@@ -25,6 +25,8 @@ import {
   Mail,
   Megaphone,
   MessageSquare,
+  MessagesSquare,
+  Radio,
   Palette,
   Server,
   Share2,
@@ -66,6 +68,8 @@ import TrashTab from './admin/TrashTab';
 import RetentionTab from './admin/RetentionTab';
 import { useT } from '../i18n';
 import ShotgridSitesTab from './admin/ShotgridSitesTab';
+import LiveRoomTab from './admin/LiveRoomTab';
+import ChatTab from './admin/ChatTab';
 import { sectionHaystack, sectionMatches } from './admin/settingsSearch';
 import { ADMIN_GROUPS, adminGroupLabel, adminSections, type AdminSectionKey } from './admin/adminSections';
 
@@ -97,11 +101,13 @@ const VIEWS: Record<AdminSectionKey, { icon: LucideIcon; Component: ComponentTyp
     video: { icon: Video, Component: TranscodeTab },
     distribution: { icon: Share2, Component: DistributionTab },
     'review-statuses': { icon: ClipboardCheck, Component: ReviewStatusTab },
+    live: { icon: Radio, Component: LiveRoomTab },
     announcements: { icon: Megaphone, Component: AnnouncementsTab },
     smtp: { icon: Mail, Component: SmtpTab },
     api: { icon: KeyRound, Component: ApiWebhooksTab },
     'service-tokens': { icon: Bot, Component: ServiceTokensTab },
     shotgrid: { icon: Workflow, Component: ShotgridSitesTab },
+    chat: { icon: MessagesSquare, Component: ChatTab },
     jobs: { icon: ListChecks, Component: JobsTab },
     trash: { icon: Trash2, Component: TrashTab },
     retention: { icon: CalendarClock, Component: RetentionTab },
@@ -115,7 +121,7 @@ export default function AdminPage() {
   const [query, setQuery] = useState('');
   if (role !== 'ADMIN') {
     return (
-      <PageShell title={t('nav.admin')}>
+      <PageShell title={t('nav.settings')}>
         <p className="text-sm text-destructive">{t('admin.restricted')}</p>
       </PageShell>
     );
@@ -137,7 +143,11 @@ export default function AdminPage() {
 
   return (
     <PageShell>
-      <h1 className="mb-4 text-xl font-semibold">{t('nav.admin')}</h1>
+      {/* Un seul nom pour un seul endroit : le lien de la barre latérale, la palette et
+          ce titre disent tous « Réglages ». La page s'appelait « Administration », son
+          lien « Paramètres » et l'une de ses sections « Réglages » — trois mots pour le
+          même écran, dont deux qu'on ne retrouvait nulle part ailleurs. */}
+      <h1 className="mb-4 text-xl font-semibold">{t('nav.settings')}</h1>
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-52 md:flex-col md:overflow-visible md:pb-0">
           {/* Chercher dans les réglages, pas seulement dans leurs titres : vingt-huit

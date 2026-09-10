@@ -12,7 +12,10 @@ import { QueryState } from '../../components/ui/query-state';
 import { Metric, Panel } from './AdminPrimitives';
 import { fmtBytes, fmtDateTime } from './adminShared';
 import { CATEGORY_LABELS, DERIVED_LABELS, STUDIO_LABELS, sortedEntries } from './adminStorage';
+import SaveBar from './SaveBar';
+import SettingsFields from './SettingsFields';
 import StorageMap from './StorageMap';
+import { useSaveAction, useStudioSettings } from './useStudioSettings';
 import type { AdminStorageReport, StorageAgg } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
 
@@ -47,6 +50,36 @@ function AggBars({
   );
 }
 
+/**
+ * Limites de téléversement et quotas — la contrepartie réglable de la carte ci-dessous.
+ *
+ * Taille maximale d'un fichier, quota par compte et nombre d'envois simultanés se
+ * réglaient dans la section fourre-tout, à trois écrans de la page qui montre ce que le
+ * bucket contient. C'est ici qu'on vient quand le stockage déborde, donc c'est ici qu'on
+ * doit pouvoir le borner. Le quota fait autorité pour tous les comptes ; la fiche d'un
+ * compte n'en donne qu'une surcharge individuelle.
+ */
+function LimitsPanel() {
+  const t = useT();
+  const settings = useStudioSettings('storage');
+  const { busy, save } = useSaveAction(() => settings.commit());
+  return (
+    <>
+      <Panel title={t('settings.group.uploads')}>
+        <SettingsFields
+          fields={settings.fields}
+          stored={settings.stored}
+          draft={settings.draft}
+          units={settings.units}
+          onChange={settings.setValue}
+          onUnit={settings.setUnit}
+        />
+      </Panel>
+      <SaveBar dirty={settings.dirty} busy={busy} onSave={() => void save()} onDiscard={settings.discard} />
+    </>
+  );
+}
+
 /** Cartographie du stockage MinIO : occupation réelle par convention de clé + guide. */
 export default function StorageTab() {
   const t = useT();
@@ -57,7 +90,16 @@ export default function StorageTab() {
     staleTime: 5 * 60_000,
   });
 
-  if (!reportQ.data) return <QueryState query={reportQ} skeleton={<SkeletonRows count={6} />} />;
+  // Les limites ne dépendent pas du scan du bucket : elles restent réglables même quand il
+  // échoue — c'est précisément le moment où l'on vient baisser un quota.
+  if (!reportQ.data) {
+    return (
+      <div className="space-y-6">
+        <QueryState query={reportQ} skeleton={<SkeletonRows count={6} />} />
+        <LimitsPanel />
+      </div>
+    );
+  }
   const r = reportQ.data;
 
   return (
@@ -133,6 +175,8 @@ export default function StorageTab() {
       </Panel>
 
       <StorageMap />
+
+      <LimitsPanel />
     </div>
   );
 }

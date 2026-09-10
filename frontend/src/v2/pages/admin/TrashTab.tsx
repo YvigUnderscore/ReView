@@ -15,6 +15,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import SelectionBar from '../../components/ui/selection-bar';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
+import SettingsPointer from './SettingsPointer';
 import type { TrashProject } from './adminShared';
 import { intlLocale, useT } from '../../i18n';
 
@@ -77,10 +78,28 @@ export default function TrashTab() {
     }
   };
 
+  /* Le délai avant purge automatique se réglait ici même, dans la section fourre-tout, et
+     ailleurs pour les journaux. Il vit maintenant avec les autres durées de conservation ;
+     cet écran dit où, plutôt que d'en proposer une seconde copie. */
+  const retentionPointer = (
+    <SettingsPointer
+      section="retention"
+      label={t('admin.tab.retention')}
+      hint={t('settings.trashRetention')}
+    />
+  );
+
   if (!trash) return <QueryState query={trashQ} skeleton={<SkeletonRows count={3} />} />;
-  if (trash.length === 0) return <p className="text-sm text-muted-foreground">{t('adminTrash.empty')}</p>;
+  if (trash.length === 0)
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">{t('adminTrash.empty')}</p>
+        {retentionPointer}
+      </div>
+    );
   return (
     <div className="space-y-1.5">
+      {retentionPointer}
       <label className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
         <Checkbox checked={sel.allSelected} onCheckedChange={() => sel.toggleAll()} />
         {t('common.selectAllItems')}

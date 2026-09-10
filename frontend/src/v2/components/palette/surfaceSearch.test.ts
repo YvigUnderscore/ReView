@@ -136,17 +136,18 @@ describe('recherche d’écrans de réglages', () => {
 
   it('trouve aussi par le mot français, et par un libellé de champ', () => {
     expect(searchSettingsSurfaces('filigrane', 'ADMIN', t).map((h) => h.to)).toEqual(['/admin/distribution']);
-    // « Uploads simultanés » est un champ de la section fourre-tout, pas un nom de section.
-    expect(searchSettingsSurfaces(t('settings.maxUploads'), 'ADMIN', t).map((h) => h.to)).toContain(
-      '/admin/settings',
-    );
+    // « Uploads simultanés » est un champ, pas un nom de section — et il mène désormais à
+    // l'écran qui le rend, « Stockage », et non plus à la section fourre-tout.
+    expect(searchSettingsSurfaces(t('settings.maxUploads'), 'ADMIN', t).map((h) => h.to)).toEqual([
+      '/admin/storage',
+    ]);
   });
 
   it('place l’écran qui porte le mot avant celui qui l’a en synonyme', () => {
-    // « Réglages » liste « corbeille » parmi ses mots-clés ; l'écran Corbeille, lui, s'appelle
-    // ainsi — c'est celui qu'on cherche.
+    // « Corbeille » est aussi le sujet d'un réglage de la Rétention (le délai avant purge) ;
+    // l'écran Corbeille, lui, s'appelle ainsi — c'est celui qu'on cherche d'abord.
     const hits = searchSettingsSurfaces(t('admin.tab.trash'), 'ADMIN', t);
-    expect(hits.map((h) => h.to)).toContain('/admin/settings');
+    expect(hits.map((h) => h.to)).toContain('/admin/retention');
     expect(hits[0].to).toBe('/admin/trash');
   });
 

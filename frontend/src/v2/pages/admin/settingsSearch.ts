@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { SETTINGS_FIELDS } from './adminShared';
+import { SETTINGS_HOMES, fieldsFor, type SettingsHome } from './studioSettings';
 import type { MessageKey } from '../../i18n';
 
 /**
@@ -52,18 +52,18 @@ export const SECTION_KEYWORDS: Record<string, string[]> = {
   settings: [
     'reglages',
     'settings',
-    'quota',
-    'upload',
-    'televersement',
-    'slack',
-    'live',
+    'studio',
+    'nom',
+    'name',
+    'marque',
+    'brand',
+    'logo',
     'langue',
     'language',
     'accent',
+    'theme',
     'source',
     'agpl',
-    'corbeille',
-    'trash',
   ],
   defaults: [
     'defauts',
@@ -137,6 +137,8 @@ export const SECTION_KEYWORDS: Record<string, string[]> = {
   trash: ['corbeille', 'trash', 'suppression', 'delete', 'restaurer', 'restore'],
   retention: ['retention', 'conservation', 'purge', 'journaux', 'logs', 'duree', 'duration'],
   'media-access': ['acces', 'access', 'medias', 'media', 'consultation', 'journal', 'log'],
+  live: ['live', 'salle', 'room', 'direct', 'session', 'cadence', 'hz', 'synchronisation', 'sync'],
+  chat: ['slack', 'discord', 'chat', 'messagerie', 'notification', 'webhook', 'equipe', 'team'],
 };
 
 /**
@@ -145,11 +147,16 @@ export const SECTION_KEYWORDS: Record<string, string[]> = {
  */
 export function sectionHaystack(key: string, label: string, t: (k: MessageKey) => string): string {
   const parts = [label, key, ...(SECTION_KEYWORDS[key] ?? [])];
-  // La section « settings » porte onze champs nommés : les indexer évite d'avoir à deviner
-  // que « uploads simultanés » s'y trouve.
-  if (key === 'settings') parts.push(...SETTINGS_FIELDS.map((f) => t(f.labelKey)));
+  // Les réglages clé/valeur sont indexés dans la section qui les rend : « uploads
+  // simultanés » mène à « Stockage », « rétention corbeille » à « Rétention ». Tant qu'ils
+  // vivaient tous au même endroit, la recherche renvoyait toujours le même écran.
+  if (isSettingsHome(key)) parts.push(...fieldsFor(key).map((f) => t(f.labelKey)));
   return fold(parts.join(' '));
 }
+
+/** La section rend-elle des réglages clé/valeur ? */
+const isSettingsHome = (key: string): key is SettingsHome =>
+  (SETTINGS_HOMES as readonly string[]).includes(key);
 
 /** La section répond-elle à la recherche ? Une recherche vide laisse tout passer. */
 export function sectionMatches(haystack: string, query: string): boolean {

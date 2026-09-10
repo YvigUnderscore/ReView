@@ -181,3 +181,17 @@ export interface AdminStorageReport {
   projects: AdminStorageProject[];
   generatedAt: string;
 }
+
+/**
+ * GET /api/studio — la ligne du studio, telle que l'administration la lit.
+ *
+ * Le nom et le webhook Discord voyagent ensemble sur cette route et se réglaient nulle
+ * part : deux écrans les éditent désormais, sous une seule définition. En redéclarer une
+ * moitié par écran aurait suffi à en faire diverger le type au premier champ ajouté.
+ */
+export interface StudioRow {
+  id: number;
+  name: string;
+  slug: string;
+  discordWebhookUrl: string | null;
+}

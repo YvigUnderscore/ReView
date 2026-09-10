@@ -53,3 +53,15 @@ export function clampBatchSize(raw: string | number): number {
   if (!Number.isFinite(n) || n <= 0) return MIN_BATCH;
   return clamp(n, MIN_BATCH, MAX_BATCH);
 }
+
+/**
+ * La politique a-t-elle bougé depuis le chargement ?
+ *
+ * C'est ce qui arme la barre d'enregistrement de l'écran : sans cela le bouton restait
+ * offert en permanence, et rien ne distinguait « je n'ai rien touché » de « j'ai touché et
+ * je n'ai pas encore validé ».
+ */
+export function policyChanged(saved: RetentionPolicy, draft: RetentionPolicy): boolean {
+  if (saved.batchSize !== draft.batchSize) return true;
+  return RETENTION_FAMILIES.some((family) => saved[family] !== draft[family]);
+}

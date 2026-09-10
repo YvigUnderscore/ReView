@@ -25,16 +25,25 @@ describe('recherche dans les réglages', () => {
     expect(sectionMatches(haystackOf('retention'), 'retention')).toBe(true);
   });
 
-  it('exige tous les mots : « quota stockage » ne rend pas la moitié de l’administration', () => {
-    expect(sectionMatches(haystackOf('storage'), 'stockage quota')).toBe(false);
-    expect(sectionMatches(haystackOf('settings'), 'quota')).toBe(true);
+  it('exige tous les mots : « quota slack » ne rend pas la moitié de l’administration', () => {
+    expect(sectionMatches(haystackOf('storage'), 'quota slack')).toBe(false);
     expect(sectionMatches(haystackOf('storage'), 'stockage bucket')).toBe(true);
   });
 
-  it('indexe les libellés de champs de la section fourre-tout', () => {
-    // « Uploads simultanés » est un champ de `settings`, pas un nom de section.
-    const hay = haystackOf('settings');
-    expect(hay).toContain(fold(t('settings.maxUploads')));
+  /**
+   * Chaque réglage est indexé dans la section qui le rend. Tant que les quatorze vivaient au
+   * même endroit, chercher « quota » ou « corbeille » ramenait toujours le même écran —
+   * celui qui les empilait tous.
+   */
+  it('indexe chaque réglage dans la section qui le rend, et nulle part ailleurs', () => {
+    expect(haystackOf('storage')).toContain(fold(t('settings.maxUploads')));
+    expect(haystackOf('storage')).toContain(fold(t('settings.storageQuota')));
+    expect(haystackOf('retention')).toContain(fold(t('settings.trashRetention')));
+    expect(haystackOf('chat')).toContain(fold(t('settings.slackWebhook')));
+    expect(haystackOf('defaults')).toContain(fold(t('settings.defaultStartFrame')));
+    // La section « Réglages » ne les porte plus : elle ne garde que l'identité du studio.
+    expect(haystackOf('settings')).not.toContain(fold(t('settings.maxUploads')));
+    expect(haystackOf('settings')).not.toContain(fold(t('settings.trashRetention')));
   });
 
   it('laisse tout passer quand la recherche est vide', () => {
@@ -46,8 +55,8 @@ describe('recherche dans les réglages', () => {
     expect(sectionMatches(haystackOf('jobs'), 'zzzz')).toBe(false);
   });
 
-  it('couvre les vingt-huit sections par au moins un mot-clé', () => {
-    expect(Object.keys(SECTION_KEYWORDS).length).toBeGreaterThanOrEqual(26);
+  it('couvre chaque section par au moins un mot-clé', () => {
+    expect(Object.keys(SECTION_KEYWORDS).length).toBeGreaterThanOrEqual(28);
     for (const [key, words] of Object.entries(SECTION_KEYWORDS)) {
       expect(words.length, key).toBeGreaterThan(0);
     }

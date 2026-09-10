@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Save, Trash2, Upload } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import BurninPanel from './BurninPanel';
+import SettingsPointer from './SettingsPointer';
 import { useT } from '../../i18n';
 
 interface WatermarkConfig {
@@ -20,101 +21,21 @@ interface WatermarkConfig {
 }
 
 /**
- * Section Diffusion (35.B/35.D) : logo studio (page client + burn-ins) et watermark
- * spectateur (viewers internes + partages).
+ * Section Diffusion (35.B/35.D) : watermark spectateur (viewers internes + partages) et
+ * burn-ins.
+ *
+ * Le logo du studio se déposait ici, alors que la page de connexion l'affiche aussi : la
+ * même marque se réglait à deux endroits, et celui qu'on ouvrait n'était pas toujours le
+ * bon. Il vit désormais avec le nom et la couleur du studio ; cet écran y renvoie.
  */
 export default function DistributionTab() {
+  const t = useT();
   return (
     <div className="max-w-2xl space-y-4">
-      <LogoPanel />
+      <SettingsPointer section="settings" label={t('settings.group.studio')} hint={t('burnin.studioLogo')} />
       <WatermarkPanel />
       <BurninPanel />
     </div>
-  );
-}
-
-function LogoPanel() {
-  const t = useT();
-  const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const logoQ = useQuery({
-    queryKey: qk.admin('studio-logo'),
-    queryFn: () => api.get<{ url: string | null }>('/api/studio/logo'),
-  });
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: qk.admin('studio-logo') });
-
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (fileRef.current) fileRef.current.value = '';
-    if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
-      toast.error(t('profile.avatar.invalidFormat'));
-      return;
-    }
-    setBusy(true);
-    try {
-      const { url, key } = await api.post<{ url: string; key: string }>('/api/studio/logo/presign', {
-        contentType: file.type,
-      });
-      const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
-      await api.put('/api/studio/settings', { key: 'studio_logo_key', value: key });
-      void invalidate();
-      toast.success(t('distribution.logoUpdated'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async () => {
-    setBusy(true);
-    try {
-      await api.put('/api/studio/settings', { key: 'studio_logo_key', value: '' });
-      void invalidate();
-      toast.success(t('distribution.logoDeleted'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Panel title={t('burnin.studioLogo')}>
-      <p className="mb-3 text-xs text-muted-foreground">{t('dist.slateHint')}</p>
-      <div className="flex items-center gap-4">
-        <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-md border border-border bg-background">
-          {logoQ.data?.url ? (
-            <img
-              src={logoQ.data.url}
-              alt={t('burnin.studioLogo')}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : (
-            <span className="text-xs text-muted-foreground">{t('distribution.noLogo')}</span>
-          )}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="hidden"
-          onChange={onFile}
-        />
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}>
-          <Upload size={14} className="mr-1" /> {t('common.upload')}
-        </Button>
-        {logoQ.data?.url && (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={remove}>
-            <Trash2 size={14} className="mr-1 text-destructive" /> {t('common.remove')}
-          </Button>
-        )}
-      </div>
-    </Panel>
   );
 }
 

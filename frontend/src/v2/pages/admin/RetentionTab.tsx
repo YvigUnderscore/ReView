@@ -10,6 +10,9 @@ import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
+import SaveBar from './SaveBar';
+import SettingsFields from './SettingsFields';
+import { useSaveAction, useStudioSettings } from './useStudioSettings';
 import { intlLocale, useT, type MessageKey, type Tr } from '../../i18n';
 import {
   DEAD_ONLY_FAMILIES,
@@ -19,15 +22,20 @@ import {
   RETENTION_FAMILIES,
   clampBatchSize,
   clampDays,
+  policyChanged,
   type RetentionFamily,
   type RetentionPolicy,
 } from './retentionForm';
 
 /**
- * Rétention des journaux (`lib/retention` côté serveur) : combien de temps le studio garde
- * chaque trace avant suppression automatique. C'est la page qu'on ouvre pour répondre à une
- * demande RGPD — d'où l'affichage systématique de la valeur par défaut du produit à côté de
- * la valeur en vigueur.
+ * Rétention : combien de temps le studio garde ce qu'il a produit et ce qu'il a supprimé,
+ * avant purge automatique. C'est la page qu'on ouvre pour répondre à une demande RGPD —
+ * d'où l'affichage systématique de la valeur par défaut du produit à côté de celle en
+ * vigueur.
+ *
+ * La corbeille se vidait selon un délai réglé dans la section fourre-tout, à l'autre bout
+ * de la barre latérale : deux écrans à connaître pour une seule question. Le délai de la
+ * corbeille vit ici, avec les journaux ; l'écran « Corbeille » y renvoie.
  */
 
 /** Libellé traduit — table recalculée à chaque rendu, jamais figée au chargement du module. */
@@ -84,29 +92,37 @@ export default function RetentionTab() {
     queryFn: () => api.get<Loaded>('/api/admin/retention'),
   });
   const data = retentionQ.data;
+  const settings = useStudioSettings('retention');
   const [draft, setDraft] = useState<RetentionPolicy | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [sweeping, setSweeping] = useState(false);
+
+  /**
+   * Une seule barre pour deux routes : la politique des journaux (`/api/admin/retention`)
+   * et le délai de la corbeille (un réglage clé/valeur). Rien à l'écran ne dit qu'il s'agit
+   * de deux stockages différents — et rien ne devrait le dire.
+   */
+  const { busy, save } = useSaveAction(async () => {
+    if (draft && data && policyChanged(data.policy, draft)) {
+      const { policy } = await api.put<Loaded>('/api/admin/retention', draft);
+      setDraft(policy);
+      await qc.invalidateQueries({ queryKey: qk.admin('retention') });
+    }
+    await settings.commit();
+  }, t('retention.saved'));
+
   if (data && !draft) setDraft(data.policy);
 
   if (!data || !draft) return <QueryState query={retentionQ} skeleton={<SkeletonRows count={6} />} />;
   const defaults = data.defaults;
+  const dirty = policyChanged(data.policy, draft) || settings.dirty;
 
-  const save = async () => {
-    setBusy(true);
-    try {
-      const { policy } = await api.put<Loaded>('/api/admin/retention', draft);
-      setDraft(policy);
-      void qc.invalidateQueries({ queryKey: qk.admin('retention') });
-      toast.success(t('retention.saved'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('common.error.save'));
-    } finally {
-      setBusy(false);
-    }
+  const discard = () => {
+    setDraft(data.policy);
+    settings.discard();
   };
 
   const run = async () => {
-    setBusy(true);
+    setSweeping(true);
     try {
       const res = await api.post<{ total: number; truncated: boolean }>('/api/admin/retention/run');
       toast.success(t('retention.runDone', { value: res.total.toLocaleString(intlLocale()) }));
@@ -115,56 +131,70 @@ export default function RetentionTab() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
-      setBusy(false);
+      setSweeping(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <Panel title={t('retention.title')}>
-        <p className="mb-2 text-xs text-muted-foreground">{t('retention.intro')}</p>
-        <div>
-          {RETENTION_FAMILIES.map((f) => (
-            <DaysRow
-              key={f}
-              family={f}
-              value={draft[f]}
-              fallback={defaults[f]}
-              onChange={(days) => setDraft({ ...draft, [f]: days })}
-            />
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">{t('retention.conflictNote')}</p>
-      </Panel>
-
-      <Panel title={t('retention.batchTitle')}>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <label className="w-56 shrink-0 text-muted-foreground" htmlFor="retention-batch">
-            {t('retention.batchSize')}
-          </label>
-          <input
-            id="retention-batch"
-            type="number"
-            min={MIN_BATCH}
-            max={MAX_BATCH}
-            value={draft.batchSize}
-            onChange={(e) => setDraft({ ...draft, batchSize: clampBatchSize(e.target.value) })}
-            className="w-24 rounded border border-input bg-background px-2 py-1 text-sm"
+    <div>
+      <div className="space-y-4">
+        <Panel title={t('settings.group.data')}>
+          <SettingsFields
+            fields={settings.fields}
+            stored={settings.stored}
+            draft={settings.draft}
+            units={settings.units}
+            onChange={settings.setValue}
+            onUnit={settings.setUnit}
           />
-          <span className="min-w-0 flex-1 text-xs text-muted-foreground">
-            {t('retention.hint.batchSize')}
-          </span>
-        </div>
-      </Panel>
+        </Panel>
 
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => void save()} disabled={busy}>
-          {t('common.save')}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => void run()} disabled={busy}>
-          {busy ? t('retention.running') : t('retention.run')}
-        </Button>
+        <Panel title={t('retention.title')}>
+          <p className="mb-2 text-xs text-muted-foreground">{t('retention.intro')}</p>
+          <div>
+            {RETENTION_FAMILIES.map((f) => (
+              <DaysRow
+                key={f}
+                family={f}
+                value={draft[f]}
+                fallback={defaults[f]}
+                onChange={(days) => setDraft({ ...draft, [f]: days })}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{t('retention.conflictNote')}</p>
+        </Panel>
+
+        <Panel title={t('retention.batchTitle')}>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <label className="w-56 shrink-0 text-muted-foreground" htmlFor="retention-batch">
+              {t('retention.batchSize')}
+            </label>
+            <input
+              id="retention-batch"
+              type="number"
+              min={MIN_BATCH}
+              max={MAX_BATCH}
+              value={draft.batchSize}
+              onChange={(e) => setDraft({ ...draft, batchSize: clampBatchSize(e.target.value) })}
+              className="w-24 rounded border border-input bg-background px-2 py-1 text-sm"
+            />
+            <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+              {t('retention.hint.batchSize')}
+            </span>
+          </div>
+        </Panel>
+
+        {/* Balayer maintenant n'est pas un enregistrement : c'est une opération, qui reste à
+          côté des réglages qu'elle applique plutôt que dans la barre qui les valide. */}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => void run()} disabled={busy || sweeping}>
+            {sweeping ? t('retention.running') : t('retention.run')}
+          </Button>
+        </div>
       </div>
+
+      <SaveBar dirty={dirty} busy={busy} onSave={() => void save()} onDiscard={discard} />
     </div>
   );
 }

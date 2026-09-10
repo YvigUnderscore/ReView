@@ -11,6 +11,7 @@ import { Select } from '../../components/ui/select';
 import { SegmentedControl } from '../../components/ui/segmented-control';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ROLES } from './adminShared';
+import SettingsPointer from './SettingsPointer';
 import type { Role, User } from '../../types/api';
 import { useT } from '../../i18n';
 
@@ -172,6 +173,10 @@ export default function UserModal({
               onChange={(e) => setForm((f) => ({ ...f, storageLimitGo: e.target.value }))}
             />
           </div>
+          {/* Ce quota-ci ne vaut que pour ce compte : celui que reçoivent tous les autres se
+              règle dans « Stockage ». Le champ vide n'est pas « aucun quota », c'est « le
+              quota du studio ». */}
+          <SettingsPointer section="storage" label={t('storage.title')} hint={t('storage.quotaLabel')} />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose}>

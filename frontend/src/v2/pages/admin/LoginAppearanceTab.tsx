@@ -13,6 +13,7 @@ import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
+import SettingsPointer from './SettingsPointer';
 import { useT } from '../../i18n';
 import type { LoginAppearance } from '../../lib/branding';
 import { backdropStyle, overlayStyle } from '../auth/loginStyles';
@@ -201,6 +202,13 @@ export default function LoginAppearanceTab() {
             />
             <span className="font-medium">{t('login.appearance.showLogo')}</span>
           </label>
+          {/* Cet écran décide si le logo s'affiche, pas quel logo : la marque du studio est
+              une seule image, déposée une seule fois. */}
+          <SettingsPointer
+            section="settings"
+            label={t('settings.group.studio')}
+            hint={t('burnin.studioLogo')}
+          />
         </div>
         <div className="mt-3">
           <Button size="sm" onClick={save} disabled={busy}>

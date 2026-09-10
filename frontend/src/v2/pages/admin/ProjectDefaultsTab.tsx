@@ -1,31 +1,39 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Save } from 'lucide-react';
-import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import DepartmentsEditor from '../../components/DepartmentsEditor';
+import ProjectNamingSection from '../../components/ProjectNamingSection';
+import ProjectDefaultLightingSection from '../../components/ProjectDefaultLightingSection';
+import ProjectColorSection from '../../components/ProjectColorSection';
+import { sameValue } from '../../lib/projectInheritance';
 import { Panel } from './AdminPrimitives';
+import { FormatPanel, NumberingPanel } from './ProjectDefaultsFields';
+import SaveBar from './SaveBar';
+import SettingsFields from './SettingsFields';
+import SettingsPointer from './SettingsPointer';
+import TaskPolicyField, { TASK_POLICY_KEY } from './TaskPolicyField';
+import { useSaveAction, useStudioSettings } from './useStudioSettings';
 import type { Nomenclature, ProjectSettings } from '../../types/api';
 import { useT } from '../../i18n';
 
-function DefField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1 text-2xs section-label text-muted-foreground">
-      {label}
-      {children}
-    </label>
-  );
-}
-
-/** Défauts de création de projet : nomenclature + départements (overridables par projet). */
+/**
+ * Défauts de projet : ce dont hérite un projet tant qu'il ne s'en approprie pas.
+ *
+ * L'écran n'exposait que trois des sept sections réellement héritables — numérotation,
+ * format, départements. Les quatre autres (convention de nommage, éclairage 3D, couleur,
+ * burn-ins) apparaissaient côté projet, badge « HÉRITÉ DU STUDIO » à l'appui, en désignant
+ * un studio qu'aucun écran ne permettait de régler. Les sept sont ici.
+ *
+ * La septième, les burn-ins, ne se règle pas ici : le template studio vit dans
+ * « Diffusion », qui en est le propriétaire. L'écran y renvoie plutôt que d'en offrir une
+ * seconde copie — deux champs pour une valeur, c'est une valeur qu'on croit avoir changée.
+ */
 export default function ProjectDefaultsTab() {
   const t = useT();
   const qc = useQueryClient();
@@ -34,12 +42,25 @@ export default function ProjectDefaultsTab() {
     queryFn: () =>
       api.get<{ settings: ProjectSettings }>('/api/admin/project-defaults').then((d) => d.settings),
   });
-  const data = defaultsQ.data;
+  const settings = useStudioSettings('defaults');
   const [draft, setDraft] = useState<ProjectSettings | null>(null);
-  const [busy, setBusy] = useState(false);
+  const saved = defaultsQ.data;
+
+  const { busy, save } = useSaveAction(async () => {
+    if (draft && saved && !sameValue(saved, draft)) {
+      const { settings: fresh } = await api.put<{ settings: ProjectSettings }>(
+        '/api/admin/project-defaults',
+        draft,
+      );
+      setDraft(fresh);
+      await qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
+    }
+    await settings.commit();
+  }, t('defaults.saved'));
+
   // Amorce l'édition depuis les valeurs serveur (ajustement d'état pendant le render).
-  if (data && !draft) setDraft(data);
-  if (!draft) return <QueryState query={defaultsQ} skeleton={<SkeletonRows count={3} />} />;
+  if (saved && !draft) setDraft(saved);
+  if (!draft || !saved) return <QueryState query={defaultsQ} skeleton={<SkeletonRows count={3} />} />;
 
   const setNom = (k: keyof Nomenclature, v: string) =>
     setDraft(
@@ -52,105 +73,68 @@ export default function ProjectDefaultsTab() {
   const setRes = (k: 'width' | 'height', v: string) =>
     setDraft((d) => d && { ...d, resolution: { ...d.resolution, [k]: Number(v) || 1 } });
   const setFps = (v: string) => setDraft((d) => d && { ...d, framerate: Number(v) || 1 });
-  const save = async () => {
-    setBusy(true);
-    try {
-      const { settings } = await api.put<{ settings: ProjectSettings }>('/api/admin/project-defaults', draft);
-      setDraft(settings);
-      void qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
-      toast.success(t('defaults.saved'));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('common.error.save'));
-    } finally {
-      setBusy(false);
-    }
-  };
+
+  const policy = settings.draft[TASK_POLICY_KEY] ?? settings.stored[TASK_POLICY_KEY] ?? '';
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <p className="text-sm text-muted-foreground">{t('defaults.hint')}</p>
+    <div className="max-w-2xl">
+      <div className="space-y-6">
+        <p className="text-sm text-muted-foreground">{t('defaults.hint')}</p>
 
-      <Panel title={t('defaults.naming')}>
-        <div className="flex flex-wrap items-end gap-3">
-          <DefField label={t('pipeline.prefix.sequence')}>
-            <Input
-              className="w-24 py-1.5 text-xs"
-              value={draft.nomenclature.sequencePrefix}
-              onChange={(e) => setNom('sequencePrefix', e.target.value)}
-            />
-          </DefField>
-          <DefField label={t('pipeline.prefix.shot')}>
-            <Input
-              className="w-24 py-1.5 text-xs"
-              value={draft.nomenclature.shotPrefix}
-              onChange={(e) => setNom('shotPrefix', e.target.value)}
-            />
-          </DefField>
-          <DefField label={t('pipeline.step')}>
-            <Input
-              type="number"
-              min={1}
-              className="w-16 py-1.5 text-xs"
-              value={String(draft.nomenclature.step)}
-              onChange={(e) => setNom('step', e.target.value)}
-            />
-          </DefField>
-          <DefField label={t('pipeline.digits')}>
-            <Input
-              type="number"
-              min={1}
-              max={8}
-              className="w-16 py-1.5 text-xs"
-              value={String(draft.nomenclature.padding)}
-              onChange={(e) => setNom('padding', e.target.value)}
-            />
-          </DefField>
-        </div>
-      </Panel>
+        <NumberingPanel value={draft.nomenclature} onChange={setNom} />
 
-      <Panel title={t('defaults.formatRate')}>
-        <div className="flex flex-wrap items-end gap-3">
-          <DefField label={t('pipeline.width')}>
-            <Input
-              type="number"
-              min={1}
-              className="w-24 py-1.5 text-xs"
-              value={String(draft.resolution.width)}
-              onChange={(e) => setRes('width', e.target.value)}
+        <FormatPanel
+          value={draft}
+          onResolution={setRes}
+          onFramerate={setFps}
+          startFrame={
+            <SettingsFields
+              fields={settings.fields}
+              stored={settings.stored}
+              draft={settings.draft}
+              units={settings.units}
+              onChange={settings.setValue}
+              onUnit={settings.setUnit}
             />
-          </DefField>
-          <span className="pb-1.5 text-muted-foreground">×</span>
-          <DefField label={t('pipeline.height')}>
-            <Input
-              type="number"
-              min={1}
-              className="w-24 py-1.5 text-xs"
-              value={String(draft.resolution.height)}
-              onChange={(e) => setRes('height', e.target.value)}
-            />
-          </DefField>
-          <DefField label={t('pipeline.fps')}>
-            <Input
-              type="number"
-              min={1}
-              className="w-20 py-1.5 text-xs"
-              value={String(draft.framerate)}
-              onChange={(e) => setFps(e.target.value)}
-            />
-          </DefField>
-        </div>
-      </Panel>
-
-      <Panel title={t('defaults.departments')}>
-        <DepartmentsEditor
-          value={draft.departments}
-          onChange={(departments) => setDraft((d) => d && { ...d, departments })}
+          }
         />
-      </Panel>
 
-      <Button onClick={save} disabled={busy}>
-        <Save size={15} /> {busy ? t('common.saving') : t('defaults.save')}
-      </Button>
+        <Panel title={t('defaults.departments')}>
+          <DepartmentsEditor
+            value={draft.departments}
+            onChange={(departments) => setDraft((d) => d && { ...d, departments })}
+          />
+        </Panel>
+
+        <TaskPolicyField value={policy} onChange={(v) => settings.setValue(TASK_POLICY_KEY, v)} />
+
+        <ProjectNamingSection
+          value={draft.naming ?? { pattern: '', mode: 'off' }}
+          onChange={(naming) => setDraft((d) => d && { ...d, naming })}
+        />
+
+        <ProjectDefaultLightingSection
+          value={draft.defaultLighting}
+          onChange={(defaultLighting) => setDraft((d) => d && { ...d, defaultLighting })}
+        />
+
+        <ProjectColorSection
+          value={draft.color}
+          onChange={(color) => setDraft((d) => d && { ...d, color })}
+        />
+
+        <SettingsPointer section="distribution" label={t('review.delivery')} hint={t('burnin.title')} />
+      </div>
+
+      <SaveBar
+        dirty={!sameValue(saved, draft) || settings.dirty}
+        busy={busy}
+        onSave={() => void save()}
+        onDiscard={() => {
+          setDraft(saved);
+          settings.discard();
+        }}
+      />
     </div>
   );
 }

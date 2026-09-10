@@ -2,145 +2,159 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import TranslationNotice from '../../components/TranslationNotice';
-import TaskPolicyField from './TaskPolicyField';
-import { BASE_LOCALE, LOCALES, isLocale, type Locale } from '../../i18n';
-import { useT } from '../../i18n';
-import { SETTINGS_FIELDS, SETTING_GROUPS } from './adminShared';
-import SettingsGroup from './SettingsGroup';
+import { BASE_LOCALE, LOCALES, isLocale, useT } from '../../i18n';
+import { Panel } from './AdminPrimitives';
+import SaveBar from './SaveBar';
+import SettingsFields from './SettingsFields';
+import StudioLogoPanel from './StudioLogoPanel';
+import { useSaveAction, useStudioRow, useStudioSettings } from './useStudioSettings';
 
+const ACCENT_FALLBACK = '#00b3c4';
+const ACCENT_RE = /^#[0-9a-f]{6}$/i;
+
+/**
+ * « Identité du studio » — ce qui dit de quelle maison l'instance est le miroir : son nom,
+ * sa couleur, sa langue par défaut, son logo, et l'adresse de ses sources (AGPL §13).
+ *
+ * C'était la section fourre-tout : quatorze réglages sans rapport et onze boutons
+ * « Enregistrer ». Les quotas sont partis dans « Stockage », la rétention dans
+ * « Rétention », les cadences dans « Salle live », Slack dans « Messagerie d'équipe » et la
+ * frame de départ dans « Défauts de projet » — chacun là où on le cherche. Ne restent ici
+ * que les réglages qu'on vient chercher **au nom du studio**, sous une barre unique.
+ *
+ * Le nom du studio n'avait aucun écran alors que l'API l'expose depuis toujours : il se
+ * réglait à la main en base. Il ouvre désormais la page.
+ */
 export default function SettingsTab() {
   const t = useT();
   const qc = useQueryClient();
-  const settingsQ = useQuery({
-    queryKey: qk.admin('settings'),
-    queryFn: () =>
-      api.get<{ settings: Record<string, string> }>('/api/studio/settings').then((d) => d.settings),
+  const settings = useStudioSettings('settings');
+  const studioQ = useStudioRow();
+
+  // Le nom vit sur la ligne Studio (PATCH /api/studio), pas dans la table clé/valeur : il a
+  // son propre brouillon, mais partage la barre d'enregistrement de la page.
+  const [name, setName] = useState<string | null>(null);
+  const storedName = studioQ.data?.name ?? '';
+  const nameDirty = name !== null && name !== storedName;
+
+  const { busy, save } = useSaveAction(async () => {
+    // Le nom d'abord : c'est le seul champ que le serveur peut refuser (longueur), et un
+    // refus doit laisser la page intacte plutôt qu'à moitié enregistrée.
+    if (nameDirty) {
+      await api.patch('/api/studio', { name });
+      await qc.invalidateQueries({ queryKey: qk.admin('studio') });
+      setName(null);
+    }
+    await settings.commit();
   });
-  const data = settingsQ.data;
 
-  const persist = async (key: string, value: string) => {
-    try {
-      await api.put('/api/studio/settings', { key, value });
-      void qc.invalidateQueries({ queryKey: qk.admin('settings') });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('common.error.save'));
-    }
+  const discard = () => {
+    setName(null);
+    settings.discard();
   };
 
-  /** Enregistrement d'une famille : les champs modifiés partent ensemble, l'écran ne se
-   *  rafraîchit qu'une fois, et un seul message rend compte du résultat. */
-  const persistGroup = async (values: { key: string; value: string }[]) => {
-    try {
-      for (const { key, value } of values) await api.put('/api/studio/settings', { key, value });
-      void qc.invalidateQueries({ queryKey: qk.admin('settings') });
-      toast.success(t('settings.savedTick'));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('common.error.save'));
-    }
-  };
+  const stored = settings.stored;
+  const accent = settings.draft.studio_accent ?? stored.studio_accent ?? '';
+  const accentValue = ACCENT_RE.test(accent) ? accent : ACCENT_FALLBACK;
+  const locale = settings.draft.studio_default_locale ?? stored.studio_default_locale ?? '';
 
-  if (!data) return <QueryState query={settingsQ} skeleton={<SkeletonRows count={5} />} />;
-  return (
-    <div className="space-y-4">
-      {SETTING_GROUPS.map((group) => {
-        const fields = SETTINGS_FIELDS.filter((f) => f.group === group);
-        if (fields.length === 0) return null;
-        return (
-          <SettingsGroup key={group} group={group} fields={fields} stored={data} onSave={persistGroup} />
-        );
-      })}
-      <TaskPolicyField stored={data.task_department_policy ?? ''} onSave={persist} />
-      <DefaultLocaleField stored={data.studio_default_locale ?? ''} onSave={persist} />
-      <AccentField stored={data.studio_accent ?? ''} onSave={persist} />
-    </div>
-  );
-}
+  if (!settings.query.data) {
+    return <QueryState query={settings.query} skeleton={<SkeletonRows count={5} />} />;
+  }
 
-/**
- * Langue par défaut du studio : celle des comptes qui n'ont rien choisi, et celle des
- * emails envoyés à ces comptes. Le sélecteur ne change pas la langue de l'admin qui le
- * manipule — c'est un réglage d'instance, pas une préférence personnelle.
- */
-function DefaultLocaleField({
-  stored,
-  onSave,
-}: {
-  stored: string;
-  onSave: (key: string, value: string) => Promise<void>;
-}) {
-  const t = useT();
-  const [value, setValue] = useState(isLocale(stored) ? stored : BASE_LOCALE);
   return (
-    <div className="space-y-2 rounded-lg border border-border p-3">
-      <h3 className="text-sm font-semibold">{t('settings.studioLanguage')}</h3>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <label className="w-64 text-muted-foreground" htmlFor="studio-default-locale">
-          {t('reviewStatus.defaultLang')}
-        </label>
-        <Select
-          id="studio-default-locale"
-          className="py-1 text-xs"
-          value={value}
-          onChange={(e) => setValue(e.target.value as Locale)}
-        >
-          {LOCALES.map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.native} ({l.english}){l.regional ? ` ${t('language.regionalSuffix')}` : ''}
-            </option>
-          ))}
-        </Select>
-        <Button variant="outline" size="sm" onClick={() => onSave('studio_default_locale', value)}>
-          {t('common.apply')}
-        </Button>
+    <div className="max-w-2xl">
+      <div className="space-y-4">
+        <Panel title={t('settings.group.studio')}>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <label className="w-64 text-muted-foreground" htmlFor="studio-name">
+                {t('settings.studioName')}
+              </label>
+              <Input
+                id="studio-name"
+                className="flex-1 py-1 text-xs"
+                placeholder={t('settings.hint.studioName')}
+                value={name ?? storedName}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <SettingsFields
+              fields={settings.fields}
+              stored={stored}
+              draft={settings.draft}
+              units={settings.units}
+              onChange={settings.setValue}
+              onUnit={settings.setUnit}
+            />
+          </div>
+        </Panel>
+
+        <Panel title={t('settings.studioTheme')}>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <label className="w-64 text-muted-foreground" htmlFor="studio-accent">
+              {t('settings.accentColour')}
+            </label>
+            <input
+              id="studio-accent"
+              type="color"
+              value={accentValue}
+              onChange={(e) => settings.setValue('studio_accent', e.target.value)}
+              className="h-8 w-12 cursor-pointer rounded border border-border bg-transparent"
+            />
+            <span className="w-24 font-mono text-xs text-muted-foreground">{accentValue}</span>
+            {accent && (
+              <Button variant="ghost" size="sm" onClick={() => settings.setValue('studio_accent', '')}>
+                {t('common.reset')}
+              </Button>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{t('settings.accentHint')}</p>
+        </Panel>
+
+        <Panel title={t('settings.studioLanguage')}>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <label className="w-64 text-muted-foreground" htmlFor="studio-default-locale">
+              {t('reviewStatus.defaultLang')}
+            </label>
+            <Select
+              id="studio-default-locale"
+              className="py-1 text-xs"
+              value={isLocale(locale) ? locale : BASE_LOCALE}
+              onChange={(e) => settings.setValue('studio_default_locale', e.target.value)}
+            >
+              {LOCALES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.native} ({l.english}){l.regional ? ` ${t('language.regionalSuffix')}` : ''}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{t('settings.localeHint')}</p>
+          <TranslationNotice />
+        </Panel>
+
+        {/* Le logo est un dépôt de fichier : il s'enregistre de lui-même, la barre ne peut
+            rien pour lui. Il vit ici parce que c'est la marque du studio — les slates, les
+            burn-ins et la page de connexion la reprennent, aucun ne la possède. */}
+        <StudioLogoPanel />
       </div>
-      <p className="text-xs text-muted-foreground">{t('settings.localeHint')}</p>
-      <TranslationNotice />
-    </div>
-  );
-}
 
-/** Thème studio (42.B — №101) : couleur d'accent, appliquée à l'app + page de connexion. */
-function AccentField({
-  stored,
-  onSave,
-}: {
-  stored: string;
-  onSave: (key: string, value: string) => Promise<void>;
-}) {
-  const t = useT();
-  const [value, setValue] = useState(/^#[0-9a-f]{6}$/i.test(stored) ? stored : '#00b3c4');
-  return (
-    <div className="space-y-2 rounded-lg border border-border p-3">
-      <h3 className="text-sm font-semibold">{t('settings.studioTheme')}</h3>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <label className="w-64 text-muted-foreground">{t('settings.accentColour')}</label>
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="h-8 w-12 cursor-pointer rounded border border-border bg-transparent"
-          aria-label={t('settings.accentColor')}
-        />
-        <span className="w-24 font-mono text-xs text-muted-foreground">{value}</span>
-        <Button variant="outline" size="sm" onClick={() => onSave('studio_accent', value)}>
-          {t('common.apply')}
-        </Button>
-        {stored && (
-          <Button variant="ghost" size="sm" onClick={() => onSave('studio_accent', '')}>
-            {t('common.reset')}
-          </Button>
-        )}
-      </div>
-      <p className="text-xs text-muted-foreground">{t('settings.accentHint')}</p>
+      <SaveBar
+        dirty={settings.dirty || nameDirty}
+        busy={busy}
+        onSave={() => void save()}
+        onDiscard={discard}
+      />
     </div>
   );
 }

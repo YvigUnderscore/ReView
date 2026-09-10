@@ -10,6 +10,8 @@ import {
   RETENTION_FAMILIES,
   clampBatchSize,
   clampDays,
+  policyChanged,
+  type RetentionPolicy,
 } from './retentionForm';
 
 describe('clampDays', () => {
@@ -50,5 +52,25 @@ describe('familles', () => {
     // Un journal daté (audit, accès média) se purge à l'ancienneté, pas à l'état.
     expect(DEAD_ONLY_FAMILIES.has('auditLog')).toBe(false);
     expect(DEAD_ONLY_FAMILIES.has('mediaAccessLog')).toBe(false);
+  });
+});
+
+describe('policyChanged', () => {
+  const saved = Object.fromEntries([
+    ...RETENTION_FAMILIES.map((f) => [f, 30]),
+    ['batchSize', 1000],
+  ]) as RetentionPolicy;
+
+  it('reste inerte tant que rien n’a bougé', () => {
+    expect(policyChanged(saved, { ...saved })).toBe(false);
+  });
+
+  it('voit une durée modifiée, y compris remise à « conserver »', () => {
+    expect(policyChanged(saved, { ...saved, auditLog: 31 })).toBe(true);
+    expect(policyChanged(saved, { ...saved, shareLink: 0 })).toBe(true);
+  });
+
+  it('voit la tranche de suppression modifiée', () => {
+    expect(policyChanged(saved, { ...saved, batchSize: 2000 })).toBe(true);
   });
 });

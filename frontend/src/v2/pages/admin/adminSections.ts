@@ -44,7 +44,10 @@ export const adminSections = (t: Tr) =>
     { key: 'identity', group: 'studio', label: t('admin.tab.identity') },
     { key: 'login-appearance', group: 'studio', label: t('admin.tab.loginAppearance') },
     { key: 'system', group: 'studio', label: t('admin.tab.system') },
-    { key: 'settings', group: 'studio', label: t('admin.tab.settings') },
+    // « Réglages » ne désigne plus un fourre-tout mais l'identité de l'instance : son nom,
+    // sa couleur, sa langue par défaut, son logo, l'adresse de ses sources. Le mot
+    // « Réglages » nomme désormais la page entière, plus une section parmi vingt-neuf.
+    { key: 'settings', group: 'studio', label: t('settings.group.studio') },
     { key: 'defaults', group: 'studio', label: t('admin.tab.projectDefaults') },
     { key: 'users', group: 'content', label: t('admin.tab.users') },
     { key: 'projects', group: 'content', label: t('nav.projects') },
@@ -59,6 +62,9 @@ export const adminSections = (t: Tr) =>
     { key: 'video', group: 'reviewContexts', label: t('admin.tab.video') },
     { key: 'distribution', group: 'reviewContexts', label: t('review.delivery') },
     { key: 'review-statuses', group: 'reviewContexts', label: t('admin.tab.statuses') },
+    // Les quatre cadences de diffusion de la salle live n'ont de sens qu'ensemble : elles
+    // tenaient un quart de l'ancienne section fourre-tout, elles ont maintenant leur écran.
+    { key: 'live', group: 'reviewContexts', label: t('settings.group.live') },
     { key: 'announcements', group: 'communications', label: t('admin.tab.announcements') },
     { key: 'smtp', group: 'communications', label: 'SMTP' },
     { key: 'api', group: 'communications', label: t('admin.tab.api') },
@@ -67,6 +73,9 @@ export const adminSections = (t: Tr) =>
     // portant rôle, projet, expiration et scopes fins.
     { key: 'service-tokens', group: 'communications', label: t('admin.tab.serviceTokens') },
     { key: 'shotgrid', group: 'communications', label: t('shotgrid.tab.label') },
+    // Slack et Discord : le même geste (« préviens l'équipe »), dont une moitié n'avait
+    // aucun écran alors que l'API l'expose.
+    { key: 'chat', group: 'communications', label: t('admin.tab.chat') },
     { key: 'jobs', group: 'maintenance', label: t('admin.tab.jobs') },
     { key: 'trash', group: 'maintenance', label: t('admin.tab.trash') },
     { key: 'retention', group: 'maintenance', label: t('admin.tab.retention') },
