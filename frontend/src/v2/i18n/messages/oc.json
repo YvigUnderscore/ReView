@@ -164,12 +164,12 @@
     "one": "projècte",
     "other": "projèctes"
   },
-  "projects.deleteMany.title": "Suprimir los projèctes ?",
+  "projects.deleteMany.title": "Metre los projèctes a la banasta ?",
   "projects.deleteMany.message": {
     "one": "{count} projècte serà mes a l’escobilhièr. Restaurable dempuèi l’administracion.",
     "other": "{count} projèctes seràn meses a l’escobilhièr. Restaurables dempuèi l’administracion."
   },
-  "projects.delete.title": "Suprimir lo projècte ?",
+  "projects.delete.title": "Metre lo projècte a la banasta ?",
   "projects.delete.message": "Lo projècte « {name} » serà mes a l’escobilhièr. Lo poiretz restaurar dempuèi l’administracion.",
   "reviews.trashed": "Mèdia mes a l’escobilhièr",
   "reviews.filter.allProjects": "Totes los projèctes",

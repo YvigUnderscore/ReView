@@ -164,12 +164,12 @@
     "one": "Projekt",
     "other": "Projekt"
   },
-  "projects.deleteMany.title": "D'Projekt lesche?",
+  "projects.deleteMany.title": "D Projekt in de Papierkorb tue ?",
   "projects.deleteMany.message": {
     "one": "{count} Projekt kummt in d'Mülltonn. Uss d'r Verwaltung widderherstellbar.",
     "other": "{count} Projekt kumme in d'Mülltonn. Uss d'r Verwaltung widderherstellbar."
   },
-  "projects.delete.title": "S'Projekt lesche?",
+  "projects.delete.title": "S Projekt in de Papierkorb tue ?",
   "projects.delete.message": "S'Projekt „{name}“ kummt in d'Mülltonn. Du kasch's uss d'r Verwaltung widderherstelle.",
   "reviews.trashed": "Medium in d'Mülltonn gsteckt",
   "reviews.filter.allProjects": "Alli Projekt",

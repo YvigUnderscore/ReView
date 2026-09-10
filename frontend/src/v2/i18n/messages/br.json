@@ -162,11 +162,11 @@
   "projects.countLabel": {
     "other": "raktres"
   },
-  "projects.deleteMany.title": "Dilemel ar raktresoù ?",
+  "projects.deleteMany.title": "Lakaat ar raktresoù el lastez ?",
   "projects.deleteMany.message": {
     "other": "{count} raktres a vo lakaet er pod-lastez. Assevelus adalek ar melestradurezh."
   },
-  "projects.delete.title": "Dilemel ar raktres ?",
+  "projects.delete.title": "Lakaat ar raktres el lastez ?",
   "projects.delete.message": "Ar raktres « {name} » a vo lakaet er pod-lastez. Gallout a reot e assevel adalek ar melestradurezh.",
   "reviews.trashed": "Media lakaet er pod-lastez",
   "reviews.filter.allProjects": "An holl raktresoù",

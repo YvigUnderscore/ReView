@@ -164,12 +164,12 @@
     "one": "prughjettu",
     "other": "prughjetti"
   },
-  "projects.deleteMany.title": "Sguassà i prughjetti ?",
+  "projects.deleteMany.title": "Mette i prughjetti in a spazzatura ?",
   "projects.deleteMany.message": {
     "one": "{count} prughjettu serà messu in a spazzatura. Ricuperabile da l’amministrazione.",
     "other": "{count} prughjetti seranu messi in a spazzatura. Ricuperabili da l’amministrazione."
   },
-  "projects.delete.title": "Sguassà u prughjettu ?",
+  "projects.delete.title": "Mette u prughjettu in a spazzatura ?",
   "projects.delete.message": "U prughjettu « {name} » serà messu in a spazzatura. U puderai ricuperà da l’amministrazione.",
   "reviews.trashed": "Media messu in a spazzatura",
   "reviews.filter.allProjects": "Tutti i prughjetti",

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { stripHtml } from '../../lib/richText';
 import type { ReviewComment, TimelineClip } from '../../types/api';
 
 /**
@@ -60,12 +61,4 @@ export function commentMarkers(
       shared: c.sharedToShot,
     };
   });
-}
-
-/** Texte nu d'un contenu déjà assaini : les balises n'ont rien à faire dans une infobulle. */
-export function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }

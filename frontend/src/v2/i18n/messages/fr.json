@@ -164,12 +164,12 @@
     "one": "projet",
     "other": "projets"
   },
-  "projects.deleteMany.title": "Supprimer les projets ?",
+  "projects.deleteMany.title": "Mettre les projets à la corbeille ?",
   "projects.deleteMany.message": {
     "one": "{count} projet sera déplacé dans la corbeille. Restaurable depuis l’administration.",
     "other": "{count} projets seront déplacés dans la corbeille. Restaurables depuis l’administration."
   },
-  "projects.delete.title": "Supprimer le projet ?",
+  "projects.delete.title": "Mettre le projet à la corbeille ?",
   "projects.delete.message": "Le projet « {name} » sera déplacé dans la corbeille. Vous pourrez le restaurer depuis l’administration.",
   "reviews.trashed": "Média déplacé dans la corbeille",
   "reviews.filter.allProjects": "Tous les projets",

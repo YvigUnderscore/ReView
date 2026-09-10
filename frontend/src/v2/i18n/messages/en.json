@@ -164,12 +164,12 @@
     "one": "project",
     "other": "projects"
   },
-  "projects.deleteMany.title": "Delete the projects?",
+  "projects.deleteMany.title": "Move the projects to the trash?",
   "projects.deleteMany.message": {
     "one": "{count} project will be moved to the trash. Restorable from the administration.",
     "other": "{count} projects will be moved to the trash. Restorable from the administration."
   },
-  "projects.delete.title": "Delete the project?",
+  "projects.delete.title": "Move the project to the trash?",
   "projects.delete.message": "The project “{name}” will be moved to the trash. You can restore it from the administration.",
   "reviews.trashed": "Media moved to the trash",
   "reviews.filter.allProjects": "All projects",

@@ -164,12 +164,12 @@
     "one": "projeto",
     "other": "projetos"
   },
-  "projects.deleteMany.title": "Excluir os projetos?",
+  "projects.deleteMany.title": "Mover os projetos para o lixo?",
   "projects.deleteMany.message": {
     "one": "{count} projeto será movido para a lixeira. Restaurável pela administração.",
     "other": "{count} projetos serão movidos para a lixeira. Restauráveis pela administração."
   },
-  "projects.delete.title": "Excluir o projeto?",
+  "projects.delete.title": "Mover o projeto para o lixo?",
   "projects.delete.message": "O projeto «{name}» será movido para a lixeira. Você poderá restaurá-lo pela administração.",
   "reviews.trashed": "Mídia movida para a lixeira",
   "reviews.filter.allProjects": "Todos os projetos",

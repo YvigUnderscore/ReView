@@ -197,7 +197,7 @@ export default function ProjectsPage() {
                       { icon: EditIcon, label: t('common.edit'), onClick: () => setEditing(p) },
                       {
                         icon: DeleteIcon,
-                        label: t('common.delete'),
+                        label: t('common.moveToTrash'),
                         danger: true,
                         onClick: () => setDeleting(p),
                       },
@@ -246,7 +246,7 @@ export default function ProjectsPage() {
           onClear={sel.clear}
           actions={[
             {
-              label: t('common.delete'),
+              label: t('common.moveToTrash'),
               icon: <Trash2 size={14} />,
               danger: true,
               onClick: () => setBulkDeleting(true),

@@ -6,6 +6,7 @@ import { MessageSquare, Clapperboard } from 'lucide-react';
 import { timeAgo } from '../../lib/time';
 import { reviewPath } from '../../lib/slug';
 import { MEDIA_KIND_ICON } from '../task/taskTypes';
+import { stripHtml } from '../../lib/richText';
 import type { DashboardReview } from './homeTypes';
 import { useT } from '../../i18n';
 
@@ -46,7 +47,11 @@ function CommentLine({ review }: { review: DashboardReview }) {
       <span className="truncate">
         <span className="font-medium text-foreground">{c.author ?? t('common.guest')}</span>
         {c.timestamp != null && <span className="ml-1 text-primary">@ {tc(c.timestamp)}</span>}
-        <span className="ml-1">« {c.content} »</span>
+        {/* Le corps d'un commentaire est du HTML : le rendre tel quel dans un aperçu d'une
+            ligne montrerait le balisage au lecteur, ce que l'accueil faisait pour toute note
+            venue de ShotGrid. Ici on n'en veut que le texte — les balises de bloc n'ont rien
+            à faire au milieu d'une phrase. */}
+        <span className="ml-1">« {stripHtml(c.content)} »</span>
       </span>
       <span className="ml-auto shrink-0">{timeAgo(c.createdAt)}</span>
     </p>

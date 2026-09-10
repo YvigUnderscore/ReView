@@ -164,12 +164,12 @@
     "one": "proiektu",
     "other": "proiektu"
   },
-  "projects.deleteMany.title": "Proiektuak ezabatu?",
+  "projects.deleteMany.title": "Proiektuak zakarrontzira eraman?",
   "projects.deleteMany.message": {
     "one": "Proiektu {count} zakarrontzira joango da. Administraziotik berreskura daiteke.",
     "other": "{count} proiektu zakarrontzira joango dira. Administraziotik berreskura daitezke."
   },
-  "projects.delete.title": "Proiektua ezabatu?",
+  "projects.delete.title": "Proiektua zakarrontzira eraman?",
   "projects.delete.message": "«{name}» proiektua zakarrontzira joango da. Administraziotik berreskura dezakezu.",
   "reviews.trashed": "Media zakarrontzira bidali da",
   "reviews.filter.allProjects": "Proiektu guztiak",

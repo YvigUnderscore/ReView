@@ -164,12 +164,12 @@
     "one": "प्रोजेक्ट",
     "other": "प्रोजेक्ट"
   },
-  "projects.deleteMany.title": "प्रोजेक्ट हटाएँ?",
+  "projects.deleteMany.title": "प्रोजेक्ट्स को ट्रैश में ले जाएँ?",
   "projects.deleteMany.message": {
     "one": "{count} प्रोजेक्ट रद्दी में चला जाएगा। प्रशासन से पुनर्स्थापित किया जा सकता है।",
     "other": "{count} प्रोजेक्ट रद्दी में चले जाएँगे। प्रशासन से पुनर्स्थापित किए जा सकते हैं।"
   },
-  "projects.delete.title": "प्रोजेक्ट हटाएँ?",
+  "projects.delete.title": "प्रोजेक्ट को ट्रैश में ले जाएँ?",
   "projects.delete.message": "प्रोजेक्ट «{name}» रद्दी में चला जाएगा। आप इसे प्रशासन से पुनर्स्थापित कर सकते हैं।",
   "reviews.trashed": "मीडिया रद्दी में डाल दिया गया",
   "reviews.filter.allProjects": "सभी प्रोजेक्ट",

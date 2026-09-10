@@ -164,12 +164,12 @@
     "one": "Projekt",
     "other": "Projekte"
   },
-  "projects.deleteMany.title": "Projekte löschen?",
+  "projects.deleteMany.title": "Projekte in den Papierkorb verschieben?",
   "projects.deleteMany.message": {
     "one": "{count} Projekt wird in den Papierkorb verschoben. Aus der Administration wiederherstellbar.",
     "other": "{count} Projekte werden in den Papierkorb verschoben. Aus der Administration wiederherstellbar."
   },
-  "projects.delete.title": "Projekt löschen?",
+  "projects.delete.title": "Projekt in den Papierkorb verschieben?",
   "projects.delete.message": "Das Projekt „{name}“ wird in den Papierkorb verschoben. Sie können es aus der Administration wiederherstellen.",
   "reviews.trashed": "Medium in den Papierkorb verschoben",
   "reviews.filter.allProjects": "Alle Projekte",

@@ -161,11 +161,11 @@
   "projects.countLabel": {
     "other": "件のプロジェクト"
   },
-  "projects.deleteMany.title": "プロジェクトを削除しますか？",
+  "projects.deleteMany.title": "プロジェクトをゴミ箱に移動しますか？",
   "projects.deleteMany.message": {
     "other": "{count} 件のプロジェクトをゴミ箱へ移動します。管理画面から復元できます。"
   },
-  "projects.delete.title": "プロジェクトを削除しますか？",
+  "projects.delete.title": "プロジェクトをゴミ箱に移動しますか？",
   "projects.delete.message": "プロジェクト「{name}」をゴミ箱へ移動します。管理画面から復元できます。",
   "reviews.trashed": "メディアをゴミ箱へ移動しました",
   "reviews.filter.allProjects": "すべてのプロジェクト",

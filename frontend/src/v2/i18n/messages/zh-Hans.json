@@ -161,11 +161,11 @@
   "projects.countLabel": {
     "other": "个项目"
   },
-  "projects.deleteMany.title": "删除这些项目？",
+  "projects.deleteMany.title": "将项目移到回收站？",
   "projects.deleteMany.message": {
     "other": "{count} 个项目将被移入回收站，可在管理后台恢复。"
   },
-  "projects.delete.title": "删除该项目？",
+  "projects.delete.title": "将项目移到回收站？",
   "projects.delete.message": "项目「{name}」将被移入回收站，你可以在管理后台恢复它。",
   "reviews.trashed": "媒体已移入回收站",
   "reviews.filter.allProjects": "全部项目",
