@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "यह कार्य एजेंट की कॉन्फ़िगरेशन में बंद है।",
   "error.RELEASE_UNKNOWN": "वह रिलीज़ मौजूद नहीं है।",
   "error.OPS_RUN_FINISHED": "यह कार्य अब रद्द नहीं किया जा सकता।",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid ने इस साइट के क्रेडेंशियल अस्वीकार कर दिए: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "इस साइट के लिए कोई ShotGrid क्रेडेंशियल दर्ज नहीं है।",
   "about.title": "इस इंस्टेंस के बारे में",
   "about.version": "Version",
   "about.builtAt": "बिल्ड की तारीख",

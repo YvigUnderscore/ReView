@@ -3,6 +3,7 @@
 
 import { Readable } from 'node:stream';
 import { logger } from '../../lib/logger';
+import { AppError } from '../../lib/errors';
 import { safeFetch } from '../../lib/safeFetch';
 import { env } from '../../config/env';
 import type { SgRecord } from './shotgridMapper';
@@ -37,19 +38,49 @@ export interface ShotgridCredentials {
   password?: string | null;
 }
 
-export class ShotgridApiError extends Error {
+export interface ShotgridErrorOptions {
+  /** Refus d'authentification avéré — posé par `token()`, jamais déduit du code HTTP. */
+  auth?: boolean;
+  /** Code stable que l'interface traduit (`error.<CODE>` au catalogue front). */
+  code?: string;
+  /** Données rendues au client — notamment `reason`, les mots du site. */
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Erreur venue d'un site ShotGrid.
+ *
+ * Deux codes cohabitent sans se confondre : `status` est celui rendu par le SITE,
+ * `statusCode` (hérité d'`AppError`) celui que ReView rend à son propre client — toujours
+ * 502, c'est la passerelle qui a échoué et non la requête de l'utilisateur.
+ *
+ * L'héritage d'`AppError` est le point : un `Error` nu finissait en « Internal server
+ * error » à l'écran, et l'administrateur devait ouvrir les journaux du backend pour
+ * apprendre que son compte ShotGrid était verrouillé. Message et code remontent désormais
+ * jusqu'à l'interface.
+ */
+export class ShotgridApiError extends AppError {
+  private readonly authRefused: boolean;
+
   constructor(
     message: string,
     readonly status: number,
     readonly body?: unknown,
+    options: ShotgridErrorOptions = {},
   ) {
-    super(message);
+    super(message, 502, options.code, options.details);
     this.name = 'ShotgridApiError';
+    this.authRefused = options.auth ?? false;
   }
 
-  /** Identifiants refusés : la connexion doit passer en `auth_error`, pas retenter en boucle. */
+  /**
+   * Identifiants refusés : la connexion doit passer en `auth_error`, pas retenter en
+   * boucle. Le code HTTP ne suffit pas à le dire — un site réel répond **400** avec
+   * `code: 102` (« Can't authenticate user … ») là où la documentation laisse attendre un
+   * 401. D'où le drapeau, posé à la source par `token()`.
+   */
   get isAuth(): boolean {
-    return this.status === 401 || this.status === 403;
+    return this.authRefused || this.status === 401 || this.status === 403;
   }
 }
 
@@ -74,12 +105,35 @@ interface TokenState {
 /** Jetons partagés par site : plusieurs projets d'un même site réutilisent la session. */
 const tokenCache = new Map<string, TokenState>();
 
+/**
+ * Refus d'authentification mémorisé par site — le coupe-circuit.
+ *
+ * Un site ShotGrid **verrouille le compte** au bout de quelques échecs, et ReView savait
+ * en produire vingt en quinze secondes : chaque écran redemandait son jeton pour son
+ * compte. Une faute de frappe dans le mot de passe se terminait donc en compte bloqué,
+ * qu'aucune correction locale ne débloque. Un refus ferme désormais la porte pour tout le
+ * site pendant `AUTH_BLOCK_MS` et se rejoue sans appeler personne ; corriger les
+ * identifiants passe par `clearTokenCache`, qui rouvre aussitôt.
+ */
+const authBlocks = new Map<string, { error: ShotgridApiError; until: number }>();
+
 export function clearTokenCache(baseUrl?: string): void {
-  if (baseUrl) tokenCache.delete(baseUrl);
-  else tokenCache.clear();
+  if (baseUrl) {
+    tokenCache.delete(baseUrl);
+    authBlocks.delete(baseUrl);
+  } else {
+    tokenCache.clear();
+    authBlocks.clear();
+  }
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+/**
+ * Durée pendant laquelle un refus d'authentification vaut pour le site entier : assez
+ * longue pour qu'une rafale d'écrans ne compte que pour un essai, assez courte pour qu'un
+ * compte déverrouillé côté studio reparte sans redémarrer ReView.
+ */
+const AUTH_BLOCK_MS = 5 * 60_000;
 const MAX_PAGE_SIZE = 500;
 /** Une page de 500 enregistrements pèse quelques mégaoctets ; 32 Mio laisse de la marge. */
 const MAX_JSON_BYTES = 32 * 1024 * 1024;
@@ -118,21 +172,49 @@ export class ShotgridClient {
    * Jeton d'accès (Bearer). On ne suit pas la chaîne de rafraîchissement : les
    * refresh_token de ShotGrid sont à usage unique et se perdent au moindre appel
    * concurrent — se ré-authentifier coûte une requête et ne peut pas diverger.
+   *
+   * Un refus, lui, ne se retente pas : il est mémorisé pour le site (`authBlocks`) et
+   * rejoué tel quel pendant quelques minutes. Retenter des identifiants refusés ne les
+   * rend pas bons, et le site compte les échecs pour verrouiller le compte.
    */
   private async token(): Promise<string> {
     const cached = tokenCache.get(this.baseUrl);
     if (cached && cached.expiresAt > Date.now() + 30_000) return cached.accessToken;
 
+    const blocked = authBlocks.get(this.baseUrl);
+    if (blocked) {
+      if (blocked.until > Date.now()) {
+        logger.warn(
+          { baseUrl: this.baseUrl, retryInMs: blocked.until - Date.now() },
+          'Authentification ShotGrid déjà refusée pour ce site — requête non émise',
+        );
+        // Une instance neuve plutôt que la même : la pile pointe l'appel qui a échoué ici,
+        // pas celui d'il y a trois minutes.
+        throw new ShotgridApiError(blocked.error.message, blocked.error.status, blocked.error.body, {
+          auth: true,
+          code: blocked.error.code,
+          details: blocked.error.details,
+        });
+      }
+      authBlocks.delete(this.baseUrl);
+    }
+
     const body = new URLSearchParams();
     if (this.creds.authMode === 'user') {
       if (!this.creds.login || !this.creds.password)
-        throw new ShotgridApiError('Identifiants utilisateur ShotGrid manquants', 401);
+        throw new ShotgridApiError('No ShotGrid user credentials recorded for this site', 401, null, {
+          auth: true,
+          code: 'SHOTGRID_NOT_CONFIGURED',
+        });
       body.set('grant_type', 'password');
       body.set('username', this.creds.login);
       body.set('password', this.creds.password);
     } else {
       if (!this.creds.scriptName || !this.creds.scriptKey)
-        throw new ShotgridApiError('Script ShotGrid non configuré', 401);
+        throw new ShotgridApiError('No ShotGrid script credentials recorded for this site', 401, null, {
+          auth: true,
+          code: 'SHOTGRID_NOT_CONFIGURED',
+        });
       body.set('grant_type', 'client_credentials');
       body.set('client_id', this.creds.scriptName);
       body.set('client_secret', this.creds.scriptKey);
@@ -148,13 +230,24 @@ export class ShotgridClient {
     });
     if (!res.ok) {
       const detail = await safeJson(res);
-      throw new ShotgridApiError(
+      /**
+       * Les mots du site, pas les nôtres : « Can't authenticate user 'x' » et « … because
+       * the account is locked » demandent deux gestes différents, et le libellé générique
+       * les confondait. La raison remonte donc jusqu'à l'écran (`details.reason`).
+       */
+      const reason = sgErrorMessage(detail, res.status);
+      const hint =
         this.creds.authMode === 'user'
-          ? 'Authentification ShotGrid refusée — vérifier le Legacy Login et le Personal Access Token lié au site'
-          : 'Authentification ShotGrid refusée — vérifier le nom et la clé du script',
+          ? 'check the Legacy Login and the Personal Access Token linked to this site'
+          : 'check the script name and key';
+      const error = new ShotgridApiError(
+        `ShotGrid refused the credentials: ${reason} — ${hint}`,
         res.status,
         detail,
+        { auth: true, code: 'SHOTGRID_AUTH_REFUSED', details: { reason } },
       );
+      authBlocks.set(this.baseUrl, { error, until: Date.now() + AUTH_BLOCK_MS });
+      throw error;
     }
     const json = (await res.json()) as { access_token: string; expires_in?: number };
     const expiresIn = typeof json.expires_in === 'number' ? json.expires_in : 600;

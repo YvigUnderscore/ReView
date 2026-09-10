@@ -2,7 +2,7 @@
 
 *Link a project to ShotGrid and keep both sides honest: what is exchanged, when it travels, and what cannot be undone.*
 
-> Updated: 2026-08-26
+> Updated: 2026-09-11
 
 Link a ReView project to a ShotGrid project and keep both in step. Sequences, shots,
 assets, tasks, statuses, schedule and published media flow into ReView; review decisions,
@@ -47,6 +47,9 @@ the API. Each user must:
 
 Only then do the login and the legacy password authenticate against the API. Repeated wrong
 passwords lock the ShotGrid account, so test once and read the error rather than retrying.
+ReView helps: after a refusal it stops calling that site for five minutes and replays the
+same error, so a typo cannot turn into a locked account. Saving the site record clears the
+pause immediately.
 
 ## Registering a site
 
@@ -761,7 +764,8 @@ downloaded back.
 | Conflicts pile up on entities nobody touched | Any edit moved `updatedAt` | Fixed: a conflict now requires the values to actually differ |
 | A conflict says *"Divergence recorded before the values were captured"* | The line predates value capture | Synchronise again; the next occurrence carries both values |
 | **Keep ReView** reports *"nothing was sent"* | That domain is closed for writing | Open the write column, then resolve the conflict again |
-| *Authentication refused* | Wrong script name/key, or in user mode: Legacy Login not enabled, or the Personal Access Token not bound | Re-enter the credentials on the site record |
+| *ShotGrid refused the credentials…* | Wrong script name/key, or in user mode: Legacy Login not enabled, or the Personal Access Token not bound | Read the rest of the message — it quotes the site's own words — then re-enter the credentials on the site record |
+| …and it ends with *because the account is locked* | Too many failed attempts; the site locked the account | No local change will help. Have a ShotGrid administrator unlock the account, or wait out the site's lockout window, then save the credentials again |
 | *Remote project name changed* | The linked project was renamed, or its id reused | Confirm the target on the site, then unlink and relink |
 | No events arriving | Webhook disabled after 100 failures, wrong secret, or ReView not reachable | Check the webhook status in ShotGrid; switch to **Periodic polling** if the instance is not public |
 | Events accepted but nothing imported for notes or playlists | *(historical)* those events triggered no pass | Fixed: each entity type now runs its own passes |

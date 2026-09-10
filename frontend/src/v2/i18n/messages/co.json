@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "St'operazione hè disattivata in a cunfigurazione di l'agente.",
   "error.RELEASE_UNKNOWN": "Sta versione ùn esiste micca.",
   "error.OPS_RUN_FINISHED": "St'operazione ùn pò più esse annullata.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid hà ricusatu l'identificativi di stu situ : {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "Nisun identificativu ShotGrid ùn hè registratu per stu situ.",
   "about.title": "À prupositu di st'istanza",
   "about.version": "Version",
   "about.builtAt": "Custruita u",

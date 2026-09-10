@@ -14,7 +14,7 @@
  * de session morte (branché par le store d'auth) ramène l'utilisateur à la connexion.
  */
 
-import { hasMessage, t } from '../v2/i18n';
+import { hasMessage, t, type TParams } from '../v2/i18n';
 
 const TOKEN_KEY = 'token';
 const REFRESH_KEY = 'refreshToken';
@@ -112,7 +112,7 @@ const send = (method: string, path: string, body?: unknown): Promise<Response> =
   });
 
 /** Corps d'erreur normalisé par `middleware/error` côté backend. */
-type ErrorBody = { error?: string; code?: string };
+type ErrorBody = { error?: string; code?: string } & Record<string, unknown>;
 
 /**
  * Erreur d'API : le message est déjà dans la langue du lecteur, le code reste la forme
@@ -143,8 +143,27 @@ export class ApiError extends Error {
  */
 export function apiErrorMessage(body: ErrorBody, status: number): string {
   const key = `error.${body.code ?? ''}`;
-  if (body.code && hasMessage(key)) return t(key);
+  if (body.code && hasMessage(key)) return t(key, messageParams(body));
   return body.error ?? t('common.error.http', { status });
+}
+
+/**
+ * Détails joints à la faute — les `details` d'une `AppError`, que le middleware d'erreur
+ * rend à plat — offerts au message traduit comme variables.
+ *
+ * Sans eux, traduire par le code effaçait ce que le message anglais disait de précis :
+ * « ShotGrid refused the credentials: … because the account is locked » redevenait un
+ * « refus d'authentification » générique, et le lecteur repartait dans les journaux du
+ * serveur. La raison vient d'un service distant : elle n'a pas de traduction, mais elle a
+ * sa place dans la phrase traduite.
+ */
+function messageParams(body: ErrorBody): TParams {
+  const params: TParams = {};
+  for (const [name, value] of Object.entries(body)) {
+    if (name === 'error' || name === 'code') continue;
+    if (typeof value === 'string' || typeof value === 'number') params[name] = value;
+  }
+  return params;
 }
 
 async function parse<T>(res: Response): Promise<T> {

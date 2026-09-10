@@ -3092,6 +3092,8 @@
   "error.OPS_NOT_ALLOWED": "Diweredekaet eo an oberiadenn-mañ e kefluniadur an ajant.",
   "error.RELEASE_UNKNOWN": "N'eus ket eus ar stumm-se.",
   "error.OPS_RUN_FINISHED": "N'haller ket nullañ an oberiadenn-mañ ken.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid en deus nac'het titouroù kevreañ al lec'hienn-mañ : {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "N'eus titour kevreañ ShotGrid ebet enrollet evit al lec'hienn-mañ.",
   "about.title": "Diwar-benn an instañs-mañ",
   "about.version": "Version",
   "about.builtAt": "Savet d'an",

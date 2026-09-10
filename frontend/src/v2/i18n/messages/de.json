@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "Dieser Vorgang ist in der Konfiguration des Agenten abgeschaltet.",
   "error.RELEASE_UNKNOWN": "Diese Ausgabe gibt es nicht.",
   "error.OPS_RUN_FINISHED": "Dieser Vorgang lässt sich nicht mehr abbrechen.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid hat die Zugangsdaten dieser Site abgelehnt: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "Für diese Site sind keine ShotGrid-Zugangsdaten hinterlegt.",
   "about.title": "Über diese Instanz",
   "about.version": "Version",
   "about.builtAt": "Erstellt am",

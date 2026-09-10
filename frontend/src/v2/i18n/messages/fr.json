@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "Cette opération est désactivée dans la configuration de l'agent.",
   "error.RELEASE_UNKNOWN": "Cette version n'existe pas.",
   "error.OPS_RUN_FINISHED": "Cette opération ne peut plus être annulée.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid a refusé les identifiants de ce site : {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "Aucun identifiant ShotGrid n'est enregistré pour ce site.",
   "about.title": "À propos de cette instance",
   "about.version": "Version",
   "about.builtAt": "Construite le",

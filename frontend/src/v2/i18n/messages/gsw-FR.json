@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "Dä Vorgang isch i de Konfiguration vom Agent uusgschalte.",
   "error.RELEASE_UNKNOWN": "Die Uusgab gits nid.",
   "error.OPS_RUN_FINISHED": "Dä Vorgang cha me nümme abbräche.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid het d'Zuegangsdate vu dere Site abgleihnt: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "Fer die Site sin kei ShotGrid-Zuegangsdate hinterleit.",
   "about.title": "Iwer die Instanz do",
   "about.version": "Version",
   "about.builtAt": "Gebaut am",

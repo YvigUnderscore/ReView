@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "Essa operação está desativada na configuração do agente.",
   "error.RELEASE_UNKNOWN": "Esse lançamento não existe.",
   "error.OPS_RUN_FINISHED": "Essa operação já não pode ser cancelada.",
+  "error.SHOTGRID_AUTH_REFUSED": "O ShotGrid recusou as credenciais deste site: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "Nenhuma credencial do ShotGrid está registada para este site.",
   "about.title": "Acerca desta instância",
   "about.version": "Version",
   "about.builtAt": "Compilada em",

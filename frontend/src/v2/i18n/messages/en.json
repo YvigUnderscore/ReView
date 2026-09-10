@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "That operation is turned off in the agent configuration.",
   "error.RELEASE_UNKNOWN": "That release does not exist.",
   "error.OPS_RUN_FINISHED": "That operation can no longer be cancelled.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid refused the credentials for this site: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "No ShotGrid credentials are recorded for this site.",
   "about.title": "About this instance",
   "about.version": "Version",
   "about.builtAt": "Built on",

@@ -2997,6 +2997,8 @@
   "error.OPS_NOT_ALLOWED": "이 작업은 에이전트 설정에서 꺼져 있습니다.",
   "error.RELEASE_UNKNOWN": "그 릴리스는 존재하지 않습니다.",
   "error.OPS_RUN_FINISHED": "이 작업은 더 이상 취소할 수 없습니다.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid에서 이 사이트의 인증 정보를 거부했습니다: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "이 사이트에 등록된 ShotGrid 인증 정보가 없습니다.",
   "about.title": "이 인스턴스 정보",
   "about.version": "Version",
   "about.builtAt": "빌드 일시",

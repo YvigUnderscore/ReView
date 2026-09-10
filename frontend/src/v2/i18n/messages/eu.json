@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "Eragiketa hori desaktibatuta dago agentearen konfigurazioan.",
   "error.RELEASE_UNKNOWN": "Argitalpen hori ez da existitzen.",
   "error.OPS_RUN_FINISHED": "Eragiketa hori ezin da jada bertan behera utzi.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid-ek gune honen kredentzialak ukatu ditu: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "Ez dago ShotGrid-eko kredentzialik gordeta gune honetarako.",
   "about.title": "Instantzia honi buruz",
   "about.version": "Version",
   "about.builtAt": "Eraikitze-data",

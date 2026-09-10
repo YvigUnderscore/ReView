@@ -2997,6 +2997,8 @@
   "error.OPS_NOT_ALLOWED": "この作業はエージェントの設定で無効になっています。",
   "error.RELEASE_UNKNOWN": "そのリリースは存在しません。",
   "error.OPS_RUN_FINISHED": "この作業はもう取り消せません。",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid がこのサイトの認証情報を拒否しました: {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "このサイトの ShotGrid 認証情報が登録されていません。",
   "about.title": "このインスタンスについて",
   "about.version": "Version",
   "about.builtAt": "ビルド日時",

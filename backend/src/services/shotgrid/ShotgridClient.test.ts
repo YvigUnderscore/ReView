@@ -109,6 +109,58 @@ describe('ShotgridClient', () => {
     await expect(client.search('Shot')).rejects.toMatchObject({ status: 401 });
   });
 
+  /**
+   * Un refus d'authentification arrive sous un code que la documentation ne promet pas :
+   * un site réel répond **400** avec `code: 102`. Le déduire du code HTTP laissait la
+   * connexion en simple « erreur », et le libellé générique effaçait ce que le site
+   * disait — « compte verrouillé » et « mot de passe faux » n'appellent pas le même geste.
+   */
+  it('reconnaît un refus rendu en 400 et porte les mots du site', async () => {
+    const title = "Can't authenticate user 'demo' because the account is locked.";
+    fetchMock.mockImplementation(async () => json({ errors: [{ code: 102, title, detail: null }] }, 400));
+
+    const error = await new ShotgridClient(creds).serverInfo().catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ShotgridApiError);
+    const sgError = error as ShotgridApiError;
+    expect(sgError.isAuth).toBe(true);
+    expect(sgError.message).toContain(title);
+    expect(sgError.code).toBe('SHOTGRID_AUTH_REFUSED');
+    expect(sgError.details).toEqual({ reason: title });
+    // Le code rendu au client de ReView est celui de la passerelle, pas celui du site.
+    expect(sgError.statusCode).toBe(502);
+    expect(sgError.status).toBe(400);
+  });
+
+  /**
+   * Le site verrouille le compte au bout de quelques échecs : retenter des identifiants
+   * refusés ne les rend pas bons, et transforme une faute de frappe en compte bloqué.
+   */
+  it('n’appelle plus le site après un refus, jusqu’à correction des identifiants', async () => {
+    fetchMock.mockImplementation(async () =>
+      json({ errors: [{ title: "Can't authenticate user 'demo'." }] }, 400),
+    );
+
+    await expect(new ShotgridClient(creds).serverInfo()).rejects.toBeInstanceOf(ShotgridApiError);
+    const emitted = fetchMock.mock.calls.length;
+
+    // Deux écrans de plus, deux clients de plus : aucune requête supplémentaire.
+    await expect(new ShotgridClient(creds).serverInfo()).rejects.toMatchObject({
+      code: 'SHOTGRID_AUTH_REFUSED',
+    });
+    await expect(new ShotgridClient(creds).search('Shot')).rejects.toBeInstanceOf(ShotgridApiError);
+    expect(fetchMock.mock.calls).toHaveLength(emitted);
+
+    // Corriger le site vide le cache de jetons : la porte se rouvre au même instant.
+    clearTokenCache(creds.baseUrl);
+    fetchMock.mockImplementation(async (input) =>
+      String(input).includes('access_token') ? authOk() : json({ data: { shotgun_version: '8.88' } }),
+    );
+    await expect(new ShotgridClient(creds).serverInfo()).resolves.toMatchObject({
+      shotgun_version: '8.88',
+    });
+  });
+
   it('utilise le flot mot de passe pour un compte utilisateur', async () => {
     fetchMock.mockResolvedValueOnce(authOk());
     fetchMock.mockImplementation(async () => json({ data: [] }));

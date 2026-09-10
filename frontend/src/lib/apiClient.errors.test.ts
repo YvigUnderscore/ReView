@@ -8,10 +8,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * traduire par le code, se rabattre sur le message du serveur — et non le contenu du
  * catalogue, qui vit dans `messages/*.json` et bouge à chaque lot de traduction.
  */
+const TRANSLATED: Record<string, (p: Record<string, unknown>) => string> = {
+  'error.PROJECT_ARCHIVED': () => 'Le projet est archivé',
+  'error.SHOTGRID_AUTH_REFUSED': (p) => `Identifiants refusés : ${String(p.reason ?? '')}`,
+};
+
 vi.mock('../v2/i18n', () => ({
-  hasMessage: (key: string) => key === 'error.PROJECT_ARCHIVED',
+  hasMessage: (key: string) => key in TRANSLATED,
   t: (key: string, params?: Record<string, unknown>) =>
-    key === 'error.PROJECT_ARCHIVED' ? 'Le projet est archivé' : `${key}(${JSON.stringify(params ?? {})})`,
+    TRANSLATED[key]?.(params ?? {}) ?? `${key}(${JSON.stringify(params ?? {})})`,
 }));
 
 const { ApiError, api, apiErrorMessage } = await import('./apiClient');
@@ -44,6 +49,21 @@ describe('apiErrorMessage', () => {
 
   it('réponse vide : message générique portant le statut', () => {
     expect(apiErrorMessage({}, 502)).toBe('common.error.http({"status":502})');
+  });
+
+  /**
+   * Traduire par le code effaçait ce que le serveur disait de précis : « compte
+   * verrouillé » redevenait « refus d'authentification », et le lecteur repartait dans les
+   * journaux. Les détails de la faute nourrissent donc la phrase traduite.
+   */
+  it('les détails du serveur nourrissent le message traduit', () => {
+    const reason = "Can't authenticate user 'demo' because the account is locked.";
+    expect(
+      apiErrorMessage(
+        { error: `ShotGrid refused the credentials: ${reason}`, code: 'SHOTGRID_AUTH_REFUSED', reason },
+        502,
+      ),
+    ).toBe(`Identifiants refusés : ${reason}`);
   });
 });
 

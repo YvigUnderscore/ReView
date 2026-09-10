@@ -2997,6 +2997,8 @@
   "error.OPS_NOT_ALLOWED": "该操作在代理配置中已被关闭。",
   "error.RELEASE_UNKNOWN": "该发行版不存在。",
   "error.OPS_RUN_FINISHED": "该操作已无法取消。",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid 拒绝了此站点的凭据：{reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "尚未为此站点记录 ShotGrid 凭据。",
   "about.title": "关于本实例",
   "about.version": "Version",
   "about.builtAt": "构建时间",

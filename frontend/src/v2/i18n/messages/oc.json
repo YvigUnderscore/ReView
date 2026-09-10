@@ -3093,6 +3093,8 @@
   "error.OPS_NOT_ALLOWED": "Aquesta operacion es desactivada dins la configuracion de l'agent.",
   "error.RELEASE_UNKNOWN": "Aquesta version existís pas.",
   "error.OPS_RUN_FINISHED": "Aquesta operacion pòt pas mai èsser anullada.",
+  "error.SHOTGRID_AUTH_REFUSED": "ShotGrid a refusat los identificants d'aqueste site : {reason}",
+  "error.SHOTGRID_NOT_CONFIGURED": "Cap d'identificant ShotGrid es pas enregistrat per aqueste site.",
   "about.title": "A prepaus d'aquesta instància",
   "about.version": "Version",
   "about.builtAt": "Bastida lo",
