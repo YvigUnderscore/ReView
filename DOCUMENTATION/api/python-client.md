@@ -2,7 +2,7 @@
 
 *The stdlib-only Python client and its Blender and Nuke add-ons: install, publish, read back, name files.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 The repository ships a client for the [v1 API](v1-integration.md) in
 [`clients/python/`](../../clients/python/README.md), and two thin integrations built on it
@@ -77,6 +77,8 @@ review.download(plate["id"], "/tmp/" + plate["filename"])   # signs its own URL,
 | `media_url(id, variant="source"\|"proxy"\|"thumbnail", expires_in=)` | A presigned URL |
 | `download(id, destination, variant=)` | Streams a media to disk, 1 MB at a time |
 | `resolve(path)` | Pipeline path → entities |
+| `reviewers(version_id)`, `set_reviewers(version_id, […])` | Who a version's review was handed to, and the brief for each of them |
+| `project_settings(ref)` | The project's effective rules — naming convention, format, `reviewRequest` |
 | `me()`, `schema()` | Token powers, accepted values |
 | `events(since=, limit=, project=, events=)` | Event journal, by cursor |
 | `request(method, path, body=, params=, headers=)` | The escape hatch: any v1 endpoint, with the retry and error handling |
@@ -105,6 +107,7 @@ on `.code`, never on the message.
 | `create_missing` | `True` | `False` fails instead of creating sequence, shot and task |
 | `start_frame`, `end_frame`, `shot_name` | — | Applied **only when the shot is created** |
 | `usd` | — | `{"variants": {...}, "purpose": "render"}` — the selection that saves a second full Blender conversion |
+| `reviewers` | — | `[{"userId": 12, "note": "The lighting."}]` — who the version is handed to, and what each should look at. Written before the media goes public, so a project that demands the brief refuses the publish rather than letting it out |
 | `content_hash` | `True` | Turn off for a very large file on a slow disk, at the cost of the corruption check |
 | `idempotency_key` | a fresh uuid | For a caller that owns its own key, e.g. a farm scheduler that retries jobs itself |
 

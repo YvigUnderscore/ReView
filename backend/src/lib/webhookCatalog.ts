@@ -30,6 +30,7 @@ export const EMITTED_WEBHOOK_EVENTS = [
   'task.assigned',
   'version.created',
   'version.published',
+  'version.reviewers_changed',
 ] as const satisfies readonly WebhookEvent[];
 
 export type EmittedWebhookEvent = (typeof EMITTED_WEBHOOK_EVENTS)[number];

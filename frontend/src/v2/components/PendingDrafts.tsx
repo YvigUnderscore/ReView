@@ -4,12 +4,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileClock, X, Trash2, Send, Eye } from 'lucide-react';
+import { FileClock, X, Trash2, Send, Eye, UserPlus } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { reviewPath } from '../lib/slug';
 import { useUploadStore } from '../../stores/useUploadStore';
-import type { Media } from '../types/api';
+import type { Media, ReviewRequestRule } from '../types/api';
+import type { ReviewAssignee } from '../types/entities';
+import ReviewersDialog from './review/ReviewersDialog';
 import { useT } from '../i18n';
 
 /** GET /api/media/drafts — brouillon + localisation lisible. */
@@ -17,7 +19,16 @@ type Draft = Pick<Media, 'id' | 'originalName' | 'kind' | 'status'> & {
   versionName: string;
   location: string;
   createdAt: string;
+  /** La version porteuse : c'est elle qu'on confie en publiant. */
+  versionId: number;
+  /** Projet porteur — `null` sur un brouillon dont la version a perdu son rattachement. */
+  projectId: number | null;
+  /** Règle de consigne du projet, servie avec la ligne pour éviter un appel par brouillon. */
+  reviewRequest: ReviewRequestRule | null;
 };
+
+/** Une version fraîchement livrée n'a encore été confiée à personne. */
+const NO_REVIEWERS: ReviewAssignee[] = [];
 
 /**
  * Pastille « Brouillons en attente » posée dans la barre du haut, à gauche de la
@@ -29,6 +40,8 @@ export default function PendingDrafts() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
+  // Le brouillon dont on est en train de composer la liste de ReViewers, s'il y en a un.
+  const [handingOver, setHandingOver] = useState<Draft | null>(null);
   const uploads = useUploadStore((s) => s.uploads);
 
   const { data } = useQuery({
@@ -49,10 +62,18 @@ export default function PendingDrafts() {
       qc.invalidateQueries({ queryKey: ['versions'] }),
       qc.invalidateQueries({ queryKey: ['media'] }),
     ]);
-  const publish = async (id: number) => {
+  /**
+   * Publie, avec ou sans ReViewers.
+   *
+   * C'est le second endroit d'où l'on publie (l'autre étant la review elle-même), et donc
+   * le second moment où dire à qui l'on confie, et quoi regarder. Le bouton direct reste :
+   * livrer sans désigner personne est un cas parfaitement normal, et celui qui doit rester
+   * à un clic.
+   */
+  const publish = async (id: number, reviewers?: { userId: number; note: string | null }[]) => {
     setBusy(id);
     try {
-      await api.post(`/api/media/${id}/publish`);
+      await api.post(`/api/media/${id}/publish`, reviewers ? { reviewers } : {});
       await refresh();
     } finally {
       setBusy(null);
@@ -123,6 +144,19 @@ export default function PendingDrafts() {
                   >
                     <Send size={11} /> {t('common.publish')}
                   </button>
+                  {/* Sans projet résolu, il n'y a ni annuaire à proposer ni règle à faire
+                      respecter : le bouton direct reste, celui-ci s'efface. */}
+                  {d.projectId !== null && (
+                    <button
+                      disabled={busy === d.id}
+                      onClick={() => setHandingOver(d)}
+                      title={t('reviewers.publishTitle')}
+                      aria-label={t('reviewers.publishTitle')}
+                      className="flex items-center gap-1 rounded border border-border px-1.5 py-0.5 hover:bg-secondary/60 disabled:opacity-50"
+                    >
+                      <UserPlus size={11} />
+                    </button>
+                  )}
                   <button
                     disabled={busy === d.id}
                     onClick={() => remove(d.id)}
@@ -136,6 +170,23 @@ export default function PendingDrafts() {
             ))}
           </div>
         </div>
+      )}
+      {handingOver?.projectId != null && (
+        <ReviewersDialog
+          open
+          onOpenChange={(isOpen) => !isOpen && setHandingOver(null)}
+          projectId={handingOver.projectId}
+          reviewers={NO_REVIEWERS}
+          rule={handingOver.reviewRequest ?? { requireNote: false, minNoteLength: 5 }}
+          title={t('reviewers.publishTitle')}
+          description={t('reviewers.publishHint')}
+          submitLabel={t('common.publish')}
+          busy={busy === handingOver.id}
+          onSubmit={async (reviewers) => {
+            await publish(handingOver.id, reviewers);
+            setHandingOver(null);
+          }}
+        />
       )}
     </div>
   );

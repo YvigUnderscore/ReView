@@ -68,6 +68,7 @@ def publish_file(
     end_frame: int | None = None,
     shot_name: str | None = None,
     usd: dict | None = None,
+    reviewers: list[dict] | None = None,
     content_hash: bool = True,
     idempotency_key: str | None = None,
 ) -> PublishResult:
@@ -76,6 +77,12 @@ def publish_file(
     ``content_hash`` computes a sha256 the worker re-checks; turn it off for a very large
     file on a slow disk, at the cost of losing the corruption check. ``publish=False``
     uploads without exposing the media — useful for a nightly that publishes later.
+
+    ``reviewers`` hands the version over in the same call — who should look at it, and at
+    what: ``[{"userId": 12, "note": "The lighting, nothing else."}]``. It is written before
+    the media goes public, so a project that demands the brief refuses the whole publish
+    rather than letting out a delivery nobody knows how to look at. With ``publish=False``
+    the version is handed over all the same.
     """
     key = idempotency_key or str(uuid.uuid4())
     shot = {
@@ -106,10 +113,13 @@ def publish_file(
 
     opened = client.request("POST", "/api/v1/publish", body=body, headers={"Idempotency-Key": key})
     client.upload(opened["uploadUrl"], filepath, opened["contentType"], size=body["size"])
+    complete: dict[str, Any] = {"publish": publish, "submitForReview": submit_for_review}
+    if reviewers is not None:
+        complete["reviewers"] = reviewers
     done = client.request(
         "POST",
         f"/api/v1/publish/{opened['mediaId']}/complete",
-        body={"publish": publish, "submitForReview": submit_for_review},
+        body=complete,
         headers={"Idempotency-Key": key + "-complete"},
     )
     return PublishResult(

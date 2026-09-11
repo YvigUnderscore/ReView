@@ -17,6 +17,7 @@ const BASE: ProjectSettings = {
   departments: [{ key: 'ANIM', name: 'Animation' }],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
   naming: { pattern: '', mode: 'off' },
+  reviewRequest: { requireNote: false, minNoteLength: 5 },
   resolution: { width: 1920, height: 1080 },
   framerate: 24,
 };

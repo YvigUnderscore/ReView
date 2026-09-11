@@ -58,7 +58,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
   it('assigned=me : les seules versions dont la review m’est confiée (Phase 49)', async () => {
     await listReviews(artist, { assigned: 'me' }, page);
     const version = lastWhere().version as { reviewers?: unknown };
-    expect(version.reviewers).toEqual({ some: { id: 3 } });
+    expect(version.reviewers).toEqual({ some: { reviewerId: 3 } });
   });
 
   it('sans assigned : aucune restriction de reviewer', async () => {

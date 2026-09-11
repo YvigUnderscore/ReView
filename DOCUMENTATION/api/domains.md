@@ -2,7 +2,7 @@
 
 *A route map of the web API: which router owns which prefix, and why the mount order explains the surprises.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 `/api` is the surface the web interface consumes. It is assembled in
 `backend/src/app.ts` from one router per domain (`backend/src/routes/*.routes.ts`), and
@@ -100,6 +100,7 @@ Full reference, including the refusal codes and the share-link session:
 | `/api/departments` | Department reference — studio-wide, or per project; `PUT /departments/order` |
 | `/api/tasks` | Tasks CRUD, statuses, assignment; `GET /tasks/board?projectId=` returns a whole kanban in one request |
 | `/api/versions` | Versions, publication (publish lock), `POST /:id/decision`, `GET /:id/decisions`, restore and purge |
+| `GET`/`PUT /api/versions/:id/reviewers`, `PATCH …/reviewers/:userId` | Who the version was handed to, and the brief written for each of them |
 | `/api/review-statuses` | Studio review statuses (approval circuit) |
 | `/api/pipeline-statuses` | Task and shot pipeline statuses |
 | `/api/context` | `GET /:entity/:id` — breadcrumb and surrounding context for any entity |
@@ -140,7 +141,7 @@ paths they own, in the order Express tries them.
 | `POST /api/media/sequence/{init,:id/urls,:id/complete}`, `GET /api/media/sequence/:id/frames` | Image sequences: N files become **one** media — see below |
 | `POST /api/media/:id/finalize` | Close an upload: magic-byte check, size, quotas, enqueue processing |
 | `GET /api/media`, `/reviews`, `/drafts`, `/:id`, `/:id/url` | Listing, review feed, drafts, detail, presigned read URL |
-| `POST /api/media/:id/publish`, `/reprocess`, `/thumbnail`, `/auto-thumbnail` | Publish, retry a failed job, set or compute a thumbnail |
+| `POST /api/media/:id/publish`, `/reprocess`, `/thumbnail`, `/auto-thumbnail` | Publish (optionally handing the version over, briefs included), retry a failed job, set or compute a thumbnail |
 | `GET /api/media/:id/hls/:file` | HLS manifests and segments |
 | `DELETE /api/media/:id`, `POST /:id/restore`, `DELETE /:id/purge` | Trash, restore, permanent purge |
 | `POST /api/media/:id/trim` | Non-destructive video trim, before publication |
@@ -211,7 +212,7 @@ they are the only prefixes reachable without an account.
 > Replaying a delivery towards a **disabled** webhook is refused with
 > `400 WEBHOOK_INACTIVE` rather than queued: the delivery worker stops on an inactive hook,
 > so the replayed row would wait forever. Re-enable the webhook first. Subscriptions are
-> also validated against the ten events that are actually published — see
+> also validated against the eleven events that are actually published — see
 > [Identity, API & audit](../admin-guide/identity-and-api.md).
 
 ## Integrations

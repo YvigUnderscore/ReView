@@ -8,6 +8,7 @@ import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
 import { notFound } from '../lib/errors';
+import { reviewNoteSchema } from '../lib/projectSettings';
 import * as AssignmentService from '../services/AssignmentService';
 import * as ReviewAssignmentService from '../services/ReviewAssignmentService';
 
@@ -74,25 +75,54 @@ router.get('/versions/:id/reviewers', auth, validate({ params: idParam }), async
 });
 
 /**
- * PUT /api/versions/:id/reviewers — confie la review à ces personnes.
+ * PUT /api/versions/:id/reviewers — confie la review à ces personnes, consignes comprises.
  *
  * Le droit se lit sur le rôle EFFECTIF du projet (38.E), asserté par le service : un
  * superviseur nommé sur le projet doit pouvoir répartir ses reviews, un administrateur de
- * passage aussi, et le rôle global du compte ne dit ni l'un ni l'autre.
+ * passage aussi, et le rôle global du compte ne dit ni l'un ni l'autre. L'auteur de la
+ * version y a droit aussi — c'est lui qui sait ce qu'il vient de livrer.
  */
 router.put(
   '/versions/:id/reviewers',
   auth,
+  validate({ params: idParam, body: z.object({ reviewers: ReviewAssignmentService.reviewersSchema }) }),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const projectId = await resolveVersionAccess(req, id);
+    const reviewers = await ReviewAssignmentService.setReviewers(
+      req.user!,
+      projectId,
+      id,
+      req.body.reviewers,
+    );
+    res.json({ reviewers });
+  },
+);
+
+/**
+ * PATCH /api/versions/:id/reviewers/:userId — réécrit la consigne d'une seule personne.
+ *
+ * Le geste d'après-coup, « ajoute-lui ce qu'il faut regarder » : renvoyer la liste entière
+ * pour changer une phrase aurait obligé l'écran à la relire, et deux écrans ouverts se
+ * seraient effacés l'un l'autre.
+ */
+router.patch(
+  '/versions/:id/reviewers/:userId',
+  auth,
   validate({
-    params: idParam,
-    body: z.object({
-      userIds: z.array(z.number().int().positive()).max(ReviewAssignmentService.MAX_REVIEWERS),
-    }),
+    params: idParam.extend({ userId: z.coerce.number().int().positive() }),
+    body: z.object({ note: reviewNoteSchema }),
   }),
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveVersionAccess(req, id);
-    const reviewers = await ReviewAssignmentService.setReviewers(req.user!, projectId, id, req.body.userIds);
+    const reviewers = await ReviewAssignmentService.updateNote(
+      req.user!,
+      projectId,
+      id,
+      Number(req.params.userId),
+      req.body.note ?? null,
+    );
     res.json({ reviewers });
   },
 );

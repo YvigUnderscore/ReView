@@ -3,6 +3,26 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-09-11 — Say what the person you hand a version to should look at
+
+- **A brief beside each name.** Handing a version over said *who* was expected and never
+  *at what* — the person opened four minutes of playblast with no idea whether the light,
+  the timing or the cut was the question. Each name now carries one line saying what that
+  person should look at. It is **per person**: "the lighting" to the lighting lead and "the
+  cut at 1042" to the editor are two different requests.
+- **Said at the moment you deliver.** *Publish* — from the review, or the ✚ beside *Publish*
+  in the **Pending drafts** pill — now opens *Publish and hand over the review*: the names,
+  the briefs, and the publication in one gesture. The artist who just delivered may hand
+  their own version over; it grants them nothing else, the decision is still supervision's.
+- **Read where it is needed.** Whoever the version was handed to sees their own line at the
+  top of the review, above the viewer, the moment they open the media. Rewriting a brief
+  tells them again; it does not re-subscribe them to a version they had chosen to leave.
+- **A studio can demand it.** *Project → Settings → Brief for the ReViewer* makes the brief
+  mandatory and sets a minimum length (5 characters by default, so "ok" does not count). It
+  inherits studio → project like every other setting, and it holds through the interface and
+  the integration API alike. Requiring it never forces you to name anyone: publishing with
+  nobody in particular stays one click.
+
 ## 2026-09-11 — Hand a version to someone, and find your own queue on arrival
 
 - **« Assigned to me », in front of the Reviews page.** The page said what had come out of the

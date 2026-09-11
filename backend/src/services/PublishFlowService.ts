@@ -20,6 +20,7 @@ import * as Resolve from './PipelineResolveService';
 import * as VersionService from './VersionService';
 import * as ApiEventService from './ApiEventService';
 import type { UsdRequest } from './ModelConvertService';
+import { setReviewers, type ReviewerInput } from './ReviewAssignmentService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
@@ -227,6 +228,15 @@ export interface CompletePublishInput {
   publish?: boolean;
   /** Passer la version en REVIEW — la soumettre sans la publier. */
   submitForReview?: boolean;
+  /**
+   * À qui confier la review de cette version, et ce que chacun doit y regarder.
+   *
+   * Le geste du DCC est le même que celui de l'écran : on livre EN DISANT à qui c'est
+   * destiné. Écrit avant la publication, ce qui donne son sens au réglage projet
+   * « consigne obligatoire » — une consigne manquante refuse la publication au lieu de
+   * laisser partir une livraison que personne ne sait comment regarder.
+   */
+  reviewers?: ReviewerInput[];
 }
 
 /**
@@ -245,7 +255,14 @@ export async function complete(actor: Actor, mediaId: number, input: CompletePub
 
   const finalized = await MediaService.finalize(actor, mediaId);
   const shouldPublish = input.publish !== false;
-  if (shouldPublish) await MediaService.publish(actor, mediaId);
+  if (shouldPublish) await MediaService.publish(actor, mediaId, input.reviewers);
+  // Livraison non publiée (`publish: false`) : la review est tout de même confiée. Perdre
+  // la consigne parce que l'artiste garde son brouillon une nuit de plus l'obligerait à la
+  // réécrire le lendemain.
+  else if (input.reviewers !== undefined) {
+    const projectId = await resolveProjectIdForVersion(media.versionId);
+    if (projectId) await setReviewers(actor, projectId, media.versionId, input.reviewers);
+  }
 
   const isManager = actor.role === Role.ADMIN || actor.role === Role.SUPERVISOR;
   const nextStatus = shouldPublish && isManager ? VersionStatus.PUBLISHED : VersionStatus.REVIEW;

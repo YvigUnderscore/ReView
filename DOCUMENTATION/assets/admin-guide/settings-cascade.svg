@@ -2,7 +2,7 @@
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="fig-title">What each level of the pipeline may override</title>
-  <desc id="fig-desc">The studio defaults define all eight settings sections. A project may override any of them, section by section. The optional episode level carries no pipeline override at all. A sequence and a shot may only redefine resolution and framerate. Frame ranges live on dedicated columns, not in this JSON.</desc>
+  <desc id="fig-desc">The studio defaults define all nine settings sections. A project may override any of them, section by section. The optional episode level carries no pipeline override at all. A sequence and a shot may only redefine resolution and framerate. Frame ranges live on dedicated columns, not in this JSON.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -63,8 +63,8 @@
   <text class="t" x="38" y="68">Studio defaults</text>
   <text class="m" x="38" y="86">Setting.project_defaults</text>
   <rect class="band" x="252" y="44" width="524" height="56" rx="9"/>
-  <text class="m" x="266" y="68">resolution · framerate · nomenclature · departments</text>
-  <text class="m" x="266" y="86">naming · defaultLighting · color · burnin</text>
+  <text class="m" x="266" y="68">resolution · framerate · nomenclature · departments · naming</text>
+  <text class="m" x="266" y="86">reviewRequest · defaultLighting · color · burnin</text>
   <text class="a" x="762" y="68" text-anchor="end">ADMIN</text>
 
   <path class="conn" d="M132 100 L132 122" marker-end="url(#arrow)"/>
@@ -74,7 +74,7 @@
   <text class="t" x="38" y="146">Project override</text>
   <text class="m" x="38" y="164">Project.settings</text>
   <rect class="band" x="252" y="122" width="524" height="56" rx="9"/>
-  <text class="l" x="266" y="146">The same eight sections, each one present or absent</text>
+  <text class="l" x="266" y="146">The same nine sections, each one present or absent</text>
   <text class="d" x="266" y="164">what the project omits keeps following the studio</text>
   <text class="a" x="762" y="146" text-anchor="end">SUPERVISOR</text>
 

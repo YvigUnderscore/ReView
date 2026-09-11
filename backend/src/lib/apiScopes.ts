@@ -31,6 +31,10 @@ export type ScopeAction = 'read' | 'write';
 const DOMAIN_ACTIONS = {
   // Lecture seule : la création d'un projet n'appartient pas à l'API d'intégration.
   projects: ['read'],
+  // Le niveau épisode se lit ; il se compose depuis l'interface. Écrire ce qu'un épisode
+  // porte (responsables, brief) passe par `sequences:write`, le cran qu'il regroupe —
+  // plutôt que de déclarer une action d'écriture qu'aucune route n'exigerait.
+  episodes: ['read'],
   sequences: ['read', 'write'],
   shots: ['read', 'write'],
   assets: ['read', 'write'],

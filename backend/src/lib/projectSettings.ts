@@ -52,6 +52,25 @@ export interface NamingRule {
 }
 
 /**
+ * Ce que le projet exige quand quelqu'un est tagué comme ReViewer d'un média.
+ *
+ * Taguer sans dire quoi regarder ne fait gagner de temps qu'à celui qui tague : le
+ * destinataire ouvre la livraison sans savoir si on attend de lui la lumière, le timing ou
+ * le raccord. Un studio peut donc rendre la consigne obligatoire — et lui donner un
+ * plancher, sans lequel « ok » et « voir » satisfont la règle sans rien apprendre.
+ *
+ * Le plancher s'applique à **toute note écrite**, même quand elle n'est pas obligatoire :
+ * une consigne facultative de deux caractères n'est pas une consigne courte, c'est une
+ * consigne vide qui a pris la place d'un champ vide.
+ */
+export interface ReviewRequestRule {
+  /** Taguer quelqu'un sans consigne est-il refusé ? */
+  requireNote: boolean;
+  /** Longueur minimale d'une consigne écrite, en caractères. */
+  minNoteLength: number;
+}
+
+/**
  * Éclairage HDRI par défaut d'un projet (39.F) — miroir de `LightingConfig` (frontend).
  * Rejoué à l'ouverture d'un média 3D qui n'a pas d'éclairage propre (`splatPresentation.lighting`).
  * `hdriId` référence la bibliothèque instance ; les autres champs ont des défauts neutres.
@@ -80,6 +99,8 @@ export interface ProjectSettings extends PipelineSettings {
   nomenclature: Nomenclature;
   /** Convention de nommage des fichiers à l'upload (38.C). */
   naming: NamingRule;
+  /** Consigne exigée d'un ReViewer tagué sur un média. */
+  reviewRequest: ReviewRequestRule;
   /** Override partiel des burn-ins (35.A) — résolu champ par champ sur le template studio. */
   burnin?: Partial<BurninConfig>;
   /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */
@@ -184,6 +205,24 @@ export function checkNaming(
   return { pass: re.test(filename), mode: naming.mode };
 }
 
+/**
+ * La consigne donnée à un ReViewer satisfait-elle la règle du projet ?
+ *
+ * Rendu plutôt que levé : la même règle sert à trois endroits — le service, qui refuse ;
+ * l'API, qui doit dire *pourquoi* ; et l'écran, qui désactive le bouton avant même
+ * l'appel. Une fonction pure est la seule forme qui tienne les trois.
+ *
+ * L'espace ne compte pas : la note est comparée après `trim`, sans quoi cinq espaces
+ * passeraient un plancher de cinq caractères.
+ */
+export type NoteVerdict = 'ok' | 'missing' | 'too-short';
+
+export function checkReviewNote(note: string | null | undefined, rule: ReviewRequestRule): NoteVerdict {
+  const text = (note ?? '').trim();
+  if (!text) return rule.requireNote ? 'missing' : 'ok';
+  return text.length < rule.minNoteLength ? 'too-short' : 'ok';
+}
+
 export const STUDIO_DEFAULTS_KEY = 'project_defaults';
 
 // Bornes de sécurité (partagées par le sanitize et les schémas Zod).
@@ -196,6 +235,26 @@ const EXPOSURE_MIN = 0;
 const EXPOSURE_MAX = 10;
 const ROTATION_MIN = -180;
 const ROTATION_MAX = 180;
+
+/**
+ * Bornes du plancher de consigne. Cinq caractères par défaut : de quoi écarter « ok » et
+ * « voir » sans exiger une phrase — « lumière » en fait sept, et c'est déjà une consigne.
+ * Le plafond tient une phrase courte imposée : au-delà, le studio ne demande plus une
+ * consigne, il demande un rapport, et l'uploader écrira n'importe quoi pour passer.
+ */
+const NOTE_MIN_LENGTH_FLOOR = 1;
+const NOTE_MIN_LENGTH_CEILING = 280;
+export const DEFAULT_NOTE_MIN_LENGTH = 5;
+
+/** Longueur maximale d'une consigne stockée — au-delà, c'est un commentaire de review. */
+export const REVIEW_NOTE_MAX_LENGTH = 2000;
+
+/**
+ * Une consigne telle qu'elle arrive : bornée, et effaçable (`null`) — « finalement,
+ * regarde tout ». La longueur MINIMALE n'est pas ici : elle dépend du projet, que seul le
+ * service connaît. Zod borne ce qui est universel, le service tranche le reste.
+ */
+export const reviewNoteSchema = z.string().max(REVIEW_NOTE_MAX_LENGTH).nullable().optional();
 
 const clampDim = (v: number) => Math.min(Math.max(Math.round(v), DIM_MIN), DIM_MAX);
 const clampFps = (v: number) => Math.min(Math.max(v, FPS_MIN), FPS_MAX);
@@ -213,6 +272,10 @@ const FALLBACK: ProjectSettings = {
   ],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
   naming: { pattern: '', mode: 'off' },
+  // Rien n'est exigé par défaut : un studio qui n'a jamais demandé de consigne ne doit pas
+  // voir ses publications refusées au premier déploiement. Le plancher, lui, est posé — il
+  // ne sert que le jour où le studio coche la case.
+  reviewRequest: { requireNote: false, minNoteLength: DEFAULT_NOTE_MIN_LENGTH },
   resolution: { width: 1920, height: 1080 },
   framerate: 24,
 };
@@ -249,6 +312,7 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   const resolution = sanitizeResolution(o.resolution, base.resolution);
   const framerate = Number.isFinite(o.framerate) ? clampFps(Number(o.framerate)) : base.framerate;
   const naming = sanitizeNaming(o.naming, base.naming);
+  const reviewRequest = sanitizeReviewRequest(o.reviewRequest, base.reviewRequest);
   // Burn-ins : override PARTIEL conservé tel quel (clés connues, types vérifiés) — la
   // résolution effective (fusion avec le template studio) est faite par lib/burnin.
   const burnin = sanitizeBurninOverride(o.burnin) ?? base.burnin;
@@ -260,6 +324,7 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
     departments,
     nomenclature,
     naming,
+    reviewRequest,
     resolution,
     framerate,
     ...(burnin ? { burnin } : {}),
@@ -300,6 +365,26 @@ function sanitizeLighting(raw: unknown): LightingDefault | undefined {
     rotationDeg,
     showBackground: o.showBackground === true,
     groundShadow: o.groundShadow === true,
+  };
+}
+
+/**
+ * Nettoie la règle de consigne de review, champ par champ, sur un socle.
+ *
+ * Le plancher est borné plutôt que refusé : ce réglage descend du studio vers des dizaines
+ * de projets, et une valeur aberrante héritée (`0`, `-1`, `10000`) ne doit pas rendre
+ * impossible le tag d'un ReViewer sur toute une production.
+ */
+function sanitizeReviewRequest(raw: unknown, base: ReviewRequestRule): ReviewRequestRule {
+  const o = (raw ?? {}) as Partial<ReviewRequestRule>;
+  return {
+    requireNote: typeof o.requireNote === 'boolean' ? o.requireNote : base.requireNote,
+    minNoteLength: Number.isFinite(o.minNoteLength)
+      ? Math.min(
+          Math.max(Math.round(Number(o.minNoteLength)), NOTE_MIN_LENGTH_FLOOR),
+          NOTE_MIN_LENGTH_CEILING,
+        )
+      : base.minNoteLength,
   };
 }
 
@@ -393,6 +478,10 @@ const sectionSchemas = {
     step: z.number().int().min(1),
   }),
   naming: z.object({ pattern: z.string().max(200), mode: z.enum(['off', 'warn', 'reject']) }),
+  reviewRequest: z.object({
+    requireNote: z.boolean(),
+    minNoteLength: z.number().int().min(NOTE_MIN_LENGTH_FLOOR).max(NOTE_MIN_LENGTH_CEILING),
+  }),
   resolution: resolutionSchema,
   framerate: z.number().min(FPS_MIN).max(FPS_MAX),
   burnin: burninConfigSchema,
@@ -415,6 +504,7 @@ export const projectSettingsSchema = z.object({
   departments: sectionSchemas.departments.optional(),
   nomenclature: sectionSchemas.nomenclature.optional(),
   naming: sectionSchemas.naming.optional(),
+  reviewRequest: sectionSchemas.reviewRequest.optional(),
   resolution: sectionSchemas.resolution.optional(),
   framerate: sectionSchemas.framerate.optional(),
   burnin: sectionSchemas.burnin.optional(),
@@ -432,6 +522,7 @@ export const projectSettingsPatchSchema = z
     departments: sectionSchemas.departments.nullable().optional(),
     nomenclature: sectionSchemas.nomenclature.nullable().optional(),
     naming: sectionSchemas.naming.nullable().optional(),
+    reviewRequest: sectionSchemas.reviewRequest.nullable().optional(),
     resolution: sectionSchemas.resolution.nullable().optional(),
     framerate: sectionSchemas.framerate.nullable().optional(),
     burnin: sectionSchemas.burnin.nullable().optional(),
@@ -493,6 +584,7 @@ export const SETTINGS_SECTIONS = [
   'nomenclature',
   'departments',
   'naming',
+  'reviewRequest',
   'defaultLighting',
   'color',
   'burnin',
@@ -529,6 +621,8 @@ export function sanitizeOverride(raw: unknown, studio: ProjectSettings): Project
   if (provided(o, 'nomenclature'))
     out.nomenclature = sanitizeNomenclature(o.nomenclature, studio.nomenclature);
   if (provided(o, 'naming')) out.naming = sanitizeNaming(o.naming, studio.naming);
+  if (provided(o, 'reviewRequest'))
+    out.reviewRequest = sanitizeReviewRequest(o.reviewRequest, studio.reviewRequest);
   if (provided(o, 'resolution')) out.resolution = sanitizeResolution(o.resolution, studio.resolution);
   if (provided(o, 'framerate') && Number.isFinite(o.framerate)) out.framerate = clampFps(Number(o.framerate));
   const burnin = provided(o, 'burnin') ? sanitizeBurninOverride(o.burnin) : undefined;

@@ -18,6 +18,7 @@ import Avatar from '../../../components/Avatar';
 import ShortcutsHelp from '../../../components/ShortcutsHelp';
 import ReviewDecisionBadge from '../../../components/ReviewDecisionBadge';
 import ReviewDecisionDialog from '../../../components/ReviewDecisionDialog';
+import ReviewersDialog from '../../../components/review/ReviewersDialog';
 import { useSgLinks } from '../../../components/shotgrid/useSgLinks';
 import { useAuth } from '../../../stores/useAuth';
 import type { VersionDetail } from '../../../types/api';
@@ -56,7 +57,7 @@ export default function ReviewHeaderActions({
   live,
 }: {
   data: MediaResp;
-  onPublish: () => void;
+  onPublish: (reviewers?: { userId: number; note: string | null }[]) => void | Promise<void>;
   commentsOpen: boolean;
   onToggleComments: () => void;
   /** Mode théâtre immersif in-window (42.A — №76). */
@@ -74,6 +75,10 @@ export default function ReviewHeaderActions({
   const t = useT();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [decisionOpen, setDecisionOpen] = useState(false);
+  // Publier passe par le dialogue : c'est le moment où l'on dit à qui l'on livre, et quoi
+  // regarder. Le serveur écrit la liste avant de basculer le média, ce qui permet au
+  // réglage « consigne obligatoire » de refuser la publication plutôt que de râler après.
+  const [publishOpen, setPublishOpen] = useState(false);
   const viewers = useReviewPresence(data.media.id);
   const role = useAuth((s) => s.user?.role);
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
@@ -141,7 +146,7 @@ export default function ReviewHeaderActions({
       )}
       {has('publish') && (
         <button
-          onClick={onPublish}
+          onClick={() => setPublishOpen(true)}
           className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
         >
           {t('review.publish')}
@@ -174,6 +179,22 @@ export default function ReviewHeaderActions({
         {commentsOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
       </button>
       <ShortcutsHelp open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      {publishOpen && (
+        <ReviewersDialog
+          open
+          onOpenChange={setPublishOpen}
+          projectId={data.projectId}
+          reviewers={data.reviewers}
+          rule={data.reviewRequest}
+          title={t('reviewers.publishTitle')}
+          description={t('reviewers.publishHint')}
+          submitLabel={t('review.publish')}
+          onSubmit={async (reviewers) => {
+            await onPublish(reviewers);
+            setPublishOpen(false);
+          }}
+        />
+      )}
       <ReviewDecisionDialog
         versionId={versionId}
         versionName={versionQ.data?.name ?? `Version ${versionId}`}

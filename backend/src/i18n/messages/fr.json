@@ -50,6 +50,7 @@
   "notification.taskAssigned": "Tâche assignée : {name}",
   "notification.clientComment": "{name} a laissé un retour depuis un lien de partage",
   "notification.reviewAssigned": "La review de la version {version} vous a été confiée",
+  "notification.reviewNoteUpdated": "La consigne a changé sur une review qu'on vous a confiée : {version}",
   "chat.system.joined": { "one": "{names} a rejoint la conversation", "other": "{names} ont rejoint la conversation" },
   "chat.system.left": "{name} a quitté la conversation",
   "chat.system.removed": "{name} a été retiré",

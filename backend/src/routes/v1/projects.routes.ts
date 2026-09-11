@@ -9,6 +9,7 @@ import { validate } from '../../middleware/validate';
 import { requireScope } from '../../middleware/scope';
 import { isGlobalManager } from '../../lib/projectRoles';
 import { readPagination, pageArgs, paginate } from '../../lib/pagination';
+import { resolveProjectSettingsById } from '../../lib/projectSettings';
 import {
   projectSelect,
   sequenceSelect,
@@ -60,6 +61,33 @@ router.get(
 router.get('/:ref', requireScope('projects:read'), validate({ params: refParam }), async (req, res) => {
   res.json({ project: toProject(await requireProject(req, String(req.params.ref))) });
 });
+
+/**
+ * GET /api/v1/projects/:ref/settings — les règles du projet, héritage studio résolu.
+ *
+ * Ce sont celles qu'une publication doit connaître AVANT d'envoyer quoi que ce soit :
+ * la convention de nommage (`naming`), qui peut refuser un fichier mal nommé, la
+ * résolution et la cadence attendues, et la règle de consigne (`reviewRequest`), qui
+ * décide si taguer un ReViewer exige d'écrire ce qu'il doit regarder — et sur combien de
+ * caractères. Sans cette route, un DCC découvrait la règle en se faisant refuser.
+ *
+ * Les valeurs rendues sont les valeurs EFFECTIVES : ce dont le projet hérite du studio est
+ * déjà fondu dedans, un intégrateur n'a pas à recomposer deux niveaux.
+ */
+router.get(
+  '/:ref/settings',
+  requireScope('projects:read'),
+  validate({ params: refParam }),
+  async (req, res) => {
+    const project = await requireProject(req, String(req.params.ref));
+    const settings = await resolveProjectSettingsById(project.id);
+    res.json({
+      projectId: project.id,
+      startFrame: project.startFrame,
+      settings,
+    });
+  },
+);
 
 // ── Séquences ────────────────────────────────────────────────────────────────
 

@@ -33,6 +33,10 @@ export const WEBHOOK_EVENTS = [
   'version.published',
   'media.uploaded',
   'media.failed',
+  // Qui doit regarder une version, et la consigne donnée à chacun. Émis à chaque écriture :
+  // un bot de production sait qui relancer, et un tableau de bord externe voit arriver une
+  // demande sans interroger l'API en boucle.
+  'version.reviewers_changed',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 

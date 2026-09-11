@@ -356,6 +356,18 @@ export interface NamingRule {
   pattern: string;
   mode: NamingMode;
 }
+/**
+ * Ce que le projet exige quand on confie la review d'une version à quelqu'un.
+ *
+ * Le plancher vaut pour toute consigne écrite, même facultative : une consigne de deux
+ * caractères n'est pas une consigne courte, c'est un champ rempli pour passer.
+ */
+export interface ReviewRequestRule {
+  /** Confier une review sans consigne est-il refusé ? */
+  requireNote: boolean;
+  /** Longueur minimale d'une consigne écrite, en caractères. */
+  minNoteLength: number;
+}
 /** Éclairage HDRI par défaut d'un projet (39.F) — miroir de LightingConfig (review). */
 export interface LightingDefault {
   hdriId?: string;
@@ -376,6 +388,8 @@ export interface ProjectSettings extends PipelineSettings {
   nomenclature: Nomenclature;
   /** Convention de nommage à l'upload (38.C). */
   naming: NamingRule;
+  /** Consigne exigée quand on confie la review d'une version. */
+  reviewRequest: ReviewRequestRule;
   /** Override burn-ins partiel du projet (35.A) — voir types/share.ts. */
   burnin?: Partial<import('./share').BurninConfig>;
   /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */

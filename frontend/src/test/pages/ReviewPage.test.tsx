@@ -71,6 +71,8 @@ const mediaResp = (kind: MediaKind, patch: Partial<MediaResp> = {}): MediaResp =
   timelineSprite: null,
   timelineSpriteUrl: null,
   references: [],
+  reviewers: [],
+  reviewRequest: { requireNote: false, minNoteLength: 5 },
   ...patch,
 });
 

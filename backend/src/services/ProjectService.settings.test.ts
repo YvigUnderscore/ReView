@@ -30,6 +30,7 @@ const STUDIO: ProjectSettings = {
   departments: [{ key: 'ANIM', name: 'Animation' }],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
   naming: { pattern: '', mode: 'off' },
+  reviewRequest: { requireNote: false, minNoteLength: 5 },
   resolution: { width: 1920, height: 1080 },
   framerate: 24,
 };
@@ -99,7 +100,7 @@ describe('updateSettings (PUT) — remplacement de l’override', () => {
     // La résolution envoyée était celle du studio : elle reste une surcharge explicite ici,
     // puisque le PUT est un remplacement total — mais rien n'a été inventé en plus.
     expect(Object.keys(stored).sort()).toEqual(
-      ['departments', 'framerate', 'naming', 'nomenclature', 'resolution'].sort(),
+      ['departments', 'framerate', 'naming', 'nomenclature', 'resolution', 'reviewRequest'].sort(),
     );
   });
 

@@ -2,7 +2,7 @@
 
 *From dropping a file to publishing it: where it lands, what is checked on the way, and what publication locks forever.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 Delivering into ReView is a drag and a drop. Everything that follows — hashing, resuming,
 deduplicating, checking, transcoding, publishing — happens without holding you on the page:
@@ -168,8 +168,42 @@ Publishing fans out, in order:
 3. a push to ShotGrid when the project is linked — creating the remote version, or adding the
    media to the one already there;
 4. a notification to the **watchers** of the version, shot or asset;
-5. the outgoing `media.published` webhook;
-6. a line in the studio's Slack or Discord channel, when a webhook is configured for it.
+5. a notification to each person the version was **handed to** — see below;
+6. the outgoing `media.published` webhook;
+7. a line in the studio's Slack or Discord channel, when a webhook is configured for it.
+
+## Saying who should look, and at what
+
+Publishing tells everyone the same thing: *a new media is out*. It does not say that the
+lighting lead is the person actually waited on, and it never says **what** to look at — the
+reviewer opens four minutes of playblast without knowing whether they are being asked about
+the light, the timing or the cut.
+
+**Publish** answers both. It opens *Publish and hand over the review*: the people who should
+look at this delivery, and beside each name a **brief** — one line saying what that person
+should look at. The ✚ beside *Publish* in the **Pending drafts** pill does the same without
+leaving the top bar, and the plain *Publish* button still publishes in one click for the
+many deliveries that need nobody in particular.
+
+Three things are worth knowing:
+
+- **The brief is per person, not per delivery.** "The lighting" to the lighting lead and
+  "the cut at 1042" to the editor are two different requests. Adding a second name starts
+  from the brief you just wrote, so "the same thing for all three" stays one piece of
+  typing.
+- **It is handed to the version**, not to the file: that is the unit a review concludes on,
+  and it is what the *Assigned to me* list reads.
+- **It can be changed afterwards**, by you or by a supervisor, from the review-decision
+  dialog. Rewriting a brief notifies the person again; taking someone off the list does not
+  — a withdrawal is not news.
+
+Whoever is handed the version sees the brief written for them at the top of the review,
+above the viewer, the moment they open the media.
+
+Your studio can **demand** that brief, and set a minimum length for it (5 characters by
+default): see [Brief for the ReViewer](../admin-guide/pipeline-settings.md#the-brief-a-reviewer-is-owed).
+When the project demands one, publishing with a name but no brief is refused — before the
+delivery goes out, not after. Publishing without naming anyone is never blocked by it.
 
 Versions have a third state, `REVIEW`, used by the API publishing flow: when an artist
 completes an upload through the API without the right to publish the version, the media is
@@ -284,6 +318,17 @@ log records it as `MEDIA_QUARANTINED`.
 **A draft you cannot find.** Drafts are private to their uploader: if someone else delivered
 it, only they see it and only they can publish it.
 
+**`REVIEW_NOTE_REQUIRED` or `REVIEW_NOTE_TOO_SHORT` when publishing.** The project demands a
+brief for every person you hand the version to, and one of them has none or too short a one.
+Either write it, or remove the name — publishing with nobody named is never blocked by this
+rule.
+
+**`NOT_ASSIGNABLE` on a name you can see elsewhere.** That account is a service account, is
+disabled, is a client, or is not a member of this project.
+
+**A `403` when handing a version over.** Only the author of the version, or a project
+manager, decides who is expected on it.
+
 ## Related pages
 
 - [Media processing](media-processing.md) — what happens after the upload
@@ -292,3 +337,7 @@ it, only they see it and only they can publish it.
 - [Video review](review-video.md), [3D review](review-3d.md),
   [Splat review](review-splat.md)
 - [Sharing with clients](sharing.md) — what a published media exposes outside the studio
+- [Review decisions & approvals](review-approvals.md) — handing a version over, and the
+  brief that goes with it
+- [Pipeline settings](../admin-guide/pipeline-settings.md) — the naming rule and the brief a
+  ReViewer is owed

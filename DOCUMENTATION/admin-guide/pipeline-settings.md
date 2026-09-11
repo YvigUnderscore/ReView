@@ -2,12 +2,13 @@
 
 *How delivery format, numbering, departments and colour cascade from the studio down to a shot — and how an override is written, read and handed back.*
 
-> Updated: 2026-08-26
+> Updated: 2026-09-11
 
 Pipeline settings describe **what the studio delivers**: frame size, framerate, shot
-numbering, the ordered list of departments, the naming rule applied to uploads, the default
-3D lighting, the colour config and the burn-in template. They cascade **studio → project →
-sequence → shot**, each level overriding only the fields it redefines.
+numbering, the ordered list of departments, the naming rule applied to uploads, what a
+ReViewer must be told when they are tagged, the default 3D lighting, the colour config and
+the burn-in template. They cascade **studio → project → sequence → shot**, each level
+overriding only the fields it redefines.
 
 Two facts govern everything on this page. First, an override exists **per section**, not per
 field: a project either owns `resolution` or inherits it, and there is no half-way. Second,
@@ -15,7 +16,7 @@ what the settings screen shows you are the **effective** values — studio plus 
 "what is on screen" and "what this project owns" are not the same thing, and the interface
 tells you which is which.
 
-![The studio defaults define all eight settings sections; a project may override any of them; the optional episode level carries no pipeline override; sequences and shots may only redefine resolution and framerate.](../assets/admin-guide/settings-cascade.svg)
+![The studio defaults define all nine settings sections; a project may override any of them; the optional episode level carries no pipeline override; sequences and shots may only redefine resolution and framerate.](../assets/admin-guide/settings-cascade.svg)
 
 ## The levels, and what each one may override
 
@@ -26,7 +27,7 @@ tells you which is which.
 | Episode | *Project → Settings → Episodes* switch | global `ADMIN`/`SUPERVISOR` | — no settings column at all |
 | Sequence / shot override | On the sequence or the shot | global `ADMIN`/`SUPERVISOR` (`POST`/`PATCH /api/sequences`, `/api/shots`) | `Sequence.settings` / `Shot.settings` (JSON) |
 
-The studio and the project speak in the same eight **sections**. That vocabulary is worth
+The studio and the project speak in the same nine **sections**. That vocabulary is worth
 learning, because it is the unit in which an override exists, is reported by the API and is
 reverted in the interface:
 
@@ -37,6 +38,7 @@ reverted in the interface:
 | `nomenclature` | Sequence and shot prefixes, digit padding, numbering step |
 | `departments` | The ordered pipe of the project |
 | `naming` | The upload file-name convention: pattern and mode |
+| `reviewRequest` | Whether tagging a ReViewer demands a brief, and its minimum length |
 | `defaultLighting` | The HDRI replayed on 3D media that carry none |
 | `color` | The OCIO config, display and view of the project |
 | `burnin` | The project's partial override of the studio burn-in template |
@@ -69,6 +71,7 @@ falls back to:
 | Numbering padding | **3** (→ `010`) | 1–8 |
 | Numbering step | **10** (→ 010, 020, 030) | ≥ 1 |
 | Upload naming rule | **empty pattern, mode `off`** | pattern ≤ 200 characters |
+| ReViewer brief | **not required, 5 characters minimum** | minimum 1–280; a brief itself ≤ 2000 characters |
 | Departments | Modeling, Rigging, Animation, FX, Lighting, Compositing, Look Dev, Layout | key ≤ 40, name ≤ 80 |
 | Default 3D lighting | **none** | exposure 0–10 (default 1), rotation −180 to 180 (default 0) |
 | Colour | **none** — the studio's default OCIO config applies | config id, display and view ≤ 120 characters |
@@ -128,17 +131,18 @@ The two screens do not expose the same sections, and that asymmetry surprises pe
 | `resolution`, `framerate` | *Default format & rate* | *Format & rate* |
 | `departments` | *Default departments* | *Departments* |
 | `naming` | — no control | *Naming convention* (pattern + policy) |
+| `reviewRequest` | *Brief for the ReViewer* | *Brief for the ReViewer* |
 | `defaultLighting` | — no control | *Default 3D lighting* |
 | `color` | — no control | *Colour management (OCIO)* |
 | `burnin` | — no control | *Burn-ins* |
 
 > [!IMPORTANT]
-> Four of the eight sections have **no studio-level control on that screen**: file naming
-> rule, default lighting, colour and burn-ins. They still inherit studio → project — the API
-> and the cascade know them perfectly well — but the studio values behind them are set
-> elsewhere (the burn-in template in *Admin → Review contexts → Delivery*, the OCIO default in
+> Three of the nine sections have **no studio-level control on that screen**: default
+> lighting, colour and burn-ins. They still inherit studio → project — the API and the
+> cascade know them perfectly well — but the studio values behind them are set elsewhere
+> (the burn-in template in *Admin → Review contexts → Delivery*, the OCIO default in
 > *Admin → Colour (OCIO)*) or simply left empty. `PUT /api/admin/project-defaults` accepts
-> all eight if you drive the studio from a script.
+> all nine if you drive the studio from a script.
 
 Two more things live on that project screen without being settings sections: the **start
 frame** of the project, saved on its own with `PATCH /api/projects/:projectId`, and the
@@ -253,6 +257,46 @@ Security and safety properties, all verifiable in `lib/projectSettings.ts`:
   reports `pass: true, mode: 'off'`. The convention is a discipline aid, not a security
   control — never rely on it to keep a file shape out.
 - The settings panel includes a live tester; use it before switching to `reject`.
+
+## The brief a ReViewer is owed
+
+Handing a version to someone says *who* is expected. The brief attached to that
+assignment says *what* — "the lighting", "the cut at 1042, the rest is signed off".
+Without it, the person opens four minutes of playblast with no idea which of the three
+things they could be looking at is the one being asked.
+
+*Project → Settings → Brief for the ReViewer* (and the same panel at studio level) decides
+how strict the studio is about that:
+
+| Field | What it does | Default |
+|-------|--------------|---------|
+| **Require a brief** | Handing a version over with no brief is refused (`400 REVIEW_NOTE_REQUIRED`) | off |
+| **Minimum length** | A written brief shorter than this is refused (`400 REVIEW_NOTE_TOO_SHORT`) | **5** characters, range 1–280 |
+
+Two properties are worth stating plainly, because they are what makes the rule useful:
+
+- **The minimum applies to every brief that is written, even an optional one.** A two-letter
+  brief is not a short brief, it is an empty field that was filled in to get past the form.
+  Leaving the brief out entirely stays allowed as long as *Require a brief* is off.
+- **Whitespace is not a brief.** The text is measured after trimming, so five spaces do not
+  satisfy a five-character minimum.
+
+The rule is enforced in the service, not in the screen, so it holds through all three doors
+that write an assignment: the review-decision dialog, the *Publish* gesture (from the review
+or the **Pending drafts** pill), and the integration API (`PUT /api/v1/versions/{id}/reviewers`,
+and `reviewers` on `POST /api/v1/publish/{id}/complete`). The interface also checks it
+locally, which is why a name is put on hold while you write instead of being handed over and
+refused.
+
+> [!NOTE]
+> Requiring a brief does **not** mean a delivery must name anyone. Publishing without
+> handing the version to someone remains a one-click gesture; the rule only fires once a
+> name is attached.
+
+A DCC that publishes on an artist's behalf should read the rule before it builds its form:
+`GET /api/v1/projects/{ref}/settings` returns the effective `reviewRequest` alongside the
+naming convention. See [Review decisions & approvals](../user-guide/review-approvals.md#the-brief-and-what-a-studio-can-demand-of-it)
+for the gesture itself.
 
 ## Default 3D lighting
 

@@ -58,6 +58,7 @@ describe('catalogue', () => {
     expect([...SCOPE_DOMAINS].sort()).toEqual([
       'assets',
       'comments',
+      'episodes',
       'events',
       'media',
       'projects',

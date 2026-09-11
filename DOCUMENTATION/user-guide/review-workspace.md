@@ -2,7 +2,7 @@
 
 *The five fixed places every viewer shares — mode switch, tool rail, options bar, inspector dock, bottom row.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 Every media type — video, image, 3D model, Gaussian splat — opens in the **same workspace**.
 Only the tools change; their places never do. Nothing floats over the media except what is
@@ -36,6 +36,13 @@ Two header rows sit above all of it, and they do different jobs:
   selector, which those two viewers gained once the shared scene could host a second version.
   Choosing a version to compare is a header gesture in all four viewers; the *Comparison*
   panel of the dock only picks the sub-mode.
+
+On a draft, *Publish* opens **Publish and hand over the review**: the people who should
+look at this delivery, and the brief written for each of them. Afterwards, the same list
+lives in the review-decision dialog, which is where a forgotten brief gets caught up. And
+if the version was handed to **you**, the brief written for you sits in a strip above the
+viewer the moment you open the media — you do not have to go looking for it. See
+[Review decisions & approvals](review-approvals.md#handing-a-version-to-someone).
 
 > [!NOTE]
 > The workspace has no minimum width. The rail is a 44 px column of icons, the dock folds to
@@ -240,6 +247,11 @@ releases. Circle the problem with `E`, write the note, send. The comment is anch
 frame; a click on its card later brings the player back to it.
 
 ### Handing the same shot to three different people
+
+Hand the version to the three of them and write a different brief beside each name — "the
+lighting", "the cut at 1042", "the tracking on the sign". Each gets a notification that
+opens straight onto the review, and finds their own line above the viewer; none of them
+reads the other two.
 
 Once notes are in, the versions themselves are chosen in the header (*Compare…*); the
 **Comparison** panel of the dock only decides between side by side, wipe and diff. What you

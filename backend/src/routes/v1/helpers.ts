@@ -11,6 +11,8 @@ import {
   resolveProjectIdForMedia,
   resolveProjectIdForShot,
   resolveProjectIdForAsset,
+  resolveProjectIdForEpisode,
+  resolveProjectIdForSequence,
 } from '../../lib/pipeline';
 import { notFound } from '../../lib/errors';
 import * as Resolve from '../../services/PipelineResolveService';
@@ -57,6 +59,12 @@ async function requireOwningProject(req: Request, id: number, resolve: Resolver,
   assertTokenProject(req, projectId);
   return projectId;
 }
+
+export const requireEpisodeProject = (req: Request, id: number) =>
+  requireOwningProject(req, id, resolveProjectIdForEpisode, 'Episode');
+
+export const requireSequenceProject = (req: Request, id: number) =>
+  requireOwningProject(req, id, resolveProjectIdForSequence, 'Sequence');
 
 export const requireShotProject = (req: Request, id: number) =>
   requireOwningProject(req, id, resolveProjectIdForShot, 'Shot');

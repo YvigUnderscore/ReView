@@ -28,6 +28,17 @@ export interface AssigneeRef {
 }
 
 /**
+ * Une personne à qui la review d'une version est confiée.
+ *
+ * C'est un `AssigneeRef` plus la **consigne** écrite pour elle : savoir qu'on est attendu
+ * sans savoir sur quoi ne fait gagner du temps qu'à celui qui assigne. `null` = confiée
+ * sans consigne, ce que le projet peut interdire (`settings.reviewRequest`).
+ */
+export interface ReviewAssignee extends AssigneeRef {
+  note: string | null;
+}
+
+/**
  * Ce qu'une carte de séquence, de plan ou d'asset affiche en plus de son nom.
  *
  * Les trois listes partagent exactement ces champs : les définir une fois est ce qui

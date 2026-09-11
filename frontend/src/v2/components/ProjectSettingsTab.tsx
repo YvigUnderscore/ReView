@@ -10,6 +10,7 @@ import DepartmentImages from './DepartmentImages';
 import ProjectBurninSection from './ProjectBurninSection';
 import ProjectStorageSection from './ProjectStorageSection';
 import ProjectNamingSection from './ProjectNamingSection';
+import ProjectReviewRequestSection from './ProjectReviewRequestSection';
 import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
 import ProjectColorSection from './ProjectColorSection';
 import ProjectSettingsInheritance from './ProjectSettingsInheritance';
@@ -270,6 +271,14 @@ export default function ProjectSettingsTab({
         <ProjectNamingSection
           value={draft.naming ?? { pattern: '', mode: 'off' }}
           onChange={(naming) => setDraft((d) => d && { ...d, naming })}
+        />
+      )}
+
+      {/* Consigne exigée d'un ReViewer tagué : le geste se fait à l'upload, la règle se pose ici. */}
+      {draft && (
+        <ProjectReviewRequestSection
+          value={draft.reviewRequest ?? { requireNote: false, minNoteLength: 5 }}
+          onChange={(reviewRequest) => setDraft((d) => d && { ...d, reviewRequest })}
         />
       )}
 

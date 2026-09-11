@@ -18,6 +18,7 @@ const STUDIO: ProjectSettings = {
   departments: [{ key: 'ANIM', name: 'Animation' }],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
   naming: { pattern: '', mode: 'off' },
+  reviewRequest: { requireNote: false, minNoteLength: 5 },
   resolution: { width: 1920, height: 1080 },
   framerate: 24,
 };
@@ -56,7 +57,7 @@ describe('ProjectSettingsInheritance', () => {
 
   it('liste une ligne par groupe de sections', () => {
     const html = render({ override: {}, studio: STUDIO, overrides: [] });
-    expect((html.match(/<li/g) ?? []).length).toBe(7);
+    expect((html.match(/<li/g) ?? []).length).toBe(8);
   });
 
   it('affiche un squelette tant que la vue d’héritage n’est pas arrivée', () => {

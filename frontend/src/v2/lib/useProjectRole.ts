@@ -76,12 +76,30 @@ interface MembershipRow {
 /**
  * Membres du projet qui peuvent recevoir du travail.
  *
- * Même clé de cache et même requête que `useProjectRole` : la fiche du projet est déjà
- * chargée partout, une seconde requête pour la même donnée serait du gaspillage. Les
- * comptes de service et les clients sont écartés — le serveur les refuse de toute façon,
- * autant ne pas les proposer.
+ * Les comptes de service et les clients sont écartés — le serveur les refuse de toute
+ * façon, autant ne pas les proposer.
  */
 export function useProjectMembers(projectId: number): AssignableMember[] {
+  return useMembers(projectId, (role) => role !== 'CLIENT');
+}
+
+/**
+ * Membres du projet qu'on peut attendre en review.
+ *
+ * Le client EST un reviewer — c'est le rôle qui porte ce nom — donc il figure ici, là où
+ * `useProjectMembers` l'écarte : on ne lui confie pas de travail, on lui demande son avis.
+ * Les comptes de service restent hors liste dans les deux cas : une identité machine
+ * n'ouvre pas la review.
+ */
+export function useProjectReviewers(projectId: number): AssignableMember[] {
+  return useMembers(projectId, () => true);
+}
+
+/**
+ * Le socle des deux : une seule requête, une seule clé de cache. La fiche du projet est
+ * déjà chargée partout — en redemander une seconde pour la même donnée serait du gaspillage.
+ */
+function useMembers(projectId: number, keepRole: (role: Role) => boolean): AssignableMember[] {
   const { data } = useQuery({
     queryKey: qk.project(projectId),
     queryFn: () => api.get<{ project: { memberships?: MembershipRow[] } }>(`/api/projects/${projectId}`),
@@ -90,7 +108,7 @@ export function useProjectMembers(projectId: number): AssignableMember[] {
   });
   const rows = data?.project.memberships ?? [];
   return rows
-    .filter((m) => !m.user.isService && (m.role ?? m.user.role) !== 'CLIENT')
+    .filter((m) => !m.user.isService && keepRole(m.role ?? m.user.role))
     .map((m) => ({
       id: m.user.id,
       name: personLabel(m.user),

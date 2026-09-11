@@ -50,6 +50,7 @@
   "notification.taskAssigned": "Ufgab zuegwiese: {name}",
   "notification.clientComment": "{name} het über e Teile-Link e Rückmeldung hinterloh",
   "notification.reviewAssigned": "D review vu dr version {version} isch Ihne zuegwiese wore",
+  "notification.reviewNoteUpdated": "D Awisung fer e review wu mr dir gä hät sich gänderet : {version}",
   "chat.system.joined": { "one": "{names} isch in d'Underhaltung kumme", "other": "{names} sìnn in d'Underhaltung kumme" },
   "chat.system.left": "{name} het d'Underhaltung verlonn",
   "chat.system.removed": "{name} isch üsegnumme wore",

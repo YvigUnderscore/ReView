@@ -50,6 +50,7 @@
   "notification.taskAssigned": "Prètzfach assignat : {name}",
   "notification.clientComment": "{name} a daissat un retorn dempuèi un ligam de partatge",
   "notification.reviewAssigned": "La review de la version {version} vos es estada confiada",
+  "notification.reviewNoteUpdated": "La consigna a cambiat sus una review que vos an confiada : {version}",
   "chat.system.joined": { "one": "{names} a rejonch la convèrsa", "other": "{names} an rejonch la convèrsa" },
   "chat.system.left": "{name} a quitat la convèrsa",
   "chat.system.removed": "{name} es estat retirat",

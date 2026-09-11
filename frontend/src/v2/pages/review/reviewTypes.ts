@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { Media, ModelSource } from '../../types/api';
+import type { Media, ModelSource, ReviewRequestRule } from '../../types/api';
+import type { ReviewAssignee } from '../../types/entities';
 import { normalizeAnim } from './camera/channels/model';
 import type { CameraAnimV2 } from './camera/channels/model';
 
@@ -249,6 +250,10 @@ export interface MediaResp {
   /** Images de référence review 2D (Phase 24, multi-items) : persistées & partagées,
    *  épinglées au canvas (coordonnées en fractions de l'image de base). */
   references: ReviewReferenceItem[];
+  /** À qui la review de cette VERSION est confiée, et ce que chacun doit y regarder. */
+  reviewers: ReviewAssignee[];
+  /** Ce que le projet exige d'une consigne — l'écran refuse avant l'aller-retour. */
+  reviewRequest: ReviewRequestRule;
 }
 
 /** Image de référence épinglée au canvas de la review image (figée, liée à un commentaire). */

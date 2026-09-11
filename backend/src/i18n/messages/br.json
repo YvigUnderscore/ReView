@@ -50,6 +50,7 @@
   "notification.taskAssigned": "Dlead roet : {name}",
   "notification.clientComment": "{name} en deus laosket ur respont dre ul liamm rannañ",
   "notification.reviewAssigned": "Roet eo bet deoc'h review ar version {version}",
+  "notification.reviewNoteUpdated": "Cheñchet eo bet ar gourc'hemenn war ur review fiziet ennoc'h : {version}",
   "chat.system.joined": { "one": "{names} a zo deuet er gaozeadenn", "other": "{names} a zo deuet er gaozeadenn" },
   "chat.system.left": "{name} en deus kuitaet ar gaozeadenn",
   "chat.system.removed": "Lamet eo bet {name}",

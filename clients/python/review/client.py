@@ -28,7 +28,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from .errors import ReviewApiError, ReviewConfigError, ReviewTransportError
 
@@ -209,6 +209,27 @@ class ReviewClient:
             params={"variant": variant, "expiresIn": expires_in},
         )
         return str(answer["url"])
+
+    def reviewers(self, version_id: int) -> list[dict]:
+        """Who a version's review was handed to, and the brief written for each of them."""
+        return list(self.request("GET", f"/api/v1/versions/{version_id}/reviewers")["reviewers"])
+
+    def set_reviewers(self, version_id: int, reviewers: Sequence[Mapping[str, Any]]) -> list[dict]:
+        """Hand a version over: ``[{"userId": 12, "note": "the lighting"}]``.
+
+        Replacement, not addition: a name absent from the list is taken off. The project may
+        demand the brief and impose a minimum length — read ``settings.reviewRequest`` from
+        ``GET /api/v1/projects/{ref}/settings`` before building a form, or handle
+        ``REVIEW_NOTE_REQUIRED`` / ``REVIEW_NOTE_TOO_SHORT``.
+        """
+        answer = self.request(
+            "PUT", f"/api/v1/versions/{version_id}/reviewers", body={"reviewers": list(reviewers)}
+        )
+        return list(answer["reviewers"])
+
+    def project_settings(self, ref: str) -> dict:
+        """Effective rules of a project: naming convention, format, ReViewer brief rule."""
+        return self.request("GET", f"/api/v1/projects/{ref}/settings")
 
     def events(
         self,

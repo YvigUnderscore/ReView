@@ -2,7 +2,7 @@
 
 *SSO, sessions, machine identities, scopes, webhooks and access logs: who gets in, with what powers, and what is traced.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 Four different things can present themselves to the API, and they are not interchangeable: a
 human with a session, a person's API token, a machine's service token, and a client holding a
@@ -155,6 +155,7 @@ screens on its own.
 | Domain | Actions | Notes |
 |---|---|---|
 | `projects` | `read` | Read-only: creating a project is not an integration's job |
+| `episodes` | `read` | The level is read here and composed in the interface; what an episode carries is written under `sequences:write` |
 | `sequences` | `read`, `write` | |
 | `shots` | `read`, `write` | |
 | `assets` | `read`, `write` | |
@@ -299,13 +300,13 @@ network where MinIO, Redis and PostgreSQL live, which is why this is worth the t
 
 ### Which events actually fire
 
-Ten event names are emitted today, and they are the only ones you can subscribe to:
+Eleven event names are emitted today, and they are the only ones you can subscribe to:
 
-`comment.created`, `comment.resolved`, `media.published`, `review.decision`, `task.created`,
-`task.updated`, `task.status_changed`, `task.assigned`, `version.created`,
-`version.published`.
+`comment.created`, `comment.resolved`, `media.published`, `review.decision`,
+`task.created`, `task.updated`, `task.status_changed`, `task.assigned`, `version.created`,
+`version.published`, `version.reviewers_changed`.
 
-The vocabulary itself is larger — `/api/v1/schema` still returns all eighteen names, because a
+The vocabulary itself is larger — `/api/v1/schema` still returns all nineteen names, because a
 consumer may hold one from before — but the eight without an emitter
 (`project.created`, `project.updated`, `sequence.created`, `shot.created`, `shot.updated`,
 `asset.created`, `media.uploaded`, `media.failed`) are **refused at subscription** with a

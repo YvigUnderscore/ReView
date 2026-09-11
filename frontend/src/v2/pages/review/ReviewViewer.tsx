@@ -6,6 +6,7 @@ import type { ReviewComment, Role } from '../../types/api';
 import { useAuth } from '../../stores/useAuth';
 import { useWatermarkConfigQuery } from '../../lib/queries';
 import WatermarkOverlay from '../../components/WatermarkOverlay';
+import ReviewBriefBanner from '../../components/review/ReviewBriefBanner';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './reviewTypes';
@@ -148,7 +149,8 @@ export default function ReviewViewer({
   // Overlay d'annotation 2D (extrait — budget 300 lignes).
   const renderOverlay = useAnnotationOverlay(ann);
 
-  // Watermark spectateur interne (35.B, opt-in admin) : identité du compte sur tout le viewer.
+  // Le compte connecté : le watermark spectateur (35.B) y lit un nom, la bande de consigne
+  // y lit un identifiant — c'est la même lecture, faite une fois.
   const wmUser = useAuth((s) => s.user);
   const wmQ = useWatermarkConfigQuery();
   const watermarkText =
@@ -173,6 +175,9 @@ export default function ReviewViewer({
       onWheelCapture={clearOnViewMove}
     >
       {watermarkText && <WatermarkOverlay text={watermarkText} opacity={wmQ.data?.opacity} />}
+      {/* Ce qu'on vous demande de regarder, quand la review vous a été confiée : au-dessus
+          du viewer, à l'ouverture, et non trois clics plus loin dans un dialogue. */}
+      {data && <ReviewBriefBanner reviewers={data.reviewers} currentUserId={wmUser?.id} />}
       {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady || splatReady) && (
         <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} />
       )}

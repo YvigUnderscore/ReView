@@ -2,7 +2,7 @@
 
 *The stable contract for pipeline tools: pipeline paths, idempotent publish, reading back, scopes and events.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 **`/api/v1`** is the surface meant for tools: DCCs (Maya, Blender, Houdini, Nuke), pipeline
 managers (Prism), bots and third-party synchronisations. It sits next to `/api`, which
@@ -119,7 +119,7 @@ looked up on every request).
 
 ## Scopes, and the gates a request crosses
 
-Scopes are `domain:action`, over **nine domains**, and the catalogue only declares what a
+Scopes are `domain:action`, over **ten domains**, and the catalogue only declares what a
 route actually guards. A scope that protects nothing is worse than a missing one: it gets
 ticked when a token is created, it gets read in the documentation, and it suggests a
 confinement that does not exist.
@@ -127,6 +127,7 @@ confinement that does not exist.
 | Domain | `:read` | `:write` |
 |--------|:-------:|:--------:|
 | `projects` | yes | — creating a project is not the integration API's business |
+| `episodes` | yes | — an episode is read here and composed in the interface |
 | `sequences` | yes | yes |
 | `shots` | yes | yes |
 | `assets` | yes | yes |
@@ -136,9 +137,14 @@ confinement that does not exist.
 | `comments` | yes | yes |
 | `events` | yes | — the journal writes itself |
 
-Sixteen fine-grained strings, plus **`admin`**, which covers everything: **17 grantable
+Seventeen fine-grained strings, plus **`admin`**, which covers everything: **18 grantable
 values**. Granting `x:write` implies `x:read`. Playlists, webhooks and the user directory
 have no scope because they are not exposed by `/api/v1` at all — they live on the web API.
+
+`episodes` has no `:write` on purpose: the level is readable here, and composed from the
+interface, where reordering and re-parenting sequences is a production gesture. What an
+episode *carries* — its people and its brief — is written under `sequences:write`, the tier
+it groups.
 
 Read the list from `GET /api/v1/schema`, under `scopes`. The web API serves the same list
 plus the legacy names at `GET /api/auth/scopes`, which needs a session JWT:
@@ -388,9 +394,27 @@ curl -s -X POST "$REVIEW/api/v1/publish/128/complete" \
 
 The path segment is the **media id** returned by step 1, and `complete` requires the same
 two scopes. It validates the file (magic bytes → `detectedExtension`, size, quotas),
-triggers transcoding or thumbnailing, and publishes the media. Two body fields, both
-optional booleans: `publish` (**omitting it publishes** — only `publish: false` holds the
-media back) and `submitForReview`.
+triggers transcoding or thumbnailing, and publishes the media. Three body fields, all
+optional: `publish` (**omitting it publishes** — only `publish: false` holds the media
+back), `submitForReview`, and `reviewers`.
+
+`reviewers` hands the version over in the same call, saying who should look at this
+delivery and at what:
+
+```bash
+curl -s -X POST "$REVIEW/api/v1/publish/128/complete" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{ "publish": true,
+        "reviewers": [ { "userId": 12, "note": "The lighting, nothing else." },
+                       { "userId": 31, "note": "The cut at 1042." } ] }'
+```
+
+It is written **before** the media flips to published, which is what lets a project demand
+the brief: a missing or too-short one refuses the whole call (`REVIEW_NOTE_REQUIRED`,
+`REVIEW_NOTE_TOO_SHORT`) rather than letting a delivery go out that nobody knows how to
+look at. Read the rule from `GET /api/v1/projects/{ref}/settings` (`settings.reviewRequest`)
+before building the form. With `publish: false` the version is still handed over, so an
+artist who keeps their draft one more night does not have to retype the brief tomorrow.
 
 The **version** is only moved to `PUBLISHED` if the caller is a supervisor or an
 administrator; otherwise it lands in `REVIEW`. An artist publishes their media without the
@@ -766,17 +790,21 @@ curl -s -H "Authorization: Bearer $TOKEN" \
   in batches by the daily sweep. A daemon that stays down longer than that loses the gap —
   reconcile with the collection endpoints.
 
-### The catalogue, and the ten names that actually fire
+### The catalogue, and the eleven names that actually fire
 
-`GET /api/v1/schema` returns eighteen event names under `events`. They are the vocabulary,
-and the `?events=` filter accepts all of them — but **only ten have an emission point in
+`GET /api/v1/schema` returns nineteen event names under `events`. They are the vocabulary,
+and the `?events=` filter accepts all of them — but **only eleven have an emission point in
 the code**:
 
 ```
 media.published    review.decision     comment.created    comment.resolved
 task.created       task.updated        task.status_changed  task.assigned
-version.created    version.published
+version.created    version.published   version.reviewers_changed
 ```
+
+`version.reviewers_changed` fires on every write of a version's reviewer list — the brief
+included — and carries `{ versionId, reviewers: [{ userId, note }] }`, enough for a
+production bot to know who to chase without polling the API.
 
 The eight others — `project.created`, `project.updated`, `sequence.created`,
 `shot.created`, `shot.updated`, `asset.created`, `media.uploaded`, `media.failed` — are
@@ -786,7 +814,7 @@ and a unit test re-reads the sources so the list cannot quietly drift.
 > [!WARNING]
 > Filtering the pull journal on one of those eight returns an empty page, forever, with no
 > error to tell you why. On the push side the refusal is explicit: `POST /api/admin/webhooks`
-> validates its `events` array against the **ten**, so subscribing to `media.failed` is
+> validates its `events` array against the **eleven**, so subscribing to `media.failed` is
 > rejected with a `400`. An alert you cannot honour is worse than a missing event — see
 > [Identity, API & audit](../admin-guide/identity-and-api.md) and
 > [Authentication & API access](authentication.md#outgoing-webhooks).
@@ -865,6 +893,10 @@ actually changed), `task.assigned` (when `assigneeId` is present) and always `ta
 | `POST /api/v1/tasks/:id/versions` | `versions:write` | Ensure a version (`name`, `reuseExisting`) |
 | `PATCH /api/v1/versions/:id` | `versions:write` | Rename, or move the status. Goes through `VersionService`, so the publish lock and the supervisor rule apply; moving to `PUBLISHED` emits `version.published` |
 | `POST /api/v1/versions/:id/decision` | `versions:write` | A review decision — supervisors and administrators only, always `201` |
+| `PUT /api/v1/versions/:id/reviewers` | `versions:write` | Replace who the version is handed to, each with the brief written for them (20 maximum). Project manager, or the author of the version |
+| `PATCH /api/v1/versions/:id/reviewers/:userId` | `versions:write` | Rewrite one person's brief without touching the rest of the list |
+| `PUT /api/v1/{episodes,sequences,shots,assets}/:id/assignees` | `sequences:write` · `shots:write` · `assets:write` | Replace the people responsible for an entity (an episode writes under `sequences:write`) |
+| `PUT /api/v1/{episodes,sequences,shots,assets}/:id/note` | same as above | Write the entity's markdown brief; an empty body deletes the note rather than keeping it empty |
 | `POST /api/v1/media/:id/comments` | `comments:write` | Leave a note: `content` (1–10 000), `timestamp` and `duration` in seconds, `parentId` to reply. `201 { comment }` |
 | `POST /api/v1/comments/:id/resolve` | `comments:write` | `{ resolved: true }` by default; emits `comment.resolved` when it closes a note |
 | `POST /api/v1/publish`, `POST /api/v1/publish/:id/complete` | `versions:write` **+** `media:write` | The two-call publish flow |
@@ -880,8 +912,10 @@ curl -s -X POST "$REVIEW/api/v1/versions/512/decision" \
   -d '{ "statusId": 4, "comment": "Retake on the last 20 frames." }'
 ```
 
-`statusId` references one of the studio's custom review statuses — read them from
-`GET /api/v1/schema` rather than hard-coding ids.
+`statusId` references one of the studio's custom review statuses. Read them from
+`GET /api/v1/review-statuses` rather than hard-coding ids — on a ShotGrid-linked project,
+pass `?projectId=` so the list is narrowed to the statuses the remote site actually knows;
+posting any other goes nowhere. `GET /api/v1/schema` carries the same vocabulary.
 
 ### Everything the tool needs to read back
 
@@ -898,6 +932,13 @@ curl -s -X POST "$REVIEW/api/v1/versions/512/decision" \
 | `GET /api/v1/shots/:id/tasks` · `GET /api/v1/assets/:id/tasks` | `tasks:read` | `{ tasks }` |
 | `GET /api/v1/tasks/:id` · `GET /api/v1/tasks/:id/versions` | `tasks:read` · `versions:read` | `{ task }` · `{ versions }` |
 | `GET /api/v1/versions/:id` · `GET /api/v1/versions/:id/media` | `versions:read` · `media:read` | `{ version }` · `{ media }` |
+| `GET /api/v1/versions/:id/decisions` | `versions:read` | `{ decisions }` — the whole history, newest first |
+| `GET /api/v1/review-statuses` | `versions:read` | `{ statuses }` — the studio's vocabulary and its ids; `?projectId=` narrows it to what is actually postable on a ShotGrid-linked project |
+| `GET /api/v1/versions/:id/reviewers` | `versions:read` | `{ reviewers }` — who the version was handed to, and each one's brief |
+| `GET /api/v1/projects/:ref/settings` | `projects:read` | `{ projectId, startFrame, settings }` — the **effective** rules: naming convention, delivery format, and `reviewRequest` |
+| `GET /api/v1/projects/:ref/episodes` | `episodes:read` | `{ enabled, episodes, unassignedSequences, … }` — paginated; `enabled: false` on a project with no episode level |
+| `GET /api/v1/episodes/:id` · `GET /api/v1/episodes/:id/sequences` | `episodes:read` · `sequences:read` | `{ episode }` (its sequences and their shots) · `{ sequences }` in the ordinary v1 shape |
+| `GET /api/v1/{episodes,sequences,shots,assets}/:id/assignees` · `…/note` | that level's `:read` | `{ assignees }` — the whole scope, entity, children and tasks · `{ note }` |
 | `GET /api/v1/media/:id/comments` | `comments:read` | paginated; `?resolved=true\|false` |
 | `GET /api/v1/versions/:id/comments` | `comments:read` | `{ comments }` — not paginated |
 
@@ -1034,6 +1075,7 @@ retrying.
 | Format | `KIND_UNKNOWN`, `UNSUPPORTED_FORMAT`, `SEQUENCE_NOT_SUPPORTED_HERE`, `USD_NOT_3D`, `INVALID_FILE`, `NOT_FINALIZED` (400) |
 | Quotas and size | `FILE_TOO_LARGE` (400), `STORAGE_LIMIT`, `PROJECT_QUOTA` (403), `TOO_MANY_UPLOADS` (**429**) |
 | State | `VERSION_EXISTS`, `NAMING_REJECTED` (400), `PROJECT_ARCHIVED` (403), `NO_LATEST_VERSION`, `VARIANT_UNAVAILABLE` (404), `IDEMPOTENCY_IN_PROGRESS` and the `*_IN_TRASH` family (409) |
+| Review hand-over | `REVIEW_NOTE_REQUIRED`, `REVIEW_NOTE_TOO_SHORT` (400), `NOT_ASSIGNABLE` (400 — service account, disabled account or client), plus a plain `403` when the caller is neither the version's author nor a project manager |
 
 Rate limits are counted over a 15-minute window in Redis and shared by every replica.
 `/api/v1` has its own budget of **10 000 requests**, counted per IP — but a v1 request also

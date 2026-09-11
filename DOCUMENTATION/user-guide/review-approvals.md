@@ -98,17 +98,56 @@ A decision says what was concluded. It says nothing about the step before it: **
 asked to look**. That request used to live in a corridor conversation or a chat thread, so
 nobody could open ReView and answer "what is waiting on me?".
 
-The same dialog carries it. Under the statuses, a **Reviewers** line shows the faces of the
-people the version was handed to, and a supervisor opens the studio directory from
-*Assign*:
+The same dialog carries it. Under the statuses, a **Reviewers** line shows the people the
+version was handed to and **the brief written for each of them**; a supervisor opens the
+studio directory from *Assign*:
 
 - clicking a name **hands them the version**; clicking it again **takes it back**. There is
   no *Save* — a checklist you can leave without validating lies about its own state;
+- beside each name sits a **brief**: one line saying what that person should look at. It is
+  saved when you leave the field, `Escape` puts back what was there, and it can be written
+  or rewritten at any time — this is where a forgotten one is caught up;
 - the directory is the **project's members**, searchable by name, address, job title or
   role. Service accounts and clients are not offered, and the server refuses them too:
   a machine identity does not watch dailies, and a client comments rather than reviews;
 - up to **20 people** on one version. Past that it is not an assignment any more, it is a
   screening — that is what a [playlist](playlists-and-live-review.md) is for.
+
+### The brief, and what a studio can demand of it
+
+"Look at this" and "look at the cut at 1042, the rest is signed off" do not ask for the same
+work. Knowing you are expected without knowing **at what** only saves time for the person
+who assigned it: the recipient opens four minutes of playblast with no idea which of three
+things is being asked.
+
+The brief is **per person, not per version**. "The lighting" to the lighting lead and "the
+cut at 1042" to the editor are two different requests, and squeezing both into one field
+makes neither readable.
+
+*Project → Settings → Brief for the ReViewer* decides how strict the studio is: the brief
+can be **required**, with a **minimum length** (5 characters by default, so "ok" does not
+count). See [Pipeline settings](../admin-guide/pipeline-settings.md#the-brief-a-reviewer-is-owed).
+When it is required, clicking a name does not hand the version over straight away — it puts
+the person on hold while you write. Handing over first only to be refused afterwards would
+be a false promise.
+
+Whoever is handed the version sees the brief written for them **at the top of the review**,
+above the viewer, the moment they open the media. They do not have to go looking for it.
+
+### Saying it at the moment you deliver
+
+The dialog above is the supervisor's place, after the fact. The person who just delivered
+has one of their own: **Publish** — from the review, or the ✚ beside *Publish* in the
+**Pending drafts** pill — opens *Publish and hand over the review*, where names and briefs
+are composed and the whole thing goes out in one gesture.
+
+The author of a version may hand over its review, exactly like a project manager. It is
+what makes "require a brief at upload" a rule the uploader can actually satisfy — and the
+artist who just delivered is the person who knows what there is to look at. It grants
+nothing else: the decision is still supervision's.
+
+Publishing without naming anyone stays a one-click gesture. The rule only fires once a name
+is attached.
 
 Assigning **grants nothing and removes nothing**. It is an expectation, not a delegation:
 the decision stays reserved to supervision, and an artist handed a version reviews and
@@ -117,12 +156,15 @@ as the decision history is.
 
 Each person newly handed the version gets a **notification** that opens straight onto the
 review screen, and starts **following** the version — the comments and the decision that
-follow are precisely what they are waiting for. Taking someone off the list does not
-unfollow them: they may have chosen to follow it themselves in the meantime.
+follow are precisely what they are waiting for. Rewriting someone's brief notifies them
+again but does **not** re-subscribe them; taking someone off the list does not unfollow
+them either. Both are theirs to decide, and they may have chosen already.
 
 > [!NOTE]
 > Assigning is written to the audit log under `version.reviewers`, with the list of people
-> it was set to. Who asked whom to look is production history, not interface state.
+> it was set to; rewriting a brief alone is written under `version.reviewer_note`, with no
+> list — the list did not change, and saying it did would be false. Who asked whom to look
+> is production history, not interface state.
 
 ## What one decision sets off
 
@@ -200,9 +242,12 @@ tool rather than by hand:
 | `GET /api/versions/:id/decisions` | The full history of a version | Any project member |
 | `GET /api/review-statuses?projectId=` | The status list, narrowed to the ShotGrid mapping when the project has one | Any authenticated user |
 | `GET /api/versions/:id/reviewers` | Who the version was handed to | Any project member |
-| `PUT /api/versions/:id/reviewers` | Hand the version to these people — body `userIds`, 20 maximum, replaces the list | Effective supervisor or admin on the project |
+| `PUT /api/versions/:id/reviewers` | Hand the version to these people — body `reviewers: [{ userId, note }]`, 20 maximum, replaces the list | Project manager, or the author of the version |
+| `PATCH /api/versions/:id/reviewers/:userId` | Rewrite one person's brief, leaving the rest of the list alone | Project manager, or the author of the version |
 | `GET /api/media/reviews?assigned=me` | The media of the versions handed to you | Any authenticated user |
+| `POST /api/media/:id/publish` | Publish, and hand over in the same call — body `reviewers: [{ userId, note }]` | The uploader |
 | `POST /api/v1/versions/:id/decision` | The same act from a service token | Token with the `versions:write` scope, `SUPERVISOR` or `ADMIN` |
+| `PUT`/`PATCH /api/v1/versions/:id/reviewers…` | Hand over from a pipeline tool | Token with the `versions:write` scope |
 
 See [v1 integration](../api/v1-integration.md).
 

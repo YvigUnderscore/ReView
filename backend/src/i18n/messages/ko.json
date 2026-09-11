@@ -50,6 +50,7 @@
   "notification.taskAssigned": "작업이 배정되었습니다: {name}",
   "notification.clientComment": "{name} 님이 공유 링크로 의견을 남겼습니다",
   "notification.reviewAssigned": "version {version}의 review가 배정되었습니다",
+  "notification.reviewNoteUpdated": "맡은 review의 지시 사항이 바뀌었습니다: {version}",
   "chat.system.joined": { "other": "{names}님이 대화에 참여했습니다" },
   "chat.system.left": "{name}님이 대화를 나갔습니다",
   "chat.system.removed": "{name}님이 제외되었습니다",

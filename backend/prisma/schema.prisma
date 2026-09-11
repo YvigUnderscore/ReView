@@ -291,8 +291,10 @@ model User {
   assignedShots     Shot[]     @relation("ShotAssignees")
   assignedAssets    Asset[]    @relation("AssetAssignees")
   assignedEpisodes  Episode[]  @relation("EpisodeAssignees")
-  // Reviews qu'on m'a confiées (Phase 49) : les versions que je dois regarder.
-  assignedReviews   Version[]  @relation("VersionReviewers")
+  // Reviews qu'on m'a confiées (Phase 49) : les versions que je dois regarder, et la
+  // consigne qui accompagne chacune. `sentReviews` : celles que j'ai confiées.
+  assignedReviews   ReviewAssignment[] @relation("ReviewAssignmentReviewer")
+  sentReviews       ReviewAssignment[] @relation("ReviewAssignmentAuthor")
   entityNotes       EntityNote[]     @relation("EntityNoteAuthor")
   noteTemplates     NoteTemplate[]   @relation("NoteTemplateAuthor")
   visibilityRules   VisibilityRule[] @relation("VisibilityRuleAuthor")
@@ -882,10 +884,14 @@ model Version {
   // La décision reste au superviseur ; ce que la base ne savait pas écrire, c'est « c'est à
   // toi de la regarder ». Ça se disait de vive voix ou dans un fil de discussion, et ça se
   // perdait avec — personne ne pouvait répondre à « qu'est-ce qu'on attend de moi ? » sans
-  // rouvrir la conversation. Même forme que les responsables d'un plan ou d'un asset
-  // (`ShotAssignees`), pour que l'assignation ait un seul vocabulaire dans toute
-  // l'application.
-  reviewers User[] @relation("VersionReviewers")
+  // rouvrir la conversation.
+  //
+  // La liaison était implicite (`_VersionReviewers`, la forme de `ShotAssignees`) ; elle est
+  // devenue un modèle À PART ENTIÈRE pour porter la **consigne** — savoir qu'on est attendu
+  // sans savoir sur quoi ne fait gagner de temps qu'à celui qui assigne. Une table de
+  // liaison implicite ne peut porter aucune colonne : c'est la seule raison du changement,
+  // et la migration reprend les lignes existantes plutôt que de les perdre.
+  reviewers ReviewAssignment[]
   playlistItems  PlaylistItem[]
   shareLinks     ShareLink[]
 
@@ -1054,6 +1060,46 @@ model ReviewDecision {
   // `onDelete: Restrict` : supprimer un statut de review compte d'abord ses décisions.
   @@index([statusId])
   @@index([authorId])
+}
+
+// Personne à qui la review d'une version est confiée, et la consigne qui l'accompagne.
+//
+// « Regarde ça » et « regarde le raccord au 1042, le reste est validé » ne demandent pas le
+// même travail. L'assignation existait sans la seconde moitié : le destinataire ouvrait
+// quatre minutes de playblast sans savoir si on attendait de lui la lumière, le timing ou
+// le raccord.
+//
+// La `note` vit sur l'assignation, pas sur la version : deux personnes confiées à la même
+// livraison n'ont pas la même chose à vérifier, et une note par version aurait forcé à
+// écrire « pour Alice : … ; pour Bruno : … » dans un seul champ. Le cas « même consigne pour
+// tout le monde » s'écrit en la répétant, ce qui ne coûte rien.
+//
+// Le réglage projet `reviewRequest` (lib/projectSettings) décide si la note est obligatoire
+// et sa longueur minimale ; la colonne reste nullable — une base existante, et les projets
+// qui n'exigent rien, n'ont pas de note à fournir.
+model ReviewAssignment {
+  id        Int     @id @default(autoincrement())
+  version   Version @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId Int
+  // Le ReViewer attendu. Cascade : son compte supprimé, l'attente n'a plus d'objet — c'est
+  // ce que faisait déjà la table de liaison qu'il remplace.
+  reviewer   User   @relation("ReviewAssignmentReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId Int
+  // Ce qu'il doit regarder. `null` = confié sans consigne (autorisé tant que le projet ne
+  // l'exige pas) ; jamais une chaîne vide, que le service normalise en `null`.
+  note String?
+  // Qui a confié. SetNull comme ailleurs : le départ d'un superviseur n'efface pas la
+  // consigne qu'il a laissée à l'équipe.
+  assignedBy   User? @relation("ReviewAssignmentAuthor", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedById Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Une personne n'est confiée qu'une fois par version : la reconfier met sa note à jour.
+  @@unique([versionId, reviewerId])
+  // « Ce qu'on attend de moi », de la demande la plus récente à la plus ancienne.
+  @@index([reviewerId, createdAt])
+  @@index([assignedById])
 }
 
 model MediaObject {

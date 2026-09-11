@@ -50,6 +50,7 @@
   "notification.taskAssigned": "Zeregina esleituta: {name}",
   "notification.clientComment": "{name} erabiltzaileak iruzkina utzi du partekatze-esteka batetik",
   "notification.reviewAssigned": "{version} version-aren review esleitu zaizu",
+  "notification.reviewNoteUpdated": "Esleitu dizuten review baten jarraibidea aldatu da: {version}",
   "chat.system.joined": { "one": "{names} elkarrizketara batu da", "other": "{names} elkarrizketara batu dira" },
   "chat.system.left": "{name} elkarrizketatik atera da",
   "chat.system.removed": "{name} kendu dute",

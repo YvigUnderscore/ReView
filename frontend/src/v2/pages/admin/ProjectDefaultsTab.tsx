@@ -9,6 +9,7 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import DepartmentsEditor from '../../components/DepartmentsEditor';
 import ProjectNamingSection from '../../components/ProjectNamingSection';
+import ProjectReviewRequestSection from '../../components/ProjectReviewRequestSection';
 import ProjectDefaultLightingSection from '../../components/ProjectDefaultLightingSection';
 import ProjectColorSection from '../../components/ProjectColorSection';
 import { sameValue } from '../../lib/projectInheritance';
@@ -111,6 +112,11 @@ export default function ProjectDefaultsTab() {
         <ProjectNamingSection
           value={draft.naming ?? { pattern: '', mode: 'off' }}
           onChange={(naming) => setDraft((d) => d && { ...d, naming })}
+        />
+
+        <ProjectReviewRequestSection
+          value={draft.reviewRequest ?? { requireNote: false, minNoteLength: 5 }}
+          onChange={(reviewRequest) => setDraft((d) => d && { ...d, reviewRequest })}
         />
 
         <ProjectDefaultLightingSection

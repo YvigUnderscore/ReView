@@ -25,7 +25,11 @@ const { db, caller } = vi.hoisted(() => {
 });
 
 vi.mock('../../lib/prisma', () => ({ prisma: db }));
-vi.mock('../../lib/projectSettings', () => ({
+// Mock PARTIEL : le module porte aussi des schémas Zod qu'un routeur monté ici construit à
+// l'import (`reviewNoteSchema`). Un mock total les faisait disparaître, et le montage
+// échouait avant le premier test.
+vi.mock('../../lib/projectSettings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/projectSettings')>()),
   // Le pipe du projet : c'est lui qui fait gagner le compositing sur l'animation.
   resolveProjectSettingsById: vi.fn(() =>
     Promise.resolve({

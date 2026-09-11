@@ -14,6 +14,9 @@ import latestRoutes from './latest.routes';
 import publishRoutes from './publish.routes';
 import commentsRoutes from './comments.routes';
 import eventsRoutes from './events.routes';
+import episodesRoutes from './episodes.routes';
+import entityExtrasRoutes from './entity-extras.routes';
+import reviewRoutes from './review.routes';
 
 /**
  * API d'intégration v1 — surface stable destinée aux outils : DCC (Maya, Blender,
@@ -46,14 +49,22 @@ export const V1_MOUNTS: { prefix: string; router: ExpressRouter }[] = [
   { prefix: '/projects', router: projectContentRoutes },
   { prefix: '/publish', router: publishRoutes },
   { prefix: '/events', router: eventsRoutes },
+  // Le niveau épisode, monté avant les entités : ses deux chemins portent déjà leur
+  // préfixe (`/projects/:ref/episodes`, `/episodes/:id`).
+  { prefix: '', router: episodesRoutes },
   { prefix: '', router: entitiesRoutes },
   { prefix: '', router: tasksRoutes },
   { prefix: '', router: versionsRoutes },
+  // Ce qu'une entité porte en plus de sa fiche : ses responsables, son brief.
+  { prefix: '', router: entityExtrasRoutes },
   // Lecture des fichiers et « dernière version » : montés après les collections, dont ils
   // prolongent les chemins (`/tasks/:id/versions/latest` après `/tasks/:id/versions`).
   { prefix: '', router: mediaRoutes },
   { prefix: '', router: latestRoutes },
   { prefix: '', router: commentsRoutes },
+  // Le tour de la review : qui est attendu sur un média, le vocabulaire de décision, et
+  // l'historique. Monté après les médias et les versions, dont il prolonge les chemins.
+  { prefix: '', router: reviewRoutes },
 ];
 
 const router = Router();

@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
+import type { ReviewAssignee } from '../../types/entities';
 import type { MediaResp } from './reviewTypes';
 import { useT } from '../../i18n';
 
@@ -27,15 +28,34 @@ export function useMediaActions(
   const qc = useQueryClient();
   const [reprocessing, setReprocessing] = useState(false);
 
-  const publishMedia = async () => {
+  /**
+   * Publie, et confie la review au passage.
+   *
+   * Les ReViewers voyagent avec la publication plutôt qu'en un second appel : le serveur
+   * les écrit AVANT de basculer le média, ce qui permet au réglage « consigne obligatoire »
+   * de refuser la publication au lieu de la laisser partir puis de râler.
+   */
+  const publishMedia = async (reviewers?: { userId: number; note: string | null }[]) => {
     if (beforePublish && !(await beforePublish())) return;
     try {
-      const { media } = await api.post<{ media: MediaResp['media'] }>(`/api/media/${id}/publish`);
-      // Mise à jour ciblée du cache : pas de refetch (les URLs présignées changeraient
-      // et rechargeraient le viewer) — seuls le badge et les brouillons sont concernés.
-      qc.setQueryData<MediaResp>(qk.media(id), (old) =>
-        old ? { ...old, media: { ...old.media, published: media.published } } : old,
+      const answer = await api.post<{ media: MediaResp['media']; reviewers: ReviewAssignee[] }>(
+        `/api/media/${id}/publish`,
+        reviewers ? { reviewers } : {},
       );
+      // Mise à jour ciblée du cache : pas de refetch (les URLs présignées changeraient et
+      // rechargeraient le viewer) — la réponse porte déjà la liste à jour, il n'y a rien à
+      // relire. Seuls le badge, les ReViewers et les brouillons sont concernés.
+      qc.setQueryData<MediaResp>(qk.media(id), (old) =>
+        old
+          ? {
+              ...old,
+              media: { ...old.media, published: answer.media.published },
+              reviewers: answer.reviewers,
+            }
+          : old,
+      );
+      // La version porteuse vient de la réponse : pas besoin de la passer en paramètre.
+      void qc.invalidateQueries({ queryKey: qk.versionReviewers(answer.media.versionId) });
       void qc.invalidateQueries({ queryKey: qk.drafts });
       void qc.invalidateQueries({ queryKey: ['versions'] });
       toast.success(t('media.publishedTeam'));

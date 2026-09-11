@@ -2,7 +2,7 @@
 
 *Every way to prove who you are — sessions, 2FA, SSO, API tokens, share links, webhooks — and exactly what each one opens.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 Three credentials exist, and they are not interchangeable. A human gets a **JWT session**, a
 machine gets an **API token**, a client outside the studio gets a **share session**. They
@@ -337,12 +337,13 @@ writes keep an author. See [API v1](v1-integration.md).
 
 A scope is `domain:action`, and the catalogue lists **only what a route actually guards** —
 a scope that protects nothing is worse than an absent one, because it gets ticked at
-creation and read in documentation, promising a limit that does not exist. Nine domains,
-seventeen scopes:
+creation and read in documentation, promising a limit that does not exist. Ten domains,
+eighteen scopes:
 
 | Domain | Actions | Note |
 |--------|---------|------|
 | `projects` | `read` | Creating a project is not part of the integration API |
+| `episodes` | `read` | Read-only: an episode is composed in the interface. Its people and its brief are written under `sequences:write` |
 | `sequences`, `shots`, `assets` | `read`, `write` | The pipeline entities |
 | `tasks`, `versions` | `read`, `write` | |
 | `media` | `read`, `write` | Includes asking for a presigned URL |

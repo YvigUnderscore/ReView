@@ -9,6 +9,7 @@ import { requireScope, assertTokenProject } from '../../middleware/scope';
 import { assertProjectAccess } from '../../middleware/rbac';
 import { idempotency } from '../../lib/idempotency';
 import { usdRequestSchema } from '../../lib/usdRequest';
+import { reviewersSchema } from '../../services/ReviewAssignmentService';
 import * as PublishFlowService from '../../services/PublishFlowService';
 import * as Resolve from '../../services/PipelineResolveService';
 import { parsePipelinePath } from '../../lib/pipelinePath';
@@ -88,6 +89,14 @@ router.post(
     body: z.object({
       publish: z.boolean().optional(),
       submitForReview: z.boolean().optional(),
+      reviewers: reviewersSchema
+        .optional()
+        .describe(
+          'À qui confier la review de cette version, et ce que chacun doit y regarder. Le ' +
+            'projet peut exiger la consigne et lui imposer une longueur minimale : la ' +
+            'publication est alors refusée sans elle. Voir GET /api/v1/projects/{ref}/settings, ' +
+            'section « reviewRequest ».',
+        ),
     }),
   }),
   async (req, res) => {

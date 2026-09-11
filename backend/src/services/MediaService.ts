@@ -38,6 +38,7 @@ import { assertProjectQuota } from '../lib/projectQuota';
 import { logger } from '../lib/logger';
 import { assertCanContribute } from '../lib/projectRoles';
 import { notifyWatchers } from './WatchService';
+import { listReviewers, setReviewers, type ReviewerInput } from './ReviewAssignmentService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import type { UsdRequest } from './ModelConvertService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
@@ -321,7 +322,7 @@ export async function listReviews(
           : {}),
       // Reviews confiées (Phase 49). Le filtre porte sur la version, pas sur le média :
       // c'est la livraison qu'on confie, et elle en compte souvent plusieurs.
-      ...(filter.assigned === 'me' ? { reviewers: { some: { id: user.id } } } : {}),
+      ...(filter.assigned === 'me' ? { reviewers: { some: { reviewerId: user.id } } } : {}),
       OR: [
         { task: { shot: { deletedAt: null, project } } },
         { task: { asset: { deletedAt: null, project } } },
@@ -398,7 +399,14 @@ export async function listReviews(
   return paginate(items, total, p);
 }
 
-/** Brouillons (non publiés) de l'utilisateur, avec localisation lisible. */
+/**
+ * Brouillons (non publiés) de l'utilisateur, avec localisation lisible.
+ *
+ * Chaque ligne porte aussi son projet et la règle de consigne qui y règne : la pastille
+ * « Brouillons en attente » est le second endroit d'où l'on publie, et publier, c'est dire
+ * à qui l'on confie. Sans ces deux champs, le panneau aurait dû faire un appel par
+ * brouillon pour savoir s'il peut proposer le geste — et sous quelle contrainte.
+ */
 export async function listDrafts(userId: number) {
   const drafts = await prisma.mediaObject.findMany({
     where: { published: false, deletedAt: null, uploaderId: userId },
@@ -413,15 +421,27 @@ export async function listDrafts(userId: number) {
             select: {
               id: true,
               name: true,
-              shot: { select: { code: true, sequence: { select: { code: true } } } },
-              asset: { select: { name: true } },
+              shot: { select: { code: true, projectId: true, sequence: { select: { code: true } } } },
+              asset: { select: { name: true, projectId: true } },
             },
           },
-          asset: { select: { name: true } },
+          asset: { select: { name: true, projectId: true } },
         },
       },
     },
   });
+  // Les règles de consigne sont lues une fois par PROJET, pas une fois par brouillon : cent
+  // brouillons d'une même production ne doivent pas faire cent résolutions de réglages,
+  // chacune traversant les défauts studio.
+  const projectOf = (m: (typeof drafts)[number]) =>
+    m.version?.task?.shot?.projectId ?? m.version?.task?.asset?.projectId ?? m.version?.asset?.projectId;
+  const rules = new Map(
+    await Promise.all(
+      [...new Set(drafts.map(projectOf).filter((id): id is number => typeof id === 'number'))].map(
+        async (id) => [id, (await resolveProjectSettingsById(id)).reviewRequest] as const,
+      ),
+    ),
+  );
   return drafts.map((m) => {
     const v = m.version;
     const t = v?.task;
@@ -438,6 +458,11 @@ export async function listDrafts(userId: number) {
       versionName: v?.name ?? '',
       location,
       createdAt: m.createdAt,
+      // De quoi confier la review sans quitter la pastille : la version, son projet, et ce
+      // que ce projet exige d'une consigne.
+      versionId: m.versionId,
+      projectId: projectOf(m) ?? null,
+      reviewRequest: rules.get(projectOf(m) ?? -1) ?? null,
     };
   });
 }
@@ -472,8 +497,19 @@ export async function syncVersionPublication(versionId: number, actorId: number)
   return true;
 }
 
-/** Publie un média brouillon (réservé à l'uploader). */
-export async function publish(user: SessionUser, id: number) {
+/**
+ * Publie un média brouillon (réservé à l'uploader).
+ *
+ * `reviewers` est le geste de l'upload : « publie, et voilà qui doit regarder quoi ». La
+ * liste est écrite sur la VERSION — c'est elle qu'on confie — et AVANT le basculement :
+ * c'est ce qui donne son sens au réglage projet « consigne obligatoire », qui refuse alors
+ * la publication au lieu de la laisser partir et de râler ensuite. Absente, la liste déjà
+ * posée est laissée telle quelle : publier n'est pas défaire ce qu'on a confié.
+ *
+ * Rend le média ET la liste : c'est ce qui permet à l'écran de se mettre à jour sans
+ * relire le média — un détail relu resignerait toutes ses URL et rechargerait le viewer.
+ */
+export async function publish(user: SessionUser, id: number, reviewers?: ReviewerInput[]) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Media not found');
   // Brouillon strictement privé : seul l'uploader voit et publie son média (404 sinon).
@@ -482,6 +518,14 @@ export async function publish(user: SessionUser, id: number) {
   // magic bytes, ni normalisation du type de contenu, ni antivirus, ni contrôle de la
   // taille réelle contre les quotas. Le publier ferait servir un contenu jamais vérifié.
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
+  if (reviewers !== undefined) {
+    // Une liste explicitement demandée ne se perd pas en silence : une version détachée de
+    // tout projet n'a personne à qui la confier, et le dire vaut mieux que publier comme si
+    // de rien n'était.
+    const owner = await resolveProjectIdForVersion(media.versionId);
+    if (!owner) throw notFound('Version not attached to a project');
+    await setReviewers(user, owner, media.versionId, reviewers);
+  }
   const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
   // La version suit ses médias : dès qu'il ne reste plus un brouillon, elle est publiée.
   await syncVersionPublication(media.versionId, user.id);
@@ -518,7 +562,7 @@ export async function publish(user: SessionUser, id: number) {
     // Messagerie d'équipe (42.B — №67).
     void notifyChat(`🎬 Nouveau média publié : ${media.originalName}`);
   }
-  return serializeMedia(updated);
+  return { media: serializeMedia(updated), reviewers: await listReviewers(media.versionId) };
 }
 
 /** Relance le job de traitement d'un média (échec/bloqué, non publié). */
@@ -635,6 +679,7 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     project,
     projectSettings,
     references,
+    reviewers,
   ] = await Promise.all([
     storage.getPresignedGetUrl(viewKey),
     media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
@@ -661,6 +706,9 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
         })),
       ),
     ),
+    // Qui est attendu sur cette version, et sa consigne. La garde de lecture est celle de
+    // la fonction : on n'arrive ici qu'après l'avoir passée.
+    listReviewers(media.versionId),
   ]);
   return {
     media: serializeMedia(media),
@@ -722,6 +770,12 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     timelineSpriteUrl,
     // Images de référence review 2D (Phase 24, multi-items) : persistées & partagées.
     references,
+    // À qui la review de cette version est confiée, et ce que chacun doit y regarder.
+    // Rendu à tout le monde : savoir qu'un lead est attendu évite deux reviews en parallèle.
+    reviewers,
+    // La règle du projet, rendue avec le média : l'écran peut refuser une consigne trop
+    // courte sans aller-retour, et dire au passage ce qu'il attend.
+    reviewRequest: projectSettings.reviewRequest,
   };
 }
 

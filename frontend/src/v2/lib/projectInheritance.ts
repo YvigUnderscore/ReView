@@ -24,6 +24,7 @@ export const SETTINGS_SECTIONS = [
   'nomenclature',
   'departments',
   'naming',
+  'reviewRequest',
   'defaultLighting',
   'color',
   'burnin',
@@ -126,6 +127,17 @@ export function inheritanceRows(t: Tr, studio: ProjectSettings | undefined): Inh
     },
     { id: 'departments', label: t('pipeline.departments'), sections: ['departments'] },
     { id: 'fileNaming', label: t('inheritance.section.fileNaming'), sections: ['naming'] },
+    {
+      id: 'reviewRequest',
+      label: t('reviewRequest.title'),
+      sections: ['reviewRequest'],
+      // Ce que le studio impose, en une ligne : on revient à « ça » en rendant la section.
+      studioValue: studio
+        ? studio.reviewRequest.requireNote
+          ? t('reviewRequest.summary.required', { min: studio.reviewRequest.minNoteLength })
+          : t('reviewRequest.summary.optional')
+        : undefined,
+    },
     { id: 'lighting', label: t('lighting.default.title'), sections: ['defaultLighting'] },
     { id: 'color', label: t('color.title'), sections: ['color'] },
     { id: 'burnin', label: t('burnin.title'), sections: ['burnin'] },

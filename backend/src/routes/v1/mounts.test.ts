@@ -25,6 +25,29 @@ describe('plan d’URL de l’API v1', () => {
     expect(find('get', '/api/v1/latest')?.scope).toBe('versions:read');
   });
 
+  /**
+   * Les manques soldés par le tour d'API : ce qu'un intégrateur ne pouvait pas atteindre.
+   * Le `statusId` de `POST /versions/{id}/decision` n'était notamment découvrable nulle
+   * part — la route qui le rend est donc aussi importante que celle qui le consomme.
+   */
+  it('publie ce qui vivait jusque-là sur la seule API web', () => {
+    expect(find('get', '/api/v1/versions/{id}/reviewers')?.scope).toBe('versions:read');
+    expect(find('put', '/api/v1/versions/{id}/reviewers')?.scope).toBe('versions:write');
+    expect(find('patch', '/api/v1/versions/{id}/reviewers/{userId}')?.scope).toBe('versions:write');
+    expect(find('get', '/api/v1/review-statuses')?.scope).toBe('versions:read');
+    expect(find('get', '/api/v1/versions/{id}/decisions')?.scope).toBe('versions:read');
+    expect(find('get', '/api/v1/projects/{ref}/settings')?.scope).toBe('projects:read');
+    expect(find('get', '/api/v1/projects/{ref}/episodes')?.scope).toBe('episodes:read');
+    expect(find('get', '/api/v1/episodes/{id}')?.scope).toBe('episodes:read');
+    expect(find('get', '/api/v1/shots/{id}/note')?.scope).toBe('shots:read');
+    expect(find('put', '/api/v1/shots/{id}/note')?.scope).toBe('shots:write');
+    expect(find('get', '/api/v1/assets/{id}/assignees')?.scope).toBe('assets:read');
+    expect(find('put', '/api/v1/sequences/{id}/assignees')?.scope).toBe('sequences:write');
+    // Un épisode se lit sous son domaine et s'écrit sous celui de la séquence : déclarer
+    // `episodes:write` sans route qui l'exige remettrait au catalogue un scope creux.
+    expect(find('put', '/api/v1/episodes/{id}/note')?.scope).toBe('sequences:write');
+  });
+
   it('n’a pas cassé les chemins d’écriture existants', () => {
     expect(find('post', '/api/v1/publish')?.scope).toBe('versions:write');
     expect(find('post', '/api/v1/publish/{id}/complete')?.scope).toBe('versions:write');

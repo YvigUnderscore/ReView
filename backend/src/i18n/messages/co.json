@@ -50,6 +50,7 @@
   "notification.taskAssigned": "Attività assignata : {name}",
   "notification.clientComment": "{name} hà lasciatu un ritornu da un ligame spartutu",
   "notification.reviewAssigned": "A review di a version {version} vi hè stata assignata",
+  "notification.reviewNoteUpdated": "L'istruzzione hè cambiata nant'à una review chì v'hè stata affidata : {version}",
   "chat.system.joined": { "one": "{names} hè entrutu in a cunversazione", "other": "{names} sò entruti in a cunversazione" },
   "chat.system.left": "{name} hà lasciatu a cunversazione",
   "chat.system.removed": "{name} hè statu ritiratu",

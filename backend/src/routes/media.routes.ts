@@ -7,6 +7,7 @@ import { MediaKind } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { paginationQuery, readPagination } from '../lib/pagination';
+import { reviewersSchema } from '../services/ReviewAssignmentService';
 import * as MediaService from '../services/MediaService';
 
 const router = Router();
@@ -84,12 +85,16 @@ router.get(
   },
 );
 
-/**
- * POST /api/media/:id/publish — publie un média brouillon (réservé à l'uploader).
- */
-router.post('/:id/publish', validate({ params: idParam }), async (req, res) => {
-  res.json({ media: await MediaService.publish(req.user!, Number(req.params.id)) });
-});
+/** POST /api/media/:id/publish — publie un média brouillon (réservé à l'uploader). */
+router.post(
+  '/:id/publish',
+  // Le geste de l'upload : publier EN DISANT qui doit regarder quoi — une consigne manquante
+  // refuse alors la publication. Rend `{ media, reviewers }`.
+  validate({ params: idParam, body: z.object({ reviewers: reviewersSchema.optional() }) }),
+  async (req, res) => {
+    res.json(await MediaService.publish(req.user!, Number(req.params.id), req.body.reviewers));
+  },
+);
 
 /**
  * GET /api/media/drafts — brouillons (non publiés) de l'utilisateur courant.

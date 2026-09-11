@@ -50,6 +50,7 @@
   "notification.taskAssigned": "Tarefa atribuída: {name}",
   "notification.clientComment": "{name} deixou um comentário a partir de um link partilhado",
   "notification.reviewAssigned": "A review da version {version} foi atribuída a você",
+  "notification.reviewNoteUpdated": "A instrução mudou numa review que lhe confiaram: {version}",
   "chat.system.joined": { "one": "{names} entrou na conversa", "other": "{names} entraram na conversa" },
   "chat.system.left": "{name} saiu da conversa",
   "chat.system.removed": "{name} foi removido",

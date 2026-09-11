@@ -31,10 +31,22 @@ entry, migrations, breaking changes, and any manual step.
 
 Installable by a third-party studio without us: an installer, a versioned update path with
 rollback, a health probe that actually probes, a visible version, published images, and
-alerting that fires instead of being suggested.
+alerting that fires instead of being suggested. Plus
+[saying what the person you hand a version to should look at](DOCUMENTATION/CHANGELOG.md).
 
 ### Operator actions
 
+- **Nothing to do for the ReViewer briefs.** The feature is off until a studio turns it on:
+  `reviewRequest` defaults to *not required*, so no publication that worked yesterday is
+  refused today. A studio that wants it mandatory sets it in *Admin → Project defaults →
+  Brief for the ReViewer*, or per project. Instances that drive the studio from a script
+  should note that `PUT /api/admin/project-defaults` now carries **nine** sections and
+  resets what it omits to the factory value — add `reviewRequest` to the payload.
+- **`PUT /api/versions/:id/reviewers` changed its body** from `{ userIds: [1, 2] }` to
+  `{ reviewers: [{ userId: 1, note: "…" }] }`, so the brief can travel with the name. The
+  old shape shipped yesterday and was never released; nothing in the wild sends it.
+- **New webhook event `version.reviewers_changed`**, and a new API scope `episodes:read`.
+  Existing tokens and subscriptions are untouched: nothing was renamed or removed.
 - New installs: `bash scripts/install.sh` writes `.env` and `deploy/` (rendered nginx
   configuration and site overlay), generates every secret, creates the data directories and
   starts the stack. Nothing else needs editing by hand.
@@ -78,6 +90,12 @@ alerting that fires instead of being suggested.
   (who a version's review was handed to). Additive: no column changes, no data rewritten,
   and an instance that skips the feature simply never writes a row. Applied by
   `migrate deploy` like the rest; nothing to do by hand.
+- `20260911120000_consigne_du_reviewer` — replaces that link table with a `ReviewAssignment`
+  table so the hand-over can carry the **brief** written for each person. An implicit link
+  table cannot hold a column, which is the only reason for the swap: the rows already in
+  `_VersionReviewers` are copied over, without a brief and without an author, before the old
+  table is dropped. Nothing is lost, and nothing to do by hand. Both migrations ship
+  together — an instance upgrading from a release older than today applies them in order.
 
 ## Earlier history
 
