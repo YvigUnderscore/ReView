@@ -89,8 +89,9 @@ router.get(
 router.post(
   '/:id/publish',
   // Le geste de l'upload : publier EN DISANT qui doit regarder quoi — une consigne manquante
-  // refuse alors la publication. Rend `{ media, reviewers }`.
-  validate({ params: idParam, body: z.object({ reviewers: reviewersSchema.optional() }) }),
+  // refuse alors la publication. Rend `{ media, reviewers }`. Corps absent = publier sans
+  // rien confier, comme avant : sans `.default({})`, un POST sans corps se verrait refusé.
+  validate({ params: idParam, body: z.object({ reviewers: reviewersSchema.optional() }).default({}) }),
   async (req, res) => {
     res.json(await MediaService.publish(req.user!, Number(req.params.id), req.body.reviewers));
   },
