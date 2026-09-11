@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Parolla d'accessu (per disattivà)",
   "kanban.addItem": "Aghjunghje un elementu…",
   "reviews.addToPlaylistShort": "Aghjunghje à a playlist",
+  "reviews.assigned.title": "Assignatu à mè",
+  "reviews.assigned.count": { "one": "{count} review v'aspetta", "other": "{count} reviews v'aspettanu" },
+  "reviews.filter.allAssignments": "Tutte e reviews",
   "common.clearSelection": "Annullà a selezzione",
   "comments.imagePreview": "Anteprima di l'imagine",
   "comments.created": "Cummentu creatu",
@@ -2918,6 +2921,7 @@
   "notification.decision": "Decisione « {status} » nant'à a version {version}",
   "notification.taskAssigned": "Attività assignata : {name}",
   "notification.clientComment": "Novu cummentu di u cliente {name}",
+  "notification.reviewAssigned": "A review di a version {version} vi hè stata assignata",
   "assign.menu": "Assignà",
   "assign.unassigned": "Nimu",
   "assign.done": "Assignazione aghjurnata",
@@ -3433,5 +3437,9 @@
   "ops.backups.restoreHint": "U ristabilimentu resta apposta un cumandu di terminale :",
   "ops.history.title": "Operazione recente",
   "ops.backups.createHint": "Scrive un dump di a basa è mette à ghjornu u spechju di u bucket in un cartulare novu datatu. L'istanza cuntinueghja à funziunà durante stu tempu.",
-  "ops.run.gone": "L'istanza ùn cunnosce più st'operazione : hè stata purgata da a cronologia, o l'agente d'esercitu hè statu toltu dapoi."
+  "ops.run.gone": "L'istanza ùn cunnosce più st'operazione : hè stata purgata da a cronologia, o l'agente d'esercitu hè statu toltu dapoi.",
+  "reviewers.title": "Reviewers",
+  "reviewers.none": "Nimu hè ancu incaricatu di a review di sta version",
+  "reviewers.assign": "Assignà",
+  "reviewers.saved": { "one": "{count} persona nant'à sta review", "other": "{count} persone nant'à sta review" }
 }

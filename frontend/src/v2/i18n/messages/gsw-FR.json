@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Passwort (zum Ussschalte)",
   "kanban.addItem": "E Element dezuenäh…",
   "reviews.addToPlaylistShort": "Zue d'r playlist dezuenäh",
+  "reviews.assigned.title": "Mir zuegwiese",
+  "reviews.assigned.count": { "one": "{count} review wartet uf Ihne", "other": "{count} reviews warte uf Ihne" },
+  "reviews.filter.allAssignments": "Alli review",
   "common.clearSelection": "D'Ussswahl uffhebe",
   "comments.imagePreview": "Bildvorschau",
   "comments.created": "Kommentar ahgleit",
@@ -2918,6 +2921,7 @@
   "notification.decision": "Entscheidig « {status} » zue dr version {version}",
   "notification.taskAssigned": "Ufgab zuegwiese: {name}",
   "notification.clientComment": "Neier Kundekommentar vum {name}",
+  "notification.reviewAssigned": "D review vu dr version {version} isch Ihne zuegwiese wore",
   "assign.menu": "Zuewiise",
   "assign.unassigned": "Niemer",
   "assign.done": "Zuewiisig aktualisiert",
@@ -3433,5 +3437,9 @@
   "ops.backups.restoreHint": "S Iispiele bliibt bewusst e Terminal-Befähl:",
   "ops.history.title": "Letschti Vorgäng",
   "ops.backups.createHint": "Schriibt en Dump vo de Datebank und bringt de Spiegel vom Bucket in en neue datierte Ordner. D Instanz lauft derwiil witer.",
-  "ops.run.gone": "Die Instanz kennt dä Vorgang nümme — er isch us de Chronik grumt worde, oder de Betriibsagent isch sithär abgebaut worde."
+  "ops.run.gone": "Die Instanz kennt dä Vorgang nümme — er isch us de Chronik grumt worde, oder de Betriibsagent isch sithär abgebaut worde.",
+  "reviewers.title": "Reviewer",
+  "reviewers.none": "Fir d review vu däre version isch no niemer bstimmt",
+  "reviewers.assign": "Zuewiese",
+  "reviewers.saved": { "one": "{count} Person bi däre review", "other": "{count} Persone bi däre review" }
 }

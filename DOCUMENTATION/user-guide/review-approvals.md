@@ -1,8 +1,8 @@
 # Review decisions & approvals
 
-*Recording what a review concluded on a version — customisable statuses, and a history that never changes.*
+*Recording what a review concluded on a version — customisable statuses, a history that never changes, and who was asked to look.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-11
 
 A **review decision** is the studio's answer to one question: what did we conclude about
 this version? It is deliberately distinct from the task's kanban status. The kanban says
@@ -92,6 +92,38 @@ alone is allowed to decide there. See
 > dispatched as the room walks the playlist. See
 > [Playlists & live review sessions](playlists-and-live-review.md).
 
+## Handing a version to someone
+
+A decision says what was concluded. It says nothing about the step before it: **who was
+asked to look**. That request used to live in a corridor conversation or a chat thread, so
+nobody could open ReView and answer "what is waiting on me?".
+
+The same dialog carries it. Under the statuses, a **Reviewers** line shows the faces of the
+people the version was handed to, and a supervisor opens the studio directory from
+*Assign*:
+
+- clicking a name **hands them the version**; clicking it again **takes it back**. There is
+  no *Save* — a checklist you can leave without validating lies about its own state;
+- the directory is the **project's members**, searchable by name, address, job title or
+  role. Service accounts and clients are not offered, and the server refuses them too:
+  a machine identity does not watch dailies, and a client comments rather than reviews;
+- up to **20 people** on one version. Past that it is not an assignment any more, it is a
+  screening — that is what a [playlist](playlists-and-live-review.md) is for.
+
+Assigning **grants nothing and removes nothing**. It is an expectation, not a delegation:
+the decision stays reserved to supervision, and an artist handed a version reviews and
+comments exactly as they already could. Reading the list is open to every project member,
+as the decision history is.
+
+Each person newly handed the version gets a **notification** that opens straight onto the
+review screen, and starts **following** the version — the comments and the decision that
+follow are precisely what they are waiting for. Taking someone off the list does not
+unfollow them: they may have chosen to follow it themselves in the meantime.
+
+> [!NOTE]
+> Assigning is written to the audit log under `version.reviewers`, with the list of people
+> it was set to. Who asked whom to look is production history, not interface state.
+
 ## What one decision sets off
 
 Recording a decision is not a badge change. In a single gesture it does all of this:
@@ -142,13 +174,20 @@ and [Exporting review notes](exporting-notes.md).
 
 ## Finding what is still waiting
 
-The Reviews page carries a **decision filter** — *All decisions*, *No decision*, or any
-single status — which combines with the project, media type and published/draft filters.
-It is the fastest way to answer "what is still waiting on me" (*No decision*) or "what did
-we retake this week" (the retake status).
+The Reviews page opens on an **Assigned to me** panel: the versions someone handed you,
+newest first, with a count and a way into the full list. It is not shown when the list is
+empty — a permanent "nothing for you" frame would cost every reader what it gives the few
+with a queue.
+
+The same page carries a **decision filter** — *All decisions*, *No decision*, or any single
+status — and an **assignment filter** — *All reviews* or *Assigned to me* — which combine
+with the project, media type and published/draft filters. Together they answer "what is
+still waiting on me" (*Assigned to me*, or *No decision* for a supervisor) and "what did we
+retake this week" (the retake status).
 
 A filter combination worth keeping can be saved from the **Saved views** menu next to the
-filters, and reapplied in one click on your next pass.
+filters, and reapplied in one click on your next pass — the assignment filter travels with
+the rest.
 
 ## API
 
@@ -160,6 +199,9 @@ tool rather than by hand:
 | `POST /api/versions/:id/decision` | Record a decision — body `statusId`, optional `comment` (2000 characters max) | Effective supervisor or admin on the project |
 | `GET /api/versions/:id/decisions` | The full history of a version | Any project member |
 | `GET /api/review-statuses?projectId=` | The status list, narrowed to the ShotGrid mapping when the project has one | Any authenticated user |
+| `GET /api/versions/:id/reviewers` | Who the version was handed to | Any project member |
+| `PUT /api/versions/:id/reviewers` | Hand the version to these people — body `userIds`, 20 maximum, replaces the list | Effective supervisor or admin on the project |
+| `GET /api/media/reviews?assigned=me` | The media of the versions handed to you | Any authenticated user |
 | `POST /api/v1/versions/:id/decision` | The same act from a service token | Token with the `versions:write` scope, `SUPERVISOR` or `ADMIN` |
 
 See [v1 integration](../api/v1-integration.md).
@@ -178,6 +220,14 @@ See [v1 integration](../api/v1-integration.md).
 
 Nothing in that circuit modifies the earlier version, which is what makes the history worth
 reading later.
+
+### Splitting a morning of dailies between two supervisors
+
+Forty published versions, two people to look at them. From each version's decision dialog,
+hand it to whoever owns that sequence — or open the sequence's versions one after another
+and assign as you go. Each of them opens ReView, finds their share under **Assigned to me**,
+and works down it. Nobody reviews the same shot twice, and nothing falls between the two
+because it was mentioned to nobody.
 
 ### Clearing the queue on Monday morning
 
@@ -219,6 +269,15 @@ reorder it; if you want it out of circulation, move it to the end of the list.
 **I can open the decision dialog but not the chips.** Deciding is restricted to
 `SUPERVISOR` and `ADMIN`. Everyone else gets the read-only history — which is the point:
 the record is public, the decision is not.
+
+**The person I want to hand the version to is not in the directory.** Only the project's
+members are offered, minus the clients and the service accounts. Add them to the project
+first — assigning someone who cannot even open the media would notify them of nothing they
+can act on.
+
+**The "Assigned to me" panel is not on my Reviews page.** It appears only when something is
+actually waiting for you, and it steps aside when the list itself is already filtered on
+*Assigned to me* — there it would say nothing the page does not.
 
 **Two statuses both look like the default.** Only one can be. Setting the *default* flag on
 a status clears it on every other one, so if the list still shows two, reload — the screen

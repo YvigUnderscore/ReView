@@ -49,6 +49,7 @@
   "notification.decision": "Decision « {status} » sus la version {version}",
   "notification.taskAssigned": "Prètzfach assignat : {name}",
   "notification.clientComment": "{name} a daissat un retorn dempuèi un ligam de partatge",
+  "notification.reviewAssigned": "La review de la version {version} vos es estada confiada",
   "chat.system.joined": { "one": "{names} a rejonch la convèrsa", "other": "{names} an rejonch la convèrsa" },
   "chat.system.left": "{name} a quitat la convèrsa",
   "chat.system.removed": "{name} es estat retirat",

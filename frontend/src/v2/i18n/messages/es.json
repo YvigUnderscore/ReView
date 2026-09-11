@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Contraseña (para desactivar)",
   "kanban.addItem": "Añadir un elemento…",
   "reviews.addToPlaylistShort": "Añadir a la playlist",
+  "reviews.assigned.title": "Asignado a mí",
+  "reviews.assigned.count": { "one": "{count} review te espera", "other": "{count} reviews te esperan" },
+  "reviews.filter.allAssignments": "Todas las reviews",
   "common.clearSelection": "Cancelar la selección",
   "comments.imagePreview": "Vista previa de la imagen",
   "comments.created": "Comentario creado",
@@ -2918,6 +2921,7 @@
   "notification.decision": "Decisión « {status} » sobre la version {version}",
   "notification.taskAssigned": "Tarea asignada: {name}",
   "notification.clientComment": "Nuevo comentario de cliente de {name}",
+  "notification.reviewAssigned": "Se te ha asignado la review de la version {version}",
   "assign.menu": "Asignar",
   "assign.unassigned": "Nadie",
   "assign.done": "Asignación actualizada",
@@ -3433,5 +3437,9 @@
   "ops.backups.restoreHint": "Restaurar sigue siendo deliberadamente un comando de terminal:",
   "ops.history.title": "Operaciones recientes",
   "ops.backups.createHint": "Escribe un volcado de la base de datos y actualiza el espejo del bucket en una carpeta nueva con fecha. La instancia sigue funcionando mientras tanto.",
-  "ops.run.gone": "La instancia ya no conoce esta operación: se ha purgado del historial, o el agente de operaciones se ha retirado desde entonces."
+  "ops.run.gone": "La instancia ya no conoce esta operación: se ha purgado del historial, o el agente de operaciones se ha retirado desde entonces.",
+  "reviewers.title": "Reviewers",
+  "reviewers.none": "Todavía no se ha encargado a nadie la review de esta version",
+  "reviewers.assign": "Asignar",
+  "reviewers.saved": { "one": "{count} persona en esta review", "other": "{count} personas en esta review" }
 }

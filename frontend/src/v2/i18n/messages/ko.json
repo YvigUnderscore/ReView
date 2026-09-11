@@ -778,6 +778,9 @@
   "twofa.passwordToDisable": "비밀번호(해제용)",
   "kanban.addItem": "항목 추가…",
   "reviews.addToPlaylistShort": "playlist에 추가",
+  "reviews.assigned.title": "나에게 배정됨",
+  "reviews.assigned.count": { "other": "{count}건의 review가 기다리고 있습니다" },
+  "reviews.filter.allAssignments": "모든 review",
   "common.clearSelection": "선택 해제",
   "comments.imagePreview": "이미지 미리보기",
   "comments.created": "댓글을 만들었습니다",
@@ -2830,6 +2833,7 @@
   "notification.decision": "version {version}에 대한 판정 « {status} »",
   "notification.taskAssigned": "작업이 배정되었습니다: {name}",
   "notification.clientComment": "{name}님의 새 고객 코멘트",
+  "notification.reviewAssigned": "version {version}의 review가 배정되었습니다",
   "assign.menu": "담당 지정",
   "assign.unassigned": "담당자 없음",
   "assign.done": "담당자를 변경했습니다",
@@ -3324,5 +3328,9 @@
   "ops.backups.restoreHint": "복원은 의도적으로 터미널 명령으로 남겨 두었습니다:",
   "ops.history.title": "최근 작업",
   "ops.backups.createHint": "데이터베이스 덤프를 쓰고 버킷 미러를 날짜가 붙은 새 디렉터리에 갱신합니다. 그동안에도 인스턴스는 계속 동작합니다.",
-  "ops.run.gone": "인스턴스가 이 작업을 더 이상 알지 못합니다. 기록에서 정리되었거나, 그 사이 운영 에이전트가 제거되었습니다."
+  "ops.run.gone": "인스턴스가 이 작업을 더 이상 알지 못합니다. 기록에서 정리되었거나, 그 사이 운영 에이전트가 제거되었습니다.",
+  "reviewers.title": "review 담당자",
+  "reviewers.none": "아직 이 version의 review를 맡은 사람이 없습니다",
+  "reviewers.assign": "배정",
+  "reviewers.saved": { "other": "이 review에 {count}명" }
 }

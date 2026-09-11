@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Senhal (per desactivar)",
   "kanban.addItem": "Apondre un element…",
   "reviews.addToPlaylistShort": "Apondre a la playlist",
+  "reviews.assigned.title": "Assignat a ieu",
+  "reviews.assigned.count": { "one": "{count} review vos espèra", "many": "{count} reviews vos espèran", "other": "{count} reviews vos espèran" },
+  "reviews.filter.allAssignments": "Totas las reviews",
   "common.clearSelection": "Anullar la seleccion",
   "comments.imagePreview": "Apercebut de l'imatge",
   "comments.created": "Comentari creat",
@@ -2918,6 +2921,7 @@
   "notification.decision": "Decision « {status} » sus la version {version}",
   "notification.taskAssigned": "Prètzfach assignat : {name}",
   "notification.clientComment": "Novèl comentari del client {name}",
+  "notification.reviewAssigned": "La review de la version {version} vos es estada confiada",
   "assign.menu": "Assignar",
   "assign.unassigned": "Degun",
   "assign.done": "Assignacion mesa a jorn",
@@ -3439,5 +3443,9 @@
   "ops.backups.restoreHint": "Restablir demòra a bèl esprèssi una comanda de terminal :",
   "ops.history.title": "Operacions recentas",
   "ops.backups.createHint": "Escriu un dump de la basa e met a jorn lo miralh del bucket dins un dorsièr novèl datat. L'instància contunha de foncionar pendent aqueste temps.",
-  "ops.run.gone": "L'instància coneis pas mai aquesta operacion : es estada purgada de l'istoric, o l'agent d'exploitacion es estat levat dempuèi."
+  "ops.run.gone": "L'instància coneis pas mai aquesta operacion : es estada purgada de l'istoric, o l'agent d'exploitacion es estat levat dempuèi.",
+  "reviewers.title": "Reviewers",
+  "reviewers.none": "Degun es pas encara cargat de la review d'aquesta version",
+  "reviewers.assign": "Assignar",
+  "reviewers.saved": { "one": "{count} persona sus aquesta review", "many": "{count} personas sus aquesta review", "other": "{count} personas sus aquesta review" }
 }

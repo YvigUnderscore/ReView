@@ -55,6 +55,17 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
     expect(version.OR[2]!.asset!.project).toEqual({ deletedAt: null, id: 7 });
   });
 
+  it('assigned=me : les seules versions dont la review m’est confiée (Phase 49)', async () => {
+    await listReviews(artist, { assigned: 'me' }, page);
+    const version = lastWhere().version as { reviewers?: unknown };
+    expect(version.reviewers).toEqual({ some: { id: 3 } });
+  });
+
+  it('sans assigned : aucune restriction de reviewer', async () => {
+    await listReviews(artist, {}, page);
+    expect((lastWhere().version as { reviewers?: unknown }).reviewers).toBeUndefined();
+  });
+
   it('mappe les items : miniature présignée, localisation, projet', async () => {
     findMany.mockResolvedValue([
       {

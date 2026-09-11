@@ -281,6 +281,8 @@ export interface ReviewsFilter {
   status?: 'published' | 'draft';
   /** Filtre par décision de review courante : id de ReviewStatus, ou 'none' = sans décision. */
   decision?: number | 'none';
+  /** 'me' = les versions dont la review m'a été confiée (Phase 49) — l'encart s'en sert. */
+  assigned?: 'me';
 }
 
 /**
@@ -317,6 +319,9 @@ export async function listReviews(
         : filter.decision !== undefined
           ? { reviewStatusId: filter.decision }
           : {}),
+      // Reviews confiées (Phase 49). Le filtre porte sur la version, pas sur le média :
+      // c'est la livraison qu'on confie, et elle en compte souvent plusieurs.
+      ...(filter.assigned === 'me' ? { reviewers: { some: { id: user.id } } } : {}),
       OR: [
         { task: { shot: { deletedAt: null, project } } },
         { task: { asset: { deletedAt: null, project } } },

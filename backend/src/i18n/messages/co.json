@@ -49,6 +49,7 @@
   "notification.decision": "Decisione « {status} » nant'à a version {version}",
   "notification.taskAssigned": "Attività assignata : {name}",
   "notification.clientComment": "{name} hà lasciatu un ritornu da un ligame spartutu",
+  "notification.reviewAssigned": "A review di a version {version} vi hè stata assignata",
   "chat.system.joined": { "one": "{names} hè entrutu in a cunversazione", "other": "{names} sò entruti in a cunversazione" },
   "chat.system.left": "{name} hà lasciatu a cunversazione",
   "chat.system.removed": "{name} hè statu ritiratu",

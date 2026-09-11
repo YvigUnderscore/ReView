@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "पासवर्ड (बंद करने के लिए)",
   "kanban.addItem": "आइटम जोड़ें…",
   "reviews.addToPlaylistShort": "playlist में जोड़ें",
+  "reviews.assigned.title": "मुझे सौंपा गया",
+  "reviews.assigned.count": { "one": "{count} review आपकी प्रतीक्षा में है", "other": "{count} reviews आपकी प्रतीक्षा में हैं" },
+  "reviews.filter.allAssignments": "सभी reviews",
   "common.clearSelection": "चयन रद्द करें",
   "comments.imagePreview": "छवि पूर्वावलोकन",
   "comments.created": "टिप्पणी बनी",
@@ -2918,6 +2921,7 @@
   "notification.decision": "version {version} पर निर्णय « {status} »",
   "notification.taskAssigned": "कार्य सौंपा गया: {name}",
   "notification.clientComment": "{name} की ओर से नई क्लाइंट टिप्पणी",
+  "notification.reviewAssigned": "version {version} की review आपको सौंपी गई है",
   "assign.menu": "सौंपें",
   "assign.unassigned": "कोई नहीं",
   "assign.done": "असाइनमेंट अपडेट हुआ",
@@ -3433,5 +3437,9 @@
   "ops.backups.restoreHint": "पुनर्स्थापना जानबूझकर टर्मिनल कमांड ही रखी गई है:",
   "ops.history.title": "हाल के कार्य",
   "ops.backups.createHint": "डेटाबेस का डंप लिखता है और बकेट का मिरर एक नई दिनांकित डायरेक्टरी में अपडेट करता है। इस दौरान इंस्टेंस चलता रहता है।",
-  "ops.run.gone": "इंस्टेंस अब इस कार्य को नहीं जानता — यह इतिहास से हटा दिया गया है, या तब से ऑपरेशन एजेंट हटा दिया गया है।"
+  "ops.run.gone": "इंस्टेंस अब इस कार्य को नहीं जानता — यह इतिहास से हटा दिया गया है, या तब से ऑपरेशन एजेंट हटा दिया गया है।",
+  "reviewers.title": "review करने वाले",
+  "reviewers.none": "इस version की review अभी किसी को नहीं सौंपी गई है",
+  "reviewers.assign": "सौंपें",
+  "reviewers.saved": { "one": "इस review पर {count} व्यक्ति", "other": "इस review पर {count} व्यक्ति" }
 }

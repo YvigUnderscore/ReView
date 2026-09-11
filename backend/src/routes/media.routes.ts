@@ -61,6 +61,8 @@ router.get(
         status: z.enum(['published', 'draft']).optional(),
         // Filtre par décision de review (Phase 31) : id de statut ou 'none' (sans décision)
         decision: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
+        // Reviews qui m'ont été confiées (Phase 49) — ce que lit l'encart « Assigned to me ».
+        assigned: z.literal('me').optional(),
       })
       .merge(paginationQuery),
   }),
@@ -74,6 +76,7 @@ router.get(
           kind: q.kind as MediaKind | undefined,
           status: q.status as 'published' | 'draft' | undefined,
           decision: q.decision === 'none' ? 'none' : q.decision ? Number(q.decision) : undefined,
+          assigned: q.assigned as 'me' | undefined,
         },
         readPagination(q),
       ),

@@ -49,6 +49,7 @@
   "notification.decision": "Entscheidung « {status} » zur version {version}",
   "notification.taskAssigned": "Aufgabe zugewiesen: {name}",
   "notification.clientComment": "{name} hat über einen Freigabelink eine Rückmeldung hinterlassen",
+  "notification.reviewAssigned": "Ihnen wurde die review der version {version} zugewiesen",
   "chat.system.joined": { "one": "{names} ist der Unterhaltung beigetreten", "other": "{names} sind der Unterhaltung beigetreten" },
   "chat.system.left": "{name} hat die Unterhaltung verlassen",
   "chat.system.removed": "{name} wurde entfernt",

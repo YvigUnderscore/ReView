@@ -74,7 +74,10 @@ alerting that fires instead of being suggested.
 
 ### Migrations
 
-None.
+- `20260911101957_assignation_review_version` — creates the `_VersionReviewers` link table
+  (who a version's review was handed to). Additive: no column changes, no data rewritten,
+  and an instance that skips the feature simply never writes a row. Applied by
+  `migrate deploy` like the rest; nothing to do by hand.
 
 ## Earlier history
 

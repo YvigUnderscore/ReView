@@ -116,6 +116,8 @@ export const qk = {
   liveSessions: (projectId: number) => ['live-sessions', projectId] as const,
   timelineMarkers: (mediaId: number) => ['timeline-markers', mediaId] as const,
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
+  /** Personnes à qui la review d'une version est confiée (Phase 49). */
+  versionReviewers: (versionId: number) => ['version-reviewers', versionId] as const,
   shareLinks: (projectId: number) => ['share-links', projectId] as const,
   watermarkConfig: ['watermark-config'] as const,
   authSessions: ['auth-sessions'] as const,

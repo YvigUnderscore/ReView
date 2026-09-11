@@ -778,6 +778,9 @@
   "twofa.passwordToDisable": "パスワード（無効化用）",
   "kanban.addItem": "項目を追加…",
   "reviews.addToPlaylistShort": "playlist に追加",
+  "reviews.assigned.title": "自分に割り当て",
+  "reviews.assigned.count": { "other": "{count} 件の review が待っています" },
+  "reviews.filter.allAssignments": "すべての review",
   "common.clearSelection": "選択を解除",
   "comments.imagePreview": "画像プレビュー",
   "comments.created": "コメントを作成しました",
@@ -2830,6 +2833,7 @@
   "notification.decision": "version {version} の判定「{status}」",
   "notification.taskAssigned": "タスクが割り当てられました：{name}",
   "notification.clientComment": "{name} さんからの新しいクライアントコメント",
+  "notification.reviewAssigned": "version {version} の review が割り当てられました",
   "assign.menu": "担当を割り当て",
   "assign.unassigned": "担当なし",
   "assign.done": "担当を更新しました",
@@ -3324,5 +3328,9 @@
   "ops.backups.restoreHint": "復元は意図的にターミナルのコマンドのままにしています:",
   "ops.history.title": "最近の作業",
   "ops.backups.createHint": "データベースのダンプを書き出し、バケットのミラーを日付つきの新しいディレクトリに更新します。その間もインスタンスは動き続けます。",
-  "ops.run.gone": "このインスタンスはこの作業をもう把握していません。履歴から消えたか、その後に運用エージェントが取り外されています。"
+  "ops.run.gone": "このインスタンスはこの作業をもう把握していません。履歴から消えたか、その後に運用エージェントが取り外されています。",
+  "reviewers.title": "review 担当",
+  "reviewers.none": "この version の review 担当はまだ決まっていません",
+  "reviewers.assign": "割り当てる",
+  "reviewers.saved": { "other": "この review の担当は {count} 人" }
 }
