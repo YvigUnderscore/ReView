@@ -5,7 +5,16 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { AtSign, Bell, CheckCheck, ListTodo, MessageSquare, Radio, Reply } from 'lucide-react';
+import {
+  AtSign,
+  Bell,
+  CheckCheck,
+  ClipboardCheck,
+  ListTodo,
+  MessageSquare,
+  Radio,
+  Reply,
+} from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { getSocket } from '../../lib/socket';
 import { qk } from '../lib/query';
@@ -22,7 +31,13 @@ import { notificationText } from '../lib/notificationText';
 function linkFor(n: Notification): string | null {
   if (n.type === 'TASK_ASSIGNED' && n.referenceId) return `/tasks/${n.referenceId}`;
   if (
-    (n.type === 'REPLY' || n.type === 'COMMENT_ASSIGNED' || n.type === 'MENTION' || n.type === 'WATCH') &&
+    (n.type === 'REPLY' ||
+      n.type === 'COMMENT_ASSIGNED' ||
+      // Review confiée (Phase 49) : la référence est le premier média de la version, donc
+      // le clic ouvre l'écran où le travail demandé se fait.
+      n.type === 'REVIEW_ASSIGNED' ||
+      n.type === 'MENTION' ||
+      n.type === 'WATCH') &&
     n.referenceId
   )
     return `/review/${n.referenceId}`;
@@ -52,6 +67,7 @@ function IconFor({ type }: { type: Notification['type'] }) {
   if (type === 'TASK_ASSIGNED') return <ListTodo size={16} className={cls} />;
   if (type === 'REPLY') return <Reply size={16} className={cls} />;
   if (type === 'COMMENT_ASSIGNED') return <MessageSquare size={16} className={cls} />;
+  if (type === 'REVIEW_ASSIGNED') return <ClipboardCheck size={16} className={cls} />;
   if (type === 'MENTION') return <AtSign size={16} className={cls} />;
   if (type === 'LIVE') return <Radio size={16} className="mt-0.5 shrink-0 text-accent2" />;
   return <Bell size={16} className={cls} />;

@@ -789,6 +789,9 @@
   "twofa.passwordToDisable": "Ger-tremen (evit diweredekaat)",
   "kanban.addItem": "Ouzhpennañ un elfenn…",
   "reviews.addToPlaylistShort": "Ouzhpennañ d'ar playlist",
+  "reviews.assigned.title": "Roet din",
+  "reviews.assigned.count": { "one": "{count} review o c'hortoz ac'hanoc'h", "two": "{count} review o c'hortoz ac'hanoc'h", "few": "{count} review o c'hortoz ac'hanoc'h", "many": "{count} review o c'hortoz ac'hanoc'h", "other": "{count} review o c'hortoz ac'hanoc'h" },
+  "reviews.filter.allAssignments": "An holl review",
   "common.clearSelection": "Nullañ an diuzad",
   "comments.imagePreview": "Rakwel ar skeudenn",
   "comments.created": "Evezhiadenn krouet",
@@ -2917,6 +2920,7 @@
   "notification.decision": "Diviz « {status} » war ar version {version}",
   "notification.taskAssigned": "Dlead roet : {name}",
   "notification.clientComment": "Evezhiadenn nevez eus ar c'hliant {name}",
+  "notification.reviewAssigned": "Roet eo bet deoc'h review ar version {version}",
   "assign.menu": "Deverkañ",
   "assign.unassigned": "Den",
   "assign.done": "Deverkadur hizivaet",
@@ -3449,5 +3453,9 @@
   "ops.backups.restoreHint": "A-ratozh e chom an assevel un urzhiad termenell :",
   "ops.history.title": "Oberiadennoù nevez",
   "ops.backups.createHint": "Skrivañ a ra un dump eus an diaz ha hizivaat melezour ar bucket en un teuliad nevez deiziataet. An instañs a gendalc'h da vont e-pad an amzer-se.",
-  "ops.run.gone": "N'anavez ket mui an instañs an oberiadenn-mañ : skarzhet eo bet eus an istor, pe eo bet lamet an ajant merañ abaoe."
+  "ops.run.gone": "N'anavez ket mui an instañs an oberiadenn-mañ : skarzhet eo bet eus an istor, pe eo bet lamet an ajant merañ abaoe.",
+  "reviewers.title": "Reviewerien",
+  "reviewers.none": "Den ebet c'hoazh evit review ar version-mañ",
+  "reviewers.assign": "Deverkañ",
+  "reviewers.saved": { "one": "{count} den war ar review-mañ", "two": "{count} zen war ar review-mañ", "few": "{count} den war ar review-mañ", "many": "{count} a dud war ar review-mañ", "other": "{count} den war ar review-mañ" }
 }

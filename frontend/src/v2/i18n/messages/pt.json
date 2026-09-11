@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Senha (para desativar)",
   "kanban.addItem": "Adicionar um item…",
   "reviews.addToPlaylistShort": "Adicionar à playlist",
+  "reviews.assigned.title": "Atribuído a mim",
+  "reviews.assigned.count": { "one": "{count} review à sua espera", "many": "{count} reviews à sua espera", "other": "{count} reviews à sua espera" },
+  "reviews.filter.allAssignments": "Todas as reviews",
   "common.clearSelection": "Cancelar a seleção",
   "comments.imagePreview": "Prévia da imagem",
   "comments.created": "Comentário criado",
@@ -2918,6 +2921,7 @@
   "notification.decision": "Decisão « {status} » sobre a version {version}",
   "notification.taskAssigned": "Tarefa atribuída: {name}",
   "notification.clientComment": "Novo comentário de cliente de {name}",
+  "notification.reviewAssigned": "A review da version {version} foi atribuída a você",
   "assign.menu": "Atribuir",
   "assign.unassigned": "Ninguém",
   "assign.done": "Atribuição atualizada",
@@ -3439,5 +3443,9 @@
   "ops.backups.restoreHint": "Restaurar continua a ser deliberadamente um comando de terminal:",
   "ops.history.title": "Operações recentes",
   "ops.backups.createHint": "Escreve um dump da base de dados e atualiza o espelho do bucket numa nova pasta datada. A instância continua a funcionar entretanto.",
-  "ops.run.gone": "A instância já não conhece esta operação: foi purgada do histórico, ou o agente de operações foi removido entretanto."
+  "ops.run.gone": "A instância já não conhece esta operação: foi purgada do histórico, ou o agente de operações foi removido entretanto.",
+  "reviewers.title": "Reviewers",
+  "reviewers.none": "Ainda ninguém ficou responsável pela review desta version",
+  "reviewers.assign": "Atribuir",
+  "reviewers.saved": { "one": "{count} pessoa nesta review", "many": "{count} pessoas nesta review", "other": "{count} pessoas nesta review" }
 }

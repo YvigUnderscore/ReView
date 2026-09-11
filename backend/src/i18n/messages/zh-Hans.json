@@ -49,6 +49,7 @@
   "notification.decision": "version {version} 的判定「{status}」",
   "notification.taskAssigned": "已指派任务：{name}",
   "notification.clientComment": "{name} 通过共享链接留下了反馈",
+  "notification.reviewAssigned": "version {version} 的 review 已指派给你",
   "chat.system.joined": { "other": "{names} 加入了对话" },
   "chat.system.left": "{name} 离开了对话",
   "chat.system.removed": "{name} 已被移除",

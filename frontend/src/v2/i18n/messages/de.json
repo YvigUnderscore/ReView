@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Passwort (zum Deaktivieren)",
   "kanban.addItem": "Element hinzufügen…",
   "reviews.addToPlaylistShort": "Zur playlist hinzufügen",
+  "reviews.assigned.title": "Mir zugewiesen",
+  "reviews.assigned.count": { "one": "{count} review wartet auf Sie", "other": "{count} reviews warten auf Sie" },
+  "reviews.filter.allAssignments": "Alle reviews",
   "common.clearSelection": "Auswahl aufheben",
   "comments.imagePreview": "Bildvorschau",
   "comments.created": "Kommentar erstellt",
@@ -2918,6 +2921,7 @@
   "notification.decision": "Entscheidung « {status} » zur version {version}",
   "notification.taskAssigned": "Aufgabe zugewiesen: {name}",
   "notification.clientComment": "Neuer Kundenkommentar von {name}",
+  "notification.reviewAssigned": "Ihnen wurde die review der version {version} zugewiesen",
   "assign.menu": "Zuweisen",
   "assign.unassigned": "Niemand",
   "assign.done": "Zuweisung aktualisiert",
@@ -3433,5 +3437,9 @@
   "ops.backups.restoreHint": "Das Einspielen bleibt bewusst ein Terminalbefehl:",
   "ops.history.title": "Letzte Vorgänge",
   "ops.backups.createHint": "Schreibt einen Dump der Datenbank und spiegelt den Bucket in ein neues datiertes Verzeichnis. Die Instanz läuft dabei weiter.",
-  "ops.run.gone": "Diese Instanz kennt den Vorgang nicht mehr — er wurde aus dem Verlauf entfernt, oder der Betriebsagent wurde seither abgebaut."
+  "ops.run.gone": "Diese Instanz kennt den Vorgang nicht mehr — er wurde aus dem Verlauf entfernt, oder der Betriebsagent wurde seither abgebaut.",
+  "reviewers.title": "Reviewer",
+  "reviewers.none": "Für die review dieser version ist noch niemand benannt",
+  "reviewers.assign": "Zuweisen",
+  "reviewers.saved": { "one": "{count} Person bei dieser review", "other": "{count} Personen bei dieser review" }
 }

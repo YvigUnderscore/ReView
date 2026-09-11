@@ -270,9 +270,12 @@ export interface ReviewComment {
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
-/** referenceId = tâche (TASK_ASSIGNED) ou média (REPLY/COMMENT_ASSIGNED) ; sinon projet. */
+/**
+ * referenceId = tâche (TASK_ASSIGNED) ou média (REPLY/COMMENT_ASSIGNED, et le premier
+ * média de la version pour REVIEW_ASSIGNED) ; sinon projet.
+ */
 export type NotificationType =
-  'TASK_ASSIGNED' | 'COMMENT_ASSIGNED' | 'REPLY' | 'MENTION' | 'WATCH' | 'SYSTEM';
+  'TASK_ASSIGNED' | 'COMMENT_ASSIGNED' | 'REVIEW_ASSIGNED' | 'REPLY' | 'MENTION' | 'WATCH' | 'SYSTEM';
 export interface Notification {
   id: number;
   type: NotificationType | string;

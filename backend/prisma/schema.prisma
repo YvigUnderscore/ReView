@@ -291,6 +291,8 @@ model User {
   assignedShots     Shot[]     @relation("ShotAssignees")
   assignedAssets    Asset[]    @relation("AssetAssignees")
   assignedEpisodes  Episode[]  @relation("EpisodeAssignees")
+  // Reviews qu'on m'a confiées (Phase 49) : les versions que je dois regarder.
+  assignedReviews   Version[]  @relation("VersionReviewers")
   entityNotes       EntityNote[]     @relation("EntityNoteAuthor")
   noteTemplates     NoteTemplate[]   @relation("NoteTemplateAuthor")
   visibilityRules   VisibilityRule[] @relation("VisibilityRuleAuthor")
@@ -874,6 +876,16 @@ model Version {
   reviewStatus   ReviewStatus?    @relation(fields: [reviewStatusId], references: [id], onDelete: SetNull)
   reviewStatusId Int?
   decisions      ReviewDecision[]
+
+  // Qui doit regarder cette livraison (Phase 49).
+  //
+  // La décision reste au superviseur ; ce que la base ne savait pas écrire, c'est « c'est à
+  // toi de la regarder ». Ça se disait de vive voix ou dans un fil de discussion, et ça se
+  // perdait avec — personne ne pouvait répondre à « qu'est-ce qu'on attend de moi ? » sans
+  // rouvrir la conversation. Même forme que les responsables d'un plan ou d'un asset
+  // (`ShotAssignees`), pour que l'assignation ait un seul vocabulaire dans toute
+  // l'application.
+  reviewers User[] @relation("VersionReviewers")
   playlistItems  PlaylistItem[]
   shareLinks     ShareLink[]
 

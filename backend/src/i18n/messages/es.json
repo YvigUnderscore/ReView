@@ -49,6 +49,7 @@
   "notification.decision": "Decisión « {status} » sobre la version {version}",
   "notification.taskAssigned": "Tarea asignada: {name}",
   "notification.clientComment": "{name} ha dejado un comentario desde un enlace compartido",
+  "notification.reviewAssigned": "Se te ha asignado la review de la version {version}",
   "chat.system.joined": { "one": "{names} se ha unido a la conversación", "other": "{names} se han unido a la conversación" },
   "chat.system.left": "{name} ha salido de la conversación",
   "chat.system.removed": "Se ha retirado a {name}",

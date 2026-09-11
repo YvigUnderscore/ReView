@@ -49,6 +49,7 @@
   "notification.decision": "version {version} पर निर्णय « {status} »",
   "notification.taskAssigned": "कार्य सौंपा गया: {name}",
   "notification.clientComment": "{name} ने साझा लिंक से प्रतिक्रिया दी",
+  "notification.reviewAssigned": "version {version} की review आपको सौंपी गई है",
   "chat.system.joined": { "one": "{names} बातचीत में शामिल हुए", "other": "{names} बातचीत में शामिल हुए" },
   "chat.system.left": "{name} ने बातचीत छोड़ दी",
   "chat.system.removed": "{name} को हटा दिया गया",

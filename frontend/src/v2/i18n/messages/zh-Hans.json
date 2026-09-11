@@ -778,6 +778,9 @@
   "twofa.passwordToDisable": "密码（用于关闭）",
   "kanban.addItem": "添加条目…",
   "reviews.addToPlaylistShort": "加入 playlist",
+  "reviews.assigned.title": "指派给我的",
+  "reviews.assigned.count": { "other": "{count} 个 review 在等你" },
+  "reviews.filter.allAssignments": "全部 review",
   "common.clearSelection": "取消选择",
   "comments.imagePreview": "图片预览",
   "comments.created": "评论已创建",
@@ -2830,6 +2833,7 @@
   "notification.decision": "version {version} 的判定「{status}」",
   "notification.taskAssigned": "已指派任务：{name}",
   "notification.clientComment": "来自 {name} 的新客户评论",
+  "notification.reviewAssigned": "version {version} 的 review 已指派给你",
   "assign.menu": "指派",
   "assign.unassigned": "无人",
   "assign.done": "已更新指派",
@@ -3324,5 +3328,9 @@
   "ops.backups.restoreHint": "还原被有意保留为终端命令：",
   "ops.history.title": "最近的操作",
   "ops.backups.createHint": "写出数据库转储，并把存储桶的镜像更新到一个带日期的新目录。其间实例照常运行。",
-  "ops.run.gone": "实例已不再知晓此操作——它已从历史中清除，或运维代理此后被移除。"
+  "ops.run.gone": "实例已不再知晓此操作——它已从历史中清除，或运维代理此后被移除。",
+  "reviewers.title": "review 负责人",
+  "reviewers.none": "还没有人负责这个 version 的 review",
+  "reviewers.assign": "指派",
+  "reviewers.saved": { "other": "这个 review 上有 {count} 人" }
 }

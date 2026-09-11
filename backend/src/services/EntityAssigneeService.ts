@@ -100,8 +100,11 @@ async function findEntity(kind: AssigneeKind, id: number): Promise<{ projectId: 
  * quelqu'un qui n'est pas membre du projet serait averti d'un travail qu'il ne peut pas
  * ouvrir. Les deux chemins d'assignation doivent refuser les mêmes personnes, sinon
  * l'un devient la porte de service de l'autre.
+ *
+ * Exporté depuis l'assignation de review (`ReviewAssignmentService`) : un troisième chemin
+ * avec sa propre copie des refus aurait divergé au premier correctif.
  */
-async function assertAssignable(projectId: number, userIds: number[]): Promise<void> {
+export async function assertAssignable(projectId: number, userIds: number[]): Promise<void> {
   if (userIds.length === 0) return;
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },

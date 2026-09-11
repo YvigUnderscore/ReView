@@ -12,6 +12,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Textarea } from './ui/textarea';
 import ReviewDecisionBadge from './ReviewDecisionBadge';
+import ReviewAssignees from './ReviewAssignees';
 import { pickPreselectedStatus, reviewStatusStyle } from './reviewDecision.helpers';
 import { useTheme } from '../stores/useTheme';
 import type { ReviewDecision, ReviewStatus } from '../types/api';
@@ -135,6 +136,10 @@ export default function ReviewDecisionDialog({
             </div>
           </div>
         )}
+
+        {/* À qui on demande de regarder (Phase 49) : avant l'historique, parce que c'est la
+            question qui se pose au moment où l'on ouvre cette fenêtre sans décider. */}
+        <ReviewAssignees versionId={versionId} projectId={projectId} canAssign={canDecide} enabled={open} />
 
         <div className="max-h-56 space-y-2 overflow-y-auto border-t border-border pt-3">
           {history.length === 0 ? (

@@ -29,6 +29,7 @@ import { Select } from '../components/ui/select';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
 import { mediaKindLabels, type ReviewItem } from './reviews/reviewsTypes';
+import AssignedToMeSection from './reviews/AssignedToMeSection';
 import { useT } from '../i18n';
 
 const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
@@ -51,6 +52,8 @@ export default function ReviewsPage() {
   const [kind, setKind] = useState('');
   const [status, setStatus] = useState('');
   const [decision, setDecision] = useState('');
+  // Reviews confiées (Phase 49) : '' = toutes, 'me' = celles qu'on m'a demandé de regarder.
+  const [assigned, setAssigned] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
   // « Ajouter à la playlist » (Phase 33) : mediaIds ciblés (carte seule ou sélection).
   const [playlistTarget, setPlaylistTarget] = useState<number[] | null>(null);
@@ -62,6 +65,7 @@ export default function ReviewsPage() {
   if (kind) params.set('kind', kind);
   if (status) params.set('status', status);
   if (decision) params.set('decision', decision);
+  if (assigned) params.set('assigned', assigned);
   const qs = params.toString();
 
   // La page annonçait fièrement « 1 247 media » au-dessus de cent cartes : le total venait
@@ -137,19 +141,33 @@ export default function ReviewsPage() {
               </option>
             ))}
           </Select>
+          <Select
+            value={assigned}
+            onChange={(e) => setAssigned(e.target.value)}
+            aria-label={t('reviews.filter.allAssignments')}
+            className="text-xs"
+          >
+            <option value="">{t('reviews.filter.allAssignments')}</option>
+            <option value="me">{t('reviews.assigned.title')}</option>
+          </Select>
           <SavedViewsMenu
             scope="reviews"
-            current={{ projectId, kind, status, decision }}
+            current={{ projectId, kind, status, decision, assigned }}
             onApply={(f) => {
               setProjectId(f.projectId ?? '');
               setKind(f.kind ?? '');
               setStatus(f.status ?? '');
               setDecision(f.decision ?? '');
+              setAssigned(f.assigned ?? '');
             }}
           />
           <ViewToggle contextKey="reviews" />
         </div>
       </div>
+
+      {/* La file personnelle passe avant le catalogue — et s'efface quand la liste entière
+          est déjà filtrée sur elle, où elle ne dirait rien de plus. */}
+      {!assigned && <AssignedToMeSection onSeeAll={() => setAssigned('me')} />}
 
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
 

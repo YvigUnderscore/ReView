@@ -3,6 +3,22 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-09-11 — Hand a version to someone, and find your own queue on arrival
+
+- **« Assigned to me », in front of the Reviews page.** The page said what had come out of the
+  studio; it did not say what was waiting for *you*. The versions someone handed you are now
+  the first thing on it, with a count and a way into the full list — and the panel steps aside
+  entirely when nothing is waiting.
+- **Ask someone to review a version.** The decision dialog gained a *Reviewers* line: a
+  supervisor opens the project's directory, clicks a name to hand the version over, clicks it
+  again to take it back. Until now that request lived in a corridor or a chat thread, and it
+  stayed there.
+- **The person hears about it.** They get a notification that opens straight onto the review
+  screen — in their own language, on the bell and in the browser — and start following the
+  version, so the comments and the decision that follow reach them too.
+- **A filter that goes with it.** *Assigned to me* sits next to the decision filter and travels
+  into a saved view, for the pass where you want the whole queue and not just its head.
+
 ## 2026-09-10 — See what a new release changes, and take it from the administration
 
 - **A screen that says which release you run, and what a newer one would change.** Admin →

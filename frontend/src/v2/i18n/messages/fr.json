@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Mot de passe (pour désactiver)",
   "kanban.addItem": "Ajouter un élément…",
   "reviews.addToPlaylistShort": "Ajouter à la playlist",
+  "reviews.assigned.title": "Qui m'est confié",
+  "reviews.assigned.count": { "one": "{count} review vous attend", "many": "{count} reviews vous attendent", "other": "{count} reviews vous attendent" },
+  "reviews.filter.allAssignments": "Toutes les reviews",
   "common.clearSelection": "Annuler la sélection",
   "comments.imagePreview": "Aperçu image",
   "comments.created": "Commentaire créé",
@@ -2918,6 +2921,7 @@
   "notification.decision": "Décision « {status} » sur la version {version}",
   "notification.taskAssigned": "Tâche assignée : {name}",
   "notification.clientComment": "Nouveau commentaire client de {name}",
+  "notification.reviewAssigned": "La review de la version {version} vous a été confiée",
   "assign.menu": "Assigner",
   "assign.unassigned": "Personne",
   "assign.done": "Assignation mise à jour",
@@ -3439,5 +3443,9 @@
   "ops.backups.restoreHint": "Restaurer reste volontairement une commande de terminal :",
   "ops.history.title": "Opérations récentes",
   "ops.backups.createHint": "Écrit un dump de la base et met à jour le miroir du bucket dans un nouveau dossier daté. L'instance continue de fonctionner pendant ce temps.",
-  "ops.run.gone": "L'instance ne connaît plus cette opération : elle a été purgée de l'historique, ou l'agent d'exploitation a été retiré depuis."
+  "ops.run.gone": "L'instance ne connaît plus cette opération : elle a été purgée de l'historique, ou l'agent d'exploitation a été retiré depuis.",
+  "reviewers.title": "Reviewers",
+  "reviewers.none": "Personne n'a encore été chargé de la review de cette version",
+  "reviewers.assign": "Assigner",
+  "reviewers.saved": { "one": "{count} personne sur cette review", "many": "{count} personnes sur cette review", "other": "{count} personnes sur cette review" }
 }

@@ -796,6 +796,9 @@
   "twofa.passwordToDisable": "Pasahitza (desaktibatzeko)",
   "kanban.addItem": "Gehitu elementu bat…",
   "reviews.addToPlaylistShort": "Gehitu playlist-era",
+  "reviews.assigned.title": "Niri esleituta",
+  "reviews.assigned.count": { "one": "review {count} duzu zain", "other": "{count} review dituzu zain" },
+  "reviews.filter.allAssignments": "review guztiak",
   "common.clearSelection": "Utzi hautaketa",
   "comments.imagePreview": "Irudiaren aurrebista",
   "comments.created": "Iruzkina sortu da",
@@ -2918,6 +2921,7 @@
   "notification.decision": "« {status} » erabakia {version} version-ari buruz",
   "notification.taskAssigned": "Zeregina esleituta: {name}",
   "notification.clientComment": "{name} bezeroaren iruzkin berria",
+  "notification.reviewAssigned": "{version} version-aren review esleitu zaizu",
   "assign.menu": "Esleitu",
   "assign.unassigned": "Inor ez",
   "assign.done": "Esleipena eguneratu da",
@@ -3433,5 +3437,9 @@
   "ops.backups.restoreHint": "Leheneratzea nahita terminal-agindu bat da oraindik:",
   "ops.history.title": "Azken eragiketak",
   "ops.backups.createHint": "Datu-basearen iraulketa idazten du eta bucket-aren ispilua data duen karpeta berri batean eguneratzen. Instantziak funtzionatzen jarraitzen du bitartean.",
-  "ops.run.gone": "Instantziak ez du jada eragiketa hau ezagutzen: historiatik garbitu da, edo ustiapen-agentea kendu da geroztik."
+  "ops.run.gone": "Instantziak ez du jada eragiketa hau ezagutzen: historiatik garbitu da, edo ustiapen-agentea kendu da geroztik.",
+  "reviewers.title": "Reviewerrak",
+  "reviewers.none": "Oraindik inork ez du version honen review egiteko ardura",
+  "reviewers.assign": "Esleitu",
+  "reviewers.saved": { "one": "pertsona {count} review honetan", "other": "{count} pertsona review honetan" }
 }
