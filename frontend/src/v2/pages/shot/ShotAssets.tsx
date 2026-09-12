@@ -39,7 +39,7 @@ export default function ShotAssets({
   });
   const assets = shotQ.isError ? [] : (shotQ.data?.shot.assets ?? null);
   // Sélecteur : toutes les pages (cf. AssetAssignDialog), pas les cent premiers assets.
-  const allAssets: AssetRef[] = useAssetsQuery(projectId, true, { all: true }).data ?? [];
+  const allAssets: AssetRef[] = useAssetsQuery(projectId, projectId > 0, { all: true }).data ?? [];
   const [pick, setPick] = useState('');
   const [creating, setCreating] = useState({ name: '', type: 'CHARACTER' });
   const [showCreate, setShowCreate] = useState(false);
