@@ -83,6 +83,21 @@ alerting that fires instead of being suggested. Plus
   owner verbatim, and an OCI reference does not accept an uppercase path. Registry mode is
   usable for the first time; images also carry their version, commit and build date, which
   `GET /api/version` had been reporting as `null`.
+- **Fixed: on Docker Desktop, persistent data no longer sits on a host directory.** A bind
+  mount of a Windows or macOS folder reaches the VM through a translation layer that does
+  not honour the write guarantees a database requires: Postgres panics mid-write (`could
+  not write to log file … I/O error`, `global/pg_filenode.map: Bad address`) and restarts
+  in recovery — random query failures, and a corruption risk. MinIO and Redis write less
+  harshly, but nothing shields them either. `scripts/install.sh` now detects that daemon
+  and puts all three volumes under Docker's own management; on every other daemon the bind
+  mounts are unchanged, where size and storage pool are the operator's call. Note that the
+  media then grow inside Docker Desktop's virtual disk, which extends itself but does not
+  shrink on delete — watch its size, and keep `backups/` on a separate disk.
+  Existing installs keep working as they are. To adopt it: back up (`scripts/backup.sh`),
+  point the services at Docker-managed volumes in `deploy/compose.site.yml`, restore the
+  database (`scripts/restore.sh db <backup>/db.dump`) into the empty cluster, and copy the
+  MinIO and Redis volumes cold (`docker run --rm -v <old>:/from:ro -v <new>:/to alpine cp
+  -a /from/. /to/`) with every service stopped.
 
 ### Migrations
 

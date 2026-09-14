@@ -244,8 +244,32 @@ ok ".env écrit (droits 600)"
 
 # ── 4. Rendu de la configuration du site ─────────────────────────────────────
 say "Configuration du site"
-mkdir -p deploy "$DATA_ROOT/postgres" "$DATA_ROOT/minio" "$DATA_ROOT/redis"
-ok "données persistantes : $DATA_ROOT"
+
+# Les données durables vont-elles dans un dossier de l'hôte ? Oui — sauf sous Docker
+# Desktop (Windows, macOS), où ce dossier est présenté à la VM à travers une couche de
+# traduction qui ne tient pas les garanties d'écriture attendues. Postgres y meurt le
+# premier : « could not write to log file … I/O error », « global/pg_filenode.map: Bad
+# address », panique en pleine écriture et redémarrage en recovery — quand il ne perd pas
+# de données. MinIO et Redis écrivent moins durement, mais rien ne les en protège. Sur ce
+# démon, les trois vont donc sur des volumes gérés par Docker, c'est-à-dire sur l'ext4 de
+# la VM.
+#
+# Ce que l'administrateur récupère depuis l'hôte n'est de toute façon pas le contenu de ces
+# volumes — un répertoire de cluster ou un backend MinIO ne se lisent pas à la main — mais
+# `backups/`, où scripts/backup.sh dépose un pg_dump et un miroir du bucket.
+DATA_BIND=1
+case "$(docker info --format '{{.OperatingSystem}}' 2>/dev/null)" in
+  *"Docker Desktop"*) DATA_BIND=0 ;;
+esac
+
+mkdir -p deploy
+if [ "$DATA_BIND" = "1" ]; then
+  mkdir -p "$DATA_ROOT/postgres" "$DATA_ROOT/minio" "$DATA_ROOT/redis"
+  DATA_LOCATION="$DATA_ROOT"
+else
+  DATA_LOCATION="volumes gérés par Docker (Docker Desktop : un dossier de l'hôte n'y est pas un support sûr)"
+fi
+ok "données persistantes : $DATA_LOCATION"
 
 # Sauvegardes et file d'ordres. `backups/` contient une copie de .env — donc les secrets de
 # l'instance — et `ops/` porte le nom des personnes qui commandent une opération : ni l'un
@@ -278,11 +302,15 @@ fi
     echo "  frontend: {}"
   fi
   # Les médias d'un studio ne doivent pas atterrir dans /var/lib/docker/volumes : sur un
-  # NAS, c'est le pool système, pas le pool de données choisi par l'administrateur.
+  # NAS, c'est le pool système, pas le pool de données choisi par l'administrateur. D'où le
+  # bind — sauf là où l'hôte n'est pas un support sûr, cf. DATA_BIND plus haut.
   echo "volumes:"
   for pair in "pgdata:postgres" "miniodata:minio" "redisdata:redis"; do
     echo "  ${pair%%:*}:"
     echo "    driver: local"
+    if [ "$DATA_BIND" = "0" ]; then
+      continue
+    fi
     echo "    driver_opts:"
     echo "      type: none"
     echo "      o: bind"
@@ -363,7 +391,7 @@ cat <<SUMMARY
    il se ferme dès qu'un studio existe.)
 
   Fichiers écrits (non versionnés) : .env, deploy/
-  Données persistantes             : $DATA_ROOT
+  Données persistantes             : $DATA_LOCATION
   Sauvegarde                       : bash scripts/backup.sh
   Mise à jour                      : bash scripts/update.sh
   Supervision (optionnelle)        : docker compose --profile monitoring up -d
