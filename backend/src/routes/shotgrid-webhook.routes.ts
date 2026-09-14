@@ -45,14 +45,35 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
 
   const token = String(req.params.token ?? '');
   const connection = await prisma.shotgridConnection.findUnique({ where: { webhookToken: token } });
-  // Réponse volontairement identique pour un jeton inconnu et une signature fausse :
-  // rien ne doit permettre de deviner qu'un jeton existe.
-  if (!connection) return res.status(404).json({ error: 'not_found' });
+  /**
+   * Réponse volontairement identique pour un jeton inconnu et une signature fausse :
+   * rien ne doit permettre de deviner qu'un jeton existe.
+   *
+   * Le journal, lui, distingue les deux — et ce n'est pas un détail de confort. Une
+   * intégration muette dont toutes les livraisons repartaient en 404 ne laissait aucune
+   * trace permettant de savoir laquelle des deux valeurs était à corriger : l'adresse ou
+   * le secret. On le dit ici, du côté qui a le droit de le savoir.
+   */
+  if (!connection) {
+    logger.warn({ tokenLength: token.length }, 'Webhook ShotGrid : jeton inconnu (adresse périmée ?)');
+    return res.status(404).json({ error: 'not_found' });
+  }
 
   const body = Buffer.isBuffer(req.body) ? req.body : Buffer.from(String(req.body ?? ''));
-  const secret = webhookSecretOf(connection);
+  // Un secret illisible (clé de chiffrement changée) n'est pas une signature fausse : le
+  // laisser remonter en 500 ferait passer une panne de configuration pour une panne du site.
+  let secret: string | null;
+  try {
+    secret = webhookSecretOf(connection);
+  } catch (err) {
+    logger.error({ err, connectionId: connection.id }, 'Webhook ShotGrid : secret illisible');
+    return res.status(404).json({ error: 'not_found' });
+  }
   if (secret && !signatureMatches(secret, body, req.header('x-sg-signature') ?? undefined)) {
-    logger.warn({ connectionId: connection.id }, 'Webhook ShotGrid : signature invalide');
+    logger.warn(
+      { connectionId: connection.id, signed: Boolean(req.header('x-sg-signature')) },
+      'Webhook ShotGrid : signature invalide — le secret du site diffère de celui de la connexion',
+    );
     return res.status(404).json({ error: 'not_found' });
   }
 
@@ -65,6 +86,15 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
 
   // Accusé de réception immédiat ; la mise en file peut se poursuivre après la réponse.
   res.status(202).json({ accepted: true });
+
+  /**
+   * Le test de connexion de ShotGrid n'a ni entité ni type d'événement exploitable : il
+   * traverse la mise en file sans rien produire. C'est justement le moment où un
+   * administrateur veut une confirmation — il vient de coller l'adresse et le secret.
+   */
+  if ((payload as { data?: { event_type?: string } })?.data?.event_type === 'Test_Connection') {
+    logger.info({ connectionId: connection.id }, 'Webhook ShotGrid : test de connexion accepté');
+  }
 
   try {
     await enqueueShotgridEvent(connection.id, payload, {

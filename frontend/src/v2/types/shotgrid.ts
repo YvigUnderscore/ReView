@@ -41,6 +41,8 @@ export interface SgSettings {
     maxSizeMo: number | null;
     /** `sgCode` : le média porte le code de la Version ShotGrid. `filename` : son nom de fichier. */
     naming: 'sgCode' | 'filename';
+    /** Rapatrier la vignette que le site porte sur une séquence, un plan ou un asset. */
+    thumbnails: boolean;
   };
   push: { publishMode: 'link' | 'upload' | 'off'; attributeToUser: boolean; attachAnnotations: boolean };
   /**

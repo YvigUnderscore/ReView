@@ -23,6 +23,7 @@ export const sgKeys = {
   remoteProjects: (siteId: number, query: string) =>
     ['shotgrid', 'sites', siteId, 'projects', query] as const,
   connection: (projectId: number) => ['shotgrid', 'connection', projectId] as const,
+  webhookSecret: (projectId: number) => ['shotgrid', 'webhook-secret', projectId] as const,
   runs: (projectId: number) => ['shotgrid', 'runs', projectId] as const,
   logs: (runId: number, level: string) => ['shotgrid', 'logs', runId, level] as const,
   diff: (projectId: number) => ['shotgrid', 'diff', projectId] as const,
@@ -193,6 +194,37 @@ export function useRotateWebhookToken(projectId: number) {
         .post<{ connection: SgConnection }>(`/api/shotgrid/projects/${projectId}/connection/rotate-token`)
         .then((r) => r.connection),
     onSuccess: (connection) => qc.setQueryData(sgKeys.connection(projectId), connection),
+  });
+}
+
+/**
+ * Secret de signature du webhook — demandé seulement quand l'écran doit le montrer.
+ *
+ * Il ne voyage pas avec la connexion : `enabled` reste faux tant que personne n'a cliqué
+ * sur « afficher », et le résultat n'est pas gardé en cache au-delà de l'écran ouvert.
+ */
+export function useWebhookSecret(projectId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: sgKeys.webhookSecret(projectId),
+    queryFn: () =>
+      api
+        .get<{ secret: string | null }>(`/api/shotgrid/projects/${projectId}/connection/webhook-secret`)
+        .then((r) => r.secret),
+    enabled,
+    gcTime: 0,
+    staleTime: 0,
+  });
+}
+
+export function useRotateWebhookSecret(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api
+        .post<{ secret: string }>(`/api/shotgrid/projects/${projectId}/connection/rotate-secret`)
+        .then((r) => r.secret),
+    // La connexion elle-même n'a pas bougé : seule la valeur affichée à côté change.
+    onSuccess: (secret) => qc.setQueryData(sgKeys.webhookSecret(projectId), secret),
   });
 }
 

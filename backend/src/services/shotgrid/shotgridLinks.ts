@@ -213,12 +213,27 @@ export interface TaskLinkData extends LinkData {
   sgStatusCode?: string | null;
 }
 
-export interface ShotLinkData extends LinkData {
+/**
+ * Témoin de la vignette rapatriée du site (voir `ShotgridThumbnails`).
+ *
+ * C'est l'adresse de l'image, signature retirée : adressée par contenu, donc stable tant
+ * que la vignette ne change pas. Sa présence dit aussi que la vignette locale vient du
+ * site — sans quoi une image déposée à la main dans ReView se ferait effacer par le
+ * premier plan que ShotGrid n'illustre pas.
+ */
+export interface ThumbnailLinkData extends LinkData {
+  sgThumbSrc?: string | null;
+}
+
+/** Une séquence n'a rien d'autre à conserver hors modèle : sa vignette, et c'est tout. */
+export type SequenceLinkData = ThumbnailLinkData;
+
+export interface ShotLinkData extends ThumbnailLinkData {
   sgStatusCode?: string | null;
   cutDuration?: number | null;
 }
 
-export interface AssetLinkData extends LinkData {
+export interface AssetLinkData extends ThumbnailLinkData {
   sgAssetType?: string | null;
   sgStatusCode?: string | null;
 }

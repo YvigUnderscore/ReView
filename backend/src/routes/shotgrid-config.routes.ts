@@ -159,6 +159,30 @@ router.delete('/projects/:projectId/connection', validate({ params: projectParam
   res.status(204).end();
 });
 
+/** Secret de signature, en clair et jamais mis en cache — voir `revealWebhookSecret`. */
+router.get(
+  '/projects/:projectId/connection/webhook-secret',
+  validate({ params: projectParam }),
+  async (req, res) => {
+    const projectId = Number(req.params.projectId);
+    await assertProjectManager(req.user!, projectId);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ secret: await Config.revealWebhookSecret(projectId) });
+  },
+);
+
+/** Nouveau secret, à reporter dans le webhook du site — voir `rotateWebhookSecret`. */
+router.post(
+  '/projects/:projectId/connection/rotate-secret',
+  validate({ params: projectParam }),
+  async (req, res) => {
+    const projectId = Number(req.params.projectId);
+    await assertProjectManager(req.user!, projectId);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ secret: await Config.rotateWebhookSecret(projectId) });
+  },
+);
+
 /** Rotation du jeton d'URL du webhook (l'ancienne adresse cesse aussitôt de répondre). */
 router.post(
   '/projects/:projectId/connection/rotate-token',

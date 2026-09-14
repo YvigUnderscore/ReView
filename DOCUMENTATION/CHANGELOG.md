@@ -3,6 +3,25 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-09-14 — ShotGrid: the webhook that could never work, and the images it was not bringing
+
+- **The webhook secret is finally readable.** A project link was born with a signature
+  secret that nothing displayed — so ShotGrid signed with a different one, ReView refused
+  every delivery with a `404`, and the site switched the endpoint off after a hundred
+  failures. *Settings → Events* now shows it, copies it, and can generate a new one. Paste
+  it into the webhook's **Secret token** field and deliveries start being accepted.
+- **A refusal now says which half is wrong.** The answer to the site is unchanged — an
+  unknown address and a bad signature look identical from outside, on purpose — but the
+  server log distinguishes *unknown token* from *invalid signature*, and says so plainly.
+  A connection test that goes through is logged as well, so a successful setup looks
+  different from a silent one.
+- **Shot, sequence and asset thumbnails come in.** The image production chose on the site
+  is brought across and put on the card, instead of leaving it blank until some published
+  media eventually supplies one. It follows changes: replace the image in ShotGrid and the
+  card follows. Nothing is transferred when nothing changed, and a thumbnail you dropped on
+  a shot by hand is never overwritten. Switch it off under *Publishes → Bring in ShotGrid
+  thumbnails*.
+
 ## 2026-09-11 — Say what the person you hand a version to should look at
 
 - **A brief beside each name.** Handing a version over said *who* was expected and never

@@ -341,6 +341,43 @@ export function webhookSecretOf(conn: ShotgridConnection): string | null {
   return conn.webhookSecret ? decryptSecret(conn.webhookSecret) : null;
 }
 
+/**
+ * Le secret du webhook, en clair, pour qu'un administrateur puisse le recopier.
+ *
+ * Sans cette lecture, l'intégration ne pouvait tout simplement pas fonctionner : la
+ * connexion naissait avec un secret aléatoire que **personne** ne pouvait connaître, la
+ * vue d'API n'en disait que l'existence, et l'écran ne montrait que l'adresse. ShotGrid
+ * signait donc chaque livraison avec un autre secret, la signature ne concordait jamais,
+ * et toutes les livraisons repartaient en 404 — jusqu'à ce que le site désactive le
+ * point d'entrée au bout de cent échecs.
+ *
+ * Il n'entre pas dans `connectionView` pour autant : un secret ne se promène pas dans
+ * chaque lecture d'une connexion. Il se demande, explicitement, et la route qui le sert
+ * exige les droits de gestion du projet.
+ */
+export async function revealWebhookSecret(projectId: number): Promise<string | null> {
+  const conn = await getConnectionOrThrow(projectId);
+  return webhookSecretOf(conn);
+}
+
+/**
+ * Régénère le secret de signature.
+ *
+ * L'ancien cesse d'être accepté à l'instant même : tant que le nouveau n'est pas reporté
+ * dans le webhook du site, les livraisons repartiront en 404. C'est voulu — un secret
+ * qui a fuité ne doit pas survivre le temps d'une manipulation.
+ */
+export async function rotateWebhookSecret(projectId: number): Promise<string> {
+  const conn = await getConnectionOrThrow(projectId);
+  const secret = randomBytes(24).toString('base64url');
+  await prisma.shotgridConnection.update({
+    where: { id: conn.id },
+    data: { webhookSecret: encryptSecret(secret) },
+  });
+  logger.info({ projectId }, 'Secret de webhook ShotGrid régénéré');
+  return secret;
+}
+
 export interface ConnectionContext {
   connection: ShotgridConnection & { site: ShotgridSite };
   client: ShotgridClient;

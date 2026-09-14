@@ -32,10 +32,27 @@ entry, migrations, breaking changes, and any manual step.
 Installable by a third-party studio without us: an installer, a versioned update path with
 rollback, a health probe that actually probes, a visible version, published images, and
 alerting that fires instead of being suggested. Plus
-[saying what the person you hand a version to should look at](DOCUMENTATION/CHANGELOG.md).
+[saying what the person you hand a version to should look at](DOCUMENTATION/CHANGELOG.md),
+and [a ShotGrid webhook that can actually be made to work, with the site's thumbnails coming
+in behind it](DOCUMENTATION/CHANGELOG.md).
 
 ### Operator actions
 
+- **ShotGrid webhooks: re-copy the secret token.** Links created before this release carry a
+  signature secret that was never displayed anywhere, so the site was signing with something
+  else and *every* delivery was refused with a `404`. Open **Project → ShotGrid → Settings →
+  Events**, reveal the secret, and paste it into the webhook's *Secret token* field on the
+  site (or *Generate a new secret* and paste that). Nothing is migrated automatically: the
+  value lives on the site, and only an administrator can put it there. While you are in that
+  screen, check that the webhook's triggers include the **change** events and not only
+  *create / delete / revive* — with creations alone, a status or a thumbnail that moves is
+  never delivered.
+- **ShotGrid thumbnails are read by default.** Each synchronisation now requests the `image`
+  field of sequences, shots and assets and copies the image into object storage (a few tens
+  of kilobytes per entity, transferred once and only when it changes). The first full pass
+  on a large project therefore does more work than before. Turn it off per project under
+  *Settings → Publishes → Bring in ShotGrid thumbnails* if you would rather not. No
+  migration and no schema change.
 - **Nothing to do for the ReViewer briefs.** The feature is off until a studio turns it on:
   `reviewRequest` defaults to *not required*, so no publication that worked yesterday is
   refused today. A studio that wants it mandatory sets it in *Admin → Project defaults →

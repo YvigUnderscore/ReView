@@ -25,6 +25,16 @@ describe('parseSettings', () => {
     expect(s.reconcile.onBoot).toBe(true);
   });
 
+  /**
+   * Une connexion enregistrée avant l'arrivée des vignettes ShotGrid n'a pas la clé :
+   * elle doit se lire avec le défaut, sans migration ni réglage à ressaisir.
+   */
+  it('donne les vignettes ShotGrid à une connexion antérieure au réglage', () => {
+    const s = parseSettings({ media: { source: 'original', autoImport: false } });
+    expect(s.media.thumbnails).toBe(true);
+    expect(s.media.autoImport).toBe(false);
+  });
+
   it('ouvre la lecture et l’écriture par défaut, sauf statuts et comptes', () => {
     const s = parseSettings({});
     expect(s.domains.tasks).toEqual({ read: true, write: true });

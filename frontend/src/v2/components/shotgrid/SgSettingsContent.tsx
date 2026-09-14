@@ -102,6 +102,13 @@ export default function SgSettingsContent({
             onChange={(v) => onPatch({ media: { ...s.media, maxSizeMo: v ? Number(v) : null } })}
           />
         </Row>
+        <Toggle
+          checked={s.media.thumbnails}
+          disabled={disabled}
+          onChange={(v) => onPatch({ media: { ...s.media, thumbnails: v } })}
+          label={t('shotgrid.settings.thumbnails')}
+          hint={t('shotgrid.settings.thumbnailsHint')}
+        />
       </SettingsCard>
 
       <SettingsCard icon={Upload} title={t('shotgrid.settings.pushTitle')}>

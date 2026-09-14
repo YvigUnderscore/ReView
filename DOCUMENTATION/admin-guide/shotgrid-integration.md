@@ -113,7 +113,7 @@ from ShotGrid, and what it writes back. Each cell is an independent switch.
 
 | Domain (row) | Read brings in | Write sends back | Default on a new link |
 |---|---|---|---|
-| **Sequences, shots, assets** (`hierarchy`) | codes, descriptions, cut ranges (`sg_cut_in`/`sg_cut_out`), sequence and shot statuses, asset types, asset↔shot and asset↔sequence links, and the **episodes** when the level is on | shot statuses, sequence statuses, asset↔shot / asset↔sequence links | read on, write **off** |
+| **Sequences, shots, assets** (`hierarchy`) | codes, descriptions, cut ranges (`sg_cut_in`/`sg_cut_out`), sequence and shot statuses, asset types, asset↔shot and asset↔sequence links, the **thumbnail** each one carries on the site, and the **episodes** when the level is on | shot statuses, sequence statuses, asset↔shot / asset↔sequence links | read on, write **off** |
 | **Tasks** (`tasks`) | name (`content`), pipeline step, status, start/due dates, duration, assignees | status, start + due dates, assignee | read on, write **off** |
 | **Status list** (`statuses`) | the exact statuses of your site — code, display name, colour, order, per entity type | *never* — reference data | read on, write **never** |
 | **Versions and published media** (`versions`) | versions, their media, first/last frame, `PublishedFile` paths | review decisions, versions created by publishing in ReView, thumbnails, optionally the media file | read on, write **off** |
@@ -344,13 +344,22 @@ and hope.
 
 ### Webhooks (near-instant)
 
-Copy the address shown in the settings, then in ShotGrid:
+The settings show two values, side by side: the **address** and the **secret token**. The
+secret is hidden behind *Show the secret token*; both have a copy button. Then in ShotGrid:
 
 1. Open **Admin → Webhooks → Create Webhook**.
 2. Paste the URL.
 3. Filter on **the linked project** and on the entity types you care about — see the matrix
-   below before you tick.
-4. Set the **secret token** to the one shown in ReView.
+   below before you tick, and read the paragraph on *create, change, delete* right after it.
+4. Set the **secret token** to the one ReView shows.
+
+**Step 4 is not optional.** ShotGrid signs every delivery with that value, ReView
+recomputes the signature on the bytes it received, and a mismatch is answered `404` — the
+same answer as an unknown address, so nothing can probe for a valid one. A webhook whose
+secret does not match therefore fails *every* delivery, connection test included, and
+ShotGrid switches the endpoint off after a hundred failures. If the site already carries a
+secret you cannot read, generate a new one on both sides: *Generate a new secret* in ReView,
+then paste it into the webhook. The previous one stops being accepted immediately.
 
 ReView answers within milliseconds and processes in the background: ShotGrid requires a
 reply within six seconds and counts response time against a site-wide budget, so a
@@ -369,6 +378,15 @@ the whole project — statuses, people, sequences, shots, assets, tasks and ever
 one entity.
 
 ![A matrix of the ten ShotGrid entity types against the passes each of them re-reads; Status and HumanUser are global events that are never narrowed to one entity.](../assets/admin-guide/shotgrid-event-passes.svg)
+
+**Tick the field changes too, not only creations.** ShotGrid's trigger list offers *create*,
+*change* (shown as *update* in the summary), *delete* and *revive* per entity type, and a
+filter that carries only *create, delete, revive* is a common and very quiet mistake: new
+entities arrive, and then nothing ever moves again. A status advanced, a shot renamed, a cut
+range adjusted, a thumbnail replaced — all of those are **changes**, and none of them is
+delivered. The webhook looks healthy, its delivery log is green, and the project drifts. If
+you cannot subscribe to changes, switch the update mode to *Periodic polling*, which reads
+the event log and does not depend on the filter.
 
 The consequence for your webhook filter is direct: **tick every entity type in that matrix
 that matters to you**. Omitting `Status` lets the status vocabulary go stale, which is
@@ -516,6 +534,29 @@ The link between the ShotGrid version and the ReView version is written **before
 transfer is attempted. It states a fact that is already true — "this version is in ReView" —
 and without it a failed download left an orphan that the next pass re-created, once per
 pass, indefinitely.
+
+### Thumbnails carried by the site
+
+A sequence, a shot or an asset carries an image in ShotGrid — the one production recognises
+in every list on the site. ReView brings it in and puts it on the card, under *Publishes →
+**Bring in ShotGrid thumbnails*** (on by default).
+
+Three things are worth knowing about it:
+
+- **The image is copied, not linked.** ShotGrid hands out a signed address that expires in
+  fifteen minutes and is different on every read. A card pointing at it would have been
+  broken a quarter of an hour later.
+- **Nothing is downloaded twice.** The address is content-addressed once its signature is
+  stripped, and that stripped form is kept on the link. A nightly catch-up over an unchanged
+  project transfers nothing at all; a thumbnail replaced on the site is picked up on the
+  next pass — or within seconds, on a webhook, provided the filter subscribes to *changes*.
+- **A thumbnail you set by hand is yours.** A shot, sequence or asset whose image was
+  dropped here is left alone entirely — never overwritten by the site's image, never
+  cleared when the site has none. Remove it here and the site takes over again on the next
+  pass.
+
+Versions are a separate matter: their thumbnail comes from the media pipeline, generated
+from the media itself, not from the site.
 
 ### The status filter imports; it does not freeze
 
@@ -768,6 +809,9 @@ downloaded back.
 | …and it ends with *because the account is locked* | Too many failed attempts; the site locked the account | No local change will help. Have a ShotGrid administrator unlock the account, or wait out the site's lockout window, then save the credentials again |
 | *Remote project name changed* | The linked project was renamed, or its id reused | Confirm the target on the site, then unlink and relink |
 | No events arriving | Webhook disabled after 100 failures, wrong secret, or ReView not reachable | Check the webhook status in ShotGrid; switch to **Periodic polling** if the instance is not public |
+| **Every** delivery fails with `{"error":"not_found"}`, connection test included | The secret token on the site is not the one ReView signs against | Copy it from **Settings → Webhook → Secret token** into the webhook, or *Generate a new secret* and paste that. The server log distinguishes *unknown token* (wrong address) from *invalid signature* (wrong secret) |
+| New entities arrive, but nothing ever changes afterwards | The webhook subscribes to *create / delete / revive* only | Add the *change* triggers for each entity type in the ShotGrid filter, or switch to **Periodic polling** |
+| Thumbnails from the site do not appear on the cards | The setting is off, or the change was never delivered | Check *Publishes → Bring in ShotGrid thumbnails*, then run **Synchronise** — the run log carries a line per thumbnail that could not be brought in |
 | Events accepted but nothing imported for notes or playlists | *(historical)* those events triggered no pass | Fixed: each entity type now runs its own passes |
 | Polling interval changed but nothing happened | *(historical)* the schedule was only laid at boot | Fixed: saving the settings re-lays the repeatable jobs |
 | The interface freezes while a full pass runs | *(historical)* one socket event per realigned entity | Fixed: a large pass emits one summary instead |

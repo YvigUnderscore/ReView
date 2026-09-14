@@ -27,9 +27,11 @@ import {
   upsertLink,
   type LocalType,
   type AssetLinkData,
+  type SequenceLinkData,
   type ShotLinkData,
   type TaskLinkData,
 } from './shotgridLinks';
+import { syncThumbnail } from './ShotgridThumbnails';
 import type { SyncJournal } from './ShotgridSyncJournal';
 import { can } from './shotgridSettings';
 import { enqueuePush } from './ShotgridPushService';
@@ -48,7 +50,12 @@ import { resolveForTask, type TaskDepartment } from '../DepartmentService';
  * écriture. C'est ce qui rend la réconciliation périodique sans risque.
  */
 
-const SEQUENCE_FIELDS = ['code', 'description', 'sg_status_list', 'project', 'updated_at'];
+/**
+ * `image` est la vignette choisie sur le site : demandée partout où ReView sait en
+ * porter une (séquence, plan, asset). Voir `ShotgridThumbnails` — la valeur est une URL
+ * signée à durée de vie courte, donc recopiée et jamais pointée.
+ */
+const SEQUENCE_FIELDS = ['code', 'description', 'sg_status_list', 'image', 'project', 'updated_at'];
 const SHOT_FIELDS = [
   'code',
   'description',
@@ -57,6 +64,7 @@ const SHOT_FIELDS = [
   'sg_cut_out',
   'sg_cut_duration',
   'sg_status_list',
+  'image',
   'project',
   'updated_at',
 ];
@@ -65,6 +73,7 @@ const ASSET_FIELDS = [
   'description',
   'sg_asset_type',
   'sg_status_list',
+  'image',
   // Rattachements portés par l'asset côté ShotGrid : c'est de là que sortent les
   // listes « quels assets pour ce plan », et les lire évite de les ressaisir ici.
   'shots',
@@ -504,7 +513,7 @@ export async function pullSequences(
       deletedAt: null,
     };
 
-    let saved: { id: number };
+    let saved: { id: number; thumbnailKey: string | null };
     if (existing) {
       const localStatus = existing.pipelineStatusId
         ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
@@ -537,6 +546,21 @@ export async function pullSequences(
     } else {
       saved = await prisma.sequence.create({ data });
     }
+    /**
+     * La vignette est alignée AVANT le signal : `touch` est la seule notification de la
+     * boucle, et l'émettre en premier laissait l'écran se rafraîchir sur la carte encore
+     * vide, sans plus rien derrière pour lui annoncer l'image.
+     */
+    const sgThumbSrc = await syncThumbnail(ctx, {
+      holder: 'sequence',
+      localId: saved.id,
+      sgType: 'Sequence',
+      sgId: record.id,
+      name: localCode,
+      image: record.image,
+      previous: (link?.data as SequenceLinkData | undefined)?.sgThumbSrc,
+      currentKey: saved.thumbnailKey,
+    });
     // Sans ce signal, un statut lu depuis le site n'atteint jamais un écran ouvert :
     // il fallait recharger la page pour le voir apparaître.
     touch(ctx, 'sequence', saved.id);
@@ -548,6 +572,7 @@ export async function pullSequences(
       sgType: 'Sequence',
       sgId: record.id,
       sgUpdatedAt: asDate(record.updated_at),
+      data: { sgThumbSrc } satisfies SequenceLinkData,
     });
     ctx.journal.count('sequences', existing ? 'updated' : 'created');
   }
@@ -594,7 +619,7 @@ export async function pullShots(
       deletedAt: null,
     };
 
-    let savedId: number;
+    let saved: { id: number; thumbnailKey: string | null };
     if (existing) {
       const localStatus = existing.pipelineStatusId
         ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
@@ -615,22 +640,33 @@ export async function pullShots(
       if (verdict === 'keep') {
         await enqueuePush(ctx.connection.projectId, { type: 'shot-status', shotId: existing.id });
       }
-      const updated = await prisma.shot.update({
+      saved = await prisma.shot.update({
         where: { id: existing.id },
         data: withoutStatus(data, verdict),
       });
-      savedId = updated.id;
       ctx.journal.count('shots', 'updated');
     } else {
-      const created = await prisma.shot.create({ data });
-      savedId = created.id;
+      saved = await prisma.shot.create({ data });
       ctx.journal.count('shots', 'created');
     }
+    const savedId = saved.id;
+    // Avant `touch`, pour la même raison que sur les séquences : un seul signal part.
+    const sgThumbSrc = await syncThumbnail(ctx, {
+      holder: 'shot',
+      localId: savedId,
+      sgType: 'Shot',
+      sgId: record.id,
+      name: code,
+      image: record.image,
+      previous: (link?.data as ShotLinkData | undefined)?.sgThumbSrc,
+      currentKey: saved.thumbnailKey,
+    });
     touch(ctx, 'shot', savedId);
 
     const linkData: ShotLinkData = {
       sgStatusCode: statusCode,
       cutDuration: asNumber(record.sg_cut_duration) ?? cutDuration(cutIn, cutOut),
+      sgThumbSrc,
     };
     await upsertLink({
       connectionId: ctx.connection.id,
@@ -712,9 +748,20 @@ export async function pullAssets(
       },
     });
 
+    const sgThumbSrc = await syncThumbnail(ctx, {
+      holder: 'asset',
+      localId: saved.id,
+      sgType: 'Asset',
+      sgId: record.id,
+      name: localName,
+      image: record.image,
+      previous: (link?.data as AssetLinkData | undefined)?.sgThumbSrc,
+      currentKey: saved.thumbnailKey,
+    });
     const linkData: AssetLinkData = {
       sgAssetType: asString(record.sg_asset_type),
       sgStatusCode: asString(record.sg_status_list),
+      sgThumbSrc,
     };
     await upsertLink({
       connectionId: ctx.connection.id,

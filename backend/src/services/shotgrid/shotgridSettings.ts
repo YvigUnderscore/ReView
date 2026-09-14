@@ -91,6 +91,16 @@ export const shotgridSettingsSchema = z.object({
        * encodage) que le code ne reprend pas.
        */
       naming: z.enum(['sgCode', 'filename']).default('sgCode'),
+      /**
+       * Rapatrier la vignette portée par une séquence, un plan ou un asset du site.
+       *
+       * C'est l'image que la production reconnaît : elle est choisie dans ShotGrid, elle
+       * illustre le plan dans toutes ses listes, et ReView affichait jusqu'ici une carte
+       * vide en attendant qu'un média publié lui en donne une. Le transfert est une
+       * image de quelques kilo-octets par entité, et il ne part que lorsque la vignette
+       * a réellement changé côté site.
+       */
+      thumbnails: z.boolean().default(true),
     })
     .default({}),
   push: z
