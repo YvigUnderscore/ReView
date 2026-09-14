@@ -30,9 +30,11 @@ const ctx = {
   settings: {},
   client: {
     findById: vi.fn(),
-    create: vi.fn(),
     search: vi.fn(),
   },
+  // La création passe par le writer : c'est lui qui pose le projet lié et relit ce que le
+  // site a écrit. Sa propre suite l'éprouve ; ici on ne double que l'écriture.
+  writer: { create: vi.fn() },
 };
 
 beforeEach(() => {
@@ -41,7 +43,7 @@ beforeEach(() => {
   ctx.client.findById.mockImplementation((type: string, id: number) =>
     type === 'Step' ? { id, code: 'Look Development' } : { id, project: { id: 1 } },
   );
-  ctx.client.create.mockResolvedValue({ id: 900 });
+  ctx.writer.create.mockResolvedValue({ id: 900 });
   vi.mocked(prisma.shotgridLink.findFirst).mockResolvedValue({ sgId: 100, sgType: 'Asset' } as never);
   vi.mocked(prisma.task.create).mockResolvedValue({ id: 42 } as never);
   vi.mocked(resolveForTask).mockResolvedValue({ department: 'LOOK_DEVELOPMENT', departmentId: 5 });

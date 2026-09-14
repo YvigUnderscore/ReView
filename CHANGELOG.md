@@ -38,6 +38,11 @@ in behind it](DOCUMENTATION/CHANGELOG.md).
 
 ### Operator actions
 
+- **ShotGrid deletions catch up once, by hand.** Retirements are now applied on the event,
+  but the ones made *before* this release were never recorded anywhere. Run a full
+  **Synchronise** once per linked project to bin what the site has already dropped; the
+  nightly catch-up will not do it (it reads what changed, and an absent entity there means
+  *unchanged*, not *deleted*). No migration and no schema change.
 - **ShotGrid webhooks: re-copy the secret token.** Links created before this release carry a
   signature secret that was never displayed anywhere, so the site was signing with something
   else and *every* delivery was refused with a `404`. Open **Project → ShotGrid → Settings →

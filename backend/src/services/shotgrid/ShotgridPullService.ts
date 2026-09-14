@@ -32,6 +32,7 @@ import {
   type TaskLinkData,
 } from './shotgridLinks';
 import { syncThumbnail } from './ShotgridThumbnails';
+import { sgIdsOfType } from './ShotgridSyncPasses';
 import type { SyncJournal } from './ShotgridSyncJournal';
 import { can } from './shotgridSettings';
 import { enqueuePush } from './ShotgridPushService';
@@ -137,6 +138,70 @@ export function touch(
     id,
     ...extra,
   });
+}
+
+/**
+ * Ce que le site ne rend plus est mis à la corbeille — sur une passe complète **comme**
+ * sur une passe ciblée.
+ *
+ * C'est la correction d'un silence complet : un événement `Shotgun_Shot_Retirement`
+ * était accepté, mis en file, exécuté — et ne faisait rien. La passe qu'il déclenche est
+ * ciblée, la mise à la corbeille était réservée à la passe complète, et la lecture
+ * ciblée d'une entité retirée ne rend évidemment rien. Le journal enregistrait une
+ * exécution « ok » aux statistiques vides, et la suppression faite dans ShotGrid
+ * n'atteignait ReView qu'au prochain balayage complet, déclenché à la main.
+ *
+ * Les trois cas ne se valent pas, et c'est tout l'objet de cette fonction :
+ *  - **complète** : le lot reçu fait autorité, ce qui en manque a été retiré ;
+ *  - **ciblée** : seuls les identifiants demandés concluent — le site vient de nommer
+ *    ces entités-là, leur absence de la réponse est une réponse ;
+ *  - **incrémentale** (`since`) : une entité absente du lot n'a simplement pas changé.
+ *    En déduire un retrait viderait le projet à chaque rattrapage nocturne.
+ */
+async function trashMissing(
+  ctx: PullContext,
+  sgType: 'Shot' | 'Sequence' | 'Asset' | 'Task',
+  records: SgRecord[],
+  options: PullOptions,
+): Promise<void> {
+  const alive = new Set(records.map((r) => r.id));
+  if (!options.since && !options.onlySgIds) {
+    await trashRemoved(ctx, sgType, alive);
+    return;
+  }
+  const requested = sgIdsOfType(options.onlySgIds, sgType);
+  if (requested.length === 0) return;
+  const gone = await confirmGone(ctx, sgType, requested, alive);
+  if (gone.length > 0) await trashRemoved(ctx, sgType, alive, gone);
+}
+
+/**
+ * Parmi les identifiants visés absents de la lecture, ceux que le site ne connaît
+ * vraiment plus.
+ *
+ * L'absence a deux causes, et une seule est un retrait : l'entité a disparu du site, ou
+ * bien elle en revient encore mais `keepInProject` l'a écartée — elle appartient
+ * désormais à un autre projet. Mettre la seconde à la corbeille sous le message « retirée
+ * dans ShotGrid » dirait quelque chose de faux, et agirait précisément là où la garde de
+ * projet, partout ailleurs dans ce fichier, refuse d'agir.
+ *
+ * Une relecture par identifiant tranche. Elle ne coûte qu'un appel, et seulement pour un
+ * identifiant déjà manquant — c'est-à-dire sur un événement de retrait, pas sur le
+ * trafic courant.
+ */
+export async function confirmGone(
+  ctx: PullContext,
+  sgType: string,
+  requested: readonly number[],
+  alive: ReadonlySet<number>,
+): Promise<number[]> {
+  const gone: number[] = [];
+  for (const sgId of requested) {
+    if (alive.has(sgId)) continue;
+    if (await ctx.client.findById(sgType, sgId, ['id'])) continue;
+    gone.push(sgId);
+  }
+  return gone;
 }
 
 /** Filtres d'une recherche : projet obligatoire, plus la fenêtre temporelle éventuelle. */
@@ -480,8 +545,8 @@ export async function pullSequences(
    * remontait la séquence en tête de liste pour tout le monde.
    */
   const fullPass = !options.since && !options.onlySgIds;
-  // Passe complète : ce que le site ne renvoie plus a été mis à la corbeille là-bas.
-  if (fullPass) await trashRemoved(ctx, 'Sequence', new Set(records.map((r) => r.id)));
+  // Ce que le site ne renvoie plus y a été mis à la corbeille — voir `trashMissing`.
+  await trashMissing(ctx, 'Sequence', records, options);
   const links = await mapSgToLocal(ctx.connection.id, 'sequence');
 
   for (const [index, record] of records.entries()) {
@@ -589,7 +654,7 @@ export async function pullShots(
   const records = await fetchScoped(ctx, 'Shot', SHOT_FIELDS, options);
   // Même raison que pour les séquences : `order` n'a de sens qu'en passe complète.
   const fullPass = !options.since && !options.onlySgIds;
-  if (fullPass) await trashRemoved(ctx, 'Shot', new Set(records.map((r) => r.id)));
+  await trashMissing(ctx, 'Shot', records, options);
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
 
@@ -689,8 +754,7 @@ export async function pullAssets(
 ) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Asset', ASSET_FIELDS, options);
-  if (!options.since && !options.onlySgIds)
-    await trashRemoved(ctx, 'Asset', new Set(records.map((r) => r.id)));
+  await trashMissing(ctx, 'Asset', records, options);
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
   // Les plans et sequences ont été importés juste avant : leurs correspondances
   // existent, on peut donc rattacher sans rien créer au passage.
@@ -855,9 +919,8 @@ export async function pullTasks(
 ) {
   if (!can(ctx.settings, 'tasks', 'read')) return;
   const records = await fetchScoped(ctx, 'Task', TASK_FIELDS, options);
-  // Passe complète : une tâche que le site ne renvoie plus y a été mise à la corbeille.
-  if (!options.since && !options.onlySgIds)
-    await trashRemoved(ctx, 'Task', new Set(records.map((r) => r.id)));
+  // Une tâche que le site ne renvoie plus y a été mise à la corbeille.
+  await trashMissing(ctx, 'Task', records, options);
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
   const taskLinks = await mapSgToLocal(ctx.connection.id, 'task');
@@ -966,16 +1029,25 @@ export async function pullTasks(
  * Entités retirées côté ShotGrid : mises à la corbeille, jamais supprimées.
  * Le travail associé (commentaires, versions, historique) reste consultable, et un
  * retrait par erreur côté ShotGrid se répare sans perte.
+ *
+ * `scope` borne les identifiants examinés, et c'est ce qui rend la fonction utilisable
+ * sur une passe ciblée. Sans lui, elle ne pouvait tourner qu'en passe complète — seule
+ * situation où « absent du lot reçu » signifie « retiré du site ». Un événement de
+ * retrait, lui, nomme UNE entité : l'absence de cet identifiant-là est une information
+ * sûre, celle des autres ne l'est pas.
  */
 export async function trashRemoved(
   ctx: PullContext,
   sgType: 'Shot' | 'Sequence' | 'Asset' | 'Task',
   aliveSgIds: Set<number>,
+  scope?: readonly number[],
 ): Promise<void> {
   const localType = sgType.toLowerCase() as 'shot' | 'sequence' | 'asset' | 'task';
   const links = await mapSgToLocal(ctx.connection.id, localType);
-  for (const [sgId, link] of links) {
-    if (aliveSgIds.has(sgId)) continue;
+  for (const sgId of scope ?? links.keys()) {
+    const link = links.get(sgId);
+    // Identifiant visé qui n'a jamais été importé : rien à mettre à la corbeille.
+    if (!link || aliveSgIds.has(sgId)) continue;
 
     const table =
       sgType === 'Shot'

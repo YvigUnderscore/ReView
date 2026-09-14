@@ -33,6 +33,24 @@ const ENTITY_FROM_EVENT = /^Shotgun_([A-Za-z]+)_(New|Change|Retirement|Revival)$
 /** Fenêtre de regroupement des événements portant sur une même entité. */
 const COALESCE_MS = 5_000;
 
+/**
+ * Sur quoi regrouper les événements d'une même tranche de temps.
+ *
+ * Une entité de production se regroupe par identifiant : deux plans modifiés ensemble
+ * sont deux relectures, chacune ciblée. Une entité **globale** (statut, compte), elle,
+ * déclenche exactement le même travail quel que soit son identifiant — une relecture de
+ * toute la hiérarchie du projet. L'y faire entrer coûtait cher pour rien : renommer
+ * cinquante comptes d'un coup fabriquait cinquante passes complètes là où une seule dit
+ * la même chose.
+ *
+ * Cela devient un vrai risque dès qu'un second webhook, sans filtre de projet, apporte
+ * les `Person` et les `Status` de tout le site — seule façon de les recevoir, ShotGrid
+ * ne les proposant pas dans un webhook filtré sur un projet.
+ */
+export function coalesceKey(entity: string, sgId: number): string {
+  return eventIsGlobal(entity) ? entity : `${entity}-${sgId}`;
+}
+
 export function parseEventType(eventType: string | undefined): { entity: string; action: string } | null {
   if (!eventType) return null;
   const m = ENTITY_FROM_EVENT.exec(eventType);
@@ -70,7 +88,7 @@ export async function enqueueShotgridEvent(
         // tranche, l'identifiant resterait pris par le travail déjà terminé et tout
         // événement ultérieur serait silencieusement ignoré. Pas de deux-points :
         // BullMQ les réserve à ses propres clés et rejette l'identifiant.
-        jobId: `sgevt-${connectionId}-${parsed.entity}-${entityRef.id}-${Math.floor(Date.now() / COALESCE_MS)}`,
+        jobId: `sgevt-${connectionId}-${coalesceKey(parsed.entity, entityRef.id)}-${Math.floor(Date.now() / COALESCE_MS)}`,
         delay: 2000,
         removeOnComplete: 200,
         removeOnFail: 500,

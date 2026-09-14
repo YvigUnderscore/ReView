@@ -19,7 +19,11 @@ vi.mock('../../config/env', () => ({ env: { APP_URL: null } }));
 vi.mock('../MediaService', () => ({ mediaSourceKey: vi.fn(() => 'key') }));
 vi.mock('../StorageService', () => ({ storage: {} }));
 vi.mock('./ShotgridNoteAttachments', () => ({ importNoteAttachments: vi.fn(async () => 0) }));
-vi.mock('./ShotgridPullService', () => ({ touch: (...args: unknown[]) => touch(...args) }));
+vi.mock('./ShotgridPullService', () => ({
+  touch: (...args: unknown[]) => touch(...args),
+  // Rien n'est retiré du site dans ces scénarios : la confirmation rend une liste vide.
+  confirmGone: vi.fn(async () => []),
+}));
 vi.mock('./shotgridSettings', () => ({ can: () => true }));
 vi.mock('./shotgridLinks', () => ({
   mapSgToLocal: (...args: unknown[]) => links.mapSgToLocal(...args),

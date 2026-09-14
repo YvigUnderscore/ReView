@@ -17,7 +17,8 @@ import { asDate, asEntityRef, asString, type SgRecord } from './shotgridMapper';
 import { findByLocal, mapSgToLocal, upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
 import { importNoteAttachments } from './ShotgridNoteAttachments';
-import { touch, type PullContext } from './ShotgridPullService';
+import { confirmGone, touch, type PullContext } from './ShotgridPullService';
+import type { ShotgridWriter } from './ShotgridWriter';
 
 /**
  * Notes ShotGrid ↔ commentaires ReView.
@@ -83,6 +84,32 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
 
   const versionLinks = await mapSgToLocal(ctx.connection.id, 'version');
   const commentLinks = await mapSgToLocal(ctx.connection.id, 'comment');
+
+  /**
+   * Notes supprimées sur le site : **signalées, pas appliquées**.
+   *
+   * Un commentaire ReView n'a pas de corbeille — la table n'a pas de `deletedAt`. Honorer
+   * le retrait reviendrait donc à effacer pour de bon un retour de review, ses réponses et
+   * son annotation, sur la foi d'un ménage fait dans ShotGrid. Le reste de l'intégration
+   * met à la corbeille et ne supprime jamais ; on ne fait pas l'inverse ici en silence.
+   *
+   * Le journal le dit donc, et un humain tranche. Sans cette ligne, l'événement de retrait
+   * ne laissait aucune trace du tout, et l'écart entre les deux outils restait invisible.
+   */
+  if (options.onlySgIds?.length) {
+    const alive = new Set(records.map((r) => r.id));
+    for (const sgId of await confirmGone(ctx, 'Note', options.onlySgIds, alive)) {
+      const link = commentLinks.get(sgId);
+      if (!link) continue;
+      ctx.journal.count('notes', 'skipped');
+      await ctx.journal.log(
+        'warn',
+        'shotgrid.log.noteRetiredRemotely',
+        { sgId },
+        { sgType: 'Note', sgId, localType: 'comment', localId: link.localId },
+      );
+    }
+  }
 
   for (const record of records) {
     if (!belongsToProject(record, ctx.scope).ok) {
@@ -220,17 +247,8 @@ async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number
 export interface PushNoteContext {
   connectionId: number;
   sgProjectId: number;
-  client: {
-    createAs: (entity: string, data: Record<string, unknown>, asUser?: string | null) => Promise<SgRecord>;
-    uploadFile: (
-      entity: string,
-      id: number,
-      field: string,
-      body: Buffer,
-      filename: string,
-      contentType?: string,
-    ) => Promise<void>;
-  };
+  /** Toute écriture passe par là — le projet lié est posé par le writer, pas ici. */
+  writer: Pick<ShotgridWriter, 'create' | 'upload'>;
   attachAnnotations: boolean;
   asUserLogin: string | null;
 }
@@ -298,27 +316,27 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
    * sur une note libre dont le sujet et le corps portent le contexte, et le lien de
    * retour vers ReView reste cliquable.
    */
+  // Pas de `project` ici : c'est `ShotgridWriter` qui le pose, et lui seul.
   const base = {
-    project: { type: 'Project', id: ctx.sgProjectId },
     subject: timecode ? `ReView — ${timecode}` : 'ReView',
     content: body,
   };
   let created: SgRecord;
   try {
-    created = await ctx.client.createAs(
+    created = await ctx.writer.create(
       'Note',
       { ...base, note_links: [{ type: 'Version', id: versionLink.sgId }] },
-      ctx.asUserLogin,
+      { asUserLogin: ctx.asUserLogin },
     );
   } catch (err) {
     logger.info(
       { commentId, sgVersionId: versionLink.sgId, err: err instanceof Error ? err.message : err },
       'Rattachement de note refusé par le site — note créée sans lien',
     );
-    created = await ctx.client.createAs(
+    created = await ctx.writer.create(
       'Note',
       { ...base, subject: `${base.subject} — ${versionName ?? `Version #${versionLink.sgId}`}` },
-      ctx.asUserLogin,
+      { asUserLogin: ctx.asUserLogin },
     );
   }
 
@@ -362,7 +380,7 @@ async function attachAnnotationImage(
   try {
     const buffer = await renderAnnotatedFrame(comment);
     if (!buffer) return;
-    await ctx.client.uploadFile(
+    await ctx.writer.upload(
       'Note',
       sgNoteId,
       'attachments',

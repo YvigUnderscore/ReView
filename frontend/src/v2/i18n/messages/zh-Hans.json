@@ -2735,6 +2735,7 @@
   "shotgrid.log.thumbnailFailed": "« {name} » 的缩略图未能获取（{error}）",
   "shotgrid.log.importTaskCreated": "已在 shot {shot} 上创建「ShotGrid」任务以容纳 publishes",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} 已在 ShotGrid 中移除 — 移入 ReView 回收站",
+  "shotgrid.log.noteRetiredRemotely": "站点上的 Note {sgId} 已删除 — ReView 中的评论予以保留，因为评论没有回收站",
   "shotgrid.log.noStatusSchema": "无法读取 {entity} 的状态列表",
   "shotgrid.log.statusNotOnSite": "状态「{code}」({scope}) 站点上不存在 — 已保留",
   "shotgrid.log.conflictOverwritten": "「{name}」— {field} 存在差异：ReView「{review}」对 ShotGrid「{shotgrid}」。以 ShotGrid 为准，已替换 ReView 的值。",

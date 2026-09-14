@@ -2820,6 +2820,7 @@
   "shotgrid.log.thumbnailFailed": "« {name} » का थंबनेल नहीं लाया जा सका ({error})",
   "shotgrid.log.importTaskCreated": "publishes रखने के लिए shot {shot} पर « ShotGrid » कार्य बनाया",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} ShotGrid में हटाया गया — ReView कचरे में ले जाया गया",
+  "shotgrid.log.noteRetiredRemotely": "साइट पर Note {sgId} हटाई गई — टिप्पणियों के लिए रद्दी नहीं है, इसलिए ReView की टिप्पणी रखी गई है",
   "shotgrid.log.noStatusSchema": "{entity} के लिए कोई पठनीय स्थिति सूची नहीं",
   "shotgrid.log.statusNotOnSite": "स्थिति « {code} » ({scope}) साइट पर नहीं — रखी गई",
   "shotgrid.log.conflictOverwritten": "«{name}» — {field} भिन्न है: ReView «{review}» बनाम ShotGrid «{shotgrid}»। ShotGrid जीता: ReView का मान बदल दिया गया।",

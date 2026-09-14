@@ -2788,6 +2788,7 @@
   "shotgrid.log.mediaTooLarge": "« {name} » pèse {sizeMo} Mo, au-delà de la limite de {limitMo} Mo — ignoré",
   "shotgrid.log.importTaskCreated": "Tâche « ShotGrid » créée sur le plan {shot} pour accueillir les publishes",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} retiré dans ShotGrid — mis à la corbeille ReView",
+  "shotgrid.log.noteRetiredRemotely": "Note {sgId} supprimée sur le site — le commentaire ReView est conservé, faute de corbeille pour les commentaires",
   "shotgrid.log.noStatusSchema": "Aucune liste de statuts lisible pour {entity}",
   "shotgrid.log.statusNotOnSite": "Statut « {code} » ({scope}) absent du site — conservé",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} diverge : ReView « {review} » contre ShotGrid « {shotgrid} ». ShotGrid l'emporte : la valeur ReView a été remplacée.",

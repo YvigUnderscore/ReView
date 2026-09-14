@@ -2735,6 +2735,7 @@
   "shotgrid.log.thumbnailFailed": "« {name} »의 썸네일을 가져오지 못했습니다 ({error})",
   "shotgrid.log.importTaskCreated": "publishes를 담기 위해 shot {shot}에 « ShotGrid » 작업을 만들었습니다",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId}이(가) ShotGrid에서 삭제됨 — ReView 휴지통으로 이동",
+  "shotgrid.log.noteRetiredRemotely": "사이트에서 Note {sgId}가 삭제되었습니다 — 댓글에는 휴지통이 없으므로 ReView의 댓글은 유지됩니다",
   "shotgrid.log.noStatusSchema": "{entity}의 상태 목록을 읽을 수 없습니다",
   "shotgrid.log.statusNotOnSite": "상태 « {code} »({scope})가 사이트에 없습니다 — 유지",
   "shotgrid.log.conflictOverwritten": "「{name}」— {field} 불일치: ReView 「{review}」 대 ShotGrid 「{shotgrid}」. ShotGrid가 우선하여 ReView 값을 교체했습니다.",

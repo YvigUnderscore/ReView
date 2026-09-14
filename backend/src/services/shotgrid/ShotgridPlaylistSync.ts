@@ -4,11 +4,11 @@
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
-import { writeAllowedOn } from './shotgridTemplateGuard';
 import { asDate, asEntityRefs, asString, type SgEntityRef, type SgRecord } from './shotgridMapper';
 import { findByLocal, mapLocalToSg, mapSgToLocal, upsertLink } from './shotgridLinks';
 import { can } from './shotgridSettings';
 import { touch, type PullContext } from './ShotgridPullService';
+import type { ShotgridWriter } from './ShotgridWriter';
 
 /**
  * Playlists ShotGrid ↔ playlists de dailies.
@@ -137,16 +137,12 @@ export interface PlaylistPushContext {
    * ne sert qu'à compléter la portée partagée avec le reste du dossier.
    */
   sgProjectName?: string | null;
+  /** Lecture seule : la playlist distante est relue avant d'en fusionner les versions. */
   client: {
-    create: (entity: string, data: Record<string, unknown>) => Promise<{ id: number }>;
-    update: (
-      entity: string,
-      id: number,
-      data: Record<string, unknown>,
-      options?: { asUserLogin?: string | null },
-    ) => Promise<unknown>;
     findById: (entity: string, id: number, fields: string[]) => Promise<SgRecord | null>;
   };
+  /** Toute écriture passe par là — cloisonnement et projet modèle compris. */
+  writer: Pick<ShotgridWriter, 'create' | 'update'>;
   asUserLogin: string | null;
 }
 
@@ -252,8 +248,8 @@ export async function pushPlaylist(ctx: PlaylistPushContext, playlistId: number)
     );
   }
 
-  const created = await ctx.client.create('Playlist', {
-    project: { type: 'Project', id: ctx.sgProjectId },
+  // Pas de `project` ici : `ShotgridWriter` le pose et relit ce que le site a ecrit.
+  const created = await ctx.writer.create('Playlist', {
     code: playlist.name,
     versions: localSgIds.map((id) => ({ type: 'Version', id })),
   });
@@ -293,25 +289,9 @@ async function updateRemotePlaylist(
     return null;
   }
 
-  const verdict = belongsToProject(remote, {
-    sgProjectId: ctx.sgProjectId,
-    sgProjectName: ctx.sgProjectName ?? '',
-  });
-  if (!verdict.ok) {
-    logger.error(
-      { playlistId: playlist.id, sgId, expected: ctx.sgProjectId, found: verdict.foundProjectId },
-      'Écriture de playlist annulée : la cible appartient à un autre projet',
-    );
-    return null;
-  }
-  if (!writeAllowedOn(remote)) {
-    logger.error(
-      { playlistId: playlist.id, sgId },
-      'Écriture de playlist annulée : cible dans un projet modèle',
-    );
-    return null;
-  }
-
+  // Le cloisonnement et le refus des projets modèles ne sont plus recopiés ici : c'est
+  // `ShotgridWriter` qui les applique, juste avant d'écrire, pour toutes les écritures du
+  // dossier. Deux copies d'une même règle finissent par diverger — celle-ci en était une.
   const remoteRefs = asEntityRefs(remote.versions);
   const merged = mergePlaylistVersions({ remote: remoteRefs, local: localSgIds, known });
   const preserved = merged.filter((ref) => ref.type !== 'Version' || !known.has(ref.id)).length;
@@ -323,7 +303,7 @@ async function updateRemotePlaylist(
     return sgId;
   }
 
-  await ctx.client.update(
+  await ctx.writer.update(
     'Playlist',
     sgId,
     { code: playlist.name, versions: merged },

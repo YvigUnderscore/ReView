@@ -433,15 +433,26 @@ export class ShotgridClient {
 
   // ───────────────────────────── Écriture ─────────────────────────────
 
-  async create(entity: string, data: Record<string, unknown>): Promise<SgRecord> {
+  /**
+   * ⚠ Écriture brute. **Ne pas appeler directement** : passer par `ShotgridWriter`, qui
+   * pose le projet lié et relit ce que le site a écrit. `ShotgridWriteGuard.test.ts` fait
+   * échouer la suite si un `unsafe*` réapparaît hors de ce writer.
+   */
+  async unsafeCreate(
+    entity: string,
+    data: Record<string, unknown>,
+    asUserLogin?: string | null,
+  ): Promise<SgRecord> {
+    const query = asUserLogin ? `?sudo_as_login=${encodeURIComponent(asUserLogin)}` : '';
     const json = await this.request<{ data?: unknown }>(
-      `${SG_API_PATH}/entity/${encodeURIComponent(entity)}`,
+      `${SG_API_PATH}/entity/${encodeURIComponent(entity)}${query}`,
       { method: 'POST', body: JSON.stringify(data) },
     );
     return flattenRecord(json.data);
   }
 
-  async update(
+  /** ⚠ Écriture brute — voir `unsafeCreate`. */
+  async unsafeUpdate(
     entity: string,
     id: number,
     data: Record<string, unknown>,
@@ -455,25 +466,12 @@ export class ShotgridClient {
     return flattenRecord(json.data);
   }
 
-  /** Retire une entité du site (mise à la corbeille ShotGrid). */
-  async remove(entity: string, id: number): Promise<void> {
+  /** ⚠ Écriture brute — voir `unsafeCreate`. Retire une entité du site. */
+  async unsafeRemove(entity: string, id: number): Promise<void> {
     await this.request(`${SG_API_PATH}/entity/${encodeURIComponent(entity)}/${id}`, {
       method: 'DELETE',
       retries: 0,
     });
-  }
-
-  async createAs(
-    entity: string,
-    data: Record<string, unknown>,
-    asUserLogin?: string | null,
-  ): Promise<SgRecord> {
-    const query = asUserLogin ? `?sudo_as_login=${encodeURIComponent(asUserLogin)}` : '';
-    const json = await this.request<{ data?: unknown }>(
-      `${SG_API_PATH}/entity/${encodeURIComponent(entity)}${query}`,
-      { method: 'POST', body: JSON.stringify(data) },
-    );
-    return flattenRecord(json.data);
   }
 
   // ───────────────────────────── Fichiers ─────────────────────────────
@@ -532,7 +530,7 @@ export class ShotgridClient {
    * Envoi d'un fichier dans un champ (Version.sg_uploaded_movie, Note.attachments) :
    * ShotGrid délivre une URL signée, on y dépose le contenu, puis on confirme.
    */
-  async uploadFile(
+  async unsafeUploadFile(
     entity: string,
     id: number,
     field: string,

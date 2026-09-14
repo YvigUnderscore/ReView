@@ -2820,6 +2820,7 @@
   "shotgrid.log.thumbnailFailed": "Thumbnail von « {name} » nicht geholt ({error})",
   "shotgrid.log.importTaskCreated": "Aufgabe « ShotGrid » am Shot {shot} angelegt, um die Publishes aufzunehmen",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} in ShotGrid entfernt — in den ReView-Papierkorb verschoben",
+  "shotgrid.log.noteRetiredRemotely": "Note {sgId} auf der Site gelöscht — der ReView-Kommentar bleibt, da Kommentare keinen Papierkorb haben",
   "shotgrid.log.noStatusSchema": "Keine lesbare Statusliste für {entity}",
   "shotgrid.log.statusNotOnSite": "Status « {code} » ({scope}) nicht auf der Site — beibehalten",
   "shotgrid.log.conflictOverwritten": "„{name}“ — {field} weicht ab: ReView „{review}“ gegen ShotGrid „{shotgrid}“. ShotGrid gewinnt: der ReView-Wert wurde ersetzt.",

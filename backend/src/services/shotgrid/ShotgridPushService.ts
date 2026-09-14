@@ -9,9 +9,8 @@ import { shotgridQueue } from '../JobService';
 import { storage } from '../StorageService';
 import { mediaSourceKey } from '../MediaService';
 import { clientForSiteRecord } from './ShotgridConfigService';
-import { belongsToProject } from './shotgridProjectGuard';
+import { writerFor, type ShotgridWriter } from './ShotgridWriter';
 import { findVersionByCode } from './ShotgridVersionLookup';
-import { writeAllowedOn } from './shotgridTemplateGuard';
 import { toSgDate } from './shotgridMapper';
 import { findByLocal, upsertLink } from './shotgridLinks';
 import { can, parseSettings } from './shotgridSettings';
@@ -75,14 +74,19 @@ interface PushContext {
   sgProjectId: number;
   sgProjectName: string;
   client: ReturnType<typeof clientForSiteRecord>;
+  /** Toute écriture passe par là — voir `ShotgridWriter`. */
+  writer: ShotgridWriter;
   settings: ReturnType<typeof parseSettings>;
   baseUrl: string;
 }
 
 /**
- * Identifiant ShotGrid d'une entité locale, avec vérification d'appartenance.
- * Un lien peut pointer une entité supprimée puis recréée sous le même identifiant
- * dans un autre projet : on relit avant d'écrire.
+ * Identifiant ShotGrid d'une entité locale.
+ *
+ * Il ne relit plus la cible pour en vérifier le projet : c'est désormais `ShotgridWriter`
+ * qui le fait, juste avant d'écrire, pour **toutes** les écritures — y compris celles que
+ * cette fonction ne voyait pas passer. Le contrôle a gagné en portée et la lecture qui
+ * était faite ici en double a disparu.
  */
 async function resolveTarget(
   ctx: PushContext,
@@ -92,24 +96,6 @@ async function resolveTarget(
 ): Promise<number | null> {
   const link = await findByLocal(ctx.connectionId, localType, localId);
   if (!link || link.sgType !== sgType) return null;
-  const remote = await ctx.client.findById(sgType, link.sgId, ['id', 'project']);
-  if (!remote) return null;
-  const verdict = belongsToProject(remote, {
-    sgProjectId: ctx.sgProjectId,
-    sgProjectName: ctx.sgProjectName,
-  });
-  if (!verdict.ok) {
-    logger.error(
-      { sgType, sgId: link.sgId, expected: ctx.sgProjectId, found: verdict.foundProjectId },
-      'Écriture ShotGrid annulée : la cible appartient à un autre projet',
-    );
-    return null;
-  }
-  // Second rempart, indépendant du cloisonnement : jamais dans un projet modèle.
-  if (!writeAllowedOn(remote)) {
-    logger.error({ sgType, sgId: link.sgId }, 'Écriture ShotGrid annulée : cible dans un projet modèle');
-    return null;
-  }
   return link.sgId;
 }
 
@@ -168,11 +154,17 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
   });
   if (!connection?.active) return;
 
+  const client = clientForSiteRecord(connection.site);
   const ctx: PushContext = {
     connectionId,
     sgProjectId: connection.sgProjectId,
     sgProjectName: connection.sgProjectName,
-    client: clientForSiteRecord(connection.site),
+    client,
+    writer: writerFor({
+      client,
+      sgProjectId: connection.sgProjectId,
+      sgProjectName: connection.sgProjectName,
+    }),
     settings: parseSettings(connection.settings),
     baseUrl: connection.site.baseUrl,
   };
@@ -241,7 +233,7 @@ async function pushTaskStatus(ctx: PushContext, job: Extract<PushJob, { type: 't
   if (!sgId) return;
 
   const code = task.pipelineStatus.code;
-  await ctx.client.update(
+  await ctx.writer.update(
     'Task',
     sgId,
     { sg_status_list: code },
@@ -271,7 +263,7 @@ async function pushTaskDates(ctx: PushContext, job: Extract<PushJob, { type: 'ta
   if (task.dueDate) payload.due_date = toSgDate(task.dueDate);
   if (Object.keys(payload).length === 0) return;
 
-  await ctx.client.update('Task', sgId, payload, { asUserLogin: await actorLogin(ctx, job.actorId) });
+  await ctx.writer.update('Task', sgId, payload, { asUserLogin: await actorLogin(ctx, job.actorId) });
 }
 
 async function pushTaskAssignee(ctx: PushContext, job: Extract<PushJob, { type: 'task-assignee' }>) {
@@ -289,7 +281,7 @@ async function pushTaskAssignee(ctx: PushContext, job: Extract<PushJob, { type: 
     logger.info({ taskId: task.id }, 'Assignation non poussée : pas de compte ShotGrid correspondant');
     return;
   }
-  await ctx.client.update(
+  await ctx.writer.update(
     'Task',
     sgId,
     {
@@ -310,7 +302,7 @@ async function pushShotStatus(ctx: PushContext, job: Extract<PushJob, { type: 's
   if (!sgId) return;
 
   const code = shot.pipelineStatus.code;
-  await ctx.client.update(
+  await ctx.writer.update(
     'Shot',
     sgId,
     { sg_status_list: code },
@@ -339,7 +331,7 @@ async function pushSequenceStatus(ctx: PushContext, job: Extract<PushJob, { type
   if (!sgId) return;
 
   const code = sequence.pipelineStatus.code;
-  await ctx.client.update(
+  await ctx.writer.update(
     'Sequence',
     sgId,
     { sg_status_list: code },
@@ -365,7 +357,7 @@ async function pushAssetStatus(ctx: PushContext, job: Extract<PushJob, { type: '
   const sgId = await resolveTarget(ctx, 'asset', asset.id, 'Asset');
   if (!sgId) return;
 
-  await ctx.client.update(
+  await ctx.writer.update(
     'Asset',
     sgId,
     { sg_status_list: asset.pipelineStatus.code },
@@ -395,7 +387,7 @@ async function pushDescription(ctx: PushContext, job: Extract<PushJob, { type: '
   const sgId = await resolveTarget(ctx, job.kind, job.id, sgType);
   if (!sgId) return;
 
-  await ctx.client.update(
+  await ctx.writer.update(
     sgType,
     sgId,
     { description: description ?? '' },
@@ -440,7 +432,7 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
     );
     return;
   }
-  await ctx.client.update(
+  await ctx.writer.update(
     'Version',
     sgId,
     { sg_status_list: code },
@@ -545,7 +537,9 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     : null;
   if (reviewUrl) payload.sg_path_to_movie = reviewUrl;
 
-  const created = await ctx.client.createAs('Version', payload, await actorLogin(ctx, job.actorId));
+  const created = await ctx.writer.create('Version', payload, {
+    asUserLogin: await actorLogin(ctx, job.actorId),
+  });
   await upsertLink({
     connectionId: ctx.connectionId,
     localType: 'version',
@@ -590,6 +584,7 @@ async function pushPlaylistJob(ctx: PushContext, job: Extract<PushJob, { type: '
       // vide est un piège pour qui l'étendra au nom.
       sgProjectName: ctx.sgProjectName,
       client: ctx.client,
+      writer: ctx.writer,
       asUserLogin: await actorLogin(ctx, job.actorId),
     },
     job.playlistId,
@@ -603,7 +598,7 @@ async function pushCommentJob(ctx: PushContext, job: Extract<PushJob, { type: 'c
     {
       connectionId: ctx.connectionId,
       sgProjectId: ctx.sgProjectId,
-      client: ctx.client,
+      writer: ctx.writer,
       attachAnnotations: ctx.settings.push.attachAnnotations,
       asUserLogin: await actorLogin(ctx, job.actorId),
     },
@@ -645,7 +640,7 @@ async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'a
     if (link) sequenceRefs.push({ type: 'Sequence', id: link.sgId });
   }
 
-  await ctx.client.update(
+  await ctx.writer.update(
     'Asset',
     sgId,
     { shots: shotRefs, sequences: sequenceRefs },
@@ -666,14 +661,7 @@ async function uploadThumbnail(
   if (!media.thumbnailKey) return;
   try {
     const buffer = await storage.getObjectBuffer(media.thumbnailKey);
-    await ctx.client.uploadFile(
-      'Version',
-      sgVersionId,
-      'image',
-      buffer,
-      `thumb-${media.id}.webp`,
-      'image/webp',
-    );
+    await ctx.writer.upload('Version', sgVersionId, 'image', buffer, `thumb-${media.id}.webp`, 'image/webp');
   } catch (err) {
     logger.warn({ err, mediaId: media.id }, 'Vignette non transmise à ShotGrid');
   }
@@ -708,7 +696,7 @@ async function uploadMasterMedia(
     const buffer = await storage.getObjectBuffer(mediaSourceKey(media));
     // `sg_uploaded_movie` accepte images et vidéos : c'est lui qui déclenche le
     // transcodage de ShotGrid et alimente son lecteur.
-    await ctx.client.uploadFile(
+    await ctx.writer.upload(
       'Version',
       sgVersionId,
       'sg_uploaded_movie',

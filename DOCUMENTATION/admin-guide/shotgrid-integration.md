@@ -390,6 +390,26 @@ delivered. The webhook looks healthy, its delivery log is green, and the project
 you cannot subscribe to changes, switch the update mode to *Periodic polling*, which reads
 the event log and does not depend on the filter.
 
+**`Status` and `HumanUser` need a second webhook.** ShotGrid will not offer them in the one
+you just built, and no setting changes that: *"Selecting a project limits you to selecting an
+entity that always belongs to a single project […] If you want to select a non-project (or
+multi-project) entity like Person, you should not select a project."* A status list and a
+person belong to the site, not to a project, so a project-filtered webhook cannot carry them.
+
+Create a second webhook alongside the first:
+
+| Field | Value |
+|---|---|
+| URL | **the same address** as the first — it reaches the same connection |
+| Secret token | **the same secret** |
+| Projects | **leave blank** — this is what makes the two entity types appear |
+| Entity filter | `Person` → `login`, `name`, `email`, `sg_status_list` · `Status` → `code`, `name`, `bg_color`, `list_order` |
+
+Leaving the project blank does *not* flood ReView with the rest of the studio: the filter
+carries only those two entity types, and neither belongs to a project. Anything else that
+reached the address with another project on it would be refused by the project guard before
+any work is done.
+
 The consequence for your webhook filter is direct: **tick every entity type in that matrix
 that matters to you**. Omitting `Status` lets the status vocabulary go stale, which is
 exactly what produces the *unknown status code* warnings described
@@ -793,6 +813,34 @@ pipeline status shown in the interface is the site's. Codes are also classified 
 progress gauges — `omt`, `dis`, `ign`, `na`, `dcl` count as neither work to do nor work done,
 so an omitted shot does not inflate a production's remaining work forever.
 
+## Deleting on the site
+
+Deleting in ShotGrid **moves the ReView counterpart to the bin** — it never erases it. The
+work attached (media, comments, decisions, history) stays readable, the link survives, and
+restoring the entity on the site brings the same one back rather than a copy.
+
+It now happens **on the event**, within seconds, and no longer only on a full pass run by
+hand. The retirement of a sequence, a shot, an asset, a task or a version is applied as
+soon as the webhook delivers it — or on the next poll, in polling mode.
+
+| Deleted on the site | What ReView does |
+|---|---|
+| Sequence, shot, asset | Moved to the bin, with its history |
+| Task | Removed if it is empty; **kept** if it carries versions, and the run log says so — deleting it would take that review work with it |
+| Version | Moved to the bin, media and comments included |
+| Note | **Kept**, and reported in the run log. A comment has no bin of its own, so honouring the deletion would erase a review exchange for good — that decision is left to a person |
+
+Two limits worth knowing:
+
+- **A missed deletion is not caught up.** A nightly catch-up reads what *changed*; an entity
+  it does not receive has simply not moved, and inferring a deletion there would empty the
+  project. So a deletion made while the instance was unreachable is applied by the next
+  **full** *Synchronise*, not by the catch-up. **Comparison** lists those entities in the
+  meantime, as *missing on the site*.
+- **An entity that moved to another project is not a deletion.** ReView re-reads it before
+  trashing anything: if the site still answers for it, nothing is binned, and the project
+  guard reports it as out-of-project instead.
+
 ## What cannot be undone
 
 Two mistakes have no recovery path from inside ReView. Both have dedicated guards.
@@ -800,6 +848,20 @@ Two mistakes have no recovery path from inside ReView. Both have dedicated guard
 **Writing into the wrong project.** A ShotGrid site hosts every project of the studio, and a
 forgotten filter does not look like a bug — it just imports the neighbour's project over
 yours.
+
+ReView has **one** outbound write path. Every create, update and file upload goes through a
+single writer built from the connection; the client's raw write methods are named `unsafe*`
+and a test fails the build if any of them is called from anywhere else. The writer re-reads
+its target and refuses to touch it if the project does not match or if it sits in a template
+project; on a creation it sets the project itself, refuses a payload that names a different
+one, and re-reads what the site actually filed. Writing into the wrong project is no longer
+something a future change can do by forgetting a check.
+
+Two things that guarantee cannot cover, and no amount of code will: the gap between the
+verification read and the write (ShotGrid offers no conditional write, so the window is
+milliseconds but not zero), and a link pointed at the wrong project from the outset — every
+write is then correct with respect to a wrong premise, which is why linking checks the id
+**and** the name, and why the name is re-checked before every pass.
 
 - Every search carries the project filter (`['project', 'is', {Project, id}]`).
 - Every record received is re-checked with `belongsToProject` before being used. Entities
@@ -854,6 +916,9 @@ downloaded back.
 | A shot exists in ReView but nowhere in ShotGrid | Created locally before the link | The comparison lists it as *Not linked* |
 | An entity disappeared from ReView | Moved to the ShotGrid bin — deletion happens there and propagates here | Restore it in ShotGrid and re-synchronise; the ReView entity is only trashed, with its history |
 | A task deleted in ShotGrid is still in ReView | It carries versions, and deleting it would delete that review work | Move the versions elsewhere, then re-synchronise |
+| A deletion made on the site changes nothing here | *(historical)* the retirement event ran a targeted pass, and binning was reserved to the full pass — the run ended *ok* with empty counts | Fixed: a retirement is applied on the event. For deletions made before this release, run a full **Synchronise** once |
+| A note deleted on the site is still a comment in ReView | Expected — a comment has no bin, so the deletion is reported instead of applied | Read the run log (*the ReView comment is kept*) and delete it here if you want it gone |
+| `Status` and `HumanUser` are missing from the webhook's entity list | The webhook is filtered on a project, and neither belongs to one | Create a second webhook on the same address and secret, with **no project** and those two entity types only |
 | The comparison shows more tasks or versions in ReView | Tasks kept as above, or local versions never pushed | Check *publish mode* |
 | Annotations not attached to notes | Media file missing from storage, or the site refuses `Note.attachments` | Check the run log; ask a ShotGrid administrator for the permission |
 | Media are named after the delivered file, not the version code | *Media name* is set to *Delivered file name*, or the version has not been re-read yet | Switch the setting; names realign on the next pass |

@@ -24,13 +24,16 @@ vi.mock('./shotgridLinks', () => ({
   upsertLink: vi.fn(),
 }));
 
-import { trashRemoved, type PullContext } from './ShotgridPullService';
+import { confirmGone, trashRemoved, type PullContext } from './ShotgridPullService';
+
+const findById = vi.fn();
 
 const logs: Array<{ level: string; key: string }> = [];
 
 function context(): PullContext {
   return {
     connection: { id: 1, projectId: 7 },
+    client: { findById },
     journal: {
       count: vi.fn(),
       log: vi.fn(async (level: string, key: string) => {
@@ -102,6 +105,75 @@ describe('trashRemoved', () => {
 
     expect(db.task.delete).toHaveBeenCalledWith({ where: { id: 30 } });
     expect(logs.map((l) => l.key)).toContain('shotgrid.log.trashedRemotely');
+  });
+
+  /**
+   * Le périmètre est ce qui rend la fonction utilisable sur un événement de retrait.
+   * Sans lui, elle ne pouvait tourner qu'en passe complète, et un `Shotgun_Shot_Retirement`
+   * traversait toute la chaîne — accepté, mis en file, exécuté — sans rien mettre à la
+   * corbeille. Le journal enregistrait « ok », statistiques vides.
+   */
+  describe('périmètre restreint (passe ciblée)', () => {
+    it('ne met à la corbeille que l’identifiant nommé par l’événement', async () => {
+      linkMap.mapSgToLocal.mockResolvedValue(
+        new Map([
+          [100, { localId: 10 }],
+          [200, { localId: 20 }],
+        ]),
+      );
+
+      // Le site vient de dire « 200 est retiré ». Il n'a rien dit de 100, absent du lot
+      // ciblé pour la seule raison qu'on ne l'a pas demandé.
+      await trashRemoved(context(), 'Shot', new Set(), [200]);
+
+      expect(db.shot.update).toHaveBeenCalledTimes(1);
+      expect(db.shot.update.mock.calls[0]![0].where).toEqual({ id: 20 });
+    });
+
+    it('ne touche à rien quand l’entité visée est revenue de la lecture', async () => {
+      linkMap.mapSgToLocal.mockResolvedValue(new Map([[200, { localId: 20 }]]));
+
+      await trashRemoved(context(), 'Shot', new Set([200]), [200]);
+
+      expect(db.shot.update).not.toHaveBeenCalled();
+    });
+
+    it('ignore un identifiant visé qui n’a jamais été importé', async () => {
+      linkMap.mapSgToLocal.mockResolvedValue(new Map());
+
+      await trashRemoved(context(), 'Shot', new Set(), [999]);
+
+      expect(db.shot.update).not.toHaveBeenCalled();
+      expect(linkMap.removeLink).not.toHaveBeenCalled();
+      expect(logs).toHaveLength(0);
+    });
+  });
+
+  /**
+   * Une entité peut manquer à une lecture ciblée pour deux raisons opposées : le site
+   * l'a retirée, ou elle en revient encore mais appartient désormais à un autre projet et
+   * `keepInProject` l'a écartée. Confondre les deux mettrait à la corbeille, sous le
+   * message « retirée dans ShotGrid », une entité bien vivante ailleurs.
+   */
+  describe('confirmGone', () => {
+    it('retient ce que le site ne rend plus du tout', async () => {
+      findById.mockResolvedValue(null);
+
+      await expect(confirmGone(context(), 'Shot', [200], new Set())).resolves.toEqual([200]);
+    });
+
+    it('écarte ce que le site rend encore, fût-ce hors du projet', async () => {
+      // Réponse du site : l'entité existe. Son projet est l'affaire de la garde, pas de
+      // la corbeille.
+      findById.mockResolvedValue({ id: 200, type: 'Shot' });
+
+      await expect(confirmGone(context(), 'Shot', [200], new Set())).resolves.toEqual([]);
+    });
+
+    it('n’interroge pas le site pour ce que la lecture a déjà rendu', async () => {
+      await expect(confirmGone(context(), 'Shot', [200], new Set([200]))).resolves.toEqual([]);
+      expect(findById).not.toHaveBeenCalled();
+    });
   });
 
   it('garde une tâche qui porte des versions : la supprimer emporterait la review', async () => {

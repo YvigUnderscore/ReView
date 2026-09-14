@@ -2788,6 +2788,7 @@
   "shotgrid.log.mediaTooLarge": "« {name} » is {sizeMo} MB, over the {limitMo} MB limit — skipped",
   "shotgrid.log.importTaskCreated": "Task « ShotGrid » created on shot {shot} to hold published media",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} removed in ShotGrid — moved to the ReView bin",
+  "shotgrid.log.noteRetiredRemotely": "Note {sgId} deleted on the site — the ReView comment is kept, as comments have no bin",
   "shotgrid.log.noStatusSchema": "No status list readable for {entity}",
   "shotgrid.log.statusNotOnSite": "Status « {code} » ({scope}) no longer exists on the site — kept",
   "shotgrid.log.conflictOverwritten": "“{name}” — {field} differs: ReView “{review}” vs ShotGrid “{shotgrid}”. ShotGrid won: the ReView value was replaced.",

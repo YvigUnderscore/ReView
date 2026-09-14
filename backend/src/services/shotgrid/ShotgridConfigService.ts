@@ -8,6 +8,7 @@ import { decryptSecret, encryptSecret } from '../../lib/crypto';
 import { badRequest, conflict, notFound } from '../../lib/errors';
 import { logger } from '../../lib/logger';
 import { ShotgridClient, ShotgridApiError, clearTokenCache } from './ShotgridClient';
+import { writerFor, type ShotgridWriter } from './ShotgridWriter';
 import { asString } from './shotgridMapper';
 import { projectNameMatches } from './shotgridProjectGuard';
 import { assertNotTemplateProject } from './shotgridTemplateGuard';
@@ -382,6 +383,11 @@ export interface ConnectionContext {
   connection: ShotgridConnection & { site: ShotgridSite };
   client: ShotgridClient;
   settings: ShotgridSettings;
+  /**
+   * Le seul objet par lequel on écrit sur le site. Il est posé ici, à l'ouverture de la
+   * connexion, pour qu'aucune passe n'ait à se demander où le trouver — ni à s'en passer.
+   */
+  writer: ShotgridWriter;
 }
 
 /**
@@ -432,7 +438,16 @@ export async function openConnection(
     }
   }
 
-  return { connection, client, settings };
+  return {
+    connection,
+    client,
+    settings,
+    writer: writerFor({
+      client,
+      sgProjectId: connection.sgProjectId,
+      sgProjectName: connection.sgProjectName,
+    }),
+  };
 }
 
 export async function markStatus(id: number, status: string, message: string | null) {

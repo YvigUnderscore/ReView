@@ -2820,6 +2820,7 @@
   "shotgrid.log.thumbnailFailed": "Miniatura de « {name} » não recuperada ({error})",
   "shotgrid.log.importTaskCreated": "Tarefa « ShotGrid » criada no shot {shot} para acolher os publishes",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} removido no ShotGrid — movido para a reciclagem do ReView",
+  "shotgrid.log.noteRetiredRemotely": "Nota {sgId} eliminada no site — o comentário do ReView é mantido, pois os comentários não têm reciclagem",
   "shotgrid.log.noStatusSchema": "Nenhuma lista de estados legível para {entity}",
   "shotgrid.log.statusNotOnSite": "Estado « {code} » ({scope}) ausente do site — conservado",
   "shotgrid.log.conflictOverwritten": "«{name}» — {field} diverge: ReView «{review}» contra ShotGrid «{shotgrid}». Ganha o ShotGrid: o valor do ReView foi substituído.",

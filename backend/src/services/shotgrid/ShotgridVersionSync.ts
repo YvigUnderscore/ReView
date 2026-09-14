@@ -23,11 +23,18 @@ import {
   attachmentUrl,
   type SgRecord,
 } from './shotgridMapper';
-import { mapSgToLocal, shouldImportMedia, upsertLink, type VersionLinkData } from './shotgridLinks';
+import {
+  mapSgToLocal,
+  removeLink,
+  shouldImportMedia,
+  upsertLink,
+  type VersionLinkData,
+} from './shotgridLinks';
+import { softDeleteVersion } from '../../lib/trash';
 import { can } from './shotgridSettings';
 import { sgMediaName } from '../../lib/mediaNaming';
 import { realignMediaNames } from './ShotgridMediaNaming';
-import { noteUnknownStatus, touch, type PullContext } from './ShotgridPullService';
+import { confirmGone, noteUnknownStatus, touch, type PullContext } from './ShotgridPullService';
 
 /**
  * Import des Media Publishes : une Version ShotGrid devient une Version ReView avec
@@ -80,6 +87,23 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
   // Une seule lecture de la table de liens pour tout le lot : elle sert à distinguer la
   // version déjà connue (qu'on met à jour) de la version neuve (que le filtre peut écarter).
   const knownVersions = await mapSgToLocal(ctx.connection.id, 'version');
+
+  /**
+   * Versions retirées du site.
+   *
+   * Uniquement sur une demande ciblée — c'est-à-dire un événement de retrait, qui nomme
+   * la version supprimée. Une version absente d'un lot incrémental n'a pas été supprimée,
+   * elle n'a pas changé ; et un balayage complet ne se voit pas confier ce pouvoir ici,
+   * car il mettrait à la corbeille, d'un seul coup et sans que personne l'ait demandé,
+   * tout ce qui a été supprimé du site depuis la mise en service de la connexion.
+   */
+  if (options.onlySgIds?.length) {
+    // `confirmGone` distingue « le site ne l'a plus » de « la garde de projet l'a
+    // écartée » : seule la première est un retrait.
+    const alive = new Set(records.map((r) => r.id));
+    const gone = await confirmGone(ctx, 'Version', options.onlySgIds, alive);
+    await trashRemovedVersions(ctx, gone, knownVersions);
+  }
 
   for (const record of records) {
     const verdict = belongsToProject(record, ctx.scope);
@@ -141,6 +165,48 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
         { sgType: 'Version', sgId: record.id },
       );
     }
+  }
+}
+
+/**
+ * Versions supprimées sur le site → corbeille de ReView.
+ *
+ * Une version retirée ne revient plus d'aucune recherche : l'identifiant demandé qui
+ * manque à la réponse est la seule trace de sa disparition. C'est la corbeille et non une
+ * suppression, comme pour les plans et les séquences — le média, les commentaires et la
+ * décision de review restent consultables, et un retrait fait par erreur dans ShotGrid se
+ * répare sans rien perdre.
+ *
+ * Le lien survit à la mise à la corbeille : restaurer la version côté site doit rendre
+ * celle d'ici telle qu'elle était, pas en fabriquer une copie.
+ */
+async function trashRemovedVersions(
+  ctx: PullContext,
+  goneSgIds: readonly number[],
+  links: Map<number, { localId: number }>,
+): Promise<void> {
+  for (const sgId of goneSgIds) {
+    const link = links.get(sgId);
+    if (!link) continue;
+
+    const version = await prisma.version.findUnique({ where: { id: link.localId } });
+    // Cible déjà disparue : le lien ne désigne plus rien, et le garder ferait rejouer ce
+    // retrait à chaque passe.
+    if (!version) {
+      await removeLink(ctx.connection.id, 'Version', sgId);
+      continue;
+    }
+    if (version.deletedAt) continue;
+
+    await softDeleteVersion(version.id);
+    ctx.journal.count('versions', 'skipped');
+    await ctx.journal.log(
+      'info',
+      'shotgrid.log.trashedRemotely',
+      { sgType: 'Version', sgId },
+      { sgType: 'Version', sgId, localType: 'version', localId: version.id },
+    );
+    touch(ctx, 'version', version.id, { taskId: version.taskId, assetId: version.assetId });
   }
 }
 

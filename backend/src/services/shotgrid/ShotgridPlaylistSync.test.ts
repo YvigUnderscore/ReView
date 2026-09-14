@@ -21,22 +21,23 @@ vi.mock('./shotgridLinks', () => ({
 import { mergePlaylistVersions, pushPlaylist, type PlaylistPushContext } from './ShotgridPlaylistSync';
 import type { SgRecord } from './shotgridMapper';
 
-type MockedClient = {
-  create: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  findById: ReturnType<typeof vi.fn>;
-};
+type MockedClient = { findById: ReturnType<typeof vi.fn> };
+type MockedWriter = { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
 
-function contextWith(remote: SgRecord | null = null): PlaylistPushContext & { client: MockedClient } {
+function contextWith(
+  remote: SgRecord | null = null,
+): PlaylistPushContext & { client: MockedClient; writer: MockedWriter } {
   return {
     connectionId: 1,
     sgProjectId: 42,
     sgProjectName: 'ALPHA',
     asUserLogin: 'lea@studio.fr',
-    client: {
-      create: vi.fn(async () => ({ id: 900 })),
-      update: vi.fn(async () => ({})),
-      findById: vi.fn(async () => remote),
+    client: { findById: vi.fn(async () => remote) },
+    // Le cloisonnement n'est plus l'affaire de ce module : `ShotgridWriter` l'applique,
+    // et il a sa propre suite. On ne double ici que l'écriture elle-même.
+    writer: {
+      create: vi.fn(async () => ({ id: 900, type: 'Playlist' })),
+      update: vi.fn(async () => ({ id: 900, type: 'Playlist' })),
     },
   };
 }
@@ -99,8 +100,9 @@ describe('pushPlaylist — création', () => {
     const sgId = await pushPlaylist(ctx, 5);
 
     expect(sgId).toBe(900);
-    expect(ctx.client.create).toHaveBeenCalledWith('Playlist', {
-      project: { type: 'Project', id: 42 },
+    // Pas de `project` dans la charge utile : `ShotgridWriter` le pose, et sa propre
+    // suite vérifie qu'il refuse d'en viser un autre.
+    expect(ctx.writer.create).toHaveBeenCalledWith('Playlist', {
       code: 'Dailies 12/06',
       versions: [version(111), version(112), version(113)],
     });
@@ -118,7 +120,7 @@ describe('pushPlaylist — création', () => {
     const ctx = contextWith();
     await pushPlaylist(ctx, 5);
 
-    expect(ctx.client.create.mock.calls[0]![1]).toMatchObject({ versions: [version(111)] });
+    expect(ctx.writer.create.mock.calls[0]![1]).toMatchObject({ versions: [version(111)] });
   });
 
   it('ne touche à rien quand la playlist locale a disparu', async () => {
@@ -126,8 +128,8 @@ describe('pushPlaylist — création', () => {
 
     const ctx = contextWith();
     expect(await pushPlaylist(ctx, 5)).toBeNull();
-    expect(ctx.client.create).not.toHaveBeenCalled();
-    expect(ctx.client.update).not.toHaveBeenCalled();
+    expect(ctx.writer.create).not.toHaveBeenCalled();
+    expect(ctx.writer.update).not.toHaveBeenCalled();
   });
 });
 
@@ -146,8 +148,8 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     const sgId = await pushPlaylist(ctx, 5);
 
     expect(sgId).toBe(777);
-    expect(ctx.client.create).not.toHaveBeenCalled();
-    expect(ctx.client.update).toHaveBeenCalledWith(
+    expect(ctx.writer.create).not.toHaveBeenCalled();
+    expect(ctx.writer.update).toHaveBeenCalledWith(
       'Playlist',
       777,
       { code: 'Dailies', versions: [version(111)] },
@@ -162,7 +164,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     await pushPlaylist(ctx, 5);
 
     // 500 reste en tête ; l'emplacement de 112, connue et retirée ici, revient à 113.
-    expect(ctx.client.update.mock.calls[0]![2]).toEqual({
+    expect(ctx.writer.update.mock.calls[0]![2]).toEqual({
       code: 'Dailies',
       versions: [version(500), version(111), version(113)],
     });
@@ -174,7 +176,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     const ctx = contextWith(sgRemote([version(111)]));
     await pushPlaylist(ctx, 5);
 
-    expect(ctx.client.update.mock.calls[0]![2]).toMatchObject({
+    expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({
       versions: [version(111), version(112)],
     });
   });
@@ -185,7 +187,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     const ctx = contextWith(sgRemote([version(111), version(112)]));
     await pushPlaylist(ctx, 5);
 
-    expect(ctx.client.update.mock.calls[0]![2]).toMatchObject({ versions: [version(111)] });
+    expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({ versions: [version(111)] });
   });
 
   it('ne retire ni ne déplace une version d’un autre projet du site', async () => {
@@ -196,7 +198,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     const ctx = contextWith(sgRemote([version(111), version(600), version(112)]));
     await pushPlaylist(ctx, 5);
 
-    expect(ctx.client.update.mock.calls[0]![2]).toMatchObject({ versions: [version(600)] });
+    expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({ versions: [version(600)] });
   });
 
   it('propage l’ordre de la séance sans bouger les versions inconnues', async () => {
@@ -206,7 +208,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     await pushPlaylist(ctx, 5);
 
     // 700 garde son rang ; les deux emplacements gouvernés par ReView sont recomposés.
-    expect(ctx.client.update.mock.calls[0]![2]).toMatchObject({
+    expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({
       versions: [version(112), version(700), version(111)],
     });
   });
@@ -218,7 +220,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     const sgId = await pushPlaylist(ctx, 5);
 
     expect(sgId).toBe(777);
-    expect(ctx.client.update).not.toHaveBeenCalled();
+    expect(ctx.writer.update).not.toHaveBeenCalled();
   });
 
   it('écrit quand seul le nom a changé', async () => {
@@ -227,27 +229,16 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     const ctx = contextWith(sgRemote([version(111)], { code: 'Ancien nom' }));
     await pushPlaylist(ctx, 5);
 
-    expect(ctx.client.update.mock.calls[0]![2]).toMatchObject({ code: 'Dailies' });
+    expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({ code: 'Dailies' });
   });
 
-  it('abandonne quand la playlist distante appartient à un autre projet', async () => {
-    // Un identifiant réattribué suffirait à écrire dans la séance du voisin.
-    localPlaylist([11]);
-
-    const ctx = contextWith(sgRemote([version(111)], { project: { type: 'Project', id: 43, name: 'BETA' } }));
-    expect(await pushPlaylist(ctx, 5)).toBeNull();
-    expect(ctx.client.update).not.toHaveBeenCalled();
-  });
-
-  it('abandonne quand la cible est dans un projet modèle', async () => {
-    localPlaylist([11]);
-
-    const ctx = contextWith(
-      sgRemote([version(111)], { project: { type: 'Project', id: 42, name: 'Template Project' } }),
-    );
-    expect(await pushPlaylist(ctx, 5)).toBeNull();
-    expect(ctx.client.update).not.toHaveBeenCalled();
-  });
+  /**
+   * Le cloisonnement projet et le refus des projets modèles étaient vérifiés ici, sur une
+   * copie locale des trois contrôles. Cette copie a disparu : `ShotgridWriter` les applique
+   * pour **toutes** les écritures du dossier, et `ShotgridWriter.test.ts` les éprouve —
+   * cible passée à un autre projet, projet modèle, cible disparue. Les rejouer ici ne
+   * testerait plus que la doublure.
+   */
 
   it('abandonne sans rien recréer quand la playlist distante a disparu', async () => {
     // La recréer remettrait dans le studio une séance supprimée à la main.
@@ -255,8 +246,8 @@ describe('pushPlaylist — mise à jour non destructive', () => {
 
     const ctx = contextWith(null);
     expect(await pushPlaylist(ctx, 5)).toBeNull();
-    expect(ctx.client.update).not.toHaveBeenCalled();
-    expect(ctx.client.create).not.toHaveBeenCalled();
+    expect(ctx.writer.update).not.toHaveBeenCalled();
+    expect(ctx.writer.create).not.toHaveBeenCalled();
   });
 });
 

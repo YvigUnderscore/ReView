@@ -338,7 +338,7 @@ describe('uploadFile', () => {
     fetchMock.mockResolvedValueOnce(json({ data: {} }));
 
     const client = new ShotgridClient(creds);
-    await client.uploadFile('Note', 42, 'attachments', Buffer.from('image'), 'a.png', 'image/png');
+    await client.unsafeUploadFile('Note', 42, 'attachments', Buffer.from('image'), 'a.png', 'image/png');
 
     const put = fetchMock.mock.calls.find((c) => c[1]?.method === 'PUT');
     expect(String(put![0])).toBe('https://s3.example/signed');
@@ -350,7 +350,9 @@ describe('uploadFile', () => {
     fetchMock.mockResolvedValueOnce(authOk());
     fetchMock.mockImplementation(async () => json({ data: {}, links: {} }));
     const client = new ShotgridClient(creds);
-    await expect(client.uploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png')).rejects.toThrow();
+    await expect(
+      client.unsafeUploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png'),
+    ).rejects.toThrow();
   });
 });
 
@@ -420,7 +422,7 @@ describe('ShotgridClient — requêtes sortantes sous garde', () => {
     fetchMock.mockResolvedValueOnce(json({ data: {}, links: { upload: 'http://169.254.169.254/review/x' } }));
     const client = new ShotgridClient(creds);
     await expect(
-      client.uploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png'),
+      client.unsafeUploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png'),
     ).rejects.toBeInstanceOf(OutboundBlockedError);
     // Aucun PUT n'a été émis.
     expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'PUT')).toBe(false);

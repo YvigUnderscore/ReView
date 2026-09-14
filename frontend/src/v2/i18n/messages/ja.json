@@ -2735,6 +2735,7 @@
   "shotgrid.log.thumbnailFailed": "« {name} » のサムネイルを取得できませんでした（{error}）",
   "shotgrid.log.importTaskCreated": "publishes を受け入れるため shot {shot} に「ShotGrid」タスクを作成しました",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} が ShotGrid で削除されました — ReView のごみ箱へ移動",
+  "shotgrid.log.noteRetiredRemotely": "サイトで Note {sgId} が削除されました — コメントにはゴミ箱がないため、ReView のコメントは残ります",
   "shotgrid.log.noStatusSchema": "{entity} のステータス一覧を読み取れません",
   "shotgrid.log.statusNotOnSite": "ステータス「{code}」({scope}) はサイトにありません — 保持",
   "shotgrid.log.conflictOverwritten": "「{name}」— {field} が相違：ReView「{review}」対 ShotGrid「{shotgrid}」。ShotGrid が優先され、ReView の値を置き換えました。",

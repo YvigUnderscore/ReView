@@ -3,6 +3,45 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-09-14 — ShotGrid: one door out, and it is locked
+
+- **Every write to the site now goes through a single path.** The project-isolation checks
+  were already there and already correct — but they depended on whoever wrote the next line
+  of code remembering to call them, and one module had quietly copied them by hand instead.
+  They are now applied in one place, for creates, updates and file uploads alike, and a test
+  fails the build if any code reaches the site another way.
+- **A creation cannot name a project.** The linked project is set by the writer itself, a
+  payload that names a different one is refused before anything leaves, and what the site
+  actually filed is read back and checked.
+
+## 2026-09-14 — ShotGrid: status and people changes can reach ReView too
+
+- **A recipe for the two entity types ShotGrid hides.** A webhook filtered on a project
+  cannot carry `Status` or `HumanUser` — neither belongs to a project, and ShotGrid simply
+  leaves them out of the list. The admin guide now spells out the second webhook that does:
+  same address, same secret, **no project**, those two entity types only. It brings nothing
+  else with it.
+- **A burst of people changes no longer replays the project once per person.** A status or
+  an account triggers the same work whatever its id — one re-read of the whole hierarchy —
+  so those events are now grouped on their type alone. Fifty accounts renamed at once used
+  to queue fifty identical full passes.
+
+## 2026-09-14 — ShotGrid: deleting on the site now reaches ReView
+
+- **A deletion made in ShotGrid is applied within seconds.** It was not: the event arrived,
+  was queued, ran, and did nothing at all — the run closed *succeeded* with empty counts,
+  and the deletion only landed when someone ran a full synchronisation by hand. Retiring a
+  sequence, a shot, an asset, a task or a version now moves the ReView counterpart to the
+  bin as the event lands.
+- **The bin, never an erasure.** Media, comments, decisions and history stay readable, the
+  link survives, and restoring the entity on the site brings *that* one back rather than a
+  copy. A task carrying versions is still kept rather than removed, as before.
+- **A note deleted on the site is reported, not obeyed.** A comment has no bin of its own,
+  so honouring the deletion would erase a review exchange for good. The run log says which
+  comment is concerned and leaves the decision to a person.
+- **An entity that moved to another project is not treated as deleted.** ReView asks the
+  site again before binning anything: if it still answers, nothing is touched.
+
 ## 2026-09-14 — ShotGrid: the webhook that could never work, and the images it was not bringing
 
 - **The webhook secret is finally readable.** A project link was born with a signature

@@ -226,8 +226,9 @@ export async function createTaskFromStep(
     if (!assignee) throw badRequest('This person is not a member of the project');
   }
 
-  const created = await ctx.client.create('Task', {
-    project: { type: 'Project', id: ctx.connection.sgProjectId },
+  // Le projet et sa relecture sont l'affaire de `ShotgridWriter` : il pose l'un, verifie
+  // l'autre, et refuse un projet modele. Rien a redire ici.
+  const created = await ctx.writer.create('Task', {
     content: name,
     step: { type: 'Step', id: params.stepSgId },
     entity: { type: parentLink.sgType, id: parentLink.sgId },

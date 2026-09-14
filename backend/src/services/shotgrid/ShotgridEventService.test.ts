@@ -14,7 +14,7 @@ vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), err
 vi.mock('../JobService', () => ({ shotgridQueue: { add: vi.fn() } }));
 vi.mock('./ShotgridSyncService', () => ({ runSync: (...args: unknown[]) => runSync(...args) }));
 
-import { handleEvent, parseEventType } from './ShotgridEventService';
+import { coalesceKey, handleEvent, parseEventType } from './ShotgridEventService';
 
 const LINKED = {
   id: 1,
@@ -45,6 +45,28 @@ describe('parseEventType', () => {
     expect(parseEventType('Shotgun_Version_Change')).toEqual({ entity: 'Version', action: 'Change' });
     expect(parseEventType('bruit')).toBeNull();
     expect(parseEventType(undefined)).toBeNull();
+  });
+});
+
+/**
+ * Une entité globale déclenche la même relecture quel que soit son identifiant. Le
+ * regroupement doit donc l'ignorer — sans quoi cinquante comptes renommés d'un coup
+ * fabriquent cinquante passes complètes identiques. Le cas cesse d'être théorique dès
+ * qu'un webhook sans filtre de projet apporte les `Person` et les `Status` du site.
+ */
+describe('coalesceKey', () => {
+  it('regroupe les entités globales sur leur seul type', () => {
+    expect(coalesceKey('HumanUser', 11)).toBe(coalesceKey('HumanUser', 22));
+    expect(coalesceKey('Status', 3)).toBe('Status');
+  });
+
+  it('garde l’identifiant pour une entité de production', () => {
+    expect(coalesceKey('Shot', 11)).toBe('Shot-11');
+    expect(coalesceKey('Shot', 11)).not.toBe(coalesceKey('Shot', 12));
+  });
+
+  it('ne confond pas deux types globaux entre eux', () => {
+    expect(coalesceKey('Status', 1)).not.toBe(coalesceKey('HumanUser', 1));
   });
 });
 

@@ -22,7 +22,7 @@ vi.mock('../../config/env', () => ({ env: { APP_URL: null } }));
 vi.mock('../MediaService', () => ({ mediaSourceKey: vi.fn(() => 'key') }));
 vi.mock('../StorageService', () => ({ storage }));
 vi.mock('./ShotgridNoteAttachments', () => ({ importNoteAttachments: vi.fn(async () => 0) }));
-vi.mock('./ShotgridPullService', () => ({ touch: vi.fn() }));
+vi.mock('./ShotgridPullService', () => ({ touch: vi.fn(), confirmGone: vi.fn(async () => []) }));
 vi.mock('./shotgridSettings', () => ({ can: () => true }));
 vi.mock('./shotgridLinks', () => ({
   mapSgToLocal: (...args: unknown[]) => links.mapSgToLocal(...args),
@@ -34,12 +34,12 @@ import { pushComment } from './ShotgridNoteSync';
 
 function context(attachAnnotations: boolean) {
   const createAs = vi.fn(async () => ({ id: 4242, type: 'Note' }));
-  const uploadFile = vi.fn(async () => undefined);
+  const uploadFile = vi.fn(async () => true);
   return {
     ctx: {
       connectionId: 1,
       sgProjectId: 77,
-      client: { createAs, uploadFile },
+      writer: { create: createAs, upload: uploadFile },
       attachAnnotations,
       asUserLogin: null,
     },

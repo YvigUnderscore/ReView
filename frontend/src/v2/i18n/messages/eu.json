@@ -2820,6 +2820,7 @@
   "shotgrid.log.thumbnailFailed": "« {name} » koadro txikia ez da ekarri ({error})",
   "shotgrid.log.importTaskCreated": "publishes hartzeko « ShotGrid » zeregina sortu da {shot} shot-ean",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} ShotGrid-en kendua — ReView-en zakarrontzira eramana",
+  "shotgrid.log.noteRetiredRemotely": "{sgId} Note gunean ezabatu da — ReView-eko iruzkina gorde egiten da, iruzkinek ez baitute zakarrontzirik",
   "shotgrid.log.noStatusSchema": "{entity}(r)entzat ez dago egoera-zerrenda irakurgarririk",
   "shotgrid.log.statusNotOnSite": "« {code} » egoera ({scope}) ez dago gunean — mantendua",
   "shotgrid.log.conflictOverwritten": "«{name}» — {field} desberdina da: ReView «{review}» vs ShotGrid «{shotgrid}». ShotGrid nagusitu da: ReView-eko balioa ordezkatu da.",

@@ -2820,6 +2820,7 @@
   "shotgrid.log.thumbnailFailed": "Vinheta de « {name} » pas recuperada ({error})",
   "shotgrid.log.importTaskCreated": "Prètzfach « ShotGrid » creat sul shot {shot} per aculhir los publishes",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} levat dins ShotGrid — mes a la banasta de ReView",
+  "shotgrid.log.noteRetiredRemotely": "Nòta {sgId} suprimida sul site — lo comentari ReView es servat, que los comentaris an pas de banasta",
   "shotgrid.log.noStatusSchema": "Cap de lista d'estats legibla per {entity}",
   "shotgrid.log.statusNotOnSite": "Estat « {code} » ({scope}) absent del site — servat",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} divergís : ReView « {review} » contra ShotGrid « {shotgrid} ». ShotGrid ganha : la valor ReView es estada remplaçada.",

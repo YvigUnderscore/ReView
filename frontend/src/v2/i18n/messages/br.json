@@ -2819,6 +2819,7 @@
   "shotgrid.log.thumbnailFailed": "Melvenn « {name} » nann-adtapet ({error})",
   "shotgrid.log.importTaskCreated": "Trevell « ShotGrid » krouet war ar shot {shot} evit degemer ar publishes",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} tennet e ShotGrid — kaset d'al lastez ReView",
+  "shotgrid.log.noteRetiredRemotely": "Note {sgId} dilamet war al lec’hienn — miret eo an evezhiadenn ReView, rak n’eus pod-lastez ebet evit an evezhiadennoù",
   "shotgrid.log.noStatusSchema": "Roll statudoù lennus ebet evit {entity}",
   "shotgrid.log.statusNotOnSite": "Statud « {code} » ({scope}) diank eus al lec'hienn — miret",
   "shotgrid.log.conflictOverwritten": "« {name} » — {field} a zo disheñvel : ReView « {review} » a-enep ShotGrid « {shotgrid} ». ShotGrid a c'hounez : erlerc'hiet eo bet talvoud ReView.",

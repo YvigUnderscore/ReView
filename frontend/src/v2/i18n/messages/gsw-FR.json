@@ -2820,6 +2820,7 @@
   "shotgrid.log.thumbnailFailed": "Vorschaubildle vu « {name} » nit ghole ({error})",
   "shotgrid.log.importTaskCreated": "Ufgab « ShotGrid » am Shot {shot} aagleit, für d Publishes uufznee",
   "shotgrid.log.trashedRemotely": "{sgType} #{sgId} in ShotGrid entfernt — in de ReView-Papierkorb gschobe",
+  "shotgrid.log.noteRetiredRemotely": "Note {sgId} uf dr Site glöscht — dr ReView-Kommentar bliibt, wel d Kommentär kei Abfallkorb hän",
   "shotgrid.log.noStatusSchema": "Kei läsbari Statuslischt fir {entity}",
   "shotgrid.log.statusNotOnSite": "Status « {code} » ({scope}) nit uf de Site — bhalte",
   "shotgrid.log.conflictOverwritten": "„{name}“ — {field} isch andersch: ReView „{review}“ gege ShotGrid „{shotgrid}“. ShotGrid gwinnt: dr ReView-Wert isch ersetzt worre.",
