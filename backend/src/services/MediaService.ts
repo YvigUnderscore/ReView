@@ -389,6 +389,9 @@ export async function listReviews(
             }
           : null,
         location,
+        // La décision se pose sur la VERSION, pas sur le média : sans cet identifiant,
+        // la page Reviews ne pouvait rien changer en lot sans un appel par carte.
+        versionId: m.versionId,
         versionName: m.version?.name ?? '',
         reviewStatus: m.version?.reviewStatus ?? null,
         project,

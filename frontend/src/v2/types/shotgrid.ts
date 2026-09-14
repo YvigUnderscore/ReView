@@ -31,6 +31,8 @@ export interface SgSettings {
   lockLocalCreation: boolean;
   /** Étapes de pipeline retenues pour ce projet, par identifiant ShotGrid. */
   steps: { asset: number[]; shot: number[] };
+  /** Statuts retenus pour ce projet, par périmètre et par code ShotGrid ; vide = tous. */
+  visibleStatuses: Record<StatusScope, string[]>;
   eventMode: 'webhook' | 'polling' | 'manual';
   pollingIntervalSec: number;
   reconcile: { enabled: boolean; hour: number; lookbackHours: number; onBoot: boolean };

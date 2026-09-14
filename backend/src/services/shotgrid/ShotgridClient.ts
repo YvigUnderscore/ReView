@@ -246,6 +246,17 @@ export class ShotgridClient {
         detail,
         { auth: true, code: 'SHOTGRID_AUTH_REFUSED', details: { reason } },
       );
+      /**
+       * Le refus est tracé ici, à l'instant où le site le prononce — c'est la seule
+       * occasion. Le rejeu depuis `authBlocks` ne sait dire que « déjà refusée » ; le
+       * motif — compte verrouillé, jeton périmé, mauvais login — ne vivait que dans la
+       * réponse rendue au navigateur, donc invisible depuis les journaux. Diagnostiquer
+       * une connexion qui ne passe pas obligeait à rejouer l'appel à la main.
+       */
+      logger.warn(
+        { baseUrl: this.baseUrl, status: res.status, authMode: this.creds.authMode, reason },
+        'Authentification ShotGrid refusée par le site',
+      );
       authBlocks.set(this.baseUrl, { error, until: Date.now() + AUTH_BLOCK_MS });
       throw error;
     }

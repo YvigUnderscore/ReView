@@ -2,7 +2,7 @@
 
 *Link a project to ShotGrid and keep both sides honest: what is exchanged, when it travels, and what cannot be undone.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-14
 
 Link a ReView project to a ShotGrid project and keep both in step. Sequences, shots,
 assets, tasks, statuses, schedule and published media flow into ReView; review decisions,
@@ -257,6 +257,8 @@ Two behaviours protect the write columns.
 - **Pipeline steps**: ShotGrid restricts the steps offered on a project but exposes that
   setting nowhere in its REST API. Declare them once under **Pipeline steps used by this
   project**; leave the list empty and ReView infers them from the tasks already present.
+- **Statuses offered**: the same idea, one level down — see
+  [Narrowing the statuses offered](#narrowing-the-statuses-offered).
 
 ## Creating entities
 
@@ -719,6 +721,37 @@ the gap intact and let it come back at the next pass.
 
 If the matching domain is closed for writing, **Keep ReView** says so instead of announcing a
 write that will not happen.
+
+## Narrowing the statuses offered
+
+A studio site knows every status the studio has ever defined — twenty-one on a shot is
+common. A given show uses six of them. All twenty-one were offered in every right-click
+menu, every picker and every filter, and finding the one you meant took reading the lot.
+
+*ShotGrid tab → Settings → **Statuses offered on this project*** lists the imported
+vocabulary for one scope at a time — tasks, shots, sequences, assets, each with its own
+list on the site — with the site's colour, display name and code. Tick the ones the show
+uses and everything that offers a status follows. Leave a scope empty and it stays whole:
+nothing is deduced from an omission.
+
+Three properties make this safe to use on a live show:
+
+- **Hiding never erases.** Synchronisation keeps importing the real status of an entity, and
+  an entity that already carries a hidden status keeps displaying it. Only the *choice* is
+  narrowed.
+- **A filter that matches nothing is ignored.** Codes renamed on the site, or a list copied
+  from another show, would otherwise leave an empty picker — and an empty picker cannot be
+  repaired from the screen where it is missing. The scope falls back to its full list.
+- **It is judged scope by scope.** A shot list that matched nothing is not rescued by the
+  task statuses that survived alongside it.
+
+The setting lives on the connection (`visibleStatuses`, one list of codes per scope) and
+survives a settings read fallback, like the step list and the status mapping.
+
+> [!NOTE]
+> This narrows what ReView *offers*. It is not a permission: the API refuses a hidden status
+> the same way it refuses one belonging to another project, so a pipeline tool posting
+> `pipelineStatusId` gets the same list as a person.
 
 ## Statuses ReView does not recognise
 

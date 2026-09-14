@@ -15,9 +15,13 @@ vi.mock('../../config/env', async (importOriginal) => {
   return { ...actual, env: { ...actual.env, SHOTGRID_INSECURE_HOSTS: 'sim.local:8890' } };
 });
 
+/** Le refus d'authentification doit laisser une trace : les journaux sont assertés ici. */
+vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+
 import { lookup } from 'node:dns/promises';
 import { ShotgridClient, ShotgridApiError, clearTokenCache, flattenRecord } from './ShotgridClient';
 import { OutboundBlockedError } from '../../lib/safeFetch';
+import { logger } from '../../lib/logger';
 
 /**
  * Le client parle à un serveur simulé par un `fetch` remplacé : ces tests décrivent le
@@ -130,6 +134,24 @@ describe('ShotgridClient', () => {
     // Le code rendu au client de ReView est celui de la passerelle, pas celui du site.
     expect(sgError.statusCode).toBe(502);
     expect(sgError.status).toBe(400);
+  });
+
+  /**
+   * Le motif du refus doit être lisible dans les journaux, sans rejouer l'appel à la main.
+   * Il ne l'était pas : seul le rejeu depuis le cache écrivait une ligne, et elle disait
+   * « déjà refusée » sans le motif. Un compte verrouillé côté site était donc indiscernable
+   * d'un mot de passe faux pour qui n'a que `docker logs`.
+   */
+  it('écrit le motif du refus dans les journaux, dès le premier appel', async () => {
+    const title = "Can't authenticate user 'demo' because the account is locked.";
+    fetchMock.mockImplementation(async () => json({ errors: [{ code: 102, title }] }, 400));
+
+    await expect(new ShotgridClient(creds).serverInfo()).rejects.toBeInstanceOf(ShotgridApiError);
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: creds.baseUrl, status: 400, reason: title }),
+      expect.stringContaining('refusée par le site'),
+    );
   });
 
   /**

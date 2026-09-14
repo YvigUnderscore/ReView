@@ -2,7 +2,7 @@
 
 *Recording what a review concluded on a version — customisable statuses, a history that never changes, and who was asked to look.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-14
 
 A **review decision** is the studio's answer to one question: what did we conclude about
 this version? It is deliberately distinct from the task's kanban status. The kanban says
@@ -71,8 +71,9 @@ gesture where the version already is:
 |---|---|---|
 | A **version card**, on a task or asset page | Right-click → *Review decision…* | The entry reads *Decision history…* if you cannot decide |
 | The **review header**, while reviewing a media | The clipboard button | It carries the version's current decision as a badge |
+| The **Reviews page**, on one card or a whole selection | Right-click → *Review decision*, or the button in the selection bar | Supervision only; see [several at once](#several-at-once) |
 
-Both open the same dialog:
+The first two open the same dialog:
 
 - the **current decision** at the top, as a coloured badge, or *No decision yet*;
 - the available statuses as **coloured chips**, pre-selected on the current decision, or
@@ -91,6 +92,29 @@ alone is allowed to decide there. See
 > During a live review session the clipboard button stays available, so decisions can be
 > dispatched as the room walks the playlist. See
 > [Playlists & live review sessions](playlists-and-live-review.md).
+
+### Several at once
+
+A morning of dailies ends in thirty retakes and a dozen approvals. On the Reviews page,
+select the media — click, then shift-click for a range, or ctrl/cmd-click to pick — and
+take the decision once: from the right-click menu of any selected card, or from the
+**Review decision** button in the selection bar. The dialog asks for a status and the same
+optional comment, and writes them on every selected version.
+
+Four things are worth knowing:
+
+- the decision lands on the **version**, not on the media, so two media of the same version
+  receive one decision, not two;
+- the statuses offered are those of the selection's project when it has only one; a
+  selection spanning several projects is offered the studio list, and says so;
+- each project is rechecked on the server — supervision on **that** project, and whether it
+  uses that status. What is refused is counted, not silently dropped: the toast reads
+  *"12 decisions recorded, 3 refused"*;
+- the team messaging channel gets **one** line for the batch, not one per version.
+
+Everything else behaves as if you had opened each version by hand: the history, the
+notification to the author, the ShotGrid push and the outgoing webhook all happen per
+version.
 
 ## Handing a version to someone
 
@@ -239,6 +263,7 @@ tool rather than by hand:
 | Call | Purpose | Who |
 |---|---|---|
 | `POST /api/versions/:id/decision` | Record a decision — body `statusId`, optional `comment` (2000 characters max) | Effective supervisor or admin on the project |
+| `PATCH /api/bulk/versions/decision` | The same decision on up to 200 versions — body `ids`, `statusId`, optional `comment`; answers `{ updated, failed }` | Rechecked project by project |
 | `GET /api/versions/:id/decisions` | The full history of a version | Any project member |
 | `GET /api/review-statuses?projectId=` | The status list, narrowed to the ShotGrid mapping when the project has one | Any authenticated user |
 | `GET /api/versions/:id/reviewers` | Who the version was handed to | Any project member |
@@ -278,8 +303,10 @@ because it was mentioned to nobody.
 
 Open the Reviews page, filter on *No decision*, and go down the list. Every media you open
 already has the clipboard button in its header, so deciding never means going back to a
-task page. What is left in the filter at the end of the pass is exactly what you did not
-get to. Save that filter as a view and the next pass starts in one click.
+task page. What is obviously fine can be cleared without opening anything: select those
+cards and take the decision on the whole selection in one gesture. What is left in the
+filter at the end of the pass is exactly what you did not get to. Save that filter as a
+view and the next pass starts in one click.
 
 ### A studio that does not say "CBB"
 
