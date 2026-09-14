@@ -292,6 +292,19 @@ export interface SplatCamera {
 export const VIEWER_ZONE =
   'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/40';
 
+/**
+ * Même zone, en plein écran vidéo : elle couvre tout le pane (lui-même `position: relative`)
+ * au lieu de rester dans le flux. Classes réécrites en entier plutôt qu'ajoutées à
+ * `VIEWER_ZONE` : `absolute` et `relative` s'y retrouvaient ensemble, et la feuille Tailwind
+ * pose `.relative` après `.absolute` — la zone restait donc dans le flux, d'une hauteur
+ * dictée par la boîte mesurée avant le plein écran, et la vidéo gardait sa taille.
+ */
+export const VIEWER_ZONE_FULLSCREEN =
+  'absolute inset-0 flex items-center justify-center overflow-hidden bg-black';
+
+/** Zone média d'un lecteur vidéo, selon que le plein écran immersif est actif. */
+export const viewerZone = (fullscreen: boolean) => (fullscreen ? VIEWER_ZONE_FULLSCREEN : VIEWER_ZONE);
+
 /** Timecode HH:MM:SS:FF à partir d'un index de frame et du fps. */
 export function tcFromFrame(frame: number, fps: number): string {
   const f = Math.max(0, Math.round(frame));

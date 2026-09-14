@@ -9,7 +9,7 @@ import {
   createSeekCoalescer,
   safePlay,
   stepVideoFrame,
-  VIEWER_ZONE,
+  viewerZone,
 } from '../review/reviewTypes';
 import { useReviewShortcuts } from '../review/useReviewShortcuts';
 import { useVideoFullscreen } from '../review/useVideoFullscreen';
@@ -149,10 +149,7 @@ export default function ClientVideoPlayer({
           : 'flex min-h-0 flex-1 flex-col gap-2'
       }
     >
-      <div
-        ref={containerRef}
-        className={`${VIEWER_ZONE} ${videoOnlyFs ? 'absolute inset-0 rounded-none border-0 bg-black' : ''}`}
-      >
+      <div ref={containerRef} className={viewerZone(videoOnlyFs)}>
         <div
           className="relative"
           style={box ? { width: box.w, height: box.h } : { maxWidth: '100%', maxHeight: '100%' }}

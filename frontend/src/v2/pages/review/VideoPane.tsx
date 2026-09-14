@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { toast } from 'sonner';
 import type { ReviewComment } from '../../types/api';
-import { cancelPendingPlay, createSeekCoalescer, safePlay, stepVideoFrame, VIEWER_ZONE } from './reviewTypes';
+import { cancelPendingPlay, createSeekCoalescer, safePlay, stepVideoFrame, viewerZone } from './reviewTypes';
 import { useReviewShortcuts } from './useReviewShortcuts';
 import { useVideoFrameClock } from './useVideoFrameClock';
 import { useHlsPlayer } from './useHlsPlayer';
@@ -218,7 +218,7 @@ export default function VideoPane({
       }
     >
       <div
-        className={`${VIEWER_ZONE} ${videoOnlyFs ? 'absolute inset-0 rounded-none border-0 bg-black' : ''}`}
+        className={viewerZone(videoOnlyFs)}
         ref={containerRef}
         onPointerDown={zoom.handlers.onPointerDown}
         onPointerMove={(e) => {

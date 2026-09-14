@@ -10,6 +10,9 @@ import {
   cancelPendingPlay,
   createSeekCoalescer,
   splitAnnotationParts,
+  VIEWER_ZONE,
+  VIEWER_ZONE_FULLSCREEN,
+  viewerZone,
 } from './reviewTypes';
 
 describe('splitAnnotationParts — plage in→out (34.A)', () => {
@@ -165,5 +168,28 @@ describe('findCompareMedia — comparaison A/B (vidéo & image)', () => {
     expect(findCompareMedia([{ id: 11, kind: 'VIDEO' }], 11, 'VIDEO')).toBeNull();
     expect(findCompareMedia([{ id: 10, kind: 'MODEL_3D' }], 99, 'VIDEO')).toBeNull();
     expect(findCompareMedia([], 99, 'IMAGE')).toBeNull();
+  });
+});
+
+describe('VIEWER_ZONE_FULLSCREEN — zone média en plein écran vidéo', () => {
+  const positions = (cls: string) =>
+    cls.split(/\s+/).filter((c) => ['static', 'fixed', 'absolute', 'relative', 'sticky'].includes(c));
+
+  it('couvre tout le pane plutôt que de rester dans le flux', () => {
+    expect(positions(VIEWER_ZONE_FULLSCREEN)).toEqual(['absolute']);
+    expect(VIEWER_ZONE_FULLSCREEN).toContain('inset-0');
+  });
+
+  it('ne garde pas les classes de flux de la zone normale', () => {
+    // Le pane en plein écran n'est pas un conteneur flex : `flex-1` n'y dimensionnerait
+    // rien, et un second `position` (celui de VIEWER_ZONE) reprenait le dessus dans la
+    // feuille Tailwind — la vidéo gardait alors la taille mesurée avant le plein écran.
+    expect(VIEWER_ZONE_FULLSCREEN).not.toContain('flex-1');
+    expect(positions(VIEWER_ZONE)).toEqual(['relative']);
+  });
+
+  it('viewerZone rend la zone du mode courant', () => {
+    expect(viewerZone(true)).toBe(VIEWER_ZONE_FULLSCREEN);
+    expect(viewerZone(false)).toBe(VIEWER_ZONE);
   });
 });
