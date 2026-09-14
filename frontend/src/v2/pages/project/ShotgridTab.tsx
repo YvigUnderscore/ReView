@@ -9,6 +9,7 @@ import { useDeleteSgConnection, useSgConnection } from '../../lib/shotgridApi';
 import SgConnectionSetup from '../../components/shotgrid/SgConnectionSetup';
 import SgSettingsPanel from '../../components/shotgrid/SgSettingsPanel';
 import SgStepsPanel from '../../components/shotgrid/SgStepsPanel';
+import SgStatusesPanel from '../../components/shotgrid/SgStatusesPanel';
 import SgSyncPanel from '../../components/shotgrid/SgSyncPanel';
 import SgDiffPanel from '../../components/shotgrid/SgDiffPanel';
 import SgVersionsPanel from '../../components/shotgrid/SgVersionsPanel';
@@ -121,6 +122,9 @@ export default function ShotgridTab({ projectId, canManage }: { projectId: numbe
           {/* Les étapes retenues vivent avec les réglages : c'est une décision de projet,
               prise une fois, pas un geste de synchronisation. */}
           <SgStepsPanel connection={connection} canManage={canManage} />
+          {/* Même nature : ce que le projet retient du vocabulaire du site. Les étapes
+              disent qui travaille, les statuts disent où en est le travail. */}
+          <SgStatusesPanel connection={connection} canManage={canManage} />
         </div>
       )}
     </div>

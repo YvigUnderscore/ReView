@@ -64,23 +64,59 @@ export async function list(scope?: Scope): Promise<PipelineStatus[]> {
  * Le troisième niveau ne joue jamais dans l'autre sens. C'est ce qui manquait : le repli
  * précédent servait les statuts ShotGrid à des projets autonomes.
  */
-export async function listForProject(projectId: number, scope?: Scope): Promise<PipelineStatus[]> {
+export async function listForProject(
+  projectId: number,
+  scope?: Scope,
+  options: { all?: boolean } = {},
+): Promise<PipelineStatus[]> {
   const where = scope ? { scope } : {};
-  const own = await prisma.pipelineStatus.findMany({ where: { projectId, ...where }, orderBy: ORDER_BY });
-  if (own.length > 0) return own;
-
   const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });
+  // Le tri du studio (`visibleStatuses`) s'applique au résultat, quelle que soit la
+  // source : un vocabulaire propre au projet se réduit comme celui du site.
+  const keep = (list: PipelineStatus[]) =>
+    options.all ? list : filterVisible(list, connection?.active ? connection.settings : null);
+
+  const own = await prisma.pipelineStatus.findMany({ where: { projectId, ...where }, orderBy: ORDER_BY });
+  if (own.length > 0) return keep(own);
+
   const origin = connection?.active ? 'shotgrid' : 'local';
   const studio = await prisma.pipelineStatus.findMany({
     where: { projectId: null, origin, ...where },
     orderBy: ORDER_BY,
   });
-  if (studio.length > 0 || !connection?.active) return studio;
+  if (studio.length > 0 || !connection?.active) return keep(studio);
 
-  return prisma.pipelineStatus.findMany({
-    where: { projectId: null, origin: 'local', ...where },
-    orderBy: ORDER_BY,
-  });
+  return keep(
+    await prisma.pipelineStatus.findMany({
+      where: { projectId: null, origin: 'local', ...where },
+      orderBy: ORDER_BY,
+    }),
+  );
+}
+
+/**
+ * Ne garder que les statuts que le studio a retenus pour ce projet (réglage ShotGrid).
+ *
+ * Un périmètre sans liste reste entier : on ne déduit jamais un masquage d'un oubli.
+ * Et un filtre qui ne reconnaîtrait plus aucun code — codes renommés côté site, liste
+ * héritée d'un autre projet — est ignoré : mieux vaut proposer trop que rien du tout,
+ * un menu vide ne se répare pas depuis l'écran où il manque.
+ */
+function filterVisible(list: PipelineStatus[], settings: unknown): PipelineStatus[] {
+  const visible = (settings as { visibleStatuses?: Partial<Record<Scope, string[]>> } | null)
+    ?.visibleStatuses;
+  if (!visible) return list;
+  // Le repli se juge périmètre par périmètre : une liste de plans devenue vide ne doit
+  // pas être sauvée par les statuts de tâche restés, eux, dans le résultat.
+  const kept = new Set<number>();
+  for (const scope of SCOPES) {
+    const inScope = list.filter((s) => s.scope === scope);
+    const codes = visible[scope];
+    const shown = !codes || codes.length === 0 ? inScope : inScope.filter((s) => codes.includes(s.code));
+    for (const s of shown.length > 0 ? shown : inScope) kept.add(s.id);
+  }
+  // Un périmètre inconnu de `SCOPES` traverse sans filtre : il n'a pas de réglage.
+  return list.filter((s) => kept.has(s.id) || !SCOPES.includes(s.scope as Scope));
 }
 
 /**

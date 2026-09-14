@@ -4,19 +4,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Clapperboard, FolderOpen, ListVideo, Trash2 } from 'lucide-react';
+import { CheckCircle2, Clapperboard, FolderOpen, ListVideo, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { qk } from '../lib/query';
-import { useProjectsQuery, useReviewStatusesQuery } from '../lib/queries';
 import { useInfiniteList } from '../lib/useInfiniteList';
 import { reviewPath } from '../lib/slug';
 import { useMultiSelect } from '../lib/useMultiSelect';
 import { bulkDelete } from '../lib/bulkApi';
-import type { MediaKind } from '../types/api';
 import PageShell from '../components/PageShell';
 import AddToPlaylistDialog from '../components/AddToPlaylistDialog';
-import SavedViewsMenu from '../components/SavedViewsMenu';
-import ViewToggle from '../components/ViewToggle';
 import { useAuth } from '../stores/useAuth';
 import { useViewMode } from '../stores/useViewPref';
 import EntityCard, { EntityContainer } from '../components/EntityCard';
@@ -25,14 +21,18 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import ReviewDecisionBadge from '../components/ReviewDecisionBadge';
 import SelectionBar from '../components/ui/selection-bar';
 import { Badge } from '../components/ui/badge';
-import { Select } from '../components/ui/select';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
-import { mediaKindLabels, type ReviewItem } from './reviews/reviewsTypes';
+import {
+  EMPTY_FILTERS,
+  mediaKindLabels,
+  type ReviewItem,
+  type ReviewsFilterState,
+} from './reviews/reviewsTypes';
+import ReviewsFilters from './reviews/ReviewsFilters';
+import BulkDecisionDialog from './reviews/BulkDecisionDialog';
 import AssignedToMeSection from './reviews/AssignedToMeSection';
 import { useT } from '../i18n';
-
-const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 
 /**
  * Page « Reviews » globale (12.C) : tous les médias publiés de mes projets + mes
@@ -44,28 +44,18 @@ export default function ReviewsPage() {
   const view = useViewMode('reviews');
   const navigate = useNavigate();
   const qc = useQueryClient();
-  // Le filtre doit proposer tous les projets, pas les cent premiers : une liste déroulante
-  // ne défile pas jusqu'à une sentinelle.
-  const { data: projects } = useProjectsQuery({ all: true });
-  const { data: reviewStatuses } = useReviewStatusesQuery();
-  const [projectId, setProjectId] = useState('');
-  const [kind, setKind] = useState('');
-  const [status, setStatus] = useState('');
-  const [decision, setDecision] = useState('');
-  // Reviews confiées (Phase 49) : '' = toutes, 'me' = celles qu'on m'a demandé de regarder.
-  const [assigned, setAssigned] = useState('');
+  const [filters, setFilters] = useState<ReviewsFilterState>(EMPTY_FILTERS);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   // « Ajouter à la playlist » (Phase 33) : mediaIds ciblés (carte seule ou sélection).
   const [playlistTarget, setPlaylistTarget] = useState<number[] | null>(null);
+  // Décision de review en lot : mediaIds ciblés, convertis en versions à l'envoi.
+  const [decisionTarget, setDecisionTarget] = useState<number[] | null>(null);
   const role = useAuth((s) => s.user?.role);
   const canPlaylist = role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST';
+  const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
 
   const params = new URLSearchParams();
-  if (projectId) params.set('projectId', projectId);
-  if (kind) params.set('kind', kind);
-  if (status) params.set('status', status);
-  if (decision) params.set('decision', decision);
-  if (assigned) params.set('assigned', assigned);
+  for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value);
   const qs = params.toString();
 
   // La page annonçait fièrement « 1 247 media » au-dessus de cent cartes : le total venait
@@ -88,13 +78,22 @@ export default function ReviewsPage() {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
-  // Projet commun des médias ciblés (une playlist = un projet) ; null si mixte.
-  const targetProjectId = (() => {
-    if (!playlistTarget || !items) return null;
-    const ids = new Set(playlistTarget);
-    const pids = new Set(items.filter((m) => ids.has(m.id)).map((m) => m.project?.id ?? 0));
+  /** Les médias ciblés, retrouvés dans la page courante (l'ordre n'importe pas). */
+  const targeted = (mediaIds: number[] | null) => {
+    if (!mediaIds || !items) return [];
+    const wanted = new Set(mediaIds);
+    return items.filter((m) => wanted.has(m.id));
+  };
+  /** Projet commun des médias ciblés (une playlist = un projet) ; null si mixte. */
+  const commonProjectId = (mediaIds: number[] | null) => {
+    const pids = new Set(targeted(mediaIds).map((m) => m.project?.id ?? 0));
     return pids.size === 1 ? ([...pids][0] ?? null) : null;
-  })();
+  };
+  // Deux médias d'une même version ne valent qu'une décision : la décision porte sur la
+  // version, la poser deux fois écrirait deux lignes d'historique pour un seul geste.
+  const targetVersionIds = [...new Set(targeted(decisionTarget).map((m) => m.versionId))];
+  // Agit sur la sélection si la carte en fait partie, sinon sur la carte seule.
+  const scopeOf = (id: number) => (sel.count > 0 && sel.isSelected(id) ? sel.ids : [id]);
 
   const deleteOne = async (id: number) => {
     try {
@@ -110,64 +109,14 @@ export default function ReviewsPage() {
     <PageShell title={t('nav.reviews')}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t('nav.reviews')}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="text-xs">
-            <option value="">{t('reviews.filter.allProjects')}</option>
-            {(projects ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-          <Select value={kind} onChange={(e) => setKind(e.target.value)} className="text-xs">
-            <option value="">{t('reviews.filter.allTypes')}</option>
-            {KIND_OPTIONS.map((k) => (
-              <option key={k} value={k}>
-                {kindLabels[k]}
-              </option>
-            ))}
-          </Select>
-          <Select value={status} onChange={(e) => setStatus(e.target.value)} className="text-xs">
-            <option value="">{t('reviews.filter.publishedAndDrafts')}</option>
-            <option value="published">{t('reviews.filter.published')}</option>
-            <option value="draft">{t('reviews.filter.myDrafts')}</option>
-          </Select>
-          <Select value={decision} onChange={(e) => setDecision(e.target.value)} className="text-xs">
-            <option value="">{t('reviews.filter.allDecisions')}</option>
-            <option value="none">{t('reviews.filter.noDecision')}</option>
-            {(reviewStatuses ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={assigned}
-            onChange={(e) => setAssigned(e.target.value)}
-            aria-label={t('reviews.filter.allAssignments')}
-            className="text-xs"
-          >
-            <option value="">{t('reviews.filter.allAssignments')}</option>
-            <option value="me">{t('reviews.assigned.title')}</option>
-          </Select>
-          <SavedViewsMenu
-            scope="reviews"
-            current={{ projectId, kind, status, decision, assigned }}
-            onApply={(f) => {
-              setProjectId(f.projectId ?? '');
-              setKind(f.kind ?? '');
-              setStatus(f.status ?? '');
-              setDecision(f.decision ?? '');
-              setAssigned(f.assigned ?? '');
-            }}
-          />
-          <ViewToggle contextKey="reviews" />
-        </div>
+        <ReviewsFilters value={filters} onChange={setFilters} />
       </div>
 
       {/* La file personnelle passe avant le catalogue — et s'efface quand la liste entière
           est déjà filtrée sur elle, où elle ne dirait rien de plus. */}
-      {!assigned && <AssignedToMeSection onSeeAll={() => setAssigned('me')} />}
+      {!filters.assigned && (
+        <AssignedToMeSection onSeeAll={() => setFilters({ ...filters, assigned: 'me' })} />
+      )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
 
@@ -203,14 +152,23 @@ export default function ReviewsPage() {
                     label: t('common.open'),
                     onClick: () => void navigate(reviewPath({ id: m.id, originalName: m.name })),
                   },
+                  // Le clic droit est la porte d'entrée des actions (UI simple) : la
+                  // décision s'y pose pour une carte comme pour toute la sélection.
+                  ...(canDecide
+                    ? [
+                        {
+                          icon: <CheckCircle2 size={14} />,
+                          label: t('decision.title'),
+                          onClick: () => setDecisionTarget(scopeOf(m.id)),
+                        },
+                      ]
+                    : []),
                   ...(canPlaylist
                     ? [
                         {
                           icon: <ListVideo size={14} />,
                           label: t('reviews.addToPlaylist'),
-                          // Agit sur la sélection si la carte en fait partie, sinon sur la carte.
-                          onClick: () =>
-                            setPlaylistTarget(sel.count > 0 && sel.isSelected(m.id) ? sel.ids : [m.id]),
+                          onClick: () => setPlaylistTarget(scopeOf(m.id)),
                         },
                       ]
                     : []),
@@ -243,6 +201,15 @@ export default function ReviewsPage() {
         label={t('reviews.countLabel', { count: sel.count })}
         onClear={sel.clear}
         actions={[
+          ...(canDecide
+            ? [
+                {
+                  label: t('decision.title'),
+                  icon: <CheckCircle2 size={14} />,
+                  onClick: () => setDecisionTarget(sel.ids),
+                },
+              ]
+            : []),
           ...(canPlaylist
             ? [
                 {
@@ -264,8 +231,16 @@ export default function ReviewsPage() {
       <AddToPlaylistDialog
         open={playlistTarget !== null}
         onOpenChange={(o) => !o && setPlaylistTarget(null)}
-        projectId={targetProjectId}
+        projectId={commonProjectId(playlistTarget)}
         mediaIds={playlistTarget ?? []}
+        onDone={sel.clear}
+      />
+
+      <BulkDecisionDialog
+        open={decisionTarget !== null}
+        onOpenChange={(o) => !o && setDecisionTarget(null)}
+        projectId={commonProjectId(decisionTarget)}
+        versionIds={targetVersionIds}
         onDone={sel.clear}
       />
 

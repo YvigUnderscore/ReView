@@ -45,8 +45,10 @@ describe('listForProject', () => {
     answers(own);
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['brief']);
-    // Le studio n'est pas consulté, ni la connexion : le projet a le dernier mot.
-    expect(db.shotgridConnection.findUnique).not.toHaveBeenCalled();
+    // Le studio n'est pas consulté : le projet a le dernier mot sur la SOURCE. La
+    // connexion, elle, l'est désormais — c'est elle qui porte les statuts retenus, et
+    // ce tri vaut aussi pour un vocabulaire propre au projet.
+    expect(db.pipelineStatus.findMany).toHaveBeenCalledTimes(1);
   });
 
   it('ne propose que le vocabulaire du site sur un projet relié', async () => {
@@ -146,5 +148,63 @@ describe('assertBelongsToProject', () => {
   it('laisse toujours effacer le statut', async () => {
     await expect(assertBelongsToProject(448, 'shot', null)).resolves.toBeNull();
     expect(db.pipelineStatus.findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Tri du studio (réglage ShotGrid du projet) : un site propose vingt et un statuts de
+ * plan, une production n'en emploie que six. Ce qui est masqué ne doit plus être
+ * proposé — mais rien ne doit jamais rendre une liste vide, où plus aucun choix ne se
+ * ferait et d'où l'on ne pourrait plus revenir.
+ */
+describe('listForProject — statuts retenus par le projet', () => {
+  const connectionWith = (visibleStatuses: unknown) =>
+    db.shotgridConnection.findUnique.mockResolvedValue({ active: true, settings: { visibleStatuses } });
+
+  it('ne garde que les codes cochés pour le périmètre', async () => {
+    answers([], site);
+    connectionWith({ task: ['wtg', 'suprev'] });
+    const r = await listForProject(461, 'task');
+    expect(r.map((s) => s.code)).toEqual(['wtg', 'suprev']);
+  });
+
+  it('laisse le périmètre entier quand rien n’est coché', async () => {
+    answers([], site);
+    connectionWith({ task: [], shot: ['fin'] });
+    const r = await listForProject(461, 'task');
+    expect(r.map((s) => s.code)).toEqual(['wtg', 'hld', 'suprev']);
+  });
+
+  it('ignore un filtre qui ne reconnaît plus aucun code', async () => {
+    // Codes renommés côté site, liste recopiée d'un autre projet : un menu vide ne se
+    // répare pas depuis l'écran où il manque.
+    answers([], site);
+    connectionWith({ task: ['inconnu'] });
+    const r = await listForProject(461, 'task');
+    expect(r.map((s) => s.code)).toEqual(['wtg', 'hld', 'suprev']);
+  });
+
+  it('juge le repli périmètre par périmètre', async () => {
+    // Sans scope : les statuts de tâche restés dans le résultat ne doivent pas faire
+    // croire que le filtre de plan a fonctionné.
+    const mixed = [...site, { id: 30, scope: 'shot', code: 'fin', origin: 'shotgrid' }];
+    answers([], mixed);
+    connectionWith({ task: ['wtg'], shot: ['inconnu'] });
+    const r = await listForProject(461);
+    expect(r.map((s) => s.code)).toEqual(['wtg', 'fin']);
+  });
+
+  it('rend le catalogue entier quand l’écran de réglage le demande', async () => {
+    answers([], site);
+    connectionWith({ task: ['wtg'] });
+    const r = await listForProject(461, 'task', { all: true });
+    expect(r.map((s) => s.code)).toEqual(['wtg', 'hld', 'suprev']);
+  });
+
+  it('ne filtre rien sur un projet non relié', async () => {
+    answers([], local);
+    db.shotgridConnection.findUnique.mockResolvedValue({ active: false, settings: { task: ['todo'] } });
+    const r = await listForProject(448, 'task');
+    expect(r.map((s) => s.code)).toEqual(['todo', 'approved']);
   });
 });

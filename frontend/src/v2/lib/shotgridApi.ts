@@ -304,13 +304,20 @@ export function useResolveConflict(projectId: number) {
  * site sur un projet relié à ShotGrid, le nôtre sinon. Sans lui, on reçoit le référentiel
  * du studio entier — ce qu'il faut à l'écran d'administration, jamais à un sélecteur.
  */
-export function usePipelineStatuses(scope?: StatusScope, projectId?: number) {
+export function usePipelineStatuses(
+  scope?: StatusScope,
+  projectId?: number,
+  // `all` : le catalogue entier, sans le tri que le studio a fait pour ce projet. Réservé
+  // à l'écran qui règle précisément ce tri — partout ailleurs, on veut la liste réduite.
+  options: { all?: boolean } = {},
+) {
   return useQuery({
-    queryKey: sgKeys.pipelineStatuses(scope, projectId),
+    queryKey: [...sgKeys.pipelineStatuses(scope, projectId), options.all ?? false],
     queryFn: () => {
       const params = new URLSearchParams();
       if (scope) params.set('scope', scope);
       if (projectId) params.set('projectId', String(projectId));
+      if (options.all) params.set('all', 'true');
       const query = params.toString();
       return api
         .get<{ statuses: PipelineStatus[] }>(`/api/pipeline-statuses${query ? `?${query}` : ''}`)

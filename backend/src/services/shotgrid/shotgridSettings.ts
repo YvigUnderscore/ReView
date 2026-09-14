@@ -56,6 +56,25 @@ export const shotgridSettingsSchema = z.object({
       shot: z.array(z.number().int().positive()).max(200).default([]),
     })
     .default({}),
+  /**
+   * Statuts retenus pour ce projet, par périmètre et par code ShotGrid.
+   *
+   * Un site de studio propose vingt et un statuts de plan ; une production donnée n'en
+   * emploie que six. Les vingt et un s'affichaient partout — menus contextuels, colonnes,
+   * filtres — et il fallait les lire tous pour trouver celui du jour. Le studio déclare
+   * donc ici ceux qu'il veut voir. Liste vide = tous, comme avant.
+   *
+   * Masquer n'efface rien : la synchronisation continue d'importer le statut réel d'une
+   * entité, et le badge d'un plan déjà « on hold » reste juste. Seul le choix est réduit.
+   */
+  visibleStatuses: z
+    .object({
+      task: z.array(z.string()).max(200).default([]),
+      shot: z.array(z.string()).max(200).default([]),
+      sequence: z.array(z.string()).max(200).default([]),
+      asset: z.array(z.string()).max(200).default([]),
+    })
+    .default({}),
   eventMode: z.enum(['webhook', 'polling', 'manual']).default('webhook'),
   pollingIntervalSec: z.number().int().min(15).max(3600).default(60),
   /** Réconciliation périodique : rattrape ce qu'un webhook perdu ou une coupure a manqué. */
@@ -158,7 +177,15 @@ export function parseSettings(raw: unknown): ShotgridSettings {
   if (raw && typeof raw === 'object') {
     // Section par section : ce qui se valide seul est conservé, le reste garde le repli.
     const source = raw as Record<string, unknown>;
-    for (const key of ['media', 'push', 'reconcile', 'steps', 'versionStatusMap', 'descriptions'] as const) {
+    for (const key of [
+      'media',
+      'push',
+      'reconcile',
+      'steps',
+      'visibleStatuses',
+      'versionStatusMap',
+      'descriptions',
+    ] as const) {
       const section = shotgridSettingsSchema.shape[key].safeParse(source[key]);
       if (section.success) (safe as Record<string, unknown>)[key] = section.data;
     }

@@ -10,6 +10,8 @@ import { emitToProject } from './SocketService';
 import { publish as publishApiEvent } from './ApiEventService';
 import { notifyChat } from './ChatNotifyService';
 import { badRequest, conflict, notFound } from '../lib/errors';
+import { resolveProjectIdForVersion } from '../lib/pipeline';
+import { assertProjectManage } from '../lib/projectRoles';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
@@ -117,6 +119,7 @@ export async function decide(
   versionId: number,
   statusId: number,
   comment?: string,
+  options: { chat?: boolean } = {},
 ) {
   const version = await prisma.version.findFirst({
     where: { id: versionId, deletedAt: null },
@@ -194,10 +197,79 @@ export async function decide(
       decidedBy: user.id,
     },
   });
-  // Messagerie d'équipe (42.B — №67) : signal studio-wide des décisions.
-  const emoji = status.isApproval ? '✅' : status.isRetake ? '🔁' : '🟠';
-  void notifyChat(`${emoji} Décision « ${status.name} » sur la version ${version.name}`);
+  // Messagerie d'équipe (42.B — №67) : signal studio-wide des décisions. Un lot le tait
+  // version par version et n'annonce qu'une ligne : trente messages pour une session de
+  // review rendraient le canal inutilisable.
+  if (options.chat !== false) {
+    const emoji = status.isApproval ? '✅' : status.isRetake ? '🔁' : '🟠';
+    void notifyChat(`${emoji} Décision « ${status.name} » sur la version ${version.name}`);
+  }
   return decision;
+}
+
+/**
+ * Même décision sur une sélection de versions (page Reviews).
+ *
+ * La sélection traverse volontiers plusieurs projets — la page les mélange par défaut.
+ * Chaque projet est donc revérifié : droit de supervision **effectif** (38.E) et
+ * appartenance du statut au vocabulaire offert là-bas. Une version refusée est comptée,
+ * pas jetée : sur quarante plans, tout perdre pour un seul serait absurde.
+ */
+export async function decideMany(
+  user: SessionUser,
+  versionIds: number[],
+  statusId: number,
+  comment?: string,
+): Promise<{ updated: number; failed: number }> {
+  const status = await prisma.reviewStatus.findUnique({ where: { id: statusId } });
+  if (!status) throw badRequest('Unknown review status');
+
+  // Un contrôle par projet, pas par version : la même sélection porte souvent cent
+  // versions pour deux projets. Le verdict est mémorisé, refus compris.
+  const allowed = new Map<number, boolean>();
+  const allowsProject = async (projectId: number): Promise<boolean> => {
+    const known = allowed.get(projectId);
+    if (known !== undefined) return known;
+    const ok = await (async () => {
+      try {
+        await assertProjectManage(user.id, user.role, projectId);
+        const offered = await listStatusesForProject(projectId);
+        return offered.some((s) => s.id === statusId);
+      } catch {
+        return false;
+      }
+    })();
+    allowed.set(projectId, ok);
+    return ok;
+  };
+
+  let updated = 0;
+  let failed = 0;
+  for (const versionId of versionIds) {
+    const projectId = await resolveProjectIdForVersion(versionId);
+    if (!projectId || !(await allowsProject(projectId))) {
+      failed++;
+      continue;
+    }
+    try {
+      await decide(user, projectId, versionId, statusId, comment, { chat: false });
+      updated++;
+    } catch {
+      failed++;
+    }
+  }
+  if (updated > 0) {
+    const emoji = status.isApproval ? '✅' : status.isRetake ? '🔁' : '🟠';
+    void notifyChat(`${emoji} Décision « ${status.name} » sur ${updated} version(s)`);
+  }
+  logAudit({
+    userId: user.id,
+    action: 'version.decision.bulk',
+    entityType: 'Version',
+    entityId: statusId,
+    metadata: { status: status.name, ids: versionIds, updated, failed },
+  });
+  return { updated, failed };
 }
 
 /** Historique des décisions d'une version (récent → ancien). */

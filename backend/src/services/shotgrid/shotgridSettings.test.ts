@@ -154,3 +154,26 @@ describe('readOnlySettings', () => {
     expect(s.reconcile.enabled).toBe(true);
   });
 });
+
+/**
+ * Statuts retenus par le projet : un réglage d'affichage, mais qui se perdrait aussi
+ * facilement que les correspondances de statuts si le repli le jetait.
+ */
+describe('visibleStatuses', () => {
+  it('vaut « tous » par défaut, périmètre par périmètre', () => {
+    const s = parseSettings({});
+    expect(s.visibleStatuses).toEqual({ task: [], shot: [], sequence: [], asset: [] });
+  });
+
+  it('garde les codes cochés et complète les périmètres absents', () => {
+    const s = parseSettings({ visibleStatuses: { shot: ['ip', 'fin'] } });
+    expect(s.visibleStatuses.shot).toEqual(['ip', 'fin']);
+    expect(s.visibleStatuses.task).toEqual([]);
+  });
+
+  it('survit au repli de lecture seule quand une autre section est illisible', () => {
+    // Le repli ferme les écritures ; il ne doit pas effacer un tri que le studio a fait.
+    const s = parseSettings({ eventMode: 'carrier-pigeon', visibleStatuses: { task: ['wtg'] } });
+    expect(s.visibleStatuses.task).toEqual(['wtg']);
+  });
+});

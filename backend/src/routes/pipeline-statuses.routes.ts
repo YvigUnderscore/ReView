@@ -47,6 +47,9 @@ router.get(
       // Le vocabulaire dépend du projet : celui du site sur un projet relié, le nôtre
       // sinon. Sans ce paramètre, on répond le référentiel entier — les deux mélangés.
       projectId: z.coerce.number().int().positive().optional(),
+      // `all` ignore le tri que le studio a fait pour ce projet : c'est l'écran de
+      // réglage qui le demande, et on n'y coche pas une liste déjà amputée d'elle-même.
+      all: z.enum(['true', 'false']).optional(),
     }),
   }),
   async (req, res) => {
@@ -54,9 +57,10 @@ router.get(
     // restent des chaînes. On relit donc la valeur brute plutôt que de la supposer.
     const scope = req.query.scope as PipelineStatusService.Scope | undefined;
     const projectId = req.query.projectId ? Number(req.query.projectId) : null;
+    const all = req.query.all === 'true';
     res.json({
       statuses: projectId
-        ? await PipelineStatusService.listForProject(projectId, scope)
+        ? await PipelineStatusService.listForProject(projectId, scope, { all })
         : await PipelineStatusService.list(scope),
     });
   },

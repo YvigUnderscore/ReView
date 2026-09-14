@@ -8,6 +8,7 @@ import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as BulkService from '../services/BulkService';
 import * as AssignmentService from '../services/AssignmentService';
+import * as ReviewDecisionService from '../services/ReviewDecisionService';
 import { DELETE_DOMAINS } from '../services/BulkService';
 
 /**
@@ -98,6 +99,23 @@ router.patch(
     const { ids: versionIds, status } = req.body as { ids: number[]; status: VersionStatus };
     const count = await BulkService.bulkPatchVersions(req.user!, versionIds, status);
     res.json({ count });
+  },
+);
+
+/**
+ * PATCH /api/bulk/versions/decision — décision de review sur une sélection (Phase 31).
+ *
+ * La sélection de la page Reviews traverse volontiers plusieurs projets : le service
+ * revérifie donc la supervision et le vocabulaire projet par projet, et compte les refus.
+ */
+router.patch(
+  '/versions/decision',
+  validate({
+    body: z.object({ ids, statusId: z.number().int().positive(), comment: z.string().max(2000).optional() }),
+  }),
+  async (req, res) => {
+    const b = req.body as { ids: number[]; statusId: number; comment?: string };
+    res.json(await ReviewDecisionService.decideMany(req.user!, b.ids, b.statusId, b.comment));
   },
 );
 
