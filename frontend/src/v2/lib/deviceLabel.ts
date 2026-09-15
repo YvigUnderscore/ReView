@@ -1,5 +1,7 @@
-import { t } from '../i18n'; // SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { t } from '../i18n';
 
 /** Étiquette lisible d'un user-agent (36.B, liste des sessions) — heuristique volontairement simple. */
 export function deviceLabel(userAgent: string | null): string {
@@ -15,7 +17,7 @@ export function deviceLabel(userAgent: string | null): string {
           ? 'Firefox'
           : ua.includes('safari/')
             ? 'Safari'
-            : 'Navigateur';
+            : t('common.browser');
   const os = ua.includes('windows')
     ? 'Windows'
     : ua.includes('android')

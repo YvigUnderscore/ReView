@@ -8,6 +8,7 @@ import {
   LOCALE_CODES,
   formatTag,
   isLocale,
+  localeFromAcceptLanguage,
   localeFromPreferences,
   pluralTag,
   t,
@@ -82,5 +83,38 @@ describe('langue d’un destinataire', () => {
     expect(localeFromPreferences({})).toBeNull();
     expect(localeFromPreferences(null)).toBeNull();
     expect(localeFromPreferences('fr')).toBeNull();
+  });
+});
+
+describe('localeFromAcceptLanguage', () => {
+  it('retombe sur la langue de base sans en-tête', () => {
+    expect(localeFromAcceptLanguage(undefined)).toBe('en');
+    expect(localeFromAcceptLanguage(null)).toBe('en');
+    expect(localeFromAcceptLanguage('')).toBe('en');
+  });
+
+  it('reconnaît un code exact', () => {
+    expect(localeFromAcceptLanguage('fr')).toBe('fr');
+    expect(localeFromAcceptLanguage('zh-Hans')).toBe('zh-Hans');
+  });
+
+  it('retombe d’un tag régional sur la langue', () => {
+    expect(localeFromAcceptLanguage('pt-BR')).toBe('pt');
+    expect(localeFromAcceptLanguage('zh-CN')).toBe('zh-Hans');
+    expect(localeFromAcceptLanguage('fr-CA,fr;q=0.9')).toBe('fr');
+  });
+
+  it('respecte les qualités', () => {
+    expect(localeFromAcceptLanguage('de;q=0.3, ja;q=0.9')).toBe('ja');
+    expect(localeFromAcceptLanguage('xx;q=1.0, es;q=0.5')).toBe('es');
+  });
+
+  it('ignore une langue refusée et le joker', () => {
+    expect(localeFromAcceptLanguage('fr;q=0, ko')).toBe('ko');
+    expect(localeFromAcceptLanguage('*')).toBe('en');
+  });
+
+  it('retombe sur la base quand rien n’est connu', () => {
+    expect(localeFromAcceptLanguage('xx-YY, zz')).toBe('en');
   });
 });

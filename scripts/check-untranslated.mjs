@@ -40,10 +40,38 @@ import { join, relative, resolve, sep } from 'node:path';
 // au typecheck. Aucune dépendance nouvelle, donc aucune obligation de licence nouvelle.
 const ts = createRequire(resolve('frontend/package.json'))('typescript');
 
-const ROOT = 'frontend/src';
+/**
+ * Arborescences contrôlées.
+ *
+ * Le backend en était ABSENT — un seul répertoire était scanné. Or il a sa propre i18n
+ * (`backend/src/i18n`), et la règle du projet vise les deux moitiés : « tout texte visible
+ * passe par `t()` (`v2/i18n` front, `src/i18n` back) ». Tout ce que le serveur rend à un
+ * humain — pied de page de `/api/docs`, corps des e-mails, pages publiques — échappait donc
+ * au plafond, qui mesurait une moitié du produit en annonçant le tout.
+ */
+const ROOTS = ['frontend/src', 'backend/src'];
 
-/** Reliquat de texte en dur toléré — dette à résorber, jamais à relever. */
-const CEILING = 0;
+/**
+ * Dette backend constatée à l'entrée dans le périmètre. À faire baisser, jamais monter.
+ *
+ * Ce chiffre est une LIGNE DE BASE, pas un relâchement : le backend n'était pas contrôlé du
+ * tout jusqu'ici. Ce qu'il recouvre est presque entièrement hors interface — assemblage SVG,
+ * filtres FFmpeg, fragments SQL, messages de journal destinés à l'exploitant, textes d'erreur
+ * ShotGrid. Les surfaces réellement lues par un utilisateur, elles, sont à zéro et passent
+ * par `t()` : pied de page public de `/api/docs`, page de désabonnement, e-mails.
+ */
+const BACKEND_DEBT = 343;
+
+/**
+ * Reliquat toléré **par arborescence** — dette à résorber, jamais à relever.
+ *
+ * Le front est à zéro et doit y rester. Le backend entre dans le périmètre avec une dette :
+ * il n'était pas contrôlé du tout, et l'essentiel de ce qu'on y trouve n'a rien à faire dans
+ * un catalogue (assemblage SVG, filtres FFmpeg, fragments SQL, journaux d'exploitation). Le
+ * plafond fige donc l'existant pour que rien ne s'ajoute, pendant que les surfaces réellement
+ * lues par un humain — pied de page public, e-mails, invitations — passent par `t()`.
+ */
+const CEILINGS = { 'frontend/src': 0, 'backend/src': BACKEND_DEBT };
 
 /**
  * Balises dont le contenu est du littéral technique et non de la prose : une commande, un
@@ -81,6 +109,28 @@ const SPEAKING_CALLS = /^(toast(\.\w+)?|confirm|alert|prompt|window\.(confirm|al
 /** Props dont la valeur est une adresse, une classe ou un identifiant — jamais de la prose. */
 const TECHNICAL_PROPS =
   /^(className|class|style|id|key|href|src|srcSet|to|type|name|value|htmlFor|accept|pattern|role|d|points|viewBox|data-.*|aria-(hidden|controls|labelledby|describedby))$/;
+
+/**
+ * Props techniques **seulement sur une balise HTML native**.
+ *
+ * `value` est l'exemple qui a coûté cher : sur `<input>` ou `<option>` c'est une donnée, mais
+ * sur un composant maison (`<Row value=…>`, `<Metric value=…>`) c'est de la prose affichée.
+ * Classer `value` technique sans regarder la balise laissait passer « SQ### / SH### (pas 10) »
+ * en pleine page d'administration. La distinction est celle de JSX : minuscule = élément du
+ * DOM, majuscule = composant.
+ */
+const NATIVE_ONLY_PROPS = /^(value|name|type|role)$/;
+
+/**
+ * Props et clés d'option dont la valeur est un **discriminant**, jamais de la prose : la
+ * variante d'un composant (`variant="destructive"`), une portée, une option `Intl`
+ * (`{ month: 'long' }`), un attribut SVG de peinture.
+ *
+ * Ces noms sont nécessaires depuis que le contrôle ne se fie plus au seul aspect du mot :
+ * « destructive » et « numeric » ressemblent trait pour trait à « approbation ».
+ */
+const DISCRIMINANT_PROPS =
+  /^(variant|scope|kind|mode|side|align|tone|level|status|size|entity|fill|stroke|strokeLinecap|strokeLinejoin|weekday|era|year|month|day|hour|minute|second|timeZoneName|dateStyle|timeStyle|numeric|unit|unitDisplay|currency|notation|display|position|behavior|block|inline|aria-current)$/;
 
 /** Appels dont les arguments sont des URL, des clés de cache ou des traces. */
 const TECHNICAL_CALLS =
@@ -167,10 +217,12 @@ const ALLOWED = new Set(
     'fps',
     'ms',
     's',
-    'Ko',
-    'Mo',
-    'Go',
-    'To',
+    // « Ko », « Mo », « Go » et « To » ont été RETIRÉS : ce sont les symboles français, et
+    // l'anglais les rend « KB », « MB », « GB », « TB ». Le contrat de cette liste — « un mot
+    // qu'aucune langue ne rendrait autrement » — ne les couvrait pas, et leur présence ici a
+    // laissé passer pendant des mois un formateur d'octets écrit en français dans les sept
+    // écrans d'administration qui l'utilisaient. Les tailles passent désormais par
+    // `lib/formatBytes`, qui les rend via `Intl.NumberFormat`.
     'KB',
     'MB',
     'GB',
@@ -388,10 +440,73 @@ export function insideCode(node, src) {
  * fragments qui ressemblent à des mots sans en être.
  */
 export function inTechnicalContext(node, src) {
-  for (let cur = node.parent; cur; cur = cur.parent) {
-    if (ts.isJsxAttribute(cur) && TECHNICAL_PROPS.test(cur.name.getText(src))) return true;
+  let previous = node;
+  for (let cur = node.parent; cur; previous = cur, cur = cur.parent) {
+    if (ts.isJsxAttribute(cur) && TECHNICAL_PROPS.test(cur.name.getText(src))) {
+      // `value` sur un composant maison PEUT porter de la prose (`<Row value={\`… (pas 10)\`}>`).
+      // On ne lève l'exemption que pour un texte qui en a la forme : une phrase, ou un gabarit
+      // interpolé. Un mot isolé (`value="cards"`, `value="invite"`) reste un discriminant.
+      if (
+        NATIVE_ONLY_PROPS.test(cur.name.getText(src)) &&
+        !isNativeJsxElement(cur, src) &&
+        looksLikeProse(node)
+      ) {
+        continue;
+      }
+      return true;
+    }
+    if (ts.isJsxAttribute(cur) && DISCRIMINANT_PROPS.test(cur.name.getText(src))) return true;
     if (ts.isCallExpression(cur) && TECHNICAL_CALLS.test(calleeName(cur.expression))) return true;
     if (ts.isPropertyAssignment(cur) && TECHNICAL_PROPS.test(cur.name.getText(src))) return true;
+    if (ts.isPropertyAssignment(cur) && DISCRIMINANT_PROPS.test(cur.name.getText(src))) return true;
+    // Un littéral COMPARÉ n'est jamais affiché : `tool === 'erase'`, `case 'move':`. Le mot
+    // ressemble à de la prose, mais il ne quitte jamais le code.
+    //
+    // Pour `case`, seule l'ÉTIQUETTE est exclue — surtout pas le corps de la clause, où vit
+    // précisément le `return 'En attente…'` que ce contrôle doit attraper.
+    if (ts.isBinaryExpression(cur) && isComparison(cur)) return true;
+    if (ts.isCaseClause(cur)) return cur.expression === previous;
+  }
+  return false;
+}
+
+/** Vrai pour `===`, `!==`, `==`, `!=` — les opérateurs qui confrontent sans afficher. */
+export function isComparison(node) {
+  const kind = node.operatorToken.kind;
+  return (
+    kind === ts.SyntaxKind.EqualsEqualsEqualsToken ||
+    kind === ts.SyntaxKind.ExclamationEqualsEqualsToken ||
+    kind === ts.SyntaxKind.EqualsEqualsToken ||
+    kind === ts.SyntaxKind.ExclamationEqualsToken
+  );
+}
+
+/**
+ * Ce nœud a-t-il la forme d'une phrase plutôt que d'un discriminant ?
+ *
+ * Un gabarit interpolé ou un texte à plusieurs mots est de la prose ; un mot isolé est un
+ * identifiant. C'est ce qui sépare `` `SQ### / SH### (pas ${step})` `` — du français affiché
+ * en pleine page d'administration — de `value="cards"`.
+ */
+export function looksLikeProse(node) {
+  if (!node) return false;
+  if (ts.isTemplateExpression(node) || ts.isNoSubstitutionTemplateLiteral(node)) return true;
+  if (ts.isStringLiteral(node)) return /\s/.test(node.text.trim());
+  return true;
+}
+
+/**
+ * La balise qui porte cet attribut est-elle un élément natif du DOM ?
+ *
+ * JSX tranche sur la casse : `<div>`, `<input>`, `<option>` sont des éléments ; `<Row>`,
+ * `<Metric>`, `<Badge>` sont des composants, dont les props peuvent porter de la prose.
+ */
+export function isNativeJsxElement(attribute, src) {
+  for (let cur = attribute.parent; cur; cur = cur.parent) {
+    if (ts.isJsxOpeningElement(cur) || ts.isJsxSelfClosingElement(cur)) {
+      const tag = cur.tagName.getText(src);
+      return /^[a-z]/.test(tag);
+    }
   }
   return false;
 }
@@ -451,8 +566,12 @@ export function scan(file) {
     ) {
       // `const FILTERS = [{ value: 'open', label: 'Ouverts' }]` — une table de libellés est
       // du texte d'interface, et c'est là qu'il se cache le plus souvent.
+      //
+      // Le contexte technique s'applique ici aussi : une variable nommée `monthLabel` fait
+      // passer `{ month: 'long', year: 'numeric' }` pour une table de libellés, alors que ce
+      // sont les options d'`Intl.DateTimeFormat`.
       const value = literalOf(node.initializer);
-      if (value) push(value);
+      if (value && !inTechnicalContext(node, src)) push(value);
     } else if (ts.isCallExpression(node) && SPEAKING_CALLS.test(calleeName(node.expression))) {
       for (const arg of node.arguments) {
         const value = literalOf(arg);
@@ -520,45 +639,66 @@ export function scan(file) {
   return found;
 }
 
+/**
+ * Répertoires hors périmètre : les catalogues eux-mêmes, et tout ce qui ne s'adresse jamais
+ * à un utilisateur — bancs d'essai d'intégration (fixtures, comptes de test, messages
+ * d'assertion) et validation de configuration, qui parle à l'exploitant dans les journaux
+ * de démarrage, pas à l'écran.
+ */
+const SKIPPED_DIRS = new Set(['i18n', 'integration', 'config', 'types']);
+
 function* sources(dir) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
-      if (entry !== 'i18n') yield* sources(full);
-    } else if (/\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry)) {
+      if (!SKIPPED_DIRS.has(entry)) yield* sources(full);
+    } else if (/\.tsx?$/.test(entry) && !/\.(test|itest)\.tsx?$/.test(entry)) {
       yield full;
     }
   }
 }
 
 /** Scanne l'arborescence et rend les textes en dur, groupés par fichier. */
-export function collectHardcoded(root = ROOT) {
+export function collectHardcoded(roots = ROOTS) {
   const findings = new Map();
-  for (const file of sources(root)) {
-    const items = scan(file);
-    if (items.length) findings.set(file, items);
+  for (const root of Array.isArray(roots) ? roots : [roots]) {
+    for (const file of sources(root)) {
+      const items = scan(file);
+      if (items.length) findings.set(file, items);
+    }
   }
   return findings;
 }
 
 function main() {
   const findings = collectHardcoded();
-  const total = [...findings.values()].reduce((n, v) => n + v.length, 0);
   if (process.argv.includes('--list')) {
     for (const [file, items] of [...findings].sort()) {
-      console.log(relative(ROOT, file).split(sep).join('/'));
+      console.log(relative(resolve('.'), file).split(sep).join('/'));
       for (const item of items) console.log('   ', item);
     }
   }
 
-  if (total > CEILING) {
-    console.error(
-      `\x1b[0;31m✗ ${total} texte(s) d'interface en dur dans ${ROOT} (plafond : ${CEILING}).\x1b[0m`,
-    );
+  // Un plafond PAR arborescence : le front reste à zéro, le backend entre avec sa dette.
+  // Un total unique laisserait une régression du front se cacher derrière la dette du back.
+  let failed = false;
+  for (const root of ROOTS) {
+    const prefix = resolve(root);
+    const total = [...findings]
+      .filter(([file]) => resolve(file).startsWith(prefix))
+      .reduce((n, [, items]) => n + items.length, 0);
+    const ceiling = CEILINGS[root] ?? 0;
+    if (total > ceiling) {
+      failed = true;
+      console.error(`[0;31m✗ ${total} texte(s) d'interface en dur dans ${root} (plafond : ${ceiling}).[0m`);
+    } else {
+      console.log(`[0;32m✓ ${root} : ${total} texte(s) en dur (plafond ${ceiling})[0m`);
+    }
+  }
+  if (failed) {
     console.error('  Relancer avec --list pour les voir, puis les passer par t().');
     process.exit(1);
   }
-  console.log(`\x1b[0;32m✓ textes d'interface en dur : ${total} (plafond ${CEILING})\x1b[0m`);
 }
 
 // Importable pour les tests ; exécuté seulement quand on l'appelle directement.

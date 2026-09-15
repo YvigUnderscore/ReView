@@ -210,9 +210,26 @@ describe('nginx', () => {
     });
 
     it(`fige les assets hachés par Vite (${name})`, () => {
-      expect(conf).toMatch(/location \^~ \/assets\/ \{/);
+      // Le bloc filtre sur l'EXTENSION, pas sur le préfixe : `location ^~ /assets/` capturait
+      // aussi la route applicative `/assets/:id` (fiche d'asset) et la terminait en 404.
+      expect(conf).toMatch(/location ~ \^\/assets\/\.\+\\.\(/);
+      expect(conf).not.toMatch(/location \^~ \/assets\/ \{/);
       expect(conf).toMatch(/expires 1y;/);
       expect(conf).toMatch(/add_header Cache-Control "public, immutable" always;/);
+    });
+
+    it(`ne masque aucune route de l'application par un répertoire du build (${name})`, () => {
+      // Le frontal de production proxifie tout : il n'a pas de `try_files`, donc seules les
+      // assertions de résolution de répertoire concernent la configuration du conteneur.
+      if (!conf.includes('try_files')) return;
+      // `try_files $uri $uri/ /index.html` faisait gagner le RÉPERTOIRE sur la route : `/docs`
+      // (matérialisé par le prebuild de la documentation) partait en redirection d'index —
+      // absolue, reconstruite sur le port interne, donc port public perdu — puis en 403.
+      // Toute URL de doc saisie, partagée, mise en favori ou rechargée était morte.
+      expect(conf).not.toMatch(/try_files \$uri \$uri\/ \/index\.html/);
+      expect(conf).toMatch(/try_files \$uri \/index\.html;/);
+      expect(conf).toMatch(/absolute_redirect off;/);
+      expect(conf).toMatch(/port_in_redirect off;/);
     });
   }
 

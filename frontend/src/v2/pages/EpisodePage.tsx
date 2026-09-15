@@ -24,6 +24,8 @@ import {
 } from '../components/ui/breadcrumb';
 import { shotsOfSequence, useEpisodeQuery, useEpisodeSettings } from '../lib/episodesApi';
 import type { EpisodeDetail, EpisodeSequence } from '../types/episode';
+import EntityUnavailable from '../components/EntityUnavailable';
+import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 import { useT } from '../i18n';
 
 /**
@@ -73,6 +75,12 @@ export default function EpisodePage() {
       </BreadcrumbList>
     </Breadcrumb>
   );
+
+  // Épisode absent, retiré, ou identifiant inexploitable : la page rendait un `<main>` VIDE —
+  // ni message, ni redirection, juste un écran blanc. Les autres pages d'entité passent par
+  // `EntityUnavailable` depuis longtemps ; celle-ci n'y avait jamais été branchée.
+  if (isBadId(episodeId) || (error && isMissingOrForbidden(error)))
+    return <EntityUnavailable kind="episode" error={isBadId(episodeId) ? undefined : error} />;
 
   return (
     <PageShell breadcrumb={breadcrumb}>

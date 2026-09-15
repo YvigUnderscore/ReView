@@ -10,6 +10,7 @@ import { rateLimit } from '../middleware/rateLimit';
 import { verifyUnsubscribe } from '../lib/unsubscribe';
 import { logger } from '../lib/logger';
 import { getSourceUrl } from '../lib/settings';
+import { localeFromAcceptLanguage, t, type Locale } from '../i18n';
 import { escapeHtml } from '../lib/html';
 
 /**
@@ -67,7 +68,14 @@ router.post('/:token/confirm', limiter, validate({ params: tokenParam }), async 
   res
     .status(ok ? 200 : 400)
     .type('html')
-    .send(page(ok ? 'done' : 'invalid', '', await getSourceUrl()));
+    .send(
+      page(
+        ok ? 'done' : 'invalid',
+        '',
+        await getSourceUrl(),
+        localeFromAcceptLanguage(req.headers['accept-language']),
+      ),
+    );
 });
 
 /**
@@ -91,43 +99,57 @@ router.get('/:token', limiter, validate({ params: tokenParam }), async (req, res
   res
     .status(valid ? 200 : 400)
     .type('html')
-    .send(page(valid ? 'confirm' : 'invalid', token, await getSourceUrl()));
+    .send(
+      page(
+        valid ? 'confirm' : 'invalid',
+        token,
+        await getSourceUrl(),
+        localeFromAcceptLanguage(req.headers['accept-language']),
+      ),
+    );
 });
 
 /**
- * Page autonome : ni React, ni session, ni catalogue de traduction. Elle est lue une fois,
- * par quelqu'un qui vient de cliquer dans un email — l'anglais, langue de base, y suffit.
+ * Page autonome : ni React, ni session — mais bel et bien traduite.
+ *
+ * Elle l'était en anglais seulement, au motif qu'aucun catalogue n'était disponible côté
+ * serveur. Il y en a un, et cette page est justement celle qu'un destinataire externe ouvre
+ * après avoir cliqué dans un email : c'est la surface où sa langue compte le plus, et la
+ * seule que l'application ne peut pas lui faire choisir. La langue se négocie donc sur
+ * `Accept-Language`, comme pour la page publique `/api/docs`.
  */
-function page(state: 'confirm' | 'done' | 'invalid', token: string, sourceUrl: string): string {
+function page(
+  state: 'confirm' | 'done' | 'invalid',
+  token: string,
+  sourceUrl: string,
+  locale: Locale,
+): string {
   const copy = {
     confirm: {
-      title: 'Confirm your unsubscribe',
-      body: 'Confirm below to stop receiving this recurring email. You can turn it back on at any time from your ReView profile.',
+      title: t(locale, 'unsubscribe.confirm.title'),
+      body: t(locale, 'unsubscribe.confirm.body'),
     },
-    done: {
-      title: 'You are unsubscribed',
-      body: 'You will no longer receive this recurring email. You can turn it back on at any time from your ReView profile.',
-    },
+    done: { title: t(locale, 'unsubscribe.done.title'), body: t(locale, 'unsubscribe.done.body') },
     invalid: {
-      title: 'This link is no longer valid',
-      body: 'The link may have expired or been altered. Open your ReView profile to change your email preferences.',
+      title: t(locale, 'unsubscribe.invalid.title'),
+      body: t(locale, 'unsubscribe.invalid.body'),
     },
   }[state];
   // Le bouton POSTe : c'est ce qui met l'action hors de portée d'un préchargement de lien.
   const form =
     state === 'confirm'
       ? `<form method="post" action="/api/unsubscribe/${escapeHtml(encodeURIComponent(token))}/confirm" style="margin:20px 0 0">
-<button type="submit" style="font:inherit;font-size:14px;padding:10px 16px;border-radius:8px;border:1px solid #1E2433;background:#1B2233;color:#E6EBEF;cursor:pointer">Unsubscribe</button>
+<button type="submit" style="font:inherit;font-size:14px;padding:10px 16px;border-radius:8px;border:1px solid #1E2433;background:#1B2233;color:#E6EBEF;cursor:pointer">${escapeHtml(t(locale, 'unsubscribe.action'))}</button>
 </form>`
       : '';
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="${escapeHtml(locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>${copy.title}</title></head>
+<title>${escapeHtml(copy.title)}</title></head>
 <body style="margin:0;font-family:ui-sans-serif,system-ui,sans-serif;background:#0B0E14;color:#E6EBEF">
 <div style="max-width:520px;margin:15vh auto;padding:24px;background:#121620;border:1px solid #1E2433;border-radius:12px">
-<h1 style="font-size:18px;margin:0 0 12px">${copy.title}</h1>
-<p style="font-size:14px;line-height:1.7;color:#9BA3B2;margin:0">${copy.body}</p>
+<h1 style="font-size:18px;margin:0 0 12px">${escapeHtml(copy.title)}</h1>
+<p style="font-size:14px;line-height:1.7;color:#9BA3B2;margin:0">${escapeHtml(copy.body)}</p>
 ${form}
 <!-- AGPL §13 : une surface accessible sans authentification porte le lien vers le code
      source correspondant. Cette page en est une. -->

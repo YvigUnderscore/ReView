@@ -57,6 +57,17 @@ export default function CommandPalette({
   const ctxProjectId = useProjectContext((s) => s.projectId);
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
+  /**
+   * Élément actif de la liste, tenu par nous plutôt que par cmdk.
+   *
+   * `shouldFilter={false}` désactive la passe de filtrage de cmdk — et c'est cette passe qui,
+   * chez lui, resélectionne le premier item. Résultat : après une frappe, les actions rapides
+   * étaient démontées et les résultats montés, mais la valeur active restait celle d'un item
+   * disparu. **Plus aucun élément n'était sélectionné**, donc Entrée ne faisait rien : il
+   * fallait d'abord appuyer sur ↓. Une palette dont la première frappe d'Entrée est perdue
+   * n'est pas une palette.
+   */
+  const [active, setActive] = useState('');
   const inFlight = useRef('');
 
   // Raccourci global Ctrl/Cmd+K (prime sur les champs de saisie, comme VS Code/Linear)
@@ -94,10 +105,23 @@ export default function CommandPalette({
     staleTime: 30_000,
   });
 
+  // La requête a changé : le jeu de résultats va changer aussi. On vide la sélection pour que
+  // cmdk reprenne la main et désigne le premier item dès qu'il est monté.
+  //
+  // Ajusté PENDANT le rendu plutôt que dans un effet (motif React admis, déjà employé par
+  // `Shell` au changement de type de média) : dans un effet, la liste se serait affichée un
+  // rendu entier sans sélection — exactement la fenêtre où l'utilisateur appuie sur Entrée.
+  const [lastQuery, setLastQuery] = useState(debounced);
+  if (lastQuery !== debounced) {
+    setLastQuery(debounced);
+    setActive('');
+  }
+
   const close = () => {
     if (inFlight.current !== '') void queryClient.cancelQueries({ queryKey: qk.search(inFlight.current) });
     inFlight.current = '';
     setQ('');
+    setActive('');
   };
 
   const go = (to: string) => {
@@ -140,7 +164,7 @@ export default function CommandPalette({
       }}
       title={t('palette.title')}
     >
-      <Command shouldFilter={false}>
+      <Command shouldFilter={false} value={active} onValueChange={setActive}>
         <CommandInput value={q} onValueChange={setQ} placeholder={t('palette.placeholder')} />
         <CommandList>
           {hasQuery && !canSearch && <CommandEmpty>{t('palette.typeMore')}</CommandEmpty>}

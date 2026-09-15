@@ -40,12 +40,14 @@ const mount = (role: 'ADMIN' | 'ARTIST' = 'ADMIN', route = `/projects/${PROJECT_
     api: baseApi,
   });
 
+// Les onglets portent désormais `role="tab"` et `aria-selected` : sans eux, la synthèse
+// vocale n'annonçait que des boutons interchangeables, sans dire lequel était actif.
 describe('ProjectPage', () => {
   it('ouvre l’aperçu par défaut et sort le nom du projet du serveur', async () => {
     mount();
 
     expect(await screen.findByRole('heading', { name: 'Alpha', level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: new RegExp(t('project.tab.overview')) })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: new RegExp(t('project.tab.overview')) })).toBeInTheDocument();
   });
 
   it('compte les plans et les assets d’après le total du serveur, pas la page chargée', async () => {
@@ -53,17 +55,15 @@ describe('ProjectPage', () => {
 
     // 42 plans existent, aucun n'est encore descendu : le badge doit dire 42.
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: new RegExp(`^${t('shots.title')}`) })).toHaveTextContent(
-        '42',
-      ),
+      expect(screen.getByRole('tab', { name: new RegExp(`^${t('shots.title')}`) })).toHaveTextContent('42'),
     );
-    expect(screen.getByRole('button', { name: /^Assets/ })).toHaveTextContent('7');
+    expect(screen.getByRole('tab', { name: /^Assets/ })).toHaveTextContent('7');
   });
 
   it('écrit l’onglet actif dans l’URL pour qu’un lien s’ouvre au bon endroit', async () => {
     const { user, currentPath } = mount();
 
-    await user.click(await screen.findByRole('button', { name: new RegExp(`^${t('shots.title')}`) }));
+    await user.click(await screen.findByRole('tab', { name: new RegExp(`^${t('shots.title')}`) }));
 
     await waitFor(() => expect(currentPath()).toContain('tab=shots'));
     // Le panneau a suivi : l'en-tête de la section des plans est monté.
@@ -73,7 +73,7 @@ describe('ProjectPage', () => {
   it('monte directement l’onglet demandé par l’URL', async () => {
     mount('ADMIN', `/projects/${PROJECT_ID}?tab=members`);
 
-    expect(await screen.findByRole('button', { name: new RegExp(t('nav.members')) })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: new RegExp(t('nav.members')) })).toBeInTheDocument();
     // L'aperçu n'est pas monté : un seul panneau à la fois.
     expect(screen.queryByRole('heading', { name: t('shots.title'), level: 2 })).not.toBeInTheDocument();
   });
@@ -88,18 +88,16 @@ describe('ProjectPage', () => {
       t('admin.tab.settings'),
       t('admin.tab.trash'),
     ]) {
-      expect(screen.queryByRole('button', { name: new RegExp(label) })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: new RegExp(label) })).not.toBeInTheDocument();
     }
     // Les onglets de consultation, eux, restent là.
-    expect(screen.getByRole('button', { name: new RegExp(`^${t('shots.title')}`) })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: new RegExp(`^${t('shots.title')}`) })).toBeInTheDocument();
   });
 
   it('n’affiche l’onglet ShotGrid que sur un projet réellement relié', async () => {
     const { unmount } = mount();
     await screen.findByRole('heading', { name: 'Alpha', level: 1 });
-    expect(
-      screen.queryByRole('button', { name: new RegExp(t('shotgrid.tab.label')) }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: new RegExp(t('shotgrid.tab.label')) })).not.toBeInTheDocument();
     unmount();
 
     renderWithProviders(<ProjectPage />, {
@@ -113,8 +111,6 @@ describe('ProjectPage', () => {
       },
     });
 
-    expect(
-      await screen.findByRole('button', { name: new RegExp(t('shotgrid.tab.label')) }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: new RegExp(t('shotgrid.tab.label')) })).toBeInTheDocument();
   });
 });

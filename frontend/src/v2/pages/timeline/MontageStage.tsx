@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { FileWarning } from 'lucide-react';
 import { VIEWER_ZONE } from '../review/reviewTypes';
+import { isStillClip } from './timelinePlayback';
 import type { TimelineClip } from '../../types/api';
 import { useT } from '../../i18n';
 
@@ -26,6 +27,7 @@ export default function MontageStage({
   overlay,
   onClick,
   zoneRef,
+  stillUrl,
 }: {
   clip: TimelineClip | null;
   active: 'A' | 'B';
@@ -36,6 +38,8 @@ export default function MontageStage({
   onClick?: () => void;
   /** Zone d'image — cible du plein écran « vidéo seule » du transport. */
   zoneRef?: RefObject<HTMLDivElement | null>;
+  /** Source pleine résolution quand le plan courant est une image fixe. */
+  stillUrl?: string | null;
 }) {
   const t = useT();
   const local = useRef<HTMLDivElement>(null);
@@ -43,6 +47,11 @@ export default function MontageStage({
   const [aspect, setAspect] = useState(16 / 9);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const card = clip !== null && clip.mediaId === null;
+  // Un plan dont la version publiée est une image : il occupe sa place dans le montage, mais
+  // ne passe PAS par l'élément vidéo — un JPEG confié à `<video>` échoue au démultiplexage
+  // et bloquait la lecture de tout le montage dès que le premier plan en portait une.
+  const still = isStillClip(clip);
+  const stillSrc = stillUrl ?? clip?.thumbnailUrl ?? null;
 
   // Boîte d'affichage : l'image occupe tout l'espace disponible à son ratio, et l'overlay
   // partage la même boîte — même calcul que le lecteur de review.
@@ -71,7 +80,7 @@ export default function MontageStage({
           onClick={onClick}
           onLoadedMetadata={(e) => onMeta(e.currentTarget, 'A')}
           className={`absolute inset-0 h-full w-full cursor-pointer object-contain ${
-            active === 'A' && !card ? '' : 'invisible'
+            active === 'A' && !card && !still ? '' : 'invisible'
           }`}
           playsInline
           crossOrigin="anonymous"
@@ -81,11 +90,32 @@ export default function MontageStage({
           onClick={onClick}
           onLoadedMetadata={(e) => onMeta(e.currentTarget, 'B')}
           className={`absolute inset-0 h-full w-full cursor-pointer object-contain ${
-            active === 'B' && !card ? '' : 'invisible'
+            active === 'B' && !card && !still ? '' : 'invisible'
           }`}
           playsInline
           crossOrigin="anonymous"
         />
+        {still && stillSrc && (
+          // Bouton plutôt qu'`<img onClick>` : l'image occupe la place du lecteur, et
+          // « cliquer pour lire/mettre en pause » doit répondre au clavier comme au pointeur.
+          <button
+            type="button"
+            onClick={onClick}
+            aria-label={t('timeline.navHint')}
+            className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0"
+          >
+            <img
+              src={stillSrc}
+              alt={clip?.mediaName ?? ''}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth > 0) setAspect(img.naturalWidth / img.naturalHeight);
+              }}
+              className="h-full w-full object-contain"
+              crossOrigin="anonymous"
+            />
+          </button>
+        )}
         {overlay}
         {card && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">

@@ -78,5 +78,14 @@
   "notesSheet.printHint": "Print this page and choose “Save as PDF” to keep a copy.",
   "notesSheet.empty": "No notes to print here.",
   "notesSheet.reply": "Reply",
-  "notesSheet.truncated": "Only the first {count} notes are shown."
+  "notesSheet.truncated": "Only the first {count} notes are shown.",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Free software under the AGPL-3.0 license, with no warranty.",
+  "license.source": "Source code",
+  "unsubscribe.confirm.title": "Confirm your unsubscribe",
+  "unsubscribe.confirm.body": "Confirm below to stop receiving this recurring email. You can turn it back on at any time from your ReView profile.",
+  "unsubscribe.done.title": "You are unsubscribed",
+  "unsubscribe.done.body": "You will no longer receive this recurring email. You can turn it back on at any time from your ReView profile.",
+  "unsubscribe.invalid.title": "This link is no longer valid",
+  "unsubscribe.invalid.body": "The link may have expired or been altered. Open your ReView profile to change your email preferences.",
+  "unsubscribe.action": "Unsubscribe"
 }

@@ -19,6 +19,7 @@ const clip = (over: Partial<TimelineClip> & { order: number; startTime: number }
   departmentName: 'Animation',
   mediaId: 100 + over.order,
   mediaName: 'plan.mp4',
+  mediaKind: 'VIDEO',
   thumbnailUrl: null,
   placeholder: false,
   durationMismatch: false,

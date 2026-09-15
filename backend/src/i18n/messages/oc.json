@@ -78,5 +78,14 @@
   "notesSheet.printHint": "Imprimissètz aquesta pagina e causissètz « Enregistrar en PDF » per ne gardar una còpia.",
   "notesSheet.empty": "I a cap de nòta d'imprimir aicí.",
   "notesSheet.reply": "Responsa",
-  "notesSheet.truncated": "Solas las {count} primièras nòtas son mostradas."
+  "notesSheet.truncated": "Solas las {count} primièras nòtas son mostradas.",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Logicial liure jos licéncia AGPL-3.0, sens cap de garantia.",
+  "license.source": "Còdi font",
+  "unsubscribe.confirm.title": "Confirmatz vòstra desabonament",
+  "unsubscribe.confirm.body": "Confirmatz çai jos per pas mai recebre aqueste corrièl recurrent. Lo poiretz tornar activar quand volgatz dempuèi vòstre perfil ReView.",
+  "unsubscribe.done.title": "Sètz desabonat",
+  "unsubscribe.done.body": "Recebretz pas mai aqueste corrièl recurrent. Lo poiretz tornar activar quand volgatz dempuèi vòstre perfil ReView.",
+  "unsubscribe.invalid.title": "Aqueste ligam es pas mai valid",
+  "unsubscribe.invalid.body": "Benlèu que lo ligam a expirat o es estat modificat. Dobrissètz vòstre perfil ReView per cambiar vòstras preferéncias de corrièl.",
+  "unsubscribe.action": "Se desabonar"
 }

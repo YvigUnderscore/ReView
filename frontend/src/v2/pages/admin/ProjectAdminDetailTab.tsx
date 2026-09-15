@@ -119,7 +119,11 @@ export default function ProjectAdminDetailTab() {
             <Row label={t('pipeline.startFrame')} value={String(project.startFrame)} />
             <Row
               label={t('pipeline.naming')}
-              value={`${settings.nomenclature.sequencePrefix}### / ${settings.nomenclature.shotPrefix}### (pas ${settings.nomenclature.step})`}
+              value={t('pipeline.namingValue', {
+                sequence: settings.nomenclature.sequencePrefix,
+                shot: settings.nomenclature.shotPrefix,
+                step: settings.nomenclature.step,
+              })}
             />
             <Row
               label={t('pipeline.departments')}
@@ -129,7 +133,7 @@ export default function ProjectAdminDetailTab() {
               label={t('projectAdmin.naming')}
               value={
                 settings.naming.mode === 'off'
-                  ? 'libre'
+                  ? t('naming.unrestricted')
                   : `${settings.naming.mode} (${settings.naming.pattern})`
               }
             />

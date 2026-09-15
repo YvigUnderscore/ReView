@@ -2,7 +2,7 @@
 
 *Runtime health, studio limits, queues, trash and audit — the screens to open when something breaks, or deletes itself.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-15
 
 This page covers the parts of the admin area that are about the **instance** rather than about
 the work: is it healthy, what are its limits, what is queued, what was deleted, and who did
@@ -79,10 +79,11 @@ text fields:
 | Studio language | `studio_default_locale` | `en` | Language of accounts that never chose one, and of **every server-rendered email**. Changing it does not change your own interface language |
 | Accent colour | `studio_accent` | `#00b3c4` | Applied to the application and to the login page; the reset button clears it back to the product accent |
 
-Size fields are entered in **MB or GB and stored in bytes**, using decimal units — 1 GB is
-1 000 000 000 bytes, so the 5 GiB default reads back as `5.37 Go` in the field. There is **one**
-`max_file_size` for the whole instance: it is not per media kind, and an EXR sequence is measured
-as the sum of what it uploads.
+Size fields are entered in **MB or GB and stored in bytes**, in binary units — 1 GB is
+1 073 741 824 bytes, the same base the file managers and the MinIO console count in, and the same
+one every size shown elsewhere in the administration uses. A value typed here therefore reads
+back unchanged. There is **one** `max_file_size` for the whole instance: it is not per media
+kind, and an EXR sequence is measured as the sum of what it uploads.
 
 > [!CAUTION]
 > Two keys are **never readable and never writable through this screen**: `smtp_config` and

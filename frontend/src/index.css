@@ -16,6 +16,18 @@
    * Toute couleur de l'app passe par ces tokens — statuts inclus (success/warning/info/accent-2).
    */
   :root {
+    /*
+     * Schéma de couleurs déclaré — il ne l'était nulle part.
+     *
+     * Deux conséquences. D'abord les contrôles natifs, les barres de défilement et le fond du
+     * canevas suivaient l'OS et non le thème choisi dans ReView. Ensuite, et surtout, les
+     * **147 figures de la documentation** : servies en `<img src="…svg">`, elles portent
+     * chacune leur variante `@media (prefers-color-scheme: dark)`, qui se résolvait contre le
+     * système. Un lecteur en thème clair dont l'OS est sombre voyait donc des pavés bleu nuit
+     * au milieu d'une page blanche. `color-scheme` se propage à l'image embarquée : la figure
+     * suit désormais le thème de l'application, sans toucher aux 147 fichiers.
+     */
+    color-scheme: light;
     --background: 220 25% 97%;
     --foreground: 222 30% 10%;
     --card: 0 0% 100%;
@@ -89,6 +101,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 220 29% 6%;
     --foreground: 207 22% 92%;
     --card: 223 28% 10%;

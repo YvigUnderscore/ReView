@@ -166,7 +166,7 @@ export default function Model3DReview({
     getBasePose: model3d.getActivationView,
   });
 
-  const { state, update } = useChromeState('MODEL_3D');
+  const { state, update } = useChromeState('MODEL_3D', data.media.published);
   // Mode Mise en scène = atelier caméra : entrer dans le mode active le layout (PiP +
   // caméra-objet), en sortir le désactive. L'interrupteur du panneau Caméra reste en override.
   const { setLayoutMode } = model3d;
@@ -195,6 +195,8 @@ export default function Model3DReview({
 
   return (
     <ReviewChrome
+      // Verrou de publication : les modes qui altèrent le média sont grisés, pas offerts.
+      published={data.media.published}
       kind="MODEL_3D"
       state={state}
       onState={update}

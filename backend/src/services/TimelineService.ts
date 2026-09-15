@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Role, type Prisma } from '@prisma/client';
+import { MediaKind, Role, type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { resolveProjectSettingsById, type Department } from '../lib/projectSettings';
@@ -176,6 +176,13 @@ export interface TimelineClip {
   departmentName: string | null;
   mediaId: number | null;
   mediaName: string | null;
+  /**
+   * Nature du média retenu. Le montage privilégie la vidéo (`preferPlayable`), mais un plan
+   * dont la seule version publiée est une image atterrit bel et bien ici — et le lecteur doit
+   * le savoir : servi à une balise `<video>`, un JPEG ne se démultiplexe pas et la lecture
+   * reste bloquée sur le plan sans le moindre message.
+   */
+  mediaKind: MediaKind | null;
   thumbnailUrl: string | null;
   placeholder: boolean;
   durationMismatch: boolean;
@@ -220,9 +227,11 @@ export async function resolve(timelineId: number): Promise<TimelineView> {
 
   const thumbs = new Map<number, string | null>();
   const names = new Map<number, string>();
+  const kinds = new Map<number, MediaKind>();
   for (const pick of picks.values()) {
     if (!pick.media) continue;
     names.set(pick.media.id, pick.media.originalName);
+    kinds.set(pick.media.id, pick.media.kind);
     thumbs.set(
       pick.media.id,
       pick.media.thumbnailKey ? await storage.getPresignedGetUrl(pick.media.thumbnailKey) : null,
@@ -250,6 +259,7 @@ export async function resolve(timelineId: number): Promise<TimelineView> {
       ...it,
       departmentName: nameOf(it.department),
       mediaName: it.mediaId !== null ? (names.get(it.mediaId) ?? null) : null,
+      mediaKind: it.mediaId !== null ? (kinds.get(it.mediaId) ?? null) : null,
       thumbnailUrl: it.mediaId !== null ? (thumbs.get(it.mediaId) ?? null) : null,
     })),
     totalDuration: totalDuration(items),

@@ -7,6 +7,8 @@ import {
   formatTimecode,
   globalTimeOf,
   localTimeAt,
+  holdsOnClock,
+  isStillClip,
   nextPlayableIndex,
   sequenceSpans,
   sequenceStarts,
@@ -27,6 +29,7 @@ const clip = (over: Partial<TimelineClip> & { order: number; startTime: number }
   departmentName: 'Animation',
   mediaId: 100 + over.order,
   mediaName: 'plan.mp4',
+  mediaKind: 'VIDEO',
   thumbnailUrl: null,
   placeholder: false,
   durationMismatch: false,
@@ -158,8 +161,48 @@ describe('nextPlayableIndex', () => {
     expect(nextPlayableIndex(withGap, 0)).toBe(2);
   });
 
+  it('saute aussi les plans-image : rien à précharger dans un élément vidéo', () => {
+    const withStill = [
+      clip({ order: 0, startTime: 0 }),
+      clip({ order: 1, startTime: 2, mediaKind: 'IMAGE', mediaName: 'still.jpg' }),
+      clip({ order: 2, startTime: 4 }),
+    ];
+    expect(nextPlayableIndex(withStill, 0)).toBe(2);
+  });
+
   it('rend -1 en fin de montage', () => {
     expect(nextPlayableIndex(items, 2)).toBe(-1);
+  });
+});
+
+describe('holdsOnClock', () => {
+  // Le montage restait bloqué à 00:00 quand son premier plan portait une image : servie à
+  // une balise `<video>`, elle échoue au démultiplexage et la lecture ne démarre jamais.
+  it('tient sur l’horloge un carton comme une image', () => {
+    expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaId: null, placeholder: true }))).toBe(true);
+    expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaKind: 'IMAGE' }))).toBe(true);
+  });
+
+  it('laisse la vidéo mener sa propre horloge', () => {
+    expect(holdsOnClock(clip({ order: 0, startTime: 0 }))).toBe(false);
+  });
+
+  it('traite 3D et splat comme des plans vidéo (le montage les encode en proxy)', () => {
+    expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaKind: 'MODEL_3D' }))).toBe(false);
+    expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaKind: 'SPLAT' }))).toBe(false);
+  });
+
+  it('ne se prononce pas sur un plan absent', () => {
+    expect(holdsOnClock(null)).toBe(false);
+    expect(holdsOnClock(undefined)).toBe(false);
+  });
+});
+
+describe('isStillClip', () => {
+  it('distingue l’image fixe du carton vide', () => {
+    expect(isStillClip(clip({ order: 0, startTime: 0, mediaKind: 'IMAGE' }))).toBe(true);
+    expect(isStillClip(clip({ order: 0, startTime: 0, mediaId: null, placeholder: true }))).toBe(false);
+    expect(isStillClip(clip({ order: 0, startTime: 0 }))).toBe(false);
   });
 });
 

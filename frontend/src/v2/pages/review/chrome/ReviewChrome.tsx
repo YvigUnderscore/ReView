@@ -9,7 +9,14 @@ import { SegmentedControl } from '../../../components/ui/segmented-control';
 import ToolRail from './ToolRail';
 import InspectorDock from './InspectorDock';
 import { useReviewHeaderSlots } from '../header/reviewHeaderSlots';
-import { canSwitchMode, modesFor, switcherModesFor, type ModeId, type ReviewMode } from './modes';
+import {
+  canSwitchMode,
+  isLockedByPublication,
+  modesFor,
+  switcherModesFor,
+  type ModeId,
+  type ReviewMode,
+} from './modes';
 import { panelsFor, type PanelId } from './panels';
 import { toolsFor, viewActionsFor, type ReviewTool, type ToolId, type ViewAction } from './tools';
 import type { ChromeState } from './chromeState';
@@ -41,6 +48,7 @@ export default function ReviewChrome({
   onViewAction,
   dirty,
   hiddenTools,
+  published = false,
   children,
 }: {
   kind: MediaKind;
@@ -87,6 +95,11 @@ export default function ReviewChrome({
   dirty?: boolean;
   /** Outils du mode que ce viewer n'implémente pas — retirés du rail. */
   hiddenTools?: ToolId[];
+  /**
+   * Le média est publié : les modes qui l'ALTÈRENT (trim, nettoyage) sont grisés plutôt
+   * qu'offerts pour finir en 403. La mise en scène reste ouverte — exception documentée.
+   */
+  published?: boolean;
   /** Le viewport, plein espace. */
   children: ReactNode;
 }) {
@@ -129,12 +142,20 @@ export default function ReviewChrome({
             <SegmentedControl
               size="lg"
               label={t('review.mode')}
-              items={modes.map((m) => ({
-                value: m.value,
-                label: t(m.labelKey),
-                icon: m.icon,
-                hint: `${t(m.labelKey)} (${modes.indexOf(m) + 1}) — ${t(m.hintKey)}`,
-              }))}
+              items={modes.map((m) => {
+                const locked = isLockedByPublication(m.value, published);
+                return {
+                  value: m.value,
+                  label: t(m.labelKey),
+                  icon: m.icon,
+                  disabled: locked,
+                  // Le verrou se dit dans l'infobulle : un segment grisé sans explication
+                  // laisse croire à une panne plutôt qu'à une règle.
+                  hint: locked
+                    ? `${t(m.labelKey)} — ${t('error.PUBLISHED_LOCKED')}`
+                    : `${t(m.labelKey)} (${modes.indexOf(m) + 1}) — ${t(m.hintKey)}`,
+                };
+              })}
               value={state.mode}
               onChange={(mode: ModeId) => onState({ mode })}
             />

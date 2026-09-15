@@ -78,5 +78,14 @@
   "notesSheet.printHint": "Drucke Sie die Syte un wähle Sie „Als PDF spychere“, fer e Kopie z behalte.",
   "notesSheet.empty": "Do git s kei Notize zum Drucke.",
   "notesSheet.reply": "Antwort",
-  "notesSheet.truncated": "S wärde nur di erschte {count} Notize zeigt."
+  "notesSheet.truncated": "S wärde nur di erschte {count} Notize zeigt.",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Freji Software unter d'r Lizänz AGPL-3.0, ohne jedi Garantie.",
+  "license.source": "Quellcode",
+  "unsubscribe.confirm.title": "Abmäldig bestätige",
+  "unsubscribe.confirm.body": "Bestätige Si unte, um die wiederkehrend E-Mail nümme z'überchò. Si chönne si jederziit im ReView-Profil wider iischalte.",
+  "unsubscribe.done.title": "Si sind abgmäldet",
+  "unsubscribe.done.body": "Si überchöme die wiederkehrend E-Mail nümme. Si chönne si jederziit im ReView-Profil wider iischalte.",
+  "unsubscribe.invalid.title": "De Link isch nümme gültig",
+  "unsubscribe.invalid.body": "De Link isch villicht abglaufe oder gänderet worde. Mache Si Ihres ReView-Profil uf, zum d'E-Mail-Iistellige z'ändere.",
+  "unsubscribe.action": "Abmälde"
 }

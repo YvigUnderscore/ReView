@@ -20,6 +20,7 @@ const clip = (order: number, mediaId: number | null): TimelineClip => ({
   departmentName: 'Animation',
   mediaId,
   mediaName: mediaId ? 'plan.mp4' : null,
+  mediaKind: 'VIDEO',
   thumbnailUrl: null,
   placeholder: mediaId === null,
   durationMismatch: false,

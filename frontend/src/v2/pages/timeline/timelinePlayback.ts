@@ -106,9 +106,33 @@ export function trackLayout(items: readonly TimelineClip[], total: number): Trac
   }));
 }
 
-/** Le plan lisible suivant (les cartons n'ont rien à charger), null en fin de montage. */
+/**
+ * Ce plan est-il tenu par une horloge plutôt que par un élément vidéo ?
+ *
+ * Deux cas s'y retrouvent : le carton (aucun média publié) et l'**image fixe**. Une image
+ * confiée à une balise `<video>` échoue au démultiplexage (`DEMUXER_ERROR_COULD_NOT_OPEN`)
+ * et la lecture ne démarre jamais — c'est ce qui bloquait tout montage dont le premier plan
+ * portait une image : le bouton restait sur « Lire » et le compteur sur `00:00`, sans un mot.
+ * `preferPlayable` côté serveur privilégie la vidéo, mais un plan dont la seule version
+ * publiée est une image arrive tel quel dans le montage.
+ */
+export function holdsOnClock(clip: TimelineClip | null | undefined): boolean {
+  if (!clip) return false;
+  return clip.mediaId === null || clip.mediaKind === 'IMAGE';
+}
+
+/** Vrai quand le plan porte une image fixe à afficher (et non un carton vide). */
+export function isStillClip(clip: TimelineClip | null | undefined): boolean {
+  return !!clip && clip.mediaId !== null && clip.mediaKind === 'IMAGE';
+}
+
+/**
+ * Le plan lisible suivant — celui qu'un tampon vidéo peut précharger. Les cartons **et les
+ * images** n'ont rien à charger dans un élément vidéo : ils sont sautés ici et tenus par
+ * l'horloge le moment venu.
+ */
 export function nextPlayableIndex(items: readonly TimelineClip[], from: number): number {
-  for (let i = from + 1; i < items.length; i++) if (items[i].mediaId !== null) return i;
+  for (let i = from + 1; i < items.length; i++) if (!holdsOnClock(items[i])) return i;
   return -1;
 }
 

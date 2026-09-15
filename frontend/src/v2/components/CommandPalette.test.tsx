@@ -168,3 +168,50 @@ describe('CommandPalette — la frappe n’inonde pas le serveur', () => {
     expect(screen.getByText(/palette\.empty|No results/)).toBeInTheDocument();
   });
 });
+
+/**
+ * Le clavier de la palette.
+ *
+ * HONNÊTETÉ SUR LA PORTÉE : la défaillance d'origine — aucun item actif après la frappe, donc
+ * une première Entrée perdue — n'a été reproduite qu'au NAVIGATEUR. Sous jsdom, cmdk
+ * resélectionne de lui-même et ces assertions passaient déjà avant le correctif. Elles tiennent
+ * donc l'invariant (« un et un seul item actif dès que les résultats sont là »), pas le
+ * scénario exact ; un futur changement qui laisserait la liste sans sélection les ferait tomber.
+ */
+describe('CommandPalette — le clavier', () => {
+  /** L'item que cmdk tient pour actif, ou null si la liste n'en désigne aucun. */
+  const activeItem = () => document.querySelector('[cmdk-item][aria-selected="true"]');
+
+  it('désigne le premier résultat dès qu’il arrive', async () => {
+    const { user } = mount();
+    await user.type(input(), 'SH0120');
+    await screen.findByText('SH0120_comp_v012.mov');
+    // Aucun élément n'était sélectionné : `shouldFilter={false}` prive cmdk de la passe qui
+    // resélectionne le premier item, et la valeur active restait celle d'une action rapide
+    // démontée entre-temps.
+    expect(activeItem()).not.toBeNull();
+  });
+
+  it('ouvre le résultat sur une SEULE frappe d’Entrée', async () => {
+    const { user, currentPath, onOpenChange } = mount();
+    await user.type(input(), 'SH0120');
+    await screen.findByText('SH0120_comp_v012.mov');
+    // Sans flèche préalable : c'est précisément ce qui ne marchait pas.
+    await user.keyboard('{Enter}');
+    expect(currentPath()).not.toBe('/');
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('redésigne le premier item quand la requête change', async () => {
+    const { user } = mount();
+    await user.type(input(), 'SH0120');
+    await screen.findByText('SH0120_comp_v012.mov');
+    const first = activeItem()?.getAttribute('data-value');
+    await user.clear(input());
+    await user.type(input(), 'ana');
+    await screen.findByText('Dailies jeudi');
+    expect(activeItem()).not.toBeNull();
+    expect(activeItem()?.getAttribute('data-value')).not.toBe(undefined);
+    expect(first).toBeTruthy();
+  });
+});

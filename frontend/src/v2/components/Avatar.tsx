@@ -3,7 +3,7 @@
 
 import type { UserStatus } from '../types/api';
 import { STATUS_COLOR } from '../lib/userStatus';
-import { userColor as colorFor } from '../lib/userColor';
+import { readableInk, userColor as colorFor } from '../lib/userColor';
 import { useT } from '../i18n';
 
 /**
@@ -38,8 +38,16 @@ export default function Avatar({
         />
       ) : (
         <div
-          className="flex items-center justify-center rounded-full font-semibold text-white"
-          style={{ width: size, height: size, background: colorFor(seed), fontSize: size * 0.4 }}
+          className="flex items-center justify-center rounded-full font-semibold"
+          // Encre calculée, pas figée en blanc : aucune des douze teintes de la palette ne
+          // tenait 4,5:1 avec du blanc (1,98:1 au pire). `readableInk` choisit la meilleure.
+          style={{
+            width: size,
+            height: size,
+            background: colorFor(seed),
+            color: readableInk(colorFor(seed)),
+            fontSize: size * 0.4,
+          }}
         >
           {initials}
         </div>

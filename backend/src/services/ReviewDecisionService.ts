@@ -140,7 +140,7 @@ export async function decide(
 
   logAudit({
     userId: user.id,
-    action: 'version.decision',
+    action: 'VERSION_DECISION',
     entityType: 'Version',
     entityId: versionId,
     metadata: { status: status.name, comment: comment ?? null },
@@ -264,7 +264,7 @@ export async function decideMany(
   }
   logAudit({
     userId: user.id,
-    action: 'version.decision.bulk',
+    action: 'VERSION_DECISION_BULK',
     entityType: 'Version',
     entityId: statusId,
     metadata: { status: status.name, ids: versionIds, updated, failed },

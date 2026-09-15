@@ -175,7 +175,7 @@ export default function AdminPage() {
             if (inGroup.length === 0) return null;
             return (
               <div key={group} className="flex gap-1 md:flex-col">
-                <div className="hidden px-3 pb-1 pt-3 text-2xs font-semibold section-label tracking-wider text-muted-foreground/70 first:pt-0 md:block">
+                <div className="hidden px-3 pb-1 pt-3 text-2xs font-semibold section-label tracking-wider text-muted-foreground first:pt-0 md:block">
                   {adminGroupLabel(t, group)}
                 </div>
                 {inGroup.map((s) => {

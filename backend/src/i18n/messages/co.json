@@ -78,5 +78,14 @@
   "notesSheet.printHint": "Stampate sta pagina è sceglite « Arregistrà in PDF » per tene una copia.",
   "notesSheet.empty": "Ùn ci hè nisuna nota da stampà quì.",
   "notesSheet.reply": "Risposta",
-  "notesSheet.truncated": "Solu e prime {count} note sò mustrate."
+  "notesSheet.truncated": "Solu e prime {count} note sò mustrate.",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Software liberu sottu licenza AGPL-3.0, senza nisuna guaranzia.",
+  "license.source": "Codice surghjente",
+  "unsubscribe.confirm.title": "Cunfirmate a vostra disiscrizzione",
+  "unsubscribe.confirm.body": "Cunfirmate quì sottu per ùn ricevà più issu email ricurrente. U pudete riattivà quandu vulete da u vostru prufilu ReView.",
+  "unsubscribe.done.title": "Site disiscrittu",
+  "unsubscribe.done.body": "Ùn riceverete più issu email ricurrente. U pudete riattivà quandu vulete da u vostru prufilu ReView.",
+  "unsubscribe.invalid.title": "Issu ligame ùn hè più validu",
+  "unsubscribe.invalid.body": "U ligame pò esse scadutu o cambiatu. Apre u vostru prufilu ReView per cambià e preferenze di email.",
+  "unsubscribe.action": "Disiscriviisi"
 }

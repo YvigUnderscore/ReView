@@ -19,7 +19,7 @@ import {
   ContextMenuTrigger,
 } from '../../components/ui/context-menu';
 import type { DashboardTask } from './homeTypes';
-import { useT } from '../../i18n';
+import { intlLocale, useT } from '../../i18n';
 
 /**
  * Mes tâches assignées (non approuvées), triées par urgence côté serveur.
@@ -38,7 +38,7 @@ function DueDate({ iso }: { iso: string }) {
     <span
       className={`shrink-0 text-xs ${overdue ? 'font-medium text-destructive' : 'text-muted-foreground'}`}
     >
-      {t('home.due', { date: due.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) })}
+      {t('home.due', { date: due.toLocaleDateString(intlLocale(), { day: 'numeric', month: 'short' }) })}
     </span>
   );
 }

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MonitorSmartphone, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,6 +33,9 @@ const fmt = (iso: string) =>
   });
 
 /** Sessions actives du compte (36.B) : liste des appareils connectés + révocation. */
+/** Sessions affichées d'emblée ; au-delà, un bouton les déplie. */
+const SESSIONS_PREVIEW = 8;
+
 export default function SessionsSection() {
   const t = useT();
   const qc = useQueryClient();
@@ -41,6 +45,10 @@ export default function SessionsSection() {
     queryFn: () => api.get<{ sessions: SessionRow[] }>('/api/auth/sessions').then((d) => d.sessions),
   });
   const sessions = sessionsQ.data ?? [];
+  // Sur un compte actif, la liste complète (deux cents lignes constatées) écrasait tout le
+  // reste du profil. On en montre assez pour reconnaître ses appareils, le reste à la demande.
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? sessions : sessions.slice(0, SESSIONS_PREVIEW);
 
   const revoke = async (s: SessionRow) => {
     try {
@@ -61,7 +69,7 @@ export default function SessionsSection() {
       <h2 className="text-sm font-semibold">{t('sessions.title')}</h2>
       {sessions.length === 0 && <p className="text-xs text-muted-foreground">{t('sessions.empty')}</p>}
       <div className="space-y-1.5">
-        {sessions.map((s) => (
+        {shown.map((s) => (
           <div
             key={s.id}
             className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -90,6 +98,15 @@ export default function SessionsSection() {
             </Button>
           </div>
         ))}
+        {sessions.length > SESSIONS_PREVIEW && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-primary hover:underline"
+          >
+            {expanded ? t('sessions.showFewer') : t('sessions.showAll', { count: sessions.length })}
+          </button>
+        )}
       </div>
     </Card>
   );

@@ -24,6 +24,7 @@ import { useAnnotations } from './review/useAnnotations';
 import { useAnnotationOverlay } from './review/useAnnotationOverlay';
 import { splitAnnotationParts } from './review/reviewTypes';
 import MontageStage from './timeline/MontageStage';
+import { useStillSource } from './timeline/useStillSource';
 import MontageTimeline from './timeline/MontageTimeline';
 import MontagePanels from './timeline/MontagePanels';
 import MontageHeader, { ShareToShotItem } from './timeline/MontageHeader';
@@ -88,6 +89,9 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
   const stageRef = useRef<HTMLDivElement>(null);
   const playback = useContinuousPlayback(items, videoA, videoB, Number(params.get('t')) || 0);
   const { clip } = playback;
+  // Plan-image : il occupe sa place dans le montage, mais par une `<img>` — une image confiée
+  // à l'élément vidéo échoue au démultiplexage et bloquait la lecture de tout le montage.
+  const stillUrl = useStillSource(clip);
 
   const { state, update } = useChromeState('VIDEO');
   const ann = useAnnotations({ defaultColor: userColor(userId) });
@@ -268,6 +272,7 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
               active={playback.active}
               videoA={videoA}
               videoB={videoB}
+              stillUrl={stillUrl}
               overlay={renderOverlay()}
               onClick={playback.toggle}
             />

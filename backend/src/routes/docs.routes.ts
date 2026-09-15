@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { buildOpenApiDocument } from '../lib/openapi';
 import { getSourceUrl } from '../lib/settings';
+import { localeFromAcceptLanguage, t } from '../i18n';
 // L'URL atterrit dans un `href` : `safeSourceUrl` a filtré le protocole, on neutralise le reste.
 import { escapeHtml } from '../lib/html';
 
@@ -67,12 +68,19 @@ router.get('/openapi.json', (_req, res) => {
   res.json(buildOpenApiDocument());
 });
 
-router.get('/docs', async (_req, res) => {
+router.get('/docs', async (req, res) => {
   const sourceUrl = escapeHtml(await getSourceUrl());
   const nonce = randomBytes(16).toString('base64');
+  // Page publique : pas de compte, donc pas de préférence enregistrée — la langue se négocie
+  // sur l'en-tête. La mention AGPL §13 était écrite en dur EN FRANÇAIS ici, alors que la même
+  // mention est rendue en anglais par le front : une mention légale ne peut pas dépendre de
+  // la porte d'entrée. Les deux surfaces partagent désormais les clés `license.*`.
+  const locale = localeFromAcceptLanguage(req.headers['accept-language']);
   res.setHeader('Content-Security-Policy', csp(nonce));
+  // `Vary` : sans lui, un cache intermédiaire servirait la version française à tout le monde.
+  res.setHeader('Vary', 'Accept-Language');
   res.type('html').send(`<!doctype html>
-<html>
+<html lang="${escapeHtml(locale)}">
   <head>
     <title>ReView API — Documentation</title>
     <meta charset="utf-8" />
@@ -82,8 +90,8 @@ router.get('/docs', async (_req, res) => {
     <script nonce="${nonce}" id="api-reference" data-url="/api/openapi.json"></script>
     <script src="${SCALAR_SRC}" integrity="${SCALAR_SRI}" crossorigin="anonymous"></script>
     <footer style="padding: 16px; text-align: center; font: 12px/1.5 system-ui, sans-serif; opacity: 0.7">
-      ReView — Copyright © 2026 Yvig Bidon. Logiciel libre sous licence AGPL-3.0-or-later,
-      fourni sans aucune garantie. <a href="${sourceUrl}" rel="noreferrer">Code source</a>
+      ${escapeHtml(t(locale, 'license.notice'))}
+      <a href="${sourceUrl}" rel="noreferrer">${escapeHtml(t(locale, 'license.source'))}</a>
     </footer>
   </body>
 </html>`);

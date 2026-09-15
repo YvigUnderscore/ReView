@@ -160,7 +160,10 @@ export default function ShotPage() {
       kind="shot"
       id={shotId}
       projectId={projectId}
-      title={shot ? shot.code : `${t('shots.title')} #${shotId}`}
+      // Titre d'attente, le temps que la fiche arrive. Il disait « Shots #21 » — le titre de
+      // la LISTE, au pluriel, pour un plan unique. L'identifiant seul ne ment sur rien et
+      // n'a pas de forme grammaticale à accorder dans quatorze langues.
+      title={shot ? shot.code : `#${shotId}`}
       subtitle={shot?.name && shot.name !== shot.code ? shot.name : null}
       entity={shot ?? {}}
       thumbnailUrl={shot?.thumbnailUrl}

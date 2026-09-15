@@ -78,5 +78,14 @@
   "notesSheet.printHint": "이 페이지를 인쇄하고 “PDF로 저장”을 선택하면 사본을 남길 수 있습니다.",
   "notesSheet.empty": "여기에는 인쇄할 노트가 없습니다.",
   "notesSheet.reply": "답글",
-  "notesSheet.truncated": "처음 {count}개의 노트만 표시합니다."
+  "notesSheet.truncated": "처음 {count}개의 노트만 표시합니다.",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. AGPL-3.0 라이선스의 자유 소프트웨어이며, 어떠한 보증도 제공하지 않습니다.",
+  "license.source": "소스 코드",
+  "unsubscribe.confirm.title": "수신 거부 확인",
+  "unsubscribe.confirm.body": "아래에서 확인하면 이 정기 메일을 더 이상 받지 않습니다. ReView 프로필에서 언제든지 다시 켤 수 있습니다.",
+  "unsubscribe.done.title": "수신을 거부했습니다",
+  "unsubscribe.done.body": "이 정기 메일을 더 이상 받지 않습니다. ReView 프로필에서 언제든지 다시 켤 수 있습니다.",
+  "unsubscribe.invalid.title": "이 링크는 더 이상 유효하지 않습니다",
+  "unsubscribe.invalid.body": "링크가 만료되었거나 변경되었을 수 있습니다. ReView 프로필에서 메일 환경설정을 변경하세요.",
+  "unsubscribe.action": "수신 거부"
 }

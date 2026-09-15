@@ -122,6 +122,25 @@ export function switcherModesFor(kind: MediaKind): ReviewMode[] {
 export const DEFAULT_MODE: ModeId = 'explore';
 
 /**
+ * Modes qui MODIFIENT le média, et que le verrou de publication (Phase 11) interdit.
+ *
+ * `edit` pose les points d'entrée/sortie d'une vidéo, `clean` masque des splats : les deux
+ * écrivent sur le média lui-même, et le serveur les refuse en 403 `PUBLISHED_LOCKED` dès
+ * qu'il est publié. L'interface les offrait pourtant en entier — on posait ses points de trim
+ * ou sa sélection de nettoyage, et l'on perdait son travail sur un toast d'erreur, à tous les
+ * coups, sur la majorité des médias d'une review.
+ *
+ * `stage` n'en est PAS : la mise en scène (caméra, présentation) reste autorisée après
+ * publication — c'est l'exception documentée, le média n'est pas altéré.
+ */
+const PUBLICATION_LOCKED_MODES: ReadonlySet<ModeId> = new Set<ModeId>(['edit', 'clean']);
+
+/** Ce mode est-il hors d'atteinte parce que le média est publié ? */
+export function isLockedByPublication(mode: ModeId, published: boolean): boolean {
+  return published && PUBLICATION_LOCKED_MODES.has(mode);
+}
+
+/**
  * La bascule de mode est-elle offerte ? Le client reste en exploration, en lecture seule ;
  * et un segment unique ne bascule vers rien — le montage, qui n'a qu'un mode, s'en passe.
  */

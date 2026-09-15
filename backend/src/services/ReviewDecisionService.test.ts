@@ -108,7 +108,7 @@ describe('decide', () => {
     expect(out).toBe(decisionRow);
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(logAudit).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'version.decision', entityId: 42 }),
+      expect.objectContaining({ action: 'VERSION_DECISION', entityId: 42 }),
     );
     expect(emitToProject).toHaveBeenCalledWith(3, 'version:update', expect.objectContaining({ id: 42 }));
     expect(notify).toHaveBeenCalledWith(

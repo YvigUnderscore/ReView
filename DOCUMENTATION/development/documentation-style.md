@@ -2,7 +2,7 @@
 
 *The shape of a page, the five callouts, and the figure contract every diagram must honour.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-15
 
 `DOCUMENTATION/` is a deliverable, not a scratchpad. It is committed with the code, read on
 GitHub, and served inside the application at `/docs` — where a reader browses it by chapter,
@@ -23,7 +23,7 @@ Every page opens with the same three lines, in this order and nothing between th
 
 *Frame-accurate playback, comparison modes and timeline markers for delivered shots.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-15
 ```
 
 | Line | What it becomes |
@@ -117,10 +117,12 @@ Five rules, all enforced by `scripts/check-docs.mjs`:
    figure, not a filename. Add a `<desc>` when the title cannot carry it alone.
 3. A `@media (prefers-color-scheme: dark)` block — **dark is the default theme of ReView**,
    and a figure designed only for white paper is a white rectangle in the middle of a dark
-   page. Note that an SVG loaded as an image follows the **operating system's** scheme, not
-   the theme picked inside the application: a reader on a dark desktop who forces the light
-   theme gets dark figures. That is why every figure draws its own background — it has to
-   read as a self-contained card either way, exactly like the screenshots around it.
+   page. The media query resolves against the **theme picked inside the application**: the
+   stylesheet declares `color-scheme` on the root according to that theme, and the browser
+   propagates it to every embedded image. Until that declaration existed, the query fell back
+   to the operating system, and a reader on a dark desktop who chose the light theme got dark
+   figures in a white page. Keep drawing an explicit background in every figure all the same —
+   it has to read as a self-contained card, exactly like the screenshots around it.
 4. Tags balanced, `</svg>` last — a malformed figure renders as nothing at all.
 5. Referenced by at least one page — an orphan figure is dead weight.
 

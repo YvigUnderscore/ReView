@@ -28,9 +28,30 @@ describe('GET /api/docs — surface publique', () => {
     const res = await request(app).get('/api/docs');
     expect(res.status).toBe(200);
     expect(res.text).toContain('Copyright © 2026 Yvig Bidon');
-    expect(res.text).toContain('AGPL-3.0-or-later');
-    expect(res.text).toContain('sans aucune garantie');
+    expect(res.text).toContain('AGPL-3.0');
+    // La mention est rendue dans la langue de base, comme le reste du produit — elle était
+    // écrite en dur en français, et disait donc autre chose que la même mention côté front.
+    expect(res.text).toContain('with no warranty');
+    expect(res.text).toContain('>Source code</a>');
     expect(res.text).toContain('href="https://git.studio.tld/review"');
+  });
+
+  it('rend la mention légale dans la langue du lecteur', async () => {
+    findUnique.mockResolvedValue(null);
+    const fr = await request(app).get('/api/docs').set('Accept-Language', 'fr');
+    expect(fr.text).toContain('Logiciel libre');
+    expect(fr.text).toContain('>Code source</a>');
+    expect(fr.text).toContain('<html lang="fr">');
+
+    const ja = await request(app).get('/api/docs').set('Accept-Language', 'ja,en;q=0.5');
+    expect(ja.text).toContain('ソースコード');
+    expect(ja.text).toContain('<html lang="ja">');
+  });
+
+  it('déclare Vary: Accept-Language — sinon un cache sert une langue à tout le monde', async () => {
+    findUnique.mockResolvedValue(null);
+    const res = await request(app).get('/api/docs');
+    expect(res.headers.vary).toContain('Accept-Language');
   });
 
   it('retombe sur le dépôt amont quand le réglage studio est vide', async () => {

@@ -24,17 +24,11 @@ import type { SplatCompareState } from './compare/useSplatCompare';
 import { buildCleanSpz, cleanExportName, downloadBytes, type ExportEdits } from './export/exportSplat';
 import { downloadAnimGltf } from '../three/exportCameraGltf';
 import { useT } from '../../../i18n';
+import { formatBytes } from '../../../../lib/formatBytes';
 import { intlLocale } from '../../../i18n';
 
 const RAD = Math.PI / 180;
 const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
-
-/** Taille lisible pour le toast d'export (Ko/Mo). */
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} o`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} Ko`;
-  return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
-}
 
 /** Aspect du cadre de livraison, en texte — hérité des réglages pipeline, non modifiable ici. */
 function aspectLabel(aspect: number | undefined): string {

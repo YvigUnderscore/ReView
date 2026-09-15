@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Expand, Info } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
+import { formatBytes } from '../../lib/formatBytes';
 import { useT } from '../i18n';
 
 /**
@@ -201,8 +202,9 @@ export default function ImageReviewViewer({
     setOffset((o) => ({ x: cx - (cx - o.x) * k, y: cy - (cy - o.y) * k }));
     setScale(next);
   };
-  const fmtSize = (b?: number | null) =>
-    b == null ? null : b > 1e6 ? `${(b / 1e6).toFixed(1)} Mo` : `${Math.round(b / 1e3)} Ko`;
+  // QUATRIÈME formateur d'octets du dépôt, en français lui aussi. Tous passent désormais par
+  // `lib/formatBytes`, qui rend l'unité dans la langue du lecteur et compte en base 1024.
+  const fmtSize = (b?: number | null) => (b == null ? null : formatBytes(b));
   const rootRef = useRef<HTMLDivElement>(null);
   // Plein écran : celui fourni par la page (bloc review complet) sinon repli local à l'image.
   const fullscreen = onFullscreen ?? (() => void rootRef.current?.requestFullscreen?.());

@@ -195,7 +195,7 @@ export default function EntityCard({
           {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
           {/* La description n'a droit qu'à une ligne en compact : la ligne EST la carte. */}
           {meta?.description && (
-            <div className="truncate text-2xs text-muted-foreground/80">{meta.description}</div>
+            <div className="truncate text-2xs text-muted-foreground">{meta.description}</div>
           )}
         </div>
         {meta && <EntityCardMeta meta={meta} compact />}

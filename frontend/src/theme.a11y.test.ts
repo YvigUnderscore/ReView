@@ -194,3 +194,34 @@ describe('zoom (WCAG 1.4.4)', () => {
     expect(viewport).not.toMatch(/user-scalable\s*=\s*no|maximum-scale/);
   });
 });
+
+/**
+ * `color-scheme` — ce qui relie le thème de l'application à tout ce qu'elle embarque.
+ *
+ * Il n'était déclaré nulle part. Les contrôles natifs et les barres de défilement suivaient
+ * donc l'OS, mais surtout les **147 figures de la documentation** : servies en
+ * `<img src="…svg">`, elles portent chacune une variante `@media (prefers-color-scheme: dark)`
+ * qui se résolvait contre le système. Un lecteur en thème clair sur un OS sombre voyait des
+ * pavés bleu nuit au milieu d'une page blanche — et le symétrique en thème sombre.
+ * `color-scheme` se propage à l'image embarquée : c'est ce qui recolle les deux.
+ */
+describe('color-scheme (propagation aux contenus embarqués)', () => {
+  // Le fichier pose d'abord `:root` (thème clair), puis `.dark`. Couper à ce sélecteur
+  // sépare les deux jeux de tokens sans dépendre d'un comptage d'accolades.
+  const [avantDark, apresDark] = css.split(/\n\s*\.dark\s*\{/);
+
+  it('le thème clair déclare color-scheme: light', () => {
+    expect(avantDark).toContain('color-scheme: light');
+  });
+
+  it('le thème sombre déclare color-scheme: dark', () => {
+    expect(apresDark).toBeDefined();
+    expect(apresDark?.slice(0, 2000)).toContain('color-scheme: dark');
+  });
+
+  it('les figures de documentation portent bien une variante sombre à faire suivre', () => {
+    // Si ce contrat disparaissait, la déclaration ci-dessus n'aurait plus d'objet.
+    const figure = readFileSync('../DOCUMENTATION/assets/user-guide/comment-states.svg', 'utf8');
+    expect(figure).toContain('@media (prefers-color-scheme: dark)');
+  });
+});

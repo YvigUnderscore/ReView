@@ -12,7 +12,7 @@ import { Button } from '../../components/ui/button';
 import { Checkbox } from '../../components/ui/checkbox';
 import { QueryState } from '../../components/ui/query-state';
 import { SkeletonRows } from '../../components/ui/skeleton';
-import { useT, type Tr } from '../../i18n';
+import { intlLocale, useT, type Tr } from '../../i18n';
 import { Panel } from './AdminPrimitives';
 import BackupsPanel from './BackupsPanel';
 import CommandBlock from './CommandBlock';
@@ -121,7 +121,7 @@ export default function UpdatesTab() {
   const runId = followed && followed !== dismissed ? followed : null;
 
   const notice = mechanismNotice(t, overview.mechanism, overview.commands, (iso) =>
-    new Date(iso).toLocaleString(),
+    new Date(iso).toLocaleString(intlLocale()),
   );
   const canUpdate = canUpdateFromHere(overview) && runId === null;
 

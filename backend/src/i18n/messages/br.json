@@ -78,5 +78,14 @@
   "notesSheet.printHint": "Moulit ar bajenn-mañ ha dibabit « Enrollañ e PDF » evit mirout un eilenn.",
   "notesSheet.empty": "N'eus notenn ebet da voulañ amañ.",
   "notesSheet.reply": "Respont",
-  "notesSheet.truncated": "Nemet an {count} notenn gentañ a zo diskouezet."
+  "notesSheet.truncated": "Nemet an {count} notenn gentañ a zo diskouezet.",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Meziant frank dindan al lañvaz AGPL-3.0, hep gwarant ebet.",
+  "license.source": "Kod mammenn",
+  "unsubscribe.confirm.title": "Kadarnait ho tizenskrivañ",
+  "unsubscribe.confirm.body": "Kadarnait dindan evit paouez da resev ar postel reoliek-mañ. Gallout a reot e adweredekaat forzh pegoulz adalek ho profil ReView.",
+  "unsubscribe.done.title": "Dizenskrivet oc'h",
+  "unsubscribe.done.body": "Ne resevot mui ar postel reoliek-mañ. Gallout a reot e adweredekaat forzh pegoulz adalek ho profil ReView.",
+  "unsubscribe.invalid.title": "N’eo ket mat al liamm-mañ ken",
+  "unsubscribe.invalid.body": "Marteze eo deuet al liamm da vezañ diamzeret pe kemmet. Digorit ho profil ReView evit cheñch ho tibaboù postel.",
+  "unsubscribe.action": "Dizenskrivañ"
 }

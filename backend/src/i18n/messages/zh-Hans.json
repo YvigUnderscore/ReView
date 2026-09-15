@@ -78,5 +78,14 @@
   "notesSheet.printHint": "打印本页并选择“另存为 PDF”即可保存一份副本。",
   "notesSheet.empty": "这里没有可打印的备注。",
   "notesSheet.reply": "回复",
-  "notesSheet.truncated": "仅显示前 {count} 条备注。"
+  "notesSheet.truncated": "仅显示前 {count} 条备注。",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon。基于 AGPL-3.0 许可的自由软件，不提供任何担保。",
+  "license.source": "源代码",
+  "unsubscribe.confirm.title": "确认退订",
+  "unsubscribe.confirm.body": "在下方确认后将不再收到这封周期性邮件。您可以随时在 ReView 个人资料中重新开启。",
+  "unsubscribe.done.title": "您已退订",
+  "unsubscribe.done.body": "您将不再收到这封周期性邮件。您可以随时在 ReView 个人资料中重新开启。",
+  "unsubscribe.invalid.title": "此链接已失效",
+  "unsubscribe.invalid.body": "链接可能已过期或被修改。请打开 ReView 个人资料以更改邮件偏好。",
+  "unsubscribe.action": "退订"
 }

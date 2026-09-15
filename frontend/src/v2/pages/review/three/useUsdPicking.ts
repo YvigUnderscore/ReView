@@ -96,12 +96,24 @@ export function useUsdPicking(
       );
     };
 
-    dom.addEventListener('pointerdown', onDown);
-    dom.addEventListener('pointerup', onUp);
+    // PHASE DE CAPTURE pour les événements de pointeur.
+    //
+    // Les contrôles de caméra sont posés sur le même élément et traitent le bouton GAUCHE
+    // (orbite) : leur `pointerdown` arrêtait la propagation avant que celui-ci n'enregistre
+    // l'origine du geste. `down.current` restait donc nul, `onUp` sortait aussitôt, et un
+    // clic gauche ne sélectionnait jamais rien — alors que le clic DROIT, que ces contrôles
+    // traitent autrement (vol libre), atteignait bien ce module : le menu du prim s'ouvrait
+    // et « Cadrer » visait le bon objet. C'est cette asymétrie qui a mis sur la piste.
+    //
+    // La capture descend avant toute écoute en bulle : on note l'origine du geste sans rien
+    // empêcher — ces deux écouteurs n'appellent ni `preventDefault` ni `stopPropagation`,
+    // l'orbite continue de fonctionner exactement comme avant.
+    dom.addEventListener('pointerdown', onDown, true);
+    dom.addEventListener('pointerup', onUp, true);
     dom.addEventListener('contextmenu', onCtx);
     return () => {
-      dom.removeEventListener('pointerdown', onDown);
-      dom.removeEventListener('pointerup', onUp);
+      dom.removeEventListener('pointerdown', onDown, true);
+      dom.removeEventListener('pointerup', onUp, true);
       dom.removeEventListener('contextmenu', onCtx);
     };
   }, [getSceneHandle, ready, onSelect]);

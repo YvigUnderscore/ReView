@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { qk } from '../../lib/query';
 import { t } from '../../i18n';
 import { BoardConflictError, boardBase, loadBoard, persistBoard, type BoardScope } from './boardApi';
+import { sceneSignature } from './boardSignature';
 import type { BoardFiles } from './boardFiles';
 
 /**
@@ -21,7 +22,8 @@ import type { BoardFiles } from './boardFiles';
  *    la référence sans remplacer la scène et rouvrirait précisément l'écrasement.
  */
 
-type Snapshot = { elements: readonly unknown[]; files: BoardFiles };
+/** `sig` : empreinte de la scène (cf. `boardSignature`) — la seule base de comparaison fiable. */
+type Snapshot = { elements: readonly unknown[]; files: BoardFiles; sig: string };
 
 export type BoardEditor = {
   /** Scène à passer à Excalidraw, `null` tant que le board n'est pas chargé. */
@@ -45,6 +47,8 @@ const SAVE_DEBOUNCE_MS = 1200;
 export function useBoardDocument(scope: BoardScope, targetId: number): BoardEditor {
   const base = boardBase(scope, targetId);
   const baseRef = useRef<string | null>(null);
+  /** Empreinte de la scène telle qu'elle est actuellement enregistrée côté serveur. */
+  const savedSigRef = useRef<string | null>(null);
   const storedRef = useRef<Set<string>>(new Set());
   const pendingRef = useRef<Snapshot | null>(null);
   const runningRef = useRef(false);
@@ -64,6 +68,10 @@ export function useBoardDocument(scope: BoardScope, targetId: number): BoardEdit
       // exactement la scène que l'éditeur va monter.
       baseRef.current = loaded.updatedAt;
       storedRef.current = loaded.storedIds;
+      // Point de départ de la comparaison : sans lui, le tout premier `onChange` — celui
+      // qu'Excalidraw émet au montage, sans aucune action de l'utilisateur — passerait pour
+      // une modification et déclencherait une sauvegarde à l'ouverture de chaque board.
+      savedSigRef.current = sceneSignature(loaded.elements, loaded.files);
       return loaded;
     },
     staleTime: 0,
@@ -96,7 +104,12 @@ export function useBoardDocument(scope: BoardScope, targetId: number): BoardEdit
     runningRef.current = true;
     try {
       baseRef.current = await persistBoard(base, snapshot, storedRef.current, baseRef.current);
-      if (pendingRef.current === snapshot) {
+      savedSigRef.current = snapshot.sig;
+      // Comparaison par EMPREINTE, jamais par identité d'objet : `onChange` reconstruit un
+      // objet neuf à chaque appel, si bien que `pendingRef.current === snapshot` était
+      // toujours faux — l'instantané n'était jamais purgé et la sauvegarde se relançait
+      // sans fin sur un document inchangé.
+      if (pendingRef.current?.sig === snapshot.sig) {
         pendingRef.current = null;
         setSaved(true);
       }
@@ -115,7 +128,19 @@ export function useBoardDocument(scope: BoardScope, targetId: number): BoardEdit
   };
 
   const onChange = (elements: readonly unknown[], _appState: unknown, files: BoardFiles): void => {
-    pendingRef.current = { elements, files };
+    const sig = sceneSignature(elements, files);
+    // Excalidraw rappelle `onChange` pour un déplacement de curseur, un défilement, une
+    // sélection, ou simplement parce que ce composant s'est re-rendu. Sans ce filtre, chacun
+    // de ces rappels réarmait une sauvegarde : un board ouvert et **intouché** réécrivait sa
+    // ligne en base toutes les ~1,2 s, pour chaque onglet ouvert du studio.
+    if (sig === savedSigRef.current) {
+      if (pendingRef.current) {
+        pendingRef.current = null;
+        setSaved(true);
+      }
+      return;
+    }
+    pendingRef.current = { elements, files, sig };
     setSaved(false);
     if (conflictRef.current) return; // l'utilisateur doit d'abord trancher
     schedule(SAVE_DEBOUNCE_MS);

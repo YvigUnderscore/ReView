@@ -74,9 +74,10 @@ describe('valeur affichée', () => {
 
   it('remet une taille dans son unité lisible', () => {
     const f = field({ key: 'max_file_size', bytes: true });
-    expect(fieldDisplay(f, { max_file_size: '5000000000' }, {})).toBe('5');
-    expect(fieldUnit(f, { max_file_size: '5000000000' }, {})).toBe('Go');
-    expect(fieldUnit(f, { max_file_size: '5000000000' }, { max_file_size: 'Mo' })).toBe('Mo');
+    const fiveGiB = String(5 * 1024 ** 3);
+    expect(fieldDisplay(f, { max_file_size: fiveGiB }, {})).toBe('5');
+    expect(fieldUnit(f, { max_file_size: fiveGiB }, {})).toBe('GB');
+    expect(fieldUnit(f, { max_file_size: fiveGiB }, { max_file_size: 'MB' })).toBe('MB');
   });
 
   it('n’affiche pas un zéro là où rien n’est réglé', () => {
@@ -95,16 +96,16 @@ describe('écritures envoyées', () => {
   });
 
   it('convertit les tailles selon l’unité affichée', () => {
-    expect(settingsPayload(fields, { quota: '2' }, { quota: 'Go' }).entries).toEqual([
-      { key: 'quota', value: '2000000000' },
+    expect(settingsPayload(fields, { quota: '2' }, { quota: 'GB' }).entries).toEqual([
+      { key: 'quota', value: String(2 * 1024 ** 3) },
     ]);
-    expect(settingsPayload(fields, { quota: '2' }, { quota: 'Mo' }).entries).toEqual([
-      { key: 'quota', value: '2000000' },
+    expect(settingsPayload(fields, { quota: '2' }, { quota: 'MB' }).entries).toEqual([
+      { key: 'quota', value: String(2 * 1024 ** 2) },
     ]);
   });
 
   it('refuse tout l’enregistrement plutôt que d’en écrire la moitié', () => {
-    const res = settingsPayload(fields, { hook: 'https://x', quota: 'douze' }, { quota: 'Go' });
+    const res = settingsPayload(fields, { hook: 'https://x', quota: 'douze' }, { quota: 'GB' });
     expect(res.invalidKey).toBe('quota');
     expect(res.entries).toEqual([]);
   });

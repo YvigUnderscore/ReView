@@ -38,6 +38,13 @@ function TabButton({
 }) {
   return (
     <button
+      type="button"
+      // Sans `role="tab"` ni `aria-selected`, rien ne disait à la synthèse vocale que ces
+      // boutons formaient un jeu d'onglets, ni lequel était actif : on entendait quatre
+      // boutons interchangeables. La règle jsx-a11y ne peut pas l'attraper — un `<button>`
+      // nu lui est parfaitement valide ; c'est le MOTIF qui était incomplet.
+      role="tab"
+      aria-selected={isActive}
       onClick={onClick}
       tabIndex={showUnderline ? undefined : -1}
       className={`${TAB_CLASS} ${isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
@@ -118,7 +125,7 @@ export default function Tabs({
         </span>
       </div>
 
-      <div ref={barRef} className="flex items-center gap-1">
+      <div ref={barRef} role="tablist" className="flex items-center gap-1">
         {visible.map((tab) => (
           <TabButton
             key={tab.key}

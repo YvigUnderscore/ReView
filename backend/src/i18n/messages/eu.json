@@ -78,5 +78,14 @@
   "notesSheet.printHint": "Inprimatu orri hau eta aukeratu «Gorde PDF gisa» kopia bat gordetzeko.",
   "notesSheet.empty": "Hemen ez dago inprimatzeko oharrik.",
   "notesSheet.reply": "Erantzuna",
-  "notesSheet.truncated": "Lehen {count} oharrak baino ez dira erakusten."
+  "notesSheet.truncated": "Lehen {count} oharrak baino ez dira erakusten.",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. Software librea AGPL-3.0 lizentziapean, inolako bermerik gabe.",
+  "license.source": "Iturburu-kodea",
+  "unsubscribe.confirm.title": "Baja berretsi",
+  "unsubscribe.confirm.body": "Berretsi behean mezu elektroniko periodiko hau jasotzeari uzteko. Edonoiz berpiztu dezakezu zure ReView profiletik.",
+  "unsubscribe.done.title": "Baja emanda zaude",
+  "unsubscribe.done.body": "Ez duzu mezu elektroniko periodiko hau gehiago jasoko. Edonoiz berpiztu dezakezu zure ReView profiletik.",
+  "unsubscribe.invalid.title": "Esteka hau ez da jada baliozkoa",
+  "unsubscribe.invalid.body": "Baliteke esteka iraungita edo aldatuta egotea. Ireki zure ReView profila mezu elektronikoen hobespenak aldatzeko.",
+  "unsubscribe.action": "Baja eman"
 }

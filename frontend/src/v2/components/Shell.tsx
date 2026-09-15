@@ -27,13 +27,13 @@ import { usePreferences, useUpdatePreferences } from '../lib/usePreferences';
 import { resolveBindings } from '../lib/shortcutRegistry';
 import { useIsNarrowViewport } from '../lib/useMediaQuery';
 import { useStickyProjectId } from '../lib/stickyProject';
+import { resolveCurrentProjectId } from '../lib/currentProject';
 import { syncAccountDensity } from '../stores/useDensity';
 import { useViewPref } from '../stores/useViewPref';
 import { syncAccountLocale, useT } from '../i18n';
 import { useSocketInvalidation } from '../lib/socketBridge';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
-const ENTITY_PAGE_RE = /^\/(tasks|assets|review)\//;
 
 /**
  * Coquille de l'application (A1) : **route layout**, montée une seule fois pour toutes les
@@ -97,14 +97,13 @@ export default function Shell() {
     });
   };
 
-  // Projet courant pour la sidebar contextuelle : depuis la route (/projects/:id…)
-  // ou, sur les pages d'entité (/tasks, /assets, /review), depuis le contexte
-  // résolu par le breadcrumb (useProjectContext).
+  // Projet courant : depuis la route (/projects/:id…) ou, sur les pages d'entité, depuis le
+  // contexte résolu par le breadcrumb. La règle vit dans `lib/currentProject`, testée — elle
+  // décide à la fois du temps réel (`join_project`) et des raccourcis `g k` / `g b`.
   const ctxProjectId = useProjectContext((s) => s.projectId);
   const routeId = parseIdParam(params.id);
   const routeProjectId = pathname.startsWith('/projects/') && !Number.isNaN(routeId) ? routeId : null;
-  const isEntityPage = ENTITY_PAGE_RE.test(pathname);
-  const currentProjectId = routeProjectId ?? (isEntityPage ? ctxProjectId : null);
+  const currentProjectId = resolveCurrentProjectId(pathname, routeProjectId, ctxProjectId);
   // La barre garde le projet ouvert même sur l'accueil, la liste des projets ou les
   // reviews : sans cela ses sections disparaissaient dès qu'on quittait le projet.
   const sidebarProjectId = useStickyProjectId(currentProjectId);

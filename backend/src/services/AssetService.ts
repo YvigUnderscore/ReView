@@ -13,6 +13,7 @@ import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../
 import { CARD_ASSIGNEE_SELECT, awaitingReviewByAsset, signAssignees } from '../lib/entityCardData';
 import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
+import { emitToProject } from './SocketService';
 
 /** Logique métier des assets. L'accès projet (RBAC) est asserté dans la route (10.D8). */
 
@@ -180,6 +181,11 @@ export async function update(projectId: number, id: number, body: UpdateAssetInp
       sequences: { where: { deletedAt: null, hiddenAt: null }, select: { id: true, code: true, name: true } },
     },
   });
+  // Même raison que pour un plan ou une séquence : le front écoute `asset:update`, mais
+  // seuls `PipelineEnsureService` et la synchronisation ShotGrid l'émettaient — jamais le
+  // chemin d'édition ordinaire. Un statut ou un rattachement changé restait invisible sur
+  // un écran déjà ouvert jusqu'au rechargement.
+  emitToProject(projectId, 'asset:update', { projectId, id });
   // 48 : les rattachements remontent à ShotGrid, qui porte ces liens sur l'asset.
   if (shotIds || sequenceIds) await enqueuePush(projectId, { type: 'asset-links', assetId: id });
   // Le statut repart vers le site : sans cela, la synchronisation suivante ramènerait

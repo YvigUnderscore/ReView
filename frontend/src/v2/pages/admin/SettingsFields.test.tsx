@@ -60,10 +60,12 @@ describe('SettingsFields', () => {
   });
 
   it('affiche la valeur enregistrée, remise dans son unité lisible', () => {
-    mount({ max_concurrent_uploads: '5', max_file_size: '2000000000' });
+    // Base 1024 et symboles internationaux : le sélecteur disait « Mo »/« Go » (du français
+    // servi aux quatorze langues) et comptait en base 1000, à rebours de `formatBytes`.
+    mount({ max_concurrent_uploads: '5', max_file_size: String(2 * 1024 ** 3) });
     expect(screen.getByLabelText<HTMLInputElement>(t('settings.maxUploads')).value).toBe('5');
     expect(screen.getByLabelText<HTMLInputElement>(t('settings.maxFileSize')).value).toBe('2');
-    expect(screen.getByLabelText<HTMLSelectElement>(t('settings.sizeUnit')).value).toBe('Go');
+    expect(screen.getByLabelText<HTMLSelectElement>(t('settings.sizeUnit')).value).toBe('GB');
   });
 
   it('remonte la saisie à la page plutôt que de la garder', async () => {
@@ -75,8 +77,8 @@ describe('SettingsFields', () => {
 
   it('remonte le changement d’unité — il change la valeur envoyée', async () => {
     const user = userEvent.setup();
-    mount({ max_file_size: '2000000' });
-    await user.selectOptions(screen.getByLabelText(t('settings.sizeUnit')), 'Go');
-    expect(onUnit).toHaveBeenCalledWith(FIELDS[1], 'Go');
+    mount({ max_file_size: String(2 * 1024 ** 2) });
+    await user.selectOptions(screen.getByLabelText(t('settings.sizeUnit')), 'GB');
+    expect(onUnit).toHaveBeenCalledWith(FIELDS[1], 'GB');
   });
 });

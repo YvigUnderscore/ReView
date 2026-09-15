@@ -8,6 +8,7 @@ import { assertProjectWritable } from '../lib/projectGuard';
 import * as PipelineStatusService from './PipelineStatusService';
 import { assertDescriptionWritable } from './shotgrid/ShotgridGuardService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
+import { emitToProject } from './SocketService';
 import {
   effectiveThumbnailUrl,
   firstMediaThumbKeyForSequence,
@@ -128,6 +129,10 @@ export async function update(
     await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
   }
   const sequence = await prisma.sequence.update({ where: { id }, data: body });
+  // Même raison que pour un plan : le front écoute `sequence:update`, mais personne ne
+  // l'émettait sur le chemin d'édition ordinaire — un statut changé restait invisible sur
+  // un écran déjà ouvert.
+  emitToProject(projectId, 'sequence:update', { projectId, id });
   if (body.pipelineStatusId !== undefined) {
     await enqueuePush(projectId, { type: 'sequence-status', sequenceId: id, actorId });
   }

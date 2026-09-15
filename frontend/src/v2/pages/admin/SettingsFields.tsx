@@ -61,8 +61,10 @@ export default function SettingsFields({
                 value={fieldUnit(field, stored, units)}
                 onChange={(e) => onUnit(field, e.target.value as SizeUnit)}
               >
-                <option value="Mo">Mo</option>
-                <option value="Go">Go</option>
+                {/* Symboles internationaux : « Mo »/« Go » n'existent qu'en français, et
+                    la modale « New user » disait déjà « Quota (GB) » deux écrans plus loin. */}
+                <option value="MB">MB</option>
+                <option value="GB">GB</option>
               </Select>
               <span className="w-24 text-xs text-muted-foreground">
                 {stored[field.key] ? `= ${fmtBytes(Number(stored[field.key]))}` : ''}

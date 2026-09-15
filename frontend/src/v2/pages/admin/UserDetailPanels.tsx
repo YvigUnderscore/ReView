@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import { auditActionLabel, auditEntityLink, fmtDateTime } from './adminShared';
+import { useState } from 'react';
 import { useT } from '../../i18n';
 import type {
   AdminApiToken,
@@ -47,6 +48,15 @@ export function MembershipsPanel({ memberships }: { memberships: AdminUserMember
   );
 }
 
+/**
+ * Combien de sessions s'affichent avant de devoir le demander.
+ *
+ * La liste était rendue d'un seul tenant : sur un compte actif, deux cents lignes écrasaient
+ * tout le reste de la fiche. Toutes les autres listes denses de l'administration (activité,
+ * accès média, versions, commentaires) sont paginées ; celle-ci était la seule à tout déverser.
+ */
+const SESSIONS_PREVIEW = 8;
+
 export function SessionsPanel({
   sessions,
   onRevoke,
@@ -57,10 +67,12 @@ export function SessionsPanel({
   onRevokeAll: () => void;
 }) {
   const t = useT();
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? sessions : sessions.slice(0, SESSIONS_PREVIEW);
   return (
     <Panel title={t('userDetail.activeSessions', { count: sessions.length })}>
       <div className="space-y-1.5">
-        {sessions.map((s) => (
+        {shown.map((s) => (
           <div key={s.id} className="flex items-center gap-2 text-sm">
             <MonitorSmartphone size={14} className="shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate" title={s.userAgent ?? undefined}>
@@ -80,6 +92,15 @@ export function SessionsPanel({
         ))}
         {sessions.length === 0 && (
           <p className="text-xs text-muted-foreground">{t('userDetail.noSession')}</p>
+        )}
+        {sessions.length > SESSIONS_PREVIEW && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-primary hover:underline"
+          >
+            {expanded ? t('sessions.showFewer') : t('sessions.showAll', { count: sessions.length })}
+          </button>
         )}
       </div>
       {sessions.length > 0 && (

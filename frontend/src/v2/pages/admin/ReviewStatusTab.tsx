@@ -77,7 +77,11 @@ export default function ReviewStatusTab() {
           <div key={s.id} className="flex items-center gap-3 px-3 py-2">
             <ReviewDecisionBadge status={s} title={s.name} />
             <span className="flex-1 truncate text-xs text-muted-foreground">
-              {[s.isDefault && t('common.default'), s.isApproval && 'approbation', s.isRetake && 'retake']
+              {[
+                s.isDefault && t('common.default'),
+                s.isApproval && t('reviewStatus.flag.approval'),
+                s.isRetake && 'retake',
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </span>

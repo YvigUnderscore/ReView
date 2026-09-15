@@ -78,5 +78,14 @@
   "notesSheet.printHint": "このページを印刷し、「PDF に保存」を選ぶと控えを残せます。",
   "notesSheet.empty": "ここに印刷するノートはありません。",
   "notesSheet.reply": "返信",
-  "notesSheet.truncated": "先頭の {count} 件のノートのみ表示しています。"
+  "notesSheet.truncated": "先頭の {count} 件のノートのみ表示しています。",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. AGPL-3.0 ライセンスのフリーソフトウェアであり、いかなる保証もありません。",
+  "license.source": "ソースコード",
+  "unsubscribe.confirm.title": "配信停止の確認",
+  "unsubscribe.confirm.body": "下で確認すると、この定期メールの配信を停止します。ReView のプロフィールからいつでも再開できます。",
+  "unsubscribe.done.title": "配信を停止しました",
+  "unsubscribe.done.body": "この定期メールは今後配信されません。ReView のプロフィールからいつでも再開できます。",
+  "unsubscribe.invalid.title": "このリンクは無効です",
+  "unsubscribe.invalid.body": "リンクの有効期限が切れたか、改変された可能性があります。ReView のプロフィールでメールの設定を変更してください。",
+  "unsubscribe.action": "配信停止"
 }

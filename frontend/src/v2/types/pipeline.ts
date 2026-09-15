@@ -90,6 +90,12 @@ export interface TimelineClip {
   departmentName: string | null;
   mediaId: number | null;
   mediaName: string | null;
+  /**
+   * Nature du média retenu. Un plan dont la seule version publiée est une image est
+   * parfaitement légitime dans un montage : le lecteur doit le tenir sur son horloge plutôt
+   * que de le confier à une balise `<video>`, qui ne sait pas démultiplexer un JPEG.
+   */
+  mediaKind: 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'SPLAT' | null;
   thumbnailUrl: string | null;
   placeholder: boolean;
   durationMismatch: boolean;

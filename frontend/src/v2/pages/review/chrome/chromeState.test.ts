@@ -10,7 +10,7 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { modesFor, switcherModesFor } from './modes';
+import { isLockedByPublication, modesFor, switcherModesFor } from './modes';
 import { panelsFor } from './panels';
 import { toolSearchOrder, toolsFor, viewActionsFor } from './tools';
 
@@ -207,5 +207,30 @@ describe('préférences', () => {
 
   it('conserve un dock explicitement replié', () => {
     expect(readChromePrefs('VIDEO', JSON.stringify({ panel: null })).panel).toBeNull();
+  });
+});
+
+describe('verrou de publication sur les modes', () => {
+  it('ferme les modes qui ALTÈRENT le média une fois publié', () => {
+    // Le serveur les refuse en 403 `PUBLISHED_LOCKED` ; l'interface les offrait quand même,
+    // et l'on perdait son trim ou sa sélection de nettoyage sur un toast d'erreur.
+    expect(isLockedByPublication('edit', true)).toBe(true);
+    expect(isLockedByPublication('clean', true)).toBe(true);
+  });
+
+  it('laisse la mise en scène ouverte après publication — exception documentée', () => {
+    expect(isLockedByPublication('stage', true)).toBe(false);
+  });
+
+  it('n’entrave rien tant que le média n’est pas publié', () => {
+    for (const mode of ['explore', 'annotate', 'compare', 'edit', 'stage', 'clean'] as const) {
+      expect(isLockedByPublication(mode, false)).toBe(false);
+    }
+  });
+
+  it('ne touche pas aux modes de lecture', () => {
+    expect(isLockedByPublication('explore', true)).toBe(false);
+    expect(isLockedByPublication('compare', true)).toBe(false);
+    expect(isLockedByPublication('annotate', true)).toBe(false);
   });
 });

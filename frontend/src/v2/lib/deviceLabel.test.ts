@@ -25,6 +25,14 @@ describe('deviceLabel', () => {
   });
   it('repli sur inconnu', () => {
     expect(deviceLabel(null)).toBe('Unknown device');
-    expect(deviceLabel('curl/8.0')).toBe('Navigateur');
+    // Ce repli valait « Navigateur » — un littéral français qui s'affichait dans les quatorze
+    // langues, sur la liste des sessions actives du profil. L'assertion figeait la faute.
+    expect(deviceLabel('curl/8.0')).toBe('Browser');
+  });
+
+  it('aucun libellé n’échappe à la traduction', () => {
+    // Le détecteur `check-untranslated` ne lit que le JSX : un littéral posé dans un module
+    // `lib/` lui est invisible. Cette assertion tient la place du contrôle manquant.
+    expect(deviceLabel('curl/8.0')).not.toMatch(/Navigateur/);
   });
 });

@@ -78,5 +78,14 @@
   "notesSheet.printHint": "इस पृष्ठ को प्रिंट करें और प्रतिलिपि रखने के लिए “PDF के रूप में सहेजें” चुनें।",
   "notesSheet.empty": "यहाँ प्रिंट करने के लिए कोई नोट नहीं है।",
   "notesSheet.reply": "उत्तर",
-  "notesSheet.truncated": "केवल पहले {count} नोट्स दिखाए गए हैं।"
+  "notesSheet.truncated": "केवल पहले {count} नोट्स दिखाए गए हैं।",
+  "license.notice": "ReView — Copyright © 2026 Yvig Bidon. AGPL-3.0 लाइसेंस के तहत मुक्त सॉफ़्टवेयर, बिना किसी वारंटी के।",
+  "license.source": "स्रोत कोड",
+  "unsubscribe.confirm.title": "सदस्यता समाप्ति की पुष्टि करें",
+  "unsubscribe.confirm.body": "यह नियमित ईमेल प्राप्त करना बंद करने के लिए नीचे पुष्टि करें। आप इसे अपनी ReView प्रोफ़ाइल से कभी भी फिर से चालू कर सकते हैं।",
+  "unsubscribe.done.title": "आपकी सदस्यता समाप्त हो गई",
+  "unsubscribe.done.body": "अब आपको यह नियमित ईमेल नहीं मिलेगा। आप इसे अपनी ReView प्रोफ़ाइल से कभी भी फिर से चालू कर सकते हैं।",
+  "unsubscribe.invalid.title": "यह लिंक अब मान्य नहीं है",
+  "unsubscribe.invalid.body": "लिंक की अवधि समाप्त हो गई है या उसे बदला गया है। ईमेल प्राथमिकताएँ बदलने के लिए अपनी ReView प्रोफ़ाइल खोलें।",
+  "unsubscribe.action": "सदस्यता समाप्त करें"
 }

@@ -57,7 +57,7 @@ export default function MediaChrome({
   children: ReactNode;
 }) {
   const t = useT();
-  const { state, update } = useChromeState(kind);
+  const { state, update } = useChromeState(kind, data.media.published);
   useMediaChrome({ state, update, ann });
   const trim = useVideoTrim({ data, fps, videoRef, onSaved });
 
@@ -67,6 +67,8 @@ export default function MediaChrome({
 
   return (
     <ReviewChrome
+      // Verrou de publication : les modes qui altèrent le média sont grisés, pas offerts.
+      published={data.media.published}
       kind={kind}
       state={state}
       onState={update}

@@ -3,8 +3,10 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import Hls from 'hls.js';
-import { api, getToken } from '../../../lib/apiClient';
-import { clipIndexAt, globalTimeOf, localTimeAt, nextPlayableIndex } from './timelinePlayback';
+import { getToken } from '../../../lib/apiClient';
+import { playbackSource } from './mediaSource';
+import { usePlayingFromElements } from './usePlayingFromElements';
+import { clipIndexAt, globalTimeOf, holdsOnClock, localTimeAt, nextPlayableIndex } from './timelinePlayback';
 import type { TimelineClip } from '../../types/api';
 
 /**
@@ -28,24 +30,6 @@ interface Buffer {
 }
 
 const EMPTY: Buffer = { clipIndex: null, url: null, hls: null };
-
-/**
- * Source d'un plan — la même que celle de la review : le master HLS servi par le proxy
- * authentifié quand des renditions existent, le MP4 web sinon.
- *
- * Aligner les deux n'est pas cosmétique : le montage doit lire ce que la review lit, faute
- * de quoi un plan visible en review resterait noir dans le film sans qu'on sache pourquoi.
- */
-async function playbackSource(
-  mediaId: number,
-): Promise<{ url: string; hls: boolean; file: string | null } | null> {
-  const data = await api.get<{ url: string; proxyUrl: string | null; hls?: unknown }>(
-    `/api/media/${mediaId}`,
-  );
-  const file = data.proxyUrl ?? data.url ?? null;
-  if (data.hls && Hls.isSupported()) return { url: `/api/media/${mediaId}/hls/master.m3u8`, hls: true, file };
-  return file ? { url: file, hls: false, file } : null;
-}
 
 /**
  * Attache un flux HLS à un tampon — jeton injecté comme dans le lecteur de review.
@@ -138,10 +122,13 @@ export function useContinuousPlayback(
   const load = useCallback(
     async (slot: 'A' | 'B', clipIndex: number, startAt = 0) => {
       const target = items[clipIndex];
-      // Un carton n'a pas de source à résoudre, mais la préparation d'un tampon reste
-      // asynchrone dans tous les cas : sans cela, l'amorçage déclencherait un rendu en
-      // cascade depuis son effet.
-      const source = await (target?.mediaId != null ? playbackSource(target.mediaId) : Promise.resolve(null));
+      // Un carton n'a pas de source à résoudre, et **une image non plus** : la confier à
+      // l'élément vidéo la faisait échouer au démultiplexage, ce qui bloquait la lecture de
+      // tout le montage. La préparation d'un tampon reste asynchrone dans tous les cas :
+      // sans cela, l'amorçage déclencherait un rendu en cascade depuis son effet.
+      const source = await (!holdsOnClock(target) && target?.mediaId != null
+        ? playbackSource(target.mediaId)
+        : Promise.resolve(null));
       const el = elementOf(slot);
       // Le flux précédent de ce tampon est détruit avant d'en attacher un autre : deux
       // instances sur le même élément se disputeraient sa source.
@@ -221,7 +208,7 @@ export function useContinuousPlayback(
       const target = items[targetIndex];
       if (!target) return;
       setPlaying(true);
-      if (target.mediaId === null) {
+      if (holdsOnClock(target)) {
         placeholderStart.current = performance.now() - localStart * 1000;
         armPlaceholderTimer(target.duration - localStart);
         return;
@@ -253,7 +240,7 @@ export function useContinuousPlayback(
     setIndex(nextIndex);
     setTime(next.startTime);
 
-    if (next.mediaId === null) {
+    if (holdsOnClock(next)) {
       elementOf(active)?.pause();
       placeholderStart.current = performance.now();
       armPlaceholderTimer(next.duration);
@@ -323,6 +310,9 @@ export function useContinuousPlayback(
     });
   }, [started, index, items, startAt, load, preloadNext, begin]);
 
+  // L'état « ça joue » se lit sur les éléments, pas sur la promesse de `play()`.
+  usePlayingFromElements(videoA, videoB, setPlaying);
+
   // Horloge : la vidéo pour un plan filmé, `performance.now()` pour un carton.
   useEffect(() => {
     if (!playing) return;
@@ -332,7 +322,7 @@ export function useContinuousPlayback(
       // C'est le PLAN courant qui dit quelle horloge suivre, jamais le tampon : le tampon
       // sortant garde sa source pendant un carton, et s'y fier ferait comparer la position
       // du plan précédent à la durée du trou — donc escamoter le trou aussitôt affiché.
-      if (current && current.mediaId === null) {
+      if (current && holdsOnClock(current)) {
         if (placeholderStart.current !== null) {
           const elapsed = (performance.now() - placeholderStart.current) / 1000;
           setTime(globalTimeOf(current, elapsed));
@@ -369,7 +359,7 @@ export function useContinuousPlayback(
     const onTimeUpdate = () => {
       const current = items[index];
       // Même règle que l'horloge : pendant un carton, cet élément n'est plus le film.
-      if (current && current.mediaId !== null && el.currentTime >= current.duration) swap();
+      if (current && !holdsOnClock(current) && el.currentTime >= current.duration) swap();
     };
     el.addEventListener('ended', onEnded);
     el.addEventListener('timeupdate', onTimeUpdate);

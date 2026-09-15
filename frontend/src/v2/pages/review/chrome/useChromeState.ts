@@ -11,7 +11,7 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { switcherModesFor } from './modes';
+import { isLockedByPublication, switcherModesFor } from './modes';
 import { panelsFor } from './panels';
 import { canSwitchModeWith } from './reservedKeys';
 import { DEFAULT_TOOL, toolSearchOrder, toolsFor } from './tools';
@@ -32,7 +32,7 @@ function initialState(kind: MediaKind): ChromeState {
   return { ...base, ...prefs, drawer: drawerOpen ? drawerForKind(kind) : null };
 }
 
-export function useChromeState(kind: MediaKind) {
+export function useChromeState(kind: MediaKind, published = false) {
   const [state, setState] = useState<ChromeState>(() => initialState(kind));
 
   const update = useCallback(
@@ -83,7 +83,9 @@ export function useChromeState(kind: MediaKind) {
       const index = Number(e.key) - 1;
       if (Number.isInteger(index) && index >= 0 && index < modes.length) {
         e.preventDefault();
-        update({ mode: modes[index].value });
+        // Le verrou de publication vaut aussi au clavier : sans cela, la touche 3 entrait dans
+        // un mode que la bascule vient de griser, et l'on retombait sur le 403 du serveur.
+        if (!isLockedByPublication(modes[index].value, published)) update({ mode: modes[index].value });
         return;
       }
       // Lettre d'outil : le mode courant d'abord, sinon les autres modes — armer l'outil d'un
@@ -105,7 +107,7 @@ export function useChromeState(kind: MediaKind) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [kind, modes, state.mode, state.panel, state.tool, update]);
+  }, [kind, modes, published, state.mode, state.panel, state.tool, update]);
 
   return { state, update };
 }

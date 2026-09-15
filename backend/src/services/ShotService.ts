@@ -266,6 +266,13 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
     if (conflict) throw badRequest('A shot with this code already exists in this sequence', 'CODE_TAKEN');
   }
   const shot = await prisma.shot.update({ where: { id }, data: body });
+  // Le plan lui-même a changé : statut, code, nom, description, omission. Sans cet
+  // événement, un écran ouvert sur ce plan — ou sur la liste des plans du projet — gardait
+  // l'ancienne valeur jusqu'au rechargement, et l'auteur du changement croyait qu'il
+  // n'était pas passé. Le front écoute `shot:update` depuis toujours (`socketBridge`) ;
+  // seuls `PipelineEnsureService` et la synchronisation ShotGrid l'émettaient, c'est-à-dire
+  // aucun des chemins empruntés par un humain qui édite un plan dans l'interface.
+  emitToProject(projectId, 'shot:update', { projectId, id });
   // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
   // montages automatiques, qui doivent se remettre à jour sans rechargement (Phase 45).
   emitToProject(projectId, 'timeline:update', { projectId, shotId: id });

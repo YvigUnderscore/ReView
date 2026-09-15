@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { Activity, Film, GitBranch } from 'lucide-react';
 import { timeAgo } from '../../lib/time';
 import type { DashboardActivityItem } from './homeTypes';
-import { useT } from '../../i18n';
+import { intlLocale, useT } from '../../i18n';
 
 /**
  * Flux d'activité cross-projets : nouvelles versions et médias publiés.
@@ -21,7 +21,9 @@ function dayLabel(iso: string, t: ReturnType<typeof useT>): string {
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
   if (sameDay(d, today)) return t('calendar.today');
   if (sameDay(d, yesterday)) return t('home.yesterday');
-  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+  // `undefined` prenait la locale du NAVIGATEUR : l'accueil affichait « dimanche 13 sept. »
+  // en plein milieu d'une interface anglaise ou japonaise.
+  return d.toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'short' });
 }
 
 export default function ActivityFeed({ items }: { items: DashboardActivityItem[] }) {
@@ -46,7 +48,7 @@ export default function ActivityFeed({ items }: { items: DashboardActivityItem[]
         <div className="space-y-2">
           {groups.map((g) => (
             <div key={g.label}>
-              <p className="px-2 pb-0.5 text-2xs font-semibold section-label tracking-wider text-muted-foreground/70">
+              <p className="px-2 pb-0.5 text-2xs font-semibold section-label tracking-wider text-muted-foreground">
                 {g.label}
               </p>
               <div className="space-y-0.5">

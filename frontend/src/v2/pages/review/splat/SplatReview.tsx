@@ -94,7 +94,7 @@ export default function SplatReview({
   const compare = useSplatCompare(splat, data.media);
   // Hotspot posé au clic (et non plus au centre de l'écran), comme dans le viewer 3D.
   const hotspot = useHotspotPlacement(splat, ann.setHotspot3d);
-  const { state, update } = useChromeState('SPLAT');
+  const { state, update } = useChromeState('SPLAT', data.media.published);
   // Culling Spark neutralisé par défaut : rien ne disparaît en zoom fort (réglage de session).
   const [cullingOff, setCullingOffState] = useState(true);
   const onCullingOff = useCallback(
@@ -231,6 +231,8 @@ export default function SplatReview({
 
   return (
     <ReviewChrome
+      // Verrou de publication : les modes qui altèrent le média sont grisés, pas offerts.
+      published={data.media.published}
       kind="SPLAT"
       state={state}
       onState={update}

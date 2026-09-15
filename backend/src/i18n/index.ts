@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { BASE_LOCALE, isLocale, pluralTag, type Locale } from './locales';
+import { BASE_LOCALE, LOCALE_CODES, isLocale, pluralTag, type Locale } from './locales';
 import en from './messages/en.json';
 import fr from './messages/fr.json';
 import es from './messages/es.json';
@@ -97,4 +97,42 @@ export function localeFromPreferences(preferences: unknown): Locale | null {
   if (!preferences || typeof preferences !== 'object') return null;
   const value = (preferences as Record<string, unknown>).locale;
   return isLocale(value) ? value : null;
+}
+
+/**
+ * Langue d'un lecteur **non authentifié**, négociée depuis `Accept-Language`.
+ *
+ * Les surfaces publiques du backend — au premier chef la page `/api/docs`, que l'AGPL §13
+ * oblige à porter la mention de source — n'ont ni compte ni préférence enregistrée à
+ * consulter. Faute de cette négociation, leur contenu était écrit en dur : la mention légale
+ * de `/api/docs` s'affichait **en français** pour tout le monde, alors que la même mention
+ * est rendue en anglais par le front. Une mention légale qui change de langue selon la porte
+ * d'entrée n'est pas une mention légale.
+ *
+ * Les valeurs de qualité (`;q=`) sont respectées, et un tag régional retombe sur la langue :
+ * `zh-CN` choisit `zh-Hans`, `pt-BR` choisit `pt`. Repli sur la langue de base.
+ */
+export function localeFromAcceptLanguage(header: string | null | undefined): Locale {
+  if (!header) return BASE_LOCALE;
+  const ranked = header
+    .split(',')
+    .map((part) => {
+      const [tag = '', ...params] = part.trim().split(';');
+      const q = params.find((p) => p.trim().startsWith('q='));
+      const weight = q ? Number(q.trim().slice(2)) : 1;
+      return { tag: tag.trim().toLowerCase(), weight: Number.isFinite(weight) ? weight : 0 };
+    })
+    .filter((r) => r.tag !== '' && r.tag !== '*' && r.weight > 0)
+    // Tri stable : à qualité égale, l'ordre d'écriture fait foi, comme le veut la RFC.
+    .sort((a, b) => b.weight - a.weight);
+  for (const { tag } of ranked) {
+    const exact = LOCALE_CODES.find((c) => c.toLowerCase() === tag);
+    if (exact) return exact;
+    const base = tag.split('-')[0] ?? tag;
+    const loose = LOCALE_CODES.find(
+      (c) => c.toLowerCase() === base || c.toLowerCase().startsWith(`${base}-`),
+    );
+    if (loose) return loose;
+  }
+  return BASE_LOCALE;
 }
