@@ -1,9 +1,20 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { Readable } from 'node:stream';
-import { buildReleaseCatalog, getLut, isAllowedAssetHost } from './OcioService';
+
+// La garde SSRF résout les noms : sans doublure, ces tests dépendraient du DNS de la machine.
+vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
+
+import { lookup } from 'node:dns/promises';
+import {
+  buildReleaseCatalog,
+  getLut,
+  install,
+  isAllowedAssetHost,
+  __resetReleasesCache,
+} from './OcioService';
 import { lutStorageKey } from '../lib/ocioBake';
 
 const CONFIG_ID = '11111111-1111-4111-8111-111111111111';
@@ -26,7 +37,7 @@ const library = [
 
 // `vi.hoisted` : les fabriques de `vi.mock` sont remontées en tête de fichier et s'exécutent
 // avant les `const` ordinaires — sans cela, les doublures seraient en zone morte temporelle.
-const { storageMock, enqueueMock, findUniqueMock } = vi.hoisted(() => ({
+const { storageMock, enqueueMock, findUniqueMock, upsertMock } = vi.hoisted(() => ({
   storageMock: {
     getObjectStream: vi.fn(),
     statObject: vi.fn(),
@@ -37,9 +48,12 @@ const { storageMock, enqueueMock, findUniqueMock } = vi.hoisted(() => ({
   },
   enqueueMock: vi.fn(() => Promise.resolve()),
   findUniqueMock: vi.fn(),
+  upsertMock: vi.fn(() => Promise.resolve({})),
 }));
 
-vi.mock('../lib/prisma', () => ({ prisma: { setting: { findUnique: findUniqueMock } } }));
+vi.mock('../lib/prisma', () => ({
+  prisma: { setting: { findUnique: findUniqueMock, upsert: upsertMock } },
+}));
 vi.mock('./StorageService', () => ({ storage: storageMock }));
 vi.mock('../workers/ocio/queue', () => ({ enqueueOcioBake: enqueueMock }));
 
@@ -151,5 +165,86 @@ describe('OcioService — LUT d’affichage', () => {
       display: 'sRGB - Display',
       view: 'ACES 1.0 - SDR Video',
     });
+  });
+});
+
+/**
+ * A2-03 — L'installation télécharge depuis GitHub, qui sert ses assets par une redirection.
+ * L'allow-list n'était contrôlée que sur l'URL de DÉPART : `fetch` suivait ensuite le 302
+ * en aveugle, jusque vers une adresse interne. Ces tests exercent la vraie garde de sortie
+ * (`fetchAllowlisted`), avec le seul `fetch` global en doublure.
+ */
+describe('OcioService — install : sortie durcie (A2-03)', () => {
+  const TAG = 'v2.1.0';
+  const ASSET = 'studio-config-v2.1.0_aces-v1.3_ocio-v2.3.ocio';
+  const PUBLIC_ADDRESS = [{ address: '93.184.216.34', family: 4 }];
+
+  let fetchMock: Mock<typeof fetch>;
+
+  /** Premier appel : le JSON des releases. Les suivants : ce que le scénario demande. */
+  const withDownload = (...responses: Response[]) => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([release(TAG, [ASSET])]), { status: 200 }));
+    for (const res of responses) fetchMock.mockResolvedValueOnce(res);
+  };
+
+  const redirectTo = (location: string) => new Response(null, { status: 302, headers: { location } });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetReleasesCache();
+    vi.mocked(lookup).mockResolvedValue(PUBLIC_ADDRESS as never);
+    findUniqueMock.mockResolvedValue(null); // bibliothèque vide
+    fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('installe l’asset en suivant la redirection vers l’hôte de contenu GitHub', async () => {
+    withDownload(
+      redirectTo('https://objects.githubusercontent.com/a'),
+      new Response('ocio_profile_version: 2', { status: 200 }),
+    );
+    const entry = await install(TAG, ASSET);
+    expect(entry.assetName).toBe(ASSET);
+    expect(storageMock.putObject).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledTimes(3); // releases + départ + saut
+  });
+
+  it('refuse une redirection vers les métadonnées cloud, et n’écrit rien dans MinIO', async () => {
+    withDownload(redirectTo('http://169.254.169.254/latest/meta-data/iam/'));
+    await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_BLOCKED' });
+    expect(storageMock.putObject).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
+    // Le saut interne n'a jamais été émis : releases + départ, rien de plus.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuse une redirection vers MinIO sur le réseau applicatif', async () => {
+    withDownload(redirectTo('http://10.0.0.9:9000/review/'));
+    await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_BLOCKED' });
+    expect(storageMock.putObject).not.toHaveBeenCalled();
+  });
+
+  it('refuse une redirection vers un hôte public hors allow-list', async () => {
+    withDownload(redirectTo('https://evil.test/collect'));
+    await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_BLOCKED' });
+    expect(storageMock.putObject).not.toHaveBeenCalled();
+  });
+
+  it('refuse un corps qui dépasse le plafond avant de le charger en mémoire', async () => {
+    withDownload(new Response('x', { status: 200, headers: { 'content-length': String(64 * 1024 * 1024) } }));
+    await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_TOO_LARGE' });
+    expect(storageMock.putObject).not.toHaveBeenCalled();
+  });
+
+  it('pose un signal d’abandon sur chaque requête sortante', async () => {
+    withDownload(new Response('ocio_profile_version: 2', { status: 200 }));
+    await install(TAG, ASSET);
+    for (const call of fetchMock.mock.calls) {
+      const init = call[1] as RequestInit;
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+      expect(init.redirect).toBe('manual');
+    }
   });
 });

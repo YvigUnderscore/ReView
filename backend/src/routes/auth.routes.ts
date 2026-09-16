@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
@@ -9,9 +9,10 @@ import { signAccessToken, signRefreshToken, signTwoFaToken, verifyToken } from '
 import { createSession, isSessionActive, touchSession } from '../lib/sessions';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
-import { rateLimit } from '../middleware/rateLimit';
-import { toSessionUser } from '../lib/userView';
+import { rateLimit, targetAccountRateKey } from '../middleware/rateLimit';
+import { toSessionUser, type RawSessionUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
+import { logLoginAttempt } from '../services/AuditService';
 import * as InvitationService from '../services/InvitationService';
 import { isPasswordLoginBlocked } from '../lib/oidcConfig';
 import { env } from '../config/env';
@@ -40,7 +41,17 @@ const credentialsSchema = z.object({
   password: z.string().max(128),
 });
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 });
+// Deux freins distincts, non un budget partagé : l'IP protège le service et reste large (tout un
+// studio sort par une seule adresse publique), le COMPTE protège le mot de passe — cent machines
+// complices restent bornées sur l'adresse visée. Inscription et invitation ont leur propre espace.
+const loginIpLimiter = rateLimit({ name: 'auth-login-ip', windowMs: 15 * 60_000, max: 300 });
+const signupLimiter = rateLimit({ name: 'auth-signup', windowMs: 15 * 60_000, max: 50 });
+const loginAccountLimiter = rateLimit({
+  name: 'auth-login-account',
+  windowMs: 15 * 60_000,
+  max: 10,
+  keyGenerator: targetAccountRateKey,
+});
 
 /**
  * Mode « SSO seul » (studio) : le mot de passe n'est plus une porte d'entrée.
@@ -55,12 +66,27 @@ async function refusePasswordAuth(): Promise<void> {
   }
 }
 
+// Offboarding (A1-01) : révoquer les sessions d'un partant ne servait à rien tant qu'il lui
+// suffisait de retaper son mot de passe. Le refus est nommé sans rien apprendre — on n'y arrive
+// qu'avec le bon mot de passe.
+const refuseIfDisabled = (user: { disabledAt: Date | null }): void => {
+  if (user.disabledAt) throw unauthorized('Account disabled', 'ACCOUNT_DISABLED');
+};
+
+/** Ouvre la session et rend le couple de jetons — réponse commune à `/login` et à l'activation. */
+async function grantSession(user: RawSessionUser, req: Request, res: Response): Promise<void> {
+  const sid = await createSession(user.id, req);
+  const payload = { id: user.id, email: user.email, role: user.role, sid };
+  const token = signAccessToken(payload);
+  res.json({ token, refreshToken: signRefreshToken(payload), user: await toSessionUser(user) });
+}
+
 // POST /api/auth/register — crée un artiste. Fermé par défaut (ALLOW_SELF_REGISTRATION) :
 // sinon n'importe qui obtient un compte authentifié sur l'instance, et peut réserver
 // l'email d'un collaborateur avant sa première connexion SSO.
 router.post(
   '/register',
-  authLimiter,
+  signupLimiter,
   validate({
     body: z.object({
       email: z.string().email().max(254),
@@ -86,9 +112,11 @@ router.post(
   },
 );
 
-// POST /api/auth/login — crée une session révocable (36.B) ; si 2FA actif, renvoie un
-// jeton intermédiaire à échanger contre les tokens via /api/auth/2fa/verify (36.A).
-router.post('/login', authLimiter, validate({ body: credentialsSchema }), async (req, res) => {
+// POST /api/auth/login — session révocable (36.B) ; si 2FA actif, renvoie un jeton
+// intermédiaire à échanger via /api/auth/2fa/verify (36.A). Le frein par compte est posé
+// APRÈS la validation Zod : sans corps parsé, sa clé serait ce que l'appelant a bien voulu.
+const loginGuards = [loginIpLimiter, validate({ body: credentialsSchema }), loginAccountLimiter];
+router.post('/login', loginGuards, async (req: Request, res: Response) => {
   await refusePasswordAuth();
   const { password } = req.body as { password: string };
   // Toutes les écritures normalisent l'adresse (inscription, invitation, installation,
@@ -101,20 +129,18 @@ router.post('/login', authLimiter, validate({ body: credentialsSchema }), async 
   const passwordOk = await bcrypt.compare(password, user?.password ?? ABSENT_ACCOUNT_HASH);
   // Un compte de service (API v1) n'existe que pour porter les écritures d'un token
   // machine : il ne se connecte jamais, même si son mot de passe aléatoire fuitait.
-  if (!user || !passwordOk || user.isService) {
-    throw unauthorized('Invalid credentials', 'BAD_CREDENTIALS');
-  }
+  const granted = !!user && passwordOk && !user.isService && !user.disabledAt;
+  // A5-03 : le verdict est consigné avant d'être rendu, refus compris — c'est la première
+  // ligne que l'on cherche après un vol de compte. Appel identique dans les deux branches,
+  // écriture non attendue : aucun écart de temps ne trahit l'existence de l'adresse.
+  logLoginAttempt({ user, granted, email, ip: req.ip });
+  if (!user || !passwordOk || user.isService) throw unauthorized('Invalid credentials', 'BAD_CREDENTIALS');
+  refuseIfDisabled(user);
   if (user.totpEnabledAt) {
     res.json({ requires2fa: true, tmpToken: signTwoFaToken(user.id) });
     return;
   }
-  const sid = await createSession(user.id, req);
-  const payload = { id: user.id, email: user.email, role: user.role, sid };
-  res.json({
-    token: signAccessToken(payload),
-    refreshToken: signRefreshToken(payload),
-    user: await toSessionUser(user),
-  });
+  await grantSession(user, req, res);
 });
 
 // POST /api/auth/refresh — exige une session active.
@@ -131,6 +157,7 @@ router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) 
   if (!sid) throw unauthorized('Session revoked', 'SESSION_REVOKED');
   const user = await prisma.user.findUnique({ where: { id: payload.id } });
   if (!user) throw unauthorized('User not found');
+  refuseIfDisabled(user);
   if (!(await isSessionActive(sid))) throw unauthorized('Session revoked', 'SESSION_REVOKED');
   await touchSession(sid);
   const next = { id: user.id, email: user.email, role: user.role, sid };
@@ -145,7 +172,7 @@ const invitationTokenParam = z.object({ token: z.string().min(20).max(128) });
 // GET /api/auth/invitation/:token — aperçu affiché sur la page d'activation
 router.get(
   '/invitation/:token',
-  authLimiter,
+  signupLimiter,
   validate({ params: invitationTokenParam }),
   async (req, res) => {
     res.json({ invitation: await InvitationService.describeInvitation(req.params.token as string) });
@@ -155,20 +182,14 @@ router.get(
 // POST /api/auth/invitation/:token — pose le mot de passe choisi et ouvre la session
 router.post(
   '/invitation/:token',
-  authLimiter,
+  signupLimiter,
   validate({ params: invitationTokenParam, body: z.object({ password: passwordSchema }) }),
   async (req, res) => {
     const { password } = req.body as { password: string };
     const user = await InvitationService.acceptInvitation(req.params.token as string, password);
     // Activer son compte vaut connexion : personne ne demande de retaper le mot de passe
     // qu'on vient de choisir.
-    const sid = await createSession(user.id, req);
-    const payload = { id: user.id, email: user.email, role: user.role, sid };
-    res.json({
-      token: signAccessToken(payload),
-      refreshToken: signRefreshToken(payload),
-      user: await toSessionUser(user),
-    });
+    await grantSession(user, req, res);
   },
 );
 

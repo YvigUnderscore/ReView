@@ -111,6 +111,13 @@ services:
       S3_FORCE_PATH_STYLE: "true"
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # Un seul proxy devant l'API dans cette pile — le conteneur frontend (et, en
+      # production, le nginx TLS), qui APPEND l'adresse réelle à `X-Forwarded-For`. C'est
+      # ce qui rend `req.ip` juste pour les limiteurs et l'audit. Cette valeur n'est sûre
+      # que parce que le port du backend est borné à la boucle locale ci-dessous : à
+      # BPORT_BIND=0.0.0.0, joindre le backend sans passer par le proxy redevient possible
+      # et l'en-tête redevient falsifiable — poser alors TRUST_PROXY=0 dans .env.
+      TRUST_PROXY: ${TRUST_PROXY:-1}
       # Fuseau des digests, rapports hebdomadaires et burn-ins horodatés. Défaut historique
       # conservé ; un studio hors de France pose TZ dans .env.
       TZ: ${TZ:-Europe/Paris}
@@ -130,8 +137,13 @@ services:
     # Le simulateur ShotGrid de développement tourne sur la machine hôte.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Boucle locale par défaut, comme MinIO et Grafana : ce port est la porte de service du
+    # développement, sans TLS et sans proxy devant. Publié sur 0.0.0.0, il offrait l'API en
+    # clair à tout le réseau du studio — jetons de connexion compris — et laissait forger
+    # `X-Forwarded-For`, donc contourner les limiteurs. Poser BPORT_BIND=0.0.0.0 pour
+    # l'exposer sciemment (docker-compose.prod.yml, lui, retire tout port hôte).
     ports:
-      - "${BPORT:-3430}:3000"
+      - "${BPORT_BIND:-127.0.0.1}:${BPORT:-3430}:3000"
     depends_on:
       postgres:
         condition: service_healthy

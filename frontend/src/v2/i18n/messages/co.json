@@ -797,7 +797,10 @@
   "kanban.addItem": "Aghjunghje un elementu…",
   "reviews.addToPlaylistShort": "Aghjunghje à a playlist",
   "reviews.assigned.title": "Assignatu à mè",
-  "reviews.assigned.count": { "one": "{count} review v'aspetta", "other": "{count} reviews v'aspettanu" },
+  "reviews.assigned.count": {
+    "one": "{count} review v'aspetta",
+    "other": "{count} reviews v'aspettanu"
+  },
   "reviews.filter.allAssignments": "Tutte e reviews",
   "common.clearSelection": "Annullà a selezzione",
   "comments.imagePreview": "Anteprima di l'imagine",
@@ -1171,7 +1174,10 @@
     "one": "{count} sessione revucata",
     "other": "{count} sessioni revucate"
   },
-  "sessions.showAll": { "one": "Mustrà a {count} sessione", "other": "Mustrà tutte e {count} sessioni" },
+  "sessions.showAll": {
+    "one": "Mustrà a {count} sessione",
+    "other": "Mustrà tutte e {count} sessioni"
+  },
   "sessions.showFewer": "Mustrà menu",
   "twofa.qr": "Codice QR d’iscrizzione 2FA",
   "twofa.scan": "Scanneghja stu codice QR cù a to applicazione (Google Authenticator, 1Password…), po scrivi u codice affissatu.",
@@ -2078,6 +2084,8 @@
   "smtp.port": "Portu",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Email di prova mandatu à {to}",
+  "smtp.allowInsecure": "Permette l’inviu senza cifratura (senza STARTTLS)",
+  "smtp.allowInsecureHint": "Solu per un relè internu chì ùn prupone micca STARTTLS. A parolla d’intrata SMTP è ogni ligame d’invitu attraversanu tandu a rete in chjaru, leghjibili da chiunque sia nant’à u caminu.",
   "storage.map.hint": "Un solu bucket S3/MinIO per tutta l’istanza ; squassà un media purga u so cartulare d’uriginale è u so prefissu",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Ogetti",
@@ -2912,7 +2920,10 @@
   "shotgrid.statuses.title": "Stati proposti nant'à stu prughjettu",
   "shotgrid.statuses.hint": "Un situ cunnosce tutti i stati di u studio ; una produzzione ùn ne adopra chè qualchidunu. Marchighjate quelli chì vulete vede proposti — i menù, i selettori è i filtri seguitanu. Marcà nunda guarda u vucabulariu sanu. Piattà ùn sguassa micca : un'entità chì porta dighjà un statu piattatu seguita à mustrallu.",
   "shotgrid.statuses.all": "tutti proposti",
-  "shotgrid.statuses.count": { "one": "{count} sceltu", "other": "{count} scelti" },
+  "shotgrid.statuses.count": {
+    "one": "{count} sceltu",
+    "other": "{count} scelti"
+  },
   "shotgrid.statuses.scopeLabel": "Stati mustrati",
   "shotgrid.statuses.scope.task": "Per i tasks",
   "shotgrid.statuses.scope.shot": "Per i shots",
@@ -3145,6 +3156,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "Nisun identificativu ShotGrid ùn hè registratu per stu situ.",
   "error.REVIEW_NOTE_REQUIRED": "Stu prughjettu esige un'istruzzione per affidà una review.",
   "error.REVIEW_NOTE_TOO_SHORT": "St'istruzzione hè più corta chè ciò chì u prughjettu esige.",
+  "error.ACCOUNT_DISABLED": "Stu contu hè disattivatu. Dumandate à un amministratore di riattivallu.",
+  "error.DEPARTMENT_SCOPE_MIX": "Ùn si pò micca riordinà inseme i dipartimenti di prughjetti sfarenti.",
+  "error.SMTP_PASSWORD_UNREADABLE": "A parolla d’intrata SMTP registrata ùn si pò più dicifrà. Scrivitela torna.",
   "about.title": "À prupositu di st'istanza",
   "about.version": "Version",
   "about.builtAt": "Custruita u",
@@ -3373,11 +3387,20 @@
     "other": "{count} shots aghjurnati, {failed} ricusati"
   },
   "bulk.status.menu": "Statutu",
-  "bulk.decision.title": { "one": "Decisione di review nant'à {count} version", "other": "Decisione di review nant'à {count} versions" },
+  "bulk.decision.title": {
+    "one": "Decisione di review nant'à {count} version",
+    "other": "Decisione di review nant'à {count} versions"
+  },
   "bulk.decision.hint": "A listessa decisione, è u listessu cummentu facultativu, sò posti nant'à ognuna.",
   "bulk.decision.mixed": "A selezzione traversa parechji prughjetti : un statu chì unu d'elli ùn adopra micca hè ricusatu quì, è cuntatu.",
-  "bulk.decision.done": { "one": "{count} decisione posta", "other": "{count} decisioni poste" },
-  "bulk.decision.partial": { "one": "{count} decisione posta, {failed} ricusata", "other": "{count} decisioni poste, {failed} ricusate" },
+  "bulk.decision.done": {
+    "one": "{count} decisione posta",
+    "other": "{count} decisioni poste"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} decisione posta, {failed} ricusata",
+    "other": "{count} decisioni poste, {failed} ricusate"
+  },
   "queryState.title": "Sta sezione ùn hè pussutu esse caricata",
   "queryState.description": "U servitore ùn hà micca rispostu. Forse hè in trainu di ripartesi o ùn hè micca dispunibule — pruvate torna.",
   "queryState.retry": "Pruvà torna",
@@ -3419,7 +3442,10 @@
   "ops.latest.rateLimited": "U catalogu di e versione ricusa altre verifiche per avà. Pruvate torna più tardi.",
   "ops.latest.disabled": "A verifica di e versione hè disattivata nant'à st'istanza.",
   "ops.changes.title": "Ciò chì cambia",
-  "ops.changes.count": { "one": "{count} versione dapoi quella installata", "other": "{count} versione dapoi quella installata" },
+  "ops.changes.count": {
+    "one": "{count} versione dapoi quella installata",
+    "other": "{count} versione dapoi quella installata"
+  },
   "ops.changes.none": "Nunda di novu dapoi a versione installata.",
   "ops.changes.prerelease": "Pre-versione",
   "ops.manual.title": "Da un terminale",
@@ -3475,7 +3501,10 @@
   "ops.result.intact": "Nunda hè statu cambiatu : l'istanza hè intatta.",
   "ops.result.unknownHint": "L'agente ùn risponde più : u risultatu ùn hè micca cunnisciutu. Leghjite u so propiu ghjurnale :",
   "ops.backups.title": "Salvaguardie",
-  "ops.backups.count": { "one": "{count} salvaguardia", "other": "{count} salvaguardie" },
+  "ops.backups.count": {
+    "one": "{count} salvaguardia",
+    "other": "{count} salvaguardie"
+  },
   "ops.backups.empty": "Ancu nisuna salvaguardia quì.",
   "ops.backups.unavailable": "U cartulare di e salvaguardie ùn hè micca muntatu in l'applicazione, dunque ùn si pò nunda listà. E salvaguardie fatte da un terminale ùn sò micca tocche.",
   "ops.backups.create": "Salvà avà",
@@ -3492,7 +3521,10 @@
   "reviewers.title": "Reviewers",
   "reviewers.none": "Nimu hè ancu incaricatu di a review di sta version",
   "reviewers.assign": "Assignà",
-  "reviewers.saved": { "one": "{count} persona nant'à sta review", "other": "{count} persone nant'à sta review" },
+  "reviewers.saved": {
+    "one": "{count} persona nant'à sta review",
+    "other": "{count} persone nant'à sta review"
+  },
   "reviewers.notePlaceholder": "Ciò chì deve guardà ? (a luce, u raccordu à 1042…)",
   "reviewers.noteLabel": "Ciò chì {name} deve guardà",
   "reviewers.noteRequired": "Stu prughjettu esige un'istruzzione.",

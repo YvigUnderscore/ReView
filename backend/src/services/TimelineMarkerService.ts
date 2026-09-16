@@ -6,14 +6,16 @@ import { prisma } from '../lib/prisma';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { checkProjectAccess } from '../middleware/rbac';
 import { resolveProjectIdForMedia } from '../lib/pipeline';
+import { assertCanContribute, isProjectManager } from '../lib/projectRoles';
 import { displayName } from '../lib/userView';
 import { emitToReview } from './SocketService';
 
 /**
  * Marqueurs de timeline nommés/colorés partagés (Phase 34.C) : posés par clic droit sur
- * la timeline vidéo, visibles par tous les membres du projet. Création par les rôles
- * d'écriture ; modification/suppression par l'auteur ou un superviseur. Chaque mutation
- * notifie la room de review (`markers:changed`) pour invalidation temps réel.
+ * la timeline vidéo, visibles par tous les membres du projet. Écriture réservée aux
+ * contributeurs du projet (rôle EFFECTIF, cf. `lib/projectRoles`) ; modification et
+ * suppression par l'auteur ou un superviseur DE CE PROJET. Chaque mutation notifie la
+ * room de review (`markers:changed`) pour invalidation temps réel.
  */
 
 type SessionUser = { id: number; role: Role };
@@ -69,8 +71,6 @@ async function assertMediaRead(mediaId: number, user: SessionUser): Promise<numb
   return projectId;
 }
 
-const canWrite = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR || role === Role.ARTIST;
-
 export async function list(user: SessionUser, mediaId: number): Promise<TimelineMarkerView[]> {
   await assertMediaRead(mediaId, user);
   const markers = await prisma.timelineMarker.findMany({
@@ -86,8 +86,11 @@ export async function create(
   mediaId: number,
   data: { frame: number; name: string; color: string },
 ): Promise<TimelineMarkerView> {
-  if (!canWrite(user.role)) throw forbidden('Creating a marker requires a write role');
-  await assertMediaRead(mediaId, user);
+  const projectId = await assertMediaRead(mediaId, user);
+  // 38.E : c'est le rôle EFFECTIF sur CE projet qui décide, pas le rôle global. Un ARTIST
+  // rétrogradé CLIENT garde son membership (checkProjectAccess dit toujours oui) mais ne
+  // pose plus de marqueur partagé.
+  await assertCanContribute(user.id, user.role, projectId);
   if (!COLOR_RE.test(data.color)) throw badRequest('Invalid colour (expected hex #rrggbb)');
   const count = await prisma.timelineMarker.count({ where: { mediaObjectId: mediaId } });
   if (count >= MAX_MARKERS) throw badRequest('Too many markers on this media');
@@ -107,10 +110,13 @@ export async function create(
 
 /** L'auteur ou un superviseur/admin peut modifier/supprimer un marqueur. */
 async function assertMarkerManage(user: SessionUser, mediaId: number, markerId: number) {
-  await assertMediaRead(mediaId, user);
+  const projectId = await assertMediaRead(mediaId, user);
   const marker = await prisma.timelineMarker.findUnique({ where: { id: markerId } });
   if (!marker || marker.mediaObjectId !== mediaId) throw notFound('Marker not found');
-  const manager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
+  // Même règle qu'à la création : sans droit de contribution sur ce projet, on ne touche
+  // plus aux marqueurs partagés — fût-on leur auteur d'avant la rétrogradation.
+  await assertCanContribute(user.id, user.role, projectId);
+  const manager = await isProjectManager(user.id, user.role, projectId);
   if (!manager && marker.authorId !== user.id)
     throw forbidden('Only the author or a supervisor can change this');
   return marker;

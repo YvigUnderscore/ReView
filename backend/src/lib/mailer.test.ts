@@ -3,23 +3,61 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { transport, smtp } = vi.hoisted(() => ({
+const { transport, smtp, createTransport } = vi.hoisted(() => ({
   transport: { sendMail: vi.fn() },
   smtp: { getEffectiveConfig: vi.fn() },
+  createTransport: vi.fn(),
 }));
 
-vi.mock('nodemailer', () => ({ default: { createTransport: () => transport } }));
+vi.mock('nodemailer', () => ({ default: { createTransport } }));
 vi.mock('../services/SmtpService', () => smtp);
 vi.mock('./logger', () => ({ logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() } }));
 
 import { isMailerConfigured, sendMail } from './mailer';
 
-const CONFIG = { host: 'smtp.test', port: 587, secure: false, from: 'ReView <no-reply@test>' };
+const CONFIG = {
+  host: 'smtp.test',
+  port: 587,
+  secure: false,
+  from: 'ReView <no-reply@test>',
+  allowInsecure: false,
+};
+
+/** Options passées à nodemailer pour le dernier envoi. */
+const lastTransportOptions = () =>
+  createTransport.mock.calls[createTransport.mock.calls.length - 1]![0] as {
+    requireTLS?: boolean;
+    tls?: { minVersion?: string };
+  };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  createTransport.mockReturnValue(transport);
   smtp.getEffectiveConfig.mockResolvedValue(CONFIG);
   transport.sendMail.mockResolvedValue({});
+});
+
+describe('transport — chiffrement exigé (A3-04)', () => {
+  it('exige STARTTLS sur un relais en clair', async () => {
+    // Sans requireTLS, le STARTTLS du port 587 est opportuniste : un intermédiaire qui
+    // retire 250-STARTTLS de l'EHLO fait poursuivre en clair, et le transport livre
+    // AUTH LOGIN puis le lien d'invitation — qui pose le mot de passe d'un compte.
+    await sendMail('a@b.c', 'Sujet', '<p>x</p>');
+    expect(lastTransportOptions().requireTLS).toBe(true);
+    expect(lastTransportOptions().tls?.minVersion).toBe('TLSv1.2');
+  });
+
+  it('n’exige pas STARTTLS sur un port déjà chiffré de bout en bout', async () => {
+    smtp.getEffectiveConfig.mockResolvedValue({ ...CONFIG, port: 465, secure: true });
+    await sendMail('a@b.c', 'Sujet', '<p>x</p>');
+    expect(lastTransportOptions().requireTLS).toBe(false);
+  });
+
+  it('laisse l’échappatoire explicite d’un relais interne sans TLS', async () => {
+    smtp.getEffectiveConfig.mockResolvedValue({ ...CONFIG, allowInsecure: true });
+    await sendMail('a@b.c', 'Sujet', '<p>x</p>');
+    expect(lastTransportOptions().requireTLS).toBe(false);
+  });
 });
 
 describe('sendMail', () => {

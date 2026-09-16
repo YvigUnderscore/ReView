@@ -7,16 +7,17 @@ import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { authenticate } from '../middleware/auth';
-import { requireRole } from '../middleware/rbac';
+import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as DepartmentService from '../services/DepartmentService';
 
 /**
  * Départements du pipeline (B1).
  *
- * Lecture ouverte aux comptes authentifiés : un département sert d'étiquette partout
- * (regroupements, filtres, badges). L'administration reste aux ADMIN et SUPERVISOR, comme
- * les autres réglages structurants du projet.
+ * Le référentiel du studio se lit de tout compte authentifié — un département sert
+ * d'étiquette partout (regroupements, filtres, badges) ; le pipe d'un projet, lui, se
+ * filtre par appartenance comme toute lecture de projet. L'administration reste aux ADMIN
+ * et SUPERVISOR, comme les autres réglages structurants du projet.
  */
 const router = Router();
 
@@ -48,13 +49,15 @@ const departmentBody = z.object({
  * permet à l'écran de proposer deux entrées plutôt que douze, sous la politique de
  * département (cf. `lib/taskDepartmentPolicy`). Le drapeau est **consultatif** : le serveur
  * revérifie à l'écriture, un client ne se contrôle pas lui-même.
+ *
+ * Lecture filtrée par appartenance (A5-06) : la réponse est propre au projet ET au
+ * lecteur, elle n'a rien d'un référentiel public. Le pipe d'un projet dont on n'est pas
+ * membre ne se lit plus ici — le référentiel du studio, lui, reste ouvert ci-dessous.
  */
 router.get('/projects/:projectId/departments', auth, validate({ params: projectParam }), async (req, res) => {
-  const departments = await DepartmentService.listForProjectWithRights(
-    Number(req.params.projectId),
-    req.user!,
-  );
-  res.json({ departments });
+  const projectId = Number(req.params.projectId);
+  await assertProjectAccess(req, projectId);
+  res.json({ departments: await DepartmentService.listForProjectWithRights(projectId, req.user!) });
 });
 
 /** Référentiel du studio, celui que les projets héritent par défaut. */
@@ -90,7 +93,7 @@ router.patch(
   manage,
   validate({ params: idParam, body: departmentBody.partial() }),
   async (req, res) => {
-    res.json({ department: await DepartmentService.update(Number(req.params.id), req.body) });
+    res.json({ department: await DepartmentService.update(req.user!, Number(req.params.id), req.body) });
   },
 );
 
@@ -122,12 +125,12 @@ router.put(
 );
 
 router.delete('/departments/:id', auth, manage, validate({ params: idParam }), async (req, res) => {
-  await DepartmentService.remove(Number(req.params.id));
+  await DepartmentService.remove(req.user!, Number(req.params.id));
   res.status(204).end();
 });
 
 router.put('/departments/order', auth, manage, validate({ body: idsBody }), async (req, res) => {
-  await DepartmentService.reorder(req.body.ids);
+  await DepartmentService.reorder(req.user!, req.body.ids);
   res.status(204).end();
 });
 

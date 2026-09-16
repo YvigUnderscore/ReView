@@ -797,7 +797,10 @@
   "kanban.addItem": "Element hinzufügen…",
   "reviews.addToPlaylistShort": "Zur playlist hinzufügen",
   "reviews.assigned.title": "Mir zugewiesen",
-  "reviews.assigned.count": { "one": "{count} review wartet auf Sie", "other": "{count} reviews warten auf Sie" },
+  "reviews.assigned.count": {
+    "one": "{count} review wartet auf Sie",
+    "other": "{count} reviews warten auf Sie"
+  },
   "reviews.filter.allAssignments": "Alle reviews",
   "common.clearSelection": "Auswahl aufheben",
   "comments.imagePreview": "Bildvorschau",
@@ -1171,7 +1174,10 @@
     "one": "{count} Sitzung widerrufen",
     "other": "{count} Sitzungen widerrufen"
   },
-  "sessions.showAll": { "one": "Die {count} Sitzung anzeigen", "other": "Alle {count} Sitzungen anzeigen" },
+  "sessions.showAll": {
+    "one": "Die {count} Sitzung anzeigen",
+    "other": "Alle {count} Sitzungen anzeigen"
+  },
   "sessions.showFewer": "Weniger anzeigen",
   "twofa.qr": "QR-Code zur 2FA-Einrichtung",
   "twofa.scan": "Scannen Sie diesen QR-Code mit Ihrer App (Google Authenticator, 1Password…) und geben Sie dann den angezeigten Code ein.",
@@ -2078,6 +2084,8 @@
   "smtp.port": "Port",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Test-E-Mail an {to} gesendet",
+  "smtp.allowInsecure": "Unverschlüsselten Versand erlauben (ohne STARTTLS)",
+  "smtp.allowInsecureHint": "Nur für ein internes Relay ohne STARTTLS. Das SMTP-Passwort und jeder Einladungslink laufen dann im Klartext durch das Netz und sind für jeden auf dem Weg lesbar.",
   "storage.map.hint": "Ein einziger S3/MinIO-Bucket für die ganze Instanz; das Löschen eines Mediums räumt seinen Originalordner und sein Präfix ab",
   "storage.objShort": "{count} Obj.",
   "storage.objects": "Objekte",
@@ -2912,7 +2920,10 @@
   "shotgrid.statuses.title": "Auf diesem Projekt angebotene Status",
   "shotgrid.statuses.hint": "Ein Site kennt alle Status des Studios; eine Produktion nutzt nur wenige. Haken Sie an, was angeboten werden soll — Menüs, Auswahlfelder und Filter folgen. Nichts anhaken lässt den ganzen Wortschatz stehen. Ausblenden löscht nie: Wer einen ausgeblendeten Status schon trägt, zeigt ihn weiter.",
   "shotgrid.statuses.all": "alle angeboten",
-  "shotgrid.statuses.count": { "one": "{count} ausgewählt", "other": "{count} ausgewählt" },
+  "shotgrid.statuses.count": {
+    "one": "{count} ausgewählt",
+    "other": "{count} ausgewählt"
+  },
   "shotgrid.statuses.scopeLabel": "Angezeigte Status",
   "shotgrid.statuses.scope.task": "Für Tasks",
   "shotgrid.statuses.scope.shot": "Für Shots",
@@ -3145,6 +3156,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "Für diese Site sind keine ShotGrid-Zugangsdaten hinterlegt.",
   "error.REVIEW_NOTE_REQUIRED": "Dieses Projekt verlangt eine Anweisung, um eine Review zu übergeben.",
   "error.REVIEW_NOTE_TOO_SHORT": "Diese Anweisung ist kürzer, als das Projekt verlangt.",
+  "error.ACCOUNT_DISABLED": "Dieses Konto ist deaktiviert. Bitten Sie die Administration, es wieder zu aktivieren.",
+  "error.DEPARTMENT_SCOPE_MIX": "Abteilungen aus verschiedenen Projekten können nicht gemeinsam neu sortiert werden.",
+  "error.SMTP_PASSWORD_UNREADABLE": "Das gespeicherte SMTP-Passwort lässt sich nicht mehr entschlüsseln. Geben Sie es erneut ein.",
   "about.title": "Über diese Instanz",
   "about.version": "Version",
   "about.builtAt": "Erstellt am",
@@ -3373,11 +3387,20 @@
     "other": "{count} Shots aktualisiert, {failed} abgelehnt"
   },
   "bulk.status.menu": "Status",
-  "bulk.decision.title": { "one": "Review-Entscheidung für {count} version", "other": "Review-Entscheidung für {count} versions" },
+  "bulk.decision.title": {
+    "one": "Review-Entscheidung für {count} version",
+    "other": "Review-Entscheidung für {count} versions"
+  },
   "bulk.decision.hint": "Dieselbe Entscheidung und derselbe optionale Kommentar werden auf jede geschrieben.",
   "bulk.decision.mixed": "Die Auswahl umfasst mehrere Projekte: Ein dort nicht verwendeter Status wird abgelehnt und gezählt.",
-  "bulk.decision.done": { "one": "{count} Entscheidung festgehalten", "other": "{count} Entscheidungen festgehalten" },
-  "bulk.decision.partial": { "one": "{count} Entscheidung festgehalten, {failed} abgelehnt", "other": "{count} Entscheidungen festgehalten, {failed} abgelehnt" },
+  "bulk.decision.done": {
+    "one": "{count} Entscheidung festgehalten",
+    "other": "{count} Entscheidungen festgehalten"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} Entscheidung festgehalten, {failed} abgelehnt",
+    "other": "{count} Entscheidungen festgehalten, {failed} abgelehnt"
+  },
   "queryState.title": "Dieser Bereich konnte nicht geladen werden",
   "queryState.description": "Der Server hat nicht geantwortet. Er startet vielleicht neu oder ist nicht erreichbar — versuchen Sie es erneut.",
   "queryState.retry": "Erneut versuchen",
@@ -3419,7 +3442,10 @@
   "ops.latest.rateLimited": "Der Ausgabenkatalog lehnt weitere Prüfungen vorerst ab. Später erneut versuchen.",
   "ops.latest.disabled": "Die Prüfung auf neue Ausgaben ist auf dieser Instanz abgeschaltet.",
   "ops.changes.title": "Was sich ändert",
-  "ops.changes.count": { "one": "{count} Ausgabe seit der installierten", "other": "{count} Ausgaben seit der installierten" },
+  "ops.changes.count": {
+    "one": "{count} Ausgabe seit der installierten",
+    "other": "{count} Ausgaben seit der installierten"
+  },
   "ops.changes.none": "Nichts Neues seit der installierten Ausgabe.",
   "ops.changes.prerelease": "Vorabausgabe",
   "ops.manual.title": "Über ein Terminal",
@@ -3475,7 +3501,10 @@
   "ops.result.intact": "Es wurde nichts umgeschaltet — die Instanz ist unberührt.",
   "ops.result.unknownHint": "Der Agent antwortet nicht mehr, der Ausgang ist unbekannt. Sein eigenes Protokoll lesen:",
   "ops.backups.title": "Sicherungen",
-  "ops.backups.count": { "one": "{count} Sicherung", "other": "{count} Sicherungen" },
+  "ops.backups.count": {
+    "one": "{count} Sicherung",
+    "other": "{count} Sicherungen"
+  },
   "ops.backups.empty": "Hier gibt es noch keine Sicherung.",
   "ops.backups.unavailable": "Das Sicherungsverzeichnis ist nicht in die Anwendung eingebunden, es kann also nichts aufgelistet werden. Über ein Terminal erstellte Sicherungen bleiben davon unberührt.",
   "ops.backups.create": "Jetzt sichern",
@@ -3492,7 +3521,10 @@
   "reviewers.title": "Reviewer",
   "reviewers.none": "Für die review dieser version ist noch niemand benannt",
   "reviewers.assign": "Zuweisen",
-  "reviewers.saved": { "one": "{count} Person bei dieser review", "other": "{count} Personen bei dieser review" },
+  "reviewers.saved": {
+    "one": "{count} Person bei dieser review",
+    "other": "{count} Personen bei dieser review"
+  },
   "reviewers.notePlaceholder": "Worauf soll er achten? (das Licht, der Anschluss bei 1042 …)",
   "reviewers.noteLabel": "Worauf {name} achten soll",
   "reviewers.noteRequired": "Dieses Projekt verlangt eine Anweisung.",

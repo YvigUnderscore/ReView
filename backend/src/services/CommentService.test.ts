@@ -15,6 +15,8 @@ vi.mock('../lib/prisma', () => ({
     },
     reaction: { upsert: vi.fn(), delete: vi.fn() },
     projectMembership: { findMany: vi.fn() },
+    // Montage visé par un retour (46) : son projet est confronté à celui de la route.
+    timeline: { findUnique: vi.fn() },
     // Projet writable par défaut (38.B) : le verrou d’archivage interroge project.findFirst.
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
   },
@@ -60,6 +62,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(prisma.comment.findUnique).mockResolvedValue({ userId: author.id } as never);
   vi.mocked(prisma.comment.update).mockResolvedValue({ id: 1, author: { id: 5 }, mediaObjectId: 9 } as never);
+  // Par défaut, le montage cité appartient au projet 3 — celui que la route a autorisé.
+  vi.mocked(prisma.timeline.findUnique).mockResolvedValue({ projectId: 3 } as never);
 });
 
 describe('extractMentionTokens (32.B)', () => {
@@ -158,6 +162,88 @@ describe('create — pièces jointes : clés bornées à l’auteur', () => {
       ],
     });
     expect(persistedAttachments()).toBeUndefined();
+  });
+});
+
+/**
+ * A1-02 : la route n'autorise que le projet du MÉDIA. `timelineId` arrive du même corps de
+ * requête et désignait, lui, n'importe quel montage du studio — identifiants séquentiels,
+ * donc devinables. Un ARTIST écrivait ainsi dans les notes de montage d'un projet voisin,
+ * sous son nom, alors que la lecture des mêmes notes lui répond 403.
+ */
+describe('create — montage cité : cloisonnement par projet (A1-02)', () => {
+  beforeEach(() => {
+    vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.create).mockResolvedValue({ id: 50, content: 'x', author: { id: 5 } } as never);
+  });
+
+  it('refuse un montage appartenant à un autre projet, sans rien écrire', async () => {
+    vi.mocked(prisma.timeline.findUnique).mockResolvedValue({ projectId: 2 } as never);
+    await expect(
+      create(author, 7, { mediaObjectId: 34, content: 'coucou', timelineId: 2, timelineTime: 1 }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  it('refuse un montage inexistant', async () => {
+    vi.mocked(prisma.timeline.findUnique).mockResolvedValue(null);
+    await expect(
+      create(author, 7, { mediaObjectId: 34, content: 'coucou', timelineId: 99999 }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  // Une position dans le film sans film ne désigne rien : valeur orpheline, jamais relue.
+  it('refuse une position de montage sans montage', async () => {
+    await expect(
+      create(author, 3, { mediaObjectId: 9, content: 'coucou', timelineTime: 71.5 }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  it('accepte le montage du projet autorisé', async () => {
+    vi.mocked(prisma.timeline.findUnique).mockResolvedValue({ projectId: 7 } as never);
+    await create(author, 7, { mediaObjectId: 34, content: 'coupe', timelineId: 12, timelineTime: 4 });
+    expect(prisma.comment.create).toHaveBeenCalled();
+  });
+});
+
+/**
+ * A2-04 : `annotation` et `cameraState` étaient déclarés `z.any()`. Le service les relit
+ * désormais lui-même — toutes les entrées ne passent pas par `routes/comments.routes.ts`.
+ */
+describe('create — blobs JSON bornés (A2-04)', () => {
+  beforeEach(() => {
+    vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.comment.create).mockResolvedValue({ id: 51, content: 'x', author: { id: 5 } } as never);
+  });
+
+  it('refuse une annotation de forme libre', async () => {
+    await expect(
+      create(author, 3, { mediaObjectId: 9, content: 'x', annotation: { pad: 'A'.repeat(100) } }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  it('refuse une pose caméra portant un champ inconnu', async () => {
+    await expect(
+      create(author, 3, {
+        mediaObjectId: 9,
+        content: 'x',
+        cameraState: { position: { x: 0, y: 0, z: 1 }, target: { x: 0, y: 0, z: 0 }, pad: 'A'.repeat(100) },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  it('laisse passer une annotation et une pose légitimes', async () => {
+    await create(author, 3, {
+      mediaObjectId: 9,
+      content: 'x',
+      annotation: [{ type: 'rect', id: 'a1', color: '#ef4444', width: 3, x: 0.1, y: 0.2, w: 0.3, h: 0.4 }],
+      cameraState: { position: { x: 1, y: 2, z: 3 }, target: { x: 0, y: 0, z: 0 }, fov: 45 },
+    });
+    expect(prisma.comment.create).toHaveBeenCalled();
   });
 });
 

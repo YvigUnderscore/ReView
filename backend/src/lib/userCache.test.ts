@@ -11,7 +11,7 @@ import { __redisTesting, enableRedisTransport } from './redis';
 import { createFakeRedis, type FakeRedis } from './redisFake';
 import { Role } from '@prisma/client';
 
-const user = { id: 1, email: 'a@b.c', role: Role.ARTIST };
+const user = { id: 1, email: 'a@b.c', role: Role.ARTIST, disabledAt: null };
 let redis: FakeRedis;
 
 beforeEach(() => {
@@ -32,6 +32,14 @@ describe('getAuthUser', () => {
     await getAuthUser(1);
     await getAuthUser(1);
     expect(db.user.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  // A1-01 : un droit qu'on ne charge pas est un droit qu'on ne peut pas refuser. Sans cette
+  // colonne, `middleware/auth` n'avait rien à tester pour un compte sorti du studio.
+  it('charge la date de désactivation avec l’identité', async () => {
+    await getAuthUser(1);
+    const call = db.user.findUnique.mock.calls[0]![0] as { select: Record<string, boolean> };
+    expect(call.select).toMatchObject({ disabledAt: true });
   });
 
   it('rend la même identité depuis le cache', async () => {

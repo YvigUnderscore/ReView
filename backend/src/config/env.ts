@@ -51,6 +51,23 @@ const baseEnvSchema = z.object({
   // CORS
   CORS_ORIGIN: z.string().default('*'),
 
+  // Nombre de proxys de confiance devant l'API (`app.set('trust proxy', …)`).
+  //
+  // Zéro par défaut, et c'est le point : à toute autre valeur, Express lit `req.ip` dans
+  // `X-Forwarded-For`, un en-tête que l'APPELANT fournit. Le port du backend étant
+  // joignable en direct dès qu'on le publie, une valeur codée en dur rendait chaque
+  // limiteur par IP contournable d'un en-tête (un quota neuf par adresse inventée) et
+  // laissait l'attaquant choisir l'adresse écrite dans le journal d'audit.
+  // À 0, `req.ip` redevient l'adresse de la socket : faux derrière un proxy, jamais
+  // falsifiable. Poser 1 quand — et seulement quand — le nginx de `nginx/nginx.conf`
+  // (ou un proxy équivalent qui réécrit `X-Forwarded-For`) est le seul chemin d'entrée.
+  TRUST_PROXY: z.coerce
+    .number({ invalid_type_error: 'TRUST_PROXY doit être un nombre de sauts (0 = aucun proxy)' })
+    .int()
+    .min(0)
+    .max(4)
+    .default(0),
+
   // Email sortant (digest quotidien) — optionnel : sans SMTP_HOST, aucun envoi.
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),

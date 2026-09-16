@@ -25,20 +25,27 @@ vi.mock('./prisma', () => {
   };
 });
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock('../services/AuditService', () => ({ logAudit: vi.fn() }));
+// Seule l'écriture d'audit est simulée : les garde-fous que la rétention lui emprunte
+// (plancher, actions inpurgeables) doivent être les vrais, sinon le test se contente de
+// vérifier sa propre copie.
+vi.mock('../services/AuditService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/AuditService')>()),
+  logAudit: vi.fn(),
+}));
 
 import {
   RETENTION_DEFAULTS,
   RETENTION_FAMILIES,
   deleteInBatches,
   getRetentionPolicy,
+  retentionPolicySchema,
   setRetentionPolicy,
   sweepRetention,
   __testing,
   type RetentionPolicy,
 } from './retention';
 import { prisma } from './prisma';
-import { logAudit } from '../services/AuditService';
+import { logAudit, AUDIT_RETENTION_MIN_DAYS, AUDIT_UNPURGEABLE_ACTIONS } from '../services/AuditService';
 
 const DAY = 86_400_000;
 
@@ -103,6 +110,35 @@ describe('lecture / écriture de la politique', () => {
     expect(call.where.key).toBe(__testing.RETENTION_KEY);
     expect(__testing.RETENTION_KEY).toBe('retention_policy');
     expect(JSON.parse(call.create.value)).toEqual(saved);
+  });
+});
+
+/**
+ * A5-04 : sans plancher, `PUT /api/admin/retention {"auditLog":1}` puis
+ * `POST /api/admin/retention/run` effaçaient en deux gestes les traces de celui qui les
+ * faisait. Le plancher refuse la durée au lieu de l'ajuster en silence — un administrateur
+ * qui demande « un jour » doit apprendre que non, pas croire que c'est fait.
+ */
+describe('plancher de conservation du journal d’audit (A5-04)', () => {
+  it('refuse une durée d’audit sous le plancher, accepte 0 et le plancher lui-même', () => {
+    expect(retentionPolicySchema.safeParse({ auditLog: 1 }).success).toBe(false);
+    expect(retentionPolicySchema.safeParse({ auditLog: AUDIT_RETENTION_MIN_DAYS - 1 }).success).toBe(false);
+    // 0 = conservation illimitée : c'est le sens le plus protecteur, il reste permis.
+    expect(retentionPolicySchema.safeParse({ auditLog: 0 }).success).toBe(true);
+    expect(retentionPolicySchema.safeParse({ auditLog: AUDIT_RETENTION_MIN_DAYS }).success).toBe(true);
+    // Le plancher ne vaut que pour l'audit : les autres familles gardent leur liberté.
+    expect(retentionPolicySchema.safeParse({ notification: 1 }).success).toBe(true);
+  });
+
+  it('relève une durée d’audit déjà persistée sous le plancher (réglage antérieur, ou base éditée)', async () => {
+    vi.mocked(prisma.setting.findUnique).mockResolvedValue({ value: '{"auditLog":1}' } as never);
+    await expect(getRetentionPolicy()).resolves.toMatchObject({ auditLog: AUDIT_RETENTION_MIN_DAYS });
+  });
+
+  it('laisse passer 0 et n’écrase pas la valeur en place quand rien n’est proposé', () => {
+    const base = { ...RETENTION_DEFAULTS, auditLog: 120 };
+    expect(__testing.sanitize({ auditLog: 0 }, base).auditLog).toBe(0);
+    expect(__testing.sanitize({}, base).auditLog).toBe(120);
   });
 });
 
@@ -175,6 +211,18 @@ describe('sweepRetention', () => {
     expect(out.total).toBe(2);
     expect(out.families.auditLog).toBe(2);
     expect(out.truncated).toBe(false);
+  });
+
+  /**
+   * A5-04 : la purge de l'audit ne doit jamais emporter la preuve de l'effacement. Sans
+   * cette exclusion, le `RETENTION_CONFIG` qui trahit la manœuvre part avec le reste.
+   */
+  it('épargne inconditionnellement les actions qui décrivent un effacement', async () => {
+    await sweepRetention({ policy: onlyFamily('auditLog', 100), now, pauseMs: 0 });
+
+    const args = firstCall<{ where: { action?: { notIn: string[] } } }>(prisma.auditLog.findMany);
+    expect(args.where.action?.notIn).toEqual(AUDIT_UNPURGEABLE_ACTIONS);
+    expect(AUDIT_UNPURGEABLE_ACTIONS).toContain('RETENTION_CONFIG');
   });
 
   it('consigne une trace d’audit quand elle a supprimé, et rien quand la base est propre', async () => {

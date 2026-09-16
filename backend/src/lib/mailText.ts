@@ -14,6 +14,8 @@
  * reproduire la mise en page, mais à rendre le message lisible et ses liens accessibles.
  */
 
+import { escapeHtml } from './html';
+
 /** Entités HTML que nos gabarits produisent réellement. */
 const ENTITIES: Record<string, string> = {
   '&amp;': '&',
@@ -55,9 +57,17 @@ const CELL_SEP = '\uE000';
  */
 function inlineLinks(html: string): string {
   return html.replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href: string, inner: string) => {
+    // L'adresse arrive ÉCHAPPÉE du gabarit (`mailButton` et le lien de repli passent
+    // désormais par `escapeHtml`) : un `&` de requête y vaut `&amp;`. Sans décodage, une
+    // adresse portant un paramètre n'était plus reconnue comme égale à son libellé, et le
+    // repli « adresse (adresse) » la répétait deux fois dans la version texte.
+    //
+    // Seule la COMPARAISON travaille sur la forme décodée : ce qu'on réinjecte reste la
+    // forme échappée, que la passe finale d'`htmlToText` décodera — une fois, pas deux.
+    const url = decodeEntities(href);
     const label = decodeEntities(inner.replace(/<[^>]+>/g, '')).trim();
     if (!label) return href;
-    if (label === href) return label;
+    if (label === url) return href;
     return `${label} (${href})`;
   });
 }
@@ -98,7 +108,10 @@ export function htmlToText(html: string): string {
  * hors du champ le texte qui suivrait.
  */
 export function preheader(text: string): string {
-  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // `escapeHtml` de `lib/html`, et surtout pas une copie locale : celle qui vivait ici ne
+  // traitait que `&`, `<` et `>`. Le texte d'aperçu est aujourd'hui un nœud de texte, donc
+  // la copie amputée suffisait — mais c'est exactement la ligne qu'on recopie le jour où
+  // on place la même donnée dans un attribut, et elle devient fausse à cet instant-là.
   const spacer = '&#847;&zwnj;&nbsp;'.repeat(60);
-  return `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${escaped}${spacer}</div>`;
+  return `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${escapeHtml(text)}${spacer}</div>`;
 }

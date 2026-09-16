@@ -60,3 +60,7 @@ deploy/
 # (ops/Dockerfile, ops/agent.sh), que `.github/workflows/release.yml` construit.
 ops/queue/
 ops/state/
+
+# Bytecode Python du client : jamais versionné.
+__pycache__/
+*.pyc

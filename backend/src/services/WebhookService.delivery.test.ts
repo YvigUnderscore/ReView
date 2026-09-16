@@ -18,12 +18,13 @@ vi.mock('../lib/prisma', () => ({
     webhookDelivery: { create: vi.fn(), update: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
   },
 }));
-vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn() } }));
+vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 vi.mock('../lib/crypto', () => ({ decryptSecret: vi.fn(() => 'shh') }));
 vi.mock('./JobService', () => ({ enqueueWebhookDelivery: vi.fn() }));
 
 import { lookup } from 'node:dns/promises';
 import { prisma } from '../lib/prisma';
+import { decryptSecret } from '../lib/crypto';
 import { enqueueWebhookDelivery } from './JobService';
 import {
   deliver,
@@ -32,6 +33,7 @@ import {
   queueDelivery,
   replayDelivery,
   RESPONSE_BODY_MAX,
+  SECRET_UNREADABLE_ERROR,
   subscriberFilter,
   unpackDelivery,
 } from './WebhookService';
@@ -176,6 +178,45 @@ describe('webhook mort', () => {
     activeHook();
     await expect(deliver(1, 'x', { _reviewDeliveryId: 77 })).rejects.toThrow();
     expect(prisma.webhook.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { active: false } });
+  });
+});
+
+describe('secret illisible', () => {
+  it('n’émet rien plutôt que de signer avec une clé vide', async () => {
+    // decryptSecret rend null dès que la clé de chiffrement a changé. Le repli en chaîne
+    // vide signait alors avec une clé HMAC VIDE : la livraison partait avec un en-tête
+    // X-ReView-Signature bien formé, mais recalculable par quiconque connaît l'URL — de
+    // quoi forger un événement ReView et déclencher le pipeline aval du studio.
+    vi.mocked(decryptSecret).mockReturnValueOnce(null);
+    activeHook();
+    await deliver(1, 'version.published', { versionId: 3, _reviewDeliveryId: 77 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('laisse le motif lisible dans le journal du webhook', async () => {
+    vi.mocked(decryptSecret).mockReturnValueOnce(null);
+    activeHook();
+    await deliver(1, 'version.published', { versionId: 3, _reviewDeliveryId: 77 });
+    expect(prisma.webhookDelivery.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 77 },
+        data: expect.objectContaining({
+          status: 'FAILED',
+          error: SECRET_UNREADABLE_ERROR,
+        }) as unknown,
+      }),
+    );
+    expect(prisma.webhook.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ lastError: SECRET_UNREADABLE_ERROR }) as unknown,
+      }),
+    );
+  });
+
+  it('ne relance pas : une reprise ne réparerait pas une clé changée', async () => {
+    vi.mocked(decryptSecret).mockReturnValueOnce(null);
+    activeHook();
+    await expect(deliver(1, 'version.published', { _reviewDeliveryId: 77 })).resolves.toBeUndefined();
   });
 });
 

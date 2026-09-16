@@ -14,6 +14,15 @@ import { QueryState } from '../../components/ui/query-state';
 import type { SmtpConfig } from '../../types/api';
 import { useT } from '../../i18n';
 
+/**
+ * Vue du formulaire : la configuration rendue par le serveur, plus `allowInsecure`.
+ *
+ * Le champ est servi par `GET /api/studio/smtp` mais ne figure pas encore dans `SmtpConfig`
+ * (`v2/types/api.ts`, hors du périmètre de ce lot) : on compose par intersection, jamais
+ * en redéclarant l'entité — la règle de `v2/types/api.ts` interdit la seconde définition.
+ */
+type SmtpView = SmtpConfig & { allowInsecure?: boolean };
+
 /** Configuration SMTP (admin) : champs en base, mot de passe chiffré write-only + envoi test. */
 export default function SmtpTab() {
   const t = useT();
@@ -21,11 +30,11 @@ export default function SmtpTab() {
   const myEmail = useAuth((s) => s.user?.email) ?? '';
   const smtpQ = useQuery({
     queryKey: qk.admin('smtp'),
-    queryFn: () => api.get<{ smtp: SmtpConfig }>('/api/studio/smtp').then((d) => d.smtp),
+    queryFn: () => api.get<{ smtp: SmtpView }>('/api/studio/smtp').then((d) => d.smtp),
   });
   const data = smtpQ.data;
 
-  const [f, setF] = useState<Partial<SmtpConfig> & { password?: string }>({});
+  const [f, setF] = useState<Partial<SmtpView> & { password?: string }>({});
   const [testTo, setTestTo] = useState('');
   const [busy, setBusy] = useState(false);
   if (!data) return <QueryState query={smtpQ} skeleton={<SkeletonRows count={5} />} />;
@@ -40,6 +49,10 @@ export default function SmtpTab() {
         secure: !!v.secure,
         user: v.user,
         from: v.from,
+        // Toujours envoyé, jamais conditionné à `f.allowInsecure` : le service conserve la
+        // valeur en place quand le champ est absent, si bien qu'un décochage seul — sans
+        // autre modification — n'aurait rien remis en sécurité.
+        allowInsecure: !!v.allowInsecure,
         ...(f.password ? { password: f.password } : {}),
       };
       await api.put('/api/studio/smtp', payload);
@@ -120,6 +133,25 @@ export default function SmtpTab() {
             aria-label={t('smtp.fromPlaceholder')}
           />
         </Row>
+        {/*
+          Le réglage sort de la liste des champs, et porte la couleur du danger.
+          Aligné en `Row` entre « Port » et « Expéditeur », il se cocherait comme une
+          préférence d'affichage : or il retire le chiffrement du transport, donc remet le
+          mot de passe du relais et chaque lien d'invitation en clair sur le réseau. La
+          conséquence est écrite sous le libellé, pas renvoyée à une infobulle.
+        */}
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2.5">
+          <label className="flex cursor-pointer items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-0.5 accent-destructive"
+              checked={!!v.allowInsecure}
+              onChange={(e) => setF((s) => ({ ...s, allowInsecure: e.target.checked }))}
+            />
+            <span className="text-sm font-medium text-destructive">{t('smtp.allowInsecure')}</span>
+          </label>
+          <p className="mt-1 pl-6 text-xs text-muted-foreground">{t('smtp.allowInsecureHint')}</p>
+        </div>
         <div className="pt-1">
           <Button size="sm" onClick={save} disabled={busy}>
             {busy ? t('common.saving') : t('common.save')}

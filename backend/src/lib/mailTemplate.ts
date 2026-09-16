@@ -3,6 +3,7 @@
 
 import { env } from '../config/env';
 import { t, type Locale } from '../i18n';
+import { escapeHtml } from './html';
 import { preheader } from './mailText';
 
 /**
@@ -36,17 +37,21 @@ const TITLE = '#F4F7F9';
 function brandHeader(): string {
   const logo = env.APP_URL ? `${env.APP_URL}/logo_banner.png` : null;
   return logo
-    ? `<img src="${logo}" alt="ReView" width="112" style="display:block;border:0;height:auto;width:112px" />`
+    ? `<img src="${escapeHtml(logo)}" alt="ReView" width="112" style="display:block;border:0;height:auto;width:112px" />`
     : `<span style="font-weight:500;color:${TEXT};font-size:16px;letter-spacing:0.06em">ReView</span>`;
 }
 
 /**
  * Bouton d'action principal. Les clients mail ignorent `<button>` et la plupart des
  * feuilles de style : c'est un lien à fond plein, tout en styles inline.
+ *
+ * `url` et `label` sont des DONNÉES, pas du balisage : l'adresse porte des jetons, le
+ * libellé vient d'un catalogue de traduction. Les échapper coûte l'esperluette d'une
+ * URL rendue en `&amp;` — ce qui est précisément la forme correcte dans un attribut.
  */
 export function mailButton(url: string, label: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:20px auto"><tr><td align="center" bgcolor="${MAIL_ACCENT}" style="background:${MAIL_ACCENT};border-radius:8px">
-<a href="${url}" style="display:inline-block;padding:12px 28px;color:${BG};font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:600;text-decoration:none">${label}</a>
+<a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 28px;color:${BG};font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:600;text-decoration:none">${escapeHtml(label)}</a>
 </td></tr></table>`;
 }
 
@@ -61,6 +66,11 @@ export function mailButton(url: string, label: string): string {
  * ne connaît pas `max-width`. Nos messages y arrivaient étalés sur toute la largeur,
  * sans cadre. Le `preheader` s'insère en tête du corps : c'est le texte que la liste des
  * messages affiche avant l'ouverture, et sans lui elle répète le nom du studio.
+ *
+ * Seul `contentHtml` est du HTML — son nom le dit. `title` est une DONNÉE : un appelant y
+ * met le nom d'un projet, que le premier superviseur venu peut renommer en un lien vers
+ * un domaine tiers, sous l'habillage du studio et depuis son relais SMTP. Il est donc
+ * échappé ici, au seul endroit qui voit passer tous les titres.
  */
 export function mailLayout(locale: Locale, title: string, contentHtml: string, preview?: string): string {
   return `<div lang="${locale}" style="font-family:ui-sans-serif,system-ui,sans-serif;background:${BG};padding:24px">
@@ -76,7 +86,7 @@ ${preview ? preheader(preview) : ''}
           </tr>
           <tr>
             <td style="padding:20px;font-size:14px;line-height:1.7;color:${TEXT}">
-              <h1 style="font-size:18px;font-weight:600;margin:0 0 12px;color:${TITLE}">${title}</h1>
+              <h1 style="font-size:18px;font-weight:600;margin:0 0 12px;color:${TITLE}">${escapeHtml(title)}</h1>
               ${contentHtml}
             </td>
           </tr>

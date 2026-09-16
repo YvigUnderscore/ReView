@@ -3,13 +3,19 @@
 
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import * as oidc from 'openid-client';
 import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 import { getOidcConfig, getOidcLogoUrl, isOidcReady, type OidcConfig } from '../lib/oidcConfig';
-import { signAccessToken, signRefreshToken, signTwoFaToken } from '../lib/jwt';
+import {
+  JWT_ALGORITHM,
+  JWT_VERIFY_OPTIONS,
+  signAccessToken,
+  signRefreshToken,
+  signTwoFaToken,
+} from '../lib/jwt';
 import { createSession } from '../lib/sessions';
 import { logAudit } from '../services/AuditService';
 import { logger } from '../lib/logger';
@@ -26,6 +32,16 @@ const router = Router();
 
 const COOKIE = 'oidc_state';
 let discoveryCache: { key: string; config: oidc.Configuration; until: number } | null = null;
+
+/**
+ * Le cookie d'état est signé du même `JWT_SECRET` que les jetons de session : il reprend
+ * donc l'algorithme déclaré une seule fois dans `lib/jwt`, des DEUX côtés. Un invariant
+ * énoncé là-bas mais oublié ici ne protège rien — c'est le vérificateur le plus permissif
+ * qui décide, et ce cookie porte toute la protection CSRF du flux de connexion.
+ */
+const STATE_SIGN_OPTIONS: SignOptions = { algorithm: JWT_ALGORITHM, expiresIn: '10m' };
+/** Contenu du cookie d'état tel qu'il est PRÉSENTÉ : rien n'en garantit la forme. */
+type OidcStateClaims = { kind?: string; state?: string; nonce?: string };
 
 const OIDC_TIMEOUT_MS = 10_000;
 /** Un document de découverte ou un JWKS se compte en kilo-octets : 1 Mio est déjà large. */
@@ -99,7 +115,7 @@ router.get('/login', async (_req, res) => {
   const config = await discovery(cfg);
   const state = randomBytes(16).toString('hex');
   const nonce = randomBytes(16).toString('hex');
-  res.cookie(COOKIE, jwt.sign({ kind: 'oidc', state, nonce }, env.JWT_SECRET, { expiresIn: '10m' }), {
+  res.cookie(COOKIE, jwt.sign({ kind: 'oidc', state, nonce }, env.JWT_SECRET, STATE_SIGN_OPTIONS), {
     httpOnly: true,
     sameSite: 'lax',
     secure: cfg.publicUrl.startsWith('https://'),
@@ -125,7 +141,9 @@ router.get('/callback', async (req, res) => {
     if (!raw) return fail('Session SSO expirée, réessayez');
     let checks: { state: string; nonce: string };
     try {
-      const p = jwt.verify(raw, env.JWT_SECRET) as { kind?: string; state?: string; nonce?: string };
+      // Sans `JWT_VERIFY_OPTIONS`, c'est celui qui PRÉSENTE le cookie qui choisit avec quel
+      // algorithme il a été signé (cf. `STATE_SIGN_OPTIONS` ci-dessus).
+      const p = jwt.verify(raw, env.JWT_SECRET, JWT_VERIFY_OPTIONS) as OidcStateClaims;
       if (p.kind !== 'oidc' || !p.state || !p.nonce) return fail('Session SSO invalide');
       checks = { state: p.state, nonce: p.nonce };
     } catch {
@@ -156,6 +174,11 @@ router.get('/callback', async (req, res) => {
       });
       logAudit({ userId: user.id, action: 'OIDC_PROVISION', entityType: 'User', entityId: user.id });
     }
+    // Offboarding (A1-01) : l'identité vit encore chez le fournisseur après le départ. Sans
+    // ce refus, le SSO rendait au partant, sans même un mot de passe, l'accès que la
+    // désactivation venait de lui retirer. Même message que « pas de compte » : de son point
+    // de vue c'est le même fait, et rien n'est dit de l'état du compte.
+    if (user.disabledAt) return fail('Aucun compte pour cet email — contactez un admin');
 
     if (user.totpEnabledAt) {
       return res.redirect(`/login#tfa=${encodeURIComponent(signTwoFaToken(user.id))}`);

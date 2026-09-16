@@ -779,7 +779,9 @@
   "kanban.addItem": "項目を追加…",
   "reviews.addToPlaylistShort": "playlist に追加",
   "reviews.assigned.title": "自分に割り当て",
-  "reviews.assigned.count": { "other": "{count} 件の review が待っています" },
+  "reviews.assigned.count": {
+    "other": "{count} 件の review が待っています"
+  },
   "reviews.filter.allAssignments": "すべての review",
   "common.clearSelection": "選択を解除",
   "comments.imagePreview": "画像プレビュー",
@@ -1142,7 +1144,9 @@
   "sessions.revokedCount": {
     "other": "セッション {count} 件を失効させました"
   },
-  "sessions.showAll": { "other": "{count} 件のセッションをすべて表示" },
+  "sessions.showAll": {
+    "other": "{count} 件のセッションをすべて表示"
+  },
   "sessions.showFewer": "表示を減らす",
   "twofa.qr": "2FA 登録用 QR コード",
   "twofa.scan": "認証アプリ（Google Authenticator、1Password…）でこの QR コードを読み取り、表示されたコードを入力してください。",
@@ -2025,6 +2029,8 @@
   "smtp.port": "ポート",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "{to} にテストメールを送信しました",
+  "smtp.allowInsecure": "暗号化なしの送信を許可する（STARTTLS なし）",
+  "smtp.allowInsecureHint": "STARTTLS に対応していない社内リレーのためだけの設定です。SMTP のパスワードと招待リンクはすべて平文でネットワークを流れ、経路上の誰でも読めます。",
   "storage.map.hint": "インスタンス全体で S3/MinIO バケットは 1 つです。メディアを削除すると、その原本フォルダーと接頭辞も消えます",
   "storage.objShort": "{count} オブジェクト",
   "storage.objects": "オブジェクト",
@@ -2825,7 +2831,9 @@
   "shotgrid.statuses.title": "このプロジェクトで提示するステータス",
   "shotgrid.statuses.hint": "サイトはスタジオのすべてのステータスを持ちますが、ある制作が使うのはごく一部です。提示したいものにチェックを入れてください。メニューも選択欄もフィルターもそれに従います。何もチェックしなければ語彙はそのまま残ります。隠しても消えません。すでに隠したステータスを持つ対象は、引き続きそれを表示します。",
   "shotgrid.statuses.all": "すべて提示",
-  "shotgrid.statuses.count": { "other": "{count} 件を選択" },
+  "shotgrid.statuses.count": {
+    "other": "{count} 件を選択"
+  },
   "shotgrid.statuses.scopeLabel": "表示するステータス",
   "shotgrid.statuses.scope.task": "task 用",
   "shotgrid.statuses.scope.shot": "shot 用",
@@ -3049,6 +3057,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "このサイトの ShotGrid 認証情報が登録されていません。",
   "error.REVIEW_NOTE_REQUIRED": "このプロジェクトでは review を任せる際に指示が必要です。",
   "error.REVIEW_NOTE_TOO_SHORT": "この指示はプロジェクトが求める長さより短いです。",
+  "error.ACCOUNT_DISABLED": "このアカウントは無効化されています。管理者に再有効化を依頼してください。",
+  "error.DEPARTMENT_SCOPE_MIX": "異なるプロジェクトの部署をまとめて並べ替えることはできません。",
+  "error.SMTP_PASSWORD_UNREADABLE": "保存された SMTP のパスワードを復号できなくなりました。入力し直してください。",
   "about.title": "このインスタンスについて",
   "about.version": "Version",
   "about.builtAt": "ビルド日時",
@@ -3267,11 +3278,17 @@
     "other": "{count} 件の shot を更新、{failed} 件は拒否されました"
   },
   "bulk.status.menu": "ステータス",
-  "bulk.decision.title": { "other": "{count} 件の version の review 判定" },
+  "bulk.decision.title": {
+    "other": "{count} 件の version の review 判定"
+  },
   "bulk.decision.hint": "同じ判定と同じ任意コメントが、それぞれに記録されます。",
   "bulk.decision.mixed": "選択が複数のプロジェクトにまたがっています。使われていないステータスはそこで拒否され、件数に数えられます。",
-  "bulk.decision.done": { "other": "{count} 件の判定を記録しました" },
-  "bulk.decision.partial": { "other": "{count} 件の判定を記録、{failed} 件は拒否されました" },
+  "bulk.decision.done": {
+    "other": "{count} 件の判定を記録しました"
+  },
+  "bulk.decision.partial": {
+    "other": "{count} 件の判定を記録、{failed} 件は拒否されました"
+  },
   "queryState.title": "このセクションを読み込めませんでした",
   "queryState.description": "サーバーから応答がありませんでした。再起動中か、利用できない可能性があります。もう一度お試しください。",
   "queryState.retry": "再試行",
@@ -3310,7 +3327,9 @@
   "ops.latest.rateLimited": "リリース一覧が今は追加の確認を受け付けません。しばらくしてからお試しください。",
   "ops.latest.disabled": "このインスタンスではリリースの確認が無効になっています。",
   "ops.changes.title": "変わること",
-  "ops.changes.count": { "other": "導入済みのものから {count} 件" },
+  "ops.changes.count": {
+    "other": "導入済みのものから {count} 件"
+  },
   "ops.changes.none": "導入済みのリリース以降、新しいものはありません。",
   "ops.changes.prerelease": "プレリリース",
   "ops.manual.title": "ターミナルから",
@@ -3366,7 +3385,9 @@
   "ops.result.intact": "切り替えは行われていません。インスタンスはそのままです。",
   "ops.result.unknownHint": "エージェントが応答しなくなったため、結果は不明です。エージェント自身のログを確認してください:",
   "ops.backups.title": "バックアップ",
-  "ops.backups.count": { "other": "バックアップ {count} 件" },
+  "ops.backups.count": {
+    "other": "バックアップ {count} 件"
+  },
   "ops.backups.empty": "ここにはまだバックアップがありません。",
   "ops.backups.unavailable": "バックアップのディレクトリがアプリケーションにマウントされていないため、一覧を出せません。ターミナルから取ったバックアップには影響しません。",
   "ops.backups.create": "今すぐバックアップ",
@@ -3383,7 +3404,9 @@
   "reviewers.title": "review 担当",
   "reviewers.none": "この version の review 担当はまだ決まっていません",
   "reviewers.assign": "割り当てる",
-  "reviewers.saved": { "other": "この review の担当は {count} 人" },
+  "reviewers.saved": {
+    "other": "この review の担当は {count} 人"
+  },
   "reviewers.notePlaceholder": "何を見てほしいですか？（ライティング、1042 のつながり…）",
   "reviewers.noteLabel": "{name} が見るべきもの",
   "reviewers.noteRequired": "このプロジェクトは指示を必須にしています。",

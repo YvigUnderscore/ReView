@@ -8,7 +8,7 @@ const { db, tasks, departments } = vi.hoisted(() => ({
   db: {
     asset: { findFirst: vi.fn() },
     shot: { findFirst: vi.fn() },
-    user: { findUnique: vi.fn() },
+    user: { findMany: vi.fn() },
     task: { findMany: vi.fn(), create: vi.fn() },
     shotgridConnection: { findUnique: vi.fn() },
   },
@@ -28,6 +28,10 @@ vi.mock('../lib/projectRoles', async () => {
 });
 vi.mock('./TaskService', () => tasks);
 vi.mock('./DepartmentService', () => departments);
+// `assertAssignable` vit désormais dans `EntityAssigneeService` et s'exerce ici pour de
+// vrai : ce sont ses deux dépendances de bord qu'on neutralise, pas la garde elle-même.
+vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
+vi.mock('../lib/userView', () => ({ avatarUrl: vi.fn(async () => null) }));
 
 import { effectiveProjectRole } from '../lib/projectRoles';
 import { assignEntity, assignMany } from './AssignmentService';
@@ -38,7 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.asset.findFirst.mockResolvedValue({ projectId: 42 });
   db.shot.findFirst.mockResolvedValue({ projectId: 42 });
-  db.user.findUnique.mockResolvedValue({ id: 9, role: Role.ARTIST, isService: false });
+  db.user.findMany.mockResolvedValue([{ id: 9, role: Role.ARTIST, isService: false, disabledAt: null }]);
   db.shotgridConnection.findUnique.mockResolvedValue(null);
   vi.mocked(effectiveProjectRole).mockResolvedValue(Role.ARTIST);
   departments.listForProject.mockResolvedValue([{ id: 3, key: 'COMP', name: 'Compositing' }]);
@@ -94,9 +98,34 @@ describe('assignEntity', () => {
 
   it('refuse un compte de service', async () => {
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: null, departmentId: 3 }]);
-    db.user.findUnique.mockResolvedValue({ id: 9, role: Role.ARTIST, isService: true });
+    db.user.findMany.mockResolvedValue([{ id: 9, role: Role.ARTIST, isService: true, disabledAt: null }]);
     await expect(assignEntity(actor, { holder: 'asset', id: 5, userId: 9 })).rejects.toMatchObject({
       code: 'NOT_ASSIGNABLE',
+    });
+  });
+
+  /**
+   * La copie privée de `assertAssignable` que gardait ce service avait divergé de la garde
+   * commune : elle ne lisait pas `disabledAt`. Un compte désactivé était donc refusé comme
+   * responsable d'un plan (`EntityAssigneeService`) et accepté comme assigné d'une tâche —
+   * l'un des deux chemins servant de porte de service à l'autre. Il n'y a plus qu'une garde.
+   */
+  it('refuse un compte désactivé, comme le fait l’assignation d’entité', async () => {
+    db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: null, departmentId: 3 }]);
+    db.user.findMany.mockResolvedValue([
+      { id: 9, role: Role.ARTIST, isService: false, disabledAt: new Date('2026-01-01') },
+    ]);
+    await expect(assignEntity(actor, { holder: 'asset', id: 5, userId: 9 })).rejects.toMatchObject({
+      code: 'NOT_ASSIGNABLE',
+    });
+    expect(tasks.setAssignee).not.toHaveBeenCalled();
+  });
+
+  it('refuse une personne inconnue', async () => {
+    db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: null, departmentId: 3 }]);
+    db.user.findMany.mockResolvedValue([]);
+    await expect(assignEntity(actor, { holder: 'asset', id: 5, userId: 9 })).rejects.toMatchObject({
+      statusCode: 404,
     });
   });
 
@@ -116,7 +145,7 @@ describe('assignEntity', () => {
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: 9, departmentId: 3 }]);
     const result = await assignEntity(actor, { holder: 'asset', id: 5, userId: null });
     expect(result.updated).toBe(1);
-    expect(db.user.findUnique).not.toHaveBeenCalled();
+    expect(db.user.findMany).not.toHaveBeenCalled();
   });
 
   it('signale une entité sans aucune tâche', async () => {

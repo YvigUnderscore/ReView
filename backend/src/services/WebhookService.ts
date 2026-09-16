@@ -47,6 +47,13 @@ const MAX_ATTEMPTS = 5;
 const DELIVERY_TIMEOUT_MS = 10_000;
 
 /**
+ * Motif consigné quand le secret du webhook ne se déchiffre plus (`lastError`, visible
+ * dans l'écran d'administration). Il ne décrit pas une panne du destinataire : c'est la
+ * clé de chiffrement de l'instance qui a changé — cf. `lib/crypto`.
+ */
+export const SECRET_UNREADABLE_ERROR = 'WEBHOOK_SECRET_UNREADABLE';
+
+/**
  * Clé d'enveloppe portant l'identifiant de livraison à travers la file.
  *
  * `WebhookJobData` (services/JobService) ne transporte que `{ webhookId, event, payload }`
@@ -146,7 +153,25 @@ export async function deliver(
   const hook = await prisma.webhook.findUnique({ where: { id: webhookId } });
   if (!hook || !hook.active) return; // désactivé/supprimé entre-temps : rien à faire
   const { deliveryId, data } = unpackDelivery(payload);
-  const secret = decryptSecret(hook.secret) ?? '';
+  const secret = decryptSecret(hook.secret);
+  /**
+   * Échec FERMÉ sur l'authenticité.
+   *
+   * Le `?? ''` d'avant signait avec une clé HMAC VIDE : Node l'accepte, la livraison
+   * partait avec un `X-ReView-Signature` parfaitement formé — et recalculable par
+   * quiconque connaît l'URL. C'est pire que pas de signature du tout, puisque le
+   * destinataire croit vérifier. On n'émet donc rien, et la panne devient lisible.
+   *
+   * Pas de `throw` : une reprise ne réparera pas une clé de chiffrement changée, elle
+   * ne ferait que rejouer cinq fois la même impasse. Le webhook reste actif — la panne
+   * est de configuration, pas d'endpoint ; le réparer ne doit pas exiger de le
+   * réactiver à la main.
+   */
+  if (secret === null) {
+    logger.error({ webhookId, deliveryId }, '[webhooks] secret illisible — livraison refusée');
+    await recordFailure(webhookId, deliveryId, null, null, SECRET_UNREADABLE_ERROR);
+    return;
+  }
   const timestamp = String(Date.now());
   const body = JSON.stringify({ id: deliveryId, event, timestamp: Number(timestamp), data });
 

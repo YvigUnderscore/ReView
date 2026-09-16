@@ -779,7 +779,9 @@
   "kanban.addItem": "항목 추가…",
   "reviews.addToPlaylistShort": "playlist에 추가",
   "reviews.assigned.title": "나에게 배정됨",
-  "reviews.assigned.count": { "other": "{count}건의 review가 기다리고 있습니다" },
+  "reviews.assigned.count": {
+    "other": "{count}건의 review가 기다리고 있습니다"
+  },
   "reviews.filter.allAssignments": "모든 review",
   "common.clearSelection": "선택 해제",
   "comments.imagePreview": "이미지 미리보기",
@@ -1142,7 +1144,9 @@
   "sessions.revokedCount": {
     "other": "세션 {count}개를 해지했습니다"
   },
-  "sessions.showAll": { "other": "{count}개 세션 모두 보기" },
+  "sessions.showAll": {
+    "other": "{count}개 세션 모두 보기"
+  },
   "sessions.showFewer": "간략히 보기",
   "twofa.qr": "2FA 등록 QR 코드",
   "twofa.scan": "인증 앱(Google Authenticator, 1Password…)으로 이 QR 코드를 스캔한 뒤, 표시된 코드를 입력하세요.",
@@ -2025,6 +2029,8 @@
   "smtp.port": "포트",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "{to}(으)로 테스트 메일을 보냈습니다",
+  "smtp.allowInsecure": "암호화 없이 전송 허용(STARTTLS 미사용)",
+  "smtp.allowInsecureHint": "STARTTLS를 제공하지 않는 내부 릴레이에만 사용하세요. 그러면 SMTP 비밀번호와 모든 초대 링크가 평문으로 네트워크를 지나가며, 경로상의 누구나 읽을 수 있습니다.",
   "storage.map.hint": "인스턴스 전체가 S3/MinIO 버킷 하나를 씁니다. 미디어를 지우면 원본 폴더와 접두사가 함께 정리됩니다",
   "storage.objShort": "{count}개 객체",
   "storage.objects": "객체",
@@ -2825,7 +2831,9 @@
   "shotgrid.statuses.title": "이 프로젝트에서 제시할 상태",
   "shotgrid.statuses.hint": "사이트는 스튜디오의 모든 상태를 알고 있지만, 한 작품이 쓰는 것은 몇 개뿐입니다. 제시하고 싶은 것에 체크하세요. 메뉴와 선택기, 필터가 이를 따릅니다. 아무것도 체크하지 않으면 어휘 전체가 남습니다. 숨겨도 지워지지 않습니다. 숨긴 상태를 이미 가진 대상은 계속 그것을 표시합니다.",
   "shotgrid.statuses.all": "전체 제시",
-  "shotgrid.statuses.count": { "other": "{count}개 선택됨" },
+  "shotgrid.statuses.count": {
+    "other": "{count}개 선택됨"
+  },
   "shotgrid.statuses.scopeLabel": "표시할 상태",
   "shotgrid.statuses.scope.task": "task용",
   "shotgrid.statuses.scope.shot": "shot용",
@@ -3049,6 +3057,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "이 사이트에 등록된 ShotGrid 인증 정보가 없습니다.",
   "error.REVIEW_NOTE_REQUIRED": "이 프로젝트는 review를 맡길 때 지시 사항을 요구합니다.",
   "error.REVIEW_NOTE_TOO_SHORT": "이 지시 사항은 프로젝트가 요구하는 길이보다 짧습니다.",
+  "error.ACCOUNT_DISABLED": "이 계정은 비활성화되었습니다. 관리자에게 다시 활성화를 요청하세요.",
+  "error.DEPARTMENT_SCOPE_MIX": "서로 다른 프로젝트의 부서를 함께 재정렬할 수 없습니다.",
+  "error.SMTP_PASSWORD_UNREADABLE": "저장된 SMTP 비밀번호를 더 이상 복호화할 수 없습니다. 다시 입력해 주세요.",
   "about.title": "이 인스턴스 정보",
   "about.version": "Version",
   "about.builtAt": "빌드 일시",
@@ -3267,11 +3278,17 @@
     "other": "shot {count}개 갱신, {failed}개 거부됨"
   },
   "bulk.status.menu": "상태",
-  "bulk.decision.title": { "other": "version {count}개에 대한 review 결정" },
+  "bulk.decision.title": {
+    "other": "version {count}개에 대한 review 결정"
+  },
   "bulk.decision.hint": "같은 결정과 같은 선택 코멘트가 각각에 기록됩니다.",
   "bulk.decision.mixed": "선택이 여러 프로젝트에 걸쳐 있습니다. 사용하지 않는 상태는 그곳에서 거부되고 건수로 집계됩니다.",
-  "bulk.decision.done": { "other": "결정 {count}건을 기록했습니다" },
-  "bulk.decision.partial": { "other": "결정 {count}건 기록, {failed}건 거부됨" },
+  "bulk.decision.done": {
+    "other": "결정 {count}건을 기록했습니다"
+  },
+  "bulk.decision.partial": {
+    "other": "결정 {count}건 기록, {failed}건 거부됨"
+  },
   "queryState.title": "이 구역을 불러오지 못했습니다",
   "queryState.description": "서버가 응답하지 않았습니다. 다시 시작 중이거나 사용할 수 없는 상태일 수 있습니다. 다시 시도해 주세요.",
   "queryState.retry": "다시 시도",
@@ -3310,7 +3327,9 @@
   "ops.latest.rateLimited": "릴리스 목록이 지금은 추가 확인을 거부합니다. 나중에 다시 시도하세요.",
   "ops.latest.disabled": "이 인스턴스에서는 릴리스 확인이 꺼져 있습니다.",
   "ops.changes.title": "무엇이 바뀌는지",
-  "ops.changes.count": { "other": "설치된 것 이후 {count}건" },
+  "ops.changes.count": {
+    "other": "설치된 것 이후 {count}건"
+  },
   "ops.changes.none": "설치된 릴리스 이후 새로운 것이 없습니다.",
   "ops.changes.prerelease": "사전 릴리스",
   "ops.manual.title": "터미널에서",
@@ -3366,7 +3385,9 @@
   "ops.result.intact": "전환된 것이 없습니다. 인스턴스는 그대로입니다.",
   "ops.result.unknownHint": "에이전트가 응답하지 않아 결과를 알 수 없습니다. 에이전트의 로그를 확인하세요:",
   "ops.backups.title": "백업",
-  "ops.backups.count": { "other": "백업 {count}개" },
+  "ops.backups.count": {
+    "other": "백업 {count}개"
+  },
   "ops.backups.empty": "여기에는 아직 백업이 없습니다.",
   "ops.backups.unavailable": "백업 디렉터리가 애플리케이션에 마운트되어 있지 않아 목록을 표시할 수 없습니다. 터미널에서 만든 백업에는 영향이 없습니다.",
   "ops.backups.create": "지금 백업",
@@ -3383,7 +3404,9 @@
   "reviewers.title": "review 담당자",
   "reviewers.none": "아직 이 version의 review를 맡은 사람이 없습니다",
   "reviewers.assign": "배정",
-  "reviewers.saved": { "other": "이 review에 {count}명" },
+  "reviewers.saved": {
+    "other": "이 review에 {count}명"
+  },
   "reviewers.notePlaceholder": "무엇을 봐야 하나요? (조명, 1042의 연결…)",
   "reviewers.noteLabel": "{name}이(가) 봐야 할 것",
   "reviewers.noteRequired": "이 프로젝트는 지시 사항을 요구합니다.",

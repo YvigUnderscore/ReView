@@ -481,16 +481,50 @@ export async function purge(user: SessionUser, projectId: number) {
   logAudit({ userId: user.id, action: 'PROJECT_PURGE', entityType: 'Project', entityId: projectId });
 }
 
-export async function addMember(projectId: number, userId: number, role?: Role) {
-  return prisma.projectMembership.upsert({
+/**
+ * Ajout d'un membre — ou changement de son rôle local, que le même `upsert` couvre.
+ *
+ * A5-03 : c'est le geste d'escalade du constat A1-03 (un superviseur local rétrograde un
+ * ARTIST en CLIENT sur un compte qu'il contrôle), et il ne laissait aucune trace. On lit
+ * donc l'état AVANT l'écriture : c'est la seule façon de distinguer une arrivée d'un
+ * changement de rôle, et de dire depuis quel rôle — le détail qui rend la trace utile.
+ *
+ * L'acteur est optionnel parce que la synchronisation ShotGrid appelle sans session
+ * humaine (`ShotgridCrewService`) ; l'entrée est posée dans tous les cas, sans auteur si
+ * besoin — une trace anonyme vaut mieux qu'aucune trace.
+ */
+export async function addMember(projectId: number, userId: number, role?: Role, actor?: SessionUser | null) {
+  const before = await prisma.projectMembership.findUnique({
+    where: { userId_projectId: { userId, projectId } },
+    select: { role: true },
+  });
+  const membership = await prisma.projectMembership.upsert({
     where: { userId_projectId: { userId, projectId } },
     update: { role: role ?? null },
     create: { userId, projectId, role: role ?? null },
   });
+  logAudit({
+    userId: actor?.id ?? null,
+    action: before ? 'PROJECT_MEMBER_UPDATE' : 'PROJECT_MEMBER_ADD',
+    entityType: 'Project',
+    entityId: projectId,
+    metadata: { targetUserId: userId, role: role ?? null, previousRole: before?.role ?? null },
+  });
+  return membership;
 }
 
-export async function removeMember(projectId: number, userId: number) {
-  await prisma.projectMembership.delete({ where: { userId_projectId: { userId, projectId } } });
+/** Retrait d'accès : consigné pour les mêmes raisons que l'octroi (A5-03). */
+export async function removeMember(projectId: number, userId: number, actor?: SessionUser | null) {
+  const membership = await prisma.projectMembership.delete({
+    where: { userId_projectId: { userId, projectId } },
+  });
+  logAudit({
+    userId: actor?.id ?? null,
+    action: 'PROJECT_MEMBER_REMOVE',
+    entityType: 'Project',
+    entityId: projectId,
+    metadata: { targetUserId: userId, role: membership.role ?? null },
+  });
 }
 
 /* --- Réglages : lecture effective vs lecture d'override (voir lib/projectSettings) --- */

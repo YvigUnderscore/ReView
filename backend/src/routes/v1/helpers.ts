@@ -49,6 +49,17 @@ export async function requireProject(req: Request, ref: string) {
   return project;
 }
 
+/**
+ * Accès à un projet désigné directement par son identifiant (query ou corps), sans
+ * entité intermédiaire à résoudre. Les deux mêmes vérifications que partout ailleurs :
+ * une route qui lit un `projectId` brut sans elles rend le cantonnement d'un jeton faux.
+ */
+export async function requireProjectId(req: Request, projectId: number): Promise<number> {
+  await assertProjectAccess(req, projectId);
+  assertTokenProject(req, projectId);
+  return projectId;
+}
+
 type Resolver = (id: number) => Promise<number | null>;
 
 /** Vérifie l'accès au projet propriétaire d'une entité, désignée par son identifiant. */

@@ -21,6 +21,20 @@ describe('htmlToText', () => {
     expect(htmlToText('<a href="https://review.test">https://review.test</a>')).toBe('https://review.test');
   });
 
+  it('ne répète pas non plus une adresse à paramètres, dont le gabarit échappe le « & »', () => {
+    // Les gabarits échappent désormais l'adresse (`mailButton`, lien de repli) : l'attribut
+    // porte `&amp;` là où le libellé, lui, est décodé avant comparaison. Sans décodage de
+    // l'attribut, les deux cessaient d'être « égaux » et le repli imprimait l'adresse deux
+    // fois de suite dans l'alternative texte.
+    const html = '<a href="https://review.test/s?t=1&amp;v=2">https://review.test/s?t=1&amp;v=2</a>';
+    expect(htmlToText(html)).toBe('https://review.test/s?t=1&v=2');
+  });
+
+  it('décode l’adresse échappée d’un bouton, à côté de son libellé', () => {
+    const html = '<a href="https://review.test/s?t=1&amp;v=2">Open the review</a>';
+    expect(htmlToText(html)).toBe('Open the review (https://review.test/s?t=1&v=2)');
+  });
+
   it('rend une adresse seule quand le lien n’a pas de libellé', () => {
     expect(htmlToText('<a href="https://review.test"><img src="x"></a>')).toBe('https://review.test');
   });
@@ -76,6 +90,15 @@ describe('preheader', () => {
   it('échappe le HTML : un nom de projet n’ouvre pas de balise', () => {
     expect(preheader('<script>alert(1)</script>')).not.toContain('<script>');
     expect(preheader('Rock & Roll')).toContain('Rock &amp; Roll');
+  });
+
+  it('échappe AUSSI les guillemets — l’échappement complet, pas la copie amputée', () => {
+    // Le texte d'aperçu est un nœud de texte : les guillemets n'y sont pas exploitables
+    // aujourd'hui. C'est justement pourquoi une copie à trois caractères avait pu survivre
+    // ici — et c'est cette copie-là qu'on recopie le jour où la donnée passe en attribut.
+    // La garde porte donc sur le contrat de `lib/html` : les six caractères, toujours.
+    expect(preheader('Projet "Dune" — l’épisode')).toContain('&quot;Dune&quot;');
+    expect(preheader("L'épisode")).toContain('&#39;');
   });
 
   it('pousse hors du champ le texte qui suivrait', () => {

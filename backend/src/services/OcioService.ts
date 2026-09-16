@@ -22,6 +22,7 @@ import {
   serializeCube,
 } from '../lib/ocioBake';
 import { enqueueOcioBake } from '../workers/ocio/queue';
+import { fetchAllowlisted, readCappedBody } from '../lib/httpFetch';
 
 /**
  * Catalogue des configs couleur OCIO (39.B). Les configs ACES officielles sont récupérées depuis
@@ -32,18 +33,33 @@ import { enqueueOcioBake } from '../workers/ocio/queue';
  * Sécurité (CP-SEC) : le dépôt est **fixe** (aucune URL fournie par l'utilisateur) ; on installe
  * uniquement des assets renvoyés par l'API GitHub, dont l'hôte de téléchargement est **allowlisté**,
  * avec un plafond de taille. Les fichiers `.ocio` sont du YAML stocké tel quel (jamais exécuté).
+ *
+ * Ces deux requêtes partent du processus API, DANS le réseau applicatif : elles passent donc
+ * par `fetchAllowlisted` (lib/httpFetch) et non par `fetch`. L'allow-list seule ne suffisait
+ * pas — GitHub sert ses assets par une redirection 302, que `fetch` suivait en aveugle : un
+ * amont (ou un résolveur) hostile renvoyait la requête vers `169.254.169.254` ou `minio:9000`
+ * et le contenu obtenu était rangé comme une « config OCIO ». Chaque saut est désormais
+ * re-soumis à la garde SSRF et à l'allow-list, avec délai d'attente et taille bornée.
  */
 
 const SETTING_KEY = 'ocioLibrary';
 const OCIO_REPO = 'AcademySoftwareFoundation/OpenColorIO-Config-ACES';
 const GITHUB_API = 'https://api.github.com';
+const ALLOWED_API_HOSTS = new Set(['api.github.com']);
 const ALLOWED_ASSET_HOSTS = new Set([
   'github.com',
   'objects.githubusercontent.com',
   'release-assets.githubusercontent.com',
 ]);
 const MAX_ASSET_BYTES = 25 * 1024 * 1024; // 25 Mo (les configs ACES font < 1 Mo)
+/** Quinze releases avec leurs assets : quelques centaines de ko, jamais deux. */
+const MAX_RELEASES_BYTES = 2 * 1024 * 1024;
 const RELEASES_TTL_MS = 10 * 60 * 1000;
+/** Ni le catalogue ni le téléchargement ne doivent pouvoir retenir un worker de requête. */
+const OUTBOUND_TIMEOUT_MS = 15_000;
+
+/** Porte de sortie injectable (tests) — par défaut la sortie durcie de `lib/httpFetch`. */
+export type OutboundFetch = typeof fetchAllowlisted;
 
 export interface OcioEntry {
   id: string;
@@ -146,13 +162,27 @@ async function writeLibrary(entries: OcioEntry[]): Promise<void> {
 let releasesCache: { at: number; data: GithubRelease[] } | null = null;
 
 /** Récupère (avec cache 10 min) les releases ACES depuis GitHub. `fetchFn` injectable (tests). */
-async function fetchReleases(fetchFn: typeof fetch): Promise<GithubRelease[]> {
+async function fetchReleases(fetchFn: OutboundFetch): Promise<GithubRelease[]> {
   if (releasesCache && Date.now() - releasesCache.at < RELEASES_TTL_MS) return releasesCache.data;
-  const res = await fetchFn(`${GITHUB_API}/repos/${OCIO_REPO}/releases?per_page=15`, {
-    headers: { accept: 'application/vnd.github+json', 'user-agent': 'ReView-app' },
-  });
+  const res = await fetchFn(
+    `${GITHUB_API}/repos/${OCIO_REPO}/releases?per_page=15`,
+    { headers: { accept: 'application/vnd.github+json', 'user-agent': 'ReView-app' } },
+    // L'API GitHub ne redirige pas : une redirection ici n'est pas un cas d'usage, c'est un
+    // détournement.
+    {
+      isAllowedHost: (url) => ALLOWED_API_HOSTS.has(url.hostname),
+      timeoutMs: OUTBOUND_TIMEOUT_MS,
+      maxRedirects: 0,
+    },
+  );
   if (!res.ok) throw badRequest(`GitHub answered ${res.status}`, 'OCIO_RELEASES_FAILED');
-  const data = (await res.json()) as GithubRelease[];
+  const body = await readCappedBody(res, MAX_RELEASES_BYTES, GITHUB_API);
+  let data: GithubRelease[];
+  try {
+    data = JSON.parse(body.toString('utf-8')) as GithubRelease[];
+  } catch {
+    throw badRequest('GitHub returned an unreadable payload', 'OCIO_RELEASES_FAILED');
+  }
   releasesCache = { at: Date.now(), data };
   return data;
 }
@@ -163,7 +193,7 @@ export function __resetReleasesCache(): void {
 }
 
 /** Catalogue des releases ACES disponibles, marquées « installées » / « défaut recommandé ». */
-export async function listReleases(fetchFn: typeof fetch = fetch): Promise<OcioReleaseEntry[]> {
+export async function listReleases(fetchFn: OutboundFetch = fetchAllowlisted): Promise<OcioReleaseEntry[]> {
   const [releases, installed] = await Promise.all([fetchReleases(fetchFn), readLibrary()]);
   return buildReleaseCatalog(releases, new Set(installed.map((e) => e.assetName)));
 }
@@ -256,7 +286,7 @@ export async function getLut(configId: string, display: string, view: string): P
 export async function install(
   tag: string,
   assetName: string,
-  fetchFn: typeof fetch = fetch,
+  fetchFn: OutboundFetch = fetchAllowlisted,
 ): Promise<OcioEntry> {
   const entries = await readLibrary();
   if (entries.some((e) => e.assetName === assetName))
@@ -270,10 +300,20 @@ export async function install(
     throw badRequest('This download host is not allowed', 'OCIO_BAD_HOST');
   if (asset.sizeBytes > MAX_ASSET_BYTES) throw badRequest('Config is too large', 'OCIO_TOO_LARGE');
 
-  const dl = await fetchFn(asset.downloadUrl, { headers: { 'user-agent': 'ReView-app' } });
+  // GitHub sert l'asset par une redirection vers son hôte de contenu : on la suit, mais
+  // chaque saut repasse par la garde SSRF ET par l'allow-list — c'est tout l'objet de
+  // `fetchAllowlisted`. Un 302 vers 169.254.169.254 ou minio:9000 est refusé avant d'émettre.
+  const dl = await fetchFn(
+    asset.downloadUrl,
+    { headers: { 'user-agent': 'ReView-app' } },
+    {
+      isAllowedHost: (url) => ALLOWED_ASSET_HOSTS.has(url.hostname),
+      timeoutMs: OUTBOUND_TIMEOUT_MS,
+      maxRedirects: 3,
+    },
+  );
   if (!dl.ok) throw badRequest(`Download failed (${dl.status})`, 'OCIO_DOWNLOAD_FAILED');
-  const buf = Buffer.from(await dl.arrayBuffer());
-  if (buf.byteLength > MAX_ASSET_BYTES) throw badRequest('Config is too large', 'OCIO_TOO_LARGE');
+  const buf = await readCappedBody(dl, MAX_ASSET_BYTES, asset.downloadUrl);
 
   const storageKey = `studio/ocio/${randomUUID()}.ocio`;
   await storage.putObject(storageKey, buf, 'text/plain; charset=utf-8');

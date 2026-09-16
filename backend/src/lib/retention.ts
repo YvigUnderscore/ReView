@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { prisma } from './prisma';
 import { logger } from './logger';
-import { logAudit } from '../services/AuditService';
+import { AUDIT_RETENTION_MIN_DAYS, logAudit, purgeableAuditWhere } from '../services/AuditService';
 
 /**
  * Rétention des journaux — cycle de vie des tables qui ne cessent de croître.
@@ -27,7 +27,10 @@ import { logAudit } from '../services/AuditService';
  * Ce qui n'est JAMAIS supprimé, quelle que soit la durée :
  *  - une session encore valide (seules les révoquées/expirées depuis N jours partent) ;
  *  - un lien de partage actif (seuls les révoqués/expirés depuis N jours partent) ;
- *  - une passe ShotGrid qui porte encore un conflit non arbitré.
+ *  - une passe ShotGrid qui porte encore un conflit non arbitré ;
+ *  - une entrée d'audit qui décrit un effacement (`AUDIT_UNPURGEABLE_ACTIONS`), et plus
+ *    généralement le journal d'audit en deçà de `AUDIT_RETENTION_MIN_DAYS` (A5-04) : c'est
+ *    ce qui empêche un administrateur d'effacer ses propres traces via la politique.
  *
  * Politique et valeurs par défaut : `DOCUMENTATION/admin-guide/data-retention.md`.
  */
@@ -93,10 +96,26 @@ export const BATCH_PAUSE_MS = 25;
 const clampDays = (value: unknown, fallback: number): number =>
   Number.isFinite(value) ? Math.min(Math.max(Math.round(Number(value)), 0), MAX_DAYS) : fallback;
 
+/**
+ * Durée d'audit assainie (A5-04) : `0` reste la conservation illimitée, toute durée finie
+ * est relevée au plancher. Ce n'est pas la première défense — le schéma refuse déjà la
+ * valeur — c'en est la seconde : une politique écrite avant ce plancher, ou une ligne
+ * `Setting` éditée directement en base, ne doit pas raccourcir la purge pour autant.
+ *
+ * Le plancher ne s'applique **qu'à une valeur proposée**, jamais au repli : le repli est
+ * une politique déjà assainie, et l'écraser ferait mentir « valeur absente = valeur en place ».
+ */
+const clampAuditDays = (value: unknown, fallback: number): number => {
+  if (!Number.isFinite(value)) return fallback;
+  const days = clampDays(value, fallback);
+  return days === 0 ? 0 : Math.max(days, AUDIT_RETENTION_MIN_DAYS);
+};
+
 function sanitize(raw: unknown, base: RetentionPolicy): RetentionPolicy {
   const o = (raw ?? {}) as Partial<Record<keyof RetentionPolicy, unknown>>;
   const out = { ...base };
   for (const family of RETENTION_FAMILIES) out[family] = clampDays(o[family], base[family]);
+  out.auditLog = clampAuditDays(o.auditLog, base.auditLog);
   out.batchSize = Number.isFinite(o.batchSize)
     ? Math.min(Math.max(Math.round(Number(o.batchSize)), MIN_BATCH), MAX_BATCH)
     : base.batchSize;
@@ -105,8 +124,17 @@ function sanitize(raw: unknown, base: RetentionPolicy): RetentionPolicy {
 
 const daysField = z.number().int().min(0).max(MAX_DAYS).optional();
 
+/**
+ * Durée d'audit : `0` (illimité) ou au moins `AUDIT_RETENTION_MIN_DAYS`. Le refus est
+ * préférable à l'ajustement silencieux — l'administrateur qui demande « un jour » doit
+ * apprendre que non, plutôt que de repartir en croyant ses traces effaçables demain.
+ */
+const auditDaysField = z
+  .union([z.literal(0), z.number().int().min(AUDIT_RETENTION_MIN_DAYS).max(MAX_DAYS)])
+  .optional();
+
 export const retentionPolicySchema = z.object({
-  auditLog: daysField,
+  auditLog: auditDaysField,
   mediaAccessLog: daysField,
   notification: daysField,
   userSession: daysField,
@@ -206,11 +234,14 @@ const pickIds = (rows: { id: RowId }[]): RowId[] => rows.map((r) => r.id);
 const OLDEST_FIRST = { id: 'asc' } as const;
 
 const SPECS: Record<RetentionFamily, FamilySpec> = {
+  // A5-04 : le filtre vient d'`AuditService`, qui en exempte les actions décrivant un
+  // effacement — purger le `RETENTION_CONFIG` de la veille, c'est effacer la preuve de
+  // l'effacement, et c'est exactement le geste que l'attaquant cherche.
   auditLog: {
     batchDivisor: 1,
     findExpiredIds: (cutoff, take) =>
       prisma.auditLog
-        .findMany({ where: { createdAt: { lt: cutoff } }, select: { id: true }, orderBy: OLDEST_FIRST, take })
+        .findMany({ where: purgeableAuditWhere(cutoff), select: { id: true }, orderBy: OLDEST_FIRST, take })
         .then(pickIds),
     deleteByIds: (ids) =>
       prisma.auditLog.deleteMany({ where: { id: { in: ids as number[] } } }).then((r) => r.count),

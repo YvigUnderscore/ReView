@@ -797,7 +797,10 @@
   "kanban.addItem": "आइटम जोड़ें…",
   "reviews.addToPlaylistShort": "playlist में जोड़ें",
   "reviews.assigned.title": "मुझे सौंपा गया",
-  "reviews.assigned.count": { "one": "{count} review आपकी प्रतीक्षा में है", "other": "{count} reviews आपकी प्रतीक्षा में हैं" },
+  "reviews.assigned.count": {
+    "one": "{count} review आपकी प्रतीक्षा में है",
+    "other": "{count} reviews आपकी प्रतीक्षा में हैं"
+  },
   "reviews.filter.allAssignments": "सभी reviews",
   "common.clearSelection": "चयन रद्द करें",
   "comments.imagePreview": "छवि पूर्वावलोकन",
@@ -1171,7 +1174,10 @@
     "one": "{count} सत्र निरस्त किया गया",
     "other": "{count} सत्र निरस्त किए गए"
   },
-  "sessions.showAll": { "one": "{count} सत्र दिखाएँ", "other": "सभी {count} सत्र दिखाएँ" },
+  "sessions.showAll": {
+    "one": "{count} सत्र दिखाएँ",
+    "other": "सभी {count} सत्र दिखाएँ"
+  },
   "sessions.showFewer": "कम दिखाएँ",
   "twofa.qr": "2FA नामांकन QR कोड",
   "twofa.scan": "अपने ऐप (Google Authenticator, 1Password…) से यह QR कोड स्कैन करें, फिर दिखाया गया कोड भरें।",
@@ -2078,6 +2084,8 @@
   "smtp.port": "पोर्ट",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "{to} को परीक्षण ईमेल भेजा गया",
+  "smtp.allowInsecure": "बिना एन्क्रिप्शन भेजने की अनुमति दें (STARTTLS के बिना)",
+  "smtp.allowInsecureHint": "केवल ऐसे आंतरिक रिले के लिए जो STARTTLS नहीं देता। तब SMTP पासवर्ड और हर आमंत्रण लिंक सादे पाठ में नेटवर्क पर जाते हैं और रास्ते में मौजूद कोई भी उन्हें पढ़ सकता है।",
   "storage.map.hint": "पूरे इंस्टेंस के लिए एक ही S3/MinIO बकेट; कोई मीडिया मिटाने पर उसका मूल फ़ोल्डर और उपसर्ग भी साफ़ हो जाता है",
   "storage.objShort": "{count} ऑब्जेक्ट",
   "storage.objects": "ऑब्जेक्ट",
@@ -2912,7 +2920,10 @@
   "shotgrid.statuses.title": "इस परियोजना में प्रस्तावित स्थितियाँ",
   "shotgrid.statuses.hint": "एक साइट स्टूडियो की सभी स्थितियाँ जानती है; कोई एक प्रोडक्शन उनमें से कुछ ही काम में लेता है। जिन्हें प्रस्तावित देखना चाहते हैं उन्हें चुनें — मेनू, चयनकर्ता और फ़िल्टर उनका अनुसरण करते हैं। कुछ न चुनने पर पूरी शब्दावली बनी रहती है। छिपाना मिटाता नहीं: जिस इकाई पर छिपी स्थिति पहले से है, वह उसे दिखाती रहती है।",
   "shotgrid.statuses.all": "सभी प्रस्तावित",
-  "shotgrid.statuses.count": { "one": "{count} चुना गया", "other": "{count} चुने गए" },
+  "shotgrid.statuses.count": {
+    "one": "{count} चुना गया",
+    "other": "{count} चुने गए"
+  },
   "shotgrid.statuses.scopeLabel": "दिखाई गई स्थितियाँ",
   "shotgrid.statuses.scope.task": "task के लिए",
   "shotgrid.statuses.scope.shot": "shot के लिए",
@@ -3145,6 +3156,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "इस साइट के लिए कोई ShotGrid क्रेडेंशियल दर्ज नहीं है।",
   "error.REVIEW_NOTE_REQUIRED": "यह प्रोजेक्ट review सौंपते समय निर्देश अनिवार्य करता है।",
   "error.REVIEW_NOTE_TOO_SHORT": "यह निर्देश प्रोजेक्ट की मांग से छोटा है।",
+  "error.ACCOUNT_DISABLED": "यह खाता निष्क्रिय कर दिया गया है। इसे फिर से सक्रिय करने के लिए किसी प्रशासक से कहें।",
+  "error.DEPARTMENT_SCOPE_MIX": "अलग-अलग प्रोजेक्ट के विभागों को एक साथ पुनः क्रमबद्ध नहीं किया जा सकता।",
+  "error.SMTP_PASSWORD_UNREADABLE": "सहेजा गया SMTP पासवर्ड अब डिक्रिप्ट नहीं हो पा रहा। इसे फिर से दर्ज करें।",
   "about.title": "इस इंस्टेंस के बारे में",
   "about.version": "Version",
   "about.builtAt": "बिल्ड की तारीख",
@@ -3373,11 +3387,20 @@
     "other": "{count} shots अद्यतन, {failed} अस्वीकृत"
   },
   "bulk.status.menu": "स्थिति",
-  "bulk.decision.title": { "one": "{count} version पर review निर्णय", "other": "{count} versions पर review निर्णय" },
+  "bulk.decision.title": {
+    "one": "{count} version पर review निर्णय",
+    "other": "{count} versions पर review निर्णय"
+  },
   "bulk.decision.hint": "वही निर्णय और वही वैकल्पिक टिप्पणी हर एक पर दर्ज होती है।",
   "bulk.decision.mixed": "चयन कई परियोजनाओं में फैला है: जिस परियोजना में वह स्थिति प्रयोग नहीं होती, वहाँ वह अस्वीकृत और गिनी जाती है।",
-  "bulk.decision.done": { "one": "{count} निर्णय दर्ज", "other": "{count} निर्णय दर्ज" },
-  "bulk.decision.partial": { "one": "{count} निर्णय दर्ज, {failed} अस्वीकृत", "other": "{count} निर्णय दर्ज, {failed} अस्वीकृत" },
+  "bulk.decision.done": {
+    "one": "{count} निर्णय दर्ज",
+    "other": "{count} निर्णय दर्ज"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} निर्णय दर्ज, {failed} अस्वीकृत",
+    "other": "{count} निर्णय दर्ज, {failed} अस्वीकृत"
+  },
   "queryState.title": "यह अनुभाग लोड नहीं किया जा सका",
   "queryState.description": "सर्वर ने उत्तर नहीं दिया। संभव है कि वह पुनः चालू हो रहा हो या उपलब्ध न हो — पुनः प्रयास करें।",
   "queryState.retry": "पुनः प्रयास करें",
@@ -3419,7 +3442,10 @@
   "ops.latest.rateLimited": "रिलीज़ सूची अभी और जाँच स्वीकार नहीं कर रही। बाद में फिर कोशिश करें।",
   "ops.latest.disabled": "इस इंस्टेंस पर रिलीज़ जाँच बंद है।",
   "ops.changes.title": "क्या बदलता है",
-  "ops.changes.count": { "one": "स्थापित के बाद {count} रिलीज़", "other": "स्थापित के बाद {count} रिलीज़" },
+  "ops.changes.count": {
+    "one": "स्थापित के बाद {count} रिलीज़",
+    "other": "स्थापित के बाद {count} रिलीज़"
+  },
   "ops.changes.none": "स्थापित रिलीज़ के बाद कुछ नया नहीं।",
   "ops.changes.prerelease": "पूर्व-रिलीज़",
   "ops.manual.title": "टर्मिनल से",
@@ -3475,7 +3501,10 @@
   "ops.result.intact": "कुछ भी नहीं बदला गया — इंस्टेंस अछूता है।",
   "ops.result.unknownHint": "एजेंट ने जवाब देना बंद कर दिया, इसलिए परिणाम अज्ञात है। उसका अपना लॉग पढ़ें:",
   "ops.backups.title": "बैकअप",
-  "ops.backups.count": { "one": "{count} बैकअप", "other": "{count} बैकअप" },
+  "ops.backups.count": {
+    "one": "{count} बैकअप",
+    "other": "{count} बैकअप"
+  },
   "ops.backups.empty": "यहाँ अभी कोई बैकअप नहीं है।",
   "ops.backups.unavailable": "बैकअप डायरेक्टरी एप्लिकेशन में माउंट नहीं है, इसलिए कुछ भी सूचीबद्ध नहीं किया जा सकता। टर्मिनल से लिए गए बैकअप पर कोई असर नहीं पड़ता।",
   "ops.backups.create": "अभी बैकअप लें",
@@ -3492,7 +3521,10 @@
   "reviewers.title": "review करने वाले",
   "reviewers.none": "इस version की review अभी किसी को नहीं सौंपी गई है",
   "reviewers.assign": "सौंपें",
-  "reviewers.saved": { "one": "इस review पर {count} व्यक्ति", "other": "इस review पर {count} व्यक्ति" },
+  "reviewers.saved": {
+    "one": "इस review पर {count} व्यक्ति",
+    "other": "इस review पर {count} व्यक्ति"
+  },
   "reviewers.notePlaceholder": "उन्हें क्या देखना है? (लाइटिंग, 1042 पर जोड़…)",
   "reviewers.noteLabel": "{name} को क्या देखना है",
   "reviewers.noteRequired": "यह प्रोजेक्ट निर्देश अनिवार्य करता है।",

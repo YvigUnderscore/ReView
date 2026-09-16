@@ -4,6 +4,7 @@
 import jwt from 'jsonwebtoken';
 import type { ShareLink } from '@prisma/client';
 import { env } from '../config/env';
+import { JWT_ALGORITHM, JWT_VERIFY_OPTIONS } from './jwt';
 
 /**
  * Session de partage client (35.C) : après le `GET /api/client/:token` initial (qui compte
@@ -15,14 +16,24 @@ import { env } from '../config/env';
 const SHARE_SESSION_TTL = '24h';
 
 export function signShareSession(linkId: number): string {
-  return jwt.sign({ kind: 'share', linkId }, env.JWT_SECRET, { expiresIn: SHARE_SESSION_TTL });
+  return jwt.sign({ kind: 'share', linkId }, env.JWT_SECRET, {
+    algorithm: JWT_ALGORITHM,
+    expiresIn: SHARE_SESSION_TTL,
+  });
 }
 
 /** Vrai si `token` est une session valide pour ce lien précis. */
 export function verifyShareSession(token: string | undefined, linkId: number): boolean {
   if (!token) return false;
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as { kind?: string; linkId?: number };
+    // L'algorithme est épinglé ici comme dans `lib/jwt` : sans l’option `algorithms`, c'est le
+    // porteur du jeton qui choisit avec quel algorithme on le vérifie. Ce jeton ouvre le
+    // partage client — mot de passe et limite de vues déjà franchis — donc il se vérifie
+    // avec exactement les mêmes garanties qu'un jeton de session.
+    const payload = jwt.verify(token, env.JWT_SECRET, JWT_VERIFY_OPTIONS) as {
+      kind?: string;
+      linkId?: number;
+    };
     return payload.kind === 'share' && payload.linkId === linkId;
   } catch {
     return false;

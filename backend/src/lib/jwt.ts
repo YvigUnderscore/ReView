@@ -39,25 +39,31 @@ export type VerifiedJwtPayload = Omit<JwtPayload, 'sid'> & { sid?: string; kind?
  * publique HMAC exploitable si une variante asymétrique était introduite un jour, et la
  * liste d'algorithmes acceptés dépendrait de la version de la bibliothèque plutôt que de
  * nous. On la déclare donc explicitement, ici et une seule fois.
+ *
+ * Les deux constantes sont EXPORTÉES parce que `JWT_SECRET` signe aussi des jetons
+ * auxiliaires hors de ce module : session de partage client (`lib/shareAccess`), état
+ * OIDC (`routes/auth-oidc.routes`). Un invariant énoncé ici mais oublié là-bas ne
+ * protège rien — c'est le vérificateur le plus permissif qui décide. Tout émetteur du
+ * même secret reprend donc ces constantes plutôt que d'en redéclarer.
  */
-const ALGORITHM = 'HS256' as const;
-const VERIFY_OPTIONS: VerifyOptions = { algorithms: [ALGORITHM] };
+export const JWT_ALGORITHM = 'HS256' as const;
+export const JWT_VERIFY_OPTIONS: VerifyOptions = { algorithms: [JWT_ALGORITHM] };
 
 export const signAccessToken = (payload: JwtPayload): string =>
   jwt.sign(payload, env.JWT_SECRET, {
-    algorithm: ALGORITHM,
+    algorithm: JWT_ALGORITHM,
     expiresIn: env.JWT_EXPIRES_IN,
   } as SignOptions);
 
 export const signRefreshToken = (payload: JwtPayload): string =>
   jwt.sign({ ...payload, kind: 'refresh' }, env.JWT_SECRET, {
-    algorithm: ALGORITHM,
+    algorithm: JWT_ALGORITHM,
     expiresIn: env.JWT_REFRESH_EXPIRES_IN,
   } as SignOptions);
 
 export const verifyToken = (token: string): VerifiedJwtPayload | null => {
   try {
-    return jwt.verify(token, env.JWT_SECRET, VERIFY_OPTIONS) as VerifiedJwtPayload;
+    return jwt.verify(token, env.JWT_SECRET, JWT_VERIFY_OPTIONS) as VerifiedJwtPayload;
   } catch {
     return null;
   }
@@ -65,11 +71,11 @@ export const verifyToken = (token: string): VerifiedJwtPayload | null => {
 
 /** Jeton intermédiaire 2FA (36.A) : émis après mot de passe correct, avant le code TOTP. */
 export const signTwoFaToken = (userId: number): string =>
-  jwt.sign({ id: userId, kind: '2fa' }, env.JWT_SECRET, { algorithm: ALGORITHM, expiresIn: '5m' });
+  jwt.sign({ id: userId, kind: '2fa' }, env.JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '5m' });
 
 export const verifyTwoFaToken = (token: string): number | null => {
   try {
-    const p = jwt.verify(token, env.JWT_SECRET, VERIFY_OPTIONS) as { id?: number; kind?: string };
+    const p = jwt.verify(token, env.JWT_SECRET, JWT_VERIFY_OPTIONS) as { id?: number; kind?: string };
     return p.kind === '2fa' && typeof p.id === 'number' ? p.id : null;
   } catch {
     return null;

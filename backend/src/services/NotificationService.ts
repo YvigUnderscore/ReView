@@ -8,6 +8,7 @@ import { t, type MessageKey, type TParams } from '../i18n';
 import { emitToUser } from './SocketService';
 import { sendToUser } from './PushService';
 import { isValidDiscordWebhook } from '../lib/sanitize';
+import { safeFetch } from '../lib/safeFetch';
 import { logger } from '../lib/logger';
 
 /**
@@ -79,20 +80,38 @@ export async function notifyPlaylistLiveStarted(
   );
 }
 
+/** Discord répond en quelques centaines de millisecondes ; au-delà, la notification est perdue. */
+const DISCORD_TIMEOUT_MS = 5000;
+/** La réponse de Discord tient en quelques centaines d'octets ; on ne lui en lira pas plus. */
+const DISCORD_MAX_BYTES = 64 * 1024;
+
 /**
  * Envoie un message au webhook Discord du studio (si configuré et valide).
  * Tolérant aux erreurs : un échec Discord ne doit jamais casser le flux applicatif.
+ *
+ * L'appel passe par `safeFetch` et non par `fetch` : il n'avait **aucun délai d'attente**.
+ * Un relais qui accepte la connexion puis se tait retenait indéfiniment un socket et le
+ * contexte du message, une fois par notification, sans jamais atteindre le `catch`.
+ * `safeFetch` apporte en prime la garde sur l'adresse résolue et le refus de suivre une
+ * redirection — l'allow-list `isValidDiscordWebhook` ne contrôle que l'URL de départ.
  */
 export async function sendDiscord(content: string): Promise<void> {
   try {
     const studio = await prisma.studio.findFirst({ select: { discordWebhookUrl: true } });
     const url = studio?.discordWebhookUrl;
     if (!url || !isValidDiscordWebhook(url)) return;
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    });
+    const res = await safeFetch(
+      url,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      },
+      { timeoutMs: DISCORD_TIMEOUT_MS, maxRedirects: 0, maxBytes: DISCORD_MAX_BYTES },
+    );
+    // Un 4xx (webhook supprimé, charge malformée) restait totalement muet : rien ne
+    // distinguait une notification remise d'une notification perdue.
+    if (!res.ok) logger.warn({ status: res.status }, '[Discord] webhook refusé');
   } catch (err) {
     logger.warn({ err }, '[Discord] envoi échoué');
   }

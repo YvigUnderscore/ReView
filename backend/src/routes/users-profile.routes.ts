@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { badRequest } from '../lib/errors';
 import * as UserService from '../services/UserService';
 
 /**
@@ -16,6 +17,19 @@ const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
+
+/**
+ * Seule forme de clé d'avatar acceptée : celle que `presignAvatar` vient de produire,
+ * `avatars/<id>.<ext>`. Le motif est **ancré** et l'identifiant comparé entier.
+ *
+ * Un préfixe ouvert (`key.startsWith('avatars/' + id)`) ne ferme pas la comparaison : en
+ * décimal, `9` est préfixe de `91`, donc le compte 9 désignait l'avatar du compte 91. Les
+ * deux contrôles jumeaux du code (vignette d'entité, image de département) ferment, eux,
+ * sur le point séparateur — c'est cette version-là qui fait foi.
+ */
+const AVATAR_KEY_RE = /^avatars\/(\d+)\.(?:png|jpe?g|webp)$/;
+const ownsAvatarKey = (key: string, userId: number): boolean =>
+  AVATAR_KEY_RE.exec(key)?.[1] === String(userId);
 
 // GET /api/users/:id/profile — fiche publique d'un membre (tout compte authentifié)
 router.get('/:id/profile', validate({ params: idParam }), async (req, res) => {
@@ -37,7 +51,9 @@ router.put(
   '/me/avatar',
   validate({ body: z.object({ key: z.string().max(256).nullable() }) }),
   async (req, res) => {
-    res.json({ user: await UserService.setAvatar(req.user!.id, req.body.key) });
+    const key = req.body.key as string | null;
+    if (key !== null && !ownsAvatarKey(key, req.user!.id)) throw badRequest('Invalid avatar key', 'BAD_KEY');
+    res.json({ user: await UserService.setAvatar(req.user!.id, key) });
   },
 );
 

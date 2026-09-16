@@ -41,7 +41,16 @@ export function invitationUrl(token: string): string {
   return `${env.APP_URL ?? ''}/invite/${token}`;
 }
 
-/** HTML de l'email d'invitation (pur — testé unitairement). */
+/**
+ * HTML de l'email d'invitation (pur — testé unitairement).
+ *
+ * `url` traverse DEUX fois `escapeHtml` : dans l'attribut `href` du lien de repli autant
+ * que dans son texte. Elle vaut aujourd'hui `APP_URL` + jeton hexadécimal, donc rien n'y
+ * échappe — mais `APP_URL` est une variable d'environnement, et le jour où elle porte un
+ * guillemet l'attribut se referme et le reste de la ligne devient du balisage. C'est la
+ * faute déjà corrigée dans `ShareMailService` : la laisser écrite ici la fait revenir au
+ * premier copier-coller.
+ */
 export function renderInvitationHtml(
   locale: Locale,
   recipientName: string,
@@ -56,7 +65,7 @@ export function renderInvitationHtml(
 ${mailButton(url, t(locale, 'invite.cta'))}
 <p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.expiry', { days: INVITATION_TTL_DAYS }))}</p>
 <p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.fallback'))}<br />
-<a href="${url}" style="color:${MAIL_ACCENT};word-break:break-all">${escapeHtml(url)}</a></p>
+<a href="${escapeHtml(url)}" style="color:${MAIL_ACCENT};word-break:break-all">${escapeHtml(url)}</a></p>
 <p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.ignore'))}</p>`;
   // Le texte d'aperçu, celui que la boîte de réception affiche avant l'ouverture :
   // sans lui, elle y répète le nom du studio, identique d'un message à l'autre.
@@ -154,14 +163,33 @@ async function findValid(token: string) {
       acceptedAt: true,
       expiresAt: true,
       user: {
-        select: { id: true, email: true, name: true, firstName: true, lastName: true, username: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          username: true,
+          disabledAt: true,
+        },
       },
       invitedBy: {
         select: { id: true, email: true, name: true, firstName: true, lastName: true, username: true },
       },
     },
   });
-  if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) return null;
+  // Offboarding (A1-01) : un lien d'invitation encore en boîte mail à l'heure du départ
+  // ouvrait une session — il pose un mot de passe ET connecte. Un compte désactivé n'a plus
+  // d'invitation valide : l'aperçu comme l'activation le traitent en lien périmé, sans dire
+  // pourquoi (le porteur du lien n'a pas à apprendre l'état d'un compte).
+  if (
+    !invitation ||
+    invitation.acceptedAt ||
+    invitation.expiresAt < new Date() ||
+    invitation.user.disabledAt
+  ) {
+    return null;
+  }
   return invitation;
 }
 

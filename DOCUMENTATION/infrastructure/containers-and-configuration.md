@@ -2,7 +2,7 @@
 
 *Where every setting comes from, what bounds each container, and how the stack is probed, pinned and upgraded.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 This page is about the envelope, not the contents: which file wins when two of them set the
 same variable, what stops a container before it can do damage, how much memory each service is
@@ -69,6 +69,50 @@ With `--tls none` the list it writes is the base stack plus the site overlay onl
 production overlay, so host ports stay published. That mode is for an instance already sitting
 behind someone else's TLS front end. See
 [Installation](../getting-started/installation.md#install-a-studio-instance).
+
+## Reaching the API: `BPORT_BIND` and `TRUST_PROXY`
+
+Two variables decide who can talk to the API directly, and whose word ReView takes for the
+address of a client. Neither is safe on its own — they are only safe as a pair, which is why
+they are documented together.
+
+`BPORT` publishes the backend container's port on the host; **`BPORT_BIND` is the interface it
+is published on**, and it defaults to `127.0.0.1`, the same treatment MinIO, Postgres and Redis
+already had. Bound to the loopback, the API is reachable only through whatever sits in front of
+it. Set to `0.0.0.0`, it answers the whole studio network in clear, going round the TLS front
+end entirely.
+
+**`TRUST_PROXY` is the number of proxies between the client and the API**, handed straight to
+Express's `trust proxy`. It decides where `req.ip` comes from: at `0` it is the address of the
+socket, at `1` it is taken from the `X-Forwarded-For` header. That address is the key of every
+rate limiter — sign-in, 2FA, share unlock — and the address written on every audit line.
+`X-Forwarded-For` is supplied by the *caller*, so trusting it with no proxy in front hands the
+caller a fresh limiter counter on every request, and lets them choose what the audit log
+records about them.
+
+| `BPORT_BIND` | `TRUST_PROXY` | What you get |
+|---|---|---|
+| `127.0.0.1` (default) | `1` (compose default) | **The intended pairing.** The API is only reachable through the front end, so `X-Forwarded-For` can only have been written by it |
+| `127.0.0.1` | `0` | Safe, and lossy: every request looks like it came from the proxy, so the limiters count the whole studio as one client and audit lines all carry one address |
+| `0.0.0.0` | `0` | Safe as far as identity goes — `req.ip` is the socket address, which nobody can forge. Exposing the API in clear on the network remains a separate problem |
+| `0.0.0.0` | `1` | **Broken.** Anyone on the network reaches the API directly with an `X-Forwarded-For` of their choosing: every IP-keyed limiter is bypassed, and the audit log records whatever they pick |
+
+The base compose file sets both ends of the first row — `BPORT_BIND` defaults to the loopback
+and `TRUST_PROXY` to `1` — while `config/env.ts` defaults `TRUST_PROXY` to **`0`**, because an
+API started outside Docker has nothing in front of it. Accepted values are `0` to `4`; anything
+else stops the boot.
+
+> [!CAUTION]
+> Raising `TRUST_PROXY` is only sound when the proxy is the *only* way in. If you publish the
+> backend port on `0.0.0.0` — for a debugging session, for a load test, for an instance behind
+> someone else's front end — put `TRUST_PROXY=0` back in `.env` in the same gesture. Left at
+> `1`, the rate limiters stop limiting anything, and they fail silently: there is no error, the
+> counters simply never reach their ceiling.
+
+For production, deploy the base file **and** `docker-compose.prod.yml`, which removes every
+host port and adds the TLS front end — see
+[Installation](../getting-started/installation.md#install-a-studio-instance). Limiter ceilings
+and what they are keyed on are in [Security model](security.md#rate-limiting).
 
 ## The schema gate at boot
 

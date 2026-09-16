@@ -4,6 +4,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Request } from 'express';
 import { prisma } from './prisma';
+import { publishRedis } from './redis';
 import { env } from '../config/env';
 
 /**
@@ -12,6 +13,58 @@ import { env } from '../config/env';
  * deux. Le middleware vérifie la validité avec un petit cache in-process (TTL 30 s) —
  * la révocation est effective en ≤ 30 s sans requête DB par appel.
  */
+
+/**
+ * Canal de révocation immédiate (A3-02, volet immédiat).
+ *
+ * Deux trous se refermaient mal avec le seul cache local :
+ *
+ *  1. le cache de validité est **par process** — la réplique qui a servi le `DELETE /sessions`
+ *     invalide le sien, les autres continuent de répondre « session vivante » pendant trente
+ *     secondes ;
+ *  2. une websocket vit des jours. `SocketService` rejoue bien les contrôles, mais toutes les
+ *     minutes : une minute pendant laquelle l'onglet du partant recevait encore les
+ *     commentaires internes du projet et les URL présignées de leurs pièces jointes.
+ *
+ * La révocation publie donc les `sid` concernés ; chaque réplique tombe son cache et ferme
+ * les sockets correspondants sans attendre son balayage. La publication est best-effort
+ * (`publishRedis` avale les pannes) : c'est assumé, le balayage périodique reste le filet.
+ */
+export const SESSION_REVOCATION_CHANNEL = 'review:session-revoked';
+
+/** Charge utile du canal : la liste des `sid` révoqués, rien de plus (aucune donnée de compte). */
+export const encodeSessionRevocation = (sids: readonly string[]): string => JSON.stringify({ sids });
+
+/**
+ * Décodage défensif : le canal est partagé et rien ne garantit ce qu'on y lit. Un message
+ * illisible rend une liste vide plutôt qu'une exception — un abonné pub/sub qui jette tue
+ * le gestionnaire, pas seulement le message.
+ */
+export function decodeSessionRevocation(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw) as { sids?: unknown };
+    if (!Array.isArray(parsed?.sids)) return [];
+    return parsed.sids.filter((s): s is string => typeof s === 'string' && s.length > 0);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Applique localement une révocation venue d'une autre réplique : le cache de validité doit
+ * tomber TOUT DE SUITE, sinon `isSessionActive` continuerait de répondre « vivante » jusqu'à
+ * trente secondes et la déconnexion du socket serait cosmétique (l'API, elle, accepterait
+ * encore le jeton).
+ */
+export function markSessionsRevoked(sids: readonly string[]): void {
+  for (const sid of sids) cacheSet(sid, false);
+}
+
+/** Publie une révocation. Une liste vide ne réveille personne. */
+function publishRevocation(sids: readonly string[]): void {
+  if (sids.length === 0) return;
+  publishRedis(SESSION_REVOCATION_CHANNEL, encodeSessionRevocation(sids));
+}
 
 const CACHE_TTL_MS = 30_000;
 const CACHE_MAX = 10_000;
@@ -58,7 +111,12 @@ export async function revokeSession(sid: string, userId?: number): Promise<boole
     where: { id: sid, revokedAt: null, ...(userId != null ? { userId } : {}) },
     data: { revokedAt: new Date() },
   });
-  if (r.count > 0) cacheSet(sid, false);
+  if (r.count > 0) {
+    cacheSet(sid, false);
+    // Les autres répliques ne savent rien de cette écriture : elles tiennent leur propre
+    // cache, et c'est l'une d'elles qui héberge peut-être la websocket de ce `sid`.
+    publishRevocation([sid]);
+  }
   return r.count > 0;
 }
 
@@ -89,7 +147,13 @@ export async function revokeAllSessions(userId: number, keepSessionId?: string):
   };
   const sessions = await prisma.userSession.findMany({ where, select: { id: true } });
   const r = await prisma.userSession.updateMany({ where, data: { revokedAt: new Date() } });
-  for (const s of sessions) cacheSet(s.id, false);
+  const sids = sessions.map((s) => s.id);
+  markSessionsRevoked(sids);
+  // Publier depuis ici plutôt que depuis `revokeAllCredentials` : tous les chemins de
+  // révocation en masse (offboarding, changement de mot de passe, réinitialisation admin)
+  // passent par cette fonction, et `keepSessionId` est déjà exclu du `where` — la session
+  // de l'auteur de l'action n'est donc jamais dans la liste publiée.
+  publishRevocation(sids);
   return r.count;
 }
 

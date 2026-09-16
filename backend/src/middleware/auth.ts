@@ -69,7 +69,16 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     return;
   }
 
-  req.user = dbUser;
+  // Offboarding (A1-01) : désactiver un compte révoque ses sessions, mais rien n'empêchait
+  // d'en rouvrir une. Le verrou est ici ET à l'émission des jetons — celui-ci ferme la
+  // fenêtre de trente secondes du cache d'identité pour les jetons déjà en circulation.
+  if (dbUser.disabledAt) {
+    res.status(401).json({ error: 'Account disabled', code: 'ACCOUNT_DISABLED' });
+    return;
+  }
+
+  // `disabledAt` ne voyage pas plus loin : `req.user` est l'identité, pas la fiche du compte.
+  req.user = { id: dbUser.id, email: dbUser.email, role: dbUser.role };
   req.sessionId = payload.sid;
   next();
 };

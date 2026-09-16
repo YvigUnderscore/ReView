@@ -3,6 +3,7 @@
 
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { Prisma, Role, UserStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { invalidateAuthUser } from '../lib/userCache';
@@ -136,8 +137,13 @@ export async function listPresence(viewer?: { id: number; role: Role }) {
           },
         }
       : {};
+  // Un compte désactivé sort de l'annuaire (A5-07), comme il sort déjà de la recherche
+  // globale (`lib/search.ts`). Deux raisons, et la seconde est la plus opérante : le nom
+  // d'un ancien salarié restait publié à tout le studio, comptes CLIENT extérieurs compris ;
+  // et cet annuaire alimente les mentions et le choix d'un destinataire — assigner du travail
+  // à quelqu'un qui ne peut plus se connecter ne rend service à personne.
   const users = await prisma.user.findMany({
-    where: { isService: false, ...scope },
+    where: { isService: false, disabledAt: null, ...scope },
     select: {
       id: true,
       email: true, // nécessaire au repli displayName/initials — retiré de la sortie plus bas
@@ -274,9 +280,22 @@ export async function presignAvatar(userId: number, contentType: string) {
   return { url, key };
 }
 
+/**
+ * Forme exacte d'une clé d'avatar : `avatars/<id>.<ext>`, telle que `StorageService`
+ * la fabrique. La comparaison se fait sur l'identifiant CAPTURÉ, jamais sur un préfixe :
+ * `'avatars/91.png'.startsWith('avatars/9')` est vrai, et c'est par là que le compte 9
+ * faisait servir l'avatar du compte 91 (A1-04/A2-06). Les deux contrôles du même genre
+ * (`DepartmentService.setImage`, `EntityThumbnailService.set`) sont, eux, délimités.
+ */
+const AVATAR_KEY_RE = /^avatars\/(\d+)\.(?:png|jpe?g|webp)$/;
+
 export async function setAvatar(userId: number, key: string | null) {
-  // Sécurité : la clé doit cibler le dossier avatar de l'utilisateur courant.
-  if (key && !key.startsWith(`avatars/${userId}`)) throw badRequest('Invalid avatar key', 'BAD_KEY');
+  // Sécurité : la clé doit désigner EXACTEMENT l'avatar de l'utilisateur courant. Le
+  // contrôle vit ici, dans le service : la route est aujourd'hui son seul appelant, mais
+  // c'est le service qui écrit en base — une garde posée seulement à l'entrée HTTP tombe
+  // au premier second appelant (worker, import, script de migration).
+  if (key !== null && AVATAR_KEY_RE.exec(key)?.[1] !== String(userId))
+    throw badRequest('Invalid avatar key', 'BAD_KEY');
   const user = await prisma.user.update({
     where: { id: userId },
     data: { avatarKey: key },
@@ -452,22 +471,76 @@ export async function deleteUser(actorId: number, id: number) {
 
 const PREFERENCES_MAX_BYTES = 32_768;
 
+/**
+ * Nombre de clés conservées au premier niveau du sac (A2-04).
+ *
+ * La taille totale ne suffit pas : la fusion est superficielle et n'efface jamais une clé
+ * qu'on ne lui redemande pas, si bien qu'un compte ordinaire pouvait faire grossir la liste
+ * des clés d'un `PATCH` à l'autre jusqu'à saturer le plafond d'octets — et l'y laisser
+ * définitivement, puisque seul un `null` explicite par clé permet d'en reprendre. Borner le
+ * NOMBRE de clés rend l'accumulation refusable avant d'en arriver là, et rend le refus
+ * actionnable : le message dit quoi supprimer. Le type front (`UserPreferences`) en compte
+ * une douzaine ; deux cents laissent toute la marge dont une feature aura besoin.
+ */
+const PREFERENCES_MAX_KEYS = 200;
+
+/**
+ * Feuille admissible d'une préférence. Chaque chaîne est bornée pour la même raison que
+ * dans `lib/commentPayload` : sans cela, un seul champ suffit à remplir tout le budget.
+ */
+const preferenceLeaf = z.union([z.string().max(4_000), z.number().finite(), z.boolean(), z.null()]);
+
+/**
+ * Valeur admissible, construite en DESCENDANT sur une profondeur finie plutôt qu'en
+ * `z.lazy()` récursif : la profondeur devient une propriété du schéma, pas une course entre
+ * la pile de Node et la taille du corps. Cinq niveaux couvrent la plus imbriquée des
+ * préférences réelles (`savedViews` : portée → liste de vues → `filters`).
+ */
+function preferenceValue(depth: number): z.ZodTypeAny {
+  if (depth === 0) return preferenceLeaf;
+  const inner = preferenceValue(depth - 1);
+  return z.union([
+    preferenceLeaf,
+    z.array(inner).max(500),
+    z.record(z.string().max(64), inner).refine((o) => Object.keys(o).length <= PREFERENCES_MAX_KEYS),
+  ]);
+}
+
+/**
+ * Corps admissible de `PATCH /api/users/me/preferences`. La clé était déjà bornée à 64
+ * caractères, la VALEUR ne l'était pas : `z.unknown()` laissait passer n'importe quelle
+ * forme, de n'importe quelle profondeur, jusqu'au plafond du parseur de corps (2 Mo). Le
+ * schéma vit ici, et non dans la route, parce que ce qu'une préférence a le droit de
+ * contenir relève de la même décision que la fusion qui l'écrit.
+ */
+export const preferencesPatchSchema = z.record(z.string().max(64), preferenceValue(5));
+
 export async function getPreferences(userId: number): Promise<Record<string, unknown>> {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
   if (!u) throw notFound('User not found');
   return (u.preferences ?? {}) as Record<string, unknown>;
 }
 
-/** Merge superficiel : clé à `null` = suppression ; taille totale bornée. */
+/** Merge superficiel : clé à `null` = suppression ; taille ET nombre de clés bornés. */
 export async function updatePreferences(
   userId: number,
   patch: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const next = { ...(await getPreferences(userId)) };
+  const current = await getPreferences(userId);
+  const next = { ...current };
   for (const [k, v] of Object.entries(patch)) {
     if (v === null) delete next[k];
     else next[k] = v;
   }
+  // Les deux plafonds portent sur le RÉSULTAT de la fusion, pas sur l'appel : c'est
+  // l'accumulation qui est le défaut (A2-04), et un appel isolé est toujours minuscule.
+  //
+  // Le plafond de clés ne bloque que ce qui GROSSIT : un sac déjà trop garni — données
+  // écrites avant le plafond — doit rester réductible, sinon le refus enferme son
+  // propriétaire dans l'état même qu'on lui reproche, `null` de suppression compris.
+  const keyCount = Object.keys(next).length;
+  if (keyCount > PREFERENCES_MAX_KEYS && keyCount >= Object.keys(current).length)
+    throw badRequest('Too many preference keys', 'PREFERENCES_TOO_MANY_KEYS');
   if (JSON.stringify(next).length > PREFERENCES_MAX_BYTES)
     throw badRequest('Preferences are too large', 'PREFERENCES_TOO_LARGE');
   await prisma.user.update({

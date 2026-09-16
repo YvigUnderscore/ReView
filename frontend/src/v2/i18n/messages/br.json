@@ -790,7 +790,13 @@
   "kanban.addItem": "Ouzhpennañ un elfenn…",
   "reviews.addToPlaylistShort": "Ouzhpennañ d'ar playlist",
   "reviews.assigned.title": "Roet din",
-  "reviews.assigned.count": { "one": "{count} review o c'hortoz ac'hanoc'h", "two": "{count} review o c'hortoz ac'hanoc'h", "few": "{count} review o c'hortoz ac'hanoc'h", "many": "{count} review o c'hortoz ac'hanoc'h", "other": "{count} review o c'hortoz ac'hanoc'h" },
+  "reviews.assigned.count": {
+    "one": "{count} review o c'hortoz ac'hanoc'h",
+    "two": "{count} review o c'hortoz ac'hanoc'h",
+    "few": "{count} review o c'hortoz ac'hanoc'h",
+    "many": "{count} review o c'hortoz ac'hanoc'h",
+    "other": "{count} review o c'hortoz ac'hanoc'h"
+  },
   "reviews.filter.allAssignments": "An holl review",
   "common.clearSelection": "Nullañ an diuzad",
   "comments.imagePreview": "Rakwel ar skeudenn",
@@ -1164,7 +1170,13 @@
     "one": "{count} dalc'h nullet",
     "other": "{count} dalc'h nullet"
   },
-  "sessions.showAll": { "one": "Diskouez an {count} dalc'h", "two": "Diskouez an {count} zalc'h", "few": "Diskouez ar {count} dalc'h", "many": "Diskouez ar {count} dalc'h", "other": "Diskouez an holl {count} dalc'h" },
+  "sessions.showAll": {
+    "one": "Diskouez an {count} dalc'h",
+    "two": "Diskouez an {count} zalc'h",
+    "few": "Diskouez ar {count} dalc'h",
+    "many": "Diskouez ar {count} dalc'h",
+    "other": "Diskouez an holl {count} dalc'h"
+  },
   "sessions.showFewer": "Diskouez nebeutoc'h",
   "twofa.qr": "Kod QR enskrivañ 2FA",
   "twofa.scan": "Skannit ar c’hod QR-mañ gant hoc’h arload (Google Authenticator, 1Password…), ha merkit ar c’hod diskwelet.",
@@ -2070,6 +2082,8 @@
   "smtp.port": "Porzh",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Postel amprouiñ kaset da {to}",
+  "smtp.allowInsecure": "Aotren ar c’hasadennoù hep enrinegañ (hep STARTTLS)",
+  "smtp.allowInsecureHint": "Evit un daskas diabarzh hep STARTTLS hepken. Ger-tremen SMTP ha pep liamm pedadenn a dremen neuze dre ar rouedad e testenn sklaer, lennus gant an holl war an hent.",
   "storage.map.hint": "Ur bucket S3/MinIO hepken evit an holl instañs ; dilemel ur media a skarzh e teuliad orin hag e rakger",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Traoù",
@@ -2911,7 +2925,10 @@
   "shotgrid.statuses.title": "Statudoù kinniget war ar raktres-mañ",
   "shotgrid.statuses.hint": "Anavezout a ra ul lec'hienn holl statudoù ar studio ; un ijinerezh ne implij nemet un nebeut anezho. Merkit ar re a fell deoc'h gwelet kinniget — lañserioù, dibaberioù ha siloù a heuilh. Chom hep merkañ a viro ar geriaoueg a-bezh. Kuzhat ne ziverk ket : un elfenn a zoug dija ur statud kuzhet a genderc'h d'e ziskouez.",
   "shotgrid.statuses.all": "an holl kinniget",
-  "shotgrid.statuses.count": { "one": "{count} dibabet", "other": "{count} dibabet" },
+  "shotgrid.statuses.count": {
+    "one": "{count} dibabet",
+    "other": "{count} dibabet"
+  },
   "shotgrid.statuses.scopeLabel": "Statudoù diskouezet",
   "shotgrid.statuses.scope.task": "Evit an tasks",
   "shotgrid.statuses.scope.shot": "Evit ar shots",
@@ -3144,6 +3161,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "N'eus titour kevreañ ShotGrid ebet enrollet evit al lec'hienn-mañ.",
   "error.REVIEW_NOTE_REQUIRED": "Ar raktres-mañ a c'houlenn ur gourc'hemenn evit fiziout ur review.",
   "error.REVIEW_NOTE_TOO_SHORT": "Berroc'h eo ar gourc'hemenn-mañ eget ar pezh a c'houlenn ar raktres.",
+  "error.ACCOUNT_DISABLED": "Diweredekaet eo ar gont-mañ. Goulennit digant ur merour he adweredekaat.",
+  "error.DEPARTMENT_SCOPE_MIX": "N’haller ket adurzhiañ asambles rannoù a raktresoù disheñvel.",
+  "error.SMTP_PASSWORD_UNREADABLE": "N’haller ket ezrinegañ ger-tremen SMTP enrollet ken. Adskrivit anezhañ.",
   "about.title": "Diwar-benn an instañs-mañ",
   "about.version": "Version",
   "about.builtAt": "Savet d'an",
@@ -3380,11 +3400,20 @@
     "other": "{count} shot hizivaet, {failed} nac'het"
   },
   "bulk.status.menu": "Statud",
-  "bulk.decision.title": { "one": "Diviz review war {count} version", "other": "Diviz review war {count} version" },
+  "bulk.decision.title": {
+    "one": "Diviz review war {count} version",
+    "other": "Diviz review war {count} version"
+  },
   "bulk.decision.hint": "An hevelep diviz, hag an hevelep evezhiadenn diret, a vez lakaet war pep hini.",
   "bulk.decision.mixed": "Meur a raktres a zo er choaz : ur statud n'implij ket unan anezho a vez nac'het eno, ha kontet.",
-  "bulk.decision.done": { "one": "{count} diviz lakaet", "other": "{count} diviz lakaet" },
-  "bulk.decision.partial": { "one": "{count} diviz lakaet, {failed} nac'het", "other": "{count} diviz lakaet, {failed} nac'het" },
+  "bulk.decision.done": {
+    "one": "{count} diviz lakaet",
+    "other": "{count} diviz lakaet"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} diviz lakaet, {failed} nac'het",
+    "other": "{count} diviz lakaet, {failed} nac'het"
+  },
   "queryState.title": "N'eus ket bet gallet kargañ ar rann-mañ",
   "queryState.description": "N'en deus ket respontet an dafariad. Marteze emañ oc'h adloc'hañ pe n'eo ket hegerz — klaskit en-dro.",
   "queryState.retry": "Klask en-dro",
@@ -3435,7 +3464,10 @@
   "ops.latest.rateLimited": "Ar roll stummoù a nac'h gwiriadennoù all evit ar mare. Klask en-dro diwezhatoc'h.",
   "ops.latest.disabled": "Diweredekaet eo gwiriañ ar stummoù war an instañs-mañ.",
   "ops.changes.title": "Ar pezh a cheñch",
-  "ops.changes.count": { "one": "{count} stumm embannet abaoe an hini en implij", "other": "{count} stumm embannet abaoe an hini en implij" },
+  "ops.changes.count": {
+    "one": "{count} stumm embannet abaoe an hini en implij",
+    "other": "{count} stumm embannet abaoe an hini en implij"
+  },
   "ops.changes.none": "Netra nevez abaoe ar stumm en implij.",
   "ops.changes.prerelease": "Rag-stumm",
   "ops.manual.title": "Adalek un termenell",
@@ -3491,7 +3523,10 @@
   "ops.result.intact": "N'eus bet treuzkemmet netra : dizaonet eo an instañs.",
   "ops.result.unknownHint": "Ne respont ket mui an ajant : dianav eo an disoc'h. Lenn e varilh dezhañ :",
   "ops.backups.title": "Gwarezadennoù",
-  "ops.backups.count": { "one": "{count} gwarezadenn", "other": "{count} gwarezadenn" },
+  "ops.backups.count": {
+    "one": "{count} gwarezadenn",
+    "other": "{count} gwarezadenn"
+  },
   "ops.backups.empty": "N'eus gwarezadenn ebet amañ evit ar mare.",
   "ops.backups.unavailable": "N'eo ket bet marc'het teuliad ar gwarezadennoù en arload : n'haller rollañ netra. Ar gwarezadennoù graet adalek un termenell ne cheñchont ket.",
   "ops.backups.create": "Gwarediñ bremañ",
@@ -3508,7 +3543,13 @@
   "reviewers.title": "Reviewerien",
   "reviewers.none": "Den ebet c'hoazh evit review ar version-mañ",
   "reviewers.assign": "Deverkañ",
-  "reviewers.saved": { "one": "{count} den war ar review-mañ", "two": "{count} zen war ar review-mañ", "few": "{count} den war ar review-mañ", "many": "{count} a dud war ar review-mañ", "other": "{count} den war ar review-mañ" },
+  "reviewers.saved": {
+    "one": "{count} den war ar review-mañ",
+    "two": "{count} zen war ar review-mañ",
+    "few": "{count} den war ar review-mañ",
+    "many": "{count} a dud war ar review-mañ",
+    "other": "{count} den war ar review-mañ"
+  },
   "reviewers.notePlaceholder": "Petra a rank sellout outañ ? (ar gouloù, ar c'hevread e 1042…)",
   "reviewers.noteLabel": "Ar pezh a rank {name} sellout outañ",
   "reviewers.noteRequired": "Ar raktres-mañ a c'houlenn ur gourc'hemenn.",

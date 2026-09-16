@@ -131,7 +131,8 @@ router.post(
   requireProjectManage, // 38.E : superviseur local autorisé
   async (req, res) => {
     const { userId, role } = req.body as { userId: number; role?: Role };
-    const membership = await ProjectService.addMember(Number(req.params.projectId), userId, role);
+    const actor = req.user!;
+    const membership = await ProjectService.addMember(Number(req.params.projectId), userId, role, actor);
     res.status(201).json({ membership });
   },
 );
@@ -177,7 +178,7 @@ router.delete(
   validate({ params: z.object({ projectId: z.coerce.number().int(), userId: z.coerce.number().int() }) }),
   requireProjectManage, // 38.E : superviseur local autorisé
   async (req, res) => {
-    await ProjectService.removeMember(Number(req.params.projectId), Number(req.params.userId));
+    await ProjectService.removeMember(Number(req.params.projectId), Number(req.params.userId), req.user);
     res.status(204).end();
   },
 );

@@ -25,7 +25,7 @@ const whereOf = () => (db.user.findMany.mock.calls[0]![0] as { where: Record<str
 describe('listPresence — cloisonnement (C1)', () => {
   it('sert le studio entier à un compte interne', async () => {
     await listPresence({ id: 2, role: Role.ARTIST });
-    expect(whereOf()).toEqual({ isService: false });
+    expect(whereOf()).toEqual({ isService: false, disabledAt: null });
   });
 
   it('restreint un CLIENT aux personnes de ses projets', async () => {
@@ -55,6 +55,20 @@ describe('listPresence — cloisonnement (C1)', () => {
 
   it('reste sûr sans demandeur connu', async () => {
     await listPresence();
-    expect(whereOf()).toEqual({ isService: false });
+    expect(whereOf()).toEqual({ isService: false, disabledAt: null });
+  });
+
+  /**
+   * A5-07 : le nom, le prénom et la fonction d'un ancien salarié restaient publiés dans
+   * l'annuaire du studio — visibles des comptes CLIENT extérieurs — et la personne restait
+   * proposée aux mentions et à l'assignation. La recherche globale, elle, les excluait déjà :
+   * les deux annuaires du produit ne suivaient pas la même règle.
+   */
+  it('exclut les comptes désactivés, pour tous les rôles', async () => {
+    for (const role of [Role.ADMIN, Role.SUPERVISOR, Role.ARTIST, Role.CLIENT]) {
+      db.user.findMany.mockClear();
+      await listPresence({ id: 2, role });
+      expect(whereOf()).toMatchObject({ disabledAt: null });
+    }
   });
 });

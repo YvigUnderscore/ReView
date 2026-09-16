@@ -22,6 +22,25 @@ router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
+/**
+ * Transformation d'affichage d'une version 3D (A2-04) : orientation en degrés + échelle
+ * uniforme, exactement ce que `useSaveTransform` envoie et ce qu'`applyEulerTransform` lit.
+ * C'était un `z.any()` — donc une colonne Json qu'un membre du projet remplissait de la
+ * forme et du volume qu'il voulait, jusqu'au plafond du parseur de corps.
+ *
+ * L'écriture est stricte, la lecture reste tolérante : les transformations héritées de
+ * l'ancien viewer continuent d'être relues telles quelles côté front, qui les fusionne avec
+ * ses valeurs par défaut. Champs facultatifs, mais aucun champ libre.
+ */
+const transformSchema = z
+  .object({
+    yaw: z.number().finite().min(-3_600).max(3_600).optional(),
+    pitch: z.number().finite().min(-3_600).max(3_600).optional(),
+    roll: z.number().finite().min(-3_600).max(3_600).optional(),
+    scale: z.number().finite().min(0.000_1).max(10_000).optional(),
+  })
+  .strict();
+
 /** Résout le projet d'une version + assertion d'accès (RBAC) → renvoie le projectId. */
 async function resolveVersionAccess(req: Request, id: number): Promise<number> {
   const projectId = await resolveProjectIdForVersion(id);
@@ -99,7 +118,7 @@ router.patch(
     body: z.object({
       name: z.string().min(1).max(60).optional(),
       status: z.nativeEnum(VersionStatus).optional(),
-      transform: z.any().optional(),
+      transform: transformSchema.optional(),
     }),
   }),
   async (req, res) => {

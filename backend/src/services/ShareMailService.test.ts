@@ -64,6 +64,25 @@ describe('renderShareMailHtml', () => {
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
+  // Le nom du projet est repris dans le titre du message, que `mailLayout` compose.
+  // Un superviseur peut le renommer : c'est une donnée d'utilisateur, pas du balisage.
+  it('échappe le nom du projet jusque dans le titre en gras', () => {
+    const html = renderShareMailHtml('en', {
+      ...ctx,
+      projectName: 'Réf. <a href="https://faux.example">Ouvrir la review</a>',
+    });
+    expect(html).not.toContain('<a href="https://faux.example">');
+    expect(html).toContain('&lt;a href=&quot;https://faux.example&quot;&gt;');
+  });
+
+  // La copie locale de l'échappement oubliait les guillemets : la seule qui compte
+  // dès qu'une donnée atterrit dans un attribut.
+  it('échappe aussi les guillemets, pas seulement les chevrons', () => {
+    const html = renderShareMailHtml('en', { ...ctx, note: 'x" onmouseover="alert(1)' });
+    expect(html).not.toContain('onmouseover="');
+    expect(html).toContain('&quot;');
+  });
+
   it('omet le bloc de note quand il n’y en a pas', () => {
     expect(renderShareMailHtml('en', ctx)).not.toContain('padding-left:12px');
   });

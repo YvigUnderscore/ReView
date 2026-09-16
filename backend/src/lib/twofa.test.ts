@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import {
   generateTotpSecret,
   otpauthUri,
@@ -11,11 +11,63 @@ import {
   consumeBackupCode,
   hashBackupCode,
   consumeTotpOnce,
+  consumeTotpOnceShared,
   __testing,
 } from './twofa';
+import { createFakeRedis } from './redisFake';
+import { __redisTesting } from './redis';
+
+const redis = createFakeRedis();
 
 beforeEach(() => {
   __testing.usedTotp.clear();
+  redis.flush();
+  redis.failing = false;
+  __redisTesting.setClient(redis);
+});
+
+afterAll(() => {
+  __redisTesting.reset();
+});
+
+describe('anti-rejeu partagé entre répliques (A3-09)', () => {
+  /** Ce que voit une SECONDE réplique : sa mémoire de process est vierge. */
+  const autreReplique = () => __testing.usedTotp.clear();
+
+  it('refuse sur une réplique le code déjà consommé sur l’autre', async () => {
+    await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(true);
+    autreReplique();
+    await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(false);
+  });
+
+  it('constate que la garde locale seule laisse passer ce rejeu', () => {
+    // Le défaut, isolé : deux répliques derrière le même frontal multiplient les chances
+    // d'un code intercepté, puisque chacune ne connaît que ses propres tentatives.
+    expect(consumeTotpOnce(7, '123456')).toBe(true);
+    autreReplique();
+    expect(consumeTotpOnce(7, '123456')).toBe(true);
+  });
+
+  it('pose un marqueur borné dans le temps', async () => {
+    await consumeTotpOnceShared(7, '123456');
+    expect(redis.peek('totp:used:7:123456')).toBe('1');
+    expect(Number(await redis.call('PTTL', 'totp:used:7:123456'))).toBeGreaterThan(0);
+  });
+
+  it('ignore les séparateurs de saisie, comme la garde locale', async () => {
+    await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(true);
+    autreReplique();
+    await expect(consumeTotpOnceShared(7, ' 123 456 ')).resolves.toBe(false);
+  });
+
+  it('refuse le code quand le marqueur partagé est injoignable (échec fermé)', async () => {
+    // Un anti-rejeu qui a perdu la mémoire de ce qui a été présenté ne peut pas répondre
+    // « jamais vu » : laisser passer ferait de la panne du marqueur le moyen de le
+    // contourner. Aucune disponibilité n'est perdue au passage — les deux limiteurs de
+    // `/verify`, eux aussi adossés à Redis, refusent déjà la requête en amont.
+    redis.failing = true;
+    await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(false);
+  });
 });
 
 describe('twofa', () => {

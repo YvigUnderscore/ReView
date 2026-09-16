@@ -74,19 +74,41 @@ export interface SheetInput {
 }
 
 /**
+ * Balises que `annotationToSvg` émet réellement — et donc les seules admises ici.
+ *
+ * Une liste d'éléments interdits se contourne : il suffit d'en citer un qu'elle ignore
+ * (`<animate>`, `<set>`, `<a>`, `<style>`…). La liste des éléments ATTENDUS, elle, ne se
+ * contourne pas. Elle doit s'élargir en même temps que le rendu : une forme nouvelle dont
+ * la balise manque ici disparaît de la planche, ce qui se voit, plutôt que de passer.
+ */
+const ALLOWED_SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'ellipse', 'line', 'polygon', 'text']);
+
+/** Toute ouverture de balise, y compris `<!…`, `<?…` et un `<` esseulé (nom vide). */
+const TAG_OPEN = /<\s*\/?\s*([^\s/>]*)/g;
+
+/**
  * Filet de sécurité avant d'incruster un SVG dans le document.
  *
- * `annotationToSvg` compose ses attributs à partir de la couleur enregistrée avec la
- * forme, qui vient du client. Dans un fichier lu par ffmpeg, un guillemet mal placé ne
- * produisait qu'un rendu raté ; dans un document HTML ouvert par un navigateur, il
- * ouvrirait la porte à du balisage arbitraire. On rejette donc en bloc tout SVG qui porte
- * un gestionnaire d'événement, un script ou une URL exécutable, plutôt que de recoudre le
- * balisage — une planche sans le dessin reste lisible, une planche piégée non.
+ * Ce n'est qu'un filet : la vraie défense est dans `annotationSvg.ts`, qui ne compose plus
+ * ses attributs qu'à partir de valeurs contraintes (couleur hexadécimale, nombres finis).
+ * Le filtre reste parce que le SVG, lui, traverse ensuite un document HTML ouvert dans un
+ * navigateur — et parce que la version précédente de ce filtre a été prise en défaut : sa
+ * règle des gestionnaires exigeait un BLANC devant (`\son…=`), si bien qu'un `/onbegin=`
+ * — forme que l'analyseur HTML accepte pour séparer deux attributs — passait intact.
+ *
+ * On rejette donc en bloc plutôt que de recoudre le balisage : une planche sans le dessin
+ * reste lisible, une planche piégée non.
  */
 export function sanitizeInlineSvg(svg: string | null): string | null {
   if (!svg) return null;
-  if (/<\s*(script|foreignObject|iframe|use|image)\b/i.test(svg)) return null;
-  if (/\son[a-z]+\s*=/i.test(svg)) return null;
+  for (const match of svg.matchAll(TAG_OPEN)) {
+    if (!ALLOWED_SVG_TAGS.has((match[1] ?? '').toLowerCase())) return null;
+  }
+  // Un gestionnaire peut être séparé de l'attribut précédent par un blanc, un solidus, ou
+  // le guillemet fermant lui-même : `stroke="x"onload=` est recollé par les navigateurs.
+  if (/["'\s/]on[a-z]+\s*=/i.test(svg)) return null;
+  // Aucune forme rendue ne porte de lien : un `href` ici ne peut être qu'ajouté.
+  if (/["'\s/](?:xlink:)?href\s*=/i.test(svg)) return null;
   if (/(javascript|vbscript)\s*:/i.test(svg)) return null;
   return svg;
 }
@@ -126,18 +148,36 @@ h1 { margin: 0 0 4px; font-size: 20px; }
 }
 `;
 
+/**
+ * Data URI d'image, seule forme de source admise dans la planche.
+ *
+ * Le document se veut autonome : il n'a aucune raison d'aller chercher une ressource
+ * ailleurs. Contraindre la source ici évite qu'une URL quelconque — `javascript:`, ou
+ * simplement un pixel traçant chez un tiers — n'entre dans un `src` ou dans un `url()`
+ * CSS, où l'échappement HTML ne protégerait de rien.
+ */
+const DATA_IMAGE = /^data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/** Le seul type d'image qui embarque du balisage exécutable. */
+const DATA_SVG = /^data:image\/svg/i;
+
+/** Longueur en pixels : un entier positif, jamais une chaîne recopiée dans un style. */
+const px = (value: number, fallback: number): number =>
+  Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
+
 function imageBlock(note: SheetNote, labels: SheetLabels): string {
   const svg = sanitizeInlineSvg(note.annotationSvg) ?? '';
-  const image = note.image;
+  const usable = (src: string): boolean => DATA_IMAGE.test(src) && !DATA_SVG.test(src);
+  const image = note.image && usable(note.image.src) ? note.image : null;
   if (!image) {
     return `<div class="shot" style="width:160px;height:90px"><div class="none">${escapeHtml(
       labels.noFrame,
     )}</div>${svg}</div>`;
   }
-  const box = `width:${image.width}px;height:${image.height}px`;
+  const box = `width:${px(image.width, 160)}px;height:${px(image.height, 90)}px`;
   if (image.tile) {
-    const pos = `background-position:-${image.tile.offsetX}px -${image.tile.offsetY}px`;
-    const size = `background-size:${image.tile.sheetWidth}px ${image.tile.sheetHeight}px`;
+    const pos = `background-position:-${px(image.tile.offsetX, 0)}px -${px(image.tile.offsetY, 0)}px`;
+    const size = `background-size:${px(image.tile.sheetWidth, 0)}px ${px(image.tile.sheetHeight, 0)}px`;
     const bg = `background-image:url('${image.src}')`;
     return `<div class="shot" style="${box}"><div class="tile" style="${box};${bg};${pos};${size}"></div>${svg}</div>`;
   }

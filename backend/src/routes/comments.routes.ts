@@ -11,6 +11,7 @@ import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pip
 import { Role } from '@prisma/client';
 import { forbidden, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
+import { annotationSchema, cameraStateSchema } from '../lib/commentPayload';
 import { rateLimit, identityRateKey } from '../middleware/rateLimit';
 import * as CommentService from '../services/CommentService';
 import * as CommentExportService from '../services/CommentExportService';
@@ -98,8 +99,9 @@ router.post(
       content: z.string().min(1).max(10000),
       timestamp: z.number().nonnegative().optional(),
       duration: z.number().nonnegative().optional(),
-      annotation: z.any().optional(),
-      cameraState: z.any().optional(),
+      // Bornés en forme ET en volume : en `z.any()`, leur seul plafond était les 2 Mo du corps.
+      annotation: annotationSchema.optional(),
+      cameraState: cameraStateSchema.optional(),
       attachments: z
         .array(
           z.object({

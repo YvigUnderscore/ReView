@@ -797,7 +797,10 @@
   "kanban.addItem": "Add an item…",
   "reviews.addToPlaylistShort": "Add to the playlist",
   "reviews.assigned.title": "Assigned to me",
-  "reviews.assigned.count": { "one": "{count} review waiting for you", "other": "{count} reviews waiting for you" },
+  "reviews.assigned.count": {
+    "one": "{count} review waiting for you",
+    "other": "{count} reviews waiting for you"
+  },
   "reviews.filter.allAssignments": "All reviews",
   "common.clearSelection": "Clear the selection",
   "comments.imagePreview": "Image preview",
@@ -1171,7 +1174,10 @@
     "one": "{count} session revoked",
     "other": "{count} sessions revoked"
   },
-  "sessions.showAll": { "one": "Show the {count} session", "other": "Show all {count} sessions" },
+  "sessions.showAll": {
+    "one": "Show the {count} session",
+    "other": "Show all {count} sessions"
+  },
   "sessions.showFewer": "Show fewer",
   "twofa.qr": "2FA enrolment QR code",
   "twofa.scan": "Scan this QR code with your app (Google Authenticator, 1Password…), then enter the code it shows.",
@@ -2078,6 +2084,8 @@
   "smtp.port": "Port",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Test email sent to {to}",
+  "smtp.allowInsecure": "Allow unencrypted sending (no STARTTLS)",
+  "smtp.allowInsecureHint": "Only for an internal relay that does not offer STARTTLS. The SMTP password and every invitation link then cross the network in clear text, readable by anyone on the path.",
   "storage.map.hint": "A single S3/MinIO bucket for the whole instance; deleting a media purges its original folder and its prefix",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objects",
@@ -2912,7 +2920,10 @@
   "shotgrid.statuses.title": "Statuses offered on this project",
   "shotgrid.statuses.hint": "A site knows every status of the studio; a given production uses only a few. Tick the ones you want offered — menus, pickers and filters follow. Tick nothing and the whole vocabulary stays. Hiding never erases: an entity that already carries a hidden status keeps showing it.",
   "shotgrid.statuses.all": "all offered",
-  "shotgrid.statuses.count": { "one": "{count} selected", "other": "{count} selected" },
+  "shotgrid.statuses.count": {
+    "one": "{count} selected",
+    "other": "{count} selected"
+  },
   "shotgrid.statuses.scopeLabel": "Statuses shown",
   "shotgrid.statuses.scope.task": "For tasks",
   "shotgrid.statuses.scope.shot": "For shots",
@@ -3145,6 +3156,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "No ShotGrid credentials are recorded for this site.",
   "error.REVIEW_NOTE_REQUIRED": "This project requires a brief when handing over a review.",
   "error.REVIEW_NOTE_TOO_SHORT": "This brief is shorter than the project demands.",
+  "error.ACCOUNT_DISABLED": "This account is disabled. Ask an administrator to re-enable it.",
+  "error.DEPARTMENT_SCOPE_MIX": "Departments from different projects cannot be reordered together.",
+  "error.SMTP_PASSWORD_UNREADABLE": "The stored SMTP password can no longer be decrypted. Enter it again.",
   "about.title": "About this instance",
   "about.version": "Version",
   "about.builtAt": "Built on",
@@ -3373,11 +3387,20 @@
     "other": "{count} shots updated, {failed} refused"
   },
   "bulk.status.menu": "Status",
-  "bulk.decision.title": { "one": "Review decision on {count} version", "other": "Review decision on {count} versions" },
+  "bulk.decision.title": {
+    "one": "Review decision on {count} version",
+    "other": "Review decision on {count} versions"
+  },
   "bulk.decision.hint": "The same decision, and the same optional comment, is recorded on each one.",
   "bulk.decision.mixed": "The selection spans several projects: a status one of them does not use is refused there, and counted.",
-  "bulk.decision.done": { "one": "{count} decision recorded", "other": "{count} decisions recorded" },
-  "bulk.decision.partial": { "one": "{count} decision recorded, {failed} refused", "other": "{count} decisions recorded, {failed} refused" },
+  "bulk.decision.done": {
+    "one": "{count} decision recorded",
+    "other": "{count} decisions recorded"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} decision recorded, {failed} refused",
+    "other": "{count} decisions recorded, {failed} refused"
+  },
   "queryState.title": "Could not load this section",
   "queryState.description": "The server did not answer. It may be restarting or unavailable — try again.",
   "queryState.retry": "Try again",
@@ -3419,7 +3442,10 @@
   "ops.latest.rateLimited": "The release catalogue is refusing further checks for now. Try again later.",
   "ops.latest.disabled": "Release checks are turned off on this instance.",
   "ops.changes.title": "What it changes",
-  "ops.changes.count": { "one": "{count} release since the one installed", "other": "{count} releases since the one installed" },
+  "ops.changes.count": {
+    "one": "{count} release since the one installed",
+    "other": "{count} releases since the one installed"
+  },
   "ops.changes.none": "Nothing new since the installed release.",
   "ops.changes.prerelease": "Pre-release",
   "ops.manual.title": "From a terminal",
@@ -3475,7 +3501,10 @@
   "ops.result.intact": "Nothing was switched — the instance is untouched.",
   "ops.result.unknownHint": "The agent stopped answering, so the outcome is not known. Read its own log:",
   "ops.backups.title": "Backups",
-  "ops.backups.count": { "one": "{count} backup", "other": "{count} backups" },
+  "ops.backups.count": {
+    "one": "{count} backup",
+    "other": "{count} backups"
+  },
   "ops.backups.empty": "No backup here yet.",
   "ops.backups.unavailable": "The backup directory is not mounted in the application, so nothing can be listed. Backups taken from a terminal are unaffected.",
   "ops.backups.create": "Back up now",
@@ -3492,7 +3521,10 @@
   "reviewers.title": "Reviewers",
   "reviewers.none": "Nobody has been asked to review this version yet",
   "reviewers.assign": "Assign",
-  "reviewers.saved": { "one": "{count} person on this review", "other": "{count} people on this review" },
+  "reviewers.saved": {
+    "one": "{count} person on this review",
+    "other": "{count} people on this review"
+  },
   "reviewers.notePlaceholder": "What should they look at? (the lighting, the cut at 1042…)",
   "reviewers.noteLabel": "What {name} should look at",
   "reviewers.noteRequired": "This project demands a brief.",

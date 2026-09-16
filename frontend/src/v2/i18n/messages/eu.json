@@ -797,7 +797,10 @@
   "kanban.addItem": "Gehitu elementu bat…",
   "reviews.addToPlaylistShort": "Gehitu playlist-era",
   "reviews.assigned.title": "Niri esleituta",
-  "reviews.assigned.count": { "one": "review {count} duzu zain", "other": "{count} review dituzu zain" },
+  "reviews.assigned.count": {
+    "one": "review {count} duzu zain",
+    "other": "{count} review dituzu zain"
+  },
   "reviews.filter.allAssignments": "review guztiak",
   "common.clearSelection": "Utzi hautaketa",
   "comments.imagePreview": "Irudiaren aurrebista",
@@ -1171,7 +1174,10 @@
     "one": "saio {count} baliogabetu da",
     "other": "{count} saio baliogabetu dira"
   },
-  "sessions.showAll": { "one": "Erakutsi {count} saioa", "other": "Erakutsi {count} saioak" },
+  "sessions.showAll": {
+    "one": "Erakutsi {count} saioa",
+    "other": "Erakutsi {count} saioak"
+  },
   "sessions.showFewer": "Erakutsi gutxiago",
   "twofa.qr": "2FA izena emateko QR kodea",
   "twofa.scan": "Eskaneatu QR kode hau zure aplikazioarekin (Google Authenticator, 1Password…) eta gero idatzi erakusten duen kodea.",
@@ -2078,6 +2084,8 @@
   "smtp.port": "Ataka",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Proba-mezua {to} helbidera bidali da",
+  "smtp.allowInsecure": "Baimendu zifratu gabeko bidalketa (STARTTLS gabe)",
+  "smtp.allowInsecureHint": "STARTTLS eskaintzen ez duen barneko errele batentzat baino ez. Orduan SMTP pasahitza eta gonbidapen-esteka guztiak testu argitan ibiltzen dira sarean, eta bidean dagoen edonork irakur ditzake.",
   "storage.map.hint": "S3/MinIO bucket bakarra instantzia osorako; media bat ezabatzeak bere jatorrizko karpeta eta aurrizkia garbitzen ditu",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objektuak",
@@ -2912,7 +2920,10 @@
   "shotgrid.statuses.title": "Proiektu honetan eskaintzen diren egoerak",
   "shotgrid.statuses.hint": "Gune batek estudioaren egoera guztiak ezagutzen ditu; ekoizpen batek gutxi batzuk baino ez ditu erabiltzen. Markatu eskaini nahi dituzunak — menuek, hautatzaileek eta iragazkiek jarraitzen dute. Ezer ez markatzeak hiztegi osoa uzten du. Ezkutatzeak ez du ezabatzen: ezkutuko egoera bat dagoeneko duen entitateak erakusten jarraitzen du.",
   "shotgrid.statuses.all": "guztiak eskainita",
-  "shotgrid.statuses.count": { "one": "{count} hautatuta", "other": "{count} hautatuta" },
+  "shotgrid.statuses.count": {
+    "one": "{count} hautatuta",
+    "other": "{count} hautatuta"
+  },
   "shotgrid.statuses.scopeLabel": "Erakutsitako egoerak",
   "shotgrid.statuses.scope.task": "Task-entzat",
   "shotgrid.statuses.scope.shot": "Shot-entzat",
@@ -3145,6 +3156,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "Ez dago ShotGrid-eko kredentzialik gordeta gune honetarako.",
   "error.REVIEW_NOTE_REQUIRED": "Proiektu honek jarraibidea eskatzen du review bat esleitzeko.",
   "error.REVIEW_NOTE_TOO_SHORT": "Jarraibide hau proiektuak eskatzen duena baino laburragoa da.",
+  "error.ACCOUNT_DISABLED": "Kontu hau desaktibatuta dago. Eskatu administratzaile bati berriro aktibatzeko.",
+  "error.DEPARTMENT_SCOPE_MIX": "Ezin dira proiektu desberdinetako sailak batera berrantolatu.",
+  "error.SMTP_PASSWORD_UNREADABLE": "Gordetako SMTP pasahitza ezin da jada deszifratu. Idatzi berriro.",
   "about.title": "Instantzia honi buruz",
   "about.version": "Version",
   "about.builtAt": "Eraikitze-data",
@@ -3373,11 +3387,20 @@
     "other": "{count} shot eguneratuta, {failed} baztertuta"
   },
   "bulk.status.menu": "Egoera",
-  "bulk.decision.title": { "one": "Review erabakia {count} version-i", "other": "Review erabakia {count} version-i" },
+  "bulk.decision.title": {
+    "one": "Review erabakia {count} version-i",
+    "other": "Review erabakia {count} version-i"
+  },
   "bulk.decision.hint": "Erabaki bera, eta aukerako iruzkin bera, bakoitzean jasotzen dira.",
   "bulk.decision.mixed": "Hautapenak hainbat proiektu hartzen ditu: haietako batek erabiltzen ez duen egoera bertan baztertzen da, eta zenbatzen.",
-  "bulk.decision.done": { "one": "{count} erabaki jarrita", "other": "{count} erabaki jarrita" },
-  "bulk.decision.partial": { "one": "{count} erabaki jarrita, {failed} baztertuta", "other": "{count} erabaki jarrita, {failed} baztertuta" },
+  "bulk.decision.done": {
+    "one": "{count} erabaki jarrita",
+    "other": "{count} erabaki jarrita"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} erabaki jarrita, {failed} baztertuta",
+    "other": "{count} erabaki jarrita, {failed} baztertuta"
+  },
   "queryState.title": "Atal hau ezin izan da kargatu",
   "queryState.description": "Zerbitzariak ez du erantzun. Baliteke berrabiarazten egotea edo eskuragarri ez egotea: saiatu berriro.",
   "queryState.retry": "Saiatu berriro",
@@ -3419,7 +3442,10 @@
   "ops.latest.rateLimited": "Argitalpenen katalogoak ez du egiaztapen gehiagorik onartzen oraingoz. Saiatu berriro geroago.",
   "ops.latest.disabled": "Argitalpenen egiaztapena desaktibatuta dago instantzia honetan.",
   "ops.changes.title": "Zer aldatzen den",
-  "ops.changes.count": { "one": "{count} argitalpen instalatutakoaz geroztik", "other": "{count} argitalpen instalatutakoaz geroztik" },
+  "ops.changes.count": {
+    "one": "{count} argitalpen instalatutakoaz geroztik",
+    "other": "{count} argitalpen instalatutakoaz geroztik"
+  },
   "ops.changes.none": "Ezer berririk ez instalatutako argitalpenaz geroztik.",
   "ops.changes.prerelease": "Aurre-argitalpena",
   "ops.manual.title": "Terminal batetik",
@@ -3475,7 +3501,10 @@
   "ops.result.intact": "Ez da ezer aldatu: instantzia ukitu gabe dago.",
   "ops.result.unknownHint": "Agenteak erantzuteari utzi dio, beraz emaitza ezezaguna da. Irakurri bere egunkaria:",
   "ops.backups.title": "Babeskopiak",
-  "ops.backups.count": { "one": "babeskopia {count}", "other": "{count} babeskopia" },
+  "ops.backups.count": {
+    "one": "babeskopia {count}",
+    "other": "{count} babeskopia"
+  },
   "ops.backups.empty": "Oraindik ez dago babeskopiarik hemen.",
   "ops.backups.unavailable": "Babeskopien karpeta ez dago aplikazioan muntatuta, beraz ezin da ezer zerrendatu. Terminaletik egindako babeskopiei ez die eragiten.",
   "ops.backups.create": "Egin babeskopia orain",
@@ -3492,7 +3521,10 @@
   "reviewers.title": "Reviewerrak",
   "reviewers.none": "Oraindik inork ez du version honen review egiteko ardura",
   "reviewers.assign": "Esleitu",
-  "reviewers.saved": { "one": "pertsona {count} review honetan", "other": "{count} pertsona review honetan" },
+  "reviewers.saved": {
+    "one": "pertsona {count} review honetan",
+    "other": "{count} pertsona review honetan"
+  },
   "reviewers.notePlaceholder": "Zer begiratu behar du? (argia, 1042ko lotura…)",
   "reviewers.noteLabel": "{name}(e)k begiratu behar duena",
   "reviewers.noteRequired": "Proiektu honek jarraibide bat eskatzen du.",

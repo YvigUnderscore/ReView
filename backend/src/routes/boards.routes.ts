@@ -3,14 +3,14 @@
 
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { Role } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForAsset } from '../lib/pipeline';
 import { assertProjectWritable } from '../lib/projectGuard';
+import { assertCanContribute } from '../lib/projectRoles';
 import { emitToProject } from '../services/SocketService';
-import { forbidden, notFound } from '../lib/errors';
+import { notFound } from '../lib/errors';
 import {
   boardDocumentSchema,
   fileIdSchema,
@@ -42,7 +42,9 @@ async function guard(req: Request, scope: BoardScope, write: boolean): Promise<n
   await assertProjectAccess(req, projectId);
   if (write) {
     await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
-    if (req.user!.role === Role.CLIENT) throw forbidden('Read-only for clients');
+    // 38.E : rôle EFFECTIF sur CE projet — le rôle global laissait écrire un ARTIST
+    // rétrogradé CLIENT ici, son membership suffisant à passer `assertProjectAccess`.
+    await assertCanContribute(req.user!.id, req.user!.role, projectId);
   }
   return projectId;
 }

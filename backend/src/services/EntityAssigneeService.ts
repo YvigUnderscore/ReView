@@ -93,16 +93,18 @@ async function findEntity(kind: AssigneeKind, id: number): Promise<{ projectId: 
 }
 
 /**
- * Qui peut recevoir une responsabilité.
+ * Qui peut recevoir du travail ou une responsabilité — **garde unique** des trois chemins
+ * d'assignation : l'entité (ici), la tâche (`AssignmentService`) et la review
+ * (`ReviewAssignmentService`).
  *
- * Mêmes refus que pour une tâche (`AssignmentService.assertAssignable`) et pour les mêmes
- * raisons : un compte de service n'ouvre pas Maya, un client commente sans livrer, et
- * quelqu'un qui n'est pas membre du projet serait averti d'un travail qu'il ne peut pas
- * ouvrir. Les deux chemins d'assignation doivent refuser les mêmes personnes, sinon
- * l'un devient la porte de service de l'autre.
+ * Quatre refus : un compte de service (une identité machine n'ouvre pas Maya), un compte
+ * désactivé, un client (il commente, il ne livre pas) et quelqu'un qui n'est pas membre du
+ * projet — l'assigner l'avertirait d'un travail qu'il ne peut même pas ouvrir.
  *
- * Exporté depuis l'assignation de review (`ReviewAssignmentService`) : un troisième chemin
- * avec sa propre copie des refus aurait divergé au premier correctif.
+ * `AssignmentService` en gardait une copie privée à trois refus, sans `disabledAt` : un
+ * compte désactivé était donc refusé comme responsable de plan et accepté comme assigné de
+ * tâche. Une copie de garde qui diverge devient la porte de service de l'autre ; il n'en
+ * reste qu'une.
  */
 export async function assertAssignable(projectId: number, userIds: number[]): Promise<void> {
   if (userIds.length === 0) return;

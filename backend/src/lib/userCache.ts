@@ -24,6 +24,14 @@ export interface CachedUser {
   id: number;
   email: string;
   role: Role;
+  /**
+   * Date de désactivation du compte (offboarding), `null` tant qu'il est actif.
+   *
+   * Elle est ici parce qu'un droit qu'on ne charge pas est un droit qu'on ne peut pas
+   * refuser : sans cette colonne, `middleware/auth` n'avait rien à tester et un compte
+   * désactivé continuait de passer avec un jeton neuf.
+   */
+  disabledAt: Date | null;
 }
 
 const TTL_MS = 30_000;
@@ -55,7 +63,7 @@ export async function getAuthUser(id: number): Promise<CachedUser | null> {
   if (hit && hit.until > Date.now()) return hit.user;
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, role: true },
+    select: { id: true, email: true, role: true, disabledAt: true },
   });
   cacheSet(id, user);
   return user;

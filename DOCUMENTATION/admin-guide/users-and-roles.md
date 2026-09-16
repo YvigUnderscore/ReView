@@ -2,7 +2,7 @@
 
 *The two authorisation layers, how the effective role on a project is computed, and how to offboard without losing history.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 ![The Members tab of a project — where a role is granted for this project only.](../assets/admin-guide/project-members.png)
 
@@ -226,12 +226,28 @@ Two guard rails apply to all three:
   instance standing but unadministrable, with the setup route closed and an SQL update as
   the only way back.
 
+Disabling is a lock on the front door as well as a revocation of what was already issued.
+`disabledAt` is checked at five places, and each of them answers `401 ACCOUNT_DISABLED`:
+
+| Way back in | Where it is refused |
+|---|---|
+| Email and password | The sign-in route, before a session is created |
+| The second factor | The 2FA exchange, so a valid first step is not enough |
+| SSO | The OIDC callback, with a deliberately vague message — the sign-in page of an instance open to the internet should not confirm that an address has an account |
+| An access token issued before the account was disabled | Every authenticated request |
+| An API token (`rvk_…`) | Every call on `/api/v1` |
+
+The last two are what make the first three worth anything. Disabling revokes the sessions and
+tokens that exist, but the identity behind a request is read from a 30-second cache, and a
+token minted moments earlier would otherwise have kept working for that window. The gate is on
+the **current state of the account**, not on the history of revocations — so a token re-issued
+by any other path does not hand the account back either.
+
 > [!WARNING]
-> `disabledAt` is **not consulted on the login path**. A disabled account whose password is
-> known can still obtain a fresh session, and its role still resolves normally. Disabling
-> revokes what exists and keeps the history readable; it is not, today, a lock on the front
-> door. To actually cut access, remove the memberships or demote the global role — both are
-> instant, and both are described in the offboarding use case below.
+> Until this check existed, disabling revoked sessions and tokens and nothing else: someone
+> who knew their own password signed straight back in, with every role and membership intact.
+> If you offboarded anyone on an instance older than this, disabling alone did not remove
+> their access — check the memberships and the global role of those accounts.
 
 ## Authentication
 
@@ -328,8 +344,10 @@ The one-click answer is the **delete button in *Admin → Content → Users***, 
 the account: sessions and API tokens are revoked on the spot, and every comment, version and
 audit entry keeps its author. That is the whole point of the disable path.
 
-It is not, on its own, a lock — `disabledAt` is not checked at login. So for a departure
-that has to be airtight today:
+It **is** a lock on sign-in: password, second factor, SSO, an access token already issued and
+an API token are all refused for a disabled account. The steps below go further because
+disabling is reversible by any administrator, and because two things survive it — the share
+links the person created, and the memberships that would come back with the account:
 
 1. **Disable the account** (the delete button, or `PATCH … disabled:true`). Sessions and
    tokens die immediately, and the audit records `USER_DISABLE`.

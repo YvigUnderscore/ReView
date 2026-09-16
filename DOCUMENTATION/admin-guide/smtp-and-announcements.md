@@ -2,7 +2,7 @@
 
 *Configure outgoing mail, know exactly what breaks without it, and post announcements people still read.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 Two unrelated ways of reaching everyone in the studio: **outgoing mail**, which leaves the
 instance, and **in-app announcements**, which never do. Both live under **Administration →
@@ -17,6 +17,7 @@ Communications**, and both are reserved to the `ADMIN` global role.
 | **Host** | The SMTP server, `smtp.example.com` | empty — nothing is sent |
 | **Port** | TCP port | `587` |
 | **Secure connection (TLS)** | Implicit TLS on connect | off, i.e. STARTTLS on 587 |
+| **Allow unencrypted sending (no STARTTLS)** | Drops the requirement that the relay upgrade the connection | off — STARTTLS is required |
 | **User** | SMTP account | empty — no authentication |
 | **Password** | Write-only, encrypted at rest | empty |
 | **Sender (From)** | What recipients see, `ReView <no-reply@example.com>` | `SMTP_FROM`, itself defaulting to `ReView <no-reply@review.local>` |
@@ -29,10 +30,12 @@ Three behaviours are worth knowing before you touch the form:
 - **Send a test email to…** delivers a short message to any address using the *effective*
   configuration, and falls back to your own address if you leave the field blank. It reports
   a failure rather than pretending: a `400` with `SMTP_SEND_FAILED` means either "nothing
-  configured" or "the relay refused it". The test message is written in the language of the
-  administrator who triggered it.
-- Changing the relay is recorded in the audit log under `SMTP_UPDATE`, with the host and
-  whether the password changed — never the password itself.
+  configured" or "the relay refused it", and a `400` with `SMTP_PASSWORD_UNREADABLE` means the
+  stored password no longer decrypts — re-enter it, and read
+  [Security model](../infrastructure/security.md#secrets) on why it happened. The test message
+  is written in the language of the administrator who triggered it.
+- Changing the relay is recorded in the audit log under `SMTP_UPDATE`, with the host, whether
+  the password changed and whether unencrypted sending was allowed — never the password itself.
 
 > [!WARNING]
 > Whoever controls the outgoing relay can divert every message the instance sends —
@@ -45,6 +48,33 @@ key is **reserved**: the generic `GET /api/studio/settings` never returns it, an
 can read or write it, which is what keeps the encryption and the write-only password from
 being bypassed by an arbitrary key/value write. The VAPID key pair used for browser push is
 reserved the same way — see [Branding & notifications](branding-and-notifications.md).
+
+## STARTTLS, and the one way around it
+
+On port `587` the connection to the relay starts in clear and is upgraded by the `STARTTLS`
+command. That upgrade is **opportunistic** unless the client insists on it, and opportunistic
+means removable: a network intermediary that strips `250-STARTTLS` from the `EHLO` reply leaves
+the dialogue in clear, and an ordinary client carries on — sending `AUTH LOGIN` with the
+studio's relay credentials, then the body of the message. The most sensitive body ReView sends
+is an invitation, whose token sets the password of a new account.
+
+So ReView requires the upgrade instead of hoping for it, and refuses TLS below 1.2. A relay
+that does not offer STARTTLS makes the connection fail rather than downgrade. On port `465`,
+**Secure connection (TLS)** encrypts from the first byte and the requirement does not apply.
+
+**Allow unencrypted sending (no STARTTLS)** is the deliberate way out, and the panel shows it
+as one: its own box, in the danger colour, with the consequence written under the label rather
+than hidden in a tooltip. It exists for one case — an internal relay on a segment you control
+that advertises no STARTTLS at all — and it is not a default anywhere. Ticking it and saving
+writes `allowInsecure` to the audit entry (`SMTP_UPDATE`) alongside the host, and logs a warning
+at the moment of the decision as well as at the first send, so the choice can be dated and
+attributed months later.
+
+> [!CAUTION]
+> With that box ticked, the relay password and every invitation link cross the network in clear
+> text, readable by anything on the path. An invitation token is a password-setting credential:
+> whoever reads one in transit owns the account it was meant for. Prefer fixing the relay, or
+> putting it on the same host, over ticking the box.
 
 ## Environment versus database
 

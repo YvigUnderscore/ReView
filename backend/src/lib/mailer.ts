@@ -17,13 +17,43 @@ export async function isMailerConfigured(): Promise<boolean> {
   return (await getEffectiveConfig()) !== null;
 }
 
+/**
+ * Transport nodemailer du relais configuré.
+ *
+ * `requireTLS` n'est pas un détail de confort : sans lui, le STARTTLS du mode 587 est
+ * OPPORTUNISTE. Un intermédiaire réseau qui retire `250-STARTTLS` de la réponse EHLO fait
+ * poursuivre le dialogue en clair — nodemailer envoie alors `AUTH LOGIN` (identifiants du
+ * studio) puis le corps du message. Or le message le plus sensible d'ici est l'invitation :
+ * son jeton pose le mot de passe d'un compte. Avec `requireTLS`, la connexion est
+ * abandonnée au lieu d'être dégradée.
+ *
+ * `secure: true` (port 465) chiffre déjà d'emblée : `requireTLS` n'y a pas de sens.
+ * `allowInsecure` est l'échappatoire assumée du relais interne sans certificat.
+ */
 function buildTransport(cfg: SmtpEffectiveConfig): Transporter {
+  if (cfg.allowInsecure) warnInsecureOnce(cfg.host);
   return nodemailer.createTransport({
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
+    requireTLS: !cfg.secure && !cfg.allowInsecure,
+    // TLS 1.0/1.1 sont retirés partout ailleurs ; les laisser ici rouvrirait la
+    // dégradation par le bas plutôt que par la suppression de STARTTLS.
+    tls: { minVersion: 'TLSv1.2' },
     auth: cfg.user ? { user: cfg.user, pass: cfg.pass ?? '' } : undefined,
   });
+}
+
+let insecureWarned = false;
+
+/** Une seule ligne par process : le réglage est délibéré, mais il ne doit pas s'oublier. */
+function warnInsecureOnce(host: string): void {
+  if (insecureWarned) return;
+  insecureWarned = true;
+  logger.warn(
+    { host },
+    '[mailer] dialogue SMTP en clair autorisé (allowInsecure) : identifiants et liens d’invitation circulent sans chiffrement.',
+  );
 }
 
 export interface MailOptions {

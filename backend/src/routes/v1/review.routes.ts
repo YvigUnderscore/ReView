@@ -8,7 +8,7 @@ import { requireScope } from '../../middleware/scope';
 import { reviewNoteSchema } from '../../lib/projectSettings';
 import * as ReviewAssignmentService from '../../services/ReviewAssignmentService';
 import * as ReviewDecisionService from '../../services/ReviewDecisionService';
-import { actorOf, idParam, requireVersionProject } from './helpers';
+import { actorOf, idParam, requireProjectId, requireVersionProject } from './helpers';
 
 /**
  * Le tour de la review, côté intégrations : qui doit regarder quoi, et ce que le studio a
@@ -104,12 +104,13 @@ router.get(
     // Express 5 : la validation fusionne, elle ne remplace pas — la valeur reste une chaîne.
     const raw = req.query.projectId;
     const projectId = raw === undefined ? undefined : Number(raw);
-    res.json({
-      statuses:
-        projectId && Number.isInteger(projectId)
-          ? await ReviewDecisionService.listStatusesForProject(projectId)
-          : await ReviewDecisionService.listStatuses(),
-    });
+    if (!projectId || !Number.isInteger(projectId))
+      return res.json({ statuses: await ReviewDecisionService.listStatuses() });
+    // Seule route v1 qui lisait un `projectId` sans passer par les gardes communes : un
+    // jeton cantonné au projet X y apprenait le vocabulaire — donc l'existence et le
+    // rattachement ShotGrid — du projet Y.
+    await requireProjectId(req, projectId);
+    res.json({ statuses: await ReviewDecisionService.listStatusesForProject(projectId) });
   },
 );
 

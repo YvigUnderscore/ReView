@@ -797,7 +797,10 @@
   "kanban.addItem": "E Element dezuenäh…",
   "reviews.addToPlaylistShort": "Zue d'r playlist dezuenäh",
   "reviews.assigned.title": "Mir zuegwiese",
-  "reviews.assigned.count": { "one": "{count} review wartet uf Ihne", "other": "{count} reviews warte uf Ihne" },
+  "reviews.assigned.count": {
+    "one": "{count} review wartet uf Ihne",
+    "other": "{count} reviews warte uf Ihne"
+  },
   "reviews.filter.allAssignments": "Alli review",
   "common.clearSelection": "D'Ussswahl uffhebe",
   "comments.imagePreview": "Bildvorschau",
@@ -1171,7 +1174,10 @@
     "one": "{count} Sitzig widerrüefe",
     "other": "{count} Sitzige widerrüefe"
   },
-  "sessions.showAll": { "one": "D {count} Sitzig zeige", "other": "Alli {count} Sitzige zeige" },
+  "sessions.showAll": {
+    "one": "D {count} Sitzig zeige",
+    "other": "Alli {count} Sitzige zeige"
+  },
   "sessions.showFewer": "Weniger zeige",
   "twofa.qr": "QR-Code fer d'2FA-Ihrichtung",
   "twofa.scan": "Scann dä QR-Code mit dinere App (Google Authenticator, 1Password…) un gib dann d'r ahzeigt Code ih.",
@@ -2078,6 +2084,8 @@
   "smtp.port": "Port",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Teschtmail an {to} gschickt",
+  "smtp.allowInsecure": "Unverschlüsselte Versand erlauwe (ohni STARTTLS)",
+  "smtp.allowInsecureHint": "Nur fer e interns Relay ohni STARTTLS. S’SMTP-Passwort un jeder Iladungs-Link laufe denn im Klartext durichs Netz un sin fer jeder uf’m Wäg läsbar.",
   "storage.map.hint": "E einzige S3/MinIO-Bucket fer di ganz Instanz; s Lösche vumene Medium ruumt si Originalordner un si Präfix ab",
   "storage.objShort": "{count} Obj.",
   "storage.objects": "Objekt",
@@ -2912,7 +2920,10 @@
   "shotgrid.statuses.title": "Status, wu uff däm Projekt aagebote wäre",
   "shotgrid.statuses.hint": "E Site kennt alli Status vum Studio ; e Produktion bruucht numme e paar dervun. Hakle die aa, wu aagebote sinn solle — Menü, Uuswähler un Filter folge. Nix aahakle losst s'ganze Vokabular stehn. Verstecke leschd nit : e Entität, wu scho e versteckte Status hät, zeigt ne wiiter.",
   "shotgrid.statuses.all": "alli aagebote",
-  "shotgrid.statuses.count": { "one": "{count} uusgwählt", "other": "{count} uusgwählt" },
+  "shotgrid.statuses.count": {
+    "one": "{count} uusgwählt",
+    "other": "{count} uusgwählt"
+  },
   "shotgrid.statuses.scopeLabel": "Aazeigti Status",
   "shotgrid.statuses.scope.task": "Fir Tasks",
   "shotgrid.statuses.scope.shot": "Fir Shots",
@@ -3145,6 +3156,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "Fer die Site sin kei ShotGrid-Zuegangsdate hinterleit.",
   "error.REVIEW_NOTE_REQUIRED": "S Projekt verlangt e Awisung, fer e review z gä.",
   "error.REVIEW_NOTE_TOO_SHORT": "Dëni Awisung isch kirzer as was s Projekt verlangt.",
+  "error.ACCOUNT_DISABLED": "Des Konto isch deaktiviert. Frog d’Administration, ass sie’s widder aktiviert.",
+  "error.DEPARTMENT_SCOPE_MIX": "Abteilunge üs verschiedene Projäkt kenne nit zämme neu sortiert werre.",
+  "error.SMTP_PASSWORD_UNREADABLE": "S’gspeicherte SMTP-Passwort losst sich nimm entschlüssle. Gänn’s nomol i.",
   "about.title": "Iwer die Instanz do",
   "about.version": "Version",
   "about.builtAt": "Gebaut am",
@@ -3373,11 +3387,20 @@
     "other": "{count} Shots aktualisiert, {failed} abglehnt"
   },
   "bulk.status.menu": "Status",
-  "bulk.decision.title": { "one": "Review-Entscheidig fir {count} version", "other": "Review-Entscheidig fir {count} versions" },
+  "bulk.decision.title": {
+    "one": "Review-Entscheidig fir {count} version",
+    "other": "Review-Entscheidig fir {count} versions"
+  },
   "bulk.decision.hint": "D'glich Entscheidig un dr glich fakultativ Kommentar wäre uff jedi gschriewe.",
   "bulk.decision.mixed": "D'Uuswahl gehd iwer mehreri Projekt : e Status, wu eins nit bruucht, wird dert abglehnt un zehlt.",
-  "bulk.decision.done": { "one": "{count} Entscheidig gsetzt", "other": "{count} Entscheidige gsetzt" },
-  "bulk.decision.partial": { "one": "{count} Entscheidig gsetzt, {failed} abglehnt", "other": "{count} Entscheidige gsetzt, {failed} abglehnt" },
+  "bulk.decision.done": {
+    "one": "{count} Entscheidig gsetzt",
+    "other": "{count} Entscheidige gsetzt"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} Entscheidig gsetzt, {failed} abglehnt",
+    "other": "{count} Entscheidige gsetzt, {failed} abglehnt"
+  },
   "queryState.title": "Der Beritt het nit chenne glade werre",
   "queryState.description": "Der Server het nit gantwort. Villicht startet er grad neu, oder er isch nit erreichbar — nochemol probiere.",
   "queryState.retry": "Nochemol probiere",
@@ -3419,7 +3442,10 @@
   "ops.latest.rateLimited": "S Verzeichnis vo de Uusgabe nimmt jetz kei witeri Aafroge. Speter no mal probiere.",
   "ops.latest.disabled": "S Pröefe vo neue Uusgabe isch uf däre Instanz uusgschalte.",
   "ops.changes.title": "Was sich ändered",
-  "ops.changes.count": { "one": "{count} Uusgab sit dere wo lauft", "other": "{count} Uusgabe sit dere wo lauft" },
+  "ops.changes.count": {
+    "one": "{count} Uusgab sit dere wo lauft",
+    "other": "{count} Uusgabe sit dere wo lauft"
+  },
   "ops.changes.none": "Nüt Neus sit dere Uusgab wo lauft.",
   "ops.changes.prerelease": "Vorab-Uusgab",
   "ops.manual.title": "Vom Terminal us",
@@ -3475,7 +3501,10 @@
   "ops.result.intact": "Es isch nüt umgschaltet worde — d Instanz isch unberüehrt.",
   "ops.result.unknownHint": "De Agent antwortet nümme, drum isch de Uusgang unbekannt. Sis eigete Protokoll läse:",
   "ops.backups.title": "Sicherige",
-  "ops.backups.count": { "one": "{count} Sicherig", "other": "{count} Sicherige" },
+  "ops.backups.count": {
+    "one": "{count} Sicherig",
+    "other": "{count} Sicherige"
+  },
   "ops.backups.empty": "Do gits no kei Sicherig.",
   "ops.backups.unavailable": "S Verzeichnis vo de Sicherige isch nid i de Aawändig iibunde, drum cha nüt uufglistet wärde. Sicherige wo vom Terminal us gmacht wärde, sind nid betroffe.",
   "ops.backups.create": "Jetz sichere",
@@ -3492,7 +3521,10 @@
   "reviewers.title": "Reviewer",
   "reviewers.none": "Fir d review vu däre version isch no niemer bstimmt",
   "reviewers.assign": "Zuewiese",
-  "reviewers.saved": { "one": "{count} Person bi däre review", "other": "{count} Persone bi däre review" },
+  "reviewers.saved": {
+    "one": "{count} Person bi däre review",
+    "other": "{count} Persone bi däre review"
+  },
   "reviewers.notePlaceholder": "Was soll er aaluege ? (s Liecht, dr Aaschluss bi 1042…)",
   "reviewers.noteLabel": "Was {name} aaluege soll",
   "reviewers.noteRequired": "S Projekt verlangt e Awisung.",

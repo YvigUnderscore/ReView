@@ -3,55 +3,102 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../lib/prisma', () => ({
-  prisma: { user: { findUnique: vi.fn(), update: vi.fn() } },
+/**
+ * A2-04 — `PATCH /api/users/me/preferences` validait `z.record(z.string().max(64),
+ * z.unknown())` : la CLÉ était bornée, la VALEUR non. N'importe quel compte ordinaire
+ * écrivait donc du JSON de forme et de profondeur libres dans sa colonne `preferences`, et
+ * la fusion étant superficielle, chaque appel AJOUTAIT une clé sans jamais en reprendre.
+ *
+ * Deux moitiés se répondent ici : le schéma borne ce qu'une valeur a le droit d'être, la
+ * fusion borne ce que le sac a le droit de devenir.
+ */
+
+const { db } = vi.hoisted(() => ({
+  db: { user: { findUnique: vi.fn(), update: vi.fn() } },
 }));
+
+vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
-vi.mock('./StorageService', () => ({ storage: {}, StorageService: class {} }));
-vi.mock('./PresenceService', () => ({ getOnlineUserIds: () => [] }));
+vi.mock('./InvitationService', () => ({ sendInvitation: vi.fn() }));
+vi.mock('./StorageService', () => ({
+  storage: { getPresignedGetUrl: vi.fn() },
+  StorageService: { avatarKey: vi.fn() },
+}));
+vi.mock('./PresenceService', () => ({ getOnlineUserIds: vi.fn(() => []) }));
+vi.mock('../lib/userCache', () => ({ invalidateAuthUser: vi.fn() }));
+vi.mock('../lib/sessions', () => ({ revokeAllCredentials: vi.fn() }));
+vi.mock('../lib/userView', () => ({ toPublicUser: vi.fn() }));
 
-import { getPreferences, updatePreferences } from './UserService';
-import { prisma } from '../lib/prisma';
+import { preferencesPatchSchema, updatePreferences } from './UserService';
 
-const findUnique = vi.mocked(prisma.user.findUnique);
-const update = vi.mocked(prisma.user.update);
+const accepts = (value: unknown) => preferencesPatchSchema.safeParse({ k: value }).success;
 
-describe('UserService — préférences UI', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    update.mockResolvedValue({} as never);
+/** Sac déjà en base pour ce compte. */
+const stored = (preferences: Record<string, unknown>) =>
+  db.user.findUnique.mockResolvedValue({ preferences });
+
+const manyKeys = (n: number, prefix = 'k') =>
+  Object.fromEntries(Array.from({ length: n }, (_, i) => [`${prefix}${i}`, true]));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  db.user.update.mockResolvedValue({});
+});
+
+describe('preferencesPatchSchema — ce que l’interface enregistre réellement passe', () => {
+  it('accepte les préférences existantes, imbriquées comprises', () => {
+    const real = {
+      emailDigest: true,
+      annotationColor: '#ef4444',
+      locale: 'fr',
+      density: 'compact',
+      shortcuts: { 'review.next': 'ArrowRight' },
+      savedViews: { 'shots:12': [{ id: 'v1', name: 'Retakes', filters: { status: 'RETAKE' } }] },
+      homeWidgets: { hidden: ['calendar'], order: ['tasks'], settings: { tasks: { limit: 5 } } },
+      onboardingSeen: null,
+    };
+    expect(preferencesPatchSchema.safeParse(real).success).toBe(true);
   });
 
-  it('renvoie {} quand aucune préférence enregistrée', async () => {
-    findUnique.mockResolvedValue({ preferences: null } as never);
-    expect(await getPreferences(1)).toEqual({});
+  it('refuse une chaîne démesurée — un champ ne peut pas manger tout le budget', () => {
+    expect(accepts('x'.repeat(4_000))).toBe(true);
+    expect(accepts('x'.repeat(4_001))).toBe(false);
   });
 
-  it('merge superficiellement et persiste', async () => {
-    findUnique.mockResolvedValue({ preferences: { a: 1, kanbanViews: { '5': [] } } } as never);
-    const next = await updatePreferences(1, { b: 'x' });
-    expect(next).toEqual({ a: 1, kanbanViews: { '5': [] }, b: 'x' });
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 1 }, data: { preferences: next } }),
-    );
+  it('refuse une imbrication sans fond', () => {
+    const nest = (depth: number): unknown => (depth === 0 ? 1 : { a: nest(depth - 1) });
+    expect(accepts(nest(5))).toBe(true);
+    expect(accepts(nest(7))).toBe(false);
   });
 
-  it('supprime une clé passée à null', async () => {
-    findUnique.mockResolvedValue({ preferences: { a: 1, b: 2 } } as never);
-    expect(await updatePreferences(1, { a: null })).toEqual({ b: 2 });
+  it('refuse un tableau ou un sous-objet démesuré', () => {
+    expect(accepts(Array.from({ length: 501 }, () => 1))).toBe(false);
+    expect(accepts(manyKeys(201, 'n'))).toBe(false);
   });
 
-  it('refuse des préférences trop volumineuses', async () => {
-    findUnique.mockResolvedValue({ preferences: {} } as never);
-    const big = 'x'.repeat(40_000);
-    await expect(updatePreferences(1, { big })).rejects.toMatchObject({
-      code: 'PREFERENCES_TOO_LARGE',
+  it('refuse une clé de premier niveau trop longue', () => {
+    expect(preferencesPatchSchema.safeParse({ ['k'.repeat(65)]: true }).success).toBe(false);
+  });
+});
+
+describe('updatePreferences — le sac ne grossit pas indéfiniment', () => {
+  it('refuse d’ajouter une clé de plus au-delà du plafond, sans rien écrire', async () => {
+    stored(manyKeys(200));
+    await expect(updatePreferences(7, { unDeTrop: true })).rejects.toMatchObject({
+      code: 'PREFERENCES_TOO_MANY_KEYS',
     });
-    expect(update).not.toHaveBeenCalled();
+    expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('rejette un utilisateur introuvable', async () => {
-    findUnique.mockResolvedValue(null);
-    await expect(getPreferences(99)).rejects.toThrow();
+  it('laisse remplacer une clé existante à plafond atteint', async () => {
+    stored(manyKeys(200));
+    await expect(updatePreferences(7, { k0: false })).resolves.toMatchObject({ k0: false });
+  });
+
+  /** Un sac antérieur au plafond doit rester réductible, sinon le refus enferme. */
+  it('laisse reprendre des clés à un sac déjà trop garni', async () => {
+    stored(manyKeys(260));
+    await expect(updatePreferences(7, { k0: null })).resolves.toBeTruthy();
+    expect(db.user.update).toHaveBeenCalledTimes(1);
   });
 });

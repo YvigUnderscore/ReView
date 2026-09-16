@@ -52,6 +52,56 @@ export function documentedVariables(sample) {
   return new Set([...sample.matchAll(/^(?:# ?)?([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]));
 }
 
+/**
+ * Les correspondances de ports publiées par un service (contenu de sa clé `ports:`).
+ *
+ * On ne balaie pas tout le bloc : `extra_hosts:` a la même forme de liste, et confondre les
+ * deux ferait passer « host.docker.internal:host-gateway » pour un port ouvert.
+ */
+export function publishedPorts(body) {
+  const lines = body.split(/\r?\n/);
+  const start = lines.findIndex((l) => l === '    ports:');
+  if (start === -1) return [];
+  const mappings = [];
+  for (const line of lines.slice(start + 1)) {
+    const entry = /^ {6}- "?([^"]+?)"?$/.exec(line);
+    if (!entry) break;
+    mappings.push(entry[1]);
+  }
+  return mappings;
+}
+
+/**
+ * Les blocs `location …` d'une configuration nginx, indexés par leur en-tête.
+ *
+ * Compteur d'accolades plutôt qu'expression régulière : une `location` contient des blocs
+ * imbriqués (`if (…) { … }`), et s'arrêter à la première accolade fermante ferait croire
+ * qu'une directive posée après appartient au serveur.
+ */
+export function locationBlocks(conf) {
+  const blocks = new Map();
+  const re = /^(?!\s*#)\s*location\s+([^{]+?)\s*\{/gm;
+  let m;
+  while ((m = re.exec(conf)) !== null) {
+    let depth = 1;
+    let i = re.lastIndex;
+    while (i < conf.length && depth > 0) {
+      if (conf[i] === '{') depth += 1;
+      else if (conf[i] === '}') depth -= 1;
+      i += 1;
+    }
+    blocks.set(m[1], conf.slice(re.lastIndex, i - 1));
+  }
+  return blocks;
+}
+
+/** La configuration privée du corps de ses `location` : ce qui vaut pour tout le serveur. */
+export function outsideLocations(conf) {
+  let rest = conf;
+  for (const body of locationBlocks(conf).values()) rest = rest.replace(body, '\n');
+  return rest;
+}
+
 describe('backend/start.sh', () => {
   const startSh = read('backend', 'start.sh');
   // Les commentaires du script décrivent l'anti-patron supprimé, et un message d'erreur le
@@ -148,6 +198,42 @@ describe('docker-compose.yml', () => {
     expect(body).toContain('http://127.0.0.1:3000');
     expect(body).toContain("process.env.HEALTH_PATH || '/health'");
   });
+
+  it("ne publie aucun port sur toutes les interfaces sans qu'on l'ait demandé", () => {
+    // Le backend était le seul service publié sans préfixe d'interface : l'API, en clair et
+    // sans TLS, était offerte à tout le réseau du studio — jetons de connexion compris — et
+    // `X-Forwarded-For` y devenait forgeable, donc tous les limiteurs par IP contournables.
+    // Le frontend reste sur 0.0.0.0 : c'est la SPA, et c'est le service qu'on publie.
+    const exposed = [...services].flatMap(([name, body]) =>
+      publishedPorts(body).map((mapping) => [name, mapping]),
+    );
+    const unbound = exposed.filter(
+      ([name, mapping]) => name !== 'frontend' && !/^\$\{[A-Z_]+:-127\.0\.0\.1\}:/.test(mapping),
+    );
+    expect(unbound).toEqual([]);
+  });
+});
+
+/**
+ * `app.set('trust proxy', …)` — vérification textuelle, à dessein.
+ *
+ * La valeur elle-même est couverte par backend/src/config/env.test.ts (défaut nul, bornes,
+ * et le `req.ip` observé sur un vrai serveur Express). Ce qui manque est le CHAÎNON : que
+ * app.ts passe bien la variable et non un littéral. Aucun test unitaire ne monte `createApp`
+ * — il arme le transport Redis — donc ce chaînon n'est vérifiable qu'ici.
+ */
+describe('backend/src/app.ts — confiance accordée à X-Forwarded-For', () => {
+  const app = read('backend', 'src', 'app.ts');
+
+  it('lit le nombre de proxys de confiance dans la configuration', () => {
+    expect(app).toMatch(/app\.set\('trust proxy', env\.TRUST_PROXY\)/);
+  });
+
+  it('ne fait jamais confiance en dur', () => {
+    // `trust proxy` à une valeur codée fait de `req.ip` — clé de tous les limiteurs et
+    // adresse du journal d'audit — un en-tête fourni par l'appelant.
+    expect(app).not.toMatch(/app\.set\('trust proxy',\s*(?:1|true|'[^']*')\)/);
+  });
 });
 
 describe('.env.example', () => {
@@ -236,5 +322,55 @@ describe('nginx', () => {
   it('ne cache jamais index.html (il pointe vers les assets hachés)', () => {
     const conf = configs['frontend/nginx.conf'];
     expect(conf).toMatch(/location = \/index\.html \{[\s\S]*?Cache-Control "no-cache"/);
+  });
+
+  for (const [name, conf] of Object.entries(configs)) {
+    it(`borne le corps des requêtes partout où nginx le met sur disque (${name})`, () => {
+      // « Pas de limite » au niveau `server` était hérité par toutes les `location`. Or seule
+      // celle qui streame vers MinIO pose `proxy_request_buffering off` : ailleurs, nginx écrit
+      // l'INTÉGRALITÉ du corps dans un fichier temporaire (la couche inscriptible du conteneur,
+      // le disque des volumes de données) avant d'ouvrir la connexion vers le backend. Vingt
+      // POST anonymes alimentés au goutte-à-goutte remplissaient le disque sans aucun compte,
+      // et `express.json({ limit: '2mb' })` n'avait jamais son mot à dire.
+      expect(outsideLocations(conf)).toMatch(/^\s*client_max_body_size \d+[kKmMgG];$/m);
+      for (const [header, body] of locationBlocks(conf)) {
+        if (!/client_max_body_size\s+0;/.test(body)) continue;
+        expect(body, `location ${header}`).toMatch(/proxy_request_buffering off;/);
+      }
+    });
+
+    it(`n'ouvre pas le WebSocket à tout l'internet dans la CSP (${name})`, () => {
+      // Un schéma nu (`ws:`/`wss:`) dans une source-list autorise TOUT hôte sur ce schéma :
+      // la politique refusait `fetch('https://evil.example')` mais laissait passer
+      // `new WebSocket('wss://evil.example')` — les jetons vivent en localStorage. Socket.io
+      // se connecte à l'origine, et `'self'` couvre déjà ws/wss de même origine (CSP 3).
+      for (const directive of conf.matchAll(/connect-src ([^;"]+)/g)) {
+        expect(directive[1].split(/\s+/), directive[0]).not.toContain('ws:');
+        expect(directive[1].split(/\s+/), directive[0]).not.toContain('wss:');
+      }
+    });
+  }
+
+  it('laisse à /api/ le temps de répondre, des deux côtés du proxy', () => {
+    // Le conteneur frontend est la porte d'entrée réelle de la pile docker seule : ce qui
+    // manque ici ne manque nulle part ailleurs. Sans ces délais, le défaut nginx de 60 s
+    // coupait la réponse en 504 pendant que Node poursuivait son travail jusqu'au bout —
+    // requête payée en entier, puis jetée, et l'utilisateur recharge par-dessus.
+    for (const [name, conf] of Object.entries(configs)) {
+      const api = locationBlocks(conf).get('/api/');
+      expect(api, `${name} : bloc /api/`).toBeDefined();
+      expect(api, name).toMatch(/proxy_read_timeout 300s;/);
+      expect(api, name).toMatch(/proxy_send_timeout 300s;/);
+      // Le backend en déduit le schéma d'origine : les deux configurations doivent le dire.
+      expect(api, name).toMatch(/proxy_set_header X-Forwarded-Proto \$scheme;/);
+    }
+  });
+
+  it("n'annonce une bascule de protocole que lorsque le client en demande une", () => {
+    // `Connection 'upgrade'` posé en dur sur /api/ annonçait un changement de protocole à
+    // chaque requête ordinaire. La forme correcte est une table `map $http_upgrade`.
+    const conf = configs['frontend/nginx.conf'];
+    expect(conf).toMatch(/map \$http_upgrade \$connection_upgrade \{/);
+    expect(conf).not.toMatch(/proxy_set_header Connection ['"]upgrade['"];/);
   });
 });

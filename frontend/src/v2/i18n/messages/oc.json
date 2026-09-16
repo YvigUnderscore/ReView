@@ -797,7 +797,11 @@
   "kanban.addItem": "Apondre un element…",
   "reviews.addToPlaylistShort": "Apondre a la playlist",
   "reviews.assigned.title": "Assignat a ieu",
-  "reviews.assigned.count": { "one": "{count} review vos espèra", "many": "{count} reviews vos espèran", "other": "{count} reviews vos espèran" },
+  "reviews.assigned.count": {
+    "one": "{count} review vos espèra",
+    "many": "{count} reviews vos espèran",
+    "other": "{count} reviews vos espèran"
+  },
   "reviews.filter.allAssignments": "Totas las reviews",
   "common.clearSelection": "Anullar la seleccion",
   "comments.imagePreview": "Apercebut de l'imatge",
@@ -1171,7 +1175,10 @@
     "one": "{count} session revocada",
     "other": "{count} sessions revocadas"
   },
-  "sessions.showAll": { "one": "Afichar la {count} session", "other": "Afichar las {count} sessions" },
+  "sessions.showAll": {
+    "one": "Afichar la {count} session",
+    "other": "Afichar las {count} sessions"
+  },
   "sessions.showFewer": "Afichar mens",
   "twofa.qr": "Còdi QR d’enrolament 2FA",
   "twofa.scan": "Escanejatz aqueste còdi QR amb vòstra aplicacion (Google Authenticator, 1Password…), puèi picatz lo còdi afichat.",
@@ -2078,6 +2085,8 @@
   "smtp.port": "Pòrt",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Corrièl de tèst mandat a {to}",
+  "smtp.allowInsecure": "Autorizar lo mandadís pas chifrat (sens STARTTLS)",
+  "smtp.allowInsecureHint": "Solament per un relais intèrne que prepausa pas STARTTLS. Lo senhal SMTP e cada ligam d’invitacion traversan alara la ret en clar, legibles per qui que siá sul camin.",
   "storage.map.hint": "Un sol bucket S3/MinIO per tota l’instància ; la supression d’un mèdia purga son dorsièr d’original e son prefix",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objèctes",
@@ -2912,7 +2921,10 @@
   "shotgrid.statuses.title": "Estatuts prepausats sus aqueste projècte",
   "shotgrid.statuses.hint": "Un site coneis totes los estatuts de l'estudiò ; una produccion n'emplega pas que qualques-uns. Marcatz los que volètz veire prepausats — menús, seleccionaires e filtres seguisson. Marcar res garda lo vocabulari entièr. Amagar escafa pas : una entitat que pòrta ja un estatut amagat contunha de l'afichar.",
   "shotgrid.statuses.all": "totes prepausats",
-  "shotgrid.statuses.count": { "one": "{count} causit", "other": "{count} causits" },
+  "shotgrid.statuses.count": {
+    "one": "{count} causit",
+    "other": "{count} causits"
+  },
   "shotgrid.statuses.scopeLabel": "Estatuts afichats",
   "shotgrid.statuses.scope.task": "Per las tasks",
   "shotgrid.statuses.scope.shot": "Pels shots",
@@ -3145,6 +3157,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "Cap d'identificant ShotGrid es pas enregistrat per aqueste site.",
   "error.REVIEW_NOTE_REQUIRED": "Aqueste projècte exigís una consigna per confiar una review.",
   "error.REVIEW_NOTE_TOO_SHORT": "Aquesta consigna es mai corta que çò qu'exigís lo projècte.",
+  "error.ACCOUNT_DISABLED": "Aqueste compte es desactivat. Demandatz a un administrator de lo reactivar.",
+  "error.DEPARTMENT_SCOPE_MIX": "Es pas possible de reordenar ensemble de departaments de projèctes diferents.",
+  "error.SMTP_PASSWORD_UNREADABLE": "Lo senhal SMTP enregistrat se deschifra pas mai. Tornatz lo picar.",
   "about.title": "A prepaus d'aquesta instància",
   "about.version": "Version",
   "about.builtAt": "Bastida lo",
@@ -3376,11 +3391,20 @@
     "other": "{count} shots meses a jorn, {failed} refusat(s)"
   },
   "bulk.status.menu": "Estatut",
-  "bulk.decision.title": { "one": "Decision de review sus {count} version", "other": "Decision de review sus {count} versions" },
+  "bulk.decision.title": {
+    "one": "Decision de review sus {count} version",
+    "other": "Decision de review sus {count} versions"
+  },
   "bulk.decision.hint": "La meteissa decision, e lo meteis comentari facultatiu, son pausats sus caduna.",
   "bulk.decision.mixed": "La seleccion travèrsa mai d'un projècte : un estatut que l'un d'eles emplega pas i es refusat, e comptat.",
-  "bulk.decision.done": { "one": "{count} decision pausada", "other": "{count} decisions pausadas" },
-  "bulk.decision.partial": { "one": "{count} decision pausada, {failed} refusada(s)", "other": "{count} decisions pausadas, {failed} refusada(s)" },
+  "bulk.decision.done": {
+    "one": "{count} decision pausada",
+    "other": "{count} decisions pausadas"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} decision pausada, {failed} refusada(s)",
+    "other": "{count} decisions pausadas, {failed} refusada(s)"
+  },
   "queryState.title": "Aquesta seccion a pas pogut se cargar",
   "queryState.description": "Lo servidor a pas respondut. Benlèu que tòrna aviar, o qu'es pas disponible — tornatz ensajar.",
   "queryState.retry": "Tornar ensajar",
@@ -3425,7 +3449,10 @@
   "ops.latest.rateLimited": "Lo catalòg de las versions refusa d'autras verificacions pel moment. Tornatz ensajar mai tard.",
   "ops.latest.disabled": "La verificacion de las versions es desactivada sus aquesta instància.",
   "ops.changes.title": "Çò que cambia",
-  "ops.changes.count": { "one": "{count} version pareguda dempuèi aquela en servici", "other": "{count} versions paregudas dempuèi aquela en servici" },
+  "ops.changes.count": {
+    "one": "{count} version pareguda dempuèi aquela en servici",
+    "other": "{count} versions paregudas dempuèi aquela en servici"
+  },
   "ops.changes.none": "Res de nòu dempuèi la version en servici.",
   "ops.changes.prerelease": "Pre-version",
   "ops.manual.title": "Dempuèi un terminal",
@@ -3481,7 +3508,10 @@
   "ops.result.intact": "Res es pas estat bascullat : l'instància es intacta.",
   "ops.result.unknownHint": "L'agent respond pas mai : l'eissida es pas coneguda. Legir son pròpri jornal :",
   "ops.backups.title": "Salvagardas",
-  "ops.backups.count": { "one": "{count} salvagarda", "other": "{count} salvagardas" },
+  "ops.backups.count": {
+    "one": "{count} salvagarda",
+    "other": "{count} salvagardas"
+  },
   "ops.backups.empty": "Cap de salvagarda aicí pel moment.",
   "ops.backups.unavailable": "Lo dorsièr de las salvagardas es pas montat dins l'aplicacion : res pòt pas èsser listat. Las salvagardas fachas dempuèi un terminal, elas, cambian pas.",
   "ops.backups.create": "Salvagardar ara",
@@ -3498,7 +3528,11 @@
   "reviewers.title": "Reviewers",
   "reviewers.none": "Degun es pas encara cargat de la review d'aquesta version",
   "reviewers.assign": "Assignar",
-  "reviewers.saved": { "one": "{count} persona sus aquesta review", "many": "{count} personas sus aquesta review", "other": "{count} personas sus aquesta review" },
+  "reviewers.saved": {
+    "one": "{count} persona sus aquesta review",
+    "many": "{count} personas sus aquesta review",
+    "other": "{count} personas sus aquesta review"
+  },
   "reviewers.notePlaceholder": "Qué deu agachar ? (la lum, lo raccòrd a 1042…)",
   "reviewers.noteLabel": "Çò que {name} deu agachar",
   "reviewers.noteRequired": "Aqueste projècte exigís una consigna.",

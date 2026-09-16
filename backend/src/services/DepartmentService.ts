@@ -5,6 +5,7 @@ import { Prisma, type Department, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
 import { storage, StorageService } from './StorageService';
+import { logAudit } from './AuditService';
 import { isProjectManager } from '../lib/projectRoles';
 import { parseTaskPolicy, writableDepartments } from '../lib/taskDepartmentPolicy';
 import { SETTING_KEYS } from '../lib/settings';
@@ -35,6 +36,14 @@ export interface DepartmentInput {
 
 /** Entités qui peuvent déclarer les départements qu'elles traversent. */
 export type DepartmentHolder = 'asset' | 'shot' | 'sequence';
+
+/**
+ * Acteur d'un geste consigné (A5-03). Les trois écritures structurantes — renommer,
+ * retirer, renuméroter — décident de ce qu'est « la dernière version » d'un plan
+ * (`lib/pipelineOrder`) ; elles ne peuvent pas rester anonymes. L'appelant le connaît
+ * toujours : c'est `req.user`, d'où le paramètre obligatoire plutôt qu'optionnel.
+ */
+export type DepartmentActor = { id: number };
 
 const ORDER_BY = [{ order: 'asc' as const }, { key: 'asc' as const }];
 
@@ -193,10 +202,14 @@ export async function create(
 }
 
 /** Le nom, l'ordre et la couleur se modifient ; la clé, jamais. */
-export async function update(id: number, input: Partial<DepartmentInput>): Promise<Department> {
+export async function update(
+  actor: DepartmentActor,
+  id: number,
+  input: Partial<DepartmentInput>,
+): Promise<Department> {
   const department = await prisma.department.findUnique({ where: { id } });
   if (!department) throw notFound('Department not found');
-  return prisma.department.update({
+  const updated = await prisma.department.update({
     where: { id },
     data: {
       ...(input.name !== undefined ? { name: input.name.trim() } : {}),
@@ -205,6 +218,20 @@ export async function update(id: number, input: Partial<DepartmentInput>): Promi
       ...(input.imageKey !== undefined ? { imageKey: input.imageKey } : {}),
     },
   });
+  logAudit({
+    userId: actor.id,
+    action: 'DEPARTMENT_UPDATE',
+    entityType: 'Department',
+    entityId: id,
+    // `previousOrder` est le champ qui compte : c'est lui qui désignait la dernière version.
+    metadata: {
+      key: department.key,
+      projectId: department.projectId,
+      previousOrder: department.order,
+      changes: { ...input },
+    },
+  });
+  return updated;
 }
 
 /**
@@ -212,16 +239,54 @@ export async function update(id: number, input: Partial<DepartmentInput>): Promi
  * repassent simplement en fin de pipe : rien n'est perdu, et rétablir le département les
  * y ramène. C'est un retrait logique, jamais une suppression de travail.
  */
-export async function remove(id: number): Promise<void> {
+export async function remove(actor: DepartmentActor, id: number): Promise<void> {
   const department = await prisma.department.findUnique({ where: { id } });
   if (!department) throw notFound('Department not found');
   await prisma.department.update({ where: { id }, data: { deletedAt: new Date() } });
+  logAudit({
+    userId: actor.id,
+    action: 'DEPARTMENT_DELETE',
+    entityType: 'Department',
+    entityId: id,
+    metadata: { key: department.key, projectId: department.projectId, order: department.order },
+  });
 }
 
-export async function reorder(ids: number[]): Promise<void> {
+/**
+ * Renumérote un pipe — et **un seul**.
+ *
+ * `order` n'est pas décoratif : c'est lui qui désigne la dernière version d'un plan
+ * (`lib/pipelineOrder`). La fonction écrivait la position dans le tableau sur toute ligne
+ * `Department` nommée, sans rien lire d'abord : un identifiant étranger glissé dans la
+ * liste — écran périmé, `curl` direct — réordonnait le pipe d'un autre projet ou celui du
+ * référentiel studio, et la version livrable de plans qu'on n'avait pas touchés changeait
+ * de département. On exige donc que le lot soit complet et homogène : même studio, même
+ * portée (projet, ou référentiel studio).
+ */
+export async function reorder(actor: DepartmentActor, ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  const unique = [...new Set(ids)];
+  const rows = await prisma.department.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, studioId: true, projectId: true },
+  });
+  if (rows.length !== unique.length) throw notFound('Department not found');
+  const scopes = new Set(rows.map((r) => `${r.studioId}:${r.projectId ?? 'studio'}`));
+  if (scopes.size > 1)
+    throw badRequest('Reordering mixes departments from different scopes', 'DEPARTMENT_SCOPE_MIX');
+  const [first] = rows;
   await prisma.$transaction(
     ids.map((id, index) => prisma.department.update({ where: { id }, data: { order: index } })),
   );
+  logAudit({
+    userId: actor.id,
+    action: 'DEPARTMENT_REORDER',
+    entityType: 'Department',
+    entityId: ids[0],
+    // La trace porte le lot ENTIER et sa portée : c'est l'ordre du pipe, pas une ligne,
+    // qui vient de changer — et avec lui « la dernière version » de tous les plans visés.
+    metadata: { ids, studioId: first?.studioId ?? null, projectId: first?.projectId ?? null },
+  });
 }
 
 /**

@@ -797,7 +797,10 @@
   "kanban.addItem": "Añadir un elemento…",
   "reviews.addToPlaylistShort": "Añadir a la playlist",
   "reviews.assigned.title": "Asignado a mí",
-  "reviews.assigned.count": { "one": "{count} review te espera", "other": "{count} reviews te esperan" },
+  "reviews.assigned.count": {
+    "one": "{count} review te espera",
+    "other": "{count} reviews te esperan"
+  },
   "reviews.filter.allAssignments": "Todas las reviews",
   "common.clearSelection": "Cancelar la selección",
   "comments.imagePreview": "Vista previa de la imagen",
@@ -1171,7 +1174,10 @@
     "one": "{count} sesión revocada",
     "other": "{count} sesiones revocadas"
   },
-  "sessions.showAll": { "one": "Mostrar la {count} sesión", "other": "Mostrar las {count} sesiones" },
+  "sessions.showAll": {
+    "one": "Mostrar la {count} sesión",
+    "other": "Mostrar las {count} sesiones"
+  },
   "sessions.showFewer": "Mostrar menos",
   "twofa.qr": "Código QR de alta 2FA",
   "twofa.scan": "Escanea este código QR con tu aplicación (Google Authenticator, 1Password…) y luego introduce el código que muestra.",
@@ -2078,6 +2084,8 @@
   "smtp.port": "Puerto",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Correo de prueba enviado a {to}",
+  "smtp.allowInsecure": "Permitir el envío sin cifrar (sin STARTTLS)",
+  "smtp.allowInsecureHint": "Solo para un relé interno que no ofrece STARTTLS. La contraseña SMTP y cada enlace de invitación cruzan entonces la red en texto claro, legibles por cualquiera que esté en el camino.",
   "storage.map.hint": "Un solo bucket S3/MinIO para toda la instancia; eliminar un medio purga su carpeta de original y su prefijo",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objetos",
@@ -2912,7 +2920,10 @@
   "shotgrid.statuses.title": "Estados propuestos en este proyecto",
   "shotgrid.statuses.hint": "Un site conoce todos los estados del estudio; una producción solo usa unos pocos. Marque los que quiera ver propuestos — menús, selectores y filtros los siguen. No marcar nada conserva todo el vocabulario. Ocultar no borra: una entidad que ya lleva un estado oculto lo sigue mostrando.",
   "shotgrid.statuses.all": "todos propuestos",
-  "shotgrid.statuses.count": { "one": "{count} seleccionado", "other": "{count} seleccionados" },
+  "shotgrid.statuses.count": {
+    "one": "{count} seleccionado",
+    "other": "{count} seleccionados"
+  },
   "shotgrid.statuses.scopeLabel": "Estados mostrados",
   "shotgrid.statuses.scope.task": "Para las tasks",
   "shotgrid.statuses.scope.shot": "Para los shots",
@@ -3145,6 +3156,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "No hay credenciales de ShotGrid guardadas para este sitio.",
   "error.REVIEW_NOTE_REQUIRED": "Este proyecto exige una instrucción para confiar una review.",
   "error.REVIEW_NOTE_TOO_SHORT": "Esta instrucción es más corta de lo que exige el proyecto.",
+  "error.ACCOUNT_DISABLED": "Esta cuenta está desactivada. Pide a un administrador que la reactive.",
+  "error.DEPARTMENT_SCOPE_MIX": "No se pueden reordenar juntos departamentos de proyectos distintos.",
+  "error.SMTP_PASSWORD_UNREADABLE": "La contraseña SMTP guardada ya no se puede descifrar. Vuelve a escribirla.",
   "about.title": "Acerca de esta instancia",
   "about.version": "Version",
   "about.builtAt": "Compilada el",
@@ -3373,11 +3387,20 @@
     "other": "{count} shots actualizados, {failed} rechazado(s)"
   },
   "bulk.status.menu": "Estado",
-  "bulk.decision.title": { "one": "Decisión de review sobre {count} version", "other": "Decisión de review sobre {count} versions" },
+  "bulk.decision.title": {
+    "one": "Decisión de review sobre {count} version",
+    "other": "Decisión de review sobre {count} versions"
+  },
   "bulk.decision.hint": "La misma decisión, y el mismo comentario opcional, se registran en cada una.",
   "bulk.decision.mixed": "La selección abarca varios proyectos: un estado que uno de ellos no usa se rechaza allí, y se cuenta.",
-  "bulk.decision.done": { "one": "{count} decisión registrada", "other": "{count} decisiones registradas" },
-  "bulk.decision.partial": { "one": "{count} decisión registrada, {failed} rechazada(s)", "other": "{count} decisiones registradas, {failed} rechazada(s)" },
+  "bulk.decision.done": {
+    "one": "{count} decisión registrada",
+    "other": "{count} decisiones registradas"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} decisión registrada, {failed} rechazada(s)",
+    "other": "{count} decisiones registradas, {failed} rechazada(s)"
+  },
   "queryState.title": "No se ha podido cargar esta sección",
   "queryState.description": "El servidor no ha respondido. Puede estar reiniciándose o no disponible: inténtelo de nuevo.",
   "queryState.retry": "Intentar de nuevo",
@@ -3419,7 +3442,10 @@
   "ops.latest.rateLimited": "El catálogo de publicaciones rechaza más comprobaciones por ahora. Inténtalo más tarde.",
   "ops.latest.disabled": "La comprobación de publicaciones está desactivada en esta instancia.",
   "ops.changes.title": "Qué cambia",
-  "ops.changes.count": { "one": "{count} publicación desde la instalada", "other": "{count} publicaciones desde la instalada" },
+  "ops.changes.count": {
+    "one": "{count} publicación desde la instalada",
+    "other": "{count} publicaciones desde la instalada"
+  },
   "ops.changes.none": "Nada nuevo desde la publicación instalada.",
   "ops.changes.prerelease": "Versión previa",
   "ops.manual.title": "Desde un terminal",
@@ -3475,7 +3501,10 @@
   "ops.result.intact": "No se ha cambiado nada: la instancia está intacta.",
   "ops.result.unknownHint": "El agente dejó de responder, así que el resultado se desconoce. Consulta su propio registro:",
   "ops.backups.title": "Copias de seguridad",
-  "ops.backups.count": { "one": "{count} copia", "other": "{count} copias" },
+  "ops.backups.count": {
+    "one": "{count} copia",
+    "other": "{count} copias"
+  },
   "ops.backups.empty": "Aquí todavía no hay ninguna copia.",
   "ops.backups.unavailable": "La carpeta de copias no está montada en la aplicación, así que no se puede listar nada. Las copias hechas desde un terminal no se ven afectadas.",
   "ops.backups.create": "Copiar ahora",
@@ -3492,7 +3521,10 @@
   "reviewers.title": "Reviewers",
   "reviewers.none": "Todavía no se ha encargado a nadie la review de esta version",
   "reviewers.assign": "Asignar",
-  "reviewers.saved": { "one": "{count} persona en esta review", "other": "{count} personas en esta review" },
+  "reviewers.saved": {
+    "one": "{count} persona en esta review",
+    "other": "{count} personas en esta review"
+  },
   "reviewers.notePlaceholder": "¿Qué debe mirar? (la luz, el raccord en 1042…)",
   "reviewers.noteLabel": "Lo que {name} debe mirar",
   "reviewers.noteRequired": "Este proyecto exige una instrucción.",

@@ -20,6 +20,7 @@ import { canWriteTask, parseTaskPolicy, writableDepartments } from '../lib/taskD
 import { SETTING_KEYS } from '../lib/settings';
 import { taskSelect, toTask } from '../lib/v1Resources';
 import * as ApiEventService from './ApiEventService';
+import { assertAssignable } from './EntityAssigneeService';
 import * as DepartmentService from './DepartmentService';
 import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
@@ -76,6 +77,20 @@ async function publishTaskEvents(
       payload: { task, ...extra },
     });
 }
+
+/**
+ * Qui peut recevoir cette tâche.
+ *
+ * Même garde que l'assignation d'entité et que l'assignation de review
+ * (`EntityAssigneeService.assertAssignable`), volontairement partagée : un compte de
+ * service, un compte désactivé ou quelqu'un qui ne contribue pas à CE projet-là se voyait
+ * confier une tâche — et notifier — par le seul chemin des tâches, qui ne vérifiait rien.
+ * Trois chemins d'assignation, deux gardes : le troisième était la porte de service des
+ * deux autres.
+ */
+const assertTaskAssignee = async (projectId: number, assigneeId: number | null | undefined) => {
+  if (assigneeId != null) await assertAssignable(projectId, [assigneeId]);
+};
 
 /** Notifie l'assigné d'une tâche (hors auto-assignation). */
 async function notifyAssignee(
@@ -320,6 +335,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
     const allowed = writableDepartments([{ id: department.departmentId }], ctx);
     if (allowed.length === 0) throw forbidden('This task belongs to a department you are not part of');
   }
+  await assertTaskAssignee(projectId, body.assigneeId);
   const task = await prisma.task.create({
     data: {
       name: body.name,
@@ -527,6 +543,7 @@ export async function setAssignee(
   opts: { notify?: boolean } = {},
 ) {
   await assertProjectManage(user.id, user.role, projectId);
+  await assertTaskAssignee(projectId, assigneeId);
   const before = await prisma.task.findUnique({ where: { id: taskId }, select: { assigneeId: true } });
   const updated = await prisma.task.update({
     where: { id: taskId },
@@ -568,6 +585,7 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     if (!reachable || keys.some((k) => !allowed.includes(k)))
       throw forbidden('On a task assigned to you, only the status and the checklist can change');
   }
+  await assertTaskAssignee(projectId, body.assigneeId);
   const { checklist, department, ...rest } = body;
   // Département : la clé et la relation avancent ensemble, comme le statut plus bas.
   const departmentPair = department !== undefined ? await resolveDepartment(projectId, department) : {};
@@ -637,6 +655,7 @@ export interface ApiPatchInput {
  * chaque client devrait comparer les états lui-même pour le retrouver.
  */
 export async function applyApiPatch(actorId: number, projectId: number, id: number, body: ApiPatchInput) {
+  await assertTaskAssignee(projectId, body.assigneeId);
   const before = await prisma.task.findUnique({ where: { id }, select: { status: true } });
   // Même résolution que l'interface : l'API n'écrivait que l'énumération historique, si
   // bien qu'un `PATCH {status}` depuis un DCC laissait `pipelineStatusId` sur l'ancienne

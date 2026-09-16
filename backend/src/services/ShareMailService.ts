@@ -7,6 +7,9 @@ import { env } from '../config/env';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
 import { mailLayout, mailButton, MAIL_ACCENT, MAIL_MUTED } from '../lib/mailTemplate';
+// Un seul échappement, partagé : la copie locale oubliait les guillemets — celle qui
+// compte dans un attribut, donc la seule dont l'absence se paie.
+import { escapeHtml as esc } from '../lib/html';
 import { displayName } from '../lib/userView';
 import { logAudit } from './AuditService';
 import { badRequest, notFound } from '../lib/errors';
@@ -28,8 +31,6 @@ const SHARE_MAIL_LOCALE: Locale = 'en';
 
 /** Un envoi ne s'adresse pas à une liste de diffusion : au-delà, c'est une newsletter. */
 export const SHARE_MAIL_MAX_RECIPIENTS = 10;
-
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** URL publique du lien, telle qu'elle est ouverte dans un navigateur. */
 export function shareUrl(token: string): string {
@@ -83,7 +84,7 @@ ${ctx.note ? `<p style="border-left:2px solid ${MAIL_ACCENT};padding-left:12px">
 ${mailButton(ctx.url, t(locale, 'share.mail.cta'))}
 <p style="${small}">${lines.map(esc).join('<br />')}</p>
 <p style="${small}">${esc(t(locale, 'share.mail.fallback'))}<br />
-<a href="${ctx.url}" style="color:${MAIL_ACCENT};word-break:break-all">${esc(ctx.url)}</a></p>`;
+<a href="${esc(ctx.url)}" style="color:${MAIL_ACCENT};word-break:break-all">${esc(ctx.url)}</a></p>`;
 
   return mailLayout(
     locale,

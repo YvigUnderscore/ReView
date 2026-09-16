@@ -143,7 +143,11 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   // ici, et pas à l'import, pour qu'un test unitaire n'ouvre jamais de connexion.
   enableRedisTransport();
 
-  app.set('trust proxy', 1);
+  // Confiance accordée à `X-Forwarded-For` — explicite, et nulle par défaut : cet en-tête
+  // est fourni par l'appelant dès que le port du backend est joignable sans proxy devant,
+  // et il sert de clé à TOUS les limiteurs (middleware/rateLimit) comme d'adresse aux
+  // lignes d'audit. Cf. le commentaire de TRUST_PROXY dans config/env.ts.
+  app.set('trust proxy', env.TRUST_PROXY);
   // Journalisation HTTP structurée le plus tôt possible (request-id sur toutes les réponses).
   app.use(httpLogger);
   app.use(

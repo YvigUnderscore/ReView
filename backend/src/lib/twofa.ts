@@ -3,6 +3,8 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 import { generate, generateSecret, generateURI, verify } from 'otplib';
+import { getRedis } from './redis';
+import { logger } from './logger';
 
 /**
  * 2FA TOTP (36.A) — helpers (testés) au-dessus d'otplib v13 (API fonctionnelle, async).
@@ -48,10 +50,16 @@ const normalizeCode = (code: string): string =>
  * hameçonnage en temps réel, journal d'un client mal réglé — se rejoue tant que la
  * fenêtre n'est pas passée : le second facteur ne prouve alors plus rien.
  *
- * La mémoire est in-process, comme le cache de sessions et le rate limiter (`mono-instance`
- * assumé côté projet). Sur plusieurs répliques, chacune tient la sienne : le rejeu
- * redevient possible d'une réplique à l'autre. Le jour où l'on passera à N instances,
- * ce compteur doit migrer avec le limiteur (Redis) ou sur la ligne `User`.
+ * Deux étages, et ils ne jouent pas le même rôle :
+ *
+ *  - `consumeTotpOnce` — garde LOCALE au process. Gratuite, elle court-circuite le rejeu
+ *    déjà vu par CETTE réplique et rattrape une éviction du marqueur partagé sous pression
+ *    mémoire. Elle ne suffit pas : elle ignore tout de ce que sert l'autre réplique.
+ *  - `consumeTotpOnceShared` — garde PARTAGÉE (Redis), **la seule que la route de
+ *    vérification doit appeler**. Sur deux répliques derrière le même frontal, la garde
+ *    locale ne voit pas la tentative servie par l'autre : le code intercepté se rejoue en
+ *    tombant sur la seconde. Le limiteur de débit a été porté sur Redis pour exactement ce
+ *    motif (`middleware/rateLimit`), la présence et les salles live aussi.
  */
 const REPLAY_TTL_MS = 120_000;
 const REPLAY_MAX_ENTRIES = 50_000;
@@ -77,6 +85,38 @@ export function consumeTotpOnce(userId: number, code: string): boolean {
   if ((usedTotp.get(key) ?? 0) > now) return false;
   usedTotp.set(key, now + REPLAY_TTL_MS);
   return true;
+}
+
+/** Marqueur partagé entre répliques. Le préfixe le range avec les autres états volatils. */
+const totpRedisKey = (userId: number, code: string): string => `totp:used:${totpKey(userId, code)}`;
+
+/**
+ * Consommation d'un code TOTP valable pour TOUTE l'instance, répliques comprises.
+ *
+ * `SET … PX … NX` est atomique : la première réplique pose la clé et reçoit `OK`, la
+ * seconde reçoit `null` et refuse. La garde locale reste interrogée d'abord — elle est
+ * gratuite et évite un aller-retour sur un rejeu que cette réplique a déjà vu.
+ *
+ * ⚠ **Échec FERMÉ si Redis ne répond pas.** Un anti-rejeu qui a perdu la mémoire de ce qui
+ * a été présenté ne peut pas répondre « jamais vu » : laisser passer ferait de la panne du
+ * marqueur le moyen de le contourner — c'est mot pour mot la règle déjà tenue par le
+ * limiteur de débit (`middleware/rateLimit`, échec fermé en 429). Et cette fermeture ne
+ * coûte aucune disponibilité que la 2FA aurait encore : `/api/auth/2fa/verify` est précédé
+ * de deux limiteurs eux-mêmes adossés à Redis, qui refusent la requête avant d'arriver ici
+ * quand le serveur est injoignable.
+ *
+ * Effet de bord assumé : le code présenté pendant la panne est brûlé par la garde locale.
+ * Il vaut trente secondes — l'utilisateur en lit un autre.
+ */
+export async function consumeTotpOnceShared(userId: number, code: string): Promise<boolean> {
+  if (!consumeTotpOnce(userId, code)) return false;
+  try {
+    const reply = await getRedis().call('SET', totpRedisKey(userId, code), '1', 'PX', REPLAY_TTL_MS, 'NX');
+    return reply === 'OK';
+  } catch (err) {
+    logger.error({ err, userId }, '[2fa] anti-rejeu partagé injoignable — code refusé (échec fermé)');
+    return false;
+  }
 }
 
 // ── Codes de secours ─────────────────────────────────────────────────────────

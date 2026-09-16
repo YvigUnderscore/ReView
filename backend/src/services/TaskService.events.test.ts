@@ -28,6 +28,9 @@ vi.mock('./PipelineStatusService', () => ({
   resolveByLegacy: vi.fn(() => Promise.resolve(null)),
 }));
 vi.mock('./shotgrid/ShotgridPushService', () => ({ enqueuePush: vi.fn() }));
+// Garde d'assignation (A1-05) : son contenu se teste dans `TaskService.assignable.test.ts`,
+// ici on ne veut que laisser passer les assignations de ces scénarios d'événements.
+vi.mock('./EntityAssigneeService', () => ({ assertAssignable: vi.fn() }));
 vi.mock('../lib/projectGuard', () => ({ assertProjectWritable: vi.fn() }));
 vi.mock('../lib/projectRoles', () => ({
   assertCanContribute: vi.fn(),

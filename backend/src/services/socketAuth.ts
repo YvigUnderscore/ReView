@@ -13,6 +13,14 @@ import { prisma } from '../lib/prisma';
  */
 export interface AuthedSocket extends Socket {
   user?: { id: number; email: string; role: import('@prisma/client').Role };
+  /**
+   * Session de connexion (36.B) portée par le jeton du handshake.
+   *
+   * Elle est conservée parce qu'une websocket vit des jours : sans le `sid`, la seule
+   * vérification de la session était celle du handshake, et révoquer une session laissait
+   * le canal temps réel ouvert. `SocketService` la rejoue périodiquement (A3-02).
+   */
+  authSid?: string;
   shareProjectId?: number;
 }
 
@@ -52,10 +60,13 @@ export const authenticateSocket = async (
     // Zombie-token check + rôle courant relu en base (un rôle rétrogradé prend effet).
     const dbUser = await prisma.user.findUnique({
       where: { id: payload.id },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, role: true, disabledAt: true },
     });
-    if (!dbUser) return next(REFUS());
-    socket.user = dbUser;
+    // Offboarding (A1-01) : un compte désactivé n'ouvre pas de canal temps réel. Le socket
+    // donne accès aux mêmes données que l'API — il se ferme sur les mêmes conditions.
+    if (!dbUser || dbUser.disabledAt) return next(REFUS());
+    socket.user = { id: dbUser.id, email: dbUser.email, role: dbUser.role };
+    socket.authSid = payload.sid;
     return next();
   }
 

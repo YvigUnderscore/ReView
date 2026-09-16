@@ -75,7 +75,8 @@ router.get('/me/preferences', async (req, res) => {
 // PATCH /api/users/me/preferences — merge superficiel (clé à null = suppression)
 router.patch(
   '/me/preferences',
-  validate({ body: z.record(z.string().max(64), z.unknown()) }),
+  // Valeur bornée en forme, en profondeur et en volume — le service tient le reste (A2-04).
+  validate({ body: UserService.preferencesPatchSchema }),
   async (req, res) => {
     res.json({ preferences: await UserService.updatePreferences(req.user!.id, req.body) });
   },

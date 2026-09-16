@@ -19,6 +19,8 @@ import {
   findShareMedia,
 } from '../services/ClientShareService';
 import { createGuest } from '../services/CommentService';
+import { cameraStateSchema } from '../lib/commentPayload';
+import { guestCommentRateLimit } from './clientShareLimits';
 import { signShareSession, verifyShareSession } from '../lib/shareAccess';
 import { getWatermarkConfig } from '../lib/watermarkConfig';
 import { logAudit } from '../services/AuditService';
@@ -164,13 +166,16 @@ router.get('/:token/media/:id/comments', validate({ params: tokenAndId }), async
 // `emit` socket qui se perdait dès que personne n'avait le projet ouvert.
 router.post(
   '/:token/media/:id/comments',
+  // Écriture ouverte à un anonyme : freinée par lien et par lien+IP (cf. clientShareLimits).
+  ...guestCommentRateLimit,
   validate({
     params: tokenAndId,
     body: z.object({
       guestName: z.string().trim().min(1).max(80),
       content: z.string().min(1).max(10000),
       timestamp: z.number().nonnegative().optional(),
-      cameraState: z.any().optional(),
+      // Même schéma que la review interne (A2-04) ; `createGuest` le revalide de toute façon.
+      cameraState: cameraStateSchema.nullish(),
     }),
   }),
   async (req, res) => {

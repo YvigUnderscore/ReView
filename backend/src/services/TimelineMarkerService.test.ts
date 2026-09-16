@@ -14,6 +14,9 @@ vi.mock('../lib/prisma', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    // Le rôle par projet (38.E) est lu en base par `lib/projectRoles`, laissé RÉEL ici :
+    // mocker la garde qu'on teste rendrait le test aveugle au contournement A1-03.
+    projectMembership: { findUnique: vi.fn() },
   },
 }));
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: vi.fn() }));
@@ -46,6 +49,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(resolveProjectIdForMedia).mockResolvedValue(7);
   vi.mocked(checkProjectAccess).mockResolvedValue(true);
+  // Membre sans rôle local : le rôle effectif retombe sur le rôle global.
+  vi.mocked(prisma.projectMembership.findUnique).mockResolvedValue({
+    userId: 2,
+    projectId: 7,
+    role: null,
+  } as never);
 });
 
 describe('TimelineMarkerService (34.C)', () => {
@@ -96,5 +105,52 @@ describe('TimelineMarkerService (34.C)', () => {
     await remove(admin, 9, 5);
     expect(prisma.timelineMarker.delete).toHaveBeenCalledWith({ where: { id: 5 } });
     expect(emitToReview).toHaveBeenCalledWith(9, 'markers:changed', { mediaId: 9 });
+  });
+});
+
+/**
+ * A1-03 — le service lisait le rôle GLOBAL après n'avoir vérifié que l'appartenance :
+ * un ARTIST rétrogradé CLIENT sur le projet gardait son `ProjectMembership`, donc
+ * `checkProjectAccess` disait oui, et il écrivait quand même les marqueurs partagés.
+ */
+describe('TimelineMarkerService — rôle effectif par projet (38.E)', () => {
+  /** Global ARTIST, rétrogradé CLIENT sur le projet 7 ; auteur du marqueur 5. */
+  const demoted = { id: 2, role: Role.ARTIST };
+
+  beforeEach(() => {
+    vi.mocked(prisma.projectMembership.findUnique).mockResolvedValue({
+      userId: 2,
+      projectId: 7,
+      role: Role.CLIENT,
+    } as never);
+  });
+
+  it('create : rétrogradé CLIENT sur le projet → 403 ROLE_FORBIDDEN, rien n’est écrit', async () => {
+    vi.mocked(prisma.timelineMarker.count).mockResolvedValue(0);
+    await expect(create(demoted, 9, { frame: 24, name: 'x', color: '#22d3ee' })).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'ROLE_FORBIDDEN',
+    });
+    expect(prisma.timelineMarker.create).not.toHaveBeenCalled();
+  });
+
+  it('update/remove : il ne touche plus ses propres marqueurs non plus', async () => {
+    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker()); // authorId: 2
+    await expect(update(demoted, 9, 5, { name: 'x' })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(remove(demoted, 9, 5)).rejects.toMatchObject({ statusCode: 403 });
+    expect(prisma.timelineMarker.update).not.toHaveBeenCalled();
+    expect(prisma.timelineMarker.delete).not.toHaveBeenCalled();
+  });
+
+  it('inversement : un ARTIST promu SUPERVISOR localement gère le marqueur d’un autre', async () => {
+    vi.mocked(prisma.projectMembership.findUnique).mockResolvedValue({
+      userId: 4,
+      projectId: 7,
+      role: Role.SUPERVISOR,
+    } as never);
+    vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker()); // authorId: 2
+    vi.mocked(prisma.timelineMarker.update).mockResolvedValue(dbMarker({ name: 'Plan 3' }));
+    const out = await update({ id: 4, role: Role.ARTIST }, 9, 5, { name: 'Plan 3' });
+    expect(out.name).toBe('Plan 3');
   });
 });

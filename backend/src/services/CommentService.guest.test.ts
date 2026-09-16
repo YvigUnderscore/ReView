@@ -134,3 +134,46 @@ describe('createGuest — ce qu’un invité ne peut pas faire', () => {
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * A2-02 : `cameraState` était le seul champ de forme libre de la surface PUBLIQUE de
+ * partage — `z.any()` côté route, recopié tel quel en base, puis rediffusé à toutes les
+ * sockets du projet. Quiconque reçoit le lien pouvait donc y verser des mégaoctets de JSON
+ * quelconque, requête après requête, sans aucun compte. Le service le relit désormais.
+ */
+describe('createGuest — la pose caméra d’un invité est bornée (A2-02)', () => {
+  it('refuse un blob de forme libre', async () => {
+    await expect(
+      createGuest(guest, 7, { ...body, cameraState: { p: 'A'.repeat(4_000) } }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  it('refuse une pose augmentée d’un champ inconnu (le volume passerait par là)', async () => {
+    await expect(
+      createGuest(guest, 7, {
+        ...body,
+        cameraState: {
+          position: { x: 0, y: 0, z: 1 },
+          target: { x: 0, y: 0, z: 0 },
+          pad: 'A'.repeat(4_000),
+        },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prisma.comment.create).not.toHaveBeenCalled();
+  });
+
+  it('accepte la pose que le viewer capture réellement', async () => {
+    const pose = {
+      position: { x: 1.5, y: 2, z: -3 },
+      target: { x: 0, y: 0, z: 0 },
+      fov: 45,
+      aspect: 1.78,
+      apertureAngle: 0.02,
+      focalDistance: 4.2,
+    };
+    await createGuest(guest, 7, { ...body, cameraState: pose });
+    const data = vi.mocked(prisma.comment.create).mock.calls[0]?.[0]?.data as Record<string, unknown>;
+    expect(data.cameraState).toEqual(pose);
+  });
+});

@@ -36,7 +36,7 @@ import { inheritsPublication, shouldPublishVersion } from '../lib/publishState';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertProjectQuota } from '../lib/projectQuota';
 import { logger } from '../lib/logger';
-import { assertCanContribute } from '../lib/projectRoles';
+import { assertCanContribute, isProjectManager } from '../lib/projectRoles';
 import { notifyWatchers } from './WatchService';
 import { listReviewers, setReviewers, type ReviewerInput } from './ReviewAssignmentService';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
@@ -1027,7 +1027,11 @@ export async function assertMediaManage(
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  const manager = user.role === Role.ADMIN || user.role === Role.SUPERVISOR;
+  // 38.E : le rôle global ne décide de rien ici. Un ARTIST rétrogradé CLIENT conserve son
+  // membership — `checkProjectAccess` dit donc toujours oui — mais ne gère plus les médias
+  // qu'il avait déposés avant ; un ARTIST promu SUPERVISOR localement, lui, gère les autres.
+  await assertCanContribute(user.id, user.role, projectId);
+  const manager = await isProjectManager(user.id, user.role, projectId);
   if (!manager && media.uploaderId !== user.id)
     throw forbidden("Suppression réservée à l'uploader ou un superviseur");
   return { projectId, versionId: media.versionId };

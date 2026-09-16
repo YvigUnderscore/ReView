@@ -13,6 +13,7 @@ import { notifyWatchers } from './WatchService';
 import { publish as publishApiEvent } from './ApiEventService';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, forbidden } from '../lib/errors';
+import { parseAnnotation, parseCameraState } from '../lib/commentPayload';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
@@ -250,6 +251,27 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
     if (!parent || parent.mediaObjectId !== body.mediaObjectId) throw badRequest('Invalid parent comment');
   }
 
+  // Sécurité : le montage visé est fourni par le client, et la route n'a autorisé QUE le
+  // projet du média. Recopier `timelineId` tel quel laissait écrire dans les notes de
+  // montage d'un projet voisin — refusé en lecture (403), mais ouvert en écriture, sous le
+  // nom de l'auteur. Les identifiants de montage sont de petits entiers séquentiels.
+  if (body.timelineId != null) {
+    const timeline = await prisma.timeline.findUnique({
+      where: { id: body.timelineId },
+      select: { projectId: true },
+    });
+    if (!timeline || timeline.projectId !== projectId) throw badRequest('Invalid timeline');
+  } else if (body.timelineTime != null) {
+    // Une position dans le montage sans montage ne désigne rien : on refuse plutôt que de
+    // persister une valeur orpheline.
+    throw badRequest('timelineTime requires timelineId');
+  }
+
+  // Blobs JSON relus ici et pas seulement à la route : la forme et le volume sont bornés
+  // pour tous les appelants du service (cf. `lib/commentPayload`).
+  const annotation = parseAnnotation(body.annotation);
+  const cameraState = parseCameraState(body.cameraState);
+
   const comment = await prisma.comment.create({
     data: {
       mediaObjectId: body.mediaObjectId,
@@ -257,8 +279,8 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       content: sanitizeHtml(body.content),
       timestamp: body.timestamp ?? null,
       duration: body.duration ?? null,
-      annotation: body.annotation ?? undefined,
-      cameraState: body.cameraState ?? undefined,
+      annotation: annotation ?? undefined,
+      cameraState: cameraState ?? undefined,
       attachments: attachments.length > 0 ? (attachments as object) : undefined,
       parentId: body.parentId ?? null,
       timelineId: body.timelineId ?? null,
@@ -357,13 +379,17 @@ export interface CreateGuestCommentInput {
 
 export async function createGuest(guest: GuestActor, projectId: number, body: CreateGuestCommentInput) {
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+  // La pose caméra arrive d'une surface PUBLIQUE, sans compte derrière : c'est le seul
+  // champ de forme libre qu'un anonyme muni du lien puisse écrire en base, et il est
+  // ensuite rediffusé à toutes les sockets du projet. Il passe donc par son schéma.
+  const cameraState = parseCameraState(body.cameraState);
   const comment = await prisma.comment.create({
     data: {
       mediaObjectId: body.mediaObjectId,
       guestName: guest.name,
       content: sanitizeHtml(body.content),
       timestamp: body.timestamp ?? null,
-      cameraState: body.cameraState ?? undefined,
+      cameraState: cameraState ?? undefined,
       // Un retour de client se relit forcément côté client : il reste visible du lien.
       isVisibleToClient: true,
     },

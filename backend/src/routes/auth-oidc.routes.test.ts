@@ -41,15 +41,21 @@ vi.mock('../lib/oidcConfig', () => ({
 }));
 vi.mock('../lib/prisma', () => ({ prisma: { user: { findUnique: vi.fn(), create: vi.fn() } } }));
 vi.mock('../lib/sessions', () => ({ createSession: vi.fn(async () => 'sid') }));
+vi.mock('bcryptjs', () => ({ default: { hash: vi.fn(async () => 'hash') } }));
 vi.mock('../services/AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn() } }));
 
 import express from 'express';
 import request from 'supertest';
 import { lookup } from 'node:dns/promises';
+import jwt from 'jsonwebtoken';
+import * as oidc from 'openid-client';
 import oidcRoutes from './auth-oidc.routes';
 import { errorHandler } from '../middleware/error';
 import { OutboundBlockedError } from '../lib/safeFetch';
+import { prisma } from '../lib/prisma';
+import { createSession } from '../lib/sessions';
+import { env } from '../config/env';
 
 const app = express().use(express.json()).use('/api/auth/oidc', oidcRoutes).use(errorHandler);
 
@@ -107,5 +113,44 @@ describe('SSO OIDC — requêtes sortantes sous garde', () => {
     expect(res.status).toBe(200);
     expect((fetchMock.mock.calls[0]![1] as RequestInit).redirect).toBe('manual');
     vi.unstubAllGlobals();
+  });
+});
+
+/**
+ * A1-01 — la porte la plus large de toutes : en SSO, l'identité vit chez le fournisseur et
+ * survit au départ. Sans garde, le callback rendait au partant, sans même un mot de passe,
+ * l'accès que la désactivation venait de lui retirer.
+ */
+describe('GET /api/auth/oidc/callback — compte désactivé', () => {
+  /** Cookie d'état : le callback exige le state+nonce qu'il a lui-même posés. */
+  const stateCookie = () =>
+    `oidc_state=${jwt.sign({ kind: 'oidc', state: 's1', nonce: 'n1' }, env.JWT_SECRET)}`;
+
+  const callback = async (disabledAt: Date | null) => {
+    discoveryMock.mockResolvedValue({});
+    vi.mocked(oidc.authorizationCodeGrant).mockResolvedValue({
+      claims: () => ({ email: 'partie@studio.com', email_verified: true }),
+    } as never);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 7,
+      email: 'partie@studio.com',
+      role: 'ARTIST',
+      totpEnabledAt: null,
+      disabledAt,
+    } as never);
+    return request(app).get('/api/auth/oidc/callback?code=abc&state=s1').set('Cookie', stateCookie());
+  };
+
+  it('n’émet aucun jeton pour un compte désactivé', async () => {
+    const res = await callback(new Date());
+    expect(res.headers.location).toContain('#ssoerr=');
+    expect(res.headers.location).not.toContain('#sso=');
+    expect(createSession).not.toHaveBeenCalled();
+  });
+
+  it('connecte normalement un compte actif', async () => {
+    const res = await callback(null);
+    expect(res.headers.location).toContain('#sso=');
+    expect(createSession).toHaveBeenCalled();
   });
 });

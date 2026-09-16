@@ -5,7 +5,23 @@ import type { Request, Response, NextFunction } from 'express';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { forbidden, notFound, unauthorized } from '../lib/errors';
-import { effectiveProjectRole, canManageProject } from '../lib/projectRoles';
+import { effectiveProjectRole, canManageProject, canContribute } from '../lib/projectRoles';
+
+/**
+ * Ce que l'appelant vient FAIRE du projet.
+ *
+ * Racine du défaut 38.E/A1-03 : la garde d'accès n'accordait que sur l'existence du
+ * `ProjectMembership` et ignorait son champ `role`. Chaque appelant qui écrivait devait
+ * donc *se souvenir* d'ajouter `assertCanContribute` derrière — et trois l'avaient oublié
+ * (marqueurs de timeline, gestion de média, board). Une garde qu'il faut penser à doubler
+ * n'est pas une garde : c'est une convention.
+ *
+ * L'intention rend le rôle obligatoire au bon endroit. `read` reste le défaut (un CLIENT
+ * membre lit et commente, c'est son métier) ; `write` exige de pouvoir contribuer ;
+ * `manage` exige le rôle de gestion. Dans les trois cas c'est le rôle EFFECTIF sur CE
+ * projet qui décide (`lib/projectRoles`), élévation et rétrogradation locales comprises.
+ */
+export type ProjectAccessIntent = 'read' | 'write' | 'manage';
 
 /**
  * Options d'un contrôle d'accès projet.
@@ -17,14 +33,15 @@ import { effectiveProjectRole, canManageProject } from '../lib/projectRoles';
  */
 export interface ProjectAccessOptions {
   includeTrashed?: boolean;
+  intent?: ProjectAccessIntent;
 }
 
 /**
  * Verdict d'un contrôle d'accès projet. Le refus dit sa nature pour que l'appelant
  * choisisse le bon code : 404 quand le projet n'est pas désignable, 403 quand il l'est
- * mais que la personne n'y appartient pas.
+ * mais que la personne n'y appartient pas ou que son rôle ne porte pas l'intention.
  */
-export type ProjectAccessOutcome = 'granted' | 'not-member' | 'unavailable';
+export type ProjectAccessOutcome = 'granted' | 'not-member' | 'unavailable' | 'insufficient-role';
 
 /**
  * Exige que l'utilisateur authentifié possède l'un des rôles donnés.
@@ -65,19 +82,24 @@ const projectIsAddressable = async (projectId: number, includeTrashed: boolean):
  *
  * Règles v2 inchangées par ailleurs : ADMIN et SUPERVISOR ont un accès global, les autres
  * passent par leur `ProjectMembership`.
+ *
+ * **Le rôle EFFECTIF est lu ici**, et plus seulement l'existence du membership : c'est ce
+ * qui permet à `intent` de trancher sans que l'appelant ait à doubler la garde (38.E).
+ * Pour un accès global (ADMIN/SUPERVISOR) `effectiveProjectRole` répond sans interroger le
+ * membership — le coût en requêtes est donc inchangé.
  */
 export const resolveProjectAccess = async (
   userId: number,
   role: Role,
   projectId: number,
-  { includeTrashed = false }: ProjectAccessOptions = {},
+  { includeTrashed = false, intent = 'read' }: ProjectAccessOptions = {},
 ): Promise<ProjectAccessOutcome> => {
   if (!(await projectIsAddressable(projectId, includeTrashed))) return 'unavailable';
-  if (role === Role.ADMIN || role === Role.SUPERVISOR) return 'granted';
-  const membership = await prisma.projectMembership.findUnique({
-    where: { userId_projectId: { userId, projectId } },
-  });
-  return membership === null ? 'not-member' : 'granted';
+  const effective = await effectiveProjectRole(userId, role, projectId);
+  if (effective === null) return 'not-member';
+  if (intent === 'write' && !canContribute(effective)) return 'insufficient-role';
+  if (intent === 'manage' && !canManageProject(effective)) return 'insufficient-role';
+  return 'granted';
 };
 
 /**
@@ -94,9 +116,21 @@ export const checkProjectAccess = async (
 /**
  * Erreur typée correspondant à un verdict de refus. Le 404 reste générique (message et
  * code de repli) : nommer le projet dans la réponse annulerait le bénéfice du 404.
+ *
+ * Le refus de RÔLE se distingue du refus d'APPARTENANCE : il porte le code
+ * `ROLE_FORBIDDEN` — le même qu'`assertCanContribute` —, sans quoi l'interface dirait
+ * « aucun accès à ce projet » à quelqu'un qui le voit parfaitement mais n'y écrit pas.
  */
-const projectAccessError = (outcome: Exclude<ProjectAccessOutcome, 'granted'>): Error =>
-  outcome === 'unavailable' ? notFound() : forbidden('No access to this project');
+const projectAccessError = (
+  outcome: Exclude<ProjectAccessOutcome, 'granted'>,
+  intent: ProjectAccessIntent,
+): Error => {
+  if (outcome === 'unavailable') return notFound();
+  if (outcome === 'not-member') return forbidden('No access to this project');
+  return intent === 'manage'
+    ? forbidden('Managing the project is reserved to supervisors')
+    : forbidden('Your role on this project does not allow this', 'ROLE_FORBIDDEN');
+};
 
 /**
  * Middleware d'accès projet — lit l'id projet depuis `req.params.projectId`.
@@ -118,12 +152,16 @@ export const requireProjectAccess = async (
   const outcome = await resolveProjectAccess(req.user.id, req.user.role, projectId);
   // Erreur typée plutôt que réponse écrite ici : le handler global uniformise `{error, code}`,
   // seul moyen pour l'interface d'afficher le refus dans la langue du lecteur.
-  next(outcome === 'granted' ? undefined : projectAccessError(outcome));
+  next(outcome === 'granted' ? undefined : projectAccessError(outcome, 'read'));
 };
 
 /**
  * Variante utilisable dans un handler : lève une AppError (captée par le handler global)
  * si l'utilisateur n'a pas accès au projet. `req.user` est supposé présent (après authenticate).
+ *
+ * Un handler qui ÉCRIT passe `{ intent: 'write' }` : la garde vérifie alors le rôle
+ * effectif elle-même, au lieu de compter sur l'appel à `assertCanContribute` que trois
+ * chemins d'écriture avaient oublié (A1-03).
  */
 export const assertProjectAccess = async (
   req: Request,
@@ -132,7 +170,7 @@ export const assertProjectAccess = async (
 ): Promise<void> => {
   if (!req.user) throw unauthorized();
   const outcome = await resolveProjectAccess(req.user.id, req.user.role, projectId, options);
-  if (outcome !== 'granted') throw projectAccessError(outcome);
+  if (outcome !== 'granted') throw projectAccessError(outcome, options?.intent ?? 'read');
 };
 
 /**
@@ -157,10 +195,10 @@ export const requireProjectManage = async (
     res.status(400).json({ error: 'projectId invalide' });
     return;
   }
-  if (!(await projectIsAddressable(projectId, false))) {
-    next(notFound());
-    return;
-  }
-  const role = await effectiveProjectRole(req.user.id, req.user.role, projectId);
-  next(canManageProject(role) ? undefined : forbidden('Managing the project is reserved to supervisors'));
+  // Même garde que partout ailleurs, l'intention en plus : une seule implémentation du
+  // couple « projet désignable + rôle effectif », donc une seule à corriger.
+  const outcome = await resolveProjectAccess(req.user.id, req.user.role, projectId, {
+    intent: 'manage',
+  });
+  next(outcome === 'granted' ? undefined : projectAccessError(outcome, 'manage'));
 };

@@ -5,11 +5,12 @@ import { Role, TaskStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { AppError, badRequest, notFound } from '../lib/errors';
 import { assertProjectWritable } from '../lib/projectGuard';
-import { assertProjectManage, canContribute, effectiveProjectRole } from '../lib/projectRoles';
+import { assertProjectManage } from '../lib/projectRoles';
 import { sgStepToTaskType } from './shotgrid/shotgridMapper';
 import type { SessionUser } from '../lib/shotgridAccess';
 import * as DepartmentService from './DepartmentService';
 import * as TaskService from './TaskService';
+import { assertAssignable } from './EntityAssigneeService';
 
 /**
  * Assigner quelqu'un à un asset ou à un plan.
@@ -53,24 +54,13 @@ async function resolveProject(holder: AssignHolder, id: number): Promise<number>
 }
 
 /**
- * Qui peut recevoir du travail.
+ * Qui peut recevoir du travail : **une seule** garde, celle d'`EntityAssigneeService`.
  *
- * Trois refus, tous silencieux jusqu'ici parce que rien ne les vérifiait : un compte de
- * service (une identité machine n'ouvre pas Maya), un client (il commente, il ne livre
- * pas), et quelqu'un qui n'est pas membre du projet — l'assigner l'avertirait d'un travail
- * qu'il ne peut même pas ouvrir.
+ * Ce service en gardait une copie privée qui avait divergé — elle ne testait pas
+ * `disabledAt`, si bien qu'un compte désactivé refusé comme responsable d'un plan restait
+ * acceptable comme assigné d'une tâche. Deux copies des mêmes refus, c'est la porte de
+ * service de l'autre : on assigne la tâche, et l'entité suit.
  */
-async function assertAssignable(projectId: number, userId: number): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true, isService: true },
-  });
-  if (!user) throw notFound('User not found');
-  if (user.isService) throw badRequest('A service account cannot be assigned work', 'NOT_ASSIGNABLE');
-  const role = await effectiveProjectRole(user.id, user.role, projectId);
-  if (!canContribute(role))
-    throw badRequest('This person cannot be assigned work on this project', 'NOT_ASSIGNABLE');
-}
 
 /** Le projet est-il piloté depuis ShotGrid ? On n'y crée alors aucune tâche. */
 async function isDrivenByShotgrid(projectId: number): Promise<boolean> {
@@ -91,7 +81,7 @@ export async function assignEntity(user: SessionUser, input: AssignInput): Promi
   const projectId = await resolveProject(input.holder, input.id);
   await assertProjectWritable(projectId);
   await assertProjectManage(user.id, user.role, projectId);
-  if (input.userId !== null) await assertAssignable(projectId, input.userId);
+  if (input.userId !== null) await assertAssignable(projectId, [input.userId]);
 
   const departmentIds = input.departmentIds ?? [];
   if (departmentIds.length > 0) await DepartmentService.assertDepartmentsOfProject(projectId, departmentIds);

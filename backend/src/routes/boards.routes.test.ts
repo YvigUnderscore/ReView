@@ -111,6 +111,50 @@ describe('PUT /api/boards — verrou d’archivage', () => {
 });
 
 /**
+ * A1-03 — la garde d'écriture lisait le rôle GLOBAL (`req.user.role === CLIENT`) alors que
+ * `assertProjectAccess` ne vérifie que l'existence du membership. Un ARTIST rétrogradé
+ * CLIENT sur le projet (38.E) écrivait donc le board comme avant.
+ */
+describe('PUT /api/boards — rôle effectif par projet (38.E)', () => {
+  beforeEach(() => {
+    db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
+    // Global ARTIST (cf. `actor.current`), rétrogradé CLIENT sur le projet 42.
+    db.projectMembership.findUnique.mockResolvedValue({ userId: 7, projectId: 42, role: Role.CLIENT });
+  });
+
+  it('refuse l’écriture à un ARTIST rétrogradé CLIENT (403 ROLE_FORBIDDEN)', async () => {
+    const res = await request(app).put('/api/boards/project/42').send(save);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('ROLE_FORBIDDEN');
+    expect(db.board.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuse aussi la présignation d’images, qui est une écriture', async () => {
+    const res = await request(app)
+      .post('/api/boards/project/42/files')
+      .send({ files: [{ id: 'a1b2c3d4', mimeType: 'image/png' }] });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('ROLE_FORBIDDEN');
+  });
+
+  it('lui laisse la lecture — rétrograder retire l’écriture, pas l’accès au projet', async () => {
+    const res = await request(app).get('/api/boards/project/42');
+    expect(res.status).toBe(200);
+    expect(res.body.board.document).toEqual(document);
+  });
+
+  it('inversement : un ARTIST promu SUPERVISOR localement écrit le board', async () => {
+    db.projectMembership.findUnique.mockResolvedValue({
+      userId: 7,
+      projectId: 42,
+      role: Role.SUPERVISOR,
+    });
+    const res = await request(app).put('/api/boards/project/42').send(save);
+    expect(res.status).toBe(200);
+  });
+});
+
+/**
  * Le journal `BoardChange` écrivait une ligne à chaque autosave (1,2 s de débounce) et
  * n'était relu par rien : modèle et table retirés.
  */

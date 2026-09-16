@@ -1,7 +1,12 @@
 # Override de DÉVELOPPEMENT — auto-chargé par `docker compose up`.
 # Expose Postgres/Redis à l'hôte pour le dev local (Prisma, scripts, tests).
-# NE PAS utiliser en production : déployer avec uniquement le fichier de base
-#   docker compose -f docker-compose.yml up -d
+# NE PAS utiliser en production : déployer le fichier de base ET l'overlay de production,
+# qui ajoute le frontal TLS et retire tout port hôte (`ports: !reset []`) :
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Nommer le fichier de base SEUL — ce que cet en-tête conseillait jusqu'ici — n'écarte que
+# cet override : le frontal TLS manque, les ports hôtes restent publiés, et l'API répond
+# donc en clair. C'est aussi ce que prescrivent DOCUMENTATION/getting-started/installation.md
+# et docker-stack.md ; `scripts/install.sh` écrit la même liste dans COMPOSE_FILE.
 # Ces deux services n'ont AUCUNE authentification réseau utile en dev (Redis n'a pas de mot
 # de passe du tout) : ils écoutent donc sur la boucle locale et non sur 0.0.0.0, où ils
 # offriraient la base et la file de jobs à tout le réseau. Poser DEV_BIND=0.0.0.0 pour

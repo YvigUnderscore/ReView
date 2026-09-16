@@ -6,7 +6,10 @@ import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
 import { detectImage } from '../lib/fileSignatures';
-import { badRequest, forbidden } from '../lib/errors';
+import { badRequest, forbidden, notFound } from '../lib/errors';
+import { checkProjectAccess } from '../middleware/rbac';
+import { assertProjectWritable } from '../lib/projectGuard';
+import { resolveProjectIdForMedia } from '../lib/pipeline';
 import { assertMediaManage } from './MediaService';
 
 /**
@@ -68,9 +71,27 @@ async function serialize(ref: {
 }
 
 /**
+ * Accès en écriture au média porteur (membre du projet, projet ni retiré ni archivé).
+ *
+ * La propriété d'un commentaire ne vaut pas autorisation : elle raisonne sur un état
+ * passé. Le commentaire survit au retrait du membership, à l'archivage du projet et à sa
+ * mise à la corbeille — un prestataire sorti d'un projet terminé rejouait l'un de ses
+ * anciens `commentId` et déposait encore jusqu'à 6 Mo sous le préfixe `derived/` du
+ * studio. L'accès se revérifie donc au moment du geste, comme sur le routeur voisin
+ * (`TimelineMarkerService.assertMediaRead`).
+ */
+async function assertMediaWrite(mediaId: number, user: SessionUser): Promise<void> {
+  const projectId = await resolveProjectIdForMedia(mediaId);
+  if (!projectId) throw notFound('Media not found');
+  if (!(await checkProjectAccess(user.id, user.role, projectId)))
+    throw forbidden('No access to this project');
+  await assertProjectWritable(projectId);
+}
+
+/**
  * Ajoute une image de référence (data URL) liée à un commentaire du média. Réservé à
- * l'**auteur du commentaire** (l'accès projet est garanti par l'existence du commentaire,
- * créé sous RBAC). La position est figée à la création.
+ * l'**auteur du commentaire**, et seulement tant qu'il a accès au projet. La position est
+ * figée à la création.
  */
 export async function add(
   user: SessionUser,
@@ -79,6 +100,7 @@ export async function add(
   commentId: number,
   pos?: { x?: number; y?: number; width?: number },
 ) {
+  await assertMediaWrite(mediaId, user);
   const comment = await prisma.comment.findUnique({
     where: { id: commentId },
     select: { mediaObjectId: true, userId: true },

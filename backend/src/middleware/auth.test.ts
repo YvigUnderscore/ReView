@@ -158,6 +158,29 @@ describe('authenticate — session et existence du compte', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  /**
+   * A1-01 : le cache d'identité ne SÉLECTIONNAIT même pas la colonne — le middleware n'avait
+   * donc rien à tester, et un jeton émis avant la désactivation vivait sa vie. C'est le
+   * second verrou : celui de l'émission ne couvre pas les jetons déjà en circulation.
+   */
+  it('refuse un compte désactivé', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      ...dbUser,
+      disabledAt: new Date(),
+    } as never);
+    const { res, next } = await run(signAccessToken({ ...dbUser, sid: 'abc' }));
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toMatchObject({ code: 'ACCOUNT_DISABLED' });
+  });
+
+  // `req.user` est l'identité, pas la fiche : la date de désactivation n'a pas à voyager
+  // dans les réponses qui recopient l'utilisateur authentifié.
+  it('ne propage pas disabledAt dans req.user', async () => {
+    const { req } = await run(signAccessToken({ ...dbUser, sid: 'abc' }));
+    expect(req.user).not.toHaveProperty('disabledAt');
+  });
+
   // Fin de la grâce transitoire de 36.B. Un jeton sans `sid` — émis avant la phase 36, ou
   // fabriqué en retirant la claim — n'a aucune session à révoquer : il survivrait à une
   // déconnexion, à un changement de mot de passe et à un offboarding. Il est donc refusé

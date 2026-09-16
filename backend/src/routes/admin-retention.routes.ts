@@ -28,10 +28,29 @@ router.get('/retention', async (_req, res) => {
   res.json({ policy: await getRetentionPolicy(), defaults: RETENTION_DEFAULTS });
 });
 
-// PUT /api/admin/retention — enregistre les durées (0 = conservation illimitée)
+/**
+ * PUT /api/admin/retention — enregistre les durées (0 = conservation illimitée).
+ *
+ * La trace porte l'AVANT et l'APRÈS : « 365 → 90 sur l'audit » se lit, « 90 » ne dit rien.
+ * Elle est inpurgeable (`AUDIT_UNPURGEABLE_ACTIONS`), donc un raccourcissement de la
+ * rétention d'audit reste visible pour toujours, y compris après la purge qu'il commande.
+ *
+ * **Pas de délai avant prise d'effet**, délibérément (A5-04). Un tel délai n'apporterait
+ * rien de plus ici : le plancher `AUDIT_RETENTION_MIN_DAYS` met déjà hors d'atteinte tout
+ * ce qui s'est passé récemment — la fenêtre que le délai protégerait —, et la manœuvre
+ * reste consignée de façon indélébile. Il coûterait en revanche une politique « en
+ * attente » à stocker, afficher et annuler, et il retarderait le cas légitime pressé :
+ * une demande d'effacement RGPD, qui doit être honorée sans attendre une semaine.
+ */
 router.put('/retention', validate({ body: retentionPolicySchema }), async (req, res) => {
+  const previous = await getRetentionPolicy();
   const policy = await setRetentionPolicy(req.body);
-  logAudit({ userId: req.user!.id, action: 'RETENTION_CONFIG', entityType: 'Setting', metadata: policy });
+  logAudit({
+    userId: req.user!.id,
+    action: 'RETENTION_CONFIG',
+    entityType: 'Setting',
+    metadata: { previous, policy },
+  });
   res.json({ policy, defaults: RETENTION_DEFAULTS });
 });
 

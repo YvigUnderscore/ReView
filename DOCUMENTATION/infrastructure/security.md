@@ -2,7 +2,7 @@
 
 *The controls behind every request — tokens, roles, presigned bytes, outbound guards, limits and retention.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 ReView is a single-tenant application: one instance is one studio, and everything inside it is
 somebody's unreleased work. The model below is built on that assumption. There is no
@@ -25,6 +25,13 @@ through a URL that was signed after an authorization check.
   the `Referer` header, where a header does not go.
 - Passwords are bcrypt-hashed with cost 12 and must be 8–128 characters with at least one letter
   and one digit. Auth events are audited.
+- **A disabled account cannot come back in.** `disabledAt` is checked when a password is
+  presented, at the 2FA step, when an SSO identity is matched, on every request carrying an
+  access token, and on every call made with an API token — all of them answer
+  `401 ACCOUNT_DISABLED`. The check on the request path matters as much as the one at sign-in:
+  the identity cache is 30 s old at worst, and without it a token issued a moment before the
+  account was disabled kept working for that window. See
+  [Users & roles](../admin-guide/users-and-roles.md#disabling-re-enabling-deleting).
 - Optional TOTP 2FA with hashed one-time backup codes; the TOTP secret is stored encrypted
   (AES-GCM, `APP_ENCRYPTION_KEY` or a key derived from `JWT_SECRET`). The verification endpoint is
   limited to 15 attempts per 15 minutes.
@@ -224,6 +231,12 @@ JWT signature counts as an identity — a random `Bearer` falls back to the IP, 
 token per request would create a fresh counter every time, which is no limiter at all. Opaque API
 tokens (`rvk_…`) are counted by IP and have their own `/api/v1` ceiling.
 
+Everything above rests on `req.ip` being the client's address rather than a value the client
+chose. That is what `TRUST_PROXY` decides, and it is why it defaults to `0` and why the backend
+port is bound to the loopback: an API reachable directly, with `X-Forwarded-For` trusted, has
+limiters that count a different client on every request. The pairing is set out in
+[Containers & configuration](containers-and-configuration.md#reaching-the-api-bport_bind-and-trust_proxy).
+
 > [!WARNING]
 > The limiter **fails closed**: if Redis does not answer, the request is refused with `429`. That
 > is the right trade — a limiter that cannot count must not become the way around itself — but it
@@ -234,9 +247,23 @@ tokens (`rvk_…`) are counted by IP and have their own `/api/v1` ceiling.
 ## Secrets
 
 - `JWT_SECRET`, MinIO, SMTP and Grafana credentials live in `.env` — never commit it.
-- Stored secrets (SMTP password, webhook HMAC secrets, per-account TOTP secrets) are encrypted at
-  rest with `APP_ENCRYPTION_KEY`, or a key derived from `JWT_SECRET` when it is unset. If you set
-  it, production applies the same strength rule as to `JWT_SECRET`.
+- Stored secrets (SMTP password, OIDC client secret, webhook HMAC secrets, ShotGrid credentials,
+  per-account TOTP secrets) are encrypted at rest with `APP_ENCRYPTION_KEY`, or a key derived
+  from `JWT_SECRET` when it is unset. If you set it, production applies the same strength rule as
+  to `JWT_SECRET`.
+- **Set `APP_ENCRYPTION_KEY` explicitly, on day one.** Left unset, the encryption key is a
+  SHA-256 of `JWT_SECRET`, which ties the secrets of the studio to the signing secret of its
+  sessions. Rotating `JWT_SECRET` is the correct answer to a leaked token — and doing it while
+  the two are tied makes **every stored secret unreadable at once**: outgoing mail stops, the
+  SSO client secret is gone, webhooks lose their signing key, and every 2FA enrolment has to be
+  redone. Setting the variable decouples the two, so a rotation costs nothing but re-signing
+  sessions. Changing `APP_ENCRYPTION_KEY` itself has the same effect as the rotation it protects
+  you from, so it is set once and kept with the backups.
+- Each ciphertext carries a 32-bit fingerprint of the key that produced it, in clear. It protects
+  nothing — AES-GCM does that — it tells the two failures apart: a secret encrypted with another
+  key and a corrupted secret both decrypt to nothing, and only the fingerprint says whether to go
+  looking for the old key or to re-enter the value. Decryption failures are logged as errors with
+  the remedy, once a minute per secret, and the caller is refused rather than degraded.
 - Secrets shown once and never again: API tokens (`rvk_…`), service tokens, webhook HMAC secrets,
   2FA backup codes. Only hashes or ciphertext are stored.
 - Log objects are redacted (`password`, `secret`, `apiKey`, `accessToken`, plus one and two levels
@@ -252,8 +279,11 @@ tokens (`rvk_…`) are counted by IP and have their own `/api/v1` ceiling.
   every host port from `frontend`, `backend` and `minio`. MinIO is reachable only through
   `https://<domain>/<bucket>/`; its console requires an SSH tunnel or a VPN.
 - `helmet` is applied on the API, with `crossOriginResourcePolicy: cross-origin` so the SPA can
-  consume storage responses. `trust proxy` is set to 1 hop, which is what makes IP-based rate
-  limiting meaningful behind nginx.
+  consume storage responses. `trust proxy` is `TRUST_PROXY`, **`0` by default** and set to `1`
+  by the compose files, which is what makes IP-based rate limiting meaningful behind nginx — and
+  only holds while the backend port stays on the loopback, as
+  [Containers & configuration](containers-and-configuration.md#reaching-the-api-bport_bind-and-trust_proxy)
+  explains.
 - Each nginx location sets its own CSP: a strict `default-src 'self'` policy for the SPA, a
   `sandbox` policy for the storage path. The application policy is deliberately declared per
   location and not at server level — two coexisting CSP headers are applied as an *intersection*

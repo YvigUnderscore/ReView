@@ -797,7 +797,11 @@
   "kanban.addItem": "Ajouter un élément…",
   "reviews.addToPlaylistShort": "Ajouter à la playlist",
   "reviews.assigned.title": "Qui m'est confié",
-  "reviews.assigned.count": { "one": "{count} review vous attend", "many": "{count} reviews vous attendent", "other": "{count} reviews vous attendent" },
+  "reviews.assigned.count": {
+    "one": "{count} review vous attend",
+    "many": "{count} reviews vous attendent",
+    "other": "{count} reviews vous attendent"
+  },
   "reviews.filter.allAssignments": "Toutes les reviews",
   "common.clearSelection": "Annuler la sélection",
   "comments.imagePreview": "Aperçu image",
@@ -1171,7 +1175,11 @@
     "one": "{count} session révoquée",
     "other": "{count} sessions révoquées"
   },
-  "sessions.showAll": { "one": "Afficher la {count} session", "many": "Afficher les {count} sessions", "other": "Afficher les {count} sessions" },
+  "sessions.showAll": {
+    "one": "Afficher la {count} session",
+    "many": "Afficher les {count} sessions",
+    "other": "Afficher les {count} sessions"
+  },
   "sessions.showFewer": "Afficher moins",
   "twofa.qr": "QR code d’enrôlement 2FA",
   "twofa.scan": "Scannez ce QR code avec votre application (Google Authenticator, 1Password…), puis saisissez le code affiché.",
@@ -2078,6 +2086,8 @@
   "smtp.port": "Port",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "Email de test envoyé à {to}",
+  "smtp.allowInsecure": "Autoriser l’envoi non chiffré (sans STARTTLS)",
+  "smtp.allowInsecureHint": "Réservé à un relais interne qui ne propose pas STARTTLS. Le mot de passe SMTP et chaque lien d’invitation traversent alors le réseau en clair, lisibles par quiconque est sur le trajet.",
   "storage.map.hint": "Un seul bucket S3/MinIO pour toute l’instance ; la suppression d’un média purge son dossier d’original et son préfixe",
   "storage.objShort": "{count} obj.",
   "storage.objects": "Objets",
@@ -2912,7 +2922,10 @@
   "shotgrid.statuses.title": "Statuts proposés sur ce projet",
   "shotgrid.statuses.hint": "Un site connaît tous les statuts du studio ; une production donnée n'en emploie que quelques-uns. Cochez ceux que vous voulez voir proposés — menus, sélecteurs et filtres suivent. Ne rien cocher garde le vocabulaire entier. Masquer n'efface pas : une entité qui porte déjà un statut masqué continue de l'afficher.",
   "shotgrid.statuses.all": "tous proposés",
-  "shotgrid.statuses.count": { "one": "{count} retenu", "other": "{count} retenus" },
+  "shotgrid.statuses.count": {
+    "one": "{count} retenu",
+    "other": "{count} retenus"
+  },
   "shotgrid.statuses.scopeLabel": "Statuts affichés",
   "shotgrid.statuses.scope.task": "Pour les tasks",
   "shotgrid.statuses.scope.shot": "Pour les shots",
@@ -3145,6 +3158,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "Aucun identifiant ShotGrid n'est enregistré pour ce site.",
   "error.REVIEW_NOTE_REQUIRED": "Ce projet exige une consigne pour confier une review.",
   "error.REVIEW_NOTE_TOO_SHORT": "Cette consigne est plus courte que ce que le projet exige.",
+  "error.ACCOUNT_DISABLED": "Ce compte est désactivé. Demandez à un administrateur de le réactiver.",
+  "error.DEPARTMENT_SCOPE_MIX": "Impossible de réordonner ensemble des départements de projets différents.",
+  "error.SMTP_PASSWORD_UNREADABLE": "Le mot de passe SMTP enregistré ne se déchiffre plus. Ressaisissez-le.",
   "about.title": "À propos de cette instance",
   "about.version": "Version",
   "about.builtAt": "Construite le",
@@ -3376,11 +3392,20 @@
     "other": "{count} shots mis à jour, {failed} refusé(s)"
   },
   "bulk.status.menu": "Statut",
-  "bulk.decision.title": { "one": "Décision de review sur {count} version", "other": "Décision de review sur {count} versions" },
+  "bulk.decision.title": {
+    "one": "Décision de review sur {count} version",
+    "other": "Décision de review sur {count} versions"
+  },
   "bulk.decision.hint": "La même décision, et le même commentaire facultatif, sont posés sur chacune.",
   "bulk.decision.mixed": "La sélection traverse plusieurs projets : un statut que l'un d'eux n'emploie pas y est refusé, et compté.",
-  "bulk.decision.done": { "one": "{count} décision posée", "other": "{count} décisions posées" },
-  "bulk.decision.partial": { "one": "{count} décision posée, {failed} refusée(s)", "other": "{count} décisions posées, {failed} refusée(s)" },
+  "bulk.decision.done": {
+    "one": "{count} décision posée",
+    "other": "{count} décisions posées"
+  },
+  "bulk.decision.partial": {
+    "one": "{count} décision posée, {failed} refusée(s)",
+    "other": "{count} décisions posées, {failed} refusée(s)"
+  },
   "queryState.title": "Impossible de charger cette section",
   "queryState.description": "Le serveur n'a pas répondu. Il redémarre peut-être, ou il est indisponible — réessayez.",
   "queryState.retry": "Réessayer",
@@ -3425,7 +3450,10 @@
   "ops.latest.rateLimited": "Le catalogue des versions refuse d'autres vérifications pour l'instant. Réessayer plus tard.",
   "ops.latest.disabled": "La vérification des versions est désactivée sur cette instance.",
   "ops.changes.title": "Ce que ça change",
-  "ops.changes.count": { "one": "{count} version parue depuis celle en service", "other": "{count} versions parues depuis celle en service" },
+  "ops.changes.count": {
+    "one": "{count} version parue depuis celle en service",
+    "other": "{count} versions parues depuis celle en service"
+  },
   "ops.changes.none": "Rien de nouveau depuis la version en service.",
   "ops.changes.prerelease": "Pré-version",
   "ops.manual.title": "Depuis un terminal",
@@ -3481,7 +3509,10 @@
   "ops.result.intact": "Rien n'a été basculé : l'instance est intacte.",
   "ops.result.unknownHint": "L'agent ne répond plus : l'issue n'est pas connue. Lire son propre journal :",
   "ops.backups.title": "Sauvegardes",
-  "ops.backups.count": { "one": "{count} sauvegarde", "other": "{count} sauvegardes" },
+  "ops.backups.count": {
+    "one": "{count} sauvegarde",
+    "other": "{count} sauvegardes"
+  },
   "ops.backups.empty": "Aucune sauvegarde ici pour l'instant.",
   "ops.backups.unavailable": "Le dossier des sauvegardes n'est pas monté dans l'application : rien ne peut être listé. Les sauvegardes prises depuis un terminal, elles, ne changent pas.",
   "ops.backups.create": "Sauvegarder maintenant",
@@ -3498,7 +3529,11 @@
   "reviewers.title": "Reviewers",
   "reviewers.none": "Personne n'a encore été chargé de la review de cette version",
   "reviewers.assign": "Assigner",
-  "reviewers.saved": { "one": "{count} personne sur cette review", "many": "{count} personnes sur cette review", "other": "{count} personnes sur cette review" },
+  "reviewers.saved": {
+    "one": "{count} personne sur cette review",
+    "many": "{count} personnes sur cette review",
+    "other": "{count} personnes sur cette review"
+  },
   "reviewers.notePlaceholder": "Que doit-il regarder ? (la lumière, le raccord au 1042…)",
   "reviewers.noteLabel": "Ce que {name} doit regarder",
   "reviewers.noteRequired": "Ce projet exige une consigne.",

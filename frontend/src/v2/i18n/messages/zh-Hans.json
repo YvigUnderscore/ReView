@@ -779,7 +779,9 @@
   "kanban.addItem": "添加条目…",
   "reviews.addToPlaylistShort": "加入 playlist",
   "reviews.assigned.title": "指派给我的",
-  "reviews.assigned.count": { "other": "{count} 个 review 在等你" },
+  "reviews.assigned.count": {
+    "other": "{count} 个 review 在等你"
+  },
   "reviews.filter.allAssignments": "全部 review",
   "common.clearSelection": "取消选择",
   "comments.imagePreview": "图片预览",
@@ -1142,7 +1144,9 @@
   "sessions.revokedCount": {
     "other": "已注销 {count} 个会话"
   },
-  "sessions.showAll": { "other": "显示全部 {count} 个会话" },
+  "sessions.showAll": {
+    "other": "显示全部 {count} 个会话"
+  },
   "sessions.showFewer": "收起",
   "twofa.qr": "2FA 绑定二维码",
   "twofa.scan": "用你的验证器应用（Google Authenticator、1Password…）扫描此二维码，然后输入显示的验证码。",
@@ -2025,6 +2029,8 @@
   "smtp.port": "端口",
   "smtp.fromPlaceholder": "ReView <no-reply@example.com>",
   "smtp.testSent": "测试邮件已发送至 {to}",
+  "smtp.allowInsecure": "允许不加密发送（不使用 STARTTLS）",
+  "smtp.allowInsecureHint": "仅适用于不支持 STARTTLS 的内部中继。此时 SMTP 密码和所有邀请链接都会以明文穿过网络，路径上的任何人都能读到。",
   "storage.map.hint": "整个实例只用一个 S3/MinIO bucket；删除媒体会清除其原始目录及前缀",
   "storage.objShort": "{count} 个对象",
   "storage.objects": "对象",
@@ -2825,7 +2831,9 @@
   "shotgrid.statuses.title": "本项目提供的状态",
   "shotgrid.statuses.hint": "站点掌握工作室的全部状态，而一部作品只用到其中几个。勾选希望提供的状态，菜单、选择器与筛选都会随之收窄。不勾选则保留全部词汇。隐藏并不删除：已带有被隐藏状态的对象仍会显示它。",
   "shotgrid.statuses.all": "全部提供",
-  "shotgrid.statuses.count": { "other": "已选 {count} 个" },
+  "shotgrid.statuses.count": {
+    "other": "已选 {count} 个"
+  },
   "shotgrid.statuses.scopeLabel": "显示的状态",
   "shotgrid.statuses.scope.task": "用于 task",
   "shotgrid.statuses.scope.shot": "用于 shot",
@@ -3049,6 +3057,9 @@
   "error.SHOTGRID_NOT_CONFIGURED": "尚未为此站点记录 ShotGrid 凭据。",
   "error.REVIEW_NOTE_REQUIRED": "该项目要求在交付 review 时填写说明。",
   "error.REVIEW_NOTE_TOO_SHORT": "该说明短于项目的要求。",
+  "error.ACCOUNT_DISABLED": "该账户已被停用，请联系管理员重新启用。",
+  "error.DEPARTMENT_SCOPE_MIX": "不能将不同项目的部门一起重新排序。",
+  "error.SMTP_PASSWORD_UNREADABLE": "已保存的 SMTP 密码无法再解密，请重新输入。",
   "about.title": "关于本实例",
   "about.version": "Version",
   "about.builtAt": "构建时间",
@@ -3267,11 +3278,17 @@
     "other": "已更新 {count} 个 shot，{failed} 个被拒绝"
   },
   "bulk.status.menu": "状态",
-  "bulk.decision.title": { "other": "对 {count} 个 version 作出 review 决定" },
+  "bulk.decision.title": {
+    "other": "对 {count} 个 version 作出 review 决定"
+  },
   "bulk.decision.hint": "相同的判定与相同的可选备注会逐一记录。",
   "bulk.decision.mixed": "所选内容跨越多个项目：某个项目未使用的状态会在那里被拒绝并计入。",
-  "bulk.decision.done": { "other": "已记录 {count} 个判定" },
-  "bulk.decision.partial": { "other": "已记录 {count} 个判定，{failed} 个被拒绝" },
+  "bulk.decision.done": {
+    "other": "已记录 {count} 个判定"
+  },
+  "bulk.decision.partial": {
+    "other": "已记录 {count} 个判定，{failed} 个被拒绝"
+  },
   "queryState.title": "无法加载此部分",
   "queryState.description": "服务器没有响应。它可能正在重启或不可用，请重试。",
   "queryState.retry": "重试",
@@ -3310,7 +3327,9 @@
   "ops.latest.rateLimited": "发行版目录暂时拒绝继续查询。请稍后再试。",
   "ops.latest.disabled": "此实例已关闭发行版检查。",
   "ops.changes.title": "有哪些变化",
-  "ops.changes.count": { "other": "自已安装版本以来 {count} 个" },
+  "ops.changes.count": {
+    "other": "自已安装版本以来 {count} 个"
+  },
   "ops.changes.none": "自已安装的发行版以来没有新内容。",
   "ops.changes.prerelease": "预发行",
   "ops.manual.title": "从终端执行",
@@ -3366,7 +3385,9 @@
   "ops.result.intact": "没有进行任何切换——实例保持原样。",
   "ops.result.unknownHint": "代理已停止响应，结果未知。请查看它自己的日志：",
   "ops.backups.title": "备份",
-  "ops.backups.count": { "other": "{count} 个备份" },
+  "ops.backups.count": {
+    "other": "{count} 个备份"
+  },
   "ops.backups.empty": "这里还没有备份。",
   "ops.backups.unavailable": "备份目录未挂载到应用中，因此无法列出任何内容。从终端创建的备份不受影响。",
   "ops.backups.create": "立即备份",
@@ -3383,7 +3404,9 @@
   "reviewers.title": "review 负责人",
   "reviewers.none": "还没有人负责这个 version 的 review",
   "reviewers.assign": "指派",
-  "reviewers.saved": { "other": "这个 review 上有 {count} 人" },
+  "reviewers.saved": {
+    "other": "这个 review 上有 {count} 人"
+  },
   "reviewers.notePlaceholder": "要看什么？（灯光、1042 处的衔接……）",
   "reviewers.noteLabel": "{name} 要看什么",
   "reviewers.noteRequired": "该项目要求填写说明。",

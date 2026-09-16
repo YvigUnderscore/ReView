@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
-import { requireRole } from '../middleware/rbac';
+import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as ReviewDecisionService from '../services/ReviewDecisionService';
 
@@ -37,12 +37,13 @@ router.get(
     // la valeur peut rester une chaîne. On la convertit explicitement.
     const raw = req.query.projectId;
     const projectId = raw === undefined ? undefined : Number(raw);
-    res.json({
-      statuses:
-        projectId && Number.isInteger(projectId)
-          ? await ReviewDecisionService.listStatusesForProject(projectId)
-          : await ReviewDecisionService.listStatuses(),
-    });
+    if (!projectId || !Number.isInteger(projectId))
+      return res.json({ statuses: await ReviewDecisionService.listStatuses() });
+    // Le vocabulaire restreint d'un projet dit s'il existe, s'il est relié à un site
+    // ShotGrid et ce qu'on peut y poster : un `projectId` arbitraire énumérait le studio
+    // entier depuis n'importe quel compte, partage client compris.
+    await assertProjectAccess(req, projectId);
+    res.json({ statuses: await ReviewDecisionService.listStatusesForProject(projectId) });
   },
 );
 

@@ -51,6 +51,22 @@ describe('authenticateSocket — jeton d’accès', () => {
     expect(socket.user).toEqual(dbUser);
   });
 
+  // A1-01 : un socket donne accès aux mêmes données que l'API — commentaires internes,
+  // URLs présignées, notifications. Il se ferme donc sur les mêmes conditions.
+  it('refuse un compte désactivé', async () => {
+    db.user.findUnique.mockResolvedValue({ ...dbUser, disabledAt: new Date() });
+    const { socket, refuse } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
+    expect(refuse).toBe(true);
+    expect(socket.user).toBeUndefined();
+  });
+
+  // A3-02 : sans le `sid`, la session n'était vérifiée qu'au handshake et une révocation
+  // laissait la websocket ouverte pour des jours. La revalidation périodique en a besoin.
+  it('retient la session du handshake pour pouvoir la rejouer', async () => {
+    const { socket } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
+    expect(socket.authSid).toBe('abc');
+  });
+
   /**
    * Le cœur du correctif : un socket donne accès aux mêmes données qu'une requête HTTP.
    * Tant qu'il acceptait un jeton hérité sans `sid`, il restait la seule porte du produit

@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { toPublicUser } from '../lib/userView';
 import { getOnlineUserIds } from './PresenceService';
+import { redactAuditMetadata } from './AuditService';
 
 /**
  * Fiche détaillée d'un compte pour l'administration : profil complet, projets
@@ -69,7 +70,14 @@ export async function userDetail(id: number) {
         where: { userId: id },
         orderBy: { createdAt: 'desc' },
         take: 20,
-        select: { id: true, action: true, entityType: true, entityId: true, createdAt: true },
+        select: {
+          id: true,
+          action: true,
+          entityType: true,
+          entityId: true,
+          createdAt: true,
+          metadata: true,
+        },
       }),
       prisma.mediaObject.count({ where: { uploaderId: id, deletedAt: null } }),
       prisma.version.count({ where: { authorId: id, deletedAt: null } }),
@@ -79,6 +87,18 @@ export async function userDetail(id: number) {
 
   // `totpEnabledAt` ne sort pas tel quel : on n'expose qu'un booléen 2FA.
   const { totpEnabledAt, ...publicFields } = user;
+
+  /*
+   * A5-03 : cette vue rendait l'activité SANS `metadata`, alors que la vue studio le rend
+   * désormais — « MEDIA_PURGE · MediaObject · 812 » sans dire lesquels des trois cents
+   * identifiants du lot étaient partis. Le champ passe donc par la MÊME rédaction que
+   * l'autre vue : sans elle, l'écran par personne exposerait (URL de webhook, secret glissé
+   * dans le contexte d'une action) exactement ce que l'écran studio protège.
+   */
+  const redactedActivity = activity.map(({ metadata, ...row }) => ({
+    ...row,
+    metadata: redactAuditMetadata(metadata) ?? null,
+  }));
   return {
     user: {
       ...(await toPublicUser(publicFields)),
@@ -88,7 +108,7 @@ export async function userDetail(id: number) {
     memberships,
     sessions,
     apiTokens,
-    activity,
+    activity: redactedActivity,
     counts: { media: mediaCount, versions: versionCount, comments: commentCount, tasks: taskCount },
   };
 }

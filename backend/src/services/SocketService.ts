@@ -4,11 +4,19 @@
 import { Server as SocketServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import type { Server as HttpServer } from 'node:http';
-import { createRedisClient, enableRedisTransport } from '../lib/redis';
+import { createRedisClient, enableRedisTransport, subscribeRedis } from '../lib/redis';
 import { registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { authenticateSocket, type AuthedSocket } from './socketAuth';
+import { getAuthUser } from '../lib/userCache';
+import {
+  isSessionActive,
+  decodeSessionRevocation,
+  markSessionsRevoked,
+  SESSION_REVOCATION_CHANNEL,
+} from '../lib/sessions';
+import { attachSocketRateLimit } from '../lib/socketRateLimit';
 import { checkProjectAccess } from '../middleware/rbac';
 import { env } from '../config/env';
 import {
@@ -49,6 +57,88 @@ let io: SocketServer | undefined;
 // La vérification du handshake vit dans `socketAuth` : c'est une frontière de sécurité,
 // elle a ses propres tests plutôt que d'être une closure inaccessible.
 export type { AuthedSocket };
+
+/**
+ * Cadence de revalidation des connexions établies (A3-02).
+ *
+ * `authenticateSocket` ne s'exécute qu'au handshake : ensuite `socket.user` est figé et la
+ * connexion vit tant que le transport tient — des jours. Révoquer une session ou rétrograder
+ * un rôle coupait donc l'API en trente secondes sans rien changer au canal temps réel :
+ * l'onglet resté ouvert continuait de recevoir les commentaires internes du projet (y compris
+ * ceux cachés aux clients, avec les URL présignées de leurs pièces jointes), et son ancien
+ * rôle lui rouvrait `join_project`.
+ *
+ * Une minute est un compromis assumé : plus court ne gagnerait rien (session et identité sont
+ * mises en cache trente secondes de part et d'autre), plus long laisserait un partant écouter.
+ */
+const REVALIDATE_INTERVAL_MS = 60_000;
+
+/**
+ * Rejoue sur un socket établi les contrôles de la porte : session vivante, compte existant
+ * et actif, rôle courant. Rend `false` quand la connexion n'a plus lieu d'être.
+ *
+ * Le rôle est **relu et réécrit**, pas seulement vérifié : c'est `socket.user.role` que
+ * consultent `join_review`, `live:join` et `join_project`, et `resolveProjectAccess` accorde
+ * un accès global à ADMIN comme à SUPERVISOR. Le laisser figé revenait à donner à une
+ * rétrogradation la durée de vie d'un onglet ouvert.
+ *
+ * Coût : aucune requête par message. `isSessionActive` et `getAuthUser` ont chacun leur cache
+ * de trente secondes, donc au pire une lecture par compte et par balayage.
+ */
+export async function revalidateSocket(socket: AuthedSocket): Promise<boolean> {
+  const current = socket.user;
+  // Un invité de partage n'a ni session ni rôle : son accès tient au ShareLink, revérifié
+  // à chaque lecture côté API. Rien à rejouer ici.
+  if (!current) return true;
+  if (!socket.authSid || !(await isSessionActive(socket.authSid))) return false;
+  const fresh = await getAuthUser(current.id);
+  if (!fresh || fresh.disabledAt) return false;
+  socket.user = { id: fresh.id, email: fresh.email, role: fresh.role };
+  return true;
+}
+
+/**
+ * Balaye les sockets de CETTE réplique — chacune tient les siennes, l'adapter Redis ne sert
+ * qu'aux émissions.
+ *
+ * Une panne de base ou de Redis ne doit pas déconnecter tout le studio : l'échec du contrôle
+ * garde la connexion (l'API, elle, échoue fermé de son côté). C'est le choix d'exploitation,
+ * pas un oubli.
+ */
+export async function sweepSockets(server: SocketServer): Promise<void> {
+  for (const socket of server.sockets.sockets.values()) {
+    const authed = socket as AuthedSocket;
+    const keep = await revalidateSocket(authed).catch((err: unknown) => {
+      logger.warn({ err }, '[socket] revalidation impossible : connexion conservée');
+      return true;
+    });
+    if (!keep) authed.disconnect(true);
+  }
+}
+
+/**
+ * Ferme, sans attendre le balayage, les connexions portées par une session révoquée
+ * (A3-02, volet immédiat). Rend le nombre de connexions fermées.
+ *
+ * Le rapprochement se fait sur le `sid` exact et non sur l'utilisateur : c'est ce qui fait
+ * que « révoquer toutes mes sessions sauf celle-ci » ne déconnecte pas l'auteur de l'action
+ * — la session épargnée n'est simplement pas dans la liste publiée.
+ *
+ * Bornée à CETTE réplique, comme `sweepSockets` : chaque process tient ses propres sockets,
+ * l'adapter Redis ne sert qu'aux émissions. C'est la publication sur le canal qui porte
+ * l'ordre jusqu'aux autres.
+ */
+export function disconnectRevokedSockets(server: SocketServer, sids: readonly string[]): number {
+  const revoked = new Set(sids);
+  let closed = 0;
+  for (const socket of server.sockets.sockets.values()) {
+    const authed = socket as AuthedSocket;
+    if (!authed.authSid || !revoked.has(authed.authSid)) continue;
+    authed.disconnect(true);
+    closed += 1;
+  }
+  return closed;
+}
 
 /**
  * Initialise Socket.io avec auth JWT (utilisateur) ou token de partage (ShareLink → invité).
@@ -125,7 +215,42 @@ export const initSocket = (server: HttpServer): SocketServer => {
     void authenticateSocket(socket, next).catch(() => next(new Error('Authentication error')));
   });
 
+  // Le handshake ne vaut que pour l'instant où il a lieu : ensuite, seule cette horloge
+  // rapproche la connexion de l'état réel du compte (A3-02).
+  const revalidation = setInterval(() => void sweepSockets(io!), REVALIDATE_INTERVAL_MS);
+  // Cette horloge ne doit pas, à elle seule, retenir le process en vie : c'est le serveur
+  // HTTP qui le fait, et l'extinction la coupe proprement juste en dessous.
+  revalidation.unref();
+  registerShutdownTask({
+    name: 'socket-revalidation',
+    phase: SHUTDOWN_PHASE.STOP_INTAKE,
+    run: () => {
+      clearInterval(revalidation);
+      return Promise.resolve();
+    },
+  });
+
+  // Volet immédiat de la révocation : l'abonnement vit ici parce que la réplique qui a servi
+  // le `DELETE /sessions` n'est pas forcément celle qui héberge la websocket du révoqué.
+  // Le balayage d'une minute au-dessus reste en place — c'est le filet quand ce message
+  // se perd (publication best-effort, Redis en panne, réplique qui démarre).
+  subscribeRedis(SESSION_REVOCATION_CHANNEL, (raw) => {
+    const sids = decodeSessionRevocation(raw);
+    if (sids.length === 0) return;
+    // Le cache de validité de CETTE réplique croit encore la session vivante (TTL 30 s) :
+    // sans cette écriture, fermer le socket ne servirait à rien, l'API le rouvrirait.
+    markSessionsRevoked(sids);
+    if (!io) return;
+    const closed = disconnectRevokedSockets(io, sids);
+    if (closed > 0) logger.info({ closed }, '[socket] session révoquée : connexions fermées');
+  });
+
   io.on('connection', (socket: AuthedSocket) => {
+    // Première instruction du corps : la garde de débit doit être posée avant que le moindre
+    // gestionnaire ne soit joignable. C'est elle qui refuse le paquet AVANT le `socket.on`,
+    // donc avant la requête Postgres que `join_review` émettrait pour le refuser.
+    attachSocketRateLimit(socket);
+
     if (socket.user) {
       // `join`/`leave` rendent une promesse avec les adapters distribués ; l'adapter en
       // mémoire résout de façon synchrone — d'où le `void` sur les appels hors contexte async.
@@ -149,6 +274,8 @@ export const initSocket = (server: HttpServer): SocketServer => {
         const mid = Number(mediaId);
         if (!Number.isInteger(mid)) return;
         if (joinedReviews.has(mid)) return emitViewers(mid);
+        // Rôle et session relus avant d'accorder : `socket.user.role` date du handshake.
+        if (!(await revalidateSocket(socket))) return socket.disconnect(true);
         const projectId = await resolveProjectIdForMedia(mid);
         if (!projectId || !(await checkProjectAccess(uid, socket.user!.role, projectId))) return;
         const raw = await prisma.user.findUnique({
@@ -209,6 +336,8 @@ export const initSocket = (server: HttpServer): SocketServer => {
         cancelLiveLeave(key, uid);
         // Re-join idempotent (navigation interne) : ré-émet simplement l'état courant.
         if (joinedLives.has(key)) return emitLiveState(key, getLiveState(key));
+        // Rôle et session relus avant d'accorder : `socket.user.role` date du handshake.
+        if (!(await revalidateSocket(socket))) return socket.disconnect(true);
         const target = parseLiveKey(key);
         const projectId = await resolveLiveProject(key);
         if (!target || !projectId || !(await checkProjectAccess(uid, socket.user!.role, projectId))) return;
@@ -318,6 +447,10 @@ export const initSocket = (server: HttpServer): SocketServer => {
       const pid = Number(projectId);
       if (!Number.isInteger(pid)) return;
       if (socket.shareProjectId) return;
+      // C'est ici que la rétrogradation se jouait : le contrôle lisait le rôle du handshake,
+      // et `resolveProjectAccess` accorde un accès global à ADMIN comme à SUPERVISOR. Un
+      // ancien superviseur rejoignait donc n'importe quel projet depuis un onglet ouvert.
+      if (!(await revalidateSocket(socket))) return socket.disconnect(true);
       if (socket.user && (await checkProjectAccess(socket.user.id, socket.user.role, pid))) {
         await socket.join(`project_${pid}`);
       }

@@ -15,7 +15,7 @@ import {
   verifyTotp,
   generateBackupCodes,
   consumeBackupCode,
-  consumeTotpOnce,
+  consumeTotpOnceShared,
   hashBackupCode,
 } from '../lib/twofa';
 import { signAccessToken, signRefreshToken, verifyTwoFaToken } from '../lib/jwt';
@@ -34,6 +34,29 @@ const router = Router();
  * lire — c'est-à-dire précisément le jour où le téléphone est perdu.
  */
 const codeSchema = z.string().min(6).max(64);
+
+/**
+ * Deux freins sur la vérification du second facteur, comme sur la connexion.
+ *
+ * Un seul seau par IP faisait les deux erreurs à la fois : quinze coups pour tout un studio
+ * derrière une sortie NAT (le seizième arrivant du matin ne pouvait plus valider son code),
+ * et aucune borne sur le compte visé dès que les essais venaient de plusieurs machines. Le
+ * frein par compte lit le `tmpToken`, qui NOMME le compte — c'est la seule identité
+ * disponible ici, le porteur n'a pas encore de session.
+ */
+const TOO_MANY = { error: 'Too many attempts, try again later.' };
+const twoFaIpLimiter = rateLimit({ name: '2fa-ip', windowMs: 15 * 60_000, max: 100, message: TOO_MANY });
+const twoFaAccountLimiter = rateLimit({
+  name: '2fa-account',
+  windowMs: 15 * 60_000,
+  max: 10,
+  message: TOO_MANY,
+  keyGenerator: (req) => {
+    const tmpToken = (req.body as { tmpToken?: unknown } | null | undefined)?.tmpToken;
+    const userId = typeof tmpToken === 'string' ? verifyTwoFaToken(tmpToken) : null;
+    return userId != null ? `u:${userId}` : `ip:${req.ip ?? 'unknown'}`;
+  },
+});
 
 // POST /api/auth/2fa/setup — génère le secret (chiffré) et l'URI otpauth (QR côté client)
 router.post('/setup', authenticate, async (req, res) => {
@@ -92,24 +115,32 @@ router.post(
 // POST /api/auth/2fa/verify — échange { tmpToken, code TOTP ou code de secours } → tokens
 router.post(
   '/verify',
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 15,
-    message: { error: 'Too many attempts, try again later.' },
-  }),
+  twoFaIpLimiter,
   validate({ body: z.object({ tmpToken: z.string(), code: codeSchema }) }),
+  twoFaAccountLimiter,
   async (req, res) => {
     const { tmpToken, code } = req.body as { tmpToken: string; code: string };
     const userId = verifyTwoFaToken(tmpToken);
     if (!userId) throw unauthorized('Token expired — sign in again', 'TWOFA_TOKEN_EXPIRED');
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user?.totpSecret || !user.totpEnabledAt) throw unauthorized('Two-factor authentication is not on');
+    // Offboarding (A1-01) : le compte a pu être désactivé entre le mot de passe et le code.
+    // Le second facteur n'est pas une porte de plus, c'est la même porte — elle se ferme ici
+    // aussi, sinon la 2FA rendrait au partant le jeton que /login vient de lui refuser.
+    if (user.disabledAt) throw unauthorized('Account disabled', 'ACCOUNT_DISABLED');
 
     const secret = decryptSecret(user.totpSecret);
     // Un code TOTP ne vaut qu'une fois : sans cette consommation, le code intercepté se
     // rejoue pendant toute sa fenêtre (30 s + tolérance), et le second facteur ne prouve
     // plus la possession du téléphone. Le refus est indistinguable d'un code faux.
-    let ok = secret ? (await verifyTotp(secret, code)) && consumeTotpOnce(user.id, code) : false;
+    //
+    // La consommation est PARTAGÉE (Redis) et non locale au process : la garde de process
+    // ne voit pas la tentative servie par une autre réplique, si bien que le même code
+    // repassait simplement en tombant sur la seconde. Elle est fermée en cas de panne du
+    // marqueur — cf. `lib/twofa.consumeTotpOnceShared`.
+    let ok = secret
+      ? (await verifyTotp(secret, code)) && (await consumeTotpOnceShared(user.id, code))
+      : false;
     if (!ok) {
       // Code de secours (consommé définitivement). La suppression passe par un `updateMany`
       // conditionné au code encore présent : deux requêtes concurrentes portant le même

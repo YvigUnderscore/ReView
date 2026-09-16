@@ -62,11 +62,18 @@ export async function authenticateApiToken(
       expiresAt: true,
       projectId: true,
       kind: true,
-      user: { select: { id: true, email: true, role: true } },
+      user: { select: { id: true, email: true, role: true, disabledAt: true } },
     },
   });
   if (!row || row.revokedAt || (row.expiresAt && row.expiresAt < new Date())) {
     res.status(403).json({ error: "Token d'API invalide ou révoqué", code: 'API_TOKEN_INVALID' });
+    return;
+  }
+  // Offboarding (A1-01) : la désactivation révoque les tokens existants, mais un token
+  // émis (ou réactivé) autrement ne doit pas redonner la main à un compte parti. La porte
+  // se ferme sur l'état du compte, pas sur l'historique des révocations.
+  if (row.user.disabledAt) {
+    res.status(401).json({ error: 'Account disabled', code: 'ACCOUNT_DISABLED' });
     return;
   }
   if (isWriteMethod(req.method) && !grantsAnyWrite(row.scopes)) {
@@ -80,7 +87,7 @@ export async function authenticateApiToken(
       .update({ where: { id: row.id }, data: { lastUsedAt: new Date() } })
       .catch(() => undefined);
   }
-  req.user = row.user;
+  req.user = { id: row.user.id, email: row.user.email, role: row.user.role };
   req.apiToken = {
     id: row.id,
     scopes: row.scopes,

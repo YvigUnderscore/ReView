@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Prisma } from '@prisma/client';
 
+vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/prisma', () => ({
   prisma: {
     department: {
@@ -32,6 +33,7 @@ import {
   listForProject,
   normaliseKey,
   remove,
+  reorder,
   resolveByKey,
   resolveForTask,
   setHolderDepartments,
@@ -40,6 +42,11 @@ import {
   update,
 } from './DepartmentService';
 import { prisma } from '../lib/prisma';
+import { logAudit } from './AuditService';
+
+/** Acteur des gestes consignés — l'appelant le connaît toujours (`req.user`). */
+const ACTOR = { id: 42 };
+const audited = vi.mocked(logAudit);
 
 const dept = (over: Record<string, unknown> = {}) => ({
   id: 1,
@@ -145,7 +152,7 @@ describe('update', () => {
   it('ne touche jamais à la clé', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept() as never);
     vi.mocked(prisma.department.update).mockResolvedValueOnce(dept() as never);
-    await update(1, { name: 'Anim', key: 'AUTRE_CHOSE' });
+    await update(ACTOR, 1, { name: 'Anim', key: 'AUTRE_CHOSE' });
     const data = vi.mocked(prisma.department.update).mock.calls[0]![0].data as Record<string, unknown>;
     expect(data).not.toHaveProperty('key');
     expect(data.name).toBe('Anim');
@@ -153,7 +160,7 @@ describe('update', () => {
 
   it('refuse un département inexistant', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(null);
-    await expect(update(404, { name: 'x' })).rejects.toThrow();
+    await expect(update(ACTOR, 404, { name: 'x' })).rejects.toThrow();
   });
 });
 
@@ -161,7 +168,7 @@ describe('remove', () => {
   it('retire logiquement, sans effacer le travail rattaché', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept() as never);
     vi.mocked(prisma.department.update).mockResolvedValueOnce(dept() as never);
-    await remove(1);
+    await remove(ACTOR, 1);
     const data = vi.mocked(prisma.department.update).mock.calls[0]![0].data as { deletedAt: Date };
     expect(data.deletedAt).toBeInstanceOf(Date);
   });
@@ -444,5 +451,106 @@ describe('rattachements', () => {
       where: { id: 4 },
       data: { departments: { set: [{ id: 1 }] } },
     });
+  });
+});
+
+/**
+ * A5-06 — renumérote un pipe, et un seul.
+ *
+ * `order` désigne la dernière version d'un plan (`lib/pipelineOrder`) : réécrire celui
+ * d'un projet voisin ou du référentiel studio change le fichier présenté comme livrable
+ * sur des plans qu'on n'a pas touchés. Le lot doit donc être complet et homogène.
+ */
+describe('reorder — portée du lot', () => {
+  const rows = (...items: { id: number; studioId?: number; projectId?: number | null }[]) =>
+    vi.mocked(prisma.department.findMany).mockResolvedValue(
+      items.map((i) => ({
+        id: i.id,
+        studioId: i.studioId ?? 1,
+        projectId: 'projectId' in i ? i.projectId : 7,
+      })) as never,
+    );
+
+  it('refuse un lot qui mélange deux projets', async () => {
+    rows({ id: 1, projectId: 7 }, { id: 2, projectId: 8 });
+    await expect(reorder(ACTOR, [1, 2])).rejects.toMatchObject({ code: 'DEPARTMENT_SCOPE_MIX' });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('refuse un lot qui mêle le référentiel studio à un projet', async () => {
+    rows({ id: 1, projectId: null }, { id: 2, projectId: 7 });
+    await expect(reorder(ACTOR, [1, 2])).rejects.toMatchObject({ code: 'DEPARTMENT_SCOPE_MIX' });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('refuse un identifiant qui n’existe pas', async () => {
+    rows({ id: 1 });
+    await expect(reorder(ACTOR, [1, 404])).rejects.toMatchObject({ statusCode: 404 });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('accepte un lot homogène et écrit la position de chacun', async () => {
+    rows({ id: 3 }, { id: 1 }, { id: 2 });
+    await reorder(ACTOR, [3, 1, 2]);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.department.update).toHaveBeenNthCalledWith(1, { where: { id: 3 }, data: { order: 0 } });
+    expect(prisma.department.update).toHaveBeenNthCalledWith(3, { where: { id: 2 }, data: { order: 2 } });
+  });
+});
+
+/**
+ * A5-03 — les trois écritures structurantes du pipe laissent une trace nominative.
+ *
+ * `order` n'est pas décoratif : c'est lui qui désigne « la dernière version » d'un plan
+ * (`lib/pipelineOrder`). Renommer, retirer ou renuméroter un département changeait le
+ * fichier présenté comme livrable sans que le journal d'audit n'en dise rien — ni quoi,
+ * ni par qui. La signature prend donc l'acteur, que l'appelant connaît (`req.user`).
+ */
+describe('audit des gestes de pipe', () => {
+  it('consigne une mise à jour, avec son ordre précédent', async () => {
+    vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept({ order: 3 }) as never);
+    vi.mocked(prisma.department.update).mockResolvedValueOnce(dept({ order: 0 }) as never);
+    await update(ACTOR, 1, { order: 0 });
+    expect(audited).toHaveBeenCalledWith({
+      userId: 42,
+      action: 'DEPARTMENT_UPDATE',
+      entityType: 'Department',
+      entityId: 1,
+      metadata: { key: 'ANIMATION', projectId: null, previousOrder: 3, changes: { order: 0 } },
+    });
+  });
+
+  it('consigne un retrait', async () => {
+    vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept({ projectId: 7 }) as never);
+    vi.mocked(prisma.department.update).mockResolvedValueOnce(dept() as never);
+    await remove(ACTOR, 9);
+    expect(audited).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 42, action: 'DEPARTMENT_DELETE', entityId: 9 }),
+    );
+  });
+
+  it('consigne une renumérotation avec le lot entier et sa portée', async () => {
+    vi.mocked(prisma.department.findMany).mockResolvedValue([
+      { id: 3, studioId: 1, projectId: 7 },
+      { id: 1, studioId: 1, projectId: 7 },
+    ] as never);
+    await reorder(ACTOR, [3, 1]);
+    expect(audited).toHaveBeenCalledWith({
+      userId: 42,
+      action: 'DEPARTMENT_REORDER',
+      entityType: 'Department',
+      entityId: 3,
+      metadata: { ids: [3, 1], studioId: 1, projectId: 7 },
+    });
+  });
+
+  it('ne consigne rien quand le lot est vide ou refusé', async () => {
+    await reorder(ACTOR, []);
+    vi.mocked(prisma.department.findMany).mockResolvedValue([
+      { id: 1, studioId: 1, projectId: 7 },
+      { id: 2, studioId: 1, projectId: 8 },
+    ] as never);
+    await expect(reorder(ACTOR, [1, 2])).rejects.toMatchObject({ code: 'DEPARTMENT_SCOPE_MIX' });
+    expect(audited).not.toHaveBeenCalled();
   });
 });
