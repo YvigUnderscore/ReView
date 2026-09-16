@@ -105,7 +105,9 @@ export default function SequenceShotPicker({
       {shotsQ.error && <p className="mb-2 text-xs text-destructive">{shotsQ.error.message}</p>}
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        {shotsQ.isPending ? (
+        {/* `isComplete` plutôt que `isPending` : tant que les pages s'enchaînent, « aucun
+            plan à rattacher » serait un mensonge sur une liste à moitié arrivée. */}
+        {!shotsQ.isComplete ? (
           <SkeletonRows count={3} />
         ) : nothingToAttach ? (
           <p className="text-xs text-muted-foreground">{t('sequenceShots.noneToAttach')}</p>

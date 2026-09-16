@@ -2,7 +2,7 @@
 
 *What `validate.sh` and CI check, in what order, and the ratchets that may only ever tighten.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 `scripts/validate.sh` is the single answer to "is this committable?". It is a **protected
 principle** of the repository: it may be extended, never weakened. No skipping a step, no
@@ -82,7 +82,10 @@ The script fails at the first red step, and nothing after it runs.
    *and* `tsconfig.e2e.json` for `e2e/` and the config files); vitest unit tests plus coverage
    floors; Vite build; then the **entry bundle budget** (`check-bundle-budget.mjs`) — the gzip
    size of everything the browser downloads before the first screen, so route-level code
-   splitting cannot silently regress.
+   splitting cannot silently regress. Everything means the entry script, the modules it
+   preloads **and** the linked stylesheet: a `<link rel="stylesheet">` blocks rendering exactly
+   as the entry script does, and leaving it out once made the check announce 427 kB where nginx
+   served 442.
 9. **Optional tails** — the Playwright smoke path, then the ShotGrid harness.
 
 `check-prisma-drift.mjs` deserves its own paragraph, because `prisma validate` only says "the
@@ -117,7 +120,7 @@ and each may move in exactly one direction.
 | `check-raw-keys.mjs` | Keys reaching the screen unresolved | `0` | Down only | `scripts/check-raw-keys.mjs` (`CEILING`) |
 | `a11y.names.test.ts` | Form controls with no accessible name | `24` | Down only | `frontend/src/a11y.names.test.ts` |
 | `check-coverage.mjs` | Statements and branches, **per folder** | Unset — the provider is not installed yet | Up only | `scripts/coverage-floors.json` |
-| `check-bundle-budget.mjs` | Gzip bytes before the first screen | `430 000` (measured at about 401 kB) | Down only | `scripts/check-bundle-budget.mjs` (`ENTRY_BUDGET_GZIP`) |
+| `check-bundle-budget.mjs` | Gzip bytes before the first screen, stylesheet included | `280 000` (measured at 258.6 kB over four files) | Down only | `scripts/check-bundle-budget.mjs` (`ENTRY_BUDGET_GZIP`) |
 | Route budget | Lines per backend route file | `200` | Down only | `scripts/validate.sh` |
 | `max-lines` | Code lines per component or page | `300` | Down only | `frontend/eslint.config.js` |
 | ESLint | Warnings | `0` | Fixed | Both ESLint configs |

@@ -18,7 +18,23 @@
 /** Fenêtre de signature des URL de segments (s) — cf. `signingWindowStart`. */
 export const HLS_URL_WINDOW_SEC = 15 * 60;
 
-/** Durée de vie des URL présignées de segments (s), comptée depuis la fenêtre. */
+/**
+ * Durée de vie des URL présignées de segments (s), comptée depuis la fenêtre.
+ *
+ * **C'est le délai réel de révocation d'une review interne diffusée en HLS**, et il faut le
+ * lire comme tel : une URL de segment n'est liée à personne (la signature S3 ne couvre que
+ * le bucket, la clé et la date), donc retirer un membre d'un projet, dépublier un média ou
+ * le mettre à la corbeille ne coupe pas les segments déjà remis — ils restent lisibles
+ * jusqu'à deux heures (2 h 10 avec la tranche de signature de `StorageService`).
+ *
+ * Ces deux heures sont **assumées, pas subies** : pour un VOD, hls.js charge la
+ * sous-playlist UNE fois et ne la recharge jamais. Raccourcir le TTL ne raccourcirait donc
+ * pas la fuite d'un lien déjà copié — cela couperait la lecture d'un média resté ouvert plus
+ * longtemps que le TTL, au premier déplacement de tête de lecture, c'est-à-dire en pleine
+ * projection de dailies. Le fermer pour de bon suppose de servir les segments derrière une
+ * route qui revérifie l'accès (le jeton de `lib/mediaToken` en est la moitié faite), pas de
+ * jouer sur la durée.
+ */
 export const HLS_URL_TTL_SEC = 2 * 60 * 60;
 
 /**

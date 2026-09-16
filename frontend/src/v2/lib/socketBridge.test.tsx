@@ -32,7 +32,9 @@ const fire = (event: string, payload: unknown): void => {
   for (const fn of [...(handlers.get(event) ?? [])]) fn(payload);
 };
 
-vi.mock('../../lib/socket', () => ({ getSocket: () => socket }));
+// `emitActivity` : le pont porte aussi le battement de présence — inerte ici, mais il
+// doit exister, sinon le montage du pont lève avant la moindre mesure d'invalidation.
+vi.mock('../../lib/socket', () => ({ getSocket: () => socket, emitActivity: () => undefined }));
 
 import { useSocketInvalidation, COALESCE_WINDOW_MS, dropRedundantKeys } from './socketBridge';
 import { qk } from './query';

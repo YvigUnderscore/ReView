@@ -2,7 +2,7 @@
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="mj-title">Two roads to a translated sentence</title>
-  <desc id="mj-desc">An interface string is written in en.json, pushed into the fourteen catalogues by i18n-add.mjs, then read by t() at runtime, where English is bundled and the chosen language is fetched on demand. A server error takes the other road: the route throws an English message plus a stable code, and the client looks that code up in its own catalogue.</desc>
+  <desc id="mj-desc">An interface string is written in en.json, pushed into the fourteen catalogues by i18n-add.mjs, then read by t() at runtime, where no catalogue is bundled and English is fetched only when it will actually serve as a fallback. A server error takes the other road: the route throws an English message plus a stable code, and the client looks that code up in its own catalogue.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -66,7 +66,7 @@
 
   <rect class="panel" x="415" y="44" width="180" height="46" rx="9"/>
   <text class="l" x="505" y="66" text-anchor="middle">t('jobs.purgeNow')</text>
-  <text class="d" x="505" y="82" text-anchor="middle">others fetched on demand</text>
+  <text class="d" x="505" y="82" text-anchor="middle">reads the loaded catalogue</text>
 
   <path class="conn-a" d="M595 67 L625 67" marker-end="url(#arrow-a)"/>
 
@@ -74,8 +74,8 @@
   <text class="t" x="695" y="66" text-anchor="middle">Screen</text>
   <text class="d" x="695" y="82" text-anchor="middle">reader's language</text>
 
-  <text class="d" x="35" y="118">en.json is bundled; the rest is fetched on demand</text>
-  <text class="d" x="35" y="134">46 to 57 kB gzipped per language</text>
+  <text class="d" x="35" y="118">no catalogue is bundled; the chosen language is fetched</text>
+  <text class="d" x="35" y="134">English only when it serves as fallback — 51 to 64 kB gzipped</text>
 
   <path class="conn-o" d="M505 90 L505 104" marker-end="url(#arrow)"/>
   <rect class="panel-o" x="415" y="104" width="350" height="34" rx="9"/>

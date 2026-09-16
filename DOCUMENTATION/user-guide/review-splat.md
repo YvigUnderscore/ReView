@@ -2,7 +2,7 @@
 
 *Scans in Spark: DCC navigation, non-destructive clean-up, comparison across versions, presentation and a cleaned SPZ export.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 Gaussian splat media are rendered with **Spark (SparkJS)** inside the Three.js scene, with the
 same DCC-style navigation as [3D review](review-3d.md) — plus a full **non-destructive
@@ -212,6 +212,23 @@ slower.
 | **Total splats** | The size of the cloud as delivered |
 | **Hidden splats** | How many the saved mask removes — the size of the clean-up |
 | **Draw calls** | The cost of the frame |
+
+Like the 3D viewport, the splat viewer draws **on demand** rather than at screen rate. Any
+navigation, any brush stroke, any change made from the dock brings it back to full rate at
+once; a scan left still settles to a heartbeat of **eight frames a second**, so a laptop stops
+heating for an image nobody is changing, and anything arriving late — persisted edits, a
+comparison cloud — still appears within an eighth of a second.
+
+Two things hold the viewer at full rate on purpose, and both are worth knowing if you are
+chasing battery life:
+
+- the **counters above**, for as long as the *Info* panel is open — an fps counter that lowers
+  the rate it measures measures only itself;
+- **level of detail on *auto***, which is the default, because it decides from the framerate
+  and so needs the real one.
+
+Set the level of detail to *off*, *on* or *stream* and close the *Info* panel, and a still scan
+costs the machine almost nothing.
 
 ## The dock, panel by panel
 

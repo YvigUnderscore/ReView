@@ -13,8 +13,10 @@ what runs inside: [Architecture](architecture.md), [Jobs & workers](jobs-and-wor
 ## Where configuration comes from
 
 `.env` at the repository root is the single operator-facing file. Copy `.env.example`, which
-documents **every** variable of `backend/src/config/env.ts` — 43 of them, grouped, commented,
-and with the optional ones left commented out rather than emptied.
+documents the **52** variables of `backend/src/config/env.ts` — bar the four the compose file
+owns outright (`S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, see the
+precedence table below) — plus the compose-only ones, grouped, commented, and with the optional
+ones left commented out rather than emptied.
 
 The `backend` and `worker` services load that file whole:
 
@@ -24,8 +26,7 @@ env_file:
     required: false
 ```
 
-Before this, both services listed a closed `environment:` block carrying 17 of the 43
-variables. `APP_URL`, `SMTP_*`, `VAPID_*`, `APP_ENCRYPTION_KEY`, `LOG_LEVEL` and the rest never
+Before this, both services listed a closed `environment:` block carrying 17 of them. `APP_URL`, `SMTP_*`, `VAPID_*`, `APP_ENCRYPTION_KEY`, `LOG_LEVEL` and the rest never
 reached the container, so **inviting a collaborator failed on any Docker install**
 (`APP_URL_MISSING`) and no email could carry a link.
 

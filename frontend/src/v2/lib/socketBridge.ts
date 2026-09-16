@@ -3,8 +3,9 @@
 
 import { useEffect } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { getSocket } from '../../lib/socket';
+import { emitActivity, getSocket } from '../../lib/socket';
 import { qk } from './query';
+import { presenceKey, type PresenceUser } from './queries';
 
 /** Payloads des événements temps réel émis par les routes backend (10.E3). */
 interface TaskEvent {
@@ -144,6 +145,78 @@ function createInvalidationQueue(qc: QueryClient): InvalidationQueue {
 /** Identifiants portés par un événement d'entité : le lot s'il existe, sinon l'unité. */
 const entityIds = (e: EntityEvent): number[] => (e.ids?.length ? e.ids : [e.id]);
 
+/** Période du battement d'activité de fond (ms) — inchangée. */
+const HEARTBEAT_MS = 60_000;
+
+/**
+ * Intervalle minimal entre deux trames `activity` (ms).
+ *
+ * La fenêtre d'inactivité côté serveur se compte en minutes : une trame toutes les
+ * trente secondes suffit à distinguer « devant l'écran » de « parti », et reste deux
+ * fois plus fine que le battement de fond.
+ */
+export const ACTIVITY_THROTTLE_MS = 30_000;
+
+/**
+ * Poussée `presence:update` → cache Query.
+ *
+ * Le serveur n'envoie que les identifiants en ligne : on réécrit le drapeau `online` des
+ * personnes déjà en cache plutôt que de redemander l'annuaire. Un updater qui rend
+ * `undefined` ne crée aucune entrée : si personne n'affiche l'annuaire, la poussée ne
+ * coûte rien. Les objets inchangés sont rendus tels quels, pour ne pas faire re-rendre
+ * la liste entière à chaque battement.
+ */
+function applyPresencePush(qc: QueryClient, onlineUserIds: number[]): void {
+  const online = new Set(onlineUserIds);
+  qc.setQueryData<PresenceUser[]>(presenceKey, (prev) =>
+    prev?.map((u) => (u.online === online.has(u.id) ? u : { ...u, online: online.has(u.id) })),
+  );
+}
+
+/**
+ * Volet présence du pont : poussée temps réel vers le cache, et battement d'activité.
+ *
+ * Les deux vivaient dans `usePresence`, donc dans CHAQUE consommateur de l'annuaire :
+ * deux panneaux montés ensemble posaient deux abonnements socket, deux minuteries et
+ * deux jeux d'écouteurs de fenêtre — et chacun émettait une trame `activity` par frappe,
+ * soit quarante trames pour une phrase tapée dans une note de review. Installé une seule
+ * fois au niveau du pont, le comportement est le même pour un coût fixe.
+ */
+export function usePresenceBridge(): void {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const socket = getSocket();
+    const onPresence = (data: { onlineUserIds: number[] }) => {
+      applyPresencePush(qc, data.onlineUserIds);
+    };
+    socket.on('presence:update', onPresence);
+    return () => {
+      socket.off('presence:update', onPresence);
+    };
+  }, [qc]);
+
+  useEffect(() => {
+    // `last` à zéro : la toute première trame part au montage, sans attendre le seuil.
+    let last = 0;
+    const ping = (): void => {
+      const now = Date.now();
+      if (now - last < ACTIVITY_THROTTLE_MS) return;
+      last = now;
+      emitActivity();
+    };
+    ping();
+    const interval = setInterval(ping, HEARTBEAT_MS);
+    window.addEventListener('click', ping);
+    window.addEventListener('keydown', ping);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('click', ping);
+      window.removeEventListener('keydown', ping);
+    };
+  }, []);
+}
+
 /**
  * Pont temps réel → cache Query (10.E3) : rejoint la room du projet courant
  * (RBAC revérifié côté serveur à chaque join) et traduit chaque événement
@@ -152,6 +225,10 @@ const entityIds = (e: EntityEvent): number[] => (e.ids?.length ? e.ids : [e.id])
  */
 export function useSocketInvalidation(projectId: number | null): void {
   const qc = useQueryClient();
+
+  // Monté ici parce que le pont est lui-même monté une fois pour toute l'application :
+  // c'est le seul endroit où l'annuaire de présence peut avoir un unique abonnement.
+  usePresenceBridge();
 
   // Rejoint la room du projet courant ; re-join après une reconnexion socket.
   useEffect(() => {

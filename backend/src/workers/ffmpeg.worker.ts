@@ -799,12 +799,21 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       }
     }
 
+    // Date du verdict antivirus, quand il y en a eu un : elle sert plus bas à marquer le
+    // média, et son absence à ne PAS le marquer.
+    let scannedAt: string | undefined;
     // Scan antivirus opt-in (37.E) : fichier infecté → objet déplacé en quarantaine,
     // média FAILED. clamd injoignable = erreur (retry BullMQ) — on ne publie pas sans scan.
     // Une séquence a déjà été scannée frame par frame pendant son assemblage : le master
     // qu'on tient ici est notre propre sortie, le scanner ne prouverait rien.
     if (isClamavEnabled() && !sourceGone && !sequence) {
       const scan = await scanFile(src);
+      // Un média non scanné ne doit pas se faire passer pour un média scanné et sain :
+      // la marque est portée par le média lui-même, pas par l'existence d'un job.
+      if (scan.clean) {
+        scannedAt = new Date().toISOString();
+        metadata.scannedAt = scannedAt;
+      }
       if (!scan.clean) {
         const quarantineKey = `quarantine/${mediaId}/${media.originalName}`;
         await storage.copyObject(media.storageKey, quarantineKey).catch(() => undefined);
@@ -830,6 +839,14 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
     if (kind === 'scan') {
       // Antivirus seul (37.E) : le préambule ci-dessus a déjà scanné/quarantainé.
       report('scan', { fraction: 1 });
+      // Ce média est READY et téléchargeable DEPUIS la finalisation : c'est le seul chemin
+      // où le scan ne conditionne rien. Sans trace écrite, un GLB ou un splat jamais scanné
+      // (clamd redémarré pendant la fenêtre de dépôt) est indiscernable d'un média scanné et
+      // sain — pour l'exploitant comme pour la requête SQL. On écrit donc le verdict, et on
+      // efface l'échec d'une tentative précédente que celle-ci vient de rattraper. Rien à
+      // écrire si l'antivirus a été coupé entre l'enfilement et le traitement : ce média
+      // n'est pas scanné, et le prétendre serait pire que le silence.
+      if (scannedAt) await recordScanOutcome(mediaId, { scannedAt });
       return;
     }
 
@@ -1217,6 +1234,53 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
 }
 
 /**
+ * Écrit sur le média ce que l'antivirus a donné — verdict OU échec (37.E, A4-04).
+ *
+ * Un job `scan` est le seul dont l'échec ne change rien au média : il porte sur un fichier
+ * déjà READY et déjà téléchargeable (GLB, splats — `jobKindFor` ne leur donne pas de job de
+ * traitement). Jusqu'ici, un scan qui mourait — clamd redémarré pour une mise à jour de base
+ * virale, une à deux minutes d'indisponibilité — épuisait ses trois tentatives en une
+ * trentaine de secondes et disparaissait sans laisser une ligne : ni statut, ni métadonnée,
+ * ni audit. L'exploitant croyait son instance couverte, et rien ne distinguait le fichier
+ * jamais scanné du fichier scanné et sain.
+ *
+ * On écrit donc les deux faces, et on les écrit à CHAQUE tentative plutôt qu'à la dernière :
+ * compter les tentatives suppose de savoir si `attemptsMade` est déjà incrémenté quand le
+ * gestionnaire tourne, ce qui dépend de la version de BullMQ. Une marque d'échec posée trop
+ * tôt est effacée par la tentative qui réussit — l'inverse (ne jamais rien écrire) est le
+ * défaut que l'on corrige.
+ *
+ * La relecture des métadonnées est volontaire : le job a pu démarrer bien avant, et écraser
+ * ici l'état courant ferait disparaître des champs écrits entre-temps.
+ */
+async function recordScanOutcome(
+  mediaId: number,
+  outcome: { scannedAt: string } | { failed: string },
+): Promise<void> {
+  try {
+    const media = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
+    if (!media) return;
+    const metadata: Record<string, unknown> = { ...((media.metadata ?? {}) as object) };
+    if ('scannedAt' in outcome) {
+      metadata.scannedAt = outcome.scannedAt;
+      delete metadata.scanFailed;
+      delete metadata.scanFailedAt;
+    } else {
+      metadata.scanFailed = outcome.failed.trim().slice(0, 500);
+      metadata.scanFailedAt = new Date().toISOString();
+      delete metadata.scannedAt;
+    }
+    await prisma.mediaObject.update({
+      where: { id: mediaId },
+      data: { metadata: metadata as Prisma.InputJsonObject },
+    });
+  } catch (err) {
+    // Le marquage ne doit jamais masquer l'erreur d'origine, relancée par l'appelant.
+    logger.warn({ err, mediaId }, '[ffmpeg.worker] verdict de scan non consigné');
+  }
+}
+
+/**
  * Passe un média en échec **en conservant la raison** (45.C) : sans cela, la review n'affiche
  * qu'un statut `FAILED` muet — insuffisant pour l'USD, où l'échec vient le plus souvent de
  * quelque chose que l'utilisateur peut corriger (asset manquant dans le zip, outillage absent).
@@ -1245,7 +1309,16 @@ export const ffmpegWorker = new Worker<MediaJobData>(
     } catch (err) {
       // Un trim raté ne condamne pas le média (proxy d'origine servi) ; un scan en erreur
       // (clamd injoignable) non plus — BullMQ retente, seule une détection met FAILED.
-      if (job.data.kind !== 'trim' && job.data.kind !== 'scan') await markFailed(job.data.mediaObjectId, err);
+      // Mais un scan en erreur laisse un média servi SANS avoir été scanné : il le dit
+      // désormais sur le média, faute de quoi l'absence de scan était indistinguable d'un
+      // scan propre (cf. `recordScanOutcome`).
+      if (job.data.kind === 'scan') {
+        await recordScanOutcome(job.data.mediaObjectId, {
+          failed: err instanceof Error ? err.message : String(err),
+        });
+      } else if (job.data.kind !== 'trim') {
+        await markFailed(job.data.mediaObjectId, err);
+      }
       throw err;
     }
   },

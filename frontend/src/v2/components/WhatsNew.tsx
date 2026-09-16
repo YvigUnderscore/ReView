@@ -16,6 +16,7 @@ import { useT } from '../i18n';
  * l'ouverture marque la dernière entrée comme vue (localStorage).
  */
 const SEEN_KEY = 'review:changelog-seen';
+const CHANGELOG_URL = '/docs/CHANGELOG.md';
 
 /**
  * Rendu du markdown, chargé à l'ouverture du dialogue et pas avant (F6).
@@ -26,6 +27,52 @@ const SEEN_KEY = 'review:changelog-seen';
  * suffit à décider de la pastille et n'a besoin de rien.
  */
 type RenderDocHtml = typeof import('../pages/docs/docsRender').renderDocHtml;
+
+/**
+ * Octets lus pour décider de la pastille (F6, second geste).
+ *
+ * Le panneau est monté par la coquille, donc sur **toute** page authentifiée, et il n'a
+ * besoin avant ouverture que d'une seule information : le titre de l'entrée la plus récente,
+ * c'est-à-dire le premier `## ` du fichier. Il téléchargeait pourtant les 24 568 octets du
+ * changelog — non compressés de surcroît, nginx servant ce `.md` en
+ * `application/octet-stream`, type absent de ses `gzip_types`.
+ *
+ * Le titre commence au 190e octet du fichier servi ; 2 ko laissent dix fois la marge.
+ */
+const HEAD_BYTES = 2048;
+const HEADING_RE = /^##\s+(.+?)\s*$/;
+
+/**
+ * Clé dérivée de `qk.changelog` : la sonde et le document entier sont deux vues du même
+ * fichier, elles se rangent côte à côte dans le cache et s'invalident ensemble.
+ */
+const CHANGELOG_HEAD_KEY = [...qk.changelog, 'head'] as const;
+
+interface ChangelogHead {
+  /** Titre de l'entrée la plus récente (= son identifiant), null si le fichier n'en porte pas. */
+  latestId: string | null;
+  /**
+   * Document entier, quand le serveur a ignoré `Range` et a tout envoyé : inutile alors de
+   * le redemander à l'ouverture. Null quand la réponse était bien partielle.
+   */
+  full: string | null;
+}
+
+/**
+ * Identifiant de l'entrée la plus récente, lu sur un début de fichier.
+ *
+ * `partial` : le serveur a tronqué la réponse, sa dernière ligne est donc coupée au milieu —
+ * on la jette plutôt que de risquer un titre amputé (« ## 2026-09 — Bande de mon »).
+ */
+function parseChangelogHead(text: string, partial: boolean): string | null {
+  const lines = text.split('\n');
+  if (partial) lines.pop();
+  for (const line of lines) {
+    const found = HEADING_RE.exec(line);
+    if (found) return found[1].trim();
+  }
+  return null;
+}
 
 export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
   const t = useT();
@@ -42,9 +89,9 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
   });
 
   /**
-   * Le changelog ne décide que d'une pastille : il n'a rien à faire dans la rafale du
-   * premier écran, où il disputait la bande passante aux requêtes de la page (F6). Il part
-   * quand le navigateur n'a plus rien d'urgent à faire.
+   * La sonde ne décide que d'une pastille : elle n'a rien à faire dans la rafale du premier
+   * écran, où elle disputait la bande passante aux requêtes de la page (F6). Elle part quand
+   * le navigateur n'a plus rien d'urgent à faire.
    */
   useEffect(() => {
     if (typeof window.requestIdleCallback !== 'function') {
@@ -55,11 +102,31 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     return () => window.cancelIdleCallback?.(handle);
   }, []);
 
-  const { data } = useQuery({
+  // Sonde : les premiers octets suffisent à connaître la dernière entrée.
+  const { data: head } = useQuery({
     enabled: idle,
+    queryKey: CHANGELOG_HEAD_KEY,
+    queryFn: async (): Promise<ChangelogHead> => {
+      const res = await fetch(CHANGELOG_URL, { headers: { Range: `bytes=0-${HEAD_BYTES - 1}` } });
+      if (!res.ok) throw new Error(t('whatsNew.unavailable', { status: res.status }));
+      const text = await res.text();
+      // 206 : le serveur a honoré `Range`. 200 : il l'a ignoré (compression à la volée,
+      // cache intermédiaire) et a tout envoyé — on garde alors le document plutôt que de le
+      // retélécharger à l'ouverture.
+      const partial = res.status === 206;
+      return { latestId: parseChangelogHead(text, partial), full: partial ? null : text };
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  // Document entier : à l'ouverture réelle du panneau, et seulement si la sonde ne l'a pas
+  // déjà ramené.
+  const { data: fetched, error: fullError } = useQuery({
+    enabled: open && head != null && head.full === null,
     queryKey: qk.changelog,
     queryFn: async () => {
-      const res = await fetch('/docs/CHANGELOG.md');
+      const res = await fetch(CHANGELOG_URL);
       if (!res.ok) throw new Error(t('whatsNew.unavailable', { status: res.status }));
       return res.text();
     },
@@ -67,11 +134,12 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     retry: false,
   });
 
-  const entries = useMemo(() => (data ? parseChangelog(data) : []), [data]);
-  const latestId = entries[0]?.id ?? null;
+  const markdown = head?.full ?? fetched ?? null;
+  const entries = useMemo(() => (markdown ? parseChangelog(markdown) : []), [markdown]);
+  const latestId = head?.latestId ?? null;
   const hasUnseen = latestId !== null && latestId !== seen;
 
-  // Ouverture : marque la dernière entrée comme vue (le bouton n'existe que si data est chargée).
+  // Ouverture : marque la dernière entrée comme vue (le bouton n'existe que si on la connaît).
   const openPanel = () => {
     setOpen(true);
     // `setState(() => fn)` : la forme fonctionnelle, sinon React appellerait le rendu.
@@ -85,7 +153,9 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     setSeen(latestId);
   };
 
-  if (entries.length === 0) return null;
+  // Pas de bouton tant qu'aucune entrée n'est connue : c'était déjà le cas, mais cela se
+  // décidait sur les 24 ko du fichier.
+  if (latestId === null) return null;
 
   return (
     <>
@@ -107,7 +177,9 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
             <DialogTitle>{t('whatsNew.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            {renderDocHtml === null ? (
+            {fullError ? (
+              <p className="text-sm text-muted-foreground">{fullError.message}</p>
+            ) : renderDocHtml === null || entries.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
             ) : (
               entries.map((e) => (

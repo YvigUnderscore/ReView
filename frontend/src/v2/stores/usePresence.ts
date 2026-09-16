@@ -1,65 +1,28 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useState } from 'react';
-import { api } from '../../lib/apiClient';
-import { getSocket, emitActivity } from '../../lib/socket';
-import type { UserStatus } from '../types/api';
+import { usePresenceQuery } from '../lib/queries';
+import type { PresenceUser } from '../lib/queries';
 import { t, intlLocale } from '../i18n';
 
-export interface PresenceUser {
-  id: number;
-  email: string;
-  displayName: string;
-  initials: string;
-  avatarUrl: string | null;
-  status: UserStatus;
-  lastSeenAt: string | null;
-  online: boolean;
-}
+export type { PresenceUser };
+
+/** Repli stable : un littéral recréé à chaque rendu ferait retravailler les `useMemo` des appelants. */
+const NO_ONE: PresenceUser[] = [];
 
 /**
- * Présence des utilisateurs : liste initiale via REST, mises à jour live via
- * Socket.io (event `presence:update`). Émet aussi un signal d'activité régulier.
+ * Présence des utilisateurs du studio.
+ *
+ * Simple lecture du cache TanStack Query (clé partagée, `staleTime` d'une minute) :
+ * l'annuaire ne repart sur le réseau ni parce qu'un second panneau s'ouvre, ni parce
+ * qu'un composant se démonte et se remonte. La fraîcheur de « qui est en ligne » vient
+ * de la poussée socket `presence:update`, branchée une seule fois par le pont temps réel
+ * (`usePresenceBridge`, lib/socketBridge) qui écrit dans ce même cache — et non d'un
+ * magasin parallèle, ni d'un rechargement.
  */
-export function usePresence() {
-  const [users, setUsers] = useState<PresenceUser[]>([]);
-  const [onlineIds, setOnlineIds] = useState<Set<number>>(new Set());
-
-  const reload = () =>
-    api
-      .get<{ users: PresenceUser[] }>('/api/users/presence')
-      .then((d) => {
-        setUsers(d.users);
-        setOnlineIds(new Set(d.users.filter((u) => u.online).map((u) => u.id)));
-      })
-      .catch(() => undefined);
-
-  useEffect(() => {
-    void reload();
-    const socket = getSocket();
-    const onPresence = (data: { onlineUserIds: number[] }) => {
-      setOnlineIds(new Set(data.onlineUserIds));
-    };
-    socket.on('presence:update', onPresence);
-
-    // Signale l'activité immédiatement puis périodiquement
-    emitActivity();
-    const interval = setInterval(emitActivity, 60_000);
-    const onActivity = () => emitActivity();
-    window.addEventListener('click', onActivity);
-    window.addEventListener('keydown', onActivity);
-
-    return () => {
-      socket.off('presence:update', onPresence);
-      clearInterval(interval);
-      window.removeEventListener('click', onActivity);
-      window.removeEventListener('keydown', onActivity);
-    };
-  }, []);
-
-  const merged = users.map((u) => ({ ...u, online: onlineIds.has(u.id) }));
-  return { users: merged, reload };
+export function usePresence(): { users: PresenceUser[] } {
+  const { data } = usePresenceQuery();
+  return { users: data ?? NO_ONE };
 }
 
 /** Format « actif il y a X » à partir d'un timestamp ISO. */

@@ -23,7 +23,12 @@ const render = () =>
     </React.StrictMode>,
   );
 
-// Le catalogue de la langue retenue est chargé avant le premier rendu : sinon l'écran
-// s'affiche en anglais puis bascule. `finally` — un catalogue illisible ne doit pas
-// empêcher l'application de démarrer, le repli anglais suffit.
+// Le catalogue de la langue retenue est chargé avant le premier rendu, et ce blocage est
+// délibéré : aucun catalogue n'est embarqué dans le bundle livré (correctif F1), si bien
+// qu'un rendu anticipé n'afficherait pas de l'anglais mais les clés elles-mêmes —
+// « common.save » à l'écran. L'attente est en revanche raccourcie en amont : le document
+// précharge le catalogue dès son analyse (`i18nCatalogPreload` dans `vite.config.js`), donc
+// les octets sont déjà là quand cette ligne s'exécute.
+// `finally` — un catalogue illisible ne doit pas empêcher l'application de démarrer, le
+// repli anglais suffit.
 initLocale().finally(render);

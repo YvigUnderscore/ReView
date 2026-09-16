@@ -2,7 +2,7 @@
 
 *From `git clone` to a running studio: the installer, host ports, every environment variable, and the guards a production instance must pass.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 ReView ships as a Docker Compose stack, and one instance is one studio. Database, object
 storage, job queue, API, media worker and web front all come up from a single
@@ -191,7 +191,7 @@ Ports are set in `.env` and consumed by `docker-compose.yml`:
 | Service | Host port | `.env` variable | Bind address |
 |---------|-----------|-----------------|--------------|
 | Frontend (nginx) | `3429` | `PORT` | all interfaces |
-| Backend API | `3430` | `BPORT` | all interfaces |
+| Backend API | `3430` | `BPORT` | `BPORT_BIND`, default `127.0.0.1` |
 | MinIO S3 API | `9000` | `MINIO_API_PORT` | `MINIO_BIND`, default `127.0.0.1` |
 | MinIO console | `9001` | `MINIO_CONSOLE_PORT` | `MINIO_BIND`, default `127.0.0.1` |
 | PostgreSQL (dev overlay only) | `5432` | `POSTGRES_PORT` | `DEV_BIND`, default `127.0.0.1` |
@@ -208,6 +208,15 @@ purpose: the MinIO console is a full storage administration UI and Redis has no 
 all. Both bind variables accept `0.0.0.0` when you knowingly want LAN access — and note that
 `MINIO_BIND` governs the API and the console together, which is why an installation made with
 `--tls none` exposes both.
+
+**The backend API is bound to the loopback for a different reason**, and it is the one to read
+before changing it. Compose also sets `TRUST_PROXY=1`, which tells the API to take the client's
+address from the `X-Forwarded-For` header — sound only while the TLS front end is the sole way
+in. Publish the API on `0.0.0.0` while leaving `TRUST_PROXY` at `1` and anyone on the network
+picks their own address on every request: every IP-keyed rate limiter is bypassed, silently,
+and the audit log records whatever they chose. Set `TRUST_PROXY=0` in `.env` in the same
+gesture. The four combinations are laid out in
+[Containers & configuration](../infrastructure/containers-and-configuration.md#reaching-the-api-bport_bind-and-trust_proxy).
 
 The production overlay removes every host port from `frontend`, `backend` and `minio`
 (`ports: !reset []`), leaving nginx as the only exposed service on `80`/`443`.
@@ -240,6 +249,7 @@ it serves no HTTP request.
 | `JWT_REFRESH_EXPIRES_IN` | `30d` | Refresh token lifetime |
 | `ALLOW_SELF_REGISTRATION` | `false` | Enables `POST /api/auth/register`. Closed by default — see [Security model](../infrastructure/security.md) |
 | `CORS_ORIGIN` | `*` | Comma-separated origin list. `*` is rejected in production |
+| `TRUST_PROXY` | `0` (compose sets `1`) | Number of proxies in front of the API, `0` to `4`, handed to Express's `trust proxy`. Above `0`, `req.ip` — the key of every rate limiter and the address written in the audit log — is read from `X-Forwarded-For`. Only raise it when the proxy is the **only** way in; see `BPORT_BIND` below |
 | `APP_URL` | *(unset)* | Public URL used to build links in outgoing mail. Without it, links are omitted |
 | `APP_ENCRYPTION_KEY` | derived from `JWT_SECRET` (SHA-256) | Encrypts stored secrets (SMTP password, webhook secrets, per-account TOTP secret). Same strength requirement as `JWT_SECRET` in production |
 
@@ -311,7 +321,10 @@ These live in `.env` but are consumed by `docker-compose*.yml` or by the scripts
 | Variable | Default | What it does |
 |----------|---------|--------------|
 | `PORT` / `BPORT` | `3429` / `3430` | Host ports of the frontend and the API |
+| `BPORT_BIND` | `127.0.0.1` | Interface the API port is published on. `0.0.0.0` exposes the API in clear on the network, bypassing the TLS front end — pair it with `TRUST_PROXY=0` |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `review` / `review_dev` / `review` | Database credentials, also assembled into `DATABASE_URL` by compose |
+| `DB_POOL` / `DB_POOL_TIMEOUT` | `10` / `20` | Prisma connections **per process** and the seconds a query waits for a free one. Left unbounded, Prisma sizes the pool from the host's cores, so a 32-core machine asks for more connections than the shipped `max_connections=100` allows and the second process to start loops on *too many clients*. Keep `DB_POOL × 2` — backend and worker — below `max_connections`, with room for `psql`, backups and migrations |
+| `DB_STATEMENT_TIMEOUT_MS` | `60000` | Ceiling on a **single** query, set on the application's connection. It is deliberately not set on the PostgreSQL role: that would also cap the DDL the Prisma CLI runs at boot, and an index built on a large table would fail `migrate deploy` |
 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | `minioadmin` | MinIO credentials, passed through as the S3 keys |
 | `MINIO_API_PORT` / `MINIO_CONSOLE_PORT` / `MINIO_BIND` | `9000` / `9001` / `127.0.0.1` | Where MinIO is published |
 | `POSTGRES_PORT` / `REDIS_PORT` / `DEV_BIND` | `5432` / `6379` / `127.0.0.1` | Development overlay only |

@@ -39,7 +39,11 @@ export default function ShotAssets({
   });
   const assets = shotQ.isError ? [] : (shotQ.data?.shot.assets ?? null);
   // Sélecteur : toutes les pages (cf. AssetAssignDialog), pas les cent premiers assets.
-  const allAssets: AssetRef[] = useAssetsQuery(projectId, projectId > 0, { all: true }).data ?? [];
+  // Conditionné à `canManage` : la liste entière des assets du projet ne sert QU'au menu
+  // « rattacher un existant », qui n'est rendu que là. Un lecteur ouvrait jusque-là la
+  // bibliothèque complète du projet, page après page, pour n'en rien afficher.
+  const allAssets: AssetRef[] =
+    useAssetsQuery(projectId, projectId > 0 && canManage, { all: true }).data ?? [];
   const [pick, setPick] = useState('');
   const [creating, setCreating] = useState({ name: '', type: 'CHARACTER' });
   const [showCreate, setShowCreate] = useState(false);

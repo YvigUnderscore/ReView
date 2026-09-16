@@ -25,7 +25,7 @@ import { pipeline } from 'node:stream/promises';
 import { createWriteStream, createReadStream } from 'node:fs';
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
-import { safeUploadContentType } from '../lib/uploadContentType';
+import { OPAQUE_CONTENT_TYPE, safeUploadContentType } from '../lib/uploadContentType';
 
 /**
  * Largeur de la tranche pendant laquelle une URL présignée de lecture ne bouge pas.
@@ -47,6 +47,97 @@ export const PRESIGN_CACHE_MAX = 5000;
  * respecté par MinIO). Au-delà, la liste est découpée en tranches de cette taille.
  */
 export const DELETE_OBJECTS_BATCH = 1000;
+
+/**
+ * Type de réponse déduit de l'EXTENSION de la clé de stockage.
+ *
+ * Le `Content-Type` **stocké** ne vaut rien quand l'objet est arrivé par PUT présigné : le
+ * presigner ne signe que `host` (`X-Amz-SignedHeaders=host`), le déposant envoie donc
+ * l'en-tête qu'il veut. Seul le chemin média corrigeait ce type à la finalisation
+ * (`setObjectContentType`) ; les autres dépôts présignés — image de fiche, vignette
+ * d'entité, image de département, HDRI — rendaient l'objet SANS type imposé, c'est-à-dire
+ * avec celui du déposant. La clé, elle, est composée par le serveur à partir d'un type déjà
+ * validé : c'est la seule source sûre, comme le dit `lib/uploadContentType`.
+ *
+ * D'où la règle, appliquée ici une fois pour toutes plutôt que surface par surface :
+ * l'extension de la clé décide du type servi, et **tout ce qui n'est pas reconnu est rendu
+ * opaque**. Aucun format que le navigateur rend activement (HTML, SVG, XML, JS) n'est
+ * atteignable par cette table — c'est ce qui la rend sûre par construction.
+ *
+ * Les formats VFX (EXR, GLB, PLY, SPZ, USD, DPX, masques binaires, LUT `.cube`) tombent sur
+ * `application/octet-stream` : aucun n'est rendu par le navigateur, tous sont lus par
+ * `arrayBuffer()`/`text()` côté viewer, qui ne regarde pas le type. C'est déjà leur type
+ * stocké aujourd'hui, `safeUploadContentType` les y ramenant à l'écriture.
+ */
+const KEY_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.avif': 'image/avif',
+  '.bmp': 'image/bmp',
+  '.tif': 'image/tiff',
+  '.tiff': 'image/tiff',
+  '.mp4': 'video/mp4',
+  '.m4v': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.mkv': 'video/x-matroska',
+  '.ts': 'video/mp2t',
+  '.m3u8': 'application/vnd.apple.mpegurl',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.ogg': 'audio/ogg',
+  '.wav': 'audio/wav',
+  '.pdf': 'application/pdf',
+};
+
+/** Type imposé à la lecture d'une clé, à défaut d'un type explicitement fourni. */
+export function responseTypeFromKey(key: string): string {
+  const slash = key.lastIndexOf('/');
+  const dot = key.lastIndexOf('.');
+  // Un point dans un nom de dossier n'est pas une extension ; une clé sans extension non plus.
+  if (dot <= slash + 1) return OPAQUE_CONTENT_TYPE;
+  return KEY_CONTENT_TYPES[key.slice(dot).toLowerCase()] ?? OPAQUE_CONTENT_TYPE;
+}
+
+/**
+ * Durée de vie par défaut d'une lecture présignée — contenu consommé d'un bloc.
+ *
+ * Une URL présignée n'est liée à personne : la signature couvre le bucket, la clé et la
+ * date, rien qui la rattache au compte, au lien de partage ou à l'état du média. Révoquer un
+ * partage, dépublier ou mettre à la corbeille ne coupe donc PAS un lien déjà remis — seule
+ * son expiration le fait. La durée est la révocation, et elle était d'une heure.
+ *
+ * Or l'écrasante majorité de ces URL est consommée dans la seconde qui suit son émission
+ * (vignettes, images, GLB, splats, masques, HDRI, LUT, sprites) et réémise à chaque montage
+ * de page (`staleTime` de 30 s côté TanStack Query). Quinze minutes couvrent très largement
+ * l'écart entre l'émission et l'usage, y compris un téléchargement déclenché longtemps après
+ * l'affichage — S3 n'évalue l'expiration qu'au DÉBUT de la requête, un transfert commencé à
+ * temps va à son terme.
+ */
+export const DEFAULT_GET_TTL_SECONDS = 900;
+
+/**
+ * Durée de vie d'une lecture **diffusée dans la durée** (vidéo, audio).
+ *
+ * Un `<video src>` présigné redemande des tranches d'octets pendant toute la lecture : une
+ * URL courte couperait la projection en son milieu, exactement au moment où personne ne peut
+ * la relancer. Ce contenu garde donc l'heure historique — c'est la part de A3-05 que ce lot
+ * ne ferme pas, et il faut le dire : un lien de vidéo qui fuit reste lisible jusqu'à 70 min.
+ * La fermer suppose de servir la vidéo derrière une route qui revérifie l'accès à chaque
+ * requête (cf. `lib/mediaToken`), pas de raccourcir davantage.
+ */
+export const STREAMED_GET_TTL_SECONDS = 3600;
+
+/** Durée par défaut choisie sur la nature du contenu (cf. les deux constantes ci-dessus). */
+export function defaultGetTtl(key: string): number {
+  const type = responseTypeFromKey(key);
+  return type.startsWith('video/') || type.startsWith('audio/')
+    ? STREAMED_GET_TTL_SECONDS
+    : DEFAULT_GET_TTL_SECONDS;
+}
 
 /**
  * Abstraction du stockage objet (MinIO, S3-compatible).
@@ -296,13 +387,21 @@ class StorageService {
    * navigateur et n'est donc pas fiable. Le paramètre voyage dans la signature — le client
    * ne peut ni le retirer ni le changer sans invalider l'URL.
    *
+   * **À défaut de type explicite, le type est déduit de la clé** (`responseTypeFromKey`) :
+   * ne rien imposer revenait à servir l'objet avec le type que son déposant avait choisi,
+   * et les quatre surfaces qui n'ont pas de passage serveur après le dépôt le faisaient.
+   * De même, `ttlSeconds` omis retient la durée qui va à la nature du contenu
+   * (`defaultGetTtl`), et non une heure pour tout le monde.
+   *
    * L'URL est **stable pendant une tranche de `PRESIGN_WINDOW_SECONDS`** : à clé, type
    * imposé et durée identiques, deux appels rendent la même chaîne, donc le navigateur
    * réutilise son cache au lieu de retélécharger. La stabilité vaut aussi entre processus
    * (API et worker) parce que la date de signature est épinglée au début de la tranche et
    * non prise à l'instant de l'appel.
    */
-  async getPresignedGetUrl(key: string, ttlSeconds = 3600, contentTypeOverride?: string): Promise<string> {
+  async getPresignedGetUrl(key: string, ttlSeconds?: number, contentTypeOverride?: string): Promise<string> {
+    const ttl = ttlSeconds ?? defaultGetTtl(key);
+    const imposed = contentTypeOverride ?? responseTypeFromKey(key);
     const slot = Math.floor(Date.now() / 1000 / PRESIGN_WINDOW_SECONDS);
     // Changement de tranche : plus aucune de ces URL ne sera reproduite, on repart à vide.
     if (slot !== this.presignSlot) {
@@ -311,11 +410,13 @@ class StorageService {
     }
     // Clé non ambiguë : un type imposé ou un nom de fichier peut contenir n'importe quel
     // caractère, on sérialise donc les trois champs plutôt que de les coller bout à bout.
-    const cacheKey = JSON.stringify([ttlSeconds, contentTypeOverride ?? '', key]);
+    // Les valeurs RÉSOLUES : demander le défaut ou le redemander explicitement, c'est la
+    // même URL, elle ne doit pas être signée deux fois.
+    const cacheKey = JSON.stringify([ttl, imposed, key]);
     const hit = this.presignCache.get(cacheKey);
     if (hit) return hit.url;
 
-    const url = this.signGetUrl(key, ttlSeconds, slot, contentTypeOverride);
+    const url = this.signGetUrl(key, ttl, slot, imposed);
     this.presignCache.set(cacheKey, { objectKey: key, url });
     // Une signature en échec ne doit pas rester mémorisée — et l'attente de ce rejet ici
     // évite un « unhandled rejection » si l'appelant, lui, a déjà traité l'erreur.
@@ -337,16 +438,13 @@ class StorageService {
    * toute fin d'une tranche reste valable au moins aussi longtemps que ce que l'appelant
    * a demandé — la mémoïsation ne raccourcit donc jamais la durée de vie d'un lien.
    */
-  private signGetUrl(
-    key: string,
-    ttlSeconds: number,
-    slot: number,
-    contentTypeOverride?: string,
-  ): Promise<string> {
+  private signGetUrl(key: string, ttlSeconds: number, slot: number, contentType: string): Promise<string> {
     const cmd = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
-      ...(contentTypeOverride ? { ResponseContentType: safeUploadContentType(contentTypeOverride) } : {}),
+      // Second filtre : même un type explicitement passé par un appelant peut venir du
+      // client (pièce jointe, fichier de board), il repasse donc par la liste blanche.
+      ResponseContentType: safeUploadContentType(contentType),
     });
     return getSignedUrl(this.publicClient, cmd, {
       expiresIn: ttlSeconds + PRESIGN_WINDOW_SECONDS,

@@ -49,7 +49,10 @@ export default function AssetAssignDialog({
   });
   const shots = useMemo(() => shotsQ.data ?? [], [shotsQ.data]);
   const sequences = useMemo(() => seqsQ.data?.sequences ?? [], [seqsQ.data]);
-  const loading = shotsQ.isPending || seqsQ.isPending || assetQ.isPending;
+  // `isComplete` et non `isPending` : la première page arrive en un aller-retour, la
+  // dernière en quatre. Entre les deux, la grille afficherait une partie des plans et le
+  // filtre répondrait « aucun résultat » pour un plan qui existe — on préfère le squelette.
+  const loading = !shotsQ.isComplete || seqsQ.isPending || assetQ.isPending;
   const loadError = shotsQ.error ?? seqsQ.error ?? assetQ.error;
 
   // Sélection : dérivée des assignations actuelles de l'asset tant que

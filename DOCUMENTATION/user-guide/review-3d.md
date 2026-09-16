@@ -2,7 +2,7 @@
 
 *A DCC-style viewport for models and USD scenes: navigation, scene graph, ReView overrides, inspection, comparison and lighting.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-16
 
 3D media open in a Three.js viewer built to feel like a DCC viewport rather than a web
 preview: you orbit and fly, you select a prim, you switch a variant, you put a gizmo on
@@ -232,6 +232,25 @@ simply do not get the group.
 The *Scene* panel carries the **performance** counters instead: fps, draw calls, triangles
 drawn and estimated texture memory, with a warning above the triangle budget. They are only
 measured while that panel is open, so an idle dock costs nothing.
+
+### When nothing moves, nothing is redrawn
+
+The viewport used to redraw sixty times a second for as long as it was open — identical frame
+after identical frame. A model left on screen during a meeting kept a laptop's fan running for
+an image nobody was changing. It now draws **on demand**: an orbit, a zoom, a pan, a resize, a
+flight, a playing animation clip, a turntable, a camera animation, a gizmo, any change you make
+from the dock. Damping is included, so a released orbit still coasts to its stop.
+
+With the scene genuinely still, the viewport settles to a heartbeat of **eight frames a
+second**. That heartbeat is what makes the saving safe rather than clever: anything arriving
+late — an HDRI finishing its download, a baked variant, the model you are comparing against —
+appears within an eighth of a second instead of waiting for you to touch something.
+
+The **performance counters of the *Scene* panel are the deliberate exception**. While they are
+on screen the viewport is put back to full rate, because a frame counter that lowers the rate
+it measures ends up measuring its own presence. The fps you read there is what the machine can
+do with this model, which is the only number worth comparing between two versions or two
+workstations.
 
 ### How big is it?
 

@@ -15,6 +15,7 @@ import type {
   ReviewStatus,
   SequenceSummary,
   ShotSummary,
+  UserStatus,
 } from '../types/api';
 
 /**
@@ -143,6 +144,51 @@ export function useLiveSessionsQuery(projectId: number | null) {
         .then((d) => d.sessions),
     enabled: projectId !== null,
     staleTime: 10_000,
+  });
+}
+
+/** Personne de l'annuaire de présence du studio (`GET /api/users/presence`). */
+export interface PresenceUser {
+  id: number;
+  email: string;
+  displayName: string;
+  initials: string;
+  avatarUrl: string | null;
+  status: UserStatus;
+  lastSeenAt: string | null;
+  online: boolean;
+}
+
+/**
+ * Clé de l'annuaire de présence.
+ *
+ * Définie ici et non dans `qk` (query.ts) faute de pouvoir toucher ce fichier dans ce
+ * lot : elle a vocation à y rejoindre ses voisines sous le nom `qk.presence`. Tableau
+ * autonome plutôt que `['users', 'presence']`, pour ne pas se faire invalider par
+ * ricochet à chaque écriture sur `qk.users` (administration des comptes).
+ */
+export const presenceKey = ['presence'] as const;
+
+/**
+ * Annuaire de présence du studio — une seule requête pour tous les consommateurs.
+ *
+ * L'annuaire était chargé dans un `useEffect` propre à chaque consommateur, hors
+ * TanStack Query : deux composants montés ensemble faisaient deux requêtes, et chaque
+ * ouverture du sélecteur de personnes en refaisait une. La réponse porte une URL
+ * d'avatar présignée par compte (calculée à chaque appel côté serveur) : mesurée à
+ * 4 724 octets pour 8 comptes, soit ~70 ko pour un studio de 120 personnes.
+ *
+ * `staleTime` d'une minute : ce qui bouge vite dans cette liste, c'est « qui est en
+ * ligne », et cela arrive par la poussée socket `presence:update` qui écrit directement
+ * dans ce cache (`applyPresencePush`, socketBridge). Le reste — nom, avatar, statut —
+ * ne justifie pas un rechargement à chaque montage.
+ */
+export function usePresenceQuery(enabled = true) {
+  return useQuery({
+    queryKey: presenceKey,
+    queryFn: () => api.get<{ users: PresenceUser[] }>('/api/users/presence').then((d) => d.users),
+    staleTime: 60_000,
+    enabled,
   });
 }
 

@@ -53,7 +53,16 @@ export type Tr = typeof t;
 /** Valeurs interpolées dans un message : `{name}` dans le catalogue. */
 export type TParams = Record<string, string | number> & { count?: number };
 
-const STORAGE_KEY = 'locale';
+/**
+ * Case de `localStorage` où vit la langue choisie sur cet appareil.
+ *
+ * Ce module n'est plus seul à la lire : le script de préchargement produit au build
+ * (`i18nCatalogPreload` dans `vite.config.js`, correctif F13) doit ouvrir la même case pour
+ * savoir quel catalogue précharger avant même que le bundle ne s'exécute. D'où l'export —
+ * `preload.test.ts` confronte les deux valeurs, une divergence ferait précharger une langue
+ * et en télécharger une autre, en silence.
+ */
+export const LOCALE_STORAGE_KEY = 'locale';
 
 /** Catalogues chargés. Vide au démarrage : même l'anglais arrive par son propre chunk. */
 const catalogs = new Map<Locale, Catalog>();
@@ -115,7 +124,7 @@ const getVersion = () => version;
 
 function readStored(): Locale | null {
   try {
-    const v = localStorage.getItem(STORAGE_KEY);
+    const v = localStorage.getItem(LOCALE_STORAGE_KEY);
     return isLocale(v) ? v : null;
   } catch {
     return null; // stockage indisponible (SSR, tests, mode privé)
@@ -171,7 +180,7 @@ export function setLocale(code: Locale, options: { persist?: boolean } = {}): Pr
   const { persist = true } = options;
   if (persist) {
     try {
-      localStorage.setItem(STORAGE_KEY, code);
+      localStorage.setItem(LOCALE_STORAGE_KEY, code);
     } catch {
       /* stockage indisponible */
     }

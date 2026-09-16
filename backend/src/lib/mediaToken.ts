@@ -22,7 +22,16 @@ import { env } from '../config/env';
  *     authentifier une requête d'API, ni un jeton d'accès à autoriser une lecture ici.
  */
 
-/** Durée de vie du jeton — alignée sur celle des URL présignées de segments. */
+/**
+ * Durée de vie du jeton — alignée sur celle des URL présignées de segments.
+ *
+ * Ce jeton nomme son porteur (`uid`), mais il ne le fait qu'à l'ouverture : comme les URL
+ * qu'il permet d'obtenir, il ne repasse par aucun contrôle en base une fois émis. Une
+ * révocation d'accès ne mord donc qu'au bout de ces deux heures — même délai que
+ * `HLS_URL_TTL_SEC`, et pour la même raison. Il est le bon endroit où accrocher un contrôle
+ * par requête le jour où l'on voudra fermer A3-05 : il porte déjà la portée (média +
+ * lecteur), il ne lui manque que la relecture de l'état du média à chaque appel.
+ */
 export const HLS_PLAYBACK_TTL_SEC = 2 * 60 * 60;
 
 const PLAYBACK_KIND = 'media-playback';
