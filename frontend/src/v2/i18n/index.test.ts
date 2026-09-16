@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { localesCoveringBaseCatalog } from '../../../vite.config.js';
 import {
   BASE_LOCALE,
   LOCALES,
@@ -232,6 +235,103 @@ describe('traduction', () => {
     await setLocale('zh-Hans');
     expect(document.documentElement.lang).toBe('zh-Hans');
     expect(document.documentElement.dir).toBe('ltr');
+  });
+});
+
+/**
+ * Ce que le navigateur télécharge avant le premier écran (F1).
+ *
+ * Mesure au build, sur le même arbre, `vite build` deux fois : avec l'anglais inliné
+ * 310,2 ko gzip de premier chargement (chunk d'entrée 176,2) ; sans, 258,6 ko (chunk
+ * d'entrée 124,7) — **51,5 ko gzip, 16,6 %**, plus un chunk `en-*.js` de 51,0 ko que
+ * seules les langues incomplètes vont chercher. Les tests qui suivent gardent les deux
+ * conditions de cette économie : aucun catalogue dans le chunk d'entrée, et une liste
+ * de langues complètes qui dit vrai — sans quoi une traduction partielle afficherait
+ * des clés brutes à la place du repli anglais.
+ */
+describe('poids du premier chargement', () => {
+  // `process.cwd()` est la racine du projet frontend, celle que vitest se donne.
+  const source = readFileSync(path.join(process.cwd(), 'src/v2/i18n/index.ts'), 'utf8');
+
+  it('n’importe statiquement aucun catalogue : ils arrivent tous par leur chunk', () => {
+    const inlines = [...source.matchAll(/^import\s[^\n]*?from\s+'\.\/messages\/[^']+'/gm)];
+    expect(inlines.map((m) => m[0])).toEqual([]);
+  });
+
+  it('laisse les quatorze catalogues chargeables à la demande', async () => {
+    for (const code of LOCALE_CODES) {
+      await loadCatalog(code);
+      expect(coverage(code), code).not.toBeNull();
+    }
+  });
+
+  /**
+   * La liste est calculée par `vite.config.js` en lisant les fichiers ; le bundle, lui,
+   * sert les modules vus par Vite. Les deux vues doivent coïncider : une langue déclarée
+   * complète à tort n'irait plus chercher l'anglais, et ses clés manquantes s'afficheraient
+   * telles quelles.
+   */
+  it('ne déclare complète qu’une langue qui couvre vraiment toutes les clés', () => {
+    const baseKeys = Object.keys(catalogOf(BASE_LOCALE));
+    const reallyComplete = LOCALE_CODES.filter(
+      (code) => code !== BASE_LOCALE && baseKeys.every((k) => catalogOf(code)[k] !== undefined),
+    );
+    expect([...localesCoveringBaseCatalog()].sort()).toEqual([...reallyComplete].sort());
+  });
+});
+
+/**
+ * Le socle embarque le catalogue de base **hors production** — sans quoi les tests, qui
+ * n'amorcent pas l'application, n'auraient aucun message à traduire. Les cas qui suivent
+ * rejouent donc les conditions de production (`PROD` vrai, aucun catalogue en mémoire) sur
+ * une instance neuve du module, et comptent ce qui est réellement téléchargé : un
+ * catalogue, ou deux. `coverage(code)` vaut `null` tant qu'un catalogue n'est pas arrivé —
+ * c'est notre compteur de requêtes.
+ */
+describe('en conditions de production : nombre de catalogues téléchargés', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+    localStorage.clear();
+  });
+
+  const freshI18n = async (fullLocales: string) => {
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('I18N_FULL_LOCALES', fullLocales);
+    vi.resetModules();
+    return import('./index');
+  };
+
+  it('n’en télécharge qu’un quand la langue couvre toutes les clés', async () => {
+    const i18n = await freshI18n('fr,ja');
+    await i18n.setLocale('fr');
+
+    // L'anglais n'a pas été demandé : il n'aurait servi de repli à aucune clé.
+    expect(i18n.coverage('en')).toBeNull();
+    const keys = Object.keys(catalogOf('fr')).length;
+    expect(i18n.coverage('fr')).toEqual({ translated: keys, total: keys });
+    expect(i18n.t('common.save')).toBe(catalogOf('fr')['common.save']);
+  });
+
+  it('en télécharge deux quand la traduction est partielle, et le repli tient', async () => {
+    // `br` hors de la liste : le build l'a trouvée incomplète. Le module neuf charge ses
+    // propres instances de catalogue : on tronque celle-là, pas celle du reste du fichier.
+    const i18n = await freshI18n('fr,ja');
+    const partiel = (await import('./messages/br.json')).default as unknown as Record<string, unknown>;
+    delete partiel['common.save'];
+    await i18n.setLocale('br');
+
+    expect(i18n.coverage('en')).not.toBeNull();
+    expect(i18n.t('common.save')).toBe('Save');
+    expect(i18n.t('common.close')).toBe(partiel['common.close']);
+  });
+
+  // Sans information de build (configuration sans le calcul), on ne sait pas : on charge
+  // l'anglais. Le repli prime sur l'économie, jamais l'inverse.
+  it('en télécharge deux quand le build n’a rien dit', async () => {
+    const i18n = await freshI18n('');
+    await i18n.loadCatalog('ja');
+    expect(i18n.coverage('en')).not.toBeNull();
   });
 });
 

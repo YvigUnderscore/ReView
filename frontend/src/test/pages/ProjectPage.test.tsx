@@ -65,9 +65,14 @@ describe('ProjectPage', () => {
 
     await user.click(await screen.findByRole('tab', { name: new RegExp(`^${t('shots.title')}`) }));
 
+    // On attend le PANNEAU avant l'URL, et non l'inverse : depuis que les douze onglets sont
+    // chargés par `lazy()`, le clic franchit une frontière Suspense. Attendre d'abord l'URL
+    // revenait à se donner une seconde pour un import dynamique — le test passait seul et
+    // tombait dès que la machine était chargée. Le délai est explicite pour la même raison.
+    expect(
+      await screen.findByRole('heading', { name: t('shots.title'), level: 2 }, { timeout: 10_000 }),
+    ).toBeInTheDocument();
     await waitFor(() => expect(currentPath()).toContain('tab=shots'));
-    // Le panneau a suivi : l'en-tête de la section des plans est monté.
-    expect(await screen.findByRole('heading', { name: t('shots.title'), level: 2 })).toBeInTheDocument();
   });
 
   it('monte directement l’onglet demandé par l’URL', async () => {

@@ -1,25 +1,24 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useMemo, useState } from 'react';
-import {
-  ChevronDown,
-  ChevronRight,
-  Copy,
-  Eye,
-  EyeOff,
-  Lock,
-  LockOpen,
-  RotateCcw,
-  Search,
-  Trash2,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RotateCcw, Search } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../../components/ui/context-menu';
 import type { UsdBakedVariant, UsdModelInfo } from '../../../types/api';
-import { filterPrimTree, flattenTree, type PrimNode } from '../three/usdScenegraph';
-import { clonePath, clonesOf, isHidden, isHiddenByAncestor } from '../three/sceneOverride';
+import { filterPrimTree, flattenTree } from '../three/usdScenegraph';
+import { isHidden, isHiddenByAncestor } from '../three/sceneOverride';
 import type { UsdSceneState } from '../three/useUsdScene';
 import PrimMenuItems from './PrimMenuItems';
+import { CloneRow, PrimRow } from './ScenegraphRow';
+import {
+  ROW_ESTIMATE,
+  ROW_OVERSCAN,
+  aimedPrimPath,
+  buildRows,
+  rowIndexOf,
+  variantTitleIndex,
+} from './scenegraphRows';
 import { useT } from '../../../i18n';
 
 /**
@@ -30,184 +29,12 @@ import { useT } from '../../../i18n';
  *
  * L'arbre vient de l'analyseur, pas des nœuds glTF : il montre donc aussi les prims **non
  * rendus** (variante inactive, purpose filtré), affichés en grisé.
+ *
+ * **Échelle (F10)** : une scène de production compte des milliers de prims, et chercher les
+ * déplie tous d'un coup. L'arbre est donc aplati en rangées (`scenegraphRows`) puis virtualisé —
+ * seule la vingtaine de rangées visibles est montée — et le menu contextuel est **unique** : il
+ * retrouve la rangée visée au clic droit, au lieu qu'une instance Radix soit montée par prim.
  */
-
-/** Un prim porteur de variantes dans la scène analysée. */
-const variantSetsOf = (usd: UsdModelInfo | null, prim: string) =>
-  (usd?.variantSets ?? []).filter((v) => v.prim === prim);
-
-function PrimRow({
-  node,
-  depth,
-  scene,
-  usd,
-  baked,
-  expanded,
-  onToggle,
-  onRowClick,
-}: {
-  node: PrimNode;
-  depth: number;
-  scene: UsdSceneState;
-  usd: UsdModelInfo | null;
-  baked?: readonly UsdBakedVariant[] | null;
-  expanded: Set<string>;
-  onToggle: (path: string) => void;
-  /** Clic sur la rangée — la sélection (simple/additive/plage) est arbitrée par le panneau. */
-  onRowClick: (path: string, e: React.MouseEvent | React.KeyboardEvent) => void;
-}) {
-  const t = useT();
-  const open = expanded.has(node.path);
-  const hidden = isHidden(scene.override, node.path);
-  const byAncestor = isHiddenByAncestor(scene.override, node.path);
-  const rendered = scene.renderedPaths.has(node.path);
-  const sets = variantSetsOf(usd, node.path);
-  const isSelected = scene.selected.includes(node.path);
-  const locked = scene.locked.has(node.path);
-
-  return (
-    <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={(e) => onRowClick(node.path, e)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter' && e.key !== ' ') return;
-              e.preventDefault();
-              onRowClick(node.path, e);
-            }}
-            style={{ paddingLeft: `${depth * 12 + 4}px` }}
-            className={`group flex cursor-default items-center gap-1 rounded py-0.5 pr-1 text-xs ${
-              isSelected ? 'bg-primary/20 text-foreground' : 'hover:bg-secondary'
-            } ${hidden || !rendered ? 'text-muted-foreground' : 'text-foreground'}`}
-          >
-            {node.children.length > 0 ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggle(node.path);
-                }}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-                aria-label={open ? t('common.collapse') : t('scenegraph.expand')}
-              >
-                {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              </button>
-            ) : (
-              <span className="w-3 shrink-0" />
-            )}
-
-            <span className="truncate" title={`${node.path}${node.type ? ` · ${node.type}` : ''}`}>
-              {node.name}
-            </span>
-            {sets.length > 0 && (
-              <span
-                title={sets.map((s) => s.name).join(', ')}
-                className="shrink-0 rounded bg-secondary px-1 text-2xs text-secondary-foreground"
-              >
-                {t('prim.variantShort')}
-              </span>
-            )}
-            <span className="flex-1" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                scene.toggleLock(node.path);
-              }}
-              title={locked ? t('scenegraph.unlock') : t('scenegraph.lock')}
-              className={`shrink-0 hover:text-foreground ${
-                locked ? 'text-foreground' : 'text-muted-foreground opacity-0 group-hover:opacity-100'
-              }`}
-            >
-              {locked ? <Lock size={12} /> : <LockOpen size={12} />}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                // Alt+clic = solo : isole ce prim (tout le reste est masqué) — façon DCC.
-                if (e.altKey) scene.isolate(node.path);
-                else scene.setPrim(node.path, { visible: hidden ? undefined : false });
-              }}
-              // Masqué par un ancêtre : le rétablir ici n'aurait aucun effet visible.
-              disabled={byAncestor}
-              title={
-                byAncestor
-                  ? t('scenegraph.hiddenByParent')
-                  : hidden
-                    ? t('common.show')
-                    : t('scenegraph.eyeHint')
-              }
-              className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-40"
-            >
-              {hidden ? <EyeOff size={12} /> : <Eye size={12} />}
-            </button>
-          </div>
-        </ContextMenuTrigger>
-
-        <ContextMenuContent>
-          <PrimMenuItems scene={scene} usd={usd} baked={baked} path={node.path} />
-        </ContextMenuContent>
-      </ContextMenu>
-
-      {/* Clones de mise en scène du prim (C1) : rangées filles, badge dédié, supprimables. */}
-      {clonesOf(scene.override, node.path).map((clone) => {
-        const pseudo = clonePath(node.path, clone.id);
-        const cloneSelected = scene.selected.includes(pseudo);
-        return (
-          <div
-            key={pseudo}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => scene.select(pseudo, { additive: e.ctrlKey || e.metaKey })}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter' && e.key !== ' ') return;
-              e.preventDefault();
-              scene.select(pseudo, { additive: e.ctrlKey || e.metaKey });
-            }}
-            style={{ paddingLeft: `${(depth + 1) * 12 + 4}px` }}
-            className={`group flex cursor-default items-center gap-1 rounded py-0.5 pr-1 text-xs ${
-              cloneSelected ? 'bg-primary/20 text-foreground' : 'text-muted-foreground hover:bg-secondary'
-            }`}
-          >
-            <Copy size={10} className="shrink-0" />
-            <span className="truncate italic">{node.name}</span>
-            <span className="shrink-0 rounded bg-secondary px-1 text-2xs text-secondary-foreground">
-              {t('prim.cloneBadge')}
-            </span>
-            <span className="flex-1" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                scene.deleteClone(pseudo);
-              }}
-              title={t('common.delete')}
-              className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground"
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
-        );
-      })}
-
-      {open &&
-        node.children.map((child) => (
-          <PrimRow
-            key={child.path}
-            node={child}
-            depth={depth + 1}
-            scene={scene}
-            usd={usd}
-            baked={baked}
-            expanded={expanded}
-            onToggle={onToggle}
-            onRowClick={onRowClick}
-          />
-        ))}
-    </>
-  );
-}
-
 export default function ScenegraphPanel({
   scene,
   usd,
@@ -226,37 +53,115 @@ export default function ScenegraphPanel({
   saving?: boolean;
 }) {
   const t = useT();
+  // Méthodes extraites de l'état de scène : les listes de dépendances portent alors sur les
+  // fonctions elles-mêmes — stables — et non sur l'objet, reconstruit à chaque rendu du viewer.
+  const { primary, select, selectMany, isolate, setPrim } = scene;
   const [query, setQuery] = useState('');
   // Les deux premiers niveaux ouverts : assez pour situer la scène sans noyer l'utilisateur.
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(scene.tree.flatMap((n) => [n.path, ...n.children.map((c) => c.path)])),
   );
-  const toggle = (path: string) =>
-    setExpanded((s) => {
-      const next = new Set(s);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
+  const toggle = useCallback(
+    (path: string) =>
+      setExpanded((s) => {
+        const next = new Set(s);
+        if (next.has(path)) next.delete(path);
+        else next.add(path);
+        return next;
+      }),
+    [],
+  );
 
   // Recherche : l'arbre filtré garde les ancêtres des résultats ; tout est déplié pendant
   // qu'une requête est active (sinon un résultat resterait caché sous un nœud replié).
   const displayTree = useMemo(() => filterPrimTree(scene.tree, query), [scene.tree, query]);
   const searching = query.trim().length > 0;
+  const rows = useMemo(
+    () => buildRows(displayTree, expanded, scene.override, searching),
+    [displayTree, expanded, scene.override, searching],
+  );
+  const variants = useMemo(() => variantTitleIndex(usd), [usd]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Le compilateur React renonce à mémoïser un composant qui appelle `useVirtualizer` : le
+  // virtualiseur rend des fonctions liées à un état mutable, qu'on figerait à tort. Sans
+  // conséquence ici — les rangées sont mémoïsées à la main et ne reçoivent que des valeurs.
+  // eslint-disable-next-line react-hooks/incompatible-library -- mémoïsation explicite, cf. ci-dessus
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_ESTIMATE,
+    overscan: ROW_OVERSCAN,
+    getItemKey: (index) => rows[index].path,
+  });
+
+  /**
+   * Sélection venue du viewer : sa rangée peut être hors fenêtre — sur une liste virtualisée
+   * elle n'existe même pas dans le DOM, aucun `scrollIntoView` ne la trouverait. On défile donc
+   * par index. `align: 'auto'` ne bouge pas quand la rangée est déjà visible : cliquer une
+   * rangée ne déplace jamais la liste sous le doigt.
+   */
+  useEffect(() => {
+    const index = rowIndexOf(rows, primary);
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: 'auto' });
+  }, [primary, rows, virtualizer]);
+
+  /** Flèches haut/bas : la rangée visée peut n'être montée qu'au rendu suivant le défilement. */
+  const onMove = useCallback(
+    (from: number, delta: number) => {
+      const next = Math.max(0, Math.min(rows.length - 1, from + delta));
+      if (next === from) return;
+      virtualizer.scrollToIndex(next, { align: 'auto' });
+      const focus = () => scrollRef.current?.querySelector<HTMLElement>(`[data-index="${next}"]`)?.focus();
+      focus();
+      requestAnimationFrame(focus);
+    },
+    [rows.length, virtualizer],
+  );
 
   /** Clic sur une rangée : simple = remplace, Ctrl = bascule, Maj = plage depuis le primaire. */
-  const onRowClick = (path: string, e: React.MouseEvent | React.KeyboardEvent) => {
-    if (e.shiftKey && scene.primary && scene.primary !== path) {
-      const order = flattenTree(displayTree);
-      const a = order.indexOf(scene.primary);
-      const b = order.indexOf(path);
-      if (a >= 0 && b >= 0) {
-        scene.selectMany(order.slice(Math.min(a, b), Math.max(a, b) + 1));
-        return;
+  const onRowClick = useCallback(
+    (path: string, e: React.MouseEvent | React.KeyboardEvent) => {
+      if (e.shiftKey && primary && primary !== path) {
+        const order = flattenTree(displayTree);
+        const a = order.indexOf(primary);
+        const b = order.indexOf(path);
+        if (a >= 0 && b >= 0) {
+          selectMany(order.slice(Math.min(a, b), Math.max(a, b) + 1));
+          return;
+        }
       }
-    }
-    scene.select(path, { additive: e.ctrlKey || e.metaKey });
-  };
+      select(path, { additive: e.ctrlKey || e.metaKey });
+    },
+    [displayTree, primary, select, selectMany],
+  );
+
+  const onEye = useCallback(
+    (path: string, alt: boolean, hiddenNow: boolean) => {
+      // Alt+clic = solo : isole ce prim (tout le reste est masqué) — façon DCC.
+      if (alt) isolate(path);
+      else setPrim(path, { visible: hiddenNow ? undefined : false });
+    },
+    [isolate, setPrim],
+  );
+
+  // Menu contextuel unique : la rangée visée est retrouvée au clic droit. Le prim visé est
+  // aussi tenu dans une ref, lue par `onOpenChange` dans le même événement — un clic droit
+  // hors d'une rangée de prim (zone vide, rangée de clone) n'ouvre rien, comme avant.
+  const aimed = useRef<string | null>(null);
+  const [target, setTarget] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const onAim = useCallback((e: React.MouseEvent) => {
+    aimed.current = aimedPrimPath(e.target);
+    setTarget(aimed.current);
+  }, []);
+  /** Appui long tactile : Radix ouvre le même menu sans passer par `contextmenu`. */
+  const onTouchAim = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.pointerType !== 'mouse') onAim(e);
+    },
+    [onAim],
+  );
 
   if (scene.tree.length === 0)
     return <p className="p-2 text-xs text-muted-foreground">{t('review.scenegraph.empty')}</p>;
@@ -273,24 +178,63 @@ export default function ScenegraphPanel({
           className="min-w-0 flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground"
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {displayTree.map((node) => (
-          <PrimRow
-            key={node.path}
-            node={node}
-            depth={0}
-            scene={scene}
-            usd={usd}
-            baked={baked}
-            expanded={searching ? new Set(flattenTree(displayTree)) : expanded}
-            onToggle={toggle}
-            onRowClick={onRowClick}
-          />
-        ))}
-        {searching && displayTree.length === 0 && (
-          <p className="p-2 text-xs text-muted-foreground">{t('scenegraph.noMatch')}</p>
-        )}
-      </div>
+      <ContextMenu open={menuOpen} onOpenChange={(next) => setMenuOpen(next && aimed.current !== null)}>
+        <ContextMenuTrigger asChild>
+          <div
+            ref={scrollRef}
+            onContextMenu={onAim}
+            onPointerDown={onTouchAim}
+            className="min-h-0 flex-1 overflow-y-auto"
+          >
+            {/* Cale à la hauteur de l'arbre déplié : l'ascenseur dit la vérité sur le volume. */}
+            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+              {virtualizer.getVirtualItems().map((item) => {
+                const row = rows[item.index];
+                return row.kind === 'clone' ? (
+                  <CloneRow
+                    key={item.key}
+                    path={row.path}
+                    name={row.name}
+                    depth={row.depth}
+                    index={item.index}
+                    start={item.start}
+                    measure={virtualizer.measureElement}
+                    onMove={onMove}
+                    selected={scene.selected.includes(row.path)}
+                    onClick={onRowClick}
+                    onDelete={scene.deleteClone}
+                  />
+                ) : (
+                  <PrimRow
+                    key={item.key}
+                    row={row}
+                    index={item.index}
+                    start={item.start}
+                    measure={virtualizer.measureElement}
+                    onMove={onMove}
+                    selected={scene.selected.includes(row.path)}
+                    locked={scene.locked.has(row.path)}
+                    hidden={isHidden(scene.override, row.path)}
+                    byAncestor={isHiddenByAncestor(scene.override, row.path)}
+                    rendered={scene.renderedPaths.has(row.path)}
+                    variants={variants.get(row.path) ?? null}
+                    onToggle={toggle}
+                    onClick={onRowClick}
+                    onLock={scene.toggleLock}
+                    onEye={onEye}
+                  />
+                );
+              })}
+            </div>
+            {searching && rows.length === 0 && (
+              <p className="p-2 text-xs text-muted-foreground">{t('scenegraph.noMatch')}</p>
+            )}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {target && <PrimMenuItems scene={scene} usd={usd} baked={baked} path={target} />}
+        </ContextMenuContent>
+      </ContextMenu>
       {usd?.primsTruncated && (
         <p className="px-2 py-1 text-2xs text-muted-foreground">{t('review.scenegraph.truncated')}</p>
       )}

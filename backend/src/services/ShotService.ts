@@ -243,7 +243,49 @@ export interface UpdateShotInput {
   omitted?: boolean;
 }
 
-export async function update(id: number, projectId: number, body: UpdateShotInput, actorId?: number | null) {
+export interface UpdateShotOptions {
+  /**
+   * Retient les événements temps réel : l'appelant les émettra lui-même, une fois, pour
+   * le lot entier (cf. `emitShotsUpdated`). Réservé aux boucles ; le chemin unitaire,
+   * lui, émet comme avant.
+   */
+  deferEvents?: boolean;
+}
+
+/**
+ * Événements temps réel d'une modification de plan : `shot:update` + `timeline:update`.
+ *
+ * Exporté pour que les actions EN LOT n'émettent qu'un couple d'événements au lieu de N.
+ * Trente plans passés en retake d'un clic — le geste quotidien d'une production — c'était
+ * trente `shot:update`, donc trente rechargements COMPLETS du kanban chez chacune des
+ * personnes qui l'avaient ouvert : la lecture la plus lourde de l'application, répétée
+ * pour rien puisque seule la dernière réponse survivait.
+ *
+ * `ids` porte le lot. Le payload du SINGULIER reste exactement celui d'avant — pas de
+ * champ `ids` quand il n'y a qu'un plan — et `id`/`shotId` valent toujours le premier
+ * identifiant : un consommateur qui ignore `ids` continue de fonctionner tel quel.
+ */
+export function emitShotsUpdated(projectId: number, ids: readonly number[]): void {
+  const first = ids[0];
+  if (first === undefined) return;
+  const batch = ids.length > 1 ? { ids: [...ids] } : {};
+  // Le plan lui-même a changé : statut, code, nom, description, omission. Sans cet
+  // événement, un écran ouvert sur ce plan — ou sur la liste des plans du projet — gardait
+  // l'ancienne valeur jusqu'au rechargement, et l'auteur du changement croyait qu'il
+  // n'était pas passé. Le front écoute `shot:update` depuis toujours (`socketBridge`).
+  emitToProject(projectId, 'shot:update', { projectId, id: first, ...batch });
+  // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
+  // montages automatiques, qui doivent se remettre à jour sans rechargement (Phase 45).
+  emitToProject(projectId, 'timeline:update', { projectId, shotId: first, ...batch });
+}
+
+export async function update(
+  id: number,
+  projectId: number,
+  body: UpdateShotInput,
+  actorId?: number | null,
+  options?: UpdateShotOptions,
+) {
   await assertProjectWritable(projectId); // 38.B
   await assertSequenceInProject(body.sequenceId, projectId);
   // Le statut doit venir du vocabulaire de CE projet : poser l'identifiant d'un statut
@@ -266,16 +308,10 @@ export async function update(id: number, projectId: number, body: UpdateShotInpu
     if (conflict) throw badRequest('A shot with this code already exists in this sequence', 'CODE_TAKEN');
   }
   const shot = await prisma.shot.update({ where: { id }, data: body });
-  // Le plan lui-même a changé : statut, code, nom, description, omission. Sans cet
-  // événement, un écran ouvert sur ce plan — ou sur la liste des plans du projet — gardait
-  // l'ancienne valeur jusqu'au rechargement, et l'auteur du changement croyait qu'il
-  // n'était pas passé. Le front écoute `shot:update` depuis toujours (`socketBridge`) ;
-  // seuls `PipelineEnsureService` et la synchronisation ShotGrid l'émettaient, c'est-à-dire
-  // aucun des chemins empruntés par un humain qui édite un plan dans l'interface.
-  emitToProject(projectId, 'shot:update', { projectId, id });
-  // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
-  // montages automatiques, qui doivent se remettre à jour sans rechargement (Phase 45).
-  emitToProject(projectId, 'timeline:update', { projectId, shotId: id });
+  // Émissions au singulier, sauf quand un appelant en lot les regroupe lui-même. Seuls
+  // `PipelineEnsureService` et la synchronisation ShotGrid émettaient `shot:update`,
+  // c'est-à-dire aucun des chemins empruntés par un humain qui édite un plan.
+  if (!options?.deferEvents) emitShotsUpdated(projectId, [id]);
   // Le statut repart vers ShotGrid. Il ne partait nulle part : le plan changeait d'état
   // dans ReView, le site gardait l'ancien, et la synchronisation suivante ramenait
   // celui du site. L'artiste voyait son changement s'annuler tout seul.

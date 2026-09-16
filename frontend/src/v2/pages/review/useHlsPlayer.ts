@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import Hls from 'hls.js';
 import { getToken } from '../../../lib/apiClient';
 import { getSocket } from '../../../lib/socket';
 import { applyHlsAuth, isExpiredMediaUrlError, MAX_HLS_REFRESHES } from './hlsSource';
+import { canUseHlsJs, loadHls, type HlsInstance } from './hlsRuntime';
 
 export interface HlsLevel {
   height: number;
@@ -33,6 +33,10 @@ export interface HlsLevel {
  * - `switching` = feedback UI du changement en cours, retombé par LEVEL_SWITCHED ou par
  *   un garde-fou (le spinner ne peut pas rester coincé).
  *
+ * La bibliothèque elle-même est chargée **à la demande** (`hlsRuntime`) : elle ne pèse
+ * plus sur les reviews d'image, de 3D ou de splat. La décision « HLS ou MP4 ? » reste
+ * prise dès le premier rendu, sans elle, pour que l'écran ne change pas d'un iota.
+ *
  * Échelle progressive (34.F) : `mediaId` fourni → à l'événement `hls:changed` (room de
  * review, nouvelles renditions transcodées), le master est rechargé en préservant
  * position/lecture ; qualité re-verrouillée sur la plus haute, sauf choix manuel.
@@ -45,9 +49,14 @@ export function useHlsPlayer(
   const [levels, setLevels] = useState<HlsLevel[]>([]);
   const [level, setLevelState] = useState(0);
   const [switching, setSwitching] = useState(false);
-  const hlsRef = useRef<Hls | null>(null);
+  const hlsRef = useRef<HlsInstance | null>(null);
   const switchTimer = useRef<number | undefined>(undefined);
-  const active = !!hlsUrl && Hls.isSupported();
+  // Source dont le chunk du lecteur n'a pas pu être téléchargé (réseau coupé au mauvais
+  // moment) : on y repasse au repli MP4 plutôt que de laisser un élément vidéo sans
+  // source. Mémoriser l'URL plutôt qu'un booléen évite de devoir la remettre à zéro — un
+  // média suivant n'est pas celui qui a échoué.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const active = canUseHlsJs(hlsUrl) && failedUrl !== hlsUrl;
   // Rechargement du master (34.F) : génération bumpée par l'événement socket ; l'état de
   // lecture (position/pause) et le choix manuel de qualité survivent au re-attach.
   const [gen, setGen] = useState(0);
@@ -70,54 +79,71 @@ export function useHlsPlayer(
   }, []);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !hlsUrl || !Hls.isSupported()) return;
-    const hls = new Hls({
-      xhrSetup: (xhr, url) => applyHlsAuth(xhr, url, getToken()),
-    });
-    hlsRef.current = hls;
-    hls.attachMedia(video);
-    hls.loadSource(hlsUrl);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      setLevels(hls.levels.map((l) => ({ height: l.height, bitrate: l.bitrate })));
-      // Verrouille la meilleure rendition avant le premier fragment (pas d'ABR) — sauf
-      // qualité choisie manuellement, conservée à travers un rechargement 34.F.
-      let target = 0;
-      hls.levels.forEach((l, i) => {
-        if (l.height > hls.levels[target].height) target = i;
-      });
-      const manual = manualHeightRef.current;
-      if (manual != null) {
-        const idx = hls.levels.findIndex((l) => l.height === manual);
-        if (idx >= 0) target = idx;
-      }
-      setLevelState(target);
-      hls.currentLevel = target;
-      // Reprise après rechargement du master (34.F) : position et lecture restaurées.
-      const restore = restoreRef.current;
-      restoreRef.current = null;
-      if (restore && video) {
-        video.currentTime = restore.t;
-        if (!restore.paused) void video.play().catch(() => undefined);
-      }
-    });
-    hls.on(Hls.Events.LEVEL_SWITCHED, () => {
-      window.clearTimeout(switchTimer.current);
-      setSwitching(false);
-      // Après un flush en pause, le décodeur peut ne plus avoir d'image sous la tête de
-      // lecture : micro-seek sur place pour recharger le segment et rafraîchir la frame.
-      if (video.paused && video.readyState < 3) video.currentTime = Math.max(0, video.currentTime - 0.001);
-    });
-    // Segment refusé par le stockage : sa signature a expiré (séance plus longue que la
-    // durée de validité). Le manifeste, lui, reste accessible — on le redemande, ce qui
-    // rend un jeu d'URL fraîches, position et lecture préservées.
-    hls.on(Hls.Events.ERROR, (_evt, data) => {
-      if (!isExpiredMediaUrlError(data) || refreshesRef.current >= MAX_HLS_REFRESHES) return;
-      refreshesRef.current += 1;
-      reloadSource();
-    });
+    if (!videoRef.current || !hlsUrl || !canUseHlsJs(hlsUrl)) return;
+    // Chargement paresseux (F2) : la bibliothèque n'est demandée qu'ici, donc uniquement
+    // pour une vraie vidéo. `disposed` couvre le démontage survenu pendant le
+    // téléchargement — sans lui, un lecteur s'attacherait à un élément déjà retiré.
+    let disposed = false;
+    let player: HlsInstance | null = null;
+    void loadHls().then(
+      (HlsCtor) => {
+        const video = videoRef.current;
+        if (disposed || !video) return;
+        const hls = new HlsCtor({
+          xhrSetup: (xhr, url) => applyHlsAuth(xhr, url, getToken()),
+        });
+        player = hls;
+        hlsRef.current = hls;
+        hls.attachMedia(video);
+        hls.loadSource(hlsUrl);
+        hls.on(HlsCtor.Events.MANIFEST_PARSED, () => {
+          setLevels(hls.levels.map((l) => ({ height: l.height, bitrate: l.bitrate })));
+          // Verrouille la meilleure rendition avant le premier fragment (pas d'ABR) — sauf
+          // qualité choisie manuellement, conservée à travers un rechargement 34.F.
+          let target = 0;
+          hls.levels.forEach((l, i) => {
+            if (l.height > hls.levels[target].height) target = i;
+          });
+          const manual = manualHeightRef.current;
+          if (manual != null) {
+            const idx = hls.levels.findIndex((l) => l.height === manual);
+            if (idx >= 0) target = idx;
+          }
+          setLevelState(target);
+          hls.currentLevel = target;
+          // Reprise après rechargement du master (34.F) : position et lecture restaurées.
+          const restore = restoreRef.current;
+          restoreRef.current = null;
+          if (restore && video) {
+            video.currentTime = restore.t;
+            if (!restore.paused) void video.play().catch(() => undefined);
+          }
+        });
+        hls.on(HlsCtor.Events.LEVEL_SWITCHED, () => {
+          window.clearTimeout(switchTimer.current);
+          setSwitching(false);
+          // Après un flush en pause, le décodeur peut ne plus avoir d'image sous la tête de
+          // lecture : micro-seek sur place pour recharger le segment et rafraîchir la frame.
+          if (video.paused && video.readyState < 3)
+            video.currentTime = Math.max(0, video.currentTime - 0.001);
+        });
+        // Segment refusé par le stockage : sa signature a expiré (séance plus longue que la
+        // durée de validité). Le manifeste, lui, reste accessible — on le redemande, ce qui
+        // rend un jeu d'URL fraîches, position et lecture préservées.
+        hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
+          if (!isExpiredMediaUrlError(data) || refreshesRef.current >= MAX_HLS_REFRESHES) return;
+          refreshesRef.current += 1;
+          reloadSource();
+        });
+      },
+      () => {
+        // Repli MP4 : `active` retombe à faux, l'élément vidéo reçoit `src` au rendu suivant.
+        if (!disposed) setFailedUrl(hlsUrl);
+      },
+    );
     return () => {
-      hls.destroy();
+      disposed = true;
+      player?.destroy();
       hlsRef.current = null;
       window.clearTimeout(switchTimer.current);
       setLevels([]);

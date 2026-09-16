@@ -1,9 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ReactNode } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Check, EyeOff, GripVertical, Settings2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import EntityContextMenu from '../../components/ui/entity-menu';
@@ -48,6 +46,23 @@ const DENSITY_LABEL: Record<WidgetDensity, MessageKey> = {
   compact: 'display.density.compact',
 };
 
+/**
+ * Ce que le mode réagencement fournit au cadre — et rien de plus.
+ *
+ * Le cadre appelait lui-même `useSortable`, ce qui plaçait @dnd-kit (16,8 ko gzip) dans le
+ * premier chargement de tout le monde, pour un geste que l'immense majorité des sessions ne
+ * fait jamais (F5). Le glisser-déposer vit maintenant dans `HomeGridSortable`, chargé à
+ * l'entrée en édition ; hors édition, `drag` vaut `undefined` et le rendu est identique à
+ * ce que produisait `useSortable({ disabled: true })` : ni transform, ni transition.
+ */
+export interface WidgetDragHandle {
+  ref: (node: HTMLElement | null) => void;
+  style: CSSProperties;
+  dragging: boolean;
+  /** Attributs ARIA et écouteurs de la poignée, fournis tels quels par dnd-kit. */
+  handleProps: ButtonHTMLAttributes<HTMLButtonElement>;
+}
+
 export interface WidgetFrameProps {
   id: HomeWidgetId;
   settings: ResolvedWidgetSettings;
@@ -59,6 +74,8 @@ export interface WidgetFrameProps {
   onMove: (direction: -1 | 1) => void;
   canMoveBefore: boolean;
   canMoveAfter: boolean;
+  /** Fourni par le seul mode réagencement ; absent, le cadre ne connaît pas dnd-kit. */
+  drag?: WidgetDragHandle;
   children: ReactNode;
 }
 
@@ -72,14 +89,11 @@ export default function WidgetFrame({
   onMove,
   canMoveBefore,
   canMoveAfter,
+  drag,
   children,
 }: WidgetFrameProps) {
   const t = useT();
   const definition = HOME_WIDGETS[id];
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-    disabled: !editing,
-  });
 
   const title = t(definition.labelKey);
   const entries: MenuEntry[] = [
@@ -134,9 +148,9 @@ export default function WidgetFrame({
 
   return (
     <section
-      ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`col-span-12 ${spanClass(settings.span)} ${isDragging ? 'z-10 opacity-60' : ''}`}
+      ref={drag?.ref}
+      style={drag?.style}
+      className={`col-span-12 ${spanClass(settings.span)} ${drag?.dragging ? 'z-10 opacity-60' : ''}`}
       data-widget={id}
     >
       <EntityContextMenu entries={entries} nested>
@@ -149,8 +163,7 @@ export default function WidgetFrame({
             <header className="mb-3 flex items-center gap-2">
               {editing && (
                 <button
-                  {...attributes}
-                  {...listeners}
+                  {...drag?.handleProps}
                   title={t('home.widget.drag')}
                   aria-label={t('home.widget.drag')}
                   className="cursor-grab rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"

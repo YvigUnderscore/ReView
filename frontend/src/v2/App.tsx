@@ -5,7 +5,6 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { MotionConfig } from 'framer-motion';
 import { Toaster } from 'sonner';
 import { api } from '../lib/apiClient';
 import { queryClient, qk } from './lib/query';
@@ -19,7 +18,6 @@ import SetupPage from './pages/SetupPage';
 import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
 import ReviewsPage from './pages/ReviewsPage';
-import ProjectPage from './pages/ProjectPage';
 import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import { useT } from './i18n';
 
@@ -29,7 +27,12 @@ import { useT } from './i18n';
  * L'espace de review et les vingt-sept onglets d'administration partaient dans le fichier
  * d'entrée : ils étaient téléchargés avant la page de connexion, par quelqu'un qui n'avait
  * encore rien demandé. Chacun s'ouvre maintenant à l'usage.
+ *
+ * La page projet et ses douze onglets (dont les six panneaux ShotGrid) y partaient eux
+ * aussi — 28,8 ko gzip d'écrans qu'on n'ouvre qu'après avoir choisi un projet, téléchargés
+ * avant même la saisie du mot de passe (F4).
  */
+const ProjectPage = lazy(() => import('./pages/ProjectPage'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage'));
 const TaskPage = lazy(() => import('./pages/TaskPage'));
 const AssetPage = lazy(() => import('./pages/AssetPage'));
@@ -65,15 +68,17 @@ function ProtectedShell() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      {/* reducedMotion="user" : framer respecte prefers-reduced-motion globalement (10.B6). */}
-      <MotionConfig reducedMotion="user">
-        {/* Pas de provider d'infobulles ici : le monter à la racine imposerait d'avoir Radix
-            dès le premier rendu — or c'est précisément ce que la façade `ui/tooltip` évite,
-            en gardant 10 ko hors du premier chargement. L'insérer plus tard, une fois le
-            module chargé, remonterait toute l'application. Chaque infobulle se fournit donc
-            son provider, au prix de la seule fenêtre de grâce partagée. */}
-        <AppRoutes />
-      </MotionConfig>
+      {/* Plus de `MotionConfig` ici (F3) : framer-motion pesait 38,5 ko gzip du premier
+          chargement pour trois apparitions et un soulignement d'onglet. Les animations
+          restantes sont des `@keyframes` CSS (tailwindcss-animate) et chacune porte
+          `motion-reduce:animate-none` — `prefers-reduced-motion` est donc respecté par la
+          feuille de style, sans moteur d'animation impératif dans le bundle d'entrée. */}
+      {/* Pas de provider d'infobulles ici : le monter à la racine imposerait d'avoir Radix
+          dès le premier rendu — or c'est précisément ce que la façade `ui/tooltip` évite,
+          en gardant 10 ko hors du premier chargement. L'insérer plus tard, une fois le
+          module chargé, remonterait toute l'application. Chaque infobulle se fournit donc
+          son provider, au prix de la seule fenêtre de grâce partagée. */}
+      <AppRoutes />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

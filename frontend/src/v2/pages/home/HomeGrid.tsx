@@ -1,24 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import { SortableContext, rectSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { Suspense, lazy } from 'react';
 import LatestReviews from './LatestReviews';
 import MyTasksCard from './MyTasksCard';
 import ActivityFeed from './ActivityFeed';
 import StatsRow from './StatsRow';
 import RecentProjects from './RecentProjects';
-import WidgetFrame from './WidgetFrame';
+import WidgetFrame, { type WidgetDragHandle } from './WidgetFrame';
 import {
-  isWidgetId,
   reorderWidgets,
   setWidgetSetting,
   visibleWidgets,
@@ -36,7 +26,16 @@ import type { DashboardData } from './homeTypes';
  * qu'un bloc ne pouvait jamais quitter. Ici, tout se déplace partout — à la souris comme
  * au clavier (dnd-kit gère les deux) — et seulement en mode édition : hors édition, la
  * page reste une page, sans poignée ni bordure.
+ *
+ * Le moteur de glisser-déposer suit cette règle jusqu'au bout depuis F5 : il n'est
+ * téléchargé qu'à l'entrée en édition. Hors édition, la grille est exactement le même HTML
+ * qu'avant — mêmes classes, mêmes blocs, mêmes menus — mais sans les 16,8 ko gzip de
+ * @dnd-kit dans le premier chargement de tout le monde.
  */
+const HomeGridSortable = lazy(() => import('./HomeGridSortable'));
+
+const GRID_CLASS = 'grid grid-cols-12 items-start gap-6';
+
 export default function HomeGrid({
   data,
   pref,
@@ -53,21 +52,6 @@ export default function HomeGrid({
   onEnterEdit: () => void;
 }) {
   const ids = visibleWidgets(pref);
-  const sensors = useSensors(
-    // Un seuil de quelques pixels : sans lui, un simple clic sur un bloc démarrerait un
-    // glissement et avalerait le clic.
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  const onDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const from = String(active.id);
-    const to = String(over.id);
-    if (!isWidgetId(from) || !isWidgetId(to)) return;
-    onPref(reorderWidgets(from, to, pref));
-  };
 
   const content = (id: HomeWidgetId, variant: string) => {
     switch (id) {
@@ -84,45 +68,49 @@ export default function HomeGrid({
     }
   };
 
-  const grid = (
-    <div className="grid grid-cols-12 items-start gap-6">
-      {ids.map((id, index) => {
-        const settings = widgetSettings(id, pref);
-        const apply = (patch: HomeWidgetSettings) => onPref(setWidgetSetting(id, patch, pref));
-        // Déplacement d'une place : le voisin sert de cible, la même fonction que le glisser.
-        const move = (direction: -1 | 1) => {
-          const neighbour = ids[index + direction];
-          if (neighbour) onPref(reorderWidgets(id, neighbour, pref));
-        };
-        return (
-          <WidgetFrame
-            key={id}
-            id={id}
-            settings={settings}
-            editing={editing}
-            onSettings={apply}
-            onHide={() => onHide(id)}
-            onEdit={onEnterEdit}
-            onMove={move}
-            canMoveBefore={index > 0}
-            canMoveAfter={index < ids.length - 1}
-          >
-            <div data-density={settings.density} className={settings.density === 'compact' ? 'text-sm' : ''}>
-              {content(id, settings.variant)}
-            </div>
-          </WidgetFrame>
-        );
-      })}
-    </div>
-  );
+  const widget = (id: HomeWidgetId, index: number, drag?: WidgetDragHandle) => {
+    const settings = widgetSettings(id, pref);
+    const apply = (patch: HomeWidgetSettings) => onPref(setWidgetSetting(id, patch, pref));
+    // Déplacement d'une place : le voisin sert de cible, la même fonction que le glisser.
+    const move = (direction: -1 | 1) => {
+      const neighbour = ids[index + direction];
+      if (neighbour) onPref(reorderWidgets(id, neighbour, pref));
+    };
+    return (
+      <WidgetFrame
+        key={id}
+        id={id}
+        settings={settings}
+        editing={editing}
+        onSettings={apply}
+        onHide={() => onHide(id)}
+        onEdit={onEnterEdit}
+        onMove={move}
+        canMoveBefore={index > 0}
+        canMoveAfter={index < ids.length - 1}
+        drag={drag}
+      >
+        <div data-density={settings.density} className={settings.density === 'compact' ? 'text-sm' : ''}>
+          {content(id, settings.variant)}
+        </div>
+      </WidgetFrame>
+    );
+  };
+
+  const grid = <div className={GRID_CLASS}>{ids.map((id, index) => widget(id, index))}</div>;
 
   if (!editing) return grid;
 
+  // Repli identique à la grille finale : le temps que le module arrive, la page ne bouge
+  // pas — seules les poignées ne répondent pas encore.
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={ids} strategy={rectSortingStrategy}>
-        {grid}
-      </SortableContext>
-    </DndContext>
+    <Suspense fallback={grid}>
+      <HomeGridSortable
+        ids={ids}
+        className={GRID_CLASS}
+        onReorder={(from, to) => onPref(reorderWidgets(from, to, pref))}
+        renderWidget={widget}
+      />
+    </Suspense>
   );
 }

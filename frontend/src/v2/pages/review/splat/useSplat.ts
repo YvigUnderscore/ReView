@@ -22,6 +22,7 @@ import { toThumbnail } from '../viewer/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
 import { renderPipPass, type PipRect } from '../viewer/pipWindow';
 import { applySplatTransform, parseHotspotPoint } from './scene/meshPose';
+import { useRenderGate, SETTLE_WINDOW_MS } from '../viewer/renderScheduler';
 
 /**
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
@@ -132,6 +133,8 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   const flyRef = useRef<ReturnType<typeof createFlyControls> | null>(null);
   // Rect de la fenêtre PiP (mode layout, Phase 27) — non-null : 2ᵉ passe de rendu par frame.
   const pipRectRef = useRef<PipRect | null>(null);
+  // Rendu à la demande (F14) — porte l'invalidation, le comptage des lecteurs de FPS, la boucle.
+  const gate = useRenderGate();
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // Progression du téléchargement du fichier splat (41.B) — démarre à 0, passe à null une fois
@@ -172,6 +175,9 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
         if (cancelled) return;
         setProgress(null); // fichier reçu : le décodage/LOD prend le relais (41.B)
         if (!framed) framed = frameCameraToMesh(THREE, mesh, camera, controls);
+        // Le nuage continue de se raffiner après `onLoad` (décodage, LOD, premier tri) : on
+        // laisse deux secondes de plein régime avant de retomber sur le rendu à la demande.
+        gate.invalidate(SETTLE_WINDOW_MS);
         setReady(true);
       };
 
@@ -211,48 +217,48 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       const init = (mesh as unknown as { initialized?: Promise<unknown> }).initialized;
       init?.then(onReady).catch(() => !cancelled && setLoadError(true));
 
-      const resize = () =>
-        resizeRendererCamera(
-          renderer,
-          camera,
-          container.clientWidth,
-          container.clientHeight,
-          frameAspectRef.current,
-        );
+      const resize = () => {
+        gate.invalidate(); // `setSize` vide le tampon de dessin : il faut redessiner tout de suite
+        const { clientWidth: w, clientHeight: h } = container;
+        resizeRendererCamera(renderer, camera, w, h, frameAspectRef.current);
+      };
       resize();
       const ro = new ResizeObserver(resize);
       ro.observe(container);
 
-      let lastFrameMs = performance.now();
-      renderer.setAnimationLoop(() => {
-        const now = performance.now();
-        const dt = (now - lastFrameMs) / 1000;
-        lastFrameMs = now;
-        // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
-        // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
-        if (fly.flying) fly.update(dt);
-        else controls.update();
-        frameCbs.current.forEach((cb) => cb(dt));
-        renderer.render(scene, camera);
-        // PiP du mode layout (Phase 27) : vue de la caméra layout dans la fenêtre flottante.
-        const pip = pipRectRef.current;
-        if (pip)
-          renderPipPass(renderer, scene, layoutCam, pip, container.clientWidth, container.clientHeight);
-        statsRef.current?.frame(now);
-        // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
-        marker.update(hotspotRef.current, camera, mesh, container.clientWidth, container.clientHeight);
-        // Capture de miniature demandée : le buffer de dessin est intact juste après le rendu.
-        if (captureReq.current) {
-          const cb = captureReq.current;
+      // `update` est joué à chaque tour ; seul `draw` (passes GPU + mesures de mise en page)
+      // est sauté quand l'image serait identique — cf. `renderScheduler` pour les garde-fous.
+      const stopLoop = gate.start({
+        renderer,
+        controls,
+        isBusy: () => fly.flying || frameCbs.current.size > 0 || !!captureReq.current,
+        update: (dt) => {
+          // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
+          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
+          if (fly.flying) fly.update(dt);
+          else controls.update();
+          frameCbs.current.forEach((cb) => cb(dt));
+        },
+        draw: (now) => {
+          renderer.render(scene, camera);
+          const { clientWidth: w, clientHeight: h } = container;
+          // PiP du mode layout (Phase 27) : vue de la caméra layout dans la fenêtre flottante.
+          const pip = pipRectRef.current;
+          if (pip) renderPipPass(renderer, scene, layoutCam, pip, w, h);
+          statsRef.current?.frame(now);
+          // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
+          marker.update(hotspotRef.current, camera, mesh, w, h);
+          // Capture de miniature demandée : le buffer de dessin est intact juste après le rendu.
+          const shot = captureReq.current;
           captureReq.current = null;
-          cb(toThumbnail(renderer.domElement));
-        }
+          shot?.(toThumbnail(renderer.domElement));
+        },
       });
 
       sceneRef.current = { renderer, scene, camera, controls, spark, mesh, pivot, layoutCam };
       cleanup = () => {
         ro.disconnect();
-        renderer.setAnimationLoop(null);
+        stopLoop();
         fly.dispose();
         flyRef.current = null;
         controls.dispose();
@@ -277,7 +283,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       captureReq.current?.(null);
       captureReq.current = null;
     };
-  }, [url, fileName]);
+  }, [url, fileName, gate]);
 
   // Handles de pose caméra (capture/restauration vue libre + PiP layout) — hook dédié (budget).
   const { captureCamera, restoreCamera, restorePipCamera } = useCameraHandles(sceneRef, threeRef);
@@ -324,11 +330,13 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     s.pivot.updateMatrixWorld(true);
   }, []);
 
-  const subscribeStats = useCallback((cb: (stats: SplatStats) => void): (() => void) => {
+  const subscribeStats = useCallback(
     // L'échantillonneur existe dès le montage de la scène (avant `ready`) ; les panneaux du
     // HUD ne sont montés qu'une fois le viewer prêt, l'abonnement est donc toujours effectif.
-    return statsRef.current?.subscribe(cb) ?? (() => undefined);
-  }, []);
+    (cb: (stats: SplatStats) => void): (() => void) =>
+      gate.countSub(statsRef.current?.subscribe(cb)) ?? (() => undefined),
+    [gate],
+  );
 
   const setCullingOff = useCallback((off: boolean) => {
     const s = sceneRef.current;

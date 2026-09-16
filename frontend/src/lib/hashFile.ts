@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { createSHA256 } from 'hash-wasm';
 import type { Sha256Request, Sha256Response } from './sha256.worker';
 
 /**
@@ -18,8 +17,17 @@ import type { Sha256Request, Sha256Response } from './sha256.worker';
 /** Taille de tranche de lecture, identique côté worker et côté repli. */
 const HASH_CHUNK = 8 * 1024 * 1024;
 
-/** sha256 hex calculé sur le thread appelant — repli, et implémentation de référence. */
+/**
+ * sha256 hex calculé sur le thread appelant — repli, et implémentation de référence.
+ *
+ * `hash-wasm` est chargé ici et nulle part ailleurs (F15) : en tête de module, il entrait
+ * dans le fichier d'entrée — 7,6 ko gzip que téléchargeait quiconque ouvrait l'application,
+ * relecteur qui ne téléversera jamais rien compris — alors que le calcul normal se fait
+ * dans `sha256.worker.ts`, qui a son propre bundle. Ce chemin-ci ne sert qu'aux
+ * environnements sans `Worker`.
+ */
 export async function sha256OnMainThread(blob: Blob): Promise<string> {
+  const { createSHA256 } = await import('hash-wasm');
   const hasher = await createSHA256();
   for (let off = 0; off < blob.size; off += HASH_CHUNK) {
     const buf = await blob.slice(off, off + HASH_CHUNK).arrayBuffer();

@@ -137,9 +137,16 @@ const NATIVE_ONLY_PROPS = /^(value|name|type|role)$/;
 const DISCRIMINANT_PROPS =
   /^(variant|scope|kind|mode|side|align|tone|level|status|size|entity|fill|stroke|strokeLinecap|strokeLinejoin|weekday|era|year|month|day|hour|minute|second|timeZoneName|dateStyle|timeStyle|numeric|unit|unitDisplay|currency|notation|display|position|behavior|block|inline|aria-current)$/;
 
-/** Appels dont les arguments sont des URL, des clés de cache ou des traces. */
+/**
+ * Appels dont les arguments sont des URL, des clés de cache, des traces — ou des SÉLECTEURS CSS.
+ *
+ * `querySelector` et sa famille prennent un sélecteur, jamais de la prose : sans cette entrée, un
+ * sélecteur interpolé (`[data-index="${i}"]`) est compté comme un texte d'interface, ce qui pousse
+ * à l'écrire par concaténation — un code moins lisible que le premier relecteur « nettoiera » en
+ * gabarit, rouvrant le faux positif. C'est l'appelant qui déclare la nature du littéral.
+ */
 const TECHNICAL_CALLS =
-  /^(api\.\w+|fetch|navigate|qk(\.\w+)?|URL|URLSearchParams|encodeURI\w*|decodeURI\w*|console\.\w+|(local|session)Storage\.\w+|require|import)$/;
+  /^(api\.\w+|fetch|navigate|qk(\.\w+)?|URL|URLSearchParams|encodeURI\w*|decodeURI\w*|console\.\w+|(local|session)Storage\.\w+|require|import|(\w+\.)*(querySelector|querySelectorAll|closest|matches|getAttribute|setAttribute|removeAttribute))$/;
 
 /**
  * Gabarits BALISÉS qui déclarent un langage, pas de la prose.

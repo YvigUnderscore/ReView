@@ -15,6 +15,13 @@
  * ne sont jamais distribuées et n'ont donc aucune notice à porter.
  *
  * Zéro dépendance : la résolution npm est rejouée à la main sur les package-lock.json.
+ *
+ * **Limite fermée en F-lot8.** Parcourir l'arbre du lockfile ne voit que ce qui est
+ * *déclaré*. Un paquet qui recopie le code d'un tiers dans son propre build (mermaid
+ * embarque js-yaml 4.1.1, Prisma embarque execa, glob, fs-extra…) échappait complètement
+ * au générateur : ce code partait en production sans notice. `collectVendored` le repère
+ * désormais aux marqueurs que les bundlers laissent (`nom@version/node_modules/nom/…`) et
+ * le fichier produit le dit — y compris quand la licence n'a pas pu être établie.
  */
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -221,12 +228,14 @@ async function readLicenseText(dir) {
 }
 
 /** Collecte les métadonnées d'attribution d'un workspace. */
-export async function collectWorkspace(repoRoot, workspace) {
-  const lockPath = path.join(repoRoot, workspace.dir, 'package-lock.json');
-  const lock = JSON.parse(await readFile(lockPath, 'utf8'));
+export async function collectWorkspace(repoRoot, workspace, lock, tree) {
+  if (!lock) {
+    const lockPath = path.join(repoRoot, workspace.dir, 'package-lock.json');
+    lock = JSON.parse(await readFile(lockPath, 'utf8'));
+  }
   const seen = new Map();
 
-  for (const key of productionTree(lock)) {
+  for (const key of tree ?? productionTree(lock)) {
     const dir = path.join(repoRoot, workspace.dir, key);
     /*
      * Binaire natif restreint à une plateforme : on ne lit rien de `node_modules`.
@@ -270,14 +279,189 @@ export async function collectWorkspace(repoRoot, workspace) {
   return [...seen.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
+/* ------------------------------------------------------------------------------------ *
+ * Code tiers recopié à l'intérieur d'un paquet (« vendored »)
+ * ------------------------------------------------------------------------------------ */
+
+/**
+ * Licences de copies internes vérifiées à la main, quand ni l'une ni l'autre des deux
+ * heuristiques ci-dessous ne tranche. Même contrat que `LICENSE_OVERRIDES` : on n'y inscrit
+ * que ce qu'on a réellement lu dans le dépôt du projet concerné.
+ */
+export const VENDORED_LICENSES = {};
+
+/** Fichiers susceptibles de contenir du code empaqueté (pas les `.map`, jamais livrées). */
+const SHIPPED_CODE = /\.(m|c)?js$/;
+
+/** Prédécoupage rapide : inutile de décoder un fichier qui ne cite aucun `node_modules`. */
+const NODE_MODULES = Buffer.from('/node_modules/');
+
+/**
+ * Marqueur de module empaqueté laissé par esbuild/rollup quand le paquet a été construit
+ * avec pnpm : `.pnpm/js-yaml@4.1.1/node_modules/js-yaml/dist/js-yaml.mjs`. Le suffixe
+ * `_peer@x` des installations à pairs est toléré. pnpm encode `@scope/nom` en
+ * `@scope+nom` côté magasin : les deux graphies doivent donc désigner le même paquet.
+ */
+const VENDORED_MARKER = /(@?[\w.+-]+)@(\d[\w.+-]*)(?:_[^/]*)?\/node_modules\/((?:@[\w.-]+\/)?[\w.-]+)\//g;
+
+/**
+ * Identifiants `nom@version` du code tiers recopié dans un texte source.
+ *
+ * Volontairement restreint aux marqueurs **versionnés** : un commentaire de bundler sans
+ * version (`../node_modules/foo/index.js`) ne permet ni d'attribuer une licence ni de
+ * distinguer une copie d'un simple chemin cité. Mieux vaut ne pas prétendre le voir.
+ */
+export function vendoredIdsFrom(text) {
+  const out = new Set();
+  for (const [, outer, version, inner] of text.matchAll(VENDORED_MARKER)) {
+    if (inner !== outer && inner !== outer.replace('+', '/')) continue;
+    out.add(`${inner}@${version}`);
+  }
+  return out;
+}
+
+/** Parcourt un paquet installé sans descendre dans ses `node_modules` imbriqués. */
+async function* shippedFiles(dir) {
+  const stack = [dir];
+  while (stack.length) {
+    let entries;
+    const cur = stack.pop();
+    try {
+      entries = await readdir(cur, { withFileTypes: true });
+    } catch {
+      continue; // paquet non installé : rien à scanner
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules') continue;
+      const full = path.join(cur, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else if (SHIPPED_CODE.test(entry.name)) yield full;
+    }
+  }
+}
+
+/**
+ * Copies internes trouvées dans l'arbre de production d'un workspace : `id` → paquets
+ * hôtes. Une copie déjà présente dans l'arbre sous la même version est ignorée — elle a
+ * déjà sa notice. C'est bien la **version** qui compte : le lockfile du frontend porte
+ * js-yaml 4.3.1 (via eslint, donc jamais distribué) quand mermaid en recopie 4.1.1.
+ */
+export async function collectVendored(repoRoot, workspace, lock, tree) {
+  const shipped = new Set(tree.map((k) => `${packageName(k)}@${lock.packages[k]?.version ?? '?'}`));
+  const found = new Map();
+  for (const key of tree) {
+    const locked = lock.packages[key] ?? {};
+    // Même raison qu'au-dessus : un binaire natif n'est installé que pour la plateforme
+    // courante. Le scanner rendrait un résultat différent sous Windows et sous Linux.
+    if (Array.isArray(locked.os) || Array.isArray(locked.cpu)) continue;
+    const host = packageName(key);
+    for await (const file of shippedFiles(path.join(repoRoot, workspace.dir, key))) {
+      let buffer;
+      try {
+        buffer = await readFile(file);
+      } catch {
+        continue;
+      }
+      if (!buffer.includes(NODE_MODULES)) continue;
+      for (const id of vendoredIdsFrom(buffer.toString('latin1'))) {
+        if (shipped.has(id) || id === `${host}@${locked.version}`) continue;
+        if (!found.has(id)) found.set(id, new Set());
+        found.get(id).add(host);
+      }
+    }
+  }
+  return found;
+}
+
+/** Index licence des deux lockfiles, dev comprises : une copie interne peut venir de n'importe où. */
+export function lockLicenseIndex(locks) {
+  const byId = new Map();
+  const byName = new Map();
+  for (const lock of locks) {
+    for (const [key, entry] of Object.entries(lock.packages ?? {})) {
+      if (!key.includes('node_modules/') || !entry.version || !entry.license) continue;
+      const name = packageName(key);
+      byId.set(`${name}@${entry.version}`, entry.license);
+      if (!byName.has(name)) byName.set(name, new Set());
+      byName.get(name).add(entry.license);
+    }
+  }
+  return { byId, byName };
+}
+
+/**
+ * Licence d'une copie interne, et sur quoi elle repose — c'est cette seconde information
+ * qui rend le signalement honnête : une licence lue sur *une autre version* du même paquet
+ * est une présomption, pas une vérification.
+ */
+export function vendoredLicense(id, index) {
+  const name = id.slice(0, id.lastIndexOf('@'));
+  if (VENDORED_LICENSES[id]) return { license: VENDORED_LICENSES[id], basis: 'verified by hand' };
+  if (index.byId.has(id)) return { license: index.byId.get(id), basis: 'same version in a lockfile' };
+  const versions = index.byName.get(name);
+  if (versions?.size === 1) {
+    return { license: [...versions][0], basis: 'other versions of the package, all agreeing' };
+  }
+  return { license: null, basis: 'not determined' };
+}
+
+/** Assemble la liste triée des copies internes d'un workspace, licence comprise. */
+export function describeVendored(found, index, workspaceLabel) {
+  return [...found.entries()]
+    .map(([id, hosts]) => ({
+      id,
+      workspace: workspaceLabel,
+      hosts: [...hosts].sort(),
+      ...vendoredLicense(id, index),
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
 /** Encadre un texte sans risquer de casser le Markdown. */
 function fence(text) {
   const ticks = '`'.repeat(Math.max(3, ...(text.match(/`+/g) ?? ['']).map((m) => m.length + 1)));
   return `${ticks}text\n${text}\n${ticks}`;
 }
 
+/**
+ * Chapitre des copies internes. Rédigé pour dire deux choses : ce que le scan a trouvé,
+ * et ce qu'il ne peut pas voir. Une liste qui se présenterait comme exhaustive sans l'être
+ * serait pire que pas de liste du tout.
+ */
+export function renderVendored(vendored) {
+  if (!vendored.length) return [];
+  const unknown = vendored.filter((v) => !v.license).length;
+  return [
+    '## Vendored third-party code',
+    '',
+    'Some packages ship a copy of another project inside their own build output instead of',
+    'depending on it. Those copies are redistributed with ReView, but they appear in no',
+    'lockfile, so the lists above cannot see them: mermaid inlines js-yaml, Prisma inlines',
+    'execa, glob and fs-extra, and none of them was named here before.',
+    '',
+    'They are recovered from the build markers bundlers leave behind',
+    '(`name@version/node_modules/name/…`) and listed for attribution.',
+    '',
+    '> **This list is a best effort, not a proof of completeness.** Only markers that carry a',
+    '> version can be attributed; a copy inlined without one stays invisible to the scan, and',
+    '> no verbatim license text is available for these copies since they are not installed as',
+    '> packages. Please report anything you find missing.',
+    '',
+    `${vendored.length} copies, ${unknown} of which with no license established.`,
+    '',
+    '| Component | Copied inside | License | Determined from |',
+    '| --- | --- | --- | --- |',
+    ...vendored.map(
+      (v) =>
+        `| \`${v.id}\` | ${v.hosts.map((h) => `\`${h}\``).join(', ')} (${v.workspace}) |` +
+        ` ${v.license ? `\`${v.license}\`` : '**unverified**'} | ${v.basis} |`,
+    ),
+    '',
+  ];
+}
+
 /** Rend le fichier de notices complet. */
-export function renderNotices(sections) {
+export function renderNotices(sections, vendored = []) {
   const all = sections.flatMap((s) => s.packages);
   const counts = new Map();
   for (const p of all) counts.set(p.license, (counts.get(p.license) ?? 0) + 1);
@@ -331,6 +515,7 @@ export function renderNotices(sections) {
       }
     }
   }
+  out.push(...renderVendored(vendored));
   return `${out.join('\n').trimEnd()}\n`;
 }
 
@@ -343,15 +528,37 @@ async function main() {
   const target = path.join(repoRoot, 'THIRD-PARTY-NOTICES.md');
 
   const sections = [];
+  const locks = [];
+  const trees = [];
   for (const workspace of WORKSPACES) {
-    sections.push({ label: workspace.label, packages: await collectWorkspace(repoRoot, workspace) });
+    const lock = JSON.parse(await readFile(path.join(repoRoot, workspace.dir, 'package-lock.json'), 'utf8'));
+    const tree = productionTree(lock);
+    locks.push(lock);
+    trees.push(tree);
+    sections.push({
+      label: workspace.label,
+      packages: await collectWorkspace(repoRoot, workspace, lock, tree),
+    });
   }
 
+  // Code tiers recopié dans un paquet : invisible du lockfile, donc du reste de ce script.
+  const index = lockLicenseIndex(locks);
+  const vendored = [];
+  for (const [i, workspace] of WORKSPACES.entries()) {
+    const found = await collectVendored(repoRoot, workspace, locks[i], trees[i]);
+    vendored.push(...describeVendored(found, index, workspace.dir));
+  }
+  vendored.sort((a, b) => a.id.localeCompare(b.id) || a.workspace.localeCompare(b.workspace));
+
   // Garde-fou de compatibilité : une dépendance sous licence non compatible AGPL ne doit
-  // pas se contenter d'apparaître dans les notices, elle doit arrêter la validation.
-  const rejected = sections
-    .flatMap((section) => section.packages)
-    .filter((pkg) => !isAllowedLicense(pkg.license));
+  // pas se contenter d'apparaître dans les notices, elle doit arrêter la validation. Une
+  // copie interne dont la licence est établie y est soumise au même titre ; celle dont la
+  // licence reste indéterminée est signalée dans le fichier, pas transformée en blocage
+  // sur une présomption.
+  const rejected = [
+    ...sections.flatMap((section) => section.packages),
+    ...vendored.filter((v) => v.license),
+  ].filter((pkg) => !isAllowedLicense(pkg.license));
   if (rejected.length) {
     console.error(`✗ ${rejected.length} dépendance(s) sous licence non compatible AGPL-3.0 :`);
     for (const pkg of rejected) console.error(`  ${pkg.id} — ${pkg.license}`);
@@ -360,7 +567,14 @@ async function main() {
     process.exit(1);
   }
 
-  const content = renderNotices(sections);
+  const content = renderNotices(sections, vendored);
+  const unverified = vendored.filter((v) => !v.license).length;
+  if (unverified) {
+    console.warn(
+      `! ${unverified} copie(s) interne(s) sans licence établie — listées « unverified » dans` +
+        ' THIRD-PARTY-NOTICES.md ; les vérifier une à une et compléter VENDORED_LICENSES.',
+    );
+  }
 
   if (check) {
     let current = '';
@@ -375,14 +589,16 @@ async function main() {
       process.exit(1);
     }
     console.log(
-      `✓ THIRD-PARTY-NOTICES.md à jour (${sections.reduce((n, s) => n + s.packages.length, 0)} paquets)`,
+      `✓ THIRD-PARTY-NOTICES.md à jour (${sections.reduce((n, s) => n + s.packages.length, 0)} paquets,` +
+        ` ${vendored.length} copies internes)`,
     );
     return;
   }
 
   await writeFile(target, content);
   console.log(
-    `✓ THIRD-PARTY-NOTICES.md écrit — ${sections.map((s) => `${s.packages.length} ${s.label.split(' ')[0].toLowerCase()}`).join(', ')}`,
+    `✓ THIRD-PARTY-NOTICES.md écrit — ${sections.map((s) => `${s.packages.length} ${s.label.split(' ')[0].toLowerCase()}`).join(', ')},` +
+      ` ${vendored.length} copies internes`,
   );
 }
 

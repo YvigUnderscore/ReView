@@ -59,10 +59,84 @@ export function createModelScene(
   const root = new THREE.Group();
   scene.add(root);
 
+  let disposed = false;
   const dispose = () => {
+    if (disposed) return;
+    disposed = true;
     controls.dispose();
+    // `renderer.dispose()` ne libère que les caches JS de Three (three 0.183 : renderLists,
+    // renderStates, properties, objects, bindingStates, programCache, xr). Ni les géométries,
+    // ni les matériaux, ni les textures du modèle chargé — il faut parcourir la scène (F9).
+    disposeSceneTree(scene);
     renderer.dispose();
+    // Le contexte WebGL lui-même : Chrome plafonne le nombre de contextes simultanés, et un
+    // contexte abandonné fait perdre le plus ancien canvas (viewer noir) après quelques
+    // allers-retours entre versions d'un même asset.
+    renderer.forceContextLoss();
     renderer.domElement.remove();
   };
   return { renderer, scene, camera, controls, root, dispose };
+}
+
+/** Ressources GPU effectivement libérées — grandeur mesurable (tests de `dispose`). */
+export interface DisposeCounts {
+  geometries: number;
+  materials: number;
+  textures: number;
+}
+
+const isTexture = (value: unknown): value is THREE.Texture =>
+  !!value && typeof value === 'object' && (value as { isTexture?: boolean }).isTexture === true;
+
+/**
+ * Libère géométries, matériaux et textures de tout un sous-arbre de scène (F9). `seen` dédoublonne :
+ * un matériau ou une texture partagés par plusieurs maillages — le cas courant d'un GLB, et celui
+ * des clones de mise en scène, qui partagent géométrie et matériaux avec leur source — ne sont
+ * libérés **qu'une fois**, et le compte rendu reste juste.
+ *
+ * Deux ressources sont volontairement épargnées :
+ * - `scene.environment` / `scene.background` (carte HDRI pré-filtrée) : elles appartiennent à
+ *   `useModel3DLighting`, qui les libère de son côté et peut les garder d'une scène à l'autre.
+ *   Le parcours ne suit que les matériaux portés par les objets, jamais ces deux champs.
+ * - Tout ce qui figure déjà dans `seen` : l'appelant peut y déposer les textures qu'un autre
+ *   viewer utilise encore, pour qu'elles survivent au démontage de celui-ci.
+ */
+export function disposeSceneTree(root: THREE.Object3D, seen = new Set<object>()): DisposeCounts {
+  const counts: DisposeCounts = { geometries: 0, materials: 0, textures: 0 };
+
+  const disposeTexture = (texture: THREE.Texture) => {
+    if (seen.has(texture)) return;
+    seen.add(texture);
+    texture.dispose();
+    counts.textures += 1;
+  };
+
+  const disposeMaterial = (material: THREE.Material) => {
+    if (seen.has(material)) return;
+    seen.add(material);
+    // Les textures sont cherchées dans les **propriétés** du matériau plutôt que dans une liste
+    // de noms (map, normalMap, roughnessMap…) : un slot ajouté par une extension glTF
+    // (KHR_materials_*) serait sinon laissé sur le GPU à chaque chargement.
+    for (const value of Object.values(material)) if (isTexture(value)) disposeTexture(value);
+    // ShaderMaterial : les textures vivent dans `uniforms[x].value`, hors des propriétés.
+    const uniforms = (material as { uniforms?: Record<string, { value?: unknown }> }).uniforms;
+    if (uniforms) for (const u of Object.values(uniforms)) if (isTexture(u?.value)) disposeTexture(u.value);
+    material.dispose();
+    counts.materials += 1;
+  };
+
+  root.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    const geometry = mesh.geometry as THREE.BufferGeometry | undefined;
+    if (geometry?.dispose && !seen.has(geometry)) {
+      seen.add(geometry);
+      geometry.dispose();
+      counts.geometries += 1;
+    }
+    const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    if (Array.isArray(material)) material.forEach(disposeMaterial);
+    else if (material?.dispose) disposeMaterial(material);
+  });
+
+  return counts;
 }

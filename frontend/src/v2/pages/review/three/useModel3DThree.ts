@@ -23,6 +23,7 @@ import { useModelLayout } from './useModelLayout';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import { createFlyControls, type FlyControls } from '../viewer/flyControls';
 import { useThumbnailCapture } from '../viewer/useThumbnailCapture';
+import { useRenderGate, CAPTURE_WINDOW_MS } from '../viewer/renderScheduler';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { useModelFraming } from './useModelFraming';
 import { useSaveTransform } from './useSaveTransform';
@@ -74,7 +75,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     threeRef,
   });
   const frameCbs = useRef(new Set<(dt: number) => void>());
-  const { onFrame: captureFrame, capture: captureThumbnail } = useThumbnailCapture();
+  const { onFrame: captureFrame, capture: captureRaw } = useThumbnailCapture();
+  // Rendu à la demande (F14) — porte l'invalidation, les abonnements passifs et la boucle.
+  const gate = useRenderGate();
   const flyRef = useRef<FlyControls | null>(null);
   // Aspect du cadre de livraison (présentation persistée) — la caméra le garde quel que soit
   // l'écran, la vue étant étendue au conteneur entier (Phase 25, cf. resizeRendererCamera).
@@ -113,9 +116,15 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const { captureCamera, restoreCamera, registerViewState, fov, setFov, roll, setRoll } =
     useModelCameraHandles({ runtimeRef, threeRef });
   const subscribeStats = useCallback(
-    (cb: (stats: { fps: number } & ModelPerfSample) => void) => statsRef.current?.subscribe(cb) ?? (() => {}),
-    [],
+    (cb: (stats: { fps: number } & ModelPerfSample) => void) =>
+      gate.countSub(statsRef.current?.subscribe(cb)) ?? (() => {}),
+    [gate],
   );
+  /** Miniature : la capture suit un rendu — il faut donc en demander un (F14). */
+  const captureThumbnail = useCallback(() => {
+    gate.invalidate(CAPTURE_WINDOW_MS);
+    return captureRaw();
+  }, [gate, captureRaw]);
   const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
 
   /** Poignée impérative commune (gizmos, caméra-objet, cadrage) — cf. `viewer/sceneHandle`. */
@@ -148,7 +157,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     reapplyRef: reapplyScaleRef,
   });
 
-  const anim = useModelAnimations(runtimeRef, actionRef, threeRef, subscribeFrame);
+  const anim = useModelAnimations(runtimeRef, actionRef, threeRef, gate.subscribeIdle);
   // `init` reste privé (appelé au chargement) ; le reste du transport est exposé tel quel.
   const { init: animInit, ...animApi } = anim;
   const layout = useModelLayout({ runtimeRef, threeRef, subscribeFrame, getDom, captureCamera });
@@ -219,14 +228,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       const fly = createFlyControls(THREE, scene.camera, scene.controls, scene.renderer.domElement);
       flyRef.current = fly;
 
-      const resize = () =>
-        resizeRendererCamera(
-          scene.renderer,
-          scene.camera,
-          container.clientWidth,
-          container.clientHeight,
-          frameAspectRef.current,
-        );
+      const resize = () => {
+        gate.invalidate(); // `setSize` vide le tampon de dessin : il faut redessiner tout de suite
+        const { clientWidth: w, clientHeight: h } = container;
+        resizeRendererCamera(scene.renderer, scene.camera, w, h, frameAspectRef.current);
+      };
       resize();
       // Cadrage initial (une fois l'aspect connu) + near/far partagés avec la caméra layout. Le
       // modèle repose sur `y = 0` : la caméra vise son centre, pas l'origine (sinon elle regarde
@@ -247,33 +253,33 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       const ro = new ResizeObserver(resize);
       ro.observe(container);
 
-      let last = performance.now();
-      scene.renderer.setAnimationLoop(() => {
-        const now = performance.now();
-        const dt = (now - last) / 1000;
-        last = now;
-        // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
-        // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
-        if (fly.flying) fly.update(dt);
-        else scene.controls.update();
-        mixer?.update(dt);
-        frameCbs.current.forEach((cb) => cb(dt));
-        scene.renderer.render(scene.scene, scene.camera);
-        renderPip(); // PiP de la caméra layout (no-op hors mode layout)
-        marker.update(
-          hotspotRef.current,
-          scene.camera,
-          scene.root,
-          container.clientWidth,
-          container.clientHeight,
-        );
-        statsRef.current?.frame(now);
-        captureFrame(scene.renderer.domElement); // miniature auto (Phase 20)
+      // `update` est joué à chaque tour ; seul `draw` (passes GPU + mesures de mise en page)
+      // est sauté quand l'image serait identique — cf. `renderScheduler` pour les garde-fous.
+      const stopLoop = gate.start({
+        renderer: scene.renderer,
+        controls: scene.controls,
+        isBusy: () => fly.flying || frameCbs.current.size > 0 || actionRef.current?.isRunning() === true,
+        update: (dt) => {
+          // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
+          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
+          if (fly.flying) fly.update(dt);
+          else scene.controls.update();
+          mixer?.update(dt);
+          frameCbs.current.forEach((cb) => cb(dt));
+        },
+        draw: (now) => {
+          scene.renderer.render(scene.scene, scene.camera);
+          renderPip(); // PiP de la caméra layout (no-op hors mode layout)
+          const { clientWidth: w, clientHeight: h } = container;
+          marker.update(hotspotRef.current, scene.camera, scene.root, w, h);
+          statsRef.current?.frame(now);
+          captureFrame(scene.renderer.domElement); // miniature auto (Phase 20)
+        },
       });
       setReady(true);
       cleanup = () => {
         ro.disconnect();
-        scene.renderer.setAnimationLoop(null);
+        stopLoop();
         fly.dispose();
         flyRef.current = null;
         marker.remove();
@@ -295,22 +301,25 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       actionRef.current = null;
       statsRef.current = null;
     };
-  }, [active, glbSrc, animInit, renderPip, captureFrame, hotspotRef]);
+  }, [active, glbSrc, animInit, renderPip, captureFrame, hotspotRef, gate]);
 
   // Applique la transformation (orientation + échelle) au groupe parent, en live.
   useEffect(() => {
     const rt = runtimeRef.current;
-    if (rt && ready) applyEulerTransform(rt.scene.root, transform);
-  }, [transform, ready]);
+    if (!rt || !ready) return;
+    applyEulerTransform(rt.scene.root, transform);
+    gate.invalidate();
+  }, [transform, ready, gate]);
 
   const updateTransform = useCallback(
     (patch: Partial<Transform>) => {
       const next = { ...transform, ...patch };
       const rt = runtimeRef.current;
       if (rt) applyEulerTransform(rt.scene.root, next);
+      gate.invalidate();
       setTfEdit(next);
     },
-    [transform],
+    [transform, gate],
   );
 
   const saveTransform = useSaveTransform(versionId, transform, () => setTfEdit(null));

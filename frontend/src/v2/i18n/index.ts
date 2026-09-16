@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useSyncExternalStore } from 'react';
-import base from './messages/en.json';
 import {
   BASE_LOCALE,
   formatTag,
@@ -20,8 +19,14 @@ export * from './locales';
  *
  * L'anglais est la langue de base : `messages/en.json` définit l'ensemble des clés et
  * toute clé absente d'un autre catalogue y retombe, si bien qu'une traduction partielle
- * reste utilisable. Seul l'anglais est embarqué dans le bundle ; les autres catalogues
- * sont chargés à la demande, une langue supplémentaire ne coûte donc rien aux autres.
+ * reste utilisable.
+ *
+ * **Aucun catalogue n'est embarqué dans le chunk d'entrée**, pas même l'anglais : il y
+ * pesait 51,5 ko gzip — 16,6 % du premier chargement mesuré au build — que tout lecteur
+ * non anglophone payait avant de télécharger sa propre langue, pour n'en lire jamais une
+ * phrase. Les quatorze catalogues sont désormais des chunks à part, et l'anglais n'est
+ * chargé que s'il sert effectivement de repli, c'est-à-dire quand la langue retenue ne
+ * couvre pas toutes les clés de base (voir `coversAllBaseKeys`).
  *
  * Le vocabulaire métier (shot, sequence, dailies, playblast, version, annotation…) n'est
  * jamais traduit : les artistes le lisent en anglais dans tous les pipelines. Voir le
@@ -33,8 +38,14 @@ type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other: strin
 type Message = string | PluralForms;
 type Catalog = Partial<Record<MessageKey, Message>>;
 
-/** L'ensemble des clés de traduction — dérivé du catalogue anglais de référence. */
-export type MessageKey = keyof typeof base;
+/**
+ * L'ensemble des clés de traduction — dérivé du catalogue anglais de référence.
+ *
+ * `typeof import(…)` est un type, pas une valeur : TypeScript le résout à la compilation
+ * et il ne subsiste rien au bundle. Un `import` ordinaire, lui, inlinait les 3 197 clés
+ * dans le chunk d'entrée.
+ */
+export type MessageKey = keyof typeof import('./messages/en.json');
 
 /** Signature du traducteur — à passer aux helpers définis hors composant. */
 export type Tr = typeof t;
@@ -44,8 +55,8 @@ export type TParams = Record<string, string | number> & { count?: number };
 
 const STORAGE_KEY = 'locale';
 
-/** Catalogues chargés, l'anglais étant toujours présent. */
-const catalogs = new Map<Locale, Catalog>([[BASE_LOCALE, base]]);
+/** Catalogues chargés. Vide au démarrage : même l'anglais arrive par son propre chunk. */
+const catalogs = new Map<Locale, Catalog>();
 
 /**
  * Chargeurs paresseux, un par fichier de `messages/`. Le glob est résolu à la
@@ -53,8 +64,36 @@ const catalogs = new Map<Locale, Catalog>([[BASE_LOCALE, base]]);
  */
 const loaders = import.meta.glob<{ default: Catalog }>('./messages/*.json');
 
+/**
+ * Hors production, le catalogue de base est embarqué d'emblée : les tests unitaires
+ * appellent `t()` et `hasMessage()` sans passer par l'amorçage `initLocale()`, et le
+ * serveur de développement n'a de toute façon pas de chunk à économiser. `import.meta.env.PROD`
+ * est résolu à la compilation : la branche — et avec elle le catalogue — disparaît du
+ * bundle livré (vérifié sur le build : plus aucune clé anglaise dans le chunk d'entrée).
+ */
+if (!import.meta.env.PROD) {
+  const embedded = import.meta.glob<{ default: Catalog }>('./messages/en.json', { eager: true });
+  const baseModule = embedded['./messages/en.json'];
+  if (baseModule) catalogs.set(BASE_LOCALE, baseModule.default);
+}
+
 function loaderFor(code: Locale): (() => Promise<{ default: Catalog }>) | undefined {
   return loaders[`./messages/${code}.json`];
+}
+
+/**
+ * Cette langue couvre-t-elle toutes les clés du catalogue de base ? Si oui, l'anglais ne
+ * lui servirait de repli à rien et on ne le télécharge pas — c'est là toute l'économie.
+ *
+ * La liste est calculée au build par `vite.config.js`, sur les fichiers-mêmes qui partent
+ * dans le bundle : elle ne peut pas mentir sur ce qui est livré. Absente (dev, tests,
+ * configuration sans le plugin), on ne sait pas : on charge l'anglais. Le repli prime
+ * toujours sur l'économie.
+ */
+function coversAllBaseKeys(code: Locale): boolean {
+  if (code === BASE_LOCALE) return true;
+  const declared: unknown = import.meta.env.I18N_FULL_LOCALES;
+  return typeof declared === 'string' && declared.split(',').includes(code);
 }
 
 let current: Locale = BASE_LOCALE;
@@ -83,8 +122,8 @@ function readStored(): Locale | null {
   }
 }
 
-/** Charge le catalogue d'une langue s'il manque (l'anglais est déjà là). */
-export async function loadCatalog(code: Locale): Promise<void> {
+/** Charge un catalogue s'il manque, sans jamais faire échouer l'appelant. */
+async function fetchCatalog(code: Locale): Promise<void> {
   if (catalogs.has(code)) return;
   const load = loaderFor(code);
   if (!load) return; // langue déclarée sans catalogue : elle restera en anglais
@@ -94,6 +133,17 @@ export async function loadCatalog(code: Locale): Promise<void> {
   } catch {
     /* catalogue illisible : le repli anglais prend le relais */
   }
+}
+
+/**
+ * Charge le catalogue d'une langue, accompagné de celui de la langue de base lorsqu'il
+ * lui servira de repli. Les deux requêtes partent **en parallèle** : la chaîne de repli
+ * est complète au premier rendu, en un seul aller-retour et non deux.
+ */
+export async function loadCatalog(code: Locale): Promise<void> {
+  await Promise.all(
+    coversAllBaseKeys(code) ? [fetchCatalog(code)] : [fetchCatalog(code), fetchCatalog(BASE_LOCALE)],
+  );
 }
 
 function applyDocumentLocale(code: Locale): void {
@@ -206,7 +256,15 @@ export function t(key: MessageKey, params?: TParams): string {
  * que la clé elle-même affichée à l'écran.
  */
 export function hasMessage(key: string): key is MessageKey {
-  return Object.hasOwn(base, key);
+  // L'union « langue courante ∪ anglais » redonne exactement l'ensemble des clés de base :
+  // aucun catalogue n'a de clé orpheline (`check-translations.mjs` les refuse), et l'anglais
+  // est chargé dès que la langue courante ne couvre pas tout.
+  return declaresKey(current, key) || declaresKey(BASE_LOCALE, key);
+}
+
+function declaresKey(code: Locale, key: string): boolean {
+  const catalog = catalogs.get(code);
+  return catalog !== undefined && Object.hasOwn(catalog, key);
 }
 
 const subscribe = (fn: () => void) => {
@@ -247,10 +305,17 @@ export { subscribe as subscribeToLocale, getVersion as localeSnapshot };
  * couverture du sélecteur. Renvoie `null` tant que le catalogue n'est pas chargé.
  */
 export function coverage(code: Locale): { translated: number; total: number } | null {
-  const total = Object.keys(base).length;
-  if (code === BASE_LOCALE) return { translated: total, total };
   const catalog = catalogs.get(code);
   if (!catalog) return null;
-  const translated = Object.keys(base).filter((k) => catalog[k as MessageKey] !== undefined).length;
+  const baseCatalog = catalogs.get(BASE_LOCALE);
+  // Pas de catalogue de base en mémoire ⇒ celui-ci couvre toutes ses clés : c'est
+  // précisément la condition à laquelle on a renoncé à télécharger l'anglais.
+  if (!baseCatalog) {
+    const complete = Object.keys(catalog).length;
+    return { translated: complete, total: complete };
+  }
+  const total = Object.keys(baseCatalog).length;
+  if (code === BASE_LOCALE) return { translated: total, total };
+  const translated = Object.keys(baseCatalog).filter((k) => catalog[k as MessageKey] !== undefined).length;
   return { translated, total };
 }

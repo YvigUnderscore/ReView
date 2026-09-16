@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ReactNode } from 'react';
-import { motion } from 'framer-motion';
-import { fadeInUp } from '../../lib/motion';
 import { useT } from '../../i18n';
 import { useBranding, DEFAULT_LOGIN_APPEARANCE, type LoginAppearance } from '../../lib/branding';
 import LanguagePicker from '../../components/LanguagePicker';
@@ -40,6 +38,14 @@ export function AuthLayout({
     />
   ) : null;
 
+  /**
+   * Apparition du formulaire en CSS (F3) : transcription littérale de `fadeInUp`
+   * (opacité 0→1, 8 px de montée, 200 ms, courbe `EASE_OUT`) — l'écran de connexion
+   * n'avait pas d'autre animation, et payait pour elle 38,5 ko gzip de framer-motion.
+   */
+  const appear =
+    'animate-in fade-in slide-in-from-bottom-2 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:animate-none';
+
   if (login.layout === 'centered') {
     // Formulaire centré sur un fond pleine page : la mise en page qui met l'image en avant.
     return (
@@ -48,11 +54,8 @@ export function AuthLayout({
         <div className="absolute right-4 top-4">
           <LanguagePicker className="py-1 text-xs" />
         </div>
-        <motion.div
-          variants={fadeInUp}
-          initial="hidden"
-          animate="show"
-          className="relative w-full max-w-sm space-y-6 rounded-xl border border-border bg-background/80 p-6 shadow-xl backdrop-blur-md"
+        <div
+          className={`relative w-full max-w-sm space-y-6 rounded-xl border border-border bg-background/80 p-6 shadow-xl backdrop-blur-md ${appear}`}
         >
           {logo && <div className="flex justify-center">{logo}</div>}
           <div className="space-y-1 text-center">
@@ -60,7 +63,7 @@ export function AuthLayout({
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           </div>
           {children}
-        </motion.div>
+        </div>
         {/* AGPL §13 : offre de source visible avant même toute authentification. */}
         <SourceNotice className="absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center" />
       </div>
@@ -88,9 +91,7 @@ export function AuthLayout({
         <div className="absolute right-4 top-4">
           <LanguagePicker className="py-1 text-xs" />
         </div>
-        <motion.div variants={fadeInUp} initial="hidden" animate="show" className="w-full max-w-sm">
-          {children}
-        </motion.div>
+        <div className={`w-full max-w-sm ${appear}`}>{children}</div>
         {/* AGPL §13 : offre de source visible avant même toute authentification. */}
         <SourceNotice className="absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center" />
       </main>

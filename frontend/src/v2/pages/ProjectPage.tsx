@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback } from 'react';
+import { Suspense, lazy, useCallback } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -30,18 +30,7 @@ import PageShell from '../components/PageShell';
 import { PageHeader } from '../components/ui/page';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import Tabs from '../components/Tabs';
-import ProjectSettingsTab from '../components/ProjectSettingsTab';
 import OverviewTab from './project/OverviewTab';
-import ShotsTab from './project/ShotsTab';
-import SequencesTab from './project/SequencesTab';
-import EpisodesTab from './project/EpisodesTab';
-import AssetsTab from './project/AssetsTab';
-import MembersTab from './project/MembersTab';
-import PlaylistsTab from './project/PlaylistsTab';
-import ProductionTab from './project/ProductionTab';
-import SharesTab from './project/SharesTab';
-import TrashTab from './project/TrashTab';
-import ShotgridTab from './project/ShotgridTab';
 import { useSgConnection } from '../lib/shotgridApi';
 import { useEpisodesEnabled } from '../lib/episodesApi';
 import ProjectCsvActions from './project/ProjectCsvActions';
@@ -49,6 +38,23 @@ import type { ProjectSettings } from './project/projectTypes';
 import { useT } from '../i18n';
 import EntityUnavailable from '../components/EntityUnavailable';
 import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
+
+/**
+ * Un seul onglet est monté à la fois (le `?tab=` de l'URL) : les onze autres n'ont aucune
+ * raison d'être téléchargés (F4). « Vue d'ensemble » reste statique — c'est l'onglet par
+ * défaut, il voyage donc avec la page plutôt que dans un aller-retour supplémentaire.
+ */
+const ProjectSettingsTab = lazy(() => import('../components/ProjectSettingsTab'));
+const ShotsTab = lazy(() => import('./project/ShotsTab'));
+const SequencesTab = lazy(() => import('./project/SequencesTab'));
+const EpisodesTab = lazy(() => import('./project/EpisodesTab'));
+const AssetsTab = lazy(() => import('./project/AssetsTab'));
+const MembersTab = lazy(() => import('./project/MembersTab'));
+const PlaylistsTab = lazy(() => import('./project/PlaylistsTab'));
+const ProductionTab = lazy(() => import('./project/ProductionTab'));
+const SharesTab = lazy(() => import('./project/SharesTab'));
+const TrashTab = lazy(() => import('./project/TrashTab'));
+const ShotgridTab = lazy(() => import('./project/ShotgridTab'));
 
 /** Page projet — orchestrateur des onglets (découpage 10.C1, sous-composants dans pages/project/). */
 export default function ProjectPage() {
@@ -174,55 +180,70 @@ export default function ProjectPage() {
 
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
 
-      {tab === 'overview' && (
-        <OverviewTab
-          name={name}
-          projectId={projectId}
-          canManage={canManage}
-          counts={{ sequences: sequences.length, shots: shots.length, assets: assets.length }}
-          onGo={setTab}
-        />
-      )}
-      {tab === 'shots' && (
-        <ShotsTab
-          projectId={projectId}
-          sequences={sequences}
-          shots={shots}
-          canManage={canManage}
-          reload={loadStructure}
-          nomenclature={nomenclature}
-        />
-      )}
-      {/* Le garde est double : l'onglet n'existe pas, et le contenu ne se monte pas —
+      {/* Frontière des onglets différés : l'en-tête et la barre d'onglets restent en place
+          pendant le téléchargement, seule la zone de contenu attend — même contrat que la
+          coquille pour les pages (D3).
+
+          `key={tab}` n'est pas cosmétique. Le routeur enveloppe ses navigations dans une
+          transition React ; une frontière **déjà montée** qui se met à attendre ne montre
+          alors pas son repli : React préfère garder l'écran précédent, et le clic sur
+          l'onglet semble ne rien faire jusqu'à l'arrivée du module. Une clé par onglet crée
+          une frontière neuve — sans contenu à préserver, elle affiche son repli tout de
+          suite, et l'URL est écrite sans attendre le téléchargement. */}
+      <Suspense
+        key={tab}
+        fallback={<div className="p-6 text-sm text-muted-foreground">{t('common.loading')}</div>}
+      >
+        {tab === 'overview' && (
+          <OverviewTab
+            name={name}
+            projectId={projectId}
+            canManage={canManage}
+            counts={{ sequences: sequences.length, shots: shots.length, assets: assets.length }}
+            onGo={setTab}
+          />
+        )}
+        {tab === 'shots' && (
+          <ShotsTab
+            projectId={projectId}
+            sequences={sequences}
+            shots={shots}
+            canManage={canManage}
+            reload={loadStructure}
+            nomenclature={nomenclature}
+          />
+        )}
+        {/* Le garde est double : l'onglet n'existe pas, et le contenu ne se monte pas —
           un `?tab=episodes` recopié ne fait donc rien apparaître. */}
-      {tab === 'episodes' && episodesEnabled && <EpisodesTab projectId={projectId} canManage={canManage} />}
-      {tab === 'sequences' && (
-        <SequencesTab
-          projectId={projectId}
-          sequences={sequences}
-          canManage={canManage}
-          reload={loadStructure}
-          nomenclature={nomenclature}
-        />
-      )}
-      {tab === 'assets' && (
-        <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />
-      )}
-      {tab === 'playlists' && <PlaylistsTab projectId={projectId} />}
-      {tab === 'production' && <ProductionTab projectId={projectId} />}
-      {tab === 'members' && canManage && <MembersTab projectId={projectId} />}
-      {tab === 'shares' && canManage && <SharesTab projectId={projectId} />}
-      {tab === 'settings' && canManage && (
-        <ProjectSettingsTab
-          projectId={projectId}
-          startFrame={projData?.project.startFrame ?? 1001}
-          onStartFrameChange={() => qc.invalidateQueries({ queryKey: qk.project(projectId) })}
-          settings={settings}
-          onSettingsChange={() => qc.invalidateQueries({ queryKey: qk.projectSettings(projectId) })}
-        />
-      )}
-      {tab === 'trash' && canManage && <TrashTab projectId={projectId} reload={loadStructure} />}
-      {tab === 'shotgrid' && canManage && <ShotgridTab projectId={projectId} canManage={canManage} />}
+        {tab === 'episodes' && episodesEnabled && <EpisodesTab projectId={projectId} canManage={canManage} />}
+        {tab === 'sequences' && (
+          <SequencesTab
+            projectId={projectId}
+            sequences={sequences}
+            canManage={canManage}
+            reload={loadStructure}
+            nomenclature={nomenclature}
+          />
+        )}
+        {tab === 'assets' && (
+          <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />
+        )}
+        {tab === 'playlists' && <PlaylistsTab projectId={projectId} />}
+        {tab === 'production' && <ProductionTab projectId={projectId} />}
+        {tab === 'members' && canManage && <MembersTab projectId={projectId} />}
+        {tab === 'shares' && canManage && <SharesTab projectId={projectId} />}
+        {tab === 'settings' && canManage && (
+          <ProjectSettingsTab
+            projectId={projectId}
+            startFrame={projData?.project.startFrame ?? 1001}
+            onStartFrameChange={() => qc.invalidateQueries({ queryKey: qk.project(projectId) })}
+            settings={settings}
+            onSettingsChange={() => qc.invalidateQueries({ queryKey: qk.projectSettings(projectId) })}
+          />
+        )}
+        {tab === 'trash' && canManage && <TrashTab projectId={projectId} reload={loadStructure} />}
+        {tab === 'shotgrid' && canManage && <ShotgridTab projectId={projectId} canManage={canManage} />}
+      </Suspense>
     </PageShell>
   );
 }

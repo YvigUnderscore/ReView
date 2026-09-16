@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clapperboard, FolderOpen, ListVideo, Trash2 } from 'lucide-react';
+import { CheckCircle2, Clapperboard, ListVideo, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { qk } from '../lib/query';
 import { useInfiniteList } from '../lib/useInfiniteList';
@@ -15,20 +15,14 @@ import PageShell from '../components/PageShell';
 import AddToPlaylistDialog from '../components/AddToPlaylistDialog';
 import { useAuth } from '../stores/useAuth';
 import { useViewMode } from '../stores/useViewPref';
-import EntityCard, { EntityContainer } from '../components/EntityCard';
+import { EntityContainer } from '../components/EntityCard';
 import ListSentinel, { ListCount } from '../components/ListSentinel';
 import ConfirmDialog from '../components/ConfirmDialog';
-import ReviewDecisionBadge from '../components/ReviewDecisionBadge';
 import SelectionBar from '../components/ui/selection-bar';
-import { Badge } from '../components/ui/badge';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
-import {
-  EMPTY_FILTERS,
-  mediaKindLabels,
-  type ReviewItem,
-  type ReviewsFilterState,
-} from './reviews/reviewsTypes';
+import { EMPTY_FILTERS, type ReviewItem, type ReviewsFilterState } from './reviews/reviewsTypes';
+import ReviewCard from './reviews/ReviewCard';
 import ReviewsFilters from './reviews/ReviewsFilters';
 import BulkDecisionDialog from './reviews/BulkDecisionDialog';
 import AssignedToMeSection from './reviews/AssignedToMeSection';
@@ -40,7 +34,6 @@ import { useT } from '../i18n';
  */
 export default function ReviewsPage() {
   const t = useT();
-  const kindLabels = mediaKindLabels(t);
   const view = useViewMode('reviews');
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -66,14 +59,24 @@ export default function ReviewsPage() {
   const { data: items, error } = list;
 
   const sel = useMultiSelect(items?.map((m) => m.id) ?? []);
-  const refresh = () => qc.invalidateQueries({ queryKey: ['reviews'] });
+  // La sélection est lue **au moment du clic**, pas au rendu. Sans cette ref, chaque
+  // case cochée recréerait les rappels passés aux cartes, et les cent `ReviewCard`
+  // mémoïsées se re-rendraient quand même — la mémoïsation ne tient que par des rappels
+  // stables (écriture en effet : une ref ne s'écrit pas pendant le rendu).
+  const selRef = useRef(sel);
+  useEffect(() => {
+    selRef.current = sel;
+  });
+  const refresh = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: ['reviews'] });
+  }, [qc]);
   const confirmBulkDelete = async () => {
     try {
       const { count } = await bulkDelete('media', sel.ids);
       toast.success(t('reviews.trashed', { count }));
       sel.clear();
       setBulkDeleting(false);
-      void refresh();
+      refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -93,17 +96,31 @@ export default function ReviewsPage() {
   // version, la poser deux fois écrirait deux lignes d'historique pour un seul geste.
   const targetVersionIds = [...new Set(targeted(decisionTarget).map((m) => m.versionId))];
   // Agit sur la sélection si la carte en fait partie, sinon sur la carte seule.
-  const scopeOf = (id: number) => (sel.count > 0 && sel.isSelected(id) ? sel.ids : [id]);
+  const scopeOf = useCallback((id: number) => {
+    const current = selRef.current;
+    return current.count > 0 && current.isSelected(id) ? current.ids : [id];
+  }, []);
 
-  const deleteOne = async (id: number) => {
-    try {
-      await bulkDelete('media', [id]);
-      toast.success(t('reviews.trashed'));
-      void refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('common.error.generic'));
-    }
-  };
+  const deleteOne = useCallback(
+    (id: number) => {
+      void (async () => {
+        try {
+          await bulkDelete('media', [id]);
+          toast.success(t('reviews.trashed'));
+          refresh();
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : t('common.error.generic'));
+        }
+      })();
+    },
+    [refresh, t],
+  );
+  const openReview = useCallback(
+    (m: ReviewItem) => void navigate(reviewPath({ id: m.id, originalName: m.name })),
+    [navigate],
+  );
+  const openDecision = useCallback((id: number) => setDecisionTarget(scopeOf(id)), [scopeOf]);
+  const openPlaylist = useCallback((id: number) => setPlaylistTarget(scopeOf(id)), [scopeOf]);
 
   return (
     <PageShell title={t('nav.reviews')}>
@@ -137,58 +154,18 @@ export default function ReviewsPage() {
           />
           <EntityContainer view={view}>
             {items.map((m) => (
-              <EntityCard
+              <ReviewCard
                 key={m.id}
-                to={reviewPath({ id: m.id, originalName: m.name })}
+                item={m}
                 view={view}
-                title={m.name}
-                subtitle={[m.project?.name, m.location].filter(Boolean).join(' · ') || undefined}
-                thumbnailUrl={m.thumbnailUrl}
-                hoverSprite={m.hoverSprite}
-                selection={{ selected: sel.isSelected(m.id), onSelect: (mods) => sel.onSelect(m.id, mods) }}
-                contextActions={[
-                  {
-                    icon: <FolderOpen size={14} />,
-                    label: t('common.open'),
-                    onClick: () => void navigate(reviewPath({ id: m.id, originalName: m.name })),
-                  },
-                  // Le clic droit est la porte d'entrée des actions (UI simple) : la
-                  // décision s'y pose pour une carte comme pour toute la sélection.
-                  ...(canDecide
-                    ? [
-                        {
-                          icon: <CheckCircle2 size={14} />,
-                          label: t('decision.title'),
-                          onClick: () => setDecisionTarget(scopeOf(m.id)),
-                        },
-                      ]
-                    : []),
-                  ...(canPlaylist
-                    ? [
-                        {
-                          icon: <ListVideo size={14} />,
-                          label: t('reviews.addToPlaylist'),
-                          onClick: () => setPlaylistTarget(scopeOf(m.id)),
-                        },
-                      ]
-                    : []),
-                  {
-                    icon: <Trash2 size={14} />,
-                    label: t('common.delete'),
-                    danger: true,
-                    onClick: () => void deleteOne(m.id),
-                  },
-                ]}
-                badge={
-                  <span className="flex items-center gap-1">
-                    {m.published ? (
-                      <Badge variant="info">{kindLabels[m.kind]}</Badge>
-                    ) : (
-                      <Badge variant="warning">{t('reviews.draft')}</Badge>
-                    )}
-                    {m.reviewStatus && <ReviewDecisionBadge status={m.reviewStatus} />}
-                  </span>
-                }
+                selected={sel.isSelected(m.id)}
+                canDecide={canDecide}
+                canPlaylist={canPlaylist}
+                onSelect={sel.onSelect}
+                onOpen={openReview}
+                onDecide={openDecision}
+                onPlaylist={openPlaylist}
+                onDelete={deleteOne}
               />
             ))}
           </EntityContainer>

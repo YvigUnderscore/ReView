@@ -443,17 +443,27 @@ export async function bulkPatchShotStatus(
   if (!(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
 
-  let updated = 0;
   let failed = 0;
+  const touched: number[] = [];
   for (const shot of shots) {
     try {
-      await ShotService.update(shot.id, projectId, { pipelineStatusId }, user.id);
-      updated++;
+      // `deferEvents` : les trente `shot:update` unitaires que cette boucle émettait
+      // rechargeaient trente fois le kanban ENTIER chez chaque personne qui l'avait
+      // ouvert — huit artistes, un seul geste, des centaines de requêtes dont presque
+      // toutes étaient annulées en vol. Un lot doit se décrire en un événement.
+      await ShotService.update(shot.id, projectId, { pipelineStatusId }, user.id, {
+        deferEvents: true,
+      });
+      touched.push(shot.id);
     } catch {
       // Statut refusé par l'arbitrage ShotGrid, plan verrouillé : compté, pas jeté.
       failed++;
     }
   }
+  // Un seul couple d'événements, portant les plans réellement modifiés. Émis après la
+  // boucle : ce qui a échoué ne doit pas figurer dans le lot annoncé.
+  ShotService.emitShotsUpdated(projectId, touched);
+  const updated = touched.length;
   logAudit({
     userId: user.id,
     action: 'SHOT_BULK_STATUS',

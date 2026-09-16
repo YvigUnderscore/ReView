@@ -28845,3 +28845,149 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Vendored third-party code
+
+Some packages ship a copy of another project inside their own build output instead of
+depending on it. Those copies are redistributed with ReView, but they appear in no
+lockfile, so the lists above cannot see them: mermaid inlines js-yaml, Prisma inlines
+execa, glob and fs-extra, and none of them was named here before.
+
+They are recovered from the build markers bundlers leave behind
+(`name@version/node_modules/name/…`) and listed for attribution.
+
+> **This list is a best effort, not a proof of completeness.** Only markers that carry a
+> version can be attributed; a copy inlined without one stays invisible to the scan, and
+> no verbatim license text is available for these copies since they are not installed as
+> packages. Please report anything you find missing.
+
+126 copies, 60 of which with no license established.
+
+| Component | Copied inside | License | Determined from |
+| --- | --- | --- | --- |
+| `@babel/helper-validator-identifier@7.24.7` | `@prisma/client`, `prisma` (backend) | `MIT` | other versions of the package, all agreeing |
+| `@chevrotain/gast@11.1.2` | `@mermaid-js/parser` (frontend) | `Apache-2.0` | other versions of the package, all agreeing |
+| `@chevrotain/regexp-to-ast@11.1.2` | `@mermaid-js/parser` (frontend) | `Apache-2.0` | other versions of the package, all agreeing |
+| `@chevrotain/utils@11.1.2` | `@mermaid-js/parser` (frontend) | `Apache-2.0` | other versions of the package, all agreeing |
+| `@iconify/utils@3.0.2` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `@nodelib/fs.scandir@2.1.5` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `@nodelib/fs.stat@2.0.5` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `@nodelib/fs.walk@1.2.8` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `agent-base@7.1.0` | `@prisma/fetch-engine` (backend) | `MIT` | other versions of the package, all agreeing |
+| `aggregate-error@3.1.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `ansi-escapes@4.3.2` | `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `array-union@2.1.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `balanced-match@1.0.2` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `brace-expansion@1.1.11` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `brace-expansion@2.0.1` | `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `braces@3.0.2` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `chevrotain@11.1.2` | `@mermaid-js/parser` (frontend) | `Apache-2.0` | other versions of the package, all agreeing |
+| `ci-info@4.0.0` | `@prisma/client`, `prisma` (backend) | **unverified** | not determined |
+| `clean-stack@2.2.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `common-path-prefix@3.0.0` | `@prisma/client`, `@prisma/fetch-engine`, `prisma` (backend) | **unverified** | not determined |
+| `concat-map@0.0.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `cross-spawn@7.0.3` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `crypto-random-string@2.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `cytoscape@3.33.3` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `d3-format@3.1.0` | `mermaid` (frontend) | `ISC` | other versions of the package, all agreeing |
+| `dayjs@1.11.20` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `debug@4.3.6` | `@prisma/fetch-engine` (backend) | `MIT` | other versions of the package, all agreeing |
+| `del@6.1.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `dir-glob@3.0.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `dompurify@3.4.0` | `mermaid` (frontend) | `(MPL-2.0 OR Apache-2.0)` | other versions of the package, all agreeing |
+| `env-paths@2.2.1` | `@prisma/client`, `prisma` (backend) | **unverified** | not determined |
+| `es-toolkit@1.45.1` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `escape-string-regexp@4.0.0` | `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `execa@5.1.1` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `fast-glob@3.3.2` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `fastq@1.15.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `ISC` | other versions of the package, all agreeing |
+| `fetch-blob@3.2.0` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `fill-range@7.1.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `find-cache-dir@5.0.0` | `@prisma/client`, `prisma` (backend) | **unverified** | not determined |
+| `find-up@3.0.0` | `@prisma/client`, `prisma` (backend) | `MIT` | other versions of the package, all agreeing |
+| `find-up@6.3.0` | `@prisma/client`, `prisma` (backend) | `MIT` | other versions of the package, all agreeing |
+| `flat-map-polyfill@0.3.8` | `@prisma/client`, `prisma` (backend) | **unverified** | not determined |
+| `fs-extra@11.1.1` | `@prisma/client`, `@prisma/fetch-engine`, `prisma` (backend) | **unverified** | not determined |
+| `fs-jetpack@5.1.0` | `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `fs.realpath@1.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `get-stream@6.0.1` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `glob-parent@5.1.2` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `ISC` | same version in a lockfile |
+| `glob@7.2.3` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `globby@11.1.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `graceful-fs@4.2.10` | `@prisma/client`, `@prisma/fetch-engine`, `@prisma/get-platform`, `prisma` (backend) | **unverified** | not determined |
+| `has-flag@4.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `hasha@5.2.2` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `http-proxy-agent@7.0.2` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `https-proxy-agent@7.0.5` | `@prisma/fetch-engine` (backend) | `MIT` | other versions of the package, all agreeing |
+| `human-signals@2.1.0` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `ignore@5.2.4` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `indent-string@4.0.0` | `@prisma/client`, `@prisma/fetch-engine`, `@prisma/get-platform`, `prisma` (backend) | `MIT` | same version in a lockfile |
+| `inflight@1.0.6` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `is-extglob@2.1.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `is-glob@4.0.3` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `is-number@7.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `is-path-cwd@2.2.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `is-path-inside@3.0.3` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `is-stream@2.0.1` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `js-yaml@4.1.1` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `jsonfile@6.1.0` | `@prisma/client`, `@prisma/fetch-engine`, `prisma` (backend) | **unverified** | not determined |
+| `katex@0.16.45` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `kleur@4.1.5` | `@prisma/client`, `@prisma/debug`, `prisma` (backend) | **unverified** | not determined |
+| `klona@2.0.6` | `@prisma/client`, `prisma` (backend) | **unverified** | not determined |
+| `langium@4.2.0` | `@mermaid-js/parser` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `locate-path@3.0.0` | `@prisma/client`, `prisma` (backend) | `MIT` | other versions of the package, all agreeing |
+| `lodash-es@4.17.21` | `@mermaid-js/parser`, `chevrotain` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `lodash-es@4.17.23` | `@mermaid-js/parser` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `marked@16.3.0` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `merge-stream@2.0.0` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `merge2@1.4.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `micromatch@4.0.5` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `mimic-fn@2.1.0` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `minimatch@3.1.2` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `minimatch@5.1.0` | `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `ms@2.1.2` | `@prisma/fetch-engine` (backend) | `MIT` | other versions of the package, all agreeing |
+| `node-domexception@1.0.0` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `npm-run-path@4.0.1` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `onetime@5.1.2` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `p-filter@2.1.0` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `p-limit@2.3.0` | `@prisma/client`, `prisma` (backend) | `MIT` | same version in a lockfile |
+| `p-locate@3.0.0` | `@prisma/client`, `prisma` (backend) | `MIT` | other versions of the package, all agreeing |
+| `p-map@2.1.0` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `p-map@4.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `p-retry@4.6.2` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `p-try@2.2.0` | `@prisma/client`, `prisma` (backend) | `MIT` | same version in a lockfile |
+| `path-exists@3.0.0` | `@prisma/client`, `prisma` (backend) | `MIT` | other versions of the package, all agreeing |
+| `path-is-absolute@1.0.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `path-key@3.1.1` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `path-type@4.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `picomatch@2.3.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `pkg-up@3.1.0` | `@prisma/client`, `prisma` (backend) | **unverified** | not determined |
+| `pluralize@8.0.0` | `@prisma/client`, `prisma` (backend) | **unverified** | not determined |
+| `progress@2.0.3` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `queue-microtask@1.2.3` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `replace-string@3.1.0` | `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `retry@0.13.1` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `reusify@1.0.4` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |
+| `rimraf@3.0.2` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `roughjs@4.6.6_patch` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `run-parallel@1.2.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `shebang-command@2.0.0` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `shebang-regex@3.0.0` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `signal-exit@3.0.7` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `slash@3.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `strip-final-newline@2.0.0` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `stylis@4.3.6` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `supports-color@7.2.0` | `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `supports-color@8.1.1` | `@prisma/fetch-engine` (backend) | `MIT` | other versions of the package, all agreeing |
+| `supports-hyperlinks@2.3.0` | `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `temp-dir@2.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `tempy@1.0.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `terminal-link@2.1.1` | `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `to-regex-range@5.0.1` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
+| `ts-dedent@2.2.0` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `unique-string@2.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
+| `universalify@2.0.0` | `@prisma/client`, `@prisma/fetch-engine`, `prisma` (backend) | **unverified** | not determined |
+| `uuid@14.0.0` | `mermaid` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `vscode-uri@3.1.0` | `@mermaid-js/parser` (frontend) | `MIT` | other versions of the package, all agreeing |
+| `web-streams-polyfill@3.2.1` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `which@2.0.2` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `ISC` | same version in a lockfile |

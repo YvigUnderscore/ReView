@@ -3,15 +3,16 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { findMany, update, checkAccess, logAudit } = vi.hoisted(() => ({
+const { findMany, update, emitShotsUpdated, checkAccess, logAudit } = vi.hoisted(() => ({
   findMany: vi.fn(),
   update: vi.fn(),
+  emitShotsUpdated: vi.fn(),
   checkAccess: vi.fn(),
   logAudit: vi.fn(),
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: { shot: { findMany } } }));
-vi.mock('./ShotService', () => ({ update }));
+vi.mock('./ShotService', () => ({ update, emitShotsUpdated }));
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: checkAccess }));
 vi.mock('./AuditService', () => ({ logAudit }));
 
@@ -44,13 +45,17 @@ describe('bulkPatchShotStatus', () => {
       failed: 0,
     });
     expect(update).toHaveBeenCalledTimes(3);
-    expect(update).toHaveBeenCalledWith(1, 461, { pipelineStatusId: 12 }, 5);
+    expect(update).toHaveBeenCalledWith(1, 461, { pipelineStatusId: 12 }, 5, {
+      deferEvents: true,
+    });
   });
 
   it('accepte le retrait du statut', async () => {
     findMany.mockResolvedValue([{ id: 1, projectId: 461 }]);
     await bulkPatchShotStatus(user, [1], null);
-    expect(update).toHaveBeenCalledWith(1, 461, { pipelineStatusId: null }, 5);
+    expect(update).toHaveBeenCalledWith(1, 461, { pipelineStatusId: null }, 5, {
+      deferEvents: true,
+    });
   });
 
   /** Un plan verrouillé par ShotGrid ne doit pas faire perdre les quarante-neuf autres. */
@@ -86,6 +91,41 @@ describe('bulkPatchShotStatus', () => {
   it('refuse une sélection dont aucun plan ne subsiste', async () => {
     findMany.mockResolvedValue([]);
     await expect(bulkPatchShotStatus(user, [42], 12)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  /**
+   * La mesure du correctif : un lot de trente plans émettait trente `shot:update` et
+   * trente `timeline:update`, chacun rechargeant le kanban ENTIER chez chaque client
+   * connecté. Il en émet désormais UN, qui porte les trente identifiants.
+   */
+  it('n’émet qu’un seul événement pour tout le lot', async () => {
+    const ids = Array.from({ length: 30 }, (_, i) => i + 1);
+    findMany.mockResolvedValue(ids.map((id) => ({ id, projectId: 461 })));
+
+    await bulkPatchShotStatus(user, ids, 12);
+
+    expect(update).toHaveBeenCalledTimes(30);
+    expect(emitShotsUpdated).toHaveBeenCalledTimes(1);
+    expect(emitShotsUpdated).toHaveBeenCalledWith(461, ids);
+  });
+
+  /** Un plan refusé n'a pas changé : l'annoncer ferait recharger sa fiche pour rien. */
+  it('n’annonce que les plans réellement modifiés', async () => {
+    findMany.mockResolvedValue([
+      { id: 1, projectId: 461 },
+      { id: 2, projectId: 461 },
+      { id: 3, projectId: 461 },
+    ]);
+    update
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error('verrou ShotGrid'))
+      .mockResolvedValueOnce({});
+
+    await expect(bulkPatchShotStatus(user, [1, 2, 3], 12)).resolves.toEqual({
+      updated: 2,
+      failed: 1,
+    });
+    expect(emitShotsUpdated).toHaveBeenCalledWith(461, [1, 3]);
   });
 
   it('laisse une trace d’audit avec le compte des refus', async () => {

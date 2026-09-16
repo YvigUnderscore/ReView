@@ -3,10 +3,8 @@
 
 import { Link } from 'react-router-dom';
 import { Pencil, Star, Trash2 } from 'lucide-react';
-import { Children, type ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { Children, isValidElement, memo, type ReactNode } from 'react';
 import type { ViewMode } from '../stores/useViewPref';
-import { staggerContainer, fadeInUp } from '../lib/motion';
 import type { SelectModifiers } from '../lib/useMultiSelect';
 import { useFavorites, type FavType } from '../stores/useFavorites';
 import HoverSprite, { type SpriteData } from './HoverSprite';
@@ -117,7 +115,7 @@ function SelectBox({ selection, className }: { selection: EntitySelection; class
 }
 
 /** Carte ou ligne compacte selon `view`. Cliquable via `to` (lien) ou `onClick`. */
-export default function EntityCard({
+function EntityCard({
   to,
   onClick,
   active,
@@ -242,24 +240,49 @@ export default function EntityCard({
   );
 }
 
+/**
+ * Retard d'apparition de la dernière carte animée, en rangs de 30 ms.
+ *
+ * Au-delà, toutes partent ensemble : une page de cent cartes descendue par la sentinelle
+ * étalait son entrée sur trois secondes, et les cartes du bas finissaient d'apparaître
+ * bien après qu'on ait commencé à lire. Douze, c'est ce qu'un écran large affiche.
+ */
+const STAGGER_RANKS = 12;
+
 /** Conteneur adaptatif : grille en mode cartes (apparition en cascade), pile en mode compact. */
 export function EntityContainer({ view, children }: { view: ViewMode; children: ReactNode }) {
-  const reduce = useReducedMotion();
   if (view !== 'cards') return <div className="space-y-1.5">{children}</div>;
-  const gridClass = 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
-  // Reduced-motion : rendu statique, aucune animation.
-  if (reduce) return <div className={gridClass}>{children}</div>;
   return (
-    <motion.div className={gridClass} variants={staggerContainer} initial="hidden" animate="show">
-      {Children.map(children, (child, i) => (
-        <motion.div key={i} variants={fadeInUp}>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Children.toArray(children).map((child, i) => (
+        // Clé reprise de l'enfant (`key={shot.id}` chez l'appelant), jamais l'index :
+        // keyée par position, l'enveloppe changeait de carte au moindre filtre, React
+        // réutilisait le nœud de la voisine et rejouait le fondu sur des cartes déjà là.
+        <div
+          key={isValidElement(child) ? child.key : i}
+          className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200 fill-mode-backwards motion-reduce:animate-none"
+          style={{
+            animationDelay: `${Math.min(i, STAGGER_RANKS) * 30}ms`,
+            // Même courbe que l'ancienne transition (ease-out doux) : l'apparition est
+            // passée du moteur d'animation JS à une animation CSS, à l'identique.
+            animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        >
           {child}
-        </motion.div>
+        </div>
       ))}
-    </motion.div>
+    </div>
   );
 }
 
 /** Icônes d'action prêtes à l'emploi. */
 export const EditIcon = <Pencil size={14} />;
 export const DeleteIcon = <Trash2 size={14} />;
+
+/**
+ * Mémoïsée : une liste d'entités en monte jusqu'à deux mille, chacune avec son menu
+ * contextuel Radix, sa case et son aperçu au survol. Cocher une case ne doit re-rendre
+ * que la carte cochée — encore faut-il que l'appelant lui passe des props stables
+ * (cf. `pages/reviews/ReviewCard`, qui porte la frontière de mémoïsation de la page).
+ */
+export default memo(EntityCard);

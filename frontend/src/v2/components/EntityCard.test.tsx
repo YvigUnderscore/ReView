@@ -3,7 +3,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import EntityCard, { type EntityCardProps } from './EntityCard';
+import { render, screen } from '@testing-library/react';
+import EntityCard, { EntityContainer, type EntityCardProps } from './EntityCard';
 
 /**
  * `EntityCard` est la carte de toutes les listes denses (plans, assets, projets). Cent
@@ -108,5 +109,67 @@ describe('EntityCard — bande d’informations', () => {
   it('borne la description à deux lignes en vue cartes, une seule en compact', () => {
     expect(markup({ meta: { description: 'x' } })).toContain('line-clamp-2');
     expect(markup({ view: 'compact', meta: { description: 'x' } })).toContain('truncate');
+  });
+});
+
+/**
+ * La grille et ses enveloppes d'apparition.
+ *
+ * Les enveloppes étaient keyées par **index** : filtrer une grille de plans réassociait
+ * chaque carte à l'enveloppe de sa voisine — React réutilisait le nœud d'à-côté et
+ * rejouait le fondu-montée sur des cartes déjà à l'écran (la liste « clignotait »). La
+ * grandeur mesurée ici est donc un **nombre de cartes réassociées à un autre nœud** :
+ * une avant le correctif, zéro après.
+ */
+describe('EntityContainer — apparition en cascade', () => {
+  const grid = (codes: string[]) => (
+    <EntityContainer view="cards">
+      {codes.map((code) => (
+        <EntityCard key={code} view="cards" title={code} thumbnailUrl="https://minio/t.jpg" />
+      ))}
+    </EntityContainer>
+  );
+
+  /** Enveloppes de la grille, dans l'ordre du DOM. */
+  const wrappers = (container: HTMLElement) => [...(container.firstElementChild?.children ?? [])];
+
+  it('laisse à chaque carte son nœud quand la liste est filtrée', () => {
+    const { container, rerender } = render(grid(['SH010', 'SH020', 'SH030']));
+    expect(wrappers(container)).toHaveLength(3);
+    const kept = screen.getByText('SH020');
+
+    rerender(grid(['SH020', 'SH030']));
+
+    expect(screen.getByText('SH020')).toBe(kept);
+    expect(screen.queryByText('SH010')).not.toBeInTheDocument();
+  });
+
+  it('anime en CSS, en respectant « animations réduites » sans JS', () => {
+    const { container } = render(grid(['SH010', 'SH020']));
+
+    for (const wrapper of wrappers(container)) {
+      expect(wrapper).toHaveClass('animate-in');
+      expect(wrapper).toHaveClass('motion-reduce:animate-none');
+      // Sans `fill-mode-backwards`, la carte serait visible pendant son délai puis
+      // disparaîtrait d'un coup pour se remontrer : un clignotement, pas une apparition.
+      expect(wrapper).toHaveClass('fill-mode-backwards');
+    }
+  });
+
+  it('étale l’entrée, mais borne le retard : une page de cent cartes n’attend pas trois secondes', () => {
+    const { container } = render(grid(Array.from({ length: 40 }, (_, i) => `SH${i}`)));
+    const delays = wrappers(container).map((w) => (w as HTMLElement).style.animationDelay);
+
+    expect(delays.slice(0, 3)).toEqual(['0ms', '30ms', '60ms']);
+    expect(Math.max(...delays.map((d) => Number.parseInt(d, 10)))).toBeLessThanOrEqual(360);
+  });
+
+  it('empile sans enveloppe en vue compacte', () => {
+    const { container } = render(
+      <EntityContainer view="compact">
+        <EntityCard view="compact" title="SH010" thumbnailUrl="https://minio/t.jpg" />
+      </EntityContainer>,
+    );
+    expect(container.querySelector('.animate-in')).toBeNull();
   });
 });
