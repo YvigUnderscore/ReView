@@ -59,8 +59,13 @@ const ROOTS = ['frontend/src', 'backend/src'];
  * filtres FFmpeg, fragments SQL, messages de journal destinés à l'exploitant, textes d'erreur
  * ShotGrid. Les surfaces réellement lues par un utilisateur, elles, sont à zéro et passent
  * par `t()` : pied de page public de `/api/docs`, page de désabonnement, e-mails.
+ *
+ * 2026-09-16 : 343 -> 332. Les gabarits BALISÉS (`Prisma.sql`, cf. `TECHNICAL_TAGS`) ne sont
+ * plus comptés — une requête paramétrée déclarait jusqu'ici autant de « textes en dur »
+ * qu'elle avait de fragments, ce qui poussait à concaténer le SQL pour satisfaire le contrôle.
+ * Le plafond descend d'autant : ce qu'il reste est de la dette réelle, pas du bruit.
  */
-const BACKEND_DEBT = 343;
+const BACKEND_DEBT = 332;
 
 /**
  * Reliquat toléré **par arborescence** — dette à résorber, jamais à relever.
@@ -135,6 +140,20 @@ const DISCRIMINANT_PROPS =
 /** Appels dont les arguments sont des URL, des clés de cache ou des traces. */
 const TECHNICAL_CALLS =
   /^(api\.\w+|fetch|navigate|qk(\.\w+)?|URL|URLSearchParams|encodeURI\w*|decodeURI\w*|console\.\w+|(local|session)Storage\.\w+|require|import)$/;
+
+/**
+ * Gabarits BALISÉS qui déclarent un langage, pas de la prose.
+ *
+ * Côté JSX, `<code>`/`<pre>`/`<kbd>` sont la façon d'écrire « ceci ne se traduit pas ». Côté
+ * backend, c'est la balise du gabarit qui le dit : `Prisma.sql\`SELECT …\`` ne contiendra
+ * jamais une phrase destinée à un lecteur. Sans cette exemption, une requête SQL paramétrée —
+ * la SEULE forme sûre, puisque Prisma y lie les valeurs — compte autant de « textes en dur »
+ * qu'elle a de fragments, ce qui pousse à écrire du SQL concaténé pour satisfaire le contrôle.
+ *
+ * L'exemption est volontairement nominative : seule une balise de cette liste exempte. Une
+ * balise inconnue reste comptée, et une chaîne simple posée à côté d'un gabarit balisé aussi.
+ */
+const TECHNICAL_TAGS = /^(\w+\.)?(sql|raw|css|html|gql|graphql|\$queryRaw|\$executeRaw)$/;
 
 /**
  * Textes qui atteignent l'écran mais ne se traduisent pas : unités, sigles, noms propres,
@@ -457,6 +476,7 @@ export function inTechnicalContext(node, src) {
     }
     if (ts.isJsxAttribute(cur) && DISCRIMINANT_PROPS.test(cur.name.getText(src))) return true;
     if (ts.isCallExpression(cur) && TECHNICAL_CALLS.test(calleeName(cur.expression))) return true;
+    if (ts.isTaggedTemplateExpression(cur) && TECHNICAL_TAGS.test(calleeName(cur.tag))) return true;
     if (ts.isPropertyAssignment(cur) && TECHNICAL_PROPS.test(cur.name.getText(src))) return true;
     if (ts.isPropertyAssignment(cur) && DISCRIMINANT_PROPS.test(cur.name.getText(src))) return true;
     // Un littéral COMPARÉ n'est jamais affiché : `tool === 'erase'`, `case 'move':`. Le mot

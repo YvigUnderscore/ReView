@@ -39,8 +39,10 @@ async function main(): Promise<void> {
   });
 
   // Réconciliation au démarrage : les médias figés en PROCESSING par un worker tué
-  // n'ont plus de job vivant — sans ce balayage, ils le restent pour toujours. Différée
-  // pour laisser le worker se connecter à la file et éviter tout faux positif.
+  // n'ont plus de job vivant. Différée pour laisser le worker se connecter à la file et
+  // éviter tout faux positif. Le rattrapage courant, lui, ne dépend plus de ce démarrage :
+  // `runPurge` (maintenance.worker) rejoue le balayage à chaque passe d'entretien — c'est
+  // le worker qui se fait tuer, pas l'API, et son redémarrage ne passait ici jamais.
   setTimeout(() => {
     void reconcileStuckMedia().catch((err: unknown) => {
       logger.error({ err }, '[reconcile] balayage des médias figés impossible');

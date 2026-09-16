@@ -19,7 +19,11 @@ import { effectiveThumbnailUrl, firstMediaThumbKeysForProjects } from '../lib/th
  * mes tâches assignées et statistiques — le tout borné à « mes projets »
  * (ADMIN/SUPERVISOR voient tout, sinon filtre par membership, motif lib/search.ts).
  *
- * Deux corrections d'échelle par rapport à la version d'origine.
+ * Trois corrections d'échelle par rapport à la version d'origine.
+ *
+ * « Dernières reviews » rapatriait toute la table Comment du studio pour en afficher six
+ * lignes — le `distinct` de Prisma n'existe pas en SQL. L'élection est passée en base
+ * (`latestCommentPerMedia` ci-dessous).
  *
  * La progression des projets récents coûtait deux `count` corrélés PAR projet, soit dix
  * requêtes sur les vingt-trois de l'ouverture d'accueil, pour chaque utilisateur et à
@@ -75,6 +79,72 @@ const versionSelect = {
     asset: { select: { name: true } },
   },
 } as const;
+
+/** Nombre de médias montrés dans « Dernières reviews ». */
+const LATEST_REVIEWS = 6;
+
+/**
+ * Le dernier commentaire de chacun des six médias les plus récemment commentés.
+ *
+ * La lecture d'origine combinait `distinct: ['mediaObjectId']` et `take: 6`. Prisma 5 n'a
+ * pas de traduction SQL pour `distinct` : il le résout dans le moteur de requête, ce qui
+ * neutralise aussi le `take`. Le SQL émis partait donc SANS `LIMIT` — toute la table
+ * Comment du studio traversait le réseau, colonnes `annotation`, `cameraState` et
+ * `attachments` comprises, pour qu'on en garde six lignes. Mesuré à 50 000 commentaires :
+ * 40 038 lignes rapatriées, 830 ms, à chaque ouverture d'accueil de chaque compte.
+ *
+ * L'élection passe donc en SQL : un agrégat `GROUP BY "mediaObjectId"` trié sur
+ * `MAX("createdAt")` avec un vrai `LIMIT 6` (six lignes rapatriées quelle que soit
+ * l'ancienneté du studio), puis une seconde lecture qui va chercher ces six commentaires
+ * et seulement les colonnes affichées.
+ *
+ * `commentWhere` est repassé tel quel aux deux requêtes plutôt que réécrit en SQL : c'est
+ * lui qui borne un CLIENT aux notes qui lui sont destinées, et un périmètre d'accès décrit
+ * à deux endroits finit par diverger — ce serait une fuite, pas une optimisation.
+ */
+async function latestCommentPerMedia(commentWhere: Prisma.CommentWhereInput) {
+  const latest = await prisma.comment.groupBy({
+    by: ['mediaObjectId'],
+    where: commentWhere,
+    _max: { createdAt: true },
+    orderBy: { _max: { createdAt: 'desc' } },
+    take: LATEST_REVIEWS,
+  });
+  // `createdAt` n'est jamais nul et un groupe n'est jamais vide : le filtre ne fait que
+  // rendre l'absence de date représentable sans assertion.
+  const pairs = latest.flatMap((g) =>
+    g._max.createdAt ? [{ mediaObjectId: g.mediaObjectId, createdAt: g._max.createdAt }] : [],
+  );
+  if (pairs.length === 0) return [];
+  const rows = await prisma.comment.findMany({
+    where: { AND: [commentWhere, { OR: pairs }] },
+    // Même ordre qu'avant (du plus récent au plus ancien) ; `id` départage deux notes
+    // posées sur le même média à la milliseconde près, que l'ancienne lecture laissait
+    // départager par le plan d'exécution.
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    select: {
+      id: true,
+      mediaObjectId: true,
+      content: true,
+      timestamp: true,
+      createdAt: true,
+      guestName: true,
+      author: { select: { id: true, name: true } },
+      media: {
+        select: { id: true, kind: true, originalName: true, thumbnailKey: true, version: versionSelect },
+      },
+    },
+  });
+  // Un média ne paraît qu'une fois : sa note la plus récente, comme le faisait `distinct`.
+  const seen = new Set<number>();
+  const out: typeof rows = [];
+  for (const row of rows) {
+    if (seen.has(row.mediaObjectId)) continue;
+    seen.add(row.mediaObjectId);
+    out.push(row);
+  }
+  return out;
+}
 
 /** Une ligne de l'agrégat de progression : un projet, un statut, un compte. */
 interface ProjectTaskCount {
@@ -167,25 +237,8 @@ export async function getDashboard(user: SessionUser) {
     pendingReview,
     recentProjectRows,
   ] = await Promise.all([
-    // Dernier commentaire par média (distinct après tri desc = le plus récent de chacun).
-    prisma.comment.findMany({
-      where: commentWhere,
-      orderBy: { createdAt: 'desc' },
-      distinct: ['mediaObjectId'],
-      take: 6,
-      include: {
-        author: { select: { id: true, name: true } },
-        media: {
-          select: {
-            id: true,
-            kind: true,
-            originalName: true,
-            thumbnailKey: true,
-            version: versionSelect,
-          },
-        },
-      },
-    }),
+    // Dernier commentaire des six médias les plus récemment commentés (élection en SQL).
+    latestCommentPerMedia(commentWhere),
     prisma.version.findMany({
       where: { deletedAt: null, ...versionInAccess(access) },
       orderBy: { createdAt: 'desc' },

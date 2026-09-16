@@ -7,6 +7,7 @@ import { storage } from './StorageService';
 import { createUpload, type CreateUploadInput, mediaSourceKey } from './MediaService';
 import { logAudit } from './AuditService';
 import { badRequest, notFound } from '../lib/errors';
+import { discardUploadObjects } from '../lib/staleUploads';
 
 type SessionUser = { id: number; role: Role };
 
@@ -83,6 +84,12 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
         };
       } catch {
         // UploadId expiré/aborté côté MinIO : on repart de zéro (ligne nettoyée plus bas).
+        // L'abandon est tenté AVANT la suppression de la ligne : `listUploadedParts` échoue
+        // aussi sur un incident passager de MinIO, et le multipart est alors bien vivant —
+        // la ligne partie, son `uploadId` ne serait plus nulle part et ses parts resteraient
+        // sur le disque pour toujours. Si l'upload a réellement disparu, l'abandon échoue
+        // et n'a rien coûté.
+        await storage.abortMultipartUpload(pending.storageKey, meta.multipartUploadId).catch(() => undefined);
         await prisma.mediaObject.delete({ where: { id: pending.id } }).catch(() => undefined);
       }
     }
@@ -193,13 +200,10 @@ export async function completeMultipart(
 /**
  * Abandon d'un téléversement en cours, quel qu'en soit le chemin.
  *
- * Le bouton « annuler » du client aboutit ici : un multipart interrompu doit être
- * explicitement abandonné (sinon MinIO garde — et facture — les parts déjà déposées),
- * et un PUT simple coupé en vol peut avoir laissé un objet tronqué. Une séquence d'images,
- * elle, a semé N frames entières sous son préfixe : la ligne supprimée, plus rien n'y
- * mènerait — le préfixe est donc vidé ici, sans quoi 80 Go resteraient facturés et
- * invisibles. Les trois cas se terminent par la suppression de la ligne `MediaObject`,
- * restée en UPLOADING.
+ * Le bouton « annuler » du client aboutit ici. Le tri des trois chemins de dépôt (multipart
+ * à abandonner, préfixe de frames à vider, objet tronqué à supprimer) vit dans
+ * `lib/staleUploads.discardUploadObjects`, partagé avec la purge des envois abandonnés :
+ * les deux suppriment la même ligne `MediaObject`, ils doivent effacer les mêmes octets.
  */
 export async function abortUpload(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findFirst({
@@ -207,15 +211,7 @@ export async function abortUpload(user: SessionUser, id: number) {
     include: { imageSequence: true },
   });
   if (!media) throw notFound('Upload not found');
-  const uploadId = (media.metadata as Meta).multipartUploadId;
-  if (media.imageSequence) {
-    await storage.deletePrefix(media.imageSequence.storagePrefix).catch(() => undefined);
-    await storage.deleteObject(media.storageKey).catch(() => undefined);
-  } else if (typeof uploadId === 'string') {
-    await storage.abortMultipartUpload(media.storageKey, uploadId).catch(() => undefined);
-  } else {
-    await storage.deleteObject(media.storageKey).catch(() => undefined);
-  }
+  await discardUploadObjects(media);
   await prisma.mediaObject.delete({ where: { id } });
   return { aborted: true };
 }

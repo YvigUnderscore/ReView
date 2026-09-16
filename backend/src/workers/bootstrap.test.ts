@@ -6,7 +6,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Contrôle statique : chaque consommateur de file déclaré est effectivement démarré.
+ * Contrôle statique : chaque démarreur déclaré dans `workers/` est effectivement appelé au
+ * bootstrap du process worker.
  *
  * Deux files tournaient à vide en production — `spatial-thumb` et la cuisson OCIO : leur
  * `start…Worker()` existait, était exporté, et couvert par un test unitaire… mais n'était
@@ -18,6 +19,18 @@ import path from 'node:path';
 
 const WORKERS_DIR = path.join(__dirname);
 const BOOTSTRAP = path.join(WORKERS_DIR, 'ffmpeg.worker.ts');
+
+/**
+ * Motif de déclaration d'un démarreur.
+ *
+ * Il exigeait « Worker » juste avant la parenthèse. `startWorkerMetricsServer` — le point de
+ * collecte que Prometheus scrute sur `worker:9101` — porte le mot au milieu du nom : il
+ * passait donc à travers le contrôle, exporté, documenté, couvert par son propre test
+ * unitaire… et appelé nulle part, si bien que les trois panneaux Grafana du worker sont
+ * vides depuis leur création. Un contrôle qui rate le cas qu'il existe pour attraper est
+ * pire qu'aucun contrôle : « Server » compte désormais autant que « Worker ».
+ */
+const STARTER_DECLARATION = /export function (start\w*(?:Worker|Server))\s*\(/g;
 
 /** Tous les `.ts` de `workers/`, sous-dossiers compris, hors tests. */
 function workerSources(dir: string): string[] {
@@ -35,21 +48,22 @@ describe('bootstrap du process worker', () => {
 
   const declared = workerSources(WORKERS_DIR).flatMap((file) => {
     const src = readFileSync(file, 'utf8');
-    return [...src.matchAll(/export function (start\w*Worker)\s*\(/g)].flatMap((m) =>
+    return [...src.matchAll(STARTER_DECLARATION)].flatMap((m) =>
       m[1] ? [{ name: m[1], file: path.relative(WORKERS_DIR, file).replace(/\\/g, '/') }] : [],
     );
   });
 
-  it('déclare au moins les sept consommateurs connus', () => {
-    expect(declared.length).toBeGreaterThanOrEqual(7);
+  it('déclare au moins les sept consommateurs connus et le point de collecte', () => {
+    expect(declared.length).toBeGreaterThanOrEqual(8);
   });
 
   for (const { name, file } of declared) {
     it(`${name} (${file}) est appelé par ffmpeg.worker.ts`, () => {
       // Appel réel, pas une simple mention en commentaire.
-      expect(bootstrap, `${name} est exporté mais jamais démarré`).toMatch(
-        new RegExp(`^\\s*${name}\\(\\);`, 'm'),
-      );
+      expect(
+        bootstrap,
+        `${name} est exporté mais jamais démarré — ajouter un appel \`${name}(…);\` dans le bloc \`require.main === module\` de ffmpeg.worker.ts`,
+      ).toMatch(new RegExp(`^\\s*${name}\\(`, 'm'));
     });
   }
 });

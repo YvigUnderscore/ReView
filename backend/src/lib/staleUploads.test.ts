@@ -7,7 +7,7 @@ vi.mock('./prisma', () => ({
   prisma: { mediaObject: { findMany: vi.fn(), deleteMany: vi.fn() } },
 }));
 vi.mock('../services/StorageService', () => ({
-  storage: { deleteObject: vi.fn(), deletePrefix: vi.fn() },
+  storage: { deleteObject: vi.fn(), deletePrefix: vi.fn(), abortMultipartUpload: vi.fn() },
 }));
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn() } }));
 
@@ -17,12 +17,14 @@ import { storage } from '../services/StorageService';
 
 const findMany = vi.mocked(prisma.mediaObject.findMany);
 const deleteMany = vi.mocked(prisma.mediaObject.deleteMany);
+const abortMultipart = vi.mocked(storage.abortMultipartUpload);
 
 beforeEach(() => {
   vi.clearAllMocks();
   deleteMany.mockResolvedValue({ count: 0 });
   vi.mocked(storage.deleteObject).mockResolvedValue(undefined);
   vi.mocked(storage.deletePrefix).mockResolvedValue(undefined);
+  abortMultipart.mockResolvedValue(undefined);
 });
 
 /**
@@ -69,5 +71,70 @@ describe('purgeStaleUploads', () => {
 
     await expect(purgeStaleUploads()).resolves.toEqual({ purged: 1 });
     expect(deleteMany).toHaveBeenCalled();
+  });
+
+  /**
+   * A4-02 / INFRA-04. Un multipart jamais complété n'a AUCUN objet à `storageKey` :
+   * `DeleteObject` y est un aller-retour perdu, et les parts déjà reçues — 30 Go pour un
+   * master coupé à 80 % — restent dans `.minio.sys/multipart/`, que ni `ListObjectsV2`,
+   * ni `mc ls`, ni le rapport de stockage ne voient. Seul `AbortMultipartUpload` les libère,
+   * et son `uploadId` disparaît avec la ligne.
+   */
+  it('abandonne le multipart au lieu de supprimer un objet qui n’existe pas', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 21,
+        storageKey: 'projects/demo/shots/sh0100/v01/21/master.mov',
+        metadata: { multipartUploadId: 'up-42', multipartPartSize: 16 * 1024 * 1024 },
+        imageSequence: null,
+      },
+    ] as never);
+
+    await expect(purgeStaleUploads()).resolves.toEqual({ purged: 1 });
+
+    expect(abortMultipart).toHaveBeenCalledWith('projects/demo/shots/sh0100/v01/21/master.mov', 'up-42');
+    // Un aller-retour MinIO au lieu de deux, et c'est le seul qui libère quelque chose.
+    expect(abortMultipart).toHaveBeenCalledTimes(1);
+    expect(storage.deleteObject).not.toHaveBeenCalled();
+    expect(storage.deletePrefix).toHaveBeenCalledExactlyOnceWith('derived/21/');
+  });
+
+  it('vide le préfixe des frames d’une séquence coupée en route', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 22,
+        storageKey: 'projects/demo/shots/sh0200/v03/22/sequence.json',
+        metadata: {},
+        imageSequence: { storagePrefix: 'projects/demo/shots/sh0200/v03/22/frames/' },
+      },
+    ] as never);
+
+    await expect(purgeStaleUploads()).resolves.toEqual({ purged: 1 });
+
+    expect(storage.deletePrefix).toHaveBeenCalledWith('projects/demo/shots/sh0200/v03/22/frames/');
+    expect(storage.deleteObject).toHaveBeenCalledWith('projects/demo/shots/sh0200/v03/22/sequence.json');
+    expect(abortMultipart).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Ces deux colonnes portent les seuls fils qui mènent aux octets déjà déposés. Le
+   * `deleteMany` les efface : ne pas les avoir lues AVANT, c'est les perdre définitivement.
+   */
+  it('lit metadata et le préfixe de séquence avant d’effacer les lignes', async () => {
+    findMany.mockResolvedValue([] as never);
+    await purgeStaleUploads();
+    const select = (findMany.mock.calls.at(-1)?.[0] as { select: Record<string, unknown> }).select;
+    expect(select.metadata).toBe(true);
+    expect(select.imageSequence).toEqual({ select: { storagePrefix: true } });
+  });
+
+  it('libère la ligne même si l’abandon du multipart échoue (MinIO indisponible)', async () => {
+    findMany.mockResolvedValue([
+      { id: 23, storageKey: 'k/m.mov', metadata: { multipartUploadId: 'up-x' }, imageSequence: null },
+    ] as never);
+    abortMultipart.mockRejectedValue(new Error('MinIO down'));
+
+    await expect(purgeStaleUploads()).resolves.toEqual({ purged: 1 });
+    expect(deleteMany).toHaveBeenCalledWith({ where: { id: { in: [23] } } });
   });
 });

@@ -57,6 +57,23 @@ function argsOf<T = Record<string, unknown>>(fn: unknown): T {
 const whereOf = (fn: unknown): Record<string, unknown> =>
   argsOf<{ where: Record<string, unknown> }>(fn).where;
 
+/** Tous les appels simulés, dans l'ordre — quand une table est interrogée plus d'une fois. */
+function callsOf<T = Record<string, unknown>>(fn: unknown): T[] {
+  return (fn as { mock: { calls: unknown[][] } }).mock.calls.map((call) => call[0] as T);
+}
+
+/**
+ * `Department` est désormais interrogée DEUX fois, pour deux raisons étrangères l'une à
+ * l'autre : `search.ts` y résout les libellés en identifiants avant de chercher les tâches
+ * (à tout rôle, sans rien rendre), et `searchExtras` y cherche le référentiel à proposer —
+ * cela, aux seuls rôles qui peuvent l'ouvrir. Seule la seconde porte un `OR` de portée
+ * (studio ou projet) : c'est ce qui les distingue, et c'est celle que ces tests visent.
+ */
+const departmentReferentialCalls = (): { where: Record<string, unknown>; take?: number }[] =>
+  callsOf<{ where: Record<string, unknown>; take?: number }>(prisma.department.findMany).filter(
+    (args) => 'OR' in args.where,
+  );
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([
@@ -194,7 +211,7 @@ describe('searchEntities — résultats bornés', () => {
       playlists: argsOf<{ take: number }>(prisma.playlist.findMany).take,
       people: argsOf<{ take: number }>(prisma.user.findMany).take,
       episodes: argsOf<{ take: number }>(prisma.episode.findMany).take,
-      departments: argsOf<{ take: number }>(prisma.department.findMany).take,
+      departments: departmentReferentialCalls()[0]!.take,
       timelines: argsOf<{ take: number }>(prisma.timeline.findMany).take,
       boards: argsOf<{ take: number }>(prisma.board.findMany).take,
       briefs: argsOf<{ take: number }>(prisma.entityNote.findMany).take,
@@ -255,24 +272,33 @@ describe('searchEntities — les familles ajoutées', () => {
     ]);
   });
 
-  it('trouve une tâche par son département : « Modeling » ne rendait rien', () => {
-    const where = whereOf(prisma.task.findMany) as { AND: { OR: Record<string, unknown>[] }[] };
+  it('trouve une tâche par son département : « Modeling » ne rendait rien', async () => {
+    // Le libellé de l'étape ne vit pas dans `Task` : il est résolu en identifiants d'abord
+    // (cf. `matchingDepartmentIds`), puis appliqué comme une colonne de `Task`.
+    vi.mocked(prisma.department.findMany).mockResolvedValueOnce([{ id: 4 }] as never);
+    await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
+    const where = callsOf<{ where: { AND: { OR: Record<string, unknown>[] }[] } }>(prisma.task.findMany).at(
+      -1,
+    )!.where;
     const fields = where.AND[0]!.OR.map((clause) => Object.keys(clause)[0]);
-    expect(fields).toEqual(['name', 'departmentRef', 'department']);
+    expect(fields).toEqual(['name', 'department', 'departmentId']);
+    expect(where.AND[0]!.OR[2]).toEqual({ departmentId: { in: [4] } });
   });
 });
 
 describe('searchEntities — les départements ne s’offrent qu’à qui peut les ouvrir', () => {
   it('les ignore pour un ARTIST et pour un CLIENT — l’écran leur serait refusé', async () => {
-    await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
-    expect(prisma.department.findMany).not.toHaveBeenCalled();
-    await searchEntities('modeling', ARTIST_ID, Role.CLIENT);
-    expect(prisma.department.findMany).not.toHaveBeenCalled();
+    const artist = await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
+    expect(departmentReferentialCalls()).toHaveLength(0);
+    expect(artist.departments).toEqual([]);
+    const client = await searchEntities('modeling', ARTIST_ID, Role.CLIENT);
+    expect(departmentReferentialCalls()).toHaveLength(0);
+    expect(client.departments).toEqual([]);
   });
 
   it('rend le référentiel du studio et les étapes des projets accessibles à un ADMIN', async () => {
     await searchEntities('modeling', 1, Role.ADMIN);
-    const where = whereOf(prisma.department.findMany) as {
+    const where = departmentReferentialCalls()[0]!.where as {
       OR: Record<string, unknown>[];
       AND: { OR: Record<string, unknown>[] }[];
     };

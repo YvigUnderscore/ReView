@@ -5,10 +5,14 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 const tx = {
   episode: { createManyAndReturn: vi.fn() },
-  sequence: { createManyAndReturn: vi.fn(), update: vi.fn() },
-  shot: { createManyAndReturn: vi.fn(), update: vi.fn() },
-  task: { createMany: vi.fn(), update: vi.fn() },
+  sequence: { createManyAndReturn: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+  shot: { createManyAndReturn: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+  task: { createMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
 };
+
+/** `updateMany` honnête : il rend le nombre de lignes qu'il prétend avoir touchées. */
+const countsMatched = (args: { where: { id: { in: number[] } } }) =>
+  Promise.resolve({ count: args.where.id.in.length });
 
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -62,6 +66,9 @@ beforeEach(() => {
   tx.sequence.createManyAndReturn.mockResolvedValue([]);
   tx.shot.createManyAndReturn.mockResolvedValue([]);
   tx.task.createMany.mockResolvedValue({ count: 0 });
+  tx.sequence.updateMany.mockImplementation(countsMatched);
+  tx.shot.updateMany.mockImplementation(countsMatched);
+  tx.task.updateMany.mockImplementation(countsMatched);
   mocked.$transaction.mockImplementation(async (fn: (c: typeof tx) => Promise<void>) => fn(tx));
 });
 
@@ -158,7 +165,9 @@ describe('commit', () => {
     expect(report.counts).toMatchObject({ shotsUnchanged: 1, tasksUnchanged: 1, shotsToCreate: 0 });
     expect(tx.shot.createManyAndReturn).not.toHaveBeenCalled();
     expect(tx.shot.update).not.toHaveBeenCalled();
+    expect(tx.shot.updateMany).not.toHaveBeenCalled();
     expect(tx.task.update).not.toHaveBeenCalled();
+    expect(tx.task.updateMany).not.toHaveBeenCalled();
     expect(tx.task.createMany).not.toHaveBeenCalled();
   });
 

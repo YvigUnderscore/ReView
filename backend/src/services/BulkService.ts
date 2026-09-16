@@ -5,17 +5,8 @@ import { Role, TaskStatus, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import * as DepartmentService from './DepartmentService';
 import { checkProjectAccess } from '../middleware/rbac';
+import { canManageProject, effectiveProjectRole } from '../lib/projectRoles';
 import { forbidden, notFound } from '../lib/errors';
-import {
-  resolveProjectIdForProject,
-  resolveProjectIdForEpisode,
-  resolveProjectIdForSequence,
-  resolveProjectIdForShot,
-  resolveProjectIdForAsset,
-  resolveProjectIdForVersion,
-  resolveProjectIdForMedia,
-  resolveProjectIdForTask,
-} from '../lib/pipeline';
 import {
   softDeleteProjects,
   softDeleteEpisodes,
@@ -31,13 +22,13 @@ import {
   restoreAssets,
   restoreVersions,
   restoreMedias,
-  purgeProject,
-  purgeEpisode,
-  purgeSequence,
-  purgeShot,
-  purgeAsset,
-  purgeVersion,
-  purgeMedia,
+  purgeProjects,
+  purgeEpisodes,
+  purgeSequences,
+  purgeShots,
+  purgeAssets,
+  purgeVersions,
+  purgeMedias,
 } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { assertMediaManage } from './MediaService';
@@ -46,11 +37,18 @@ import * as TaskService from './TaskService';
 import * as VersionService from './VersionService';
 
 /**
- * Actions groupées (13.C). Chaque id est **revalidé individuellement** (accès projet +
- * RBAC métier) avant toute mutation : si un seul id échoue, rien n'est modifié.
+ * Actions groupées (13.C). Chaque id est **revalidé** (accès projet + RBAC métier) avant
+ * toute mutation : si un seul id échoue, rien n'est modifié.
  * Les domaines à corbeille (episodes/sequences/shots/assets/versions/media) partagent une passe
  * de validation puis une écriture en lot transactionnelle (`lib/trash`). Les patchs
  * (tasks/versions) réutilisent les services unitaires (émission temps réel + notifs).
+ *
+ * **La revalidation est mutualisée, pas relâchée.** Ce qui ne dépend que du projet — le
+ * projet est-il désignable, la personne y appartient-elle, avec quel rôle effectif — est
+ * résolu UNE fois par projet pour tout le lot ; ce qui dépend de l'entité (auteur d'une
+ * version, déposant d'un média) continue d'être vérifié id par id, dans l'ordre reçu.
+ * Poser la même question deux cents fois coûtait plus de mille requêtes séquentielles avant
+ * la première écriture, et ne protégeait rien de plus.
  */
 
 type SessionUser = { id: number; role: Role };
@@ -68,15 +66,103 @@ export const DELETE_DOMAINS = [
 ] as const;
 export type DeleteDomain = (typeof DELETE_DOMAINS)[number];
 
-const RESOLVERS: Record<DeleteDomain, (id: number) => Promise<number | null>> = {
-  projects: resolveProjectIdForProject,
-  episodes: resolveProjectIdForEpisode,
-  sequences: resolveProjectIdForSequence,
-  shots: resolveProjectIdForShot,
-  assets: resolveProjectIdForAsset,
-  versions: resolveProjectIdForVersion,
-  media: resolveProjectIdForMedia,
+/** Domaines résolus par une lecture directe ; `media` a sa propre garde (cf. plus bas). */
+type PipelineDomain = Exclude<DeleteDomain, 'media'>;
+
+/**
+ * Chaîne Version → projet, telle que la parcourt `resolveProjectIdForVersion`
+ * (lib/pipeline) — reprise ici pour la lire en une seule requête sur tout un lot.
+ */
+const VERSION_PROJECT_SELECT = {
+  asset: { select: { projectId: true } },
+  task: {
+    select: { shot: { select: { projectId: true } }, asset: { select: { projectId: true } } },
+  },
+} as const;
+
+type VersionProjectChain = {
+  asset: { projectId: number } | null;
+  task: { shot: { projectId: number } | null; asset: { projectId: number } | null } | null;
 };
+
+/** Même précédence que `resolveProjectIdForVersion` : asset direct, puis task→shot, puis task→asset. */
+const projectIdOfVersion = (version: VersionProjectChain): number | null =>
+  version.asset?.projectId ?? version.task?.shot?.projectId ?? version.task?.asset?.projectId ?? null;
+
+/** Ce que le contrôle d'accès a besoin de savoir d'une entité : son projet, et son propriétaire. */
+interface BulkEntity {
+  projectId: number | null;
+  /** Auteur d'une version ; `null` pour les domaines dont l'accès ne dépend que du rôle. */
+  ownerId: number | null;
+}
+
+/**
+ * Résout en UNE requête le projet porteur de tout un lot.
+ *
+ * Les résolveurs unitaires de `lib/pipeline` font une requête par identifiant — et trois
+ * pour une version, à cause de ses relations imbriquées. Sur les deux cents ids que la
+ * route autorise, cela faisait des centaines de lectures qui rendaient toutes le même
+ * projet. La forme des `select` est recopiée telle quelle : même précédence, mêmes cas nuls.
+ * Un id absent de la carte est un id introuvable, exactement comme un résolveur qui rendait
+ * `null`.
+ */
+async function loadBulkEntities(domain: PipelineDomain, ids: number[]): Promise<Map<number, BulkEntity>> {
+  const where = { id: { in: ids } };
+  switch (domain) {
+    case 'projects': {
+      const rows = await prisma.project.findMany({ where, select: { id: true } });
+      return new Map(rows.map((r) => [r.id, { projectId: r.id, ownerId: null }]));
+    }
+    case 'episodes': {
+      const rows = await prisma.episode.findMany({ where, select: { id: true, projectId: true } });
+      return new Map(rows.map((r) => [r.id, { projectId: r.projectId, ownerId: null }]));
+    }
+    case 'sequences': {
+      const rows = await prisma.sequence.findMany({ where, select: { id: true, projectId: true } });
+      return new Map(rows.map((r) => [r.id, { projectId: r.projectId, ownerId: null }]));
+    }
+    case 'shots': {
+      const rows = await prisma.shot.findMany({ where, select: { id: true, projectId: true } });
+      return new Map(rows.map((r) => [r.id, { projectId: r.projectId, ownerId: null }]));
+    }
+    case 'assets': {
+      const rows = await prisma.asset.findMany({ where, select: { id: true, projectId: true } });
+      return new Map(rows.map((r) => [r.id, { projectId: r.projectId, ownerId: null }]));
+    }
+    case 'versions': {
+      const rows = await prisma.version.findMany({
+        where,
+        select: { id: true, authorId: true, ...VERSION_PROJECT_SELECT },
+      });
+      return new Map(rows.map((r) => [r.id, { projectId: projectIdOfVersion(r), ownerId: r.authorId }]));
+    }
+  }
+}
+
+/**
+ * Verdict d'accès projet mémorisé pour la durée d'un lot.
+ *
+ * L'utilisateur, son rôle global et `includeTrashed` ne varient pas d'un identifiant à
+ * l'autre : le verdict ne dépend donc QUE du projet. Le redemander par entité, c'est
+ * refaire deux cents fois le même `project.count` et la même lecture d'appartenance avant
+ * la première écriture. On mémorise la promesse, pas sa valeur : deux demandes concurrentes
+ * partagent la requête. La garde elle-même reste `checkProjectAccess` — on n'en réécrit
+ * aucune règle, on cesse seulement de la reposer.
+ */
+function memoProjectAccess(
+  user: SessionUser,
+  options: { includeTrashed: boolean },
+): (projectId: number) => Promise<boolean> {
+  const verdicts = new Map<number, Promise<boolean>>();
+  return (projectId) => {
+    let verdict = verdicts.get(projectId);
+    if (!verdict) {
+      verdict = checkProjectAccess(user.id, user.role, projectId, options);
+      verdicts.set(projectId, verdict);
+    }
+    return verdict;
+  };
+}
 
 const SOFT_DELETE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
   projects: softDeleteProjects,
@@ -98,15 +184,17 @@ const RESTORE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
   media: restoreMedias,
 };
 
-// Purge définitive (DB + MinIO) — fonctions unitaires bouclées (chaque purge gère son storage).
-const PURGE: Record<DeleteDomain, (id: number) => Promise<void>> = {
-  projects: purgeProject,
-  episodes: purgeEpisode,
-  sequences: purgeSequence,
-  shots: purgeShot,
-  assets: purgeAsset,
-  versions: purgeVersion,
-  media: purgeMedia,
+// Purge définitive (DB + MinIO) en lot : une passe de lecture, une passe de suppression,
+// un seul `DeleteObjects` pour tout le lot (cf. lib/trash) — au lieu d'une purge unitaire
+// bouclée, qui enchaînait des milliers d'allers-retours MinIO dans la requête HTTP.
+const PURGE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
+  projects: purgeProjects,
+  episodes: purgeEpisodes,
+  sequences: purgeSequences,
+  shots: purgeShots,
+  assets: purgeAssets,
+  versions: purgeVersions,
+  media: purgeMedias,
 };
 
 const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; purge: string; type: string }> = {
@@ -154,6 +242,10 @@ const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; purge: 
  * (projects/episodes/sequences/shots/assets) exigent ADMIN/SUPERVISOR ; media délègue à
  * `assertMediaManage` (uploader ou manager) ; versions exige auteur ou manager.
  *
+ * Coût mesuré sur la base de démonstration, sélection accordée dans un seul projet : le
+ * contrôle passe de 3 requêtes par plan (2 pour un ADMIN) à 3 pour tout le lot, quel qu'en
+ * soit le nombre d'éléments.
+ *
  * `fromTrash` marque les deux opérations qui, par nature, désignent des éléments déjà à la
  * corbeille — restauration et purge. Elles seules lèvent l'invariant du RBAC (« un projet
  * à la corbeille n'existe plus »), sans quoi la corbeille globale ne pourrait plus rendre
@@ -165,29 +257,74 @@ async function assertDeleteAccess(
   ids: number[],
   fromTrash = false,
 ): Promise<void> {
-  if (domain === 'media') {
+  if (domain === 'media') return assertMediaBulkManage(user, ids);
+  const manager = isManager(user.role);
+  const entities = await loadBulkEntities(domain, ids);
+  const hasAccess = memoProjectAccess(user, { includeTrashed: fromTrash });
+  // Les identifiants restent parcourus DANS L'ORDRE REÇU : le premier qui échoue rend la
+  // même erreur qu'avant, avec le même identifiant dans le message.
+  for (const id of ids) {
+    const entity = entities.get(id);
+    const projectId = entity?.projectId ?? null;
+    if (!projectId) throw notFound(`Item ${id} not found`);
+    if (!(await hasAccess(projectId))) throw forbidden(`Access denied (${domain} ${id})`);
+    if (domain === 'versions') {
+      if (!manager && entity?.ownerId !== user.id)
+        throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+    } else if (!manager) {
+      throw forbidden('Supervisors and administrators only');
+    }
+  }
+}
+
+/**
+ * Garde des médias en lot.
+ *
+ * `MediaService.assertMediaManage` reste la SEULE autorité sur la politique de projet
+ * (projet désignable, appartenance, droit de contribuer, rôle de gestion) : elle est
+ * appelée telle quelle sur le premier média de chaque projet rencontré. Ce qu'on cesse de
+ * refaire, c'est de la reposer pour les cent quatre-vingt-dix-neuf suivants, dont le
+ * verdict de projet est identique par construction — six requêtes par média, toutes les
+ * mêmes, avant la moindre écriture.
+ *
+ * Seule la règle qui dépend RÉELLEMENT du média est rejouée pour les suivants : gérant du
+ * projet, ou déposant de ce média-là. Si une règle par média venait s'ajouter à
+ * `assertMediaManage`, c'est ici qu'il faudrait la reporter — d'où le nommage explicite.
+ *
+ * `fromTrash` n'entre pas en jeu : `assertMediaManage` contrôle l'accès projet sans
+ * dérogation de corbeille, et cette voie-ci ne fait que la reprendre. Comportement
+ * inchangé, y compris pour la restauration et la purge.
+ */
+async function assertMediaBulkManage(user: SessionUser, ids: number[]): Promise<void> {
+  // Un seul identifiant : rien à mutualiser. La lecture préalable coûterait alors plus que
+  // ce qu'elle épargne (mesuré : 13 requêtes contre 8), et la sélection d'un seul média est
+  // un geste courant. On garde la garde d'origine, telle quelle.
+  if (ids.length <= 1) {
     for (const id of ids) await assertMediaManage(id, user);
     return;
   }
-  const manager = isManager(user.role);
+  const rows = await prisma.mediaObject.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, uploaderId: true, version: { select: VERSION_PROJECT_SELECT } },
+  });
+  const byId = new Map(
+    rows.map((row) => [row.id, { uploaderId: row.uploaderId, projectId: projectIdOfVersion(row.version) }]),
+  );
+  // Projets dont la garde complète est déjà passée, avec le rôle effectif qui y a servi.
+  const cleared = new Map<number, Role | null>();
   for (const id of ids) {
-    const projectId = await RESOLVERS[domain](id);
-    if (!projectId) throw notFound(`Item ${id} not found`);
-    if (!(await checkProjectAccess(user.id, user.role, projectId, { includeTrashed: fromTrash })))
-      throw forbidden(`Access denied (${domain} ${id})`);
-    if (
-      domain === 'projects' ||
-      domain === 'episodes' ||
-      domain === 'sequences' ||
-      domain === 'shots' ||
-      domain === 'assets'
-    ) {
-      if (!manager) throw forbidden('Supervisors and administrators only');
-    } else if (domain === 'versions') {
-      const v = await prisma.version.findUnique({ where: { id }, select: { authorId: true } });
-      if (!manager && v?.authorId !== user.id)
-        throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+    const media = byId.get(id);
+    if (!media) throw notFound('Media not found');
+    const projectId = media.projectId;
+    if (projectId === null || !cleared.has(projectId)) {
+      await assertMediaManage(id, user);
+      // Projet non résolu : `assertMediaManage` a déjà levé, on n'arrive jamais ici.
+      if (projectId !== null)
+        cleared.set(projectId, await effectiveProjectRole(user.id, user.role, projectId));
+      continue;
     }
+    if (!canManageProject(cleared.get(projectId) ?? null) && media.uploaderId !== user.id)
+      throw forbidden("Suppression réservée à l'uploader ou un superviseur");
   }
 }
 
@@ -221,7 +358,7 @@ export async function bulkPurge(user: SessionUser, domain: DeleteDomain, ids: nu
   // définitive et irréversible de n'importe quel projet, base et stockage compris.
   if (domain === 'projects' && user.role !== Role.ADMIN)
     throw forbidden('Permanently purging a project is reserved to administrators');
-  for (const id of ids) await PURGE[domain](id);
+  await PURGE[domain](ids);
   const a = AUDIT_ACTION[domain];
   logAudit({ userId: user.id, action: a.purge, entityType: a.type, entityId: ids[0], metadata: { ids } });
   return ids.length;
@@ -234,14 +371,26 @@ export interface BulkTaskPatch {
   assigneeId?: number | null;
 }
 
-/** Patch de tâches en lot — réutilise `TaskService.update` (RBAC + notifs + temps réel) par id. */
+/**
+ * Patch de tâches en lot — réutilise `TaskService.update` (RBAC + notifs + temps réel) par id.
+ * Le projet porteur, lui, est résolu pour tout le lot en une requête : le redemander par
+ * tâche revenait à relire cinquante fois la même relation avant chaque écriture.
+ */
 export async function bulkPatchTasks(
   user: SessionUser,
   ids: number[],
   patch: BulkTaskPatch,
 ): Promise<number> {
+  const rows = await prisma.task.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, shot: { select: { projectId: true } }, asset: { select: { projectId: true } } },
+  });
+  // Même précédence que `resolveProjectIdForTask` : le plan d'abord, l'asset ensuite.
+  const projectIds = new Map(
+    rows.map((row) => [row.id, row.shot?.projectId ?? row.asset?.projectId ?? null]),
+  );
   for (const id of ids) {
-    const projectId = await resolveProjectIdForTask(id);
+    const projectId = projectIds.get(id);
     if (!projectId) throw notFound(`Task ${id} not found`);
     await TaskService.update(user, projectId, id, patch);
   }
@@ -254,8 +403,9 @@ export async function bulkPatchVersions(
   ids: number[],
   status: VersionStatus,
 ): Promise<number> {
+  const entities = await loadBulkEntities('versions', ids);
   for (const id of ids) {
-    const projectId = await resolveProjectIdForVersion(id);
+    const projectId = entities.get(id)?.projectId ?? null;
     if (!projectId) throw notFound(`Version ${id} not found`);
     await VersionService.update(user, projectId, id, { status });
   }

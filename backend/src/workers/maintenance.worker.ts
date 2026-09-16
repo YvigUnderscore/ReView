@@ -11,6 +11,7 @@ import { purgeStaleUploads } from '../lib/staleUploads';
 import { purgeObsoleteDerived } from '../lib/derivedPurge';
 import { purgeIdempotencyRecords } from '../lib/idempotency';
 import { sweepRetention } from '../lib/retention';
+import { reconcileStuckMedia } from '../lib/mediaReconcile';
 import { sendDailyDigests } from '../services/DigestService';
 import { sendWeeklyReports } from '../services/WeeklyReportService';
 import { registerWorkerShutdown } from './shutdown';
@@ -28,6 +29,10 @@ import { registerWorkerShutdown } from './shutdown';
  * Purge des tampons : corbeille expirée, dérivés obsolètes, clés d'idempotence, puis
  * balayage de rétention des neuf tables de journal (`lib/retention`). Ce sont des tampons,
  * pas des archives : sans purge, ils grossissent indéfiniment au rythme du studio.
+ *
+ * La passe se termine par la réconciliation des médias figés en `PROCESSING` : c'est le
+ * seul rendez-vous périodique du studio, et donc le seul endroit d'où elle peut rattraper
+ * un worker tué en plein transcodage sans attendre un redémarrage de l'API.
  *
  * Tout est plafonné par passe — corbeille comme journaux. Un studio qui active la rétention
  * après un an d'exploitation rattrape son retard en plusieurs nuits, sans jamais bloquer la
@@ -47,6 +52,15 @@ async function runPurge(): Promise<void> {
   if (keys > 0) logger.info(`[API v1] purge : ${keys} clé(s) d'idempotence.`);
   // Journalise lui-même son résultat (et le consigne dans l'audit quand il a supprimé).
   await sweepRetention();
+  // Médias figés en PROCESSING par un worker tué : le balayage vivait dans le démarrage du
+  // process API, alors que le process qui meurt est le worker — `restart: always` le relance
+  // seul, sans toucher à l'API, et le média gardait son spinner indéfiniment. Placé en fin
+  // de passe : une réconciliation en erreur ne doit pas emporter les purges déjà faites.
+  const reconciled = await reconcileStuckMedia();
+  if (reconciled > 0)
+    // Le décompte passe en champ de contexte plutôt qu'en gabarit : un journal se filtre
+    // sur un champ, et `check-untranslated` compte les fragments de gabarit.
+    logger.info({ reconciled }, '[reconcile] médias figés en PROCESSING passés en échec');
 }
 
 export const maintenanceWorker = new Worker<MaintenanceJobData, void, string>(

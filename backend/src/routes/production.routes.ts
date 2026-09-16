@@ -48,13 +48,27 @@ router.get(
   },
 );
 
-// GET /api/projects/:projectId/schedule — tâches datées (calendrier + Gantt, lecture seule)
+/**
+ * GET /api/projects/:projectId/schedule?from=&to= — tâches datées (calendrier + Gantt).
+ *
+ * La fenêtre borne la lecture : un Gantt n'affiche jamais qu'un mois ou un trimestre, et
+ * sans elle la route rapatriait tout le projet daté. Les deux bornes restent facultatives
+ * — absentes, la réponse est celle d'avant, au plafond de sécurité près, qu'elle annonce
+ * alors par `truncated`.
+ */
+const scheduleQuery = z.object({
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+});
+
 router.get(
   '/:projectId/schedule',
-  validate({ params: projectIdParam }),
+  validate({ params: projectIdParam, query: scheduleQuery }),
   requireProjectAccess,
   async (req, res) => {
-    res.json(await ScheduleService.getProjectSchedule(Number(req.params.projectId)));
+    // `validate` a déjà converti les bornes ; on relit par le même schéma pour les typer.
+    const { from, to } = scheduleQuery.parse(req.query);
+    res.json(await ScheduleService.getProjectSchedule(Number(req.params.projectId), { from, to }));
   },
 );
 

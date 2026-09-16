@@ -14,7 +14,7 @@
  * d'empêcher la disparition silencieuse de quelques lignes.
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -90,7 +90,14 @@ export function locationBlocks(conf) {
       else if (conf[i] === '}') depth -= 1;
       i += 1;
     }
-    blocks.set(m[1], conf.slice(re.lastIndex, i - 1));
+    // Deux serveurs du même fichier peuvent porter la MÊME location — `/` qui redirige en
+    // clair vers HTTPS et `/` qui sert la SPA. Sans clé distincte, la seconde écrasait la
+    // première : le contrôle du corps des requêtes ne voyait plus qu'un bloc sur deux, et
+    // `outsideLocations` laissait le corps oublié passer pour de la configuration de
+    // serveur. La première occurrence garde la clé nue (les `.get('/api/')` restent vrais).
+    let key = m[1];
+    for (let n = 2; blocks.has(key); n += 1) key = `${m[1]} #${n}`;
+    blocks.set(key, conf.slice(re.lastIndex, i - 1));
   }
   return blocks;
 }
@@ -197,6 +204,33 @@ describe('docker-compose.yml', () => {
     const body = services.get('backend');
     expect(body).toContain('http://127.0.0.1:3000');
     expect(body).toContain("process.env.HEALTH_PATH || '/health'");
+  });
+
+  it('borne explicitement le pool Prisma des deux process qui se connectent', () => {
+    // Sans `connection_limit`, Prisma dimensionne son pool à « cœurs physiques × 2 + 1 »,
+    // PAR PROCESS. Mesuré sur l'hôte de développement (32 cœurs logiques) : 20 requêtes
+    // concurrentes ont ouvert 20 connexions sur une URL nue, 10 sur l'URL bornée. À 32
+    // cœurs physiques, backend + worker demanderaient 130 connexions pour les 100 de
+    // l'image postgres, et le second process à démarrer boucle sur « too many clients ».
+    for (const name of ['backend', 'worker']) {
+      const body = services.get(name);
+      expect(body, `service ${name}`).toMatch(/DATABASE_URL: [^\n]*[?&]connection_limit=/);
+      expect(body, `service ${name}`).toMatch(/DATABASE_URL: [^\n]*[?&]pool_timeout=/);
+    }
+  });
+
+  it("charge les règles d'alerte de Prometheus (sinon aucune n'est jamais évaluée)", () => {
+    // `rule_files` est une glob volontairement tolérante : sans le montage, Prometheus
+    // démarre sans un mot avec ZÉRO règle. Vérifié par exécution : 0 groupe sans le
+    // montage, 4 groupes (10 règles) avec.
+    const prometheusConf = read('monitoring', 'prometheus.yml');
+    const ruleGlob = /^ {2}- (\/\S+)\/\*\.yml$/m.exec(prometheusConf);
+    expect(ruleGlob, 'prometheus.yml doit déclarer un rule_files').not.toBeNull();
+    const mounted = new RegExp(`- \\./monitoring/rules:${ruleGlob[1]}:ro`);
+    expect(services.get('prometheus')).toMatch(mounted);
+    expect(
+      readdirSync(join(ROOT, 'monitoring', 'rules')).filter((f) => f.endsWith('.yml')).length,
+    ).toBeGreaterThan(0);
   });
 
   it("ne publie aucun port sur toutes les interfaces sans qu'on l'ait demandé", () => {
@@ -372,5 +406,122 @@ describe('nginx', () => {
     const conf = configs['frontend/nginx.conf'];
     expect(conf).toMatch(/map \$http_upgrade \$connection_upgrade \{/);
     expect(conf).not.toMatch(/proxy_set_header Connection ['"]upgrade['"];/);
+  });
+});
+
+/**
+ * Surcouche de production : le frontal TLS est le SEUL service exposé.
+ *
+ * Ce qui manque ici ne manque nulle part ailleurs — un cache sans volume écrit sur le
+ * disque des volumes de données, et un nginx bloqué sans sonde reste « running ».
+ */
+describe('docker-compose.prod.yml — frontal TLS', () => {
+  const prod = read('docker-compose.prod.yml');
+  const conf = read('nginx', 'nginx.conf');
+
+  it('donne un volume au cache déclaré par proxy_cache_path', () => {
+    // 2 Go de rotation d'écriture permanente atterrissaient dans la couche inscriptible du
+    // conteneur, c'est-à-dire /var/lib/docker — le système de fichiers de pgdata et
+    // miniodata — et repartaient à zéro à chaque `scripts/update.sh`.
+    const cachePath = /proxy_cache_path\s+(\S+)/.exec(conf);
+    expect(cachePath, 'nginx.conf doit déclarer un proxy_cache_path').not.toBeNull();
+    const parent = cachePath[1].split('/').slice(0, -1).join('/');
+    const mounted = [...prod.matchAll(/^ {6}- \S+?:(\S+?)(?::ro)?$/gm)].map((m) => m[1]);
+    expect(mounted, `aucun volume monte sur ${parent}`).toContain(parent);
+    expect(prod).toMatch(/^volumes:\n {2}nginx_cache:$/m);
+  });
+
+  it('sonde le frontal sur un chemin qui ne traverse aucun amont', () => {
+    const probe = /wget[^\n]*http:\/\/127\.0\.0\.1(\/\S*?)"/.exec(prod);
+    expect(probe, 'le service nginx doit porter un healthcheck wget').not.toBeNull();
+    // La sonde doit viser une `location` servie par nginx lui-même : viser `/` ferait
+    // dépendre la santé du frontal de celle du backend.
+    expect([...locationBlocks(conf).keys()]).toContain(`= ${probe[1]}`);
+    expect(locationBlocks(conf).get(`= ${probe[1]}`)).toMatch(/return 200/);
+  });
+
+  it('ne laisse pas un `return` de niveau serveur court-circuiter la sonde', () => {
+    // Constaté : un `return 301` posé au niveau `server` s'exécute à la phase de
+    // réécriture, AVANT le choix de la location — la sonde partait en 301 et le
+    // healthcheck suivait la redirection jusqu'à un échec TLS.
+    expect(outsideLocations(conf)).not.toMatch(/^\s*return 301 /m);
+    expect(conf).toMatch(/location \/ \{\n\s*return 301 https:\/\/\$host\$request_uri;/);
+  });
+
+  it("n'expose la sonde qu'à la boucle locale", () => {
+    // `allow`/`deny` seraient sans effet : ils s'évaluent après la phase de réécriture, où
+    // `return` a déjà répondu (constaté : 200 depuis une autre adresse).
+    const healthz = locationBlocks(conf).get('= /healthz');
+    expect(healthz).toMatch(/if \(\$remote_addr !~/);
+    expect(healthz).not.toMatch(/allow /);
+  });
+});
+
+/**
+ * Image d'exécution du backend — INFRA-09.
+ *
+ * Mesuré sur l'image construite : uid 0 → uid 1000, six binaires de développement
+ * (vitest, eslint, tsc, tsx, prettier) → zéro, toutes les sources .ts → zéro,
+ * 446,2 Mo → 350,6 Mo.
+ */
+describe('backend/Dockerfile — image d’exécution', () => {
+  const dockerfile = read('backend', 'Dockerfile');
+  const stages = dockerfile.split(/^FROM /m).slice(1);
+  const runtime = stages[stages.length - 1];
+
+  it('sépare construction et exécution', () => {
+    expect(stages.length).toBe(2);
+    expect(stages[0]).toMatch(/^node:\d+-slim AS build/);
+  });
+
+  it('installe un arbre reproductible, sans devDependencies à l’exécution', () => {
+    // `npm install` réécrit l'arbre : deux images bâties à deux dates n'exécutent pas le
+    // même code. Et les devDependencies, ce sont tsx et le compilateur TypeScript dans
+    // l'image qui traite des fichiers déposés par des utilisateurs.
+    expect(dockerfile).not.toMatch(/^RUN npm install$/m);
+    expect(stages[0]).toMatch(/npm ci/);
+    expect(runtime).toMatch(/npm ci --omit=dev/);
+  });
+
+  it('n’embarque pas les sources dans l’image finale', () => {
+    expect(runtime).not.toMatch(/^COPY \. \.$/m);
+    expect(runtime).toMatch(/^COPY --from=build \/app\/dist \.\/dist$/m);
+    // Ressources du worker résolues à l'exécution sous src/ : tsc ne les copie pas.
+    for (const asset of ['src/workers/usd/*.py', 'src/workers/ocio/*.py']) {
+      expect(runtime, asset).toContain(`COPY ${asset}`);
+    }
+  });
+
+  it('abandonne les droits de root avant de lancer l’application', () => {
+    const user = runtime.indexOf('\nUSER node');
+    const cmd = runtime.indexOf('\nCMD ');
+    expect(user, 'USER node absent').toBeGreaterThan(-1);
+    expect(user).toBeLessThan(cmd);
+  });
+});
+
+describe('backend — le CLI Prisma est une dépendance d’exécution', () => {
+  const pkg = JSON.parse(read('backend', 'package.json'));
+  const startSh = read('backend', 'start.sh');
+
+  it('déclare prisma en dependencies, puisque start.sh l’invoque à chaque démarrage', () => {
+    // En devDependency, `npm ci --omit=dev` l'élaguerait et `migrate deploy` échouerait au
+    // premier démarrage du conteneur.
+    expect(Object.keys(pkg.dependencies)).toContain('prisma');
+    expect(Object.keys(pkg.devDependencies)).not.toContain('prisma');
+    expect(startSh).toContain('npx prisma migrate deploy');
+  });
+
+  it('ne régénère pas le client Prisma à chaque démarrage', () => {
+    // Une dizaine de secondes à chaque reprise de `restart: always` — et un échec net
+    // depuis que le conteneur tourne en uid 1000 : node_modules appartient à root.
+    expect(startSh).toMatch(/if \[ -d node_modules\/\.prisma\/client \]; then/);
+  });
+
+  it('livre un seed exécutable sans tsx, que l’image ne contient plus', () => {
+    // `docker compose exec backend npm run seed` est documenté (first-run.md) : il doit
+    // continuer à fonctionner alors que tsx a quitté l'image.
+    expect(pkg.scripts.seed).toBe('node dist/seed.js');
+    expect(pkg.scripts.build).toContain('build:seed');
   });
 });

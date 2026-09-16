@@ -11,7 +11,7 @@ vi.mock('./prisma', () => ({
   },
 }));
 vi.mock('../services/StorageService', () => ({
-  storage: { deleteObject: vi.fn(), deletePrefix: vi.fn() },
+  storage: { deleteObject: vi.fn(), deleteObjects: vi.fn(), deletePrefix: vi.fn() },
 }));
 vi.mock('../services/JobService', () => ({
   enqueueStorageCleanup: vi.fn(),
@@ -24,7 +24,7 @@ import { enqueueStorageCleanup } from '../services/JobService';
 
 const findUnique = vi.mocked(prisma.mediaObject.findUnique);
 const deleteMedia = vi.mocked(prisma.mediaObject.delete);
-const deleteObject = vi.mocked(storage.deleteObject);
+const deleteObjects = vi.mocked(storage.deleteObjects);
 const deletePrefix = vi.mocked(storage.deletePrefix);
 const projectFind = vi.mocked(prisma.project.findUnique);
 const projectDelete = vi.mocked(prisma.project.delete);
@@ -36,7 +36,7 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
   it('purgeMedia : supprime la ligne DB puis, si MinIO échoue, enfile un retry sans lever', async () => {
     findUnique.mockResolvedValue({ id: 1, storageKey: 'k/a.mp4', thumbnailKey: 'k/a.jpg' } as never);
     deleteMedia.mockResolvedValue({} as never);
-    deleteObject.mockRejectedValue(new Error('MinIO down'));
+    deleteObjects.mockRejectedValue(new Error('MinIO down'));
     deletePrefix.mockRejectedValue(new Error('MinIO down'));
     enqueue.mockResolvedValue(undefined as never);
 
@@ -54,12 +54,12 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
   it('purgeMedia : supprime aussi les objets storage quand MinIO répond (pas de retry)', async () => {
     findUnique.mockResolvedValue({ id: 2, storageKey: 'k/b.mp4', thumbnailKey: null } as never);
     deleteMedia.mockResolvedValue({} as never);
-    deleteObject.mockResolvedValue(undefined);
+    deleteObjects.mockResolvedValue([]);
     deletePrefix.mockResolvedValue(undefined);
 
     await purgeMedia(2);
 
-    expect(deleteObject).toHaveBeenCalledWith('k/b.mp4');
+    expect(deleteObjects).toHaveBeenCalledWith(['k/b.mp4']);
     expect(enqueue).not.toHaveBeenCalled();
   });
 
@@ -73,7 +73,7 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
   it('purgeMedia : libère aussi les dérivés du média', async () => {
     findUnique.mockResolvedValue({ id: 42, storageKey: 'k/c.mp4', thumbnailKey: null } as never);
     deleteMedia.mockResolvedValue({} as never);
-    deleteObject.mockResolvedValue(undefined);
+    deleteObjects.mockResolvedValue([]);
     deletePrefix.mockResolvedValue(undefined);
 
     await purgeMedia(42);

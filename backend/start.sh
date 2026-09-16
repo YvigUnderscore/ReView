@@ -7,8 +7,17 @@ set -e
 # Messages en anglais : ce script est le point d'entrée de l'image, sa sortie est lue dans
 # `docker logs` par des exploitants qui suivent une documentation elle-même en anglais.
 
-echo "[start] Generating the Prisma client..."
-npx prisma generate
+# Le client Prisma est généré à la CONSTRUCTION de l'image (npm ci → postinstall). Le
+# régénérer ici coûtait une dizaine de secondes à CHAQUE démarrage, reprises de
+# `restart: always` comprises — et échouerait désormais : le conteneur s'exécute en `node`
+# (uid 1000) alors que node_modules appartient à root, volontairement non inscriptible.
+# La branche de repli reste pour un montage de développement où node_modules vient de l'hôte.
+if [ -d node_modules/.prisma/client ]; then
+  echo "[start] Prisma client already generated at image build."
+else
+  echo "[start] Generating the Prisma client..."
+  npx prisma generate
+fi
 
 # ── Schéma de base de données ────────────────────────────────────────────────────────────
 #

@@ -19,6 +19,15 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
+      # Cache HLS (2 Go déclarés par `proxy_cache_path`) et fichiers temporaires de corps de
+      # requête. Sans ce volume, les deux s'écrivent dans la couche inscriptible du conteneur
+      # — /var/lib/docker, soit le système de fichiers de pgdata et miniodata, que l'exploitant
+      # n'a pas choisi — et disparaissent à chaque recréation du conteneur : la première salle
+      # de dailies qui suit une mise à jour retire chaque segment depuis MinIO, sérialisée par
+      # `proxy_cache_lock`, c'est-à-dire exactement la latence que le cache existe pour éviter.
+      # Volume nommé plutôt que tmpfs : 2 Go de RAM permanents pour un cache disque seraient
+      # pris au transcodage, et un tmpfs se viderait lui aussi à chaque recréation.
+      - nginx_cache:/var/cache/nginx
     depends_on:
       backend:
         condition: service_healthy
@@ -26,6 +35,16 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
+    healthcheck:
+      # busybox wget (image nginx:alpine), sur la sonde locale du frontal (`location =
+      # /healthz`, nginx/nginx.conf) : elle ne traverse aucun amont, donc un backend en
+      # panne ne fait pas passer le frontal pour mort. Sans sonde, un nginx dont les
+      # workers sont bloqués restait « running » — et c'est le SEUL service exposé.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging:
       driver: json-file
       options:
@@ -61,3 +80,8 @@ services:
 
   frontend:
     ports: !reset []
+
+# Compose fusionne les sections `volumes:` de tous les fichiers de la pile : celui-ci
+# n'existe donc que quand l'overlay de production est chargé, comme le service qui l'utilise.
+volumes:
+  nginx_cache:

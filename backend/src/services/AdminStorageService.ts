@@ -104,37 +104,90 @@ const add = (m: Record<string, StorageAgg>, k: string, size: number) => {
   agg.bytes += size;
 };
 
-/** Agrège une liste d'objets (clé + taille) en rapport de cartographie. */
-export function aggregateObjects(objects: Iterable<StorageObjectInfo>): StorageReportData {
+/** Accumulateur de cartographie : l'agrégation, objet par objet. */
+export interface StorageAccumulator {
+  /** Comptabilise un objet puis l'oublie — rien n'est retenu au-delà de l'appel. */
+  add(object: StorageObjectInfo): void;
+  /** Rend le rapport agrégé (projets triés du plus lourd au plus léger). */
+  finish(): StorageReportData;
+}
+
+/**
+ * Fabrique l'accumulateur. Il existe parce que le rapport se construit maintenant **pendant**
+ * le balayage du bucket : la mémoire tenue est celle des agrégats (quelques dizaines
+ * d'entrées), pas celle des objets (des centaines de milliers sur une instance de studio).
+ * L'arithmétique est exactement celle d'avant — `aggregateObjects` la réutilise telle quelle.
+ */
+export function createStorageAccumulator(): StorageAccumulator {
   const categories: Record<string, StorageAgg> = {};
   const derived: Record<string, StorageAgg> = {};
   const studio: Record<string, StorageAgg> = {};
   const byProject: Record<string, StorageAgg> = {};
   let totalObjects = 0;
   let totalBytes = 0;
-  for (const o of objects) {
-    totalObjects += 1;
-    totalBytes += o.size;
-    const c = classifyKey(o.key);
-    add(categories, c.category, o.size);
-    if (c.category === 'derived') add(derived, c.sub ?? 'other', o.size);
-    if (c.category === 'studio') add(studio, c.sub ?? 'other', o.size);
-    if (c.category === 'originals' && c.projectSlug) add(byProject, c.projectSlug, o.size);
-  }
-  const projects = Object.entries(byProject)
-    .map(([slug, agg]) => ({ slug, objects: agg.count, bytes: agg.bytes }))
-    .sort((a, b) => b.bytes - a.bytes);
-  return { totalObjects, totalBytes, categories, derived, studio, projects };
+  return {
+    add(o: StorageObjectInfo): void {
+      totalObjects += 1;
+      totalBytes += o.size;
+      const c = classifyKey(o.key);
+      add(categories, c.category, o.size);
+      if (c.category === 'derived') add(derived, c.sub ?? 'other', o.size);
+      if (c.category === 'studio') add(studio, c.sub ?? 'other', o.size);
+      if (c.category === 'originals' && c.projectSlug) add(byProject, c.projectSlug, o.size);
+    },
+    finish(): StorageReportData {
+      const projects = Object.entries(byProject)
+        .map(([slug, agg]) => ({ slug, objects: agg.count, bytes: agg.bytes }))
+        .sort((a, b) => b.bytes - a.bytes);
+      return { totalObjects, totalBytes, categories, derived, studio, projects };
+    },
+  };
+}
+
+/** Agrège une liste d'objets (clé + taille) en rapport de cartographie. */
+export function aggregateObjects(objects: Iterable<StorageObjectInfo>): StorageReportData {
+  const acc = createStorageAccumulator();
+  for (const o of objects) acc.add(o);
+  return acc.finish();
 }
 
 /**
- * Rapport complet : scan du bucket + croisement des slugs avec les projets connus
- * (id navigable, nom lisible ; un slug orphelin = projet purgé → signalé tel quel).
+ * Même agrégat, alimenté par le flux du scan MinIO. C'est cette variante qui sert en
+ * production : le générateur de `iterateObjects` est consommé au fil de l'eau, aucun
+ * tableau intermédiaire n'est construit.
  */
-export async function storageReport() {
-  const objects: StorageObjectInfo[] = [];
-  for await (const o of storage.iterateObjects()) objects.push(o);
-  const report = aggregateObjects(objects);
+export async function aggregateObjectsStream(
+  objects: AsyncIterable<StorageObjectInfo>,
+): Promise<StorageReportData> {
+  const acc = createStorageAccumulator();
+  for await (const o of objects) acc.add(o);
+  return acc.finish();
+}
+
+/** Occupation d'un projet, croisée avec le projet connu du studio. */
+export interface StorageReportProject {
+  slug: string;
+  objects: number;
+  bytes: number;
+  projectId: number | null;
+  name: string | null;
+  deleted: boolean;
+}
+
+export interface StorageReport extends Omit<StorageReportData, 'projects'> {
+  projects: StorageReportProject[];
+  generatedAt: string;
+}
+
+/**
+ * Scan effectif : croise l'agrégat du bucket avec les projets connus (id navigable, nom
+ * lisible ; un slug orphelin = projet purgé → signalé tel quel).
+ */
+async function scanStorage(): Promise<StorageReport> {
+  // Le flux est agrégé au fil de l'eau : le bucket d'un studio, ce sont tous les rushes et
+  // tous leurs segments HLS. Le matérialiser en tableau JS coûtait ~200 octets par objet,
+  // soit des centaines de mégaoctets pour une seule ouverture de l'écran Stockage.
+  const report = await aggregateObjectsStream(storage.iterateObjects());
   const known = await prisma.project.findMany({
     select: { id: true, slug: true, name: true, deletedAt: true },
   });
@@ -152,4 +205,38 @@ export async function storageReport() {
     }),
     generatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Validité du rapport mémoïsé. Le scan traverse le bucket entier : sans mémoïsation, un
+ * administrateur qui trouve l'écran lent et appuie deux fois sur F5 lance trois balayages
+ * concurrents. Le rapport porte `generatedAt`, affiché en tête de l'écran Stockage : une
+ * valeur vieille d'une minute s'y lit, elle ne se déguise pas en mesure fraîche.
+ */
+export const STORAGE_REPORT_TTL_MS = 60_000;
+
+let cachedReport: { at: number; report: StorageReport } | null = null;
+let scanInFlight: Promise<StorageReport> | null = null;
+
+/** Oublie le rapport mémoïsé (tests, et toute invalidation explicite à venir). */
+export function resetStorageReportCache(): void {
+  cachedReport = null;
+  scanInFlight = null;
+}
+
+/** Rapport complet, mémoïsé et non réentrant. */
+export async function storageReport(): Promise<StorageReport> {
+  const cached = cachedReport;
+  if (cached && Date.now() - cached.at < STORAGE_REPORT_TTL_MS) return cached.report;
+  // Un seul balayage à la fois : les appels concurrents partagent le même scan au lieu
+  // d'en lancer chacun un. Ils reçoivent le même instantané — rien n'est périmé pour eux.
+  scanInFlight ??= scanStorage()
+    .then((report) => {
+      cachedReport = { at: Date.now(), report };
+      return report;
+    })
+    .finally(() => {
+      scanInFlight = null;
+    });
+  return scanInFlight;
 }

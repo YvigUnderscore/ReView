@@ -3,7 +3,7 @@
 
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { notFound } from '../lib/errors';
+import { conflict, notFound } from '../lib/errors';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { parseProjectCsv, type CsvIssue } from '../lib/projectCsvParse';
 import { CSV_FIELDS, type ColumnOverride, type CsvField } from '../lib/projectCsvColumns';
@@ -31,9 +31,11 @@ import {
  *    reconstruit le même plan, entièrement « inchangé ». Une colonne absente n'efface
  *    jamais une valeur — un import n'est pas un remplacement.
  * 3. **Écritures groupées, transaction bornée.** Un long-métrage, c'est deux mille plans
- *    et dix mille tâches : tout ce qui se crée passe par `createMany`, et la transaction
- *    porte un `timeout` explicite (les 5 s par défaut de Prisma la feraient avorter après
- *    avoir tout écrit puis tout annulé).
+ *    et dix mille tâches : tout ce qui se crée passe par `createMany`, tout ce qui se
+ *    modifie par `updateMany` regroupé par charge utile (`applyGroupedUpdates`), et la
+ *    transaction porte un `timeout` explicite (les 5 s par défaut de Prisma la feraient
+ *    avorter après avoir tout écrit puis tout annulé). Ce groupement n'est pas une course
+ *    à la vitesse : il raccourcit la durée pendant laquelle l'import tient ses verrous.
  */
 
 type SessionUser = { id: number; role: Role };
@@ -46,6 +48,74 @@ function chunked<T>(items: T[], size = 500): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
+}
+
+/** Une mise à jour planifiée : la ligne visée et ce qu'on y écrit. */
+interface PlannedUpdate<D> {
+  id: number;
+  data: D;
+}
+
+/**
+ * Clé de regroupement d'une charge utile. Les clés sont triées pour que deux retouches
+ * identiques écrites dans un ordre différent (`{name, endFrame}` et `{endFrame, name}`)
+ * tombent bien dans le même groupe. Les charges sont plates et sérialisables — champs
+ * scalaires, dates, `null` — ce que le typage de `ShotPatch`/`TaskPatch` garantit.
+ */
+const payloadKey = (data: object): string => JSON.stringify(data, Object.keys(data).sort());
+
+/**
+ * Applique des mises à jour en les groupant par charge utile identique.
+ *
+ * Les créations étaient déjà groupées ; les mises à jour restaient unitaires et
+ * séquentielles **à l'intérieur** de la transaction d'import. Or ce qui coûte ici n'est
+ * pas la vitesse de l'import : c'est la durée pendant laquelle il tient ses verrous de
+ * ligne et une connexion du pool, pendant laquelle toute autre écriture sur ces plans
+ * (une version publiée, une synchronisation ShotGrid) attend. Un réimport de suivi écrit
+ * massivement la même valeur — même statut, même échéance de département — donc quelques
+ * `updateMany` remplacent des milliers d'allers-retours.
+ *
+ * Deux invariants à ne pas perdre :
+ *
+ * - **Le résultat est le même.** Dans un groupe, les identifiants sont distincts : les
+ *   lignes touchées sont disjointes, l'ordre entre elles n'a donc aucun effet. Si un même
+ *   identifiant revenait, on referme le lot avant de repartir, ce qui conserve « la
+ *   dernière écriture l'emporte ».
+ * - **L'échec reste un échec.** `update` levait `P2025` quand la ligne avait disparu entre
+ *   le plan et l'écriture, et faisait avorter tout l'import ; `updateMany` l'ignorerait en
+ *   silence. On compare donc le nombre de lignes touchées au nombre demandé.
+ */
+export async function applyGroupedUpdates<D extends object>(
+  updates: PlannedUpdate<D>[],
+  write: (ids: number[], data: D) => Promise<{ count: number }>,
+  entity: string,
+): Promise<void> {
+  let groups = new Map<string, { data: D; ids: number[] }>();
+  let seen = new Set<number>();
+
+  const flush = async (): Promise<void> => {
+    for (const group of groups.values()) {
+      for (const ids of chunked(group.ids)) {
+        const { count } = await write(ids, group.data);
+        if (count !== ids.length) {
+          // Concaténation : l'entité nomme une table, pas un texte d'interface.
+          throw conflict(entity + ' changed during import, nothing was written', 'IMPORT_RACE');
+        }
+      }
+    }
+    groups = new Map();
+    seen = new Set();
+  };
+
+  for (const update of updates) {
+    if (seen.has(update.id)) await flush();
+    const key = payloadKey(update.data);
+    const group = groups.get(key);
+    if (group) group.ids.push(update.id);
+    else groups.set(key, { data: update.data, ids: [update.id] });
+    seen.add(update.id);
+  }
+  await flush();
 }
 
 /** Le rapport rendu à l'appelant : le plan, sans les charges utiles d'écriture. */
@@ -269,11 +339,19 @@ async function writeSequences(
     });
     for (const s of created) byCode.set(lower(s.code), s.id);
   }
+  // Un fichier rattache en général tout un bloc de séquences au même épisode : autant de
+  // `update` identiques, que le regroupement ramène à un `updateMany` par épisode.
+  const episodeMoves: PlannedUpdate<{ episodeId: number }>[] = [];
   for (const update of plan.sequenceEpisodeUpdates) {
     const episodeId = update.episodeCode ? (episodeIdByCode.get(lower(update.episodeCode)) ?? null) : null;
     if (episodeId === null) continue;
-    await tx.sequence.update({ where: { id: update.id }, data: { episodeId } });
+    episodeMoves.push({ id: update.id, data: { episodeId } });
   }
+  await applyGroupedUpdates(
+    episodeMoves,
+    (ids, data) => tx.sequence.updateMany({ where: { id: { in: ids } }, data }),
+    'Sequence',
+  );
   return byCode;
 }
 
@@ -309,9 +387,11 @@ async function writeShots(
       byKey.set(shotKey({ sequenceCode, code: row.code }), row.id);
     }
   }
-  for (const update of plan.shotUpdates) {
-    await tx.shot.update({ where: { id: update.id }, data: update.data });
-  }
+  await applyGroupedUpdates(
+    plan.shotUpdates,
+    (ids, data) => tx.shot.updateMany({ where: { id: { in: ids } }, data }),
+    'Shot',
+  );
   return byKey;
 }
 
@@ -334,17 +414,26 @@ async function writeTasks(tx: Tx, plan: ImportPlan, shotIdByKey: Map<string, num
     });
   }
   for (const batch of chunked(rows)) await tx.task.createMany({ data: batch });
-  for (const update of plan.taskUpdates) {
-    const { startDate, dueDate, ...rest } = update.data;
-    await tx.task.update({
-      where: { id: update.id },
+
+  // Les dates sont converties AVANT le regroupement : deux tâches dues le même jour
+  // doivent tomber dans le même groupe, ce que compareraient mal une chaîne ISO et son
+  // équivalent minuit UTC.
+  const taskUpdates = plan.taskUpdates.map(({ id, data }) => {
+    const { startDate, dueDate, ...rest } = data;
+    return {
+      id,
       data: {
         ...rest,
         ...(startDate ? { startDate: atUtcMidnight(startDate) } : {}),
         ...(dueDate ? { dueDate: atUtcMidnight(dueDate) } : {}),
       },
-    });
-  }
+    };
+  });
+  await applyGroupedUpdates(
+    taskUpdates,
+    (ids, data) => tx.task.updateMany({ where: { id: { in: ids } }, data }),
+    'Task',
+  );
 }
 
 /**

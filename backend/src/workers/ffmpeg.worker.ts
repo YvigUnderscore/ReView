@@ -92,6 +92,7 @@ import {
 } from '../lib/mediaProgress';
 import { installShutdownHandlers, registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
 import { closeWorkerEvents } from '../lib/workerEvents';
+import { startWorkerMetricsServer, attachWorkerMetrics } from './metricsServer';
 
 /**
  * Worker de traitement média (FFmpeg) — BullMQ.
@@ -1259,6 +1260,15 @@ ffmpegWorker.on('failed', (job, err) =>
 );
 
 if (require.main === module) {
+  // Point de collecte AVANT les consommateurs : c'est le composant dont on a le plus besoin
+  // de savoir s'il tient, et un worker qui meurt au démarrage doit pouvoir être constaté.
+  // Le module enregistre lui-même son extinction, et un port déjà pris ne le fait pas tomber.
+  startWorkerMetricsServer();
+  // Sans ce branchement, /metrics ne rend que l'état du process — jamais son travail.
+  // La file média porte l'essentiel du coût (transcodage, HLS, vignettes, conversions 3D) ;
+  // les six autres consommateurs démarrent via des fonctions qui ne rendent pas leur worker,
+  // les y brancher demande de changer leur signature (laissé à un lot dédié).
+  attachWorkerMetrics('media', ffmpegWorker);
   // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
   void ffmpegWorker.run();
   registerWorkerShutdown('ffmpeg.worker', ffmpegWorker);

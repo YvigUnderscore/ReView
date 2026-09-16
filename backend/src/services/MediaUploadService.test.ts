@@ -18,6 +18,10 @@ vi.mock('./StorageService', () => ({
     abortMultipartUpload: vi.fn().mockResolvedValue(undefined),
     deleteObject: vi.fn().mockResolvedValue(undefined),
     deletePrefix: vi.fn().mockResolvedValue(undefined),
+    listUploadedParts: vi.fn().mockResolvedValue([]),
+    createMultipartUpload: vi.fn().mockResolvedValue('up-new'),
+    statObject: vi.fn().mockResolvedValue({ size: 0 }),
+    copyObject: vi.fn().mockResolvedValue(undefined),
   },
 }));
 vi.mock('./MediaService', () => ({
@@ -26,7 +30,8 @@ vi.mock('./MediaService', () => ({
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 
-import { abortUpload, partSizeFor, MULTIPART_PART_SIZE } from './MediaUploadService';
+import { abortUpload, initMultipart, partSizeFor, MULTIPART_PART_SIZE } from './MediaUploadService';
+import { createUpload } from './MediaService';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
 import { Role } from '@prisma/client';
@@ -125,5 +130,45 @@ describe('abortUpload — annulation réelle côté serveur', () => {
     findFirst.mockResolvedValue(null);
     await expect(abortUpload(user, 99)).rejects.toThrow('Upload not found');
     expect(remove).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * INFRA-04, second trou. `listUploadedParts` échoue aussi sur un incident passager de MinIO,
+ * alors que le multipart, lui, est bien vivant. La ligne partie, son `uploadId` n'est plus
+ * nulle part : les parts déjà déposées deviennent de l'espace invisible et définitif.
+ */
+describe('initMultipart — reprise impossible', () => {
+  it('abandonne le multipart avant de jeter la ligne dont dépendait son identifiant', async () => {
+    findFirst.mockResolvedValueOnce({
+      id: 31,
+      storageKey: 'projects/demo/shots/sh0300/v02/31/master.mov',
+      metadata: { multipartUploadId: 'up-orphan', multipartPartSize: MULTIPART_PART_SIZE },
+    } as never);
+    vi.mocked(storage.listUploadedParts).mockRejectedValueOnce(new Error('MinIO timeout'));
+    // Pas de jumeau à dédupliquer : on retombe sur la création d'un envoi neuf.
+    findFirst.mockResolvedValueOnce(null);
+    vi.mocked(createUpload).mockResolvedValue({
+      mediaObjectId: 32,
+      storageKey: 'projects/demo/shots/sh0300/v02/32/master.mov',
+      uploadUrl: 'https://minio.invalid/put',
+      namingWarning: false,
+    });
+    vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({ metadata: {} } as never);
+    remove.mockResolvedValue({} as never);
+    vi.mocked(prisma.mediaObject.update).mockResolvedValue({} as never);
+
+    const out = await initMultipart(user, {
+      versionId: 5,
+      kind: 'VIDEO',
+      filename: 'master.mov',
+      contentType: 'video/quicktime',
+      contentHash: 'sha-abc',
+      size: 40 * GB,
+    } as never);
+
+    expect(abortMultipart).toHaveBeenCalledWith('projects/demo/shots/sh0300/v02/31/master.mov', 'up-orphan');
+    expect(remove).toHaveBeenCalledWith({ where: { id: 31 } });
+    expect(out.mediaObjectId).toBe(32);
   });
 });

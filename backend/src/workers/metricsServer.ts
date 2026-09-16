@@ -100,8 +100,9 @@ export interface JobEventSource {
 }
 
 /**
- * Branche les compteurs sur un consommateur de file. À appeler pour chacun des cinq
- * workers : sans cela, seul l'état du process est mesuré, pas son travail.
+ * Branche les compteurs sur un consommateur de file. À appeler pour chacun des sept
+ * consommateurs démarrés par le bootstrap du process worker : sans cela, seul l'état du
+ * process est mesuré, pas son travail.
  */
 export function attachWorkerMetrics(queue: string, worker: JobEventSource): void {
   worker.on('completed', (job) => observeWorkerJob(queue, jobKind(job), 'completed', jobDurationSec(job)));

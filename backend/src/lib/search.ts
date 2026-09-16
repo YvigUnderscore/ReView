@@ -147,11 +147,41 @@ async function memberProjectIds(userId: number): Promise<number[]> {
   return rows.map((r) => r.projectId);
 }
 
+/**
+ * Départements dont le libellé correspond, résolus en identifiants AVANT la recherche de
+ * tâches.
+ *
+ * Une tâche se cherche par son nom, par la clé dénormalisée de son étape (`lookdev`) et par
+ * le LIBELLÉ de celle-ci (« Look Dev »), qui vit dans `Department`. Écrire les trois dans un
+ * même `OR` faisait traverser la jointure à la troisième branche — et un `BitmapOr` ne
+ * franchit pas une table : le plan retombait sur un balayage complet de `Task`, indexée ou
+ * non (mesuré à 60 000 tâches : 775 blocs lus, 25,6 ms, pour un terme qui ne correspond à
+ * rien). Résoudre les départements d'abord ramène le `OR` sur les seules colonnes de `Task`,
+ * que les trigrammes couvrent (21 blocs, 1,2 ms).
+ *
+ * Le jeu de résultats est le même, terme à terme : `departmentRef: { deletedAt: null, name }`
+ * ne sélectionnait rien d'autre que les tâches dont `departmentId` désigne un département
+ * vivant au libellé correspondant. Le référentiel n'est volontairement pas filtré par projet
+ * — il ne l'était pas non plus — et ne fuit rien : il ne sert qu'à filtrer des tâches que le
+ * demandeur voit déjà. Aucune borne de nombre : un studio compte des dizaines d'étapes, pas
+ * des milliers, et en retenir une partie changerait les résultats.
+ */
+async function matchingDepartmentIds(contains: Contains): Promise<number[]> {
+  const rows = await prisma.department.findMany({
+    where: { deletedAt: null, name: contains },
+    select: { id: true },
+  });
+  return rows.map((d) => d.id);
+}
+
 export async function searchEntities(q: string, userId: number, role: Role): Promise<SearchResults> {
   const project = projectScope(userId, role);
   const version = versionScope(project);
   const media = mediaScope(project, userId, role);
   const contains: Contains = { contains: q, mode: 'insensitive' };
+  // Seule la recherche de tâches attend ce référentiel : elle se branche dessus, les quatre
+  // autres partent en même temps (même montage que `commentsPromise` plus bas).
+  const departmentIdsPromise = matchingDepartmentIds(contains);
 
   const [projects, sequences, shots, assets, tasks] = await Promise.all([
     prisma.project.findMany({
@@ -195,41 +225,46 @@ export async function searchEntities(q: string, userId: number, role: Role): Pro
       orderBy: { id: 'desc' },
       take: SEARCH_LIMITS.assets,
     }),
-    prisma.task.findMany({
-      // Une tâche se cherche aussi par son **département** : taper « Modeling » ne rendait
-      // rien, alors que c'est le mot qu'un artiste emploie pour désigner son travail. Le
-      // filtre d'accès reste dans `OR` (Prisma joint les champs de tête par ET), la
-      // correspondance textuelle passe par `AND` — les deux ne se mélangent pas.
-      where: {
-        OR: [
-          { shot: { deletedAt: null, hiddenAt: null, project } },
-          { asset: { deletedAt: null, hiddenAt: null, project } },
-        ],
-        AND: [
-          {
-            OR: [
-              { name: contains },
-              // `departmentRef` porte le libellé, `department` la clé dénormalisée : un
-              // studio nomme son étape « Look Dev » et la clé reste `lookdev`, les deux se
-              // tapent.
-              { departmentRef: { deletedAt: null, name: contains } },
-              { department: contains },
-            ],
-          },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        shotId: true,
-        assetId: true,
-        department: true,
-        departmentRef: { select: { name: true } },
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: SEARCH_LIMITS.tasks,
-    }),
+    departmentIdsPromise.then((departmentIds) =>
+      prisma.task.findMany({
+        // Une tâche se cherche aussi par son **département** : taper « Modeling » ne rendait
+        // rien, alors que c'est le mot qu'un artiste emploie pour désigner son travail. Le
+        // filtre d'accès reste dans `OR` (Prisma joint les champs de tête par ET), la
+        // correspondance textuelle passe par `AND` — les deux ne se mélangent pas.
+        where: {
+          OR: [
+            { shot: { deletedAt: null, hiddenAt: null, project } },
+            { asset: { deletedAt: null, hiddenAt: null, project } },
+          ],
+          AND: [
+            {
+              OR: [
+                { name: contains },
+                // `department` est la clé dénormalisée : un studio nomme son étape
+                // « Look Dev » et la clé reste `lookdev`, les deux se tapent.
+                { department: contains },
+                // Le libellé, lui, a été résolu en identifiants par
+                // `matchingDepartmentIds` : le `OR` ne porte ainsi que sur des colonnes de
+                // `Task`, seule forme que ses index savent servir. Aucun département
+                // correspondant ⇒ pas de branche du tout, plutôt qu'un `IN ()` inutile.
+                ...(departmentIds.length > 0 ? [{ departmentId: { in: departmentIds } }] : []),
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          shotId: true,
+          assetId: true,
+          department: true,
+          departmentRef: { select: { name: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: SEARCH_LIMITS.tasks,
+      }),
+    ),
   ]);
 
   // Les identifiants de projets ne servent qu'à la requête plein texte (SQL brut) : la

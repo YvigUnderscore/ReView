@@ -727,6 +727,18 @@ model Shot {
   @@index([projectId, deletedAt, order, id])
   @@index([sequenceId, deletedAt, order])
   @@index([pipelineStatusId])
+  // `name`, `code` et `description` sont cherchés par fragment (`ILIKE '%…%'`, palette
+  // Ctrl+K, `lib/search.ts`) : un index B-tree n'y sert à rien, il faut des trigrammes.
+  // Les TROIS colonnes sont indexées parce qu'elles forment un seul `OR` — il suffit
+  // d'une branche non indexable pour ramener le plan entier au balayage complet.
+  //
+  // Déclarés ici et non en SQL brut : `ops: raw(...)` exprime la classe d'opérateurs, et
+  // le contrôle de dérive (`scripts/check-prisma-drift.mjs`) garde alors le schéma et les
+  // migrations d'accord tout seuls. Les deux trigrammes de 2026-08 (`MediaObject.originalName`,
+  // `Version.name`) restent en SQL seul, leur migration ayant cru la chose inexprimable.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Shot_name_trgm_idx")
+  @@index([code(ops: raw("gin_trgm_ops"))], type: Gin, map: "Shot_code_trgm_idx")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "Shot_description_trgm_idx")
 }
 
 model Asset {
@@ -772,6 +784,10 @@ model Asset {
   @@unique([projectId, name])
   @@index([projectId, deletedAt])
   @@index([pipelineStatusId])
+  // `name` et `description` cherchés par fragment : trigrammes GIN, même raison que pour
+  // Shot (les deux colonnes du même `OR` doivent l'être ensemble).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Asset_name_trgm_idx")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "Asset_description_trgm_idx")
 }
 
 model Task {
@@ -844,6 +860,13 @@ model Task {
   @@index([assigneeId, status])
   @@index([pipelineStatusId])
   @@index([sourceCommentId])
+  // `name` et `department` (la clé dénormalisée de l'étape, `lookdev`) cherchés par
+  // fragment : trigrammes GIN, même raison que pour Shot. Le LIBELLÉ du département, lui,
+  // vit dans `Department.name` : `lib/search.ts` le résout en identifiants AVANT
+  // d'interroger les tâches, faute de quoi le `OR` traverserait la jointure et aucun index
+  // de `Task` ne s'appliquerait — un `BitmapOr` ne franchit pas une table.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Task_name_trgm_idx")
+  @@index([department(ops: raw("gin_trgm_ops"))], type: Gin, map: "Task_department_trgm_idx")
 }
 
 // Version livrable (le cahier des charges parle d'« AssetVersion » ; généralisée :
@@ -1139,7 +1162,19 @@ model MediaObject {
   // (MediaService), et supprimer un compte repasse en SetNull sur toute la table. Sans
   // index de tête sur `uploaderId`, les deux balayaient la table entière.
   @@index([uploaderId, deletedAt])
-  @@index([deletedAt, published, status, createdAt])
+  // L'index `[deletedAt, published, status, createdAt]` a été RETIRÉ par
+  // `20260916090000_index_medias_recents`. Il visait les deux listings triés du produit
+  // (bibliothèque de projet, page Reviews) et ne les a jamais servis : `status` est comparé
+  // par Prisma à `CAST($n::text AS "MediaStatus")`, or `enum_in` est STABLE et non
+  // IMMUTABLE — Postgres ne peut donc ni prouver l'égalité à une constante ni en tirer un
+  // parcours ordonné. Mesuré à 40 000 médias : `idx_scan = 0`, plan `Seq Scan` +
+  // `top-N heapsort`. Deux index partiels posés en SQL seul le remplacent (prédicat
+  // partiel et `DESC` ne s'expriment pas ici) :
+  //  - `MediaObject_alive_recent_idx ("createdAt" DESC, id DESC) WHERE "deletedAt" IS NULL`
+  //    porte l'ORDRE des deux listings. Son prédicat ne retient que `IS NULL`, la seule
+  //    clause que Prisma écrit littéralement et que le prouveur sait donc impliquer ;
+  //  - `MediaObject_trashed_idx ("deletedAt") WHERE "deletedAt" IS NOT NULL` sert le
+  //    balayage de purge de corbeille (`lib/trash.ts`), seul consommateur de l'autre moitié.
   // `originalName` est cherché par fragment (`ILIKE '%…%'`, palette Ctrl+K) : index GIN de
   // trigrammes posé en SQL seul par `20260822120000_recherche_plein_texte_commentaires`,
   // la classe d'opérateurs `gin_trgm_ops` n'étant pas exprimable ici.

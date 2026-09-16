@@ -1,4 +1,36 @@
 # ReView 2.0 backend — Node 22 (glibc) pour compat. binaires (ffmpeg, prisma) + AWS SDK v3
+#
+# DEUX ÉTAPES, comme frontend/Dockerfile. L'image d'exécution n'embarque ni les sources
+# TypeScript, ni les devDependencies (typescript, vitest, eslint, tsx, supertest…), et ne
+# tourne pas en root. Le worker exécute ffmpeg, assimp et Blender sur des fichiers déposés
+# par des utilisateurs : une exécution de code obtenue par cette surface disposait jusqu'ici
+# de l'uid 0, d'un compilateur, d'un exécuteur TypeScript et du CLI Prisma — donc d'un accès
+# direct à la base.
+
+# ── Étape 1 : construction ────────────────────────────────────────────────────────────────
+FROM node:22-slim AS build
+
+WORKDIR /app
+
+# openssl : `prisma generate` s'en sert pour choisir le moteur de requête de la plateforme.
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# package.json + schéma avant l'installation : le hook postinstall (prisma generate) a
+# besoin du schéma, et la couche d'installation reste en cache tant qu'ils ne changent pas.
+COPY package*.json ./
+COPY prisma ./prisma
+# `npm ci` et non `npm install` : la construction doit rendre EXACTEMENT l'arbre du
+# lockfile, sinon deux images bâties à deux dates n'exécutent pas le même code.
+RUN npm ci
+
+COPY . .
+
+# Compile le TypeScript → dist/ (et prisma/seed.ts → dist/seed.js, cf. `build:seed`).
+RUN npm run build
+
+# ── Étape 2 : exécution ───────────────────────────────────────────────────────────────────
 FROM node:22-slim
 
 # L'image embarque aussi des programmes tiers sous leur propre licence — FFmpeg toujours,
@@ -68,17 +100,23 @@ RUN if [ -n "$INSTALL_USD_TOOLS" ]; then \
       && rm -rf /var/lib/apt/lists/*; \
     fi
 
-# Copier package.json + le schéma Prisma avant npm install :
-# le hook postinstall (prisma generate) a besoin du schéma.
+# Dépendances d'EXÉCUTION seules. `prisma` est une dependency (et non une devDependency) :
+# start.sh invoque le CLI à chaque démarrage pour `migrate deploy`, il ne peut donc pas être
+# élagué. Le postinstall génère ici le client Prisma, une fois pour toutes — le conteneur
+# n'aura plus à le refaire (ni le droit : node_modules appartient à root).
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm install
+RUN npm ci --omit=dev && npm cache clean --force
 
-COPY . .
+COPY --from=build /app/dist ./dist
 
-# Compile le TypeScript → dist/ (le client Prisma est déjà généré par postinstall)
-RUN npm run build
+# Scripts Python du worker (conversion et analyse USD, cuisson de LUT OCIO). Ils sont
+# résolus à l'exécution sous `src/workers/…` (ModelConvertService.ts, ocio/bakeRunner.ts) :
+# ce sont des ressources, pas du TypeScript, et tsc ne les copie pas dans dist/.
+COPY src/workers/usd/*.py ./src/workers/usd/
+COPY src/workers/ocio/*.py ./src/workers/ocio/
 
+COPY start.sh ./
 RUN dos2unix start.sh && chmod +x start.sh
 
 # Identité de la construction.
@@ -98,6 +136,11 @@ ARG BUILD_DATE=
 ENV APP_VERSION=$APP_VERSION \
     GIT_SHA=$GIT_SHA \
     BUILD_DATE=$BUILD_DATE
+
+# ⚠ Ni /app ni node_modules n'appartiennent à `node` : c'est voulu. L'application n'écrit
+# jamais dans son propre répertoire — les fichiers intermédiaires du worker passent par
+# `os.tmpdir()` (/tmp, monde-inscriptible) et tout le reste va dans MinIO ou Postgres.
+USER node
 
 EXPOSE 3000
 CMD ["./start.sh"]

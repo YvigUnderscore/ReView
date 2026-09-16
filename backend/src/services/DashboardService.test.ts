@@ -39,6 +39,47 @@ const queryRaw = vi.mocked(prisma.$queryRaw);
 
 const artist = { id: 3, role: Role.ARTIST };
 
+/**
+ * `comment.groupBy` sert deux fois dans l'accueil : l'élection SQL des six médias les plus
+ * récemment commentés (appel porteur de `_max`) puis le comptage des notes par média. Le
+ * stub répond à l'un ou à l'autre selon la forme de l'appel.
+ */
+function stubGroupBy(latest: unknown[] = [], counts: unknown[] = []) {
+  vi.mocked(prisma.comment.groupBy).mockImplementation(((args: { _max?: unknown }) =>
+    Promise.resolve(args._max ? latest : counts)) as never);
+}
+
+/** L'appel d'élection (celui qui porte `_max`), tel que le service l'a posé. */
+function electionCall(): { by: unknown; take: unknown; orderBy: unknown; where: unknown } {
+  const call = vi
+    .mocked(prisma.comment.groupBy)
+    .mock.calls.find((c) => typeof c[0] === 'object' && c[0] !== null && '_max' in c[0]);
+  if (!call) throw new Error('aucune élection SQL des derniers commentaires');
+  return call[0] as { by: unknown; take: unknown; orderBy: unknown; where: unknown };
+}
+
+/** Une note telle que la seconde lecture la rend (colonnes affichées seulement). */
+const noteSur9 = (content: string, id: number, createdAt: Date) => ({
+  id,
+  mediaObjectId: 9,
+  content,
+  timestamp: 4.2,
+  createdAt,
+  guestName: null,
+  author: { id: 2, name: 'Ana' },
+  media: {
+    id: 9,
+    kind: 'VIDEO',
+    originalName: 'sh010_comp.mov',
+    thumbnailKey: 'thumbs/9.jpg',
+    version: {
+      name: 'V02',
+      task: { id: 4, name: 'Compositing', shot: { code: 'SH010', sequence: { code: 'SQ01' } } },
+      asset: null,
+    },
+  },
+});
+
 function stubEmpty() {
   comments.mockResolvedValue([] as never);
   versions.mockResolvedValue([] as never);
@@ -52,7 +93,7 @@ function stubEmpty() {
   vi.mocked(prisma.mediaObject.count).mockResolvedValueOnce(5).mockResolvedValueOnce(1);
   vi.mocked(prisma.comment.count).mockResolvedValue(11);
   vi.mocked(prisma.comment.count).mockResolvedValueOnce(11).mockResolvedValueOnce(3);
-  vi.mocked(prisma.comment.groupBy).mockResolvedValue([] as never);
+  stubGroupBy();
   // Mes retakes (1) puis verdicts attendus (4) — l'ordre des appels de getDashboard.
   vi.mocked(prisma.task.count).mockResolvedValueOnce(1).mockResolvedValueOnce(4);
 }
@@ -185,26 +226,9 @@ describe('DashboardService.getDashboard', () => {
   });
 
   it('mappe les dernières reviews avec miniature présignée et dernier commentaire', async () => {
-    comments.mockResolvedValue([
-      {
-        content: 'À reprendre sur le raccord',
-        timestamp: 4.2,
-        createdAt: new Date('2026-07-12T10:00:00Z'),
-        author: { id: 2, name: 'Ana' },
-        guestName: null,
-        media: {
-          id: 9,
-          kind: 'VIDEO',
-          originalName: 'sh010_comp.mov',
-          thumbnailKey: 'thumbs/9.jpg',
-          version: {
-            name: 'V02',
-            task: { id: 4, name: 'Compositing', shot: { code: 'SH010', sequence: { code: 'SQ01' } } },
-            asset: null,
-          },
-        },
-      },
-    ] as never);
+    const posee = new Date('2026-07-12T10:00:00Z');
+    stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
+    comments.mockResolvedValue([noteSur9('À reprendre sur le raccord', 51, posee)] as never);
     const { latestReviews } = await getDashboard(artist);
     expect(latestReviews).toEqual([
       {
@@ -223,6 +247,63 @@ describe('DashboardService.getDashboard', () => {
         },
       },
     ]);
+  });
+
+  /**
+   * PERF-01. La lecture d'origine combinait `distinct: ['mediaObjectId']` et `take: 6` :
+   * Prisma 5 résout le `distinct` en mémoire, ce qui neutralise le `take` — le SQL partait
+   * sans `LIMIT` et toute la table Comment du studio traversait le réseau pour six lignes.
+   * L'élection doit donc se faire en base, et la lecture qui suit ne viser que ces six-là.
+   */
+  it('élit les six derniers médias commentés en SQL, sans rapatrier la table Comment', async () => {
+    const posee = new Date('2026-07-12T10:00:00Z');
+    stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
+    comments.mockResolvedValue([noteSur9('note', 51, posee)] as never);
+    await getDashboard(artist);
+    const election = electionCall();
+    expect(election.by).toEqual(['mediaObjectId']);
+    expect(election.take).toBe(6);
+    expect(election.orderBy).toEqual({ _max: { createdAt: 'desc' } });
+    // La seconde lecture ne va chercher que les notes élues, et n'a plus de `distinct`.
+    const lecture = comments.mock.calls[0]![0]!;
+    expect(lecture.distinct).toBeUndefined();
+    expect(JSON.stringify(lecture.where)).toContain('"mediaObjectId":9');
+    // Et jamais les colonnes lourdes (tracé d'annotation, viewpoint 3D, pièces jointes).
+    const colonnes = JSON.stringify(lecture.select);
+    expect(colonnes).not.toContain('annotation');
+    expect(colonnes).not.toContain('cameraState');
+    expect(colonnes).not.toContain('attachments');
+  });
+
+  it('repasse le périmètre d’accès aux deux lectures : un CLIENT reste borné à ses notes', async () => {
+    const posee = new Date('2026-07-12T10:00:00Z');
+    stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
+    comments.mockResolvedValue([noteSur9('note visible', 51, posee)] as never);
+    await getDashboard({ id: 8, role: Role.CLIENT });
+    // Le filtre qui borne un client aux notes qui lui sont destinées doit se retrouver
+    // À L'IDENTIQUE dans l'élection ET dans la lecture : le perdre serait une fuite.
+    expect(JSON.stringify(electionCall().where)).toContain('"isVisibleToClient":true');
+    const where = comments.mock.calls[0]![0]!.where as { AND: unknown[] };
+    expect(JSON.stringify(where.AND[0])).toContain('"isVisibleToClient":true');
+  });
+
+  it('ne garde qu’une note par média, la plus récente — ce que faisait le distinct', async () => {
+    const posee = new Date('2026-07-12T10:00:00Z');
+    stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
+    // Deux notes du même média à la même milliseconde : la lecture les rend toutes les
+    // deux (tri décroissant, `id` en départage), l'accueil n'en montre qu'une.
+    comments.mockResolvedValue([
+      noteSur9('la retenue', 52, posee),
+      noteSur9('la doublure', 51, posee),
+    ] as never);
+    const { latestReviews } = await getDashboard(artist);
+    expect(latestReviews).toHaveLength(1);
+    expect(latestReviews[0]!.lastComment.content).toBe('la retenue');
+  });
+
+  it('ne fait pas la seconde lecture quand aucun média n’a de note', async () => {
+    await getDashboard(artist);
+    expect(comments).not.toHaveBeenCalled();
   });
 
   it('fusionne versions + médias dans le flux, triés du plus récent au plus ancien', async () => {

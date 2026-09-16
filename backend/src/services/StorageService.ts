@@ -43,6 +43,12 @@ export const PRESIGN_WINDOW_SECONDS = 600;
 export const PRESIGN_CACHE_MAX = 5000;
 
 /**
+ * Nombre maximal de clés qu'un appel `DeleteObjects` accepte (plafond du protocole S3,
+ * respecté par MinIO). Au-delà, la liste est découpée en tranches de cette taille.
+ */
+export const DELETE_OBJECTS_BATCH = 1000;
+
+/**
  * Abstraction du stockage objet (MinIO, S3-compatible).
  *
  * Principe v2 : aucun fichier ne touche le filesystem du serveur applicatif.
@@ -445,6 +451,45 @@ class StorageService {
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
     this.forgetPresignedUrl(key);
+  }
+
+  /**
+   * Suppression multiple (`DeleteObjects`), jusqu'à `DELETE_OBJECTS_BATCH` clés par appel.
+   *
+   * Vider la corbeille de deux cents médias supprimait jusqu'ici les objets un par un, en
+   * série, dans le fil de la requête HTTP : quatre cents allers-retours MinIO là où le
+   * protocole en propose un seul. S3 borne l'appel à 1 000 clés, d'où le découpage.
+   *
+   * Renvoie les clés que le stockage a REFUSÉES (élément `Errors` de la réponse) plutôt que
+   * de lever : une suppression partielle est un fait normal ici, et l'appelant a besoin de
+   * la liste exacte pour enfiler un retry. Une panne de transport, elle, est propagée —
+   * c'est la même règle que `deleteObject`.
+   */
+  async deleteObjects(keys: string[]): Promise<string[]> {
+    if (keys.length === 0) return [];
+    const refused: string[] = [];
+    for (let i = 0; i < keys.length; i += DELETE_OBJECTS_BATCH) {
+      const batch = keys.slice(i, i + DELETE_OBJECTS_BATCH);
+      const res = await this.client.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucket,
+          Delete: { Objects: batch.map((Key) => ({ Key })) },
+        }),
+      );
+      for (const err of res.Errors ?? []) if (err.Key) refused.push(err.Key);
+    }
+    // Un seul balayage du cache pour tout le lot : `forgetPresignedUrl` par clé coûterait
+    // ici mille parcours d'une table de cinq mille entrées.
+    this.forgetPresignedKeys(new Set(keys));
+    return refused;
+  }
+
+  /** Oubli groupé : un seul parcours du cache pour un lot de clés supprimées. */
+  private forgetPresignedKeys(keys: Set<string>): void {
+    if (keys.size === 0) return;
+    for (const [cacheKey, entry] of this.presignCache) {
+      if (keys.has(entry.objectKey)) this.presignCache.delete(cacheKey);
+    }
   }
 
   /** Itère tous les objets du bucket (clé + taille) — cartographie stockage (admin). */

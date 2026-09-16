@@ -101,7 +101,18 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-review}:${POSTGRES_PASSWORD:-review_dev}@postgres:5432/${POSTGRES_DB:-review}?schema=public
+      # ⚠ `connection_limit` n'est pas décoratif. Sans lui, Prisma dimensionne son pool à
+      # `cœurs physiques × 2 + 1`, PAR PROCESS — mesuré : 32 cœurs logiques vus ici, 20
+      # requêtes concurrentes ont ouvert 20 connexions sur une URL nue, contre 10 avec la
+      # borne. Deux process se connectent (backend + worker) et l'image postgres reste à
+      # `max_connections = 100` : sur un hôte à 32 cœurs physiques, 2 × 65 = 130 demandées
+      # pour 100 disponibles, et le second process à démarrer boucle sur « FATAL: sorry,
+      # too many clients already ». La borne doit donc être écrite, pas déduite du matériel.
+      # Somme actuelle : 2 × ${DB_POOL:-10} = 20 connexions au plus, marge confortable pour
+      # psql, les sauvegardes et les migrations. Le délai d'exécution (`statement_timeout`)
+      # est posé par l'application (backend/src/lib/prisma.ts) et non ici, pour ne pas
+      # plafonner aussi les DDL du CLI Prisma jouées au démarrage.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-review}:${POSTGRES_PASSWORD:-review_dev}@postgres:5432/${POSTGRES_DB:-review}?schema=public&connection_limit=${DB_POOL:-10}&pool_timeout=${DB_POOL_TIMEOUT:-20}
       JWT_SECRET: ${JWT_SECRET}
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
@@ -196,7 +207,10 @@ services:
         required: false
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-review}:${POSTGRES_PASSWORD:-review_dev}@postgres:5432/${POSTGRES_DB:-review}?schema=public
+      # Même borne explicite que le backend (cf. le commentaire du service `backend`) : le
+      # worker traite deux jobs FFmpeg en parallèle, il n'a aucun besoin d'un pool
+      # dimensionné par le nombre de cœurs de la machine de transcodage.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-review}:${POSTGRES_PASSWORD:-review_dev}@postgres:5432/${POSTGRES_DB:-review}?schema=public&connection_limit=${DB_POOL:-10}&pool_timeout=${DB_POOL_TIMEOUT:-20}
       JWT_SECRET: ${JWT_SECRET}
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
@@ -262,6 +276,14 @@ services:
     profiles: ["monitoring"]
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # ⚠ Sans ce montage, AUCUNE règle d'alerte n'est chargée. `prometheus.yml` déclare
+      # `rule_files: /etc/prometheus/rules/*.yml` en glob volontairement tolérante : une
+      # glob sans correspondance n'est pas une erreur, Prometheus démarrait donc sans un
+      # mot avec zéro règle. Les dix alertes de monitoring/rules/alerts.yml (backend
+      # absent, worker absent, arriéré de file, ratio d'erreurs HTTP…) étaient écrites,
+      # versionnées et jamais évaluées — le panneau « Alertes actives » de Grafana restait
+      # vide, et le studio découvrait une panne nocturne à l'arrivée des artistes.
+      - ./monitoring/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     logging: *default-logging
     restart: always

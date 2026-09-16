@@ -241,6 +241,41 @@ export async function finalize(user: SessionUser, id: number) {
   return { media: serializeMedia(updated), detectedExtension: detected };
 }
 
+/**
+ * Nombre de lignes signées d'affilée avant de rendre la main à la boucle d'événements.
+ *
+ * POURQUOI. `getSignedUrl` rend bien une promesse, mais la signature SigV4 est une chaîne
+ * de HMAC-SHA256 qui se résout **en microtâches** : la boucle ne reprend pas la main entre
+ * deux signatures. Mesuré sur le `@aws-sdk/s3-request-presigner` du projet, avec un
+ * battement `setImmediate` en parallèle : 1 000 signatures = 164 ms et **zéro** tour de
+ * boucle. Pendant ces 164 ms, aucune autre requête n'est servie — ni une frappe de palette,
+ * ni un commentaire, ni un battement Socket.io. Une page de la bibliothèque en signe deux
+ * par média ; à `pageSize=500`, plafond qu'un simple paramètre d'URL atteint, cela fait
+ * 1 000 signatures d'un bloc. On intercale donc un vrai tour de boucle toutes les 25 lignes.
+ */
+const SIGN_YIELD_EVERY = 25;
+
+/** Rend la main à la boucle : `setImmediate` est le seul point qui laisse passer les I/O en attente. */
+const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
+/**
+ * `Promise.all(rows.map(build))`, mais par tranches, avec un tour de boucle entre chacune.
+ *
+ * Le résultat est strictement le même : mêmes lignes, même ordre, mêmes valeurs — seule la
+ * simultanéité change (25 constructions de front au lieu de toutes). Le coût CPU total est
+ * inchangé ; ce qui disparaît, c'est le blocage en tête de file pour tous les autres
+ * appelants du process.
+ */
+async function mapYieldingToEventLoop<T, R>(rows: readonly T[], build: (row: T) => Promise<R>): Promise<R[]> {
+  if (rows.length <= SIGN_YIELD_EVERY) return Promise.all(rows.map(build));
+  const out: R[] = [];
+  for (let i = 0; i < rows.length; i += SIGN_YIELD_EVERY) {
+    if (i > 0) await yieldToEventLoop();
+    out.push(...(await Promise.all(rows.slice(i, i + SIGN_YIELD_EVERY).map(build))));
+  }
+  return out;
+}
+
 /** Bibliothèque paginée : médias publiés (READY) d'un projet, avec URLs présignées. */
 export async function listPublished(
   user: SessionUser,
@@ -263,16 +298,14 @@ export async function listPublished(
     prisma.mediaObject.findMany({ where, orderBy: { createdAt: 'desc' }, ...pageArgs(p) }),
     prisma.mediaObject.count({ where }),
   ]);
-  const items = await Promise.all(
-    media.map(async (m) => ({
-      id: m.id,
-      kind: m.kind,
-      originalName: m.originalName,
-      thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
-      // Clé affichable : une bibliothèque d'EXR renverrait sinon des URL que rien ne rend.
-      url: await storage.getPresignedGetUrl(mediaViewKey(m)),
-    })),
-  );
+  const items = await mapYieldingToEventLoop(media, async (m) => ({
+    id: m.id,
+    kind: m.kind,
+    originalName: m.originalName,
+    thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
+    // Clé affichable : une bibliothèque d'EXR renverrait sinon des URL que rien ne rend.
+    url: await storage.getPresignedGetUrl(mediaViewKey(m)),
+  }));
   return paginate(items, total, p);
 }
 
@@ -359,46 +392,44 @@ export async function listReviews(
     }),
     prisma.mediaObject.count({ where }),
   ]);
-  const items = await Promise.all(
-    media.map(async (m) => {
-      const t = m.version?.task;
-      const location = t?.shot
-        ? `${t.shot.sequence ? t.shot.sequence.code + ' · ' : ''}${t.shot.code} › ${t.name}`
-        : t?.asset
-          ? `${t.asset.name} › ${t.name}`
-          : (m.version?.asset?.name ?? '');
-      const project = t?.shot?.project ?? t?.asset?.project ?? m.version?.asset?.project ?? null;
-      // Sprite de miniatures pour l'aperçu animé au survol des cartes (42.A — №78, vidéo).
-      const meta = (m.metadata ?? {}) as {
-        timelineSprite?: { key: string; count: number; cols: number; rows: number };
-      };
-      const ts = m.kind === MediaKind.VIDEO ? meta.timelineSprite : undefined;
-      return {
-        id: m.id,
-        kind: m.kind,
-        name: m.originalName,
-        published: m.published,
-        createdAt: m.createdAt,
-        thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
-        hoverSprite: ts
-          ? {
-              url: await storage.getPresignedGetUrl(ts.key),
-              count: ts.count,
-              cols: ts.cols,
-              rows: ts.rows,
-            }
-          : null,
-        location,
-        // La décision se pose sur la VERSION, pas sur le média : sans cet identifiant,
-        // la page Reviews ne pouvait rien changer en lot sans un appel par carte.
-        versionId: m.versionId,
-        versionName: m.version?.name ?? '',
-        reviewStatus: m.version?.reviewStatus ?? null,
-        project,
-        uploader: m.uploader?.name ?? null,
-      };
-    }),
-  );
+  const items = await mapYieldingToEventLoop(media, async (m) => {
+    const t = m.version?.task;
+    const location = t?.shot
+      ? `${t.shot.sequence ? t.shot.sequence.code + ' · ' : ''}${t.shot.code} › ${t.name}`
+      : t?.asset
+        ? `${t.asset.name} › ${t.name}`
+        : (m.version?.asset?.name ?? '');
+    const project = t?.shot?.project ?? t?.asset?.project ?? m.version?.asset?.project ?? null;
+    // Sprite de miniatures pour l'aperçu animé au survol des cartes (42.A — №78, vidéo).
+    const meta = (m.metadata ?? {}) as {
+      timelineSprite?: { key: string; count: number; cols: number; rows: number };
+    };
+    const ts = m.kind === MediaKind.VIDEO ? meta.timelineSprite : undefined;
+    return {
+      id: m.id,
+      kind: m.kind,
+      name: m.originalName,
+      published: m.published,
+      createdAt: m.createdAt,
+      thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
+      hoverSprite: ts
+        ? {
+            url: await storage.getPresignedGetUrl(ts.key),
+            count: ts.count,
+            cols: ts.cols,
+            rows: ts.rows,
+          }
+        : null,
+      location,
+      // La décision se pose sur la VERSION, pas sur le média : sans cet identifiant,
+      // la page Reviews ne pouvait rien changer en lot sans un appel par carte.
+      versionId: m.versionId,
+      versionName: m.version?.name ?? '',
+      reviewStatus: m.version?.reviewStatus ?? null,
+      project,
+      uploader: m.uploader?.name ?? null,
+    };
+  });
   return paginate(items, total, p);
 }
 
@@ -864,15 +895,43 @@ async function readHlsText(id: number, file: string): Promise<string> {
  * segment au stockage. Corollaire assumé : une échelle HLS régénérée (reprocess) peut être
  * annoncée avec au plus une fenêtre de retard.
  */
-const renditionCache = new Map<string, string>();
-const RENDITION_CACHE_MAX = 32;
+interface RenditionEntry {
+  /** Taille du texte mémorisé, comptée une fois résolu (0 tant que la lecture est en vol). */
+  bytes: number;
+  text: Promise<string>;
+}
 
-async function presignedRendition(id: number, file: string): Promise<string> {
-  const windowStart = signingWindowStart();
-  const cacheKey = `${windowStart}:${id}:${file}`;
-  const cached = renditionCache.get(cacheKey);
-  if (cached !== undefined) return cached;
+const renditionCache = new Map<string, RenditionEntry>();
+let renditionCacheBytes = 0;
+/** Fenêtre de signature couverte par le contenu du cache (-1 = cache vide). */
+let renditionCacheWindow = -1;
 
+/**
+ * Plafond d'entrées, dimensionné sur une salle de dailies et non au hasard.
+ *
+ * Une entrée = une rendition d'un média. Mesuré sur la pile de développement : un média
+ * transcodé porte 1 à 3 renditions (360p/720p/1080p selon la source). Une playlist de
+ * dailies de quinze à trente plans consomme donc 45 à 120 entrées **dans la même fenêtre de
+ * signature** — l'ancien plafond de 32 les évinçait au fur et à mesure, et comme l'éviction
+ * était FIFO stricte sans rajeunissement à la lecture, un parcours cyclique de la playlist
+ * évinçait systématiquement l'entrée dont on allait avoir besoin : taux de succès nul,
+ * précisément dans le cas que le cache était censé servir. 512 couvre une playlist de 128
+ * plans à 4 renditions.
+ */
+const RENDITION_CACHE_MAX = 512;
+
+/**
+ * Plafond mémoire — la vraie borne, parce que la taille d'une entrée varie de deux ordres
+ * de grandeur. Mesuré sur la pile : une sous-playlist réécrite d'un plan de 52 s à segments
+ * de 2 s pèse 11,3 ko (27 segments × ~420 o d'URL présignée) ; un montage de dix minutes en
+ * pèserait ~126 ko. Compter les entrées seules laisserait donc le cache peser entre 6 et
+ * 64 Mo selon le contenu. 8 Mo se compare aux ~2 Mo du cache de signatures
+ * (`PRESIGN_CACHE_MAX`), et c'est le plafond qui mord en premier sur les longs montages.
+ */
+const RENDITION_CACHE_MAX_BYTES = 8 * 1024 * 1024;
+
+/** Lit la sous-playlist et réécrit chaque segment en URL présignée. Aucun cache ici. */
+async function buildPresignedRendition(id: number, file: string): Promise<string> {
   const text = await readHlsText(id, file);
   const names = playlistUris(text).filter(isSafeHlsName);
   const signed = await Promise.all(
@@ -880,23 +939,72 @@ async function presignedRendition(id: number, file: string): Promise<string> {
       async (name) => [name, await storage.getPresignedGetUrl(hlsKey(id, name), HLS_URL_TTL_SEC)] as const,
     ),
   );
-  const rewritten = withPresignedSegments(text, new Map(signed));
+  return withPresignedSegments(text, new Map(signed));
+}
 
-  // Les fenêtres passées ne resserviront jamais ; le reste est borné par ancienneté.
-  for (const key of [...renditionCache.keys()])
-    if (!key.startsWith(`${windowStart}:`)) renditionCache.delete(key);
-  if (renditionCache.size >= RENDITION_CACHE_MAX) {
-    const oldest = renditionCache.keys().next().value;
-    if (oldest !== undefined) renditionCache.delete(oldest);
+/** Évince les plus anciennement LUES jusqu'à repasser sous les deux plafonds. */
+function evictRenditions(): void {
+  while (renditionCache.size > RENDITION_CACHE_MAX || renditionCacheBytes > RENDITION_CACHE_MAX_BYTES) {
+    const oldest = renditionCache.entries().next();
+    if (oldest.done) break;
+    renditionCache.delete(oldest.value[0]);
+    renditionCacheBytes -= oldest.value[1].bytes;
   }
-  renditionCache.set(cacheKey, rewritten);
-  return rewritten;
+}
+
+async function presignedRendition(id: number, file: string): Promise<string> {
+  const windowStart = signingWindowStart();
+  // La clé porte la fenêtre : au changement de fenêtre, TOUT le contenu est périmé d'un
+  // bloc. Un `clear()` est donc exactement l'ancien balayage clé par clé, en O(1).
+  if (windowStart !== renditionCacheWindow) {
+    renditionCache.clear();
+    renditionCacheBytes = 0;
+    renditionCacheWindow = windowStart;
+  }
+  const cacheKey = `${windowStart}:${id}:${file}`;
+
+  const hit = renditionCache.get(cacheKey);
+  if (hit) {
+    // LRU : relire rajeunit l'entrée (une Map itère dans l'ordre d'insertion). En FIFO
+    // stricte, la rendition qu'on vient de servir restait la prochaine à être évincée.
+    renditionCache.delete(cacheKey);
+    renditionCache.set(cacheKey, hit);
+    return hit.text;
+  }
+
+  // On mémorise la PROMESSE, pas le texte. Sans cela le cache ne rapprochait que des
+  // spectateurs SÉQUENTIELS : les vingt spectateurs d'un daily arrivent ensemble, tous
+  // manquaient le cache et chacun refaisait sa lecture MinIO et son jeu de signatures.
+  const entry: RenditionEntry = { bytes: 0, text: buildPresignedRendition(id, file) };
+  renditionCache.set(cacheKey, entry);
+  void entry.text.then(
+    (text) => {
+      if (renditionCache.get(cacheKey) !== entry) return;
+      entry.bytes = Buffer.byteLength(text, 'utf8');
+      renditionCacheBytes += entry.bytes;
+      evictRenditions();
+    },
+    () => {
+      // Un échec ne se mémorise pas : la lecture suivante doit pouvoir réessayer.
+      if (renditionCache.get(cacheKey) === entry) renditionCache.delete(cacheKey);
+    },
+  );
+  return entry.text;
 }
 
 /** Vide le cache des sous-playlists (tests, et point d'entrée si un purgeur en a besoin). */
 export function resetHlsPlaylistCache(): void {
   renditionCache.clear();
+  renditionCacheBytes = 0;
+  renditionCacheWindow = -1;
 }
+
+/** Compteurs du cache de sous-playlists — lus par les tests, jamais par une route. */
+export const __hlsCacheTesting = {
+  stats: () => ({ entries: renditionCache.size, bytes: renditionCacheBytes }),
+  RENDITION_CACHE_MAX,
+  RENDITION_CACHE_MAX_BYTES,
+};
 
 /**
  * Manifeste ou segment HLS (`derived/{id}/hls/{file}`). `file` est validé par la route ;

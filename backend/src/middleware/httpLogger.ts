@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { pinoHttp } from 'pino-http';
+import { pinoHttp, type Options } from 'pino-http';
 import { stdSerializers } from 'pino';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
@@ -75,12 +75,46 @@ export function redactUrl(url: string): string {
 }
 
 /**
- * Journalisation HTTP structurée (pino-http) : une ligne JSON par requête avec
- * request-id, méthode, URL, statut et durée. Attache `req.log` (logger enfant
- * corrélé au request-id) réutilisable dans les handlers et le middleware d'erreur.
+ * Chemins des sondes automatiques : vivacité/disponibilité du conteneur et collecte
+ * Prometheus, montés hors `/api` comme sous `/api` (app.ts monte `healthRoutes` aux deux).
+ *
+ * Le healthcheck docker interroge `/health` toutes les 10 s et Prometheus `/metrics`
+ * toutes les 15 s : ~14 400 lignes par jour qui ne portent aucune information de
+ * diagnostic, imputées sur les 50 Mo de rotation docker. `/health/ready` y figure parce
+ * que le compose prévoit explicitement de l'utiliser comme sonde (HEALTH_PATH).
  */
-export const httpLogger = pinoHttp({
-  logger,
+const PROBE_PATHS = new Set([
+  '/health',
+  '/health/live',
+  '/health/ready',
+  '/api/health',
+  '/api/health/live',
+  '/api/health/ready',
+  '/metrics',
+]);
+
+/**
+ * La requête est-elle une sonde automatique ?
+ *
+ * On compare le CHEMIN seul : Prometheus ajoute `?token=…` quand METRICS_TOKEN est posé,
+ * et une comparaison sur l'URL entière laisserait alors passer tout le bruit. La barre
+ * oblique finale est tolérée (`/health/` est la même route côté Express).
+ */
+export function isProbeRequest(url: string | undefined): boolean {
+  if (!url) return false;
+  const cut = url.search(/[?#]/);
+  const path = cut < 0 ? url : url.slice(0, cut);
+  return PROBE_PATHS.has(path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path);
+}
+
+/**
+ * Options de journalisation HTTP, exportées SANS le logger de l'application.
+ *
+ * Le logger réel est `silent` en environnement de test : compter des lignes à travers lui
+ * ne prouverait rien. La suite recrée donc un `pinoHttp` avec ces mêmes options et un flux
+ * qu'elle peut lire — c'est la configuration de production qui est mesurée, pas une copie.
+ */
+export const httpLoggerOptions: Options = {
   // Réutilise un `x-request-id` fourni en amont (reverse proxy) sinon en génère un,
   // et le renvoie au client pour la corrélation bout-en-bout.
   genReqId: (req, res) => {
@@ -89,9 +123,16 @@ export const httpLogger = pinoHttp({
     res.setHeader('x-request-id', id);
     return id;
   },
-  customLogLevel: (_req, res, err) => {
+  customLogLevel: (req, res, err) => {
     if (err || res.statusCode >= 500) return 'error';
     if (res.statusCode >= 400) return 'warn';
+    // Sonde aboutie : rien à en dire. Le silence est posé ICI et non dans
+    // `autoLogging.ignore`, qui retire les écouteurs de réponse et emporterait donc AUSSI
+    // l'échec de la sonde (pino-http/logger.js : `shouldLogSuccess` conditionne
+    // `res.on('finish', …)`). Or l'échec d'un healthcheck est précisément ce qu'un
+    // exploitant vient chercher dans le journal — il reste journalisé par les deux
+    // lignes ci-dessus.
+    if (isProbeRequest(req.url)) return 'silent';
     return 'info';
   },
   // Ne jamais journaliser les secrets transitant en en-tête.
@@ -110,4 +151,11 @@ export const httpLogger = pinoHttp({
       return serialized;
     },
   },
-});
+};
+
+/**
+ * Journalisation HTTP structurée (pino-http) : une ligne JSON par requête avec
+ * request-id, méthode, URL, statut et durée. Attache `req.log` (logger enfant
+ * corrélé au request-id) réutilisable dans les handlers et le middleware d'erreur.
+ */
+export const httpLogger = pinoHttp({ ...httpLoggerOptions, logger });

@@ -52,57 +52,67 @@ export const firstMediaThumbKeyForEpisode = (episodeId: number) =>
  * suivies de cent signatures MinIO. C'est ce qui rendait l'ouverture d'un projet lente
  * bien avant que le volume ne devienne un problème.
  *
- * On récupère les miniatures candidates en une passe, triées de la plus ancienne à la
- * plus récente, puis on élit la première par parent en mémoire — même règle qu'avant,
- * un seul aller-retour.
+ * Le regroupement se faisait ensuite par un `findMany` SANS `take`, suivi d'une élection
+ * du premier par parent EN MÉMOIRE : une page de cent plans rapatriait tous les médias
+ * publiés de ces cent plans (2 009 lignes mesurées à dix versions par plan) pour n'en
+ * garder que cent — et le facteur d'amplification, c'est le nombre de médias par plan,
+ * que rien ne borne dans un projet qui vit.
+ *
+ * L'élection se fait donc là où elle coûte le moins : `DISTINCT ON` côté PostgreSQL rend
+ * UNE ligne par parent, comme le fait déjà `firstMediaThumbKeysForProjects` plus bas. Les
+ * identifiants de la page voyagent en paramètres liés (`Prisma.join`), jamais concaténés.
+ *
+ * `m.id` départage deux médias créés à la même milliseconde : l'élection précédente les
+ * départageait par le hasard du plan d'exécution (le premier rendu par le tri), donc sans
+ * garantie de rendre deux fois la même image.
  */
 async function firstThumbKeysBy(
-  where: object,
-  pick: (media: { thumbnailKey: string | null; version: unknown }) => number | null,
-  // Ce que la requête doit ramener de la version pour retrouver le parent. Le rattachement
-  // par défaut (asset, plan) suffit aux listes de plans et d'assets ; une séquence ou un
-  // épisode se rejoint plus loin, à travers le plan.
-  versionSelect: Prisma.VersionSelect = { assetId: true, task: { select: { shotId: true, assetId: true } } },
+  // Fragments SQL écrits ici, jamais construits à partir d'une entrée : `parentKey` est
+  // l'expression qui identifie le parent, `joins` le chemin qui y mène depuis la version,
+  // `filter` la restriction à la page demandée.
+  parentKey: Prisma.Sql,
+  joins: Prisma.Sql,
+  filter: Prisma.Sql,
 ): Promise<Map<number, string>> {
-  const rows = await prisma.mediaObject.findMany({
-    where: { published: true, deletedAt: null, thumbnailKey: { not: null }, ...where },
-    orderBy: { createdAt: 'asc' },
-    select: { thumbnailKey: true, version: { select: versionSelect } },
-  });
+  const rows = await prisma.$queryRaw<{ parentId: number; thumbnailKey: string }[]>`
+    SELECT DISTINCT ON (${parentKey}) ${parentKey} AS "parentId",
+           m."thumbnailKey"          AS "thumbnailKey"
+    FROM "MediaObject" m
+    JOIN "Version" v ON v.id = m."versionId"
+    ${joins}
+    WHERE m.published = true
+      AND m."deletedAt" IS NULL
+      AND m."thumbnailKey" IS NOT NULL
+      AND ${filter}
+    ORDER BY ${parentKey}, m."createdAt" ASC, m.id ASC
+  `;
   const out = new Map<number, string>();
-  for (const row of rows) {
-    const id = pick(row);
-    // Le premier rencontré gagne : la requête est déjà triée par date de création.
-    if (id !== null && row.thumbnailKey && !out.has(id)) out.set(id, row.thumbnailKey);
-  }
+  for (const row of rows) out.set(row.parentId, row.thumbnailKey);
   return out;
 }
 
 /** Miniature de repli de chaque plan de la liste, en une requête. */
 export function firstMediaThumbKeysForShots(shotIds: number[]): Promise<Map<number, string>> {
   if (shotIds.length === 0) return Promise.resolve(new Map());
-  return firstThumbKeysBy({ version: { task: { shotId: { in: shotIds } } } }, (m) => {
-    const version = m.version as { task: { shotId: number | null } | null } | null;
-    return version?.task?.shotId ?? null;
-  });
+  return firstThumbKeysBy(
+    Prisma.sql`t."shotId"`,
+    Prisma.sql`JOIN "Task" t ON t.id = v."taskId"`,
+    Prisma.sql`t."shotId" IN (${Prisma.join(shotIds)})`,
+  );
 }
 
-/** Miniature de repli de chaque asset de la liste, en une requête. */
+/**
+ * Miniature de repli de chaque asset de la liste, en une requête.
+ *
+ * Une version peut pendre directement à l'asset ou passer par une tâche : le parent est le
+ * premier des deux rattachements, exactement comme l'élection en mémoire le faisait.
+ */
 export function firstMediaThumbKeysForAssets(assetIds: number[]): Promise<Map<number, string>> {
   if (assetIds.length === 0) return Promise.resolve(new Map());
   return firstThumbKeysBy(
-    {
-      version: {
-        OR: [{ assetId: { in: assetIds } }, { task: { assetId: { in: assetIds } } }],
-      },
-    },
-    (m) => {
-      const version = m.version as {
-        assetId: number | null;
-        task: { assetId: number | null } | null;
-      } | null;
-      return version?.assetId ?? version?.task?.assetId ?? null;
-    },
+    Prisma.sql`COALESCE(v."assetId", t."assetId")`,
+    Prisma.sql`LEFT JOIN "Task" t ON t.id = v."taskId"`,
+    Prisma.sql`(v."assetId" IN (${Prisma.join(assetIds)}) OR t."assetId" IN (${Prisma.join(assetIds)}))`,
   );
 }
 
@@ -110,16 +120,10 @@ export function firstMediaThumbKeysForAssets(assetIds: number[]): Promise<Map<nu
 export function firstMediaThumbKeysForSequences(sequenceIds: number[]): Promise<Map<number, string>> {
   if (sequenceIds.length === 0) return Promise.resolve(new Map());
   return firstThumbKeysBy(
-    {
-      version: {
-        task: { shot: { sequenceId: { in: sequenceIds }, deletedAt: null, hiddenAt: null } },
-      },
-    },
-    (m) => {
-      const version = m.version as { task: { shot: { sequenceId: number | null } | null } | null } | null;
-      return version?.task?.shot?.sequenceId ?? null;
-    },
-    { task: { select: { shot: { select: { sequenceId: true } } } } },
+    Prisma.sql`sh."sequenceId"`,
+    Prisma.sql`JOIN "Task" t ON t.id = v."taskId" JOIN "Shot" sh ON sh.id = t."shotId"`,
+    // Un plan supprimé ou masqué ne prête pas son image à sa séquence (règle d'origine).
+    Prisma.sql`sh."sequenceId" IN (${Prisma.join(sequenceIds)}) AND sh."deletedAt" IS NULL AND sh."hiddenAt" IS NULL`,
   );
 }
 
@@ -127,24 +131,14 @@ export function firstMediaThumbKeysForSequences(sequenceIds: number[]): Promise<
 export function firstMediaThumbKeysForEpisodes(episodeIds: number[]): Promise<Map<number, string>> {
   if (episodeIds.length === 0) return Promise.resolve(new Map());
   return firstThumbKeysBy(
-    {
-      version: {
-        task: {
-          shot: {
-            deletedAt: null,
-            hiddenAt: null,
-            sequence: { episodeId: { in: episodeIds }, deletedAt: null },
-          },
-        },
-      },
-    },
-    (m) => {
-      const version = m.version as {
-        task: { shot: { sequence: { episodeId: number | null } | null } | null } | null;
-      } | null;
-      return version?.task?.shot?.sequence?.episodeId ?? null;
-    },
-    { task: { select: { shot: { select: { sequence: { select: { episodeId: true } } } } } } },
+    Prisma.sql`sq."episodeId"`,
+    Prisma.sql`JOIN "Task" t ON t.id = v."taskId"
+               JOIN "Shot" sh ON sh.id = t."shotId"
+               JOIN "Sequence" sq ON sq.id = sh."sequenceId"`,
+    Prisma.sql`sq."episodeId" IN (${Prisma.join(episodeIds)})
+               AND sq."deletedAt" IS NULL
+               AND sh."deletedAt" IS NULL
+               AND sh."hiddenAt" IS NULL`,
   );
 }
 
@@ -173,7 +167,7 @@ export async function firstMediaThumbKeysForProjects(projectIds: number[]): Prom
       AND m."deletedAt" IS NULL
       AND m."thumbnailKey" IS NOT NULL
       AND COALESCE(sh."projectId", ta."projectId", va."projectId") IN (${Prisma.join(projectIds)})
-    ORDER BY COALESCE(sh."projectId", ta."projectId", va."projectId"), m."createdAt" ASC
+    ORDER BY COALESCE(sh."projectId", ta."projectId", va."projectId"), m."createdAt" ASC, m.id ASC
   `;
   for (const row of rows) out.set(row.projectId, row.thumbnailKey);
   return out;

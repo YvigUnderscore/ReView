@@ -64,22 +64,45 @@ export function reconcileFailureMessage(ageMs: number): string {
   return `Processing was interrupted (worker restarted or job lost): the media stayed in PROCESSING for ${minutes} min with no live job. Relaunch processing from the media menu.`;
 }
 
+/** États BullMQ qui protègent un média : son traitement n'est pas perdu, il attend son tour. */
+const LIVE_JOB_TYPES = ['waiting', 'active', 'delayed', 'paused', 'prioritized', 'waiting-children'] as const;
+
+/**
+ * Plafond de jobs relevés par état et par passe.
+ *
+ * `getJobs` sans plage rapatrie **chaque** job vivant depuis Redis, charge utile comprise.
+ * Tant que la réconciliation ne tournait qu'au démarrage de l'API, personne ne le voyait ;
+ * périodique, elle traverserait tout l'arriéré à chaque passe d'entretien. La plage la
+ * borne. Deux mille par état laisse une marge considérable sur un arriéré de studio (la
+ * file média porte un job par média enfilé, pas un par segment).
+ */
+export const LIVE_JOB_SCAN_MAX = 2_000;
+
+export interface LiveMediaJobs {
+  /** Médias ayant encore un job vivant. */
+  ids: Set<number>;
+  /**
+   * Faux dès que le relevé atteint le plafond. BullMQ applique la plage état par état : on
+   * ne peut pas distinguer, dans le résultat aplati, un état saturé d'une somme d'états
+   * chargés — alors on ne distingue pas, on s'abstient. Croire « aucun job » sur un relevé
+   * peut-être partiel condamnerait un média dont le traitement attend simplement son tour,
+   * et c'est irrattrapable : le média passe en FAILED sous les yeux de l'artiste.
+   */
+  complete: boolean;
+}
+
 /** Identifiants de médias ayant encore un job vivant dans la file de traitement. */
-export async function liveMediaJobIds(): Promise<Set<number>> {
-  const jobs = await mediaQueue.getJobs([
-    'waiting',
-    'active',
-    'delayed',
-    'paused',
-    'prioritized',
-    'waiting-children',
-  ]);
+export async function liveMediaJobIds(): Promise<LiveMediaJobs> {
+  // Un seul appel : BullMQ lit les six états dans un même script Lua, donc l'instantané
+  // reste cohérent — un job qui passe de `waiting` à `active` ne peut pas se glisser
+  // entre deux lectures et disparaître du relevé.
+  const jobs = await mediaQueue.getJobs([...LIVE_JOB_TYPES], 0, LIVE_JOB_SCAN_MAX - 1);
   const ids = new Set<number>();
   for (const job of jobs) {
     const id = job?.data?.mediaObjectId;
     if (typeof id === 'number') ids.add(id);
   }
-  return ids;
+  return { ids, complete: jobs.length < LIVE_JOB_SCAN_MAX };
 }
 
 /**
@@ -95,10 +118,17 @@ export async function reconcileStuckMedia(now: Date = new Date()): Promise<numbe
   if (candidates.length === 0) return 0;
 
   const live = await liveMediaJobIds();
+  if (!live.complete) {
+    logger.warn(
+      { scanned: candidates.length, max: LIVE_JOB_SCAN_MAX },
+      '[reconcile] relevé des jobs vivants tronqué : passe abandonnée sans condamner de média',
+    );
+    return 0;
+  }
   let failed = 0;
   for (const media of candidates) {
     const ageMs = now.getTime() - media.createdAt.getTime();
-    if (reconcileAction({ id: media.id, ageMs, hasLiveJob: live.has(media.id) }) !== 'fail') continue;
+    if (reconcileAction({ id: media.id, ageMs, hasLiveJob: live.ids.has(media.id) }) !== 'fail') continue;
     const metadata: Record<string, unknown> = { ...((media.metadata ?? {}) as object) };
     metadata.processingError = reconcileFailureMessage(ageMs);
     // `updateMany` avec le statut en condition : si le worker vient de terminer entre la

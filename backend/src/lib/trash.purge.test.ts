@@ -25,6 +25,7 @@ vi.mock('./prisma', () => {
 vi.mock('../services/StorageService', () => ({
   storage: {
     deleteObject: vi.fn().mockResolvedValue(undefined),
+    deleteObjects: vi.fn().mockResolvedValue([]),
     deletePrefix: vi.fn().mockResolvedValue(undefined),
   },
 }));
