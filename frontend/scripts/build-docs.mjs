@@ -54,6 +54,7 @@ export const PAGE_ORDER = {
     'boards.md',
     'production-reporting.md',
     'sharing.md',
+    'client-portal.md',
     'exporting-notes.md',
     'importing-a-project.md',
     'messaging-and-profiles.md',

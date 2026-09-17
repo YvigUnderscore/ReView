@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" width="800" height="430" role="img" aria-labelledby="portal-scope-title portal-scope-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="portal-scope-title">What a share link prunes before the client sees it</title>
+  <desc id="portal-scope-desc">The studio tree on the left holds published and unpublished versions, a hidden sequence and two playlists. The link's scope keeps only what is published, not hidden and inside the scope, so the guest portal on the right shows a home with one playlist and the latest media, and only the tabs that have something in them.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="430" rx="10"/>
+
+  <!-- ── Colonne gauche : le projet tel que le studio le voit ────────────────────── -->
+  <text class="t" x="24" y="32">In the studio</text>
+  <rect class="panel" x="16" y="44" width="286" height="366" rx="8"/>
+
+  <rect class="band" x="24" y="56" width="270" height="22" rx="4"/>
+  <text class="l" x="34" y="71">Sequence SQ010</text>
+
+  <text class="l" x="48" y="98">SH0010 · V03 published</text>
+  <text class="ok" x="272" y="98" font-size="13">✓</text>
+  <text class="l" x="48" y="122">SH0020 · draft only</text>
+  <text class="no" x="272" y="122" font-size="13">✗</text>
+
+  <rect class="band" x="24" y="136" width="270" height="22" rx="4"/>
+  <text class="l" x="34" y="151">Sequence SQ020 · hidden</text>
+  <text class="no" x="272" y="151" font-size="13">✗</text>
+  <text class="d" x="48" y="176">SH0030 · V01 published</text>
+  <text class="no" x="272" y="176" font-size="13">✗</text>
+
+  <rect class="band" x="24" y="196" width="270" height="22" rx="4"/>
+  <text class="l" x="34" y="211">Assets</text>
+  <text class="l" x="48" y="238">Fox · V01 published</text>
+  <text class="ok" x="272" y="238" font-size="13">✓</text>
+  <text class="l" x="48" y="262">Fox rig · in the trash</text>
+  <text class="no" x="272" y="262" font-size="13">✗</text>
+
+  <rect class="band" x="24" y="276" width="270" height="22" rx="4"/>
+  <text class="l" x="34" y="291">Playlists</text>
+  <text class="l" x="48" y="318">Monday dailies</text>
+  <text class="ok" x="272" y="318" font-size="13">✓</text>
+  <text class="l" x="48" y="342">Internal QC · nothing in scope</text>
+  <text class="no" x="272" y="342" font-size="13">✗</text>
+
+  <text class="d" x="34" y="380">A hidden sequence takes its shots with it,</text>
+  <text class="d" x="34" y="396">and a playlist is named only if it opens something.</text>
+
+  <!-- ── Le filtre : une seule décision, appliquée partout ───────────────────────── -->
+  <rect class="panel-o" x="326" y="150" width="124" height="130" rx="8"/>
+  <text class="a" x="388" y="178" text-anchor="middle">The link's scope</text>
+  <text class="d" x="388" y="202" text-anchor="middle">published</text>
+  <text class="d" x="388" y="220" text-anchor="middle">not in the trash</text>
+  <text class="d" x="388" y="238" text-anchor="middle">not hidden</text>
+  <text class="d" x="388" y="256" text-anchor="middle">inside the scope</text>
+
+  <path class="conn-a" d="M302 215 H326" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M450 215 H478" marker-end="url(#arrow-a)"/>
+
+  <!-- ── Colonne droite : ce que l'invité ouvre ──────────────────────────────────── -->
+  <text class="t" x="486" y="32">What the client opens</text>
+  <rect class="panel-a" x="478" y="44" width="306" height="366" rx="8"/>
+
+  <rect class="band" x="488" y="56" width="286" height="26" rx="4"/>
+  <text class="l" x="498" y="74">Home</text>
+  <text class="d" x="556" y="74">Playlists · Latest published</text>
+
+  <rect class="panel" x="488" y="96" width="66" height="26" rx="4"/>
+  <text class="l" x="521" y="114" text-anchor="middle">Review</text>
+  <rect class="panel" x="560" y="96" width="82" height="26" rx="4"/>
+  <text class="l" x="601" y="114" text-anchor="middle">Sequences</text>
+  <rect class="panel" x="648" y="96" width="56" height="26" rx="4"/>
+  <text class="l" x="676" y="114" text-anchor="middle">Shots</text>
+  <rect class="panel" x="710" y="96" width="64" height="26" rx="4"/>
+  <text class="l" x="742" y="114" text-anchor="middle">Assets</text>
+
+  <text class="d" x="488" y="146">An empty tab is not shown at all.</text>
+
+  <text class="l" x="498" y="182">Monday dailies</text>
+  <text class="d" x="498" y="200">1 playlist, its media in its own order</text>
+
+  <text class="l" x="498" y="232">SQ010 › SH0010 › V03</text>
+  <text class="d" x="498" y="250">the only sequence that kept a shot</text>
+
+  <text class="l" x="498" y="282">Fox › V01</text>
+  <text class="d" x="498" y="300">assets carry their own tab</text>
+
+  <rect class="panel-o" x="488" y="324" width="286" height="66" rx="6"/>
+  <text class="a" x="500" y="346">On every media</text>
+  <text class="d" x="500" y="366">draw, box, circle, arrow, label — the drawing</text>
+  <text class="d" x="500" y="382">travels with the comment, on the frame it was made</text>
+</svg>

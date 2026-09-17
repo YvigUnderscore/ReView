@@ -2,12 +2,13 @@
 
 *Scoped, expiring, password-protected links that show a client exactly what you published — without an account.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-17
 
 A **share link** gives someone outside the studio a way into one precise slice of a project:
 a playlist, a version, a hand-picked set of media, or the whole show. They open a URL, see a
-grid, play what is in it, and — if you let them — leave notes that land in the team's thread.
-No account, no invitation, no navigation into the application.
+home page, browse what is in it by sequence, shot or asset, play it, and — if you let them —
+draw on it and leave notes that land in the team's thread. No account, no invitation, no way
+out of what the link opens.
 
 Links are created and revoked in the project's **Shares** tab, by an `ADMIN` or a project
 `SUPERVISOR`.
@@ -136,12 +137,18 @@ why revoking also kills the sessions already open on the link.
 
 ## What the client sees
 
-The client page is deliberately bare: studio logo and name, the project name, a media grid, a
-viewer, a comment column, and the AGPL source notice in the footer. There is **no navigation
-into the application**, and the locked page carries no project data at all.
+The link opens a **portal**: studio logo and name, the project name, a home page carrying the
+playlists the link opens and the latest published media, then four tabs — *Review*,
+*Sequences*, *Shots*, *Assets* — a viewer, a comment column, and the AGPL source notice in
+the footer. A tab with nothing in it is not shown, so the portal never names a level the link
+does not reach. There is **no way into the application**, and the locked page carries no
+project data at all — not a media, not a shot code, not a playlist name.
 
-The grid lists the media of the link's scope, **newest first**, capped at 200 per page load.
-Thumbnails come from presigned URLs, like everything else the page loads.
+The full walkthrough is its own page: [The client portal](client-portal.md).
+
+The portal serves at most 200 media per page load, newest first, and says so when there are
+more. Thumbnails come from presigned URLs, like everything else the page loads — one per
+media, and the cards of the tree borrow them rather than signing their own.
 
 ### The four kinds of media
 
@@ -155,9 +162,10 @@ All four viewers are mounted, in read-only form, with the watermark drawn over e
 | Gaussian splat | The review's splat pane, same navigation, without a single editing tool |
 
 What is missing from the video player is what assumes an account: the HLS quality ladder,
-shared timeline markers, annotation drawing and A/B comparison. If the media's frame rate was
-never detected, the client can correct it in the transport so the frame numbers line up with
-the studio's.
+shared timeline markers and A/B comparison. Drawing is **not** missing — see below. The
+media's frame rate and the project's first frame travel with the share, so the frame numbers
+line up with the studio's; if the rate was never detected, the client can still correct it in
+the transport.
 
 A line under the spatial viewers says the rest in as many words: *Read only · Orbit by
 dragging · free flight on right-click · wheel to zoom · `H` Home view · Replayed exactly as
@@ -167,8 +175,9 @@ the studio staged it — nothing you change here is saved.*
 > A 3D model is served through its converted **GLB** derivative, because no browser opens an
 > `.fbx`, an `.obj` or a `.usd`. If the conversion has not run, the client gets a plain "this
 > media cannot be displayed here" rather than an empty frame. The public payload today carries
-> the file, that GLB and the video slate offset — the persisted splat edits, USD override and
-> camera presentation are replayed by the viewer as soon as the payload carries them.
+> the file, that GLB, the video slate offset **and the staging**: persisted splat edits and
+> their mask, the USD override with the prim paths that index it, the camera presentation,
+> the project lighting and its HDRI. A guest sees the scene as the supervisor staged it.
 
 ### Video source, watermark, downloads
 
@@ -194,12 +203,15 @@ the studio staged it — nothing you change here is saved.*
 | Read replies | never | never |
 | Read internal notes | never — the flag is off by default, so nothing leaks by accident | never |
 | Write a comment | refused with a `403` | yes, signed with a free-form name remembered in their browser |
+| Draw on the media | no tool is offered | the studio's own tools — freehand, box, ellipse, arrow, polygon, text, eraser |
 
 A note written by a client is not a second-class citizen: it lands in the same thread the team
 uses, flagged visible to the client, pushed live into the project room, sent to the media's
 watchers and to whoever created the link, published to the outgoing webhooks and to the v1 event
 journal, and pushed to ShotGrid as a note like any other. On a video it carries the timestamp of
-the frame on screen; on a 3D model or a splat it can carry the camera.
+the frame on screen; on a 3D model or a splat it can carry the camera. A drawing travels with
+it, in the format the internal review reads — the artist opens the note and lands on the right
+frame, with the shape in the right place. A drawing with no text is a valid note.
 
 Use *Show to the client* on an internal comment to publish it outward. See
 [Annotations & comments](annotations-and-comments.md).
@@ -294,6 +306,8 @@ with a `403`. Check the permission badge on the row.
 which. Both are studio-level settings.
 
 ## Related pages
+
+- [The client portal](client-portal.md) — the page from the client's side, tab by tab
 
 - [Secure distribution (admin)](../admin-guide/secure-distribution.md) — burn-ins, client
   derivatives, slate and watermark settings

@@ -2,7 +2,7 @@
 
 *Everything that leaves the studio: the logo, the watermark, burn-ins, slates, and what one hardened link really bounds.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-17
 
 Getting a shot out of the building is the one operation nobody can undo. Once a file has been
 watched by someone outside the studio, the only levers left are the ones that were set
@@ -235,10 +235,18 @@ therefore no known language preference.
 
 ## What a client actually gets
 
-The client page mounts the studio's **real viewers**, in read-only form, for all four kinds of
-media — a frame-accurate video transport, the image viewer, the 3D pane and the splat pane,
-with their navigation but not one editing tool. The watermark and the slate offset apply over
-all of them.
+The client page mounts the studio's **real viewers**, for all four kinds of media — a
+frame-accurate video transport, the image viewer, the 3D pane and the splat pane. The
+watermark and the slate offset apply over all of them.
+
+Read-only means *nothing a guest does changes what anyone else sees*. It does not mean the
+page is inert: on a `COMMENT` link the guest gets the studio's own drawing tools, and the
+shapes travel with the comment. They are written to `Comment.annotation`, never to the media
+— the publication lock refuses any write to a published media, whoever asks. The guest
+schema is deliberately narrower than a member's: scene overrides, camera animations and 3D
+brush strokes are refused, because those are replayed for every viewer of the media and a
+link is not an authoring surface. Writes from a link are rate limited per link, and per link
+and address.
 
 For a 3D media the share serves the converted **GLB** derivative alongside the source
 (`glbUrl`), because no browser opens an `.fbx`, an `.obj` or a `.usd`. A delivery whose
@@ -246,16 +254,19 @@ conversion never ran shows a plain "this media cannot be displayed here" rather 
 frame — which is an argument for checking the job queue before sending the link, not after.
 
 > [!NOTE]
-> The public payload carries the file, that GLB and the slate offset. The spatial viewers are
-> already written to replay the studio's staging — persisted splat edits, the USD override,
-> the camera presentation, the project lighting — and fill in on their own the day the route
-> serves those fields; until then a guest gets the raw scene, navigable but unstaged.
+> The public payload now carries the staging as well: persisted splat edits and their mask,
+> the USD override and the prim paths that index it, the camera presentation, the project
+> lighting and the HDRI it names, resolved to a presigned URL. A guest therefore sees the
+> scene **as the supervisor staged it**, not raw. It also carries the media's frame rate and
+> the project's first frame, without which a guest's drawing would be anchored to the wrong
+> frame and cite a number the artist cannot find.
 
 A guest comment goes through the **same comment service** as an internal one: it reaches the
 media's watchers and the person who created the link, fires the outgoing webhooks and the v1
 event journal, and is pushed to ShotGrid as a note. What the guest actor cannot do is
 mention, assign, resolve, reply or attach a file, and its comment is forced
-`isVisibleToClient`. An archived project refuses the write outright.
+`isVisibleToClient`. An archived project refuses the write outright. Each write is recorded
+in the audit log as `SHARE_COMMENT`, with the link and the media but never the text.
 
 ## Tracing a consultation
 

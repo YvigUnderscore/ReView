@@ -2,7 +2,7 @@
 
 *One commenting system for all four viewers: threads, states, payloads, mentions, deep links and hand-off.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-17
 
 Every review — video, image, 3D, splat — shares the same commenting system: threads, states,
 mentions, reactions, attachments, voice notes, deep links and kanban hand-off. What changes
@@ -265,7 +265,7 @@ the notes it can already see. See [Exporting review notes](exporting-notes.md).
 | `ARTIST`, `SUPERVISOR`, `ADMIN` on the project | the whole thread | root comments and replies | yes | own comments, or any as supervisor | `SUPERVISOR` / `ADMIN` |
 | `CLIENT` **account**, member of the project | the whole thread | root comments and replies | no drawing — the viewer stays in Explore | own comments only | no |
 | Share-link guest, `VIEW` permission | root comments marked visible | nothing | no | no | no |
-| Share-link guest, `COMMENT` permission | root comments marked visible | one named root comment, optional timecode | no | no | no |
+| Share-link guest, `COMMENT` permission | root comments marked visible | one named root comment, optional timecode | drawings and a surface point — no attachment | no | no |
 
 Three things follow from that table, and each one has bitten someone:
 
@@ -275,6 +275,11 @@ Three things follow from that table, and each one has bitten someone:
 - **A guest's own comment is visible to the client automatically** — a client who writes a
   note must be able to re-read it. It also travels the usual chain: watchers are notified,
   the share's creator is notified, and the note is pushed to ShotGrid on a linked project.
+- **A guest draws with the same tools you do**, and the drawing is stored in the same format,
+  so a client's note reopens here on the right frame with the shape in the right place. What
+  a guest cannot attach is an *authoring* gesture — a 3D scene proposal, a camera animation,
+  3D brush strokes — because those are replayed for everyone who opens the media. See
+  [The client portal](client-portal.md#watching-and-drawing-on-it).
 - **A `CLIENT` account is not a guest.** Signed in as a member of the project, it reads the
   internal thread like anyone else; the *Show to the client* flag governs **share links**,
   the notes **export** and the **search**, not the in-app thread. Give an outside reviewer a

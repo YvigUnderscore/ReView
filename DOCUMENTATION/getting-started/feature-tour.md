@@ -2,7 +2,7 @@
 
 *Everything ReView can do, in one page — with a link to the guide for each of them.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-17
 
 ReView is a collaborative media review platform for VFX studios, post-production teams and
 creative departments. One instance serves one studio: projects, media, review, tasks,
@@ -119,10 +119,12 @@ every viewer.
 ## Distribution
 
 Hardened client share links — password, expiry, view limit, revocation, access audit — opening
-a clean client page in the studio's colours, with the frame-accurate player and the 3D and
-splat viewers. **Burn-ins** (shot, version, timecode, logo) are baked in at transcode time, an
-identification **slate** can head a share, and a **per-viewer name watermark** marks who
-received what.
+a [client portal](../user-guide/client-portal.md) in the studio's colours: a home page with
+the link's playlists and the latest media, tabs for sequences, shots and assets, the
+frame-accurate player, the 3D and splat viewers, and **the studio's own drawing tools** for a
+client allowed to comment. **Burn-ins** (shot, version, timecode, logo) are baked in at
+transcode time, an identification **slate** can head a share, and a **per-viewer name
+watermark** marks who received what.
 
 Notes leave ReView as CSV, EDL, OTIO or an annotated contact sheet.
 

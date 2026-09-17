@@ -3,6 +3,29 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-09-17 — The client portal: a home page, four tabs, and the drawing tools
+
+A share link no longer opens on a flat grid of files. It opens on a **home page** carrying the
+playlists the link gives access to and the latest published media, with a one-line inventory
+of what the link actually contains. Below it, four tabs — **Review**, **Sequences**, **Shots**,
+**Assets** — let a client find a shot the way the studio talks about it. A tab with nothing in
+it is not shown, so the portal never names a level the link does not reach.
+
+On a link that allows comments, the client now gets **the studio's own drawing tools** —
+freehand, rectangle, ellipse, arrow, polygon, text, move, eraser, ink and thickness, with undo
+and redo — on all four kinds of media. The drawing travels with the comment, on the frame it
+was made on, and reopens in the artist's review with the shape in the right place. The thread
+shows the timecode *and* the frame number in the project's own numbering. A drawing with no
+text is a valid note.
+
+Spatial media now open **as the supervisor staged them**: the share carries the persisted
+splat edits, the USD override, the camera presentation, the project lighting and its HDRI,
+where it previously served the raw file. Where you are in the portal lives in the address, so
+the browser's Back button works and a client can point a colleague at the exact shot.
+
+Hidden shots, sequences and assets no longer reach a share link — they were listed before,
+and an organised portal would have shown their names and codes.
+
 ## 2026-09-14 — ShotGrid: one door out, and it is locked
 
 - **Every write to the site now goes through a single path.** The project-isolation checks

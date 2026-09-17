@@ -2,7 +2,7 @@
 
 *A route map of the web API: which router owns which prefix, and why the mount order explains the surprises.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-17
 
 `/api` is the surface the web interface consumes. It is assembled in
 `backend/src/app.ts` from one router per domain (`backend/src/routes/*.routes.ts`), and
@@ -193,10 +193,12 @@ that accepts a `%04d`-style pattern.
 | `/api/dashboard` | Home dashboard aggregates |
 | `/api/bulk` | Bulk operations on a multi-selection |
 | `/api/share` | Share links: create, list, revoke (supervisor and above) |
-| `/api/client` | Public client access by share token: `GET /:token`, `POST /:token/unlock`, `GET /:token/media/:id/url`, media comments |
+| `/api/client` | Public client access by share token: `GET /:token` (project, media, tree and playlists of the scope), `POST /:token/unlock`, `GET /:token/media/:id/url`, media comments |
 
 `/api/share` and `/api/client` share a dedicated limiter of **300 requests per 15 min**:
-they are the only prefixes reachable without an account.
+they are the only prefixes reachable without an account. `POST /:token/media/:id/comments`
+carries two limiters of its own on top — per link, and per link and address — because it is
+the only write in the application open to an anonymous caller.
 
 ## Administration
 
