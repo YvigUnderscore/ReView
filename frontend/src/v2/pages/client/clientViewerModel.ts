@@ -89,6 +89,10 @@ export function playerTimeOf(mediaTime: number, slateSec: number): number {
  * Commentaires du partage vus par la timeline interne, qui raisonne en **temps lecteur** :
  * les timestamps sont donc décalés du slate. Les champs que le partage n'expose pas
  * (réactions, fils, états) restent vides — la timeline ne s'en sert que pour l'affichage.
+ *
+ * `annotation` était forcé à `null` : le dessin arrivait bien du serveur et le front le
+ * jetait, si bien qu'une note annotée s'affichait sans son trait. Il voyage désormais, et
+ * c'est lui qui s'affiche quand le client clique une note.
  */
 export function toPlayerComments(comments: readonly ClientComment[], slateSec: number): ReviewComment[] {
   return comments.map((c) => ({
@@ -98,9 +102,11 @@ export function toPlayerComments(comments: readonly ClientComment[], slateSec: n
     createdAt: c.createdAt,
     author: c.author ? { id: c.author.id, name: c.author.name } : null,
     guestName: c.guestName,
+    // La pose caméra reste hors du partage : la restaurer supposerait de rendre pilotables
+    // les viewers spatiaux invités, qui sont montés en lecture seule.
     cameraState: null,
-    annotation: null,
-    isEdited: false,
+    annotation: c.annotation ?? null,
+    isEdited: c.isEdited,
     isResolved: false,
   }));
 }

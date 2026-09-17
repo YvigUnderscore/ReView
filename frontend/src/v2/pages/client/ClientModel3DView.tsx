@@ -20,11 +20,14 @@ export default function ClientModel3DView({
   source,
   loading,
   watermark,
+  overlay,
 }: {
   source: ClientMediaSource | undefined;
   /** L'URL présignée n'est pas encore arrivée — le pane affiche son état de chargement. */
   loading: boolean;
   watermark: ReactNode;
+  /** Overlay d'annotation : le pane l'ancre au cadre de livraison, pas au canvas WebGL. */
+  overlay?: ReactNode;
 }) {
   const glb = resolveClientGlb(source);
   const viewer = useClientModel3D(glb, source);
@@ -41,7 +44,7 @@ export default function ClientModel3DView({
         status={loading ? 'PROCESSING' : 'READY'}
         loadError={false}
         containerRef={viewer.containerRef}
-        overlay={null}
+        overlay={overlay ?? null}
         aspect={clientFrameAspect(source)}
         canReprocess={false}
         reprocessing={false}

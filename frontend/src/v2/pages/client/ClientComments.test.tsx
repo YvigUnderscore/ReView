@@ -11,9 +11,12 @@ const comment = (patch: Partial<ClientComment> = {}): ClientComment => ({
   id: 1,
   content: 'Trop sombre',
   timestamp: 65,
+  duration: null,
   guestName: 'Client',
   author: null,
   createdAt: '2026-08-21T10:00:00.000Z',
+  isEdited: false,
+  annotation: null,
   ...patch,
 });
 
@@ -23,6 +26,10 @@ const render = (props: Partial<Parameters<typeof ClientComments>[0]> = {}) =>
       comments={[comment()]}
       canComment={false}
       timed
+      fps={24}
+      startFrame={1001}
+      selectedId={null}
+      onSelect={vi.fn()}
       onSeek={vi.fn()}
       onSubmit={vi.fn()}
       composerRef={createRef<HTMLTextAreaElement>()}

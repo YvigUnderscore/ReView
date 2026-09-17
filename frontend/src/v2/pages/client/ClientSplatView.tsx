@@ -22,11 +22,14 @@ export default function ClientSplatView({
   originalName,
   loading,
   watermark,
+  overlay,
 }: {
   source: ClientMediaSource | undefined;
   originalName: string;
   loading: boolean;
   watermark: ReactNode;
+  /** Overlay d'annotation : le pane l'ancre au cadre de livraison, pas au canvas WebGL. */
+  overlay?: ReactNode;
 }) {
   const file = resolveClientSplat(source, originalName);
   const splat = useSplat(file?.url ?? null, file?.fileName ?? '', clientFrameAspect(source));
@@ -51,7 +54,7 @@ export default function ClientSplatView({
         loadError={false}
         progress={splat.progress}
         status={loading ? 'PROCESSING' : 'READY'}
-        overlay={null}
+        overlay={overlay ?? null}
         aspect={clientFrameAspect(source)}
       />
       {failed && <ClientUnavailable />}

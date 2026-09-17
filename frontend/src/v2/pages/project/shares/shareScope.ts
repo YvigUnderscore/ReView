@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ShareLink } from '../../../types/api';
+import type { ShareLink, ShareScope } from '../../../types/api';
 
 /**
  * Portée d'un lien de partage — le côté client de la décision « qu'est-ce que ce lien
@@ -9,7 +9,7 @@ import type { ShareLink } from '../../../types/api';
  * chose qui sépare « montrer un plan » de « ouvrir le film entier ».
  */
 
-export type ShareScope = 'PROJECT' | 'PLAYLIST' | 'VERSION' | 'MEDIA';
+export type { ShareScope };
 
 /**
  * Le lien tel que l'API le renvoie désormais. Composition (et non re-déclaration) du type

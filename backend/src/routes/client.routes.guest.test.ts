@@ -14,8 +14,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  *    de volume libres écrits en base sur présentation d'un lien.
  */
 
-const { db, share, media } = vi.hoisted(() => ({
-  db: { comment: { findMany: vi.fn() } },
+const { db, share } = vi.hoisted(() => ({
+  // `findShareMedia` est appelée DANS le service : un mock d'export ne l'intercepte pas
+  // (ESM). C'est donc le dépôt qu'on bouchonne, et la portée s'exécute pour de vrai.
+  db: {
+    comment: { findMany: vi.fn() },
+    mediaObject: { findFirst: vi.fn(() => Promise.resolve({ id: 128, storageKey: 'review/x.mp4' })) },
+  },
   share: {
     id: 3,
     projectId: 42,
@@ -25,7 +30,6 @@ const { db, share, media } = vi.hoisted(() => ({
     label: 'Client',
     passwordHash: null,
   },
-  media: { id: 128, storageKey: 'review/x.mp4', metadata: {} },
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
@@ -33,13 +37,23 @@ vi.mock('../services/StorageService', () => ({
   storage: { getPresignedGetUrl: vi.fn(() => Promise.resolve('https://minio/x?sig')) },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-vi.mock('../services/ClientShareService', () => ({
+// Le service reste RÉEL, seuls ses accès au dépôt sont bouchonnés : ce qui est mesuré ici
+// est la chaîne complète d'écriture d'un invité — permission du lien, portée, validation des
+// blobs — et non la fidélité d'un mock. `createGuest` reste le seul point d'arrêt.
+vi.mock('../services/ClientShareService', async (importActual) => ({
+  ...(await importActual<typeof import('../services/ClientShareService')>()),
   loadShare: vi.fn(() => Promise.resolve(share)),
   loadShareWithSession: vi.fn(() => Promise.resolve(share)),
   consumeView: vi.fn(),
   studioBranding: vi.fn(() => Promise.resolve({})),
-  listShareMedia: vi.fn(() => Promise.resolve({ media: [], total: 0, hasMore: false })),
-  findShareMedia: vi.fn(() => Promise.resolve(media)),
+  listShareMedia: vi.fn(() =>
+    Promise.resolve({
+      media: [],
+      browse: { episodes: [], sequences: [], shots: [], assets: [], looseMediaIds: [] },
+      total: 0,
+      hasMore: false,
+    }),
+  ),
 }));
 vi.mock('../services/CommentService', () => ({
   createGuest: vi.fn(() => Promise.resolve({ id: 1, content: 'ok' })),

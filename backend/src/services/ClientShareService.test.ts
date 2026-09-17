@@ -7,7 +7,12 @@ vi.mock('../lib/prisma', () => ({ prisma: {} }));
 vi.mock('./StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 
 import { ShareScope } from '@prisma/client';
-import { publishedMediaWhere, shareMediaWhere, type ShareScopeRef } from './ClientShareService';
+import {
+  publishedMediaWhere,
+  shareMediaWhere,
+  sharePlaylistWhere,
+  type ShareScopeRef,
+} from './ClientShareService';
 
 describe('publishedMediaWhere — ce que voit un visiteur du lien public', () => {
   const where = publishedMediaWhere(7);
@@ -96,5 +101,75 @@ describe('shareMediaWhere — ce que la portée retire au filtre public', () => 
     ]) {
       expect(shareMediaWhere(broken)).toEqual({ id: { in: [] } });
     }
+  });
+});
+
+/**
+ * Une playlist porte un NOM de production (« Retour client — final »), et l'accueil de la
+ * page publique en affiche la liste. C'est donc une divulgation à part entière : la portée
+ * doit la borner comme elle borne les médias.
+ */
+describe('sharePlaylistWhere — quelles playlists un lien a le droit de nommer', () => {
+  const base: ShareScopeRef = {
+    projectId: 7,
+    scope: ShareScope.PROJECT,
+    playlistId: null,
+    versionId: null,
+    mediaIds: [],
+  };
+
+  it('ne retient, pour un lien de projet, que les playlists qui ouvrent vraiment un média', () => {
+    const where = sharePlaylistWhere(base);
+    expect(where).toMatchObject({ projectId: 7 });
+    // Le `some` est écrit avec le filtre de portée lui-même : une playlist ne peut pas
+    // servir de passe-droit vers un brouillon ou la corbeille.
+    expect(where?.items).toEqual({ some: { version: { media: { some: shareMediaWhere(base) } } } });
+  });
+
+  it('épingle un lien de playlist à la sienne, et au projet', () => {
+    const where = sharePlaylistWhere({ ...base, scope: ShareScope.PLAYLIST, playlistId: 3 });
+    expect(where).toMatchObject({ id: 3, projectId: 7 });
+  });
+
+  /**
+   * Le point qui compte : lister « les playlists qui contiennent cette version » serait
+   * techniquement dans la portée des MÉDIAS, et révélerait pourtant l'existence de dailies
+   * que le destinataire n'a jamais reçus. Une portée qui ne montre qu'un plan ne nomme rien.
+   */
+  it('n’en nomme AUCUNE pour un lien de version ou de sélection', () => {
+    expect(sharePlaylistWhere({ ...base, scope: ShareScope.VERSION, versionId: 42 })).toBeNull();
+    expect(sharePlaylistWhere({ ...base, scope: ShareScope.MEDIA, mediaIds: [11] })).toBeNull();
+  });
+
+  it('ne retombe pas sur toutes les playlists quand la cible a disparu', () => {
+    expect(sharePlaylistWhere({ ...base, scope: ShareScope.PLAYLIST })).toBeNull();
+  });
+});
+
+/**
+ * Masquage (`hiddenAt`, cf. `VisibilityRule`) : l'élément existe, aucun écran interne ne le
+ * propose. Tant que la page publique n'affichait qu'une grille de noms de fichiers, le
+ * laisser passer se voyait à peine ; depuis qu'elle range les médias par entité, elle
+ * afficherait le nom et le code de ce qu'on a justement décidé de masquer.
+ */
+describe('publishedMediaWhere — le masquage suit jusque sur le lien public', () => {
+  const where = publishedMediaWhere(7);
+  const shotBranch = where.version.OR[0] as {
+    task: { shot: { hiddenAt: null; OR: { sequenceId?: null; sequence?: { hiddenAt: null } }[] } };
+  };
+
+  it('écarte un plan, un asset ou une séquence masqués', () => {
+    expect(shotBranch.task.shot.hiddenAt).toBeNull();
+    expect(where.version.OR[1]).toMatchObject({ task: { asset: { hiddenAt: null } } });
+    expect(where.version.OR[2]).toMatchObject({ asset: { hiddenAt: null } });
+  });
+
+  // Un plan sans séquence est un cas NORMAL (long-métrage) : exiger une séquence visible
+  // sans cette alternative l'écarterait du partage.
+  it('n’exige la visibilité de la séquence que lorsqu’il y en a une', () => {
+    expect(shotBranch.task.shot.OR).toEqual([
+      { sequenceId: null },
+      { sequence: { deletedAt: null, hiddenAt: null } },
+    ]);
   });
 });

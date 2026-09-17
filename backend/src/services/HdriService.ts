@@ -52,6 +52,18 @@ export async function listWithUrls(): Promise<(HdriEntry & { url: string })[]> {
   );
 }
 
+/**
+ * Une HDRI par son identifiant, présignée — `null` si la bibliothèque ne la connaît plus.
+ *
+ * `listWithUrls` signerait toute la bibliothèque pour n'en servir qu'une : c'est acceptable
+ * sur l'écran d'administration qui les affiche toutes, pas sur la page publique de partage,
+ * où l'on ouvre un média et où chaque signature compte.
+ */
+export async function findWithUrl(id: string): Promise<(HdriEntry & { url: string }) | null> {
+  const entry = (await readLibrary()).find((e) => e.id === id);
+  return entry ? { ...entry, url: await storage.getPresignedGetUrl(entry.storageKey) } : null;
+}
+
 /** URL présignée d'upload d'un nouveau HDRI (admin) : renvoie la clé + l'URL PUT. */
 export async function presignUpload(format: HdriFormat): Promise<{ storageKey: string; uploadUrl: string }> {
   if (!HDRI_FORMATS.includes(format)) throw badRequest('Invalid HDRI format (hdr or exr)', 'BAD_FORMAT');

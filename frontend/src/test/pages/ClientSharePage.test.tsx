@@ -20,12 +20,20 @@ import { renderWithProviders } from '../renderWithProviders';
 
 const TOKEN = 'share-token';
 
-const media: ClientMedia = { id: 5, kind: 'MODEL_3D', originalName: 'ship_v003.glb', thumbnailUrl: null };
+const media: ClientMedia = {
+  id: 5,
+  kind: 'MODEL_3D',
+  originalName: 'ship_v003.glb',
+  thumbnailUrl: null,
+  createdAt: '2026-09-16T00:00:00.000Z',
+  version: { id: 50, name: 'V03', taskName: null },
+  placement: { episodeId: null, sequenceId: null, shotId: null, assetId: 90 },
+};
 
 const payload = (patch: Partial<ClientSharePayload> = {}): ClientSharePayload => ({
   locked: false,
   studio: { name: 'Studio Nord', logoUrl: null },
-  project: { id: 1, name: 'Alpha', description: null, status: 'ACTIVE' },
+  project: { id: 1, name: 'Alpha', description: null, status: 'ACTIVE', episodesEnabled: false },
   permission: 'COMMENT',
   media: [media],
   ...patch,

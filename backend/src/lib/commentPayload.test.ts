@@ -6,8 +6,10 @@ import {
   MAX_ANNOTATION_BYTES,
   annotationSchema,
   cameraStateSchema,
+  guestAnnotationSchema,
   parseAnnotation,
   parseCameraState,
+  parseGuestAnnotation,
 } from './commentPayload';
 
 /**
@@ -185,5 +187,55 @@ describe('parseAnnotation / parseCameraState — relecture à l’écriture', ()
   it('rendent la valeur relue, débarrassée de ce qui n’est pas au contrat', () => {
     const parts = [{ type: 'rect', x: 0.1, y: 0.2, w: 0.3, h: 0.4 }];
     expect(parseAnnotation(parts)).toEqual(parts);
+  });
+});
+
+/**
+ * L'annotation d'un INVITÉ est plus étroite que celle d'un membre, et volontairement.
+ *
+ * Un client dessine sur l'image et pose un point sur une surface : ce sont des remarques.
+ * Les trois parts retirées sont des gestes d'auteur, rejoués pour TOUS les spectateurs du
+ * média — une proposition de mise en scène 3D, une animation caméra, les traits du painter.
+ * Les accepter donnerait à un anonyme muni d'une URL un moyen d'écrire dans ce que voient
+ * les autres.
+ */
+describe('guestAnnotationSchema — ce qu’un lien de partage a le droit d’écrire', () => {
+  const rect = { type: 'rect', id: 'a', color: '#ef4444', width: 3, x: 0.1, y: 0.1, w: 0.2, h: 0.2 };
+
+  it('accepte un dessin et un point de surface', () => {
+    expect(guestAnnotationSchema.safeParse([rect]).success).toBe(true);
+    expect(
+      guestAnnotationSchema.safeParse([{ type: 'hotspot', position: '1,2,3', normal: '0,1,0' }]).success,
+    ).toBe(true);
+  });
+
+  it('refuse les parts d’auteur, que le schéma d’un membre accepte', () => {
+    const authored = [
+      [{ type: 'scene-override', override: null }],
+      [{ type: 'splat-paint', points: [0, 0, 0], color: '#ffffff', width: 1 }],
+      [{ type: 'camera-anim', version: 2, loop: false, channels: {} }],
+    ];
+    for (const parts of authored) {
+      // Le membre a le droit : c'est bien l'invité que l'on restreint, pas la forme.
+      expect(annotationSchema.safeParse(parts).success).toBe(true);
+      expect(guestAnnotationSchema.safeParse(parts).success).toBe(false);
+    }
+  });
+
+  it('borne le volume plus serré que pour un membre', () => {
+    expect(guestAnnotationSchema.safeParse(Array.from({ length: 60 }, () => rect)).success).toBe(true);
+    expect(guestAnnotationSchema.safeParse(Array.from({ length: 61 }, () => rect)).success).toBe(false);
+    // Un seul champ suffit à faire un gros blob : le plafond d'octets ferme la porte.
+    const fat = { type: 'text', x: 0, y: 0, text: 'x'.repeat(2_000) };
+    expect(guestAnnotationSchema.safeParse(Array.from({ length: 40 }, () => fat)).success).toBe(false);
+  });
+
+  it('relit à l’écriture comme son équivalent interne', () => {
+    expect(parseGuestAnnotation(undefined)).toBeUndefined();
+    expect(parseGuestAnnotation(null)).toBeUndefined();
+    expect(parseGuestAnnotation([rect])).toEqual([rect]);
+    expect(() =>
+      parseGuestAnnotation([{ type: 'splat-paint', points: [], color: '#fff', width: 1 }]),
+    ).toThrowError(expect.objectContaining({ statusCode: 400 }));
   });
 });

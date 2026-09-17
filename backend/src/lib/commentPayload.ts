@@ -226,6 +226,40 @@ export function parseAnnotation(value: unknown): unknown {
   return parsed.data;
 }
 
+/**
+ * Annotation d'un **invité** — plus étroite que celle d'un membre, et volontairement.
+ *
+ * Un client dessine sur l'image et pose un point sur une surface : ce sont des remarques.
+ * Les trois parts retirées ici sont des gestes d'AUTEUR, rejoués pour tous les spectateurs
+ * du média : `scene-override` (proposition de mise en scène 3D, 46.D), `camera-anim` (une
+ * animation caméra par canaux) et `splat-paint` (les traits du painter 3D). Aucune n'a de
+ * sens venue d'un lien de partage, et les accepter donnerait à un anonyme muni d'une URL un
+ * moyen d'écrire dans ce que voient les autres.
+ *
+ * Les volumes sont resserrés dans la même intention : cinq fois moins de parts et huit fois
+ * moins d'octets que pour un membre. C'est large pour une page de retours, étroit pour un
+ * robot.
+ */
+const GUEST_MAX_PARTS = 60;
+const GUEST_MAX_ANNOTATION_BYTES = 64_000;
+
+export const guestAnnotationSchema = z
+  .array(z.union([hotspotPart, shapePart]))
+  .max(GUEST_MAX_PARTS)
+  .refine((parts) => JSON.stringify(parts).length <= GUEST_MAX_ANNOTATION_BYTES);
+
+/**
+ * Même contrat que `parseAnnotation`, appliqué à la surface publique. Il vit ici, au plus
+ * près de l'écriture, et non dans la route : `createGuest` est appelable d'ailleurs, et
+ * c'est précisément cet appelant-là qu'il ne faut pas rater.
+ */
+export function parseGuestAnnotation(value: unknown): unknown {
+  if (value == null) return undefined;
+  const parsed = guestAnnotationSchema.safeParse(value);
+  if (!parsed.success) throw badRequest('Invalid annotation');
+  return parsed.data;
+}
+
 export function parseCameraState(value: unknown): unknown {
   if (value == null) return undefined;
   const parsed = cameraStateSchema.safeParse(value);

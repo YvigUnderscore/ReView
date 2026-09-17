@@ -41,6 +41,7 @@ export default function ClientVideoPlayer({
   setFpsOverride,
   startFrame,
   watermark,
+  overlay,
 }: {
   src: string;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -56,6 +57,13 @@ export default function ClientVideoPlayer({
   setFpsOverride: (fps: number) => void;
   startFrame: number;
   watermark: ReactNode;
+  /**
+   * Overlay d'annotation, rendu DANS la boîte de l'image (et non sur toute la zone) : c'est
+   * la seule position où les coordonnées normalisées 0..1 tombent sur le pixel visé, quelles
+   * que soient les bandes noires. Il est neutre au pointeur tant que le dessin n'est pas
+   * armé, sinon il mangerait le clic qui met en lecture.
+   */
+  overlay?: ReactNode;
 }) {
   const t = useT();
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -179,6 +187,7 @@ export default function ClientVideoPlayer({
                 setAspect(e.currentTarget.videoWidth / e.currentTarget.videoHeight);
             }}
           />
+          {overlay && <div className="pointer-events-none absolute inset-0 z-20">{overlay}</div>}
         </div>
         {playbackSpeed.visible && (
           <div className="pointer-events-none absolute right-3 top-3 z-30 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur">

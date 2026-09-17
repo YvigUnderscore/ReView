@@ -14,6 +14,7 @@ import {
 } from './clientViewerModel';
 import { DEFAULT_LIGHTING } from '../review/reviewTypes';
 import type { ClientMediaSource } from './clientTypes';
+import type { ClientComment } from '../../types/api';
 
 const source = (patch: Partial<ClientMediaSource> = {}): ClientMediaSource => ({
   url: 'https://minio.example/bucket/media.mp4?X-Amz-Signature=abc',
@@ -129,15 +130,8 @@ describe('décalage du slate', () => {
   it('déplace les marqueurs de la timeline dans le référentiel du lecteur', () => {
     const mapped = toPlayerComments(
       [
-        { id: 1, content: 'a', timestamp: 5, guestName: 'Cli', author: null, createdAt: 'x' },
-        {
-          id: 2,
-          content: 'b',
-          timestamp: null,
-          guestName: null,
-          author: { id: 7, name: 'Sup' },
-          createdAt: 'x',
-        },
+        note({ id: 1, timestamp: 5, guestName: 'Cli' }),
+        note({ id: 2, timestamp: null, guestName: null, author: { id: 7, name: 'Sup' } }),
       ],
       3,
     );
@@ -147,13 +141,35 @@ describe('décalage du slate', () => {
   });
 
   it('laisse les timestamps intacts quand le dérivé n’a pas de slate', () => {
-    const mapped = toPlayerComments(
-      [{ id: 1, content: 'a', timestamp: 12, guestName: null, author: null, createdAt: 'x' }],
-      0,
-    );
-    expect(mapped[0].timestamp).toBe(12);
+    expect(toPlayerComments([note({ timestamp: 12 })], 0)[0].timestamp).toBe(12);
+  });
+
+  /**
+   * Le dessin arrivait bien du serveur et le front le jetait : une note annotée s'affichait
+   * donc sans son trait, et le client ne voyait jamais ce que le studio lui montrait.
+   */
+  it('porte désormais l’annotation au lieu de la jeter', () => {
+    const shapes = [{ id: 'a', type: 'rect', color: '#ef4444', width: 3 }];
+    expect(toPlayerComments([note({ annotation: shapes })], 0)[0].annotation).toEqual(shapes);
+    expect(toPlayerComments([note()], 0)[0].annotation).toBeNull();
   });
 });
+
+/** Une note du partage, réduite à ce que la timeline en lit. */
+function note(patch: Partial<ClientComment> = {}): ClientComment {
+  return {
+    id: 1,
+    content: 'a',
+    timestamp: null,
+    duration: null,
+    guestName: null,
+    author: null,
+    createdAt: 'x',
+    isEdited: false,
+    annotation: null,
+    ...patch,
+  };
+}
 
 /** Pose caméra minimale — seul `aspect` intéresse les tests de cadre. */
 function p() {

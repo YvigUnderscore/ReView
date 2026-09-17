@@ -4,28 +4,29 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { SharePermission } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { rateLimit } from '../middleware/rateLimit';
-import { storage } from '../services/StorageService';
-import { mediaViewKey } from '../services/MediaService';
 import {
   loadShare,
   loadShareWithSession,
   consumeView,
   studioBranding,
   listShareMedia,
+  listSharePlaylists,
+  listShareComments,
   findShareMedia,
+  createShareComment,
+  type ShareCommentInput,
 } from '../services/ClientShareService';
-import { createGuest } from '../services/CommentService';
-import { cameraStateSchema } from '../lib/commentPayload';
+import { buildClientMediaSource } from '../services/ClientMediaSourceService';
+import { cameraStateSchema, guestAnnotationSchema } from '../lib/commentPayload';
 import { guestCommentRateLimit } from './clientShareLimits';
 import { signShareSession, verifyShareSession } from '../lib/shareAccess';
 import { getWatermarkConfig } from '../lib/watermarkConfig';
 import { logAudit } from '../services/AuditService';
 import { logMediaAccess } from '../lib/mediaAccess';
-import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
+import { badRequest, notFound, unauthorized } from '../lib/errors';
 
 /**
  * Routes PUBLIQUES (sans JWT) pour le partage client sécurisé (35.C/35.D).
@@ -61,12 +62,19 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
 
   const project = await prisma.project.findFirst({
     where: { id: share.projectId, deletedAt: null },
-    select: { id: true, name: true, description: true, status: true },
+    // `episodesEnabled` : sans lui le front devinerait le niveau à `episodes.length > 0`,
+    // faux dès qu'un seul épisode traîne sur un projet où le niveau est désactivé.
+    select: { id: true, name: true, description: true, status: true, episodesEnabled: true },
   });
   if (!project) throw notFound('Project not found');
 
-  const { media, total, hasMore } = await listShareMedia(share);
-  const watermark = await getWatermarkConfig();
+  const { media, browse, total, hasMore } = await listShareMedia(share);
+  // Les playlists se lisent APRÈS les médias : leurs identifiants sont intersectés avec la
+  // page servie, pour qu'une carte n'ouvre jamais sur une tuile absente du payload.
+  const [playlists, watermark] = await Promise.all([
+    listSharePlaylists(share, new Set(media.map((m) => m.id))),
+    getWatermarkConfig(),
+  ]);
   res.json({
     locked: false,
     studio,
@@ -77,6 +85,7 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
     media,
     mediaTotal: total,
     mediaHasMore: hasMore,
+    browse: { ...browse, playlists },
     watermark: { enabled: watermark.shares, opacity: watermark.opacity },
     shareAuth: signShareSession(share.id),
   });
@@ -116,35 +125,15 @@ router.post(
   },
 );
 
-// GET /api/client/:token/media/:id/url — URL présignée d'un média DE LA PORTÉE (session requise).
-// Vidéo : sert le dérivé client (slate en tête, 35.A) s'il existe — `slateSec` permet au
-// front de décaler les timestamps de commentaires (le slate n'existe pas côté review interne).
-// 3D : `glbUrl` sert le dérivé de conversion. Un .fbx, un .obj ou un .usd n'est lisible par
-// aucun navigateur ; le viewer invité ouvrait donc l'original et n'affichait rien, alors
-// qu'un modèle déjà livré en .glb s'ouvrait très bien. Le dérivé appartient au même média,
-// donc à la même portée : `findShareMedia` a déjà tranché l'accès, et l'URL est présignée
-// en lecture seule comme toutes les autres.
+// GET /api/client/:token/media/:id/url — de quoi ouvrir un média DE LA PORTÉE (session
+// requise). `findShareMedia` a déjà tranché l'accès ; la charge utile est assemblée par
+// `ClientMediaSourceService`, qui documente pourquoi chaque champ y est.
 router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req, res) => {
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
   const media = await findShareMedia(share, id);
   logMediaAccess({ mediaObjectId: id, shareLinkId: share.id, ip: req.ip }); // 36.E
-  const meta = (media.metadata ?? {}) as { clientProxyKey?: string; slateSec?: number; glbKey?: string };
-  const clientKey = typeof meta.clientProxyKey === 'string' ? meta.clientProxyKey : null;
-  const glbKey = typeof meta.glbKey === 'string' ? meta.glbKey : null;
-  const [url, glbUrl] = await Promise.all([
-    // `mediaViewKey` et non `mediaSourceKey` : le client reçoit ce qu'un navigateur sait
-    // afficher. Un EXR, un DPX ou un TIFF partagés arrivaient jusqu'ici en format d'origine,
-    // c'est-à-dire en image cassée — alors que le proxy web existe déjà et que le viewer
-    // interne s'en sert. Le dérivé client (vidéo, avec slate et burn-ins) reste prioritaire.
-    storage.getPresignedGetUrl(clientKey ?? mediaViewKey(media)),
-    glbKey ? storage.getPresignedGetUrl(glbKey) : Promise.resolve(null),
-  ]);
-  res.json({
-    url,
-    slateSec: clientKey && typeof meta.slateSec === 'number' ? meta.slateSec : 0,
-    glbUrl,
-  });
+  res.json(await buildClientMediaSource(media, share.projectId));
 });
 
 // GET /api/client/:token/media/:id/comments — commentaires visibles client (session requise)
@@ -152,12 +141,7 @@ router.get('/:token/media/:id/comments', validate({ params: tokenAndId }), async
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
   await findShareMedia(share, id);
-  const comments = await prisma.comment.findMany({
-    where: { mediaObjectId: id, parentId: null, isVisibleToClient: true },
-    orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
-    include: { author: { select: { id: true, name: true } } },
-  });
-  res.json({ comments });
+  res.json({ comments: await listShareComments(id) });
 });
 
 // POST /api/client/:token/media/:id/comments — commentaire invité (permission COMMENT).
@@ -176,25 +160,17 @@ router.post(
       timestamp: z.number().nonnegative().optional(),
       // Même schéma que la review interne (A2-04) ; `createGuest` le revalide de toute façon.
       cameraState: cameraStateSchema.nullish(),
+      // Le dessin de l'invité. Schéma INVITÉ : ni mise en scène 3D, ni animation caméra, ni
+      // traits du painter — ce sont des gestes rejoués pour tous les spectateurs du média.
+      // Sans cette clé, `validate` remplaçant `req.body` par le parsé, l'annotation partait
+      // au serveur, recevait un 201, et n'était jamais écrite.
+      annotation: guestAnnotationSchema.nullish(),
     }),
   }),
   async (req, res) => {
     const share = await loadShareWithSession(String(req.params.token), req);
-    if (share.permission !== SharePermission.COMMENT) throw forbidden('This link is read-only');
     const id = Number(req.params.id);
-    await findShareMedia(share, id);
-
-    const body = req.body as {
-      guestName: string;
-      content: string;
-      timestamp?: number;
-      cameraState?: unknown;
-    };
-    const comment = await createGuest(
-      { name: body.guestName, shareLinkId: share.id, shareOwnerId: share.createdById },
-      share.projectId,
-      { mediaObjectId: id, content: body.content, timestamp: body.timestamp, cameraState: body.cameraState },
-    );
+    const comment = await createShareComment(share, id, req.body as ShareCommentInput, req.ip);
     res.status(201).json({ comment });
   },
 );

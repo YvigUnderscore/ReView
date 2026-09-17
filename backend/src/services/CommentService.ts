@@ -13,7 +13,7 @@ import { notifyWatchers } from './WatchService';
 import { publish as publishApiEvent } from './ApiEventService';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, forbidden } from '../lib/errors';
-import { parseAnnotation, parseCameraState } from '../lib/commentPayload';
+import { parseAnnotation, parseCameraState, parseGuestAnnotation } from '../lib/commentPayload';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
@@ -375,14 +375,18 @@ export interface CreateGuestCommentInput {
   content: string;
   timestamp?: number;
   cameraState?: unknown;
+  /** Dessin 2D + point de surface joints au retour — schéma invité, pas celui d'un membre. */
+  annotation?: unknown;
 }
 
 export async function createGuest(guest: GuestActor, projectId: number, body: CreateGuestCommentInput) {
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
-  // La pose caméra arrive d'une surface PUBLIQUE, sans compte derrière : c'est le seul
-  // champ de forme libre qu'un anonyme muni du lien puisse écrire en base, et il est
-  // ensuite rediffusé à toutes les sockets du projet. Il passe donc par son schéma.
+  // La pose caméra et le dessin arrivent d'une surface PUBLIQUE, sans compte derrière : ce
+  // sont les seuls champs de forme libre qu'un anonyme muni du lien puisse écrire en base,
+  // et ils sont ensuite rediffusés à toutes les sockets du projet. Ils passent donc par
+  // leur schéma — l'annotation par le schéma INVITÉ, plus étroit que celui d'un membre.
   const cameraState = parseCameraState(body.cameraState);
+  const annotation = parseGuestAnnotation(body.annotation);
   const comment = await prisma.comment.create({
     data: {
       mediaObjectId: body.mediaObjectId,
@@ -390,6 +394,7 @@ export async function createGuest(guest: GuestActor, projectId: number, body: Cr
       content: sanitizeHtml(body.content),
       timestamp: body.timestamp ?? null,
       cameraState: cameraState ?? undefined,
+      annotation: annotation ?? undefined,
       // Un retour de client se relit forcément côté client : il reste visible du lien.
       isVisibleToClient: true,
     },

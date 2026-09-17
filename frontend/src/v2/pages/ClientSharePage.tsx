@@ -2,34 +2,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Film, Image as ImageIcon, Box, Lock, Sparkles } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { clientApi, setShareAuth, ClientApiError } from './client/clientApi';
+import ClientBrowse from './client/ClientBrowse';
 import ClientMediaViewer from './client/ClientMediaViewer';
+import { parseClientMediaId, parseClientView, viewParams, type ClientView } from './client/clientBrowseModel';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import SourceNotice from '../components/SourceNotice';
-import type { ClientMedia, ClientSharePayload, MediaKind } from '../types/api';
+import type { ClientSharePayload } from '../types/api';
 import { useT } from '../i18n';
 import { intlLocale } from '../i18n';
 
-const kindIcon: Record<MediaKind, React.ReactNode> = {
-  VIDEO: <Film size={26} />,
-  IMAGE: <ImageIcon size={26} />,
-  MODEL_3D: <Box size={26} />,
-  SPLAT: <Sparkles size={26} />,
-};
-
 /**
- * Page client publique (35.D) : accès par lien de partage, habillage studio, lecture +
- * commentaire uniquement — zéro navigation vers l'app.
+ * Page client publique (35.D) : accès par lien de partage, habillage studio, lecture,
+ * annotation et commentaire — zéro navigation vers l'app.
+ *
+ * L'arrivée est un **accueil** : les playlists que le lien ouvre, puis les dernières
+ * livraisons ; le reste se parcourt par quatre onglets (Review, Sequences, Shots, Assets).
+ * L'endroit où l'on se trouve vit dans l'URL, comme sur la page projet : le bouton Retour du
+ * navigateur fonctionne, et un client peut envoyer à un collègue le lien du plan dont il
+ * parle — sans lui donner plus que ce que la portée autorise, puisque c'est le même jeton.
  */
 export default function ClientSharePage() {
   const t = useT();
   const { token = '' } = useParams();
   const qc = useQueryClient();
-  const [selected, setSelected] = useState<ClientMedia | null>(null);
+  const [params, setParams] = useSearchParams();
 
   const payloadQ = useQuery({
     queryKey: ['client-share', token],
@@ -42,6 +43,11 @@ export default function ClientSharePage() {
     staleTime: 60 * 1000,
   });
   const p = payloadQ.data;
+
+  const view = parseClientView(params);
+  const openedId = parseClientMediaId(params);
+  const setView = (next: ClientView, mediaId?: number | null) =>
+    setParams(viewParams(next, mediaId), { replace: false });
 
   if (payloadQ.error) {
     const err = payloadQ.error;
@@ -72,6 +78,7 @@ export default function ClientSharePage() {
   }
 
   const media = p.media ?? [];
+  const opened = openedId === null ? null : (media.find((m) => m.id === openedId) ?? null);
   // Le repli du libellé s'affiche dans le filigrane : il passe par `t()` comme le reste
   // (il était écrit en français en dur — le détecteur AST ne lit pas dans les gabarits).
   const watermarkText = p.watermark?.enabled
@@ -88,48 +95,33 @@ export default function ClientSharePage() {
         )}
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{p.project?.name}</p>
-          <p className="text-xs text-muted-foreground">{t('client.review')}</p>
+          <p className="truncate text-xs text-muted-foreground">{p.label ?? t('client.review')}</p>
         </div>
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col p-5">
-        {selected ? (
+        {media.length === 0 ? (
+          <p className="m-auto text-sm text-muted-foreground">{t('client.noPublished')}</p>
+        ) : opened ? (
+          // `key` : sans elle, React réutilise le viewer d'un média à l'autre, et le dessin
+          // en cours — comme l'annotation affichée de la note sélectionnée — survivait au
+          // changement de tuile. Constaté au tour navigateur du 2026-09-17.
           <ClientMediaViewer
+            key={opened.id}
             token={token}
-            media={selected}
+            media={opened}
             canComment={p.permission === 'COMMENT'}
             watermarkText={watermarkText}
             watermarkOpacity={p.watermark?.opacity ?? 0.08}
-            onBack={() => setSelected(null)}
+            onBack={() => setView(view)}
           />
         ) : (
-          <>
-            {media.length === 0 && (
-              <p className="m-auto text-sm text-muted-foreground">{t('client.noPublished')}</p>
-            )}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {media.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setSelected(m)}
-                  className="group overflow-hidden rounded-lg border border-border bg-card text-left transition-colors hover:border-primary/60"
-                >
-                  <div className="flex aspect-video items-center justify-center overflow-hidden bg-black/50 text-muted-foreground">
-                    {m.thumbnailUrl ? (
-                      <img
-                        src={m.thumbnailUrl}
-                        alt=""
-                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                      />
-                    ) : (
-                      kindIcon[m.kind]
-                    )}
-                  </div>
-                  <p className="truncate px-2.5 py-2 text-xs">{m.originalName}</p>
-                </button>
-              ))}
-            </div>
-          </>
+          <ClientBrowse
+            payload={p}
+            view={view}
+            onView={(next) => setView(next)}
+            onOpen={(m) => setView(view, m.id)}
+          />
         )}
       </main>
 
@@ -156,7 +148,7 @@ function ClientFrame({
           {studio?.logoUrl ? (
             <img src={studio.logoUrl} alt={studio.name} className="h-10 w-auto" />
           ) : (
-            <span className="text-lg font-semibold">{studio?.name ?? 'Review'}</span>
+            <span className="text-lg font-semibold">{studio?.name ?? 'ReView'}</span>
           )}
         </div>
         {children}
