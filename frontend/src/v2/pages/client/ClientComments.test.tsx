@@ -29,6 +29,7 @@ const render = (props: Partial<Parameters<typeof ClientComments>[0]> = {}) =>
       fps={24}
       startFrame={1001}
       selectedId={null}
+      hasAnnotation={false}
       onSelect={vi.fn()}
       onSeek={vi.fn()}
       onSubmit={vi.fn()}
@@ -74,5 +75,33 @@ describe('ClientComments', () => {
     const html = render({ comments: [] });
     expect(html).not.toContain('Trop sombre');
     expect(html).toContain('<p');
+  });
+});
+
+/**
+ * Les outils de dessin vivent SOUS le champ de commentaire, là où la review interne met les
+ * siens — et pas au-dessus de l'image, où ils repoussaient le média qu'ils servent.
+ */
+describe('ClientComments — les outils et le dessin seul', () => {
+  it('pose la barre d’outils dans le composeur, pas ailleurs', () => {
+    const html = render({ canComment: true, annotationBar: <div data-testid="tools" /> });
+    const form = html.slice(html.indexOf('<form'));
+    expect(form).toContain('data-testid="tools"');
+  });
+
+  it('n’offre aucun outil sur un lien en lecture seule', () => {
+    expect(render({ canComment: false, annotationBar: <div data-testid="tools" /> })).not.toContain(
+      'data-testid="tools"',
+    );
+  });
+
+  /**
+   * Le serveur exige un contenu, mais un dessin en tient lieu : le bouton d'envoi doit
+   * s'ouvrir sur le seul dessin. On vise l'ATTRIBUT `disabled=""` et non le mot — il figure
+   * aussi dans les classes utilitaires (`disabled:opacity-50`), qui sont là en permanence.
+   */
+  it('laisse envoyer un dessin sans texte, et refuse le vide', () => {
+    expect(render({ canComment: true, hasAnnotation: true })).not.toContain('disabled=""');
+    expect(render({ canComment: true, hasAnnotation: false })).toContain('disabled=""');
   });
 });

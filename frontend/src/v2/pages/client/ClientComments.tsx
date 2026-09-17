@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, type RefObject } from 'react';
+import { useState, type ReactNode, type RefObject } from 'react';
 import { Clock, PenLine, Send } from 'lucide-react';
 import type { ClientComment } from '../../types/api';
 import { Button } from '../../components/ui/button';
@@ -28,6 +28,8 @@ export default function ClientComments({
   onSeek,
   onSubmit,
   composerRef,
+  annotationBar,
+  hasAnnotation,
 }: {
   comments: ClientComment[];
   canComment: boolean;
@@ -44,6 +46,10 @@ export default function ClientComments({
   onSeek: (mediaSeconds: number) => void;
   onSubmit: (guestName: string, content: string) => Promise<void>;
   composerRef: RefObject<HTMLTextAreaElement | null>;
+  /** Outils de dessin — posés SOUS le champ, là où la review interne met les siens. */
+  annotationBar?: ReactNode;
+  /** Un dessin en cours suffit à envoyer : le texte devient facultatif. */
+  hasAnnotation: boolean;
 }) {
   const t = useT();
   const [guestName, setGuestName] = useState(() => localStorage.getItem('client-guest-name') ?? '');
@@ -52,7 +58,8 @@ export default function ClientComments({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestName.trim() || !content.trim() || busy) return;
+    // Un dessin vaut un retour : on n'exige le texte que s'il n'y a rien d'autre à envoyer.
+    if (!guestName.trim() || (!content.trim() && !hasAnnotation) || busy) return;
     setBusy(true);
     try {
       await onSubmit(guestName.trim(), content.trim());
@@ -127,9 +134,14 @@ export default function ClientComments({
             aria-label={timed ? t('client.commentAtFrame') : t('client.yourComment')}
             rows={3}
             maxLength={10000}
-            required
           />
-          <Button type="submit" size="sm" disabled={busy} className="w-full">
+          {annotationBar}
+          <Button
+            type="submit"
+            size="sm"
+            disabled={busy || (!content.trim() && !hasAnnotation)}
+            className="w-full"
+          >
             <Send size={13} className="mr-1" /> {t('common.send')}
           </Button>
         </form>

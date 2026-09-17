@@ -6,6 +6,7 @@ import {
   BASE_LOCALE,
   formatTag,
   isLocale,
+  isSharePath,
   localeInfo,
   negotiateLocale,
   pluralTag,
@@ -192,15 +193,22 @@ export function setLocale(code: Locale, options: { persist?: boolean } = {}): Pr
   return loadCatalog(code).then(emit);
 }
 
+/** Ce que dit le navigateur, quand on a le droit de l'écouter. */
+const negotiateBrowserLocale = (): Locale =>
+  negotiateLocale(typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language]));
+
 /**
- * Détermine et charge la langue de démarrage : choix enregistré sur l'appareil, sinon
- * négociation avec les préférences du navigateur. Appelé avant le premier rendu pour
- * éviter un passage visible par l'anglais.
+ * Détermine et charge la langue de démarrage : choix enregistré sur l'appareil, sinon —
+ * **sauf sur un lien de partage, qui démarre en anglais** (cf. `isSharePath`) — négociation
+ * avec les préférences du navigateur. Appelé avant le premier rendu pour éviter un passage
+ * visible par l'anglais.
+ *
+ * `pathname` est un paramètre plutôt qu'une lecture directe de `location` : c'est ce qui
+ * rend la règle testable sans simuler la navigation.
  */
-export function initLocale(): Promise<void> {
-  const preferred =
-    readStored() ??
-    negotiateLocale(typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language]));
+export function initLocale(pathname?: string): Promise<void> {
+  const path = pathname ?? (typeof location === 'undefined' ? '' : location.pathname);
+  const preferred = readStored() ?? (isSharePath(path) ? BASE_LOCALE : negotiateBrowserLocale());
   current = preferred;
   applyDocumentLocale(preferred);
   return loadCatalog(preferred).then(emit);

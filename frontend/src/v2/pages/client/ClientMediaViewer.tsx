@@ -146,12 +146,6 @@ export default function ClientMediaViewer({
           <ArrowLeft size={15} /> {t('versions.allMedia')}
         </button>
 
-        {canAnnotate && (
-          <div className="mb-2">
-            <ClientAnnotationBar ann={ann} />
-          </div>
-        )}
-
         <div className="relative flex min-h-0 flex-1 flex-col">
           {media.kind === 'MODEL_3D' ? (
             <ClientModel3DView
@@ -223,6 +217,8 @@ export default function ClientMediaViewer({
         onSeek={seekMedia}
         onSubmit={submitComment}
         composerRef={composerRef}
+        annotationBar={canAnnotate ? <ClientAnnotationBar ann={ann} /> : undefined}
+        hasAnnotation={ann.annot.length > 0}
       />
     </div>
   );

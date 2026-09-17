@@ -111,6 +111,10 @@ export function i18nPreloadSnippet({ map, fullLocales, codes, base, storageKey }
     `for(var k=0;k<C.length;k++)if(C[k].toLowerCase().split('-')[0]===p)return C[k];}` +
     `return B;}` +
     `var code=null;try{var s=localStorage.getItem(K);if(C.indexOf(s)>=0)code=s;}catch(e){}` +
+    // Lien de partage : anglais d'emblée, sans négocier — même règle que `isSharePath`
+    // dans le socle i18n. Les deux doivent s'accorder, sinon le document précharge une
+    // langue et le bundle en télécharge une autre (parité tenue par `preload.test.ts`).
+    `if(!code&&location.pathname.indexOf('/client/')>=0)code=B;` +
     `if(!code){var L=navigator.languages;code=pick(L?L:[navigator.language]);}` +
     `function pre(href){if(!href)return;var l=document.createElement('link');` +
     `l.rel='modulepreload';l.crossOrigin='anonymous';l.href=href;document.head.appendChild(l);}` +

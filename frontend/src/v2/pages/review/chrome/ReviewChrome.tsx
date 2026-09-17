@@ -12,7 +12,6 @@ import { useReviewHeaderSlots } from '../header/reviewHeaderSlots';
 import {
   canSwitchMode,
   isLockedByPublication,
-  modesFor,
   switcherModesFor,
   type ModeId,
   type ReviewMode,
@@ -121,7 +120,6 @@ export default function ReviewChrome({
   // qu'un bouton qui ne fait rien.
   const tools = (toolsProp ?? toolsFor(state.mode, kind)).filter((t) => !hiddenTools?.includes(t.id));
   const panels = panelsFor(kind);
-  const activeMode = modesFor(kind).find((m) => m.value === state.mode) ?? modes[0];
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
   const switchable = canSwitchMode(role, modes.length);
 
@@ -202,20 +200,18 @@ export default function ReviewChrome({
         {commentsColumn}
       </div>
 
-      <footer className="flex flex-shrink-0 items-center gap-2.5 border-t border-border bg-card/60 px-2.5 py-[0.3125rem] text-[0.625rem] text-muted-foreground">
-        <span>{t(activeMode.hintKey)}</span>
-        <span className="ml-auto flex items-center gap-2">
-          <span>
-            {state.labels ? t('review.labelsVisible') : t('review.iconRail')} · {t('review.dock')}{' '}
-            {state.panel ? t('review.dockOpen') : t('review.dockCollapsed')}
-          </span>
-          {dirty !== undefined && (
-            <Badge variant={dirty ? 'warning' : 'success'}>
-              {dirty ? t('common.notSaved') : t('common.saved')}
-            </Badge>
-          )}
-        </span>
-      </footer>
+      {/* Le pied de page ne dit plus que ce qui a une CONSÉQUENCE : reste-t-il quelque chose
+          à enregistrer. Il narrait auparavant le mode actif et l'état du rail et du dock —
+          des phrases que le lecteur a sous les yeux, et qui occupaient une bande en
+          permanence pour ne rien lui apprendre. Le mode reste expliqué dans l'infobulle de
+          son bouton, où l'on va le chercher quand on se pose la question. */}
+      {dirty !== undefined && (
+        <footer className="flex flex-shrink-0 items-center justify-end border-t border-border bg-card/60 px-2.5 py-[0.3125rem]">
+          <Badge variant={dirty ? 'warning' : 'success'}>
+            {dirty ? t('common.notSaved') : t('common.saved')}
+          </Badge>
+        </footer>
+      )}
     </div>
   );
 }

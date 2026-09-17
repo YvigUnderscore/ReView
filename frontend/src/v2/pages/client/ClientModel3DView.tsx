@@ -7,7 +7,6 @@ import { useClientModel3D } from './useClientModel3D';
 import { useClientSceneOverride } from './useClientSceneOverride';
 import { useHomeViewShortcut } from './useHomeViewShortcut';
 import { clientFrameAspect, resolveClientGlb } from './clientViewerModel';
-import ClientSpatialHint from './ClientSpatialHint';
 import ClientUnavailable from './ClientUnavailable';
 import type { ClientMediaSource } from './clientTypes';
 
@@ -52,7 +51,6 @@ export default function ClientModel3DView({
       />
       {failed && <ClientUnavailable />}
       {watermark}
-      <ClientSpatialHint />
     </div>
   );
 }

@@ -83,6 +83,26 @@ export function formatTag(code: Locale): string {
 }
 
 /**
+ * Ce chemin est-il celui d'un lien de partage — la page qu'ouvre quelqu'un d'extérieur au
+ * studio ?
+ *
+ * Le portail client démarre en **anglais**, quelle que soit la langue du navigateur, au lieu
+ * de négocier comme le reste de l'application. L'anglais est la langue de travail des
+ * pipelines : c'est dans cette langue que le studio a nommé ses plans et, le plus souvent,
+ * rédigé les notes que le client va lire. Une interface traduite au-dessus de notes
+ * anglaises fait lire deux langues à la fois. Le sélecteur reste offert, et le choix du
+ * lecteur l'emporte ensuite — il est retenu sur son appareil.
+ *
+ * Le test cherche un **segment**, pas un préfixe : l'application peut être servie sous un
+ * chemin de base (`/review/client/…`). Il est volontairement trivial — le script de
+ * préchargement produit au build doit le rejouer à l'identique en JavaScript nu, et une
+ * règle qu'on ne peut pas recopier sans se tromper est une règle qui divergera.
+ */
+export function isSharePath(pathname: string): boolean {
+  return pathname.includes('/client/');
+}
+
+/**
  * Négocie la meilleure langue disponible à partir des préférences du navigateur.
  * `fr-CA` retient `fr`, `zh-CN` retient `zh-Hans` ; sinon repli sur la langue de base.
  */

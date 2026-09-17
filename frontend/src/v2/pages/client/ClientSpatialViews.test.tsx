@@ -27,7 +27,9 @@ describe('ClientModel3DView', () => {
     );
     expect(container.querySelector('[data-viewer-zone]')).not.toBeNull();
     expect(container.querySelector('.mix-blend-difference')).not.toBeNull();
-    expect(container.querySelector('kbd')?.textContent).toBe('H');
+    // Plus de bande de mode d'emploi sous le viewer : elle occupait l'écran en permanence
+    // pour narrer ce que le lecteur avait déjà sous les yeux.
+    expect(container.querySelector('kbd')).toBeNull();
   });
 
   it('signale au client un modèle que le partage ne sait pas servir', () => {

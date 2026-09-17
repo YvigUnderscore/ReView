@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Lock } from 'lucide-react';
 import { clientApi, setShareAuth, ClientApiError } from './client/clientApi';
 import ClientBrowse from './client/ClientBrowse';
+import LanguagePicker from '../components/LanguagePicker';
 import ClientMediaViewer from './client/ClientMediaViewer';
 import { parseClientMediaId, parseClientView, viewParams, type ClientView } from './client/clientBrowseModel';
 import { Button } from '../components/ui/button';
@@ -97,6 +98,9 @@ export default function ClientSharePage() {
           <p className="truncate text-sm font-medium">{p.project?.name}</p>
           <p className="truncate text-xs text-muted-foreground">{p.label ?? t('client.review')}</p>
         </div>
+        {/* Le portail démarre en anglais (cf. `isSharePath`) — le sélecteur est ce qui rend
+            ce choix acceptable : il est offert d'emblée, et la langue retenue est gardée. */}
+        <LanguagePicker className="ml-auto w-auto py-1 text-xs" />
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col p-5">

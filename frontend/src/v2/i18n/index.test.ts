@@ -12,6 +12,7 @@ import {
   coverage,
   formatTag,
   getLocale,
+  isSharePath,
   hasMessage,
   isLocale,
   loadCatalog,
@@ -133,6 +134,25 @@ describe('négociation depuis le navigateur', () => {
   it('retombe sur l’anglais sans correspondance', () => {
     expect(negotiateLocale(['kl-GL'])).toBe('en');
     expect(negotiateLocale([])).toBe('en');
+  });
+});
+
+/**
+ * Le portail client démarre en anglais quel que soit le navigateur du lecteur : c'est la
+ * langue dans laquelle le studio a nommé ses plans et rédigé les notes que le client va
+ * lire. Une interface traduite au-dessus de notes anglaises fait lire deux langues à la
+ * fois. Le sélecteur reste offert, et son choix l'emporte ensuite.
+ */
+describe('lien de partage — l’anglais par défaut', () => {
+  it('reconnaît un lien de partage, y compris sous un chemin de base', () => {
+    expect(isSharePath('/client/abc123')).toBe(true);
+    expect(isSharePath('/review/client/abc123')).toBe(true);
+  });
+
+  it('ne confond pas une page de l’application avec un lien de partage', () => {
+    for (const path of ['/projects/7', '/', '/clients', '/reviews/12']) {
+      expect(isSharePath(path)).toBe(false);
+    }
   });
 });
 

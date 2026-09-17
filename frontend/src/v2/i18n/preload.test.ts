@@ -9,7 +9,7 @@ import {
   injectPreloadScript,
   localesCoveringBaseCatalog,
 } from '../../../vite.config.js';
-import { BASE_LOCALE, LOCALE_CODES, LOCALE_STORAGE_KEY, negotiateLocale } from './index';
+import { BASE_LOCALE, LOCALE_CODES, LOCALE_STORAGE_KEY, isSharePath, negotiateLocale } from './index';
 
 /**
  * Préchargement du catalogue de langue (F13).
@@ -31,7 +31,14 @@ type FakeLink = { rel?: string; href?: string; crossOrigin?: string };
  */
 function run(
   snippet: string,
-  env: { stored?: string | null; storedThrows?: boolean; languages?: string[] | null; language?: string },
+  env: {
+    stored?: string | null;
+    storedThrows?: boolean;
+    languages?: string[] | null;
+    language?: string;
+    /** Chemin de la page : un lien de partage démarre en anglais sans négocier. */
+    pathname?: string;
+  },
 ): FakeLink[] {
   const links: FakeLink[] = [];
   const document = {
@@ -49,7 +56,13 @@ function run(
       return key === LOCALE_STORAGE_KEY ? (env.stored ?? null) : null;
     },
   };
-  new Function('document', 'navigator', 'localStorage', snippet)(document, navigator, localStorage);
+  const location = { pathname: env.pathname ?? '/' };
+  new Function('document', 'navigator', 'localStorage', 'location', snippet)(
+    document,
+    navigator,
+    localStorage,
+    location,
+  );
   return links;
 }
 
@@ -244,6 +257,45 @@ describe('chaîne de repli', () => {
     for (const code of LOCALE_CODES) {
       const expected = code === BASE_LOCALE || full.includes(code) ? 1 : 2;
       expect(run(snippet, { stored: code }), code).toHaveLength(expected);
+    }
+  });
+});
+
+/**
+ * Le portail client démarre en anglais sans négocier (`isSharePath`). Le script de
+ * préchargement doit appliquer la MÊME règle : s'il préchargeait le français d'après le
+ * navigateur alors que le bundle réclame l'anglais, le lecteur paierait deux catalogues et
+ * attendrait le second — exactement ce que le préchargement existe pour éviter.
+ */
+describe('lien de partage — anglais d’emblée, des deux côtés', () => {
+  // `fr-CA` plutôt que la variante métropolitaine : le contrôle `no-restricted-syntax`
+  // bannit ce littéral-là pour attraper les dates figées, et la négociation est la même.
+  const FR = ['fr-CA', 'fr'];
+
+  it('précharge la langue de base sur un lien de partage, quel que soit le navigateur', () => {
+    expect(run(COMPLETE, { pathname: '/client/abc123', languages: FR })).toEqual([
+      { rel: 'modulepreload', crossOrigin: 'anonymous', href: MAP[BASE_LOCALE] },
+    ]);
+  });
+
+  it('négocie normalement partout ailleurs dans l’application', () => {
+    expect(run(COMPLETE, { pathname: '/projects/7', languages: FR })).toEqual([
+      { rel: 'modulepreload', crossOrigin: 'anonymous', href: MAP.fr },
+    ]);
+  });
+
+  // Le choix explicite du lecteur l'emporte : c'est le dernier posé en connaissance de cause.
+  it('respecte un choix enregistré, même sur un lien de partage', () => {
+    expect(run(COMPLETE, { pathname: '/client/abc123', stored: 'fr', languages: ['en'] })).toEqual([
+      { rel: 'modulepreload', crossOrigin: 'anonymous', href: MAP.fr },
+    ]);
+  });
+
+  // La parité est le point : la règle du build et celle du socle classent pareil.
+  it('classe les mêmes chemins que le socle i18n', () => {
+    for (const pathname of ['/client/abc', '/review/client/abc', '/projects/7', '/', '/clients']) {
+      const preloadedBase = run(COMPLETE, { pathname, languages: FR })[0]?.href === MAP[BASE_LOCALE];
+      expect(preloadedBase).toBe(isSharePath(pathname));
     }
   });
 });

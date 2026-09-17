@@ -8,7 +8,6 @@ import { frameCameraToMesh } from '../review/splat/scene/frameCamera';
 import { useClientSplatReplay } from './useClientSplatReplay';
 import { useHomeViewShortcut } from './useHomeViewShortcut';
 import { clientFrameAspect, resolveClientSplat } from './clientViewerModel';
-import ClientSpatialHint from './ClientSpatialHint';
 import ClientUnavailable from './ClientUnavailable';
 import type { ClientMediaSource } from './clientTypes';
 
@@ -59,7 +58,6 @@ export default function ClientSplatView({
       />
       {failed && <ClientUnavailable />}
       {watermark}
-      <ClientSpatialHint />
     </div>
   );
 }
