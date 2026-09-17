@@ -44,18 +44,48 @@ const REDACTED_FIELDS = [
   '*.access_token',
 ];
 
+/**
+ * Embellisseur de sortie — **seulement s'il est réellement là**.
+ *
+ * `pino-pretty` est une devDependency, et l'image d'exécution est construite avec
+ * `npm ci --omit=dev` : elle ne l'embarque pas. Or la pile docker de développement pose
+ * `NODE_ENV=development` sur cette même image (c'est ce qui désactive les garde-fous de
+ * production : secrets forts, CORS strict). Les deux décisions sont bonnes séparément, et
+ * leur rencontre faisait lever à pino « unable to determine transport target for
+ * "pino-pretty" » **au chargement du module** : le conteneur ne démarrait pas du tout, et le
+ * message ne parlait ni de docker ni de NODE_ENV.
+ *
+ * Un embellisseur de logs ne peut pas être la raison pour laquelle un processus refuse de
+ * démarrer. On ne le demande donc que si le paquet est installé, et on retombe sinon sur le
+ * JSON — qui est de toute façon ce qu'on veut dès qu'on agrège.
+ */
+export function prettyTransport(
+  nodeEnv: string,
+  isInstalled: (name: string) => boolean,
+): LoggerOptions['transport'] | undefined {
+  if (nodeEnv !== 'development' || !isInstalled('pino-pretty')) return undefined;
+  return {
+    target: 'pino-pretty',
+    options: { colorize: true, translateTime: 'SYS:HH:MM:ss', ignore: 'pid,hostname' },
+  };
+}
+
+/** Le paquet est-il résolvable depuis ce module ? `require.resolve` ne l'exécute pas. */
+const isInstalled = (name: string): boolean => {
+  try {
+    require.resolve(name);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const transport = prettyTransport(env.NODE_ENV, isInstalled);
+
 const options: LoggerOptions = {
   level,
   redact: { paths: REDACTED_FIELDS, censor: '[Redacted]' },
-  // pino-pretty n'est chargé qu'en développement (devDependency) : la prod reste en JSON pur.
-  ...(env.NODE_ENV === 'development'
-    ? {
-        transport: {
-          target: 'pino-pretty',
-          options: { colorize: true, translateTime: 'SYS:HH:MM:ss', ignore: 'pid,hostname' },
-        },
-      }
-    : {}),
+  ...(transport ? { transport } : {}),
 };
 
 export const logger = pino(options);
