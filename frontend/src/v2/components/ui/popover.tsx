@@ -26,6 +26,12 @@ const PopoverContent = forwardRef<
       sideOffset={sideOffset}
       className={cn(
         'z-50 w-80 rounded-lg border border-border bg-card p-1 text-card-foreground shadow-xl outline-none',
+        // Un menu ne peut pas déborder hors de l'écran sans recours : il était en
+        // `max-height: none; overflow: visible`, donc tout ce qui dépassait le bas de la
+        // fenêtre était inatteignable — ni molette, ni clavier. Radix mesure la place
+        // réellement disponible sous (ou sur) le déclencheur et la publie dans cette
+        // variable ; on s'y borne et on défile à l'intérieur.
+        'max-h-[var(--radix-popover-content-available-height)] overflow-y-auto',
         'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
         className,
       )}

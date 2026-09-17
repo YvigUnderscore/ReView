@@ -87,8 +87,13 @@ export default function ClientSharePage() {
     : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center gap-3 border-b border-border px-5 py-3">
+    // `h-full` et non `min-h-screen` : `#root` est en `height: 100%; overflow: hidden`
+    // (index.css) — l'application interne gère son propre défilement. Une page qui grandit
+    // sous ce verrou dépasse sans que rien ne puisse défiler : tout ce qui passait sous la
+    // ligne de flottaison était simplement inatteignable. La coquille tient donc la hauteur
+    // de la fenêtre, en-tête et pied fixes, et c'est le CENTRE qui défile.
+    <div className="flex h-full flex-col bg-background text-foreground">
+      <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
         {p.studio.logoUrl ? (
           <img src={p.studio.logoUrl} alt={p.studio.name} className="h-8 w-auto" />
         ) : (
@@ -103,7 +108,7 @@ export default function ClientSharePage() {
         <LanguagePicker className="ml-auto w-auto py-1 text-xs" />
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col p-5">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-5">
         {media.length === 0 ? (
           <p className="m-auto text-sm text-muted-foreground">{t('client.noPublished')}</p>
         ) : opened ? (
@@ -133,7 +138,7 @@ export default function ClientSharePage() {
       </main>
 
       {/* AGPL §13 : les invités interagissent à distance, l'offre de source leur est due. */}
-      <footer className="border-t border-border px-5 py-2 text-center">
+      <footer className="shrink-0 border-t border-border px-5 py-2 text-center">
         <SourceNotice />
       </footer>
     </div>
@@ -149,7 +154,7 @@ function ClientFrame({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
+    <div className="flex h-full flex-col items-center justify-center gap-4 overflow-y-auto bg-background p-6 text-foreground">
       <div className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-6">
         <div className="flex justify-center">
           {studio?.logoUrl ? (
