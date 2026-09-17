@@ -51,6 +51,7 @@
   "notification.clientComment": "{name} ha dejado un comentario desde un enlace compartido",
   "notification.reviewAssigned": "Se te ha asignado la review de la version {version}",
   "notification.reviewNoteUpdated": "La instrucción cambió en una review que te confiaron: {version}",
+  "notification.clientDecision": "{name} respondió «{status}» en la version {version} desde un enlace compartido",
   "chat.system.joined": { "one": "{names} se ha unido a la conversación", "other": "{names} se han unido a la conversación" },
   "chat.system.left": "{name} ha salido de la conversación",
   "chat.system.removed": "Se ha retirado a {name}",

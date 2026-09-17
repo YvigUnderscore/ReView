@@ -280,3 +280,121 @@ export async function history(versionId: number) {
     include: { status: true, author: { select: { id: true, name: true } } },
   });
 }
+
+/** Les deux réponses qu'on demande à un client : « c'est bon » et « à revoir ». */
+export interface GuestDecisionStatuses {
+  approval: { id: number; name: string; color: string } | null;
+  retake: { id: number; name: string; color: string } | null;
+}
+
+/**
+ * Le vocabulaire offert à un invité, dérivé des drapeaux du studio.
+ *
+ * Un client n'a pas à arbitrer entre « Pending », « CBB » et « Retake » : ce sont des états
+ * de pipeline, pas des réponses. On ne lui propose que les deux statuts que le studio a
+ * lui-même marqués comme validation et comme retake — son vocabulaire, donc, sans lui
+ * imposer le nôtre, et sans lui exposer le reste de sa liste.
+ */
+export async function guestStatuses(projectId: number): Promise<GuestDecisionStatuses> {
+  const all = await listStatusesForProject(projectId);
+  const pick = (flag: 'isApproval' | 'isRetake') => {
+    const found = all.find((s) => s[flag]);
+    return found ? { id: found.id, name: found.name, color: found.color } : null;
+  };
+  return { approval: pick('isApproval'), retake: pick('isRetake') };
+}
+
+/**
+ * Avis d'un invité sur une version — **un avis, pas un verdict**.
+ *
+ * La différence avec `decide` tient en une ligne absente : `Version.reviewStatusId` n'est
+ * pas touché. L'avis s'inscrit dans l'historique, attribué au client et au lien par lequel
+ * il est arrivé, et le superviseur tranche. Quelqu'un d'extérieur au studio ne fait pas
+ * bouger l'état d'un plan pour toute l'équipe — surtout pas en cliquant à côté.
+ *
+ * Il n'y a pas non plus de remontée ShotGrid : le registre de production reçoit les
+ * décisions du studio, pas les avis de ses clients.
+ */
+export async function decideAsGuest(
+  guest: { name: string; shareLinkId: number },
+  projectId: number,
+  versionId: number,
+  statusId: number,
+  comment?: string,
+) {
+  const version = await prisma.version.findFirst({
+    where: { id: versionId, deletedAt: null },
+    select: { id: true, name: true, authorId: true },
+  });
+  if (!version) throw notFound('Version not found');
+
+  // Le statut doit être l'un des DEUX que l'on propose : accepter un identifiant quelconque
+  // laisserait un invité poser « Pending » ou n'importe quel statut interne.
+  const offered = await guestStatuses(projectId);
+  const status = [offered.approval, offered.retake].find((s) => s?.id === statusId);
+  if (!status) throw badRequest('This status is not offered to share links');
+
+  const decision = await prisma.reviewDecision.create({
+    data: {
+      versionId,
+      statusId,
+      comment: comment ?? null,
+      guestName: guest.name,
+      shareLinkId: guest.shareLinkId,
+    },
+    include: { status: true },
+  });
+
+  logAudit({
+    action: 'SHARE_DECISION',
+    entityType: 'Version',
+    entityId: versionId,
+    metadata: { shareLinkId: guest.shareLinkId, status: status.name, guestName: guest.name },
+  });
+
+  const firstMedia = await prisma.mediaObject.findFirst({
+    where: { versionId },
+    orderBy: { id: 'asc' },
+    select: { id: true },
+  });
+  // L'auteur de la livraison et les suiveurs apprennent l'avis comme ils apprendraient une
+  // décision : c'est le même événement pour eux, seule l'autorité derrière change.
+  if (version.authorId) {
+    await notify({
+      userId: version.authorId,
+      type: 'review_decision',
+      messageKey: 'notification.clientDecision',
+      params: { name: guest.name, status: status.name, version: version.name },
+      projectId,
+      referenceId: firstMedia?.id ?? null,
+    });
+  }
+  await notifyWatchers({
+    versionId,
+    projectId,
+    messageKey: 'notification.clientDecision',
+    params: { name: guest.name, status: status.name, version: version.name },
+    referenceId: firstMedia?.id ?? null,
+    exclude: version.authorId ? [version.authorId] : [],
+  });
+  emitToProject(projectId, 'version:update', { projectId, id: version.id });
+  publishApiEvent('review.decision', {
+    projectId,
+    entityType: 'version',
+    entityId: versionId,
+    actorId: null,
+    payload: {
+      versionId,
+      versionName: version.name,
+      projectId,
+      status: status.name,
+      guestName: guest.name,
+      shareLinkId: guest.shareLinkId,
+      comment: comment ?? null,
+      // Le consommateur d'un webhook doit pouvoir distinguer un avis d'une décision : sans
+      // ce drapeau, une intégration prendrait l'avis d'un client pour un état de pipeline.
+      advisory: true,
+    },
+  });
+  return decision;
+}

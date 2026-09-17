@@ -114,7 +114,10 @@ export default function ClientSharePage() {
             key={opened.id}
             token={token}
             media={opened}
-            canComment={p.permission === 'COMMENT'}
+            // `DECIDE` inclut le droit de commenter : se prononcer sans pouvoir expliquer
+            // pourquoi n'aurait pas de sens.
+            canComment={p.permission === 'COMMENT' || p.permission === 'DECIDE'}
+            decisionStatuses={p.decisionStatuses}
             watermarkText={watermarkText}
             watermarkOpacity={p.watermark?.opacity ?? 0.08}
             onBack={() => setView(view)}

@@ -154,3 +154,84 @@ export function mediaOfView(
 
 /** Nombre de médias de l'accueil : assez pour donner le ton, pas assez pour noyer. */
 export const HOME_MEDIA_COUNT = 12;
+
+/** Ordres de lecture proposés au client. */
+export type ClientSort = 'recent' | 'name' | 'production';
+
+export const CLIENT_SORTS: readonly ClientSort[] = ['recent', 'name', 'production'];
+
+export const isClientSort = (value: string | null): value is ClientSort =>
+  value !== null && (CLIENT_SORTS as readonly string[]).includes(value);
+
+/**
+ * Filtre par texte libre : nom de fichier, nom de version, nom de tâche, et — le plus
+ * utile — **code et nom du plan ou de l'asset** qui portent le média. Quelqu'un qui cherche
+ * tape « SH0240 », qui n'est nulle part dans le nom du fichier.
+ */
+export function filterMedia(
+  media: readonly ClientMedia[],
+  browse: ShareBrowse | undefined,
+  query: string,
+): ClientMedia[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [...media];
+  const label = (m: ClientMedia): string => {
+    const shot = browse?.shots.find((s) => s.id === m.placement.shotId);
+    const asset = browse?.assets.find((a) => a.id === m.placement.assetId);
+    const sequence = browse?.sequences.find((s) => s.id === m.placement.sequenceId);
+    return [
+      m.originalName,
+      m.version.name,
+      m.version.taskName,
+      shot?.code,
+      shot?.name,
+      asset?.name,
+      sequence?.code,
+      sequence?.name,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+  };
+  return media.filter((m) => label(m).includes(needle));
+}
+
+/**
+ * Rang de production d'un média : séquence, puis plan, puis date. C'est l'ordre dans lequel
+ * un film se regarde — et le seul dans lequel « le raccord entre les deux plans » veut dire
+ * quelque chose. Ce que l'arborescence ne situe pas (un asset, un média orphelin) passe
+ * après, plutôt que de s'intercaler au hasard.
+ */
+function productionRank(m: ClientMedia, browse: ShareBrowse | undefined): [number, number] {
+  const sequence = browse?.sequences.findIndex((s) => s.id === m.placement.sequenceId) ?? -1;
+  const shot = browse?.shots.findIndex((s) => s.id === m.placement.shotId) ?? -1;
+  return [sequence < 0 ? Number.MAX_SAFE_INTEGER : sequence, shot < 0 ? Number.MAX_SAFE_INTEGER : shot];
+}
+
+/** Tri stable : à rang égal, le plus récent d'abord — l'ordre dans lequel le lien sert. */
+export function sortMedia(
+  media: readonly ClientMedia[],
+  browse: ShareBrowse | undefined,
+  sort: ClientSort,
+): ClientMedia[] {
+  const out = [...media];
+  if (sort === 'name') return out.sort((a, b) => a.originalName.localeCompare(b.originalName));
+  if (sort === 'production')
+    return out.sort((a, b) => {
+      const [as, ash] = productionRank(a, browse);
+      const [bs, bsh] = productionRank(b, browse);
+      return as - bs || ash - bsh || a.originalName.localeCompare(b.originalName);
+    });
+  return out; // `recent` : le serveur sert déjà du plus récent au plus ancien
+}
+
+/**
+ * Ce qui attend une réponse du client — la file de l'accueil.
+ *
+ * Un lien qui n'a pas le droit de se prononcer n'a pas de file : lui montrer « en attente de
+ * votre réponse » serait lui demander ce qu'on ne lui permet pas de donner. On lui sert
+ * alors les dernières livraisons, comme avant.
+ */
+export function pendingMedia(media: readonly ClientMedia[], canDecide: boolean): ClientMedia[] {
+  return canDecide ? media.filter((m) => !m.decided) : [];
+}

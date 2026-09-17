@@ -30,6 +30,9 @@ export default function ClientComments({
   composerRef,
   annotationBar,
   hasAnnotation,
+  guestName,
+  onGuestName,
+  decision,
 }: {
   comments: ClientComment[];
   canComment: boolean;
@@ -50,9 +53,13 @@ export default function ClientComments({
   annotationBar?: ReactNode;
   /** Un dessin en cours suffit à envoyer : le texte devient facultatif. */
   hasAnnotation: boolean;
+  /** Le nom sous lequel l'invité s'exprime — partagé avec sa réponse, pas dupliqué ici. */
+  guestName: string;
+  onGuestName: (name: string) => void;
+  /** Bloc « votre réponse », posé au-dessus du fil quand le lien autorise à se prononcer. */
+  decision?: ReactNode;
 }) {
   const t = useT();
-  const [guestName, setGuestName] = useState(() => localStorage.getItem('client-guest-name') ?? '');
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -71,6 +78,9 @@ export default function ClientComments({
 
   return (
     <aside className="flex w-full flex-col rounded-lg border border-border bg-card lg:w-80">
+      {/* La réponse passe AVANT le fil : c'est ce qu'on attend du client, la note vient
+          l'étayer. */}
+      {decision}
       <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">{t('admin.tab.comments')}</h2>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {comments.length === 0 && <p className="text-sm text-muted-foreground">{t('comments.empty')}</p>}
@@ -120,7 +130,7 @@ export default function ClientComments({
         <form onSubmit={submit} className="space-y-2 border-t border-border p-3">
           <Input
             value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
+            onChange={(e) => onGuestName(e.target.value)}
             placeholder={t('setup.adminName')}
             aria-label={t('setup.adminName')}
             maxLength={80}

@@ -16,6 +16,7 @@ import { imageTypeFromKey } from '../lib/uploadContentType';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { buildShareBrowse, type ShareBrowse } from './shareBrowse';
 import { createGuest } from './CommentService';
+import { decideAsGuest, guestStatuses } from './ReviewDecisionService';
 import { logAudit } from './AuditService';
 import { AppError, forbidden, notFound, unauthorized } from '../lib/errors';
 import { SETTING_KEYS } from '../lib/settings';
@@ -204,6 +205,8 @@ export interface ShareMediaTile {
   thumbnailUrl: string | null;
   createdAt: string;
   version: { id: number; name: string; taskName: string | null };
+  /** Ce lien s'est déjà prononcé sur cette version — la file d'accueil l'écarte. */
+  decided: boolean;
   /** Où le média est rangé. Des clés, jamais des libellés : le rendu lit les nœuds. */
   placement: {
     episodeId: number | null;
@@ -211,6 +214,21 @@ export interface ShareMediaTile {
     shotId: number | null;
     assetId: number | null;
   };
+}
+
+/**
+ * Sur quelles versions CE lien s'est-il déjà prononcé ? C'est ce qui alimente la file
+ * « en attente de votre retour » de l'accueil : un client qui revient doit retrouver où il
+ * en était, et non recommencer à lire une grille du plus récent au plus ancien.
+ */
+async function decidedVersionIds(shareLinkId: number, versionIds: number[]): Promise<Set<number>> {
+  if (versionIds.length === 0) return new Set();
+  const rows = await prisma.reviewDecision.findMany({
+    where: { shareLinkId, versionId: { in: versionIds } },
+    select: { versionId: true },
+    distinct: ['versionId'],
+  });
+  return new Set(rows.map((r) => r.versionId));
 }
 
 /** Rattachement d'une ligne, en identifiants seulement. */
@@ -237,6 +255,7 @@ function placementOf(row: ShareMediaRow): ShareMediaTile['placement'] {
  */
 export async function listShareMedia(
   share: ShareScopeRef,
+  shareLinkId: number,
 ): Promise<{ media: ShareMediaTile[]; browse: ShareBrowse; total: number; hasMore: boolean }> {
   const where = shareMediaWhere(share);
   const [rows, total] = await Promise.all([
@@ -250,6 +269,7 @@ export async function listShareMedia(
     }),
     prisma.mediaObject.count({ where }),
   ]);
+  const decided = await decidedVersionIds(shareLinkId, [...new Set(rows.map((m) => m.version.id))]);
   const media = await Promise.all(
     rows.map(async (m) => ({
       id: m.id,
@@ -258,6 +278,7 @@ export async function listShareMedia(
       thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
       createdAt: m.createdAt.toISOString(),
       version: { id: m.version.id, name: m.version.name, taskName: m.version.task?.name ?? null },
+      decided: decided.has(m.version.id),
       placement: placementOf(m),
     })),
   );
@@ -409,6 +430,12 @@ export async function listShareComments(mediaObjectId: number) {
   });
 }
 
+/** Les deux réponses que ce lien peut poser, ou `null` s'il n'en a pas le droit. */
+export async function shareDecisionStatuses(share: ShareRecord) {
+  if (share.permission !== SharePermission.DECIDE) return null;
+  return guestStatuses(share.projectId);
+}
+
 /** Ce qu'un invité envoie avec son retour. Les formes libres sont revalidées à l'écriture. */
 export interface ShareCommentInput {
   guestName: string;
@@ -427,6 +454,30 @@ export interface ShareCommentInput {
  * `createGuest` déclenche ensuite la même chaîne qu'un retour interne (suiveurs, webhooks,
  * journal v1, note ShotGrid) : le retour d'un client n'est pas un citoyen de seconde zone.
  */
+/**
+ * Avis d'un invité sur la version que porte un média — **un avis, pas un verdict**.
+ *
+ * Trois gardes, dans cet ordre : la **permission** du lien (seul `DECIDE` ouvre ce droit ;
+ * commenter et se prononcer ne sont pas le même mandat), la **portée** — `findShareMedia`
+ * refuse un identifiant deviné — puis le **statut**, que `decideAsGuest` restreint aux deux
+ * réponses offertes. Le statut courant de la version n'est jamais touché.
+ */
+export async function createShareDecision(
+  share: ShareRecord,
+  mediaObjectId: number,
+  body: { guestName: string; statusId: number; comment?: string },
+) {
+  if (share.permission !== SharePermission.DECIDE) throw forbidden('This link cannot record a decision');
+  const media = await findShareMedia(share, mediaObjectId);
+  return decideAsGuest(
+    { name: body.guestName, shareLinkId: share.id },
+    share.projectId,
+    media.versionId,
+    body.statusId,
+    body.comment,
+  );
+}
+
 export async function createShareComment(
   share: ShareRecord,
   mediaObjectId: number,

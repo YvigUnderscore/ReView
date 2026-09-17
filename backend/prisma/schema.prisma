@@ -87,6 +87,11 @@ enum MediaStatus {
 enum SharePermission {
   VIEW
   COMMENT
+  // Commenter ET se prononcer : « c'est bon pour moi » / « à revoir ». Un troisième niveau
+  // plutôt qu'un droit dérivé du commentaire, parce que donner un avis engageant n'est pas
+  // laisser une note : on envoie un lien de relecture à trois personnes et le mandat de
+  // trancher à une seule.
+  DECIDE
 }
 
 // Ce qu'un lien de partage ouvre réellement. Un lien ne connaissait que son projet : faire
@@ -1079,10 +1084,24 @@ model ReviewDecision {
   authorId  Int?
   createdAt DateTime     @default(now())
 
+  // Avis posé depuis un lien de partage, par quelqu'un qui n'a pas de compte. `authorId`
+  // reste nul : c'est `guestName` qui dit qui a parlé, et `shareLinkId` par quel lien —
+  // sans quoi l'historique afficherait « système » là où un client s'est prononcé.
+  //
+  // Un avis de client ne pilote PAS `Version.reviewStatusId` : il s'inscrit dans
+  // l'historique et s'affiche, le studio tranche. Personne d'extérieur ne fait bouger le
+  // pipeline tout seul (cf. `ReviewDecisionService.decideAsGuest`).
+  guestName   String?
+  shareLink   ShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+  shareLinkId Int?
+
   @@index([versionId, createdAt])
   // `onDelete: Restrict` : supprimer un statut de review compte d'abord ses décisions.
   @@index([statusId])
   @@index([authorId])
+  // « Ce lien s'est-il déjà prononcé sur cette version ? » — la file d'accueil du portail
+  // client pose cette question pour chaque média servi.
+  @@index([shareLinkId, versionId])
 }
 
 // Personne à qui la review d'une version est confiée, et la consigne qui l'accompagne.
@@ -1391,6 +1410,7 @@ model ShareLink {
   createdBy    User?           @relation("ShareCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdById  Int?
   createdAt    DateTime        @default(now())
+  decisions    ReviewDecision[]
 
   // Portée du lien. La cible est en Cascade et non en SetNull : la contrainte SQL
   // `ShareLink_scope_target` exige une cible pour les portées qui en ont une, et un lien

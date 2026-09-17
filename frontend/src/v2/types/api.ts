@@ -126,6 +126,11 @@ export interface ReviewDecision {
   status: ReviewStatus;
   comment: string | null;
   author: UserRef | null;
+  /**
+   * Avis posé depuis un lien de partage : `author` est nul et c'est ce nom qui dit qui s'est
+   * prononcé. Un tel avis N'A PAS changé le statut de la version — le studio tranche.
+   */
+  guestName: string | null;
   createdAt: string;
 }
 export interface Version {

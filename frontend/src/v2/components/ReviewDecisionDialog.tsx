@@ -150,7 +150,10 @@ export default function ReviewDecisionDialog({
                 <ReviewDecisionBadge status={d.status} />
                 <div className="min-w-0">
                   <span className="text-muted-foreground">
-                    {d.author?.name ?? t('admin.tab.system')} · {timeAgo(d.createdAt)}
+                    {d.author?.name ?? d.guestName ?? t('admin.tab.system')}
+                    {/* Un avis venu d'un lien n'a pas posé le statut de la version : le dire
+                        ici, sinon la ligne se lit comme une décision du studio. */}
+                    {!d.author && d.guestName && ` · ${t('decision.fromShare')}`} · {timeAgo(d.createdAt)}
                   </span>
                   {d.comment && <p className="mt-0.5 text-foreground">{d.comment}</p>}
                 </div>

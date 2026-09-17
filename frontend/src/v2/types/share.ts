@@ -4,7 +4,7 @@
 import type { MediaKind } from './api';
 
 // ── Partage client (35.C/35.D) — module séparé de api.ts pour le budget de lignes ─
-export type SharePermission = 'VIEW' | 'COMMENT';
+export type SharePermission = 'VIEW' | 'COMMENT' | 'DECIDE';
 /** Ce qu'un lien ouvre. Défini ici, réutilisé par l'écran d'administration des partages. */
 export type ShareScope = 'PROJECT' | 'PLAYLIST' | 'VERSION' | 'MEDIA';
 /** GET /api/share?projectId= — lien de partage (le hash du mot de passe n'est jamais exposé). */
@@ -37,6 +37,8 @@ export interface ClientMedia {
   thumbnailUrl: string | null;
   createdAt: string;
   version: { id: number; name: string; taskName: string | null };
+  /** Ce lien s'est déjà prononcé sur cette version — la file d'accueil l'écarte. */
+  decided: boolean;
   placement: {
     episodeId: number | null;
     sequenceId: number | null;
@@ -124,6 +126,11 @@ export interface ClientSharePayload {
   mediaTotal?: number;
   mediaHasMore?: boolean;
   browse?: ShareBrowse;
+  /** Les deux réponses offertes — `null` dès que le lien n'a pas le droit de se prononcer. */
+  decisionStatuses?: {
+    approval: { id: number; name: string; color: string } | null;
+    retake: { id: number; name: string; color: string } | null;
+  } | null;
   watermark?: { enabled: boolean; opacity: number };
   shareAuth?: string;
 }

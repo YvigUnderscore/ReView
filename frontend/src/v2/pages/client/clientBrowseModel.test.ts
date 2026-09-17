@@ -5,6 +5,9 @@ import { describe, it, expect } from 'vitest';
 import type { ClientMedia, ShareBrowse, SharePlaylistCard } from '../../types/api';
 import {
   coverUrl,
+  filterMedia,
+  pendingMedia,
+  sortMedia,
   mediaByIds,
   mediaOfView,
   parseClientMediaId,
@@ -21,6 +24,7 @@ const media = (id: number, thumbnailUrl: string | null = `t${id}`): ClientMedia 
   thumbnailUrl,
   createdAt: '2026-09-16T00:00:00.000Z',
   version: { id: id * 10, name: 'V01', taskName: null },
+  decided: false,
   placement: { episodeId: null, sequenceId: null, shotId: null, assetId: null },
 });
 
@@ -175,5 +179,137 @@ describe('mediaOfView — ce que la vue courante montre', () => {
     expect(shotsOfSequence(tree, 10).map((s) => s.code)).toEqual(['SH020']);
     expect(shotsOfSequence(tree, 999)).toEqual([]);
     expect(shotsOfSequence(undefined, 10)).toEqual([]);
+  });
+});
+
+describe('filterMedia — ce que cherche quelqu’un qui tape dans le champ', () => {
+  const tree = browse({
+    shots: [
+      {
+        id: 20,
+        code: 'SH0240',
+        name: 'Rooftop run',
+        order: 1,
+        sequenceId: 10,
+        mediaIds: [1],
+        coverMediaId: 1,
+      },
+    ],
+    sequences: [
+      {
+        id: 10,
+        code: 'SQ010',
+        name: 'Cold open',
+        order: 1,
+        episodeId: null,
+        shotIds: [20],
+        mediaIds: [1],
+        coverMediaId: 1,
+      },
+    ],
+    assets: [{ id: 90, name: 'Fox', type: 'CHARACTER', typeLabel: null, mediaIds: [2], coverMediaId: 2 }],
+  });
+  const onShot = { ...media(1), placement: { episodeId: null, sequenceId: 10, shotId: 20, assetId: null } };
+  const onAsset = {
+    ...media(2),
+    placement: { episodeId: null, sequenceId: null, shotId: null, assetId: 90 },
+  };
+  const all = [onShot, onAsset];
+
+  it('rend tout quand la recherche est vide', () => {
+    expect(filterMedia(all, tree, '   ')).toHaveLength(2);
+  });
+
+  /**
+   * Le cas qui justifie le champ : « SH0240 » n'est nulle part dans le nom du fichier, mais
+   * c'est ce qu'un client tape — c'est ainsi que le studio lui a parlé du plan.
+   */
+  it('trouve par le code du plan, absent du nom de fichier', () => {
+    expect(filterMedia(all, tree, 'SH0240').map((m) => m.id)).toEqual([1]);
+    expect(onShot.originalName).not.toContain('SH0240');
+  });
+
+  it('trouve aussi par séquence, par asset et par nom de fichier, sans tenir compte de la casse', () => {
+    expect(filterMedia(all, tree, 'cold open').map((m) => m.id)).toEqual([1]);
+    expect(filterMedia(all, tree, 'fox').map((m) => m.id)).toEqual([2]);
+    expect(filterMedia(all, tree, 'M1.MP4').map((m) => m.id)).toEqual([1]);
+  });
+
+  it('ne rend rien plutôt que tout quand rien ne correspond', () => {
+    expect(filterMedia(all, tree, 'SH9999')).toEqual([]);
+  });
+});
+
+describe('sortMedia — les trois ordres de lecture', () => {
+  const tree = browse({
+    sequences: [
+      {
+        id: 10,
+        code: 'SQ010',
+        name: 'A',
+        order: 1,
+        episodeId: null,
+        shotIds: [20],
+        mediaIds: [],
+        coverMediaId: null,
+      },
+      {
+        id: 11,
+        code: 'SQ020',
+        name: 'B',
+        order: 2,
+        episodeId: null,
+        shotIds: [21],
+        mediaIds: [],
+        coverMediaId: null,
+      },
+    ],
+    shots: [
+      { id: 20, code: 'SH010', name: 'A', order: 1, sequenceId: 10, mediaIds: [], coverMediaId: null },
+      { id: 21, code: 'SH020', name: 'B', order: 2, sequenceId: 11, mediaIds: [], coverMediaId: null },
+    ],
+  });
+  const at = (id: number, name: string, sequenceId: number | null, shotId: number | null) => ({
+    ...media(id),
+    originalName: name,
+    placement: { episodeId: null, sequenceId, shotId, assetId: null },
+  });
+  // Servi du plus récent au plus ancien, donc dans l'ordre inverse de la production.
+  const served = [at(3, 'c.mp4', 11, 21), at(2, 'b.mp4', 10, 20), at(1, 'a.mp4', null, null)];
+
+  it('laisse l’ordre du serveur pour « plus récent »', () => {
+    expect(sortMedia(served, tree, 'recent').map((m) => m.id)).toEqual([3, 2, 1]);
+  });
+
+  it('classe par nom', () => {
+    expect(sortMedia(served, tree, 'name').map((m) => m.originalName)).toEqual(['a.mp4', 'b.mp4', 'c.mp4']);
+  });
+
+  // L'ordre dans lequel un film se regarde : séquence, puis plan.
+  it('remonte l’ordre de production, et range à la fin ce qu’il ne situe pas', () => {
+    expect(sortMedia(served, tree, 'production').map((m) => m.id)).toEqual([2, 3, 1]);
+  });
+
+  it('ne modifie pas le tableau reçu', () => {
+    const before = served.map((m) => m.id);
+    sortMedia(served, tree, 'name');
+    expect(served.map((m) => m.id)).toEqual(before);
+  });
+});
+
+describe('pendingMedia — la file « en attente de votre réponse »', () => {
+  const answered = { ...media(1), decided: true };
+  const waiting = { ...media(2), decided: false };
+
+  it('ne retient que ce sur quoi le lien ne s’est pas prononcé', () => {
+    expect(pendingMedia([answered, waiting], true).map((m) => m.id)).toEqual([2]);
+  });
+
+  /**
+   * Un lien sans droit de décision n'a pas de file : lui annoncer « en attente de votre
+   * réponse » serait lui demander ce qu'on ne lui permet pas de donner.
+   */
+  it('n’en propose aucune à un lien qui n’a pas le droit de se prononcer', () => {
+    expect(pendingMedia([answered, waiting], false)).toEqual([]);
   });
 });

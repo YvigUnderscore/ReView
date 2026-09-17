@@ -27,6 +27,7 @@ const media: ClientMedia = {
   thumbnailUrl: null,
   createdAt: '2026-09-16T00:00:00.000Z',
   version: { id: 50, name: 'V03', taskName: null },
+  decided: false,
   placement: { episodeId: null, sequenceId: null, shotId: null, assetId: 90 },
 };
 

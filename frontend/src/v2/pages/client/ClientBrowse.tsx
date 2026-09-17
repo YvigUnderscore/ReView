@@ -1,16 +1,22 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useState } from 'react';
 import { ArrowLeft, Box, Clapperboard, Film, LayoutDashboard, ListVideo } from 'lucide-react';
 import Tabs from '../../components/Tabs';
 import ClientMediaGrid, { GRID_CLASS } from './ClientMediaGrid';
+import ClientListControls from './ClientListControls';
 import {
   HOME,
   HOME_MEDIA_COUNT,
   coverUrl,
+  filterMedia,
   mediaOfView,
+  pendingMedia,
   shotsOfSequence,
+  sortMedia,
   visibleTabs,
+  type ClientSort,
   type ClientTab,
   type ClientView,
 } from './clientBrowseModel';
@@ -83,11 +89,39 @@ export default function ClientBrowse({
   onOpen: (media: ClientMedia) => void;
 }) {
   const t = useT();
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<ClientSort>('recent');
+  // `layout` et non `view` : `view` est déjà la vue de NAVIGATION (accueil, onglet, nœud).
+  const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const media = payload.media ?? [];
   const browse = payload.browse;
   const playlists = browse?.playlists ?? [];
   const tabs = visibleTabs(media, browse);
   const defs = tabDefs(t);
+  const canDecide = payload.permission === 'DECIDE';
+  const pending = pendingMedia(media, canDecide);
+
+  /** Ce que la vue montre, une fois cherché et trié. Les vues de nœud en héritent aussi. */
+  const listed = (source: readonly ClientMedia[]) =>
+    sortMedia(filterMedia(source, browse, query), browse, sort);
+  const grid = (source: readonly ClientMedia[]) => (
+    <>
+      <ClientListControls
+        query={query}
+        onQuery={setQuery}
+        sort={sort}
+        onSort={setSort}
+        view={layout}
+        onView={setLayout}
+      />
+      <ClientMediaGrid
+        media={listed(source)}
+        onOpen={onOpen}
+        view={layout}
+        empty={query.trim() ? t('client.noMatch') : undefined}
+      />
+    </>
+  );
 
   // L'onglet actif pour la barre : une vue de nœud reste sous son onglet de rattachement,
   // pour que le fil d'Ariane ait un « retour » qui veuille dire quelque chose.
@@ -153,6 +187,20 @@ export default function ClientBrowse({
                 .filter(Boolean)
                 .join(' · ')}
             </p>
+
+            {/* Ce qui attend une réponse passe devant tout : c'est la question qu'on se pose
+                en ouvrant un lien, et celle à laquelle une grille du plus récent au plus
+                ancien ne répond jamais. */}
+            {canDecide && (
+              <section>
+                <h2 className="mb-3 text-sm font-semibold">{t('client.queue')}</h2>
+                {pending.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('client.queueDone')}</p>
+                ) : (
+                  <ClientMediaGrid media={pending.slice(0, HOME_MEDIA_COUNT)} onOpen={onOpen} />
+                )}
+              </section>
+            )}
 
             {playlists.length > 0 && (
               <section>
@@ -236,7 +284,7 @@ export default function ClientBrowse({
             ))}
           </div>
         ) : (
-          <ClientMediaGrid media={mediaOfView(view, media, browse, playlists)} onOpen={onOpen} />
+          grid(mediaOfView(view, media, browse, playlists))
         )}
       </div>
     </div>

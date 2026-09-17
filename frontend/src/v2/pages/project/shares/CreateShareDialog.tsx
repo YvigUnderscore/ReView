@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../../../components/ui/dialog';
+import type { SharePermission } from '../../../types/api';
 import { useT } from '../../../i18n';
 import ShareScopeFields from './ShareScopeFields';
 import { clientUrl } from './shareUrl';
@@ -35,7 +36,7 @@ export default function CreateShareDialog({
   const t = useT();
   const qc = useQueryClient();
   const [label, setLabel] = useState('');
-  const [permission, setPermission] = useState<'VIEW' | 'COMMENT'>('VIEW');
+  const [permission, setPermission] = useState<SharePermission>('VIEW');
   const [password, setPassword] = useState('');
   const [expiresInDays, setExpiresInDays] = useState('');
   const [maxViews, setMaxViews] = useState('');
@@ -102,10 +103,13 @@ export default function CreateShareDialog({
             <Select
               id="share-permission"
               value={permission}
-              onChange={(e) => setPermission(e.target.value as 'VIEW' | 'COMMENT')}
+              onChange={(e) => setPermission(e.target.value as SharePermission)}
             >
               <option value="VIEW">{t('shares.permission.readOnly')}</option>
               <option value="COMMENT">{t('shares.permission.comment')}</option>
+              {/* Donner un avis engageant n'est pas laisser une note : on envoie un lien de
+                  relecture à trois personnes et le mandat de trancher à une seule. */}
+              <option value="DECIDE">{t('shares.permission.decide')}</option>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-3">

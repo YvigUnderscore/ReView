@@ -30,6 +30,8 @@ const render = (props: Partial<Parameters<typeof ClientComments>[0]> = {}) =>
       startFrame={1001}
       selectedId={null}
       hasAnnotation={false}
+      guestName=""
+      onGuestName={vi.fn()}
       onSelect={vi.fn()}
       onSeek={vi.fn()}
       onSubmit={vi.fn()}

@@ -47,6 +47,8 @@ vi.mock('../services/ClientShareService', () => ({
   listShareComments: vi.fn(() => Promise.resolve([])),
   findShareMedia: vi.fn(() => Promise.resolve(media)),
   createShareComment: vi.fn(() => Promise.resolve({ id: 1 })),
+  createShareDecision: vi.fn(() => Promise.resolve({ id: 5 })),
+  shareDecisionStatuses: vi.fn(() => Promise.resolve(null)),
 }));
 vi.mock('../services/ClientMediaSourceService', () => ({
   buildClientMediaSource: vi.fn(() => Promise.resolve({ url: 'https://minio/plate?sig' })),

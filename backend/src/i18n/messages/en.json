@@ -51,6 +51,7 @@
   "notification.clientComment": "{name} left feedback from a share link",
   "notification.reviewAssigned": "You were assigned to the review of version {version}",
   "notification.reviewNoteUpdated": "The brief changed on a review you were given: {version}",
+  "notification.clientDecision": "{name} answered “{status}” on version {version} from a share link",
   "chat.system.joined": { "one": "{names} joined the conversation", "other": "{names} joined the conversation" },
   "chat.system.left": "{name} left the conversation",
   "chat.system.removed": "{name} was removed",

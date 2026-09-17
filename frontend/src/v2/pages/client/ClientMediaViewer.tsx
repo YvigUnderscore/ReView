@@ -7,12 +7,14 @@ import { ArrowLeft } from 'lucide-react';
 import { clientApi } from './clientApi';
 import ClientAnnotationBar from './ClientAnnotationBar';
 import ClientComments from './ClientComments';
+import ClientDecision from './ClientDecision';
 import ClientImageView from './ClientImageView';
 import ClientModel3DView from './ClientModel3DView';
 import ClientSplatView from './ClientSplatView';
 import ClientUnavailable from './ClientUnavailable';
 import ClientVideoPlayer from './ClientVideoPlayer';
 import { useClientSubmitComment } from './useClientSubmitComment';
+import { useGuestName } from './useGuestName';
 import { mediaTimeOf, playerTimeOf, toPlayerComments } from './clientViewerModel';
 import type { ClientMediaSource } from './clientTypes';
 import WatermarkOverlay from '../../components/WatermarkOverlay';
@@ -21,7 +23,7 @@ import { useAnnotations } from '../review/useAnnotations';
 import { useAnnotationOverlay } from '../review/useAnnotationOverlay';
 import { splitAnnotationParts, VIEWER_ZONE } from '../review/reviewTypes';
 import type { Shape } from '../../components/AnnotationCanvas';
-import type { ClientComment, ClientMedia } from '../../types/api';
+import type { ClientComment, ClientMedia, ClientSharePayload } from '../../types/api';
 import { useT } from '../../i18n';
 
 /** Cadence de repli quand le partage n'annonce pas celle du média. */
@@ -45,6 +47,7 @@ export default function ClientMediaViewer({
   token,
   media,
   canComment,
+  decisionStatuses,
   watermarkText,
   watermarkOpacity,
   onBack,
@@ -52,6 +55,8 @@ export default function ClientMediaViewer({
   token: string;
   media: ClientMedia;
   canComment: boolean;
+  /** Les deux réponses offertes, ou `null` si le lien n'a pas le droit de se prononcer. */
+  decisionStatuses: ClientSharePayload['decisionStatuses'];
   watermarkText: string | null;
   watermarkOpacity: number;
   onBack: () => void;
@@ -61,6 +66,8 @@ export default function ClientMediaViewer({
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [fpsOverride, setFpsOverride] = useState<number | null>(null);
+  // Un seul nom pour tout ce que l'invité pose : sa note comme sa réponse.
+  const [guestName, setGuestName] = useGuestName();
   const ann = useAnnotations();
   const overlay = useAnnotationOverlay(ann);
 
@@ -219,6 +226,13 @@ export default function ClientMediaViewer({
         composerRef={composerRef}
         annotationBar={canAnnotate ? <ClientAnnotationBar ann={ann} /> : undefined}
         hasAnnotation={ann.annot.length > 0}
+        guestName={guestName}
+        onGuestName={setGuestName}
+        decision={
+          decisionStatuses ? (
+            <ClientDecision token={token} media={media} statuses={decisionStatuses} guestName={guestName} />
+          ) : undefined
+        }
       />
     </div>
   );

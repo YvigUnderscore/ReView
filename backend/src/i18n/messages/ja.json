@@ -51,6 +51,7 @@
   "notification.clientComment": "{name} さんが共有リンクからフィードバックを送りました",
   "notification.reviewAssigned": "version {version} の review が割り当てられました",
   "notification.reviewNoteUpdated": "任された review の指示が変わりました：{version}",
+  "notification.clientDecision": "{name} さんが共有リンクから version {version} に「{status}」と回答しました",
   "chat.system.joined": { "other": "{names} が会話に参加しました" },
   "chat.system.left": "{name} が会話から退出しました",
   "chat.system.removed": "{name} がメンバーから外されました",

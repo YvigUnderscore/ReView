@@ -17,10 +17,12 @@ import {
   listShareComments,
   findShareMedia,
   createShareComment,
+  createShareDecision,
+  shareDecisionStatuses,
   type ShareCommentInput,
 } from '../services/ClientShareService';
 import { buildClientMediaSource } from '../services/ClientMediaSourceService';
-import { cameraStateSchema, guestAnnotationSchema } from '../lib/commentPayload';
+import { guestCommentBody, guestDecisionBody } from './clientShareBodies';
 import { guestCommentRateLimit } from './clientShareLimits';
 import { signShareSession, verifyShareSession } from '../lib/shareAccess';
 import { getWatermarkConfig } from '../lib/watermarkConfig';
@@ -68,12 +70,13 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
   });
   if (!project) throw notFound('Project not found');
 
-  const { media, browse, total, hasMore } = await listShareMedia(share);
+  const { media, browse, total, hasMore } = await listShareMedia(share, share.id);
   // Les playlists se lisent APRÈS les médias : leurs identifiants sont intersectés avec la
   // page servie, pour qu'une carte n'ouvre jamais sur une tuile absente du payload.
-  const [playlists, watermark] = await Promise.all([
+  const [playlists, watermark, decisionStatuses] = await Promise.all([
     listSharePlaylists(share, new Set(media.map((m) => m.id))),
     getWatermarkConfig(),
+    shareDecisionStatuses(share),
   ]);
   res.json({
     locked: false,
@@ -86,6 +89,9 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
     mediaTotal: total,
     mediaHasMore: hasMore,
     browse: { ...browse, playlists },
+    // Les deux réponses offertes — absentes dès que le lien n'a pas le droit de se
+    // prononcer, ce qui évite au front d'avoir à redécider de la permission.
+    decisionStatuses,
     watermark: { enabled: watermark.shares, opacity: watermark.opacity },
     shareAuth: signShareSession(share.id),
   });
@@ -152,26 +158,27 @@ router.post(
   '/:token/media/:id/comments',
   // Écriture ouverte à un anonyme : freinée par lien et par lien+IP (cf. clientShareLimits).
   ...guestCommentRateLimit,
-  validate({
-    params: tokenAndId,
-    body: z.object({
-      guestName: z.string().trim().min(1).max(80),
-      content: z.string().min(1).max(10000),
-      timestamp: z.number().nonnegative().optional(),
-      // Même schéma que la review interne (A2-04) ; `createGuest` le revalide de toute façon.
-      cameraState: cameraStateSchema.nullish(),
-      // Le dessin de l'invité. Schéma INVITÉ : ni mise en scène 3D, ni animation caméra, ni
-      // traits du painter — ce sont des gestes rejoués pour tous les spectateurs du média.
-      // Sans cette clé, `validate` remplaçant `req.body` par le parsé, l'annotation partait
-      // au serveur, recevait un 201, et n'était jamais écrite.
-      annotation: guestAnnotationSchema.nullish(),
-    }),
-  }),
+  validate({ params: tokenAndId, body: guestCommentBody }),
   async (req, res) => {
     const share = await loadShareWithSession(String(req.params.token), req);
     const id = Number(req.params.id);
     const comment = await createShareComment(share, id, req.body as ShareCommentInput, req.ip);
     res.status(201).json({ comment });
+  },
+);
+
+// POST /api/client/:token/media/:id/decision — avis de l'invité (permission DECIDE).
+// Il n'écrase pas le statut de la version : le studio tranche (cf. `decideAsGuest`).
+router.post(
+  '/:token/media/:id/decision',
+  // Même frein que le commentaire : c'est la même surface d'écriture anonyme.
+  ...guestCommentRateLimit,
+  validate({ params: tokenAndId, body: guestDecisionBody }),
+  async (req, res) => {
+    const share = await loadShareWithSession(String(req.params.token), req);
+    const body = req.body as { guestName: string; statusId: number; comment?: string };
+    const decision = await createShareDecision(share, Number(req.params.id), body);
+    res.status(201).json({ decision });
   },
 );
 

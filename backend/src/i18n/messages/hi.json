@@ -51,6 +51,7 @@
   "notification.clientComment": "{name} ने साझा लिंक से प्रतिक्रिया दी",
   "notification.reviewAssigned": "version {version} की review आपको सौंपी गई है",
   "notification.reviewNoteUpdated": "आपको सौंपी गई review का निर्देश बदला: {version}",
+  "notification.clientDecision": "{name} ने साझा लिंक से version {version} पर “{status}” उत्तर दिया",
   "chat.system.joined": { "one": "{names} बातचीत में शामिल हुए", "other": "{names} बातचीत में शामिल हुए" },
   "chat.system.left": "{name} ने बातचीत छोड़ दी",
   "chat.system.removed": "{name} को हटा दिया गया",
