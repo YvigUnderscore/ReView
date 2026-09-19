@@ -12,6 +12,9 @@ import { readMeshTransform } from './meshTransform';
 /** Mode du gizmo de transformation, calqué sur les DCC 3D (déplacer / tourner / mettre à l'échelle). */
 export type GizmoMode = 'translate' | 'rotate' | 'scale';
 
+/** Mode de transformation du viewer 3D : navigation (aucun gizmo) ou gizmo TRS. */
+export type TransformMode = 'navigate' | GizmoMode;
+
 /** Applique espace/snaps/taille au TransformControls (réglages par cible, 11.G). */
 function applyGizmoSettings(control: TransformControls, s: GizmoSettings): void {
   control.setSpace(s.space);

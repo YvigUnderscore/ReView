@@ -2492,6 +2492,7 @@
   "lightbox.zoomIn": "Zoom in",
   "lightbox.zoomOut": "Zoom out",
   "numberField.dragHint": "{hint} — drag the label to adjust (Shift ×10)",
+  "numberField.scrubHint": "{hint} — drag the value to adjust (Shift ×10, Esc cancels)",
   "transform.positionAxis": "Position {axis}",
   "transform.rotationAxis": "Rotation {axis}",
   "transform.snapHint": "Snapping — 0 = free",

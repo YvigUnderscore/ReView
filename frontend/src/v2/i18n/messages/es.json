@@ -2492,6 +2492,7 @@
   "lightbox.zoomIn": "Ampliar",
   "lightbox.zoomOut": "Reducir",
   "numberField.dragHint": "{hint}: arrastra la etiqueta para ajustar (Mayús ×10)",
+  "numberField.scrubHint": "{hint}: arrastra el valor para ajustar (Mayús ×10, Esc cancela)",
   "transform.positionAxis": "Posición {axis}",
   "transform.rotationAxis": "Rotación {axis}",
   "transform.snapHint": "Ajuste: 0 = libre",

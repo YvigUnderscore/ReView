@@ -43,6 +43,26 @@ export function dragValue(start: number, dxPx: number, spec: NumberFieldSpec, mu
   return clampValue(start + delta, spec);
 }
 
+/**
+ * Distance (px) au-delà de laquelle un appui **sur le champ de saisie** devient un scrub
+ * plutôt qu'un clic. Assez court pour que le geste démarre franchement, assez long pour
+ * qu'un clic tremblé continue de focaliser le champ.
+ */
+export const SCRUB_THRESHOLD_PX = 4;
+
+/** Vrai dès que le pointeur a franchi le seuil : en deçà, l'appui reste un clic. */
+export function isScrub(dxPx: number): boolean {
+  return Math.abs(dxPx) >= SCRUB_THRESHOLD_PX;
+}
+
+/**
+ * Déplacement utile d'un scrub armé sur le champ : le seuil est retiré, sinon la valeur
+ * sauterait de plusieurs pas à l'instant exact où le geste est reconnu.
+ */
+export function scrubOffset(dxPx: number): number {
+  return dxPx - Math.sign(dxPx) * SCRUB_THRESHOLD_PX;
+}
+
 /** Parse une saisie clavier (virgule française acceptée) — null si vide ou invalide. */
 export function parseInput(text: string): number | null {
   const trimmed = text.trim().replace(',', '.');

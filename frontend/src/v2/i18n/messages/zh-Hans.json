@@ -2414,6 +2414,7 @@
   "lightbox.zoomIn": "放大",
   "lightbox.zoomOut": "缩小",
   "numberField.dragHint": "{hint} — 拖动标签可调整（Shift ×10）",
+  "numberField.scrubHint": "{hint} — 拖动数值可调整（Shift ×10，Esc 取消）",
   "transform.positionAxis": "位置 {axis}",
   "transform.rotationAxis": "旋转 {axis}",
   "transform.snapHint": "吸附 — 0 = 自由",

@@ -2492,6 +2492,7 @@
   "lightbox.zoomIn": "Ingrandà",
   "lightbox.zoomOut": "Riduce",
   "numberField.dragHint": "{hint} — trascina l'etichetta per aghjustà (Maiusc ×10)",
+  "numberField.scrubHint": "{hint} — trascina u valore per aghjustà (Maiusc ×10, Esc annulla)",
   "transform.positionAxis": "Pusizione {axis}",
   "transform.rotationAxis": "Rotazione {axis}",
   "transform.snapHint": "Aggancio — 0 = liberu",

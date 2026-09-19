@@ -2492,6 +2492,7 @@
   "lightbox.zoomIn": "Vergrößern",
   "lightbox.zoomOut": "Verkleinern",
   "numberField.dragHint": "{hint} — Label ziehen zum Anpassen (Umschalt ×10)",
+  "numberField.scrubHint": "{hint} — Wert ziehen zum Anpassen (Umschalt ×10, Esc bricht ab)",
   "transform.positionAxis": "Position {axis}",
   "transform.rotationAxis": "Rotation {axis}",
   "transform.snapHint": "Einrasten — 0 = frei",

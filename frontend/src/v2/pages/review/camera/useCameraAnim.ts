@@ -10,32 +10,22 @@ import {
   animPlayDuration,
   CHANNEL_IDS,
   deleteColumn,
-  deleteKeys,
   emptyAnim,
   hasAnimation as animHasAnimation,
   moveColumn,
   moveKeysBatch,
   poseToChannelValues,
   setAnimDuration,
-  setKeyMode,
   setKeyTangent,
   upsertKey,
   upsertPoseAt,
   type CameraAnimV2,
   type ChannelId,
-  type KeyRef,
-  type TangentMode,
 } from './channels/model';
 import { evalChannel } from './channels/hermite';
 import { sampleAnimV2 } from './channels/hermite';
 import { useCameraAutoKey } from './useCameraAutoKey';
-import {
-  copyKeys,
-  loadClipboard,
-  pasteKeys,
-  persistClipboard,
-  type CurveClipboard,
-} from './channels/clipboard';
+import { useCurveSelection } from './useCurveSelection';
 
 /**
  * Contrôleur caméra minimal requis par le lecteur/éditeur d'animation — commun **3D et splat** :
@@ -63,25 +53,16 @@ export function useCameraAnim(controller: CameraController) {
   const [playing, setPlaying] = useState(false);
   const [autoPaused, setAutoPaused] = useState(false);
   const [timeMs, setTimeMs] = useState(0);
-  // Multi-sélection de clés (graph editor) — la dernière est « primaire » (poignées de tangente,
-  // caméra-objet). Phase 27.
-  const [selection, setSelectionState] = useState<KeyRef[]>([]);
   const [autoKey, setAutoKey] = useState(false);
   const [past, setPast] = useState<CameraAnimV2[]>([]);
   const [future, setFuture] = useState<CameraAnimV2[]>([]);
 
   const timeRef = useRef(0);
   const animRef = useRef(anim);
-  const selectionRef = useRef(selection);
   const baseRef = useRef<SplatCamera>({ position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } });
   useEffect(() => {
     animRef.current = anim;
   }, [anim]);
-  useEffect(() => {
-    selectionRef.current = selection;
-  }, [selection]);
-
-  const setSelection = useCallback((sels: KeyRef[]) => setSelectionState(sels), []);
 
   // ── Édition avec historique : chaque mutation empile l'état courant (undo). ──
   const pushHistory = useCallback(() => {
@@ -95,6 +76,20 @@ export function useCameraAnim(controller: CameraController) {
     },
     [pushHistory],
   );
+
+  // Multi-sélection de clés (graph editor) et presse-papier — la dernière clé sélectionnée est
+  // « primaire » (poignées de tangente, caméra-objet). Phase 27, 40.E.
+  const {
+    selection,
+    setSelection,
+    clearSelection,
+    setSelectionMode,
+    removeSelection,
+    copySelection,
+    paste,
+    canPaste,
+  } = useCurveSelection({ animRef, timeRef, commit });
+
   // Geste continu (drag d'une/plusieurs clés/tangente) : un seul snapshot au début, puis mises à
   // jour live sans empiler — un undo annule tout le geste.
   const beginStroke = useCallback(() => pushHistory(), [pushHistory]);
@@ -149,12 +144,12 @@ export function useCameraAnim(controller: CameraController) {
       setTimeMs(0);
       setPast([]);
       setFuture([]);
-      setSelectionState([]);
+      clearSelection();
       const view = captureCamera();
       if (view) baseRef.current = view;
       setAnimState(next);
     },
-    [captureCamera],
+    [captureCamera, clearSelection],
   );
 
   const setLoop = useCallback((loop: boolean) => commit({ ...animRef.current, loop }), [commit]);
@@ -267,48 +262,6 @@ export function useCameraAnim(controller: CameraController) {
     (t: number) => commit(deleteColumn(animRef.current, Math.round(t))),
     [commit],
   );
-
-  /** Applique un mode de tangente à toutes les clés sélectionnées (segmented du graph editor). */
-  const setSelectionMode = useCallback(
-    (mode: TangentMode) => {
-      const sels = selectionRef.current;
-      if (!sels.length) return;
-      let next = animRef.current;
-      for (const s of sels) next = setKeyMode(next, s.channel, s.index, mode);
-      commit(next);
-    },
-    [commit],
-  );
-
-  /** Supprime les clés sélectionnées (Suppr). */
-  const removeSelection = useCallback(() => {
-    const sels = selectionRef.current;
-    if (!sels.length) return;
-    commit(deleteKeys(animRef.current, sels));
-    setSelectionState([]);
-  }, [commit]);
-
-  // ── Copier/coller de clés (40.E) : presse-papier mémoire + `localStorage` (cross-média). ──
-  const clipboardRef = useRef<CurveClipboard | null>(loadClipboard());
-  const [canPaste, setCanPaste] = useState(() => loadClipboard() != null);
-
-  /** Copie les clés sélectionnées (valeur, mode, tangentes) dans le presse-papier (Ctrl+C). */
-  const copySelection = useCallback(() => {
-    const clip = copyKeys(animRef.current, selectionRef.current);
-    if (!clip) return;
-    clipboardRef.current = clip;
-    persistClipboard(clip);
-    setCanPaste(true);
-  }, []);
-
-  /** Colle le presse-papier à la tête de lecture et sélectionne les clés collées (Ctrl+V). */
-  const paste = useCallback(() => {
-    const clip = clipboardRef.current ?? loadClipboard();
-    if (!clip) return;
-    const { anim: next, selection: pasted } = pasteKeys(animRef.current, clip, timeRef.current);
-    commit(next);
-    setSelectionState(pasted);
-  }, [commit]);
 
   // Auto-key (Phase 27) : tout geste caméra pose une clé de la vue au temps de lecture.
   useCameraAutoKey(autoKey, getDom, insertKeyAtView);

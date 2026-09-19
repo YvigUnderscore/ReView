@@ -2492,6 +2492,7 @@
   "lightbox.zoomIn": "Vergressere",
   "lightbox.zoomOut": "Verchleinere",
   "numberField.dragHint": "{hint} — s Label ziehe zum Aapasse (Umschalt ×10)",
+  "numberField.scrubHint": "{hint} — de Wert ziehe zum Aapasse (Umschalt ×10, Esc bricht ab)",
   "transform.positionAxis": "Position {axis}",
   "transform.rotationAxis": "Rotation {axis}",
   "transform.snapHint": "Iraschte — 0 = frei",

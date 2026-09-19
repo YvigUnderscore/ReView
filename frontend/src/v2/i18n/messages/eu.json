@@ -2492,6 +2492,7 @@
   "lightbox.zoomIn": "Handiagotu",
   "lightbox.zoomOut": "Txikiagotu",
   "numberField.dragHint": "{hint} — arrastatu etiketa doitzeko (Shift ×10)",
+  "numberField.scrubHint": "{hint} — arrastatu balioa doitzeko (Shift ×10, Esc etetzeko)",
   "transform.positionAxis": "{axis} posizioa",
   "transform.rotationAxis": "{axis} biraketa",
   "transform.snapHint": "Atxikitzea — 0 = librea",

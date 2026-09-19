@@ -4,9 +4,6 @@
 import { useState } from 'react';
 import { Save } from 'lucide-react';
 import { api } from '../../lib/apiClient';
-import { SkeletonRows } from './ui/skeleton';
-import DepartmentsEditor from './DepartmentsEditor';
-import DepartmentImages from './DepartmentImages';
 import ProjectBurninSection from './ProjectBurninSection';
 import ProjectStorageSection from './ProjectStorageSection';
 import ProjectNamingSection from './ProjectNamingSection';
@@ -14,19 +11,23 @@ import ProjectReviewRequestSection from './ProjectReviewRequestSection';
 import ProjectDefaultLightingSection from './ProjectDefaultLightingSection';
 import ProjectColorSection from './ProjectColorSection';
 import ProjectSettingsInheritance from './ProjectSettingsInheritance';
+import ProjectStartFrameSection from './ProjectStartFrameSection';
+import ProjectFormatSection from './ProjectFormatSection';
+import ProjectNomenclatureSection from './ProjectNomenclatureSection';
+import ProjectDepartmentsSection from './ProjectDepartmentsSection';
 import { buildSettingsPatch } from '../lib/projectInheritance';
-import type { Nomenclature, ProjectSettings } from '../types/api';
+import type { ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
 import SgProjectSection from './shotgrid/SgProjectSection';
 import EpisodesToggle from '../pages/project/EpisodesToggle';
-import { Card } from './ui/card';
 
 /**
- * Onglet « Réglages » d'un projet (admin/superviseur) :
- *  - héritage studio : ce que le projet surcharge, et le moyen de le rendre
- *  - frame de départ (déplacée ici depuis la vue d'ensemble)
- *  - nomenclature (préfixes, pas, chiffres) — override des défauts studio
- *  - départements (nom/clé)
+ * Onglet « Réglages » d'un projet (admin/superviseur) : la composition des sections, et
+ * l'enregistrement qu'elles partagent — héritage studio, frame de départ, format & cadence,
+ * nomenclature, départements, puis les règles de review, de couleur et de diffusion.
+ *
+ * Chaque section est autonome : elle reçoit sa valeur et rend la nouvelle, sans savoir
+ * comment on l'enregistre. Ce fichier ne garde donc qu'un seul geste d'enregistrement.
  *
  * L'écran manipule les réglages EFFECTIFS. Les réenregistrer en bloc figeait dans le projet
  * tout ce qu'il ne faisait qu'hériter : on n'envoie donc que les sections réellement
@@ -46,8 +47,6 @@ export default function ProjectSettingsTab({
   onSettingsChange: (s: ProjectSettings) => void;
 }) {
   const t = useT();
-  const [frameVal, setFrameVal] = useState(String(startFrame));
-  const [savingFrame, setSavingFrame] = useState(false);
   const [draft, setDraft] = useState<ProjectSettings | null>(settings);
   // Point de départ du brouillon : c'est lui qui dit ce que la personne a réellement touché.
   const [baseline, setBaseline] = useState<ProjectSettings | null>(settings);
@@ -60,21 +59,6 @@ export default function ProjectSettingsTab({
     setDraft(settings);
     setBaseline(settings);
   }
-
-  const saveFrame = async () => {
-    const n = Number(frameVal);
-    if (!Number.isFinite(n)) return;
-    setSavingFrame(true);
-    try {
-      await api.patch(`/api/projects/${projectId}`, { startFrame: n });
-      onStartFrameChange(n);
-      setMsg(t('project.startFrameSaved'));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error.generic'));
-    } finally {
-      setSavingFrame(false);
-    }
-  };
 
   const saveSettings = async () => {
     if (!draft || !baseline) return;
@@ -111,18 +95,6 @@ export default function ProjectSettingsTab({
     onSettingsChange(fresh);
   };
 
-  const setRes = (k: 'width' | 'height', v: string) =>
-    setDraft((d) => d && { ...d, resolution: { ...d.resolution, [k]: Number(v) || 1 } });
-  const setFps = (v: string) => setDraft((d) => d && { ...d, framerate: Number(v) || 1 });
-
-  const setNom = (k: keyof Nomenclature, v: string) =>
-    setDraft(
-      (d) =>
-        d && {
-          ...d,
-          nomenclature: { ...d.nomenclature, [k]: k === 'padding' || k === 'step' ? Number(v) || 1 : v },
-        },
-    );
   return (
     <div className="max-w-2xl space-y-6">
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -131,140 +103,35 @@ export default function ProjectSettingsTab({
       {/* Héritage studio : ce qui descend du studio, ce que le projet s'est approprié. */}
       <ProjectSettingsInheritance projectId={projectId} onReverted={applyReverted} />
 
-      {/* Frame de départ */}
-      <Card>
-        <div className="text-sm font-medium">{t('pipeline.startFrame')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">{t('project.startFrameHint')}</div>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            aria-label={t('pipeline.startFrame')}
-            className="w-28 rounded border border-input bg-background px-2 py-1.5 text-sm"
-            value={frameVal}
-            onChange={(e) => setFrameVal(e.target.value)}
-          />
-          <button
-            onClick={saveFrame}
-            disabled={savingFrame}
-            className="rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
-          >
-            {savingFrame ? '…' : t('common.save')}
-          </button>
-        </div>
-      </Card>
+      {/* Frame de départ : champ du projet, elle s'enregistre seule. */}
+      <ProjectStartFrameSection
+        projectId={projectId}
+        startFrame={startFrame}
+        onStartFrameChange={onStartFrameChange}
+      />
 
       {/* Format & cadence (résolution + fps) — défauts du projet, hérités par séquences/shots */}
-      <Card>
-        <div className="text-sm font-medium">{t('pipeline.formatRate')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">{t('pipeline.formatHint')}</div>
-        {draft ? (
-          <div className="flex flex-wrap items-end gap-3">
-            <Field label={t('pipeline.width')}>
-              <input
-                type="number"
-                min={1}
-                className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                value={draft.resolution.width}
-                onChange={(e) => setRes('width', e.target.value)}
-              />
-            </Field>
-            <span className="pb-1.5 text-muted-foreground">×</span>
-            <Field label={t('pipeline.height')}>
-              <input
-                type="number"
-                min={1}
-                className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                value={draft.resolution.height}
-                onChange={(e) => setRes('height', e.target.value)}
-              />
-            </Field>
-            <Field label={t('pipeline.fps')}>
-              <input
-                type="number"
-                min={1}
-                className="w-20 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                value={draft.framerate}
-                onChange={(e) => setFps(e.target.value)}
-              />
-            </Field>
-          </div>
-        ) : (
-          <SkeletonRows count={1} />
-        )}
-      </Card>
+      <ProjectFormatSection
+        value={draft}
+        onChange={(pipeline) => setDraft((d) => d && { ...d, ...pipeline })}
+      />
 
-      {/* Nomenclature */}
-      <Card>
-        <div className="text-sm font-medium">{t('pipeline.naming')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">{t('project.namingOverride')}</div>
-        {draft ? (
-          <div className="flex flex-wrap items-end gap-3">
-            <Field label={t('pipeline.prefix.sequence')}>
-              <input
-                className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                value={draft.nomenclature.sequencePrefix}
-                onChange={(e) => setNom('sequencePrefix', e.target.value)}
-              />
-            </Field>
-            <Field label={t('pipeline.prefix.shot')}>
-              <input
-                className="w-24 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                value={draft.nomenclature.shotPrefix}
-                onChange={(e) => setNom('shotPrefix', e.target.value)}
-              />
-            </Field>
-            <Field label={t('pipeline.step')}>
-              <input
-                type="number"
-                min={1}
-                className="w-16 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                value={draft.nomenclature.step}
-                onChange={(e) => setNom('step', e.target.value)}
-              />
-            </Field>
-            <Field label={t('pipeline.digits')}>
-              <input
-                type="number"
-                min={1}
-                max={8}
-                className="w-16 rounded border border-input bg-background px-2 py-1.5 text-xs"
-                value={draft.nomenclature.padding}
-                onChange={(e) => setNom('padding', e.target.value)}
-              />
-            </Field>
-          </div>
-        ) : (
-          <SkeletonRows count={3} />
-        )}
-      </Card>
+      {/* Nomenclature : override des défauts studio. */}
+      <ProjectNomenclatureSection
+        value={draft?.nomenclature ?? null}
+        onChange={(nomenclature) => setDraft((d) => d && { ...d, nomenclature })}
+      />
 
       {/* Niveau Épisode (série) : l'interrupteur vit ici, c'est le seul endroit d'où
           il s'allume — l'onglet Épisodes n'existe pas tant qu'il est éteint. */}
       <EpisodesToggle projectId={projectId} />
 
-      {/* Départements (B1) : des entités à part entière, éditables même sur un projet relié.
-          L'éditeur était verrouillé avec la mention « hérité de ShotGrid », alors qu'aucun
-          code ne les synchronisait : le studio se retrouvait devant un champ mort. Les
-          étapes importées du site sont désormais créées à la volée à l'import ; le studio
-          reste libre de les nommer, de les ordonner et d'en ajouter. */}
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium">{t('pipeline.departments')}</span>
-        </div>
-        <div className="mb-3 text-xs text-muted-foreground">{t('project.departmentsHint')}</div>
-        <div className="mb-3 text-xs text-muted-foreground">{t('departments.keyLocked')}</div>
-        {draft && (
-          <DepartmentsEditor
-            value={draft.departments}
-            onChange={(departments) => setDraft((d) => d && { ...d, departments })}
-          />
-        )}
-        {/* Images : elles s'enregistrent seules, département par département — elles ne
-            font pas partie du brouillon de réglages, qui ne porte que clés et noms. */}
-        <div className="mt-4 border-t border-border pt-3">
-          <DepartmentImages projectId={projectId} />
-        </div>
-      </Card>
+      {/* Départements (B1) : clés et noms dans le brouillon, images enregistrées à part. */}
+      <ProjectDepartmentsSection
+        projectId={projectId}
+        value={draft?.departments ?? null}
+        onChange={(departments) => setDraft((d) => d && { ...d, departments })}
+      />
 
       {/* Convention de nommage (38.C) : éditée dans le draft, enregistrée avec les réglages. */}
       {draft && (
@@ -321,14 +188,5 @@ export default function ProjectSettingsTab({
         <Save size={15} /> {savingSettings ? t('common.saving') : t('project.saveSettings')}
       </button>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1 text-2xs section-label text-muted-foreground">
-      {label}
-      {children}
-    </label>
   );
 }

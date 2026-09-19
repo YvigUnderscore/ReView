@@ -2494,6 +2494,7 @@
   "lightbox.zoomIn": "Zoom +",
   "lightbox.zoomOut": "Zoom −",
   "numberField.dragHint": "{hint} — glisser le libellé pour ajuster (Maj ×10)",
+  "numberField.scrubHint": "{hint} — glisser la valeur pour ajuster (Maj ×10, Échap annule)",
   "transform.positionAxis": "Position {axis}",
   "transform.rotationAxis": "Rotation {axis}",
   "transform.snapHint": "Accrochage — 0 = libre",

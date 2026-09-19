@@ -2492,6 +2492,7 @@
   "lightbox.zoomIn": "ज़ूम इन",
   "lightbox.zoomOut": "ज़ूम आउट",
   "numberField.dragHint": "{hint} — समायोजित करने के लिए लेबल खींचें (Shift ×10)",
+  "numberField.scrubHint": "{hint} — समायोजित करने के लिए मान खींचें (Shift ×10, Esc रद्द करता है)",
   "transform.positionAxis": "स्थिति {axis}",
   "transform.rotationAxis": "घुमाव {axis}",
   "transform.snapHint": "स्नैप — 0 = मुक्त",

@@ -2414,6 +2414,7 @@
   "lightbox.zoomIn": "확대",
   "lightbox.zoomOut": "축소",
   "numberField.dragHint": "{hint} — 라벨을 끌어 조정 (Shift ×10)",
+  "numberField.scrubHint": "{hint} — 값을 끌어 조정 (Shift ×10, Esc로 취소)",
   "transform.positionAxis": "위치 {axis}",
   "transform.rotationAxis": "회전 {axis}",
   "transform.snapHint": "스냅 — 0 = 자유",

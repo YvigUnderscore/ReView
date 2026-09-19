@@ -1,42 +1,32 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
+import type { ReactNode } from 'react';
 import type { Role } from '../../../types/api';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
 import type { SplatViewer } from './useSplat';
-import { frameCameraToMesh } from './scene/frameCamera';
-import { frameCameraToSphere } from '../viewer/frameCamera';
-import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import { useSceneGrid } from '../viewer/useSceneGrid';
-import { meshBounds, selectionBounds } from './editor/selection/bounds';
-import { importCameraFile } from '../three/importCameraAbc';
-import { normalizeAnim } from '../camera/channels/model';
 import { useCameraSceneRig } from '../camera/sceneRig/useCameraSceneRig';
-import { useCameraShortcuts } from '../camera/useCameraShortcuts';
 import PipFrame from '../viewer/PipFrame';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import CompareControl from './compare/CompareControl';
 import { useSplatCompare } from './compare/useSplatCompare';
 import SpatialCompareHeader from '../three/SpatialCompareHeader';
-import { useHotspotPlacement } from '../three/useHotspotPlacement';
 import PaintOverlay from './paint/PaintOverlay';
 import type { SplatPaintState } from './paint/useSplatPaint';
 import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import ReviewChrome from '../chrome/ReviewChrome';
-import { useChromeState } from '../chrome/useChromeState';
-import { toolsFor } from '../chrome/tools';
 import SplatOptions from '../options/SplatOptions';
 import SpatialTransport from '../transport/SpatialTransport';
 import CurvesDrawer from '../transport/CurvesDrawer';
 import SplatPanels from './SplatPanels';
 import { SPLAT_HIDDEN_TOOLS, useSplatChrome } from './useSplatChrome';
-import { useSplatCommands } from './useSplatCommands';
 import { useSavedSplatEdits } from './useSavedSplatEdits';
+import { useSplatInput } from './scene/useSplatInput';
+import { useSplatView } from './useSplatView';
 import SplatPane from './SplatPane';
 import { useT } from '../../../i18n';
 
@@ -49,6 +39,10 @@ import { useT } from '../../../i18n';
  * L'état métier n'a pas bougé : `useSplatEditor` porte l'édition, `usePresentation` la mise
  * en scène, `useSplatCompare` l'A/B. Le rail se contente d'armer l'outil ; `useSplatChrome`
  * fait suivre les hooks.
+ *
+ * Ce composant ne calcule plus rien : `useSplatView` tient l'état de vue (chrome, culling,
+ * outil de tracé, présentation « non enregistrée ») et `scene/useSplatInput` le câblage
+ * pointeur/clavier. Ici, il ne reste que la composition du chrome et des overlays.
  */
 export default function SplatReview({
   data,
@@ -92,25 +86,14 @@ export default function SplatReview({
   const grid = useSceneGrid(splat);
   const pres = usePresentation(splat, data, onSaved);
   const compare = useSplatCompare(splat, data.media);
-  // Hotspot posé au clic (et non plus au centre de l'écran), comme dans le viewer 3D.
-  const hotspot = useHotspotPlacement(splat, ann.setHotspot3d);
-  const { state, update } = useChromeState('SPLAT', data.media.published);
-  // Culling Spark neutralisé par défaut : rien ne disparaît en zoom fort (réglage de session).
-  const [cullingOff, setCullingOffState] = useState(true);
-  const onCullingOff = useCallback(
-    (off: boolean) => {
-      setCullingOffState(off);
-      splat.setCullingOff(off);
-    },
-    [splat],
-  );
-
-  // Mode Mise en scène = atelier caméra : entrer dans le mode active le layout (PiP +
-  // caméra-objet), en sortir le désactive. L'interrupteur du panneau Caméra reste en override.
-  const { setLayoutMode } = pres.layout;
-  useEffect(() => {
-    setLayoutMode(state.mode === 'stage');
-  }, [state.mode, setLayoutMode]);
+  // État de vue : chrome (mode/outil/panneau), culling, tracé de sélection armé, écart entre
+  // l'animation courante et la présentation persistée.
+  const { state, update, culling, activeTool, selectTool, animDirty } = useSplatView({
+    splat,
+    data,
+    pres,
+    editorTool: editor.tool,
+  });
 
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo des clés.
   const cameraRig = useCameraSceneRig({
@@ -132,102 +115,22 @@ export default function SplatReview({
     cameraRig,
   });
 
-  // Raccourcis du transport caméra : Espace, K, ←/→, Début/Fin ; Ctrl+Z de l'anim en mode Layout.
-  useCameraShortcuts({
-    anim: pres.anim,
-    active: true,
-    editable: canPresent,
-    undoActive: state.mode === 'stage',
-    fps: data.fps ?? 24,
-  });
-
-  // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
-  const { setAnim: animSetAnim, play: animPlay } = pres.anim;
-  const viewedCameraAnim = ann.viewedCameraAnim;
-  useEffect(() => {
-    if (viewedCameraAnim) {
-      animSetAnim(viewedCameraAnim);
-      animPlay();
-    }
-  }, [viewedCameraAnim, animSetAnim, animPlay]);
-
-  const attachLayout = useCallback(() => {
-    if (!pres.anim.hasAnimation) return;
-    ann.setCameraAnim(pres.anim.anim);
-    toast.success(t('review.camera.attached'));
-  }, [pres.anim, ann, t]);
-
-  const importLayout = useCallback(
-    (file: File) => {
-      void importCameraFile(file)
-        .then((animData) => {
-          if (!animData) {
-            toast.error(t('review.camera.none'));
-            return;
-          }
-          pres.anim.setAnim(animData);
-          pres.anim.play();
-          toast.success(t('review.camera.imported'));
-        })
-        .catch(() => toast.error(t('review.camera.importFailed')));
-    },
-    [pres.anim, t],
-  );
-
   // Lecture seule : rejeu des éditions persistées (transformation, flip, volumes, masque,
   // sous-ensembles) — l'éditeur les gère lui-même quand il est monté.
   useSavedSplatEdits(splat, data, showEdit);
 
-  // Cadrage F/H, actif pour **tous** (y compris en review post-publish) : F cadre la sélection
-  // si présente (édition), sinon le splat visible ; H rétablit la vue d'origine.
-  const selectedSet = editor.selection.selected;
-  const frameView = useCallback(() => {
-    const handle = getSceneHandle();
-    if (!handle) return;
-    const bounds = (selectedSet.size ? selectionBounds(handle, selectedSet) : null) ?? meshBounds(handle);
-    if (bounds) frameCameraToSphere(handle.camera, handle.controls, bounds.center, bounds.radius);
-  }, [getSceneHandle, selectedSet]);
-  const homeView = useCallback(() => {
-    const handle = getSceneHandle();
-    if (handle) frameCameraToMesh(handle.THREE, handle.mesh, handle.camera, handle.controls);
-  }, [getSceneHandle]);
-
-  // Raccourcis F/H côté viewer (post-publish). En édition, l'éditeur gère déjà F/H (sélection).
-  useFrameShortcuts({
-    active: !showEdit && ready,
-    isFlying: splat.isFlying,
-    onFrame: frameView,
-    onHome: homeView,
-  });
-
-  // Palette Ctrl+K (B3) : les actions du viewer, sans bouton de plus.
-  useSplatCommands({
+  // Câblage pointeur/clavier : hotspot au clic, transport caméra, cadrage F/H, palette Ctrl+K,
+  // et les deux actions d'animation caméra (joindre au commentaire, importer un fichier).
+  const { armHotspot, frameView, homeView, attachLayout, importLayout } = useSplatInput({
+    splat,
+    data,
+    ann,
     pres,
-    frameView,
-    homeView,
+    selected: editor.selection.selected,
+    showEdit,
     canPresent,
-    hasPresentation: !!data.splatPresentation,
+    stageMode: state.mode === 'stage',
   });
-
-  // « Non enregistré » = l'animation diffère de la présentation persistée — et plus « une
-  // animation existe » (qui restait sale pour toujours, même juste après une publication).
-  const savedAnimJson = useMemo(
-    () => JSON.stringify(normalizeAnim(data.splatPresentation?.cameraAnim)),
-    [data.splatPresentation],
-  );
-  const animDirty = pres.anim.hasAnimation && JSON.stringify(pres.anim.anim) !== savedAnimJson;
-
-  const selectTool =
-    editor.tool === 'select-rect'
-      ? ('rect' as const)
-      : editor.tool === 'select-lasso'
-        ? ('lasso' as const)
-        : editor.tool === 'brush'
-          ? ('brush' as const)
-          : null;
-
-  const activeTool =
-    toolsFor(state.mode, 'SPLAT').find((t) => t.id === state.tool) ?? toolsFor(state.mode, 'SPLAT')[0];
 
   return (
     <ReviewChrome
@@ -259,7 +162,7 @@ export default function SplatReview({
           presentation={
             canPresent ? { dirty: animDirty, busy: pres.busy, onSave: () => void pres.save() } : undefined
           }
-          onPlaceHotspot={hotspot.arm}
+          onPlaceHotspot={armHotspot}
         />
       }
       panel={
@@ -272,7 +175,7 @@ export default function SplatReview({
           showEdit={showEdit}
           compare={compare}
           grid={grid}
-          culling={{ off: cullingOff, onOff: onCullingOff }}
+          culling={culling}
           exportEdits={
             // Éditions effectives à cuire dans l'export : celles de l'éditeur en cours
             // d'édition, sinon celles persistées (rejouées pour tous) en lecture seule.

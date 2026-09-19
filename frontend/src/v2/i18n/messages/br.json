@@ -2498,6 +2498,7 @@
   "lightbox.zoomIn": "Zoum +",
   "lightbox.zoomOut": "Zoum −",
   "numberField.dragHint": "{hint} — ruilhañ an tikedenn evit kempenn (Maj ×10)",
+  "numberField.scrubHint": "{hint} — ruilhañ an dalvoud evit kempenn (Maj ×10, Esc evit nullañ)",
   "transform.positionAxis": "Lec'hiadur {axis}",
   "transform.rotationAxis": "Troidell {axis}",
   "transform.snapHint": "Krogañ — 0 = dieub",

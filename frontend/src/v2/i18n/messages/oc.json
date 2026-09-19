@@ -2493,6 +2493,7 @@
   "lightbox.zoomIn": "Zoom +",
   "lightbox.zoomOut": "Zoom −",
   "numberField.dragHint": "{hint} — lisatz l'etiqueta per ajustar (Maj ×10)",
+  "numberField.scrubHint": "{hint} — lisatz la valor per ajustar (Maj ×10, Esc anula)",
   "transform.positionAxis": "Posicion {axis}",
   "transform.rotationAxis": "Rotacion {axis}",
   "transform.snapHint": "Amagrament — 0 = liure",

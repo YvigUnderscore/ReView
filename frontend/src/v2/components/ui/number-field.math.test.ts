@@ -2,7 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { clampValue, dragValue, formatValue, parseInput, snapToStep } from './number-field.math';
+import {
+  SCRUB_THRESHOLD_PX,
+  clampValue,
+  dragValue,
+  formatValue,
+  isScrub,
+  parseInput,
+  scrubOffset,
+  snapToStep,
+} from './number-field.math';
 import { setLocale } from '../../i18n';
 
 describe('snapToStep', () => {
@@ -34,6 +43,22 @@ describe('dragValue', () => {
   it('applique le multiplicateur (Maj ×10) et reste borné', () => {
     expect(dragValue(0, 40, spec, 10)).toBe(100);
     expect(dragValue(170, 400, spec)).toBe(180);
+  });
+});
+
+describe('seuil de scrub', () => {
+  it('ne reconnaît le geste qu’au franchissement du seuil, dans les deux sens', () => {
+    expect(isScrub(SCRUB_THRESHOLD_PX - 1)).toBe(false);
+    expect(isScrub(-(SCRUB_THRESHOLD_PX - 1))).toBe(false);
+    expect(isScrub(SCRUB_THRESHOLD_PX)).toBe(true);
+    expect(isScrub(-SCRUB_THRESHOLD_PX)).toBe(true);
+    expect(isScrub(0)).toBe(false);
+  });
+  it('retire le seuil du déplacement : la valeur ne saute pas au démarrage', () => {
+    expect(scrubOffset(SCRUB_THRESHOLD_PX)).toBe(0);
+    expect(scrubOffset(-SCRUB_THRESHOLD_PX)).toBe(0);
+    expect(scrubOffset(40)).toBe(40 - SCRUB_THRESHOLD_PX);
+    expect(scrubOffset(-40)).toBe(-(40 - SCRUB_THRESHOLD_PX));
   });
 });
 

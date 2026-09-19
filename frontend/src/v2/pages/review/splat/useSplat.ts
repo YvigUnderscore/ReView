@@ -1,28 +1,28 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
-import type { Hotspot3D, SplatCamera, SplatTransform } from '../reviewTypes';
-import { createScene, type SplatModules, type SplatSceneCore } from './scene/createScene';
+import { createScene, type SplatModules } from './scene/createScene';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import { resizeRendererCamera } from '../three/sceneConfig';
 import { createFlyControls } from '../viewer/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { createHotspotMarker } from './scene/hotspotMarker';
-import { raycastAt, raycastCenter as raycastCenterCore } from './scene/raycast';
-import { toNdc } from '../three/usdPicking';
 import type { PointCloud } from './scene/pointCloud';
-import { applyRenderModeToScene, type RenderMode } from './scene/renderModes';
-import { createStatsSampler, type SplatStats, type StatsSampler } from './scene/stats';
+import { createStatsSampler, type StatsSampler } from './scene/stats';
+import { DEFAULT_CULLING_OFF } from './scene/cullingDefault';
+import type { SplatScene, SplatViewer } from './scene/splatViewerTypes';
 import { useCameraHandles } from './scene/useCameraHandles';
+import { useSplatHandles } from './scene/useSplatHandles';
 import { toThumbnail } from '../viewer/thumbnail';
 import { applyCulling } from './scene/viewerConfig';
 import { renderPipPass, type PipRect } from '../viewer/pipWindow';
-import { applySplatTransform, parseHotspotPoint } from './scene/meshPose';
 import { useRenderGate, SETTLE_WINDOW_MS } from '../viewer/renderScheduler';
+
+// Contrats du viewer (scène, poignée d'édition, API rendue à la page) : définis dans
+// `scene/splatViewerTypes`, réexportés ici — l'entrée publique du viewer reste `useSplat`.
+export type { SplatSceneHandle, SplatViewer } from './scene/splatViewerTypes';
 
 /**
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
@@ -33,82 +33,10 @@ import { useRenderGate, SETTLE_WINDOW_MS } from '../viewer/renderScheduler';
  *
  * three + OrbitControls + Spark sont importés dynamiquement (uniquement à l'ouverture d'un
  * splat) pour rester hors du bundle initial — les imports type-only ci-dessus sont erased.
+ *
+ * Les poignées impératives (raycast, hotspot, miniature, modes de rendu, stats, culling, PiP)
+ * vivent dans `scene/useSplatHandles` : elles ne lisent que les refs montées ici.
  */
-type SplatScene = SplatSceneCore & {
-  mesh: SplatMesh;
-  pivot: THREE.Group;
-  /** Caméra « layout » du PiP (mode layout, Phase 27) — pilotée par le lecteur keyframe. */
-  layoutCam: THREE.PerspectiveCamera;
-};
-
-/**
- * Poignée impérative vers la scène Three.js du splat, exposée aux hooks d'édition (gizmos,
- * sélection). Les composants React de haut niveau n'y touchent pas — seule la couche `editor/`
- * consomme Three via cette poignée, gardant la séparation scène / édition.
- */
-export interface SplatSceneHandle {
-  THREE: typeof import('three');
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  controls: OrbitControls;
-  mesh: SplatMesh;
-  /** Parent du mesh portant le flip d'orientation à l'import (11.E) — les splats frères
-   *  (comparaison A/B) doivent y être ajoutés pour hériter de la même convention d'axes. */
-  pivot: THREE.Group;
-  spark: SparkRenderer;
-  dom: HTMLElement;
-}
-
-export interface SplatViewer {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  ready: boolean;
-  loadError: boolean;
-  /** Progression du téléchargement réseau du fichier splat (0..1) tant qu'il arrive, puis null
-   *  une fois le fichier reçu (décodage + LOD en cours) — 41.B streaming léger. Alimente la
-   *  barre de chargement pour ouvrir vite les grosses scènes (le LOD GPU reste géré ailleurs). */
-  progress: number | null;
-  captureCamera: () => SplatCamera | undefined;
-  restoreCamera: (state: unknown) => void;
-  /** Hotspot sur la surface au centre du viewer (raycast), sinon null si le rayon ne touche rien. */
-  raycastCenter: () => Hotspot3D | null;
-  /** Hotspot sur la surface **sous le pointeur** (coordonnées client) — pose au clic. */
-  hotspotAtPointer: (clientX: number, clientY: number) => Hotspot3D | null;
-  /** Affiche (ou masque si null) le marqueur de hotspot, projeté à l'écran à chaque frame. */
-  showHotspot: (hs: Hotspot3D | null) => void;
-  /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
-  captureThumbnail: () => Promise<string | null>;
-  /** Applique une transformation TRS au splat — preview live des gizmos et au chargement. */
-  applyTransform: (t: SplatTransform | null) => void;
-  /** Flip d'orientation à l'import (11.E) : true (défaut) = convention .ply/.spz Y-down
-   *  redressée (rotation π sur X du groupe parent) ; false = fichier laissé tel quel. */
-  setBaseFlip: (flip: boolean) => void;
-  /** Bascule le mode de visualisation (splats / ellipses gaussiennes / points). */
-  setRenderMode: (mode: RenderMode) => void;
-  /** Reflète la sélection courante dans l'overlay « points » (teinte) — no-op hors mode points. */
-  reflectSelection: (selected: ReadonlySet<number>) => void;
-  /** Reflète un (dé)masquage de splats dans l'overlay « points » — no-op hors mode points. */
-  reflectHidden: (indices: Iterable<number>, hidden: boolean) => void;
-  /** Reflète l'escamotage des volumes de crop dans l'overlay « points » (Phase 28) — no-op sinon. */
-  reflectCropped: (indices: Iterable<number>) => void;
-  /** Abonne un panneau aux stats de rendu (FPS, splats, draw calls) — mesurées si abonné. */
-  subscribeStats: (cb: (stats: SplatStats) => void) => () => void;
-  /** Abonne un callback à chaque frame rendue (dt en secondes) — animations caméra (V5). */
-  subscribeFrame: (cb: (dt: number) => void) => () => void;
-  /** Neutralise (défaut) ou rétablit le culling Spark (clipXY/maxPixelRadius) — réglage live. */
-  setCullingOff: (off: boolean) => void;
-  /** Vol en cours (clic droit + ZQSD) — les raccourcis d'édition doivent rester inertes (11.G). */
-  isFlying: () => boolean;
-  /** Rect de la fenêtre PiP (px CSS, origine haut-gauche) — non-null : 2ᵉ passe de rendu de la
-   *  caméra layout dans ce rect (mode layout, Phase 27) ; null : PiP éteint. */
-  setPipRect: (rect: PipRect | null) => void;
-  /** Applique une pose (position/cible/fov/roll) à la caméra layout du PiP. */
-  restorePipCamera: (state: unknown) => void;
-  /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
-  getSceneHandle: () => SplatSceneHandle | null;
-  /** Canvas de rendu (auto-pause de l'animation caméra) — satisfait `CameraController`. */
-  getDom: () => HTMLElement | null;
-}
-
 export function useSplat(url: string | null, fileName: string, frameAspect?: number): SplatViewer {
   const containerRef = useRef<HTMLDivElement>(null);
   // Aspect du cadre de livraison (Phase 25) : la caméra le garde quel que soit l'écran,
@@ -161,7 +89,9 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       const modules: SplatModules = { THREE, OrbitControls, SparkRenderer, SplatMesh };
       const { renderer, scene, camera, controls, spark } = createScene(modules, container);
       // Culling neutralisé par défaut (10.G-V1) : rien ne disparaît en bord de cadre/overscale.
-      applyCulling(spark, true);
+      // Même constante que l'interrupteur du panneau (`useSplatView`) : les deux ne peuvent
+      // plus diverger.
+      applyCulling(spark, DEFAULT_CULLING_OFF);
       // Navigation fly type Unreal (clic droit + ZQSD/WASD + A/E) — gèle l'orbite en vol.
       const fly = createFlyControls(THREE, camera, controls, renderer.domElement);
       flyRef.current = fly;
@@ -288,107 +218,20 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   // Handles de pose caméra (capture/restauration vue libre + PiP layout) — hook dédié (budget).
   const { captureCamera, restoreCamera, restorePipCamera } = useCameraHandles(sceneRef, threeRef);
 
-  const raycastCenter = useCallback((): Hotspot3D | null => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (!s || !THREE) return null;
-    return raycastCenterCore(THREE, s.camera, s.mesh);
-  }, []);
-
-  /** Hotspot posé sous le pointeur (coordonnées client) — placement au clic dans le viewer. */
-  const hotspotAtPointer = useCallback((clientX: number, clientY: number): Hotspot3D | null => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (!s || !THREE) return null;
-    const rect = s.renderer.domElement.getBoundingClientRect();
-    return raycastAt(THREE, s.camera, s.mesh, toNdc(clientX, clientY, rect));
-  }, []);
-
-  const showHotspot = useCallback((hs: Hotspot3D | null) => {
-    const THREE = threeRef.current;
-    hotspotRef.current = hs && THREE ? parseHotspotPoint(THREE, hs) : null;
-  }, []);
-
-  const captureThumbnail = useCallback(
-    (): Promise<string | null> =>
-      new Promise((resolve) => {
-        if (!sceneRef.current) resolve(null);
-        else captureReq.current = resolve;
-      }),
-    [],
-  );
-
-  const applyTransform = useCallback((t: SplatTransform | null) => {
-    const s = sceneRef.current;
-    if (s) applySplatTransform(s.mesh, t);
-  }, []);
-
-  const setBaseFlip = useCallback((flip: boolean) => {
-    const s = sceneRef.current;
-    if (!s) return;
-    s.pivot.rotation.x = flip ? Math.PI : 0;
-    s.pivot.updateMatrixWorld(true);
-  }, []);
-
-  const subscribeStats = useCallback(
-    // L'échantillonneur existe dès le montage de la scène (avant `ready`) ; les panneaux du
-    // HUD ne sont montés qu'une fois le viewer prêt, l'abonnement est donc toujours effectif.
-    (cb: (stats: SplatStats) => void): (() => void) =>
-      gate.countSub(statsRef.current?.subscribe(cb)) ?? (() => undefined),
-    [gate],
-  );
-
-  const setCullingOff = useCallback((off: boolean) => {
-    const s = sceneRef.current;
-    if (s) applyCulling(s.spark, off);
-  }, []);
-
-  const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
-
-  const setPipRect = useCallback((rect: PipRect | null) => {
-    pipRectRef.current = rect;
-  }, []);
-
-  const subscribeFrame = useCallback((cb: (dt: number) => void): (() => void) => {
-    frameCbs.current.add(cb);
-    return () => frameCbs.current.delete(cb);
-  }, []);
-
-  const getSceneHandle = useCallback((): SplatSceneHandle | null => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (!s || !THREE) return null;
-    return {
-      THREE,
-      scene: s.scene,
-      camera: s.camera,
-      controls: s.controls,
-      mesh: s.mesh,
-      pivot: s.pivot,
-      spark: s.spark,
-      dom: s.renderer.domElement,
-    };
-  }, []);
-
-  const setRenderMode = useCallback((mode: RenderMode) => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (s && THREE) pointsRef.current = applyRenderModeToScene(THREE, s, mode, pointsRef.current);
-  }, []);
-
-  const getDom = useCallback(() => sceneRef.current?.renderer.domElement ?? null, []);
-
-  const reflectSelection = useCallback((selected: ReadonlySet<number>) => {
-    pointsRef.current?.setSelection(selected);
-  }, []);
-
-  const reflectHidden = useCallback((indices: Iterable<number>, hidden: boolean) => {
-    pointsRef.current?.setHidden(indices, hidden);
-  }, []);
-
-  const reflectCropped = useCallback((indices: Iterable<number>) => {
-    pointsRef.current?.setCropped(indices);
-  }, []);
+  // Poignées impératives (raycast, hotspot, miniature, transformation, modes, stats, culling,
+  // PiP) — hook dédié (budget) : elles ne font que lire les refs montées ci-dessus.
+  const handles = useSplatHandles({
+    sceneRef,
+    threeRef,
+    hotspotRef,
+    captureReq,
+    pointsRef,
+    statsRef,
+    frameCbs,
+    flyRef,
+    pipRectRef,
+    gate,
+  });
 
   return {
     containerRef,
@@ -397,23 +240,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     progress,
     captureCamera,
     restoreCamera,
-    raycastCenter,
-    hotspotAtPointer,
-    showHotspot,
-    captureThumbnail,
-    applyTransform,
-    setBaseFlip,
-    setRenderMode,
-    reflectSelection,
-    reflectHidden,
-    reflectCropped,
-    subscribeStats,
-    subscribeFrame,
-    setCullingOff,
-    isFlying,
-    setPipRect,
     restorePipCamera,
-    getSceneHandle,
-    getDom,
+    ...handles,
   };
 }

@@ -2414,6 +2414,7 @@
   "lightbox.zoomIn": "拡大",
   "lightbox.zoomOut": "縮小",
   "numberField.dragHint": "{hint} — ラベルをドラッグして調整（Shift ×10）",
+  "numberField.scrubHint": "{hint} — 値をドラッグして調整（Shift ×10、Esc で取り消し）",
   "transform.positionAxis": "位置 {axis}",
   "transform.rotationAxis": "回転 {axis}",
   "transform.snapHint": "スナップ — 0 = 自由",
