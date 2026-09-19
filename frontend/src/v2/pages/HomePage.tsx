@@ -103,8 +103,8 @@ export default function HomePage() {
 
   // Résumé actionnable de l'en-tête : mes chiffres, sinon la phrase d'ambiance.
   const headline = data
-    ? data.stats.myRetakes + data.stats.pendingReview > 0
-      ? t('home.headline', { retakes: data.stats.myRetakes, pending: data.stats.pendingReview })
+    ? data.stats.myRetakes + data.stats.awaitingMyReview > 0
+      ? t('home.headline', { retakes: data.stats.myRetakes, pending: data.stats.awaitingMyReview })
       : t('home.whatMoved')
     : t('home.whatMoved');
 

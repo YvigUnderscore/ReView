@@ -40,6 +40,10 @@ const ShotPage = lazy(() => import('./pages/ShotPage'));
 const SequencePage = lazy(() => import('./pages/SequencePage'));
 const EpisodePage = lazy(() => import('./pages/EpisodePage'));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
+// Les deux vues transverses qui déplient les compteurs de l'Accueil (« mes tâches » et le
+// fil des commentaires) : on n'y passe qu'en cliquant un chiffre, elles se chargent alors.
+const MyTasksPage = lazy(() => import('./pages/MyTasksPage'));
+const CommentsPage = lazy(() => import('./pages/CommentsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const TimelinePlayerPage = lazy(() => import('./pages/TimelinePlayerPage'));
@@ -139,6 +143,10 @@ function AppRoutes() {
               <Route path="/" element={<HomePage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/reviews" element={<ReviewsPage />} />
+              {/* Destinations des compteurs de l'Accueil : deux d'entre eux pointaient une
+                  ancre qui disparaissait avec le bloc « mes tâches ». */}
+              <Route path="/my-tasks" element={<MyTasksPage />} />
+              <Route path="/comments" element={<CommentsPage />} />
               <Route path="/projects/:id" element={<ProjectPage />} />
               <Route path="/projects/:id/kanban" element={<KanbanPage />} />
               <Route path="/tasks/:id" element={<TaskPage />} />

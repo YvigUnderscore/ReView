@@ -1,16 +1,20 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { MediaStatus, Prisma, Role, TaskStatus } from '@prisma/client';
+import { Prisma, Role, TaskStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { familyOf, statusRefOf, taskPriority } from '../lib/statusFamily';
 import {
-  TASK_BLOCKED_FILTER,
-  TASK_OPEN_FILTER,
-  TASK_REVIEW_FILTER,
-  familyOf,
-  statusRefOf,
-  taskPriority,
-} from '../lib/statusFamily';
+  accessibleProjects,
+  awaitingMyReviewWhere,
+  commentFeedWhere,
+  mediaInReviewWhere,
+  myOpenTasksWhere,
+  myRetakesWhere,
+  publishedMediaInScope,
+  versionInProjects,
+  type SessionUser,
+} from '../lib/homeScope';
 import { storage } from './StorageService';
 import { effectiveThumbnailUrl, firstMediaThumbKeysForProjects } from '../lib/thumbnails';
 
@@ -30,27 +34,16 @@ import { effectiveThumbnailUrl, firstMediaThumbKeysForProjects } from '../lib/th
  * chaque affichage. Un seul agrégat les remplace.
  *
  * Et les compteurs raisonnaient sur l'enum figé `TaskStatus` : un studio relié à ShotGrid
- * voyait « mes retakes », « verdicts attendus » et la jauge de chaque projet calculés sur
- * six seaux qui ne sont pas son vocabulaire. Ils lisent désormais `PipelineStatus`
- * (`lib/statusFamily`), avec repli sur l'enum quand aucun statut personnalisable n'est posé.
+ * voyait « mes retakes » et la jauge de chaque projet calculés sur six seaux qui ne sont pas
+ * son vocabulaire. Ils lisent désormais `PipelineStatus` (`lib/statusFamily`), avec repli
+ * sur l'enum quand aucun statut personnalisable n'est posé.
+ *
+ * Les quatre compteurs de l'Accueil, enfin, ne sont plus écrits ici : leurs périmètres
+ * vivent dans `lib/homeScope`, avec les pages que les cartes ouvrent. Chacun mentait à sa
+ * façon — « mes retakes » sans aucune borne, « awaiting review » posé comme personnel mais
+ * calculé pour tout le studio, « media in review » comptant le publié décision comprise.
+ * Un chiffre et la vue qui le déplie lisent maintenant le même `where`.
  */
-
-type SessionUser = { id: number; role: Role };
-
-const isGlobal = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
-
-/** Filtre projet accessible (corbeille exclue). */
-const accessWhere = (user: SessionUser): Prisma.ProjectWhereInput =>
-  isGlobal(user.role) ? { deletedAt: null } : { deletedAt: null, memberships: { some: { userId: user.id } } };
-
-/** Sélecteur des versions rattachées à un projet accessible (3 chemins de rattachement). */
-const versionInAccess = (access: Prisma.ProjectWhereInput): Prisma.VersionWhereInput => ({
-  OR: [
-    { task: { shot: { deletedAt: null, hiddenAt: null, project: access } } },
-    { task: { asset: { deletedAt: null, hiddenAt: null, project: access } } },
-    { asset: { deletedAt: null, hiddenAt: null, project: access } },
-  ],
-});
 
 /** Localisation lisible d'une tâche (SQ010 · SH020 ou nom d'asset). */
 function loc(
@@ -195,33 +188,15 @@ async function taskCountsByProject(
 }
 
 export async function getDashboard(user: SessionUser) {
-  const access = accessWhere(user);
-  const mediaWhere: Prisma.MediaObjectWhereInput = {
-    deletedAt: null,
-    published: true,
-    status: MediaStatus.READY,
-    version: versionInAccess(access),
-  };
-  // Un CLIENT ne voit que les notes qui lui sont destinées — même règle que le fil de
-  // review, le partage public, la recherche et l'export. Sans ce filtre, les notes internes
-  // remontaient jusque dans « Dernières reviews » de son Accueil.
-  const commentWhere: Prisma.CommentWhereInput =
-    user.role === Role.CLIENT ? { media: mediaWhere, isVisibleToClient: true } : { media: mediaWhere };
+  const access = accessibleProjects(user);
+  // Les périmètres sont ceux de `lib/homeScope`, partagés avec les pages que les cartes
+  // ouvrent : un compteur ne peut plus annoncer autre chose que ce que sa vue montre. Un
+  // CLIENT y reste borné aux notes qui lui sont destinées.
+  const mediaWhere = publishedMediaInScope(user);
+  const commentWhere = commentFeedWhere(user);
+  const inReviewWhere = mediaInReviewWhere(user);
   // Fenêtre des tendances : ce qui s'est ajouté sur les 7 derniers jours.
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
-  // Tâche vivante rattachée à un projet accessible (les deux chemins de rattachement).
-  const taskInAccess: Prisma.TaskWhereInput = {
-    OR: [
-      { shot: { deletedAt: null, hiddenAt: null, project: access } },
-      { asset: { deletedAt: null, hiddenAt: null, project: access } },
-    ],
-  };
-  const myTaskInProject: Prisma.TaskWhereInput = {
-    OR: [
-      { shot: { deletedAt: null, hiddenAt: null, project: { deletedAt: null } } },
-      { asset: { deletedAt: null, hiddenAt: null, project: { deletedAt: null } } },
-    ],
-  };
 
   const [
     lastComments,
@@ -229,18 +204,18 @@ export async function getDashboard(user: SessionUser) {
     media,
     myTasks,
     projectCount,
-    mediaCount,
+    mediaInReview,
     commentCount,
-    mediaCount7d,
+    mediaInReview7d,
     commentCount7d,
     myRetakes,
-    pendingReview,
+    awaitingMyReview,
     recentProjectRows,
   ] = await Promise.all([
     // Dernier commentaire des six médias les plus récemment commentés (élection en SQL).
     latestCommentPerMedia(commentWhere),
     prisma.version.findMany({
-      where: { deletedAt: null, ...versionInAccess(access) },
+      where: { deletedAt: null, ...versionInProjects(access) },
       orderBy: { createdAt: 'desc' },
       take: 10,
       include: {
@@ -259,7 +234,9 @@ export async function getDashboard(user: SessionUser) {
       },
     }),
     prisma.task.findMany({
-      where: { assigneeId: user.id, AND: [myTaskInProject, TASK_OPEN_FILTER] },
+      // Mêmes bornes que le compteur de retakes : projet accessible, hors corbeille,
+      // parent non masqué. Sans elles, l'Accueil réclamait du travail sur un plan retiré.
+      where: myOpenTasksWhere(user),
       orderBy: { updatedAt: 'desc' },
       take: 24,
       include: {
@@ -269,15 +246,17 @@ export async function getDashboard(user: SessionUser) {
       },
     }),
     prisma.project.count({ where: access }),
-    prisma.mediaObject.count({ where: mediaWhere }),
+    // Médias réellement en review : publiés, prêts, sans décision rendue.
+    prisma.mediaObject.count({ where: inReviewWhere }),
     prisma.comment.count({ where: commentWhere }),
-    // Tendances 7 jours — mêmes périmètres que les compteurs globaux.
-    prisma.mediaObject.count({ where: { ...mediaWhere, createdAt: { gte: weekAgo } } }),
+    // Tendances 7 jours — mêmes périmètres que les compteurs qu'elles accompagnent.
+    prisma.mediaObject.count({ where: { ...inReviewWhere, createdAt: { gte: weekAgo } } }),
     prisma.comment.count({ where: { ...commentWhere, createdAt: { gte: weekAgo } } }),
     // Mes retakes/rejets : ce qui me demande une action immédiate.
-    prisma.task.count({ where: { assigneeId: user.id, ...TASK_BLOCKED_FILTER } }),
-    // Verdicts attendus dans mon périmètre (tâches en attente de review).
-    prisma.task.count({ where: { AND: [taskInAccess, TASK_REVIEW_FILTER] } }),
+    prisma.task.count({ where: myRetakesWhere(user) }),
+    // Ce qu'on attend de MOI : les reviews qui m'ont été confiées et qui n'ont pas encore
+    // reçu de décision (et non, comme avant, les verdicts attendus de tout le studio).
+    prisma.mediaObject.count({ where: awaitingMyReviewWhere(user) }),
     // Projets récents (miroir du tri de GET /api/projects) — la progression est calculée après.
     prisma.project.findMany({
       where: access,
@@ -384,12 +363,12 @@ export async function getDashboard(user: SessionUser) {
     recentProjects,
     stats: {
       projects: projectCount,
-      publishedMedia: mediaCount,
+      mediaInReview,
       comments: commentCount,
-      publishedMedia7d: mediaCount7d,
+      mediaInReview7d,
       comments7d: commentCount7d,
       myRetakes,
-      pendingReview,
+      awaitingMyReview,
     },
   };
 }

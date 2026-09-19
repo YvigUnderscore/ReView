@@ -8,9 +8,17 @@ import type { DashboardData } from './homeTypes';
 import { useT } from '../../i18n';
 
 /**
- * Compteurs de l'Accueil (refonte G) : mes chiffres d'abord (retakes, verdicts attendus),
- * puis le périmètre (médias en review, commentaires) avec tendance 7 jours. Chaque carte
- * est cliquable : vers /reviews, ou vers la section « Mes tâches » de la page (ancre).
+ * Compteurs de l'Accueil : mes chiffres d'abord (retakes, reviews qu'on m'a confiées), puis
+ * le périmètre (médias en review, commentaires) avec tendance 7 jours.
+ *
+ * Chaque carte mène à la vue qui la déplie — et c'est la moitié du travail. Deux d'entre
+ * elles pointaient l'ancre `#my-tasks`, qui disparaissait avec le bloc « mes tâches » dès
+ * qu'on le retirait de son accueil : le clic ne faisait alors rien. Les deux autres menaient
+ * à `/reviews` sans filtre, où rien ne correspondait au chiffre affiché — et, pour les
+ * commentaires, à une page qui n'en montre aucun.
+ *
+ * Un compteur qu'on ne peut pas déplier n'est pas vérifiable : c'est à ce moment-là qu'il
+ * commence à mentir sans qu'on le sache.
  */
 
 function StatCard({
@@ -30,8 +38,13 @@ function StatCard({
   to: string;
   alert?: boolean;
 }) {
-  const body = (
-    <>
+  return (
+    <Link
+      to={to}
+      className={`flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:border-primary/60 ${
+        alert ? 'border-destructive/40' : 'border-border'
+      }`}
+    >
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${cls}`}>
         <Icon size={19} />
       </span>
@@ -42,21 +55,6 @@ function StatCard({
         </span>
         <span className="block truncate text-xs text-muted-foreground">{label}</span>
       </span>
-    </>
-  );
-  const frame = `flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:border-primary/60 ${
-    alert ? 'border-destructive/40' : 'border-border'
-  }`;
-  // Ancre interne (#my-tasks) : simple <a>, le router n'a rien à y faire.
-  if (to.startsWith('#'))
-    return (
-      <a href={to} className={frame}>
-        {body}
-      </a>
-    );
-  return (
-    <Link to={to} className={frame}>
-      {body}
     </Link>
   );
 }
@@ -70,33 +68,38 @@ export default function StatsRow({ stats }: { stats: DashboardData['stats'] }) {
         cls="bg-destructive/10 text-destructive"
         value={stats.myRetakes}
         label={t('home.stat.myRetakes')}
-        to="#my-tasks"
+        to="/my-tasks?scope=blocked"
         alert={stats.myRetakes > 0}
       />
+      {/* « Ce qu'on attend de moi », et non plus les verdicts attendus de tout le studio :
+          la carte est posée parmi mes chiffres, son libellé et son calcul le disent enfin
+          tous les deux. Le filtre de la vue est exactement le périmètre du compteur. */}
       <StatCard
         icon={Gavel}
         cls="bg-warning/10 text-warning"
-        value={stats.pendingReview}
-        label={t('home.stat.pendingReview')}
-        to="#my-tasks"
+        value={stats.awaitingMyReview}
+        label={t('home.stat.awaitingMyReview')}
+        to="/reviews?assigned=me&decision=none"
       />
       <StatCard
         icon={Clapperboard}
         cls="bg-accent2/10 text-accent2"
-        value={stats.publishedMedia}
+        value={stats.mediaInReview}
         label={t('home.mediaInReview')}
         trend={
-          stats.publishedMedia7d > 0 ? t('home.stat.last7d', { count: stats.publishedMedia7d }) : undefined
+          stats.mediaInReview7d > 0 ? t('home.stat.last7d', { count: stats.mediaInReview7d }) : undefined
         }
-        to="/reviews"
+        to="/reviews?status=published&decision=none"
       />
+      {/* Le libellé était emprunté au filtre des commentaires d'une review (« All ») et la
+          carte menait à /reviews, qui n'en montre aucun. Elle a sa clé et son fil. */}
       <StatCard
         icon={MessageSquare}
         cls="bg-info/10 text-info"
         value={stats.comments}
-        label={t('comments.filter.all')}
+        label={t('home.stat.comments')}
         trend={stats.comments7d > 0 ? t('home.stat.last7d', { count: stats.comments7d }) : undefined}
-        to="/reviews"
+        to="/comments"
       />
     </div>
   );

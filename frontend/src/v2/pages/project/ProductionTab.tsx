@@ -3,13 +3,14 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, BarChart3, CalendarClock, Users } from 'lucide-react';
+import { AlertTriangle, BarChart3, CalendarClock, Repeat, Users } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import type { ProjectSchedule } from '../../types/api';
 import type { ProductionOverview } from '../../types/production';
 import ProductionSummary from '../../components/production/ProductionSummary';
-import ProgressMatrix from '../../components/production/ProgressMatrix';
+import ProductionGrid from '../../components/production/grid/ProductionGrid';
+import RetakePanel from '../../components/production/RetakePanel';
 import AttentionPanel from '../../components/production/AttentionPanel';
 import WorkloadPanel from '../../components/production/WorkloadPanel';
 import PacePanel from '../../components/production/PacePanel';
@@ -29,8 +30,8 @@ import { useT, type MessageKey } from '../../i18n';
  * atteindre demandait de faire défiler trois écrans.
  *
  * D'où deux niveaux. Une **ligne de synthèse**, toujours visible, qui répond en quatre
- * chiffres. Puis des **onglets** — avancement, ce qui bloque, l'équipe, le planning — parce
- * que ces quatre questions ne se posent pas en même temps : un superviseur ouvre
+ * chiffres. Puis des **onglets** — avancement, ce qui bloque, les retakes, l'équipe, le
+ * planning — parce que ces questions ne se posent pas en même temps : un superviseur ouvre
  * « ce qui bloque » le matin, la production ouvre « planning » en fin de semaine.
  *
  * Les badges des onglets portent le nombre d'alertes : on sait où aller sans y aller.
@@ -38,7 +39,7 @@ import { useT, type MessageKey } from '../../i18n';
 
 const WINDOWS = [4, 8, 13, 26] as const;
 
-type Panel = 'progress' | 'attention' | 'team' | 'schedule';
+type Panel = 'progress' | 'attention' | 'retakes' | 'team' | 'schedule';
 
 function Section({ titleKey, children }: { titleKey: MessageKey; children: React.ReactNode }) {
   const t = useT();
@@ -81,6 +82,7 @@ export default function ProductionTab({ projectId }: { projectId: number }) {
       icon: <AlertTriangle size={14} />,
       badge: blocking,
     },
+    { key: 'retakes', label: t('production.retakes.title'), icon: <Repeat size={14} /> },
     { key: 'team', label: t('production.section.who'), icon: <Users size={14} /> },
     { key: 'schedule', label: t('production.section.schedule'), icon: <CalendarClock size={14} /> },
   ];
@@ -92,8 +94,11 @@ export default function ProductionTab({ projectId }: { projectId: number }) {
 
       {panel === 'progress' && (
         <>
-          <Section titleKey="production.section.where">
-            <ProgressMatrix data={data} />
+          {/* La grille plans × départements remplace la matrice séquences × départements :
+              la maille séquence n'a pas disparu, elle est devenue l'état replié des
+              groupes — mais on peut enfin descendre au plan, qui est l'unité de travail. */}
+          <Section titleKey="production.grid.title">
+            <ProductionGrid projectId={projectId} />
           </Section>
           {/* La cadence répond au « à quel rythme », qui prolonge le « où en est-on » :
               les deux se lisent ensemble, pas dans deux onglets séparés. */}
@@ -119,6 +124,12 @@ export default function ProductionTab({ projectId }: { projectId: number }) {
       )}
 
       {panel === 'attention' && <AttentionPanel data={data} />}
+
+      {panel === 'retakes' && (
+        <Section titleKey="production.retakes.title">
+          <RetakePanel projectId={projectId} />
+        </Section>
+      )}
 
       {panel === 'team' && (
         <Section titleKey="production.section.who">

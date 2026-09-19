@@ -59,12 +59,21 @@ export interface DashboardData {
   recentProjects: DashboardProject[];
   stats: {
     projects: number;
-    publishedMedia: number;
+    /**
+     * Médias réellement en review : publiés, prêts, **sans décision rendue**. La carte
+     * comptait tout le publié — un projet livré depuis deux ans y figurait encore.
+     */
+    mediaInReview: number;
     comments: number;
-    /** Tendances 7 jours et compteurs personnels (refonte Accueil). */
-    publishedMedia7d: number;
+    /** Tendances 7 jours, sur le périmètre du compteur qu'elles accompagnent. */
+    mediaInReview7d: number;
     comments7d: number;
     myRetakes: number;
-    pendingReview: number;
+    /**
+     * Ce qu'on attend de MOI : les reviews qui m'ont été confiées et qu'aucune décision
+     * n'a encore tranchées. L'ancien `pendingReview` portait le même libellé personnel
+     * mais comptait les verdicts attendus de tout le studio.
+     */
+    awaitingMyReview: number;
   };
 }

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clapperboard, ListVideo, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,7 +21,8 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import SelectionBar from '../components/ui/selection-bar';
 import { SkeletonCards } from '../components/ui/skeleton';
 import EmptyState from '../components/ui/empty-state';
-import { EMPTY_FILTERS, type ReviewItem, type ReviewsFilterState } from './reviews/reviewsTypes';
+import { type ReviewItem, type ReviewsFilterState } from './reviews/reviewsTypes';
+import { apiQuery, filtersFromSearch, searchWithFilters } from './reviews/reviewsUrl';
 import ReviewCard from './reviews/ReviewCard';
 import ReviewsFilters from './reviews/ReviewsFilters';
 import BulkDecisionDialog from './reviews/BulkDecisionDialog';
@@ -31,13 +32,24 @@ import { useT } from '../i18n';
 /**
  * Page « Reviews » globale (12.C) : tous les médias publiés de mes projets + mes
  * brouillons, filtrables par projet/type/statut, tri récent, vignettes → /review/:id.
+ *
+ * Les filtres vivent dans l'URL (`reviews/reviewsUrl`) et non dans un état local : c'est ce
+ * qui permet à un compteur de l'Accueil d'ouvrir SA vue, à une recherche de se partager, et
+ * au retour arrière du navigateur de défaire le dernier filtre au lieu de quitter la page.
  */
 export default function ReviewsPage() {
   const t = useT();
   const view = useViewMode('reviews');
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [filters, setFilters] = useState<ReviewsFilterState>(EMPTY_FILTERS);
+  const [search, setSearch] = useSearchParams();
+  // L'URL est la seule source : rien à synchroniser, donc rien qui puisse diverger. Chaque
+  // changement pousse une entrée d'historique — c'est ce que défait le retour arrière.
+  const filters = useMemo(() => filtersFromSearch(search), [search]);
+  const setFilters = useCallback(
+    (next: ReviewsFilterState) => setSearch(searchWithFilters(search, next)),
+    [search, setSearch],
+  );
   const [bulkDeleting, setBulkDeleting] = useState(false);
   // « Ajouter à la playlist » (Phase 33) : mediaIds ciblés (carte seule ou sélection).
   const [playlistTarget, setPlaylistTarget] = useState<number[] | null>(null);
@@ -47,9 +59,7 @@ export default function ReviewsPage() {
   const canPlaylist = role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST';
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
 
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value);
-  const qs = params.toString();
+  const qs = apiQuery(filters);
 
   // La page annonçait fièrement « 1 247 media » au-dessus de cent cartes : le total venait
   // du serveur, les cartes d'une seule page. Les deux se rejoignent enfin.

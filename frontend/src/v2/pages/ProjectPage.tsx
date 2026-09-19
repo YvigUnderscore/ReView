@@ -126,7 +126,13 @@ export default function ProjectPage() {
     { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shotsQ.total },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assetsQ.total },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
-    { key: 'production', label: t('project.tab.production'), icon: <BarChart3 size={16} /> },
+    // Le suivi de production expose la charge nominative de l'équipe, les retards et les
+    // tâches non assignées : depuis la phase 50 ses lectures sont réservées côté serveur à
+    // qui gère le projet. Sans ce garde, un artiste verrait l'onglet et n'y trouverait que
+    // des erreurs.
+    ...(canManage
+      ? [{ key: 'production', label: t('project.tab.production'), icon: <BarChart3 size={16} /> }]
+      : []),
     ...(canManage ? [{ key: 'members', label: t('nav.members'), icon: <Users size={16} /> }] : []),
     ...(canManage ? [{ key: 'shares', label: t('project.tab.shares'), icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),
@@ -229,7 +235,7 @@ export default function ProjectPage() {
           <AssetsTab projectId={projectId} assets={assets} canManage={canManage} reload={loadStructure} />
         )}
         {tab === 'playlists' && <PlaylistsTab projectId={projectId} />}
-        {tab === 'production' && <ProductionTab projectId={projectId} />}
+        {tab === 'production' && canManage && <ProductionTab projectId={projectId} />}
         {tab === 'members' && canManage && <MembersTab projectId={projectId} />}
         {tab === 'shares' && canManage && <SharesTab projectId={projectId} />}
         {tab === 'settings' && canManage && (

@@ -26,6 +26,12 @@ export const qk = {
   setupStatus: ['setup-status'] as const,
   branding: ['branding'] as const,
   dashboard: ['dashboard'] as const,
+  /** Mes tâches, tous projets confondus (page « mes tâches ») — clé = chaîne de filtres. */
+  myTasks: (filter: string) => ['my-tasks', filter] as const,
+  /** Toutes vues confondues : ce qu'invalide un statut changé, d'où qu'il le soit. */
+  myTasksAll: ['my-tasks'] as const,
+  /** Fil des derniers commentaires de mon périmètre (carte « commentaires » de l'Accueil). */
+  commentFeed: (filter: string) => ['comment-feed', filter] as const,
   announcementsActive: ['announcements', 'active'] as const,
   reviews: (filter: string) => ['reviews', filter] as const,
   projects: ['projects'] as const,
@@ -37,6 +43,11 @@ export const qk = {
   projectTrash: (id: number) => ['project', id, 'trash'] as const,
   projectStats: (id: number) => ['project', id, 'stats'] as const,
   projectSchedule: (id: number) => ['project', id, 'schedule'] as const,
+  /** Grille de suivi (plans × départements). `search` est la query-string des filtres :
+   *  deux filtres différents sont deux listes différentes, jamais la même page réécrite. */
+  projectGrid: (id: number, search: string) => ['project', id, 'grid', search] as const,
+  /** Toutes les grilles du projet — ce qu'une mutation de case invalide, filtres compris. */
+  projectGridAll: (id: number) => ['project', id, 'grid'] as const,
   projectMedia: (id: number, kind?: string) => ['project', id, 'media', kind ?? 'all'] as const,
   /** Niveau Épisode (facultatif par projet) — le réglage pend sous le projet, comme les
    *  autres réglages : l'invalider avec lui suffit. */
