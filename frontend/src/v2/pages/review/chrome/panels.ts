@@ -1,19 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {
-  Axis3d,
-  Columns2,
-  Download,
-  Eye,
-  Grid3x3,
-  Image,
-  Info,
-  Play,
-  Sun,
-  Video,
-  type LucideIcon,
-} from 'lucide-react';
+import { Axis3d, Download, Eye, Grid3x3, Image, Info, Play, Sun, Video, type LucideIcon } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
 import { isSpatialKind } from './modes';
 import type { MessageKey } from '../../../i18n';
@@ -24,17 +12,7 @@ import type { MessageKey } from '../../../i18n';
  * fois ; le dock se replie sur sa bande d'onglets de 44 px.
  */
 export type PanelId =
-  | 'playback'
-  | 'view'
-  | 'image'
-  | 'guides'
-  | 'compare'
-  | 'info'
-  | 'export'
-  | 'camera'
-  | 'light'
-  | 'display'
-  | 'scene';
+  'playback' | 'image' | 'guides' | 'info' | 'export' | 'camera' | 'light' | 'display' | 'scene';
 
 export interface ReviewPanel {
   id: PanelId;
@@ -55,16 +33,26 @@ const SPATIAL_PANELS: ReviewPanel[] = [
   EXPORT,
 ];
 
-const MEDIA_PANELS = (kind: MediaKind): ReviewPanel[] => [
+const COLOR: ReviewPanel = { id: 'image', labelKey: 'panel.image', icon: Image };
+
+/**
+ * Dock des médias plats. Trois onglets sont tombés côté image (Phase 50) : « Comparaison »
+ * redisait l'en-tête sans offrir de B — le choix vit maintenant dans la barre d'options du
+ * mode « Compare » ; « Affichage » annonçait une cadence et une vitesse de lecture qui
+ * n'existent pas sur une image fixe ; « Repères » n'avait aucun effet, l'overlay n'étant
+ * monté que dans le lecteur vidéo — il est désormais monté sur l'image, et ses interrupteurs
+ * vivent au clic droit.
+ */
+const MEDIA_PANELS = (kind: MediaKind): ReviewPanel[] =>
   kind === 'VIDEO'
-    ? { id: 'playback', labelKey: 'panel.playback', icon: Play }
-    : { id: 'view', labelKey: 'panel.display', icon: Eye },
-  { id: 'image', labelKey: 'panel.image', icon: Image },
-  { id: 'guides', labelKey: 'panel.guides', icon: Grid3x3 },
-  { id: 'compare', labelKey: 'panel.compare', icon: Columns2 },
-  INFO,
-  EXPORT,
-];
+    ? [
+        { id: 'playback', labelKey: 'panel.playback', icon: Play },
+        COLOR,
+        { id: 'guides', labelKey: 'panel.guides', icon: Grid3x3 },
+        INFO,
+        EXPORT,
+      ]
+    : [COLOR, INFO, EXPORT];
 
 /** Panneaux du dock pour un type de média, dans l'ordre d'affichage. */
 export function panelsFor(kind: MediaKind): ReviewPanel[] {

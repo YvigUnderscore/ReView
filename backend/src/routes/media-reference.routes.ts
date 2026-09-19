@@ -18,26 +18,26 @@ router.use(authenticate);
 const idParam = z.object({ id: z.coerce.number().int() });
 const refParams = z.object({ id: z.coerce.number().int(), refId: z.coerce.number().int() });
 
+/**
+ * Position et taille en fractions de l'image, bornées au cadre : une référence posée au-delà
+ * n'est simplement pas visible, et le client n'a aucun moyen de la récupérer. Des positions
+ * hors cadre (x = 1.05) existent en base — l'affichage les recadre, le schéma empêche la suite.
+ */
+const referenceBody = z.object({
+  dataUrl: z.string().min(1).max(8_400_000),
+  commentId: z.number().int(),
+  x: z.number().min(0).max(1).optional(),
+  y: z.number().min(0).max(1).optional(),
+  width: z.number().min(0.02).max(1).optional(),
+});
+
 // POST /api/media/:id/references — joint une image (data URL base64) à un commentaire
-router.post(
-  '/:id/references',
-  validate({
-    params: idParam,
-    body: z.object({
-      dataUrl: z.string().min(1).max(8_400_000),
-      commentId: z.number().int(),
-      x: z.number().optional(),
-      y: z.number().optional(),
-      width: z.number().optional(),
-    }),
-  }),
-  async (req, res) => {
-    const { dataUrl, commentId, ...pos } = req.body;
-    res.status(201).json({
-      reference: await ReviewReferenceService.add(req.user!, Number(req.params.id), dataUrl, commentId, pos),
-    });
-  },
-);
+router.post('/:id/references', validate({ params: idParam, body: referenceBody }), async (req, res) => {
+  const { dataUrl, commentId, ...pos } = req.body;
+  res.status(201).json({
+    reference: await ReviewReferenceService.add(req.user!, Number(req.params.id), dataUrl, commentId, pos),
+  });
+});
 
 // DELETE /api/media/:id/references/:refId — retire une image de référence
 router.delete('/:id/references/:refId', validate({ params: refParams }), async (req, res) => {

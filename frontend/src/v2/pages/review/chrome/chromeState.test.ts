@@ -10,7 +10,7 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { isLockedByPublication, modesFor, switcherModesFor } from './modes';
+import { allowedModesFor, isLockedByPublication, modesFor, switcherModesFor } from './modes';
 import { panelsFor } from './panels';
 import { toolSearchOrder, toolsFor, viewActionsFor } from './tools';
 
@@ -42,6 +42,18 @@ describe('modes', () => {
       expect(switcherModesFor(kind)).toHaveLength(kind === 'IMAGE' ? 2 : 3);
       // `reconcileChrome` valide contre la liste complète : l'annotation s'arme ailleurs.
       expect(modesFor(kind).map((m) => m.value)).toContain('annotate');
+    }
+  });
+
+  it('retire Compare quand aucune version voisine n’existe — le mode s’armait sur rien', () => {
+    // Le sélecteur de comparaison disparaissait au même moment : on entrait dans un mode qui
+    // ne montrait aucune comparaison, sans autre issue que d'en sortir.
+    for (const kind of ['VIDEO', 'IMAGE'] as const) {
+      expect(switcherModesFor(kind, true).map((m) => m.value)).toContain('compare');
+      expect(switcherModesFor(kind, false).map((m) => m.value)).not.toContain('compare');
+      expect(allowedModesFor(kind, false).map((m) => m.value)).not.toContain('compare');
+      // Le reste du chrome ne bouge pas : seul « Compare » dépend des voisins.
+      expect(allowedModesFor(kind, false).map((m) => m.value)).toContain('annotate');
     }
   });
 });
@@ -115,9 +127,23 @@ describe('panels', () => {
     expect(panelsFor('SPLAT').map((p) => p.id)).not.toContain('light');
   });
 
-  it('ouvre la vidéo sur Lecture et l’image sur Affichage', () => {
+  it('ouvre la vidéo sur Lecture et l’image sur Couleur', () => {
     expect(panelsFor('VIDEO')[0].id).toBe('playback');
-    expect(panelsFor('IMAGE')[0].id).toBe('view');
+    expect(panelsFor('IMAGE')[0].id).toBe('image');
+  });
+
+  it('retire de l’image les trois onglets qui ne faisaient rien (Phase 50)', () => {
+    // « Comparaison » redisait l'en-tête sans offrir de B, « Affichage » annonçait une cadence
+    // et une vitesse de lecture qui n'existent pas sur une image fixe, et « Repères » n'avait
+    // aucun effet — l'overlay n'étant monté que dans le lecteur vidéo.
+    expect(panelsFor('IMAGE').map((p) => p.id)).toEqual(['image', 'info', 'export']);
+    // La vidéo garde les siens : la cadence y est réelle et les repères s'y affichaient.
+    expect(panelsFor('VIDEO').map((p) => p.id)).toEqual(['playback', 'image', 'guides', 'info', 'export']);
+  });
+
+  it('n’offre plus d’onglet Comparaison à aucun média plat', () => {
+    for (const kind of ['VIDEO', 'IMAGE'] as const)
+      expect(panelsFor(kind).map((p) => p.id)).not.toContain('compare');
   });
 });
 
@@ -148,6 +174,16 @@ describe('reconcileChrome', () => {
     const next = reconcileChrome(s, 'VIDEO');
     expect(next.mode).toBe('explore');
     expect(next.tool).toBe('nav');
+  });
+
+  it('rabat Compare sur l’exploration quand aucune version voisine n’existe', () => {
+    const s = state({ mode: 'compare', panel: null });
+    expect(reconcileChrome(s, 'IMAGE', true).mode).toBe('compare');
+    expect(reconcileChrome(s, 'IMAGE', false).mode).toBe('explore');
+    // Et l'outil suit : le wipe n'existe que dans le mode de comparaison.
+    expect(reconcileChrome(state({ mode: 'compare', tool: 'wipe', panel: null }), 'IMAGE', false).tool).toBe(
+      'nav',
+    );
   });
 
   it('remplace un panneau absent du dock par le premier, mais respecte le dock replié', () => {
@@ -197,6 +233,10 @@ describe('préférences', () => {
     expect(readChromePrefs('SPLAT', '{oops')).toEqual(fallback);
     // `light` n'existe pas dans le dock d'un splat.
     expect(readChromePrefs('SPLAT', JSON.stringify({ panel: 'light' })).panel).toBeNull();
+    // Préférence héritée d'un panneau supprimé (`view`, `compare`, `guides` côté image) :
+    // le dock se replie au lieu d'ouvrir un onglet qui n'existe plus.
+    for (const panel of ['view', 'compare', 'guides'])
+      expect(readChromePrefs('IMAGE', JSON.stringify({ panel })).panel).toBeNull();
   });
 
   it('borne la hauteur du tiroir et ignore une valeur invalide', () => {

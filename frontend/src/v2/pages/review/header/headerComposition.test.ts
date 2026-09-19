@@ -32,9 +32,12 @@ describe('headerActions', () => {
       );
   });
 
-  it("n'offre le sélecteur A/B qu'aux médias plats — la 3D et le splat montent le leur", () => {
+  it("ne garde le sélecteur A/B de l'en-tête que pour la vidéo", () => {
+    // Elle seule coche deux ou trois versions d'un coup (grille 2×2). L'image choisit A et B
+    // dans la barre d'options du mode « Compare » : un seul endroit, au lieu d'un menu
+    // d'en-tête et d'un onglet de dock qui se contredisaient sur où choisir B.
     expect(headerActions(base({ kind: 'VIDEO' }))).toContain('compare');
-    expect(headerActions(base({ kind: 'IMAGE' }))).toContain('compare');
+    expect(headerActions(base({ kind: 'IMAGE' }))).not.toContain('compare');
     expect(headerActions(base({ kind: 'MODEL_3D' }))).not.toContain('compare');
     expect(headerActions(base({ kind: 'SPLAT' }))).not.toContain('compare');
   });
@@ -62,7 +65,7 @@ describe('headerActions', () => {
 
   it('ordonne l’A/B en premier, pour rejoindre celui des viewers spatiaux', () => {
     // 3D et splat posent leur sélecteur en `headerRight` du chrome, juste devant cette liste.
-    expect(headerActions(base({ kind: 'IMAGE' }))[0]).toBe('compare');
+    expect(headerActions(base({ kind: 'VIDEO' }))[0]).toBe('compare');
   });
 
   it('ne répète jamais une action', () => {
@@ -84,7 +87,7 @@ describe('imageCompareOverlay', () => {
 
 describe('chromeHostsHeader', () => {
   const host = (over: Partial<Parameters<typeof chromeHostsHeader>[0]> = {}) =>
-    chromeHostsHeader({ hasData: true, kind: 'VIDEO', compareId: null, compareMode: 'side', ...over });
+    chromeHostsHeader({ hasData: true, kind: 'VIDEO', ...over });
 
   it('confie l’en-tête au chrome pour les quatre types de média', () => {
     for (const kind of KINDS) expect(host({ kind })).toBe(true);
@@ -95,16 +98,10 @@ describe('chromeHostsHeader', () => {
     expect(host({ hasData: true, kind: undefined })).toBe(false);
   });
 
-  it('le reprend sous une superposition de comparaison image, qui démonte le chrome', () => {
-    // Le cas qui aurait fait disparaître l'en-tête fusionné : le wipe et la différence
-    // remplacent la visionneuse image — et le chrome qui la portait.
-    expect(host({ kind: 'IMAGE', compareId: 7, compareMode: 'wipe' })).toBe(false);
-    expect(host({ kind: 'IMAGE', compareId: 7, compareMode: 'diff' })).toBe(false);
-    expect(host({ kind: 'IMAGE', compareId: 7, compareMode: 'side' })).toBe(true);
-  });
-
-  it('laisse la vidéo dans son chrome, wipe et différence compris — elles y sont en surcouche', () => {
-    expect(host({ kind: 'VIDEO', compareId: 7, compareMode: 'wipe' })).toBe(true);
-    expect(host({ kind: 'VIDEO', compareId: 7, compareMode: 'diff' })).toBe(true);
+  it('garde le chrome pendant la comparaison image, désormais une surcouche du viewport', () => {
+    // Le wipe et la différence démontaient tout le chrome : la bascule de mode et les réglages
+    // A/B partaient avec, à l'instant précis où l'on en avait besoin. Ce test verrouillait
+    // l'ancien comportement — il est réécrit sciemment.
+    for (const kind of KINDS) expect(host({ kind })).toBe(true);
   });
 });

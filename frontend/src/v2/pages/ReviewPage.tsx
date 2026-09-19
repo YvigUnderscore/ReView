@@ -376,6 +376,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
                 compareIds={compare.compareIds}
                 onCloseCompare={() => compare.setCompareId(null)}
                 onRemoveCompare={compare.removeCompareId}
+                onSetCompare={compare.setCompareId}
                 compareMode={compare.compareMode}
                 onCompareModeChange={compare.setCompareMode}
                 sharedWipe={sharedWipe}

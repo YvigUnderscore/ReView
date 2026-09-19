@@ -1,28 +1,26 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Shape, Tool } from '../../components/AnnotationCanvas';
+import {
+  EMPTY_HISTORY,
+  pushStep,
+  redoStep,
+  undoStep,
+  type AnnotationHistory,
+  type AnnotationSnapshot,
+} from './annotationHistory';
+import { clampRefBox, pastedRefBox, type StagedReference } from './referenceBox';
+import { useAnnotationShortcuts } from './useAnnotationShortcuts';
 import type { Hotspot3D, SplatLayoutAnim } from './reviewTypes';
 
-/** Image de référence en préparation dans le composer (locale, envoyée avec le commentaire). */
-export interface StagedReference {
-  key: string;
-  dataUrl: string;
-  x: number;
-  y: number;
-  width: number;
-}
-
 /**
- * État de l'annotation du composer (dessin 2D + hotspot 3D) avec undo/redo,
- * et de l'annotation d'un commentaire sélectionné affichée en lecture seule
- * (`viewed*`, ratio du viewer capturé à l'enregistrement pour le 3D).
+ * État de l'annotation du composer (dessin 2D, hotspot 3D, références collées) et de
+ * l'annotation d'un commentaire sélectionné, lue seule (`viewed*`).
  *
- * `defaultColor` (14.F) = couleur attitrée de l'utilisateur (dérivée de l'id ou préférence
- * enregistrée). Elle sert de valeur active tant que l'utilisateur n'a pas choisi une couleur
- * manuellement (couleur **dérivée**, pas d'effet) ; `onColorChange` permet la persistance
- * côté appelant.
+ * Un seul historique couvre le dessin et les références, au clavier comme aux boutons.
+ * `defaultColor` (couleur attitrée) reste active tant qu'aucune couleur n'est choisie à la main.
  */
 export function useAnnotations(opts?: {
   defaultColor?: string;
@@ -30,7 +28,16 @@ export function useAnnotations(opts?: {
   /** Formes initiales du composer (initialiseur paresseux — brouillon local 32.C). */
   initialShapes?: () => Shape[];
 }) {
-  const [tool, setTool] = useState<Tool>('draw');
+  const [tool, setToolState] = useState<Tool>('draw');
+  // Outil de tracé d'avant l'armement de la référence : y revenir est la sortie du mode pose.
+  const drawTool = useRef<Tool>('draw');
+  // Identité stable : le rail réarme son outil dans un effet dont `setTool` est une
+  // dépendance — un nouveau `setTool` à chaque render y écraserait `ref` aussitôt posé.
+  const setTool = useCallback((next: Tool) => {
+    if (next !== 'ref') drawTool.current = next;
+    setToolState(next);
+  }, []);
+  const exitRefTool = useCallback(() => setTool(drawTool.current), [setTool]);
   // Choix manuel prioritaire ; sinon couleur par défaut (préférence/id), rechargée sans effet.
   const [manualColor, setManualColor] = useState<string | null>(null);
   const color = manualColor ?? opts?.defaultColor ?? '#ef4444';
@@ -41,27 +48,44 @@ export function useAnnotations(opts?: {
   const [alpha, setAlpha] = useState(1);
   const [penWidth, setPenWidth] = useState(3);
   const [annot, setAnnot] = useState<Shape[]>(opts?.initialShapes ?? []);
-  const [past, setPast] = useState<Shape[][]>([]);
-  const [future, setFuture] = useState<Shape[][]>([]);
+  const [hist, setHist] = useState<AnnotationHistory>(EMPTY_HISTORY);
+  // Geste en cours : tous les changements qui le portent tiennent dans un seul cran.
+  const step = useRef<string | null>(null);
   const [annotating, setAnnotating] = useState(false);
   const [hotspot3d, setHotspot3d] = useState<Hotspot3D | null>(null);
   // Images de référence en préparation : posées/déplaçables tant que le commentaire n'est
   // pas envoyé, puis figées côté serveur (liées au commentaire créé).
   const [stagedRefs, setStagedRefs] = useState<StagedReference[]>([]);
-  const addStagedRef = (dataUrl: string) =>
+  const snapshot = (): AnnotationSnapshot => ({ shapes: annot, refs: stagedRefs });
+  // Un geste complet = un cran. Tant que le même `stepKey` revient (un glisser, cent
+  // `pointermove`), l'historique n'en ouvre pas un deuxième.
+  const openStep = (stepKey?: string) => {
+    if (stepKey && stepKey === step.current) return;
+    step.current = stepKey ?? null;
+    setHist((h) => pushStep(h, snapshot()));
+  };
+  const addStagedRef = (dataUrl: string) => {
+    openStep();
     setStagedRefs((rs) => [
       ...rs,
-      {
-        key: Math.random().toString(36).slice(2, 9),
-        dataUrl,
-        x: 1.05 + rs.length * 0.03,
-        y: rs.length * 0.03,
-        width: 0.3,
-      },
+      { key: Math.random().toString(36).slice(2, 9), dataUrl, ...pastedRefBox(rs.length) },
     ]);
-  const updateStagedRef = (key: string, patch: Partial<Pick<StagedReference, 'x' | 'y' | 'width'>>) =>
-    setStagedRefs((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-  const removeStagedRef = (key: string) => setStagedRefs((rs) => rs.filter((r) => r.key !== key));
+    // Coller sort du dessin et arme le déplacement de la référence : on vient de la poser,
+    // le geste suivant est de la placer.
+    setTool('ref');
+  };
+  const updateStagedRef = (
+    key: string,
+    patch: Partial<Pick<StagedReference, 'x' | 'y' | 'width'>>,
+    stepKey?: string,
+  ) => {
+    openStep(stepKey);
+    setStagedRefs((rs) => rs.map((r) => (r.key === key ? { ...r, ...clampRefBox({ ...r, ...patch }) } : r)));
+  };
+  const removeStagedRef = (key: string) => {
+    openStep();
+    setStagedRefs((rs) => rs.filter((r) => r.key !== key));
+  };
 
   // Animation caméra jointe au commentaire en cours (mode layout) — staged avant envoi.
   const [cameraAnim, setCameraAnim] = useState<SplatLayoutAnim | null>(null);
@@ -77,34 +101,39 @@ export function useAnnotations(opts?: {
   // hotspot et l'animation caméra).
   const [sceneOverride, setSceneOverride] = useState<unknown>(null);
 
-  const setShapes = (next: Shape[]) => {
-    setPast((p) => [...p, annot]);
-    setFuture([]);
+  /** `stepKey` : même valeur sur tout un geste (glisser d'une forme) = un seul cran. */
+  const setShapes = (next: Shape[], stepKey?: string) => {
+    openStep(stepKey);
     setAnnot(next);
   };
-  const undo = () =>
-    setPast((p) => {
-      if (!p.length) return p;
-      const prev = p[p.length - 1];
-      setFuture((f) => [annot, ...f]);
-      setAnnot(prev);
-      return p.slice(0, -1);
-    });
-  const redo = () =>
-    setFuture((f) => {
-      if (!f.length) return f;
-      const nx = f[0];
-      setPast((p) => [...p, annot]);
-      setAnnot(nx);
-      return f.slice(1);
-    });
+  const apply = (move: ReturnType<typeof undoStep>) => {
+    if (!move) return;
+    step.current = null;
+    setHist(move.history);
+    setAnnot(move.snapshot.shapes);
+    setStagedRefs(move.snapshot.refs);
+  };
+  const undo = () => apply(undoStep(hist, snapshot()));
+  const redo = () => apply(redoStep(hist, snapshot()));
   const clear = () => setShapes([]);
+  const canUndo = hist.past.length > 0;
+  const canRedo = hist.future.length > 0;
+  // Le composer est dans les mains du lecteur dès qu'il annote ou qu'il a collé : c'est là,
+  // et là seulement, que Ctrl+Z vise l'annotation plutôt que l'éditeur du média.
+  useAnnotationShortcuts({
+    enabled: annotating || stagedRefs.length > 0,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+  });
 
   /** Réinitialise le composer (après envoi du commentaire). */
   const resetComposer = () => {
     setAnnot([]);
-    setPast([]);
-    setFuture([]);
+    setHist(EMPTY_HISTORY);
+    step.current = null;
+    setTool(drawTool.current);
     setHotspot3d(null);
     setCameraAnim(null);
     // La proposition de scène est partie avec le commentaire : comme le hotspot, elle ne doit
@@ -131,6 +160,7 @@ export function useAnnotations(opts?: {
   return {
     tool,
     setTool,
+    exitRefTool,
     color,
     setColor,
     alpha,
@@ -142,8 +172,8 @@ export function useAnnotations(opts?: {
     undo,
     redo,
     clear,
-    canUndo: past.length > 0,
-    canRedo: future.length > 0,
+    canUndo,
+    canRedo,
     annotating,
     setAnnotating,
     hotspot3d,

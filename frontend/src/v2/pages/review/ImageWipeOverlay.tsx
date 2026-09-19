@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { Columns2, Diff, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
@@ -12,25 +12,21 @@ import { useT } from '../../i18n';
 
 /**
  * Comparaison A/B **image** en mode wipe : les deux images sont superposées en
- * `object-contain` (zoom/pan désactivés le temps de la comparaison), B rognée par la
- * barre déplaçable et rotative. Remplace la visionneuse pendant la comparaison.
+ * `object-contain` (zoom/pan désactivés le temps de la comparaison), B rognée par la barre
+ * déplaçable et rotative. Surcouche du viewport, à l'intérieur du chrome : côte-à-côte et
+ * différence se choisissent dans la barre d'options, qui reste sous les yeux.
  */
 export default function ImageWipeOverlay({
   aUrl,
   aName,
   compareId,
   onClose,
-  onSide,
-  onDiff,
   sharedWipe,
 }: {
   aUrl: string;
   aName: string;
   compareId: number;
   onClose: () => void;
-  onSide: () => void;
-  /** Bascule vers le mode différence amplifiée (34.E). */
-  onDiff?: () => void;
   /** Position/angle hissés (répliqués en session live). */
   sharedWipe?: WipeShared;
 }) {
@@ -63,22 +59,6 @@ export default function ImageWipeOverlay({
         )}
         <WipeControl wipe={wipe} />
         <div className="absolute right-2 top-2 z-40 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 backdrop-blur">
-          <button
-            onClick={onSide}
-            title={t('review.compare.sideBySide')}
-            className="rounded p-1.5 hover:bg-secondary"
-          >
-            <Columns2 size={14} />
-          </button>
-          {onDiff && (
-            <button
-              onClick={onDiff}
-              title={t('review.compare.diffMode')}
-              className="rounded p-1.5 hover:bg-secondary"
-            >
-              <Diff size={14} />
-            </button>
-          )}
           <button
             onClick={onClose}
             title={t('review.compare.close')}

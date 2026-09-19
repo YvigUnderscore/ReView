@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Camera, FileDown, LayoutGrid, Scissors } from 'lucide-react';
-import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
-import { Switch } from '../../../components/ui/switch';
 import type { MediaKind } from '../../../types/api';
 import type { PanelId } from '../chrome/panels';
 import { Group, Row } from '../chrome/DockGroup';
@@ -15,29 +12,19 @@ import { sheetRows } from './mediaSheet';
 import InfoPanel from './InfoPanel';
 import ExportPanel from './ExportPanel';
 import type { MediaResp } from '../reviewTypes';
-import type { CompareMode } from '../useCompareState';
-import { useT, type MessageKey } from '../../../i18n';
-
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
-type Tr = (key: MessageKey) => string;
-
-const compare_modes = (t: Tr) => [
-  { value: 'wipe' as const, label: 'Wipe' },
-  { value: 'diff' as const, label: t('review.compare.diff') },
-  { value: 'side' as const, label: t('review.compare.sideBySide') },
-];
+import { useT } from '../../../i18n';
 
 /**
- * Contenu du dock inspecteur pour les viewers plats. Les réglages de lecture et de
- * comparaison quittent les surcouches du lecteur pour six onglets fixes, communs à la vidéo
- * et à l'image.
+ * Contenu du dock inspecteur pour les viewers plats — ce qu'on règle une fois.
+ *
+ * L'onglet « Comparaison » en est parti : il redisait l'en-tête sans offrir de version B. Les
+ * réglages A et B vivent dans la barre d'options du mode « Compare », où l'on regarde déjà.
  */
 export default function MediaPanels({
   panel,
   kind,
   data,
   fps,
-  compare,
   onExportFrame,
   onContactSheet,
 }: {
@@ -45,26 +32,16 @@ export default function MediaPanels({
   kind: MediaKind;
   data: MediaResp;
   fps: number;
-  compare: {
-    mode: CompareMode;
-    onMode: (mode: CompareMode) => void;
-    /** Médias B choisis — la sélection elle-même vit dans l'en-tête de la review. */
-    ids: number[];
-    onClear: () => void;
-  };
   onExportFrame?: () => void;
   onContactSheet?: () => void;
 }) {
   const t = useT();
-  if (panel === 'playback' || panel === 'view')
+  if (panel === 'playback')
     return (
-      <Group title={kind === 'VIDEO' ? t('tokens.read') : t('display.title')}>
-        <Row label={t('review.frameRate')} hint={t('review.playbackRate')}>
+      <Group title={t('tokens.read')}>
+        <Row label={t('review.frameRate')}>
           <span className="font-mono text-xs">{fps} fps</span>
         </Row>
-        <span className="rv-optbar__hint whitespace-normal">
-          {kind === 'VIDEO' ? t('panels.videoTransportHint') : t('panels.imageTransportHint')}
-        </span>
       </Group>
     );
 
@@ -73,38 +50,6 @@ export default function MediaPanels({
   if (panel === 'image') return <ColorPanel projectColor={data.projectColor} applies={kind === 'IMAGE'} />;
 
   if (panel === 'guides') return <GuidesPanel />;
-
-  if (panel === 'compare')
-    return (
-      <>
-        <Group title="Versions">
-          <Row label="A">
-            <Badge variant="default">{t('version.current')}</Badge>
-          </Row>
-          <Row label="B">
-            {compare.ids.length ? (
-              <Badge variant="secondary">{t('reviews.count', { count: compare.ids.length })}</Badge>
-            ) : (
-              <Badge variant="muted">{t('review.none')}</Badge>
-            )}
-          </Row>
-          <span className="rv-optbar__hint whitespace-normal">{t('review.compareInHeader')}</span>
-        </Group>
-        {compare.ids.length > 0 && (
-          <Group title={t('common.mode')}>
-            <SegmentedControl
-              label={t('review.compare.mode')}
-              items={compare_modes(t)}
-              value={compare.mode}
-              onChange={compare.onMode}
-            />
-            <Row label={t('review.compare.mode')}>
-              <Switch checked onCheckedChange={() => compare.onClear()} label={t('review.compare.close')} />
-            </Row>
-          </Group>
-        )}
-      </>
-    );
 
   if (panel === 'info') return <InfoPanel sheet={sheetRows(t, data, kind, fps)} />;
 

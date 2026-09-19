@@ -3,7 +3,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import ShapeEl from './annotation/ShapeEl';
-import { useT } from '../i18n';
+import TextDraftInput from './annotation/TextDraftInput';
 import {
   ellipseFromCorners,
   hitShape,
@@ -17,10 +17,8 @@ export type { Shape, Tool };
 
 /**
  * Overlay d'annotation 2D (SVG, coordonnées normalisées 0..1 → suit la taille du média).
- * Outils : dessin libre, rectangle, ellipse, flèche, texte, gomme (clic **ou glisser**),
- * déplacement — les deux derniers prévisualisent la forme visée au survol.
- * Couleurs + épaisseur, undo/redo, effacer tout. Contrôlé : `shapes` + `onChange`.
- * En lecture seule (`editable=false`), affiche les formes fournies sans interaction.
+ * Outils : dessin libre, rectangle, ellipse, flèche, texte, gomme (clic ou glisser),
+ * déplacement. Contrôlé : `shapes` + `onChange`. En lecture seule, affiche sans interagir.
  */
 export function AnnotationCanvas({
   shapes,
@@ -34,7 +32,9 @@ export function AnnotationCanvas({
   captureAspect,
 }: {
   shapes: Shape[];
-  onChange?: (s: Shape[]) => void;
+  /** `stepKey` identifie le geste en cours : un glisser entier ne doit compter qu'un cran
+   *  d'annulation, pas un par `pointermove`. */
+  onChange?: (s: Shape[], stepKey?: string) => void;
   editable: boolean;
   tool: Tool;
   color: string;
@@ -54,7 +54,7 @@ export function AnnotationCanvas({
   const [draft, setDraft] = useState<Shape | null>(null);
   const [textDraft, setTextDraft] = useState<{ x: number; y: number; value: string } | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const drag = useRef<{ id: string; ox: number; oy: number } | null>(null);
+  const drag = useRef<{ id: string; ox: number; oy: number; step: string } | null>(null);
   const erasing = useRef(false);
   // Coin de départ de l'ellipse : tracée coin-à-coin (comme le rect), pas depuis le centre.
   const ellipseStart = useRef<[number, number] | null>(null);
@@ -99,7 +99,7 @@ export function AnnotationCanvas({
   };
 
   const down = (e: React.PointerEvent) => {
-    if (!editable) return;
+    if (!editable || tool === 'ref') return;
     if (e.button !== 0) return; // clic milieu/droit : laisse le pan remonter au parent
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -111,7 +111,7 @@ export function AnnotationCanvas({
     }
     if (tool === 'move') {
       const s = hitShape(shapes, p);
-      if (s) drag.current = { id: s.id, ox: p[0], oy: p[1] };
+      if (s) drag.current = { id: s.id, ox: p[0], oy: p[1], step: uid() };
       return;
     }
     if (tool === 'text') {
@@ -140,7 +140,7 @@ export function AnnotationCanvas({
   };
 
   const move = (e: React.PointerEvent) => {
-    if (!editable) return;
+    if (!editable || tool === 'ref') return;
     const p = pt(e);
     // Gomme au glisser : efface tout ce que le pointeur traverse.
     if (erasing.current) {
@@ -152,7 +152,10 @@ export function AnnotationCanvas({
       const dx = p[0] - d.ox,
         dy = p[1] - d.oy;
       drag.current = { ...d, ox: p[0], oy: p[1] };
-      onChange?.(shapes.map((s) => (s.id === d.id ? translateShape(s, dx, dy) : s)));
+      onChange?.(
+        shapes.map((s) => (s.id === d.id ? translateShape(s, dx, dy) : s)),
+        d.step,
+      );
       return;
     }
     if (!draft) {
@@ -203,7 +206,10 @@ export function AnnotationCanvas({
 
   const all = draft ? [...shapes, draft] : shapes;
   const showHover = editable && !draft && (tool === 'move' || tool === 'erase');
-  const cursor = !editable
+  // `ref` : le calque des références collées est au-dessus et prend le geste ; laisser le
+  // canvas capter le pointeur ici, c'était la référence qu'on n'arrivait plus à déplacer.
+  const interactive = editable && tool !== 'ref';
+  const cursor = !interactive
     ? 'default'
     : tool === 'move'
       ? hoverId
@@ -234,7 +240,7 @@ export function AnnotationCanvas({
           width: `${vbSize * 100}%`,
           height: `${vbSize * 100}%`,
           overflow: 'visible',
-          pointerEvents: editable ? 'auto' : 'none',
+          pointerEvents: interactive ? 'auto' : 'none',
           cursor,
           touchAction: 'none',
         }}
@@ -260,41 +266,3 @@ export function AnnotationCanvas({
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
-
-/** Input flottant de l'outil texte : HTML positionné en % du média (hors du SVG,
- * qui déformerait la saisie via son viewBox normalisé). Entrée valide, Échap annule. */
-function TextDraftInput({
-  draft,
-  onChangeValue,
-  onCommit,
-  onCancel,
-}: {
-  draft: { x: number; y: number; value: string };
-  onChangeValue: (v: string) => void;
-  onCommit: () => void;
-  onCancel: () => void;
-}) {
-  const t = useT();
-  return (
-    <input
-      // Focus différé : laisse passer l'action par défaut du clic d'origine avant de
-      // prendre le focus (sinon le focus par défaut du mousedown le vole → blur → fermé).
-      ref={(el) => {
-        if (el) setTimeout(() => el.focus(), 0);
-      }}
-      value={draft.value}
-      placeholder={t('draw.textPlaceholder')}
-      aria-label={t('draw.textPlaceholder')}
-      onChange={(e) => onChangeValue(e.target.value)}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === 'Enter') onCommit();
-        if (e.key === 'Escape') onCancel();
-      }}
-      onBlur={onCommit}
-      onPointerDown={(e) => e.stopPropagation()}
-      className="absolute z-10 w-48 rounded border border-primary bg-background/90 px-1.5 py-0.5 text-sm text-foreground"
-      style={{ left: `${draft.x * 100}%`, top: `${(draft.y - 0.02) * 100}%` }}
-    />
-  );
-}

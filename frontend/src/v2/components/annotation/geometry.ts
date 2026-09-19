@@ -6,7 +6,11 @@
  * d'aspect en espace écran). Extraite d'AnnotationCanvas (budget 10.F4) — testée.
  */
 
-export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'polygon' | 'text' | 'move' | 'erase';
+/**
+ * Outils du canvas. `ref` n'en dessine aucun : il rend le canvas transparent au pointeur pour
+ * que le calque des références collées reçoive le geste (pose et placement d'une référence).
+ */
+export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'polygon' | 'text' | 'move' | 'erase' | 'ref';
 
 export interface Shape {
   id: string;

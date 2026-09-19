@@ -64,6 +64,7 @@ export default function ReviewViewer({
   compareIds,
   onCloseCompare,
   onRemoveCompare,
+  onSetCompare,
   compareMode,
   onCompareModeChange,
   sharedWipe,
@@ -107,6 +108,8 @@ export default function ReviewViewer({
   onCloseCompare: () => void;
   /** Retire un seul pane de la grille (croix d'une case). */
   onRemoveCompare: (mediaId: number) => void;
+  /** Choix exclusif du média B : réglage B de la barre d'options, et armement du mode. */
+  onSetCompare: (mediaId: number) => void;
   /** Mode de comparaison hissé (répliqué en session live, retours 33 ; diff 34.E). */
   compareMode: CompareMode;
   onCompareModeChange: (mode: CompareMode) => void;
@@ -205,6 +208,7 @@ export default function ReviewViewer({
             onMode: onCompareModeChange,
             ids: compareIds,
             onClear: closeCompare,
+            onSet: onSetCompare,
           }}
         >
           <VideoReviewSection
@@ -257,6 +261,7 @@ export default function ReviewViewer({
           compareIds={compareIds}
           compareMode={compareMode}
           onCompareModeChange={onCompareModeChange}
+          onSetCompare={onSetCompare}
           closeCompare={closeCompare}
           sharedWipe={sharedWipe}
         />

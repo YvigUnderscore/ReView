@@ -58,20 +58,12 @@ export interface ReviewHeaderSlots {
  * commentaires descendent maintenant dans le chrome par contexte — pour les quatre types de
  * média, sans traverser `ReviewViewer` ni ses quatre branches.
  *
- * Deux états ne montent aucun chrome : le chargement, et la superposition de comparaison
- * image (wipe/différence), qui remplace la visionneuse. `hosted` est alors faux et la page
- * rend l'en-tête elle-même — d'où trois emplacements rendus ici, et un drapeau qui dit où
- * les poser, plutôt que deux constructions parallèles à garder d'accord.
+ * Un seul état ne monte aucun chrome : le chargement. `hosted` est alors faux et la page rend
+ * l'en-tête elle-même — d'où trois emplacements rendus ici, et un drapeau qui dit où les
+ * poser, plutôt que deux constructions parallèles à garder d'accord.
  */
 export function useReviewHeaderSlots(p: Params): ReviewHeaderSlots {
-  const hosted =
-    !p.theater &&
-    chromeHostsHeader({
-      hasData: !!p.data,
-      kind: p.kind,
-      compareId: p.compare.compareId,
-      compareMode: p.compare.compareMode,
-    });
+  const hosted = !p.theater && chromeHostsHeader({ hasData: !!p.data, kind: p.kind });
 
   const visible = p.data && !p.theater;
 

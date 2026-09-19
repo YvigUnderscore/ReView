@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { ReactNode } from 'react';
 import { Eraser, LogIn, LogOut, Redo2, Undo2, X } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -45,11 +46,13 @@ export default function MediaOptions({
   tool: ReviewTool;
   mode: ModeId;
   ann: Annotations;
-  /** Comparaison A/B — mode partagé avec le dock et la session live. */
+  /** Comparaison A/B — mode partagé avec la session live. */
   compare?: {
     mode: CompareMode;
     onMode: (mode: CompareMode) => void;
     hasB: boolean;
+    /** Réglages A et B (`CompareAB`) — montés par le chrome, absents en vidéo. */
+    ab?: ReactNode;
   };
   /** Découpe vidéo (gestionnaire, pré-publication). */
   trim?: {
@@ -81,9 +84,41 @@ export default function MediaOptions({
 
   return (
     <OptionsBar tool={tool} commit={commit}>
-      {(id === 'nav' || id === 'zoom') && <span className="rv-optbar__hint">{t(tool.hintKey)}</span>}
+      {/* L'aide de l'outil s'efface en comparaison : la ligne y porte les réglages A et B. */}
+      {(id === 'nav' || id === 'zoom') && mode !== 'compare' && (
+        <span className="rv-optbar__hint">{t(tool.hintKey)}</span>
+      )}
 
-      {(drawing || id === 'shape-move' || id === 'erase') && (
+      {/* Comparaison : les réglages restent affichés quel que soit l'outil armé — c'est le
+          mode qui compare, pas l'outil, et le choix de B doit se voir. */}
+      {mode === 'compare' && compare && (
+        <>
+          {compare.ab}
+          {compare.hasB && (
+            <>
+              <span className="rv-rule" />
+              <SegmentedControl
+                label={t('review.compare.mode')}
+                items={compare_modes(t)}
+                value={compare.mode}
+                onChange={compare.onMode}
+              />
+            </>
+          )}
+        </>
+      )}
+
+      {/* Annuler/Rétablir/Effacer suivent ce qu'il y a À DÉFAIRE, pas l'outil armé : ils
+          disparaissaient dès qu'on désarmait le tracé, alors que les formes et les références
+          collées, elles, restaient attachées au commentaire. Le clavier (Ctrl+Z / Ctrl+Y /
+          Ctrl+Maj+Z) couvre le même besoin depuis la phase 50 ; ces boutons en sont la
+          contrepartie visible. Les réglages d'encre, eux, restent propres au tracé. */}
+      {(drawing ||
+        id === 'shape-move' ||
+        id === 'erase' ||
+        ann.canUndo ||
+        ann.canRedo ||
+        ann.annot.length > 0) && (
         <>
           {drawing && (
             <>
@@ -164,21 +199,6 @@ export default function MediaOptions({
               ? t('draw.shapesAttached', { count: ann.annot.length })
               : t('draw.goesWithComment')}
           </span>
-        </>
-      )}
-
-      {id === 'wipe' && compare && (
-        <>
-          {compare.hasB ? (
-            <SegmentedControl
-              label={t('review.compare.mode')}
-              items={compare_modes(t)}
-              value={compare.mode}
-              onChange={compare.onMode}
-            />
-          ) : (
-            <span className="rv-optbar__hint">{t('review.pickB')}</span>
-          )}
         </>
       )}
 

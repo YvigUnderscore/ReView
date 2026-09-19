@@ -110,12 +110,22 @@ export function modesFor(kind: MediaKind): ReviewMode[] {
 }
 
 /**
+ * Modes réellement atteignables. « Compare » exige une version voisine : sans elle, le mode
+ * s'armait sur rien — le sélecteur de comparaison disparaissait au même moment, et l'on
+ * restait bloqué dans un mode qui ne montrait aucune comparaison. `canCompare` vient du hook
+ * qui liste les voisins (`useCompareTargets`), seul juge de la question.
+ */
+export function allowedModesFor(kind: MediaKind, canCompare = true): ReviewMode[] {
+  return modesFor(kind).filter((m) => canCompare || m.value !== 'compare');
+}
+
+/**
  * Modes proposés par la bascule d'en-tête et les touches numériques. « Annoter » n'y figure
  * plus : l'annotation s'arme depuis l'espace commentaire (bouton du composer, clic droit) ou
  * par le raccourci d'un outil de tracé — le mode reste valide, simplement non listé.
  */
-export function switcherModesFor(kind: MediaKind): ReviewMode[] {
-  return modesFor(kind).filter((m) => m.value !== 'annotate');
+export function switcherModesFor(kind: MediaKind, canCompare = true): ReviewMode[] {
+  return allowedModesFor(kind, canCompare).filter((m) => m.value !== 'annotate');
 }
 
 /** Mode par défaut — celui servi aux clients. */

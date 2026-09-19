@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { MediaKind, Role } from '../../../types/api';
-import { DEFAULT_MODE, canSwitchMode, modesFor, switcherModesFor } from './modes';
+import { DEFAULT_MODE, allowedModesFor, canSwitchMode, modesFor, switcherModesFor } from './modes';
 
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 const INTERNAL: Role[] = ['ADMIN', 'SUPERVISOR', 'ARTIST'];
@@ -44,5 +44,24 @@ describe('switcherModesFor', () => {
     expect(switcherModesFor('IMAGE').map((m) => m.value)).not.toContain('edit');
     expect(switcherModesFor('MODEL_3D').map((m) => m.value)).toContain('stage');
     expect(switcherModesFor('SPLAT').map((m) => m.value)).toContain('stage');
+  });
+});
+
+describe('allowedModesFor — « Compare » exige une version voisine', () => {
+  it('retire le segment quand il n’y a rien à comparer', () => {
+    expect(switcherModesFor('IMAGE', false).map((m) => m.value)).toEqual(['explore']);
+    expect(switcherModesFor('VIDEO', false).map((m) => m.value)).toEqual(['explore', 'edit']);
+  });
+
+  it('laisse la bascule disparaître quand l’image n’a plus qu’un mode', () => {
+    // Une image sans version voisine n'a plus que « Regarder » : un segment unique ne bascule
+    // vers rien, et la bascule s'efface au lieu de se montrer inerte.
+    expect(canSwitchMode('ARTIST', switcherModesFor('IMAGE', false).length)).toBe(false);
+    expect(canSwitchMode('ARTIST', switcherModesFor('IMAGE', true).length)).toBe(true);
+  });
+
+  it('ne touche pas aux médias spatiaux, qui n’ont pas ce mode', () => {
+    for (const kind of ['MODEL_3D', 'SPLAT'] as const)
+      expect(allowedModesFor(kind, false).map((m) => m.value)).toEqual(modesFor(kind).map((m) => m.value));
   });
 });

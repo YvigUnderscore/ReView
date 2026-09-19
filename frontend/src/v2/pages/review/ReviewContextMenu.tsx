@@ -81,7 +81,7 @@ export default function ReviewContextMenu({
   const qc = useQueryClient();
   const kind = data.media.kind;
   const isVideo = kind === 'VIDEO';
-  // Guides de composition (34.G) — préférence locale, appliquée au viewer vidéo.
+  // Repères de composition (34.G) — préférence locale, appliquée aux viewers plats.
   const guides = useGuides((s) => s.guides);
   const toggleGuide = useGuides((s) => s.toggle);
   const guideItems: Array<{ key: GuideKey; label: string }> = [
@@ -131,6 +131,21 @@ export default function ReviewContextMenu({
             <EyeOff size={14} /> {t('ctx.hideAnnotation')}
           </ContextMenuItem>
         )}
+        {/* Repères de composition (34.G) : tiers / croix / safe areas — vidéo comme image,
+            l'overlay étant monté dans les deux viewers. */}
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Grid3x3 size={14} /> {t('review.compositionGuides')}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {guideItems.map((g) => (
+              <ContextMenuItem key={g.key} onClick={() => toggleGuide(g.key)}>
+                <Check size={14} className={guides[g.key] ? 'opacity-100' : 'opacity-0'} />
+                {g.label}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
         <ContextMenuSeparator />
 
         {isVideo ? (
@@ -151,21 +166,6 @@ export default function ReviewContextMenu({
             <ContextMenuItem onSelect={() => stepVideoFrame(videoRef.current, fps, 1)}>
               <ChevronRight size={14} /> {t('video.nextFrame')}
             </ContextMenuItem>
-            {/* Guides de composition (34.G) : tiers / croix / safe areas. */}
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>
-                <Grid3x3 size={14} /> {t('review.compositionGuides')}
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent>
-                {guideItems.map((g) => (
-                  <ContextMenuItem key={g.key} onClick={() => toggleGuide(g.key)}>
-                    <Check size={14} className={guides[g.key] ? 'opacity-100' : 'opacity-0'} />
-                    {g.label}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-            <ContextMenuSeparator />
             <ContextMenuItem
               onSelect={() => run(t('ctx.frameCopied'), async () => copyImageToClipboard(frameDataUrl()))}
             >

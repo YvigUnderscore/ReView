@@ -5,6 +5,7 @@ import type { ComponentProps, RefObject } from 'react';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';
 import ReviewContextMenu from './ReviewContextMenu';
+import CompositionGuides from './CompositionGuides';
 import ImageComparePane from './ImageComparePane';
 import ImageWipeOverlay from './ImageWipeOverlay';
 import { ImageDiffOverlay } from './DiffOverlay';
@@ -19,9 +20,10 @@ import type { CompareMode } from './useCompareState';
 import type { Role } from '../../types/api';
 
 /**
- * Branche **image** du viewer de review : visionneuse annotable dans le chrome unifié, ou
- * superposition de comparaison (wipe / différence) qui prend toute la zone. Extraite de
- * `ReviewViewer` avec la refonte du chrome — même découpage que la branche vidéo.
+ * Branche **image** du viewer de review : visionneuse annotable, ou surcouche de comparaison
+ * (wipe / différence) à la place du viewport. Les deux vivent **dans** le chrome : la
+ * comparaison le démontait, et la bascule de mode comme les réglages A/B disparaissaient à
+ * l'instant où l'on en avait besoin.
  */
 export default function ImageReviewSection({
   data,
@@ -41,6 +43,7 @@ export default function ImageReviewSection({
   compareIds,
   compareMode,
   onCompareModeChange,
+  onSetCompare,
   closeCompare,
   sharedWipe,
 }: {
@@ -61,6 +64,8 @@ export default function ImageReviewSection({
   compareIds: number[];
   compareMode: CompareMode;
   onCompareModeChange: (mode: CompareMode) => void;
+  /** Choix exclusif du média B (réglage B, armement du mode « Compare »). */
+  onSetCompare: (mediaId: number) => void;
   closeCompare: () => void;
   sharedWipe?: ComponentProps<typeof ImageWipeOverlay>['sharedWipe'];
 }) {
@@ -69,32 +74,9 @@ export default function ImageReviewSection({
   // l'image brute : comparer deux versions suppose de les regarder dans le même état.
   const display = useDisplayTransform(data.url, data.projectColor);
 
-  // Le wipe et la différence remplacent la visionneuse : le zoom y est suspendu — et le
-  // chrome avec, en-tête compris. C'est `imageCompareOverlay` qui en décide, pour que la page
-  // sache reprendre l'en-tête à son compte plutôt que de le laisser disparaître.
+  // Le wipe et la différence remplacent le viewport, le zoom y étant suspendu — mais pas le
+  // chrome : `imageCompareOverlay` ne décide que du contenu de la zone média.
   const overlay = imageCompareOverlay(compareId, compareMode);
-  if (compareId != null && overlay === 'wipe')
-    return (
-      <ImageWipeOverlay
-        aUrl={data.url}
-        aName={data.media.originalName}
-        compareId={compareId}
-        onClose={closeCompare}
-        onSide={() => onCompareModeChange('side')}
-        onDiff={() => onCompareModeChange('diff')}
-        sharedWipe={sharedWipe}
-      />
-    );
-  if (compareId != null && overlay === 'diff')
-    return (
-      <ImageDiffOverlay
-        aUrl={data.url}
-        compareId={compareId}
-        onClose={closeCompare}
-        onSide={() => onCompareModeChange('side')}
-        onWipe={() => onCompareModeChange('wipe')}
-      />
-    );
 
   return (
     <MediaChrome
@@ -111,69 +93,97 @@ export default function ImageReviewSection({
         onMode: onCompareModeChange,
         ids: compareIds,
         onClear: closeCompare,
+        onSet: onSetCompare,
       }}
     >
-      <div className="flex min-h-0 flex-1 gap-3">
-        <ReviewContextMenu
-          data={data}
-          videoRef={videoRef}
-          fps={fps}
-          canManage={canManage}
-          annotating={ann.annotating}
-          onToggleAnnotate={onToggleAnnotate}
-          hasViewed={!!ann.viewed}
-          onClearSelection={onClearSelection}
-          annShapes={ann.viewed ?? ann.annot}
-        >
-          <div className={VIEWER_ZONE}>
-            <div className="absolute inset-0">
-              <ImageReviewViewer
-                src={data.url}
-                alt={data.media.originalName}
-                shapes={ann.viewed ?? ann.annot}
-                onChange={ann.setShapes}
-                editable={ann.annotating && !ann.viewed}
-                tool={ann.tool}
-                color={ann.color}
-                width={ann.penWidth}
-                alpha={ann.alpha}
-                info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
-                onFullscreen={onFullscreen}
-                viewApiRef={imageViewApiRef}
-                onUserView={onImageUserView}
-                onViewChange={compareId != null ? imageSync.onMasterView : undefined}
-                pinned={
-                  <>
-                    {/* Gestion de couleur : l'image transformée se pose **au-dessus** de
-                        l'originale dans le plan zoomé. Passer par `src` referait le cadrage
-                        à chaque cran d'exposition. */}
-                    <DisplayTransformOverlay url={display.url} />
-                    <ReviewCanvasRefs
-                      mediaId={data.media.id}
-                      references={data.references ?? []}
-                      selectedCommentId={selectedCommentId}
-                      canManage={canManage}
-                      ann={ann}
-                    />
-                  </>
-                }
-              />
-            </div>
-            <ReviewCanvasRefsControls ann={ann} annotating={ann.annotating} />
-          </div>
-        </ReviewContextMenu>
-        {/* Comparaison A/B image côte à côte — zoom/pan répliqué. */}
-        {compareId != null && compareMode === 'side' && (
-          <ImageComparePane
+      {compareId != null && overlay === 'wipe' && (
+        <div className="flex min-h-0 flex-1">
+          <ImageWipeOverlay
+            aUrl={data.url}
+            aName={data.media.originalName}
             compareId={compareId}
             onClose={closeCompare}
-            onWipe={() => onCompareModeChange('wipe')}
-            onDiff={() => onCompareModeChange('diff')}
-            viewApiRef={imageSync.slaveApiRef}
-            onViewChange={imageSync.onSlaveView}
+            sharedWipe={sharedWipe}
           />
-        )}
-      </div>
+        </div>
+      )}
+      {compareId != null && overlay === 'diff' && (
+        <div className="flex min-h-0 flex-1">
+          <ImageDiffOverlay
+            aUrl={data.url}
+            compareId={compareId}
+            onClose={closeCompare}
+            onSide={() => onCompareModeChange('side')}
+            onWipe={() => onCompareModeChange('wipe')}
+          />
+        </div>
+      )}
+      {!overlay && (
+        <div className="flex min-h-0 flex-1 gap-3">
+          <ReviewContextMenu
+            data={data}
+            videoRef={videoRef}
+            fps={fps}
+            canManage={canManage}
+            annotating={ann.annotating}
+            onToggleAnnotate={onToggleAnnotate}
+            hasViewed={!!ann.viewed}
+            onClearSelection={onClearSelection}
+            annShapes={ann.viewed ?? ann.annot}
+          >
+            <div className={VIEWER_ZONE}>
+              <div className="absolute inset-0">
+                <ImageReviewViewer
+                  src={data.url}
+                  alt={data.media.originalName}
+                  shapes={ann.viewed ?? ann.annot}
+                  onChange={ann.setShapes}
+                  editable={ann.annotating && !ann.viewed}
+                  tool={ann.tool}
+                  color={ann.color}
+                  width={ann.penWidth}
+                  alpha={ann.alpha}
+                  info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
+                  onFullscreen={onFullscreen}
+                  viewApiRef={imageViewApiRef}
+                  onUserView={onImageUserView}
+                  onViewChange={compareId != null ? imageSync.onMasterView : undefined}
+                  pinned={
+                    <>
+                      {/* Gestion de couleur : l'image transformée se pose **au-dessus** de
+                        l'originale dans le plan zoomé. Passer par `src` referait le cadrage
+                        à chaque cran d'exposition. */}
+                      <DisplayTransformOverlay url={display.url} />
+                      {/* Repères de composition : l'overlay n'était monté que dans le lecteur
+                        vidéo, et l'onglet « Repères » du dock image ne faisait donc rien. */}
+                      <CompositionGuides />
+                      <ReviewCanvasRefs
+                        mediaId={data.media.id}
+                        references={data.references ?? []}
+                        selectedCommentId={selectedCommentId}
+                        canManage={canManage}
+                        ann={ann}
+                      />
+                    </>
+                  }
+                />
+              </div>
+              <ReviewCanvasRefsControls ann={ann} annotating={ann.annotating} />
+            </div>
+          </ReviewContextMenu>
+          {/* Comparaison A/B image côte à côte — zoom/pan répliqué. */}
+          {compareId != null && compareMode === 'side' && (
+            <ImageComparePane
+              compareId={compareId}
+              onClose={closeCompare}
+              onWipe={() => onCompareModeChange('wipe')}
+              onDiff={() => onCompareModeChange('diff')}
+              viewApiRef={imageSync.slaveApiRef}
+              onViewChange={imageSync.onSlaveView}
+            />
+          )}
+        </div>
+      )}
     </MediaChrome>
   );
 }

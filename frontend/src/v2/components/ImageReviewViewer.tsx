@@ -2,16 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Expand, Info } from 'lucide-react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
-import { formatBytes } from '../../lib/formatBytes';
-import { useT } from '../i18n';
+import ImageViewerHud from './image/ImageViewerHud';
 
 /**
- * Visionneuse d'image pour la review : zoom (molette) + pan, avec overlay
- * d'annotation ancré au pixel. Les annotations peuvent déborder hors de l'image
- * (marge dessinable autour), et restent alignées lors du zoom/pan car image et
- * overlay partagent la même transformation.
+ * Visionneuse d'image pour la review : zoom (molette) + pan, avec overlay d'annotation ancré
+ * au pixel. Image et overlay partagent la même transformation, donc restent alignés au
+ * zoom/pan ; la marge dessinable autorise les annotations hors cadre.
  */
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 20;
@@ -49,7 +46,7 @@ export default function ImageReviewViewer({
   src: string;
   alt: string;
   shapes: Shape[];
-  onChange?: (s: Shape[]) => void;
+  onChange?: (s: Shape[], stepKey?: string) => void;
   editable: boolean;
   tool: Tool;
   color: string;
@@ -69,14 +66,14 @@ export default function ImageReviewViewer({
   /** Vue émise à chaque changement (fit inclus) — réplication A/B de la comparaison (34.D). */
   onViewChange?: (v: ImageView) => void;
 }) {
-  const t = useT();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [base, setBase] = useState<{ w: number; h: number } | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [showInfo, setShowInfo] = useState(false);
   const pan = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  // L'outil `ref` place une référence collée : il ne dessine pas, et le clic gauche pane.
+  const drawing = editable && tool !== 'ref';
 
   // Re-fit si la source change : ajustement d'état pendant le render
   // (https://react.dev/learn/you-might-not-need-an-effect) — le onLoad de la
@@ -157,9 +154,9 @@ export default function ImageReviewViewer({
     setScale(next);
   };
 
-  // Pan : clic milieu/droit toujours ; clic gauche si on n'annote pas
+  // Pan : clic milieu/droit toujours ; clic gauche si on ne dessine pas
   const onPointerDown = (e: React.PointerEvent) => {
-    const panButton = e.button === 1 || e.button === 2 || (e.button === 0 && !editable);
+    const panButton = e.button === 1 || e.button === 2 || (e.button === 0 && !drawing);
     if (!panButton) return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -202,9 +199,6 @@ export default function ImageReviewViewer({
     setOffset((o) => ({ x: cx - (cx - o.x) * k, y: cy - (cy - o.y) * k }));
     setScale(next);
   };
-  // QUATRIÈME formateur d'octets du dépôt, en français lui aussi. Tous passent désormais par
-  // `lib/formatBytes`, qui rend l'unité dans la langue du lecteur et compte en base 1024.
-  const fmtSize = (b?: number | null) => (b == null ? null : formatBytes(b));
   const rootRef = useRef<HTMLDivElement>(null);
   // Plein écran : celui fourni par la page (bloc review complet) sinon repli local à l'image.
   const fullscreen = onFullscreen ?? (() => void rootRef.current?.requestFullscreen?.());
@@ -224,7 +218,7 @@ export default function ImageReviewViewer({
         // métier (copier/télécharger l'image, miniature, playlist, annoter) de s'ouvrir.
         // Le menu natif est déjà bloqué en amont par ContextMenuGuard.
         style={{
-          cursor: editable ? 'crosshair' : 'grab',
+          cursor: drawing ? 'crosshair' : 'grab',
           touchAction: 'none',
           // Fond gris + grille de lignes blanches légères, fixée au canvas : la grille
           // suit le pan (background-position) et le zoom (background-size).
@@ -266,80 +260,15 @@ export default function ImageReviewViewer({
         {!base && <img src={src} alt={alt} onLoad={onImgLoad} className="invisible absolute" />}
       </div>
 
-      {/* Panneau infos repliable (14.D) */}
-      {showInfo && (
-        <div className="absolute right-3 top-3 min-w-[10rem] rounded-md border border-border bg-card/95 p-2 text-xs backdrop-blur">
-          <div className="mb-1 font-medium text-foreground">{t('imageViewer.info')}</div>
-          <dl className="space-y-0.5 text-muted-foreground">
-            {natural && (
-              <div className="flex justify-between gap-3">
-                <dt>{t('imageViewer.resolution')}</dt>
-                <dd className="tabular-nums text-foreground">
-                  {natural.w} × {natural.h}
-                </dd>
-              </div>
-            )}
-            {info?.format && (
-              <div className="flex justify-between gap-3">
-                <dt>{t('imageViewer.format')}</dt>
-                <dd className="text-foreground">{info.format}</dd>
-              </div>
-            )}
-            {fmtSize(info?.sizeBytes) && (
-              <div className="flex justify-between gap-3">
-                <dt>{t('imageViewer.size')}</dt>
-                <dd className="text-foreground">{fmtSize(info?.sizeBytes)}</dd>
-              </div>
-            )}
-          </dl>
-        </div>
-      )}
-
-      {/* Contrôles de zoom (14.D : + 100 % et infos) */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-border bg-card/90 p-1 backdrop-blur">
-        <button
-          onClick={() => zoomBy(1 / 1.25)}
-          title={t('imageViewer.zoomOut')}
-          className="rounded p-1.5 hover:bg-muted"
-        >
-          <ZoomOut size={16} />
-        </button>
-        <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
-          {Math.round(scale * 100)}%
-        </span>
-        <button
-          onClick={() => zoomBy(1.25)}
-          title={t('imageViewer.zoomIn')}
-          className="rounded p-1.5 hover:bg-muted"
-        >
-          <ZoomIn size={16} />
-        </button>
-        <button
-          onClick={oneToOne}
-          title={t('imageViewer.actualSize')}
-          className="rounded px-1.5 py-1 text-xs font-medium hover:bg-muted"
-        >
-          1:1
-        </button>
-        <button onClick={reset} title={t('imageViewer.fit')} className="rounded p-1.5 hover:bg-muted">
-          <Maximize size={16} />
-        </button>
-        <button
-          onClick={fullscreen}
-          title={t('imageViewer.fullscreen')}
-          className="rounded p-1.5 hover:bg-muted"
-        >
-          <Expand size={16} />
-        </button>
-        <button
-          onClick={() => setShowInfo((v) => !v)}
-          title={t('imageViewer.info')}
-          aria-pressed={showInfo}
-          className={`rounded p-1 hover:bg-muted ${showInfo ? 'text-primary' : ''}`}
-        >
-          <Info size={16} />
-        </button>
-      </div>
+      <ImageViewerHud
+        scale={scale}
+        natural={natural}
+        info={info}
+        onZoom={zoomBy}
+        onActualSize={oneToOne}
+        onFit={reset}
+        onFullscreen={fullscreen}
+      />
     </div>
   );
 }

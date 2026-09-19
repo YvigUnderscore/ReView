@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { MediaKind } from '../../../types/api';
-import { DEFAULT_MODE, isSpatialKind, modesFor, type ModeId } from './modes';
+import { DEFAULT_MODE, allowedModesFor, isSpatialKind, type ModeId } from './modes';
 import { panelsFor, type PanelId } from './panels';
 import { DEFAULT_TOOL, toolsFor, type ToolId } from './tools';
 
@@ -58,9 +58,14 @@ export function defaultChromeState(): ChromeState {
  * → `nav`, panneau absent du dock → premier panneau, tiroir d'une autre famille → fermé.
  * Appelé au changement de mode comme au changement de média ; retourne l'objet d'origine
  * quand rien ne bouge, pour ne pas déclencher de rendu inutile.
+ *
+ * `canCompare` faux retire « Compare » des modes valides : sans version voisine, y rester
+ * n'afficherait aucune comparaison.
  */
-export function reconcileChrome(state: ChromeState, kind: MediaKind): ChromeState {
-  const mode = modesFor(kind).some((m) => m.value === state.mode) ? state.mode : DEFAULT_MODE;
+export function reconcileChrome(state: ChromeState, kind: MediaKind, canCompare = true): ChromeState {
+  const mode = allowedModesFor(kind, canCompare).some((m) => m.value === state.mode)
+    ? state.mode
+    : DEFAULT_MODE;
   const tool = toolsFor(mode, kind).some((t) => t.id === state.tool) ? state.tool : DEFAULT_TOOL;
   const panels = panelsFor(kind);
   const panel =

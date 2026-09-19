@@ -32,12 +32,17 @@ function initialState(kind: MediaKind): ChromeState {
   return { ...base, ...prefs, drawer: drawerOpen ? drawerForKind(kind) : null };
 }
 
-export function useChromeState(kind: MediaKind, published = false) {
+/**
+ * `canCompare` : au moins une version voisine existe. Faux, le mode « Compare » quitte la
+ * bascule **et** les touches numériques — un mode qui ne peut rien montrer ne s'arme pas.
+ */
+export function useChromeState(kind: MediaKind, published = false, canCompare = true) {
   const [state, setState] = useState<ChromeState>(() => initialState(kind));
 
   const update = useCallback(
-    (patch: Partial<ChromeState>) => setState((prev) => reconcileChrome({ ...prev, ...patch }, kind)),
-    [kind],
+    (patch: Partial<ChromeState>) =>
+      setState((prev) => reconcileChrome({ ...prev, ...patch }, kind, canCompare)),
+    [kind, canCompare],
   );
 
   // Changement de média : on repart des préférences de ce type, mode et outil au repos.
@@ -46,6 +51,15 @@ export function useChromeState(kind: MediaKind, published = false) {
   if (lastKind !== kind) {
     setLastKind(kind);
     setState(initialState(kind));
+  }
+
+  // Les versions voisines arrivent après le premier rendu : quand `canCompare` retombe, l'état
+  // courant repasse au crible au lieu d'attendre la prochaine action — sans quoi l'on resterait
+  // dans un mode « Compare » que la bascule vient de retirer.
+  const [lastCanCompare, setLastCanCompare] = useState(canCompare);
+  if (lastCanCompare !== canCompare) {
+    setLastCanCompare(canCompare);
+    setState((prev) => reconcileChrome(prev, kind, canCompare));
   }
 
   // Les préférences sont persistées par type de média ; mode et outil restent éphémères.
@@ -57,7 +71,7 @@ export function useChromeState(kind: MediaKind, published = false) {
     );
   }, [kind, state]);
 
-  const modes = useMemo(() => switcherModesFor(kind), [kind]);
+  const modes = useMemo(() => switcherModesFor(kind, canCompare), [kind, canCompare]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

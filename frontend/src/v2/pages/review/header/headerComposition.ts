@@ -41,14 +41,15 @@ export interface HeaderActionContext {
 /**
  * Actions offertes à droite de l'en-tête fusionné.
  *
- * Le sélecteur A/B n'y figure que pour la vidéo et l'image : la 3D et le splat montent le
- * leur (`SpatialCompareHeader`), alimenté par leur propre hook de comparaison — il arrive
- * par la prop `headerRight` du chrome, juste avant cette liste.
+ * Le sélecteur A/B n'y figure plus que pour la vidéo, seule à cocher deux ou trois versions
+ * d'un coup (grille 2×2). L'image choisit A et B dans la barre d'options du mode
+ * « Compare » : un seul endroit visible, au lieu d'un menu d'en-tête et d'un onglet de dock
+ * qui se contredisaient. La 3D et le splat montent le leur (`SpatialCompareHeader`), qui
+ * arrive par la prop `headerRight` du chrome, juste avant cette liste.
  */
 export function headerActions(ctx: HeaderActionContext): HeaderActionId[] {
-  const flat = ctx.kind === 'VIDEO' || ctx.kind === 'IMAGE';
   return [
-    ...(flat ? (['compare'] as const) : []),
+    ...(ctx.kind === 'VIDEO' ? (['compare'] as const) : []),
     ...(ctx.hasSgLink ? (['shotgrid'] as const) : []),
     'live',
     ...(ctx.hasViewers ? (['presence'] as const) : []),
@@ -62,9 +63,10 @@ export function headerActions(ctx: HeaderActionContext): HeaderActionId[] {
 }
 
 /**
- * Superposition de comparaison image : le wipe et la différence **remplacent** la visionneuse
- * — et donc le chrome qui la porte. Un seul endroit décide, pour que la branche image et la
- * page ne divergent pas sur qui rend l'en-tête.
+ * Surcouche de comparaison image : laquelle des deux vues remplace la visionneuse **dans** le
+ * viewport. Le wipe et la différence démontaient auparavant tout le chrome — la bascule de
+ * mode et les réglages A/B partaient avec, au moment précis où l'on en avait besoin. Ils sont
+ * désormais des surcouches du viewport, comme en vidéo.
  */
 export function imageCompareOverlay(compareId: number | null, mode: CompareMode): 'wipe' | 'diff' | null {
   if (compareId == null || mode === 'side') return null;
@@ -75,17 +77,13 @@ export interface ChromeHostInput {
   /** Le média est chargé : sans lui, aucune branche ne monte de chrome. */
   hasData: boolean;
   kind?: MediaKind;
-  compareId: number | null;
-  compareMode: CompareMode;
 }
 
 /**
- * Le chrome du viewer héberge-t-il l'en-tête ? Vrai dès qu'une branche en monte un. Deux
- * états n'en montent aucun — le chargement et la superposition de comparaison image — et la
- * page rend alors l'en-tête elle-même, plutôt que de le laisser disparaître.
+ * Le chrome du viewer héberge-t-il l'en-tête ? Vrai dès qu'une branche en monte un — donc
+ * pour les quatre types de média. Seul le chargement n'en monte aucun, et la page rend alors
+ * l'en-tête elle-même plutôt que de le laisser disparaître.
  */
-export function chromeHostsHeader({ hasData, kind, compareId, compareMode }: ChromeHostInput): boolean {
-  if (!hasData || !kind) return false;
-  if (kind === 'IMAGE') return imageCompareOverlay(compareId, compareMode) === null;
-  return true;
+export function chromeHostsHeader({ hasData, kind }: ChromeHostInput): boolean {
+  return hasData && !!kind;
 }

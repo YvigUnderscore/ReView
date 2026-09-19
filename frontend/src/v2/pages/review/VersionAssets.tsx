@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,11 +12,10 @@ import {
   Boxes,
   type LucideIcon,
 } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
-import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import { useT } from '../../i18n';
-import type { MediaKind, VersionDetail } from '../../types/api';
+import type { MediaKind } from '../../types/api';
+import { useVersionMedia } from './useVersionMedia';
 
 const KIND_ICON: Record<MediaKind, LucideIcon> = {
   VIDEO: Video,
@@ -38,11 +36,7 @@ const KIND_ICON: Record<MediaKind, LucideIcon> = {
 export default function VersionAssets({ versionId, mediaId }: { versionId: number; mediaId: number }) {
   const t = useT();
   const navigate = useNavigate();
-  const versionQ = useQuery({
-    queryKey: qk.version(versionId),
-    queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`).then((d) => d.version),
-  });
-  const media = versionQ.data?.media ?? [];
+  const media = useVersionMedia(versionId);
   const index = media.findIndex((m) => m.id === mediaId);
   if (media.length < 2) return null;
 

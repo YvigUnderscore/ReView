@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { fileToImageDataUrl, imageFilesFromClipboard } from '../../lib/useImagePaste';
+import StagedRefLayer from './StagedRefLayer';
+import { clampRefBox } from './referenceBox';
 import type { Annotations } from './useAnnotations';
 import type { MediaResp, ReviewReferenceItem } from './reviewTypes';
 import { useT } from '../../i18n';
@@ -16,13 +18,10 @@ const MAX_REFS = 12;
 
 /**
  * Images de référence épinglées au canvas de la review image — **liées à un commentaire**.
- * Deux familles :
- * - références **persistées** : figées (plus déplaçables), affichées uniquement quand leur
- *   commentaire est sélectionné (les références historiques sans commentaire restent visibles) ;
- * - références **en préparation** (composer) : collées/ajoutées avant l'envoi du commentaire,
- *   déplaçables/redimensionnables jusqu'à l'envoi, puis figées côté serveur.
- * Rendues DANS le plan transformé du viewer (elles suivent le zoom/pan) ; coordonnées en
- * fractions de l'image de base.
+ * Ici les références **persistées** : figées, visibles quand leur commentaire est sélectionné
+ * (les références historiques sans commentaire restent visibles). Celles en préparation vivent
+ * dans `StagedRefLayer`. Coordonnées en fractions de l'image de base, recadrées à l'affichage :
+ * l'ancien collage en posait hors cadre, et elles seraient restées invisibles.
  */
 export default function ReviewCanvasRefs({
   mediaId,
@@ -39,14 +38,6 @@ export default function ReviewCanvasRefs({
 }) {
   const t = useT();
   const qc = useQueryClient();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{
-    key: string;
-    mode: 'move' | 'resize';
-    px: number;
-    py: number;
-    start: { x: number; y: number; width: number };
-  } | null>(null);
 
   // Persistées : celles du commentaire sélectionné + les historiques (sans commentaire).
   const visible = references.filter((r) => r.commentId == null || r.commentId === selectedCommentId);
@@ -62,89 +53,41 @@ export default function ReviewCanvasRefs({
     }
   };
 
-  // Drag des références en préparation uniquement.
-  const onPointerDown = (key: string, mode: 'move' | 'resize') => (e: React.PointerEvent) => {
-    const r = ann.stagedRefs.find((s) => s.key === key);
-    if (!r) return;
-    e.preventDefault();
-    e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    drag.current = { key, mode, px: e.clientX, py: e.clientY, start: { x: r.x, y: r.y, width: r.width } };
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    const root = rootRef.current;
-    const d = drag.current;
-    if (!d || !root) return;
-    const rect = root.getBoundingClientRect();
-    const dx = (e.clientX - d.px) / rect.width;
-    const dy = (e.clientY - d.py) / rect.height;
-    ann.updateStagedRef(
-      d.key,
-      d.mode === 'move'
-        ? { x: d.start.x + dx, y: d.start.y + dy }
-        : { width: Math.max(d.start.width + dx, 0.02) },
-    );
-  };
-  const onPointerUp = () => (drag.current = null);
-
   return (
-    <div ref={rootRef} className="pointer-events-none absolute inset-0 overflow-visible">
-      {visible.map((r) => (
-        <div
-          key={r.id}
-          className="absolute overflow-hidden rounded border border-white/20 shadow-lg"
-          style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.width * 100}%` }}
-        >
-          <img src={r.url} alt={t('ref.title')} className="block w-full select-none" draggable={false} />
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => void removePersisted(r.id)}
-              title={t('review.ref.remove')}
-              className="pointer-events-auto absolute right-1 top-1 rounded bg-black/60 p-1 text-white hover:bg-black/80"
+    <>
+      <div className="pointer-events-none absolute inset-0 overflow-visible">
+        {visible.map((r) => {
+          const box = clampRefBox(r);
+          return (
+            <div
+              key={r.id}
+              className="absolute overflow-hidden rounded border border-white/20 shadow-lg"
+              style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.width * 100}%` }}
             >
-              <Trash2 size={12} />
-            </button>
-          )}
-        </div>
-      ))}
-
-      {/* Références en préparation : liseré primaire, déplaçables jusqu'à l'envoi. */}
-      {ann.stagedRefs.map((r) => (
-        <div
-          key={r.key}
-          className="pointer-events-auto absolute cursor-move overflow-hidden rounded border-2 border-primary/70 shadow-lg"
-          style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.width * 100}%` }}
-          onPointerDown={onPointerDown(r.key, 'move')}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-        >
-          <img src={r.dataUrl} alt={t('ref.draft')} className="block w-full select-none" draggable={false} />
-          <button
-            type="button"
-            onClick={() => ann.removeStagedRef(r.key)}
-            title={t('review.ref.remove')}
-            className="absolute right-1 top-1 rounded bg-black/60 p-1 text-white hover:bg-black/80"
-          >
-            <Trash2 size={12} />
-          </button>
-          <div
-            onPointerDown={onPointerDown(r.key, 'resize')}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            title={t('common.resize')}
-            className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize bg-primary/70"
-          />
-        </div>
-      ))}
-    </div>
+              <img src={r.url} alt={t('ref.title')} className="block w-full select-none" draggable={false} />
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => void removePersisted(r.id)}
+                  title={t('review.ref.remove')}
+                  className="pointer-events-auto absolute right-1 top-1 rounded bg-black/60 p-1 text-white hover:bg-black/80"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <StagedRefLayer ann={ann} />
+    </>
   );
 }
 
 /**
- * Contrôles écran (hors canvas) : bouton d'ajout + collage CTRL+V global — l'image est
- * **jointe au prochain commentaire** (staged). Le listener document ignore les collages
- * destinés aux champs de saisie (le composer gère ses propres pièces jointes).
+ * Contrôles écran (hors canvas) : bouton d'ajout + collage Ctrl+V global — l'image est jointe
+ * au prochain commentaire. Le listener document ignore les collages destinés aux champs de
+ * saisie (le composer gère ses propres pièces jointes).
  */
 export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations; annotating: boolean }) {
   const t = useT();
