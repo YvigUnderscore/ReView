@@ -8,14 +8,15 @@ import { checkProjectAccess } from '../middleware/rbac';
 import { storage, StorageService } from './StorageService';
 import { validateMediaHeader, getExtension, detectImage } from '../lib/fileSignatures';
 import { resolveProjectIdForVersion, resolveStorageContextForVersion } from '../lib/pipeline';
-import { resolveProjectSettingsById, checkNaming } from '../lib/projectSettings';
+import { checkNaming, resolveProjectSettingsById } from '../lib/projectSettings';
+import { assertUploadNote } from '../lib/uploadNote';
 import { slugifyFilename } from '../lib/slug';
 import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { enqueueMediaJob, enqueueSpatialThumb } from './JobService';
 import { jobKindFor, spatialThumbSource } from '../lib/mediaJobKind';
-import { getLiveSyncHz, getNumericSetting, SETTING_KEYS } from '../lib/settings';
+import { getLiveSyncHz, getNumericSetting, isDraftModeEnabled, SETTING_KEYS } from '../lib/settings';
 import { logMediaAccess } from '../lib/mediaAccess';
 import { publish as publishApiEvent } from './ApiEventService';
 import { notifyChat } from './ChatNotifyService';
@@ -31,8 +32,8 @@ import {
 } from '../lib/hlsPlaylist';
 import { signMediaPlaybackToken, verifyMediaPlaybackToken } from '../lib/mediaToken';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
-import { assertNotPublished } from '../lib/publishLock';
-import { inheritsPublication, shouldPublishVersion } from '../lib/publishState';
+import { assertReprocessable, assertWritable, withPublishedReprocess } from '../lib/publishLock';
+import { bornsPublished, shouldPublishVersion } from '../lib/publishState';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertProjectQuota } from '../lib/projectQuota';
 import { logger } from '../lib/logger';
@@ -126,13 +127,18 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
     throw badRequest('Filename does not match the naming rule of this project', 'NAMING_REJECTED');
   const namingWarning = !namingCheck.pass && namingCheck.mode === 'warn';
 
-  // Une version déjà publiée ne retombe pas en brouillon parce qu'on lui ajoute un rendu :
-  // le média qui la rejoint naît publié (règle symétrique de `syncVersionPublication`).
+  // Publication d'office (Phase 50) : hors mode brouillon, un média naît publié — déposer
+  // EST livrer. Mode brouillon actif, la règle historique s'applique telle quelle : seule
+  // une version déjà publiée donne un média publié à la naissance, pour qu'elle ne retombe
+  // pas en brouillon parce qu'on lui ajoute un rendu (symétrique de `syncVersionPublication`).
   const parentVersion = await prisma.version.findUnique({
     where: { id: versionId },
     select: { published: true },
   });
-  const bornPublished = inheritsPublication(parentVersion?.published ?? false);
+  const bornPublished = bornsPublished({
+    draftMode: await isDraftModeEnabled(),
+    versionPublished: parentVersion?.published ?? false,
+  });
 
   const media = await prisma.mediaObject.create({
     data: {
@@ -160,11 +166,19 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   await prisma.mediaObject.update({ where: { id: media.id }, data: { storageKey } });
 
   const uploadUrl = await storage.getPresignedPutUrl(storageKey, contentType);
-  return { mediaObjectId: media.id, storageKey, uploadUrl, namingWarning };
+  // `published` est rendu ici pour que l'appelant sache, sans lire un réglage d'administration
+  // qui lui est fermé, si « publier » sera encore un geste à proposer après l'envoi.
+  return { mediaObjectId: media.id, storageKey, uploadUrl, namingWarning, published: bornPublished };
 }
 
-/** Finalise un upload : valide les magic bytes, met la taille à jour, déclenche le traitement. */
-export async function finalize(user: SessionUser, id: number) {
+/**
+ * Finalise un upload : valide les magic bytes, met la taille à jour, déclenche le traitement.
+ *
+ * `note` est la consigne d'upload — ce que l'auteur dit de ce qu'il livre. Elle n'est
+ * obligatoire que si le projet l'exige (`settings.reviewRequest.requireNote`) ; fournie, elle
+ * est conservée dans `metadata.uploadNote` et rendue par le détail du média.
+ */
+export async function finalize(user: SessionUser, id: number, note?: string | null) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Media not found');
 
@@ -179,7 +193,16 @@ export async function finalize(user: SessionUser, id: number) {
   // publication de leur version : un média encore en UPLOADING n'a jamais été servi à
   // personne, le finaliser est le déroulement normal de son dépôt. Le verrou garde tout
   // son sens pour un média déjà finalisé, dont le contenu, lui, a été diffusé.
-  if (media.status !== MediaStatus.UPLOADING) assertNotPublished(media);
+  if (media.status !== MediaStatus.UPLOADING) assertWritable(media, 'uploadFinalize');
+
+  // Consigne d'upload : contrôlée AVANT toute écriture et avant tout appel au stockage. La
+  // refuser plus loin marquerait le média FAILED et supprimerait l'objet déposé pour une
+  // phrase manquante, alors qu'il suffit de rappeler `finalize` avec elle.
+  const [draftMode, projectSettings] = await Promise.all([
+    isDraftModeEnabled(),
+    resolveProjectSettingsById(projectId),
+  ]);
+  const uploadNote = assertUploadNote(note, projectSettings.reviewRequest);
 
   const stat = await storage.statObject(media.storageKey);
   const header = await storage.getObjectHeader(media.storageKey, 32);
@@ -221,7 +244,15 @@ export async function finalize(user: SessionUser, id: number) {
   const jobKind = jobKindFor(media.kind, detected);
   const updated = await prisma.mediaObject.update({
     where: { id },
-    data: { status: jobKind ? MediaStatus.PROCESSING : MediaStatus.READY, size: BigInt(stat.size) },
+    data: {
+      status: jobKind ? MediaStatus.PROCESSING : MediaStatus.READY,
+      size: BigInt(stat.size),
+      // La consigne rejoint les métadonnées du média : c'est ce que l'auteur a dit de sa
+      // livraison, et cela doit survivre au fait que personne ne soit encore assigné.
+      ...(uploadNote
+        ? { metadata: { ...((media.metadata ?? {}) as Record<string, unknown>), uploadNote } }
+        : {}),
+    },
   });
   if (jobKind) await enqueueMediaJob({ mediaObjectId: id, kind: jobKind });
   // 37.E : les médias servis tels quels (GLB natif, splats) passent quand même à
@@ -237,6 +268,12 @@ export async function finalize(user: SessionUser, id: number) {
       data: { storageUsed: { increment: BigInt(stat.size) } },
     });
   }
+
+  // Publication d'office : le média est né publié, donc c'est ICI qu'il devient une
+  // livraison — la version suit ses médias, l'équipe est prévenue, les intégrations partent.
+  // En mode brouillon, rien de tout cela : « publier » reste un geste et c'est lui qui
+  // annonce, exactement comme avant ce lot.
+  if (updated.published && !draftMode) await announcePublication(updated, projectId, user.id);
 
   return { media: serializeMedia(updated), detectedExtension: detected };
 }
@@ -532,7 +569,11 @@ export async function syncVersionPublication(versionId: number, actorId: number)
 }
 
 /**
- * Publie un média brouillon (réservé à l'uploader).
+ * Publie un média brouillon (réservé à l'uploader) — geste du mode brouillon.
+ *
+ * Hors mode brouillon (défaut depuis la Phase 50), le média est déjà publié à l'arrivée ici :
+ * la route reste servie pour les studios qui ont gardé le brouillon, et pour l'API v1 dont
+ * la finalisation passe par elle. Elle ne republie alors rien — voir la garde plus bas.
  *
  * `reviewers` est le geste de l'upload : « publie, et voilà qui doit regarder quoi ». La
  * liste est écrite sur la VERSION — c'est elle qu'on confie — et AVANT le basculement :
@@ -560,65 +601,108 @@ export async function publish(user: SessionUser, id: number, reviewers?: Reviewe
     if (!owner) throw notFound('Version not attached to a project');
     await setReviewers(user, owner, media.versionId, reviewers);
   }
-  const updated = await prisma.mediaObject.update({ where: { id }, data: { published: true } });
-  // La version suit ses médias : dès qu'il ne reste plus un brouillon, elle est publiée.
-  await syncVersionPublication(media.versionId, user.id);
-  const projectId = await resolveProjectIdForVersion(media.versionId);
-  if (projectId) {
-    emitToProject(projectId, 'media:update', { projectId, id, versionId: media.versionId });
-    // 48 : la version part vers ShotGrid — création si elle y est inconnue, ajout du
-    // média à la version existante sinon. Un média ajouté en cours de route ne doit
-    // pas fabriquer un doublon portant le même nom.
-    await enqueuePush(projectId, { type: 'version-publish', versionId: media.versionId, actorId: user.id });
-    // Suiveurs (32.G) : publication sur la chaîne version/shot/asset.
-    await notifyWatchers({
-      mediaObjectId: id,
-      projectId,
-      messageKey: 'notification.mediaPublished',
-      params: { name: media.originalName },
-      exclude: [user.id],
-    });
-    // Webhooks sortants (36.D).
-    publishApiEvent('media.published', {
-      projectId,
-      entityType: 'media',
-      entityId: id,
-      actorId: user.id,
-      payload: {
-        mediaObjectId: id,
-        versionId: media.versionId,
-        projectId,
-        kind: media.kind,
-        originalName: media.originalName,
-        publishedBy: user.id,
-      },
-    });
-    // Messagerie d'équipe (42.B — №67).
-    void notifyChat(`🎬 Nouveau média publié : ${media.originalName}`);
-  }
+  // Un média déjà publié — c'est le cas de tout upload hors mode brouillon — ne se
+  // republie pas : la liste demandée est écrite, et on s'arrête là. Sans cette garde, le
+  // chemin de l'API v1 (`PublishFlowService.complete`) annoncerait deux fois la même
+  // livraison : deux webhooks, deux notifications de suiveurs, deux envois ShotGrid.
+  const alreadyPublished = media.published;
+  const updated = alreadyPublished
+    ? media
+    : await prisma.mediaObject.update({ where: { id }, data: { published: true } });
+  if (!alreadyPublished)
+    await announcePublication(updated, await resolveProjectIdForVersion(media.versionId), user.id);
   return { media: serializeMedia(updated), reviewers: await listReviewers(media.versionId) };
 }
 
-/** Relance le job de traitement d'un média (échec/bloqué, non publié). */
+/**
+ * Ce qui suit une publication de média, d'où qu'elle vienne.
+ *
+ * Extrait de `publish` parce qu'il y a désormais DEUX portes : le geste explicite, en mode
+ * brouillon, et la finalisation de l'upload, qui publie d'office. Laisser la seconde sans
+ * ces effets aurait donné des médias visibles de tous dont la version reste « brouillon »,
+ * dont les suiveurs n'entendent pas parler et que ShotGrid ne reçoit jamais.
+ *
+ * `projectId` peut manquer (version détachée) : la version suit tout de même ses médias,
+ * mais il n'y a personne à prévenir.
+ */
+export async function announcePublication(
+  media: { id: number; versionId: number; kind: MediaKind; originalName: string },
+  projectId: number | null,
+  actorId: number,
+): Promise<void> {
+  const { id, versionId, originalName } = media;
+  // La version suit ses médias : dès qu'il ne reste plus un brouillon, elle est publiée.
+  await syncVersionPublication(versionId, actorId);
+  if (!projectId) return;
+  emitToProject(projectId, 'media:update', { projectId, id, versionId });
+  // 48 : la version part vers ShotGrid — création si elle y est inconnue, ajout du
+  // média à la version existante sinon. Un média ajouté en cours de route ne doit
+  // pas fabriquer un doublon portant le même nom.
+  await enqueuePush(projectId, { type: 'version-publish', versionId, actorId });
+  // Suiveurs (32.G) : publication sur la chaîne version/shot/asset.
+  await notifyWatchers({
+    mediaObjectId: id,
+    projectId,
+    messageKey: 'notification.mediaPublished',
+    params: { name: originalName },
+    exclude: [actorId],
+  });
+  // Webhooks sortants (36.D).
+  publishApiEvent('media.published', {
+    projectId,
+    entityType: 'media',
+    entityId: id,
+    actorId,
+    payload: {
+      mediaObjectId: id,
+      versionId,
+      projectId,
+      kind: media.kind,
+      originalName,
+      publishedBy: actorId,
+    },
+  });
+  // Messagerie d'équipe (42.B — №67).
+  void notifyChat(`🎬 Nouveau média publié : ${originalName}`);
+}
+
+/**
+ * Relance le job de traitement d'un média.
+ *
+ * Un brouillon se relance librement. Un média **publié** ne se relance que si son
+ * traitement a échoué, et une seule fois (`lib/publishLock`) : sans cette exception, un
+ * média publié d'office dont le transcodage échoue serait mort à jamais — le verrou
+ * interdisait la relance, et il n'y avait plus de brouillon où recommencer. La relance
+ * consommée est comptée dans `metadata`, pour que la deuxième tentative soit refusée avec
+ * ses propres mots plutôt qu'avec un « verrouillé » qui ne dirait rien de vrai.
+ */
 export async function reprocess(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Media not found');
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
-  assertNotPublished(media);
+  assertReprocessable(media);
+  // Le compteur n'est tenu que pour un média publié : un brouillon se relance sans limite,
+  // et lui poser un compteur ferait échouer sa première relance après publication.
+  const spend = media.published
+    ? { metadata: withPublishedReprocess(media.metadata) as Prisma.InputJsonObject }
+    : {};
 
   const ext = getExtension(media.originalName);
   const jobKind = jobKindFor(media.kind, ext);
   if (!jobKind) {
     // Rien à reconvertir (ex : GLB/glTF natif) → simplement remettre READY.
-    const updated = await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.READY } });
+    const updated = await prisma.mediaObject.update({
+      where: { id },
+      data: { status: MediaStatus.READY, ...spend },
+    });
     await requestSpatialThumb(id, media.kind, ext);
     return { media: serializeMedia(updated), requeued: false };
   }
 
   const updated = await prisma.mediaObject.update({
     where: { id },
-    data: { status: MediaStatus.PROCESSING },
+    data: { status: MediaStatus.PROCESSING, ...spend },
   });
   await enqueueMediaJob({ mediaObjectId: id, kind: jobKind });
   await requestSpatialThumb(id, media.kind, ext);
@@ -671,6 +755,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     processingError?: string;
     /** Nom du fichier réellement livré par ShotGrid, quand le média porte le code du site. */
     sourceFilename?: string;
+    /** Consigne écrite à l'upload (Phase 50) — ce que l'auteur dit de ce qu'il livre. */
+    uploadNote?: string;
     // Override de scène (46.D) : mise en scène rejouée à l'ouverture pour tous.
     usdOverride?: unknown;
     fps?: number;
@@ -767,6 +853,9 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     sourceFilename: meta.sourceFilename ?? null,
     // Raison de l'échec quand le média est FAILED (45.C) : asset USD manquant, outillage absent…
     processingError: meta.processingError ?? null,
+    // Consigne d'upload (Phase 50) : ce que l'auteur a dit en livrant. Rendue à tout le monde —
+    // c'est elle qui répond à « qu'est-ce qu'on attend de moi ? » quand personne n'est assigné.
+    uploadNote: meta.uploadNote ?? null,
     // Override de scène (46.D) — rejoué au chargement du viewer 3D pour tous les spectateurs.
     usdOverride: meta.usdOverride ?? null,
     fps: meta.fps ?? null,

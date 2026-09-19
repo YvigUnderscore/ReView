@@ -7,6 +7,7 @@ import SavedViewsMenu from '../../components/SavedViewsMenu';
 import ViewToggle from '../../components/ViewToggle';
 import type { MediaKind } from '../../types/api';
 import { filtersFrom, mediaKindLabels, type ReviewsFilterState } from './reviewsTypes';
+import { useDraftMode } from '../../lib/draftMode';
 import { useT } from '../../i18n';
 
 const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
@@ -26,6 +27,7 @@ export default function ReviewsFilters({
 }) {
   const t = useT();
   const kindLabels = mediaKindLabels(t);
+  const draftMode = useDraftMode();
   // Le filtre doit proposer tous les projets, pas les cent premiers : une liste déroulante
   // ne défile pas jusqu'à une sentinelle.
   const { data: projects } = useProjectsQuery({ all: true });
@@ -60,16 +62,24 @@ export default function ReviewsFilters({
           </option>
         ))}
       </Select>
-      <Select
-        value={value.status}
-        onChange={(e) => set({ status: e.target.value })}
-        aria-label={t('reviews.filter.publishedAndDrafts')}
-        className="text-xs"
-      >
-        <option value="">{t('reviews.filter.publishedAndDrafts')}</option>
-        <option value="published">{t('reviews.filter.published')}</option>
-        <option value="draft">{t('reviews.filter.myDrafts')}</option>
-      </Select>
+      {/* Trier le publié du brouillon ne veut dire quelque chose que dans un studio qui
+          garde le parcours en deux temps (`draftMode`). Ailleurs, tout média est publié dès
+          l'upload : le sélecteur n'offrirait que deux fois la même liste. Il reparaît
+          quand un filtre est posé — une vue enregistrée doit pouvoir se défaire. */}
+      {(draftMode || value.status !== '') && (
+        <Select
+          value={value.status}
+          onChange={(e) => set({ status: e.target.value })}
+          aria-label={t('reviews.filter.publishedAndDrafts')}
+          className="text-xs"
+        >
+          <option value="">{t('reviews.filter.publishedAndDrafts')}</option>
+          <option value="published">{t('reviews.filter.published')}</option>
+          {(draftMode || value.status === 'draft') && (
+            <option value="draft">{t('reviews.filter.myDrafts')}</option>
+          )}
+        </Select>
+      )}
       <Select
         value={value.decision}
         onChange={(e) => set({ decision: e.target.value })}

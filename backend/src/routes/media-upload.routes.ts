@@ -10,6 +10,7 @@ import * as MediaUploadService from '../services/MediaUploadService';
 import * as MediaService from '../services/MediaService';
 import * as ImageSequenceService from '../services/ImageSequenceService';
 import { FRAME_NAME_MAX_LENGTH, MAX_SEQUENCE_FRAMES, MIN_SEQUENCE_FRAMES } from '../lib/imageSequence';
+import { reviewNoteSchema } from '../lib/projectSettings';
 
 /**
  * Upload résumable multipart (37.A/37.B) et envoi de séquences d'images (vague 5) —
@@ -157,10 +158,17 @@ router.post(
 );
 
 // POST /api/media/sequence/:id/complete — vérifie les frames arrivées, écrit le manifeste
-// et enfile l'assemblage (proxy + échelle HLS + miniature + sprite).
-router.post('/sequence/:id/complete', validate({ params: idParam }), async (req, res) => {
-  res.json(await ImageSequenceService.completeSequence(req.user!, Number(req.params.id)));
-});
+// et enfile l'assemblage (proxy + échelle HLS + miniature + sprite). `note` est la consigne
+// d'upload, refusée absente quand le projet l'exige : cette route finalise l'envoi d'une
+// séquence, elle porte donc la même règle que /api/media/:id/finalize (Phase 50).
+const sequenceCompleteBody = z.object({ note: reviewNoteSchema }).default({});
+router.post(
+  '/sequence/:id/complete',
+  validate({ params: idParam, body: sequenceCompleteBody }),
+  async (req, res) => {
+    res.json(await ImageSequenceService.completeSequence(req.user!, Number(req.params.id), req.body.note));
+  },
+);
 
 // GET /api/media/sequence/:id/frames — le livrable d'origine, frame par frame (URLs
 // présignées) : une archive de cent gigaoctets ne se fabrique pas dans le processus web.

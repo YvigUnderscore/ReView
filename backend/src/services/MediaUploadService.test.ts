@@ -153,6 +153,8 @@ describe('initMultipart — reprise impossible', () => {
       storageKey: 'projects/demo/shots/sh0300/v02/32/master.mov',
       uploadUrl: 'https://minio.invalid/put',
       namingWarning: false,
+      // Publication d'office (Phase 50) : `createUpload` rend désormais l'état de naissance.
+      published: true,
     });
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({ metadata: {} } as never);
     remove.mockResolvedValue({} as never);

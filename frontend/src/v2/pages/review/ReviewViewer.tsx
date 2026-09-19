@@ -50,7 +50,8 @@ export default function ReviewViewer({
   reprocessing,
   role,
   canEditTransform,
-  canEdit,
+  canTrim,
+  canEditSplat,
   canManage,
   onClearSelection,
   onSelectComment,
@@ -85,8 +86,10 @@ export default function ReviewViewer({
   reprocessing: boolean;
   role?: Role;
   canEditTransform: boolean;
-  /** Édition du média (trim, éditeur splat) — faux dès que le média est publié (Phase 11). */
-  canEdit: boolean;
+  /** Montage vidéo (points d'entrée/sortie) — faux dès que le média est publié (Phase 11). */
+  canTrim: boolean;
+  /** Éditions splat (masque, sous-ensemble) — non destructives, vraies après publication. */
+  canEditSplat: boolean;
   /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
   canManage: boolean;
   onClearSelection: (opts?: { keepScene?: boolean }) => void;
@@ -192,7 +195,7 @@ export default function ReviewViewer({
           fps={fps}
           ann={ann}
           role={role}
-          canEdit={canEdit}
+          canEdit={canTrim}
           videoRef={videoRef}
           onSaved={onSplatEditsSaved}
           onExportFrame={mediaExport.onExportFrame}
@@ -278,7 +281,7 @@ export default function ReviewViewer({
         <SplatReview
           data={data}
           splat={splat}
-          showEdit={splatReady && canEdit}
+          showEdit={splatReady && canEditSplat}
           canPresent={splatReady && canManage}
           paint={paint}
           onSaved={onSplatEditsSaved}

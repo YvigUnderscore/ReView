@@ -15,7 +15,12 @@ import * as AuditService from '../services/AuditService';
 import { storage } from '../services/StorageService';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { getLoginAppearance, loginBgUrl } from '../lib/loginAppearance';
-import { getSourceUrl } from '../lib/settings';
+import {
+  BOOLEAN_SETTING_KEYS,
+  booleanSettingSchema,
+  getSourceUrl,
+  isDraftModeEnabled,
+} from '../lib/settings';
 
 const router = Router();
 
@@ -24,12 +29,13 @@ const router = Router();
 // Porte aussi `sourceUrl` : l'AGPL §13 impose d'offrir le code source à tout utilisateur
 // distant, y compris non authentifié (connexion, partage client).
 router.get('/branding', async (_req, res) => {
-  const [studio, accent, logoKey, sourceUrl, login] = await Promise.all([
+  const [studio, accent, logoKey, sourceUrl, login, draftMode] = await Promise.all([
     prisma.studio.findFirst({ select: { name: true } }),
     prisma.setting.findUnique({ where: { key: 'studio_accent' } }),
     prisma.setting.findUnique({ where: { key: 'studio_logo_key' } }),
     getSourceUrl(),
     getLoginAppearance(),
+    isDraftModeEnabled(),
   ]);
   const logoUrl = logoKey?.value
     ? await storage.getPresignedGetUrl(logoKey.value, 3600, imageTypeFromKey(logoKey.value))
@@ -39,6 +45,10 @@ router.get('/branding', async (_req, res) => {
     accent: accent?.value ?? null,
     logoUrl,
     sourceUrl,
+    // Mode brouillon (Phase 50) : un booléen de parcours, pas un secret. Il voyage ici parce
+    // que c'est le SEUL canal que tout le monde peut lire — les réglages d'administration
+    // sont réservés aux admins, et un artiste doit savoir si « publier » est encore un geste.
+    draftMode,
     // La page de connexion est pré-auth : son habillage doit voyager avec le branding
     // public, sinon l'image de fond n'apparaît qu'une fois connecté — c'est-à-dire jamais.
     login: { ...login, bgUrl: await loginBgUrl(login.bgKey) },
@@ -129,6 +139,9 @@ router.put(
     // du texte arbitraire — et de les relire ensuite sous une clé non filtrée.
     if (SECRET_SETTING_KEYS.includes(key))
       throw badRequest('This setting has its own endpoint', 'RESERVED_SETTING');
+    // Réglages booléens (`draftMode`…) : « true » ou « false », rien d'autre. Cet upsert est
+    // générique et accepterait « oui », qui se relirait ensuite comme *faux* sans un mot.
+    if (BOOLEAN_SETTING_KEYS.includes(key)) booleanSettingSchema.parse(value);
     const setting = await prisma.setting.upsert({
       where: { key },
       update: { value },

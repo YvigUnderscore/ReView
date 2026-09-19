@@ -63,13 +63,18 @@ describe('setSceneOverride (46.D)', () => {
     expect((await setSceneOverride(USER, 1, null)).usdOverride).toBeNull();
   });
 
-  it('refuse un média publié : l’override est figé à la publication', async () => {
+  /**
+   * Ce test attendait un 403 : l'override était figé par la publication (Phase 11). La règle
+   * a changé sciemment (Phase 50, table de `lib/publishLock`) — l'override est une mise en
+   * scène rejouée au chargement, de la même nature que `splatPresentation`, qui était déjà
+   * exceptée. Le média étant publié dès son upload, la garder figée aurait interdit de mettre
+   * une scène en état d'être regardée. Le test vérifie donc l'inverse, explicitement.
+   */
+  it('accepte un média publié : l’override est une mise en scène, pas la livraison', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media({ published: true }) as never);
 
-    await expect(setSceneOverride(USER, 1, override)).rejects.toMatchObject({
-      code: 'PUBLISHED_LOCKED',
-    });
-    expect(prisma.mediaObject.update).not.toHaveBeenCalled();
+    expect((await setSceneOverride(USER, 1, override)).usdOverride).toEqual(override);
+    expect(prisma.mediaObject.update).toHaveBeenCalled();
   });
 
   it('refuse un média non 3D et un upload non finalisé', async () => {

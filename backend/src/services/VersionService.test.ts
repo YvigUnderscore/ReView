@@ -25,7 +25,7 @@ vi.mock('../lib/trash', () => ({
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 
-import { create, update, publishAll, purge, remove } from './VersionService';
+import { create, update, publishAll, purge, remove, list } from './VersionService';
 import { prisma } from '../lib/prisma';
 import { emitToProject } from './SocketService';
 import { purgeVersion } from '../lib/trash';
@@ -203,5 +203,42 @@ describe('VersionService — rôle effectif du projet (38.E)', () => {
     findUnique.mockResolvedValue({ authorId: 3, taskId: 42, assetId: null } as never);
     await expect(purge(artist, 7, 1)).rejects.toMatchObject({ statusCode: 403 });
     expect(purgeVersion).not.toHaveBeenCalled();
+  });
+});
+
+describe('VersionService.list — comptage aligné sur la visibilité réelle (10.C2)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /*
+   * Ce filtre était gardé par le scénario d'intégration « flux projet → … → média », qui
+   * déposait un brouillon et vérifiait qu'un autre membre ne le comptait pas. Depuis la
+   * Phase 50 un média naît PUBLIÉ (mode brouillon éteint par défaut) : ce scénario ne peut
+   * plus produire de brouillon, et le filtre s'y retrouverait sans gardien. Ici on ne passe
+   * pas par l'upload — on vérifie la REQUÊTE émise, donc le filtre lui-même. C'est bien la
+   * clause qui est verrouillée, pas le comportement de la base.
+   */
+  it('ne compte un média non publié que pour son uploader', async () => {
+    siblings.mockResolvedValue([] as never);
+
+    await list(42, 7);
+
+    const [args] = siblings.mock.calls[0] as [
+      { include: { _count: { select: { media: { where: unknown } } } } },
+    ];
+    expect(args.include._count.select.media.where).toEqual({
+      deletedAt: null,
+      OR: [{ published: true }, { uploaderId: 42 }],
+    });
+  });
+
+  it('ne rend jamais les brouillons d’autrui dans `draftCount`', async () => {
+    siblings.mockResolvedValue([{ id: 1, media: [{ id: 9 }] }] as never);
+
+    const versions = await list(42, 7);
+
+    const [args] = siblings.mock.calls[0] as [{ include: { media: { where: unknown } } }];
+    expect(args.include.media.where).toMatchObject({ published: false, uploaderId: 42 });
+    expect(versions[0]).toMatchObject({ id: 1, draftCount: 1 });
+    expect(versions[0]).not.toHaveProperty('media');
   });
 });

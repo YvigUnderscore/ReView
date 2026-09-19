@@ -4,6 +4,7 @@
 import { useRef, useState } from 'react';
 import { Layers } from 'lucide-react';
 import { useUploadStore } from '../../../stores/useUploadStore';
+import { withUploadNote } from '../../../stores/useUploadNoteStore';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -62,13 +63,20 @@ export default function VersionTimeline({
     setTarget(versionId);
     fileRef.current?.click();
   };
+  /**
+   * Verse les fichiers dans une version — en passant par la consigne quand le projet
+   * l'exige (Phase 50). `withUploadNote` retient le geste entier : sans message, rien ne
+   * part.
+   */
+  const fill = (versionId: number, files: File[]) =>
+    void withUploadNote(projectId, (note) => files.forEach((f) => enqueue(f, versionId, { note })));
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (files.length > 0 && target != null) files.forEach((f) => enqueue(f, target));
+    if (files.length > 0 && target != null) fill(target, files);
     if (fileRef.current) fileRef.current.value = '';
   };
   /** Dépôt sur une version existante : les fichiers la rejoignent (Phase 46). */
-  const dropInto = (versionId: number, files: File[]) => files.forEach((f) => enqueue(f, versionId));
+  const dropInto = (versionId: number, files: File[]) => fill(versionId, files);
 
   if (isLoading) {
     return (

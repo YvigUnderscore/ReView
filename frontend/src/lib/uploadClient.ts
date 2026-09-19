@@ -69,6 +69,15 @@ export interface UploadOptions {
   onProgress?: (pct: number) => void;
   /** Annulation : coupe les requêtes en vol et abandonne le multipart côté serveur. */
   signal?: AbortSignal;
+  /**
+   * Consigne exigée par le projet (`reviewRequest.requireNote`), collectée AVANT l'envoi
+   * depuis la Phase 50 — un média est publié dès son dépôt, il n'y a plus d'étape de
+   * publication où la demander.
+   *
+   * **Point de raccord unique** : elle ne part qu'au `finalize`, sous le champ `note`. Si le
+   * serveur attend un autre nom de champ ou un autre appel, c'est la seule ligne à changer.
+   */
+  note?: string | null;
 }
 
 /** N'appelle l'appelant que lorsque le pourcentage change vraiment (4 parts = 4× d'événements). */
@@ -120,7 +129,12 @@ export async function uploadMedia(
         : await uploadLarge(file, base, report, remember, signal);
     report(100);
     throwIfAborted(signal);
-    const { media } = await api.post<{ media: { status: string } }>(`/api/media/${mediaObjectId!}/finalize`);
+    const finalize = `/api/media/${mediaObjectId!}/finalize`;
+    // Sans consigne, la requête reste nue : c'est le corps qu'attendent les instances qui
+    // n'exigent rien, et celui que le contrat d'API décrit depuis toujours.
+    const { media } = await (opts.note == null
+      ? api.post<{ media: { status: string } }>(finalize)
+      : api.post<{ media: { status: string } }>(finalize, { note: opts.note }));
     return { mediaObjectId: mediaObjectId!, status: media.status, namingWarning };
   } catch (err) {
     // Abandon : libérer les parts déjà déposées plutôt que de les laisser facturées.

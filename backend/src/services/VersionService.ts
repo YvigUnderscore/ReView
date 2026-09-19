@@ -10,7 +10,7 @@ import { softDeleteVersion, restoreVersion, purgeVersion } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
 import { forbidden, notFound } from '../lib/errors';
-import { assertNotPublished } from '../lib/publishLock';
+import { assertWritable } from '../lib/publishLock';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertCanContribute, assertProjectManage, isProjectManager } from '../lib/projectRoles';
 import { versionSelect, toVersion } from '../lib/v1Resources';
@@ -204,8 +204,10 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   // ne voit plus qu'un brouillon.
   if (version.published && body.status !== undefined && body.status !== VersionStatus.PUBLISHED && !manager)
     throw forbidden('Only a supervisor or administrator can unpublish a version');
-  // Verrou de publication (Phase 11) : la transform 3D d'une version publiée est figée.
-  if (body.transform !== undefined) assertNotPublished(version);
+  // Verrou de publication : la transform 3D d'une version publiée reste figée. C'est
+  // l'assise de l'A/B et des annotations ancrées au cadre — la déplacer après coup fausse
+  // tout ce qui s'y réfère (table de `lib/publishLock`).
+  if (body.transform !== undefined) assertWritable(version, 'versionTransform');
 
   const updated = await prisma.version.update({
     where: { id },

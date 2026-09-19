@@ -36,18 +36,29 @@ vi.mock('./StorageService', () => ({
     putObject: vi.fn(),
   },
 }));
-vi.mock('./MediaService', () => ({ createUpload: (...args: unknown[]) => createUpload(...args) }));
+vi.mock('./MediaService', () => ({
+  createUpload: (...args: unknown[]) => createUpload(...args),
+  // Les effets de la publication ont leur propre banc (MediaService.publication.test.ts).
+  announcePublication: vi.fn(),
+}));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: vi.fn(async () => true) }));
 vi.mock('../lib/projectQuota', () => ({ assertProjectQuota: vi.fn() }));
 vi.mock('../lib/settings', () => ({
   getNumericSetting: vi.fn(async () => 500 * 1024 * 1024 * 1024),
+  isDraftModeEnabled: vi.fn(async () => false),
   SETTING_KEYS: { MAX_FILE_SIZE: 'max_file_size' },
 }));
 vi.mock('../lib/pipeline', () => ({ resolveProjectIdForVersion: vi.fn(async () => 3) }));
-vi.mock('../lib/projectSettings', () => ({
-  resolveProjectSettingsById: vi.fn(async () => ({ framerate: 25 })),
+// Le module reste RÉEL pour `checkReviewNote` : `lib/uploadNote` s'appuie dessus, et c'est
+// la règle de consigne qu'on veut voir s'appliquer aussi à une séquence.
+vi.mock('../lib/projectSettings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/projectSettings')>()),
+  resolveProjectSettingsById: vi.fn(async () => ({
+    framerate: 25,
+    reviewRequest: { requireNote: false, minNoteLength: 5 },
+  })),
   resolveEntitySettings: (project: { framerate: number }) => ({ framerate: project.framerate }),
 }));
 
@@ -55,6 +66,7 @@ import { completeSequence, frameUploadUrls, initSequence, listSequenceFrames } f
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
 import { enqueueMediaJob } from './JobService';
+import { resolveProjectSettingsById } from '../lib/projectSettings';
 
 const user = { id: 3, role: Role.ARTIST };
 const PREFIX = 'projects/demo/shots/sh0100/v01/42/frames/';
@@ -231,6 +243,27 @@ describe('completeSequence — ce qui est arrivé fait foi', () => {
     vi.mocked(storage.getObjectHeader).mockResolvedValue(Buffer.alloc(32));
     await expect(completeSequence(user, 42)).rejects.toMatchObject({ code: 'INVALID_FILE' });
     expect(enqueueMediaJob).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Cette fonction joue le rôle de `MediaService.finalize` pour une séquence : la consigne
+   * obligatoire (Phase 50) doit donc y valoir aussi. Sans cela, mille EXR seraient devenus la
+   * porte de service d'un réglage que le studio croit posé sur tous ses uploads.
+   */
+  it('refuse une séquence sans consigne quand le projet l’exige — avant de balayer le bucket', async () => {
+    vi.mocked(resolveProjectSettingsById).mockResolvedValue({
+      framerate: 25,
+      reviewRequest: { requireNote: true, minNoteLength: 5 },
+    } as never);
+    objects.push({ key: `${PREFIX}plan.1001.exr`, size: 8 });
+
+    await expect(completeSequence(user, 42)).rejects.toMatchObject({ code: 'UPLOAD_NOTE_REQUIRED' });
+    expect(enqueueMediaJob).not.toHaveBeenCalled();
+
+    // La même livraison passe dès qu'elle est accompagnée.
+    objects.push({ key: `${PREFIX}plan.1002.exr`, size: 8 });
+    vi.mocked(storage.getObjectHeader).mockResolvedValue(EXR_HEADER);
+    await expect(completeSequence(user, 42, 'Regarder le grain du 1001')).resolves.toBeTruthy();
   });
 });
 

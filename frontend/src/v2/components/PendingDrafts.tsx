@@ -12,6 +12,7 @@ import { useUploadStore } from '../../stores/useUploadStore';
 import type { Media, ReviewRequestRule } from '../types/api';
 import type { ReviewAssignee } from '../types/entities';
 import ReviewersDialog from './review/ReviewersDialog';
+import { useDraftMode } from '../lib/draftMode';
 import { useT } from '../i18n';
 
 /** GET /api/media/drafts — brouillon + localisation lisible. */
@@ -34,10 +35,15 @@ const NO_REVIEWERS: ReviewAssignee[] = [];
  * Pastille « Brouillons en attente » posée dans la barre du haut, à gauche de la
  * recherche. Liste les médias non publiés de l'utilisateur courant ; permet de les
  * publier ou supprimer rapidement depuis un panneau ancré sous la pastille.
+ *
+ * Elle n'existe que dans un studio qui a gardé le parcours en deux temps (`draftMode`,
+ * Phase 50). Ailleurs un média naît publié : la pastille n'aurait jamais rien à montrer, et
+ * sa requête serait un aller-retour payé par chaque page de chaque compte.
  */
 export default function PendingDrafts() {
   const t = useT();
   const qc = useQueryClient();
+  const draftMode = useDraftMode();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   // Le brouillon dont on est en train de composer la liste de ReViewers, s'il y en a un.
@@ -47,13 +53,15 @@ export default function PendingDrafts() {
   const { data } = useQuery({
     queryKey: qk.drafts,
     queryFn: () => api.get<{ drafts: Draft[] }>('/api/media/drafts').then((d) => d.drafts),
+    enabled: draftMode,
   });
   const drafts = data ?? [];
 
   // Recharge dès qu'un upload se termine (un nouveau brouillon peut apparaître)
   useEffect(() => {
-    if (uploads.some((u) => u.status === 'done')) void qc.invalidateQueries({ queryKey: qk.drafts });
-  }, [uploads, qc]);
+    if (draftMode && uploads.some((u) => u.status === 'done'))
+      void qc.invalidateQueries({ queryKey: qk.drafts });
+  }, [draftMode, uploads, qc]);
 
   // Publier/supprimer un brouillon affecte aussi les listes de versions et de médias
   const refresh = () =>

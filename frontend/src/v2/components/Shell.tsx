@@ -10,6 +10,7 @@ import { parseIdParam } from '../lib/slug';
 import { useFavorites } from '../stores/useFavorites';
 import { useProjectContext } from '../stores/useProjectContext';
 import UploadWidget from './UploadWidget';
+import UploadNoteDialog from './UploadNoteDialog';
 import PendingDrafts from './PendingDrafts';
 import SidebarFooter from './SidebarFooter';
 import SidebarNav from './shell/SidebarNav';
@@ -268,6 +269,8 @@ export default function Shell() {
       <ContextMenuGuard />
       <OnboardingTour />
       <UploadWidget />
+      {/* La consigne exigée avant l'envoi : montée ici, elle sert les cinq points de dépôt. */}
+      <UploadNoteDialog />
       {/* Conversation ouverte : ancrée au bord de la sidebar, elle survit à la navigation. */}
       <ChatDock sidebarHidden={sidebarHidden} />
     </div>

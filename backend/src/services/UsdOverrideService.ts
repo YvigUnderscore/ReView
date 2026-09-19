@@ -4,7 +4,7 @@
 import { MediaKind, MediaStatus, Prisma, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
-import { assertNotPublished } from '../lib/publishLock';
+import { assertWritable } from '../lib/publishLock';
 import { isEmptySceneOverride, type SceneOverride } from '../lib/sceneOverride';
 import { assertMediaManage } from './MediaService';
 import { logAudit } from './AuditService';
@@ -23,7 +23,13 @@ import { logAudit } from './AuditService';
 
 type SessionUser = { id: number; role: Role };
 
-/** Gestionnaire + média 3D non publié : mêmes règles que les éditions splat (verrou Phase 11). */
+/**
+ * Gestionnaire + média 3D : mêmes règles que les éditions splat.
+ *
+ * L'override est une mise en scène rejouée au chargement du viewer, de la même nature que
+ * `splatPresentation` — déjà exceptée depuis la Phase 11. Il reste donc écrivable après
+ * publication (table de `lib/publishLock`).
+ */
 async function assertEditableScene(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({
@@ -33,7 +39,7 @@ async function assertEditableScene(user: SessionUser, id: number) {
   if (!media) throw notFound('Media not found');
   if (media.kind !== MediaKind.MODEL_3D) throw badRequest('Overrides are for 3D media only', 'NOT_3D');
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
-  assertNotPublished(media);
+  assertWritable(media, 'usdOverride');
   return media;
 }
 

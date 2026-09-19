@@ -8,6 +8,7 @@ import { ListPlus, Plus, Users } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useUploadStore } from '../../stores/useUploadStore';
+import { withUploadNote } from '../../stores/useUploadNoteStore';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import { useAssignMenu, useDepartmentMenu } from '../lib/useAssignMenu';
 import { entriesOf } from '../lib/menuSpec';
@@ -100,14 +101,22 @@ export default function AssetPage() {
    * demande d'abord laquelle : ranger un rendu de texturing « sur l'asset » perd l'étape
    * qui l'a produit, et prive la version poussée vers ShotGrid de son `sg_task`.
    */
-  const withTask = async (files: File[] | 'empty', taskId: number | null) => {
+  const fill = async (files: File[], taskId: number | null, note: string | null) => {
     const created = await createVersion(taskId ? { taskId } : undefined);
     if (!created) return;
-    if (files !== 'empty') files.forEach((f) => enqueue(f, created.id));
+    files.forEach((f) => enqueue(f, created.id, { note }));
     // La timeline de cette page ne montre que les versions rattachées à l'asset : une
     // version rangée sous une tâche y serait invisible, et l'on n'aurait nulle part où
     // déposer son média.
     if (taskId) void navigate(`/tasks/${taskId}`);
+  };
+
+  const withTask = (files: File[] | 'empty', taskId: number | null) => {
+    // La consigne se demande AVANT de créer la version : un dépôt abandonné ne doit pas
+    // laisser derrière lui une version vide (Phase 50). Créer une version à vide, elle,
+    // n'est pas un dépôt et n'a rien à justifier.
+    if (files === 'empty') return fill([], taskId, null);
+    return withUploadNote(projectId, (note) => fill(files, taskId, note));
   };
 
   const menuExtras: MenuEntry[] = [

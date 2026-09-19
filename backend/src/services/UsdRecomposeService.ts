@@ -4,7 +4,7 @@
 import { MediaKind, MediaStatus, Prisma, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
-import { assertNotPublished } from '../lib/publishLock';
+import { assertWritable } from '../lib/publishLock';
 import { sanitizeVariantSelection, type UsdVariantSet } from '../lib/usdInspect';
 import { type UsdPurpose } from '../lib/blenderUsd';
 import { assertMediaManage } from './MediaService';
@@ -53,7 +53,9 @@ export async function recomposeUsd(user: SessionUser, id: number, input: Recompo
   if (!media) throw notFound('Media not found');
   if (media.kind !== MediaKind.MODEL_3D) throw badRequest('Recomposing is for 3D media only', 'NOT_3D');
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
-  assertNotPublished(media);
+  // Recomposer ne remplace pas le fichier livré : cela en dérive une représentation lisible.
+  // L'écriture reste donc permise après publication (table de `lib/publishLock`).
+  assertWritable(media, 'usdRecompose');
 
   const usd = readUsdInfo(media.metadata);
   if (!usd)

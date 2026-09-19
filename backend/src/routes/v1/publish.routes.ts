@@ -9,6 +9,7 @@ import { requireScope, assertTokenProject } from '../../middleware/scope';
 import { assertProjectAccess } from '../../middleware/rbac';
 import { idempotency } from '../../lib/idempotency';
 import { usdRequestSchema } from '../../lib/usdRequest';
+import { reviewNoteSchema } from '../../lib/projectSettings';
 import { reviewersSchema } from '../../services/ReviewAssignmentService';
 import * as PublishFlowService from '../../services/PublishFlowService';
 import * as Resolve from '../../services/PipelineResolveService';
@@ -89,6 +90,11 @@ router.post(
     body: z.object({
       publish: z.boolean().optional(),
       submitForReview: z.boolean().optional(),
+      note: reviewNoteSchema.describe(
+        'Consigne accompagnant la livraison. Le projet peut l’exiger et lui imposer une ' +
+          'longueur minimale (section « reviewRequest ») : la finalisation est alors refusée ' +
+          'sans elle, codes UPLOAD_NOTE_REQUIRED / UPLOAD_NOTE_TOO_SHORT.',
+      ),
       reviewers: reviewersSchema
         .optional()
         .describe(

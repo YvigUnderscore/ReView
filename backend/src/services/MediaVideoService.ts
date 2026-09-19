@@ -4,7 +4,7 @@
 import { MediaKind, MediaStatus, Prisma } from '@prisma/client';
 import { badRequest, notFound } from '../lib/errors';
 import { prisma } from '../lib/prisma';
-import { assertNotPublished } from '../lib/publishLock';
+import { assertWritable } from '../lib/publishLock';
 import { enqueueMediaJob } from './JobService';
 import { assertMediaManage } from './MediaService';
 import { storage } from './StorageService';
@@ -33,7 +33,9 @@ export async function setTrim(user: SessionUser, id: number, trim: TrimInput | n
   if (media.kind !== MediaKind.VIDEO) throw badRequest('Trimming is for videos only', 'NOT_VIDEO');
   if (media.status !== MediaStatus.READY)
     throw badRequest('Video not ready yet (still processing)', 'NOT_READY');
-  assertNotPublished(media);
+  // Le trim reste l'une des écritures refusées après publication : il couperait ce que les
+  // autres ont déjà vu et commenté. La raison est écrite à la table de `lib/publishLock`.
+  assertWritable(media, 'videoTrim');
 
   const meta: Record<string, unknown> = {
     ...((media.metadata ?? {}) as Record<string, unknown>),

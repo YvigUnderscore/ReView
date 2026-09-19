@@ -237,6 +237,15 @@ export interface CompletePublishInput {
    * laisser partir une livraison que personne ne sait comment regarder.
    */
   reviewers?: ReviewerInput[];
+  /**
+   * Consigne d'upload — ce que l'auteur dit de ce qu'il livre.
+   *
+   * Le projet peut l'exiger (`settings.reviewRequest.requireNote`) : la finalisation est
+   * alors refusée sans elle, avant toute écriture. Elle porte sur la LIVRAISON, là où les
+   * consignes de `reviewers` portent chacune sur une personne ; un DCC qui ne confie la
+   * review à personne doit tout de même pouvoir satisfaire la règle du studio.
+   */
+  note?: string | null;
 }
 
 /**
@@ -253,7 +262,7 @@ export async function complete(actor: Actor, mediaId: number, input: CompletePub
   });
   if (!media) throw notFound('Media not found');
 
-  const finalized = await MediaService.finalize(actor, mediaId);
+  const finalized = await MediaService.finalize(actor, mediaId, input.note);
   const shouldPublish = input.publish !== false;
   if (shouldPublish) await MediaService.publish(actor, mediaId, input.reviewers);
   // Livraison non publiée (`publish: false`) : la review est tout de même confiée. Perdre

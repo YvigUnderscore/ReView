@@ -211,11 +211,16 @@ describe('préférences', () => {
 });
 
 describe('verrou de publication sur les modes', () => {
-  it('ferme les modes qui ALTÈRENT le média une fois publié', () => {
-    // Le serveur les refuse en 403 `PUBLISHED_LOCKED` ; l'interface les offrait quand même,
-    // et l'on perdait son trim ou sa sélection de nettoyage sur un toast d'erreur.
+  it('ferme le montage vidéo une fois publié', () => {
+    // Le serveur le refuse en 403 `PUBLISHED_LOCKED` ; l'interface l'offrait quand même,
+    // et l'on perdait ses points de trim sur un toast d'erreur.
     expect(isLockedByPublication('edit', true)).toBe(true);
-    expect(isLockedByPublication('clean', true)).toBe(true);
+  });
+
+  it('laisse les éditions splat ouvertes après publication (Phase 50)', () => {
+    // Masque et sous-ensemble sont rejoués sans toucher au fichier d'origine : le serveur
+    // les accepte sur un média publié, l'écran ne doit donc plus les griser.
+    expect(isLockedByPublication('clean', true)).toBe(false);
   });
 
   it('laisse la mise en scène ouverte après publication — exception documentée', () => {

@@ -122,18 +122,21 @@ export function switcherModesFor(kind: MediaKind): ReviewMode[] {
 export const DEFAULT_MODE: ModeId = 'explore';
 
 /**
- * Modes qui MODIFIENT le média, et que le verrou de publication (Phase 11) interdit.
+ * Modes que le verrou de publication (Phase 11) interdit — la table exacte, et rien de plus.
  *
- * `edit` pose les points d'entrée/sortie d'une vidéo, `clean` masque des splats : les deux
- * écrivent sur le média lui-même, et le serveur les refuse en 403 `PUBLISHED_LOCKED` dès
- * qu'il est publié. L'interface les offrait pourtant en entier — on posait ses points de trim
- * ou sa sélection de nettoyage, et l'on perdait son travail sur un toast d'erreur, à tous les
- * coups, sur la majorité des médias d'une review.
+ * Il n'en reste qu'un : `edit`, le montage d'une vidéo. Les points d'entrée/sortie écrivent
+ * sur le média lui-même, et le serveur les refuse en 403 `PUBLISHED_LOCKED` dès qu'il est
+ * publié. L'interface offrait pourtant le mode en entier — on posait ses points, et l'on
+ * perdait son travail sur un toast d'erreur.
  *
- * `stage` n'en est PAS : la mise en scène (caméra, présentation) reste autorisée après
- * publication — c'est l'exception documentée, le média n'est pas altéré.
+ * `clean` n'en est plus (Phase 50) : les éditions splat — masque, sous-ensemble — ne
+ * touchent jamais au fichier d'origine, elles sont rejouées pour tous, et le serveur les
+ * accepte après publication. Les griser interdisait à l'écran ce que le serveur autorise.
+ *
+ * `stage` n'en a jamais été : la mise en scène (caméra, présentation) reste autorisée après
+ * publication — le média n'est pas altéré.
  */
-const PUBLICATION_LOCKED_MODES: ReadonlySet<ModeId> = new Set<ModeId>(['edit', 'clean']);
+const PUBLICATION_LOCKED_MODES: ReadonlySet<ModeId> = new Set<ModeId>(['edit']);
 
 /** Ce mode est-il hors d'atteinte parce que le média est publié ? */
 export function isLockedByPublication(mode: ModeId, published: boolean): boolean {

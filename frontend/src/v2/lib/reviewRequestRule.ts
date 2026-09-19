@@ -3,7 +3,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
-import { qk } from './query';
+import { qk, queryClient } from './query';
 import type { ProjectSettings, ReviewRequestRule } from '../types/api';
 
 /**
@@ -19,21 +19,47 @@ import type { ProjectSettings, ReviewRequestRule } from '../types/api';
 export const NO_RULE: ReviewRequestRule = { requireNote: false, minNoteLength: 5 };
 
 /**
- * La règle du projet, lue avec ses réglages effectifs.
+ * La requête des réglages effectifs du projet, décrite une fois.
  *
  * Même clé de cache que partout ailleurs (`qk.projectSettings`) : l'onglet Réglages a
  * souvent déjà chargé la fiche, et une seconde requête pour la même donnée serait du
- * gaspillage.
+ * gaspillage. Le hook et le lecteur hors composant la partagent, pour qu'ils ne puissent
+ * pas interroger deux endroits différents.
  */
+const ruleQuery = (projectId: number) => ({
+  queryKey: qk.projectSettings(projectId),
+  queryFn: () =>
+    api.get<{ settings: ProjectSettings }>(`/api/projects/${projectId}/settings`).then((d) => d.settings),
+  staleTime: 5 * 60_000,
+});
+
+/** La règle du projet, telle que la lit un écran. */
 export function useReviewRequestRule(projectId: number | undefined, enabled = true): ReviewRequestRule {
-  const { data } = useQuery({
-    queryKey: qk.projectSettings(projectId ?? 0),
-    queryFn: () =>
-      api.get<{ settings: ProjectSettings }>(`/api/projects/${projectId}/settings`).then((d) => d.settings),
-    enabled: enabled && !!projectId,
-    staleTime: 5 * 60_000,
-  });
+  const { data } = useQuery({ ...ruleQuery(projectId ?? 0), enabled: enabled && !!projectId });
   return data?.reviewRequest ?? NO_RULE;
+}
+
+/**
+ * La même règle, lue HORS composant — la file d'upload doit la connaître avant d'avoir un
+ * écran à rendre, et un `useQuery` ne se lit pas depuis un store.
+ *
+ * Même clé et même requête que le hook : le cache déjà chaud répond sans aller-retour, et
+ * la règle ne peut pas dire deux choses différentes selon qui la demande.
+ *
+ * Règle illisible (réseau coupé, projet inconnu) : on retombe sur « rien n'est exigé ».
+ * Bloquer un dépôt sur un aller-retour manqué ferait perdre le travail d'un artiste, alors
+ * que le serveur reste l'autorité et refusera l'envoi si le projet l'impose.
+ */
+export async function fetchReviewRequestRule(
+  projectId: number | null | undefined,
+): Promise<ReviewRequestRule> {
+  if (!projectId) return NO_RULE;
+  try {
+    const settings = await queryClient.ensureQueryData(ruleQuery(projectId));
+    return settings.reviewRequest ?? NO_RULE;
+  } catch {
+    return NO_RULE;
+  }
 }
 
 /** Ce qui cloche sur une consigne, ou `null` si elle convient. */

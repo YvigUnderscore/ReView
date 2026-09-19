@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { z } from 'zod';
 import { prisma } from './prisma';
 import { BASE_LOCALE, isLocale, localeFromPreferences, type Locale } from '../i18n';
 
@@ -31,7 +32,26 @@ export const SETTING_KEYS = {
   // Qui écrit sur une tâche : « open » (l'assigné, règle historique) ou « department »
   // (l'assigné et les membres de l'étape). Cf. lib/taskDepartmentPolicy.
   TASK_DEPARTMENT_POLICY: 'task_department_policy',
+  // Mode brouillon (Phase 50). ACTIF : un média naît brouillon et se publie par un geste
+  // explicite — le fonctionnement historique. INACTIF (défaut) : un média est publié dès
+  // son upload, et « publier » n'est plus un geste.
+  // La clé s'écrit `draftMode` et non en serpent minuscule comme ses voisines : c'est le
+  // contrat arrêté avec l'interface, qui l'écrit telle quelle. Une divergence de casse
+  // aurait fait lire un réglage absent — donc désactivé — sans que rien ne le signale.
+  DRAFT_MODE: 'draftMode',
 } as const;
+
+/**
+ * Réglages dont la valeur est un booléen.
+ *
+ * La table `Setting` ne stocke que du texte, et « false » y est une chaîne parfaitement
+ * vraie : sans schéma, « non » ou « 0 » s'enregistreraient et se reliraient en silence
+ * comme *faux*, ou comme *vrai*, selon le lecteur. Deux mots sont acceptés, pas trois.
+ */
+export const BOOLEAN_SETTING_KEYS: readonly string[] = [SETTING_KEYS.DRAFT_MODE];
+
+/** Forme imposée à la valeur d'un réglage booléen (Zod : refus en 400 côté route). */
+export const booleanSettingSchema = z.enum(['true', 'false']);
 
 /** Dépôt amont — valeur par défaut du lien « code source » (AGPL §13). */
 export const UPSTREAM_SOURCE_URL = 'https://github.com/YvigUnderscore/ReView';
@@ -97,6 +117,27 @@ export async function getLiveSyncHz(kind: string): Promise<number> {
   const hz = await getNumericSetting(key);
   return Math.min(30, Math.max(1, hz));
 }
+
+/**
+ * Valeur booléenne d'un réglage : un réglage absent ou mal renseigné vaut **false**.
+ *
+ * Le repli sur `false` n'est pas un hasard : les réglages booléens du studio ouvrent des
+ * comportements supplémentaires. Une base fraîche, ou une valeur qu'un opérateur a écrite
+ * de travers, doit donner le comportement par défaut, pas celui qu'on n'a pas demandé.
+ */
+export async function getBooleanSetting(key: string): Promise<boolean> {
+  const row = await prisma.setting.findUnique({ where: { key } });
+  return row?.value === 'true';
+}
+
+/**
+ * Le studio travaille-t-il en mode brouillon ? (Phase 50)
+ *
+ * Répond `false` par défaut : un média est publié dès son upload. Le studio qui veut
+ * garder l'ancien fonctionnement — déposer, relire, publier — coche le réglage, et
+ * retrouve exactement ce qu'il avait.
+ */
+export const isDraftModeEnabled = (): Promise<boolean> => getBooleanSetting(SETTING_KEYS.DRAFT_MODE);
 
 export async function getNumericSetting(key: string): Promise<number> {
   const row = await prisma.setting.findUnique({ where: { key } });

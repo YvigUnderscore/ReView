@@ -7,6 +7,7 @@ import { MediaKind } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { paginationQuery, readPagination } from '../lib/pagination';
+import { reviewNoteSchema } from '../lib/projectSettings';
 import { reviewersSchema } from '../services/ReviewAssignmentService';
 import * as MediaService from '../services/MediaService';
 
@@ -18,11 +19,12 @@ const idParam = z.object({ id: z.coerce.number().int() });
 // POST /api/media/upload-url (PUT présigné simple) : déplacé dans media-upload.routes.ts (37.A).
 
 /**
- * POST /api/media/:id/finalize — appelé après le PUT : lit l'en-tête depuis MinIO,
- * valide les magic bytes, met la taille à jour et déclenche le traitement.
+ * POST /api/media/:id/finalize — appelé après le PUT : lit l'en-tête depuis MinIO, valide les
+ * magic bytes, met la taille à jour, déclenche le traitement. `note` = consigne d'upload (P50).
  */
-router.post('/:id/finalize', validate({ params: idParam }), async (req, res) => {
-  res.json(await MediaService.finalize(req.user!, Number(req.params.id)));
+const finalizeBody = z.object({ note: reviewNoteSchema }).default({});
+router.post('/:id/finalize', validate({ params: idParam, body: finalizeBody }), async (req, res) => {
+  res.json(await MediaService.finalize(req.user!, Number(req.params.id), req.body.note));
 });
 
 /**

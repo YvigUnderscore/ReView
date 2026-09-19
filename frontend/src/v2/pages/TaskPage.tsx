@@ -9,6 +9,7 @@ import { qk } from '../lib/query';
 import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
 import { useUploadStore } from '../../stores/useUploadStore';
+import { withUploadNote } from '../../stores/useUploadNoteStore';
 import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import FullPageDropzone from '../components/FullPageDropzone';
@@ -52,16 +53,20 @@ export default function TaskPage() {
     removeMedia,
   } = useVersions({ taskId });
 
+  const project = task?.shot?.project ?? task?.asset?.project;
+
   /**
    * Déposer crée la version suivante et l'emplit (Phase 46) : la zone dédiée vit désormais
    * en tête de la liste des versions, et chaque version existante est sa propre cible.
+   *
+   * La consigne exigée par le projet se demande AVANT la création de la version (Phase 50) :
+   * un dépôt abandonné ne doit pas laisser derrière lui une version vide.
    */
-  const onDropFiles = async (files: File[]) => {
-    const created = await createVersion();
-    if (created) files.forEach((f) => enqueue(f, created.id));
-  };
-
-  const project = task?.shot?.project ?? task?.asset?.project;
+  const onDropFiles = (files: File[]) =>
+    withUploadNote(project?.id, async (note) => {
+      const created = await createVersion();
+      if (created) files.forEach((f) => enqueue(f, created.id, { note }));
+    });
 
   const { entry: statusEntry } = useStatusMenu(project?.id ?? 0, 'task');
   const menuEntries = entriesOf(

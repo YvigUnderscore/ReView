@@ -3,7 +3,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { MediaStatus } from '@prisma/client';
-import { inheritsPublication, shouldPublishVersion, shouldUnpublishVersion } from './publishState';
+import {
+  bornsPublished,
+  inheritsPublication,
+  shouldPublishVersion,
+  shouldUnpublishVersion,
+} from './publishState';
 
 const media = (published: boolean, status: MediaStatus = MediaStatus.READY) => ({ published, status });
 
@@ -41,6 +46,28 @@ describe('inheritsPublication', () => {
 
   it('laisse un média en brouillon dans une version en brouillon', () => {
     expect(inheritsPublication(false)).toBe(false);
+  });
+});
+
+describe('bornsPublished — publication d’office (Phase 50)', () => {
+  it('publie d’office hors mode brouillon, version publiée ou non', () => {
+    expect(bornsPublished({ draftMode: false, versionPublished: false })).toBe(true);
+    expect(bornsPublished({ draftMode: false, versionPublished: true })).toBe(true);
+  });
+
+  it('retombe exactement sur l’héritage en mode brouillon', () => {
+    // La règle historique, mot pour mot : un studio qui coche le réglage retrouve son
+    // fonctionnement d'avant, sans exception ni nuance nouvelle.
+    for (const versionPublished of [true, false]) {
+      expect(bornsPublished({ draftMode: true, versionPublished })).toBe(
+        inheritsPublication(versionPublished),
+      );
+    }
+  });
+
+  it('reste cohérent avec shouldPublishVersion : le premier média publié emporte la version', () => {
+    const born = bornsPublished({ draftMode: false, versionPublished: false });
+    expect(shouldPublishVersion([media(born)])).toBe(true);
   });
 });
 

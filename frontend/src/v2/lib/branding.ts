@@ -54,6 +54,13 @@ export interface Branding {
   sourceUrl: string;
   /** Absent des instances antérieures à ce réglage : replier sur `DEFAULT_LOGIN_APPEARANCE`. */
   login?: LoginAppearance;
+  /**
+   * Réglage studio `draftMode` (Phase 50) : le studio garde-t-il le parcours en deux temps
+   * (déposer, puis publier) ? Il voyage avec le branding parce que c'est le seul canal que
+   * tout le monde peut lire — les réglages d'administration sont réservés aux admins.
+   * Absent = éteint, soit la publication dès l'upload. Lu par `lib/draftMode`.
+   */
+  draftMode?: boolean;
 }
 
 const ACCENT_LS = 'review:accent';

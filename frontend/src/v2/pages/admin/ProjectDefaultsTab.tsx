@@ -13,12 +13,14 @@ import ProjectReviewRequestSection from '../../components/ProjectReviewRequestSe
 import ProjectDefaultLightingSection from '../../components/ProjectDefaultLightingSection';
 import ProjectColorSection from '../../components/ProjectColorSection';
 import { sameValue } from '../../lib/projectInheritance';
+import { DRAFT_MODE_KEY } from '../../lib/draftMode';
 import { Panel } from './AdminPrimitives';
 import { FormatPanel, NumberingPanel } from './ProjectDefaultsFields';
 import SaveBar from './SaveBar';
 import SettingsFields from './SettingsFields';
 import SettingsPointer from './SettingsPointer';
 import TaskPolicyField, { TASK_POLICY_KEY } from './TaskPolicyField';
+import DraftModeField from './DraftModeField';
 import { useSaveAction, useStudioSettings } from './useStudioSettings';
 import type { Nomenclature, ProjectSettings } from '../../types/api';
 import { useT } from '../../i18n';
@@ -56,7 +58,12 @@ export default function ProjectDefaultsTab() {
       setDraft(fresh);
       await qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
     }
+    // Lu avant l'enregistrement : `commit` vide le brouillon.
+    const touchedDraftMode = settings.draft[DRAFT_MODE_KEY] !== undefined;
     await settings.commit();
+    // `draftMode` voyage avec l'identité publique du studio : sans cette invalidation,
+    // l'interface garderait l'ancien parcours jusqu'au prochain rechargement complet.
+    if (touchedDraftMode) await qc.invalidateQueries({ queryKey: qk.branding });
   }, t('defaults.saved'));
 
   // Amorce l'édition depuis les valeurs serveur (ajustement d'état pendant le render).
@@ -76,6 +83,7 @@ export default function ProjectDefaultsTab() {
   const setFps = (v: string) => setDraft((d) => d && { ...d, framerate: Number(v) || 1 });
 
   const policy = settings.draft[TASK_POLICY_KEY] ?? settings.stored[TASK_POLICY_KEY] ?? '';
+  const draftMode = settings.draft[DRAFT_MODE_KEY] ?? settings.stored[DRAFT_MODE_KEY] ?? '';
 
   return (
     <div className="max-w-2xl">
@@ -113,6 +121,10 @@ export default function ProjectDefaultsTab() {
           value={draft.naming ?? { pattern: '', mode: 'off' }}
           onChange={(naming) => setDraft((d) => d && { ...d, naming })}
         />
+
+        {/* Publication et consigne se lisent ensemble : l'une dit quand le média devient
+            visible, l'autre ce qu'il faut écrire pour le déposer. */}
+        <DraftModeField value={draftMode} onChange={(v) => settings.setValue(DRAFT_MODE_KEY, v)} />
 
         <ProjectReviewRequestSection
           value={draft.reviewRequest ?? { requireNote: false, minNoteLength: 5 }}

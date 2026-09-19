@@ -161,12 +161,20 @@ describe('API — auth & RBAC', () => {
     const apiTok = created.body.token as string;
     expect(apiTok).toMatch(/^rvk_/);
 
-    const read = await request(app).get('/api/projects').set('Authorization', `Bearer ${apiTok}`);
+    // Ce scénario datait de la phase 36, où un `rvk_` ouvrait tout `/api`. Depuis,
+    // `apiTokenSurface` le restreint à `/api/v1` (plus `/api/docs` et `/api/openapi.json`) :
+    // un jeton volé n'atteint plus la surface de l'application. Le test vérifie donc
+    // maintenant la règle en vigueur, des deux côtés de la frontière.
+    const offSurface = await request(app).get('/api/projects').set('Authorization', `Bearer ${apiTok}`);
+    expect(offSurface.status).toBe(403);
+    expect(offSurface.body.code).toBe('API_TOKEN_V1_ONLY');
+
+    const read = await request(app).get('/api/v1/me').set('Authorization', `Bearer ${apiTok}`);
     expect(read.status).toBe(200);
     const write = await request(app)
-      .post('/api/projects')
+      .post('/api/v1/projects/any/sequences')
       .set('Authorization', `Bearer ${apiTok}`)
-      .send({ name: 'refusé' });
+      .send({ code: 'refusé' });
     expect(write.status).toBe(403);
     // Un token d'API ne peut pas créer de token (pas d'escalade).
     const escal = await request(app)
@@ -178,8 +186,10 @@ describe('API — auth & RBAC', () => {
     await request(app)
       .delete(`/api/auth/tokens/${created.body.apiToken.id}`)
       .set('Authorization', `Bearer ${token}`);
-    const dead = await request(app).get('/api/projects').set('Authorization', `Bearer ${apiTok}`);
+    // Sur `/api/v1`, sinon le 403 de surface masquerait la révocation qu'on veut prouver.
+    const dead = await request(app).get('/api/v1/me').set('Authorization', `Bearer ${apiTok}`);
     expect(dead.status).toBe(403);
+    expect(dead.body.code).toBe('API_TOKEN_INVALID');
   });
 });
 
@@ -263,15 +273,19 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(fin.status).toBe(200);
     expect(fin.body.detectedExtension).toBe('.jpg');
 
-    // Liste des versions : _count.media reflète la visibilité réelle (10.C2) —
-    // le brouillon compte pour son uploader, pas pour un autre membre.
+    // Liste des versions : `_count.media` reflète la visibilité réelle (10.C2). Ce scénario
+    // vérifiait que le brouillon comptait pour son uploader SEUL — il ne le peut plus :
+    // depuis la Phase 50 un média naît publié (mode brouillon éteint par défaut), donc les
+    // deux comptes valent 1. Le filtre de visibilité, lui, n'a pas changé et reste gardé par
+    // `VersionService.test.ts` (« un brouillon ne compte que pour son uploader »), qui pose
+    // un média non publié sans dépendre du parcours d'upload.
     const versionsArtist = await request(app)
       .get(`/api/versions?taskId=${task.body.task.id}`)
       .set('Authorization', `Bearer ${artistToken}`);
     expect(versionsArtist.status).toBe(200);
     expect(versionsArtist.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(1);
     const versionsAdmin = await request(app).get(`/api/versions?taskId=${task.body.task.id}`).set(auth);
-    expect(versionsAdmin.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(0);
+    expect(versionsAdmin.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(1);
 
     // Commentaire sur le média
     const cmt = await request(app)
@@ -323,8 +337,9 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const fin = await request(app).post(`/api/media/${up.body.mediaObjectId}/finalize`).set(auth);
     expect(fin.body.media.status).toBe('READY');
     await request(app).patch(`/api/versions/${versionId}`).set(auth).send({ status: 'PUBLISHED' });
-    // Le média est en brouillon par défaut (workflow draft 9.A2) : il faut le publier
-    // explicitement pour qu'il soit visible côté client (partage externe).
+    // Le média est publié d'office depuis la Phase 50 (`draftMode` désactivé par défaut) :
+    // il est déjà visible côté client. L'appel est conservé tel quel — il vérifie au passage
+    // que publier un média DÉJÀ publié reste un 200 sans effet, ce dont dépend l'API v1.
     const mediaPub = await request(app).post(`/api/media/${up.body.mediaObjectId}/publish`).set(auth);
     expect(mediaPub.status).toBe(200);
 
@@ -711,25 +726,30 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       });
     expect(badPres.status).toBe(400);
 
-    // Publication → verrou définitif (Phase 11) : toute édition du splat est refusée (403).
+    // Publication → les éditions splat RESTENT permises (Phase 50). Ce bloc attendait des
+    // 403 : le verrou gelait tout. Il a été réécrit sciemment, parce que le média est
+    // désormais publié dès son upload — geler les éditions à la publication revenait à les
+    // interdire tout court, alors que nettoyer un splat EST le travail de review d'un splat.
+    // Elles sont non destructives : le fichier déposé n'est jamais touché.
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
     const postPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-edits`)
       .set(auth)
       .send({ edits });
-    expect(postPublish.status).toBe(403);
+    expect(postPublish.status).toBe(200);
     const maskAfterPublish = await request(app)
       .put(`/api/media/${mediaId}/splat-mask`)
       .set(auth)
       .send({ data: mask.toString('base64'), count: 3 });
-    expect(maskAfterPublish.status).toBe(403);
+    expect(maskAfterPublish.status).toBe(200);
     const clearAfterPublish = await request(app).delete(`/api/media/${mediaId}/splat-mask`).set(auth);
-    expect(clearAfterPublish.status).toBe(403);
-    // Les éditions pré-publication restent servies telles quelles.
-    const lockedDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
-    expect(lockedDetail.body.splatEdits).toEqual(edits);
+    expect(clearAfterPublish.status).toBe(200);
+    // Les éditions sont bien celles qu'on vient d'écrire, et le masque est reparti.
+    const editedDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(editedDetail.body.splatEdits).toEqual(edits);
+    expect(editedDetail.body.splatMaskUrl).toBeNull();
 
-    // Seule la présentation (mise en scène, V5) reste modifiable après publication.
+    // La présentation (mise en scène, V5) reste modifiable elle aussi.
     const presAfterPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-presentation`)
       .set(auth)
@@ -779,9 +799,12 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     // Pas de finalize ici : il enqueuerait un job transcode que le worker de la stack docker
     // traiterait pendant le test (réécriture du metadata → perte du trim). L'objet du test est
     // le trim et son verrou de publication — le média est figé READY directement.
+    // `published: false` explicite : depuis la Phase 50 le média naît PUBLIÉ, et le trim est
+    // l'une des écritures que la publication refuse encore. Sans ce retour au brouillon, le
+    // premier trim du test serait déjà un 403 et le scénario n'éprouverait plus rien.
     await prisma.mediaObject.update({
       where: { id: mediaId },
-      data: { status: MediaStatus.READY, metadata: { fps: 24 } },
+      data: { status: MediaStatus.READY, published: false, metadata: { fps: 24 } },
     });
 
     // Bornes invalides → 400.

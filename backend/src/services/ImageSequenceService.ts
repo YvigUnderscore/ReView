@@ -4,7 +4,7 @@
 import { MediaKind, MediaStatus, Prisma, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
-import { createUpload } from './MediaService';
+import { announcePublication, createUpload } from './MediaService';
 import { logAudit } from './AuditService';
 import { enqueueMediaJob } from './JobService';
 import { badRequest, notFound } from '../lib/errors';
@@ -13,7 +13,8 @@ import { validateMediaHeader } from '../lib/fileSignatures';
 import { OPAQUE_CONTENT_TYPE } from '../lib/uploadContentType';
 import { resolveEntitySettings, resolveProjectSettingsById } from '../lib/projectSettings';
 import { assertProjectQuota } from '../lib/projectQuota';
-import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
+import { assertUploadNote } from '../lib/uploadNote';
+import { getNumericSetting, isDraftModeEnabled, SETTING_KEYS } from '../lib/settings';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
 import {
   isSafeFrameName,
@@ -270,9 +271,22 @@ export async function frameUploadUrls(user: SessionUser, id: number, names: stri
  * relus attrapent le format menti. Une séquence dont il manque des frames n'est pas
  * refusée — c'est une livraison partielle légitime — mais le compte et les bornes écrits en
  * base sont ceux du réel, jamais ceux annoncés à l'ouverture.
+ *
+ * `note` est la consigne d'upload : cette fonction joue le rôle de `MediaService.finalize`
+ * pour une séquence, elle porte donc la même règle. Sans cela, « consigne obligatoire »
+ * n'aurait valu que pour les fichiers uniques, et l'artiste l'aurait appris par l'exception.
  */
-export async function completeSequence(user: SessionUser, id: number) {
+export async function completeSequence(user: SessionUser, id: number, note?: string | null) {
   const { media, sequence } = await loadOwnSequence(user, id, MediaStatus.UPLOADING);
+  // Contrôlée AVANT le balayage du bucket et toute écriture : refuser plus loin coûterait un
+  // listing complet pour une phrase manquante, alors que le client n'a qu'à rappeler.
+  const owner = await resolveProjectIdForVersion(media.versionId);
+  const [draftMode, uploadNote] = await Promise.all([
+    isDraftModeEnabled(),
+    owner
+      ? resolveProjectSettingsById(owner).then((cfg) => assertUploadNote(note, cfg.reviewRequest))
+      : Promise.resolve(null),
+  ]);
 
   const objects: { name: string; size: number }[] = [];
   for await (const object of storage.iterateObjects(sequence.storagePrefix)) {
@@ -310,6 +324,7 @@ export async function completeSequence(user: SessionUser, id: number) {
 
   const metadata: SequenceMeta = { ...(media.metadata as SequenceMeta) };
   delete metadata.sequencePending;
+  if (uploadNote) metadata.uploadNote = uploadNote;
   const updated = await prisma.$transaction(async (tx) => {
     await tx.imageSequence.update({
       where: { mediaObjectId: id },
@@ -337,6 +352,15 @@ export async function completeSequence(user: SessionUser, id: number) {
     });
   }
   await enqueueMediaJob({ mediaObjectId: id, kind: 'transcode' });
+  // Publication d'office (Phase 50) : la séquence est un média comme un autre, née publiée
+  // hors mode brouillon. Sans cette annonce, sa version resterait « brouillon » aux yeux du
+  // calcul et les suiveurs n'entendraient jamais parler de la livraison.
+  if (updated.published && !draftMode)
+    await announcePublication(
+      { id, versionId: media.versionId, kind: updated.kind, originalName: updated.originalName },
+      owner,
+      user.id,
+    );
   logAudit({
     userId: user.id,
     action: 'MEDIA_SEQUENCE_UPLOAD',

@@ -49,6 +49,23 @@ export function inheritsPublication(versionPublished: boolean): boolean {
 }
 
 /**
+ * Un média qui vient d'être créé naît-il publié ? (Phase 50 — publication d'office)
+ *
+ * C'est la troisième règle de la famille, et elle ne contourne pas les deux autres : elle
+ * les prolonge. Hors mode brouillon, tout média naît publié, ce qui rend
+ * `shouldPublishVersion` vraie dès que le premier fichier est finalisé — la version suit
+ * ses médias, exactement comme avant. En mode brouillon, rien ne change : seul l'héritage
+ * de la version publiée donne un média publié à la naissance.
+ *
+ * Le brouillon devient donc un réglage de studio et non une étape du produit : le geste
+ * « publier » n'existait que pour rattraper une relecture que personne ne faisait, et il
+ * laissait des livraisons invisibles de l'équipe qui les attendait.
+ */
+export function bornsPublished(input: { draftMode: boolean; versionPublished: boolean }): boolean {
+  return input.draftMode ? inheritsPublication(input.versionPublished) : true;
+}
+
+/**
  * Une version publiée ne redescend jamais toute seule. Dépublier est une décision de
  * superviseur (elle retire la version des liens de partage, avec ses décisions de review) :
  * elle ne peut pas être l'effet de bord de la suppression d'un média.

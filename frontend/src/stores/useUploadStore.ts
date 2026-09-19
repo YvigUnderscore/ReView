@@ -39,6 +39,16 @@ export interface UploadItem {
   error?: string;
 }
 
+/** Ce qu'un dépôt sait de lui-même en plus du fichier et de sa version. */
+export interface EnqueueOptions {
+  kind?: MediaKind;
+  /**
+   * Consigne écrite avant l'envoi (Phase 50), quand le projet l'exige. Elle voyage jusqu'au
+   * `finalize` : c'est le seul moment où le serveur peut la refuser avant de publier.
+   */
+  note?: string | null;
+}
+
 const POLL_MS = 3000;
 const POLL_MAX_MS = 20 * 60_000; // au-delà on abandonne le suivi (le worker a un souci)
 
@@ -48,15 +58,23 @@ const MAX_CONCURRENT_UPLOADS = 3;
 /** Statuts qui consomment un créneau de transfert (le traitement serveur, lui, est gratuit). */
 const isTransferring = (s: UploadStatus): boolean => s === 'uploading' || s === 'finalizing';
 
+/** Un transfert en attente de créneau, tel que `startUpload` le reprendra. */
+interface QueuedJob {
+  file: File;
+  versionId: number;
+  kind: MediaKind;
+  note?: string | null;
+}
+
 /** Fichiers en attente de créneau — hors du store : un `File` n'a rien à faire dans l'état rendu. */
-const queued = new Map<string, { file: File; versionId: number; kind: MediaKind }>();
+const queued = new Map<string, QueuedJob>();
 /** Annulation des transferts en vol, par identifiant d'item. */
 const controllers = new Map<string, AbortController>();
 
 interface UploadState {
   uploads: UploadItem[];
   /** Met un fichier en file (démarrage immédiat si un créneau est libre). Retourne l'id local. */
-  enqueue: (file: File, versionId: number, kind?: MediaKind) => string;
+  enqueue: (file: File, versionId: number, opts?: EnqueueOptions) => string;
   updateUpload: (id: string, patch: Partial<UploadItem>) => void;
   /** Retire la ligne — et annule vraiment le transfert s'il est en cours. */
   removeUpload: (id: string) => void;
@@ -68,17 +86,17 @@ interface UploadState {
 export const useUploadStore = create<UploadState>((set, get) => ({
   uploads: [],
 
-  enqueue: (file, versionId, kind) => {
+  enqueue: (file, versionId, opts) => {
     const id = crypto.randomUUID();
     const item: UploadItem = {
       id,
       filename: file.name,
       versionId,
-      kind: kind ?? inferMediaKind(file),
+      kind: opts?.kind ?? inferMediaKind(file),
       progress: 0,
       status: 'pending',
     };
-    queued.set(id, { file, versionId, kind: item.kind });
+    queued.set(id, { file, versionId, kind: item.kind, note: opts?.note ?? null });
     set((s) => ({ uploads: [...s.uploads, item] }));
     pump(get);
     return id;
@@ -125,11 +143,7 @@ function pump(get: () => UploadState): void {
   }
 }
 
-async function startUpload(
-  id: string,
-  job: { file: File; versionId: number; kind: MediaKind },
-  get: () => UploadState,
-): Promise<void> {
+async function startUpload(id: string, job: QueuedJob, get: () => UploadState): Promise<void> {
   const { updateUpload } = get();
   const controller = new AbortController();
   controllers.set(id, controller);
@@ -137,6 +151,7 @@ async function startUpload(
   try {
     const res = await uploadMedia(job.file, job.versionId, {
       kind: job.kind,
+      note: job.note,
       signal: controller.signal,
       onProgress: (pct) =>
         updateUpload(id, { progress: pct, status: pct >= 100 ? 'finalizing' : 'uploading' }),

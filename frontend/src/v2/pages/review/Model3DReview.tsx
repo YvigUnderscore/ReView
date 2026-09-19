@@ -142,16 +142,18 @@ export default function Model3DReview({
   const { setViewedSceneOverride } = ann;
   const releaseCommentScene = useCallback(() => setViewedSceneOverride(null), [setViewedSceneOverride]);
   useCommentSceneEscape(hasCommentScene, releaseCommentScene);
-  // Recomposition USD : réservée aux gestionnaires, refusée après publication (verrou P11).
+  // Recomposition et override USD : réservés aux gestionnaires, et autorisés APRÈS
+  // publication (Phase 50) — la couche d'override est rejouée par-dessus le fichier
+  // d'origine, qui n'est jamais réécrit. Le verrou ne garde que le montage et le `transform`.
   const [recomposeOpen, setRecomposeOpen] = useState(false);
   const saveOverride = useSaveSceneOverride({
     mediaId: data.media.id,
-    allowed: canManage && !data.media.published,
+    allowed: canManage,
     merged: () => scene.merged,
     onSaved: scene.revert,
   });
   const usd = data.modelSource?.usd ?? null;
-  const canRecompose = canManage && !data.media.published && !!usd;
+  const canRecompose = canManage && !!usd;
   const grid = useSceneGrid(model3d);
   const [track, setTrack] = useState<TrackId>('camera');
 

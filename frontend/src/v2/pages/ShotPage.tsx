@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { useUploadStore } from '../../stores/useUploadStore';
+import { withUploadNote } from '../../stores/useUploadNoteStore';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { SkeletonRows } from '../components/ui/skeleton';
@@ -97,19 +98,26 @@ export default function ShotPage() {
     [overview],
   );
 
-  const withTask = async (files: File[] | 'empty', taskId: number | null) => {
-    if (!taskId) return;
+  const fill = async (files: File[], taskId: number, note: string | null) => {
     try {
       const { version } = await api.post<{ version: { id: number; name: string } }>('/api/versions', {
         taskId,
       });
-      if (files !== 'empty') files.forEach((f) => enqueue(f, version.id));
+      files.forEach((f) => enqueue(f, version.id, { note }));
       toast.success(t('version.created', { name: version.name }));
       // La version vit sous sa tâche : c'est là qu'on dépose son média et qu'on publie.
       void navigate(`/tasks/${taskId}?version=${version.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('version.createFailed'));
     }
+  };
+
+  const withTask = (files: File[] | 'empty', taskId: number | null) => {
+    if (!taskId) return;
+    // La consigne se demande AVANT de créer la version : un dépôt abandonné ne doit pas
+    // laisser derrière lui une version vide (Phase 50).
+    if (files === 'empty') return fill([], taskId, null);
+    return withUploadNote(projectId, (note) => fill(files, taskId, note));
   };
 
   // « Ajouter à la playlist » sur la dernière version publiée : c'est elle qu'on pousse

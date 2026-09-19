@@ -5,7 +5,7 @@ import { MediaKind, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { storage, StorageService } from './StorageService';
 import { badRequest, notFound } from '../lib/errors';
-import { assertNotPublished } from '../lib/publishLock';
+import { assertWritable } from '../lib/publishLock';
 import { assertMediaManage } from './MediaService';
 
 /**
@@ -42,7 +42,14 @@ export interface SplatEditsInput {
 
 const MAX_MASK_BYTES = 4_000_000;
 
-/** Gestionnaire + splat non publié (verrou Phase 11 : un média publié est figé). */
+/**
+ * Gestionnaire + média splat.
+ *
+ * Les éditions splat ne sont plus verrouillées par la publication (Phase 50) : elles sont
+ * non destructives — le fichier déposé n'est jamais touché, tout est rejoué à la lecture
+ * pour tous. Nettoyer un splat EST le travail de review d'un splat. Le verrou reste
+ * consulté, la table de `lib/publishLock` porte la raison.
+ */
 async function assertEditableSplat(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
   const media = await prisma.mediaObject.findUnique({
@@ -51,7 +58,7 @@ async function assertEditableSplat(user: SessionUser, id: number) {
   });
   if (!media) throw notFound('Media not found');
   if (media.kind !== MediaKind.SPLAT) throw badRequest('Editing is for splats only', 'NOT_SPLAT');
-  assertNotPublished(media);
+  assertWritable(media, 'splatEdit');
   return media;
 }
 

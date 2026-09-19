@@ -72,13 +72,19 @@ describe('recomposeUsd (45.E)', () => {
     expect(res.selection.variants).toEqual({});
   });
 
-  it('refuse un média publié (verrou de publication Phase 11)', async () => {
+  /**
+   * Ce test attendait un 403 (verrou Phase 11). La règle a changé sciemment en Phase 50 : la
+   * recomposition ne remplace pas le fichier livré, elle en dérive une représentation lisible
+   * — et le média étant publié dès l'upload, la refuser après publication revenait à la
+   * refuser tout court, alors que c'est le geste qui rend une scène USD regardable.
+   */
+  it('accepte un média publié : recomposer dérive une représentation, sans toucher au fichier', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(usdMedia({ published: true }) as never);
 
-    await expect(recomposeUsd(USER, 1, { variants: {}, purpose: 'render' })).rejects.toMatchObject({
-      code: 'PUBLISHED_LOCKED',
-    });
-    expect(enqueueMediaJob).not.toHaveBeenCalled();
+    const res = await recomposeUsd(USER, 1, { variants: {}, purpose: 'render' });
+
+    expect(res.requeued).toBe(true);
+    expect(enqueueMediaJob).toHaveBeenCalledWith({ mediaObjectId: 1, kind: 'convert3d' });
   });
 
   it('refuse un média non 3D et un média sans description USD', async () => {

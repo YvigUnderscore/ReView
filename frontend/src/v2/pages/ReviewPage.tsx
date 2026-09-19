@@ -123,18 +123,22 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
-  // Verrou de publication (Phase 11) : un média publié est définitivement figé — tous les
-  // outils d'édition (trim, transform, éditeur splat, miniature) sont masqués. Seule la
-  // présentation (mise en scène) reste pilotable par les gestionnaires.
+  // Verrou de publication (Phase 11, table révisée en Phase 50) : un média publié refuse le
+  // montage vidéo et le `transform` d'une version. Restent autorisées les écritures qui ne
+  // touchent pas au fichier d'origine — miniature, mise en scène, éditions splat (masque,
+  // sous-ensemble) et override USD, toutes rejouées à la lecture.
   const published = data?.media.published ?? true;
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
-  const canEditMedia = canManageMedia && !published;
+  /** Montage vidéo : refusé après publication (403 `PUBLISHED_LOCKED`). */
+  const canTrim = canManageMedia && !published;
+  /** Éditions splat : non destructives, donc offertes même après publication. */
+  const canEditSplat = canManageMedia;
   const canEditTransform = !published && (role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST');
   // Miniature auto à la 1re vue (splat + 3D), tous viewers, si absente (Phase 20).
   useAutoThumbnail(id, data, 'SPLAT', splat.ready, splat.captureThumbnail);
   useAutoThumbnail(id, data, 'MODEL_3D', model3d.ready, model3d.captureThumbnail);
   // Patch du cache après enregistrement des éditions splat + recapture gestionnaire (10.F4).
-  const onSplatEditsSaved = useSplatThumbnail(id, splat, canEditMedia);
+  const onSplatEditsSaved = useSplatThumbnail(id, splat, canEditSplat);
 
   const seek = (t: number) => {
     if (!videoRef.current) return;
@@ -358,7 +362,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
                 reprocessing={reprocessing}
                 role={role}
                 canEditTransform={canEditTransform}
-                canEdit={canEditMedia}
+                canTrim={canTrim}
+                canEditSplat={canEditSplat}
                 canManage={canManageMedia}
                 onSplatEditsSaved={onSplatEditsSaved}
                 onClearSelection={clearSelection}
