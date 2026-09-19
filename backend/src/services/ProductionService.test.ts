@@ -4,7 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({
-  prisma: { $queryRaw: vi.fn(), sequence: { findMany: vi.fn() }, task: { findMany: vi.fn() } },
+  prisma: {
+    $queryRaw: vi.fn(),
+    sequence: { findMany: vi.fn() },
+    task: { findMany: vi.fn(), count: vi.fn() },
+  },
 }));
 
 import {
@@ -213,7 +217,7 @@ describe('buildPace', () => {
   it('rend une semaine par créneau, les vides comprises', () => {
     const points = buildPace([], NOW, 4);
     expect(points.map((p) => p.weekStart)).toEqual(['2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17']);
-    expect(points.every((p) => p.delivered === 0)).toBe(true);
+    expect(points.every((p) => p.count === 0)).toBe(true);
   });
 
   it('range chaque livraison dans sa semaine', () => {
@@ -221,26 +225,24 @@ describe('buildPace', () => {
     // semaine du 17 (mardi 18 et lundi 17), une dans celle du 10.
     const points = buildPace(
       [
-        { weekStart: '2026-08-17', delivered: 2 },
-        { weekStart: '2026-08-10', delivered: 1 },
+        { weekStart: '2026-08-17', count: 2 },
+        { weekStart: '2026-08-10', count: 1 },
       ],
       NOW,
       4,
     );
-    expect(points.map((p) => p.delivered)).toEqual([0, 0, 1, 2]);
+    expect(points.map((p) => p.count)).toEqual([0, 0, 1, 2]);
   });
 
   it('ignore ce qui tombe hors fenêtre plutôt que de le rattacher au bord', () => {
-    expect(
-      buildPace([{ weekStart: '2025-12-29', delivered: 1 }], NOW, 4).every((p) => p.delivered === 0),
-    ).toBe(true);
+    expect(buildPace([{ weekStart: '2025-12-29', count: 1 }], NOW, 4).every((p) => p.count === 0)).toBe(true);
   });
 });
 
 describe('projectEnd', () => {
   const points = [
-    { weekStart: '2026-08-03', delivered: 4 },
-    { weekStart: '2026-08-10', delivered: 6 },
+    { weekStart: '2026-08-03', count: 4 },
+    { weekStart: '2026-08-10', count: 6 },
   ];
 
   it('projette la fin au rythme observé', () => {
@@ -251,12 +253,22 @@ describe('projectEnd', () => {
   });
 
   it('ne projette rien sans rythme — une date inventée se lirait comme un engagement', () => {
-    expect(projectEnd(10, 30, [{ weekStart: '2026-08-10', delivered: 0 }], NOW).projectedEnd).toBeNull();
-    expect(projectEnd(10, 30, [], NOW).projectedEnd).toBeNull();
+    const flat = projectEnd(10, 30, [{ weekStart: '2026-08-10', count: 0 }], NOW);
+    expect(flat.projectedEnd).toBeNull();
+    // La raison compte autant que l'absence : l'écran doit pouvoir dire « on ne sait pas »
+    // plutôt que de laisser un vide qui se lit comme « bientôt ».
+    expect(flat.unavailable).toBe('no-velocity');
+    expect(projectEnd(10, 30, [], NOW).unavailable).toBe('no-velocity');
   });
 
-  it('ne projette rien quand tout est fait', () => {
-    expect(projectEnd(30, 30, points, NOW).projectedEnd).toBeNull();
+  it('ne projette rien quand tout est fait, et le dit autrement', () => {
+    const done = projectEnd(30, 30, points, NOW);
+    expect(done.projectedEnd).toBeNull();
+    expect(done.unavailable).toBe('nothing-left');
+  });
+
+  it('déclare son unité : la projection divise des tâches par des tâches', () => {
+    expect(projectEnd(10, 30, points, NOW).unit).toBe('tasks');
   });
 });
 
@@ -264,11 +276,22 @@ describe('projectEnd', () => {
 
 const NO_STATUS = { isDone: null, isInactive: null, legacyStatus: null };
 
-/** Renvoie la réponse correspondant au SQL reconnu dans le template balisé. */
-function stubQueryRaw(answers: { matrix?: unknown[]; workload?: unknown[]; pace?: unknown[] }) {
+/**
+ * Renvoie la réponse correspondant au SQL reconnu dans le template balisé.
+ *
+ * `pace` et `delivery` regroupent tous deux par `date_trunc` : ce qui les distingue est la
+ * table lue — les décisions de review pour la vélocité, les médias pour le débit.
+ */
+function stubQueryRaw(answers: {
+  matrix?: unknown[];
+  workload?: unknown[];
+  pace?: unknown[];
+  delivery?: unknown[];
+}) {
   vi.mocked(prisma.$queryRaw).mockImplementation(((strings: TemplateStringsArray) => {
     const sql = strings.join(' ');
-    if (sql.includes('date_trunc')) return Promise.resolve(answers.pace ?? []);
+    if (sql.includes('ReviewDecision')) return Promise.resolve(answers.pace ?? []);
+    if (sql.includes('MediaObject')) return Promise.resolve(answers.delivery ?? []);
     if (sql.includes('"assigneeId"')) return Promise.resolve(answers.workload ?? []);
     return Promise.resolve(answers.matrix ?? []);
   }) as never);
@@ -280,16 +303,80 @@ describe('getOverview', () => {
     stubQueryRaw({});
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.task.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.task.count).mockResolvedValue(0);
   });
 
-  it('ne lit que des agrégats : trois requêtes brutes, les séquences, trois listes bornées', async () => {
+  it('ne lit que des agrégats : quatre requêtes brutes, les séquences, trois listes bornées', async () => {
     await getOverview(7, 8, NOW);
-    expect(vi.mocked(prisma.$queryRaw)).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(prisma.$queryRaw)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(prisma.sequence.findMany)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(prisma.task.findMany)).toHaveBeenCalledTimes(3);
     for (const call of vi.mocked(prisma.task.findMany).mock.calls) {
       expect(call[0]!.take).toBe(50);
     }
+  });
+
+  it('compte les totaux en base au lieu de mesurer des listes plafonnées', async () => {
+    // Un projet où chaque liste dépasse le plafond : les tuiles doivent annoncer 300, pas 50.
+    vi.mocked(prisma.task.count).mockResolvedValue(300);
+    const view = await getOverview(7, 8, NOW);
+    expect(vi.mocked(prisma.task.count)).toHaveBeenCalledTimes(4);
+    expect(view.attention.totals).toEqual({
+      overdue: 300,
+      unassigned: 300,
+      waitingReview: 300,
+      blocking: 300,
+    });
+    expect(view.attention.limit).toBe(50);
+  });
+
+  it('dédoublonne le badge : il est compté en base sur l’union, pas sommé', async () => {
+    // Le quatrième `count` est celui du badge. Une tâche à la fois en retard et non
+    // assignée ne doit y figurer qu'une fois : 5 + 9 + 6 = 20, mais l'union en vaut 14.
+    const counts = [5, 9, 6, 14];
+    let call = 0;
+    vi.mocked(prisma.task.count).mockImplementation((() => Promise.resolve(counts[call++] ?? 0)) as never);
+    const view = await getOverview(7, 8, NOW);
+    expect(view.attention.totals.blocking).toBe(14);
+    const { overdue, unassigned, waitingReview } = view.attention.totals;
+    expect(overdue + unassigned + waitingReview).toBe(20);
+    // Le where du badge est bien une union des trois conditions, pas une conjonction.
+    const badge = JSON.stringify(vi.mocked(prisma.task.count).mock.calls[3]![0]!.where);
+    expect(badge).toContain('"assigneeId":null');
+    expect(badge).toContain('"dueDate"');
+  });
+
+  it('sépare les deux unités : la vélocité en tâches, le débit en médias', async () => {
+    stubQueryRaw({
+      matrix: [
+        { sequenceId: 1, department: 'comp', status: TaskStatus.TODO, count: 10, ...NO_STATUS },
+        { sequenceId: 1, department: 'comp', status: TaskStatus.APPROVED, count: 10, ...NO_STATUS },
+      ],
+      // 8 tâches franchies sur 4 semaines = 2 tâches/semaine ; 10 restantes ⇒ 5 semaines.
+      pace: [{ weekStart: '2026-08-10', count: 8 }],
+      delivery: [{ weekStart: '2026-08-10', count: 400 }],
+    });
+    const view = await getOverview(7, 4, NOW);
+    expect(view.projection).toEqual({
+      unit: 'tasks',
+      done: 10,
+      total: 20,
+      perWeek: 2,
+      projectedEnd: '2026-09-22',
+      unavailable: null,
+    });
+    // Le débit, énorme, ne touche pas la projection : c'était tout le défaut.
+    expect(view.delivery.map((p) => p.count)).toEqual([0, 0, 400, 0]);
+  });
+
+  it('borne le débit aux médias prêts et aux parents vivants', async () => {
+    await getOverview(7, 8, NOW);
+    const sql = vi
+      .mocked(prisma.$queryRaw)
+      .mock.calls.map((c) => (c[0] as unknown as TemplateStringsArray).join(' '))
+      .find((s) => s.includes('MediaObject'))!;
+    expect(sql).toContain(`m.status = 'READY'`);
+    expect(sql.match(/sh\."deletedAt" IS NULL/)).not.toBeNull();
   });
 
   it('replie la matrice, la charge et le rythme depuis les comptes de la base', async () => {
@@ -309,7 +396,7 @@ describe('getOverview', () => {
           ...NO_STATUS,
         },
       ],
-      pace: [{ weekStart: '2026-08-10', delivered: 5 }],
+      pace: [{ weekStart: '2026-08-10', count: 5 }],
     });
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([{ id: 1, code: 'SQ010' }] as never);
 
@@ -332,7 +419,7 @@ describe('getOverview', () => {
     expect(view.workload).toEqual([
       { assigneeId: 7, name: 'Ada', todo: 0, progress: 3, review: 0, blocked: 0, overdue: 1, total: 3 },
     ]);
-    expect(view.pace.map((p) => p.delivered)).toEqual([0, 0, 5, 0]);
+    expect(view.pace.map((p) => p.count)).toEqual([0, 0, 5, 0]);
     // 6 faits sur 12 comptés (les inactifs sont hors jeu), rythme 5/4 semaines = 1,25.
     expect(view.projection).toMatchObject({ done: 6, total: 12, perWeek: 1.25 });
   });

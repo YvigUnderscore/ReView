@@ -91,7 +91,7 @@ Full reference, including the refusal codes and the share-link session:
 | `/api/studio/hdris` | HDRI library |
 | `/api/studio/ocio` | OCIO configurations |
 | `/api/projects` | Projects CRUD, membership, settings; plus `GET /usage`, `GET /:projectId/usage`, `POST /:projectId/duplicate`, `POST /:projectId/import-csv`, `GET /:projectId/export-csv` |
-| `/api/projects/:projectId/stats`, `/production`, `/schedule` | Production overview: statistics, sequences × departments and what is late, calendar and Gantt |
+| `/api/projects/:projectId/stats`, `/production`, `/schedule`, `/grid` | Production tracking, **restricted to project managers**: statistics and retake rounds, sequences × departments and what is late, calendar and Gantt, and the shots × departments grid (`/grid`, paginated by shot with an opaque `cursor`) |
 | `/api/episodes` | The optional **Episode** level — see below |
 | `/api/sequences`, `/api/shots` | Shot hierarchy, per-level pipeline overrides, `GET /shots/:id/tree`, permalink `GET /shots/:id/latest` |
 | `/api/assets` | Assets CRUD |

@@ -3,6 +3,7 @@
 
 import { Prisma, TaskStatus, TaskType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { familyOf, type FamilyOrInactive } from '../lib/statusFamily';
 
 /**
  * Planning projet (43.C — №125/№128) : tâches datées (échéance et/ou début) pour la vue
@@ -25,11 +26,32 @@ import { prisma } from '../lib/prisma';
  */
 export const SCHEDULE_MAX_TASKS = 2000;
 
+/**
+ * Le statut du studio, tel qu'une barre de Gantt le colore.
+ *
+ * Le planning peignait ses barres d'après l'enum figé `TaskStatus` : six couleurs codées
+ * en dur, dont aucune n'est le vocabulaire d'un studio relié à ShotGrid — un plan « fin »
+ * ou « awaiting client » s'affichait sous la teinte d'un statut qu'il ne porte pas. La
+ * teinte vient donc du référentiel quand il existe, et `family` dit à quel bloc le statut
+ * appartient pour les regroupements.
+ */
+export interface SchedulePipelineStatus {
+  id: number;
+  code: string;
+  name: string;
+  /** Hex #RRGGBB tel que le studio l'a réglé. */
+  color: string;
+}
+
 export interface ScheduleTask {
   id: number;
   name: string;
   type: TaskType;
   status: TaskStatus;
+  /** Statut personnalisable, `null` pour un studio qui n'en a pas posé. */
+  pipelineStatus: SchedulePipelineStatus | null;
+  /** Famille du statut — `todo|progress|review|done|blocked|inactive`. */
+  family: FamilyOrInactive;
   startDate: string | null;
   dueDate: string | null;
   location: string;
@@ -63,16 +85,28 @@ export interface ScheduleRow {
   assignee: { id: number; name: string | null } | null;
   shot: { code: string; sequence: { id: number; code: string } | null } | null;
   asset: { name: string } | null;
+  pipelineStatus: {
+    id: number;
+    code: string;
+    name: string;
+    color: string;
+    isDone: boolean;
+    isInactive: boolean;
+    legacyStatus: TaskStatus | null;
+  } | null;
 }
 
 export function toScheduleTask(t: ScheduleRow): ScheduleTask {
   const seq = t.shot?.sequence ?? null;
   const location = t.shot ? `${seq ? seq.code + ' · ' : ''}${t.shot.code}` : (t.asset?.name ?? '');
+  const ps = t.pipelineStatus;
   return {
     id: t.id,
     name: t.name,
     type: t.type,
     status: t.status,
+    pipelineStatus: ps ? { id: ps.id, code: ps.code, name: ps.name, color: ps.color } : null,
+    family: familyOf(t.status, ps),
     startDate: t.startDate ? t.startDate.toISOString() : null,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
     location,
@@ -135,6 +169,17 @@ export async function getProjectSchedule(
       assignee: { select: { id: true, name: true } },
       shot: { select: { code: true, sequence: { select: { id: true, code: true } } } },
       asset: { select: { name: true } },
+      pipelineStatus: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          color: true,
+          isDone: true,
+          isInactive: true,
+          legacyStatus: true,
+        },
+      },
     },
     // `id` ferme le tri : sans départage, deux tâches de mêmes dates sortent dans un ordre
     // que PostgreSQL ne garantit pas — et ce qui tombe sous le plafond changerait d'un

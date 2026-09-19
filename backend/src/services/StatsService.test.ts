@@ -13,6 +13,8 @@ import {
   computeSequenceConvergence,
   computeTotals,
   rankSlowestShots,
+  rankMostRetakenShots,
+  computeRetakeBuckets,
   getProjectStats,
   type ShotAggregateRow,
   type ShotStat,
@@ -102,7 +104,7 @@ describe('StatsService — computeShotStats', () => {
 });
 
 describe('StatsService — convergence par séquence', () => {
-  it('groupe par séquence, ajoute « Sans séquence » et omet les vides', () => {
+  it('groupe par séquence, ajoute le groupe hors séquence et omet les vides', () => {
     const sequences: SequenceRow[] = [
       { id: 10, code: 'SQ010', name: 'ouverture' },
       { id: 20, code: 'SQ020', name: 'vide' },
@@ -113,7 +115,10 @@ describe('StatsService — convergence par séquence', () => {
       agg({ shotId: 3, sequenceId: null }),
     ]);
     const conv = computeSequenceConvergence(sequences, shotStats);
-    expect(conv.map((c) => c.code)).toEqual(['SQ010', '—']);
+    // Le groupe hors séquence sort SANS libellé : le serveur ne nomme rien, il se
+    // contente d'un `sequenceId` nul — « Sans séquence » était du français en dur.
+    expect(conv.map((c) => c.code)).toEqual(['SQ010', '']);
+    expect(conv.find((c) => c.sequenceId === null)!.name).toBe('');
     const sq010 = conv.find((c) => c.sequenceId === 10)!;
     expect(sq010).toMatchObject({ total: 2, approved: 1, notStarted: 1 });
     expect(conv.find((c) => c.sequenceId === null)!.total).toBe(1);
@@ -209,6 +214,7 @@ function legacyShotStats(
       sequenceId: shot.sequenceId,
       versions: vs.length,
       retakes: ds.filter((x) => x.isRetake).length,
+      reviewRounds: ds.length,
       openNotes: ns.filter((n) => !n.isResolved).length,
       reviewDays: firstVersionAt && firstApprovalAt ? daysBetween(firstVersionAt, firstApprovalAt) : null,
       status: !last
@@ -358,7 +364,10 @@ describe('StatsService — getProjectStats', () => {
       openNotes: 2,
       avgReviewDays: 2,
       avgRetakesPerShot: 0.5,
+      avgReviewRoundsPerShot: 1.5,
       avgNotesPerVersion: 2,
+      // Le seul plan approuvé a coûté un retake : aucun n'est passé du premier coup.
+      firstTimeRightRate: 0,
     });
     expect(stats.sequences).toEqual([
       {
@@ -402,9 +411,69 @@ describe('StatsService — getProjectStats', () => {
       openNotes: 0,
       avgReviewDays: null,
       avgRetakesPerShot: 0,
+      avgReviewRoundsPerShot: 0,
       avgNotesPerVersion: 0,
+      firstTimeRightRate: 0,
     });
     expect(stats.sequences).toEqual([]);
     expect(stats.slowestShots).toEqual([]);
+    expect(stats.mostRetakenShots).toEqual([]);
+    // Les barres restent, toutes à zéro : un histogramme vide ne se distingue pas d'un
+    // histogramme absent, et l'écran n'a alors rien à dessiner.
+    expect(stats.retakeBuckets).toEqual([
+      { min: 0, max: 0, shots: 0 },
+      { min: 1, max: 1, shots: 0 },
+      { min: 2, max: 2, shots: 0 },
+      { min: 3, max: null, shots: 0 },
+    ]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Panneau « retakes & tours de review » (Phase 50, lot 2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('StatsService — retakes & tours de review', () => {
+  /** Quatre plans livrés, du meilleur au pire, et un jamais livré. */
+  const shotStats = computeShotStats([
+    agg({ shotId: 1, versions: 1, lastIsApproval: true, decisions: 1, retakes: 0 }),
+    agg({ shotId: 2, versions: 2, lastIsApproval: true, decisions: 2, retakes: 1 }),
+    agg({ shotId: 3, versions: 3, lastIsApproval: true, decisions: 3, retakes: 2, openNotes: 1 }),
+    agg({ shotId: 4, versions: 6, lastIsRetake: true, decisions: 6, retakes: 5, openNotes: 4 }),
+    agg({ shotId: 5 }),
+  ]);
+
+  it('compte les tours de review par plan — un verdict, un tour', () => {
+    expect(shotStats.map((s) => s.reviewRounds)).toEqual([1, 2, 3, 6, 0]);
+  });
+
+  it('distribue les retakes en barres, plans jamais livrés exclus', () => {
+    // Le plan 5 n'a rien coûté faute d'avoir été livré : le compter en « 0 retake »
+    // flatterait la production d'autant de plans qu'elle n'a pas commencés.
+    expect(computeRetakeBuckets(shotStats)).toEqual([
+      { min: 0, max: 0, shots: 1 },
+      { min: 1, max: 1, shots: 1 },
+      { min: 2, max: 2, shots: 1 },
+      { min: 3, max: null, shots: 1 },
+    ]);
+  });
+
+  it('classe les plans les plus repris, et ignore ceux qui n’ont jamais été reprise', () => {
+    expect(rankMostRetakenShots(shotStats).map((s) => s.shotId)).toEqual([4, 3, 2]);
+  });
+
+  it('respecte le plafond du classement', () => {
+    expect(rankMostRetakenShots(shotStats, 2).map((s) => s.shotId)).toEqual([4, 3]);
+  });
+
+  it('taux du premier coup : rapporté aux plans APPROUVÉS, pas à tous', () => {
+    // Trois approuvés (1, 2, 3), un seul sans retake → 33 %. Le plan 4, encore en retake,
+    // n'a pas fini de consommer ses tours : l'inclure ferait baisser le taux avec le temps.
+    expect(computeTotals(shotStats, 12, 12, 5).firstTimeRightRate).toBe(33);
+  });
+
+  it('moyenne les tours sur TOUS les plans, y compris ceux à zéro', () => {
+    // 1 + 2 + 3 + 6 + 0 = 12 sur 5 plans.
+    expect(computeTotals(shotStats, 12, 12, 5).avgReviewRoundsPerShot).toBe(2.4);
   });
 });

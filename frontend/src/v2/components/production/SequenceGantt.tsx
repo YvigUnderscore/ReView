@@ -3,36 +3,24 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TASK_STATUS_BAR, TASK_STATUS_LABEL_KEY } from '../../lib/taskStatus';
-import type { ScheduleTask } from '../../types/api';
-import { useT, type MessageKey } from '../../i18n';
-import { intlLocale } from '../../i18n';
+import { AlertTriangle } from 'lucide-react';
+import { intlLocale, useT, type MessageKey, type Tr } from '../../i18n';
+import {
+  DAY,
+  barBox,
+  ganttTicks,
+  ganttWindow,
+  groupBars,
+  markerLeft,
+  spanOf,
+  visibleBars,
+  type Bar,
+  type GanttWindow,
+} from './ganttGeometry';
+import { FAMILY_BAR, familyOfTask, type GanttTask, type StatusFamily } from './productionWire';
 
-const DAY = 86_400_000;
 const fmt = (ms: number) =>
   new Date(ms).toLocaleDateString(intlLocale(), { day: '2-digit', month: '2-digit' });
-
-interface Bar {
-  task: ScheduleTask;
-  start: number;
-  end: number;
-}
-
-/** Intervalle [début, fin] d'une tâche : à défaut de l'une des bornes, on retombe sur l'autre. */
-function spanOf(t: ScheduleTask): Bar | null {
-  const s = t.startDate ? new Date(t.startDate).getTime() : null;
-  const e = t.dueDate ? new Date(t.dueDate).getTime() : null;
-  // Gardes explicites : une borne manquante est tenue par l'autre, aucune borne = pas de barre.
-  if (s === null) return e === null ? null : { task: t, start: e, end: e };
-  if (e === null) return { task: t, start: s, end: s };
-  return e < s ? { task: t, start: e, end: s } : { task: t, start: s, end: e };
-}
-
-interface Group {
-  key: string;
-  label: string;
-  bars: Bar[];
-}
 
 /** Fenêtres proposées, en jours à partir d'aujourd'hui. `null` = tout le projet. */
 const SCALES = [
@@ -48,56 +36,55 @@ const SCALE_LABEL: Record<ScaleKey, MessageKey> = {
   all: 'gantt.scale.all',
 };
 
+const FAMILY_LABEL: Record<StatusFamily, MessageKey> = {
+  todo: 'kanban.family.todo',
+  progress: 'kanban.family.progress',
+  review: 'kanban.family.review',
+  done: 'kanban.family.done',
+  blocked: 'kanban.family.blocked',
+  inactive: 'kanban.family.inactive',
+};
+
 /**
  * Gantt léger par séquence (43.C — №128), lecture seule.
  *
- * Deux corrections (C6) : l'échelle se choisit — sur un long-métrage, « tout le projet »
- * écrase une année entière dans la largeur d'un écran et plus aucune barre n'est lisible —
- * et le repère du jour n'est plus redessiné dans chaque ligne, ce qui en faisait autant de
- * traits distincts, décalés d'un pixel par arrondi.
+ * Trois corrections dans ce lot. **Les barres ne sortent plus de leur piste** : une tâche
+ * commencée avant le début de la fenêtre était posée à un pourcentage négatif et se peignait
+ * par-dessus la colonne des libellés. La géométrie borne désormais la barre à la fenêtre
+ * (`ganttGeometry`), la piste porte `overflow-hidden` en seconde barrière, et le côté coupé
+ * perd son arrondi — la tâche reste visible, et se dit tronquée plutôt que de disparaître.
+ * **Les couleurs viennent du référentiel du studio** (`pipelineStatus`) et non de l'enum figé
+ * à six valeurs, qui ne connaît ni « fin » ni « awaiting client ». **Un planning tronqué le
+ * dit** : le serveur plafonne sa lecture, et un planning faux sans avertissement est pire
+ * qu'un planning absent.
  */
-export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
+export default function SequenceGantt({
+  tasks,
+  truncated = false,
+  limit,
+}: {
+  tasks: GanttTask[];
+  /** Le serveur a atteint son plafond : des tâches manquent. */
+  truncated?: boolean;
+  /** Plafond annoncé par le serveur ; à défaut, ce qui est effectivement affiché. */
+  limit?: number;
+}) {
   const t = useT();
   // « Maintenant » capturé une fois (rendu pur) pour le repère du jour.
   const [now] = useState(() => Date.now());
   const [scale, setScale] = useState<ScaleKey>('quarter');
   const windowDays = SCALES.find((s) => s.key === scale)?.days ?? null;
 
-  const { groups, min, span, ticks } = useMemo(() => {
-    const all = tasks.map(spanOf).filter((b): b is Bar => b !== null);
+  const view = useMemo(() => {
+    const all = tasks.map((task) => spanOf(task)).filter((b): b is Bar<GanttTask> => b !== null);
     // La fenêtre part d'une semaine en arrière : ce qui vient de finir reste visible.
     const from = windowDays === null ? -Infinity : now - 7 * DAY;
     const to = windowDays === null ? Infinity : now + windowDays * DAY;
-    const bars = all.filter((b) => b.end >= from && b.start <= to);
-    if (bars.length === 0) {
-      return { groups: [] as Group[], min: 0, span: 1, ticks: [] as number[] };
-    }
-    const min =
-      windowDays === null
-        ? Math.min(...bars.map((b) => b.start))
-        : Math.max(from, Math.min(...bars.map((b) => b.start)));
-    const max =
-      windowDays === null
-        ? Math.max(...bars.map((b) => b.end))
-        : Math.min(to, Math.max(...bars.map((b) => b.end)));
-    const span = Math.max(max - min, DAY);
-
-    const byKey = new Map<string, Group>();
-    for (const b of bars) {
-      const key = b.task.sequenceCode ?? '￿'; // tri : sans séquence en dernier
-      const label = b.task.sequenceCode ?? t('shots.noSequence');
-      const g = byKey.get(key);
-      if (g) g.bars.push(b);
-      else byKey.set(key, { key, label, bars: [b] });
-    }
-    const groups = [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
-    for (const g of groups) g.bars.sort((a, b) => a.start - b.start);
-
-    const ticks = Array.from({ length: 5 }, (_, i) => min + (span * i) / 4);
-    return { groups, min, span, ticks };
+    const bars = visibleBars(all, from, to);
+    const win = ganttWindow(bars, from, to);
+    if (!win) return null;
+    return { win, groups: groupBars(bars, t('shots.noSequence')), ticks: ganttTicks(win) };
   }, [tasks, t, now, windowDays]);
-
-  const todayLeft = groups.length && now >= min && now <= min + span ? ((now - min) / span) * 100 : null;
 
   const scaleSwitch = (
     <div className="inline-flex rounded-md border border-border p-0.5">
@@ -116,31 +103,41 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
     </div>
   );
 
-  if (groups.length === 0) {
+  const warning = truncated ? (
+    <p className="mb-2 flex items-start gap-1.5 text-2xs text-warning">
+      <AlertTriangle size={13} className="mt-px shrink-0" />
+      {t('gantt.truncated', { value: (limit ?? tasks.length).toLocaleString(intlLocale()) })}
+    </p>
+  ) : null;
+
+  if (view === null) {
     return (
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="mb-2 flex justify-end">{scaleSwitch}</div>
+        {warning}
         <p className="text-xs text-muted-foreground">{t('stats.noDatedTask')}</p>
       </section>
     );
   }
 
-  const pos = (b: Bar) => ({
-    left: `${((b.start - min) / span) * 100}%`,
-    width: `${Math.max(((b.end - b.start) / span) * 100, 1.5)}%`,
-  });
+  const todayLeft = markerLeft(now, view.win);
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-2 flex justify-end">{scaleSwitch}</div>
+      {warning}
 
       {/* Axe temporel */}
       <div className="grid grid-cols-[140px_1fr] gap-x-3">
         <div />
         <div className="relative mb-2 h-4 text-2xs text-muted-foreground">
-          {ticks.map((t, i) => (
-            <span key={t} className="absolute -translate-x-1/2" style={{ left: `${(i / 4) * 100}%` }}>
-              {fmt(t)}
+          {view.ticks.map((tick, i) => (
+            <span
+              key={tick}
+              className="absolute -translate-x-1/2"
+              style={{ left: `${(i / (view.ticks.length - 1)) * 100}%` }}
+            >
+              {fmt(tick)}
             </span>
           ))}
         </div>
@@ -158,29 +155,12 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
         )}
 
         <div className="space-y-4">
-          {groups.map((g) => (
+          {view.groups.map((g) => (
             <div key={g.key}>
               <div className="mb-1 text-xs font-semibold">{g.label}</div>
               <div className="space-y-1">
-                {g.bars.map((b) => (
-                  <div key={b.task.id} className="grid grid-cols-[140px_1fr] items-center gap-x-3">
-                    <Link
-                      to={`/tasks/${b.task.id}`}
-                      className="truncate text-xs hover:text-primary"
-                      title={`${b.task.location} · ${b.task.name}`}
-                    >
-                      {b.task.location && <span className="text-muted-foreground">{b.task.location} </span>}
-                      {b.task.name}
-                    </Link>
-                    <div className="relative h-5 rounded bg-secondary/30">
-                      <Link
-                        to={`/tasks/${b.task.id}`}
-                        style={pos(b)}
-                        title={`${TASK_STATUS_LABEL_KEY[b.task.status] ? t(TASK_STATUS_LABEL_KEY[b.task.status]) : b.task.status} · ${fmt(b.start)} → ${fmt(b.end)}`}
-                        className={`absolute top-0.5 h-4 rounded ${TASK_STATUS_BAR[b.task.status] ?? 'bg-muted-foreground/40'} opacity-90 hover:opacity-100`}
-                      />
-                    </div>
-                  </div>
+                {g.bars.map((bar) => (
+                  <GanttRow key={bar.task.id} bar={bar} win={view.win} t={t} />
                 ))}
               </div>
             </div>
@@ -188,5 +168,50 @@ export default function SequenceGantt({ tasks }: { tasks: ScheduleTask[] }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Une tâche : son libellé à gauche, sa barre dans la piste — jamais en dehors. */
+function GanttRow({ bar, win, t }: { bar: Bar<GanttTask>; win: GanttWindow; t: Tr }) {
+  const box = barBox(bar.start, bar.end, win);
+  const status = bar.task.pipelineStatus;
+  const family = familyOfTask(bar.task);
+  const clipped = [
+    box.clippedStart ? t('gantt.startsBefore') : null,
+    box.clippedEnd ? t('gantt.endsAfter') : null,
+  ].filter((s): s is string => s !== null);
+  const title = [
+    `${status?.name ?? t(FAMILY_LABEL[family])} · ${fmt(bar.start)} → ${fmt(bar.end)}`,
+    ...clipped,
+  ].join(' · ');
+
+  return (
+    <div className="grid grid-cols-[140px_1fr] items-center gap-x-3">
+      <Link
+        to={`/tasks/${bar.task.id}`}
+        className="truncate text-xs hover:text-primary"
+        title={`${bar.task.location} · ${bar.task.name}`}
+      >
+        {bar.task.location && <span className="text-muted-foreground">{bar.task.location} </span>}
+        {bar.task.name}
+      </Link>
+      {/* `overflow-hidden` : seconde barrière derrière le bornage de `barBox`. */}
+      <div className="relative h-5 overflow-hidden rounded bg-secondary/30">
+        {box.visible && (
+          <Link
+            to={`/tasks/${bar.task.id}`}
+            title={title}
+            style={{
+              left: `${box.left}%`,
+              width: `${box.width}%`,
+              ...(status ? { backgroundColor: status.color } : {}),
+            }}
+            className={`absolute top-0.5 h-4 opacity-90 hover:opacity-100 ${
+              status ? '' : FAMILY_BAR[family]
+            } ${box.clippedStart ? '' : 'rounded-l'} ${box.clippedEnd ? '' : 'rounded-r'}`}
+          />
+        )}
+      </div>
+    </div>
   );
 }

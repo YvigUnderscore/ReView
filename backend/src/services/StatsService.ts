@@ -54,6 +54,8 @@ export interface ShotStat {
   sequenceId: number | null;
   versions: number;
   retakes: number;
+  /** Verdicts rendus sur ce plan — le nombre de TOURS de review qu'il a coûtés. */
+  reviewRounds: number;
   openNotes: number;
   /** Délai (jours) entre la 1ʳᵉ version et la 1ʳᵉ décision d'approbation. */
   reviewDays: number | null;
@@ -62,13 +64,31 @@ export interface ShotStat {
 
 export interface SequenceConvergence {
   sequenceId: number | null;
+  /**
+   * Code de la séquence. **Vide quand `sequenceId` est nul** (groupe « hors séquence ») :
+   * le serveur n'écrit aucun texte d'écran — c'est au lecteur de nommer ce groupe dans sa
+   * langue. Il portait jusqu'ici un tiret et un libellé français en dur.
+   */
   code: string;
+  /** Nom de la séquence, vide pour le groupe « hors séquence » (voir `code`). */
   name: string;
   total: number;
   approved: number;
   inReview: number;
   retake: number;
   notStarted: number;
+}
+
+/**
+ * Une barre de l'histogramme des retakes : « combien de plans ont coûté N retakes ».
+ *
+ * Les bornes sont numériques et jamais nommées — un libellé « 3 et plus » serait un texte
+ * d'écran écrit par le serveur. `max` nul désigne la dernière barre, ouverte.
+ */
+export interface RetakeBucket {
+  min: number;
+  max: number | null;
+  shots: number;
 }
 
 export interface ProjectStatsTotals {
@@ -80,13 +100,21 @@ export interface ProjectStatsTotals {
   openNotes: number;
   avgReviewDays: number | null;
   avgRetakesPerShot: number;
+  /** Tours de review moyens par plan — un plan « bon du premier coup » en coûte un. */
+  avgReviewRoundsPerShot: number;
   avgNotesPerVersion: number;
+  /** Part (%) des plans approuvés SANS aucun retake, parmi ceux qui l'ont été. */
+  firstTimeRightRate: number;
 }
 
 export interface ProjectStats {
   totals: ProjectStatsTotals;
   sequences: SequenceConvergence[];
   slowestShots: ShotStat[];
+  /** Les plans qui ont coûté le plus de retakes — le classement du panneau retakes. */
+  mostRetakenShots: ShotStat[];
+  /** Distribution des retakes par plan, du meilleur au pire. */
+  retakeBuckets: RetakeBucket[];
 }
 
 /** Différence en jours entiers (bornée à 0). */
@@ -105,6 +133,7 @@ export function computeShotStats(rows: ShotAggregateRow[]): ShotStat[] {
     sequenceId: row.sequenceId,
     versions: row.versions,
     retakes: row.retakes,
+    reviewRounds: row.decisions,
     openNotes: row.openNotes,
     reviewDays:
       row.firstVersionAt && row.firstApprovalAt ? daysBetween(row.firstVersionAt, row.firstApprovalAt) : null,
@@ -140,14 +169,48 @@ function tally(
   };
 }
 
-/** Convergence par séquence (+ groupe « Sans séquence »), séquences vides omises. */
+/**
+ * Convergence par séquence (+ groupe hors séquence), séquences vides omises.
+ *
+ * Le groupe hors séquence sort avec `sequenceId: null` et des libellés VIDES : il portait
+ * « — » et « Sans séquence » écrits en dur côté serveur, donc en français pour les quatorze
+ * langues. Nommer ce groupe est le travail du lecteur.
+ */
 export function computeSequenceConvergence(
   sequences: SequenceRow[],
   shotStats: ShotStat[],
 ): SequenceConvergence[] {
   const groups = sequences.map((s) => tally(s.id, s.code, s.name, shotStats));
-  groups.push(tally(null, '—', 'Sans séquence', shotStats));
+  groups.push(tally(null, '', '', shotStats));
   return groups.filter((g) => g.total > 0);
+}
+
+/**
+ * Bornes de l'histogramme des retakes. Zéro, un, deux, puis tout le reste : au-delà de
+ * trois tours, ce n'est plus une nuance mais un plan à regarder de près.
+ */
+const RETAKE_BUCKETS: readonly { min: number; max: number | null }[] = [
+  { min: 0, max: 0 },
+  { min: 1, max: 1 },
+  { min: 2, max: 2 },
+  { min: 3, max: null },
+];
+
+/** Distribution des retakes par plan, plans jamais livrés exclus (ils n'en ont pas coûté). */
+export function computeRetakeBuckets(shotStats: ShotStat[]): RetakeBucket[] {
+  const started = shotStats.filter((s) => s.status !== 'notStarted');
+  return RETAKE_BUCKETS.map((b) => ({
+    ...b,
+    shots: started.filter((s) => s.retakes >= b.min && (b.max === null || s.retakes <= b.max)).length,
+  }));
+}
+
+/** Classe les plans qui ont coûté le plus de retakes, puis de tours, puis de notes. */
+export function rankMostRetakenShots(shotStats: ShotStat[], limit = 10): ShotStat[] {
+  return [...shotStats]
+    .filter((s) => s.retakes > 0)
+    .sort((a, b) => b.retakes - a.retakes || b.reviewRounds - a.reviewRounds || b.openNotes - a.openNotes)
+    .slice(0, limit);
 }
 
 /** Totaux projet à partir des stats par shot + comptes bruts. */
@@ -173,7 +236,17 @@ export function computeTotals(
     avgRetakesPerShot: shotStats.length
       ? round1(shotStats.reduce((a, s) => a + s.retakes, 0) / shotStats.length)
       : 0,
+    avgReviewRoundsPerShot: shotStats.length
+      ? round1(shotStats.reduce((a, s) => a + s.reviewRounds, 0) / shotStats.length)
+      : 0,
     avgNotesPerVersion: totalVersions ? round1(totalNotes / totalVersions) : 0,
+    // Rapporté aux plans APPROUVÉS seulement : un plan encore en review n'a pas fini de
+    // consommer ses retakes, l'inclure ferait baisser le taux au fil de la production.
+    firstTimeRightRate: approved
+      ? Math.round(
+          (shotStats.filter((s) => s.status === 'approved' && s.retakes === 0).length / approved) * 100,
+        )
+      : 0,
   };
 }
 
@@ -300,5 +373,7 @@ export async function getProjectStats(projectId: number): Promise<ProjectStats> 
     ),
     sequences: computeSequenceConvergence(sequences, shotStats),
     slowestShots: rankSlowestShots(shotStats),
+    mostRetakenShots: rankMostRetakenShots(shotStats),
+    retakeBuckets: computeRetakeBuckets(shotStats),
   };
 }

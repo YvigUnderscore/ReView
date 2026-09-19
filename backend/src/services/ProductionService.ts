@@ -107,18 +107,41 @@ export function buildMatrix(rows: MatrixRow[]): MatrixCell[] {
   return [...cells.values()];
 }
 
+/**
+ * Combien de tâches demandent une décision — les TOTAUX, pas la longueur des listes.
+ *
+ * Les tuiles affichaient `.length` de listes plafonnées à cinquante : un projet avec trois
+ * cents tâches en retard annonçait « 50 ». Et le badge « ce qui bloque » sommait les trois
+ * nombres, si bien qu'une tâche à la fois en retard ET non assignée comptait deux fois.
+ * `blocking` est donc compté en base sur l'UNION des trois conditions — dédoublonnée par
+ * construction, et jamais égale à la somme.
+ */
+export interface AttentionTotals {
+  overdue: number;
+  unassigned: number;
+  waitingReview: number;
+  /** Tâches distinctes concernées par au moins une des trois conditions. */
+  blocking: number;
+}
+
 export interface Attention {
   overdue: ProductionTask[];
   unassigned: ProductionTask[];
   waitingReview: ProductionTask[];
+  totals: AttentionTotals;
+  /** Plafond appliqué aux trois listes : au-delà, lire les totaux. */
+  limit: number;
 }
+
+/** Les trois listes seules, sans les totaux que seule la base sait compter. */
+export type AttentionLists = Pick<Attention, 'overdue' | 'unassigned' | 'waitingReview'>;
 
 /**
  * Ce qui demande une décision. Une tâche terminée n'est jamais « en retard » : sa date est
  * passée, mais le travail est fait — la signaler noierait ce qui compte vraiment. Une
  * tâche inactive (omise, sans objet) n'attend rien de personne et disparaît de même.
  */
-export function findAttention(tasks: ProductionTask[], now: Date, limit = 50): Attention {
+export function findAttention(tasks: ProductionTask[], now: Date, limit = 50): AttentionLists {
   const open = tasks.filter((t) => {
     const family = familyOfRow(t);
     return family !== 'done' && family !== 'inactive';
@@ -199,10 +222,18 @@ export function buildWorkload(rows: WorkloadInput[], now: Date): WorkloadRow[] {
   });
 }
 
+/**
+ * Un point de rythme hebdomadaire.
+ *
+ * L'unité est portée par la SÉRIE, pas par le point : `pace` compte des tâches,
+ * `delivery` des médias. C'est tout le correctif de la cadence — la projection divisait un
+ * reste-à-faire en tâches par un rythme en médias publiés, et annonçait une fin de projet
+ * en 2028. Deux séries nommées, deux unités déclarées, aucune division entre les deux.
+ */
 export interface WeekPoint {
   /** Lundi de la semaine, en ISO court (AAAA-MM-JJ). */
   weekStart: string;
-  delivered: number;
+  count: number;
 }
 
 /** Lundi de la semaine contenant `date`, à minuit UTC. */
@@ -216,45 +247,68 @@ export function weekStartOf(date: Date): Date {
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
-/** Livraisons par semaine sur la fenêtre demandée, semaines vides comprises. */
+/** Série hebdomadaire sur la fenêtre demandée, semaines vides comprises. */
 export function buildPace(counts: WeekPoint[], now: Date, weeks: number): WeekPoint[] {
   const start = weekStartOf(now);
   const points: WeekPoint[] = [];
   for (let i = weeks - 1; i >= 0; i--) {
     const week = new Date(start);
     week.setUTCDate(week.getUTCDate() - i * 7);
-    points.push({ weekStart: isoDay(week), delivered: 0 });
+    points.push({ weekStart: isoDay(week), count: 0 });
   }
   const index = new Map(points.map((p, i) => [p.weekStart, i]));
-  for (const count of counts) {
-    const slot = index.get(count.weekStart);
-    if (slot !== undefined) points[slot]!.delivered += count.delivered;
+  for (const point of counts) {
+    const slot = index.get(point.weekStart);
+    if (slot !== undefined) points[slot]!.count += point.count;
   }
   return points;
 }
 
+/**
+ * Pourquoi il n'y a pas de date projetée.
+ *
+ * Une projection absente doit dire sa raison, sinon l'écran ne peut pas choisir entre « la
+ * production est finie » (bonne nouvelle) et « on ne sait pas » (à ne surtout pas afficher
+ * comme une date).
+ */
+export type ProjectionUnavailable =
+  /** Tout est fait : il n'y a rien à projeter. */
+  | 'nothing-left'
+  /** Aucune tâche franchie sur la fenêtre : la vélocité observée est nulle. */
+  | 'no-velocity';
+
 export interface Projection {
+  /** Unité comptée — des TÂCHES, la maille de tout le reste de la page. */
+  unit: 'tasks';
   done: number;
   total: number;
-  /** Moyenne de tâches terminées par semaine sur la fenêtre observée. */
+  /** Tâches franchies par semaine sur la fenêtre, dans la même unité que `done`/`total`. */
   perWeek: number;
-  /** Date projetée d'achèvement, `null` si le rythme est nul ou tout est fait. */
+  /** Date projetée d'achèvement, `null` dès que `unavailable` est renseigné. */
   projectedEnd: string | null;
+  unavailable: ProjectionUnavailable | null;
 }
 
 /**
- * Projection de fin, au rythme observé. Elle vaut ce que vaut l'hypothèse — un rythme
- * constant — et c'est pourquoi elle est rendue avec le rythme lui-même : sans lui, une
- * date seule se lit comme un engagement.
+ * Projection de fin, au rythme observé — et dans la MÊME unité que le reste-à-faire.
+ *
+ * Le reste-à-faire se compte en tâches (`total - done`, lus sur la matrice) ; le rythme
+ * doit donc l'être aussi. Il n'existe aucune date de clôture de tâche en base : la seule
+ * date de franchissement qu'on puisse citer est celle de la première approbation de
+ * review (`queryPace`). C'est une mesure réelle, pas une estimation — mais elle ne
+ * connaît que les tâches passées en review, d'où le rythme rendu à côté de la date : sans
+ * lui, une date seule se lit comme un engagement.
  */
 export function projectEnd(done: number, total: number, points: WeekPoint[], now: Date): Projection {
-  const delivered = points.reduce((n, p) => n + p.delivered, 0);
-  const perWeek = points.length > 0 ? delivered / points.length : 0;
+  const crossed = points.reduce((n, p) => n + p.count, 0);
+  const perWeek = points.length > 0 ? crossed / points.length : 0;
   const remaining = Math.max(0, total - done);
-  if (remaining === 0 || perWeek <= 0) return { done, total, perWeek, projectedEnd: null };
+  const base = { unit: 'tasks' as const, done, total, perWeek };
+  if (remaining === 0) return { ...base, projectedEnd: null, unavailable: 'nothing-left' };
+  if (perWeek <= 0) return { ...base, projectedEnd: null, unavailable: 'no-velocity' };
   const end = new Date(now.getTime());
   end.setUTCDate(end.getUTCDate() + Math.ceil((remaining / perWeek) * 7));
-  return { done, total, perWeek, projectedEnd: isoDay(end) };
+  return { ...base, projectedEnd: isoDay(end), unavailable: null };
 }
 
 export interface ProductionOverview {
@@ -263,9 +317,15 @@ export interface ProductionOverview {
   departments: string[];
   attention: Attention;
   workload: WorkloadRow[];
+  /** Vélocité, en TÂCHES franchies par semaine — la maille de `projection`. */
   pace: WeekPoint[];
+  /** Débit de sortie, en MÉDIAS publiés par semaine. Ne sert à aucune division. */
+  delivery: WeekPoint[];
   projection: Projection;
 }
+
+/** Plafond des trois listes d'attention ; les totaux, eux, sont comptés en base. */
+export const ATTENTION_LIMIT = 50;
 
 // ── Lecture en base ───────────────────────────────────────────────────────────
 
@@ -421,25 +481,86 @@ function queryWorkload(projectId: number, now: Date): Promise<WorkloadAggregate[
 }
 
 /**
- * Livraisons regroupées par semaine ISO (lundi, UTC) — même découpage que `weekStartOf`.
- * La fenêtre est bornée en base ; les semaines vides sont ajoutées par `buildPace`.
+ * Médias publiés par semaine ISO (lundi, UTC) — le débit de SORTIE du pipe, en médias.
+ *
+ * Deux corrections de périmètre : la corbeille des parents était ignorée (seul `hiddenAt`
+ * était vérifié, jamais `deletedAt` — les livraisons d'un plan supprimé gonflaient donc le
+ * rythme), et un média encore en cours d'encodage comptait comme livré. Le reste du
+ * service filtre les deux ; la cadence le fait maintenant aussi.
  */
-function queryPace(projectId: number, since: Date): Promise<WeekPoint[]> {
+function queryDelivery(projectId: number, since: Date): Promise<WeekPoint[]> {
   return prisma.$queryRaw<WeekPoint[]>`
     SELECT to_char(date_trunc('week', m."createdAt"), 'YYYY-MM-DD') AS "weekStart",
-           COUNT(*)::int AS "delivered"
+           COUNT(*)::int AS "count"
     FROM "MediaObject" m
     JOIN "Version" v      ON v.id = m."versionId"
     LEFT JOIN "Task" t    ON t.id = v."taskId"
-    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"  AND sh."hiddenAt" IS NULL
-    LEFT JOIN "Asset" ta  ON ta.id = t."assetId" AND ta."hiddenAt" IS NULL
-    LEFT JOIN "Asset" va  ON va.id = v."assetId" AND va."hiddenAt" IS NULL
+    LEFT JOIN "Shot" sh   ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL AND sh."hiddenAt" IS NULL
+    LEFT JOIN "Asset" ta  ON ta.id = t."assetId" AND ta."deletedAt" IS NULL AND ta."hiddenAt" IS NULL
+    LEFT JOIN "Asset" va  ON va.id = v."assetId" AND va."deletedAt" IS NULL AND va."hiddenAt" IS NULL
     WHERE m.published = true
       AND m."deletedAt" IS NULL
+      AND m.status = 'READY'
+      AND v."deletedAt" IS NULL
       AND m."createdAt" >= ${since.toISOString()}::timestamp
       AND (sh."projectId" = ${projectId} OR ta."projectId" = ${projectId} OR va."projectId" = ${projectId})
     GROUP BY 1
   `;
+}
+
+/**
+ * Tâches franchissant leur PREMIÈRE approbation par semaine — la vélocité, en tâches.
+ *
+ * C'est la seule date de franchissement que la base sache citer : aucune colonne ne dit
+ * quand une tâche a été terminée (`updatedAt` bouge à chaque retouche, et un statut n'a pas
+ * d'historique). La première approbation de review en est le témoin daté : elle existe, elle
+ * est horodatée, elle se compte en tâches. `MIN` par tâche parce qu'un retake suivi d'une
+ * seconde approbation ne fait pas franchir deux fois la ligne d'arrivée.
+ *
+ * Le filtre de projet est DANS la première CTE : sorti d'elle, l'agrégat parcourrait toutes
+ * les décisions de l'instance avant d'en retenir un projet.
+ */
+function queryPace(projectId: number, since: Date): Promise<WeekPoint[]> {
+  return prisma.$queryRaw<WeekPoint[]>`
+    WITH approvals AS (
+      SELECT v."taskId" AS task_id, d."createdAt" AS at
+      FROM "ReviewDecision" d
+      JOIN "Version" v       ON v.id = d."versionId" AND v."deletedAt" IS NULL
+      JOIN "ReviewStatus" rs ON rs.id = d."statusId" AND rs."isApproval" = true
+      JOIN "Task" t          ON t.id = v."taskId"
+      LEFT JOIN "Shot" sh    ON sh.id = t."shotId"  AND sh."deletedAt" IS NULL AND sh."hiddenAt" IS NULL
+      LEFT JOIN "Asset" a    ON a.id  = t."assetId" AND a."deletedAt" IS NULL AND a."hiddenAt" IS NULL
+      WHERE sh."projectId" = ${projectId} OR a."projectId" = ${projectId}
+    ),
+    crossed AS (SELECT task_id, MIN(at) AS at FROM approvals GROUP BY 1)
+    SELECT to_char(date_trunc('week', at), 'YYYY-MM-DD') AS "weekStart",
+           COUNT(*)::int AS "count"
+    FROM crossed
+    WHERE at >= ${since.toISOString()}::timestamp
+    GROUP BY 1
+  `;
+}
+
+/**
+ * Les totaux réels des trois listes d'attention, plus le badge dédoublonné.
+ *
+ * Quatre `count` indexés plutôt qu'un agrégat brut : les trois familles se disent déjà en
+ * filtres Prisma (`lib/statusFamily`), et les redire en SQL dupliquerait la seule
+ * traduction statut → famille du serveur.
+ */
+async function countAttention(projectId: number, now: Date): Promise<AttentionTotals> {
+  const base = [taskInProject(projectId), TASK_OPEN_FILTER];
+  const overdueWhere: Prisma.TaskWhereInput = { dueDate: { lt: now } };
+  const unassignedWhere: Prisma.TaskWhereInput = { assigneeId: null };
+  const [overdue, unassigned, waitingReview, blocking] = await Promise.all([
+    prisma.task.count({ where: { AND: [...base, overdueWhere] } }),
+    prisma.task.count({ where: { AND: [...base, unassignedWhere] } }),
+    prisma.task.count({ where: { AND: [...base, TASK_REVIEW_FILTER] } }),
+    prisma.task.count({
+      where: { AND: [...base, { OR: [overdueWhere, unassignedWhere, TASK_REVIEW_FILTER] }] },
+    }),
+  ]);
+  return { overdue, unassigned, waitingReview, blocking };
 }
 
 /** Vue de pilotage complète d'un projet. `weeks` borne la fenêtre de rythme. */
@@ -449,17 +570,21 @@ export async function getOverview(
   now = new Date(),
 ): Promise<ProductionOverview> {
   const since = new Date(now.getTime() - weeks * 7 * 86_400_000);
-  const [matrixRows, workloadRows, sequences, paceRows, candidates] = await Promise.all([
-    queryMatrix(projectId),
-    queryWorkload(projectId, now),
-    prisma.sequence.findMany({
-      where: { projectId, deletedAt: null, hiddenAt: null },
-      orderBy: { order: 'asc' },
-      select: { id: true, code: true },
-    }),
-    queryPace(projectId, since),
-    fetchAttentionCandidates(projectId, now, 50),
-  ]);
+  const [matrixRows, workloadRows, sequences, paceRows, deliveryRows, candidates, totals] = await Promise.all(
+    [
+      queryMatrix(projectId),
+      queryWorkload(projectId, now),
+      prisma.sequence.findMany({
+        where: { projectId, deletedAt: null, hiddenAt: null },
+        orderBy: { order: 'asc' },
+        select: { id: true, code: true },
+      }),
+      queryPace(projectId, since),
+      queryDelivery(projectId, since),
+      fetchAttentionCandidates(projectId, now, ATTENTION_LIMIT),
+      countAttention(projectId, now),
+    ],
+  );
 
   const matrix = buildMatrix(
     matrixRows.map((r) => ({
@@ -495,9 +620,11 @@ export async function getOverview(
     departments: [
       ...new Set(matrixRows.map((r) => r.department).filter((d): d is string => d !== null)),
     ].sort(),
-    attention: findAttention(candidates, now),
+    attention: { ...findAttention(candidates, now, ATTENTION_LIMIT), totals, limit: ATTENTION_LIMIT },
     workload,
     pace,
+    delivery: buildPace(deliveryRows, now, weeks),
+    // Même unité des deux côtés de la division : des tâches / des tâches par semaine.
     projection: projectEnd(done, total, pace, now),
   };
 }

@@ -26,6 +26,18 @@ const base: ScheduleRow = {
   assignee: { id: 9, name: 'Ada' },
   shot: { code: 'SH020', sequence: { id: 3, code: 'SQ010' } },
   asset: null,
+  pipelineStatus: null,
+};
+
+/** Un statut du studio, tel que la synchronisation ShotGrid l'écrit. */
+const studioStatus = {
+  id: 42,
+  code: 'ip',
+  name: 'In Progress',
+  color: '#3B82F6',
+  isDone: false,
+  isInactive: false,
+  legacyStatus: 'IN_PROGRESS' as const,
 };
 
 /** Jeu de lignes distinctes, pour vérifier qu'on rend exactement ce qu'on a lu. */
@@ -46,6 +58,34 @@ describe('ScheduleService — toScheduleTask', () => {
     expect(t.dueDate).toBe('2026-07-20T00:00:00.000Z');
     expect(t.startDate).toBe('2026-07-13T00:00:00.000Z');
     expect(t.assignee).toEqual({ id: 9, name: 'Ada' });
+  });
+
+  it('rend le statut du studio, couleur comprise — le Gantt ne colore plus par l’enum', () => {
+    const t = toScheduleTask({ ...base, pipelineStatus: studioStatus });
+    expect(t.pipelineStatus).toEqual({ id: 42, code: 'ip', name: 'In Progress', color: '#3B82F6' });
+    expect(t.family).toBe('progress');
+  });
+
+  it('sans référentiel, la famille vient de l’enum et le statut du studio est nul', () => {
+    const t = toScheduleTask(base);
+    expect(t.pipelineStatus).toBeNull();
+    expect(t.family).toBe('progress');
+  });
+
+  it('un statut terminal du studio compte comme fait, même si l’enum dit le contraire', () => {
+    const t = toScheduleTask({
+      ...base,
+      status: 'IN_PROGRESS',
+      pipelineStatus: { ...studioStatus, code: 'fin', name: 'Final', isDone: true },
+    });
+    expect(t.family).toBe('done');
+    expect(t.pipelineStatus!.code).toBe('fin');
+  });
+
+  it('demande le statut du studio à la base', async () => {
+    await getProjectSchedule(7);
+    const select = findMany.mock.calls[0]![0].select as Record<string, unknown>;
+    expect(select.pipelineStatus).toBeDefined();
   });
 
   it('gère un shot sans séquence', () => {
