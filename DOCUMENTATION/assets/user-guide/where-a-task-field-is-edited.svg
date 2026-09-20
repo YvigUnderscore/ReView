@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" width="800" height="430" role="img" aria-labelledby="fig-title fig-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1016 430" width="1016" height="430" role="img" aria-labelledby="fig-title fig-desc">
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="fig-title">Which screen writes which field of a task</title>
-  <desc id="fig-desc">Seven surfaces in rows, five task fields in columns. The status is the only field an artist can write, from the kanban or from the task page; the assignee is never written from the task page; dates are reserved to supervisors and admins.</desc>
+  <desc id="fig-desc">Seven surfaces in rows, seven task fields in columns. The status is the only field an artist can write, from the kanban or from the task page; the name is renamed from the kanban; the description and the dates are reserved to managers; the assignee is never written from the task page.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -54,19 +54,21 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="800" height="430" rx="10"/>
+  <rect class="bg" x="0" y="0" width="1016" height="430" rx="10"/>
 
   <text class="d" x="24" y="30">WHO WRITES WHAT, AND FROM WHERE</text>
 
   <!-- Colonne des surfaces, et bandeau des champs -->
   <rect class="band" x="24" y="42" width="240" height="318" rx="10"/>
-  <rect class="band" x="268" y="42" width="516" height="36" rx="10"/>
+  <rect class="band" x="268" y="42" width="724" height="36" rx="10"/>
 
   <text class="d" x="318" y="66" text-anchor="middle">Status</text>
   <text class="d" x="422" y="66" text-anchor="middle">Assignee</text>
   <text class="d" x="526" y="66" text-anchor="middle">Checklist</text>
   <text class="d" x="630" y="66" text-anchor="middle">Dates</text>
   <text class="d" x="734" y="66" text-anchor="middle">New version</text>
+  <text class="d" x="838" y="66" text-anchor="middle">Name</text>
+  <text class="d" x="942" y="66" text-anchor="middle">Description</text>
 
   <!-- Ligne 1 — kanban, glisser -->
   <text class="l" x="34" y="107">Kanban — drag a card</text>
@@ -77,6 +79,8 @@
   <text class="d" x="526" y="107" text-anchor="middle">—</text>
   <text class="d" x="630" y="107" text-anchor="middle">—</text>
   <text class="d" x="734" y="107" text-anchor="middle">—</text>
+  <text class="d" x="838" y="107" text-anchor="middle">—</text>
+  <text class="d" x="942" y="107" text-anchor="middle">—</text>
 
   <!-- Ligne 2 — kanban, clic droit -->
   <text class="l" x="34" y="147">Kanban — right-click a card</text>
@@ -87,6 +91,9 @@
   <text class="d" x="526" y="147" text-anchor="middle">—</text>
   <text class="d" x="630" y="147" text-anchor="middle">—</text>
   <text class="d" x="734" y="147" text-anchor="middle">—</text>
+  <rect class="panel" x="788" y="126" width="100" height="34" rx="9"/>
+  <text class="d" x="838" y="147" text-anchor="middle">managers</text>
+  <text class="d" x="942" y="147" text-anchor="middle">—</text>
 
   <!-- Ligne 3 — page de la tâche -->
   <text class="l" x="34" y="187">Task page</text>
@@ -103,6 +110,9 @@
   <rect class="panel" x="684" y="166" width="100" height="34" rx="9"/>
   <text class="d" x="734" y="180" text-anchor="middle">anyone but</text>
   <text class="d" x="734" y="193" text-anchor="middle">a client</text>
+  <text class="d" x="838" y="187" text-anchor="middle">—</text>
+  <rect class="panel" x="892" y="166" width="100" height="34" rx="9"/>
+  <text class="d" x="942" y="187" text-anchor="middle">managers</text>
 
   <!-- Ligne 4 — panneau « Task progress » de l'onglet Overview -->
   <text class="l" x="34" y="227">Overview — Task progress</text>
@@ -113,6 +123,8 @@
   <text class="d" x="526" y="227" text-anchor="middle">—</text>
   <text class="d" x="630" y="227" text-anchor="middle">—</text>
   <text class="d" x="734" y="227" text-anchor="middle">—</text>
+  <text class="d" x="838" y="227" text-anchor="middle">—</text>
+  <text class="d" x="942" y="227" text-anchor="middle">—</text>
 
   <!-- Ligne 5 — clic droit sur un asset -->
   <text class="l" x="34" y="267">Asset right-click: Assign</text>
@@ -122,6 +134,8 @@
   <text class="d" x="526" y="267" text-anchor="middle">—</text>
   <text class="d" x="630" y="267" text-anchor="middle">—</text>
   <text class="d" x="734" y="267" text-anchor="middle">—</text>
+  <text class="d" x="838" y="267" text-anchor="middle">—</text>
+  <text class="d" x="942" y="267" text-anchor="middle">—</text>
 
   <!-- Ligne 6 — barre de sélection des onglets Assets et Shots -->
   <text class="l" x="34" y="307">Assets / Shots selection bar</text>
@@ -131,6 +145,8 @@
   <text class="d" x="526" y="307" text-anchor="middle">—</text>
   <text class="d" x="630" y="307" text-anchor="middle">—</text>
   <text class="d" x="734" y="307" text-anchor="middle">—</text>
+  <text class="d" x="838" y="307" text-anchor="middle">—</text>
+  <text class="d" x="942" y="307" text-anchor="middle">—</text>
 
   <!-- Ligne 7 — API -->
   <text class="l" x="34" y="347">API — PATCH /api/tasks/:id</text>
@@ -145,7 +161,11 @@
   <rect class="panel" x="580" y="326" width="100" height="34" rx="9"/>
   <text class="d" x="630" y="347" text-anchor="middle">managers</text>
   <text class="d" x="734" y="347" text-anchor="middle">—</text>
+  <rect class="panel" x="788" y="326" width="100" height="34" rx="9"/>
+  <text class="d" x="838" y="347" text-anchor="middle">managers</text>
+  <rect class="panel" x="892" y="326" width="100" height="34" rx="9"/>
+  <text class="d" x="942" y="347" text-anchor="middle">managers</text>
 
-  <text class="d" x="400" y="386" text-anchor="middle">Managers = admins, and supervisors of this project. Assignee = the person the task is on.</text>
-  <text class="d" x="400" y="404" text-anchor="middle">From an assignee the server accepts the status and the checklist, and refuses every other field with a 403.</text>
+  <text class="d" x="508" y="386" text-anchor="middle">Managers = admins, and supervisors of this project. Assignee = the person the task is on.</text>
+  <text class="d" x="508" y="404" text-anchor="middle">From an assignee the server accepts the status and the checklist, and refuses every other field with a 403. Deleting a task is offered on the kanban, and only for a task that carries no version.</text>
 </svg>

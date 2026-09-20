@@ -117,5 +117,19 @@ export function useTaskAssignMenu(projectId: number) {
     };
   };
 
-  return { assignEntry, departmentEntry };
+  /**
+   * Signature de ce que ces deux entrées lisent : les personnes et les étapes.
+   *
+   * Les deux constructeurs sont neufs à chaque rendu (ce sont des fermetures) : un écran qui
+   * mémoïse ses cartes ne peut pas les lister en dépendance sans tout re-rendre à chaque
+   * frappe. Il liste cette chaîne à leur place — elle change quand le menu change, et à ce
+   * moment-là seulement. Le kanban en dépend pour ne pas rejouer mille cartes par lettre.
+   */
+  const epoch = [
+    projectId,
+    ...members.map((m) => `${m.id}:${m.name}`),
+    ...departments.map((d) => `${d.id}:${d.key}:${d.name}`),
+  ].join('|');
+
+  return { assignEntry, departmentEntry, epoch };
 }

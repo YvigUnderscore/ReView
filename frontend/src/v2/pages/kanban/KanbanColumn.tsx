@@ -11,7 +11,7 @@ import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 
 /**
- * Colonne de statut : zone de dépôt, largeur minimale fixe (C4).
+ * Colonne de statut : zone de dépôt, largeur fixe, hauteur bornée par le tableau (C4).
  *
  * La grille repliait les colonnes sur deux rangées dès qu'il y en avait plus de six —
  * un board ShotGrid en a quinze, et les colonnes du bas passaient sous la ligne de
@@ -22,6 +22,10 @@ import type { BoardTask } from './kanbanTypes';
  * l'atteindre ; elle défile maintenant et ne monte que sa fenêtre (`KanbanCardList`).
  * La zone de dépôt reste la colonne entière, en-tête compris : une carte lâchée sur une
  * colonne dont on n'a pas encore fait défiler la pile arrive quand même à bon port.
+ *
+ * L'en-tête est FIGÉ sans `sticky` (Phase 50) : il est simplement hors du conteneur qui
+ * défile. Le nom du statut et son compteur restent donc lisibles quelle que soit la
+ * position de la pile — c'est la première chose qu'on cherche sur un board dense.
  */
 function KanbanColumn({
   column,
@@ -41,11 +45,11 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-64 shrink-0 flex-col rounded-lg border p-2 transition-colors ${
+      className={`flex h-full w-64 shrink-0 flex-col rounded-lg border p-2 transition-colors ${
         isOver ? 'border-primary bg-primary/5' : 'border-border bg-card/50'
       }`}
     >
-      <div className="mb-2 flex items-center justify-between gap-2 px-1 text-xs font-medium">
+      <div className="mb-2 flex shrink-0 items-center justify-between gap-2 px-1 text-xs font-medium">
         <span
           className="truncate rounded px-1.5 py-0.5"
           style={swatch ? { backgroundColor: swatch.backgroundColor, color: swatch.color } : undefined}

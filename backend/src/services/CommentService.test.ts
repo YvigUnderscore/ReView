@@ -29,6 +29,7 @@ vi.mock('./StorageService', () => ({
   storage: {
     getPresignedGetUrl: vi.fn().mockResolvedValue('https://minio/url'),
     getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put'),
+    deleteObjects: vi.fn().mockResolvedValue([]),
   },
 }));
 vi.mock('../lib/userView', () => ({
@@ -45,11 +46,14 @@ import {
   extractMentionTokens,
   listMontage,
   listThread,
+  publicAttachments,
+  remove,
   resolutionOf,
   share,
   update,
 } from './CommentService';
 import { prisma } from '../lib/prisma';
+import { storage } from './StorageService';
 import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
 import { Role } from '@prisma/client';
@@ -432,5 +436,133 @@ describe('resolutionOf (D1)', () => {
 
   it('fait foi sur l’état quand les deux arrivent — c’est lui que l’écran pilote', () => {
     expect(resolutionOf('OPEN', true)).toEqual({ state: 'OPEN', isResolved: false });
+  });
+});
+
+/**
+ * D5 — éditer les pièces jointes d'un commentaire.
+ *
+ * Le `PATCH` ignorait `attachments` : on ne pouvait ni ajouter ni retirer une image en
+ * corrigeant son texte. La garde de propriété de `create` doit être reproduite à
+ * l'identique, avec une tolérance explicite pour le dossier des notes venues de ShotGrid —
+ * sinon une simple correction effacerait les pièces rapatriées du site distant.
+ */
+describe('update — pièces jointes éditables (D5)', () => {
+  const mine = `comments/attachments/${author.id}/1700-a.png`;
+  const theirs = `comments/attachments/${other.id}/1700-secret.png`;
+  const fromShotgrid = 'comments/attachments/shotgrid/1/9-note.png';
+
+  /** Pièces jointes effectivement persistées par le dernier `comment.update`. */
+  const persisted = () =>
+    (vi.mocked(prisma.comment.update).mock.calls.at(-1)?.[0] as { data: { attachments?: unknown } }).data
+      .attachments as { key: string }[] | undefined;
+
+  it('écrit la liste fournie et marque le commentaire édité', async () => {
+    await update(author, 3, 1, { attachments: [{ key: mine, name: 'a.png' }] });
+    expect(persisted()).toEqual([{ key: mine, name: 'a.png' }]);
+    expect(
+      (vi.mocked(prisma.comment.update).mock.calls.at(-1)?.[0] as { data: { isEdited?: boolean } }).data
+        .isEdited,
+    ).toBe(true);
+  });
+
+  it('refuse l’édition des pièces jointes à un gestionnaire non auteur', async () => {
+    await expect(update(supervisor, 3, 1, { attachments: [] })).rejects.toMatchObject({ statusCode: 403 });
+    expect(prisma.comment.update).not.toHaveBeenCalled();
+  });
+
+  it('écarte la clé d’un autre utilisateur glissée dans l’édition', async () => {
+    await update(author, 3, 1, { attachments: [{ key: theirs }, { key: mine }] });
+    expect(persisted()).toEqual([{ key: mine }]);
+  });
+
+  it('conserve la pièce ShotGrid du commentaire édité', async () => {
+    await update(author, 3, 1, { attachments: [{ key: fromShotgrid }] });
+    expect(persisted()).toEqual([{ key: fromShotgrid }]);
+  });
+
+  it('refuse le dossier ShotGrid d’un AUTRE commentaire', async () => {
+    await update(author, 3, 1, { attachments: [{ key: 'comments/attachments/shotgrid/2/9-note.png' }] });
+    expect(persisted()).toEqual([]);
+  });
+
+  it('efface du stockage l’objet que l’édition a retiré', async () => {
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue({
+      userId: author.id,
+      attachments: [{ key: mine }, { key: fromShotgrid }],
+    } as never);
+    await update(author, 3, 1, { attachments: [{ key: fromShotgrid }] });
+    expect(storage.deleteObjects).toHaveBeenCalledWith([mine]);
+  });
+
+  it('ne touche au stockage pour aucune autre édition', async () => {
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue({
+      userId: author.id,
+      attachments: [{ key: mine }],
+    } as never);
+    await update(author, 3, 1, { content: 'texte seul' });
+    expect(storage.deleteObjects).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Supprimer un commentaire laissait ses pièces jointes dans MinIO indéfiniment — y compris
+ * celles de ses réponses, qui partent en cascade côté base et n'étaient relevées nulle part.
+ */
+describe('remove — purge du stockage', () => {
+  beforeEach(() => {
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue({
+      userId: author.id,
+      attachments: [{ key: 'comments/attachments/5/1-a.png' }],
+    } as never);
+    vi.mocked(prisma.comment.findMany).mockResolvedValue([
+      { attachments: [{ key: 'comments/attachments/5/2-b.png' }] },
+    ] as never);
+  });
+
+  it('efface les pièces du commentaire ET de ses réponses', async () => {
+    expect(await remove(author, 3, 1)).toBe(true);
+    expect(storage.deleteObjects).toHaveBeenCalledWith([
+      'comments/attachments/5/1-a.png',
+      'comments/attachments/5/2-b.png',
+    ]);
+  });
+
+  it('n’efface rien avant que la ligne ne soit partie', async () => {
+    const order: string[] = [];
+    vi.mocked(prisma.comment.delete).mockImplementation(() => {
+      order.push('delete');
+      return Promise.resolve({}) as never;
+    });
+    vi.mocked(storage.deleteObjects).mockImplementation(() => {
+      order.push('storage');
+      return Promise.resolve([]);
+    });
+    await remove(author, 3, 1);
+    expect(order).toEqual(['delete', 'storage']);
+  });
+
+  it('laisse la suppression réussir si le stockage refuse', async () => {
+    vi.mocked(storage.deleteObjects).mockRejectedValueOnce(new Error('minio down'));
+    await expect(remove(author, 3, 1)).resolves.toBe(true);
+  });
+});
+
+/**
+ * Portail client : les images jointes par le studio y étaient invisibles. On les rend, mais
+ * la clé MinIO ne descend jamais sur une surface publique — elle servirait à en signer
+ * d'autres.
+ */
+describe('publicAttachments — surface publique', () => {
+  it('rend une URL présignée sans la clé', async () => {
+    const out = await publicAttachments([
+      { key: 'comments/attachments/5/1-a.png', name: 'a.png', contentType: 'image/png' },
+    ]);
+    expect(out).toEqual([{ name: 'a.png', contentType: 'image/png', url: 'https://minio/url' }]);
+    expect(JSON.stringify(out)).not.toContain('comments/attachments');
+  });
+
+  it('rend une liste vide quand le commentaire n’a rien joint', async () => {
+    expect(await publicAttachments(null)).toEqual([]);
   });
 });

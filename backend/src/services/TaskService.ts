@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Role, TaskType, TaskStatus, type Prisma } from '@prisma/client';
+import { Prisma, Role, TaskType, TaskStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
 import { emitToProject } from './SocketService';
-import { badRequest, forbidden, notFound } from '../lib/errors';
+import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import {
   type PaginationParams,
   MAX_PAGE_SIZE,
@@ -314,6 +314,8 @@ export interface CreateTaskInput {
   type: TaskType;
   /** Département du pipe (clé des réglages projet) — porte l'ordre amont → aval. */
   department?: string | null;
+  /** Consigne : ce qu'il y a à faire, tel que la production le rédige (Phase 50). */
+  description?: string | null;
   shotId?: number;
   assetId?: number;
   assigneeId?: number | null;
@@ -341,6 +343,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
       name: body.name,
       type: body.type,
       ...department,
+      description: body.description ?? null,
       shotId: body.shotId ?? null,
       assetId: body.assetId ?? null,
       assigneeId: body.assigneeId ?? null,
@@ -354,29 +357,67 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
   return task;
 }
 
-/** Nom de tâche depuis un contenu de commentaire : texte sans balises, tronqué. */
+/**
+ * Nom de tâche depuis un contenu de commentaire : texte sans balises, tronqué.
+ *
+ * Ce n'est plus qu'un **repli** : le nom se demande dans un dialogue avant la création
+ * (Phase 50) — un retour de review fait une mauvaise étiquette de tâche, et celle-ci se
+ * lisait ensuite sur le kanban et dans ShotGrid. Le repli est rédigé en anglais, comme
+ * tout ce qui s'écrit en base : la langue du lecteur se choisit à l'affichage, et un nom
+ * stocké en français apparaissait tel quel dans les quatorze langues.
+ */
 export function taskNameFromComment(html: string): string {
   const text = html
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!text) return 'Retour de review';
+  if (!text) return 'Review feedback';
   return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+}
+
+/** Ce que le dialogue de création (Phase 50) apporte en plus du commentaire d'origine. */
+export interface CommentTaskInput {
+  /** Nom choisi par la personne ; absent, le texte du commentaire fait le repli. */
+  name?: string;
+  description?: string | null;
 }
 
 /**
  * Crée une tâche kanban depuis un commentaire de review (32.D) : rattachée au
  * shot/asset porteur de la version du média, assigné du commentaire repris,
  * lien retour via `sourceCommentId` (frame/annotation restaurées par ?comment=).
+ *
+ * Quatre manques corrigés en Phase 50 :
+ *  - **droits** : ce chemin ne vérifiait rien du tout, la route lisant le rôle GLOBAL du
+ *    compte. Un superviseur nommé sur CE projet — rôle par membership — ne voyait pas
+ *    l'entrée et se faisait refuser s'il l'appelait quand même, alors que la création
+ *    classique lui est ouverte. Même porte pour les deux, lue sur le rôle EFFECTIF ;
+ *  - **projet inscriptible** : une tâche naissait sur un projet archivé (38.B) ;
+ *  - **étape et statut** : la tâche n'avait ni l'un ni l'autre. Sans statut du
+ *    référentiel elle tombait dans la colonne de repli du kanban, et disparaissait du
+ *    board dès que le projet changeait de vocabulaire ;
+ *  - **site ShotGrid** : la tâche n'y était jamais créée, contrairement à tous les autres
+ *    chemins de création. Elle part maintenant par la file d'écriture — l'action locale
+ *    n'attend pas le site et ne dépend pas de lui.
  */
-export async function createFromComment(user: SessionUser, projectId: number, commentId: number) {
+export async function createFromComment(
+  user: SessionUser,
+  projectId: number,
+  commentId: number,
+  body: CommentTaskInput = {},
+) {
+  await assertProjectManage(user.id, user.role, projectId);
+  await assertProjectWritable(projectId);
   const comment = await prisma.comment.findUnique({
     where: { id: commentId },
     include: {
       media: {
         select: {
           version: {
-            select: { assetId: true, task: { select: { shotId: true, assetId: true } } },
+            select: {
+              assetId: true,
+              task: { select: { shotId: true, assetId: true, type: true, department: true } },
+            },
           },
         },
       },
@@ -384,26 +425,55 @@ export async function createFromComment(user: SessionUser, projectId: number, co
   });
   if (!comment) throw notFound('Comment not found');
   const version = comment.media.version;
-  const shotId = version.task?.shotId ?? null;
-  const assetId = version.task?.assetId ?? version.assetId ?? null;
+  const source = version.task;
+  const shotId = source?.shotId ?? null;
+  const assetId = source?.assetId ?? version.assetId ?? null;
   if (!shotId && !assetId) throw badRequest('This media has no shot or asset attached');
 
-  const task = await prisma.task.create({
-    data: {
-      name: taskNameFromComment(comment.content),
-      type: TaskType.OTHER,
-      shotId,
-      assetId: shotId ? null : assetId,
-      assigneeId: comment.assigneeId,
-      sourceCommentId: comment.id,
-    },
-    include: { assignee: { select: { id: true, name: true } } },
-  });
+  // L'étape de la tâche qui porte la version relue : un retour sur un rendu de comp est
+  // du travail de comp. C'est elle qui décide de la place dans le pipe et de qui a le
+  // droit d'écrire sur la tâche — sans elle, le retour partait en fourre-tout.
+  const department = await resolveDepartment(projectId, source?.department ?? null);
+  // Statut d'entrée du projet, dans SON vocabulaire : `resolveStatusPair` aligne
+  // l'énumération et le référentiel, exactement comme pour une tâche modifiée à l'écran.
+  const statusPair = await resolveStatusPair(projectId, { status: TaskStatus.TODO });
+  const name = body.name?.trim() || taskNameFromComment(comment.content);
+
+  let task;
+  try {
+    task = await prisma.task.create({
+      data: {
+        name,
+        type: source?.type ?? TaskType.OTHER,
+        ...department,
+        ...statusPair,
+        description: body.description?.trim() || null,
+        shotId,
+        assetId: shotId ? null : assetId,
+        assigneeId: comment.assigneeId,
+        sourceCommentId: comment.id,
+      },
+      include: { assignee: { select: { id: true, name: true } } },
+    });
+  } catch (err) {
+    // Un plan ne porte qu'une tâche par étape et par nom. Le nom venait du texte du
+    // retour, jamais deux fois le même en pratique ; il se choisit désormais, et deux
+    // retours nommés pareil sur la même étape se heurtent. La faute revient à qui l'a
+    // écrit, avec de quoi la corriger — le dialogue est encore là.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002')
+      // Le nom voyage dans les détails, pas dans le message : le client traduit par le
+      // code, et une phrase assemblée ici ne serait de toute façon lue par personne.
+      throw new AppError('A task with this name already exists at this step', 409, 'TASK_NAME_TAKEN', {
+        name,
+      });
+    throw err;
+  }
   await notifyAssignee(comment.assigneeId, user.id, projectId, task.id, task.name);
   emitTaskUpdate(projectId, task);
   await publishTaskEvents(projectId, task.id, user.id, [
     { event: 'task.created', extra: { sourceCommentId: comment.id } },
   ]);
+  await enqueuePush(projectId, { type: 'task-create', taskId: task.id, actorId: user.id });
   return task;
 }
 
@@ -444,6 +514,14 @@ export interface UpdateTaskInput {
   name?: string;
   type?: TaskType;
   department?: string | null;
+  /**
+   * Consigne de la tâche (Phase 50) : ce qu'il y a à faire.
+   *
+   * Réservée aux managers, comme le nom ou le planning : c'est la production qui donne le
+   * travail. L'assigné la lit, il ne se la réécrit pas — la liste des champs qu'il peut
+   * toucher (statut, checklist) est inchangée.
+   */
+  description?: string | null;
   status?: TaskStatus;
   /** Statut personnalisable (Phase 48) — écrit en parallèle de `status`. */
   pipelineStatusId?: number | null;
@@ -699,10 +777,28 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
   return view;
 }
 
+/**
+ * Supprime une tâche — seulement si elle est vide.
+ *
+ * `Version.taskId` est en `onDelete: Cascade` : la suppression emporte les versions de la
+ * tâche, donc les médias publiés et tout le travail de review qui y est attaché. Cette
+ * route n'avait aucune garde, et elle n'était appelée par aucun écran ; l'exposer au clic
+ * droit du kanban sans elle aurait fait d'une entrée de menu une destruction silencieuse.
+ *
+ * Même règle que le retrait d'une tâche mise à la corbeille côté ShotGrid
+ * (`ShotgridPullService.retireTask`), volontairement identique : on ne supprime que les
+ * tâches vides, et l'on dit combien de versions empêchent la suppression plutôt que de
+ * laisser deviner. Les vider d'abord est un geste explicite, version par version.
+ */
 export async function remove(user: SessionUser, projectId: number, id: number) {
   await assertProjectManage(user.id, user.role, projectId);
   const task = await prisma.task.findUnique({ where: { id }, select: { shotId: true, assetId: true } });
   if (!task) throw notFound('Task not found');
+  const versions = await prisma.version.count({ where: { taskId: id } });
+  if (versions > 0)
+    throw new AppError('This task still carries versions - delete them first', 409, 'TASK_HAS_VERSIONS', {
+      count: versions,
+    });
   await prisma.task.delete({ where: { id } });
   emitTaskUpdate(projectId, { id, shotId: task.shotId, assetId: task.assetId });
 }

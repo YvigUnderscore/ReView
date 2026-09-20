@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
+import type { CommentAttachment } from '../../lib/commentAttachments';
 import { qk } from './query';
 import type { CommentState } from '../components/comments/commentState';
 import { useT } from '../i18n';
@@ -33,9 +34,15 @@ export function useSetCommentState(mediaObjectId: number) {
   );
 }
 
+/**
+ * Édition d'un commentaire. `attachments` est la liste COMPLÈTE d'après édition (D5) :
+ * omise, le serveur n'y touche pas ; fournie, elle remplace — et ce qui en sort quitte le
+ * stockage. Le `PATCH` l'ignorait, on ne pouvait donc ni ajouter ni retirer une image.
+ */
 export function useEditComment(mediaObjectId: number) {
-  return useCommentMutation<{ id: number; content: string }>(mediaObjectId, ({ id, content }) =>
-    api.patch(`/api/comments/${id}`, { content }),
+  return useCommentMutation<{ id: number; content: string; attachments?: CommentAttachment[] }>(
+    mediaObjectId,
+    ({ id, content, attachments }) => api.patch(`/api/comments/${id}`, { content, attachments }),
   );
 }
 

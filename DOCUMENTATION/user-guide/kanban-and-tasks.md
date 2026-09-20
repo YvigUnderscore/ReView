@@ -2,7 +2,7 @@
 
 *Tasks as the unit of work: the studio's own statuses as columns, and the gestures that move a card.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 A **task** is one stage of work on one entity — *lighting on SH020*, *modelling on the hero
 prop*. It is the only pipeline entity that carries an owner, a status, a checklist and the
@@ -19,7 +19,8 @@ them.
 
 | Field | What it is | Set from |
 |---|---|---|
-| **Name** | Free text, 160 characters maximum | Task creation, CSV import, ShotGrid sync |
+| **Name** | Free text, 160 characters maximum | Task creation, CSV import, ShotGrid sync, kanban right-click |
+| **Description** | The brief — what there is to do. Plain text, 4000 characters maximum, optional | The task page |
 | **Type** | `MODELING`, `RIGGING`, `ANIMATION`, `FX`, `LIGHTING`, `COMPOSITING`, `LOOKDEV`, `LAYOUT`, `OTHER` | Task creation; derived from the pipe step on a ShotGrid project |
 | **Parent** | Exactly one **shot** or one **asset**, never both | Fixed at creation |
 | **Department** | The project's own pipe step, as a real entity | Task creation, bulk assign, CSV import |
@@ -77,8 +78,9 @@ The shortcut only fires when a project is in context, and it is rebindable — s
 ### Columns come from the project, families come from the code
 
 A studio connected to ShotGrid commonly defines fifteen statuses; fifteen columns side by
-side do not read. Columns are therefore grouped into five collapsible **families**, each on
-its own horizontally scrollable band:
+side do not read. Columns are therefore grouped into five collapsible **families**, laid out
+as one **full-screen table**: a single horizontal band carries every family, so the columns of
+one family line up with those of the next and a single scroll moves them together.
 
 | Family | Built from | What it means on the board |
 |---|---|---|
@@ -92,6 +94,12 @@ Within a family, columns keep the order of the project's own list. Each column h
 the studio's colour behind its name — the text colour is picked for contrast, so a pale
 status stays readable in the dark theme — and a count. Collapsing a family hides its columns,
 **not** its cards: the count on the family header still says how many are in there.
+
+The board occupies exactly the window: the page itself does not scroll, each column is bounded
+in height and scrolls **inside** its own frame, and the column headers stay put while its cards
+go by. Before, each column was 68 % of the window's height and the five families were stacked
+open, which put three screens' worth of board below the fold — and each family scrolled on its
+own, so two columns of two families never sat under one another.
 
 A task whose status is not offered by this project — inherited from another site, or a status
 that has since been removed — is filed under the **first column carrying the same built-in
@@ -135,6 +143,26 @@ When the current status is not offered by this project, the submenu ticks the en
 same built-in value rather than showing nothing ticked — you see where the task stands, not a
 menu pretending it has no status.
 
+### Renaming, reassigning and deleting a card
+
+The same right-click carries the rest of the card's life, for **project managers** only:
+
+| Entry | What it does |
+|---|---|
+| **Assign** | The person the task is on, among the project's members |
+| **Department** | The pipe step the task occupies — it decides the column of the pipe, the order, and who may write on the task |
+| **Rename the task** | A dialog on the current name, 160 characters maximum |
+| **Delete the task** | A confirmation, then the task is gone |
+
+> [!WARNING]
+> Deleting a task deletes **its versions with it**, media included — the database cascades.
+> The server therefore refuses a task that still carries versions and says how many: empty it
+> version by version first, deliberately. Nothing is deleted silently, and there is no undo.
+
+Renaming from the board is the counterpart of the naming dialog on creation: a task born from
+a review comment used to carry the note's text as a label for ever, and correcting it meant a
+round trip through the ShotGrid site — impossible on a standalone project.
+
 ### Filtering the board
 
 The filter bar covers **text** (task name and parent label), **status**, **assignee**,
@@ -177,8 +205,12 @@ A task opens at `/tasks/:id`. From top to bottom:
   with the breadcrumb above it;
 - the **type** badge and the **status** badge;
 - the **Original comment** chip, when the task was born from a review comment (right-click a
-  comment in review → *Create a kanban task*). It reopens the review at the exact frame and
-  annotation of that comment;
+  comment in review → *Create a kanban task*, which asks for a name before creating anything).
+  It reopens the review at the exact frame and annotation of that comment;
+- the **Description** panel — the brief: what there is to do, references, constraints. Managers
+  write it in place, by clicking the text itself; everybody else reads it. It is hidden for a
+  reader when it is empty, and always offered to a manager so there is somewhere to write the
+  first line;
 - the **Schedule** row — a planned **start** date and a **due** date. Supervisors and admins
   edit them; everybody else sees them read-only, and the row is hidden entirely when neither
   is set. These two dates are what feed the calendar and the Gantt of the
@@ -194,7 +226,7 @@ The task page carries **no assignee picker**, deliberately: an assignee is writt
 department, and the department belongs to the parent entity rather than to the task you have
 open.
 
-![Seven surfaces write a task and five fields can be written: the status is the only one an artist reaches, the assignee is never set from the task page, and the dates are reserved to supervisors and admins.](../assets/user-guide/where-a-task-field-is-edited.svg)
+![Seven surfaces write a task and seven fields can be written: the status is the only one an artist reaches, the name is renamed from the kanban, the description and the dates go to managers, and the assignee is never set from the task page.](../assets/user-guide/where-a-task-field-is-edited.svg)
 
 ### Which screen writes which field
 
@@ -202,7 +234,9 @@ open.
 |---|---|---|
 | Kanban — drag a card | Status | Managers, and the assignee |
 | Kanban — right-click a card | Status | Managers, and the assignee |
+| Kanban — right-click a card | Assignee; department; name; **deletion** | Managers |
 | Task page — right-click | Status | Supervisors and admins, and the assignee |
+| Task page — *Description* panel | Description | Managers |
 | Task page — *Schedule* row | Start & due dates | Supervisors and admins |
 | Task page — checklist | Ticks; items | Assignee ticks, managers edit the items |
 | Project **Overview** → *Task progress* panel | Status **and** assignee, per row | Managers |
@@ -215,10 +249,11 @@ open.
 > the **Shots** tab and use **Assign** in the selection bar; it works for one shot just as
 > well as for forty.
 
-One asymmetry is worth knowing: the board and the calendar read your **effective role on the
-project**, so a supervisor by membership can act there, while the task page reads the account's
-**global** role. If the *Schedule* row is read-only for you but the board lets you move cards,
-that is why.
+One asymmetry is worth knowing: the board, the calendar and the *Description* panel read your
+**effective role on the project**, so a supervisor by membership can act there, while the
+*Schedule* row and the publication controls of the task page still read the account's **global**
+role. If the *Schedule* row is read-only for you but the board lets you move cards — and the
+description lets you write — that is why.
 
 ## Versions on a task
 
@@ -303,6 +338,9 @@ banner says so), or its built-in value matches no column in the project's list.
 **The card is in the wrong column after a ShotGrid import.** Its status is one the project does
 not offer, so it was filed under the first column with the same built-in value. Add the status
 to the project's list, or set a status the project does know.
+
+**Deleting a task was refused.** It still carries versions, and deleting it would take them
+away with their media. The message says how many; delete them from the version timeline first.
 
 **An "omitted" column is full but the Production tab ignores it.** That is intended: an
 inactive status is displayed everywhere and counted in no gauge. See

@@ -20,6 +20,8 @@ const comment = (patch: Partial<ClientComment> = {}): ClientComment => ({
   ...patch,
 });
 
+const wall = 'z'.repeat(700);
+
 const render = (props: Partial<Parameters<typeof ClientComments>[0]> = {}) =>
   renderToStaticMarkup(
     <ClientComments
@@ -105,5 +107,40 @@ describe('ClientComments — les outils et le dessin seul', () => {
   it('laisse envoyer un dessin sans texte, et refuse le vide', () => {
     expect(render({ canComment: true, hasAnnotation: true })).not.toContain('disabled=""');
     expect(render({ canComment: true, hasAnnotation: false })).toContain('disabled=""');
+  });
+});
+
+/**
+ * Le portail n'affichait AUCUNE pièce jointe : une image jointe par le studio arrivait
+ * invisible chez son destinataire. Les URL sont présignées côté serveur — la clé MinIO ne
+ * descend pas, et il n'y a donc rien à reconstruire ici.
+ */
+describe('ClientComments — pièces jointes du studio', () => {
+  const withImage = () =>
+    comment({
+      attachments: [{ name: 'planche.png', contentType: 'image/png', url: 'https://minio/planche' }],
+    });
+
+  it('affiche la vignette d’une image jointe', () => {
+    const html = render({ comments: [withImage()] });
+    expect(html).toContain('https://minio/planche');
+    expect(html).toContain('planche.png');
+  });
+
+  it('n’ajoute aucune vignette à une note sans pièce jointe', () => {
+    expect(render()).not.toContain('<img');
+  });
+});
+
+/** Une note trop grande s'ouvre repliée — mais son texte reste dans la page, donc trouvable. */
+describe('ClientComments — note trop grande', () => {
+  it('pose un indicateur de dépliage et conserve le texte entier', () => {
+    const html = render({ timed: false, comments: [comment({ content: wall, timestamp: null })] });
+    expect(html).toContain(wall);
+    expect(html).toContain('<button');
+  });
+
+  it('ne replie pas une note courte', () => {
+    expect(render({ timed: false, comments: [comment({ timestamp: null })] })).not.toContain('<button');
   });
 });

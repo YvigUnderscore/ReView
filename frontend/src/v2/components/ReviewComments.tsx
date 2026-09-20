@@ -3,9 +3,7 @@
 
 import { Fragment, useState, type ReactNode } from 'react';
 import { Eye, EyeOff, Link2, ListTodo } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { api } from '../../lib/apiClient';
 import CommentItem from './comments/CommentItem';
 import { markerSections } from './comments/markerSections';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from './ui/context-menu';
@@ -19,6 +17,9 @@ import {
   type CommentState,
 } from './comments/commentState';
 import { useSetCommentState, useSetCommentVisibility } from '../lib/commentsApi';
+import { useCommentTaskDialog } from '../lib/useCommentTaskDialog';
+import { useProjectRole } from '../lib/useProjectRole';
+import { useProjectContext } from '../stores/useProjectContext';
 import type { ReviewComment, TimelineMarker } from '../types/api';
 import { useT } from '../i18n';
 
@@ -61,9 +62,16 @@ export default function ReviewComments({
   extraActions?: (comment: ReviewComment) => ReactNode;
 }) {
   const t = useT();
-  const navigate = useNavigate();
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
-  const canCreateTask = isManager;
+  /**
+   * Créer une tâche depuis un retour est un geste de production, et le droit s'en lit sur
+   * le rôle EFFECTIF du projet : le rôle GLOBAL du compte cachait l'entrée à un superviseur
+   * nommé sur CE projet-là — que le serveur, lui, autorise.
+   */
+  const projectId = useProjectContext((s) => s.projectId);
+  const { canManage: canCreateTask } = useProjectRole(projectId ?? 0);
+  // Le nom se demande AVANT la création (Phase 50) : c'est lui qu'on relit sur le kanban.
+  const commentTask = useCommentTaskDialog();
   // Filtre du fil (D1) : sur une review chargée, on veut lire ce qui reste ouvert.
   const [filter, setFilter] = useState<CommentState | null>(null);
   const setState = useSetCommentState(mediaObjectId);
@@ -75,22 +83,6 @@ export default function ReviewComments({
       .writeText(commentLink(window.location.origin, window.location.pathname, c.id))
       .then(() => toast.success(t('comments.linkCopied')))
       .catch(() => toast.error(t('comments.copyFailed')));
-
-  // Commentaire → tâche kanban (32.D) : shot/asset et assigné repris côté backend.
-  const createTask = (c: ReviewComment) =>
-    void api
-      .post<{ task: { id: number; name: string } }>(`/api/comments/${c.id}/task`)
-      .then(({ task }) =>
-        toast.success(t('task.createdNamed', { name: task.name }), {
-          action: {
-            label: t('common.open'),
-            onClick: () => {
-              void navigate(`/tasks/${task.id}`);
-            },
-          },
-        }),
-      )
-      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : t('version.createFailed')));
 
   const renderComment = (c: ReviewComment) => (
     <ContextMenu key={c.id}>
@@ -137,7 +129,7 @@ export default function ReviewComments({
           <Link2 size={14} /> {t('comments.copyLink')}
         </ContextMenuItem>
         {canCreateTask && (
-          <ContextMenuItem onSelect={() => createTask(c)}>
+          <ContextMenuItem onSelect={() => commentTask.open(c)}>
             <ListTodo size={14} /> {t('comments.toTask')}
           </ContextMenuItem>
         )}
@@ -149,6 +141,7 @@ export default function ReviewComments({
 
   return (
     <div className="space-y-2">
+      {commentTask.dialog}
       {comments.length > 1 && (
         <div className="flex flex-wrap items-center gap-1">
           <button

@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Reply, Pencil, Trash2, Check, CheckCircle2, RotateCcw } from 'lucide-react';
+import { MessagesSquare, Reply, Pencil, Trash2, CheckCircle2, RotateCcw } from 'lucide-react';
 import Avatar from '../Avatar';
 import ReplyComposer from './ReplyComposer';
 import CommentReactions from './CommentReactions';
 import CommentAttachmentList from './CommentAttachmentList';
+import CommentEditForm from './CommentEditForm';
+import CollapsibleText from './CollapsibleText';
+import { splitReplies } from './collapse';
 import { highlightMentions } from './mentions';
 import CommentMeta from './CommentMeta';
 import { STATE_CARD_CLASS, isClosed, stateOf, toggleState, type CommentState } from './commentState';
-import { useDeleteComment, useEditComment, useSetCommentState } from '../../lib/commentsApi';
+import { useDeleteComment, useSetCommentState } from '../../lib/commentsApi';
 import type { ReviewComment } from '../../types/api';
 import { useT } from '../../i18n';
 
@@ -43,8 +46,9 @@ export default function CommentItem({
   const t = useT();
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Fil long (D6) : seules les dernières réponses sont rendues tant qu'on n'a pas déplié.
+  const [allReplies, setAllReplies] = useState(false);
 
   const isAuthor = c.author?.id === currentUserId;
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
@@ -56,31 +60,15 @@ export default function CommentItem({
   // Les mutations passaient par un `catch {}` vide : sans droit ou sans réseau, le bouton
   // ne produisait rien du tout — ni erreur, ni changement (D1).
   const setState = useSetCommentState(mediaObjectId);
-  const edit = useEditComment(mediaObjectId);
   const del = useDeleteComment(mediaObjectId);
   const state = stateOf(c);
 
   const applyState = (next: CommentState) =>
     setState.mutate({ id: c.id, state: next }, { onSuccess: () => reload() });
 
-  const startEdit = () => {
-    // Édition en texte brut (le HTML stocké provient d'une saisie texte)
-    const tmp = document.createElement('div');
-    tmp.innerHTML = c.content;
-    setEditText(tmp.textContent ?? '');
-    setEditing(true);
-  };
-  const saveEdit = () =>
-    edit.mutate(
-      { id: c.id, content: editText },
-      {
-        onSuccess: () => {
-          setEditing(false);
-          reload();
-        },
-      },
-    );
   const remove = () => del.mutate(c.id, { onSuccess: () => reload() });
+  const { hidden, shown } = splitReplies(c.replies ?? []);
+  const replies = allReplies ? (c.replies ?? []) : shown;
 
   const hasAnnotation = Array.isArray(c.annotation) && c.annotation.length > 0;
   const selected = selectedId === c.id;
@@ -145,40 +133,30 @@ export default function CommentItem({
         <CommentMeta comment={c} state={state} fps={fps} startFrame={startFrame} />
 
         {editing ? (
-          <div role="presentation" onClick={stop} className="mt-1">
-            <textarea
-              aria-label={t('comments.editField')}
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              rows={2}
-              autoFocus
-              className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          <div role="presentation" onClick={stop}>
+            <CommentEditForm
+              comment={c}
+              mediaObjectId={mediaObjectId}
+              onDone={() => {
+                setEditing(false);
+                reload();
+              }}
+              onCancel={() => setEditing(false)}
             />
-            <div className="mt-1 flex justify-end gap-1">
-              <button
-                onClick={() => setEditing(false)}
-                className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={saveEdit}
-                disabled={!editText.trim()}
-                className="flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs text-primary-foreground disabled:opacity-50"
-              >
-                <Check size={12} /> {t('common.save')}
-              </button>
-            </div>
           </div>
         ) : (
-          <div
-            className="prose-doc mt-0.5 max-w-none whitespace-pre-wrap text-sm"
-            dangerouslySetInnerHTML={{ __html: highlightMentions(c.content) }}
-          />
+          /* Un commentaire trop grand s'ouvre replié (D6) — texte entier conservé dans le
+             document, donc toujours trouvable par une recherche. */
+          <CollapsibleText text={c.content}>
+            <div
+              className="prose-doc mt-0.5 max-w-none whitespace-pre-wrap text-sm"
+              dangerouslySetInnerHTML={{ __html: highlightMentions(c.content) }}
+            />
+          </CollapsibleText>
         )}
 
         {/* Pièces jointes : 2 vignettes max + tuile « +x images » (lightbox), chips PDF/zip/texte */}
-        {Array.isArray(c.attachments) && c.attachments.length > 0 && (
+        {!editing && Array.isArray(c.attachments) && c.attachments.length > 0 && (
           <CommentAttachmentList attachments={c.attachments} stop={stop} />
         )}
 
@@ -200,7 +178,7 @@ export default function CommentItem({
             <button
               onClick={(e) => {
                 stop(e);
-                startEdit();
+                setEditing(true);
               }}
               title={t('common.edit')}
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -238,10 +216,24 @@ export default function CommentItem({
             ))}
         </div>
 
-        {/* Réponses */}
-        {c.replies && c.replies.length > 0 && (
+        {/* Réponses : les dernières d'abord, le reste sur un clic (D6) */}
+        {replies.length > 0 && (
           <div className="mt-2 space-y-1 border-l border-border pl-2">
-            {c.replies.map((r) => (
+            {hidden.length > 0 && (
+              <button
+                onClick={(e) => {
+                  stop(e);
+                  setAllReplies((a) => !a);
+                }}
+                className="flex items-center gap-1 text-2xs text-muted-foreground hover:text-foreground"
+              >
+                <MessagesSquare size={12} />
+                {allReplies
+                  ? t('comments.hideEarlierReplies')
+                  : t('comments.showEarlierReplies', { count: hidden.length })}
+              </button>
+            )}
+            {replies.map((r) => (
               <CommentItem
                 key={r.id}
                 comment={r}

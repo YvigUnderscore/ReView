@@ -15,7 +15,7 @@ import { storage } from './StorageService';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { buildShareBrowse, type ShareBrowse } from './shareBrowse';
-import { createGuest } from './CommentService';
+import { createGuest, publicAttachments } from './CommentService';
 import { decideAsGuest, guestStatuses } from './ReviewDecisionService';
 import { logAudit } from './AuditService';
 import { AppError, forbidden, notFound, unauthorized } from '../lib/errors';
@@ -406,7 +406,7 @@ export async function findShareMedia(share: ShareScopeRef, id: number): Promise<
  * fil interne pose ce garde-fou depuis la Phase 46 ; la route publique l'avait oublié.
  */
 export async function listShareComments(mediaObjectId: number) {
-  return prisma.comment.findMany({
+  const rows = await prisma.comment.findMany({
     where: {
       mediaObjectId,
       parentId: null,
@@ -426,8 +426,18 @@ export async function listShareComments(mediaObjectId: number) {
       // `id` + `name` et rien d'autre : le fil les affiche, et l'identifiant sert de clé de
       // rendu. Ni e-mail, ni avatar, ni rôle ne descendent sur une page publique.
       author: { select: { id: true, name: true } },
+      // Les clés ne descendent PAS : `publicAttachments` les échange contre des URL
+      // présignées. Sans cela, une image jointe par le studio restait invisible du client,
+      // qui lisait « voir la pièce jointe » nulle part et ne voyait que du texte.
+      attachments: true,
     },
   });
+  return Promise.all(
+    rows.map(async ({ attachments, ...comment }) => ({
+      ...comment,
+      attachments: await publicAttachments(attachments),
+    })),
+  );
 }
 
 /** Les deux réponses que ce lien peut poser, ou `null` s'il n'en a pas le droit. */

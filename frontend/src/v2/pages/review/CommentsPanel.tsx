@@ -10,9 +10,12 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { ImagePlus, PencilLine, X } from 'lucide-react';
+import { ImagePlus, PencilLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
+import AttachmentDraftList from '../../components/comments/AttachmentDraftList';
+import { removeDraft, toDrafts } from '../../components/comments/attachmentDrafts';
+import { useObjectUrls } from '../../components/comments/useObjectUrls';
 import ReviewComments from '../../components/ReviewComments';
 import type { ReviewComment, TimelineMarker } from '../../types/api';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -105,6 +108,10 @@ export default function CommentsPanel({
     setAttachFiles((fs) => [...fs, ...files].slice(0, MAX_COMMENT_ATTACHMENTS));
   };
   const onPasteImage = useImagePaste(addFiles);
+  // Vignettes de ce qu'on est en train de joindre : le nom de fichier seul ne permettait pas
+  // de vérifier son envoi (« image (3).png »).
+  const drafts = toDrafts([], attachFiles, useObjectUrls(attachFiles));
+  const dropDraft = (id: string) => setAttachFiles((fs) => removeDraft(id, fs, []).files);
   // Autocomplete des mentions @membre (32.B).
   const mentions = useMentions(content, setContent, composerRef);
 
@@ -194,18 +201,7 @@ export default function CommentsPanel({
         )}
       </div>
       <form onSubmit={submit} className="shrink-0 border-t border-border p-3">
-        {attachFiles.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-1">
-            {attachFiles.map((f, i) => (
-              <span key={i} className="flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-2xs">
-                {f.name}
-                <button type="button" onClick={() => setAttachFiles((fs) => fs.filter((_, j) => j !== i))}>
-                  <X size={10} />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+        {drafts.length > 0 && <AttachmentDraftList drafts={drafts} onRemove={dropDraft} />}
         {hints.annotation && (
           <p className="mb-1.5 text-xs text-primary">{t('comment.annotationAttachedHint')}</p>
         )}

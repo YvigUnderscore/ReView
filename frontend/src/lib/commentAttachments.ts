@@ -4,11 +4,19 @@
 import { t } from '../v2/i18n';
 import { api } from './apiClient';
 
-export interface CommentAttachment {
-  key: string;
+/**
+ * Pièce jointe telle qu'elle s'AFFICHE. La clé MinIO n'en fait pas partie : le portail
+ * client reçoit l'URL présignée, le nom et le type, et rien de plus.
+ */
+export interface DisplayAttachment {
   name?: string;
   contentType?: string;
   url?: string | null;
+}
+
+/** Pièce jointe côté studio : la clé s'y ajoute, elle seule sert à réécrire la liste. */
+export interface CommentAttachment extends DisplayAttachment {
+  key: string;
 }
 
 /** Types acceptés en pièce jointe (miroir du Zod backend) : images + PDF/zip/texte. */

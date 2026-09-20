@@ -7,6 +7,8 @@ import type { ClientComment } from '../../types/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
+import CommentAttachmentList from '../../components/comments/CommentAttachmentList';
+import CollapsibleText from '../../components/comments/CollapsibleText';
 import { formatTime, splitAnnotationParts } from '../review/reviewTypes';
 import { frameOf } from './clientAnnotation';
 import { useT } from '../../i18n';
@@ -120,8 +122,16 @@ export default function ClientComments({
                   </button>
                 )}
               </div>
-              {/* Contenu déjà assaini côté serveur (sanitizeHtml) — affiché en texte brut. */}
-              <p className="whitespace-pre-wrap break-words">{c.content.replace(/<[^>]+>/g, '')}</p>
+              {/* Contenu déjà assaini côté serveur (sanitizeHtml) — affiché en texte brut,
+                  replié d'office s'il est trop grand (D6). */}
+              <CollapsibleText text={c.content}>
+                <p className="whitespace-pre-wrap break-words">{c.content.replace(/<[^>]+>/g, '')}</p>
+              </CollapsibleText>
+              {/* Images jointes par le studio : invisibles du client jusqu'ici, faute d'être
+                  servies ET rendues. Mêmes vignettes et même carrousel que côté studio. */}
+              {c.attachments && c.attachments.length > 0 && (
+                <CommentAttachmentList attachments={c.attachments} stop={(e) => e.stopPropagation()} />
+              )}
             </div>
           );
         })}

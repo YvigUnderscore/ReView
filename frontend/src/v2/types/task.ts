@@ -18,6 +18,8 @@ export interface Task {
    * projet relié. `status` reste écrit en parallèle pour le kanban et les statistiques.
    */
   pipelineStatusId?: number | null;
+  /** Consigne : ce qu'il y a à faire (Phase 50). `null` = aucune consigne écrite. */
+  description?: string | null;
 }
 /** Listes (kanban, activité projet) : assigné joint. */
 export type TaskWithAssignee = Task & { assignee: UserRef | null };

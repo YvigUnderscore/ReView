@@ -19,11 +19,13 @@ import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '../lib/taskStatus';
 import { useVersions } from './task/useVersions';
 import VersionTimeline from './task/VersionTimeline';
 import TaskChecklist from './task/TaskChecklist';
+import TaskDescription from './task/TaskDescription';
 import TaskSchedule from './task/TaskSchedule';
 import type { TaskDetail } from '../types/api';
 import { useT } from '../i18n';
 import EntityContextMenu from '../components/ui/entity-menu';
 import { useStatusMenu } from '../lib/useStatusMenu';
+import { useProjectRole } from '../lib/useProjectRole';
 import { entriesOf } from '../lib/menuSpec';
 import EntityUnavailable from '../components/EntityUnavailable';
 import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
@@ -54,6 +56,13 @@ export default function TaskPage() {
   } = useVersions({ taskId });
 
   const project = task?.shot?.project ?? task?.asset?.project;
+  /**
+   * Droit d'écrire la consigne : rôle EFFECTIF sur le projet (38.E), et non le rôle global
+   * du compte — un superviseur nommé sur ce projet-là rédige le brief de ses tâches. Le
+   * reste de la page garde son contrôle d'origine (`canPublish`), qui relève de la
+   * publication de version et non de cette phase.
+   */
+  const { canManage } = useProjectRole(project?.id ?? 0);
 
   /**
    * Déposer crée la version suivante et l'emplit (Phase 46) : la zone dédiée vit désormais
@@ -139,6 +148,8 @@ export default function TaskPage() {
           )}
         </div>
         {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
+
+        {task && <TaskDescription taskId={taskId} description={task.description} canEdit={canManage} />}
 
         {task && (
           <TaskSchedule

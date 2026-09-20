@@ -6,20 +6,23 @@ import { Paperclip } from 'lucide-react';
 import {
   isAudioAttachment,
   isImageAttachment,
-  type CommentAttachment,
+  type DisplayAttachment,
 } from '../../../lib/commentAttachments';
 import { Lightbox } from '../ui/lightbox';
 import { useT } from '../../i18n';
 
 /**
- * Pièces jointes d'un commentaire : 2 vignettes image max + tuile « +x images » (toutes
- * visibles dans la lightbox carrousel), chips téléchargeables pour les PDF/zip/texte.
+ * Pièces jointes d'un commentaire ENVOYÉ : 2 vignettes image max + tuile « +x images »
+ * (toutes visibles dans la lightbox carrousel), chips téléchargeables pour les PDF/zip/texte.
+ *
+ * Le type n'exige pas la clé MinIO : c'est ce qui permet au portail client d'afficher les
+ * mêmes vignettes sans que la clé descende jamais sur une surface publique.
  */
 export default function CommentAttachmentList({
   attachments,
   stop,
 }: {
-  attachments: CommentAttachment[];
+  attachments: DisplayAttachment[];
   /** Empêche un clic interne de sélectionner la carte du commentaire. */
   stop: (e: React.MouseEvent) => void;
 }) {
@@ -53,11 +56,11 @@ export default function CommentAttachmentList({
             stop(e);
             setLightboxIdx(2);
           }}
-          title={t('board.seeAllImages')}
+          title={t('comment.seeAllImages')}
           className="flex h-20 w-20 flex-col items-center justify-center rounded border border-border bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <span className="text-sm font-semibold">+{imageAtts.length - 2}</span>
-          <span className="text-2xs">{t('board.images')}</span>
+          <span className="text-2xs">{t('comment.images')}</span>
         </button>
       )}
       {/* Notes vocales (32.F) : lecteur audio inline */}

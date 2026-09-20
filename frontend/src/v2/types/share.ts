@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { MediaKind } from './api';
+import type { DisplayAttachment } from '../../lib/commentAttachments';
 
 // ── Partage client (35.C/35.D) — module séparé de api.ts pour le budget de lignes ─
 export type SharePermission = 'VIEW' | 'COMMENT' | 'DECIDE';
@@ -146,6 +147,12 @@ export interface ClientComment {
   isEdited: boolean;
   /** Dessin joint — celui que le studio montre au client, et celui que le client pose. */
   annotation: unknown;
+  /**
+   * Images jointes par le studio, en URL présignée : le portail n'en affichait AUCUNE, et
+   * une note illustrée arrivait donc vide chez son destinataire. La clé MinIO ne descend
+   * pas — seuls le nom, le type et l'URL le font.
+   */
+  attachments?: DisplayAttachment[];
 }
 /** GET /api/admin/burnin — template studio des burn-ins/slates (35.A). */
 export interface BurninConfig {

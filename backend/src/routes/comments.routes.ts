@@ -8,10 +8,11 @@ import { authenticate } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pipeline';
-import { Role } from '@prisma/client';
-import { forbidden, notFound } from '../lib/errors';
+import { notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import { annotationSchema, cameraStateSchema } from '../lib/commentPayload';
+import { attachmentsSchema } from '../lib/commentAttachments';
+import { commentTaskBody } from '../lib/taskPayload';
 import { rateLimit, identityRateKey } from '../middleware/rateLimit';
 import * as CommentService from '../services/CommentService';
 import * as CommentExportService from '../services/CommentExportService';
@@ -102,16 +103,7 @@ router.post(
       // Bornés en forme ET en volume : en `z.any()`, leur seul plafond était les 2 Mo du corps.
       annotation: annotationSchema.optional(),
       cameraState: cameraStateSchema.optional(),
-      attachments: z
-        .array(
-          z.object({
-            key: z.string().max(512),
-            name: z.string().max(200).optional(),
-            contentType: z.string().max(100).optional(),
-          }),
-        )
-        .max(8)
-        .optional(),
+      attachments: attachmentsSchema.optional(),
       parentId: z.number().int().optional(),
       // Retour écrit depuis un montage (46) : il lui appartient jusqu'à un renvoi explicite.
       timelineId: z.number().int().optional(),
@@ -142,6 +134,9 @@ router.patch(
     params: idParam,
     body: z.object({
       content: z.string().min(1).max(10000).optional(),
+      // Liste complète des pièces jointes après édition (D5) : absente = inchangée. Le
+      // service refiltre les clés — ce schéma borne la forme, pas la propriété.
+      attachments: attachmentsSchema.optional(),
       // État du fil (D1) ; `isResolved` reste accepté pour l'API v1 et les anciens clients.
       state: z.nativeEnum(CommentState).optional(),
       isResolved: z.boolean().optional(),
@@ -166,14 +161,14 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   res.status(204).end();
 });
 
-// POST /api/comments/:id/task — crée une tâche kanban depuis le commentaire (32.D,
-// superviseur/admin comme la création de tâche classique)
-router.post('/:id/task', validate({ params: idParam }), async (req, res) => {
-  if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
-    throw forbidden('Supervisors and administrators only');
+// POST /api/comments/:id/task — tâche kanban depuis le commentaire (32.D) : nom et consigne
+// viennent du dialogue de création. Les droits sont assertés par le service, sur le rôle
+// EFFECTIF du projet — ils se lisaient ici sur le rôle GLOBAL, qui refusait à un superviseur
+// nommé sur CE projet une création que le service lui accorde.
+router.post('/:id/task', validate({ params: idParam, body: commentTaskBody }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveCommentAccess(req, id);
-  res.status(201).json({ task: await TaskService.createFromComment(req.user!, projectId, id) });
+  res.status(201).json({ task: await TaskService.createFromComment(req.user!, projectId, id, req.body) });
 });
 
 // POST /api/comments/:id/reactions — ajoute/maj une réaction emoji

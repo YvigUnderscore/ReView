@@ -11,6 +11,7 @@ import { resolveProjectIdForTask, resolveProjectIdForShot, resolveProjectIdForAs
 import { assertProjectManage } from '../lib/projectRoles';
 import { notFound } from '../lib/errors';
 import { MAX_PAGE_SIZE, cursorPaginationQuery, readPagination } from '../lib/pagination';
+import { taskDescriptionField } from '../lib/taskPayload';
 import * as TaskService from '../services/TaskService';
 
 const router = Router();
@@ -104,6 +105,8 @@ router.post(
         name: z.string().min(1).max(160),
         type: z.nativeEnum(TaskType).default(TaskType.OTHER),
         department: z.string().min(1).max(40).nullable().optional(),
+        // Consigne de la tâche (Phase 50) — ce qu'il y a à faire, en texte simple.
+        description: taskDescriptionField,
         shotId: z.number().int().optional(),
         assetId: z.number().int().optional(),
         assigneeId: z.number().int().nullable().optional(),
@@ -147,6 +150,7 @@ router.patch(
       name: z.string().min(1).max(160).optional(),
       type: z.nativeEnum(TaskType).optional(),
       department: z.string().min(1).max(40).nullable().optional(),
+      description: taskDescriptionField,
       status: z.nativeEnum(TaskStatus).optional(),
       // Statut personnalisable (Phase 48) : les deux formes sont acceptées et alignées
       // par le service — le kanban envoie l'une, les anciens clients l'autre.

@@ -7,6 +7,11 @@ vi.mock('../lib/prisma', () => ({
   prisma: {
     task: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     comment: { findUnique: vi.fn() },
+    // Garde de suppression (Phase 50) : `Version.taskId` est en cascade — une tâche qui
+    // porte des versions ne se supprime pas. Vide par défaut.
+    version: { count: vi.fn().mockResolvedValue(0) },
+    // Verrou d'archivage (38.B) : projet ouvert par défaut.
+    project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
     // Les droits se lisent sur le rôle EFFECTIF (38.E) : par défaut, membre sans rôle local
     // (donc jugé sur son rôle global), ce que testaient déjà les cas ci-dessous.
     projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
@@ -17,11 +22,20 @@ vi.mock('../lib/prisma', () => ({
 }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./NotificationService', () => ({ notify: vi.fn() }));
+vi.mock('./DepartmentService', () => ({ resolveByKey: vi.fn().mockResolvedValue(null) }));
+vi.mock('./PipelineStatusService', () => ({
+  listForProject: vi.fn().mockResolvedValue([]),
+  resolveByLegacy: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('./shotgrid/ShotgridPushService', () => ({ enqueuePush: vi.fn() }));
 
 import { createFromComment, taskNameFromComment, update, remove } from './TaskService';
 import { prisma } from '../lib/prisma';
 import { notify } from './NotificationService';
-import { Role } from '@prisma/client';
+import * as DepartmentService from './DepartmentService';
+import * as PipelineStatusService from './PipelineStatusService';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
+import { Prisma, Role, TaskStatus } from '@prisma/client';
 
 const supervisor = { id: 2, role: Role.SUPERVISOR };
 
@@ -42,8 +56,12 @@ describe('taskNameFromComment (32.D)', () => {
     expect(taskNameFromComment(long)).toHaveLength(80);
     expect(taskNameFromComment(long).endsWith('…')).toBe(true);
   });
-  it('fallback pour un commentaire sans texte', () => {
-    expect(taskNameFromComment('<img src="x">')).toBe('Retour de review');
+  /**
+   * Le repli est rédigé en ANGLAIS : la base l'est, et un nom stocké en français
+   * s'affichait tel quel dans les quatorze langues de l'interface.
+   */
+  it('fallback anglais pour un commentaire sans texte', () => {
+    expect(taskNameFromComment('<img src="x">')).toBe('Review feedback');
   });
 });
 
@@ -94,6 +112,126 @@ describe('createFromComment (32.D)', () => {
     await expect(createFromComment(supervisor, 3, 9)).rejects.toMatchObject({ statusCode: 400 });
     vi.mocked(prisma.comment.findUnique).mockResolvedValue(null);
     await expect(createFromComment(supervisor, 3, 99)).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+/**
+ * Ce chemin ne vérifiait RIEN : ni les droits (la route les lisait sur le rôle global), ni
+ * l'archivage, et la tâche naissait sans étape ni statut de référentiel — donc dans la
+ * colonne de repli du kanban (Phase 50, lot 5).
+ */
+describe('createFromComment — gardes et complétude (Phase 50)', () => {
+  const artist = { id: 4, role: Role.ARTIST };
+  const onComp = {
+    id: 9,
+    content: 'corriger le reflet',
+    assigneeId: null,
+    media: {
+      version: { assetId: null, task: { shotId: 7, assetId: null, type: 'COMP', department: 'comp' } },
+    },
+  };
+
+  beforeEach(() => {
+    vi.mocked(prisma.comment.findUnique).mockResolvedValue(onComp as never);
+    vi.mocked(prisma.projectMembership.findUnique).mockResolvedValue({ role: null } as never);
+    vi.mocked(prisma.project.findFirst).mockResolvedValue({ status: 'ACTIVE' } as never);
+    vi.mocked(DepartmentService.resolveByKey).mockResolvedValue(null);
+    vi.mocked(PipelineStatusService.resolveByLegacy).mockResolvedValue(null);
+  });
+
+  it('un ARTIST est refusé (403), le superviseur DU PROJET est accepté', async () => {
+    await expect(createFromComment(artist, 3, 9)).rejects.toMatchObject({ statusCode: 403 });
+    expect(prisma.task.create).not.toHaveBeenCalled();
+    vi.mocked(prisma.projectMembership.findUnique).mockResolvedValue({ role: Role.SUPERVISOR } as never);
+    await createFromComment(artist, 3, 9);
+    expect(prisma.task.create).toHaveBeenCalled();
+  });
+
+  it('refuse un projet archivé (38.B)', async () => {
+    vi.mocked(prisma.project.findFirst).mockResolvedValue({ status: 'ARCHIVED' } as never);
+    await expect(createFromComment(supervisor, 3, 9)).rejects.toMatchObject({ statusCode: 403 });
+    expect(prisma.task.create).not.toHaveBeenCalled();
+  });
+
+  it('hérite de l’étape et du statut d’entrée du référentiel du projet', async () => {
+    vi.mocked(DepartmentService.resolveByKey).mockResolvedValue({ id: 6, key: 'comp' } as never);
+    vi.mocked(PipelineStatusService.resolveByLegacy).mockResolvedValue({
+      id: 31,
+      legacyStatus: TaskStatus.TODO,
+    } as never);
+    await createFromComment(supervisor, 3, 9);
+    expect(prisma.task.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          department: 'comp',
+          departmentId: 6,
+          pipelineStatusId: 31,
+          status: TaskStatus.TODO,
+          type: 'COMP',
+        }),
+      }),
+    );
+  });
+
+  it('prend le nom du dialogue, et la consigne avec', async () => {
+    await createFromComment(supervisor, 3, 9, { name: '  Flicker sur le halo  ', description: ' à revoir ' });
+    expect(prisma.task.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ name: 'Flicker sur le halo', description: 'à revoir' }),
+      }),
+    );
+  });
+
+  it('un nom vide retombe sur le texte du commentaire', async () => {
+    await createFromComment(supervisor, 3, 9, { name: '   ' });
+    expect(prisma.task.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: 'corriger le reflet' }) }),
+    );
+  });
+
+  it('409 nommé quand l’étape porte déjà ce nom, plutôt qu’une erreur interne', async () => {
+    const unique = Object.assign(
+      new Prisma.PrismaClientKnownRequestError('dup', {
+        code: 'P2002',
+        clientVersion: '5',
+      }),
+    );
+    vi.mocked(prisma.task.create).mockRejectedValueOnce(unique);
+    await expect(createFromComment(supervisor, 3, 9)).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'TASK_NAME_TAKEN',
+    });
+  });
+
+  it('demande la création de la tâche sur le site ShotGrid', async () => {
+    await createFromComment(supervisor, 3, 9);
+    expect(enqueuePush).toHaveBeenCalledWith(3, expect.objectContaining({ type: 'task-create', taskId: 50 }));
+  });
+});
+
+/**
+ * `Version.taskId` est en `onDelete: Cascade` : sans garde, exposer « Supprimer » au clic
+ * droit du kanban détruisait des versions et des médias publiés (Phase 50, lot 5).
+ */
+describe('remove — garde des versions (Phase 50)', () => {
+  beforeEach(() => {
+    vi.mocked(prisma.task.findUnique).mockResolvedValue({ shotId: 7, assetId: null } as never);
+  });
+
+  it('refuse (409) une tâche qui porte des versions, et dit combien', async () => {
+    vi.mocked(prisma.version.count).mockResolvedValue(3);
+    await expect(remove(supervisor, 3, 1)).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'TASK_HAS_VERSIONS',
+      details: { count: 3 },
+    });
+    expect(prisma.task.delete).not.toHaveBeenCalled();
+  });
+
+  it('supprime une tâche vide', async () => {
+    vi.mocked(prisma.version.count).mockResolvedValue(0);
+    await remove(supervisor, 3, 1);
+    expect(prisma.task.delete).toHaveBeenCalledWith({ where: { id: 1 } });
   });
 });
 

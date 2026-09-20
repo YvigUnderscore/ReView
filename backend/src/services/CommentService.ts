@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { CommentState, Role } from '@prisma/client';
+import { CommentState, Prisma, Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { sanitizeHtml } from '../lib/sanitize';
 import { emitToProject } from './SocketService';
@@ -14,6 +14,13 @@ import { publish as publishApiEvent } from './ApiEventService';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, forbidden } from '../lib/errors';
 import { parseAnnotation, parseCameraState, parseGuestAnnotation } from '../lib/commentPayload';
+import {
+  filterAttachments,
+  orphanedKeys,
+  ownAttachmentPrefix,
+  shotgridAttachmentPrefix,
+  type AttachmentRef,
+} from '../lib/commentAttachments';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
@@ -76,6 +83,25 @@ async function resolveAttachments(attachments: unknown): Promise<unknown> {
   return Promise.all(
     (attachments as RawAttachment[]).map(async (a) => ({
       ...a,
+      url: a.key ? await storage.getPresignedGetUrl(a.key, 3600, a.contentType).catch(() => null) : null,
+    })),
+  );
+}
+
+/**
+ * Pièces jointes prêtes pour une surface PUBLIQUE (portail client) : l'URL présignée, le
+ * nom et le type — jamais la clé MinIO. Le fil client affiche enfin les images que le
+ * studio lui joint ; il n'a pas à connaître l'emplacement de l'objet, qui servirait à en
+ * signer d'autres.
+ */
+export async function publicAttachments(
+  attachments: unknown,
+): Promise<{ name?: string; contentType?: string; url: string | null }[]> {
+  if (!Array.isArray(attachments)) return [];
+  return Promise.all(
+    (attachments as RawAttachment[]).map(async (a) => ({
+      name: a.name,
+      contentType: a.contentType,
       url: a.key ? await storage.getPresignedGetUrl(a.key, 3600, a.contentType).catch(() => null) : null,
     })),
   );
@@ -220,7 +246,7 @@ export interface CreateCommentInput {
   duration?: number;
   annotation?: unknown;
   cameraState?: unknown;
-  attachments?: { key: string; name?: string; contentType?: string }[];
+  attachments?: AttachmentRef[];
   parentId?: number;
   /** Retour écrit depuis un montage : il lui appartient (Phase 46). */
   timelineId?: number;
@@ -237,10 +263,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
   // signer une URL de lecture. On n'accepte donc que le dossier que CET utilisateur a pu
   // remplir via `presignAttachment` — le dossier global laisserait joindre (et donc lire)
   // la pièce jointe d'un autre utilisateur, sur un autre projet.
-  const ownPrefix = `comments/attachments/${user.id}/`;
-  const attachments = (body.attachments ?? []).filter(
-    (a) => a.key.startsWith(ownPrefix) && !a.key.includes('..'),
-  );
+  const attachments = filterAttachments(body.attachments, [ownAttachmentPrefix(user.id)]);
 
   // Une réponse doit cibler un commentaire du même média.
   if (body.parentId) {
@@ -487,6 +510,12 @@ export async function share(user: SessionUser, projectId: number, id: number) {
 
 export interface UpdateCommentInput {
   content?: string;
+  /**
+   * Liste COMPLÈTE des pièces jointes après édition (D5) : le `PATCH` les ignorait, on ne
+   * pouvait donc ni ajouter ni retirer une image en corrigeant un commentaire. Absente =
+   * inchangée ; présente = remplace, et ce qui en sort est effacé du stockage.
+   */
+  attachments?: AttachmentRef[];
   /** État du fil (D1). `isResolved` en découle et reste écrit en parallèle. */
   state?: CommentState;
   isResolved?: boolean;
@@ -509,12 +538,24 @@ export function resolutionOf(
 }
 
 export async function update(user: SessionUser, projectId: number, id: number, body: UpdateCommentInput) {
-  const existing = await prisma.comment.findUnique({ where: { id }, select: { userId: true } });
+  const existing = await prisma.comment.findUnique({
+    where: { id },
+    select: { userId: true, attachments: true },
+  });
   if (!existing) return null; // signalé « introuvable » par la route
   const manager = isManager(user.role);
   const isAuthor = existing.userId === user.id;
 
   if (body.content !== undefined && !isAuthor) throw forbidden("Seul l'auteur peut éditer le contenu");
+  if (body.attachments !== undefined && !isAuthor)
+    throw forbidden("Seul l'auteur peut éditer les pièces jointes");
+  // Même garde qu'à la création — la clé vient du client et sert à signer une lecture — plus
+  // le dossier ShotGrid DE CE COMMENTAIRE : une note importée y range ses pièces, et les
+  // refuser ici les effacerait à la première correction de texte.
+  const attachments =
+    body.attachments === undefined
+      ? undefined
+      : filterAttachments(body.attachments, [ownAttachmentPrefix(user.id), shotgridAttachmentPrefix(id)]);
   if ((body.isVisibleToClient !== undefined || body.assigneeId !== undefined) && !manager)
     throw forbidden('Supervisors and administrators only');
   const resolution = resolutionOf(body.state, body.isResolved);
@@ -525,6 +566,7 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     where: { id },
     data: {
       ...(body.content !== undefined ? { content: sanitizeHtml(body.content), isEdited: true } : {}),
+      ...(attachments !== undefined ? { attachments: jsonAttachments(attachments), isEdited: true } : {}),
       // Trace de résolution (32.A) : qui a résolu et quand ; effacée à la réouverture.
       ...(resolution.state !== undefined
         ? {
@@ -541,6 +583,8 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   });
   const enriched = await enrichComment(asRawComment(comment));
   emitToProject(projectId, 'comment:update', enriched);
+  // Effets MinIO APRÈS commit : les images que l'édition a retirées quittent le stockage.
+  if (attachments !== undefined) await purgeAttachments(orphanedKeys(existing.attachments, attachments));
 
   // Notifie le nouvel assigné (hors auto-assignation).
   if (body.assigneeId && body.assigneeId !== user.id) {
@@ -555,9 +599,27 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   return enriched;
 }
 
+/**
+ * La liste telle qu'elle s'écrit dans la colonne JSON. Le double passage par `unknown` est
+ * assumé : `AttachmentRef` porte des champs OPTIONNELS, que `InputJsonValue` n'accepte pas
+ * en type (un `undefined` n'est pas du JSON) alors qu'ils sont simplement absents à
+ * l'exécution — c'est déjà ce que fait la création.
+ */
+const jsonAttachments = (refs: AttachmentRef[]): Prisma.InputJsonValue =>
+  refs as unknown as Prisma.InputJsonValue;
+
+/** Objets MinIO devenus orphelins — un échec de stockage ne doit pas faire échouer l'écriture. */
+async function purgeAttachments(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  await storage.deleteObjects(keys).catch(() => undefined);
+}
+
 /** Supprime un commentaire (auteur ou superviseur/admin). `false` si introuvable. */
 export async function remove(user: SessionUser, projectId: number, id: number): Promise<boolean> {
-  const existing = await prisma.comment.findUnique({ where: { id }, select: { userId: true } });
+  const existing = await prisma.comment.findUnique({
+    where: { id },
+    select: { userId: true, attachments: true },
+  });
   if (!existing) return false;
   if (!isManager(user.role) && existing.userId !== user.id)
     throw forbidden("Suppression réservée à l'auteur ou un superviseur");
@@ -570,8 +632,16 @@ export async function remove(user: SessionUser, projectId: number, id: number): 
   // pour couvrir aussi les commentaires effacés par cascade (média, version, plan).
   // Voir `services/shotgrid/shotgridLinks.ts` et la migration
   // `20260908090000_shotgrid_liens_fiables`.
+  // Les pièces jointes du fil supprimé (le commentaire ET ses réponses, qui partent en
+  // cascade) restaient dans MinIO indéfiniment : on relève leurs clés avant l'effacement.
+  const replies = await prisma.comment.findMany({ where: { parentId: id }, select: { attachments: true } });
+  const keys = [existing.attachments, ...replies.map((r) => r.attachments)].flatMap((a) =>
+    orphanedKeys(a, []),
+  );
   await prisma.comment.delete({ where: { id } });
   emitToProject(projectId, 'comment:delete', { id });
+  // Effets MinIO après commit : la ligne est partie, les objets suivent.
+  await purgeAttachments(keys);
   return true;
 }
 

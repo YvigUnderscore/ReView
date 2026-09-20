@@ -22,6 +22,11 @@ const EMPTY_COLUMN: BoardTask[] = [];
  * `onToggle` reçoit la clé de la famille plutôt que d'être une fermeture par famille :
  * la page peut ainsi passer un rappel stable, sans quoi la mémoïsation des colonnes
  * tomberait à chaque rendu du board.
+ *
+ * La famille n'a PLUS sa propre bande qui défile (Phase 50) : elle est une tranche du
+ * tableau, et c'est le tableau qui défile horizontalement, d'un seul mouvement. Chaque
+ * famille avait son ascenseur, si bien que deux colonnes de deux familles ne se
+ * retrouvaient jamais l'une sous l'autre — on comparait deux vues décalées du même projet.
  */
 function KanbanFamily({
   group,
@@ -42,12 +47,12 @@ function KanbanFamily({
   const total = group.columns.reduce((n, c) => n + (tasksByColumn.get(c.id)?.length ?? 0), 0);
 
   return (
-    <section className="min-w-0">
+    <section className="flex min-h-0 min-w-0 flex-col">
       <button
         type="button"
         onClick={() => onToggle(group.key)}
         aria-expanded={!collapsed}
-        className="mb-2 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-xs font-semibold section-label text-muted-foreground transition-colors hover:text-foreground"
+        className="mb-2 flex shrink-0 items-center gap-1.5 self-start rounded-md px-1 py-0.5 text-xs font-semibold section-label text-muted-foreground transition-colors hover:text-foreground"
       >
         {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
         {t(FAMILY_LABEL_KEY[group.key])}
@@ -56,7 +61,7 @@ function KanbanFamily({
         </span>
       </button>
       {!collapsed && (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex min-h-0 flex-1 gap-3">
           {group.columns.map((column) => (
             <KanbanColumn
               key={column.id}

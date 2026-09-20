@@ -16,6 +16,7 @@ import { findByLocal, upsertLink } from './shotgridLinks';
 import { can, parseSettings } from './shotgridSettings';
 import { inverseVersionStatusMap, resolveVersionStatusCode } from './ShotgridStatusSync';
 import { pushComment } from './ShotgridNoteSync';
+import { pushTaskCreation } from './ShotgridTaskCreate';
 import { pushPlaylist } from './ShotgridPlaylistSync';
 
 /**
@@ -29,6 +30,8 @@ import { pushPlaylist } from './ShotgridPlaylistSync';
  */
 
 export type PushJob =
+  // Tâche née dans ReView (retour de review) : elle n'existait que chez nous.
+  | { type: 'task-create'; taskId: number; actorId?: number | null }
   | { type: 'task-status'; taskId: number; actorId?: number | null }
   | { type: 'task-dates'; taskId: number; actorId?: number | null }
   | { type: 'task-assignee'; taskId: number; actorId?: number | null }
@@ -109,6 +112,7 @@ async function actorLogin(ctx: PushContext, actorId: number | null | undefined):
 
 /** Domaine de la matrice qui gouverne chaque type d'écriture. */
 const JOB_DOMAIN: Record<PushJob['type'], 'tasks' | 'hierarchy' | 'versions' | 'notes' | 'playlists'> = {
+  'task-create': 'tasks',
   'task-status': 'tasks',
   'task-dates': 'tasks',
   'task-assignee': 'tasks',
@@ -179,6 +183,9 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
 
   try {
     switch (job.type) {
+      case 'task-create':
+        await pushTaskCreateJob(ctx, job);
+        break;
       case 'task-status':
         await pushTaskStatus(ctx, job);
         break;
@@ -220,6 +227,20 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
     logger.error({ err, job }, 'Écriture ShotGrid en échec');
     throw err;
   }
+}
+
+/** Tâche ReView → Task ShotGrid : la création, et le lien qui la rattache. */
+async function pushTaskCreateJob(ctx: PushContext, job: Extract<PushJob, { type: 'task-create' }>) {
+  if (!can(ctx.settings, 'tasks', 'write')) return;
+  await pushTaskCreation(
+    {
+      connectionId: ctx.connectionId,
+      client: ctx.client,
+      writer: ctx.writer,
+      asUserLogin: await actorLogin(ctx, job.actorId),
+    },
+    job.taskId,
+  );
 }
 
 async function pushTaskStatus(ctx: PushContext, job: Extract<PushJob, { type: 'task-status' }>) {

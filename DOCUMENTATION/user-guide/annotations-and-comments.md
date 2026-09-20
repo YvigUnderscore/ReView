@@ -2,7 +2,7 @@
 
 *One commenting system for all four viewers: threads, states, payloads, mentions, deep links and hand-off.*
 
-> Updated: 2026-09-17
+> Updated: 2026-09-20
 
 Every review — video, image, 3D, splat — shares the same commenting system: threads, states,
 mentions, reactions, attachments, voice notes, deep links and kanban hand-off. What changes
@@ -99,8 +99,19 @@ before sending.
   text**. Anything outside that list is dropped when the comment is sent, so use the picker
   rather than a drag from an unusual application. **Eight attachments per comment** is the
   ceiling, enforced on both sides.
+- **Before you send**, each attached image already shows as a small thumbnail rather than a
+  file name: click one to open it large in the lightbox carousel, and use the cross on its
+  corner to drop it from the comment. A file name alone told you nothing about what you were
+  about to send — `image (3).png` least of all.
 - Images are shown as thumbnails — two of them, then a `+N` tile opening a lightbox carousel.
   Everything else is a downloadable chip.
+- **Editing a comment edits its attachments too.** Open the pencil and you get the same
+  thumbnails, the same crosses and the same paperclip: add images, remove images, keep the
+  ones you want. The list you save is the list the comment keeps, and an image you removed is
+  deleted from storage — as are all the attachments of a comment you delete, its replies
+  included. Images that came in with an imported ShotGrid note are kept unless you remove them
+  yourself.
+- The edit box autocompletes `@mentions` like the composer and the reply box do.
 - The **microphone** in the main composer records a voice note: WebM/Opus where the browser
   supports it, the browser's own format otherwise, with the file extension following
   (`.webm`, `.ogg`, `.m4a`). It is attached like any other file and plays inline in the
@@ -109,6 +120,19 @@ before sending.
   the focus in an **image viewer** pins it as a reference on the picture instead, re-encoding
   it to PNG if the clipboard offered an exotic format — see [Image review](review-image.md).
 - There is no size limit on an attachment. A very large one is still a very large upload.
+
+### Long comments, long threads
+
+A thread is meant to be read, so ReView folds what would otherwise be a wall:
+
+- A comment longer than **600 characters** or taller than **12 lines** opens folded, under a
+  line that says how many characters it hides. One click unfolds it, another folds it back.
+  The text is only hidden in height — never truncated — so `Ctrl+F`, a screen reader and the
+  browser's own find still reach it while it is folded.
+- A thread keeps its **last 10 replies** on screen. Older ones sit behind a single line
+  saying how many there are, and appear when you ask for them.
+
+Both apply in the client portal as well, on the notes a client is shown.
 
 ### Reactions
 
@@ -220,15 +244,25 @@ card is clicked. On top of that, the composer can bundle:
 
 ### Comment to kanban task
 
-`SUPERVISOR` and `ADMIN` can right-click a comment card → **Create a kanban task**.
+A **project manager** — an admin, or a supervisor **on this project** — right-clicks a
+comment card → **Create a kanban task**. The entry reads your effective role on the project,
+like the board does, and not the global role of your account.
 
+- A dialog asks for the **name** and, optionally, the **description**. The comment text
+  arrives as a proposal, stripped of formatting and cut on a word; you are meant to rewrite
+  it, because that name is what the board, the pipe and — on a linked project — the
+  ShotGrid site will show. A dailies note makes a poor task label.
 - The task is attached to the shot or the asset carrying the media's version. A media
   attached to neither cannot produce a task.
-- Its name is taken from the comment text, stripped of formatting and truncated at eighty
-  characters; its type is *Other*; it inherits the comment's assignee when one was set.
-  That assignee field exists on the comment and is writable through
-  `PATCH /api/comments/:id` by a supervisor, but no control sets it from the interface yet —
-  in practice the task arrives unassigned.
+- It inherits the **step** of the task carrying the reviewed version and takes the project's
+  **entry status**, so it lands in a real column of the board rather than in a fallback one.
+  A step already holding a task of that name refuses the creation: the dialog stays open, on
+  your text, so you only have to change it.
+- It inherits the comment's assignee when one was set. That assignee field exists on the
+  comment and is writable through `PATCH /api/comments/:id` by a supervisor, but no control
+  sets it from the interface yet — in practice the task arrives unassigned.
+- On a project linked to ShotGrid the task is also created **on the site**, through the write
+  queue: the note does not wait for the site, and does not depend on it being reachable.
 - The task page shows an **original comment** chip linking back to the review at the exact
   frame and annotation, and a toast offers to open the new task straight away. See
   [Kanban & tasks](kanban-and-tasks.md).
@@ -275,6 +309,10 @@ Three things follow from that table, and each one has bitten someone:
 - **A guest's own comment is visible to the client automatically** — a client who writes a
   note must be able to re-read it. It also travels the usual chain: watchers are notified,
   the share's creator is notified, and the note is pushed to ShotGrid on a linked project.
+- **A visible comment shows its images to the guest.** A note the studio marks *Show to the
+  client* arrives in the portal with its thumbnails and the same lightbox carousel. The
+  portal receives signed read URLs only — never the storage keys — so nothing there can be
+  used to reach another comment's files.
 - **A guest draws with the same tools you do**, and the drawing is stored in the same format,
   so a client's note reopens here on the right frame with the shape in the right place. What
   a guest cannot attach is an *authoring* gesture — a 3D scene proposal, a camera animation,
@@ -305,9 +343,10 @@ right-clicks it and chooses **Send to the shot review**. See
 ### Turning a dailies note into work
 
 You circle the flicker, write "unstable roto on the left arm", and send. The next morning
-the coordinator right-clicks that card and creates a kanban task: it lands on the shot,
-named after the note, and the artist opens it from the board. The task keeps a chip back to
-the review at that exact frame — nobody has to re-find the moment being discussed.
+the coordinator right-clicks that card and creates a kanban task: the dialog proposes the
+note as a name, they shorten it to *Roto left arm*, and it lands on the shot at the roto
+step. The artist opens it from the board, and the task keeps a chip back to the review at
+that exact frame — nobody has to re-find the moment being discussed.
 
 ### A note that is a question, not a correction
 
@@ -384,8 +423,10 @@ supervisor has to mark each one *Show to the client*.
 **A guest says the link is read-only.** The share was created with `VIEW` permission. Issue a
 `COMMENT` link — see [Sharing](sharing.md).
 
-**"Create a kanban task" is missing, or fails.** It is limited to `SUPERVISOR` and `ADMIN`,
-and the media's version must hang off a shot or an asset.
+**"Create a kanban task" is missing, or fails.** It is limited to project managers — an
+admin, or a supervisor on this project — the project must not be archived, and the media's
+version must hang off a shot or an asset. A refusal naming the step means a task of that name
+is already there: rename yours in the dialog.
 
 **The state I picked in the right-click menu came back with an error.** Changing a state is
 reserved to the comment's author and to `SUPERVISOR` / `ADMIN`, and only on root comments.

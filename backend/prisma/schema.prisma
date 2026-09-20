@@ -816,6 +816,10 @@ model Task {
   departmentRef Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   departmentId  Int?
   department    String?
+  // Consigne de la tâche (Phase 50) : ce qu'il y a à faire, rédigé par la production et
+  // relu par l'artiste sur la fiche. Nullable et sans contrainte — une tâche sans consigne
+  // reste parfaitement valide, et c'est le cas de toutes celles qui existent déjà.
+  description String?
   order      Int        @default(0)
   // Planification (43.C — №125/№128) : début planifié (Gantt) et échéance (calendrier + fin Gantt).
   startDate  DateTime?

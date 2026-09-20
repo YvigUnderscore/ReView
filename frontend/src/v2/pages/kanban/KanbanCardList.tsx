@@ -21,6 +21,15 @@ import type { BoardTask } from './kanbanTypes';
  * la page entière, et surtout sans monter les mille cartes qu'elle contient. En deçà
  * d'une trentaine de cartes on garde la liste simple — la fenêtre visible vaudrait de
  * toute façon la colonne entière, et rien ne change pour un petit projet.
+ *
+ * La hauteur ne vient plus d'un pourcentage de FENÊTRE : elle vient du tableau (Phase 50).
+ * Chaque colonne faisait 68 % de la hauteur de l'écran et jusqu'à cinq familles s'empilaient
+ * — le board débordait de trois écrans et il fallait faire défiler la page pour atteindre la
+ * famille suivante. La pile prend maintenant la place que le tableau lui laisse (`flex-1
+ * min-h-0`), et rien ne dépasse.
+ *
+ * `overscroll-contain` a disparu avec : il coupait le chaînage de la molette, si bien qu'une
+ * molette prise sur une colonne dense ne faisait plus rien du tout une fois la pile au bout.
  */
 
 interface CardListProps {
@@ -30,8 +39,8 @@ interface CardListProps {
   activeTaskId?: number | null;
 }
 
-/** Hauteur maximale de la pile : au-delà, la colonne prend son propre ascenseur. */
-const SCROLL = 'max-h-[68vh] overflow-y-auto overscroll-contain';
+/** La pile occupe la hauteur que la colonne lui laisse, et défile à l'intérieur. */
+const SCROLL = 'min-h-0 flex-1 overflow-y-auto';
 
 const PlainCardList = memo(function PlainCardList({ tasks, menuFor }: CardListProps) {
   return (

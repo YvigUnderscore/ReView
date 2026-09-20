@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useRef, useState } from 'react';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import {
@@ -13,6 +13,9 @@ import {
 import { useImagePaste } from '../../lib/useImagePaste';
 import { useMentions } from './useMentions';
 import MentionMenu from './MentionMenu';
+import AttachmentDraftList from './AttachmentDraftList';
+import { removeDraft, toDrafts } from './attachmentDrafts';
+import { useObjectUrls } from './useObjectUrls';
 import { useT } from '../../i18n';
 
 /** Zone de réponse à un commentaire (texte + images jointes, paste CTRL+V, 8 max). */
@@ -42,6 +45,9 @@ export default function ReplyComposer({
     setFiles((fs) => [...fs, ...add].slice(0, MAX_COMMENT_ATTACHMENTS));
   };
   const onPasteImage = useImagePaste(addFiles);
+  // Mêmes vignettes que dans le composeur principal : on voit ce qu'on joint avant d'envoyer.
+  const drafts = toDrafts([], files, useObjectUrls(files));
+  const dropDraft = (id: string) => setFiles((fs) => removeDraft(id, fs, []).files);
 
   const send = async () => {
     if (!text.trim() && files.length === 0) return;
@@ -77,18 +83,7 @@ export default function ReplyComposer({
           className="w-full resize-none bg-transparent text-sm"
         />
       </div>
-      {files.length > 0 && (
-        <div className="mb-1 flex flex-wrap gap-1">
-          {files.map((f, i) => (
-            <span key={i} className="flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-2xs">
-              {f.name}
-              <button onClick={() => setFiles((fs) => fs.filter((_, j) => j !== i))}>
-                <X size={10} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+      {drafts.length > 0 && <AttachmentDraftList drafts={drafts} onRemove={dropDraft} />}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           <input

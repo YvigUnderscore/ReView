@@ -22,12 +22,9 @@ import EntityFilters from '../components/EntityFilters';
 import { applyFilters } from '../lib/entityFilters';
 import { TASK_TYPES } from './project/projectTypes';
 import { useKanbanBoard } from './kanban/useKanbanBoard';
+import { useKanbanCardMenu } from './kanban/useKanbanCardMenu';
 import { buildColumns, columnIdOf, groupByFamily, type FamilyKey } from './kanban/kanbanColumns';
 import KanbanFamily from './kanban/KanbanFamily';
-import { useProjectRole } from '../lib/useProjectRole';
-import { useAuth } from '../stores/useAuth';
-import { useStatusMenu } from '../lib/useStatusMenu';
-import { entriesOf, type MenuEntry } from '../lib/menuSpec';
 import type { BoardTask } from './kanban/kanbanTypes';
 import { KanbanCardBody } from './kanban/KanbanCard';
 import { parseIdParam } from '../lib/slug';
@@ -39,8 +36,15 @@ import { useUrlFilters } from '../lib/useUrlFilters';
  * Kanban du projet (C4).
  *
  * Colonnes bâties sur le vocabulaire réel du projet — un site ShotGrid en a couramment
- * quinze, là où le board n'en montrait que six — regroupées en familles dépliables et
- * posées sur une bande scrollable plutôt que dans une grille qui les repliait en rangées.
+ * quinze, là où le board n'en montrait que six — regroupées en familles dépliables.
+ *
+ * **Tableau plein écran** (Phase 50). Le board était une pile : chaque famille portait sa
+ * propre bande horizontale, chaque colonne faisait 68 % de la hauteur de fenêtre, et les
+ * cinq familles s'ouvraient toutes au chargement — d'où trois écrans de débordement, et des
+ * colonnes qui ne s'alignaient pas d'une famille à l'autre puisque chaque bande défilait
+ * pour son compte. La page occupe maintenant exactement la fenêtre (`flush`), les en-têtes
+ * restent visibles, chaque colonne défile à l'intérieur de sa hauteur, et une seule bande
+ * horizontale porte tout le board : un mouvement de molette déplace les colonnes ensemble.
  */
 export default function KanbanPage() {
   const t = useT();
@@ -50,42 +54,9 @@ export default function KanbanPage() {
   // Extraits du board : ces deux-là ont une identité stable et sont les seuls à voyager
   // jusqu'aux cartes mémoïsées.
   const { applyOptimisticStatus, move } = board;
-  const { canManage } = useProjectRole(projectId);
-  const myId = useAuth((s) => s.user?.id);
-  const { entry: statusEntry, choices } = useStatusMenu(projectId, 'task');
-  /**
-   * Signature de ce dont le menu d'une carte dépend réellement : les droits, le compte,
-   * le référentiel de statuts et la langue. Rien d'autre n'entre dans les entrées.
-   */
-  const menuEpoch = [
-    projectId,
-    canManage,
-    myId ?? 0,
-    t('pipeline.status.menu'),
-    ...choices.map((c) => `${c.value}:${c.label}:${c.color ?? ''}`),
-  ].join('|');
-  /**
-   * Menu d'une carte. L'assigné peut changer son propre statut — c'est très exactement ce
-   * que le serveur autorise (il n'accepte de lui que le statut et la checklist), et c'est
-   * le geste le plus utile de l'écran pour un artiste.
-   *
-   * `statusEntry` est reconstruit à chaque rendu du hook : le lister en dépendance rendrait
-   * `menuFor` neuf à chaque frappe dans la recherche, donc toutes les cartes montées avec
-   * lui — c'est ce que la mémoïsation vise précisément à éviter. `menuEpoch` résume à sa
-   * place tout ce que la fermeture lit, si bien que l'identité change quand le menu change
-   * et à ce moment-là seulement.
-   */
-  const menuFor = useCallback(
-    (task: BoardTask): MenuEntry[] =>
-      entriesOf(
-        statusEntry(task, {
-          canEdit: canManage || task.assignee?.id === myId,
-          onOptimistic: (choice) => applyOptimisticStatus(task.id, choice),
-        }),
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- gouverné par `menuEpoch`, cf. ci-dessus
-    [menuEpoch, applyOptimisticStatus],
-  );
+  // Menu de carte (statut, assignation, étape, renommage, suppression) + ses dialogues.
+  // `menuFor` y est mémoïsé sur une signature explicite : cf. `useKanbanCardMenu`.
+  const { menuFor, dialogs } = useKanbanCardMenu(projectId, applyOptimisticStatus);
   const [filters, setFilters] = useUrlFilters();
   /**
    * Le filtre appliqué suit la frappe d'un temps de retard : sur une colonne dense, la
@@ -167,59 +138,65 @@ export default function KanbanPage() {
   );
 
   return (
-    <PageShell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />} width="fluid">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Kanban</h1>
-        <EntityFilters
-          scope={`kanban:${projectId}`}
-          value={filters}
-          onChange={setFilters}
-          statuses={columns.map((c) => ({
-            value: c.statusId != null ? String(c.statusId) : c.id,
-            label: c.label,
-          }))}
-          assignees={assignees}
-          sequences={board.sequences.map((s) => ({ value: String(s.id), label: s.code }))}
-          departments={board.departments.map((d) => ({ value: String(d.id), label: d.name }))}
-          types={TASK_TYPES}
-          typeLabel={(value) => taskTypeLabel(t, value)}
-          searchPlaceholder={t('kanban.searchPlaceholder')}
-        />
-      </div>
-      {board.loadError && <p className="mb-4 text-sm text-destructive">{board.loadError}</p>}
-      {/* Une troncature silencieuse se lirait comme un board complet. */}
-      {board.truncated && (
-        <p className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
-          {t('kanban.truncated', { shown: board.tasks.length, total: board.total })}
-        </p>
-      )}
+    <PageShell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />} width="flush">
+      {dialogs}
+      <div className="flex min-h-0 flex-1 flex-col p-6">
+        <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">Kanban</h1>
+          <EntityFilters
+            scope={`kanban:${projectId}`}
+            value={filters}
+            onChange={setFilters}
+            statuses={columns.map((c) => ({
+              value: c.statusId != null ? String(c.statusId) : c.id,
+              label: c.label,
+            }))}
+            assignees={assignees}
+            sequences={board.sequences.map((s) => ({ value: String(s.id), label: s.code }))}
+            departments={board.departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            types={TASK_TYPES}
+            typeLabel={(value) => taskTypeLabel(t, value)}
+            searchPlaceholder={t('kanban.searchPlaceholder')}
+          />
+        </div>
+        {board.loadError && <p className="mb-4 shrink-0 text-sm text-destructive">{board.loadError}</p>}
+        {/* Une troncature silencieuse se lirait comme un board complet. */}
+        {board.truncated && (
+          <p className="mb-3 shrink-0 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+            {t('kanban.truncated', { shown: board.tasks.length, total: board.total })}
+          </p>
+        )}
 
-      {!board.isLoading && board.tasks.length === 0 ? (
-        <EmptyState icon={KanbanSquare} title={t('task.noTaskYet')} description={t('kanban.emptyHint')} />
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          onDragCancel={onDragCancel}
-        >
-          <div className="space-y-4">
-            {groups.map((group) => (
-              <KanbanFamily
-                key={group.key}
-                group={group}
-                tasksByColumn={tasksByColumn}
-                collapsed={collapsed.has(group.key)}
-                onToggle={toggleFamily}
-                menuFor={menuFor}
-                activeTaskId={activeId}
-              />
-            ))}
-          </div>
-          <DragOverlay>{activeTask && <KanbanCardBody task={activeTask} dragging />}</DragOverlay>
-        </DndContext>
-      )}
+        {!board.isLoading && board.tasks.length === 0 ? (
+          <EmptyState icon={KanbanSquare} title={t('task.noTaskYet')} description={t('kanban.emptyHint')} />
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDragCancel={onDragCancel}
+          >
+            {/* Bande unique : toutes les familles côte à côte dans le même ascenseur
+                horizontal, donc alignées. La hauteur est celle qui reste — les colonnes
+                défilent à l'intérieur, la page ne défile pas. */}
+            <div className="flex min-h-0 flex-1 gap-6 overflow-x-auto pb-2">
+              {groups.map((group) => (
+                <KanbanFamily
+                  key={group.key}
+                  group={group}
+                  tasksByColumn={tasksByColumn}
+                  collapsed={collapsed.has(group.key)}
+                  onToggle={toggleFamily}
+                  menuFor={menuFor}
+                  activeTaskId={activeId}
+                />
+              ))}
+            </div>
+            <DragOverlay>{activeTask && <KanbanCardBody task={activeTask} dragging />}</DragOverlay>
+          </DndContext>
+        )}
+      </div>
     </PageShell>
   );
 }
