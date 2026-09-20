@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createFlyControls, FLY_MOVE_MAPPING, isFlyMoveCode, moveDirection } from './flyControls';
+import * as three from 'three';
+import {
+  createFlyControls,
+  flyLookEuler,
+  FLY_MOVE_MAPPING,
+  isFlyMoveCode,
+  moveDirection,
+} from './flyControls';
+import { applyRoll, rollFromUp } from '../three/cameraRoll';
 import { orbitInhibitors, inhibitOrbit } from './controlsLock';
 
 describe('moveDirection', () => {
@@ -164,5 +172,66 @@ describe('l’orbite est retenue par un compteur, pas par un booléen', () => {
     fly.dispose();
     expect(controls.enabled).toBe(true);
     expect(orbitInhibitors(controls)).toEqual([]);
+  });
+});
+
+/**
+ * Le tilt (roulis du panneau Caméra) vit dans `camera.up`, que seul `lookAt` consulte — donc
+ * personne pendant le vol. Sur du vrai Three : la pose composée en vol porte bien le roulis, et
+ * l'orientation obtenue est celle que `lookAt` produirait avec le `up` de `applyRoll`, si bien que
+ * rien ne saute à l'atterrissage.
+ */
+describe('le tilt fait partie de la pose de vol', () => {
+  /** Roulis réellement affiché par une caméra : angle de son `up` autour de sa direction de vue. */
+  const shownRoll = (camera: three.PerspectiveCamera) => {
+    const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const up = new three.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    return rollFromUp(three, forward, up);
+  };
+
+  /** Caméra posée par l'orbite avec un tilt : exactement l'état d'avant le clic droit. */
+  const tiltedCamera = (roll: number) => {
+    const camera = new three.PerspectiveCamera(50, 16 / 9, 0.1, 100);
+    camera.position.set(0, 1, 5);
+    applyRoll(three, camera, new three.Vector3(0, -1, -5), roll);
+    camera.lookAt(0, 0, 0);
+    return camera;
+  };
+
+  it('compose le roulis en `z = -roll` (ordre YXZ)', () => {
+    expect(flyLookEuler({ x: 0, y: 0 }, { x: 0, y: 0 }, 0.4).z).toBeCloseTo(-0.4);
+    expect(flyLookEuler({ x: 0, y: 0 }, { x: 0, y: 0 }, 0).z).toBe(0);
+    // Mouvement de souris non fini (pointeurs synthétiques) : la pose ne part pas en NaN.
+    const pose = flyLookEuler({ x: 0.2, y: 0.3 }, { x: Number.NaN, y: Number.NaN }, Number.NaN);
+    expect(pose).toEqual({ x: 0.2, y: 0.3, z: 0 });
+  });
+
+  it('garde le tilt affiché après un mouvement de souris (il tombait à zéro)', () => {
+    const roll = (30 * Math.PI) / 180;
+    const camera = tiltedCamera(roll);
+    expect(shownRoll(camera)).toBeCloseTo(roll, 4); // pose de départ : le tilt est bien là
+    // Ce que fait `onPointerMove` : relire le tilt, composer la pose, remettre `up` en phase.
+    const euler = new three.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion);
+    const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const read = rollFromUp(three, forward, camera.up);
+    const look = flyLookEuler(euler, { x: 40, y: 12 }, read);
+    euler.set(look.x, look.y, look.z, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+    expect(shownRoll(camera)).toBeCloseTo(roll, 4);
+  });
+
+  it('remet `up` en phase : l’atterrissage (lookAt de l’orbite) ne fait pas sauter la vue', () => {
+    const roll = -0.5;
+    const camera = tiltedCamera(roll);
+    const euler = new three.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion);
+    const look = flyLookEuler(euler, { x: -80, y: 30 }, roll);
+    euler.set(look.x, look.y, look.z, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+    const flown = camera.quaternion.clone();
+    // Fin de vol : `up` remis en phase avec la nouvelle vue, puis lookAt sur la cible reprojetée.
+    const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    applyRoll(three, camera, forward, roll);
+    camera.lookAt(camera.position.clone().addScaledVector(forward, 4));
+    expect(camera.quaternion.angleTo(flown)).toBeLessThan(1e-3);
   });
 });

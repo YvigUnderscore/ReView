@@ -3,9 +3,12 @@
 
 import type { ReactNode } from 'react';
 import { Camera, FileArchive, FileDown, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../../../components/ui/button';
 import { Group } from '../chrome/DockGroup';
 import NotesExportPanel from './NotesExportPanel';
+import { downloadImage } from '../mediaCapture';
+import { exportFileName } from '../useMediaExport';
 import { useT } from '../../../i18n';
 
 /**
@@ -66,11 +69,32 @@ export default function ExportPanel({
   );
 }
 
-/** Bouton de capture de la vue courante — partagé par les panneaux Export spatiaux. */
-export function CaptureViewButton({ onCapture }: { onCapture: () => void }) {
+/**
+ * Bouton de capture de la vue courante — partagé par les panneaux Export spatiaux (3D, splat).
+ * Le téléchargement et les retours vivent ici : les deux panneaux les recopiaient, et le viewer
+ * n'a qu'une chose à fournir, le PNG (cf. `viewer/viewCapture`).
+ */
+export function CaptureViewButton({
+  capture,
+  originalName,
+}: {
+  /** Capture synchrone : PNG en data URL, ou `null` si le rendu n'a rien donné. */
+  capture: () => string | null;
+  originalName: string;
+}) {
   const t = useT();
+  const onClick = () => {
+    const png = capture();
+    if (!png) {
+      toast.error(t('common.error.capture'));
+      return;
+    }
+    void downloadImage(png, exportFileName(originalName, 'view', 'png'))
+      .then(() => toast.success(t('review.viewCaptured')))
+      .catch(() => toast.error(t('common.error.capture')));
+  };
   return (
-    <Button size="sm" variant="ghost" onClick={onCapture} title={t('review.export.capture')}>
+    <Button size="sm" variant="ghost" onClick={onClick} title={t('review.export.capture')}>
       <Camera size={13} />
       {t('review.export.captureShort')}
     </Button>

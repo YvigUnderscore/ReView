@@ -329,7 +329,9 @@ colour management is inherited from the project, never set per review. See
 ## Camera, frame and animation clips
 
 - Review cameras use a **focal length in millimetres on a fixed 36 mm sensor**, adjustable
-  from 7 to 400 mm in the *Camera* panel, with a **tilt** around the view axis.
+  from 7 to 400 mm in the *Camera* panel, with a **tilt** around the view axis. The tilt holds
+  while you fly: hold the right button and walk with `ZQSD`/`WASD`, the horizon stays where you
+  set it.
 - The viewer fills the space and a **letterbox guide** shows the delivery aspect resolved from
   the pipeline settings. Annotations are anchored to that frame, so they line up for every
   reviewer whatever their window size. The aspect itself is a read-only readout.
@@ -398,6 +400,13 @@ another HDRI.
 
 Camera import and export are detailed on [Camera animation](camera-animation.md) and
 [Alembic camera import](../admin-guide/3d-alembic.md).
+
+*Capture the view* takes a render of its own rather than a picture of your window: it renders the
+delivery frame — the area the letterbox guide draws, without the bands — at the delivery
+resolution, at least 1920 px wide, and writes a lossless PNG. The ground grid is hidden for that
+one frame, so the image carries the asset and not the orientation helper. This is unrelated to the
+media thumbnail, which stays a small JPEG (see
+[Spatial thumbnails](../admin-guide/spatial-thumbnails.md)).
 
 > [!NOTE]
 > The *Review notes* group of the Export panel — the CSV and the printable sheet described in

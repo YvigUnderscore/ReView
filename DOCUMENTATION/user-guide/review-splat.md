@@ -46,7 +46,8 @@ Orbit by dragging, zoom with the wheel, pan with the middle button. **Hold the r
 button** for free flight: the mouse looks around, `W`/`A`/`S`/`D` move (physical key positions,
 so `Z`/`Q`/`S`/`D` on an AZERTY keyboard), `E` goes up and `Q` down, the wheel sets the flight
 speed and `Shift` multiplies it by five. Releasing the button hands the orbit back with the
-target placed in front of the camera.
+target placed in front of the camera. A **tilt** set in the *Camera* panel is kept throughout the
+flight — the horizon does not straighten while you walk.
 
 The right button carries **two** gestures, told apart when you release it. Held — or dragged more
 than a few pixels — it flies. Pressed and released on the spot, in under a quarter of a second, it
@@ -278,7 +279,7 @@ own mode, its own tools and the publication lock. Holding the same button still 
 | **Original file, without edits** | The raw uploaded file |
 | **Camera animation (glTF)** | The move you built in Staging, for the DCC |
 | **Import an animation** | Reads a camera from glTF/GLB, or an Alembic camera exported to JSON samples |
-| **Capture the view** | The current frame, as an image file |
+| **Capture the view** | The delivery frame as it is framed on screen, as a lossless PNG. It gets its own render — at the delivery resolution, at least 1920 px wide, with the ground grid hidden — so it is not limited by the size of your window |
 
 Two limits to know about the cleaned SPZ: only base colour is exported (SH degree 0 —
 view-dependent spherical harmonics are not included), and the import orientation flip is *not*

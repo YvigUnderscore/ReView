@@ -1343,8 +1343,6 @@
   "tool.shapeMove.hint": "すでに置いた図形をつかみ直す",
   "tool.erase": "消しゴム",
   "tool.erase.hint": "クリックまたはドラッグで消す",
-  "tool.wipe": "wipe バー",
-  "tool.wipe.hint": "中央のつまみで移動、バー上のつまみで回転 · ダブルクリックでリセット",
   "tool.focus": "フォーカス",
   "tool.focus.hint": "splat の一点をクリックして、そこに焦点距離を合わせます",
   "tool.focus.hintStage": "クリックで焦点距離を決める",

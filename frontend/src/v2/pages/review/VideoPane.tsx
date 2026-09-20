@@ -120,7 +120,11 @@ export default function VideoPane({
   // Boîte d'affichage (fit « contain » calculé) : l'overlay d'annotation, les curseurs
   // partagés et la comparaison A/B partagent exactement la même. Re-mesurée à l'entrée et
   // à la sortie du plein écran, sinon la vidéo y garderait sa taille d'avant.
-  const { box, setAspect } = useFitBox(containerRef, videoOnlyFs);
+  //
+  // En comparaison, la boîte se cale sur la zone commune aux panes (`CompareFitProvider`) —
+  // sauf en plein écran d'un seul pane : les panes B, restés à leur taille de mise en page
+  // derrière l'image, rapetisseraient la vidéo au lieu de la laisser couvrir l'écran.
+  const { box, setAspect } = useFitBox(containerRef, videoOnlyFs, !videoOnlyFs);
   const boxRef = useRef<HTMLDivElement>(null);
   // Zoom/pan du lecteur (molette, glissement, `+`/`-`/`0`/`1`) : le viewer image le faisait
   // depuis toujours, pas la vidéo. La comparaison suit la même transformation.

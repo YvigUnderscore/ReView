@@ -1392,8 +1392,6 @@
   "tool.shapeMove.hint": "Reprendre une forme déjà posée",
   "tool.erase": "Gomme",
   "tool.erase.hint": "Clic ou glisser pour effacer",
-  "tool.wipe": "Barre de wipe",
-  "tool.wipe.hint": "La poignée centrale déplace, celle sur la barre fait pivoter · double-clic pour réinitialiser",
   "tool.focus": "Mise au point",
   "tool.focus.hint": "Cliquer un point du splat pour y régler la distance focale",
   "tool.focus.hintStage": "Régler la distance focale au clic",

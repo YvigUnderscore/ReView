@@ -8,12 +8,18 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
+import { useFitBox } from './zoom/useFitBox';
 import { useT } from '../../i18n';
 
 /**
  * Pane B de la comparaison vidéo (10.G + 14.C + 34.D) : vidéo esclave, muette et sans
  * contrôles, synchronisée sur le lecteur maître (hook `useVideoSync`). Côte-à-côte ou
  * case de la grille 2×2 ; `onWipe` (absent en grille) bascule vers le mode wipe.
+ *
+ * La vidéo s'ajuste à sa boîte comme celle du maître (`useFitBox`, zone commune du
+ * `CompareFitProvider`) : elle s'affichait jusqu'ici à sa **taille source**, si bien qu'un
+ * proxy 480p tenait au centre d'un pane plus large que lui, minuscule entre deux bandes
+ * noires, à côté d'un 1080p qui, lui, remplissait sa moitié.
  */
 export default function VideoComparePane({
   compareId,
@@ -31,7 +37,10 @@ export default function VideoComparePane({
 }) {
   const t = useT();
   const slaveRef = useRef<HTMLVideoElement>(null);
+  const zoneRef = useRef<HTMLDivElement>(null);
   const [slaveReady, setSlaveReady] = useState(false);
+  // Même ajustement « contain » que le lecteur maître, dans la zone commune aux panes.
+  const { box, setAspect } = useFitBox(zoneRef);
 
   // staleTime Infinity : même règle que la review — URLs présignées, pas de refetch.
   const mediaQ = useQuery({
@@ -79,7 +88,7 @@ export default function VideoComparePane({
           </button>
         </div>
       </div>
-      <div className={VIEWER_ZONE}>
+      <div className={VIEWER_ZONE} ref={zoneRef}>
         {mediaQ.error && <p className="text-sm text-destructive">{mediaQ.error.message}</p>}
         {src && (
           <video
@@ -87,8 +96,13 @@ export default function VideoComparePane({
             src={src}
             muted
             playsInline
-            onLoadedMetadata={() => setSlaveReady(true)}
+            onLoadedMetadata={(e) => {
+              setSlaveReady(true);
+              if (e.currentTarget.videoWidth > 0)
+                setAspect(e.currentTarget.videoWidth / e.currentTarget.videoHeight);
+            }}
             className="pointer-events-none block max-h-full max-w-full"
+            style={box ? { width: box.w, height: box.h } : undefined}
           />
         )}
       </div>

@@ -5,9 +5,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * La position d'une image de référence n'était bornée nulle part : le client postait
- * x = 1.05 et le serveur l'acceptait. Une référence hors cadre est invisible et rien ne
- * permet de la rattraper — la borne est donc au schéma, avant le service.
+ * La position d'une image de référence n'était bornée nulle part, puis l'a été à 0..1 — ce qui
+ * collait la référence d'office SUR le média. Elle doit pouvoir se poser **à côté**, dans les
+ * bandes du letterbox : le schéma laisse donc passer le débordement utile et ne refuse que
+ * l'aberrant, celui qu'aucun viewer ne montre et que personne ne peut rattraper.
  */
 const { add, remove } = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn() }));
 
@@ -38,7 +39,7 @@ beforeEach(() => {
   add.mockResolvedValue({ id: 1, url: 'u', x: 0.1, y: 0.1, width: 0.3, commentId: 3 });
 });
 
-describe('POST /api/media/:id/references — position bornée au cadre', () => {
+describe('POST /api/media/:id/references — position bornée à l’atteignable', () => {
   it('accepte une position dans le cadre', async () => {
     const res = await post({ x: 0.5, y: 0.25, width: 0.3 });
     expect(res.status).toBe(201);
@@ -49,14 +50,15 @@ describe('POST /api/media/:id/references — position bornée au cadre', () => {
     });
   });
 
-  it('refuse une abscisse hors cadre sans rien écrire', async () => {
-    const res = await post({ x: 1.05, y: 0, width: 0.3 });
-    expect(res.status).toBe(400);
-    expect(add).not.toHaveBeenCalled();
+  it('accepte une référence posée À CÔTÉ du média, dans la bande du letterbox', async () => {
+    expect((await post({ x: 1.05, y: 0.02, width: 0.3 })).status).toBe(201);
+    expect((await post({ x: -0.32, y: 0.02, width: 0.3 })).status).toBe(201);
+    expect(add).toHaveBeenCalledTimes(2);
   });
 
-  it('refuse une ordonnée négative', async () => {
-    expect((await post({ x: 0.2, y: -0.5, width: 0.3 })).status).toBe(400);
+  it('refuse une position aberrante sans rien écrire', async () => {
+    expect((await post({ x: 12, y: 0, width: 0.3 })).status).toBe(400);
+    expect((await post({ x: 0.2, y: -8, width: 0.3 })).status).toBe(400);
     expect(add).not.toHaveBeenCalled();
   });
 

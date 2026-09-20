@@ -248,21 +248,7 @@ export default function SplatPanels({
                 }}
               />
             </label>
-            <CaptureViewButton
-              onCapture={() => {
-                void splat.captureThumbnail().then((url) => {
-                  if (!url) {
-                    toast.error(t('common.error.capture'));
-                    return;
-                  }
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `${data.media.originalName.replace(/\.[^.]+$/, '')}.jpg`;
-                  a.click();
-                  toast.success(t('review.viewCaptured'));
-                });
-              }}
-            />
+            <CaptureViewButton capture={splat.captureView} originalName={data.media.originalName} />
           </>
         }
       />

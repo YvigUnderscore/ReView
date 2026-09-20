@@ -7,6 +7,7 @@ import type { MediaResp } from './reviewTypes';
 import type { useAnnotations } from './useAnnotations';
 import type { CompareMode } from './useCompareState';
 import ReviewContextMenu from './ReviewContextMenu';
+import { CompareFitProvider } from './compare/CompareFitProvider';
 import VideoComparePane from './VideoComparePane';
 import VideoWipeOverlay from './VideoWipeOverlay';
 import { VideoDiffOverlay } from './DiffOverlay';
@@ -16,6 +17,10 @@ import VideoPane from './VideoPane';
  * Branche **vidéo** du viewer de review (extrait de ReviewViewer, budget 300) : lecteur
  * maître (menu clic droit, trim) + comparaison — wipe/diff en overlay (A/B simple) ou
  * panes esclaves synchronisés, en côte-à-côte (1) ou grille 2×2 (2-3, 34.D).
+ *
+ * Tous les panes ajustent leur média dans une **zone commune** (`CompareFitProvider`) : le
+ * maître porte la timeline et le transport sous l'image, les panes B un en-tête, et deux
+ * ajustements chacun chez soi donnaient deux tailles d'affichage à l'écran.
  */
 export default function VideoReviewSection({
   data,
@@ -76,87 +81,89 @@ export default function VideoReviewSection({
   // Grille 2×2 (34.D) : dès 2 panes B — wipe/diff n'ont de sens qu'en A/B simple.
   const gridActive = compareIds.length >= 2;
   return (
-    <div
-      className={
-        gridActive ? 'grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3' : 'flex min-h-0 flex-1 gap-3'
-      }
-    >
-      <ReviewContextMenu
-        data={data}
-        videoRef={videoRef}
-        fps={fps}
-        canManage={canManage}
-        annotating={ann.annotating}
-        onToggleAnnotate={onToggleAnnotate}
-        hasViewed={!!ann.viewed}
-        onClearSelection={onClearSelection}
-        annShapes={ann.viewed ?? ann.annot}
+    <CompareFitProvider>
+      <div
+        className={
+          gridActive ? 'grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3' : 'flex min-h-0 flex-1 gap-3'
+        }
       >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-          <VideoPane
-            src={src}
-            mediaId={data.media.id}
-            hlsUrl={hlsUrl}
-            videoRef={videoRef}
-            programmaticSeekRef={programmaticSeekRef}
-            overlay={overlay}
-            compareOverlay={
-              compareId != null && compareMode === 'wipe' && !gridActive ? (
-                <VideoWipeOverlay
-                  compareId={compareId}
-                  masterRef={videoRef}
-                  onClose={closeCompare}
-                  onSide={() => onCompareModeChange('side')}
-                  onDiff={() => onCompareModeChange('diff')}
-                  sharedWipe={sharedWipe}
-                />
-              ) : compareId != null && compareMode === 'diff' && !gridActive ? (
-                <VideoDiffOverlay
-                  compareId={compareId}
-                  masterRef={videoRef}
-                  onClose={closeCompare}
-                  onSide={() => onCompareModeChange('side')}
-                  onWipe={() => onCompareModeChange('wipe')}
-                />
-              ) : null
-            }
-            comments={comments}
-            selectedId={selectedId}
-            onSelectComment={onSelectComment}
-            onManualSeek={onManualSeek}
-            onMarker={onMarker}
-            fps={fps}
-            fpsDetected={data.fps != null}
-            setFpsOverride={setFpsOverride}
-            startFrame={startFrame}
-            onFullscreen={onFullscreen}
-            trimRange={
-              // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
-              data.trim && !data.trimProxyReady
-                ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
-                : null
-            }
-            timelineSprite={
-              data.timelineSprite && data.timelineSpriteUrl
-                ? { url: data.timelineSpriteUrl, meta: data.timelineSprite }
-                : null
-            }
-            onLoopChange={onLoopChange}
-          />
-        </div>
-      </ReviewContextMenu>
-      {/* Panes B synchronisés sur le maître : côte-à-côte (1) ou grille 2×2 (34.D). */}
-      {(compareMode === 'side' || gridActive) &&
-        compareIds.map((id) => (
-          <VideoComparePane
-            key={id}
-            compareId={id}
-            masterRef={videoRef}
-            onClose={gridActive ? () => onRemoveCompare(id) : closeCompare}
-            onWipe={gridActive ? undefined : () => onCompareModeChange('wipe')}
-            onDiff={gridActive ? undefined : () => onCompareModeChange('diff')}
-          />
-        ))}
-    </div>
+        <ReviewContextMenu
+          data={data}
+          videoRef={videoRef}
+          fps={fps}
+          canManage={canManage}
+          annotating={ann.annotating}
+          onToggleAnnotate={onToggleAnnotate}
+          hasViewed={!!ann.viewed}
+          onClearSelection={onClearSelection}
+          annShapes={ann.viewed ?? ann.annot}
+        >
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+            <VideoPane
+              src={src}
+              mediaId={data.media.id}
+              hlsUrl={hlsUrl}
+              videoRef={videoRef}
+              programmaticSeekRef={programmaticSeekRef}
+              overlay={overlay}
+              compareOverlay={
+                compareId != null && compareMode === 'wipe' && !gridActive ? (
+                  <VideoWipeOverlay
+                    compareId={compareId}
+                    masterRef={videoRef}
+                    onClose={closeCompare}
+                    onSide={() => onCompareModeChange('side')}
+                    onDiff={() => onCompareModeChange('diff')}
+                    sharedWipe={sharedWipe}
+                  />
+                ) : compareId != null && compareMode === 'diff' && !gridActive ? (
+                  <VideoDiffOverlay
+                    compareId={compareId}
+                    masterRef={videoRef}
+                    onClose={closeCompare}
+                    onSide={() => onCompareModeChange('side')}
+                    onWipe={() => onCompareModeChange('wipe')}
+                  />
+                ) : null
+              }
+              comments={comments}
+              selectedId={selectedId}
+              onSelectComment={onSelectComment}
+              onManualSeek={onManualSeek}
+              onMarker={onMarker}
+              fps={fps}
+              fpsDetected={data.fps != null}
+              setFpsOverride={setFpsOverride}
+              startFrame={startFrame}
+              onFullscreen={onFullscreen}
+              trimRange={
+                // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
+                data.trim && !data.trimProxyReady
+                  ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
+                  : null
+              }
+              timelineSprite={
+                data.timelineSprite && data.timelineSpriteUrl
+                  ? { url: data.timelineSpriteUrl, meta: data.timelineSprite }
+                  : null
+              }
+              onLoopChange={onLoopChange}
+            />
+          </div>
+        </ReviewContextMenu>
+        {/* Panes B synchronisés sur le maître : côte-à-côte (1) ou grille 2×2 (34.D). */}
+        {(compareMode === 'side' || gridActive) &&
+          compareIds.map((id) => (
+            <VideoComparePane
+              key={id}
+              compareId={id}
+              masterRef={videoRef}
+              onClose={gridActive ? () => onRemoveCompare(id) : closeCompare}
+              onWipe={gridActive ? undefined : () => onCompareModeChange('wipe')}
+              onDiff={gridActive ? undefined : () => onCompareModeChange('diff')}
+            />
+          ))}
+      </div>
+    </CompareFitProvider>
   );
 }

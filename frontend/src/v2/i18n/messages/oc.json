@@ -1391,8 +1391,6 @@
   "tool.shapeMove.hint": "Tornar prene una forma ja pausada",
   "tool.erase": "Goma",
   "tool.erase.hint": "Clic o lisada per escafar",
-  "tool.wipe": "Barra de wipe",
-  "tool.wipe.hint": "La manilha centrala desplaça, aquela sus la barra fa virar · doble clic per reïnicializar",
   "tool.focus": "Mesa al punt",
   "tool.focus.hint": "Clicar un punt del splat per i reglar la distància focala",
   "tool.focus.hintStage": "Reglar la distància focala al clic",

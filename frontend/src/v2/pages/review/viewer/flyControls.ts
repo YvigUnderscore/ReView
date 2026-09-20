@@ -4,6 +4,7 @@
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { isEditable } from '../../../lib/shortcuts';
+import { applyRoll, rollFromUp } from '../three/cameraRoll';
 import { inhibitOrbit } from './controlsLock';
 
 /**
@@ -11,6 +12,8 @@ import { inhibitOrbit } from './controlsLock';
  * clavier ZQSD/WASD (codes physiques, donc azerty/qwerty confondus) + A/E descendre/monter,
  * molette = vitesse de vol, Maj = accélérer. OrbitControls est gelé pendant le vol puis recalé
  * (cible replacée devant la caméra, à distance constante) pour une reprise d'orbite cohérente.
+ *
+ * Le **tilt** (roulis du panneau Caméra) fait partie de la pose de vol : cf. `flyLookEuler`.
  *
  * Le clic droit maintenu est un **mode de navigation** : tant qu'il dure, le clavier appartient
  * au vol et à rien d'autre (le chrome de review et l'éditeur se taisent, cf. `useChromeState`).
@@ -47,6 +50,42 @@ export function isFlyMoveCode(code: string): boolean {
 
 /** Sensibilité du regard (radians par pixel de mouvement souris). */
 const LOOK_SPEED = 0.0035;
+
+/**
+ * Au-delà de cette composante verticale de la vue, le repère qui sert à mesurer le roulis est
+ * dégénéré (`cameraRoll.baseUp` y bascule d'axe) : le tilt n'y est plus relu.
+ */
+const VERTICAL_LIMIT = 0.999;
+
+/**
+ * Pose du regard en vol (Euler `YXZ`) : lacet et tangage viennent de la souris, **le roulis vient
+ * du tilt**. Pur, testable.
+ *
+ * POURQUOI. Le tilt du panneau Caméra vit dans `camera.up`, que seul `lookAt` consulte — donc
+ * OrbitControls, gelé pendant le vol. La pose composée ici forçait `z = 0` : le roulis tombait à
+ * plat au premier mouvement de souris et ne revenait qu'à l'atterrissage, quand l'orbite reprenait
+ * la main et recadrait la caméra. Il fait désormais partie de la pose de vol.
+ *
+ * `z = -roll` : dans l'ordre `YXZ`, `Rz` tourne autour de l'axe de vue, et l'angle mesuré par
+ * `rollFromUp` (celui de `up` autour de `forward`) est de signe opposé — un tilt de +30° se
+ * compose donc en `z = -30°`. C'est exactement l'orientation que produirait `lookAt` avec le `up`
+ * de `applyRoll` : rien ne saute à l'atterrissage.
+ */
+export function flyLookEuler(
+  look: { x: number; y: number },
+  movement: { x: number; y: number },
+  roll: number,
+): { x: number; y: number; z: number } {
+  const dx = Number.isFinite(movement.x) ? movement.x : 0;
+  const dy = Number.isFinite(movement.y) ? movement.y : 0;
+  const limit = Math.PI / 2;
+  return {
+    x: Math.max(-limit, Math.min(limit, look.x - dy * LOOK_SPEED)),
+    y: look.y - dx * LOOK_SPEED,
+    // `roll !== 0` : sans tilt, on rend un 0 franc plutôt que le -0 de la négation.
+    z: Number.isFinite(roll) && roll !== 0 ? -roll : 0,
+  };
+}
 
 /** Direction de déplacement locale (normalisée) selon les codes enfoncés — pur, testable. */
 export function moveDirection(pressed: ReadonlySet<string>): [number, number, number] {
@@ -87,6 +126,7 @@ export function createFlyControls(
   let flying = false;
   let shift = false;
   let speed = 1; // unités/s, recalée sur l'échelle de la scène à chaque départ de vol
+  let roll = 0; // tilt du plan, relu depuis `camera.up` au fil du vol (cf. `onPointerMove`)
   let orbitDistance = 1; // distance caméra→cible au départ, restituée à l'atterrissage
   let pointerId = -1;
   // Jeton d'inhibition de l'orbite pendant le vol (cf. `controlsLock`) : plus personne n'écrit
@@ -94,6 +134,7 @@ export function createFlyControls(
   let releaseOrbit: (() => void) | null = null;
   const euler = new THREE.Euler(0, 0, 0, 'YXZ');
   const move = new THREE.Vector3();
+  const forward = new THREE.Vector3();
 
   const endFlight = () => {
     if (!flying) return;
@@ -129,11 +170,21 @@ export function createFlyControls(
 
   const onPointerMove = (e: PointerEvent) => {
     if (!flying) return;
+    // Le tilt est relu depuis `camera.up` à chaque mouvement, puis remis en phase avec la
+    // nouvelle direction de vue : la lecture est idempotente (`rollFromUp` inverse exactement
+    // `applyRoll`), et un réglage du panneau en plein vol est pris tel quel. Vue quasi
+    // verticale exceptée : le repère de mesure y est dégénéré, on garde le dernier tilt lu
+    // plutôt que de laisser la caméra tournoyer au zénith.
+    forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    if (Math.abs(forward.y) < VERTICAL_LIMIT) roll = rollFromUp(THREE, forward, camera.up);
     euler.setFromQuaternion(camera.quaternion);
-    euler.y -= e.movementX * LOOK_SPEED;
-    euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x - e.movementY * LOOK_SPEED));
-    euler.z = 0;
+    const look = flyLookEuler(euler, { x: e.movementX, y: e.movementY }, roll);
+    euler.x = look.x;
+    euler.y = look.y;
+    euler.z = look.z;
     camera.quaternion.setFromEuler(euler);
+    forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    applyRoll(THREE, camera, forward, roll);
   };
 
   const onPointerUp = (e: PointerEvent) => {

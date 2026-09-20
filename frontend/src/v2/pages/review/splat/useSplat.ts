@@ -16,6 +16,7 @@ import type { SplatScene, SplatViewer } from './scene/splatViewerTypes';
 import { useCameraHandles } from './scene/useCameraHandles';
 import { useSplatHandles } from './scene/useSplatHandles';
 import { toThumbnail } from '../viewer/thumbnail';
+import { viewCapturer } from '../viewer/viewCapture';
 import { applyCulling } from './scene/viewerConfig';
 import { renderPipPass, type PipRect } from '../viewer/pipWindow';
 import { useRenderGate, SETTLE_WINDOW_MS } from '../viewer/renderScheduler';
@@ -63,6 +64,12 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   const pipRectRef = useRef<PipRect | null>(null);
   // Rendu à la demande (F14) — porte l'invalidation, le comptage des lecteurs de FPS, la boucle.
   const gate = useRenderGate();
+  // Capture de vue du panneau Export : rendu dédié au cadre de livraison, sans la grille de sol.
+  const captureView = viewCapturer(
+    () => sceneRef.current,
+    () => frameAspectRef.current,
+    gate.invalidate,
+  );
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // Progression du téléchargement du fichier splat (41.B) — démarre à 0, passe à null une fois
@@ -241,6 +248,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     captureCamera,
     restoreCamera,
     restorePipCamera,
+    captureView,
     ...handles,
   };
 }

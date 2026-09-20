@@ -1390,8 +1390,6 @@
   "tool.shapeMove.hint": "E scho gsetzti Form widder ufnäh",
   "tool.erase": "Radiergummi",
   "tool.erase.hint": "Klicke oder ziehe zum Lösche",
-  "tool.wipe": "Wipe-Leischte",
-  "tool.wipe.hint": "D'r mittler Griff verschiebt, dr uf em Balke drähjt · Doppelklick zum Zerucksetze",
   "tool.focus": "Fokus",
   "tool.focus.hint": "E Punkt vum splat ahklicke, fer dert d'Fokusdischtanz z'setze",
   "tool.focus.hintStage": "D'Fokusdischtanz per Klick setze",

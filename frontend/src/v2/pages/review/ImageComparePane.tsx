@@ -14,6 +14,11 @@ import { useT } from '../../i18n';
  * Pane B de la comparaison A/B **image** : visionneuse zoom/pan sans annotation, dont la
  * vue est répliquée avec le maître (34.D — `viewApiRef`/`onViewChange` branchés sur le
  * relais useImageCompareSync). Mode côte-à-côte ; `onWipe` bascule vers la superposition.
+ *
+ * Le pane n'est QUE sa zone média, comme celui du maître : le nom de B et ses bascules
+ * flottent au-dessus de l'image (même langage que les HUD du wipe et de la différence) au
+ * lieu de manger une ligne au-dessus d'elle. L'en-tête dans le flux rendait la zone de B
+ * plus courte que celle de A, et la même image s'y affichait plus petite.
  */
 export default function ImageComparePane({
   compareId,
@@ -40,57 +45,54 @@ export default function ImageComparePane({
   });
   const data = mediaQ.data ?? null;
 
+  // `min-w-0` : les deux moitiés se partagent la largeur à égalité, et un message d'erreur dans
+  // le flux ne vient pas élargir celle de B au détriment de celle de A.
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <div className="flex shrink-0 items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs">
-        <span className="truncate text-muted-foreground">
-          {t('review.compare.label')}{' '}
-          <span className="text-foreground">{data?.media.originalName ?? '…'}</span>
-        </span>
-        <div className="flex items-center gap-1">
+    <div className={`${VIEWER_ZONE} min-w-0`}>
+      {mediaQ.error && <p className="text-sm text-destructive">{mediaQ.error.message}</p>}
+      {data?.url && (
+        <div className="absolute inset-0">
+          <ImageReviewViewer
+            src={data.url}
+            alt={data.media.originalName}
+            shapes={[]}
+            editable={false}
+            tool="move"
+            color="#fff"
+            width={3}
+            alpha={1}
+            viewApiRef={viewApiRef}
+            onViewChange={onViewChange}
+          />
+        </div>
+      )}
+      <span className="absolute left-2 top-2 z-30 max-w-48 truncate rounded-md border border-border bg-card/90 px-2 py-1 text-xs text-muted-foreground backdrop-blur">
+        {t('review.compare.label')} <span className="text-foreground">{data?.media.originalName ?? '…'}</span>
+      </span>
+      <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 text-xs backdrop-blur">
+        <button
+          onClick={onWipe}
+          title={t('review.compare.toWipe')}
+          className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
+        >
+          <SplitSquareHorizontal size={13} /> {t('compare.wipe')}
+        </button>
+        {onDiff && (
           <button
-            onClick={onWipe}
-            title={t('review.compare.toWipe')}
+            onClick={onDiff}
+            title={t('review.compare.toDiff')}
             className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
           >
-            <SplitSquareHorizontal size={13} /> {t('compare.wipe')}
+            <Diff size={13} /> {t('review.compare.diff')}
           </button>
-          {onDiff && (
-            <button
-              onClick={onDiff}
-              title={t('review.compare.toDiff')}
-              className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 font-medium text-primary hover:bg-primary/25"
-            >
-              <Diff size={13} /> {t('review.compare.diff')}
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            title={t('review.compare.close')}
-            className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </div>
-      <div className={VIEWER_ZONE}>
-        {mediaQ.error && <p className="text-sm text-destructive">{mediaQ.error.message}</p>}
-        {data?.url && (
-          <div className="absolute inset-0">
-            <ImageReviewViewer
-              src={data.url}
-              alt={data.media.originalName}
-              shapes={[]}
-              editable={false}
-              tool="move"
-              color="#fff"
-              width={3}
-              alpha={1}
-              viewApiRef={viewApiRef}
-              onViewChange={onViewChange}
-            />
-          </div>
         )}
+        <button
+          onClick={onClose}
+          title={t('review.compare.close')}
+          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <X size={14} />
+        </button>
       </div>
     </div>
   );

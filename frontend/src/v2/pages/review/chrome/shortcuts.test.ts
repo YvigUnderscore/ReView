@@ -65,6 +65,11 @@ describe('chromeCommandFor — une frappe, une commande', () => {
     // « Zoom » (Z) sur les médias plats, « Région » (B) en 3D : masqués du rail par tous les
     // viewers, donc sans implémentation — et pourtant armables au clavier.
     for (const kind of ['VIDEO', 'IMAGE'] as const) expect(chromeCommandFor('z', ctx(kind))).toBeNull();
+    // « Barre de wipe » (W) : le mode « Compare » arme déjà le wipe, l'outil redisait le mode
+    // depuis le rail sans rien armer de plus. La touche ne doit donc plus rien atteindre,
+    // depuis aucun mode — c'est exactement le défaut que le registre a soldé.
+    for (const kind of ['VIDEO', 'IMAGE'] as const)
+      for (const mode of modesFor(kind)) expect(chromeCommandFor('w', ctx(kind, mode.value))).toBeNull();
     expect(chromeCommandFor('b', ctx('MODEL_3D'))).toBeNull();
     // Le splat garde sa sélection rectangle sur la même lettre.
     expect(chromeCommandFor('b', ctx('SPLAT'))).toEqual({
@@ -106,6 +111,14 @@ describe('chromeCommandFor — une frappe, une commande', () => {
     for (const kind of ['VIDEO', 'IMAGE'] as const)
       for (const mode of modesFor(kind))
         for (const tool of toolsFor(mode.value, kind)) expect(taken).not.toContain(tool.key);
+  });
+
+  it('le rail du mode Compare n’a plus que l’état de repos', () => {
+    // Le mode compare, et lui seul, perd son outil : « Annoter » garde tout son tracé.
+    for (const kind of ['VIDEO', 'IMAGE'] as const) {
+      expect(toolsFor('compare', kind).map((tool) => tool.id)).toEqual(['nav']);
+      expect(toolsFor('annotate', kind).length).toBeGreaterThan(1);
+    }
   });
 
   it('un rail restreint restreint le clavier — le montage n’a ni compare ni wipe', () => {

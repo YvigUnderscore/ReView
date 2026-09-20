@@ -11,8 +11,10 @@ import type { ReviewReferenceItem } from './reviewTypes';
 
 /**
  * Le collage posait les références à x = 1.05 et la position partait telle quelle en base :
- * des références hors cadre, donc invisibles, existent déjà. Le bornage serveur n'empêche que
- * les suivantes — l'affichage doit rattraper les anciennes.
+ * des références hors de toute bande, donc invisibles, existent déjà. Une référence peut
+ * désormais se poser à côté du média, mais seulement dans les bandes du viewer qui la lit —
+ * ici aucune n'est mesurable (happy-dom ne mesure rien), et l'affichage doit donc ramener
+ * l'ancienne position dans le cadre.
  */
 const ref = (over: Partial<ReviewReferenceItem> = {}): ReviewReferenceItem => ({
   id: 1,

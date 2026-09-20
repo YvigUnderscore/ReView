@@ -1343,8 +1343,6 @@
   "tool.shapeMove.hint": "이미 그린 도형을 다시 잡기",
   "tool.erase": "지우개",
   "tool.erase.hint": "클릭하거나 드래그해서 지우기",
-  "tool.wipe": "wipe 바",
-  "tool.wipe.hint": "가운데 손잡이로 이동, 바 위 손잡이로 회전 · 더블클릭: 초기화",
   "tool.focus": "초점",
   "tool.focus.hint": "splat의 한 점을 클릭해 그곳에 초점 거리를 맞춥니다",
   "tool.focus.hintStage": "클릭으로 초점 거리 설정",

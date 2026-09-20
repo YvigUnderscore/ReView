@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Camera, Download, Upload } from 'lucide-react';
-import { toast } from 'sonner';
+import { Download, Upload } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { PanelId } from '../chrome/panels';
 import CameraPanel from '../panels/CameraPanel';
-import ExportPanel from '../panels/ExportPanel';
+import ExportPanel, { CaptureViewButton } from '../panels/ExportPanel';
 import LightingPanel from '../panels/LightingPanel';
 import Model3DInfo from './Model3DInfo';
 import Model3DPerfGroup from './Model3DPerfGroup';
@@ -235,26 +234,7 @@ export default function Model3DPanels({
                 />
               </label>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                void m.captureThumbnail().then((url) => {
-                  if (!url) {
-                    toast.error(t('common.error.capture'));
-                    return;
-                  }
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `${data.media.originalName.replace(/\.[^.]+$/, '')}.jpg`;
-                  a.click();
-                  toast.success(t('review.viewCaptured'));
-                });
-              }}
-            >
-              <Camera size={13} />
-              {t('review.export.captureShort')}
-            </Button>
+            <CaptureViewButton capture={m.captureView} originalName={data.media.originalName} />
           </>
         }
       />

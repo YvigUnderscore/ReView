@@ -25,9 +25,12 @@ type SessionUser = { id: number; role: Role };
 
 const MAX_BYTES = 6_000_000;
 const MAX_REFS = 12;
-// Bornes du canvas : les références peuvent être posées autour de l'image de base.
-const POS_MIN = -3;
-const POS_MAX = 4;
+/**
+ * Bornes du canvas : une référence se pose autour de l'image de base (bandes du letterbox),
+ * pas seulement dessus. Même plafond que le schéma du routeur (`POS_LIMIT`) — le service
+ * reborne parce qu'il sert aussi ses propres valeurs par défaut.
+ */
+const POS_LIMIT = 3;
 
 function decodeImageDataUrl(dataUrl: string): { buf: Buffer; ext: string; contentType: string } {
   const m = /^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/i.exec(dataUrl);
@@ -49,7 +52,7 @@ function decodeImageDataUrl(dataUrl: string): { buf: Buffer; ext: string; conten
   return { buf, ext, contentType };
 }
 
-const clampPos = (v: number) => Math.min(Math.max(v, POS_MIN), POS_MAX);
+const clampPos = (v: number) => Math.min(Math.max(v, -POS_LIMIT), POS_LIMIT);
 const clampWidth = (v: number) => Math.min(Math.max(v, 0.02), 3);
 
 async function serialize(ref: {
@@ -121,8 +124,11 @@ export async function add(
       commentId,
       storageKey: key,
       createdById: user.id,
-      x: clampPos(pos?.x ?? 1.05 + count * 0.03),
-      y: clampPos(pos?.y ?? count * 0.03),
+      // Sans position (client hors écran de review) : juste à droite du cadre, là où le
+      // letterbox laisse d'ordinaire de la place. Faute de bande chez le lecteur, l'affichage
+      // la ramènera contre le bord droit du média.
+      x: clampPos(pos?.x ?? 1.02 + count * 0.03),
+      y: clampPos(pos?.y ?? 0.02 + count * 0.03),
       width: clampWidth(pos?.width ?? 0.3),
     },
   });

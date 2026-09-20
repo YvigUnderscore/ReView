@@ -1390,8 +1390,6 @@
   "tool.shapeMove.hint": "Retomar una forma ya dibujada",
   "tool.erase": "Goma",
   "tool.erase.hint": "Clic o arrastre para borrar",
-  "tool.wipe": "Barra de wipe",
-  "tool.wipe.hint": "El tirador central mueve, el de la barra gira · doble clic para restablecer",
   "tool.focus": "Enfoque",
   "tool.focus.hint": "Haz clic en un punto del splat para fijar allí la distancia focal",
   "tool.focus.hintStage": "Fijar la distancia focal con un clic",

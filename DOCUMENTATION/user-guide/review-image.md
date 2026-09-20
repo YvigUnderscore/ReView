@@ -2,7 +2,7 @@
 
 *Pan-and-zoom stills with pixel-anchored notes, pinned references, version comparison, and a colour panel that changes what you see and nothing else.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 ![Image review: zoom controls under the canvas, reference paste in the top-left corner.](../assets/user-guide/review-image.png)
 
@@ -82,7 +82,6 @@ pressing a tool letter — a drawing letter switches the workspace into Annotate
 | Text | `T` | Drop a label |
 | Move a shape | `S` | Pick up a shape of the stroke in progress |
 | Eraser | `X` | Click or drag to erase |
-| Wipe bar | `W` | Compare mode only — opens the comparison options |
 
 The options bar carries the ink (five swatches plus a free colour picker), the **thickness**
 (1 to 24 px), the **opacity** (10 to 100 %), undo, redo, clear all, and a count of the shapes
@@ -109,15 +108,23 @@ and pan with it, so "this corner should look like that" holds at any zoom level.
 
 - **Paste with `Ctrl+V`** anywhere outside a text field, or use the *Reference (Ctrl+V)*
   button at the top left of the viewer. Up to **twelve** per comment.
-- A pasted reference lands just off the **right edge** of the picture, about three tenths of
-  an image wide, each new one offset a little from the last — so it never hides the frame you
-  are looking at until you move it.
+- A pasted reference is about three tenths of an image wide and lands **beside** the picture,
+  in the letterbox band the viewer leaves around it — off the right edge when there is room
+  there, off the left edge otherwise, each new one a little lower than the last. So it never
+  hides the frame you are looking at.
+- When the picture fills the whole viewer and leaves no band, the reference falls back to its
+  **top-left corner**, where you can move it straight away.
 - While the comment is still being written, a reference is outlined in the accent colour:
   **drag it by its body**, **resize it by the handle** at its bottom-right corner, or drop it
-  with the bin icon.
+  with the bin icon. It may be dragged out of the frame, anywhere in the visible band — never
+  so far that it cannot be reached again.
 - **Sending the comment freezes them.** Their position is fixed server-side, and from then on
   they are shown only when that comment is selected. Historical references that carry no
   comment stay visible all the time.
+- A position saved beside the picture is read against **each reader's** own band: a reference
+  that would fall outside the viewer — a narrower window, or a position saved by an older
+  version of the application — is brought back against the edge of the picture rather than
+  left off screen.
 - Anyone who can manage the media can delete a persisted reference with its bin icon.
 
 Pasting with the caret **inside** the comment composer does something else: the image becomes
@@ -136,12 +143,13 @@ asset. An image comparison is **exclusive**: ticking a version replaces the curr
 than building a grid — the 2×2 grid is a video feature. A version that carries no image media
 is reported as such instead of opening onto an error.
 
-Three modes, chosen from the *Wipe bar* tool (`W`) options or from the *Comparison* panel of
-the dock:
+Three modes, chosen from the options bar of Compare mode or from the *Comparison* panel of
+the dock. Entering Compare mode already arms the wipe, so the rail carries no comparison tool
+of its own:
 
 | Mode | What you get |
 |---|---|
-| **Side by side** | Two panes. Zoom and pan are replicated both ways, so both stay on the same detail. The B pane has its own header (name, *Wipe*, *Difference*, close) and its own control cluster — its fullscreen button expands that pane alone. |
+| **Side by side** | Two panes of the **same size**: each picture is fitted to the same box, so a full-resolution master and a smaller B appear at the same scale. Zoom and pan are replicated both ways, so both stay on the same detail. B carries its name and its switches (*Wipe*, *Difference*, close) floating over the picture rather than in a header above it — a header would make its pane shorter than A’s, and the same picture smaller. |
 | **Wipe** | The two pictures superimposed, split by a bar. The round grip at the centre slides it, the smaller handle further along rotates it (the angle is shown next to it), and a double-click on the centre grip snaps it back to vertical and centred. |
 | **Difference** | \|A − B\| computed in the browser. The `×n` chip cycles the amplification (`×1`, `×2`, `×4`, `×8`, `×16`) and starts at **×4**, because a raw difference is usually invisible. The flame icon switches to a false-colour heatmap, dark where nothing changed and red where the difference is largest. |
 

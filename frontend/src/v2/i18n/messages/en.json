@@ -1390,8 +1390,6 @@
   "tool.shapeMove.hint": "Pick up a shape already drawn",
   "tool.erase": "Eraser",
   "tool.erase.hint": "Click or drag to erase",
-  "tool.wipe": "Wipe bar",
-  "tool.wipe.hint": "Centre grip moves it, the handle on the bar rotates it · double-click to reset",
   "tool.focus": "Focus",
   "tool.focus.hint": "Click a point of the splat to set the focal distance there",
   "tool.focus.hintStage": "Set the focal distance on click",

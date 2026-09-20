@@ -24,7 +24,8 @@ import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import { mediaReviewAspect } from '../reviewAspect';
 import { createFlyControls, type FlyControls } from '../viewer/flyControls';
 import { useThumbnailCapture } from '../viewer/useThumbnailCapture';
-import { useRenderGate, CAPTURE_WINDOW_MS } from '../viewer/renderScheduler';
+import { viewCapturer } from '../viewer/viewCapture';
+import { useRenderGate } from '../viewer/renderScheduler';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { useModelFraming } from './useModelFraming';
 import { useSaveTransform } from './useSaveTransform';
@@ -76,15 +77,22 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     threeRef,
   });
   const frameCbs = useRef(new Set<(dt: number) => void>());
-  const { onFrame: captureFrame, capture: captureRaw } = useThumbnailCapture();
   // Rendu à la demande (F14) — porte l'invalidation, les abonnements passifs et la boucle.
   const gate = useRenderGate();
+  // Miniature (Phase 20) : la capture suit un rendu — le hook en redemande un à chaque demande.
+  const { onFrame: captureFrame, capture: captureThumbnail } = useThumbnailCapture(gate);
   const flyRef = useRef<FlyControls | null>(null);
   // Aspect du cadre de livraison (réglages pipeline hérités, ou aspect gelé par une présentation
   // — cf. `reviewAspect`) : la caméra le garde quel que soit l'écran, la vue étant étendue au
   // conteneur entier (Phase 25, cf. resizeRendererCamera).
   const frameAspectRef = useRef<number>(DEFAULT_REVIEW_ASPECT);
   frameAspectRef.current = mediaReviewAspect(data).value;
+  // Capture de vue du panneau Export : rendu dédié au cadre de livraison, sans la grille de sol.
+  const captureView = viewCapturer(
+    () => runtimeRef.current?.scene,
+    () => frameAspectRef.current,
+    gate.invalidate,
+  );
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // Extensions glTF déclarées par le fichier chargé (fiche technique — 39.C).
@@ -122,11 +130,6 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       gate.countSub(statsRef.current?.subscribe(cb)) ?? (() => {}),
     [gate],
   );
-  /** Miniature : la capture suit un rendu — il faut donc en demander un (F14). */
-  const captureThumbnail = useCallback(() => {
-    gate.invalidate(CAPTURE_WINDOW_MS);
-    return captureRaw();
-  }, [gate, captureRaw]);
   const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
 
   /** Poignée impérative commune (gizmos, caméra-objet, cadrage) — cf. `viewer/sceneHandle`. */
@@ -348,6 +351,8 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     hotspotAtPointer,
     showHotspot,
     captureThumbnail,
+    /** PNG plein cadre de la vue courante (panneau Export) — `null` si la capture a échoué. */
+    captureView,
     captureCamera,
     restoreCamera,
     registerViewState,

@@ -1390,8 +1390,6 @@
   "tool.shapeMove.hint": "Jada marraztutako forma bat berreskuratu",
   "tool.erase": "Borragoma",
   "tool.erase.hint": "Klikatu edo arrastatu ezabatzeko",
-  "tool.wipe": "Wipe barra",
-  "tool.wipe.hint": "Erdiko heldulekuak mugitzen du, barrakoak biratzen · klik bikoitza berrezartzeko",
   "tool.focus": "Fokua",
   "tool.focus.hint": "Klikatu splat-eko puntu bat hor foku-distantzia ezartzeko",
   "tool.focus.hintStage": "Ezarri foku-distantzia klik batez",

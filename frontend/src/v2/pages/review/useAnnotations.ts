@@ -11,7 +11,7 @@ import {
   type AnnotationHistory,
   type AnnotationSnapshot,
 } from './annotationHistory';
-import { clampRefBox, pastedRefBox, type StagedReference } from './referenceBox';
+import { clampRefBox, NO_BANDS, pastedRefBox, type StagedReference, type ViewerBands } from './referenceBox';
 import { useAnnotationShortcuts } from './useAnnotationShortcuts';
 import type { Hotspot3D, SplatLayoutAnim } from './reviewTypes';
 
@@ -56,6 +56,13 @@ export function useAnnotations(opts?: {
   // Images de référence en préparation : posées/déplaçables tant que le commentaire n'est
   // pas envoyé, puis figées côté serveur (liées au commentaire créé).
   const [stagedRefs, setStagedRefs] = useState<StagedReference[]>([]);
+  // Bandes libres autour du média, publiées par le calque des références (seul à connaître la
+  // géométrie du viewer). Dans une `ref` : le placement au collage et le bornage du déplacement
+  // les lisent au moment du geste, et une remesure ne doit pas relancer un rendu du composer.
+  const refBands = useRef<ViewerBands>(NO_BANDS);
+  const setRefBands = useCallback((bands: ViewerBands) => {
+    refBands.current = bands;
+  }, []);
   const snapshot = (): AnnotationSnapshot => ({ shapes: annot, refs: stagedRefs });
   // Un geste complet = un cran. Tant que le même `stepKey` revient (un glisser, cent
   // `pointermove`), l'historique n'en ouvre pas un deuxième.
@@ -68,7 +75,11 @@ export function useAnnotations(opts?: {
     openStep();
     setStagedRefs((rs) => [
       ...rs,
-      { key: Math.random().toString(36).slice(2, 9), dataUrl, ...pastedRefBox(rs.length) },
+      {
+        key: Math.random().toString(36).slice(2, 9),
+        dataUrl,
+        ...pastedRefBox(rs.length, refBands.current),
+      },
     ]);
     // Coller sort du dessin et arme le déplacement de la référence : on vient de la poser,
     // le geste suivant est de la placer.
@@ -80,7 +91,9 @@ export function useAnnotations(opts?: {
     stepKey?: string,
   ) => {
     openStep(stepKey);
-    setStagedRefs((rs) => rs.map((r) => (r.key === key ? { ...r, ...clampRefBox({ ...r, ...patch }) } : r)));
+    setStagedRefs((rs) =>
+      rs.map((r) => (r.key === key ? { ...r, ...clampRefBox({ ...r, ...patch }, refBands.current) } : r)),
+    );
   };
   const removeStagedRef = (key: string) => {
     openStep();
@@ -184,6 +197,7 @@ export function useAnnotations(opts?: {
     addStagedRef,
     updateStagedRef,
     removeStagedRef,
+    setRefBands,
     viewed,
     setViewed,
     viewed3d,

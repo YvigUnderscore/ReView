@@ -98,7 +98,7 @@ picture does zoom and pan**, from the wheel, the middle button and the keyboard 
 | --- | --- |
 | Watch | Navigate `V` · Fit `F` · Actual size `H` |
 | Annotate | Navigate `V` · Freehand `D` · Rectangle `R` · Ellipse `E` · Arrow `A` · Polygon `P` · Text `T` · Move a shape `S` · Eraser `X` |
-| Compare | Navigate `V` · Wipe bar `W` · Fit `F` · Actual size `H` |
+| Compare | Navigate `V` · Fit `F` · Actual size `H` |
 
 **Spatial media (3D model, splat)**
 

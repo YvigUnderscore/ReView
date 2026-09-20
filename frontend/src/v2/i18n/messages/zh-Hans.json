@@ -1343,8 +1343,6 @@
   "tool.shapeMove.hint": "取回已经画好的图形",
   "tool.erase": "橡皮",
   "tool.erase.hint": "点击或拖动擦除",
-  "tool.wipe": "wipe 分隔条",
-  "tool.wipe.hint": "中间手柄移动，条上手柄旋转 · 双击重置",
   "tool.focus": "对焦",
   "tool.focus.hint": "点击 splat 上的一点，把焦距设到那里",
   "tool.focus.hintStage": "点击设置焦距",

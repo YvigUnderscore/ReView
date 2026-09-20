@@ -15,7 +15,6 @@ import {
   MapPin,
   Move,
   Move3d,
-  MoveHorizontal,
   MoveUpRight,
   Paintbrush,
   Pencil,
@@ -49,7 +48,6 @@ export type ToolId =
   | 'text'
   | 'shape-move'
   | 'erase'
-  | 'wipe'
   | 'focus'
   | 'pin'
   | 'paint'
@@ -139,21 +137,16 @@ export const DRAW_TOOLS: ReviewTool[] = [
  * déplacer, `+`/`-` au clavier — et ne dépend d'aucun outil ; le lecteur vidéo le masquait
  * même du rail tout en le laissant armable au clavier. Ajuster et 1:1 restent offerts par les
  * deux actions de vue (`F` et `H`), qui, elles, agissent.
+ *
+ * La « Barre de wipe » (`W`) a été RETIRÉE au même titre (Phase 50, lot 12) : entrer en
+ * comparaison **arme déjà le wipe** (`useCompareArm`), et la barre est alors à l'écran, avec
+ * ses poignées de déplacement et de rotation. L'outil redisait donc le mode depuis le rail
+ * sans rien armer de plus — aucun gestionnaire ne lisait cet identifiant. Le choix du mode de
+ * comparaison (wipe, différence, côte-à-côte) reste à la barre d'options, qui seule l'exprime.
  */
 function mediaTools(mode: ModeId): ReviewTool[] {
   const start = nav(NAV_HINT_MEDIA);
   if (mode === 'annotate') return [start, ...DRAW_TOOLS];
-  if (mode === 'compare')
-    return [
-      start,
-      {
-        id: 'wipe',
-        labelKey: 'tool.wipe',
-        icon: MoveHorizontal,
-        key: 'W',
-        hintKey: 'tool.wipe.hint',
-      },
-    ];
   return [start];
 }
 

@@ -58,6 +58,8 @@ export interface SplatViewer {
   showHotspot: (hs: Hotspot3D | null) => void;
   /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
   captureThumbnail: () => Promise<string | null>;
+  /** PNG plein cadre de la vue courante (panneau Export) — `null` si la capture a échoué. */
+  captureView: () => string | null;
   /** Applique une transformation TRS au splat — preview live des gizmos et au chargement. */
   applyTransform: (t: SplatTransform | null) => void;
   /** Flip d'orientation à l'import (11.E) : true (défaut) = convention .ply/.spz Y-down

@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { fileToImageDataUrl, imageFilesFromClipboard } from '../../lib/useImagePaste';
 import StagedRefLayer from './StagedRefLayer';
 import { clampRefBox } from './referenceBox';
+import { useViewerBands } from './useViewerBands';
 import type { Annotations } from './useAnnotations';
 import type { MediaResp, ReviewReferenceItem } from './reviewTypes';
 import { useT } from '../../i18n';
@@ -20,8 +21,10 @@ const MAX_REFS = 12;
  * Images de référence épinglées au canvas de la review image — **liées à un commentaire**.
  * Ici les références **persistées** : figées, visibles quand leur commentaire est sélectionné
  * (les références historiques sans commentaire restent visibles). Celles en préparation vivent
- * dans `StagedRefLayer`. Coordonnées en fractions de l'image de base, recadrées à l'affichage :
- * l'ancien collage en posait hors cadre, et elles seraient restées invisibles.
+ * dans `StagedRefLayer`. Coordonnées en fractions de l'image de base : une référence peut être
+ * posée **à côté** du média, dans les bandes du letterbox, et l'affichage la recadre dans les
+ * bandes de CE viewer — sans quoi les positions héritées (x = 1.05, hors de toute bande)
+ * resteraient invisibles.
  */
 export default function ReviewCanvasRefs({
   mediaId,
@@ -38,6 +41,14 @@ export default function ReviewCanvasRefs({
 }) {
   const t = useT();
   const qc = useQueryClient();
+  // Ce calque épouse le média : il sert de mètre pour les bandes du viewer, dont dépendent le
+  // placement au collage, le bornage du déplacement et le recadrage à l'affichage.
+  const layerRef = useRef<HTMLDivElement>(null);
+  const bands = useViewerBands(layerRef);
+  const { setRefBands } = ann;
+  useEffect(() => {
+    setRefBands(bands);
+  }, [bands, setRefBands]);
 
   // Persistées : celles du commentaire sélectionné + les historiques (sans commentaire).
   const visible = references.filter((r) => r.commentId == null || r.commentId === selectedCommentId);
@@ -55,9 +66,9 @@ export default function ReviewCanvasRefs({
 
   return (
     <>
-      <div className="pointer-events-none absolute inset-0 overflow-visible">
+      <div ref={layerRef} className="pointer-events-none absolute inset-0 overflow-visible">
         {visible.map((r) => {
-          const box = clampRefBox(r);
+          const box = clampRefBox(r, bands);
           return (
             <div
               key={r.id}

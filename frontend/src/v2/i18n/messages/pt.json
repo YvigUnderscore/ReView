@@ -1391,8 +1391,6 @@
   "tool.shapeMove.hint": "Retomar uma forma já desenhada",
   "tool.erase": "Borracha",
   "tool.erase.hint": "Clique ou arraste para apagar",
-  "tool.wipe": "Barra de wipe",
-  "tool.wipe.hint": "A alça central move, a da barra gira · duplo clique para redefinir",
   "tool.focus": "Foco",
   "tool.focus.hint": "Clique num ponto do splat para definir ali a distância focal",
   "tool.focus.hintStage": "Definir a distância focal com um clique",

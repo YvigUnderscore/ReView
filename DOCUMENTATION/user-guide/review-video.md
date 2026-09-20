@@ -165,14 +165,20 @@ the same task or asset.
 ![Compare opens a checkbox list: one version checked gives A/B with side-by-side, wipe and diff sub-modes; two or three give a 2x2 grid where wipe and diff are unavailable.](../assets/user-guide/video-compare-modes.svg)
 
 - **One version checked — A/B**: the second version plays muted and synchronised with the
-  master. Three sub-modes, from the *Wipe bar* tool (`W`) options or the *Comparison* panel:
-  **side by side**, **Wipe** and **Diff**.
+  master. Three sub-modes, from the options bar of Compare mode or the *Comparison* panel:
+  **side by side**, **Wipe** and **Diff**. Entering Compare mode already arms the wipe, so the
+  tool rail carries no comparison tool of its own.
 - The **wipe bar** carries two handles: the round grip at its centre slides it across the
   picture, and the small handle further along the bar rotates it — the current angle is
   displayed next to it. Double-click the centre grip to snap back to vertical and centred.
 - **Two or three versions checked — 2×2 grid**: up to four versions on screen (three B panes
   maximum), all slaved to the master transport. Each pane has its own close button; wipe and
   diff are only available in simple A/B.
+- **Every pane shows its media at the same size**, side by side as in the grid: each one is
+  fitted to the box the panes have in common, so a 1080p master and its 480p proxy appear at
+  the same scale instead of one filling its half while the other sits small in the middle of
+  its own. Each keeps its own aspect ratio — the fit never stretches a picture, and the
+  delivery frame guide is unchanged.
 - **Diff mode** computes |A − B| in the browser on a canvas. Click the `×n` chip to cycle the
   amplification (×1 → ×2 → ×4 → ×8 → ×16 → back) — the raw difference is often invisible — and
   the flame icon for a false-colour heatmap that runs from dark for no difference through blue
@@ -265,8 +271,8 @@ frame with "around here it flickers".
 
 ### Before / after on a colour fix
 
-Check the previous version in *Compare…*, arm the wipe bar with `W`, and drag the split across
-the picture by its centre grip; the second handle turns it horizontal if the fix runs along the
+Check the previous version in *Compare…* — the wipe is armed the moment you enter Compare mode
+— and drag the split across the picture by its centre grip; the second handle turns it horizontal if the fix runs along the
 horizon. When the difference is too subtle to see, switch to *Diff* and click the `×n` chip up
 to ×8 — what was invisible side by side becomes an obvious patch. The heatmap makes it
 printable for a note.

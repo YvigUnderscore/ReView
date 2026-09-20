@@ -192,8 +192,10 @@ describe('reconcileChrome', () => {
     const s = state({ mode: 'compare', panel: null });
     expect(reconcileChrome(s, 'IMAGE', true).mode).toBe('compare');
     expect(reconcileChrome(s, 'IMAGE', false).mode).toBe('explore');
-    // Et l'outil suit : le wipe n'existe que dans le mode de comparaison.
-    expect(reconcileChrome(state({ mode: 'compare', tool: 'wipe', panel: null }), 'IMAGE', false).tool).toBe(
+    // Et l'outil suit : le tracé n'existe que dans le mode d'annotation. (La comparaison, elle,
+    // n'a plus d'outil propre depuis que la « Barre de wipe » a quitté le rail — le mode arme
+    // déjà le wipe.)
+    expect(reconcileChrome(state({ mode: 'compare', tool: 'draw', panel: null }), 'IMAGE', false).tool).toBe(
       'nav',
     );
   });

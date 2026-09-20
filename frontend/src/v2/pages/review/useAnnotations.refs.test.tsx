@@ -4,22 +4,32 @@
 import { act, fireEvent, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useAnnotations, type Annotations } from './useAnnotations';
+import type { ViewerBands } from './referenceBox';
 import type { Shape } from '../../components/AnnotationCanvas';
 
 /**
- * Trois défauts verrouillés ici :
+ * Quatre défauts verrouillés ici :
  * - la référence collée était posée hors cadre (x = 1.05), donc invisible ;
+ * - la correction l'a ensuite collée d'office **sur** l'image : elle se pose maintenant dans
+ *   la bande du letterbox dès que le viewer en laisse une ;
  * - déplacer empilait un cran d'annulation **par mouvement de souris** : Ctrl+Z ne rendait
  *   qu'un pixel ;
  * - aucun Ctrl+Z / Ctrl+Y / Ctrl+Maj+Z n'existait dans la review image.
  */
 const DATA_URL = 'data:image/png;base64,AA';
+/** Ce que publie le calque quand le viewer est plus large que le média (bandes latérales). */
+const SIDE_BANDS = { left: 0.5, right: 0.5, top: 0, bottom: 0 };
 const shape = (id: string, x = 0): Shape => ({ id, type: 'rect', color: '#fff', width: 3, x, y: 0 });
 
-/** Monte le composer et y colle une référence, comme le fait Ctrl+V sur le canvas. */
-function composer(withRef = true) {
+/**
+ * Monte le composer et y colle une référence, comme le fait Ctrl+V sur le canvas. `bands`
+ * simule ce que le calque mesure du viewer ; par défaut rien n'est mesuré (le média remplit
+ * toute la zone), et la référence retombe alors sur un coin du média.
+ */
+function composer(withRef = true, bands?: ViewerBands) {
   const { result } = renderHook(() => useAnnotations());
   const ann = () => result.current;
+  if (bands) act(() => ann().setRefBands(bands));
   if (withRef) act(() => ann().addStagedRef(DATA_URL));
   return { ann, ref: () => ann().stagedRefs[0] };
 }
@@ -33,7 +43,7 @@ const drag = (ann: () => Annotations, key: string, xs: number[]) => {
 };
 
 describe('référence collée', () => {
-  it('atterrit dans le cadre, visible', () => {
+  it('retombe dans le cadre, visible, quand le média remplit tout le viewer', () => {
     const { ref } = composer();
     expect(ref().x).toBeGreaterThan(0);
     expect(ref().x + ref().width).toBeLessThanOrEqual(1);
@@ -55,7 +65,25 @@ describe('référence collée', () => {
     expect(ann().tool).toBe('arrow');
   });
 
-  it('ne sort jamais du cadre, même poussée au-delà', () => {
+  it('se pose À CÔTÉ du média quand le viewer laisse une bande', () => {
+    const { ref } = composer(true, SIDE_BANDS);
+    expect(ref().x).toBeGreaterThanOrEqual(1);
+  });
+
+  it('garde un déplacement hors cadre tant qu’il reste dans la bande', () => {
+    const { ann, ref } = composer(true, SIDE_BANDS);
+    act(() => ann().updateStagedRef(ref().key, { x: -0.4, y: 0.2 }, 'geste'));
+    expect(ref().x).toBeCloseTo(-0.4);
+  });
+
+  it('ne sort jamais de la zone atteignable, même poussée au-delà', () => {
+    const { ann, ref } = composer(true, SIDE_BANDS);
+    act(() => ann().updateStagedRef(ref().key, { x: 9, y: 9 }, 'geste'));
+    expect(ref().x + ref().width).toBeLessThanOrEqual(1 + SIDE_BANDS.right);
+    expect(ref().y).toBeLessThan(1);
+  });
+
+  it('s’en tient au cadre du média quand aucune bande n’est mesurée', () => {
     const { ann, ref } = composer();
     act(() => ann().updateStagedRef(ref().key, { x: 3, y: 3 }, 'geste'));
     expect(ref().x + ref().width).toBeLessThanOrEqual(1);
