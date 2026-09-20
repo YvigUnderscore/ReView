@@ -21,6 +21,14 @@ import type { BoardScope } from './board/boardApi';
  * images collées sont déposées dans MinIO plutôt qu'embarquées en base64 dans le document
  * (cf. `board/boardFiles`). Drag-drop d'images natif + insertion depuis la bibliothèque
  * média (médias publiés du projet).
+ *
+ * **Undo/redo : celui d'Excalidraw, et rien d'autre.** L'éditeur porte son propre historique
+ * (Ctrl+Z, Ctrl+Maj+Z, et Ctrl+Y sous Windows), complet et fidèle à chaque élément de la scène.
+ * Lui en superposer un autre le doublerait sans rien gagner, et le nôtre ne saurait pas ce
+ * qu'Excalidraw sait. Aucun de nos gestionnaires ne le lui prend : le registre partagé
+ * (`lib/undoScope`) n'est monté que dans la review, et les raccourcis globaux (`lib/shortcuts`)
+ * se retirent dès qu'une touche porte Ctrl. L'annulation d'un board est donc son affaire ;
+ * l'autosave débouncée vient derrière, et enregistre l'état annulé comme n'importe quel autre.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

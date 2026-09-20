@@ -11,6 +11,7 @@ import {
 } from '../lib/thumbnails';
 import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../lib/pagination';
 import { CARD_ASSIGNEE_SELECT, awaitingReviewByAsset, signAssignees } from '../lib/entityCardData';
+import { unseenByAsset } from './EntityVisitService';
 import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { emitToProject } from './SocketService';
@@ -33,7 +34,12 @@ const DETAIL_LIMIT = 200;
  * posé quand même : c'est la même règle partout, et elle ne dépend plus de la contrainte
  * d'unicité du modèle. Le curseur suit le couple `(name, id)`.
  */
-export async function list(projectId: number, p: PaginationParams) {
+export async function list(
+  projectId: number,
+  p: PaginationParams,
+  /** Qui regarde — état « non consulté » (lot 9). Absent : aucune carte ne s'allume. */
+  userId?: number,
+) {
   // `hiddenAt` : un asset masqué n'apparaît dans aucune liste — cf. ShotService.list.
   const where = { projectId, deletedAt: null, hiddenAt: null };
   const [assets, total] = await Promise.all([
@@ -66,9 +72,12 @@ export async function list(projectId: number, p: PaginationParams) {
   ]);
   // Requête groupée (B3) — cf. ShotService.list.
   const ids = assets.map((a) => a.id);
-  const [fallbacks, awaiting] = await Promise.all([
+  const [fallbacks, awaiting, unseen] = await Promise.all([
     firstMediaThumbKeysForAssets(ids),
     awaitingReviewByAsset(ids),
+    // « Non consulté » : l'activité de l'asset (ses tâches, ses livraisons par leurs DEUX
+    // chemins de rattachement, leurs médias) confrontée à ma dernière visite.
+    userId ? unseenByAsset(userId, assets) : Promise.resolve(new Map<number, boolean>()),
   ]);
   const signed = await signAssignees(assets);
   const items = await Promise.all(
@@ -76,6 +85,7 @@ export async function list(projectId: number, p: PaginationParams) {
       ...a,
       thumbnailUrl: await effectiveThumbnailUrl(a.thumbnailKey, fallbacks.get(a.id) ?? null),
       awaitingReview: awaiting.get(a.id) ?? 0,
+      unseen: unseen.get(a.id) ?? false,
     })),
   );
   return paginateCursor(items, total, p, (a) => a.name);

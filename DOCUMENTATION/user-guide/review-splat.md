@@ -155,8 +155,9 @@ The selector hides itself when the task or asset carries a single version.
 The **Annotate** mode carries 3D tools rather than 2D drawing.
 
 - **Surface brush** (`P`) paints a stroke on the surface of the cloud. Four ink colours and a
-  thickness from 1 to 16 px in the options bar, with *undo the last stroke* and *clear* next to
-  a running count. The stroke is stored in object space and travels with the comment — it is an
+  thickness from 1 to 16 px in the options bar, with *undo the last stroke*, *redo the last
+  stroke* and *clear* next to a running count — or `Ctrl+Z`, `Ctrl+Y` and `Ctrl+Shift+Z`, which
+  walk the strokes you are preparing as deep as you have gone. The stroke is stored in object space and travels with the comment — it is an
   annotation, not an edit, and it never touches the splat data. Four things are worth knowing
   about the gesture:
   - the thickness is **screen thickness**: the stroke keeps the same weight whether you zoom

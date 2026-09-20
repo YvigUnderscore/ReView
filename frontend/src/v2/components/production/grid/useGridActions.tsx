@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api } from '../../../../lib/apiClient';
 import { qk } from '../../../lib/query';
 import { useStatusMenu } from '../../../lib/useStatusMenu';
+import { useUndoToast } from '../../../lib/useUndoToast';
 import { useProjectMembers } from '../../../lib/useProjectRole';
 import { currentStatusValue } from '../../../lib/statusMenu';
 import type { MenuEntry } from '../../../lib/menuSpec';
@@ -63,9 +64,10 @@ type StatusMenu = ReturnType<typeof useStatusMenu>;
 /**
  * Le sous-menu « Statut » d'une entité, suivi du rafraîchissement de la grille.
  *
- * `useStatusMenu.entry()` ne convient pas tel quel : il fait son `PATCH` sans rien dire à
- * l'appelant, si bien que les pages de la grille garderaient l'ancien statut jusqu'à la
- * prochaine navigation. On reprend donc ses CHOIX — la règle — et on ajoute l'attente.
+ * `useStatusMenu.entry()` ne convient pas tel quel : il ne sait pas rafraîchir les pages de la
+ * grille, qui ne sont dans aucun cache partagé. On reprend donc ses CHOIX — la règle — et on
+ * lui confie l'écriture avec ce qu'elle doit rejouer après coup (`after`) et la valeur d'avant
+ * (`undoTo`), qui fait apparaître « Annuler » dans le toast.
  */
 function statusSubmenu(
   menu: StatusMenu,
@@ -90,7 +92,7 @@ function statusSubmenu(
         // ouverture suivie d'un clic repartirait vers le serveur pour rien.
         onValueChange: (next) => {
           if (next === value) return;
-          void menu.apply(entityId, next).then(refresh);
+          void menu.apply(entityId, next, { undoTo: value, after: refresh });
         },
         items: menu.choices.map((choice) => ({
           id: `grid-status-${choice.value}`,
@@ -106,6 +108,7 @@ function statusSubmenu(
 export function useGridActions(projectId: number, canEdit: boolean): GridActions {
   const t = useT();
   const qc = useQueryClient();
+  const { done } = useUndoToast();
   const taskStatus = useStatusMenu(projectId, 'task');
   const shotStatus = useStatusMenu(projectId, 'shot');
   const members = useProjectMembers(projectId);
@@ -115,15 +118,25 @@ export function useGridActions(projectId: number, canEdit: boolean): GridActions
   /** Toutes les pages de la grille, quel que soit le filtre courant. */
   const refresh = () => qc.invalidateQueries({ queryKey: qk.projectGridAll(projectId) });
 
+  /**
+   * L'écriture d'assignation, séparée de la mutation : l'annulation la rejoue à l'envers, et
+   * son échec doit remonter au toast qui l'a proposée plutôt que devenir un second succès.
+   */
+  const writeAssignee = async (taskId: number, assigneeId: number | null): Promise<void> => {
+    await api.patch(`/api/tasks/${taskId}`, { assigneeId });
+    await refresh();
+  };
+
   const assign = useMutation({
-    mutationFn: (vars: { taskId: number; assigneeId: number | null }) =>
-      api.patch(`/api/tasks/${vars.taskId}`, { assigneeId: vars.assigneeId }),
-    onSuccess: async (_data, vars) => {
+    mutationFn: (vars: { taskId: number; assigneeId: number | null; previous: number | null }) =>
+      writeAssignee(vars.taskId, vars.assigneeId),
+    onSuccess: (_data, vars) => {
       const member = members.find((m) => m.id === vars.assigneeId);
-      toast.success(
-        member ? t('production.grid.assigned', { name: member.name }) : t('production.grid.cleared'),
+      // Remettre l'assigné d'avant est une écriture de plus, pas un retour en arrière local :
+      // un cran offert dans le toast, et rien qui ressemble à une pile (cf. `useUndoToast`).
+      done(member ? t('production.grid.assigned', { name: member.name }) : t('production.grid.cleared'), () =>
+        writeAssignee(vars.taskId, vars.previous),
       );
-      await refresh();
     },
     onError: (error: unknown) =>
       toast.error(error instanceof Error ? error.message : t('common.error.generic')),
@@ -144,7 +157,11 @@ export function useGridActions(projectId: number, canEdit: boolean): GridActions
           value,
           onValueChange: (next) => {
             if (next === value) return;
-            assign.mutate({ taskId, assigneeId: next === NO_ASSIGNEE ? null : Number(next) });
+            assign.mutate({
+              taskId,
+              assigneeId: next === NO_ASSIGNEE ? null : Number(next),
+              previous: cell.assignee?.id ?? null,
+            });
           },
           items: [
             ...members.map((member) => ({

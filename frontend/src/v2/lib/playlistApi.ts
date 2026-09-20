@@ -103,26 +103,8 @@ export function useAddToPlaylist(playlistId: number, projectId: number) {
   });
 }
 
-export function useRemoveFromPlaylist(playlistId: number, projectId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (itemId: number) => api.del(`/api/playlists/${playlistId}/items/${itemId}`),
-    onSuccess: () => invalidate(qc, playlistId, projectId),
-  });
-}
-
-export function useReorderPlaylist(playlistId: number, projectId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (itemIds: number[]) => api.patch(`/api/playlists/${playlistId}`, { itemIds }),
-    onSuccess: () => invalidate(qc, playlistId, projectId),
-  });
-}
-
-export function useRenamePlaylist(playlistId: number, projectId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (name: string) => api.patch(`/api/playlists/${playlistId}`, { name }),
-    onSuccess: () => invalidate(qc, playlistId, projectId),
-  });
-}
+/**
+ * Retirer, réordonner et renommer ne vivent plus ici : les trois se défont, et leur annulation
+ * est indissociable de l'écriture — voir `pages/playlist/usePlaylistUndo`. Trois mutations nues
+ * traînaient à côté, que plus personne n'appelait.
+ */

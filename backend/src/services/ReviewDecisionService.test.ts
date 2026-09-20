@@ -109,6 +109,7 @@ describe('decide', () => {
     } as never);
     vi.mocked(prisma.reviewStatus.findUnique).mockResolvedValue({ id: 2, name: 'Approved' } as never);
     vi.mocked(prisma.$transaction).mockResolvedValue(decisionRow);
+    vi.mocked(prisma.mediaObject.findFirst).mockResolvedValue({ id: 128 } as never);
   });
 
   it('historise, dénormalise, audite, émet et notifie l’auteur', async () => {
@@ -119,8 +120,16 @@ describe('decide', () => {
       expect.objectContaining({ action: 'VERSION_DECISION', entityId: 42 }),
     );
     expect(emitToProject).toHaveBeenCalledWith(3, 'version:update', expect.objectContaining({ id: 42 }));
+    // `referenceId` est le PREMIER MÉDIA de la version, pas la version : l'auteur recevait
+    // un id de version et les suiveurs un id de média pour le même événement, si bien que le
+    // lien de l'auteur — le plus concerné — ne menait nulle part.
     expect(notify).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 9, type: 'review_decision', projectId: 3, referenceId: 42 }),
+      expect.objectContaining({
+        userId: 9,
+        kind: 'reviewDecision',
+        projectId: 3,
+        referenceId: 128,
+      }),
     );
   });
 

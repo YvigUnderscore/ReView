@@ -103,7 +103,7 @@ async function notifyAssignee(
   if (assigneeId && assigneeId !== actorId)
     await notify({
       userId: assigneeId,
-      type: 'TASK_ASSIGNED',
+      kind: 'taskAssigned',
       messageKey: 'notification.taskAssigned',
       params: { name: taskName },
       projectId,

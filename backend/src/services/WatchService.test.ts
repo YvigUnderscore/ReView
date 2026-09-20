@@ -68,7 +68,7 @@ describe('notifyWatchers (32.G)', () => {
     );
     expect(notify).toHaveBeenCalledTimes(2);
     expect(notify).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 3, type: 'WATCH', referenceId: 9 }),
+      expect.objectContaining({ userId: 3, kind: 'watch', referenceId: 9 }),
     );
   });
 

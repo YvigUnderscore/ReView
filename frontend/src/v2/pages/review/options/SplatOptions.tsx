@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Circle, Cuboid, Eraser, Focus, MapPin, Plus, Trash2, Undo2, X } from 'lucide-react';
+import { Circle, Cuboid, Eraser, Focus, MapPin, Plus, Redo2, Trash2, Undo2, X } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
@@ -134,6 +134,14 @@ export default function SplatOptions({
             bordered
             onClick={paint.undoStroke}
             disabled={paint.pendingCount === 0}
+          />
+          {/* Le bouton d'annulation n'avait pas de réciproque : un trait annulé était perdu. */}
+          <IconButton
+            icon={Redo2}
+            label={t('review.redoStroke')}
+            bordered
+            onClick={paint.redoStroke}
+            disabled={paint.redoCount === 0}
           />
           <IconButton
             icon={Eraser}

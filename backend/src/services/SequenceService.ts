@@ -17,6 +17,7 @@ import {
   firstMediaThumbKeysForShots,
 } from '../lib/thumbnails';
 import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot, signAssignees } from '../lib/entityCardData';
+import { unseenByShot } from './EntityVisitService';
 
 /**
  * Logique métier des séquences (C3).
@@ -143,7 +144,11 @@ export async function update(
 }
 
 /** Fiche complète d'une séquence : ses plans, ses assets, sa vignette, ses départements. */
-export async function getDetail(id: number) {
+export async function getDetail(
+  id: number,
+  /** Qui regarde — état « non consulté » des cartes de plans de la fiche (lot 9). */
+  userId?: number,
+) {
   const sequence = await prisma.sequence.findUnique({
     where: { id },
     include: {
@@ -185,16 +190,20 @@ export async function getDetail(id: number) {
   if (!sequence) throw notFound('Sequence not found');
 
   const shotIds = sequence.shots.map((s) => s.id);
-  const [fallbacks, awaiting, signedShots] = await Promise.all([
+  const [fallbacks, awaiting, signedShots, unseen] = await Promise.all([
     firstMediaThumbKeysForShots(shotIds),
     awaitingReviewByShot(shotIds),
     signAssignees(sequence.shots),
+    // Les plans de la fiche portent la même carte que l'onglet Plans : ils s'allument
+    // selon la même règle, sans quoi le même plan brillerait d'un écran à l'autre.
+    userId ? unseenByShot(userId, sequence.shots) : Promise.resolve(new Map<number, boolean>()),
   ]);
   const shots = await Promise.all(
     signedShots.map(async (s) => ({
       ...s,
       thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
       awaitingReview: awaiting.get(s.id) ?? 0,
+      unseen: unseen.get(s.id) ?? false,
     })),
   );
   // Les assets de la fiche n'avaient droit qu'à leur vignette choisie : ils apparaissaient

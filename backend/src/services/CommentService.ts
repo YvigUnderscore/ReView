@@ -229,7 +229,7 @@ async function notifyMentions(
     targets.map((u) =>
       notify({
         userId: u.id,
-        type: 'MENTION',
+        kind: 'mention',
         messageKey: 'notification.mentioned',
         projectId,
         referenceId: mediaObjectId,
@@ -253,9 +253,6 @@ export interface CreateCommentInput {
   /** Position dans le montage entier (s) — `timestamp` reste la position dans le plan. */
   timelineTime?: number;
 }
-
-/** Ping Discord d'un nouveau retour — le même, qu'il vienne d'un membre ou d'un invité. */
-const discordNewComment = (projectId: number) => `💬 Nouveau commentaire sur un média (projet #${projectId})`;
 
 export async function create(user: SessionUser, projectId: number, body: CreateCommentInput) {
   await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
@@ -349,7 +346,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       // referenceId = média (et non le commentaire) → navigable vers la review côté front (10.C5).
       await notify({
         userId: parent.userId,
-        type: 'REPLY',
+        kind: 'reply',
         messageKey: 'notification.reply',
         projectId,
         referenceId: body.mediaObjectId,
@@ -358,7 +355,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
   } else if (body.timelineId) {
     // Retour de montage : les suiveurs du plan ne sont pas prévenus, puisque le retour
     // n'apparaît pas encore dans leur review. C'est `share` qui les avertit.
-    void sendDiscord(`🎬 Nouveau retour sur un montage (projet #${projectId})`);
+    void sendDiscord('chat.montageComment', { project: projectId });
   } else {
     // Suiveurs (32.G) : nouveau commentaire racine sur la chaîne version/shot/asset.
     await notifyWatchers({
@@ -367,7 +364,7 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
       messageKey: 'notification.watchedComment',
       exclude: [user.id, ...mentioned],
     });
-    void sendDiscord(discordNewComment(projectId));
+    void sendDiscord('chat.newComment', { project: projectId });
   }
   return enriched;
 }
@@ -455,19 +452,20 @@ export async function createGuest(guest: GuestActor, projectId: number, body: Cr
     params: { name: guest.name },
   });
   if (guest.shareOwnerId && !notified.includes(guest.shareOwnerId)) {
-    // Type `WATCH` — le même que `notifyWatchers` : c'est lui qui fait pointer la
-    // notification vers la review du média côté front. Un type inédit renverrait sur la
-    // page du projet, et le lecteur perdrait le plan dont on lui parle.
+    // Genre `watch` — le même que `notifyWatchers` : c'est lui qui donne le type `WATCH`,
+    // celui qui fait pointer la notification vers la review du média côté front. Un type
+    // inédit renverrait sur la page du projet, et le lecteur perdrait le plan dont on lui
+    // parle.
     await notify({
       userId: guest.shareOwnerId,
-      type: 'WATCH',
+      kind: 'watch',
       messageKey: 'notification.clientComment',
       params: { name: guest.name },
       projectId,
       referenceId: body.mediaObjectId,
     });
   }
-  void sendDiscord(discordNewComment(projectId));
+  void sendDiscord('chat.newComment', { project: projectId });
   return enriched;
 }
 
@@ -600,7 +598,7 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (body.assigneeId && body.assigneeId !== user.id) {
     await notify({
       userId: body.assigneeId,
-      type: 'COMMENT_ASSIGNED',
+      kind: 'commentAssigned',
       messageKey: 'notification.commentAssigned',
       projectId,
       referenceId: comment.mediaObjectId,

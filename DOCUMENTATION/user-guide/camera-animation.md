@@ -341,7 +341,10 @@ viewport has a red border while it is on; click the button to disarm it.
 it (or set it to zero) to go back to "the last key is the end".
 
 **Undo undoes the wrong thing.** The animation's undo stack is only routed to `Ctrl+Z` while
-you are in **Staging**. In Clean up, the same keys drive the splat or model editor instead.
+you are in **Staging**, where it takes precedence over every other history of the screen.
+Outside Staging the same keys reach the next history that has something to give — the 3D
+surface brush if strokes are waiting on your comment, otherwise the splat or model editor.
+Exactly one of them answers a press.
 
 **The `Shift`+wheel pan does not work on the ruler.** It is a graph gesture. On the ruler the
 wheel always zooms; use the **Fit the view** button to come back to the whole animation.

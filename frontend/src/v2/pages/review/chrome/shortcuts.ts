@@ -148,8 +148,10 @@ function chromeRows(): ReviewShortcut[] {
     { keys: [named('common.escKey')], labelKey: 'shortcuts.restTool', handler: CHROME },
     { keys: [ch('Ctrl'), ch('V')], labelKey: 'shortcuts.pasteReference', handler: 'ReviewCanvasRefs' },
     // Deux rangées plutôt qu'un « Ctrl + Z / Y » : chaque touche est écrite telle qu'on la presse.
-    { keys: [ch('Ctrl'), ch('Z')], labelKey: 'common.undo', handler: 'useAnnotationShortcuts' },
-    { keys: [ch('Ctrl'), ch('Y')], labelKey: 'common.redo', handler: 'useAnnotationShortcuts' },
+    // Un seul gestionnaire pour tous les historiques de la review depuis le lot 9 (annotation en
+    // cours, brosse 3D, éditeur de splat) : il sert le plus prioritaire qui a un cran à rendre.
+    { keys: [ch('Ctrl'), ch('Z')], labelKey: 'common.undo', handler: 'useUndoScope' },
+    { keys: [ch('Ctrl'), ch('Y')], labelKey: 'common.redo', handler: 'useUndoScope' },
     // Le clic droit porte les actions dans les QUATRE viewers depuis le lot 8 : bref, il ouvre le
     // menu ; maintenu, il vole (spatial seulement). Les deux gestes se départagent dans
     // `viewer/contextGesture`, et le vol garde sa propre rangée plus bas.

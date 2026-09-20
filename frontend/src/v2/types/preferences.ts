@@ -10,6 +10,12 @@ export interface UserPreferences {
   emailDigest?: boolean;
   /** Rapport hebdomadaire de production par email (43.B — superviseurs/admins). */
   weeklyReport?: boolean;
+  /**
+   * Réglages de notification par type d'événement (lot 9) : genre → canal → activé.
+   * Absent, ou canal absent, vaut **activé** — la forme exacte et la liste des genres
+   * vivent dans `lib/notificationKinds`, recopiée du serveur.
+   */
+  notifications?: Record<string, { inApp?: boolean; push?: boolean }>;
   /** Dernière couleur d'annotation choisie en review. */
   annotationColor?: string;
   /** Surcharges de raccourcis clavier globaux (42.A2) : id d'action → touche. */

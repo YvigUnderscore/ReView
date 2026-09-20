@@ -276,11 +276,23 @@ export interface ReviewComment {
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 /**
- * referenceId = tâche (TASK_ASSIGNED) ou média (REPLY/COMMENT_ASSIGNED, et le premier
- * média de la version pour REVIEW_ASSIGNED) ; sinon projet.
+ * referenceId = tâche (TASK_ASSIGNED), playlist (LIVE), ou média — et pour les types portés
+ * par une version (REVIEW_ASSIGNED, REVIEW_DECISION), le PREMIER média de cette version,
+ * seul id que le viewer sait ouvrir. Sinon projet.
+ *
+ * Le type est dérivé du genre côté serveur (`lib/notificationKinds`) : c'est ce qui a mis
+ * fin au `review_decision` en minuscules, que le front ne reconnaissait pas.
  */
 export type NotificationType =
-  'TASK_ASSIGNED' | 'COMMENT_ASSIGNED' | 'REVIEW_ASSIGNED' | 'REPLY' | 'MENTION' | 'WATCH' | 'SYSTEM';
+  | 'TASK_ASSIGNED'
+  | 'COMMENT_ASSIGNED'
+  | 'REVIEW_ASSIGNED'
+  | 'REVIEW_DECISION'
+  | 'REPLY'
+  | 'MENTION'
+  | 'WATCH'
+  | 'LIVE'
+  | 'SYSTEM';
 export interface Notification {
   id: number;
   type: NotificationType | string;

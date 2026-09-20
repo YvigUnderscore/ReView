@@ -18,6 +18,7 @@ import { assertLocalCreationAllowed } from '../services/shotgrid/ShotgridGuardSe
 import { MAX_PAGE_SIZE, paginate, pageArgs, paginationQuery, readPagination } from '../lib/pagination';
 import * as SequenceService from '../services/SequenceService';
 import { CARD_ASSIGNEE_SELECT, awaitingReviewBySequence, signAssignees } from '../lib/entityCardData';
+import * as EntityVisitService from '../services/EntityVisitService';
 
 const router = Router();
 router.use(authenticate);
@@ -80,13 +81,22 @@ router.get(
     const { pageCount, hasMore } = paginate(sequences, total, p);
     // Pastille « attend une review » : ce qui attend une séquence, ce sont les
     // livraisons publiées de ses plans qu'aucune décision n'a encore tranchées.
-    const awaiting = await awaitingReviewBySequence(sequences.map((s) => s.id));
+    const [awaiting, unseen] = await Promise.all([
+      awaitingReviewBySequence(sequences.map((s) => s.id)),
+      // « Non consulté » (lot 9) : une séquence s'allume sur l'activité de ses plans —
+      // publier un média n'écrit rien sur la séquence, c'est tout le piège du lot.
+      EntityVisitService.unseenBySequence(req.user!.id, sequences),
+    ]);
     // Vignette effective : celle qu'on a choisie, sinon celle du premier média publié d'un
     // de ses plans — sans quoi la carte d'une séquence reste vide même une fois le travail
     // commencé.
     const signed = await SequenceService.signSequenceThumbnails(await signAssignees(sequences));
     res.json({
-      sequences: signed.map((s) => ({ ...s, awaitingReview: awaiting.get(s.id) ?? 0 })),
+      sequences: signed.map((s) => ({
+        ...s,
+        awaitingReview: awaiting.get(s.id) ?? 0,
+        unseen: unseen.get(s.id) ?? false,
+      })),
       unsequencedShots,
       total,
       page: p.page,
@@ -146,7 +156,7 @@ router.post(
 
 // GET /api/sequences/:id — fiche complète, celle que sert la page de séquence (C3).
 router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
-  const sequence = await SequenceService.getDetail(Number(req.params.id));
+  const sequence = await SequenceService.getDetail(Number(req.params.id), req.user!.id);
   await assertProjectAccess(req, sequence.projectId);
   res.json({ sequence });
 });

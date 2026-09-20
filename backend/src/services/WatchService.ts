@@ -115,7 +115,7 @@ export async function notifyWatchers(opts: {
     ids.map((userId) =>
       notify({
         userId,
-        type: 'WATCH',
+        kind: 'watch',
         messageKey: opts.messageKey,
         params: opts.params,
         projectId: opts.projectId,

@@ -32,6 +32,14 @@ import EpisodesToggle from '../pages/project/EpisodesToggle';
  * L'écran manipule les réglages EFFECTIFS. Les réenregistrer en bloc figeait dans le projet
  * tout ce qu'il ne faisait qu'hériter : on n'envoie donc que les sections réellement
  * modifiées, en PATCH (`buildSettingsPatch`).
+ *
+ * **Pas d'undo/redo ici, et c'est un choix.** Le formulaire est un BROUILLON : rien ne part avant
+ * « Enregistrer », et `baseline` garde l'état de référence. Tant qu'on n'a pas enregistré,
+ * abandonner c'est quitter l'onglet ; chaque champ de texte a déjà le Ctrl+Z du navigateur, qui
+ * fait mieux le travail dans une saisie. Un Ctrl+Z de formulaire devrait choisir ce qu'il défait
+ * — la frappe, le champ, la section, le brouillon entier — et chaque réponse est fausse pour la
+ * moitié des cas. Après enregistrement, l'inverse ne s'invente pas non plus : rendre une section
+ * au studio est un geste explicite, et il existe déjà (`ProjectSettingsInheritance`).
  */
 export default function ProjectSettingsTab({
   projectId,

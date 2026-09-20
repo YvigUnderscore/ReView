@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import CreateEntityButton from '../../components/entity/CreateEntityButton';
+import MarkAllSeenButton from '../../components/entity/MarkAllSeenButton';
 import EmptyState from '../../components/ui/empty-state';
 import SelectionBar from '../../components/ui/selection-bar';
 import ViewToggle from '../../components/ViewToggle';
@@ -147,6 +148,11 @@ export default function SequencesTab({
               onSubmit={(items) => createBulk(items.map((it) => ({ code: it.code, name: it.name })))}
             />
           )}
+          <MarkAllSeenButton
+            target="SEQUENCE"
+            projectId={projectId}
+            unseenCount={sorted.filter((s) => s.unseen).length}
+          />
           <ViewToggle contextKey={`sequences:${projectId}`} />
         </div>
       </div>
@@ -174,6 +180,7 @@ export default function SequencesTab({
                   description: s.description,
                   assignees: s.assignees,
                   awaitingReview: s.awaitingReview,
+                  unseen: s.unseen,
                   updatedAt: s.updatedAt,
                 }}
                 badge={

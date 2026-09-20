@@ -25,6 +25,13 @@ clicking a clip opens the player *at that point*, not at the beginning.
 Any project member can read and play a cut. Renaming it, targeting a stage, freezing a
 revision and starting an export are reserved to supervisors and admins.
 
+**Renaming and re-targeting a stage both come back with one click**, through the `Undo` of the
+toast that confirms them: changing the targeted stage rebuilds the whole cut, and it is a single
+entry in a right-click menu, so the step back is worth having. The cut itself is never assembled
+by hand — it is deduced — so there is nothing else here to undo. A **frozen revision** is the
+exception in the other direction: it is an audit record, no gesture removes it, and none is
+offered. See [Navigation & search](navigation-and-search.md).
+
 ## How each shot picks the version it plays
 
 One clip per shot, in production order: sequence order, then sequence code, then shot order,

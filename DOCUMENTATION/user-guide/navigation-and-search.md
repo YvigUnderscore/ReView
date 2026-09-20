@@ -2,7 +2,7 @@
 
 *The palette, the shortcuts, the right-click menu and the bulk gestures that get you anywhere fast.*
 
-> Updated: 2026-08-26
+> Updated: 2026-09-20
 
 A studio project is two thousand shots and a thousand assets. Nothing here is meant to be
 found by scrolling: you type two characters, or you right-click the thing itself. This page
@@ -39,8 +39,15 @@ step out to Home or to the Reviews list.
 > panel button; you get your own setting back on the next page.
 
 The **header** is the same everywhere: the page title or breadcrumb on the left, then the
-**Pending drafts** pill (only when you have drafts), the search button, and the
-notification bell. The sidebar has **no** search field — search lives in that header.
+**Pending drafts** pill (only when you have drafts), the **notification bell**, and the search
+button. The sidebar has **no** search field — search lives in that header.
+
+The bell sits *before* the search button, and everything it shows lives in the header row
+rather than floating over the page. When a notification arrives, its first line appears beside
+the bell for a few seconds and then fades; clicking it opens what it is about, and the small
+cross dismisses it. Click the bell itself for the full list. Nothing here ever covers the
+upload panel or a toast in the bottom-right corner, which is where these alerts used to
+appear — and where they used to fight the upload progress for the same pixels.
 
 ## The command palette
 
@@ -221,6 +228,41 @@ browser's own menu is suppressed on purpose. Three exceptions, in order:
 
 The **Home** page is the one place where empty space has a menu of its own: edit the
 layout, add a widget you had hidden, reset the layout, refresh the data.
+
+## Undoing what you just did
+
+ReView offers two different undos, and the difference is not cosmetic: one is a real history,
+the other is a single step. Which one you get depends on whether your action has already left
+your machine.
+
+**A local history — `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`.** Wherever you are building something
+that has not been sent yet, the keys walk a genuine stack, as deep as your session: the
+annotation you are drawing, the 3D strokes of a surface brush, a splat clean-up, a camera
+animation in Staging, a board. Nothing is shared until you send it, so nothing is lost by
+walking back.
+
+**A single step — the `Undo` button in the confirmation toast.** Everything that writes to the
+server is confirmed by a toast, and when the previous value is known the toast carries `Undo`
+for eight seconds. Moving a kanban card, setting a status, assigning a task, changing a stage,
+renaming a task or a cut, reordering a playlist, removing a version from one — each of them
+comes back with one click. It is deliberately **one** step and not a stack: the write is already
+in everyone else's screen, a ShotGrid site may have arbitrated it, and offering a pile of steps
+over data you no longer own would promise what the application cannot keep. Undoing is itself a
+write, so it can be refused — and says so instead of pretending.
+
+> [!NOTE]
+> Only one history answers a key press. When several could — you are painting 3D strokes on a
+> splat you are also cleaning up — the one holding the gesture wins: the annotation in
+> progress first, then the 3D brush, then the media editor, and the camera animation takes
+> precedence over all of them while **Staging** is open. A history with nothing left to give
+> stands aside and lets the next one answer.
+
+**And some things do not come back.** Deleting a task is final: nothing restores it, and
+re-creating it would produce a different task — new identifier, lost history, broken comment
+links. The same holds for a frozen cut revision, which is an audit record. Those gestures ask
+for a confirmation *before* acting, which is where a safeguard is honest, and offer no `Undo`
+afterwards. Deleted projects, sequences, shots, assets and versions are the exception: they go
+to the **trash** and come back from there — see [Project organization](../admin-guide/project-organization.md).
 
 ## Multi-selection and bulk actions
 

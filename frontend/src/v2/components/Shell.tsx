@@ -204,6 +204,10 @@ export default function Shell() {
           {/* Titre / fil d'Ariane projeté par la page courante (PageShell). */}
           <div ref={headerRef} className="flex min-w-0 flex-1 items-center gap-3" />
           <PendingDrafts />
+          {/* Notifications à GAUCHE de la recherche (lot 9) : elles occupaient le coin bas
+              droit, où le widget d'upload et les toasts se recouvraient mutuellement. Ici
+              elles vivent dans le flux de l'en-tête et ne masquent rien. */}
+          <NotificationBell />
           {/* Recherche permanente (12.D) : ouvre la palette Ctrl+K. Réduite à une icône en
               fenêtre étroite — un champ de 20rem y mangerait le fil d'Ariane. */}
           {narrow ? (
@@ -228,7 +232,6 @@ export default function Shell() {
               </kbd>
             </button>
           )}
-          <NotificationBell />
         </header>
         {/* Transition de page en CSS (F3) : le `key={pathname}` remonte le nœud, donc
             l'animation d'entrée rejoue à chaque navigation, exactement comme le faisait

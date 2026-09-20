@@ -23,6 +23,14 @@ import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 type SessionUser = { id: number; role: Role };
 
+/**
+ * Pastille d'une décision pour le canal d'équipe. Elle reste **hors du catalogue** :
+ * un emoji n'est pas du texte à traduire, mais il précède la phrase dans les quatorze
+ * langues — il voyage donc en paramètre `{icon}`.
+ */
+const decisionIcon = (s: { isApproval: boolean; isRetake: boolean }): string =>
+  s.isApproval ? '✅' : s.isRetake ? '🔁' : '🟠';
+
 /** Statuts classiques créés au premier accès (idempotent, instances existantes incluses). */
 const DEFAULT_STATUSES = [
   { name: 'Pending', color: '#F5A623', order: 0, isDefault: true },
@@ -154,24 +162,27 @@ export async function decide(
   // 48 : la décision remonte au registre de production. Mise en file — l'artiste ne
   // doit pas attendre ShotGrid, et une panne du site ne fait pas échouer la review.
   await enqueuePush(projectId, { type: 'version-status', versionId, actorId: user.id });
-  // Notifie l'auteur de la version (sauf s'il pose lui-même la décision).
-  if (version.authorId && version.authorId !== user.id) {
-    await notify({
-      userId: version.authorId,
-      type: 'review_decision',
-      messageKey: 'notification.decision',
-      params: { status: status.name, version: version.name },
-      projectId,
-      referenceId: versionId,
-    });
-  }
-  // Suiveurs (32.G) : décision posée sur la chaîne version/shot/asset (référence =
-  // premier média de la version, navigable vers la review).
+  // Référence commune à TOUS les destinataires : le premier média de la version, seul id
+  // que le front sait ouvrir. L'auteur recevait auparavant l'id de la VERSION et les
+  // suiveurs celui du MÉDIA, pour le même événement — l'un des deux liens était donc faux
+  // par construction, et c'était celui de la personne la plus concernée.
   const firstMedia = await prisma.mediaObject.findFirst({
     where: { versionId },
     orderBy: { id: 'asc' },
     select: { id: true },
   });
+  // Notifie l'auteur de la version (sauf s'il pose lui-même la décision).
+  if (version.authorId && version.authorId !== user.id) {
+    await notify({
+      userId: version.authorId,
+      kind: 'reviewDecision',
+      messageKey: 'notification.decision',
+      params: { status: status.name, version: version.name },
+      projectId,
+      referenceId: firstMedia?.id ?? null,
+    });
+  }
+  // Suiveurs (32.G) : décision posée sur la chaîne version/shot/asset.
   await notifyWatchers({
     versionId,
     projectId,
@@ -201,8 +212,8 @@ export async function decide(
   // version par version et n'annonce qu'une ligne : trente messages pour une session de
   // review rendraient le canal inutilisable.
   if (options.chat !== false) {
-    const emoji = status.isApproval ? '✅' : status.isRetake ? '🔁' : '🟠';
-    void notifyChat(`${emoji} Décision « ${status.name} » sur la version ${version.name}`);
+    const icon = decisionIcon(status);
+    void notifyChat('chat.decision', { icon, status: status.name, version: version.name });
   }
   return decision;
 }
@@ -259,8 +270,7 @@ export async function decideMany(
     }
   }
   if (updated > 0) {
-    const emoji = status.isApproval ? '✅' : status.isRetake ? '🔁' : '🟠';
-    void notifyChat(`${emoji} Décision « ${status.name} » sur ${updated} version(s)`);
+    void notifyChat('chat.decisionBulk', { icon: decisionIcon(status), status: status.name, count: updated });
   }
   logAudit({
     userId: user.id,
@@ -362,7 +372,7 @@ export async function decideAsGuest(
   if (version.authorId) {
     await notify({
       userId: version.authorId,
-      type: 'review_decision',
+      kind: 'reviewDecision',
       messageKey: 'notification.clientDecision',
       params: { name: guest.name, status: status.name, version: version.name },
       projectId,

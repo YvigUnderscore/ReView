@@ -18,6 +18,7 @@ import { useAddToPlaylistMenu } from '../lib/useAddToPlaylistMenu';
 import { useStatusMenu } from '../lib/useStatusMenu';
 import { entriesOf } from '../lib/menuSpec';
 import { fetchSequenceCandidates } from '../lib/playlistApi';
+import { useMarkVisited } from '../lib/useVisits';
 import type { SequenceDetailData } from './project/projectTypes';
 import { useT } from '../i18n';
 import EntityUnavailable from '../components/EntityUnavailable';
@@ -34,6 +35,8 @@ export default function SequencePage() {
   const t = useT();
   const { id } = useParams();
   const sequenceId = parseIdParam(id);
+  // Ouvrir, c'est consulter : la lueur « non consulté » s'éteint ici (lot 9).
+  useMarkVisited('SEQUENCE', sequenceId);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: qk.sequence(sequenceId),

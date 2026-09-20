@@ -73,7 +73,7 @@ describe('createGuest — le retour d’un client atteint quelqu’un', () => {
     await createGuest(guest, 7, body);
     expect(notify).toHaveBeenCalledWith(
       // Type `WATCH` : c'est lui qui fait pointer la notification vers la review du média.
-      expect.objectContaining({ userId: 2, type: 'WATCH', referenceId: 9 }),
+      expect.objectContaining({ userId: 2, kind: 'watch', referenceId: 9 }),
     );
   });
 

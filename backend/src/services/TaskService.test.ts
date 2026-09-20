@@ -85,7 +85,7 @@ describe('createFromComment (32.D)', () => {
         }),
       }),
     );
-    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 4, type: 'TASK_ASSIGNED' }));
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 4, kind: 'taskAssigned' }));
   });
 
   it('version d’asset direct : tâche rattachée à l’asset', async () => {

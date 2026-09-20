@@ -25,6 +25,7 @@ import { useStatusMenu } from '../lib/useStatusMenu';
 import { useOmitMenu } from '../lib/useOmitMenu';
 import { entriesOf } from '../lib/menuSpec';
 import type { MenuEntry } from '../lib/menuSpec';
+import { useMarkVisited } from '../lib/useVisits';
 import { useT } from '../i18n';
 import type { AssetOverview } from '../types/api';
 import EntityUnavailable from '../components/EntityUnavailable';
@@ -57,6 +58,8 @@ interface ShotDetail {
 export default function ShotPage() {
   const { id } = useParams();
   const shotId = Number(id);
+  // Ouvrir, c'est consulter : la lueur « non consulté » s'éteint ici (lot 9).
+  useMarkVisited('SHOT', shotId);
   const t = useT();
   const navigate = useNavigate();
   const enqueue = useUploadStore((s) => s.enqueue);

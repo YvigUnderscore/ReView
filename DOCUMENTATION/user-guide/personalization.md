@@ -2,7 +2,7 @@
 
 *Theme, language, density, the Home layout, shortcuts and alerts — what each one changes, and which machine remembers it.*
 
-> Updated: 2026-08-26
+> Updated: 2026-09-20
 
 Two people never use ReView the same way. A compositor wants a dark, compact window with the
 media as large as it goes; a producer wants the Home page to open on figures and a task list.
@@ -238,7 +238,7 @@ review. Both gestures are detailed in
 
 ## Notifications
 
-**Profile → Notifications** carries three switches, in this order.
+**Profile → Notifications** carries three switches and one grid, in this order.
 
 | Switch | Who sees it | Default | Arrives as |
 |--------|-------------|---------|-----------|
@@ -265,9 +265,36 @@ reported back rather than failing silently. On a browser that does not support p
 **no control at all** — a one-line message takes its place. Nothing has to be configured on
 the server for this to work: the signing key pair is generated and kept on first use.
 
+### Which events reach you
+
+Under the three switches, **Notifications by event** is a grid: one row per kind of event, one
+column per channel — *In app* (the bell) and *Browser* (push).
+
+| Event | What it covers |
+|-------|----------------|
+| You were mentioned in a comment | A `@you` in any comment |
+| New reply to your comment | Someone answers a thread you started |
+| A comment was assigned to you | A comment turned into work for you |
+| A task is assigned to you | A kanban card lands on your name |
+| A review is entrusted to you | You are named as a reviewer on a version |
+| A decision on one of your versions | A verdict is recorded on something you delivered |
+| Activity on something you follow | Comments, publications and decisions on a shot, asset or version you watch |
+| A live review starts | Somebody opens a live session on a playlist |
+
+Everything starts **ticked**, including for a new account, and a kind of event added in a later
+release arrives ticked too. Unticking *In app* does not merely hide the line: it is never
+written, so it will not be waiting for you if you tick the box again. Unticking *Browser* keeps
+the line on the bell and stops the system notification only.
+
+The grid is per account, not per browser — unlike the push switch above it, which is the
+*subscription* of one browser. Turning push off in a browser silences that browser; unticking a
+*Browser* box here silences that event everywhere.
+
 > [!TIP]
 > An artist who lives in a DCC all day turns push on and leaves the digest off: the alert that
-> matters arrives immediately, and the recap that does not, never arrives at all.
+> matters arrives immediately, and the recap that does not, never arrives at all. The row that
+> is worth unticking first is *Activity on something you follow* — following a whole sequence
+> makes it the loudest of the eight.
 
 ## First sign-in, and what changed since
 

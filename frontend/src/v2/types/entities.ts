@@ -52,6 +52,14 @@ export interface EntityCardExtras {
   awaitingReview?: number;
   /** Dernière modification (ISO) — « ça n'a pas bougé depuis trois semaines ». */
   updatedAt?: string;
+  /**
+   * A bougé depuis que **je** l'ai ouvert (lot 9) — ou jamais ouvert.
+   *
+   * Calculé par le serveur, et pour moi seul : deux personnes lisant la même liste n'y
+   * voient pas les mêmes cartes allumées. Le serveur compare l'activité de l'entité, sa
+   * descendance comprise, à ma dernière visite ; le client n'a rien à recalculer.
+   */
+  unseen?: boolean;
 }
 
 export interface Project {

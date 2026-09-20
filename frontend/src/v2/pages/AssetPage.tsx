@@ -24,6 +24,7 @@ import TaskPickerDialog from '../components/upload/TaskPickerDialog';
 import NewTaskDialog from '../components/entity/NewTaskDialog';
 import { useProjectRole } from '../lib/useProjectRole';
 import type { MenuEntry } from '../lib/menuSpec';
+import { useMarkVisited } from '../lib/useVisits';
 import type { AssetDetail, AssetOverview } from '../types/api';
 import { useT } from '../i18n';
 import EntityUnavailable from '../components/EntityUnavailable';
@@ -39,6 +40,8 @@ export default function AssetPage() {
   const t = useT();
   const { id } = useParams();
   const assetId = Number(id);
+  // Ouvrir, c'est consulter : la lueur « non consulté » s'éteint ici (lot 9).
+  useMarkVisited('ASSET', assetId);
   const enqueue = useUploadStore((s) => s.enqueue);
   const qc = useQueryClient();
   const navigate = useNavigate();

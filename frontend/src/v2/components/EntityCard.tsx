@@ -134,7 +134,20 @@ function EntityCard({
 }: EntityCardProps) {
   const t = useT();
   const highlighted = active || selection?.selected;
-  const activeRing = highlighted ? 'border-primary ring-1 ring-primary' : 'border-border';
+  /**
+   * Trois états de bordure, dans cet ordre de priorité.
+   *
+   * La sélection et la carte courante passent avant « non consulté » : une carte cochée
+   * doit se lire comme cochée, sinon une action de masse s'exerce sur ce qu'on croit avoir
+   * désélectionné. « Non consulté » n'emprunte donc pas `primary` — il prend `info`, qui
+   * n'a aucun autre emploi sur une carte, et l'anneau reste plus discret que celui de la
+   * sélection : c'est une invitation à regarder, pas un état qu'on a choisi.
+   */
+  const activeRing = highlighted
+    ? 'border-primary ring-1 ring-primary'
+    : meta?.unseen
+      ? 'border-info ring-1 ring-info/40 shadow-md shadow-info/20'
+      : 'border-border';
   const clickable = onClick ? 'cursor-pointer text-left w-full' : '';
 
   // Favoris (42.A3) : action clic droit « épingler/retirer » + indicateur étoile.

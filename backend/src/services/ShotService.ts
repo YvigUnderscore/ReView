@@ -16,6 +16,7 @@ import { type PaginationParams, pageArgs, paginateCursor, withCursor } from '../
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertDescriptionWritable } from './shotgrid/ShotgridGuardService';
 import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot, signAssignees } from '../lib/entityCardData';
+import { unseenByShot } from './EntityVisitService';
 
 /**
  * Logique métier des shots (liste + miniatures, création simple/lot avec unicité de
@@ -51,6 +52,11 @@ export async function list(
   seq: number | 'none' | undefined,
   p: PaginationParams,
   episode?: number | 'none',
+  /**
+   * Qui regarde — pour l'état « non consulté » (lot 9). Absent (surface de partage, qui
+   * n'a pas de compte), aucune carte ne s'allume : la lueur est une notion personnelle.
+   */
+  userId?: number,
 ) {
   const seqFilter =
     seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
@@ -98,9 +104,13 @@ export async function list(
   // envoyait une requête et une signature MinIO par plan, soit deux cents allers-retours
   // pour une page de cent.
   const ids = shots.map((s) => s.id);
-  const [fallbacks, awaiting] = await Promise.all([
+  const [fallbacks, awaiting, unseen] = await Promise.all([
     firstMediaThumbKeysForShots(ids),
     awaitingReviewByShot(ids),
+    // « Non consulté » : l'activité du plan — la sienne, celle de ses tâches, de ses
+    // livraisons et de leurs médias — confrontée à ma dernière visite. Le calcul est
+    // groupé comme les deux précédents, pour la même raison.
+    userId ? unseenByShot(userId, shots) : Promise.resolve(new Map<number, boolean>()),
   ]);
   const signed = await signAssignees(shots);
   const items = await Promise.all(
@@ -108,6 +118,7 @@ export async function list(
       ...s,
       thumbnailUrl: await effectiveThumbnailUrl(s.thumbnailKey, fallbacks.get(s.id) ?? null),
       awaitingReview: awaiting.get(s.id) ?? 0,
+      unseen: unseen.get(s.id) ?? false,
     })),
   );
   return paginateCursor(items, total, p, (s) => s.order);

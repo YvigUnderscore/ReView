@@ -14,6 +14,7 @@ import { entriesOf, separator, type MenuEntry } from '../../lib/menuSpec';
 import { useProjectRole } from '../../lib/useProjectRole';
 import { useStatusMenu } from '../../lib/useStatusMenu';
 import { useTaskAssignMenu } from '../../lib/useTaskAssignMenu';
+import { useUndoToast } from '../../lib/useUndoToast';
 import { useAuth } from '../../stores/useAuth';
 import type { StatusChoice } from '../../lib/statusMenu';
 import type { BoardTask } from './kanbanTypes';
@@ -39,6 +40,7 @@ export function useKanbanCardMenu(
 ): { menuFor: (task: BoardTask) => MenuEntry[]; dialogs: ReactNode } {
   const t = useT();
   const qc = useQueryClient();
+  const { done } = useUndoToast();
   const myId = useAuth((s) => s.user?.id);
   const { canManage } = useProjectRole(projectId);
   const { entry: statusEntry, choices } = useStatusMenu(projectId, 'task');
@@ -55,15 +57,29 @@ export function useKanbanCardMenu(
     setRenaming(task);
   }, []);
 
+  /** L'écriture nue du nom : elle laisse remonter son échec (l'annulation la rejoue). */
+  const writeName = async (taskId: number, name: string): Promise<void> => {
+    await api.patch(`/api/tasks/${taskId}`, { name });
+    refresh();
+    void qc.invalidateQueries({ queryKey: qk.task(taskId) });
+  };
+
+  /**
+   * Renomme, et propose de remettre l'ancien nom dans le toast.
+   *
+   * Le champ de saisie a bien le Ctrl+Z du navigateur, mais il ne sert plus à rien une fois le
+   * dialogue refermé : le nom est parti au serveur. L'inverse, lui, est tenu exactement — c'est
+   * la même route avec la chaîne d'avant.
+   */
   const rename = async () => {
     const name = draft.trim();
     if (!renaming || name === '' || name === renaming.name) return setRenaming(null);
+    const task = renaming;
     setBusy(true);
     try {
-      await api.patch(`/api/tasks/${renaming.id}`, { name });
+      await writeName(task.id, name);
       setRenaming(null);
-      refresh();
-      void qc.invalidateQueries({ queryKey: qk.task(renaming.id) });
+      done(t('task.renamed', { name }), () => writeName(task.id, task.name));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
@@ -75,6 +91,12 @@ export function useKanbanCardMenu(
    * Supprimer une tâche emporte ses versions (`onDelete: Cascade`). Le serveur refuse donc
    * une tâche qui en porte, avec un message qui dit combien : c'est cette réponse qu'on
    * affiche, plutôt que de recompter ici ce que le board ne sait pas de source sûre.
+   *
+   * **Aucune annulation offerte, et c'est voulu.** Rien ne restaure une tâche : il n'existe pas
+   * de corbeille de tâches côté serveur, et la recréer donnerait une AUTRE tâche — identifiant
+   * neuf, historique perdu, liens de commentaires et de retours rompus, ligne ShotGrid déjà
+   * supprimée du site. Un « Annuler » promettrait ce qu'on ne peut pas tenir ; le garde-fou
+   * reste la confirmation, en amont, où il est honnête.
    */
   const remove = async () => {
     if (!deleting) return;

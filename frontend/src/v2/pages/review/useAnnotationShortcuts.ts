@@ -1,15 +1,18 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect } from 'react';
-import { isEditable } from '../../lib/shortcuts';
+import { UNDO_PRIORITY, useUndoScope } from '../../lib/undoScope';
 
 /**
  * Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y sur l'annotation en cours — formes **et** références collées.
  *
- * Le raccourci n'est capté que s'il y a vraiment un cran à défaire : sinon il repart vers
- * l'éditeur qui écoute peut-être le même geste (splat, animation caméra), et deux historiques
- * ne se défont pas d'une seule frappe.
+ * Le gestionnaire clavier lui-même vit maintenant dans `lib/undoScope`, partagé avec l'éditeur
+ * de splat et la brosse 3D. Ce module ne dit plus que ceci : le composer est le périmètre le
+ * **plus prioritaire** (`UNDO_PRIORITY.composer`), et il ne réclame la frappe que s'il a
+ * vraiment un cran à rendre — sinon elle retombe sur l'éditeur du média.
+ *
+ * Avant ce partage, chaque historique posait son propre `keydown` sur `document` : deux
+ * historiques ayant un cran, une seule frappe en défaisait deux.
  */
 export function useAnnotationShortcuts({
   enabled,
@@ -24,23 +27,5 @@ export function useAnnotationShortcuts({
   undo: () => void;
   redo: () => void;
 }): void {
-  useEffect(() => {
-    if (!enabled) return;
-    const down = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-      if (isEditable(e.target) || document.querySelector('[role="dialog"]')) return;
-      const key = e.key.toLowerCase();
-      if (key === 'z' && !e.shiftKey) {
-        if (!canUndo) return;
-        e.preventDefault();
-        undo();
-      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
-        if (!canRedo) return;
-        e.preventDefault();
-        redo();
-      }
-    };
-    document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
-  }, [enabled, canUndo, canRedo, undo, redo]);
+  useUndoScope({ enabled, priority: UNDO_PRIORITY.composer, canUndo, canRedo, undo, redo });
 }

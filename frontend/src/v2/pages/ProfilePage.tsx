@@ -10,6 +10,7 @@ import Avatar from '../components/Avatar';
 import DisplaySettings from '../components/DisplaySettings';
 import PushToggle from './profile/PushToggle';
 import { DigestToggle, WeeklyReportToggle } from './profile/EmailToggles';
+import NotificationSettings from './profile/NotificationSettings';
 import SessionsSection from './profile/SessionsSection';
 import ApiTokensSection from './profile/ApiTokensSection';
 import TwoFaSection from './profile/TwoFaSection';
@@ -256,6 +257,9 @@ export default function ProfilePage() {
           <DigestToggle />
           <WeeklyReportToggle />
           <PushToggle />
+          {/* Réglages par type d'événement (lot 9) : le reste de cette carte ne couvrait
+              que les envois récurrents et l'abonnement du navigateur. */}
+          <NotificationSettings />
         </Card>
 
         {/* Sécurité du compte (36.A/36.B/36.C) : 2FA + sessions actives + tokens d'API. */}

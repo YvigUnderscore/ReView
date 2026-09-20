@@ -14,6 +14,7 @@ import ListSentinel, { ListCount } from '../../components/ListSentinel';
 import { useStatusMenu } from '../../lib/useStatusMenu';
 import { useOmitMenu } from '../../lib/useOmitMenu';
 import CreateEntityButton from '../../components/entity/CreateEntityButton';
+import MarkAllSeenButton from '../../components/entity/MarkAllSeenButton';
 import EmptyState from '../../components/ui/empty-state';
 import ShotBulkBar from './ShotBulkBar';
 import ShotDialogs from './ShotDialogs';
@@ -190,6 +191,11 @@ export default function ShotsTab({
               }
             />
           )}
+          <MarkAllSeenButton
+            target="SHOT"
+            projectId={projectId}
+            unseenCount={visible.filter((s) => s.unseen).length}
+          />
           <ViewToggle contextKey={`shots:${projectId}`} />
         </div>
       </div>
@@ -265,6 +271,7 @@ export default function ShotsTab({
                     description: shot.description,
                     assignees: shot.assignees,
                     awaitingReview: shot.awaitingReview,
+                    unseen: shot.unseen,
                     updatedAt: shot.updatedAt,
                     departments: shot.departments,
                   }}

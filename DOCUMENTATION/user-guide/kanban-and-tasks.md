@@ -75,6 +75,14 @@ Each project has a board at `/projects/:id/kanban`. Four ways in:
 The shortcut only fires when a project is in context, and it is rebindable — see
 [Personalization](personalization.md#keyboard-shortcuts-configurable).
 
+**Every write on the board comes back with one click.** Dropping a card in a column, setting a
+status, assigning someone, changing a stage, renaming a task — each is confirmed by a toast
+carrying `Undo`, which puts the previous value back. There is no `Ctrl+Z` here, and that is
+deliberate: the write is already on everyone else's board, so the application offers the one
+step it can actually keep rather than a stack it cannot. **Deleting a task is the exception**
+— nothing restores it, so it asks before acting and offers nothing afterwards. See
+[Navigation & search](navigation-and-search.md).
+
 ### Columns come from the project, families come from the code
 
 A studio connected to ShotGrid commonly defines fifteen statuses; fifteen columns side by

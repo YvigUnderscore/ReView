@@ -69,6 +69,7 @@ import announcementsRoutes from './routes/announcements.routes';
 import docsRoutes from './routes/docs.routes';
 import healthRoutes, { versionRouter } from './routes/health.routes';
 import watchRoutes from './routes/watch.routes';
+import visitsRoutes from './routes/visits.routes';
 import playlistsRoutes from './routes/playlists.routes';
 import timelinesRoutes from './routes/timelines.routes';
 import liveRoutes from './routes/live.routes';
@@ -325,6 +326,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use('/api/announcements', announcementsRoutes);
   app.use('/api/bulk', bulkRoutes);
   app.use('/api/watch', watchRoutes);
+  app.use('/api/visits', visitsRoutes); // acquittement « non consulté » (Phase 50, lot 9)
   app.use('/api/playlists', playlistsRoutes); // dailies (Phase 33)
   app.use('/api/timelines', timelinesRoutes); // montages automatiques (Phase 45)
   app.use('/api/live', liveRoutes); // sessions live en cours (badges LIVE)

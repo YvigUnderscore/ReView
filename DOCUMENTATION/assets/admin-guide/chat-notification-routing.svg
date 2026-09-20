@@ -2,7 +2,7 @@
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="chat-routing-title">Which event reaches which chat channel, and with what timeout</title>
-  <desc id="chat-routing-desc">A publication and a review decision go through notifyChat, which posts to both Slack and Discord under a five-second timeout. A new comment on a media and new feedback on a timeline go through sendDiscord, which posts to Discord only and carries no timeout at all. Both paths are fire-and-forget: a webhook that fails is logged and never fails the action that triggered it.</desc>
+  <desc id="chat-routing-desc">A publication and a review decision go through notifyChat, which posts to both Slack and Discord. A new comment on a media and new feedback on a timeline go through sendDiscord, which posts to Discord only. Both paths abort after five seconds, render their message from the translation catalogues in the studio language, and are fire-and-forget: a webhook that fails is logged and never fails the action that triggered it.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -85,7 +85,7 @@
 
   <rect class="panel-w" x="276" y="148" width="214" height="46" rx="9"/>
   <text class="t" x="292" y="170">Comments and feedback</text>
-  <text class="m" x="292" y="187">sendDiscord() — no timeout</text>
+  <text class="m" x="292" y="187">sendDiscord() — 5 s timeout</text>
 
   <text class="d" x="276" y="216">Slack never receives these two.</text>
 

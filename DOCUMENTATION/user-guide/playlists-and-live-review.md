@@ -2,7 +2,7 @@
 
 *Build a dailies playlist, play it end to end, and drive one synchronized room from a single screen.*
 
-> Updated: 2026-08-26
+> Updated: 2026-09-20
 
 ReView supports the classic **dailies** workflow in two halves that fit together: a
 **playlist** is the running order, and a **live session** is the room watching it. You can
@@ -86,6 +86,11 @@ there is no drag-and-drop here.
 
 Renaming happens inline in the header: click the pencil, type, Escape cancels and blur
 saves. **Play** jumps to the first item that has a playable media.
+
+**Reordering and removing both come back.** Each is confirmed by a toast carrying `Undo`:
+reordering goes back to the order you had, and a removed version returns **to its place** in the
+list, not to the end of it. Nothing asks for a confirmation before the fact, because the step
+after the fact is the honest one here. See [Navigation & search](navigation-and-search.md).
 
 > [!TIP]
 > Right-click the playlist header to export the whole screening's notes — CSV, printable

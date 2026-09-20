@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import type { Line2 } from 'three/addons/lines/Line2.js';
 import { api } from '../../../../../lib/apiClient';
 import { qk } from '../../../../lib/query';
+import { UNDO_PRIORITY, useUndoScope } from '../../../../lib/undoScope';
+import { useUndoToast } from '../../../../lib/useUndoToast';
 import { useT } from '../../../../i18n';
 import type { SplatPaintStroke } from '../../reviewTypes';
 import type { SplatViewer } from '../useSplat';
@@ -42,10 +44,12 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
   const { getSceneHandle } = splat;
   const t = useT();
   const qc = useQueryClient();
+  const { done } = useUndoToast();
   const [armed, setArmed] = useState<PaintTool | null>(null);
   const [color, setColor] = useState('#ff4d4d');
   const [width, setWidth] = useState(DEFAULT_STROKE_PX);
   const [pendingCount, setPendingCount] = useState(0);
+  const [redoCount, setRedoCount] = useState(0);
   const [lines, setLines] = useState<LineModules | null>(null);
   // Commentaire consulté : son annotation brute (pour réécrire la liste des parts) et son
   // identifiant, non nul **seulement si le spectateur en est l'auteur** — c'est ce que le
@@ -55,6 +59,10 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
     commentId: null,
   });
   const pendingRef = useRef<{ stroke: SplatPaintStroke; line: Line2 }[]>([]);
+  // Traits annulés, en attente d'un rétablissement. On ne garde que la DONNÉE du trait : sa
+  // ligne Three a été libérée en l'annulant (`disposeStrokeLine` rend sa géométrie), elle est
+  // donc reconstruite au rétablissement — un objet libéré ne se remet pas dans la scène.
+  const undoneRef = useRef<SplatPaintStroke[]>([]);
   const shownRef = useRef<ShownStroke[]>([]);
   // Miroirs lus depuis les gestionnaires (jamais pendant le render — règle react-hooks/refs).
   const viewedRef = useRef(viewed);
@@ -76,8 +84,8 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
     };
   }, [isSplat]);
 
-  /** Pose les traits d'un geste (un geste coupé sur un trou en produit plusieurs). */
-  const addStrokes = useCallback(
+  /** Construit et monte des traits dans la scène, sans toucher à la pile de rétablissement. */
+  const attachStrokes = useCallback(
     (strokes: SplatPaintStroke[]) => {
       const handle = getSceneHandle();
       const modules = linesRef.current;
@@ -92,6 +100,17 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
     [getSceneHandle],
   );
 
+  /** Pose les traits d'un geste (un geste coupé sur un trou en produit plusieurs). */
+  const addStrokes = useCallback(
+    (strokes: SplatPaintStroke[]) => {
+      attachStrokes(strokes);
+      // Un trait neuf rend le futur inatteignable — règle de toute pile d'historique.
+      undoneRef.current = [];
+      setRedoCount(0);
+    },
+    [attachStrokes],
+  );
+
   const getLines = useCallback(() => linesRef.current, []);
   const gesture = useStrokeGesture({ getSceneHandle, getLines, color, width, onStrokes: addStrokes });
   const { cancel: cancelGesture } = gesture;
@@ -104,16 +123,50 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
   /** Annule le dernier trait du composer. */
   const undoStroke = useCallback(() => {
     const last = pendingRef.current.pop();
-    if (last) disposeStrokeLine(last.line);
+    if (!last) return;
+    disposeStrokeLine(last.line);
+    undoneRef.current.push(last.stroke);
     setPendingCount(pendingRef.current.length);
+    setRedoCount(undoneRef.current.length);
   }, []);
+
+  /** Rétablit le dernier trait annulé — il n'y avait aucun moyen de revenir sur un Ctrl+Z. */
+  const redoStroke = useCallback(() => {
+    const stroke = undoneRef.current.pop();
+    if (!stroke) return;
+    attachStrokes([stroke]);
+    setRedoCount(undoneRef.current.length);
+  }, [attachStrokes]);
 
   /** Retire tous les traits du composer (après envoi du commentaire, ou abandon). */
   const clearPending = useCallback(() => {
     for (const p of pendingRef.current) disposeStrokeLine(p.line);
     pendingRef.current = [];
+    undoneRef.current = [];
     setPendingCount(0);
+    setRedoCount(0);
   }, []);
+
+  /**
+   * Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y sur les traits en préparation.
+   *
+   * Le bouton « annuler le dernier trait » de la barre d'options était le seul retour en
+   * arrière de la brosse, et il n'avait pas de réciproque. Les traits en préparation sont
+   * PUREMENT LOCAUX — ils partiront avec le commentaire, rien n'est encore chez le serveur :
+   * un vrai historique, donc un vrai Ctrl+Z, sans rien promettre qu'on ne tienne.
+   *
+   * Le périmètre reste inscrit tant qu'un trait est en préparation, même brosse désarmée :
+   * on désarme souvent avant de se relire. Il passe avant l'éditeur de splat, qui écoute les
+   * mêmes touches (`lib/undoScope`), et se retire dès qu'il n'a plus rien à rendre.
+   */
+  useUndoScope({
+    enabled: isSplat && (armed !== null || pendingCount > 0 || redoCount > 0),
+    priority: UNDO_PRIORITY.brush3d,
+    canUndo: pendingCount > 0,
+    canRedo: redoCount > 0,
+    undo: undoStroke,
+    redo: redoStroke,
+  });
 
   /** Parties d'annotation à joindre au commentaire en cours d'envoi. */
   const serializePending = useCallback((): SplatPaintStroke[] => {
@@ -147,21 +200,32 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
     });
   }, [viewed, lines, getSceneHandle]);
 
-  /** Retire un trait d'un commentaire déjà envoyé (auteur seulement, côté serveur aussi). */
+  /**
+   * Retire un trait d'un commentaire déjà envoyé (auteur seulement, côté serveur aussi).
+   *
+   * Ici, pas de Ctrl+Z : le trait est **parti**, il est dans le commentaire que les autres
+   * lisent, et l'effacer réécrit la liste des parts côté serveur. Le cran se propose donc dans
+   * le toast, et il ne promet que celui-là — on tient la liste d'avant, rien de plus. Un
+   * historique local sur des données déjà partagées mentirait au premier rechargement.
+   */
   const eraseSent = useCallback(
     async (commentId: number, annotation: unknown, partIndex: number) => {
       const parts = Array.isArray(annotation) ? annotation : [];
       const next = parts.filter((_, index) => index !== partIndex);
-      try {
-        await api.patch(`/api/comments/${commentId}`, { annotation: next });
-        setViewed({ annotation: next, commentId });
+      /** Pose une liste de parts et rafraîchit le fil. Elle laisse remonter son échec. */
+      const writeParts = async (value: unknown[]): Promise<void> => {
+        await api.patch(`/api/comments/${commentId}`, { annotation: value });
+        setViewed({ annotation: value, commentId });
         await qc.invalidateQueries({ queryKey: qk.comments(mediaId) });
-        toast.success(t('review.splat.strokeErased'));
+      };
+      try {
+        await writeParts(next);
+        done(t('review.splat.strokeErased'), () => writeParts(parts));
       } catch (e) {
         toast.error(e instanceof Error ? e.message : t('review.splat.strokeEraseFailed'));
       }
     },
-    [qc, mediaId, t],
+    [qc, mediaId, t, done],
   );
 
   /** Gomme au clic : le trait en préparation le plus proche, sinon celui du commentaire lu. */
@@ -219,9 +283,12 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
     width,
     setWidth,
     pendingCount,
+    /** Traits annulés, rétablissables (grise le bouton « rétablir »). */
+    redoCount,
     gesture,
     eraseAt,
     undoStroke,
+    redoStroke,
     clearPending,
     serializePending,
     showFromAnnotation,

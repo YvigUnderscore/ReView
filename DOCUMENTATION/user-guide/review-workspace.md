@@ -212,9 +212,19 @@ lives in the rail, the options bar, the dock, the bottom row or the footer.
 | `0` / `1` / `+` / `-` | Fit · 100 % · zoom in · zoom out — **video only** |
 | `Space` `←` `→` `J` `K` `L` `I` `O` `M` | Transport and loop — **video only**, see [Video review](review-video.md) |
 | `[` / `]` / `Shift`+`\` | Shift the A/B pane by one frame (`Shift` = ten) · back to zero — **video only** |
-| `Ctrl+Z` / `Ctrl+Y` / `Ctrl+Shift+Z` | Undo · redo, in modes that write |
+| `Ctrl+Z` / `Ctrl+Y` / `Ctrl+Shift+Z` | Undo · redo — the history that holds your gesture |
 | `?` | Open the keyboard shortcut panel |
 | `Ctrl+K` | Command palette |
+
+**Undo goes to one history at a time.** A review screen can carry several — the annotation you
+are drawing, the 3D strokes of the surface brush, the splat or model editor, the camera
+animation — and each of them listens to the same three keys. They are served in the order of
+what you have in your hands: the annotation in progress first, then the 3D brush, then the
+media editor, with the camera animation taking precedence over all of them while **Staging** is
+open. A history with nothing left to give stands aside, so `Ctrl+Z` reaches the next one instead
+of doing two things at once. Actions that write to the server are not part of any of these
+stacks: they are confirmed by a toast that carries its own `Undo` — see
+[Navigation & search](navigation-and-search.md).
 
 Keys are tested in a fixed order, and the first test that matches wins.
 

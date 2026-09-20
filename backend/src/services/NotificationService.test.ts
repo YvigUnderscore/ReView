@@ -23,7 +23,10 @@ vi.mock('../lib/prisma', () => ({ prisma: prismaMock }));
 vi.mock('../lib/logger', () => ({ logger: loggerMock }));
 vi.mock('./SocketService', () => ({ emitToUser: vi.fn() }));
 vi.mock('./PushService', () => ({ sendToUser: vi.fn() }));
-vi.mock('../lib/settings', () => ({ resolveUserLocale: vi.fn(() => Promise.resolve('en')) }));
+vi.mock('../lib/settings', () => ({
+  resolveUserLocale: vi.fn(() => Promise.resolve('en')),
+  getDefaultLocale: vi.fn(() => Promise.resolve('en')),
+}));
 
 import { lookup } from 'node:dns/promises';
 import { sendDiscord } from './NotificationService';
@@ -49,12 +52,14 @@ afterEach(() => {
 
 describe('NotificationService.sendDiscord — délai d’attente (A2-07)', () => {
   it('poste le message quand le webhook répond', async () => {
-    await sendDiscord('rendu terminé');
+    await sendDiscord('chat.newComment', { project: 4 });
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toBe(WEBHOOK);
     expect((init as RequestInit).method).toBe('POST');
-    expect((init as RequestInit).body).toBe(JSON.stringify({ content: 'rendu terminé' }));
+    expect((init as RequestInit).body).toBe(
+      JSON.stringify({ content: '💬 New comment on a media (project #4)' }),
+    );
     expect(loggerMock.warn).not.toHaveBeenCalled();
   });
 
@@ -67,7 +72,7 @@ describe('NotificationService.sendDiscord — délai d’attente (A2-07)', () =>
       });
     });
     let settled = false;
-    const pending = sendDiscord('rendu terminé').then(() => (settled = true));
+    const pending = sendDiscord('chat.newComment', { project: 4 }).then(() => (settled = true));
     await vi.advanceTimersByTimeAsync(4000);
     expect(settled).toBe(false); // le délai n'est pas prématuré
     await vi.advanceTimersByTimeAsync(2000);
@@ -83,7 +88,7 @@ describe('NotificationService.sendDiscord — délai d’attente (A2-07)', () =>
     fetchMock.mockResolvedValue(
       new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/' } }),
     );
-    await sendDiscord('rendu terminé');
+    await sendDiscord('chat.newComment', { project: 4 });
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(loggerMock.warn).toHaveBeenCalledWith(
       expect.objectContaining({ err: expect.objectContaining({ code: 'OUTBOUND_BLOCKED' }) }),
@@ -93,13 +98,13 @@ describe('NotificationService.sendDiscord — délai d’attente (A2-07)', () =>
 
   it('journalise un webhook refusé au lieu de rester muet', async () => {
     fetchMock.mockResolvedValue(new Response('{}', { status: 404 }));
-    await sendDiscord('rendu terminé');
+    await sendDiscord('chat.newComment', { project: 4 });
     expect(loggerMock.warn).toHaveBeenCalledWith({ status: 404 }, expect.any(String));
   });
 
   it("n'émet rien quand aucun webhook valide n'est configuré", async () => {
     prismaMock.studio.findFirst.mockResolvedValue({ discordWebhookUrl: 'https://evil.test/hook' });
-    await sendDiscord('rendu terminé');
+    await sendDiscord('chat.newComment', { project: 4 });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

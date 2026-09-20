@@ -10,6 +10,7 @@ import { useWatch } from '../../lib/useWatch';
 import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';
 import ViewToggle from '../../components/ViewToggle';
+import MarkAllSeenButton from '../../components/entity/MarkAllSeenButton';
 import { useViewMode } from '../../stores/useViewPref';
 import { entityCardMenu } from './entityCardMenu';
 import { useAssignMenu } from '../../lib/useAssignMenu';
@@ -142,6 +143,11 @@ export default function AssetsTab({
               <Plus size={16} /> {t('common.create')}
             </Button>
           )}
+          <MarkAllSeenButton
+            target="ASSET"
+            projectId={projectId}
+            unseenCount={visible.filter((a) => a.unseen).length}
+          />
           <ViewToggle contextKey={`assets:${projectId}`} />
         </div>
       </div>
@@ -206,6 +212,7 @@ export default function AssetsTab({
                   description: a.description,
                   assignees: a.assignees,
                   awaitingReview: a.awaitingReview,
+                  unseen: a.unseen,
                   updatedAt: a.updatedAt,
                   departments: a.departments,
                 }}

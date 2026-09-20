@@ -30,6 +30,8 @@ export interface EntityMeta {
   /** Livraisons publiées qu'aucune décision de review n'a tranchées. */
   awaitingReview?: number;
   updatedAt?: string;
+  /** A bougé depuis ma dernière visite (lot 9) : la carte s'allume, la date se souligne. */
+  unseen?: boolean;
 }
 
 /** La pastille « ça attend une review » — la seule information colorée de la bande. */
@@ -43,6 +45,27 @@ function AwaitingBadge({ count }: { count: number }) {
       <Eye size={11} />
       {count}
     </span>
+  );
+}
+
+/**
+ * « Du nouveau ici » — le point qui accompagne la lueur de la carte.
+ *
+ * La lueur seule ne dit pas ce qu'elle veut dire, et une bordure colorée ne se voit pas
+ * quand on regarde une carte de près. Le point porte l'infobulle qui l'explique, et donne
+ * à la couleur un point d'ancrage nommé. Il vit à gauche de la date, parce que c'est la
+ * date qui répond à « depuis quand ».
+ */
+function UnseenDot() {
+  const t = useT();
+  return (
+    <span
+      title={t('cards.unseen')}
+      aria-label={t('cards.unseen')}
+      // L'anneau fait la lueur : un point de six pixels ne se voit pas seul dans une bande
+      // qui porte déjà des visages et une pastille.
+      className="h-1.5 w-1.5 shrink-0 rounded-full bg-info ring-2 ring-info/30"
+    />
   );
 }
 
@@ -62,7 +85,10 @@ export default function EntityCardMeta({ meta, compact }: { meta: EntityMeta; co
   const people = meta.assignees ?? [];
   const awaiting = meta.awaitingReview ?? 0;
   const departments = meta.departments ?? [];
-  if (people.length === 0 && awaiting === 0 && !meta.updatedAt && departments.length === 0) return null;
+  // Le point « non consulté » suffit à justifier la bande : une carte neuve dont rien
+  // d'autre n'est renseigné doit tout de même pouvoir dire qu'elle est neuve.
+  if (people.length === 0 && awaiting === 0 && !meta.updatedAt && departments.length === 0 && !meta.unseen)
+    return null;
 
   return (
     <div className={`flex items-center gap-2 ${compact ? '' : 'mt-2'}`}>
@@ -71,10 +97,15 @@ export default function EntityCardMeta({ meta, compact }: { meta: EntityMeta; co
       {!compact && <DepartmentChips departments={departments} />}
       <span className="ml-auto flex shrink-0 items-center gap-1.5">
         {awaiting > 0 && <AwaitingBadge count={awaiting} />}
+        {meta.unseen && <UnseenDot />}
         {meta.updatedAt && (
           <span
             title={t('cards.updatedAt', { value: new Date(meta.updatedAt).toLocaleString(intlLocale()) })}
-            className="text-2xs tabular-nums text-muted-foreground"
+            // La date passe en pleine couleur quand c'est du nouveau : c'est elle qu'on lit
+            // pour savoir de quand date ce nouveau, autant qu'elle se voie.
+            className={`text-2xs tabular-nums ${
+              meta.unseen ? 'font-medium text-info' : 'text-muted-foreground'
+            }`}
           >
             {timeAgo(meta.updatedAt)}
           </span>

@@ -65,7 +65,8 @@ router.get(
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     const q = req.query as unknown as { sequenceId?: number | 'none'; episodeId?: number | 'none' };
-    res.json(await ShotService.list(projectId, q.sequenceId, readPagination(req.query), q.episodeId));
+    const p = readPagination(req.query);
+    res.json(await ShotService.list(projectId, q.sequenceId, p, q.episodeId, req.user!.id));
   },
 );
 

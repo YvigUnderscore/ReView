@@ -35,7 +35,7 @@ router.get(
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
-    res.json(await AssetService.list(projectId, readPagination(req.query)));
+    res.json(await AssetService.list(projectId, readPagination(req.query), req.user!.id));
   },
 );
 

@@ -94,6 +94,7 @@ export default function SequenceShotGrid({
                 description: shot.description,
                 assignees: shot.assignees,
                 awaitingReview: shot.awaitingReview,
+                unseen: shot.unseen,
                 updatedAt: shot.updatedAt,
               }}
               badge={

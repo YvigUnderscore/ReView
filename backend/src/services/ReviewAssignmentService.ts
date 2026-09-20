@@ -315,7 +315,7 @@ async function announce(
       if (kind === 'assigned') await setWatch(userId, WatchTargetType.VERSION, version.id, true);
       await notify({
         userId,
-        type: 'REVIEW_ASSIGNED',
+        kind: 'reviewAssigned',
         messageKey: kind === 'assigned' ? 'notification.reviewAssigned' : 'notification.reviewNoteUpdated',
         params: { version: version.name },
         projectId,

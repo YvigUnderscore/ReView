@@ -97,8 +97,8 @@ describe('create — mentions (32.B)', () => {
       author: { id: 5 },
     } as never);
     await create(author, 3, { mediaObjectId: 9, content: 'vu avec @yvig et @jean.dupont' });
-    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 7, type: 'MENTION' }));
-    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 8, type: 'MENTION' }));
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 7, kind: 'mention' }));
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 8, kind: 'mention' }));
   });
 
   it('ne notifie jamais l’auteur, même auto-mentionné', async () => {
@@ -120,7 +120,7 @@ describe('create — mentions (32.B)', () => {
     } as never);
     await create(author, 3, { mediaObjectId: 9, content: 'oui @yvig', parentId: 4 });
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 7, type: 'MENTION' }));
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 7, kind: 'mention' }));
   });
 });
 

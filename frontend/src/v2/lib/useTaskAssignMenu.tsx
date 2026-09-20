@@ -8,6 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from './query';
 import { useDepartments } from './departmentsApi';
 import { useProjectMembers } from './useProjectRole';
+import { useUndoToast } from './useUndoToast';
 import { UNASSIGNED } from './assignMenu';
 import { useT } from '../i18n';
 import type { MenuEntry } from './menuSpec';
@@ -26,6 +27,7 @@ import type { MenuEntry } from './menuSpec';
 export function useTaskAssignMenu(projectId: number) {
   const t = useT();
   const qc = useQueryClient();
+  const { done } = useUndoToast();
   const members = useProjectMembers(projectId);
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
@@ -37,11 +39,24 @@ export function useTaskAssignMenu(projectId: number) {
     void qc.invalidateQueries({ queryKey: qk.projectBoard(projectId) });
   };
 
-  const patch = async (taskId: number, body: Record<string, unknown>) => {
+  /** L'écriture nue : elle laisse remonter son échec, pour que l'annulation puisse le dire. */
+  const write = async (taskId: number, body: Record<string, unknown>): Promise<void> => {
+    await api.patch(`/api/tasks/${taskId}`, body);
+    refresh();
+  };
+
+  /**
+   * Écrit, puis confirme avec « Annuler ».
+   *
+   * `previous` est l'état d'avant, lu sur la tâche au moment du clic : assigner quelqu'un par
+   * mégarde dans un menu de quinze noms est l'erreur la plus banale de l'écran, et rien ne
+   * disait qui était là avant. Une écriture serveur ne se défait pas d'un Ctrl+Z (elle est
+   * déjà chez les autres, et ShotGrid a pu arbitrer) : c'est un cran nommé, pas un historique.
+   */
+  const patch = async (taskId: number, body: Record<string, unknown>, previous: Record<string, unknown>) => {
     try {
-      await api.patch(`/api/tasks/${taskId}`, body);
-      toast.success(t('assign.done'));
-      refresh();
+      await write(taskId, body);
+      done(t('assign.done'), () => write(taskId, previous));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('assign.failed'));
     }
@@ -64,7 +79,11 @@ export function useTaskAssignMenu(projectId: number) {
           id: `task-assign-${task.id}`,
           value: task.assigneeId != null ? String(task.assigneeId) : UNASSIGNED,
           onValueChange: (value) => {
-            void patch(task.id, { assigneeId: value === UNASSIGNED ? null : Number(value) });
+            void patch(
+              task.id,
+              { assigneeId: value === UNASSIGNED ? null : Number(value) },
+              { assigneeId: task.assigneeId },
+            );
           },
           items: [
             { id: `task-assign-${task.id}-none`, value: UNASSIGNED, label: t('assign.unassigned') },
@@ -102,7 +121,11 @@ export function useTaskAssignMenu(projectId: number) {
           id: `task-dept-${task.id}`,
           value: task.department ?? UNASSIGNED,
           onValueChange: (value) => {
-            void patch(task.id, { department: value === UNASSIGNED ? null : value });
+            void patch(
+              task.id,
+              { department: value === UNASSIGNED ? null : value },
+              { department: task.department },
+            );
           },
           items: [
             { id: `task-dept-${task.id}-none`, value: UNASSIGNED, label: t('pipeline.dept.none') },

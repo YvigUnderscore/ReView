@@ -15,13 +15,9 @@ import { SkeletonRows } from '../components/ui/skeleton';
 import PlaylistCatalog from './playlist/PlaylistCatalog';
 import PlaylistContent from './playlist/PlaylistContent';
 import { itemPath } from './review/playlistNav';
-import {
-  useAddToPlaylist,
-  usePlaylist,
-  useRemoveFromPlaylist,
-  useRenamePlaylist,
-  useReorderPlaylist,
-} from '../lib/playlistApi';
+import { useAddToPlaylist, usePlaylist } from '../lib/playlistApi';
+import { usePlaylistUndo } from './playlist/usePlaylistUndo';
+import type { PlaylistItemEntry } from '../types/api';
 import { useProjectRole } from '../lib/useProjectRole';
 import { useAuth } from '../stores/useAuth';
 import { parseIdParam } from '../lib/slug';
@@ -34,6 +30,9 @@ import { useT } from '../i18n';
  * là : il fallait ouvrir chaque plan un par un pour y cliquer « ajouter ». Les deux
  * panneaux côte à côte font de la construction d'une playlist de dailies un seul geste.
  */
+/** Liste vide stable : le hook d'édition ne doit pas voir un tableau neuf à chaque rendu. */
+const EMPTY_ITEMS: PlaylistItemEntry[] = [];
+
 export default function PlaylistPage() {
   const t = useT();
   const { id } = useParams();
@@ -49,16 +48,16 @@ export default function PlaylistPage() {
   const canEdit = canManage || (canContribute && playlist?.createdBy?.id === userId);
 
   const add = useAddToPlaylist(playlistId, projectId);
-  const removeItem = useRemoveFromPlaylist(playlistId, projectId);
-  const reorder = useReorderPlaylist(playlistId, projectId);
-  const rename = useRenamePlaylist(playlistId, projectId);
+  // Réordonner et retirer passent par leur propre hook : les deux se défont, et le toast qui
+  // les confirme porte le geste inverse (cf. `playlist/usePlaylistUndo`).
+  const edits = usePlaylistUndo(playlistId, projectId, playlist?.items ?? EMPTY_ITEMS);
   const [editingName, setEditingName] = useState<string | null>(null);
   // Sortie des notes de la playlist entière — CSV, planche, et surtout EDL/OTIO, les deux
   // formats que la salle de montage sait relire. Au clic droit sur l'en-tête : la page
   // n'a pas de dock où loger un panneau Export, et un bouton de plus n'apporterait rien.
   const notesExport = useNotesExportEntry({ scope: 'playlist', id: playlistId });
 
-  const busy = add.isPending || removeItem.isPending || reorder.isPending;
+  const busy = add.isPending || edits.busy;
   const presentVersionIds = useMemo(
     () => new Set((playlist?.items ?? []).map((it) => it.version.id)),
     [playlist],
@@ -82,9 +81,10 @@ export default function PlaylistPage() {
 
   const saveName = () => {
     const next = (editingName ?? '').trim();
+    const previous = playlist?.name;
     setEditingName(null);
-    if (!next || next === playlist?.name) return;
-    rename.mutate(next, { onError: fail });
+    if (!next || previous === undefined || next === previous) return;
+    edits.rename(next, previous);
   };
 
   return (
@@ -151,8 +151,8 @@ export default function PlaylistPage() {
             playlist={playlist}
             canEdit={!!canEdit}
             busy={busy}
-            onReorder={(ids) => reorder.mutate(ids, { onError: fail })}
-            onRemove={(itemId) => removeItem.mutate(itemId, { onError: fail })}
+            onReorder={edits.reorder}
+            onRemove={edits.remove}
           />
         </div>
       )}

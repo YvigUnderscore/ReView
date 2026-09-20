@@ -11,6 +11,7 @@ import { useDepartments } from '../../lib/departmentsApi';
 import { usePipelineStatuses } from '../../lib/shotgridApi';
 import type { TaskStatus } from '../../types/api';
 import { withStatus, type StatusChoice } from '../../lib/statusMenu';
+import { useUndoToast } from '../../lib/useUndoToast';
 import type { BoardTask, BoardResponse } from './kanbanTypes';
 import { useT } from '../../i18n';
 
@@ -28,9 +29,13 @@ import { useT } from '../../i18n';
 /** Le board vide garde le même tableau : sinon chaque rendu re-calculerait tout l'écran. */
 const NO_TASKS: BoardTask[] = [];
 
+/** Colonne d'une carte, telle que `move` l'attend — de quoi la remettre d'où elle vient. */
+type MoveTarget = { statusId: number | null; legacyStatus: TaskStatus };
+
 export function useKanbanBoard(projectId: number) {
   const tr = useT();
   const qc = useQueryClient();
+  const { done } = useUndoToast();
   const sequencesQ = useSequencesQuery(projectId);
   const departmentsQ = useDepartments(projectId, projectId > 0);
   const statusesQ = usePipelineStatuses('task', projectId);
@@ -68,14 +73,13 @@ export function useKanbanBoard(projectId: number) {
   );
 
   /**
-   * Déplacement optimiste, rollback par invalidation. Le cache est celui du board entier :
-   * la carte change de colonne à l'instant du lâcher, sans attendre le serveur.
+   * L'écriture nue du déplacement : optimiste, et qui **laisse remonter** son échec.
+   *
+   * Séparée de `move` parce que l'annulation la rejoue vers la colonne d'origine, et qu'un
+   * échec d'annulation doit parvenir au toast qui l'a proposée.
    */
-  const move = useCallback(
-    async (taskId: number, column: { statusId: number | null; legacyStatus: TaskStatus }) => {
-      const task = tasks.find((x) => x.id === taskId);
-      if (!task) return;
-      if (task.pipelineStatusId === column.statusId && task.status === column.legacyStatus) return;
+  const writeMove = useCallback(
+    async (taskId: number, column: MoveTarget) => {
       const key = qk.projectBoard(projectId);
       qc.setQueryData<BoardResponse>(key, (old) =>
         old
@@ -97,10 +101,36 @@ export function useKanbanBoard(projectId: number) {
       } catch (e) {
         // Rollback : l'invalidation relance la requête, inutile de l'attendre.
         void qc.invalidateQueries({ queryKey: key });
+        throw e;
+      }
+    },
+    [qc, projectId],
+  );
+
+  /**
+   * Déplacement optimiste, rollback par invalidation. Le cache est celui du board entier :
+   * la carte change de colonne à l'instant du lâcher, sans attendre le serveur.
+   *
+   * Le lâcher est confirmé, avec « Annuler » : une carte lâchée dans la mauvaise colonne d'un
+   * board à quinze colonnes ne se rattrapait qu'en cherchant à la main d'où elle venait — et
+   * rien ne le disait, puisque le succès était silencieux. On tient l'inverse exactement : la
+   * colonne de départ est connue, et la remettre est le même `PATCH`. Ce n'est pas pour autant
+   * un Ctrl+Z : l'écriture est partie chez les autres, et ShotGrid a pu arbitrer derrière.
+   */
+  const move = useCallback(
+    async (taskId: number, column: MoveTarget) => {
+      const task = tasks.find((x) => x.id === taskId);
+      if (!task) return;
+      if (task.pipelineStatusId === column.statusId && task.status === column.legacyStatus) return;
+      const from: MoveTarget = { statusId: task.pipelineStatusId, legacyStatus: task.status };
+      try {
+        await writeMove(taskId, column);
+        done(tr('kanban.moved'), () => writeMove(taskId, from));
+      } catch (e) {
         toast.error(e instanceof Error ? e.message : tr('kanban.moveFailed'));
       }
     },
-    [tasks, qc, projectId, tr],
+    [tasks, tr, done, writeMove],
   );
 
   return {

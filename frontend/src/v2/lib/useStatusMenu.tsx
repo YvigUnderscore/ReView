@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 import { qk } from './query';
 import { usePipelineStatuses } from './shotgridApi';
+import { useUndoToast } from './useUndoToast';
 import { useT } from '../i18n';
 import type { MenuEntry } from './menuSpec';
 import type { TaskStatus } from '../types/api';
@@ -38,38 +39,45 @@ const ENDPOINT: Record<StatusScope, string> = {
   asset: '/api/assets',
 };
 
+/** Ce qu'un appelant peut ajouter à l'écriture — au-delà du statut lui-même. */
+export interface ApplyStatusOptions {
+  /** Écriture optimiste dans le cache de l'appelant ; rend le rollback. */
+  onOptimistic?: (choice: StatusChoice | null) => () => void;
+  /**
+   * Valeur d'AVANT. Connue, elle fait apparaître « Annuler » dans le toast de confirmation.
+   *
+   * C'est un cran, jamais un historique : changer un statut part au serveur et peut être
+   * arbitré par ShotGrid derrière. Ctrl+Z laisserait croire à une pile locale qu'on ne tient
+   * pas ; le toast, lui, ne promet que le coup qu'on vient de faire, et disparaît avec lui.
+   */
+  undoTo?: string;
+  /** Rafraîchissement propre à l'appelant (la grille pagine par curseur : aucun cache partagé). */
+  after?: () => Promise<unknown>;
+}
+
 export function useStatusMenu(projectId: number, scope: StatusScope) {
   const t = useT();
   const qc = useQueryClient();
+  const { done } = useUndoToast();
   const { data: statuses = [] } = usePipelineStatuses(scope, projectId);
   const choices = statusChoices(statuses, scope, t);
 
   /**
-   * Applique le choix, en montrant le résultat avant la réponse du serveur.
+   * L'écriture nue : optimiste, et qui **laisse remonter** son échec.
    *
-   * `onOptimistic` est fourni par l'appelant : les caches n'ont pas tous la même forme
-   * (la page de plan garde le payload `{ shot }`, la liste garde un tableau), et une
-   * écriture « au jugé » casserait l'un ou l'autre en silence.
+   * Séparée d'`apply` parce que l'annulation la rejoue : un échec d'annulation doit parvenir
+   * au toast qui l'a proposée, pas se transformer en un second message de succès.
    */
-  const apply = async (
-    id: number,
-    value: string,
-    onOptimistic?: (choice: StatusChoice | null) => () => void,
-  ) => {
+  const write = async (id: number, value: string, options: ApplyStatusOptions): Promise<void> => {
     const body = bodyForChoice(choices, value);
     if (!body) return;
     const choice = choices.find((c) => c.value === value) ?? null;
-    const rollback = onOptimistic?.(choice);
+    const rollback = options.onOptimistic?.(choice);
     try {
       await api.patch(`${ENDPOINT[scope]}/${id}`, body);
-      toast.success(
-        value === NO_STATUS
-          ? t('pipeline.status.cleared')
-          : t('pipeline.status.set', { name: choice?.label ?? '' }),
-      );
     } catch (err) {
       rollback?.();
-      toast.error(err instanceof Error ? err.message : t('pipeline.status.changeFailed'));
+      throw err;
     } finally {
       // Le serveur fait foi : il a pu déduire un `status` de famille différente, ou
       // refuser au profit d'un arbitrage ShotGrid.
@@ -83,6 +91,35 @@ export function useStatusMenu(projectId: number, scope: StatusScope) {
         void qc.invalidateQueries({ queryKey: qk.sequence(id) });
         void qc.invalidateQueries({ queryKey: qk.sequences(projectId) });
       }
+      await options.after?.();
+    }
+  };
+
+  /**
+   * Applique le choix, en montrant le résultat avant la réponse du serveur, puis en confirmant
+   * — avec « Annuler » quand la valeur d'avant est connue (`undoTo`).
+   *
+   * `onOptimistic` est fourni par l'appelant : les caches n'ont pas tous la même forme
+   * (la page de plan garde le payload `{ shot }`, la liste garde un tableau), et une
+   * écriture « au jugé » casserait l'un ou l'autre en silence.
+   */
+  const apply = async (id: number, value: string, options: ApplyStatusOptions = {}) => {
+    const choice = choices.find((c) => c.value === value) ?? null;
+    try {
+      await write(id, value, options);
+      const message =
+        value === NO_STATUS
+          ? t('pipeline.status.cleared')
+          : t('pipeline.status.set', { name: choice?.label ?? '' });
+      const { undoTo } = options;
+      done(
+        message,
+        undoTo === undefined
+          ? undefined
+          : () => write(id, undoTo, { onOptimistic: options.onOptimistic, after: options.after }),
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('pipeline.status.changeFailed'));
     }
   };
 
@@ -133,7 +170,9 @@ export function useStatusMenu(projectId: number, scope: StatusScope) {
           // sans cette sortie, chaque ouverture suivie d'un clic repartirait vers ShotGrid.
           onValueChange: (next) => {
             if (next === value) return;
-            void apply(entity.id, next, options.onOptimistic);
+            // `value` est l'état d'avant, lu au moment où le menu s'est ouvert : c'est
+            // exactement ce que « Annuler » doit remettre.
+            void apply(entity.id, next, { onOptimistic: options.onOptimistic, undoTo: value });
           },
           items,
         },

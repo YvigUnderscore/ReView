@@ -15,6 +15,7 @@ import { toPublicUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
 import { revokeAllCredentials } from '../lib/sessions';
 import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
+import { NOTIFICATION_SETTINGS_KEY, notificationSettingsSchema } from '../lib/notificationKinds';
 
 /**
  * Logique métier des utilisateurs (profil, présence, administration des comptes).
@@ -513,7 +514,17 @@ function preferenceValue(depth: number): z.ZodTypeAny {
  * schéma vit ici, et non dans la route, parce que ce qu'une préférence a le droit de
  * contenir relève de la même décision que la fusion qui l'écrit.
  */
-export const preferencesPatchSchema = z.record(z.string().max(64), preferenceValue(5));
+export const preferencesPatchSchema = z
+  .record(z.string().max(64), preferenceValue(5))
+  // Une clé du sac a désormais une FORME arrêtée : les réglages de notification par type
+  // d'événement. Sans ce contrôle, un genre mal orthographié s'écrivait sans broncher et
+  // ne coupait rien — le réglage semblait pris et l'événement continuait d'arriver.
+  .refine(
+    (patch) =>
+      !(NOTIFICATION_SETTINGS_KEY in patch) ||
+      notificationSettingsSchema.nullable().safeParse(patch[NOTIFICATION_SETTINGS_KEY]).success,
+    { message: 'Invalid notification settings', path: [NOTIFICATION_SETTINGS_KEY] },
+  );
 
 export async function getPreferences(userId: number): Promise<Record<string, unknown>> {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });

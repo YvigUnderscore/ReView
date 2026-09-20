@@ -266,6 +266,7 @@ model User {
   resolvedComments     Comment[]            @relation("CommentResolver")
   shotgridSyncRuns     ShotgridSyncRun[]    @relation("SyncRunTrigger")
   watches              Watch[]
+  visits               EntityVisit[]
   reactions            Reaction[]
   notifications        Notification[]
   createdShares        ShareLink[]          @relation("ShareCreator")
@@ -1456,7 +1457,11 @@ model Notification {
   id          Int      @id @default(autoincrement())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      Int
-  type        String   @default("SYSTEM") // TASK_ASSIGNED, COMMENT_ASSIGNED, REPLY, SYSTEM…
+  // Dérivé du GENRE de l'événement (`lib/notificationKinds`) et jamais écrit à la main :
+  // une décision de review s'écrivait `review_decision`, seule en minuscules, et le front ne
+  // la reconnaissait donc pas. Valeurs : MENTION, REPLY, COMMENT_ASSIGNED, TASK_ASSIGNED,
+  // REVIEW_ASSIGNED, REVIEW_DECISION, WATCH, LIVE (+ SYSTEM, lignes anciennes).
+  type        String   @default("SYSTEM")
   // Phrase traduisible (D2) : la notification était écrite en français EN BASE, puis
   // poussée telle quelle — y compris en notification navigateur, où elle échappait à
   // tout catalogue. La clé et ses paramètres se traduisent au rendu, dans la langue du
@@ -1464,7 +1469,10 @@ model Notification {
   messageKey  String?
   params      Json?
   content     String
-  referenceId Int? // cible navigable selon le type : id de tâche (TASK_ASSIGNED) ou de média (REPLY/COMMENT_ASSIGNED)
+  // Cible navigable selon le type : id de tâche (TASK_ASSIGNED), de playlist (LIVE), sinon
+  // de média — et pour les types portés par une version (REVIEW_ASSIGNED, REVIEW_DECISION),
+  // le PREMIER média de cette version, seul id que le viewer sait ouvrir.
+  referenceId Int?
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId   Int?
   isRead      Boolean  @default(false)
@@ -1495,6 +1503,51 @@ model Watch {
 
   @@unique([userId, targetType, targetId])
   @@index([targetType, targetId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// État « non consulté » (Phase 50, lot 9) : une carte s'allume quand l'entité a
+// bougé depuis que CETTE personne l'a ouverte pour la dernière fois.
+//
+// C'est l'exact pendant lecture de `Watch` : même forme, même façon de viser une
+// entité (couple type + id plutôt qu'une clé étrangère par niveau, parce que huit
+// niveaux feraient huit colonnes dont sept nulles). La différence est qu'on n'y
+// écrit pas une intention mais une date : « vu à ».
+//
+// Les huit valeurs de l'énumération sont posées d'emblée, même si toutes les listes
+// ne les servent pas encore : ajouter une valeur à un type énuméré Postgres demande
+// une migration de plus, et la forme du mécanisme est connue dès maintenant.
+// ─────────────────────────────────────────────────────────────────────────────
+enum VisitTargetType {
+  PROJECT
+  SEQUENCE
+  SHOT
+  ASSET
+  TASK
+  MEDIA
+  PLAYLIST
+  BOARD
+}
+
+model EntityVisit {
+  id         Int             @id @default(autoincrement())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  targetType VisitTargetType
+  targetId   Int
+  // Dernière ouverture par cette personne. Écrasée à chaque visite — on ne garde pas
+  // l'historique : ce qu'on compare, c'est « la dernière fois », et une table qui
+  // grossirait d'une ligne par ouverture de carte se paierait sur huit listes.
+  visitedAt  DateTime        @default(now())
+
+  // Colonnes dans CET ordre, et pas d'index supplémentaire.
+  //
+  // La lecture est toujours la même : « les visites de cette personne, pour ce type,
+  // parmi les ids de la page » — soit `userId = ? AND targetType = ? AND targetId =
+  // ANY(…)`. L'index unique sert cette requête en entier par son préfixe gauche ;
+  // un `@@index([userId, targetType])` de plus serait exactement l'index mort que ce
+  // schéma a déjà eu à retirer ailleurs (cf. `MediaObject`), payé à chaque écriture.
+  @@unique([userId, targetType, targetId])
 }
 
 model AuditLog {

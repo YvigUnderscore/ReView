@@ -2,7 +2,7 @@
 
 *Where each branding field lives, what a signed-out visitor can see, and how team chat and browser alerts are wired.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 An instance of ReView is one studio, and it should look like that studio from the sign-in page
 onwards. Three admin screens and one API-only field carry everything visible: the studio name,
@@ -99,7 +99,7 @@ ReView can post one-line messages into a team channel on key events.
 | **Slack** | *Admin → Studio → Settings* → *Slack webhook (notifications)* | `slack_webhook_url` |
 | **Discord** | **No screen** — `PATCH /api/studio` (`ADMIN`) with `discordWebhookUrl` | `Studio.discordWebhookUrl` |
 
-![Publications and decisions go through notifyChat, under a five-second timeout, to both Slack and Discord; comments and timeline feedback go through sendDiscord, with no timeout, to Discord only.](../assets/admin-guide/chat-notification-routing.svg)
+![Publications and decisions go through notifyChat to both Slack and Discord; comments and timeline feedback go through sendDiscord to Discord only. Both paths abort after five seconds and render their message from the translation catalogues.](../assets/admin-guide/chat-notification-routing.svg)
 
 Both URLs are checked against a strict host allow-list before anything is posted: HTTPS only,
 and the host must be `hooks.slack.com` for Slack, or `discord.com` / `discordapp.com` for
@@ -118,20 +118,20 @@ What triggers a message, and along which path:
 |---|---|---|---|
 | A media is published | yes | yes | 5 seconds |
 | A review decision is recorded | yes | yes | 5 seconds |
-| A new root comment on a media | no | yes | **none** |
-| New feedback on a timeline | no | yes | **none** |
+| A new root comment on a media | no | yes | 5 seconds |
+| New feedback on a timeline | no | yes | 5 seconds |
 
 Both paths are fire-and-forget: the failure is logged and never blocks or fails the action that
-triggered it. They differ on patience. The publish and decision path aborts the request after
-five seconds; the comment path issues its request with no timeout at all, so an endpoint that
-accepts the connection and never answers leaves a pending request behind until the platform
-gives up on its own. On a busy project with a dead Discord endpoint, that is a slow leak rather
-than an incident — but it is a reason to remove a webhook you no longer use rather than leaving
-it pointing at a deleted channel.
+triggered it, and both abort the request after five seconds. Both also resolve the webhook host
+to an address before posting and refuse to follow a redirect, so a webhook whose name points
+back into the application network never causes an outbound request. A webhook you no longer use
+is still worth removing rather than leaving it pointing at a deleted channel: every event then
+buys a refused request and a log line for nothing.
 
 The message itself carries the media name, the version name and the decision label. It is
-composed from a fixed server-side template (currently written in French) and does not go through
-the translation catalogues, so it reaches every workspace in the same wording.
+rendered from the translation catalogues in the **studio default language** — the language set
+in *Administration → General*, not the language of whoever triggered the event. A channel is
+collective: nobody in a Slack room has a language of their own.
 
 > [!CAUTION]
 > A webhook URL is a **secret**: anyone holding it can post into the channel. `GET /api/studio`

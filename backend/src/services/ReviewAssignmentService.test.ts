@@ -152,7 +152,7 @@ describe('setReviewers', () => {
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 5,
-        type: 'REVIEW_ASSIGNED',
+        kind: 'reviewAssigned',
         messageKey: 'notification.reviewAssigned',
         params: { version: 'V03' },
         projectId: 3,
