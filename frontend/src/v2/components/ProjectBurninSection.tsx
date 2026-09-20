@@ -3,7 +3,10 @@
 
 import type { BurninConfig } from '../types/share';
 import { useT, type MessageKey } from '../i18n';
-import { Card } from './ui/card';
+import { Stamp } from 'lucide-react';
+import { Hint } from './ui/hint';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 // Recalculé au rendu : en constante de module, les libellés resteraient figés dans la
 // langue chargée au démarrage.
@@ -40,11 +43,16 @@ export default function ProjectBurninSection({
 }) {
   const t = useT();
   return (
-    <Card>
-      <div className="mb-1 text-sm font-medium">{t('burnin.title')}</div>
+    <SettingsCard
+      title={t('burnin.title')}
+      icon={Stamp}
+      tone="accent"
+      keywords={SETTINGS_KEYWORDS.burnin}
+      footnote={t('burnin.hint')}
+    >
       {!value ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">{t('project.burninInherit')}</p>
+          <Hint>{t('project.burninInherit')}</Hint>
           <button
             type="button"
             className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-secondary/60"
@@ -86,7 +94,6 @@ export default function ProjectBurninSection({
           </button>
         </div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">{t('burnin.hint')}</p>
-    </Card>
+    </SettingsCard>
   );
 }

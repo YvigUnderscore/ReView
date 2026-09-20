@@ -370,6 +370,15 @@ export async function getProject(projectId: number) {
               firstName: true,
               lastName: true,
               avatarKey: true,
+              // Départements de la personne, bornés au vocabulaire de CE projet (lot 10) :
+              // la liste complète mêlerait les étapes d'autres projets, que cet écran ne
+              // sait ni montrer ni retirer. Une instance = un studio, `projectId: null`
+              // désigne donc sans ambiguïté le référentiel hérité.
+              departments: {
+                where: { deletedAt: null, OR: [{ projectId }, { projectId: null }] },
+                select: { id: true, key: true, name: true, color: true },
+                orderBy: [{ order: 'asc' }, { key: 'asc' }],
+              },
             },
           },
         },

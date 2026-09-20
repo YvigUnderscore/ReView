@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { ListChecks } from 'lucide-react';
 import { Select } from '../../components/ui/select';
+import SettingsRow from '../../components/settings/SettingsRow';
 import { Panel } from './AdminPrimitives';
 import { useT, type MessageKey } from '../../i18n';
 
@@ -45,11 +47,8 @@ export default function TaskPolicyField({
   const hint = OPTIONS.find((o) => o.value === current)?.hintKey;
 
   return (
-    <Panel title={t('settings.taskPolicy')}>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <label className="w-64 text-muted-foreground" htmlFor="task-department-policy">
-          {t('settings.taskPolicy.label')}
-        </label>
+    <Panel title={t('settings.taskPolicy')} icon={ListChecks} tone="primary" footnote={hint && t(hint)}>
+      <SettingsRow label={t('settings.taskPolicy.label')} htmlFor="task-department-policy">
         <Select
           id="task-department-policy"
           className="py-1 text-xs"
@@ -62,9 +61,7 @@ export default function TaskPolicyField({
             </option>
           ))}
         </Select>
-      </div>
-      {hint && <p className="mt-2 text-xs text-muted-foreground">{t(hint)}</p>}
-      <p className="mt-1 text-xs text-muted-foreground">{t('settings.taskPolicy.visibility')}</p>
+      </SettingsRow>
     </Panel>
   );
 }

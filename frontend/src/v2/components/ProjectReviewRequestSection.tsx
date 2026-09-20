@@ -3,7 +3,10 @@
 
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
-import { Card } from './ui/card';
+import { MessageSquareText } from 'lucide-react';
+import { Hint } from './ui/hint';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 import type { ReviewRequestRule } from '../types/api';
 import { useT } from '../i18n';
 
@@ -32,10 +35,13 @@ export default function ProjectReviewRequestSection({
   const t = useT();
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('reviewRequest.title')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('reviewRequest.hint')}</div>
-
+    <SettingsCard
+      title={t('reviewRequest.title')}
+      hint={t('reviewRequest.hint')}
+      icon={MessageSquareText}
+      tone="info"
+      keywords={SETTINGS_KEYWORDS.reviewRequest}
+    >
       <div className="flex items-center justify-between gap-4">
         <label className="text-sm" htmlFor="review-request-require">
           {t('reviewRequest.require')}
@@ -68,8 +74,8 @@ export default function ProjectReviewRequestSection({
             }
           />
         </label>
-        <p className="flex-1 text-xs text-muted-foreground">{t('reviewRequest.minLengthHint')}</p>
+        <Hint className="flex-1">{t('reviewRequest.minLengthHint')}</Hint>
       </div>
-    </Card>
+    </SettingsCard>
   );
 }

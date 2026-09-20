@@ -6,7 +6,9 @@ import type { NamingRule, NamingMode } from '../types/api';
 import { useT } from '../i18n';
 
 import type { MessageKey } from '../i18n';
-import { Card } from './ui/card';
+import { CaseSensitive } from 'lucide-react';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 const MODE_KEY: Record<NamingMode, MessageKey> = {
   off: 'naming.policy.off',
@@ -39,9 +41,13 @@ export default function ProjectNamingSection({
   }
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('pipeline.naming')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('project.namingHint')}</div>
+    <SettingsCard
+      title={t('pipeline.naming')}
+      hint={t('project.namingHint')}
+      icon={CaseSensitive}
+      tone="warning"
+      keywords={SETTINGS_KEYWORDS.naming}
+    >
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-1 flex-col gap-1 text-2xs section-label text-muted-foreground">
           {t('naming.pattern')}
@@ -86,6 +92,6 @@ export default function ProjectNamingSection({
           ) : null}
         </div>
       )}
-    </Card>
+    </SettingsCard>
   );
 }

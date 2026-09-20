@@ -111,3 +111,20 @@ export function useToggleEntityDepartment(
     },
   });
 }
+
+/**
+ * Départements d'un membre **sur ce projet** — coché, décoché, jamais remplacé (lot 10).
+ *
+ * Un artiste appartient à plusieurs départements : un lead compositing qui tient aussi le
+ * roto n'a pas à choisir. Et l'écran n'affiche que le vocabulaire d'un projet — envoyer
+ * l'état affiché effacerait les étapes venues d'ailleurs, d'où l'ajout/retrait nommé.
+ */
+export function useToggleMemberDepartment(projectId: number, userId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (change: { add?: number[]; remove?: number[] }) =>
+      api.patch(`/api/projects/${projectId}/members/${userId}/departments`, change),
+    // La fiche du projet porte les memberships : c'est elle que l'onglet relit.
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.project(projectId) }),
+  });
+}

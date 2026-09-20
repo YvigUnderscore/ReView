@@ -102,3 +102,48 @@ describe('updatePreferences — le sac ne grossit pas indéfiniment', () => {
     expect(db.user.update).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * La disposition de la vue d'ensemble (lot 10) a, comme les réglages de notification, une
+ * FORME arrêtée dans le sac : ce qui s'y écrit doit citer des blocs que l'écran sait rendre.
+ */
+describe('preferencesPatchSchema — disposition de la vue d’ensemble', () => {
+  const layout = (value: unknown) => preferencesPatchSchema.safeParse({ projectOverview: value }).success;
+
+  it('accepte ce que compose réellement la page', () => {
+    expect(
+      layout({
+        hidden: ['counts'],
+        order: ['myTasks', 'activity', 'counts'],
+        settings: { activity: { span: 6, density: 'compact' } },
+      }),
+    ).toBe(true);
+  });
+
+  it('accepte l’effacement — c’est le retour au défaut du rôle', () => {
+    expect(layout(null)).toBe(true);
+  });
+
+  it('refuse un bloc que l’écran ne saurait pas rendre', () => {
+    expect(layout({ order: ['fantome'] })).toBe(false);
+  });
+
+  it('laisse passer les autres clés du sac sans les regarder', () => {
+    expect(preferencesPatchSchema.safeParse({ density: 'compact' }).success).toBe(true);
+  });
+});
+
+describe('updatePreferences — la disposition est bien persistée', () => {
+  it('écrit la clé sans toucher au reste du sac', async () => {
+    stored({ density: 'compact' });
+    const next = await updatePreferences(7, { projectOverview: { hidden: ['counts'] } });
+    expect(next).toEqual({ density: 'compact', projectOverview: { hidden: ['counts'] } });
+    expect(db.user.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('supprime la clé quand la personne revient au défaut de son rôle', async () => {
+    stored({ density: 'compact', projectOverview: { hidden: ['counts'] } });
+    const next = await updatePreferences(7, { projectOverview: null });
+    expect(next).toEqual({ density: 'compact' });
+  });
+});

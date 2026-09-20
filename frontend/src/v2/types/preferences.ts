@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { WidgetsPref } from '../lib/widgetLayout';
+
 /**
  * Préférences UI par compte — GET/PATCH /api/users/me/preferences (merge superficiel,
  * `null` = suppression de la clé). Sac ouvert : chaque feature y ajoute sa clé.
@@ -33,11 +35,13 @@ export interface UserPreferences {
    * `null` = disposition par défaut. L'ancienne forme (`order` par colonne) est ignorée
    * à la lecture — les colonnes figées ont disparu.
    */
-  homeWidgets?: {
-    hidden?: string[];
-    order?: string[];
-    settings?: Record<string, unknown>;
-  } | null;
+  homeWidgets?: WidgetsPref | null;
+  /**
+   * Disposition de la vue d'ensemble d'un projet (lot 10) : même forme que `homeWidgets`,
+   * et **une seule pour tous les projets** — on ne réapprend pas sa page à chaque projet.
+   * `null` supprime la clé : la page repart alors du défaut réglé pour le rôle.
+   */
+  projectOverview?: WidgetsPref | null;
   /**
    * Langue de l'interface, code du registre i18n. Attachée au compte et non à l'appareil :
    * le serveur en a besoin pour envoyer les emails dans la bonne langue.

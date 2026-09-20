@@ -6,7 +6,10 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { ColorSettings } from '../types/api';
 import { useT } from '../i18n';
-import { Card } from './ui/card';
+import { Palette } from 'lucide-react';
+import { Hint } from './ui/hint';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 interface OcioConfig {
   id: string;
@@ -58,11 +61,15 @@ export default function ProjectColorSection({
   };
 
   return (
-    <Card>
-      <div className="mb-1 text-sm font-medium">{t('color.title')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('project.ocioHint')}</div>
+    <SettingsCard
+      title={t('color.title')}
+      hint={t('project.ocioHint')}
+      icon={Palette}
+      tone="accent"
+      keywords={SETTINGS_KEYWORDS.color}
+    >
       {configs.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t('project.ocioNone')}</p>
+        <Hint>{t('project.ocioNone')}</Hint>
       ) : (
         <div className="flex flex-wrap items-end gap-3">
           <Field label={t('color.config')}>
@@ -111,7 +118,7 @@ export default function ProjectColorSection({
           </Field>
         </div>
       )}
-    </Card>
+    </SettingsCard>
   );
 }
 

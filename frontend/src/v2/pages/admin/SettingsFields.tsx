@@ -3,6 +3,7 @@
 
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
+import SettingsRow from '../../components/settings/SettingsRow';
 import { useT } from '../../i18n';
 import { fmtBytes, type SizeUnit } from './adminShared';
 import {
@@ -20,8 +21,9 @@ import {
  * règle qui a fait disparaître les onze boutons de l'ancienne section fourre-tout. Ce
  * composant ne sait donc que rendre et remonter les saisies.
  *
- * Chaque libellé est relié à son champ par `htmlFor` : le texte grisé du champ est un
- * exemple, jamais un nom accessible.
+ * La ligne est celle des trois familles d'écrans (`SettingsRow`) : libellé à gauche relié
+ * par `htmlFor`, contrôle à droite. Le texte grisé du champ est un exemple, jamais un nom
+ * accessible.
  */
 export default function SettingsFields({
   fields,
@@ -40,38 +42,37 @@ export default function SettingsFields({
 }) {
   const t = useT();
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {fields.map((field) => (
-        <div key={field.key} className="flex flex-wrap items-center gap-2 text-sm">
-          <label className="w-64 text-muted-foreground" htmlFor={`setting-${field.key}`}>
-            {t(field.labelKey)}
-          </label>
-          <Input
-            id={`setting-${field.key}`}
-            className={field.bytes ? 'w-24 py-1 text-xs' : 'flex-1 py-1 text-xs'}
-            placeholder={t(field.hintKey)}
-            value={fieldDisplay(field, stored, draft)}
-            onChange={(e) => onChange(field.key, e.target.value)}
-          />
-          {field.bytes && (
-            <>
-              <Select
-                className="py-1 text-xs"
-                aria-label={t('settings.sizeUnit')}
-                value={fieldUnit(field, stored, units)}
-                onChange={(e) => onUnit(field, e.target.value as SizeUnit)}
-              >
-                {/* Symboles internationaux : « Mo »/« Go » n'existent qu'en français, et
-                    la modale « New user » disait déjà « Quota (GB) » deux écrans plus loin. */}
-                <option value="MB">MB</option>
-                <option value="GB">GB</option>
-              </Select>
-              <span className="w-24 text-xs text-muted-foreground">
-                {stored[field.key] ? `= ${fmtBytes(Number(stored[field.key]))}` : ''}
-              </span>
-            </>
-          )}
-        </div>
+        <SettingsRow key={field.key} label={t(field.labelKey)} htmlFor={`setting-${field.key}`}>
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+            <Input
+              id={`setting-${field.key}`}
+              className={field.bytes ? 'w-28 py-1 text-xs' : 'min-w-48 flex-1 py-1 text-xs'}
+              placeholder={t(field.hintKey)}
+              value={fieldDisplay(field, stored, draft)}
+              onChange={(e) => onChange(field.key, e.target.value)}
+            />
+            {field.bytes && (
+              <>
+                <Select
+                  className="py-1 text-xs"
+                  aria-label={t('settings.sizeUnit')}
+                  value={fieldUnit(field, stored, units)}
+                  onChange={(e) => onUnit(field, e.target.value as SizeUnit)}
+                >
+                  {/* Symboles internationaux : « Mo »/« Go » n'existent qu'en français, et
+                      la modale « New user » disait déjà « Quota (GB) » deux écrans plus loin. */}
+                  <option value="MB">MB</option>
+                  <option value="GB">GB</option>
+                </Select>
+                <span className="w-24 text-2xs text-muted-foreground">
+                  {stored[field.key] ? `= ${fmtBytes(Number(stored[field.key]))}` : ''}
+                </span>
+              </>
+            )}
+          </div>
+        </SettingsRow>
       ))}
     </div>
   );

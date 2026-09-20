@@ -33,6 +33,8 @@ export const qk = {
   /** Fil des derniers commentaires de mon périmètre (carte « commentaires » de l'Accueil). */
   commentFeed: (filter: string) => ['comment-feed', filter] as const,
   announcementsActive: ['announcements', 'active'] as const,
+  /** Dispositions par défaut de la vue d'ensemble, une par rôle (réglage studio). */
+  overviewLayoutDefaults: ['overview-layout'] as const,
   reviews: (filter: string) => ['reviews', filter] as const,
   projects: ['projects'] as const,
   projectsArchived: ['projects', 'archived'] as const,

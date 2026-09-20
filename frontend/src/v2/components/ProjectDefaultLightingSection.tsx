@@ -6,7 +6,9 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { LightingDefault } from '../types/api';
 import { useT } from '../i18n';
-import { Card } from './ui/card';
+import { Lightbulb } from 'lucide-react';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /** Entrée de la bibliothèque HDRI instance (miroir de `HdriService.listWithUrls`). */
 interface HdriItem {
@@ -41,9 +43,13 @@ export default function ProjectDefaultLightingSection({
   const set = (patch: Partial<LightingDefault>) => value && onChange({ ...value, ...patch });
 
   return (
-    <Card>
-      <div className="mb-1 text-sm font-medium">{t('lighting.default.title')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('lighting.hint')}</div>
+    <SettingsCard
+      title={t('lighting.default.title')}
+      hint={t('lighting.hint')}
+      icon={Lightbulb}
+      tone="warning"
+      keywords={SETTINGS_KEYWORDS.lighting}
+    >
       {!value ? (
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">{t('lighting.default.empty')}</p>
@@ -122,7 +128,7 @@ export default function ProjectDefaultLightingSection({
           </div>
         </div>
       )}
-    </Card>
+    </SettingsCard>
   );
 }
 

@@ -2,7 +2,7 @@
 
 *Link a project to ShotGrid and keep both sides honest: what is exchanged, when it travels, and what cannot be undone.*
 
-> Updated: 2026-09-14
+> Updated: 2026-09-20
 
 Link a ReView project to a ShotGrid project and keep both in step. Sequences, shots,
 assets, tasks, statuses, schedule and published media flow into ReView; review decisions,
@@ -318,6 +318,33 @@ Three more rules worth knowing:
 The ShotGrid link is recorded at the same time — for people who are already members too,
 where it is often missing. It is what lets ReView write to the site *on that person's
 behalf* rather than as an anonymous "ReView".
+
+### The department comes with the person
+
+A site ranks its artists by department, and that is the one piece of the answer the import
+was missing: the accounts arrived, and someone still had to say by hand who does compositing
+and who does lighting. Each row now shows the department the site declares, and inviting
+applies it to the membership.
+
+Two precautions govern it, and both matter more than the feature itself.
+
+- **The schema is probed before anything is asked.** The field is not named the same
+  everywhere — `department` is the standard entity link, `sg_department` the in-house
+  variant found on older sites. Asking for a field the site does not declare does not return
+  *empty*: it fails the whole request, and the crew would stop loading altogether. ReView
+  therefore reads `/schema/HumanUser/fields` first and asks only for what is there. A script
+  user with no right on the schema gets a 403; that counts as *no department*, never as a
+  failed pass.
+- **No department is ever created.** A ShotGrid department is an organisational unit —
+  *2D*, *Production*, *Pipeline* — and not necessarily a step of the pipe. The name is
+  matched against the departments the studio has already declared for this project (case and
+  punctuation ignored); anything else is shown for information and applied to nobody. The
+  row's tooltip says which of the two is happening before you click.
+
+The department is **added**, never substituted: the site knows one, the person may already
+hold several in ReView. Correcting or completing the list is done from the same tab, by
+right-clicking the member — see
+[Users & roles](users-and-roles.md#departments-of-a-member).
 
 **Typical use.** A new show starts. The coordinator links the project, opens **Members →
 Load the ShotGrid crew**, selects everyone with a green *No account yet* state, and clicks

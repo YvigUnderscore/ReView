@@ -11,6 +11,7 @@ import { projectSettingsPatchSchema, type ProjectSettingsPatch } from '../lib/pr
 import { CSV_FIELDS } from '../lib/projectCsvColumns';
 import * as ProjectService from '../services/ProjectService';
 import * as ProjectImportService from '../services/ProjectImportService';
+import * as DepartmentService from '../services/DepartmentService';
 
 /**
  * Routes projet additionnelles (Phase 38) montées AVANT projects.routes pour que les chemins
@@ -123,6 +124,30 @@ router.patch(
         req.body as ProjectSettingsPatch,
       ),
     );
+  },
+);
+
+// PATCH /api/projects/:projectId/members/:userId/departments — départements d'un membre
+// sur CE projet (lot 10). On coche et on décoche : remplacer la liste entière depuis un
+// écran qui n'affiche qu'un projet effacerait les étapes venues des autres.
+router.patch(
+  '/:projectId/members/:userId/departments',
+  validate({
+    params: projectIdParam.extend({ userId: z.coerce.number().int().positive() }),
+    body: z.object({
+      add: z.array(z.number().int().positive()).max(50).optional(),
+      remove: z.array(z.number().int().positive()).max(50).optional(),
+    }),
+  }),
+  requireProjectManage,
+  async (req, res) => {
+    const departments = await DepartmentService.setMemberDepartments(
+      req.user!,
+      Number(req.params.projectId),
+      Number(req.params.userId),
+      req.body as { add?: number[]; remove?: number[] },
+    );
+    res.json({ departments });
   },
 );
 

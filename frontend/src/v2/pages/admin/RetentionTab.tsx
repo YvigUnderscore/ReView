@@ -26,6 +26,7 @@ import {
   type RetentionFamily,
   type RetentionPolicy,
 } from './retentionForm';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Rétention : combien de temps le studio garde ce qu'il a produit et ce qu'il a supprimé,
@@ -150,7 +151,7 @@ export default function RetentionTab() {
         </Panel>
 
         <Panel title={t('retention.title')}>
-          <p className="mb-2 text-xs text-muted-foreground">{t('retention.intro')}</p>
+          <Hint>{t('retention.intro')}</Hint>
           <div>
             {RETENTION_FAMILIES.map((f) => (
               <DaysRow
@@ -162,7 +163,7 @@ export default function RetentionTab() {
               />
             ))}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{t('retention.conflictNote')}</p>
+          <Hint>{t('retention.conflictNote')}</Hint>
         </Panel>
 
         <Panel title={t('retention.batchTitle')}>

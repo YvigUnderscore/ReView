@@ -115,6 +115,17 @@ export const myOpenTasksWhere = (user: SessionUser): Prisma.TaskWhereInput => ({
 });
 
 /**
+ * Tâche rattachée à UN projet précis, par ses deux chemins de rattachement.
+ *
+ * Restriction, jamais élargissement : elle se compose en `AND` avec le périmètre
+ * ci-dessus pour le bloc « mes tâches » d'une page projet, qui montre ce que la page
+ * transverse montre déjà — le même périmètre, vu par le trou d'un seul projet.
+ */
+export const taskOfProject = (projectId: number): Prisma.TaskWhereInput => ({
+  OR: [{ shot: { projectId } }, { asset: { projectId } }],
+});
+
+/**
  * Commentaires lisibles depuis mon Accueil : ceux des médias publiés de mon périmètre.
  * Un CLIENT n'y voit que les notes qui lui sont destinées — même règle que le fil de
  * review, le partage public, la recherche et l'export.

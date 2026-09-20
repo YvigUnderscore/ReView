@@ -10,6 +10,7 @@ import { Panel } from './AdminPrimitives';
 import { fmtBytes } from './adminShared';
 import CommandBlock from './CommandBlock';
 import type { BackupCatalog, BackupEntry, Mechanism } from './ops';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Les sauvegardes prises par `scripts/backup.sh`, et les deux gestes qu'on peut leur
@@ -71,7 +72,7 @@ export default function BackupsPanel({
 
       {catalog.entries.length > 0 && (
         <div className="mt-4 space-y-2 border-t border-border pt-3">
-          <p className="text-xs text-muted-foreground">{t('ops.backups.restoreHint')}</p>
+          <Hint>{t('ops.backups.restoreHint')}</Hint>
           <CommandBlock command={catalog.entries[0].restoreCommand} />
         </div>
       )}

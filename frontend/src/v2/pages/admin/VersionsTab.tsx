@@ -16,6 +16,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { fmtDateTime, versionStatusLabel } from './adminShared';
 import type { AdminProjectRow, AdminVersionRow, MediaKind, Paginated, VersionStatus } from '../../types/api';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 const PAGE_SIZE = 50;
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
@@ -125,7 +126,7 @@ export default function VersionsTab() {
           ))}
         </Select>
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">{t('versions.total', { count: total })}</p>
+      <Hint>{t('versions.total', { count: total })}</Hint>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="bg-card text-left text-xs text-muted-foreground">

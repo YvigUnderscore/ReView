@@ -7,6 +7,7 @@ import { Bell, BellOff } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { pushSupported, currentSubscription, enablePush, disablePush } from '../../lib/webpush';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /** Bascule des notifications Web Push du navigateur courant (42.B — №66). */
 export default function PushToggle() {
@@ -20,7 +21,7 @@ export default function PushToggle() {
   }, [supported]);
 
   if (!supported) {
-    return <p className="text-xs text-muted-foreground">{t('push.unsupported')}</p>;
+    return <Hint>{t('push.unsupported')}</Hint>;
   }
 
   const toggle = async () => {
@@ -46,7 +47,7 @@ export default function PushToggle() {
     <div className="flex items-center justify-between gap-3">
       <div>
         <div className="text-sm">{t('push.title')}</div>
-        <div className="text-xs text-muted-foreground">{t('push.hint')}</div>
+        <Hint>{t('push.hint')}</Hint>
       </div>
       <Button variant={enabled ? 'secondary' : 'default'} size="sm" onClick={toggle} disabled={busy}>
         {enabled ? <BellOff size={14} /> : <Bell size={14} />}

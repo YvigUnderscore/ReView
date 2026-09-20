@@ -3,7 +3,7 @@
 
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Save, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, KeyRound, Save, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
@@ -13,6 +13,7 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 interface OidcView {
   enabled: boolean;
@@ -147,8 +148,7 @@ export default function IdentityTab() {
 
       <LogoPanel draft={draft} busy={busy} onSaved={(logoKey) => void save({ logoKey })} />
 
-      <Panel title={t('sso.passwordTitle')}>
-        <p className="mb-3 text-xs text-muted-foreground">{t('sso.passwordHint')}</p>
+      <Panel title={t('sso.passwordTitle')} icon={KeyRound} tone="warning">
         <label className="flex items-start gap-2 text-sm">
           <input
             type="checkbox"
@@ -167,9 +167,7 @@ export default function IdentityTab() {
             </span>
           </span>
         </label>
-        {!ssoReady(draft) && !draft.passwordLoginDisabled && (
-          <p className="mt-2 text-xs text-muted-foreground">{t('sso.passwordNeedsSso')}</p>
-        )}
+        {!ssoReady(draft) && !draft.passwordLoginDisabled && <Hint>{t('sso.passwordNeedsSso')}</Hint>}
         {draft.passwordLoginDisabled && (
           <p className="mt-2 flex items-start gap-1.5 text-xs text-warning">
             <AlertTriangle size={14} className="mt-px shrink-0" />
@@ -221,7 +219,7 @@ function LogoPanel({
   const disabled = busy || uploading;
   return (
     <Panel title={t('sso.logoTitle')}>
-      <p className="mb-3 text-xs text-muted-foreground">{t('sso.logoHint')}</p>
+      <Hint>{t('sso.logoHint')}</Hint>
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-md border border-border bg-background">
           {draft.logoUrl ? (

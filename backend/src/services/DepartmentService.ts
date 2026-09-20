@@ -592,3 +592,79 @@ async function nextOrder(studioId: number, projectId: number | null): Promise<nu
   });
   return (last?.order ?? -1) + 1;
 }
+
+/**
+ * Les départements d'une personne **dans le vocabulaire d'un projet**.
+ *
+ * `User.departments` traverse tout le studio : une personne qui travaille sur trois projets
+ * porte les étapes des trois. L'onglet Membres d'un projet n'en montre qu'un, et ne doit
+ * donc rendre — ni laisser retirer — que ce qui appartient à celui-ci.
+ */
+export async function listMemberDepartments(projectId: number, userId: number): Promise<Department[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      departments: {
+        // Même portée que `assertDepartmentsOfProject` : les étapes du projet ET celles du
+        // référentiel hérité. Une instance = un studio, `projectId: null` ne désigne donc
+        // qu'un seul référentiel.
+        where: { deletedAt: null, OR: [{ projectId }, { projectId: null }] },
+        orderBy: ORDER_BY,
+      },
+    },
+  });
+  return user?.departments ?? [];
+}
+
+/**
+ * Départements d'un membre sur un projet : on coche et on décoche, on ne remplace jamais.
+ *
+ * **Un artiste appartient à PLUSIEURS départements, pas à un seul.** La relation est
+ * multiple depuis la vague B, et c'est le studio qui a raison : un lead compositing qui
+ * tient aussi le roto, un généraliste qui passe du layout au lighting — les obliger à
+ * choisir une case rendrait faux le filtre « mon département » et l'assignation suggérée,
+ * qui lisent tous deux cette liste.
+ *
+ * Pourquoi pas `setUserDepartments` ? Parce qu'il remplace la liste ENTIÈRE. Depuis cet
+ * écran on ne voit que le vocabulaire d'un projet : y envoyer l'état affiché effacerait
+ * sans le dire les étapes que la personne tient d'un autre projet. On nomme donc ce qu'on
+ * ajoute et ce qu'on retire, et les deux sont vérifiés contre le vocabulaire du projet —
+ * sinon un identifiant pris ailleurs suffirait à détacher quelqu'un d'un projet qu'on ne
+ * regarde même pas.
+ */
+export async function setMemberDepartments(
+  actor: DepartmentActor,
+  projectId: number,
+  userId: number,
+  change: { add?: number[]; remove?: number[] },
+): Promise<Department[]> {
+  const membership = await prisma.projectMembership.findUnique({
+    where: { userId_projectId: { userId, projectId } },
+    select: { id: true },
+  });
+  if (!membership) throw notFound('This user is not a member of the project');
+
+  const add = [...new Set(change.add ?? [])];
+  const remove = [...new Set(change.remove ?? [])].filter((id) => !add.includes(id));
+  await assertDepartmentsOfProject(projectId, [...add, ...remove]);
+
+  if (add.length > 0 || remove.length > 0) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        departments: {
+          connect: add.map((id) => ({ id })),
+          disconnect: remove.map((id) => ({ id })),
+        },
+      },
+    });
+    logAudit({
+      userId: actor.id,
+      action: 'PROJECT_MEMBER_DEPARTMENTS',
+      entityType: 'Project',
+      entityId: projectId,
+      metadata: { targetUserId: userId, added: add, removed: remove },
+    });
+  }
+  return listMemberDepartments(projectId, userId);
+}

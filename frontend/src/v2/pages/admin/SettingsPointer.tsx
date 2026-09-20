@@ -29,7 +29,7 @@ export default function SettingsPointer({
 }) {
   const t = useT();
   return (
-    <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+    <p className="flex flex-wrap items-center gap-1 text-2xs text-muted-foreground">
       {hint && <span>{hint}</span>}
       <Link
         to={`/admin/${section}`}

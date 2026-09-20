@@ -23,6 +23,7 @@ import {
   responseExcerpt,
   type WebhookDeliveryRow,
 } from './webhookLog';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Journal des livraisons d'un webhook.
@@ -77,12 +78,11 @@ export default function WebhookDeliveries({ webhookId, active }: { webhookId: nu
       <QueryState
         query={deliveriesQ}
         compact
-        skeleton={<p className="px-3 py-2 text-xs text-muted-foreground">{t('common.loading')}</p>}
+        skeleton={<Hint className="px-3 py-2">{t('common.loading')}</Hint>}
       />
     );
 
-  if (rows.length === 0)
-    return <p className="px-3 py-2 text-xs text-muted-foreground">{t('webhooks.delivery.empty')}</p>;
+  if (rows.length === 0) return <Hint className="px-3 py-2">{t('webhooks.delivery.empty')}</Hint>;
 
   return (
     <div className="space-y-1 border-l-2 border-border pl-3">

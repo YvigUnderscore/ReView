@@ -6,7 +6,6 @@ import { Link, useParams } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
-  Search,
   Bot,
   Box,
   CalendarClock,
@@ -73,6 +72,7 @@ import ShotgridSitesTab from './admin/ShotgridSitesTab';
 import LiveRoomTab from './admin/LiveRoomTab';
 import ChatTab from './admin/ChatTab';
 import { sectionHaystack, sectionMatches } from './admin/settingsSearch';
+import { SettingsSearchBar } from '../components/settings/SettingsSearch';
 import { ADMIN_GROUPS, adminGroupLabel, adminSections, type AdminSectionKey } from './admin/adminSections';
 
 /**
@@ -156,20 +156,7 @@ export default function AdminPage() {
           {/* Chercher dans les réglages, pas seulement dans leurs titres : vingt-huit
               sections en cinq groupes sont introuvables sans cela — on cherche
               « watermark », pas « Diffusion ». */}
-          <div className="relative mb-2 hidden md:block">
-            <Search
-              size={14}
-              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('admin.search.placeholder')}
-              aria-label={t('admin.search.placeholder')}
-              className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
+          <SettingsSearchBar value={query} onChange={setQuery} className="mb-2 hidden md:block" />
           {ADMIN_GROUPS.map((group) => {
             const inGroup = visibleSections.filter((s) => s.group === group);
             if (inGroup.length === 0) return null;

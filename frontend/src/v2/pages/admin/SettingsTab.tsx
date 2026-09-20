@@ -12,7 +12,9 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import TranslationNotice from '../../components/TranslationNotice';
 import { BASE_LOCALE, LOCALES, isLocale, useT } from '../../i18n';
+import { Building2, Languages, Palette } from 'lucide-react';
 import { Panel } from './AdminPrimitives';
+import SettingsRow from '../../components/settings/SettingsRow';
 import SaveBar from './SaveBar';
 import SettingsFields from './SettingsFields';
 import StudioLogoPanel from './StudioLogoPanel';
@@ -74,58 +76,58 @@ export default function SettingsTab() {
   return (
     <div className="max-w-2xl">
       <div className="space-y-4">
-        <Panel title={t('settings.group.studio')}>
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <label className="w-64 text-muted-foreground" htmlFor="studio-name">
-                {t('settings.studioName')}
-              </label>
-              <Input
-                id="studio-name"
-                className="flex-1 py-1 text-xs"
-                placeholder={t('settings.hint.studioName')}
-                value={name ?? storedName}
-                onChange={(e) => setName(e.target.value)}
+        <Panel title={t('settings.group.studio')} icon={Building2} tone="primary">
+          <SettingsRow label={t('settings.studioName')} htmlFor="studio-name">
+            <Input
+              id="studio-name"
+              className="min-w-48 flex-1 py-1 text-xs"
+              placeholder={t('settings.hint.studioName')}
+              value={name ?? storedName}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </SettingsRow>
+          <SettingsFields
+            fields={settings.fields}
+            stored={stored}
+            draft={settings.draft}
+            units={settings.units}
+            onChange={settings.setValue}
+            onUnit={settings.setUnit}
+          />
+        </Panel>
+
+        <Panel
+          title={t('settings.studioTheme')}
+          icon={Palette}
+          tone="accent"
+          footnote={t('settings.accentHint')}
+        >
+          <SettingsRow label={t('settings.accentColour')} htmlFor="studio-accent">
+            <div className="flex items-center gap-2">
+              <input
+                id="studio-accent"
+                type="color"
+                value={accentValue}
+                onChange={(e) => settings.setValue('studio_accent', e.target.value)}
+                className="h-8 w-12 cursor-pointer rounded border border-border bg-transparent"
               />
+              <span className="font-mono text-2xs text-muted-foreground">{accentValue}</span>
+              {accent && (
+                <Button variant="ghost" size="sm" onClick={() => settings.setValue('studio_accent', '')}>
+                  {t('common.reset')}
+                </Button>
+              )}
             </div>
-            <SettingsFields
-              fields={settings.fields}
-              stored={stored}
-              draft={settings.draft}
-              units={settings.units}
-              onChange={settings.setValue}
-              onUnit={settings.setUnit}
-            />
-          </div>
+          </SettingsRow>
         </Panel>
 
-        <Panel title={t('settings.studioTheme')}>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <label className="w-64 text-muted-foreground" htmlFor="studio-accent">
-              {t('settings.accentColour')}
-            </label>
-            <input
-              id="studio-accent"
-              type="color"
-              value={accentValue}
-              onChange={(e) => settings.setValue('studio_accent', e.target.value)}
-              className="h-8 w-12 cursor-pointer rounded border border-border bg-transparent"
-            />
-            <span className="w-24 font-mono text-xs text-muted-foreground">{accentValue}</span>
-            {accent && (
-              <Button variant="ghost" size="sm" onClick={() => settings.setValue('studio_accent', '')}>
-                {t('common.reset')}
-              </Button>
-            )}
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">{t('settings.accentHint')}</p>
-        </Panel>
-
-        <Panel title={t('settings.studioLanguage')}>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <label className="w-64 text-muted-foreground" htmlFor="studio-default-locale">
-              {t('reviewStatus.defaultLang')}
-            </label>
+        <Panel
+          title={t('settings.studioLanguage')}
+          icon={Languages}
+          tone="info"
+          footnote={t('settings.localeHint')}
+        >
+          <SettingsRow label={t('reviewStatus.defaultLang')} htmlFor="studio-default-locale">
             <Select
               id="studio-default-locale"
               className="py-1 text-xs"
@@ -138,8 +140,7 @@ export default function SettingsTab() {
                 </option>
               ))}
             </Select>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">{t('settings.localeHint')}</p>
+          </SettingsRow>
           <TranslationNotice />
         </Panel>
 

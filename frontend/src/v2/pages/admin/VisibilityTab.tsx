@@ -20,6 +20,7 @@ import {
 } from '../../lib/visibilityApi';
 import { MATCH_LABEL, TYPE_LABEL } from './visibilityLabels';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Masquage d'éléments (admin).
@@ -60,7 +61,7 @@ export default function VisibilityTab() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold">{t('visibility.title')}</h2>
-          <p className="text-xs text-muted-foreground">{t('visibility.lead')}</p>
+          <Hint>{t('visibility.lead')}</Hint>
         </div>
         <div className="flex items-center gap-2">
           <Button

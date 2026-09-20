@@ -57,7 +57,10 @@ describe('ProjectSettingsInheritance', () => {
 
   it('liste une ligne par groupe de sections', () => {
     const html = render({ override: {}, studio: STUDIO, overrides: [] });
-    expect((html.match(/<li/g) ?? []).length).toBe(8);
+    // `<li` tout court comptait aussi les `<line>` des icônes SVG : la carte de réglages
+    // porte désormais une icône, et le compte passait à neuf sans qu'une ligne s'ajoute.
+    // Le motif exige donc un séparateur après la balise.
+    expect((html.match(/<li[\s>]/g) ?? []).length).toBe(8);
   });
 
   it('affiche un squelette tant que la vue d’héritage n’est pas arrivée', () => {

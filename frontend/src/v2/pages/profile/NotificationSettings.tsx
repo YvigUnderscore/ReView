@@ -12,6 +12,7 @@ import {
 } from '../../lib/notificationKinds';
 import { usePreferences, useUpdatePreferences } from '../../lib/usePreferences';
 import { useT, type Tr } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Réglages de notification par type d'événement (lot 9).
@@ -72,7 +73,7 @@ export default function NotificationSettings() {
     <div className="space-y-2">
       <div>
         <div className="text-sm">{t('notifSettings.title')}</div>
-        <div className="text-xs text-muted-foreground">{t('notifSettings.hint')}</div>
+        <Hint>{t('notifSettings.hint')}</Hint>
       </div>
       <table className="w-full text-sm">
         <thead>

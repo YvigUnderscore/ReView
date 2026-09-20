@@ -51,11 +51,26 @@ describe('GET /api/dashboard/tasks', () => {
   it('sert toutes mes tâches quand aucun périmètre n’est demandé', async () => {
     const res = await request(app).get('/api/dashboard/tasks');
     expect(res.status).toBe(200);
+    // Le quatrième argument est le filtre de projet (lot 10) : absent, la liste reste
+    // transverse — c'est ce que déplient les compteurs de l'Accueil.
     expect(listMyTasks).toHaveBeenCalledWith(
       expect.objectContaining({ id: 3 }),
       'all',
       expect.objectContaining({ page: 1 }),
+      undefined,
     );
+  });
+
+  it('restreint la liste à un projet pour le bloc de la vue d’ensemble', async () => {
+    const res = await request(app).get('/api/dashboard/tasks?projectId=12');
+    expect(res.status).toBe(200);
+    expect(listMyTasks.mock.calls[0]![3]).toBe(12);
+  });
+
+  it('refuse un projet qui n’est pas un identifiant', async () => {
+    const res = await request(app).get('/api/dashboard/tasks?projectId=zero');
+    expect(res.status).toBe(400);
+    expect(listMyTasks).not.toHaveBeenCalled();
   });
 
   it('déplie le compteur de retakes sur scope=blocked', async () => {

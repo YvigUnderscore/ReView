@@ -9,7 +9,9 @@ import { qk } from '../lib/query';
 import { SkeletonRows } from './ui/skeleton';
 import { useT } from '../i18n';
 import type { ProjectSettings } from '../types/api';
-import { Card } from './ui/card';
+import { GitBranch } from 'lucide-react';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 import {
   inheritanceRows,
   overrideKey,
@@ -69,9 +71,13 @@ export default function ProjectSettingsInheritance({
   const rows = inheritanceRows(t, viewQ.data?.studio);
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('inheritance.title')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('inheritance.hint')}</div>
+    <SettingsCard
+      title={t('inheritance.title')}
+      hint={t('inheritance.hint')}
+      icon={GitBranch}
+      tone="neutral"
+      keywords={SETTINGS_KEYWORDS.inheritance}
+    >
       {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
       {message && <p className="mb-2 text-sm text-success">{message}</p>}
       {viewQ.data ? (
@@ -89,7 +95,7 @@ export default function ProjectSettingsInheritance({
       ) : (
         <SkeletonRows count={4} />
       )}
-    </Card>
+    </SettingsCard>
   );
 }
 

@@ -18,28 +18,31 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { ReactNode } from 'react';
-import { isWidgetId, type HomeWidgetId } from './homeWidgets';
-import type { WidgetDragHandle } from './WidgetFrame';
+import type { WidgetDragHandle } from './WidgetShell';
 
 /**
- * Mode réagencement de l'accueil — et **seul** module à connaître @dnd-kit (F5).
+ * Mode réagencement d'une page composable — et **seul** module à connaître @dnd-kit (F5).
  *
  * Les trois paquets (core, sortable, utilities) pèsent 16,8 ko gzip. Ils étaient dans le
  * fichier d'entrée, donc téléchargés par tout le monde sur toutes les pages, pour un geste
- * facultatif : déplacer les tuiles du tableau de bord. Ils arrivent maintenant au moment où
- * l'on entre en édition, et la grille hors édition reste du HTML simple — capteurs,
- * détection de collision et annonces ARIA compris.
+ * facultatif : déplacer des tuiles. Ils arrivent maintenant au moment où l'on entre en
+ * édition, et la grille hors édition reste du HTML simple — capteurs, détection de
+ * collision et annonces ARIA compris. Chaque page qui l'utilise doit donc l'importer en
+ * `lazy()`, jamais directement.
+ *
+ * Les identifiants circulent en `string` : c'est la page qui connaît son registre, et
+ * c'est elle qui écarte ce qu'elle ne reconnaît pas.
  */
-export interface HomeGridSortableProps {
-  ids: HomeWidgetId[];
+export interface WidgetSortableProps {
+  ids: string[];
   /** Classes de la grille, partagées avec le rendu hors édition : même mise en page. */
   className: string;
-  onReorder: (from: HomeWidgetId, to: HomeWidgetId) => void;
+  onReorder: (from: string, to: string) => void;
   /** Rend un bloc ; le troisième argument n'existe que dans ce mode. */
-  renderWidget: (id: HomeWidgetId, index: number, drag?: WidgetDragHandle) => ReactNode;
+  renderWidget: (id: string, index: number, drag?: WidgetDragHandle) => ReactNode;
 }
 
-export default function HomeGridSortable({ ids, className, onReorder, renderWidget }: HomeGridSortableProps) {
+export default function WidgetSortable({ ids, className, onReorder, renderWidget }: WidgetSortableProps) {
   const sensors = useSensors(
     // Un seuil de quelques pixels : sans lui, un simple clic sur un bloc démarrerait un
     // glissement et avalerait le clic.
@@ -50,10 +53,7 @@ export default function HomeGridSortable({ ids, className, onReorder, renderWidg
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const from = String(active.id);
-    const to = String(over.id);
-    if (!isWidgetId(from) || !isWidgetId(to)) return;
-    onReorder(from, to);
+    onReorder(String(active.id), String(over.id));
   };
 
   return (
@@ -75,9 +75,9 @@ function SortableWidget({
   index,
   renderWidget,
 }: {
-  id: HomeWidgetId;
+  id: string;
   index: number;
-  renderWidget: HomeGridSortableProps['renderWidget'];
+  renderWidget: WidgetSortableProps['renderWidget'];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return renderWidget(id, index, {

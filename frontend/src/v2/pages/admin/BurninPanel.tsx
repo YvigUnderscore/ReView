@@ -13,6 +13,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import type { BurninConfig } from '../../types/share';
 import { useT, type MessageKey } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
 type Tr = (key: MessageKey) => string;
@@ -63,7 +64,7 @@ export default function BurninPanel() {
 
   return (
     <Panel title={t('burnin.title')}>
-      <p className="mb-3 text-xs text-muted-foreground">{t('burnin.hint2')}</p>
+      <Hint>{t('burnin.hint2')}</Hint>
       <div className="space-y-2.5">
         {burninflags(t).map((f) => (
           <label key={f.key} className="flex items-center gap-2 text-sm">

@@ -13,7 +13,9 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
-import { Card } from '../../components/ui/card';
+import { Hint } from '../../components/ui/hint';
+import { SettingsCard } from '../../components/settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 
 interface SessionRow {
   id: string;
@@ -65,9 +67,13 @@ export default function SessionsSection() {
   };
 
   return (
-    <Card className="space-y-3">
-      <h2 className="text-sm font-semibold">{t('sessions.title')}</h2>
-      {sessions.length === 0 && <p className="text-xs text-muted-foreground">{t('sessions.empty')}</p>}
+    <SettingsCard
+      title={t('sessions.title')}
+      icon={MonitorSmartphone}
+      tone="info"
+      keywords={SETTINGS_KEYWORDS.sessions}
+    >
+      {sessions.length === 0 && <Hint>{t('sessions.empty')}</Hint>}
       <div className="space-y-1.5">
         {shown.map((s) => (
           <div
@@ -108,6 +114,6 @@ export default function SessionsSection() {
           </button>
         )}
       </div>
-    </Card>
+    </SettingsCard>
   );
 }

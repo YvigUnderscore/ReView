@@ -16,6 +16,7 @@ import ServiceTokenDialog from './ServiceTokenDialog';
 import { serviceTokensKey, type ServiceTokenRow } from '../../components/tokens/tokenApi';
 import { scopeLevel, type ScopeLevel } from '../../components/tokens/tokenScopes';
 import { useT, intlLocale, type MessageKey } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -76,7 +77,7 @@ export default function ServiceTokensTab() {
     <div className="max-w-3xl space-y-4">
       <Panel title={t('tokens.service.title')}>
         <div className="mb-3 flex items-start justify-between gap-3">
-          <p className="text-xs text-muted-foreground">{t('tokens.service.intro')}</p>
+          <Hint>{t('tokens.service.intro')}</Hint>
           <Button size="sm" onClick={() => setCreating(true)}>
             <Plus size={14} className="mr-1" /> {t('tokens.service.new')}
           </Button>
@@ -118,9 +119,7 @@ export default function ServiceTokensTab() {
                     </Badge>
                     {isExpired(tok) && <Badge variant="destructive">{t('tokens.expired')}</Badge>}
                   </div>
-                  {tok.description && (
-                    <p className="truncate text-xs text-muted-foreground">{tok.description}</p>
-                  )}
+                  {tok.description && <Hint className="truncate">{tok.description}</Hint>}
                   <p className="text-xs text-muted-foreground">
                     {t('tokens.createdOn', { date: fmt(tok.createdAt) })}
                     {tok.lastUsedAt

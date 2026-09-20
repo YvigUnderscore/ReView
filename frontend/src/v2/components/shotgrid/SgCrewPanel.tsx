@@ -150,6 +150,23 @@ function CrewRow({
               <code className="text-2xs">{person.login}</code>
             </>
           )}
+          {/* Département du site (lot 10). Il n'est posé dans ReView que s'il correspond à
+              une étape déjà déclarée : un département ShotGrid est une unité
+              d'organisation, pas forcément une étape du pipe. Le dire évite d'attendre
+              un rattachement qui n'aura pas lieu. */}
+          {person.sgDepartment && (
+            <>
+              {' · '}
+              <span
+                title={t(
+                  person.department ? 'shotgrid.crew.departmentApplied' : 'shotgrid.crew.departmentUnknown',
+                )}
+                className={person.department ? 'text-foreground' : undefined}
+              >
+                {person.sgDepartment}
+              </span>
+            </>
+          )}
         </p>
       </div>
       <span

@@ -10,7 +10,9 @@ import { useAuth } from '../../stores/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useT } from '../../i18n';
-import { Card } from '../../components/ui/card';
+import { SettingsCard } from '../../components/settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * 2FA TOTP (36.A) : enrôlement (QR + code), codes de secours affichés une fois,
@@ -78,16 +80,12 @@ export default function TwoFaSection() {
   };
 
   return (
-    <Card className="space-y-3">
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
-        {enabled ? (
-          <ShieldCheck size={15} className="text-success" />
-        ) : (
-          <ShieldOff size={15} className="text-muted-foreground" />
-        )}
-        {t('twofa.sectionTitle')}
-      </h2>
-
+    <SettingsCard
+      title={t('twofa.sectionTitle')}
+      icon={enabled ? ShieldCheck : ShieldOff}
+      tone={enabled ? 'success' : 'warning'}
+      keywords={SETTINGS_KEYWORDS.twofa}
+    >
       {backupCodes && (
         <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
           <p className="mb-2 text-xs font-medium">{t('twofa.backupCodes')}</p>
@@ -101,7 +99,7 @@ export default function TwoFaSection() {
 
       {!enabled && !qr && (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">{t('twofa.intro')}</p>
+          <Hint>{t('twofa.intro')}</Hint>
           <Button size="sm" onClick={start} disabled={busy}>
             {t('twofa.enable')}
           </Button>
@@ -110,7 +108,7 @@ export default function TwoFaSection() {
 
       {!enabled && qr && (
         <form onSubmit={enable} className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t('twofa.scan')}</p>
+          <Hint>{t('twofa.scan')}</Hint>
           <div className="flex items-start gap-4">
             <img src={qr} alt={t('twofa.qr')} className="rounded-md border border-border" />
             <div className="min-w-0 space-y-2">
@@ -151,6 +149,6 @@ export default function TwoFaSection() {
           </Button>
         </form>
       )}
-    </Card>
+    </SettingsCard>
   );
 }

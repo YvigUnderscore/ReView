@@ -17,6 +17,7 @@ import SettingsPointer from './SettingsPointer';
 import { useT } from '../../i18n';
 import type { LoginAppearance } from '../../lib/branding';
 import { backdropStyle, overlayStyle } from '../auth/loginStyles';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Section « Page de connexion » : habillage de l'écran vu avant toute authentification —
@@ -109,7 +110,7 @@ export default function LoginAppearanceTab() {
   return (
     <div className="max-w-3xl space-y-4">
       <Panel title={t('login.appearance.background')}>
-        <p className="mb-3 text-xs text-muted-foreground">{t('login.appearance.hint')}</p>
+        <Hint>{t('login.appearance.hint')}</Hint>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex h-20 w-36 items-center justify-center overflow-hidden rounded-md border border-border bg-background">
             {draft.bgUrl ? (

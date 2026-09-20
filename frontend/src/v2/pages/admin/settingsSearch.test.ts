@@ -3,7 +3,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { t } from '../../i18n';
-import { SECTION_KEYWORDS, fold, sectionHaystack, sectionMatches } from './settingsSearch';
+import {
+  SECTION_KEYWORDS,
+  SECTION_SETTING_LABELS,
+  fold,
+  sectionHaystack,
+  sectionMatches,
+} from './settingsSearch';
+import { adminSections } from './adminSections';
 
 /**
  * Vingt-huit sections en cinq groupes, sans aucun moyen de chercher : pour trouver le
@@ -53,6 +60,40 @@ describe('recherche dans les réglages', () => {
 
   it('ne trouve rien sur un mot absent — le message « aucun réglage » doit pouvoir sortir', () => {
     expect(sectionMatches(haystackOf('jobs'), 'zzzz')).toBe(false);
+  });
+
+  /**
+   * Le registre ne déclarait que les douze réglages clé/valeur, pour une soixantaine
+   * réellement rendus : « CRF », « slate », « STARTTLS », « taille de lot » ou « scopes »
+   * ne menaient nulle part — c'est-à-dire exactement les réglages qu'on ne retrouve pas de
+   * tête. Chacun est désormais indexé dans la section qui le rend.
+   */
+  it('indexe les réglages que les sections rendent vraiment, pas seulement les clé/valeur', () => {
+    const cas: [string, string][] = [
+      ['video', t('transcode.crf')],
+      ['video', t('transcode.audioKbps')],
+      ['distribution', t('burnin.slateShort')],
+      ['smtp', t('smtp.allowInsecure')],
+      ['retention', t('retention.batchSize')],
+      ['api', t('webhooks.hmacSecret')],
+      ['identity', t('sso.clientSecret')],
+      ['shotgrid', t('shotgrid.site.scriptKey')],
+      ['service-tokens', t('tokens.allProjects')],
+      ['jobs', t('jobs.purgeDerived')],
+      ['login-appearance', t('login.appearance.tagline')],
+      ['defaults', t('settings.draftMode')],
+    ];
+    for (const [key, label] of cas) {
+      expect(sectionMatches(haystackOf(key), label), `${key} / ${label}`).toBe(true);
+    }
+  });
+
+  it('ne déclare que des sections qui existent — un renommage ne laisse pas d’index orphelin', () => {
+    // `Set<string>` et non `Set<SectionKey>` : on interroge justement avec des clés BRUTES,
+    // celles des deux index, pour attraper un renommage que le typage ne verrait pas.
+    const connues = new Set<string>(adminSections(t).map((s) => s.key));
+    for (const key of Object.keys(SECTION_SETTING_LABELS)) expect(connues.has(key), key).toBe(true);
+    for (const key of Object.keys(SECTION_KEYWORDS)) expect(connues.has(key), key).toBe(true);
   });
 
   it('couvre chaque section par au moins un mot-clé', () => {

@@ -23,7 +23,9 @@ import {
   type ScopeLevel,
 } from '../../components/tokens/tokenScopes';
 import { useT, intlLocale, type MessageKey } from '../../i18n';
-import { Card } from '../../components/ui/card';
+import { SettingsCard } from '../../components/settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
+import { Hint } from '../../components/ui/hint';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -106,19 +108,22 @@ export default function ApiTokensSection() {
   };
 
   return (
-    <Card className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold">{t('tokens.title')}</h2>
-          <p className="text-xs text-muted-foreground">
-            {t('tokens.intro')} <code>Authorization: Bearer rvk_…</code>
-          </p>
-        </div>
+    <SettingsCard
+      title={t('tokens.title')}
+      hint={t('tokens.intro')}
+      icon={KeyRound}
+      tone="primary"
+      keywords={SETTINGS_KEYWORDS.tokens}
+      actions={
         <Button size="sm" variant={open ? 'ghost' : 'default'} onClick={() => setOpen((v) => !v)}>
           {open ? <X size={14} className="mr-1" /> : <Plus size={14} className="mr-1" />}
           {open ? t('common.cancel') : t('tokens.new')}
         </Button>
-      </div>
+      }
+    >
+      <p className="text-2xs text-muted-foreground">
+        <code>Authorization: Bearer rvk_…</code>
+      </p>
       {secret && <TokenSecret secret={secret} />}
       {open && (
         <form onSubmit={create} className="space-y-3 rounded-md border border-border p-3">
@@ -180,7 +185,7 @@ export default function ApiTokensSection() {
         </form>
       )}
       <div className="space-y-1.5">
-        {tokens.length === 0 && <p className="text-xs text-muted-foreground">{t('tokens.empty')}</p>}
+        {tokens.length === 0 && <Hint>{t('tokens.empty')}</Hint>}
         {tokens.map((tok) => (
           <EntityContextMenu
             key={tok.id}
@@ -219,6 +224,6 @@ export default function ApiTokensSection() {
         ))}
         {tokens.length > 0 && <p className="pt-1 text-2xs text-muted-foreground">{t('tokens.revokeHint')}</p>}
       </div>
-    </Card>
+    </SettingsCard>
   );
 }

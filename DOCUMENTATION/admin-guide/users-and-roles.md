@@ -2,7 +2,7 @@
 
 *The two authorisation layers, how the effective role on a project is computed, and how to offboard without losing history.*
 
-> Updated: 2026-09-16
+> Updated: 2026-09-20
 
 ![The Members tab of a project — where a role is granted for this project only.](../assets/admin-guide/project-members.png)
 
@@ -287,6 +287,28 @@ one project. Setting it to `SUPERVISOR` is the standard way to appoint a lead. B
 reversible at any time and take effect on the next request. Managing members is itself
 `requireProjectManage`, so a project supervisor runs their own team.
 
+The role is on the row itself; **right-clicking a member** opens the same choice, plus the
+departments below.
+
+### Departments of a member
+
+A member also belongs to **departments** — the pipeline steps they work in. Right-click a
+member, open *Departments*, and tick as many as apply. The list is what feeds the
+*my department* filters and the suggested assignments, so it is worth keeping honest.
+
+- **Several, not one.** An artist is rarely confined to a single step: a compositing lead
+  who also owns the roto, a generalist who moves from layout to lighting. Each box is
+  independent, and each tick is sent on its own — two quick clicks never cancel each other.
+- **Only this project's vocabulary.** The tab offers the steps of this project, falling
+  back to the studio reference. Ticking and unticking name the step being added or removed,
+  so departments the person holds on *another* project are never touched by an edit made
+  here. The server refuses an identifier that belongs to a different project, in both
+  directions.
+- **Who may.** The same right as managing members (`requireProjectManage`) — a project
+  supervisor sets the departments of their own team. The studio-wide route
+  (`PUT /api/users/:id/departments`) stays reserved to administrators, because it replaces
+  the whole list across every project.
+
 ---
 
 ## Use case: opening one project to a client
@@ -327,8 +349,8 @@ and view limit included. Note that creating a share link requires a **global** `
    (`storageLimit`). Otherwise they inherit the studio default of 10 GB and will meet
    `403 STORAGE_LIMIT` mid-upload.
 3. *Project → Members → Add*, project role left on *Global role*.
-4. Optionally assign their departments (*Compositing*) so the "my department" filters and
-   the suggested assignments work.
+4. Assign their departments (*Compositing*) by right-clicking their row in *Members*, so
+   the "my department" filters and the suggested assignments work.
 5. Write the end date in your own calendar **now** — nothing in ReView expires a membership
    automatically.
 

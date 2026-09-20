@@ -8,7 +8,10 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { SkeletonRows } from './ui/skeleton';
 import { useT } from '../i18n';
-import { Card } from './ui/card';
+import { HardDrive } from 'lucide-react';
+import { Hint } from './ui/hint';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 interface Usage {
   usage: number;
@@ -66,9 +69,13 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
   const over = pct != null && pct >= 100;
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('storage.title')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('project.storageHint')}</div>
+    <SettingsCard
+      title={t('storage.title')}
+      hint={t('project.storageHint')}
+      icon={HardDrive}
+      tone="success"
+      keywords={SETTINGS_KEYWORDS.storage}
+    >
       {!data ? (
         <SkeletonRows count={2} />
       ) : (
@@ -110,10 +117,10 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
               <Save size={14} /> {saving ? '…' : t('common.save')}
             </button>
           </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          {msg && <p className="text-xs text-success">{msg}</p>}
+          {error && <Hint tone="error">{error}</Hint>}
+          {msg && <Hint tone="success">{msg}</Hint>}
         </div>
       )}
-    </Card>
+    </SettingsCard>
   );
 }

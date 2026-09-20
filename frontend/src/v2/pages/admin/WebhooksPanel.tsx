@@ -17,6 +17,7 @@ import WebhookDeliveries from './WebhookDeliveries';
 import { isSilencedByFailures, scopeName } from './webhookLog';
 import { useT, type MessageKey } from '../../i18n';
 import type { AdminProjectRow } from '../../types/api';
+import { Hint } from '../../components/ui/hint';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
 type Tr = (key: MessageKey) => string;
@@ -252,7 +253,7 @@ export default function WebhooksPanel() {
             )}
           </div>
         ))}
-        {hooks.length === 0 && <p className="text-xs text-muted-foreground">{t('webhooks.empty')}</p>}
+        {hooks.length === 0 && <Hint>{t('webhooks.empty')}</Hint>}
       </div>
     </Panel>
   );

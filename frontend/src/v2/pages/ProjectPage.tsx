@@ -204,7 +204,6 @@ export default function ProjectPage() {
           <OverviewTab
             name={name}
             projectId={projectId}
-            canManage={canManage}
             counts={{ sequences: sequences.length, shots: shots.length, assets: assets.length }}
             onGo={setTab}
           />

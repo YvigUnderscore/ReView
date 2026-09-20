@@ -1,9 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { paginate, pageArgs, type Paginated, type PaginationParams } from '../lib/pagination';
-import { commentFeedWhere, myOpenTasksWhere, myRetakesWhere, type SessionUser } from '../lib/homeScope';
+import {
+  commentFeedWhere,
+  myOpenTasksWhere,
+  myRetakesWhere,
+  taskOfProject,
+  type SessionUser,
+} from '../lib/homeScope';
 
 /**
  * Les vues transverses de « ce qui m'attend » : mes tâches et les derniers commentaires
@@ -66,13 +73,19 @@ function place(
  * assigné et vivant, ou seulement ce qui m'est revenu (retake, rejet). Le tri place
  * l'échéance la plus proche d'abord et les tâches sans date à la fin — un `id` départage,
  * sans quoi deux tâches sans échéance pourraient changer de page d'une requête à l'autre.
+ *
+ * `projectId` restreint la même liste à un projet : c'est ce que montre le bloc « mes
+ * tâches » de la vue d'ensemble. Le périmètre reste celui du compteur — le filtre ne fait
+ * que le rétrécir, il ne l'ouvre jamais.
  */
 export async function listMyTasks(
   user: SessionUser,
   scope: 'all' | 'blocked',
   p: PaginationParams,
+  projectId?: number,
 ): Promise<Paginated<MyTaskRow>> {
-  const where = scope === 'blocked' ? myRetakesWhere(user) : myOpenTasksWhere(user);
+  const scoped = scope === 'blocked' ? myRetakesWhere(user) : myOpenTasksWhere(user);
+  const where: Prisma.TaskWhereInput = projectId ? { AND: [scoped, taskOfProject(projectId)] } : scoped;
   const parent = { select: { name: true } };
   const [rows, total] = await Promise.all([
     prisma.task.findMany({

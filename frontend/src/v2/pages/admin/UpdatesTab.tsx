@@ -30,6 +30,7 @@ import {
   type OpsOverview,
   type RunSummary,
 } from './ops';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * « Mises à jour & sauvegardes » : ce que fait tourner l'instance, ce qui est paru depuis,
@@ -155,20 +156,14 @@ export default function UpdatesTab() {
             {notice.text}
           </p>
           <div className="mt-3 space-y-2">
-            {overview.mechanism.state === 'absent' && (
-              <p className="text-xs text-muted-foreground">{t('ops.manual.body')}</p>
-            )}
+            {overview.mechanism.state === 'absent' && <Hint>{t('ops.manual.body')}</Hint>}
             {overview.commands.update && overview.mechanism.state === 'absent' && (
               <CommandBlock command={overview.commands.update} />
             )}
             {notice.command && (
               <>
-                {overview.mechanism.state === 'absent' && (
-                  <p className="text-xs text-muted-foreground">{t('ops.agent.install')}</p>
-                )}
-                {overview.mechanism.state !== 'absent' && (
-                  <p className="text-xs text-muted-foreground">{t('ops.agent.diagnose')}</p>
-                )}
+                {overview.mechanism.state === 'absent' && <Hint>{t('ops.agent.install')}</Hint>}
+                {overview.mechanism.state !== 'absent' && <Hint>{t('ops.agent.diagnose')}</Hint>}
                 <CommandBlock command={notice.command} />
               </>
             )}
@@ -180,7 +175,7 @@ export default function UpdatesTab() {
           se contenterait d'annoncer une version disponible sans dire comment y aller. */}
       {overview.mode === 'build' && overview.commands.update && !notice && (
         <Panel title={t('ops.manual.title')}>
-          <p className="text-xs text-muted-foreground">{t('ops.manual.body')}</p>
+          <Hint>{t('ops.manual.body')}</Hint>
           <div className="mt-2">
             <CommandBlock command={overview.commands.update} />
           </div>

@@ -240,6 +240,12 @@ export interface Membership {
     lastName?: string | null;
     avatarUrl?: string | null;
     isService?: boolean;
+    /**
+     * Départements de la personne, bornés au vocabulaire de CE projet (lot 10). Le serveur
+     * les filtre : la liste complète mêlerait les étapes d'autres projets, que l'onglet
+     * Membres ne sait ni montrer ni retirer.
+     */
+    departments?: Pick<Department, 'id' | 'key' | 'name' | 'color'>[];
   };
 }
 

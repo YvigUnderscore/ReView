@@ -19,6 +19,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { fmtDateTime } from './adminShared';
 import type { AdminCommentRow, AdminProjectRow, Paginated, User } from '../../types/api';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 const PAGE_SIZE = 50;
 
@@ -134,7 +135,7 @@ export default function CommentsTab() {
           <option value="true">{t('comments.filter.resolved')}</option>
         </Select>
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">{t('comments.total', { count: total })}</p>
+      <Hint>{t('comments.total', { count: total })}</Hint>
       <div className="space-y-1.5">
         {items.map((c) => (
           <div key={c.id} className="rounded-md border border-border bg-card px-3 py-2 text-sm">

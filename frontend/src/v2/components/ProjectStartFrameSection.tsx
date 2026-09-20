@@ -4,7 +4,10 @@
 import { useState } from 'react';
 import { api } from '../../lib/apiClient';
 import { useT } from '../i18n';
-import { Card } from './ui/card';
+import { Hash } from 'lucide-react';
+import { Hint } from './ui/hint';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
  * Frame de départ du projet (déplacée dans les réglages depuis la vue d'ensemble).
@@ -45,9 +48,13 @@ export default function ProjectStartFrameSection({
   };
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('pipeline.startFrame')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('project.startFrameHint')}</div>
+    <SettingsCard
+      title={t('pipeline.startFrame')}
+      hint={t('project.startFrameHint')}
+      icon={Hash}
+      tone="primary"
+      keywords={SETTINGS_KEYWORDS.startFrame}
+    >
       <div className="flex items-center gap-2">
         <input
           type="number"
@@ -64,8 +71,8 @@ export default function ProjectStartFrameSection({
           {saving ? '…' : t('common.save')}
         </button>
       </div>
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
-      {msg && <p className="mt-2 text-xs text-success">{msg}</p>}
-    </Card>
+      {error && <Hint tone="error">{error}</Hint>}
+      {msg && <Hint tone="success">{msg}</Hint>}
+    </SettingsCard>
   );
 }

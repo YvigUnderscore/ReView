@@ -13,6 +13,7 @@ import { Panel } from './AdminPrimitives';
 import WebhooksPanel from './WebhooksPanel';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 interface AdminTokenRow {
   id: number;
@@ -58,7 +59,7 @@ function ApiTokensAdminPanel() {
 
   return (
     <Panel title={t('tokens.studio')}>
-      <p className="mb-3 text-xs text-muted-foreground">{t('admin.tokens.hint')}</p>
+      <Hint>{t('admin.tokens.hint')}</Hint>
       <QueryState query={tokensQ} hasData={tokensQ.data !== undefined} compact className="mb-3" />
       <div className="space-y-1.5">
         {tokens.map((tok) => (
@@ -86,7 +87,7 @@ function ApiTokensAdminPanel() {
             </Button>
           </div>
         ))}
-        {tokens.length === 0 && <p className="text-xs text-muted-foreground">{t('tokens.empty')}</p>}
+        {tokens.length === 0 && <Hint>{t('tokens.empty')}</Hint>}
       </div>
     </Panel>
   );

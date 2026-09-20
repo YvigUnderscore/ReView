@@ -7,6 +7,7 @@ import { Panel } from './AdminPrimitives';
 import { pipelineLabel } from './adminProjects';
 import type { AdminHierarchySequence, AdminHierarchyShot, PipelineSettings } from '../../types/api';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Hiérarchie séquences → shots d'un projet (fiche admin) : à chaque niveau, les
@@ -77,9 +78,7 @@ export default function ProjectHierarchy({
             {seq.shots.map((shot) => (
               <ShotRow key={shot.id} shot={shot} />
             ))}
-            {seq.shots.length === 0 && (
-              <p className="pl-6 text-xs text-muted-foreground">{t('sequences.noShot')}</p>
-            )}
+            {seq.shots.length === 0 && <Hint className="pl-6">{t('sequences.noShot')}</Hint>}
           </div>
         ))}
         {noSequence.length > 0 && (
@@ -96,7 +95,7 @@ export default function ProjectHierarchy({
           </div>
         )}
         {sequences.length === 0 && noSequence.length === 0 && (
-          <p className="py-2 text-xs text-muted-foreground">{t('hierarchy.emptyProject')}</p>
+          <Hint className="py-2">{t('hierarchy.emptyProject')}</Hint>
         )}
       </div>
     </Panel>

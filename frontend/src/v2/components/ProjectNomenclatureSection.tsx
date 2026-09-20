@@ -5,7 +5,9 @@ import type { Nomenclature } from '../types/api';
 import { useT } from '../i18n';
 import ProjectSettingsField from './ProjectSettingsField';
 import { SkeletonRows } from './ui/skeleton';
-import { Card } from './ui/card';
+import { Tags } from 'lucide-react';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
  * Nomenclature du projet : préfixes de séquence et de plan, pas de numérotation, nombre de
@@ -30,9 +32,13 @@ export default function ProjectNomenclatureSection({
   };
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('pipeline.naming')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('project.namingOverride')}</div>
+    <SettingsCard
+      title={t('pipeline.nomenclature')}
+      hint={t('project.namingOverride')}
+      icon={Tags}
+      tone="accent"
+      keywords={SETTINGS_KEYWORDS.nomenclature}
+    >
       {value ? (
         <div className="flex flex-wrap items-end gap-3">
           <ProjectSettingsField label={t('pipeline.prefix.sequence')}>
@@ -72,6 +78,6 @@ export default function ProjectNomenclatureSection({
       ) : (
         <SkeletonRows count={3} />
       )}
-    </Card>
+    </SettingsCard>
   );
 }

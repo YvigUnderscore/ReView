@@ -5,7 +5,9 @@ import type { PipelineSettings, Resolution } from '../types/api';
 import { useT } from '../i18n';
 import ProjectSettingsField from './ProjectSettingsField';
 import { SkeletonRows } from './ui/skeleton';
-import { Card } from './ui/card';
+import { Ruler } from 'lucide-react';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
  * Format & cadence du projet : résolution de livraison + framerate. Ce sont les défauts
@@ -39,9 +41,13 @@ export default function ProjectFormatSection({
   };
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('pipeline.formatRate')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('pipeline.formatHint')}</div>
+    <SettingsCard
+      title={t('pipeline.formatRate')}
+      hint={t('pipeline.formatHint')}
+      icon={Ruler}
+      tone="info"
+      keywords={SETTINGS_KEYWORDS.format}
+    >
       {value ? (
         <div className="flex flex-wrap items-end gap-3">
           <ProjectSettingsField label={t('pipeline.width')}>
@@ -76,6 +82,6 @@ export default function ProjectFormatSection({
       ) : (
         <SkeletonRows count={1} />
       )}
-    </Card>
+    </SettingsCard>
   );
 }

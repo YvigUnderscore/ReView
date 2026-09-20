@@ -13,7 +13,7 @@ vi.mock('../lib/prisma', () => ({
 import { Role } from '@prisma/client';
 import { listMyComments, listMyTasks } from './MyWorkService';
 import { prisma } from '../lib/prisma';
-import { myOpenTasksWhere, myRetakesWhere } from '../lib/homeScope';
+import { myOpenTasksWhere, myRetakesWhere, taskOfProject } from '../lib/homeScope';
 import type { PaginationParams } from '../lib/pagination';
 
 /**
@@ -88,6 +88,16 @@ describe('listMyTasks', () => {
       { dueDate: { sort: 'asc', nulls: 'last' } },
       { id: 'desc' },
     ]);
+  });
+
+  it('ajoute le projet en RESTRICTION, sans toucher au périmètre du compteur', async () => {
+    // Le bloc « mes tâches » d'une vue d'ensemble montre la même liste, vue par le trou
+    // d'un projet. Composer en `AND` est ce qui garantit qu'un filtre ne peut jamais
+    // ouvrir ce que le périmètre ferme.
+    await listMyTasks(artist, 'all', p, 12);
+    expect(tasks.mock.calls[0]![0]!.where).toEqual({
+      AND: [myOpenTasksWhere(artist), taskOfProject(12)],
+    });
   });
 });
 

@@ -13,6 +13,7 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import type { SmtpConfig } from '../../types/api';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Vue du formulaire : la configuration rendue par le serveur, plus `allowInsecure`.
@@ -150,7 +151,7 @@ export default function SmtpTab() {
             />
             <span className="text-sm font-medium text-destructive">{t('smtp.allowInsecure')}</span>
           </label>
-          <p className="mt-1 pl-6 text-xs text-muted-foreground">{t('smtp.allowInsecureHint')}</p>
+          <Hint className="pl-6">{t('smtp.allowInsecureHint')}</Hint>
         </div>
         <div className="pt-1">
           <Button size="sm" onClick={save} disabled={busy}>

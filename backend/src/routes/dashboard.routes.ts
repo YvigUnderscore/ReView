@@ -24,13 +24,25 @@ router.get('/', async (req, res) => {
  * C'est la destination des deux cartes personnelles de l'Accueil, qui pointaient jusqu'ici
  * une ancre disparaissant avec le bloc « mes tâches ». `scope=blocked` déplie le compteur
  * de retakes, sans scope c'est tout ce qui m'est assigné et vivant.
+ *
+ * `projectId` sert le même contenu à la vue d'ensemble d'un projet : ce bloc et cette page
+ * lisent le même périmètre, si bien qu'ils ne peuvent pas se contredire.
  */
 router.get(
   '/tasks',
-  validate({ query: z.object({ scope: z.enum(['all', 'blocked']).optional() }).merge(paginationQuery) }),
+  validate({
+    query: z
+      .object({
+        scope: z.enum(['all', 'blocked']).optional(),
+        projectId: z.coerce.number().int().positive().optional(),
+      })
+      .merge(paginationQuery),
+  }),
   async (req, res) => {
     const scope = req.query.scope === 'blocked' ? 'blocked' : 'all';
-    res.json(await MyWorkService.listMyTasks(req.user!, scope, readPagination(req.query)));
+    // Express 5 : `req.query` est un getter, la coercition du middleware ne persiste pas.
+    const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+    res.json(await MyWorkService.listMyTasks(req.user!, scope, readPagination(req.query), projectId));
   },
 );
 

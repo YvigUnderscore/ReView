@@ -10,6 +10,8 @@ import { openConnection } from './ShotgridConfigService';
 import { upsertLink } from './shotgridLinks';
 import * as UserService from '../UserService';
 import * as ProjectService from '../ProjectService';
+import { setMemberDepartments } from '../DepartmentService';
+import { departmentFields, departmentLabel, matchDepartments } from './ShotgridCrewDepartments';
 import type { SessionUser } from '../../lib/shotgridAccess';
 
 /**
@@ -53,6 +55,13 @@ export interface CrewPerson {
   /** Rôle sur ce projet, quand la personne y est déjà. */
   projectRole: Role | null;
   userRole: Role | null;
+  /**
+   * Département tel que le site le nomme — affiché même sans correspondance locale : il
+   * dit à qui on a affaire, ce que l'adresse ne dit pas toujours.
+   */
+  sgDepartment: string | null;
+  /** Département ReView correspondant, quand le studio en a déjà un sous ce nom. */
+  department: { id: number; name: string } | null;
 }
 
 /**
@@ -104,8 +113,11 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
   const ids = refs.map((r) => Number(r.id)).filter((id) => Number.isFinite(id));
   if (ids.length === 0) return [];
 
+  // Le département ne se demande qu'une fois le schéma consulté : un champ que le site ne
+  // déclare pas ne renvoie pas « vide », il fait échouer la requête entière.
+  const deptFields = await departmentFields(ctx.client);
   const people = await ctx.client.search('HumanUser', {
-    fields: ['name', 'email', 'login', 'sg_status_list'],
+    fields: ['name', 'email', 'login', 'sg_status_list', ...deptFields],
     filters: [['id', 'in', ids]],
     sort: 'name',
   });
@@ -117,7 +129,12 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
       login: asString(p.login),
       email: asString(p.email),
       sgStatus: asString(p.sg_status_list),
+      sgDepartment: departmentLabel(p, deptFields),
     })),
+  );
+  const departments = await matchDepartments(
+    projectId,
+    raw.map((p) => p.sgDepartment),
   );
 
   const emails = raw.map((p) => p.email?.toLowerCase()).filter((e): e is string => Boolean(e));
@@ -163,6 +180,7 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
         ? byEmail.get(person.email.toLowerCase())
         : undefined;
     const isMember = local ? byUser.has(local.id) : false;
+    const matched = person.sgDepartment ? departments.get(person.sgDepartment) : undefined;
     return {
       sgId: person.sgId,
       name: person.name,
@@ -174,6 +192,8 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
       linkedByHand: handLinked !== undefined,
       projectRole: local && isMember ? (byUser.get(local.id) ?? null) : null,
       userRole: local?.role ?? null,
+      sgDepartment: person.sgDepartment,
+      department: matched ? { id: matched.id, name: matched.name } : null,
     };
   });
 }
@@ -288,6 +308,22 @@ export async function inviteCrew(
   });
   const results: InviteResult[] = [];
 
+  /**
+   * Le département que le site déclare, posé sur le membre — **ajouté**, jamais substitué :
+   * la personne peut déjà en porter d'autres, et le site n'en connaît qu'un.
+   *
+   * L'échec ne fait pas tomber l'import : on vient de donner un accès, le perdre pour une
+   * étiquette serait absurde. Il est consigné, l'écran permet de corriger à la main.
+   */
+  const attachDepartment = async (person: CrewPerson, userId: number) => {
+    if (!person.department) return;
+    try {
+      await setMemberDepartments(actor, projectId, userId, { add: [person.department.id] });
+    } catch (err) {
+      logger.warn({ err, sgId: person.sgId }, 'Département ShotGrid non appliqué');
+    }
+  };
+
   const link = async (person: CrewPerson, userId: number) => {
     if (!connection) return;
     // Le lien sert à l'attribution : sans lui, une écriture faite au nom de cette
@@ -313,6 +349,7 @@ export async function inviteCrew(
       });
       await ProjectService.addMember(projectId, user.id);
       await link(person, user.id);
+      await attachDepartment(person, user.id);
       results.push({ sgId: person.sgId, outcome: 'created' });
     } catch (err) {
       logger.warn({ err, sgId: person.sgId }, 'Invitation ShotGrid en échec');
@@ -328,6 +365,7 @@ export async function inviteCrew(
     // Compte existant : on l'ajoute au projet sans toucher à son rôle global.
     await ProjectService.addMember(projectId, person.userId!);
     await link(person, person.userId!);
+    await attachDepartment(person, person.userId!);
     results.push({ sgId: person.sgId, outcome: 'added' });
   }
 
@@ -336,6 +374,7 @@ export async function inviteCrew(
     // permet d'écrire sur le site au nom de cette personne.
     if (person.state === 'member' && person.userId) {
       await link(person, person.userId);
+      await attachDepartment(person, person.userId);
       results.push({ sgId: person.sgId, outcome: 'linked' });
     } else {
       results.push({ sgId: person.sgId, outcome: 'skipped', reason: person.state });

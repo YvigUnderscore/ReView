@@ -27,6 +27,7 @@ import pushRoutes from './routes/push.routes';
 import chatRoutes from './routes/chat.routes';
 import studioRoutes from './routes/studio.routes';
 import studioAppearanceRoutes from './routes/studio-appearance.routes';
+import overviewLayoutRoutes from './routes/overview-layout.routes';
 import studioSmtpRoutes from './routes/studio-smtp.routes';
 import projectsRoutes from './routes/projects.routes';
 import projectsExtraRoutes from './routes/projects-extra.routes';
@@ -257,6 +258,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use('/api/chat', chatRoutes); // messagerie interne (MP & groupes)
   app.use('/api/studio', studioRoutes);
   app.use('/api/studio', studioAppearanceRoutes);
+  app.use('/api/studio', overviewLayoutRoutes); // dispositions par défaut de la vue d'ensemble (50.10)
   app.use('/api/studio', studioSmtpRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
   app.use('/api/studio/ocio', ocioRoutes);

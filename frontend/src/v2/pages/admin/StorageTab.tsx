@@ -18,6 +18,7 @@ import StorageMap from './StorageMap';
 import { useSaveAction, useStudioSettings } from './useStudioSettings';
 import type { AdminStorageReport, StorageAgg } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 function AggBars({
   agg,
@@ -30,7 +31,7 @@ function AggBars({
 }) {
   const t = useT();
   const entries = sortedEntries(agg, labels, total);
-  if (entries.length === 0) return <p className="text-xs text-muted-foreground">{t('storage.noObject')}</p>;
+  if (entries.length === 0) return <Hint>{t('storage.noObject')}</Hint>;
   return (
     <div className="space-y-2">
       {entries.map((e) => (
@@ -105,9 +106,7 @@ export default function StorageTab() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          {t('storage.scannedAt', { date: fmtDateTime(r.generatedAt), count: r.totalObjects })}
-        </p>
+        <Hint>{t('storage.scannedAt', { date: fmtDateTime(r.generatedAt), count: r.totalObjects })}</Hint>
         <Button variant="outline" size="sm" disabled={reportQ.isFetching} onClick={() => reportQ.refetch()}>
           <RefreshCw size={13} className={reportQ.isFetching ? 'animate-spin' : ''} /> {t('common.rescan')}
         </Button>
@@ -168,9 +167,7 @@ export default function StorageTab() {
               </span>
             </div>
           ))}
-          {r.projects.length === 0 && (
-            <p className="text-xs text-muted-foreground">{t('storage.noOriginal')}</p>
-          )}
+          {r.projects.length === 0 && <Hint>{t('storage.noOriginal')}</Hint>}
         </div>
       </Panel>
 

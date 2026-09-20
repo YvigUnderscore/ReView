@@ -7,32 +7,28 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
-import { DeleteIcon } from '../../components/EntityCard';
-import Avatar from '../../components/Avatar';
 import { Button } from '../../components/ui/button';
 import AddMemberDialog from './AddMemberDialog';
-import { initialsFrom } from '../../lib/initials';
-import { personLabel } from '../../lib/peopleSearch';
-import { ROLE_LABEL_KEY } from '../../lib/userStatus';
+import MemberRow from './MemberRow';
+import { useProjectRole } from '../../lib/useProjectRole';
 import type { Member } from './projectTypes';
 import type { Role } from '../../types/api';
-import { useT, type MessageKey } from '../../i18n';
+import { useT } from '../../i18n';
 import { useSgConnection } from '../../lib/shotgridApi';
 import SgCrewPanel from '../../components/shotgrid/SgCrewPanel';
-import SgAccountLink from '../../components/shotgrid/SgAccountLink';
 
-// Rôle projet : override facultatif du rôle global (38.E). '' = hérite du rôle global.
-const projectRoles = (t: (k: MessageKey) => string): { value: string; label: string }[] => [
-  { value: '', label: t('members.role.global') },
-  { value: 'SUPERVISOR', label: t('members.role.supervisor') },
-  { value: 'ARTIST', label: t('members.role.artist') },
-  { value: 'CLIENT', label: t('members.role.client') },
-];
-
-/** Onglet Membres : ajout/retrait des utilisateurs du projet + rôle par projet (38.E). */
+/**
+ * Onglet Membres : qui est sur le projet, avec quel rôle et dans quels départements.
+ *
+ * Le rôle par projet existait depuis la phase 38.E ; le département n'avait aucun écran,
+ * alors que la relation et les routes existaient depuis la vague B. Les deux se règlent
+ * maintenant d'un clic droit sur la ligne — le geste que le produit emploie partout
+ * ailleurs pour assigner.
+ */
 export default function MembersTab({ projectId }: { projectId: number }) {
   const t = useT();
   const qc = useQueryClient();
+  const { canManage } = useProjectRole(projectId);
   const projQ = useQuery({
     queryKey: qk.project(projectId),
     queryFn: () => api.get<{ project: { memberships: Member[] } }>(`/api/projects/${projectId}`),
@@ -44,12 +40,9 @@ export default function MembersTab({ projectId }: { projectId: number }) {
   const invalidate = () => void qc.invalidateQueries({ queryKey: qk.project(projectId) });
   const { data: connection } = useSgConnection(projectId);
 
-  const setRole = async (userId: number, role: string) => {
+  const setRole = async (userId: number, role: Role | undefined) => {
     try {
-      await api.post(`/api/projects/${projectId}/members`, {
-        userId,
-        role: role ? (role as Role) : undefined,
-      });
+      await api.post(`/api/projects/${projectId}/members`, { userId, role });
       toast.success(t('members.roleUpdated'));
       invalidate();
     } catch (err) {
@@ -74,7 +67,10 @@ export default function MembersTab({ projectId }: { projectId: number }) {
 
   return (
     <div>
-      <h2 className="mb-4 text-sm font-semibold text-muted-foreground">{t('members.title')}</h2>
+      <h2 className="mb-1 text-sm font-semibold text-muted-foreground">{t('members.title')}</h2>
+      {/* Le clic droit ne se devine pas : une ligne suffit à le dire, là où un bouton de
+          plus par ligne alourdirait l'écran. */}
+      {canManage && <p className="mb-4 text-xs text-muted-foreground">{t('members.hint')}</p>}
       {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
       {/* Projet relié : l'équipe du site entre ici, sans ressaisir une adresse. */}
       {connection?.active && (
@@ -92,49 +88,15 @@ export default function MembersTab({ projectId }: { projectId: number }) {
       )}
       <div className="space-y-1.5">
         {members.map((m) => (
-          <div
+          <MemberRow
             key={m.user.id}
-            className="group flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
-          >
-            <div className="flex items-center gap-2">
-              <Avatar
-                seed={m.user.id}
-                initials={initialsFrom(personLabel(m.user))}
-                avatarUrl={m.user.avatarUrl}
-                size={28}
-              />
-              <div>
-                {/* Même identité que dans l'annuaire d'ajout : pseudo honoré, rôle lisible. */}
-                <span className="text-sm font-medium">{personLabel(m.user)}</span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {m.user.email} · {t(ROLE_LABEL_KEY[m.user.role])}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Compte ShotGrid : l'adresse ne suffit pas toujours à rapprocher les deux. */}
-              {connection?.active && <SgAccountLink projectId={projectId} userId={m.user.id} />}
-              <select
-                className="rounded border border-input bg-background px-2 py-1 text-xs"
-                value={m.role ?? ''}
-                onChange={(e) => setRole(m.user.id, e.target.value)}
-                title={t('members.roleOnProject')}
-              >
-                {projectRoles(t).map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => remove(m.user.id)}
-                title={t('common.remove')}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-destructive opacity-0 transition-opacity hover:bg-secondary group-hover:opacity-100"
-              >
-                {DeleteIcon}
-              </button>
-            </div>
-          </div>
+            projectId={projectId}
+            member={m}
+            sgLinked={Boolean(connection?.active)}
+            canManage={canManage}
+            onRole={(userId, role) => void setRole(userId, role)}
+            onRemove={(userId) => void remove(userId)}
+          />
         ))}
         {members.length === 0 && <p className="text-sm text-muted-foreground">{t('members.empty')}</p>}
       </div>

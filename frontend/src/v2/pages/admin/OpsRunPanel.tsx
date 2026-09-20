@@ -19,6 +19,7 @@ import {
   runStateVariant,
   type RunDetail,
 } from './ops';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Une réponse 4xx est DÉFINITIVE : ce run n'existe pas, ou plus — purgé de l'historique,
@@ -219,7 +220,7 @@ function Verdict({ run }: { run: NonNullable<RunDetail['run']> }) {
         <p className="text-sm">{t('ops.result.rolledBack')}</p>
         {/* Le code est revenu ; la base, elle, a pu être migrée. On donne la commande, on ne
             la lance pas : une restauration perd tout ce qui a été écrit depuis. */}
-        <p className="text-xs text-muted-foreground">{t('ops.result.rolledBackHint')}</p>
+        <Hint>{t('ops.result.rolledBackHint')}</Hint>
         {run.restoreCommand && <CommandBlock command={run.restoreCommand} />}
       </div>
     );
@@ -236,9 +237,7 @@ function Verdict({ run }: { run: NonNullable<RunDetail['run']> }) {
     return (
       <div className="space-y-1 rounded-md border border-destructive/30 bg-destructive/5 p-3">
         <p className="text-sm">{t('ops.result.failed')}</p>
-        {(run.phase === 'backup' || run.phase === 'precheck') && (
-          <p className="text-xs text-muted-foreground">{t('ops.result.intact')}</p>
-        )}
+        {(run.phase === 'backup' || run.phase === 'precheck') && <Hint>{t('ops.result.intact')}</Hint>}
       </div>
     );
   }

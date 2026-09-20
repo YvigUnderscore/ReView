@@ -16,6 +16,7 @@ import { QueryState } from '../../components/ui/query-state';
 import type { ReviewStatus } from '../../types/api';
 import ReviewStatusForm from './ReviewStatusForm';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Onglet Contextes de review → Statuts (Phase 31.A) : CRUD des statuts de
@@ -71,7 +72,7 @@ export default function ReviewStatusTab() {
           <Plus size={14} /> {t('reviewStatus.new')}
         </Button>
       </div>
-      <p className="mb-3 text-xs text-muted-foreground">{t('status.hint')}</p>
+      <Hint>{t('status.hint')}</Hint>
       <div className="divide-y divide-border rounded-lg border border-border">
         {items.map((s, i) => (
           <div key={s.id} className="flex items-center gap-3 px-3 py-2">

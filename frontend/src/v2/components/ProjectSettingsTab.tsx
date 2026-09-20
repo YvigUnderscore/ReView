@@ -18,6 +18,9 @@ import ProjectDepartmentsSection from './ProjectDepartmentsSection';
 import { buildSettingsPatch } from '../lib/projectInheritance';
 import type { ProjectSettings } from '../types/api';
 import { useT } from '../i18n';
+import { Button } from './ui/button';
+import { Hint } from './ui/hint';
+import { SettingsSearchBar, SettingsSearchEmpty, SettingsSearchProvider } from './settings/SettingsSearch';
 import SgProjectSection from './shotgrid/SgProjectSection';
 import EpisodesToggle from '../pages/project/EpisodesToggle';
 
@@ -104,97 +107,105 @@ export default function ProjectSettingsTab({
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {msg && <p className="text-sm text-success">{msg}</p>}
+    <SettingsSearchProvider>
+      <div className="max-w-2xl space-y-4">
+        {/* La recherche : même barre que dans les réglages du studio et ceux du profil.
+            Quinze cartes en colonne se parcouraient à l'œil — « où règle-t-on le
+            filigrane » n'avait pas d'autre réponse que de descendre la page. */}
+        <SettingsSearchBar />
+        {error && <Hint tone="error">{error}</Hint>}
+        {msg && <Hint tone="success">{msg}</Hint>}
 
-      {/* Héritage studio : ce qui descend du studio, ce que le projet s'est approprié. */}
-      <ProjectSettingsInheritance projectId={projectId} onReverted={applyReverted} />
+        {/* Héritage studio : ce qui descend du studio, ce que le projet s'est approprié. */}
+        <ProjectSettingsInheritance projectId={projectId} onReverted={applyReverted} />
 
-      {/* Frame de départ : champ du projet, elle s'enregistre seule. */}
-      <ProjectStartFrameSection
-        projectId={projectId}
-        startFrame={startFrame}
-        onStartFrameChange={onStartFrameChange}
-      />
-
-      {/* Format & cadence (résolution + fps) — défauts du projet, hérités par séquences/shots */}
-      <ProjectFormatSection
-        value={draft}
-        onChange={(pipeline) => setDraft((d) => d && { ...d, ...pipeline })}
-      />
-
-      {/* Nomenclature : override des défauts studio. */}
-      <ProjectNomenclatureSection
-        value={draft?.nomenclature ?? null}
-        onChange={(nomenclature) => setDraft((d) => d && { ...d, nomenclature })}
-      />
-
-      {/* Niveau Épisode (série) : l'interrupteur vit ici, c'est le seul endroit d'où
-          il s'allume — l'onglet Épisodes n'existe pas tant qu'il est éteint. */}
-      <EpisodesToggle projectId={projectId} />
-
-      {/* Départements (B1) : clés et noms dans le brouillon, images enregistrées à part. */}
-      <ProjectDepartmentsSection
-        projectId={projectId}
-        value={draft?.departments ?? null}
-        onChange={(departments) => setDraft((d) => d && { ...d, departments })}
-      />
-
-      {/* Convention de nommage (38.C) : éditée dans le draft, enregistrée avec les réglages. */}
-      {draft && (
-        <ProjectNamingSection
-          value={draft.naming ?? { pattern: '', mode: 'off' }}
-          onChange={(naming) => setDraft((d) => d && { ...d, naming })}
+        {/* Frame de départ : champ du projet, elle s'enregistre seule. */}
+        <ProjectStartFrameSection
+          projectId={projectId}
+          startFrame={startFrame}
+          onStartFrameChange={onStartFrameChange}
         />
-      )}
 
-      {/* Consigne exigée d'un ReViewer tagué : le geste se fait à l'upload, la règle se pose ici. */}
-      {draft && (
-        <ProjectReviewRequestSection
-          value={draft.reviewRequest ?? { requireNote: false, minNoteLength: 5 }}
-          onChange={(reviewRequest) => setDraft((d) => d && { ...d, reviewRequest })}
+        {/* Format & cadence (résolution + fps) — défauts du projet, hérités par séquences/shots */}
+        <ProjectFormatSection
+          value={draft}
+          onChange={(pipeline) => setDraft((d) => d && { ...d, ...pipeline })}
         />
-      )}
 
-      {/* Éclairage 3D par défaut (39.F) : HDRI hérité par les médias 3D, enregistré avec les réglages. */}
-      {draft && (
-        <ProjectDefaultLightingSection
-          value={draft.defaultLighting}
-          onChange={(defaultLighting) => setDraft((d) => d && { ...d, defaultLighting })}
+        {/* Nomenclature : override des défauts studio. */}
+        <ProjectNomenclatureSection
+          value={draft?.nomenclature ?? null}
+          onChange={(nomenclature) => setDraft((d) => d && { ...d, nomenclature })}
         />
-      )}
 
-      {/* Gestion de couleur OCIO (39.B) : config + display/view, enregistré avec les réglages. */}
-      {draft && (
-        <ProjectColorSection
-          value={draft.color}
-          onChange={(color) => setDraft((d) => d && { ...d, color })}
+        {/* Niveau Épisode (série) : l'interrupteur vit ici, c'est le seul endroit d'où
+            il s'allume — l'onglet Épisodes n'existe pas tant qu'il est éteint. */}
+        <EpisodesToggle projectId={projectId} />
+
+        {/* Départements (B1) : clés et noms dans le brouillon, images enregistrées à part. */}
+        <ProjectDepartmentsSection
+          projectId={projectId}
+          value={draft?.departments ?? null}
+          onChange={(departments) => setDraft((d) => d && { ...d, departments })}
         />
-      )}
 
-      {/* Stockage (38.D) : usage + quota du projet. */}
-      <ProjectStorageSection projectId={projectId} />
+        {/* Convention de nommage (38.C) : éditée dans le draft, enregistrée avec les réglages. */}
+        {draft && (
+          <ProjectNamingSection
+            value={draft.naming ?? { pattern: '', mode: 'off' }}
+            onChange={(naming) => setDraft((d) => d && { ...d, naming })}
+          />
+        )}
 
-      {/* Burn-ins (35.A) : override du template studio, enregistré avec les réglages. */}
-      {draft && (
-        <ProjectBurninSection
-          value={draft.burnin}
-          onChange={(burnin) => setDraft((d) => d && { ...d, burnin })}
-        />
-      )}
+        {/* Consigne exigée d'un ReViewer tagué : le geste se fait à l'upload, la règle se pose ici. */}
+        {draft && (
+          <ProjectReviewRequestSection
+            value={draft.reviewRequest ?? { requireNote: false, minNoteLength: 5 }}
+            onChange={(reviewRequest) => setDraft((d) => d && { ...d, reviewRequest })}
+          />
+        )}
 
-      {/* Liaison ShotGrid (48) : le point d'entrée vit ici, pas dans un onglet
-          permanent qu'un studio sans ShotGrid n'a aucune raison de voir. */}
-      <SgProjectSection projectId={projectId} canManage />
+        {/* Éclairage 3D par défaut (39.F) : HDRI hérité par les médias 3D, enregistré avec les réglages. */}
+        {draft && (
+          <ProjectDefaultLightingSection
+            value={draft.defaultLighting}
+            onChange={(defaultLighting) => setDraft((d) => d && { ...d, defaultLighting })}
+          />
+        )}
 
-      <button
-        onClick={saveSettings}
-        disabled={savingSettings || !draft}
-        className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-      >
-        <Save size={15} /> {savingSettings ? t('common.saving') : t('project.saveSettings')}
-      </button>
-    </div>
+        {/* Gestion de couleur OCIO (39.B) : config + display/view, enregistré avec les réglages. */}
+        {draft && (
+          <ProjectColorSection
+            value={draft.color}
+            onChange={(color) => setDraft((d) => d && { ...d, color })}
+          />
+        )}
+
+        {/* Stockage (38.D) : usage + quota du projet. */}
+        <ProjectStorageSection projectId={projectId} />
+
+        {/* Burn-ins (35.A) : override du template studio, enregistré avec les réglages. */}
+        {draft && (
+          <ProjectBurninSection
+            value={draft.burnin}
+            onChange={(burnin) => setDraft((d) => d && { ...d, burnin })}
+          />
+        )}
+
+        {/* Liaison ShotGrid (48) : le point d'entrée vit ici, pas dans un onglet
+            permanent qu'un studio sans ShotGrid n'a aucune raison de voir. */}
+        <SgProjectSection projectId={projectId} canManage />
+
+        <SettingsSearchEmpty />
+
+        {/* Un seul geste d'enregistrement pour tout le brouillon. Les sections qui
+            s'enregistrent seules (frame de départ, quota, images de département) le disent
+            dans leur propre carte : elles ne passent pas par ce bouton. */}
+        <Button onClick={() => void saveSettings()} disabled={savingSettings || !draft}>
+          <Save size={15} className="mr-1.5" />
+          {savingSettings ? t('common.saving') : t('project.saveSettings')}
+        </Button>
+      </div>
+    </SettingsSearchProvider>
   );
 }

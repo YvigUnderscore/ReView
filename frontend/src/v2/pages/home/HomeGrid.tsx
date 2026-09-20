@@ -9,6 +9,7 @@ import StatsRow from './StatsRow';
 import RecentProjects from './RecentProjects';
 import WidgetFrame, { type WidgetDragHandle } from './WidgetFrame';
 import {
+  isWidgetId,
   reorderWidgets,
   setWidgetSetting,
   visibleWidgets,
@@ -17,6 +18,7 @@ import {
   type HomeWidgetSettings,
   type HomeWidgetsPref,
 } from './homeWidgets';
+import { WIDGET_GRID_CLASS } from '../../lib/widgetLayout';
 import type { DashboardData } from './homeTypes';
 
 /**
@@ -32,9 +34,7 @@ import type { DashboardData } from './homeTypes';
  * qu'avant — mêmes classes, mêmes blocs, mêmes menus — mais sans les 16,8 ko gzip de
  * @dnd-kit dans le premier chargement de tout le monde.
  */
-const HomeGridSortable = lazy(() => import('./HomeGridSortable'));
-
-const GRID_CLASS = 'grid grid-cols-12 items-start gap-6';
+const WidgetSortable = lazy(() => import('../../components/widgets/WidgetSortable'));
 
 export default function HomeGrid({
   data,
@@ -97,7 +97,7 @@ export default function HomeGrid({
     );
   };
 
-  const grid = <div className={GRID_CLASS}>{ids.map((id, index) => widget(id, index))}</div>;
+  const grid = <div className={WIDGET_GRID_CLASS}>{ids.map((id, index) => widget(id, index))}</div>;
 
   if (!editing) return grid;
 
@@ -105,11 +105,15 @@ export default function HomeGrid({
   // pas — seules les poignées ne répondent pas encore.
   return (
     <Suspense fallback={grid}>
-      <HomeGridSortable
+      <WidgetSortable
         ids={ids}
-        className={GRID_CLASS}
-        onReorder={(from, to) => onPref(reorderWidgets(from, to, pref))}
-        renderWidget={widget}
+        className={WIDGET_GRID_CLASS}
+        onReorder={(from, to) => {
+          // Le moteur de déplacement ne connaît pas le registre : c'est la page qui écarte
+          // un identifiant qu'elle ne reconnaît plus.
+          if (isWidgetId(from) && isWidgetId(to)) onPref(reorderWidgets(from, to, pref));
+        }}
+        renderWidget={(id, index, drag) => (isWidgetId(id) ? widget(id, index, drag) : null)}
       />
     </Suspense>
   );

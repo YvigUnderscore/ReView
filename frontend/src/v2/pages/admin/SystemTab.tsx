@@ -12,6 +12,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { Gauge, Panel, Row, ServiceHealth } from './AdminPrimitives';
 import { fmtBytes, fmtDuration, type System } from './adminShared';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 export default function SystemTab() {
   const t = useT();
@@ -106,7 +107,7 @@ function LicensePanel() {
           </dd>
         </div>
       </dl>
-      <p className="mt-3 text-xs text-muted-foreground">{t('system.agplHint')}</p>
+      <Hint>{t('system.agplHint')}</Hint>
     </Panel>
   );
 }

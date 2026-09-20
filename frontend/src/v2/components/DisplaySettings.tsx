@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { LayoutGrid, List, Monitor, Moon, Sun, Rows3, Rows4, type LucideIcon } from 'lucide-react';
+import { LayoutGrid, List, Monitor, Moon, Sun, Rows3, Rows4, MonitorCog } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../stores/useTheme';
 import { useDensity, type Density } from '../stores/useDensity';
 import { useViewPref, type ViewMode } from '../stores/useViewPref';
@@ -9,71 +9,19 @@ import { useT } from '../i18n';
 import { useUpdatePreferences } from '../lib/usePreferences';
 import LanguagePicker from './LanguagePicker';
 import TranslationNotice from './TranslationNotice';
-import { Card } from './ui/card';
-
-/** Une option d'un contrôle segmenté. */
-type Opt<T extends string> = { value: T; label: string; icon?: LucideIcon };
-
-/** Contrôle segmenté générique (réglages d'affichage) — plusieurs choix exclusifs. */
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-  ariaLabel,
-}: {
-  value: T;
-  options: readonly Opt<T>[];
-  onChange: (v: T) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      className="inline-flex rounded-md border border-border bg-background p-0.5"
-    >
-      {options.map((o) => {
-        const active = o.value === value;
-        const Icon = o.icon;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(o.value)}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-              active
-                ? 'bg-primary/15 text-primary'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-            }`}
-          >
-            {Icon && <Icon size={14} />}
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Une ligne « libellé + contrôle » du panneau. */
-function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <div className="text-sm">{label}</div>
-        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
+import { SegmentedControl, type SegmentedItem } from './ui/segmented-control';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
+import SettingsRow from './settings/SettingsRow';
 
 /**
- * Réglages d'affichage (42.A1) : thème (système/clair/sombre — №102), densité (№74) et
- * langue. Personnalisation locale (localStorage), appliquée instantanément sans flash.
- * Regroupe dans une seule section du profil plutôt que d'éparpiller des boutons (UI simple).
+ * Réglages d'affichage (42.A1) : thème (système/clair/sombre — №102), densité (№74), vue
+ * par défaut des listes et langue. Personnalisation locale (localStorage), appliquée
+ * instantanément sans flash.
+ *
+ * Le panneau redéfinissait **son propre** contrôle segmenté alors que `ui/segmented-control`
+ * existe et sert quatre autres écrans : deux dessins pour un même geste, sur la page que
+ * chacun ouvre en premier. Il emploie désormais la primitive partagée.
  */
 export default function DisplaySettings() {
   const t = useT();
@@ -90,52 +38,56 @@ export default function DisplaySettings() {
   const viewGlobal = useViewPref((s) => s.global);
   const setViewGlobal = useViewPref((s) => s.setGlobal);
 
-  const themeOpts: readonly Opt<ThemeMode>[] = [
+  const themeOpts: SegmentedItem<ThemeMode>[] = [
     { value: 'system', label: t('display.theme.system'), icon: Monitor },
     { value: 'light', label: t('display.theme.light'), icon: Sun },
     { value: 'dark', label: t('display.theme.dark'), icon: Moon },
   ];
-  const densityOpts: readonly Opt<Density>[] = [
+  const densityOpts: SegmentedItem<Density>[] = [
     { value: 'comfortable', label: t('display.density.comfortable'), icon: Rows3 },
     { value: 'compact', label: t('display.density.compact'), icon: Rows4 },
   ];
-  const viewOpts: readonly Opt<ViewMode>[] = [
+  const viewOpts: SegmentedItem<ViewMode>[] = [
     { value: 'cards', label: t('view.cards'), icon: LayoutGrid },
     { value: 'compact', label: t('view.compact'), icon: List },
   ];
   return (
-    <Card className="space-y-4">
-      <h2 className="text-sm font-semibold">{t('display.title')}</h2>
-      <Row label={t('display.theme')} hint={t('display.theme.hint')}>
-        <Segmented value={mode} options={themeOpts} onChange={setMode} ariaLabel={t('display.theme')} />
-      </Row>
-      <Row label={t('display.density')} hint={t('display.density.hint')}>
-        <Segmented
+    <SettingsCard
+      title={t('display.title')}
+      icon={MonitorCog}
+      tone="info"
+      keywords={SETTINGS_KEYWORDS.display}
+    >
+      <SettingsRow label={t('display.theme')}>
+        <SegmentedControl items={themeOpts} value={mode} onChange={setMode} label={t('display.theme')} />
+      </SettingsRow>
+      <SettingsRow label={t('display.density')} hint={t('display.density.hint')}>
+        <SegmentedControl
+          items={densityOpts}
           value={density}
-          options={densityOpts}
           onChange={(d) => {
             setDensity(d);
             updatePrefs.mutate({ density: d });
           }}
-          ariaLabel={t('display.density')}
+          label={t('display.density')}
         />
-      </Row>
-      <Row label={t('display.view')} hint={t('display.view.hint')}>
-        <Segmented
+      </SettingsRow>
+      <SettingsRow label={t('display.view')} hint={t('display.view.hint')}>
+        <SegmentedControl
+          items={viewOpts}
           value={viewGlobal ?? 'cards'}
-          options={viewOpts}
           onChange={setViewGlobal}
-          ariaLabel={t('display.view')}
+          label={t('display.view')}
         />
-      </Row>
-      <Row label={t('display.language')} hint={t('display.language.hint')}>
+      </SettingsRow>
+      <SettingsRow label={t('display.language')} hint={t('display.language.hint')}>
         <LanguagePicker
           id="display-language"
           className="py-1 text-xs"
           onSelect={(locale) => updatePrefs.mutate({ locale })}
         />
-      </Row>
+      </SettingsRow>
       <TranslationNotice />
-    </Card>
+    </SettingsCard>
   );
 }

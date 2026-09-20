@@ -14,6 +14,7 @@ import { QueryState } from '../../components/ui/query-state';
 import AnnouncementForm from './AnnouncementForm';
 import type { Announcement, AnnouncementAdmin, AnnouncementType } from '../../types/api';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 const TYPE_BADGE: Record<AnnouncementType, string> = {
   INFO: 'bg-info/15 text-info',
@@ -75,7 +76,7 @@ export default function AnnouncementsTab() {
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">{a.body}</p>
+              <Hint className="truncate">{a.body}</Hint>
               <p className="mt-0.5 text-2xs text-muted-foreground">
                 {a.frequency} · {a.roles.length ? a.roles.join(', ') : t('admin.announce.everyRole')} ·{' '}
                 {t('announcement.readBy', { count: a._count.reads })}

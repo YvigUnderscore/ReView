@@ -6,7 +6,10 @@ import { toast } from 'sonner';
 import { Switch } from '../../components/ui/switch';
 import { setEpisodesEnabled, useEpisodeInvalidate, useEpisodeSettings } from '../../lib/episodesApi';
 import { useT } from '../../i18n';
-import { Card } from '../../components/ui/card';
+import { Clapperboard } from 'lucide-react';
+import { Hint } from '../../components/ui/hint';
+import { SettingsCard } from '../../components/settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 
 /**
  * L'interrupteur du niveau Épisode, dans les réglages du projet.
@@ -40,28 +43,28 @@ export default function EpisodesToggle({ projectId }: { projectId: number }) {
   };
 
   return (
-    <Card>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold">{t('episodes.settings.title')}</h3>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t('episodes.settings.description')}</p>
-        </div>
+    <SettingsCard
+      title={t('episodes.settings.title')}
+      hint={t('episodes.settings.description')}
+      icon={Clapperboard}
+      tone="accent"
+      keywords={SETTINGS_KEYWORDS.episodes}
+      actions={
         <Switch
           checked={settings.enabled}
           disabled={saving}
           label={t('episodes.settings.toggle')}
           onCheckedChange={(next) => void change(next)}
         />
-      </div>
+      }
+    >
       {settings.episodeCount > 0 && (
-        <p className="mt-3 text-sm text-muted-foreground">
+        <Hint>
           {t('episodes.settings.stored', { count: settings.episodeCount })} ·{' '}
           {t('episodes.settings.linked', { count: settings.linkedSequenceCount })}
-        </p>
+        </Hint>
       )}
-      {settings.enabled && settings.episodeCount > 0 && (
-        <p className="mt-1 text-sm text-muted-foreground">{t('episodes.settings.keepsData')}</p>
-      )}
-    </Card>
+      {settings.enabled && settings.episodeCount > 0 && <Hint>{t('episodes.settings.keepsData')}</Hint>}
+    </SettingsCard>
   );
 }

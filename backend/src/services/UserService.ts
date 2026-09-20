@@ -16,6 +16,7 @@ import { normalizeEmail } from '../lib/email';
 import { revokeAllCredentials } from '../lib/sessions';
 import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
 import { NOTIFICATION_SETTINGS_KEY, notificationSettingsSchema } from '../lib/notificationKinds';
+import { OVERVIEW_PREFERENCE_KEY, overviewLayoutSchema } from '../lib/overviewWidgets';
 
 /**
  * Logique métier des utilisateurs (profil, présence, administration des comptes).
@@ -524,6 +525,15 @@ export const preferencesPatchSchema = z
       !(NOTIFICATION_SETTINGS_KEY in patch) ||
       notificationSettingsSchema.nullable().safeParse(patch[NOTIFICATION_SETTINGS_KEY]).success,
     { message: 'Invalid notification settings', path: [NOTIFICATION_SETTINGS_KEY] },
+  )
+  // Même raison pour la disposition de la vue d'ensemble : un identifiant de bloc inventé
+  // s'enregistrait sans broncher et n'affichait rien. La liste des blocs vit dans
+  // `lib/overviewWidgets`, recopiée côté front, et c'est elle qui fait foi à l'écriture.
+  .refine(
+    (patch) =>
+      !(OVERVIEW_PREFERENCE_KEY in patch) ||
+      overviewLayoutSchema.nullable().safeParse(patch[OVERVIEW_PREFERENCE_KEY]).success,
+    { message: 'Invalid overview layout', path: [OVERVIEW_PREFERENCE_KEY] },
   );
 
 export async function getPreferences(userId: number): Promise<Record<string, unknown>> {

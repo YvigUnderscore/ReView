@@ -190,6 +190,10 @@ export interface SgCrewPerson {
   linkedByHand: boolean;
   projectRole: Role | null;
   userRole: Role | null;
+  /** Département tel que le site le nomme, même sans correspondance locale (lot 10). */
+  sgDepartment: string | null;
+  /** Département ReView correspondant, quand le studio en a déjà un sous ce nom. */
+  department: { id: number; name: string } | null;
 }
 
 export interface SgCrewResponse {

@@ -13,6 +13,7 @@ import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { t, useT, type MessageKey } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 interface JobRow {
   id: string | null;
@@ -123,7 +124,7 @@ export default function JobsTab() {
                 )}
               </div>
             ))}
-            {q.failed.length === 0 && <p className="text-xs text-muted-foreground">{t('jobs.noFailure')}</p>}
+            {q.failed.length === 0 && <Hint>{t('jobs.noFailure')}</Hint>}
           </div>
         </Panel>
       ))}
@@ -179,7 +180,7 @@ function DerivedPurgePanel() {
 
   return (
     <Panel title={t('jobs.purgeDerived')}>
-      <p className="mb-2 text-xs text-muted-foreground">{t('jobs.pruneHint')}</p>
+      <Hint>{t('jobs.pruneHint')}</Hint>
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label className="flex items-center gap-2">
           <input

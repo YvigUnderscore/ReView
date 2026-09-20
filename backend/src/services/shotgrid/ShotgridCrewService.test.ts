@@ -7,6 +7,7 @@ vi.mock('../../lib/prisma', () => ({ prisma: {} }));
 vi.mock('./ShotgridConfigService', () => ({ openConnection: vi.fn() }));
 vi.mock('../UserService', () => ({ createUser: vi.fn() }));
 vi.mock('../ProjectService', () => ({ addMember: vi.fn() }));
+vi.mock('../DepartmentService', () => ({ setMemberDepartments: vi.fn(), findByKey: vi.fn() }));
 
 import { crewState, dedupeCrew, eligibility, planInvites, type CrewPerson } from './ShotgridCrewService';
 
@@ -20,6 +21,9 @@ const person = (over: Partial<CrewPerson> & { sgId: number }): CrewPerson => ({
   linkedByHand: false,
   projectRole: null,
   userRole: null,
+  // Département venu du site (lot 10) : la fabrique suit la forme de `CrewPerson`.
+  sgDepartment: null,
+  department: null,
   ...over,
 });
 

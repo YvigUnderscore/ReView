@@ -13,6 +13,7 @@ import { Panel } from './AdminPrimitives';
 import BurninPanel from './BurninPanel';
 import SettingsPointer from './SettingsPointer';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 interface WatermarkConfig {
   internal: boolean;
@@ -75,7 +76,7 @@ function WatermarkPanel() {
 
   return (
     <Panel title={t('dist.watermarkTitle')}>
-      <p className="mb-3 text-xs text-muted-foreground">{t('dist.watermarkHint')}</p>
+      <Hint>{t('dist.watermarkHint')}</Hint>
       <div className="space-y-2.5">
         <label className="flex items-center gap-2 text-sm">
           <input

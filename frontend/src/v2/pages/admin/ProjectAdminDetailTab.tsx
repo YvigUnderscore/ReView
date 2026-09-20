@@ -16,6 +16,7 @@ import { pipelineLabel, projectStatusLabels, quotaPct } from './adminProjects';
 import ProjectHierarchy from './ProjectHierarchy';
 import type { AdminProjectDetail } from '../../types/api';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /** Fiche d'administration d'un projet : membres, réglages résolus, hiérarchie, stats. */
 export default function ProjectAdminDetailTab() {
@@ -107,9 +108,7 @@ export default function ProjectAdminDetailTab() {
                 </span>
               </div>
             ))}
-            {members.length === 0 && (
-              <p className="text-xs text-muted-foreground">{t('project.noExplicitMember')}</p>
-            )}
+            {members.length === 0 && <Hint>{t('project.noExplicitMember')}</Hint>}
           </div>
         </Panel>
 
@@ -138,7 +137,7 @@ export default function ProjectAdminDetailTab() {
               }
             />
           </dl>
-          <p className="mt-2 text-xs text-muted-foreground">{t('projectAdmin.hint')}</p>
+          <Hint>{t('projectAdmin.hint')}</Hint>
         </Panel>
       </div>
 

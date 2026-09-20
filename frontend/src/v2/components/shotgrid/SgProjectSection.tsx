@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { ExternalLink, Link2, Link2Off, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useT } from '../../i18n';
+import { SettingsCard } from '../settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from '../settings/settingsKeywords';
 import { useDeleteSgConnection, useSgConnection } from '../../lib/shotgridApi';
 import SgConnectionSetup from './SgConnectionSetup';
 
@@ -31,10 +33,13 @@ export default function SgProjectSection({
 
   if (connection?.active)
     return (
-      <section className="rounded-md border border-border p-4">
-        <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
-          <Link2 size={15} /> {t('shotgrid.tab.label')}
-        </h3>
+      <SettingsCard
+        title={t('shotgrid.tab.label')}
+        icon={Link2}
+        tone="info"
+        keywords={SETTINGS_KEYWORDS.shotgrid}
+        footnote={t('shotgrid.settings.tabHint')}
+      >
         <p className="text-sm">
           {t('shotgrid.tab.linkedTo')}{' '}
           <a
@@ -46,7 +51,6 @@ export default function SgProjectSection({
             {connection.sgProjectName} <ExternalLink size={12} />
           </a>
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">{t('shotgrid.settings.tabHint')}</p>
         <button
           type="button"
           onClick={async () => {
@@ -58,14 +62,16 @@ export default function SgProjectSection({
         >
           <Link2Off size={14} /> {t('shotgrid.tab.disconnect')}
         </button>
-      </section>
+      </SettingsCard>
     );
 
   return (
-    <section className="rounded-md border border-border p-4">
-      <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
-        <Link2 size={15} /> {t('shotgrid.tab.label')}
-      </h3>
+    <SettingsCard
+      title={t('shotgrid.tab.label')}
+      icon={Link2}
+      tone="info"
+      keywords={SETTINGS_KEYWORDS.shotgrid}
+    >
       {connecting ? (
         <>
           <p className="mb-3 text-sm text-muted-foreground">{t('shotgrid.tab.connectIntro')}</p>
@@ -91,6 +97,6 @@ export default function SgProjectSection({
           </button>
         </>
       )}
-    </section>
+    </SettingsCard>
   );
 }

@@ -10,6 +10,7 @@ import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
 
 /**
  * Le logo du studio — **un seul**, et un seul endroit pour le déposer.
@@ -77,7 +78,7 @@ export default function StudioLogoPanel() {
 
   return (
     <Panel title={t('burnin.studioLogo')}>
-      <p className="mb-3 text-xs text-muted-foreground">{t('dist.slateHint')}</p>
+      <Hint>{t('dist.slateHint')}</Hint>
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-md border border-border bg-background">
           {logoQ.data?.url ? (

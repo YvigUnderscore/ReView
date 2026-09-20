@@ -5,7 +5,9 @@ import type { DepartmentSummary } from '../types/api';
 import { useT } from '../i18n';
 import DepartmentsEditor from './DepartmentsEditor';
 import DepartmentImages from './DepartmentImages';
-import { Card } from './ui/card';
+import { ListOrdered } from 'lucide-react';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
  * Départements du projet (B1) : des entités à part entière, éditables même sur un projet
@@ -29,14 +31,18 @@ export default function ProjectDepartmentsSection({
   const t = useT();
 
   return (
-    <Card>
-      <div className="text-sm font-medium">{t('pipeline.departments')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('project.departmentsHint')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{t('departments.keyLocked')}</div>
+    <SettingsCard
+      title={t('pipeline.departments')}
+      hint={t('project.departmentsHint')}
+      icon={ListOrdered}
+      tone="primary"
+      keywords={SETTINGS_KEYWORDS.departments}
+      footnote={t('departments.keyLocked')}
+    >
       {value && <DepartmentsEditor value={value} onChange={onChange} />}
       <div className="mt-4 border-t border-border pt-3">
         <DepartmentImages projectId={projectId} />
       </div>
-    </Card>
+    </SettingsCard>
   );
 }

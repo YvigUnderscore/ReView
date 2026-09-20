@@ -11,6 +11,10 @@ const person = (sgId: number, state: SgCrewState): SgCrewPerson => ({
   login: null,
   email: `p${sgId}@studio.test`,
   sgStatus: 'act',
+  // Le département venu du site (lot 10) n'entre pas dans le choix des invitables : ces cas
+  // ne portent donc rien, et la sélection doit s'en moquer.
+  sgDepartment: null,
+  department: null,
   state,
   userId: state === 'none' ? null : sgId,
   linkedByHand: false,
