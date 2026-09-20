@@ -41,9 +41,9 @@ administration — in one place, on your own infrastructure. **One instance = on
 | 🖼️ **Image** | Overlay annotations, A/B, reference, lightbox — and **EXR/DPX sequences read as a single media** |
 | 🧊 **3D & USD** | DCC-style viewer, end-to-end USD (scenegraph, variants, overrides), inspection, OCIO, F-curve camera |
 | ✨ **Splats** | Spark viewer, non-destructive editor, SPZ export, SOG playback |
-| 💬 **Collaboration** | Threads, mentions, voice notes, customisable statuses, dailies and a synchronised live review room |
-| 📋 **Production** | Project → shot → task → version, publication lock, kanban, auto-cut timelines, stats, calendar, Gantt |
-| 🔒 **Distribution** | Hardened share links, burn-ins, slates, per-viewer watermark, CSV/EDL/OTIO note export |
+| 💬 **Collaboration** | Threads, mentions, image attachments, voice notes, unread markers, customisable statuses, dailies and a synchronised live review room |
+| 📋 **Production** | Project → shot → task → version, published on upload (draft mode is a studio setting), shots × departments tracking grid, kanban, auto-cut timelines, stats, calendar, Gantt |
+| 🔒 **Distribution** | Hardened share links, a client portal to browse, annotate and respond, burn-ins, slates, per-viewer watermark, CSV/EDL/OTIO note export |
 | 🛡️ **Identity & API** | OIDC SSO, 2FA, scoped tokens, HMAC webhooks, OpenAPI, public API v1 + Python client |
 | ⚙️ **Infra** | Docker, FFmpeg workers (NVENC), resumable + deduplicated uploads, backups, Prometheus/Grafana |
 
@@ -64,7 +64,7 @@ been relaxed:
   script linting, route size budgets, then — for both backend and frontend — formatting,
   ESLint at **zero warnings**, type-checking with tests included, the build, and the tests.
   It fails at the first red. Nothing is committed on a red suite.
-- **524 test files**, unit and integration, plus Playwright smoke tests and an end-to-end
+- **779 test files**, unit and integration, plus Playwright smoke tests and an end-to-end
   ShotGrid harness against a fake site.
 - **Ratchets, never dials.** Hardcoded UI strings: ceiling 0. Raw translation keys shown on
   screen: ceiling 0. Unnamed controls: a number that may only go down. Coverage floors that
@@ -241,7 +241,7 @@ ReView stands on other people's work: **[React](https://react.dev/)**,
 **[Spark](https://sparkjs.dev/)**, **[Excalidraw](https://excalidraw.com/)**,
 **[Socket.IO](https://socket.io/)**, **[BullMQ](https://bullmq.io/)**,
 **[MinIO](https://min.io/)**, **[FFmpeg](https://ffmpeg.org/)**,
-**[Blender](https://www.blender.org/)**, **[OpenUSD](https://openusd.org/)** — and 605
+**[Blender](https://www.blender.org/)**, **[OpenUSD](https://openusd.org/)** — and 625
 packages in all. The exhaustive list, with each licence text, lives in
 **[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)** (generated, never written by hand).
 

@@ -2,7 +2,7 @@
 
 *SSO, sessions, machine identities, scopes, webhooks and access logs: who gets in, with what powers, and what is traced.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-20
 
 Four different things can present themselves to the API, and they are not interchangeable: a
 human with a session, a person's API token, a machine's service token, and a client holding a
@@ -191,14 +191,17 @@ A token can be **bound to one project**. Cross-project access is then refused wi
 `403 TOKEN_PROJECT_SCOPE` — **on the `/api/v1` surface**, where the handlers call the check as
 soon as they have resolved a project.
 
-> [!CAUTION]
-> The internal `/api` routes do **not** apply that check, and do not read scopes either. A
-> middleware meant to close the hole — refusing any `rvk_` token outside `/api/v1` with
-> `403 API_TOKEN_V1_ONLY` — is written and unit-tested but is **not mounted** in the running
-> server, so [API authentication](../api/authentication.md) describes the intended behaviour
-> while this page describes the current one. Until it is mounted, treat a project binding as a
-> pipeline safety belt, never as a containment boundary, and treat an admin-owned
-> write-scoped token as an administrator credential in full.
+The internal `/api` routes apply neither that check nor the scopes, which is why a token is
+no longer allowed to reach them at all: `apiTokenSurface`, mounted on `/api` before every
+router, answers `403 API_TOKEN_V1_ONLY` to any `rvk_` bearer aiming outside `/api/v1`. The
+binding is a containment boundary again, and not merely a pipeline safety belt — no path is
+left on which a bound token sees another show.
+
+> [!IMPORTANT]
+> The boundary is the surface plus the binding, not the binding alone. An **unbound**
+> write-scoped token owned by an administrator is still an administrator credential over
+> every project that administrator can see — inside `/api/v1`, which is exactly what the
+> scopes and the expiry date are for. Bind it, or scope it down.
 
 The one internal router that already refuses API-token callers outright is
 `/api/admin/service-tokens`: a token can never mint a machine identity.
@@ -345,7 +348,7 @@ fire-and-forget: a failure is logged and never blocks the request, so the log is
 proof of completeness.
 
 It complements the audit log — creations, revocations, 2FA events, configuration changes — in
-*Maintenance → Audit*, described in
+*Studio → Activity*, described in
 [System & maintenance](system-and-maintenance.md).
 
 ## Use case: giving the render farm write access to one show
@@ -374,7 +377,7 @@ It complements the audit log — creations, revocations, 2FA events, configurati
 2. Work out what it could do. A token carrying `write` or `admin` and owned by an admin
    account could reach every `/api/admin/*` route. If so, treat this as an administrator
    credential compromise, not a token leak.
-3. Check *Maintenance → Audit* around the exposure window — `SHARE_CREATE`, `USER_*`,
+3. Check *Studio → Activity* around the exposure window — `SHARE_CREATE`, `USER_*`,
    `SETTING_UPDATE`, `WEBHOOK_CREATE`, `API_TOKEN_CREATE` — and *Media access* for what was
    downloaded.
 4. Reissue with the narrowest scopes that work, an expiry and a project binding. Reissuing now

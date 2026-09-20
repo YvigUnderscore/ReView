@@ -2,7 +2,7 @@
 
 *Runtime health, studio limits, queues, trash and audit — the screens to open when something breaks, or deletes itself.*
 
-> Updated: 2026-09-15
+> Updated: 2026-09-20
 
 This page covers the parts of the admin area that are about the **instance** rather than about
 the work: is it healthy, what are its limits, what is queued, what was deleted, and who did
@@ -18,16 +18,16 @@ you put a first show on a new instance, not after.
 | Screen | Where | What it is |
 |---|---|---|
 | **System** | *Studio → System* | Runtime state: host, memory, disk, service health, licence |
-| **Settings** | *Studio → Settings* | Studio limits and defaults, as key/value settings |
-| **Activity** | *Studio → Activity* | The product feed: who uploaded, published, commented |
+| **Studio identity** | *Studio → Studio identity* | What the instance is: name, theme, default language, logo, source URL |
+| **Activity** | *Studio → Activity* | The audit journal: sensitive actions, newest first |
 | **Jobs** | *Maintenance → Jobs* | Queue counters, failed jobs, retry — and the derived-files purge |
 | **Trash** | *Maintenance → Trash* | Deleted projects, restore or purge |
 | **Retention** | *Maintenance → Retention* | How long the nine journals are kept — see [Data retention](data-retention.md) |
-| **Audit** | *Maintenance → Audit* | Sensitive actions, newest first |
 | **Media access** | *Maintenance → Media access* | Who viewed which media — see [Identity, API & audit](identity-and-api.md) |
 
-The *Maintenance* group has five sections, not three. The one people miss is **Retention**, and
-it is the one that governs most of the automatic deletions described below.
+There is no *Audit* section any more: the audit journal **is** the *Activity* screen, in the
+*Studio* group. And the one section people miss in *Maintenance* is **Retention**, which
+governs most of the automatic deletions described below — trash included.
 
 ## System — *Admin → Studio → System*
 
@@ -51,39 +51,44 @@ Studio *limits* are not here — they are in *Settings*. And the screen is a sna
 > filling the volume — usually container logs or an unrotated Postgres WAL. See
 > [Backups](../infrastructure/backups.md).
 
-## Settings — *Admin → Studio → Settings*
+## Studio identity — *Admin → Studio → Studio identity*
 
 Key/value studio settings (`GET`/`PUT /api/studio/settings`, `ADMIN` only, audit action
 `SETTING_UPDATE`). Every write is a single `{ key, value }` upsert, applied immediately across
-the instance — there is no draft and no apply step.
+the instance.
+
+This screen used to be the catch-all where every key/value setting landed. It is now the
+instance's **identity** — what it is called, what it looks like, what language it defaults to,
+where its sources live — and each of the other settings was moved to the screen that already
+answers its question. The keys did not change, only where you edit them:
+
+| Setting | Key | Now edited in |
+|---|---|---|
+| Default start frame | `default_start_frame` | *Studio → Project defaults* — it is a creation default, next to the resolution and framerate it goes with |
+| Maximum file size, default quota, concurrent uploads | `max_file_size`, `storage_limit_user`, `max_concurrent_uploads` | *Content → Storage* — they are storage limits, and that screen already shows what the bucket holds |
+| Trash retention | `trash_retention_days` | *Maintenance → Retention* — one screen for “how long do we keep what we deleted”, journals and trash together |
+| Live broadcast rates | `live_sync_hz_video`, `_image`, `_3d`, `_splat` | *Review contexts → Live review room* |
+| Slack webhook | `slack_webhook_url` | *Communications → Team chat*, beside the Discord one |
+
+What is left on this screen:
 
 | Setting | Key | Default | What it does |
 |---------|-----|---------|--------------|
-| Default start frame | `default_start_frame` | **1001** | Start frame given to new projects |
-| Maximum file size | `max_file_size` | **5 GiB** | One global ceiling; an upload above it is refused with `400 FILE_TOO_LARGE` |
-| Default user storage quota | `storage_limit_user` | **10 GiB** | Applies to accounts with no `storageLimit` of their own; **administrators are exempt** |
-| Concurrent uploads | `max_concurrent_uploads` | **5** | Per uploader; beyond it, `429 TOO_MANY_UPLOADS` |
-| Trash retention | `trash_retention_days` | **30** | Days before the automatic permanent purge; `0` disables it |
-| Live sync rate — video | `live_sync_hz_video` | **2** | Broadcasts per second from the driver in a live review room, clamped 1–30 |
-| Live sync rate — image | `live_sync_hz_image` | **4** | Same, for image media |
-| Live sync rate — 3D | `live_sync_hz_3d` | **10** | Same, for 3D media |
-| Live sync rate — splat | `live_sync_hz_splat` | **10** | Same, for splat media |
-| Slack webhook | `slack_webhook_url` | *(empty)* | See [Branding & notifications](branding-and-notifications.md) |
-| Source code URL | `studio_source_url` | upstream repository | AGPL §13 obligation, see below |
-
-Two more settings live in their own blocks under that list, because they are pickers rather than
-text fields:
-
-| Setting | Key | Default | What it does |
-|---|---|---|---|
-| Studio language | `studio_default_locale` | `en` | Language of accounts that never chose one, and of **every server-rendered email**. Changing it does not change your own interface language |
+| Studio name | `Studio.name` | *(set at first run)* | Shown in the header, the login page, the client portal and every email |
+| Studio language | `studio_default_locale` | `en` | Language of accounts that never chose one, and of **every server-rendered email** and chat notification. Changing it does not change your own interface language |
 | Accent colour | `studio_accent` | `#00b3c4` | Applied to the application and to the login page; the reset button clears it back to the product accent |
+| Source code URL | `studio_source_url` | upstream repository | AGPL §13 obligation, see below |
+| Studio logo | `studio_logo_key` | *(none)* | Uploaded here, and reused by the login page, the client portal and the burn-in — see [Branding & notifications](branding-and-notifications.md) |
 
-Size fields are entered in **MB or GB and stored in bytes**, in binary units — 1 GB is
-1 073 741 824 bytes, the same base the file managers and the MinIO console count in, and the same
-one every size shown elsewhere in the administration uses. A value typed here therefore reads
-back unchanged. There is **one** `max_file_size` for the whole instance: it is not per media
-kind, and an EXR sequence is measured as the sum of what it uploads.
+One save bar covers the whole screen rather than a button per card: eleven separate save
+buttons was the worst habit of the old catch-all.
+
+Size fields — wherever they now live — are entered in **MB or GB and stored in bytes**, in
+binary units: 1 GB is 1 073 741 824 bytes, the same base the file managers and the MinIO
+console count in, and the same one every size shown elsewhere in the administration uses. A
+value typed there therefore reads back unchanged. There is **one** `max_file_size` for the
+whole instance: it is not per media kind, and an EXR sequence is measured as the sum of what
+it uploads.
 
 > [!CAUTION]
 > Two keys are **never readable and never writable through this screen**: `smtp_config` and
@@ -186,9 +191,10 @@ and the timeline sprite, then marks `metadata.hlsPurged = true`.
 - **Kept:** the MP4 proxy and the thumbnail — old versions stay watchable at proxy quality, with
   a working card.
 - **Lost:** adaptive quality selection, and the timeline hover preview on those media.
-- The MinIO deletions are permanent. Regenerating them means reprocessing the media, which is
-  refused on published versions (`403 PUBLISHED_LOCKED`) and in any case usually impossible
-  because the original has been superseded.
+- The MinIO deletions are permanent. Regenerating them means reprocessing the media, which a
+  published media only allows after a failure and only once
+  (`403 REPROCESS_ONLY_AFTER_FAILURE`) — and is in any case usually impossible, because the
+  original has been superseded.
 - It is idempotent, and once enabled it also runs inside the nightly pass.
 
 Enable it deliberately, not experimentally: it is the one maintenance switch that silently
@@ -211,10 +217,14 @@ outage. Failure reasons are truncated to 120 characters so a raw driver error ca
 connection string, and all three routes are public because the AGPL §13 offer has to be reachable
 without an account.
 
-## Audit — *Admin → Maintenance → Audit*
+## Activity — the audit journal — *Admin → Studio → Activity*
 
-`GET /api/studio/audit` (paginated, newest first) records sensitive actions with the author,
-timestamp, entity type and entity id.
+There is one journal, not two. The *Activity* screen and the audit log were separate screens
+showing overlapping things, one of them not a security record at all; *Activity* now renders
+the audit journal itself, with each entry's author, their avatar and a link to the entity.
+
+`GET /api/studio/audit` (paginated, thirty per page, newest first) records sensitive actions
+with the author, timestamp, entity type and entity id.
 
 | Group | Actions |
 |---|---|
@@ -238,12 +248,6 @@ Three limits to know:
   to `0` in *Maintenance → Retention* if the studio must keep an unbroken trail — that is the only
   value that means "never".
 
-### Activity — *Admin → Studio → Activity*
-
-The recent activity feed across projects: who uploaded, published or commented what, and when.
-Unlike the audit log this is a **product feed, not a security record** — it is not exhaustive,
-it is not retained on purpose, and it is not what you show an auditor.
-
 ## Use cases
 
 ### Preparing the first week of a new instance
@@ -252,15 +256,16 @@ it is not retained on purpose, and it is not what you show an auditor.
 
 1. *System*: confirm database, Redis and MinIO are all green. A red MinIO here explains every
    upload failure you are about to get.
-2. *Settings*: set `max_file_size` to something the studio actually produces — 5 GiB refuses a
+2. *Storage*: set `max_file_size` to something the studio actually produces — 5 GiB refuses a
    lot of EXR sequences and plate pulls, and the artist only finds out at the end of the upload.
-3. *Settings*: raise `storage_limit_user`, or set per-account limits. 10 GiB is a demo-sized
+3. *Storage*: raise `storage_limit_user`, or set per-account limits. 10 GiB is a demo-sized
    default; a single compositor exceeds it in a week.
-4. *Settings*: **decide `trash_retention_days` now.** Leaving it at 30 means anything deleted
-   today is unrecoverable in a month, silently.
-5. *Settings*: fill `studio_source_url` if you modified the code — it is a licence obligation, not
-   a nicety — and set `studio_default_locale`, which is the language of every email the server
-   sends to an account that never chose one.
+4. *Retention*: **decide `trash_retention_days` now.** Leaving it at 30 means anything deleted
+   today is unrecoverable in a month, silently. It sits with the nine journal periods, which is
+   the next step anyway.
+5. *Studio identity*: fill `studio_source_url` if you modified the code — it is a licence
+   obligation, not a nicety — and set the studio language, which is the language of every email
+   the server sends to an account that never chose one.
 6. *Retention*: read the nine periods once, and decide the audit one deliberately. See
    [Data retention](data-retention.md).
 7. *Jobs*: leave the derived purge **off** until the studio has a real version history. With

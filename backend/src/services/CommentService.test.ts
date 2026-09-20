@@ -25,6 +25,13 @@ vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./NotificationService', () => ({ notify: vi.fn(), sendDiscord: vi.fn() }));
 vi.mock('./ReviewReferenceService', () => ({ purgeForComment: vi.fn() }));
 vi.mock('./WatchService', () => ({ notifyWatchers: vi.fn().mockResolvedValue([]) }));
+// Assignation : la vraie garde interroge la base ; on la remplace pour observer SES appels.
+vi.mock('./EntityAssigneeService', async (importOriginal) => ({
+  // Le module porte aussi `ASSIGNEE_SELECT`, que d'autres services relisent à l'import :
+  // le remplacer en entier casserait leur chargement. On n'échange que la garde.
+  ...(await importOriginal<typeof import('./EntityAssigneeService')>()),
+  assertAssignable: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('./StorageService', () => ({
   storage: {
     getPresignedGetUrl: vi.fn().mockResolvedValue('https://minio/url'),
@@ -56,6 +63,7 @@ import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
 import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
+import { assertAssignable } from './EntityAssigneeService';
 import { Role } from '@prisma/client';
 
 const author = { id: 5, role: Role.ARTIST };
@@ -502,6 +510,32 @@ describe('update — pièces jointes éditables (D5)', () => {
     } as never);
     await update(author, 3, 1, { content: 'texte seul' });
     expect(storage.deleteObjects).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * CP-SEC phase 50 — assigner une note à quelqu'un du projet, et à personne d'autre.
+ *
+ * `assigneeId` arrive du client et n'était confronté à rien : un gestionnaire pouvait
+ * confier une note à n'importe quel compte de la base — étranger au projet, désactivé, ou
+ * de service —, qui en recevait la notification. Les tâches, les entités et les reviews
+ * passent toutes par `assertAssignable` ; les commentaires l'oubliaient.
+ */
+describe('update — assignation bornée au projet (CP-SEC 50)', () => {
+  it('confronte l’assigné au projet avant d’écrire', async () => {
+    await update(supervisor, 3, 1, { assigneeId: 42 });
+    expect(assertAssignable).toHaveBeenCalledWith(3, [42]);
+  });
+
+  it('n’écrit rien quand la personne n’est pas assignable sur ce projet', async () => {
+    vi.mocked(assertAssignable).mockRejectedValueOnce(new Error('NOT_ASSIGNABLE'));
+    await expect(update(supervisor, 3, 1, { assigneeId: 42 })).rejects.toThrow('NOT_ASSIGNABLE');
+    expect(prisma.comment.update).not.toHaveBeenCalled();
+  });
+
+  it('laisse passer le retrait d’assignation sans interroger la garde', async () => {
+    await update(supervisor, 3, 1, { assigneeId: null });
+    expect(assertAssignable).not.toHaveBeenCalled();
   });
 });
 

@@ -3,10 +3,13 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  RENDER_EXT,
+  RENDER_MAX_BYTES,
   figureProblems,
   headingAnchors,
   missingPreamble,
   references,
+  renderProblems,
   slugifyHeading,
 } from './check-docs.mjs';
 
@@ -140,5 +143,74 @@ describe('figureProblems', () => {
         ),
       ),
     ).toEqual([]);
+  });
+});
+
+describe('renderProblems', () => {
+  /** En-têtes réels, tronqués : le contrôle ne lit que les premiers octets. */
+  const mp4 = Buffer.concat([
+    Buffer.from([0, 0, 0, 0x20]),
+    Buffer.from('ftypisom', 'latin1'),
+    Buffer.alloc(64),
+  ]);
+  const webm = Buffer.concat([Buffer.from('1a45dfa3', 'hex'), Buffer.alloc(64)]);
+  const gif = Buffer.concat([Buffer.from('GIF89a', 'latin1'), Buffer.alloc(64)]);
+
+  it('ne reproche rien à un rendu conforme, quel que soit le conteneur', () => {
+    expect(renderProblems(mp4, 'assets/user-guide/a.mp4')).toEqual([]);
+    expect(renderProblems(webm, 'assets/user-guide/a.webm')).toEqual([]);
+    expect(renderProblems(gif, 'assets/user-guide/a.gif')).toEqual([]);
+  });
+
+  it('accepte l’extension en majuscules — le nom du fichier n’est pas le sujet', () => {
+    expect(renderProblems(mp4, 'assets/user-guide/A.MP4')).toEqual([]);
+  });
+
+  it('refuse une extension hors de la liste des rendus', () => {
+    expect(renderProblems(mp4, 'assets/user-guide/a.mov').join(' ')).toMatch(/extension de rendu inconnue/);
+  });
+
+  it('relève un fichier vide — un rendu interrompu laisse zéro octet', () => {
+    expect(renderProblems(Buffer.alloc(0), 'assets/user-guide/a.mp4')).toEqual([
+      'fichier vide (rendu interrompu ?)',
+    ]);
+  });
+
+  /**
+   * Le cas qui motive ce contrôle : le fichier existe, donc le contrôle d'image le laisse
+   * passer, mais rien ne le lit. Un `.webm` renommé en `.mp4`, une sortie tronquée, un
+   * pointeur Git-LFS resté texte — tous se voient à l'en-tête, aucun ne se voit au nom.
+   */
+  it('relève un contenu qui ne correspond pas à l’extension', () => {
+    expect(renderProblems(webm, 'assets/user-guide/a.mp4').join(' ')).toMatch(/n’est pas un MP4/);
+    expect(
+      renderProblems(Buffer.from('version https://git-lfs…'), 'assets/user-guide/a.webm').join(' '),
+    ).toMatch(/n’est pas un WEBM/);
+    expect(renderProblems(Buffer.from('GIF87b…'), 'assets/user-guide/a.gif').join(' ')).toMatch(
+      /n’est pas un GIF/,
+    );
+  });
+
+  it('accepte GIF87a comme GIF89a', () => {
+    const ancien = Buffer.concat([Buffer.from('GIF87a', 'latin1'), Buffer.alloc(64)]);
+    expect(renderProblems(ancien, 'assets/user-guide/a.gif')).toEqual([]);
+  });
+
+  it('plafonne le poids : DOCUMENTATION/ est versionné, le binaire y reste', () => {
+    const lourd = Buffer.concat([mp4, Buffer.alloc(RENDER_MAX_BYTES)]);
+    expect(renderProblems(lourd, 'assets/user-guide/a.mp4').join(' ')).toMatch(/Mio > 4 Mio/);
+
+    const juste = Buffer.concat([mp4, Buffer.alloc(RENDER_MAX_BYTES - mp4.length)]);
+    expect(renderProblems(juste, 'assets/user-guide/a.mp4')).toEqual([]);
+  });
+
+  it('cumule les reproches plutôt que de s’arrêter au premier', () => {
+    const lourdEtFaux = Buffer.concat([webm, Buffer.alloc(RENDER_MAX_BYTES)]);
+    expect(renderProblems(lourdEtFaux, 'assets/user-guide/a.mp4')).toHaveLength(2);
+  });
+
+  it('n’annonce que des extensions en minuscules, comme les compare le balayage', () => {
+    expect(RENDER_EXT).toEqual(RENDER_EXT.map((e) => e.toLowerCase()));
+    expect(RENDER_EXT).toContain('.mp4');
   });
 });

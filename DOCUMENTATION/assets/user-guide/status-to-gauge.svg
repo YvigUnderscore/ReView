@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" width="800" height="392" role="img" aria-labelledby="fig-title fig-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" width="800" height="392" role="img" aria-labelledby="status-gauge-title status-gauge-desc">
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-  <title id="fig-title">From a task's status to the family the gauges count</title>
-  <desc id="fig-desc">A task with no studio status is classified by its built-in value. A task with one is tested in order: isInactive puts it in a classification no gauge counts, isDone puts it in Done whatever its bridge says, and only then does the legacyStatus bridge decide — with an APPROVED bridge that is not terminal demoted to In review.</desc>
+  <title id="status-gauge-title">From a task's status to the family the gauges count</title>
+  <desc id="status-gauge-desc">A task with no studio status is classified by its built-in value. A task with one is tested in order: isInactive puts it in a classification no gauge counts, isDone puts it in Done whatever its bridge says, and only then does the legacyStatus bridge decide — with an APPROVED bridge that is not terminal demoted to In review.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }

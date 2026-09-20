@@ -503,29 +503,49 @@
    * présentés comme des objets à part entière.
    */
   .doc-article {
-    @apply leading-7;
+    @apply text-[0.9375rem] leading-7;
   }
   .doc-article > :first-child {
     @apply mt-0;
   }
+  /*
+   * Titres. Le contrat d'écriture (`documentation-style.md`) fait du chapitre `##` l'unité
+   * de navigation : il doit se voir de loin dans la colonne, sans quoi le sommaire latéral
+   * annonce un découpage que la page ne montre pas. La marge de défilement les décolle du
+   * bord haut quand on y arrive par une ancre ou par la recherche.
+   */
   .doc-article h2 {
-    @apply mb-3 mt-8 scroll-mt-6 border-b border-border pb-2 text-lg font-semibold tracking-tight;
+    @apply mb-3 mt-10 scroll-mt-8 border-b border-border pb-2 text-xl font-semibold tracking-tight text-foreground;
   }
   .doc-article h3 {
-    @apply mb-2 mt-6 scroll-mt-6 text-base font-semibold;
+    @apply mb-2 mt-7 scroll-mt-8 text-base font-semibold text-foreground;
   }
+  /* `####` est un dernier recours dans le contrat d'écriture : il se lit comme une étiquette,
+     pas comme un chapitre — sinon il concurrence le `###` au-dessus de lui. */
   .doc-article h4 {
-    @apply mb-1 mt-4 scroll-mt-6 text-sm font-semibold text-muted-foreground;
+    @apply mb-1 mt-5 scroll-mt-8 text-xs font-semibold uppercase tracking-wider text-muted-foreground;
   }
   .doc-article p {
-    @apply my-3 leading-7;
+    @apply my-4 leading-7;
   }
   .doc-article ul,
   .doc-article ol {
-    @apply my-3 space-y-1.5;
+    @apply my-4 space-y-1.5;
+  }
+  /* Une liste imbriquée est un détail de la puce du dessus, pas un nouveau bloc. */
+  .doc-article li > ul,
+  .doc-article li > ol {
+    @apply my-1.5;
   }
   .doc-article li::marker {
     @apply text-muted-foreground;
+  }
+  /* Citation simple — l'encart typé `> [!NOTE]`, lui, a ses propres règles plus bas. */
+  .doc-article blockquote {
+    @apply my-4 border-l-2 border-border py-0.5 pl-4 italic text-muted-foreground;
+  }
+  .doc-article kbd {
+    @apply rounded border border-border-strong bg-secondary px-1.5 py-0.5 font-mono text-2xs text-foreground;
   }
   .doc-article a {
     @apply font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:decoration-primary;
@@ -539,12 +559,16 @@
     @apply my-8 border-border;
   }
 
-  /* Tableaux : cadre défilant, en-tête posé sur une surface, dernière ligne sans trait. */
+  /*
+   * Tableaux : cadre défilant, en-tête posé sur une surface, dernière ligne sans trait. Le
+   * contrat d'écriture veut que la première colonne soit « la clé que le lecteur parcourt » :
+   * elle est donc posée sur la couleur du texte, le reste sur le gris de lecture.
+   */
   .doc-article .doc-table {
-    @apply my-4 overflow-x-auto rounded-lg border border-border;
+    @apply my-5 overflow-x-auto rounded-lg border border-border bg-card;
   }
   .doc-article table {
-    @apply my-0 w-full border-collapse text-left;
+    @apply my-0 w-full border-collapse text-left text-sm;
   }
   .doc-article thead {
     @apply bg-secondary;
@@ -558,31 +582,41 @@
   .doc-article tbody tr:last-child td {
     @apply border-b-0;
   }
+  .doc-article tbody tr {
+    @apply transition-colors hover:bg-secondary/40;
+  }
+  .doc-article tbody td:first-child {
+    @apply font-medium text-foreground;
+  }
 
-  /* Blocs de code : le langage annoncé au-dessus, en petit. */
+  /* Blocs de code : le langage annoncé au-dessus, sur une pastille. */
   .doc-article pre {
-    @apply my-4 rounded-lg border border-border bg-secondary p-4 text-xs leading-6;
+    @apply my-5 rounded-lg border border-border bg-secondary/70 p-4 font-mono text-xs leading-6;
   }
   .doc-article pre[data-lang]::before {
     content: attr(data-lang);
-    @apply mb-2 block text-2xs uppercase tracking-wide text-muted-foreground;
+    @apply mb-3 inline-block rounded-full border border-border bg-background px-2 py-0.5 font-sans text-2xs uppercase tracking-wider text-muted-foreground;
   }
   .doc-article code {
-    @apply rounded border border-border/60 bg-secondary px-1.5 py-0.5;
+    @apply rounded border border-border/60 bg-secondary px-1.5 py-0.5 text-[0.85em] text-foreground;
   }
   .doc-article pre code {
-    @apply border-0 bg-transparent p-0;
+    @apply block border-0 bg-transparent p-0 text-[1em];
   }
 
-  /* Figures : l'image et sa légende forment un bloc, la légende sous l'image. */
+  /*
+   * Figures : l'image et sa légende forment un bloc, la légende sous l'image. Le contrat de
+   * figure veut une carte autonome (fond dessiné dans le SVG) : le cadre ne fait que la
+   * poser dans la colonne, sans lui ajouter de couleur.
+   */
   .doc-article figure {
-    @apply my-5;
+    @apply my-6;
   }
   .doc-article figure img {
     @apply my-0 w-full rounded-lg border border-border;
   }
   .doc-article figcaption {
-    @apply mt-2 text-center text-xs text-muted-foreground;
+    @apply mx-auto mt-2 max-w-prose text-center text-xs italic leading-5 text-muted-foreground;
   }
 
   /*
@@ -590,7 +624,7 @@
    * libellé, dans la langue du lecteur — le markdown, lui, reste en anglais.
    */
   .doc-article .doc-callout {
-    @apply my-4 rounded-lg border border-l-4 border-border bg-secondary/40 px-4 py-3;
+    @apply my-5 rounded-lg border border-l-4 border-border bg-secondary/40 px-4 py-3;
   }
   .doc-article .doc-callout > :first-child {
     @apply mt-0;
@@ -601,34 +635,55 @@
   .doc-article .doc-callout-label {
     @apply mb-1 mt-0 text-2xs font-semibold uppercase tracking-wide;
   }
+  /*
+   * Cinq encarts, cinq teintes. Le fond est la teinte du filet à très faible opacité : les
+   * cinq se distinguent d'un coup d'œil sans qu'aucun devienne un pavé de couleur — le
+   * contrat d'écriture n'en admet qu'un par chapitre, il doit se voir, pas crier.
+   */
   .doc-article .doc-callout[data-callout='note'] {
-    @apply border-l-info;
+    @apply border-l-info bg-info/5;
   }
   .doc-article .doc-callout[data-callout='note'] .doc-callout-label {
     @apply text-info;
   }
   .doc-article .doc-callout[data-callout='tip'] {
-    @apply border-l-success;
+    @apply border-l-success bg-success/5;
   }
   .doc-article .doc-callout[data-callout='tip'] .doc-callout-label {
     @apply text-success;
   }
   .doc-article .doc-callout[data-callout='important'] {
-    @apply border-l-primary;
+    @apply border-l-primary bg-primary/5;
   }
   .doc-article .doc-callout[data-callout='important'] .doc-callout-label {
     @apply text-primary;
   }
   .doc-article .doc-callout[data-callout='warning'] {
-    @apply border-l-warning;
+    @apply border-l-warning bg-warning/5;
   }
   .doc-article .doc-callout[data-callout='warning'] .doc-callout-label {
     @apply text-warning;
   }
   .doc-article .doc-callout[data-callout='caution'] {
-    @apply border-l-destructive;
+    @apply border-l-destructive bg-destructive/5;
   }
   .doc-article .doc-callout[data-callout='caution'] .doc-callout-label {
     @apply text-destructive;
+  }
+
+  /*
+   * Surlignage de la recherche — dans le corps de la page (`<mark>` posé par
+   * `docsHighlight`) comme dans les libellés du sommaire. Même classe des deux côtés : ce
+   * qu'on cherche se reconnaît au même signe où qu'il apparaisse.
+   *
+   * `mark` a un style natif (fond jaune, texte noir) qui ignore le thème : il est remplacé,
+   * pas complété. La première occurrence de la page est marquée plus franchement — c'est
+   * celle que la page rejoint d'elle-même.
+   */
+  .doc-hit {
+    @apply -mx-0.5 rounded-[3px] bg-primary/25 px-0.5 font-medium text-foreground;
+  }
+  .doc-hit[data-doc-hit='first'] {
+    @apply bg-primary/40 ring-1 ring-primary/50;
   }
 }

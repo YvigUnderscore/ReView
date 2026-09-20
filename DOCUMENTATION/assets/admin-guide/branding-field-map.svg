@@ -2,7 +2,7 @@
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="branding-map-title">Where each branding value is set, and what a signed-out visitor sees</title>
-  <desc id="branding-map-desc">Seven values, spread over three admin screens and one API call: the studio name, the accent colour, the logo, the login page appearance and the source code URL are all public and travel with the unauthenticated branding response, while the Slack and Discord webhooks stay internal. The Discord webhook has no screen at all and is written with PATCH /api/studio.</desc>
+  <desc id="branding-map-desc">Seven values, spread over three admin screens: the studio name, the accent colour, the logo, the login page appearance and the source code URL are all public and travel with the unauthenticated branding response, while the Slack and Discord webhooks stay internal. Five of the seven are set on one screen, Studio identity.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -66,21 +66,21 @@
 
   <rect class="panel" x="30" y="84" width="740" height="34" rx="9"/>
   <text class="l" x="46" y="105">Studio name</text>
-  <text class="d" x="240" y="105">first-run setup, then API only</text>
+  <text class="d" x="240" y="105">Studio → Studio identity</text>
   <text class="m" x="452" y="105">Studio.name</text>
   <rect class="panel-a" x="662" y="91" width="76" height="20" rx="9"/>
   <text class="a" x="700" y="105" text-anchor="middle">public</text>
 
   <rect class="panel" x="30" y="123" width="740" height="34" rx="9"/>
   <text class="l" x="46" y="144">Accent colour</text>
-  <text class="d" x="240" y="144">Studio → Settings</text>
+  <text class="d" x="240" y="144">Studio → Studio identity</text>
   <text class="m" x="452" y="144">studio_accent</text>
   <rect class="panel-a" x="662" y="130" width="76" height="20" rx="9"/>
   <text class="a" x="700" y="144" text-anchor="middle">public</text>
 
   <rect class="panel" x="30" y="162" width="740" height="34" rx="9"/>
   <text class="l" x="46" y="183">Studio logo</text>
-  <text class="d" x="240" y="183">Review contexts → Delivery</text>
+  <text class="d" x="240" y="183">Studio → Studio identity</text>
   <text class="m" x="452" y="183">studio_logo_key</text>
   <rect class="panel-a" x="662" y="169" width="76" height="20" rx="9"/>
   <text class="a" x="700" y="183" text-anchor="middle">public</text>
@@ -94,20 +94,20 @@
 
   <rect class="panel" x="30" y="240" width="740" height="34" rx="9"/>
   <text class="l" x="46" y="261">Source code URL</text>
-  <text class="d" x="240" y="261">Studio → Settings</text>
+  <text class="d" x="240" y="261">Studio → Studio identity</text>
   <text class="m" x="452" y="261">studio_source_url</text>
   <rect class="panel-a" x="662" y="247" width="76" height="20" rx="9"/>
   <text class="a" x="700" y="261" text-anchor="middle">public</text>
 
   <rect class="panel" x="30" y="279" width="740" height="34" rx="9"/>
   <text class="l" x="46" y="300">Slack webhook</text>
-  <text class="d" x="240" y="300">Studio → Settings</text>
+  <text class="d" x="240" y="300">Communications → Team chat</text>
   <text class="m" x="452" y="300">slack_webhook_url</text>
   <text class="d" x="700" y="300" text-anchor="middle">internal</text>
 
   <rect class="panel" x="30" y="318" width="740" height="34" rx="9"/>
   <text class="l" x="46" y="339">Discord webhook</text>
-  <text class="d" x="240" y="339">no screen — PATCH /api/studio</text>
+  <text class="d" x="240" y="339">Communications → Team chat</text>
   <text class="m" x="452" y="339">Studio.discordWebhookUrl</text>
   <text class="d" x="700" y="339" text-anchor="middle">internal</text>
 

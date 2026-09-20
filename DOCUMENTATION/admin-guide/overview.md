@@ -2,7 +2,7 @@
 
 *Every section of the admin area, who may open it, and which studio powers deliberately live on the project page instead.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 ![The studio administration screen.](../assets/admin-guide/admin-overview.png)
 
@@ -21,52 +21,57 @@ being able to change a studio limit, mint an account or read the audit log. See
 
 ## The map of /admin
 
-Twenty-seven sections, in five sidebar groups. Each is directly addressable as
+Thirty sections, in five sidebar groups. Each is directly addressable as
 `/admin/<section>`, so a link in a ticket or a runbook lands exactly where you meant it —
 and two of them add an id segment for their per-entity page, `/admin/users/<id>` and
 `/admin/projects/<id>`.
 
-![Five columns, one per sidebar group, listing the twenty-seven admin sections with the key that addresses each of them; Users and Projects carry an accent tick because they also open a per-entity detail page.](../assets/admin-guide/admin-section-map.svg)
+![Five columns, one per sidebar group, listing the thirty admin sections with the key that addresses each of them; Users and Projects carry an accent tick because they also open a per-entity detail page.](../assets/admin-guide/admin-section-map.svg)
 
 | Group | Section | Path | What it settles |
 |-------|---------|------|-----------------|
 | Studio | Dashboard | `/admin/overview` | Studio metrics — accounts, pipeline counts, media by type and status, queue depth, heaviest projects — each tile linking to the page behind it |
-| Studio | Activity | `/admin/activity` | Recent activity across every project, without opening any of them |
+| Studio | Activity | `/admin/activity` | The **audit journal**: sensitive actions across every project, newest first, with their author and a link to the entity — see [System & maintenance](system-and-maintenance.md#activity--the-audit-journal--admin--studio--activity) |
 | Studio | Identity (SSO) | `/admin/identity` | OIDC single sign-on and the SSO-only switch — see [Identity, API & audit](identity-and-api.md) |
 | Studio | Login page | `/admin/login-appearance` | Sign-in page background and wording — see [Branding & notifications](branding-and-notifications.md) |
 | Studio | System | `/admin/system` | Host, memory, disk, service health, licence and source URL — see [System & maintenance](system-and-maintenance.md) |
-| Studio | Settings | `/admin/settings` | Studio-wide limits, trash retention, default language, accent — see [System & maintenance](system-and-maintenance.md) |
+| Studio | Studio identity | `/admin/settings` | What this instance **is**: name, accent and theme, default language, logo, source-code URL. Not a catch-all any more — the limits moved to *Storage*, trash retention to *Retention* — see [System & maintenance](system-and-maintenance.md#studio-identity--admin--studio--studio-identity) |
 | Studio | Project defaults | `/admin/defaults` | Pipeline values every new project inherits — see [Pipeline settings](pipeline-settings.md) |
 | Content | Users | `/admin/users` | Account list, invitations, per-user storage limit, plus a detail page per account — see [Content explorer](content-explorer.md#users--list-and-detail-page) |
 | Content | Projects | `/admin/projects` | Every project with its counters and quota, plus a detail page showing the effective settings of each sequence and shot — see [Content explorer](content-explorer.md#projects--list-and-detail-page) |
 | Content | Versions | `/admin/versions` | Global filterable list of every version of the studio — see [Content explorer](content-explorer.md#versions--global-list) |
 | Content | Comments | `/admin/comments` | Studio-wide comment search and moderation — see [Content explorer](content-explorer.md#comments--search-and-moderation) |
-| Content | Storage | `/admin/storage` | MinIO occupancy and the map of where each file type lives — see [Storage map](storage.md) |
+| Content | Storage | `/admin/storage` | MinIO occupancy, the map of where each file type lives, and the **storage limits**: maximum file size, default per-account quota, concurrent uploads — see [Storage map](storage.md) |
+| Content | Hidden elements | `/admin/visibility` | Rules that hide a project, sequence, shot or asset from the interface without deleting anything — see [Hiding elements](hiding-elements.md) |
 | Review contexts | 3D & Splat | `/admin/hdri` | HDRI environment library offered to 3D and splat reviews — see [HDRI library](hdri-library.md) |
 | Review contexts | Colour (OCIO) | `/admin/ocio` | Installed OCIO configs and the studio default — see [Colour management](color-management.md) |
 | Review contexts | Video | `/admin/video` | HLS transcoding ladder, NVENC, scene detection — see [Transcoding](transcoding.md) |
 | Review contexts | Delivery | `/admin/distribution` | Studio logo, viewer watermark, burn-ins and slates — see [Secure distribution](secure-distribution.md) |
 | Review contexts | Statuses | `/admin/review-statuses` | The studio's vocabulary of review decisions — see [Review decisions](../user-guide/review-approvals.md) |
+| Review contexts | Live review room | `/admin/live` | The four broadcast rates of the live room, one per media type (1—30 per second) — see [Playlists & live review](../user-guide/playlists-and-live-review.md) |
 | Communications | Announcements | `/admin/announcements` | Studio-wide announcements and their frequency — see [SMTP & announcements](smtp-and-announcements.md) |
 | Communications | SMTP | `/admin/smtp` | Outgoing mail relay, and the test that proves it works — see [SMTP & announcements](smtp-and-announcements.md) |
 | Communications | API & Webhooks | `/admin/api` | Personal API tokens of the studio and outgoing webhooks — see [Identity, API & audit](identity-and-api.md#api-tokens-studio-view--admin--communications--api--webhooks) |
 | Communications | Service tokens | `/admin/service-tokens` | Machine identities — render farm, pipeline daemon, bot — with their own role, project scope, expiry and fine-grained scopes — see [Identity, API & audit](identity-and-api.md#service-tokens--machine-identities) |
 | Communications | ShotGrid | `/admin/shotgrid` | Studio-wide ShotGrid sites and credentials — see [ShotGrid integration](shotgrid-integration.md) |
+| Communications | Team chat | `/admin/chat` | The Slack **and** Discord webhooks, in one screen — see [Branding & notifications](branding-and-notifications.md#team-chat-notifications) |
 | Maintenance | Updates | `/admin/updates` | Which release runs, what a newer one changes, and — with the operations agent — backing up and switching from here — see [Updates & backups](updates-and-backups.md) |
 | Maintenance | Jobs | `/admin/jobs` | BullMQ queues (retry, clean) and the derived-files purge — see [System & maintenance](system-and-maintenance.md#jobs--admin--maintenance--jobs) |
 | Maintenance | Trash | `/admin/trash` | Soft-deleted projects, restore and purge — see [System & maintenance](system-and-maintenance.md#trash-and-automatic-retention) |
-| Maintenance | Retention | `/admin/retention` | How long the nine journals are kept, and the on-demand sweep — see [Data retention](data-retention.md) |
-| Maintenance | Audit | `/admin/audit` | The log of sensitive actions, filterable by actor, action and entity — see [System & maintenance](system-and-maintenance.md#audit--admin--maintenance--audit) |
+| Maintenance | Retention | `/admin/retention` | How long the nine journals are kept, plus **trash retention**, and the on-demand sweep — see [Data retention](data-retention.md) |
 | Maintenance | Media access | `/admin/media-access` | Who opened which media, when, and from where — see [Identity, API & audit](identity-and-api.md#media-access-log--admin--maintenance--media-access) |
 
 An unknown `<section>` falls back to the dashboard rather than erroring, so a stale
 bookmark costs a redirect, not a 404.
 
 > [!TIP]
-> Two sections are easy to miss because they arrived after the first four groups settled:
-> **Retention**, which decides how long the audit and access journals live, and **Service
-> tokens**, which is a different screen from *API & Webhooks* — one issues identities for
-> machines, the other manages tokens that belong to people.
+> Three sections are easy to look for in the wrong place. The audit journal is **Activity**,
+> in *Studio*, and not a section of its own any more. **Service tokens** is a different screen
+> from *API & Webhooks* — one issues identities for machines, the other manages tokens that
+> belong to people. And a setting you remember being in *Settings* has probably moved to the
+> screen it belongs to: the upload limits to *Storage*, trash retention to *Retention*, the
+> live cadences to *Live review room*, the Slack webhook to *Team chat*. *Studio identity* now
+> holds only what the instance **is**.
 
 ## What lives on the project page instead
 

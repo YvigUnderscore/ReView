@@ -40,6 +40,7 @@ router.get('/branding', async (_req, res) => {
   const logoUrl = logoKey?.value
     ? await storage.getPresignedGetUrl(logoKey.value, 3600, imageTypeFromKey(logoKey.value))
     : null;
+  const { bgKey: _bgKey, ...loginPublic } = login;
   res.json({
     name: studio?.name ?? null,
     accent: accent?.value ?? null,
@@ -51,7 +52,13 @@ router.get('/branding', async (_req, res) => {
     draftMode,
     // La page de connexion est pré-auth : son habillage doit voyager avec le branding
     // public, sinon l'image de fond n'apparaît qu'une fois connecté — c'est-à-dire jamais.
-    login: { ...login, bgUrl: await loginBgUrl(login.bgKey) },
+    //
+    // `bgKey` est ÉCARTÉ du rendu (CP-SEC de la phase 50) : c'est la clé MinIO brute, et elle
+    // partait sur une réponse NON AUTHENTIFIÉE, à côté de l'URL présignée qui la rend inutile.
+    // Le dépôt s'est donné la règle à la phase 50 (`CommentService.publicAttachments`) :
+    // « jamais la clé MinIO, qui servirait à en signer d'autres ». C'était le seul endroit
+    // où elle était encore enfreinte.
+    login: { ...loginPublic, bgUrl: await loginBgUrl(login.bgKey) },
   });
 });
 

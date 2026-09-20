@@ -181,12 +181,9 @@ for (const [segment, holder] of [
   );
 }
 
-/** Départements d'une personne : chacun règle les siens, un ADMIN règle ceux des autres. */
-router.put('/users/me/departments', auth, validate({ body: idsBody }), async (req, res) => {
-  await DepartmentService.setUserDepartments(req.user!.id, req.body.ids);
-  res.status(204).end();
-});
-
+// `PUT /users/me/departments` a été RETIRÉ (CP-SEC phase 50) : se poser un département donnait
+// l'écriture sur ses tâches sous la politique par département. Ne pas le remettre — le pourquoi
+// et les deux chemins légitimes sont dans `DOCUMENTATION/infrastructure/security.md`.
 router.put(
   '/users/:id/departments',
   auth,

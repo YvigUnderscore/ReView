@@ -2,7 +2,7 @@
 
 *The shape of a page, the five callouts, and the figure contract every diagram must honour.*
 
-> Updated: 2026-09-15
+> Updated: 2026-09-20
 
 `DOCUMENTATION/` is a deliverable, not a scratchpad. It is committed with the code, read on
 GitHub, and served inside the application at `/docs` — where a reader browses it by chapter,
@@ -45,7 +45,7 @@ chapter that has genuinely distinct parts; `####` is a last resort.
 - **Second person, present tense.** "Press `I` to set the loop in point", not "the user may".
 - **Say what happens, then what it costs.** A limit, a lock or a side effect belongs in the
   same paragraph as the feature it constrains, not in a caveats section at the bottom.
-- **Name the surface exactly as the interface does** — `Admin → Settings → Storage`, the
+- **Name the surface exactly as the interface does** — `Admin → Content → Storage`, the
   `Reprocess` entry of the right-click menu, the `I/O` chip in the transport.
 - **English, and the production glossary stays in English everywhere**: shot, sequence,
   dailies, playblast, version, annotation, review, board, kanban, retake. See

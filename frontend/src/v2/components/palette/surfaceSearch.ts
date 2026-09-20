@@ -3,7 +3,8 @@
 
 import { adminGroupLabel, adminSections } from '../../pages/admin/adminSections';
 import { fold, sectionHaystack, sectionMatches } from '../../pages/admin/settingsSearch';
-import { sectionLabel, type DocsPage, type DocsSection } from '../../pages/docs/docsManifest';
+import { sectionLabel, type DocsSection } from '../../pages/docs/docsManifest';
+import { searchDocs } from '../../pages/docs/docsSearch';
 import type { Tr } from '../../i18n';
 import type { Role } from '../../types/api';
 
@@ -50,60 +51,23 @@ export interface SurfaceHit {
 export const SURFACE_LIMITS = { docs: 4, settings: 5 } as const;
 
 /**
- * Qualité d'une correspondance de page de documentation, du plus net au plus vague. Même
- * raisonnement que `lib/searchRank` côté serveur : le titre identifie, le chapitre situe,
- * le chemin de fichier ne fait qu'attester.
- */
-const DOC_SCORE = { title: 40, summary: 30, heading: 20, path: 10, words: 1 } as const;
-
-/** Tout ce par quoi une page peut être trouvée : son titre, son sous-titre, ses chapitres. */
-const docHaystack = (page: DocsPage): string =>
-  fold([page.title, page.summary, page.path, ...(page.headings ?? [])].join(' '));
-
-/**
- * La page répond-elle à la recherche ? Tous les mots doivent être présents, comme dans la
- * recherche des réglages : « watermark client » ne doit pas rendre la moitié du manuel.
- */
-const docMatches = (haystack: string, words: string[]): boolean =>
-  words.every((word) => haystack.includes(word));
-
-/** À quel point cette page est-elle ce qui a été tapé ? Le chapitre trouvé sert de raison. */
-function docRank(page: DocsPage, needle: string): { score: number; heading: string | null } {
-  const heading = (page.headings ?? []).find((h) => fold(h).includes(needle)) ?? null;
-  if (fold(page.title).includes(needle)) return { score: DOC_SCORE.title, heading };
-  if (fold(page.summary).includes(needle)) return { score: DOC_SCORE.summary, heading };
-  if (heading !== null) return { score: DOC_SCORE.heading, heading };
-  if (fold(page.path).includes(needle)) return { score: DOC_SCORE.path, heading };
-  // Trouvée mot à mot, la saisie entière n'apparaissant nulle part d'un seul tenant.
-  return { score: DOC_SCORE.words, heading };
-}
-
-/**
  * Pages de documentation répondant à la saisie — par leur titre **et par leur contenu**,
  * les titres de chapitre du manifest tenant lieu de table des matières.
+ *
+ * Le classement lui-même n'est plus ici : c'est `pages/docs/docsSearch`, le moteur que le
+ * sommaire de `/docs` emploie aussi. Tant qu'il vivait dans la palette, chercher
+ * « watermark » ouvrait la bonne page depuis Ctrl+K et ne rendait rien depuis la page de
+ * documentation. Ici on ne fait plus que borner la liste et l'habiller.
  */
 export function searchDocSurfaces(sections: DocsSection[], query: string, t: Tr): SurfaceHit[] {
-  const needle = fold(query.trim());
-  if (!needle) return [];
-  const words = needle.split(/\s+/);
-
-  return (
-    sections
-      .flatMap((section) =>
-        section.pages
-          .filter((page) => docMatches(docHaystack(page), words))
-          .map((page) => ({ section, page, ...docRank(page, needle) })),
-      )
-      // Tri stable (ES2019) : à score égal, l'ordre de lecture du sommaire départage.
-      .sort((a, b) => b.score - a.score)
-      .slice(0, SURFACE_LIMITS.docs)
-      .map(({ section, page, heading }) => ({
-        id: `doc-${page.path}`,
-        label: page.title,
-        hint: [sectionLabel(section, t), heading ?? page.summary].filter(Boolean).join(' · '),
-        to: `/docs?p=${encodeURIComponent(page.path)}`,
-      }))
-  );
+  return searchDocs(sections, query)
+    .slice(0, SURFACE_LIMITS.docs)
+    .map(({ section, page, heading }) => ({
+      id: `doc-${page.path}`,
+      label: page.title,
+      hint: [sectionLabel(section, t), heading ?? page.summary].filter(Boolean).join(' · '),
+      to: `/docs?p=${encodeURIComponent(page.path)}`,
+    }));
 }
 
 /**

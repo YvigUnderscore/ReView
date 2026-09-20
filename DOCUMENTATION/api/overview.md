@@ -2,7 +2,7 @@
 
 *The shape of every ReView call: two surfaces, one header, three error shapes, and the limits that bound them.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 The backend is an Express 5 REST API served under **`/api`**, with Socket.io realtime on
 `/socket.io`. Everything is JSON: media bytes never travel through it, they travel through
@@ -68,14 +68,14 @@ activation (`/api/auth/invitation/:token`), the unsubscribe endpoint (`/api/unsu
 the ShotGrid webhook receiver (authenticated by HMAC over the raw body), the documentation
 endpoints, and the client share routes.
 
-> [!WARNING]
-> An API token is **documented** as opening `/api/v1` only, and `/api` is expected to
-> answer `403 API_TOKEN_V1_ONLY`. The middleware that enforces it (`apiTokenSurface`) is
-> written and unit-tested but **is not mounted** by `createApp()` today: an `rvk_` token
-> currently reaches `/api/projects`, `/api/media/:id/url` and `/api/admin/*` as well — and
-> a token bound to one project is *not* held to that binding there, because only the v1
-> routes check it. Treat `/api/v1` as the only surface a token may aim at, and do not build
-> an integration on the gap. Full detail in
+> [!IMPORTANT]
+> An API token (`rvk_…`) opens `/api/v1` **and nothing else**. `apiTokenSurface` is mounted
+> on `/api` ahead of every business router, so a request whose `Authorization: Bearer`
+> carries an `rvk_` prefix and does not target `/api/v1` is answered `403
+> API_TOKEN_V1_ONLY` before any handler runs. Only `/api/docs` and `/api/openapi.json` are
+> exempt — they serve the same bytes to everyone. This closed a real gap: until the
+> middleware was mounted, a token bound to one project read and wrote every project as soon
+> as it aimed at `/api`, because only the v1 handlers consult the binding. Full detail in
 > [Authentication & API access](authentication.md).
 
 ## Health, readiness and version
@@ -249,9 +249,9 @@ there is no code, the status plus the message is all you get.
 
 | Status | What it means | Codes you will actually meet |
 |--------|---------------|------------------------------|
-| 400 | Validation failed, or a value the domain refuses | `VALIDATION_FAILED` (with `details`), `FILE_TOO_LARGE`, `INVALID_FILE`, `KIND_UNKNOWN`, `UNKNOWN_SCOPE`, `BAD_WEBHOOK_URL` |
+| 400 | Validation failed, or a value the domain refuses | `VALIDATION_FAILED` (with `details`), `FILE_TOO_LARGE`, `INVALID_FILE`, `KIND_UNKNOWN`, `UNKNOWN_SCOPE`, `BAD_WEBHOOK_URL`, `UPLOAD_NOTE_REQUIRED`, `UPLOAD_NOTE_TOO_SHORT` |
 | 401 | You are not authenticated, or no longer are | `TOKEN_REQUIRED`, `SESSION_REVOKED`, `USER_GONE`, `BAD_CREDENTIALS`, `CURRENT_PASSWORD_REQUIRED` |
-| 403 | Authenticated, but not allowed | `TOKEN_INVALID`, `API_TOKEN_INVALID`, `API_TOKEN_V1_ONLY`, `SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`, `PUBLISHED_LOCKED`, `STORAGE_LIMIT`, `PROJECT_QUOTA`, `PASSWORD_LOGIN_DISABLED` |
+| 403 | Authenticated, but not allowed | `TOKEN_INVALID`, `API_TOKEN_INVALID`, `API_TOKEN_V1_ONLY`, `SCOPE_REQUIRED`, `SCOPE_WRITE_REQUIRED`, `TOKEN_PROJECT_SCOPE`, `PUBLISHED_LOCKED`, `REPROCESS_ONLY_AFTER_FAILURE`, `REPROCESS_ALREADY_RETRIED`, `STORAGE_LIMIT`, `PROJECT_QUOTA`, `PASSWORD_LOGIN_DISABLED` |
 | 404 | Not found, or not yours to see | Usually **no code** — `NOT_FOUND` only when the handler wrote no message |
 | 409 | Conflict with the current state | `ALREADY_SETUP`, `EPISODES_DISABLED`, `IDEMPOTENCY_IN_PROGRESS`, the `*_IN_TRASH` family |
 | 429 | Rate limit, or too many concurrent uploads | `TOO_MANY_UPLOADS`; the limiters themselves send no code |

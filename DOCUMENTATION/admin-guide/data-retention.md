@@ -2,7 +2,7 @@
 
 *How long every journal is kept, which date each period is counted from, and how a sweep deletes millions of rows without locking the database.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 ReView writes nine journals that grow with every day of production: who did what (audit), who
 watched which media, notifications, sign-in sessions, password reset links, invitations,
@@ -50,11 +50,20 @@ merely given a very long period.
 
 Two families are deliberately **not** configurable here:
 
-- **Trash** keeps its own setting, `trash_retention_days` (30 days by default) — see
-  [System and maintenance](system-and-maintenance.md). Emptying the trash deletes files from
-  object storage, which is a different kind of operation with a different blast radius.
+- **Trash** keeps its own setting, `trash_retention_days` (30 days by default), which is edited
+  **on this screen** but is not one of the nine: emptying the trash deletes files from object
+  storage, a different kind of operation with a different blast radius. It sits here because
+  “how long do we keep what we deleted” is one question, and answering a GDPR request should
+  not require knowing two screens — see
+  [System and maintenance](system-and-maintenance.md#trash-and-automatic-retention) for what the
+  purge actually does.
 - **Idempotency records** (`IdempotencyRecord`) expire on a fixed technical TTL; they are a
   replay buffer for the v1 API, not a journal.
+- **Visit acknowledgements** (`EntityVisit`) are not a journal either, and are not swept. One
+  row holds “this person last opened this entity at this time”, and it is **overwritten** on
+  each visit: the table is bounded by accounts times entities, not by openings. That is why no
+  history is kept — what a card compares is the last time, and a row per opening would be paid
+  for on eight different lists.
 
 > [!IMPORTANT]
 > The audit log **is** subject to retention, and expires at one year by default. If your
@@ -143,7 +152,7 @@ what is already deleted does not come back.
 | `RETENTION_RUN` | A manual sweep finishes | Rows deleted per family, and whether a ceiling was hit |
 | `RETENTION_SWEEP` | An automatic sweep **actually deleted something** | Rows deleted per family, and whether a ceiling was hit |
 
-All three are visible in *Admin → Maintenance → Audit*, which is itself subject to the audit
+All three are visible in *Admin → Studio → Activity*, which is itself subject to the audit
 retention period above.
 
 > [!TIP]
@@ -162,11 +171,14 @@ For "what do you keep about me, and for how long":
 3. `UserSession` keeps a user agent and an IP address, but only while the session is alive
    and for 30 days after it dies; `Invitation` keeps an email address until 90 days after it
    was accepted or expired;
-4. **deleting** an account removes its sessions, notifications, invitations and push
-   subscriptions by cascade, while audit and media-access rows keep the action and drop the
-   link to the person (`SET NULL`) — they become anonymous before their own retention
-   expires;
-5. **disabling** an account, which is what the admin screens actually do, deletes nothing:
+4. `EntityVisit` records, per person, when they last opened a project, sequence, shot, asset,
+   task or media — it is what decides whether a card is lit as unread. It holds one timestamp
+   per entity, never a history, and it is never surfaced to anyone but its owner;
+5. **deleting** an account removes its sessions, notifications, invitations, push
+   subscriptions and visit acknowledgements by cascade, while audit and media-access rows keep
+   the action and drop the link to the person (`SET NULL`) — they become anonymous before their
+   own retention expires;
+6. **disabling** an account, which is what the admin screens actually do, deletes nothing:
    sessions and API tokens are revoked, the history stays attributed. Say so explicitly when
    answering an erasure request, and see [Content explorer](content-explorer.md) for how to
    go from one to the other.

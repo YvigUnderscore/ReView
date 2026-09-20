@@ -279,7 +279,7 @@ label rather than dropping the row.
 Logging is fire-and-forget: a failure is logged and never blocks the request. Treat the log as
 evidence, not as proof of completeness.
 
-*Maintenance → Audit* carries the decisions rather than the consultations: who issued a link
+*Studio → Activity* carries the decisions rather than the consultations: who issued a link
 and with what options (`SHARE_CREATE` records the permission, the label, whether a password
 was set, the view limit, the expiry, the scope and the size of a selection), who mailed it,
 who revoked it, and every wrong password.
@@ -293,9 +293,10 @@ week.*
    `CONFIDENTIAL`, and `showLogo` on **after** checking that a studio logo is actually
    uploaded. Turn `slate` on if legal wants an identification card at the head.
 2. Understand the timing. Burn-ins are applied **at transcode time**, so media already in the
-   studio has none. Either upload the cut after changing the setting, or reprocess it — which
-   is impossible once the version is published (`403 PUBLISHED_LOCKED`). In practice: change
-   the setting **before** the deliverable is uploaded.
+   studio has none. Either upload the cut after changing the setting, or reprocess it — and a
+   published media is only reprocessable after a failure, once
+   (`403 REPROCESS_ONLY_AFTER_FAILURE`). In practice: change the setting **before** the
+   deliverable is uploaded.
 3. If only this show needs it, set the override on the project instead of the studio template,
    so every other project keeps its current look.
 4. Leave the client-share watermark on (the default). It adds the recipient's label on top of
@@ -319,7 +320,7 @@ week.*
    report rather than claiming instant containment.
 3. *Admin → Maintenance → Media access* gives one line per consultation with the link label,
    the IP and the timestamp. That is the evidence of who fetched what, and when.
-4. *Maintenance → Audit*: `SHARE_CREATE` tells you who issued the link and with which options,
+4. *Studio → Activity*: `SHARE_CREATE` tells you who issued the link and with which options,
    `SHARE_EMAIL` who it was sent to and how many messages left, and a burst of
    `SHARE_UNLOCK_FAIL` tells you the password was being guessed rather than forwarded.
 5. If the leaked copy carries a client-share watermark, the recipient label is legible in the

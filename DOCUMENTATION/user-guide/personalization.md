@@ -168,6 +168,63 @@ Next to that button, a compact **resume** chip appears when this browser has a r
 its recently visited list, and takes you straight back to that media. It is per browser, like
 the recents it reads, and it names the media rather than a task.
 
+### The four counters, and where each one leads
+
+The **Statistics** block is four cards: your own two figures first, then the two that describe
+your scope, each with a *+n in 7 days* trend when there is movement. **Every card is a link to
+the view that unfolds it** — a counter you cannot open is a counter nobody can contradict.
+
+| Card | Counts | Opens |
+|------|--------|-------|
+| **My retakes** | Your tasks in retake or rejection | `/my-tasks?scope=blocked` |
+| **Awaiting my review** | Published media whose version was handed **to you** and still has no decision | `/reviews?assigned=me&decision=none` |
+| **Media in review** | Published media in your scope with no decision yet — the studio's volume, not yours | `/reviews?status=published&decision=none` |
+| **Comments** | Notes posted on media you can open | `/comments` |
+
+"Your scope" is the same everywhere on Home: a project you can still see, nothing in the trash,
+nothing whose parent is hidden. A client only ever counts the notes meant for clients.
+
+> [!NOTE]
+> Two of these cards used to point at the anchor `#my-tasks`, which vanished along with the *My
+> tasks* block as soon as anyone removed it from their Home — the click then did nothing. They
+> open the pages [My tasks and Recent comments](navigation-and-search.md#where-things-are)
+> instead, which exist whatever your arrangement and can be bookmarked and shared.
+
+## The project Overview, block by block
+
+A project's **Overview** tab (`?tab=overview`) is composed the same way, with the same engine,
+and for the same reason: an artist, a supervisor and a producer do not open the same page. The
+first comes to see what is asked of them, the second what is blocking, the third where the show
+stands.
+
+| Block | Default width | Widths offered | Shapes |
+|-------|--------------:|----------------|--------|
+| **Structure** | 12 | 4, 6, 8, 12 | KPI |
+| **My tasks** | 6 | 4, 6, 8, 12 | list |
+| **Latest published media** | 12 | 6, 8, 12 | grid |
+| **Task progress** | 12 | 6, 8, 12 | KPI |
+| **Recent activity** | 6 | 4, 6, 8, 12 | list |
+| **Tasks to handle** | 6 | 4, 6, 8, 12 | list |
+| **What is blocking** | 12 | 6, 8, 12 | list |
+| **Retakes** | 12 | 6, 8, 12 | list |
+
+The last two read [production data](production-reporting.md) and therefore **only exist for
+supervisors and administrators of the project** — not in the page, and not in the *Add*
+catalogue either, because a block that could only show an error has no business being offered.
+
+Two arrangements are layered. **Yours** lives on your account under one key, so the page you
+built follows you from project to project rather than asking to be rebuilt on each one.
+**Underneath it, a default per role**, which an administrator sets from this very page: arrange
+it, then *Set as default arrangement for…* and pick the role. *Remove the default arrangement
+for…* takes it back off. Your own entry *Back to my role's default arrangement* simply drops
+your personalisation and lets that default show through — including a default set after the
+fact.
+
+> [!NOTE]
+> The role that picks the default is your **effective role on this project**, not your account
+> role. Someone who supervises one show and delivers shots on another opens a different Overview
+> on each, which is exactly the point.
+
 ## Keyboard shortcuts (configurable)
 
 Press **`?`** anywhere to open the shortcut panel.

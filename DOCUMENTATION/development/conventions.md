@@ -2,7 +2,7 @@
 
 *The house rules a change must satisfy: languages, licensing, data fetching, layout, right-click, and the backend's safety rules.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 These are the rules that are not obvious from reading the code, and that cost a bug each time
 they were rediscovered. [Code structure](code-structure.md) says *where* a thing goes; this
@@ -212,7 +212,9 @@ submenu that is in fact full.
 - Multi-step writes in `prisma.$transaction`; MinIO effects after commit.
 - Typed errors from `lib/errors` (`badRequest`, `unauthorized`, `forbidden`, `notFound`,
   `conflict`), each carrying a stable code; pino logging, never `console.log`.
-- Schema changes only via `prisma migrate dev`, with the migration committed.
+- Schema changes always travel as a **committed migration** under
+  `backend/prisma/migrations/`. `prisma migrate dev` is the normal way to produce one,
+  but it does not work in this repository today — see below.
 
 A route reads like a declaration, not like a program:
 
@@ -243,6 +245,42 @@ Three traps that have each cost a bug:
 - **A fallback fails closed.** If configuration cannot be parsed, fall back to the restrictive
   shape, never to the schema defaults.
 
+### Writing a migration without `migrate dev`
+
+`prisma migrate dev` refuses to run in this repository. The migration
+`20260917154214_avis_client_sur_lien_de_partage` was **edited by hand after it had been
+applied**, so its checksum no longer matches what the `_prisma_migrations` table recorded.
+`migrate dev` treats that as a corrupted history and offers exactly one way out: resetting
+the development database. Resetting is not an option on a database holding a studio's test
+content, so the two Phase 50 migrations were produced another way.
+
+Until the checksum is put back in order, write a migration like this:
+
+```bash
+# 1. Generate the SQL by diffing the applied database against schema.prisma
+npx prisma migrate diff \
+  --from-schema-datasource backend/prisma/schema.prisma \
+  --to-schema-datamodel    backend/prisma/schema.prisma \
+  --script > backend/prisma/migrations/<YYYYMMDDHHMMSS>_<name>/migration.sql
+
+# 2. Apply it, and record it in _prisma_migrations
+npx prisma migrate deploy
+
+# 3. Prove the result matches the schema
+node scripts/check-prisma-drift.mjs
+```
+
+The folder name is yours to write: fourteen digits then an underscore then a snake_case
+name, in the same shape `migrate dev` would have produced, or `migrate deploy` will not see
+it. Step 3 is not optional — it is the only thing standing in for the shadow-database
+replay `migrate dev` does for you, and it is what proves the hand-made SQL and the schema
+say the same thing.
+
+> [!IMPORTANT]
+> This is written-down debt, not a new convention. The engine and the SQL are identical to
+> what `migrate dev` emits — only the authoring step differs. Whoever repairs the checksum
+> of that September migration should delete this section along with it.
+
 ### Outbound requests go through one gate
 
 The API and the workers run **inside** the application network, where MinIO, Redis, Postgres,
@@ -266,12 +304,15 @@ Failures are typed: `OutboundBlockedError` (502), `OutboundTimeoutError` (504),
 development ShotGrid simulator (`SHOTGRID_INSECURE_HOSTS`), which lives on a private address
 on purpose.
 
-> [!CAUTION]
-> Two bare `fetch` calls remain in `backend/src`, in `ChatNotifyService` and
-> `NotificationService`, and they are only safe because the hostname is pinned before the
-> call — `discord.com`, `discordapp.com`, `hooks.slack.com`, over https, checked in
-> `lib/sanitize.ts`. Do not take them as precedent: a new outbound call goes through
-> `safeFetch`.
+> [!NOTE]
+> The last two bare `fetch` calls are gone. The Slack and Discord webhooks in
+> `ChatNotifyService` and `NotificationService` now go through `safeFetch` like everything
+> else, with a 5 s header timeout, `maxRedirects: 0` and a byte cap. The allow-list in
+> `lib/sanitize.ts` still applies — `discord.com`, `discordapp.com`, `hooks.slack.com`, over
+> https — but it only ever vetted the **starting** URL, which is precisely why the resolved
+> address and the redirect refusal had to be added underneath it. The one remaining direct
+> `fetch` in the tree is inside `lib/httpFetch.ts`, which is `safeFetch`'s own
+> implementation.
 
 ### Errors travel as a code
 

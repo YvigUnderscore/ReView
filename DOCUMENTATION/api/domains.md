@@ -39,8 +39,9 @@ Three consequences worth knowing before reading the tables below.
 - **Several routers share one prefix.** `/api/media` is served by **seven** routers,
   `/api/auth` by four (`auth`, `auth/2fa`, `auth/oidc`, `auth-security`), `/api/studio` by
   three, `/api/projects` by three, `/api/admin` by two, `/api/shotgrid` by four.
-- **Three routers are mounted on `/api` itself** — departments, entity thumbnails and
-  assignments — because each carries several prefixes (`/api/projects/:id/departments`,
+- **Six routers are mounted on `/api` itself** — departments, entity thumbnails,
+  assignments, entity extras (assignees, notes, note templates), note images and visibility
+  rules — because each carries several prefixes (`/api/projects/:id/departments`,
   `/api/shots/:id/thumbnail`…). Such a router must **never** call `router.use(authenticate)`:
   Express would run it for every request crossing the `/api` mount point, public client
   share routes included. That exact mistake once made `/api/client/:token` answer `401`.
@@ -87,7 +88,8 @@ Full reference, including the refusal codes and the share-link session:
 
 | Prefix | Domain |
 |--------|--------|
-| `/api/studio` | Studio settings, appearance and branding, SMTP configuration |
+| `/api/studio` | Studio settings, appearance and branding, SMTP configuration; `GET`/`PUT /studio/overview-layout` — the studio's default overview arrangement |
+| `/api/studio/branding` | Public branding read: name, accent, logo, source-code offer, whether password login is on, and `draftMode` |
 | `/api/studio/hdris` | HDRI library |
 | `/api/studio/ocio` | OCIO configurations |
 | `/api/projects` | Projects CRUD, membership, settings; plus `GET /usage`, `GET /:projectId/usage`, `POST /:projectId/duplicate`, `POST /:projectId/import-csv`, `GET /:projectId/export-csv` |
@@ -97,8 +99,9 @@ Full reference, including the refusal codes and the share-link session:
 | `/api/assets` | Assets CRUD |
 | `/api/{sequences\|shots\|assets}/:id/thumbnail` | Entity thumbnail: `POST …/presign`, then `PUT` the key (managers) |
 | `/api/{projects\|sequences\|shots\|assets\|users}/…/departments` | Departments an entity goes through |
+| `PATCH /api/projects/:projectId/members/:userId/departments` | Which departments a member covers **on this project** (project managers). The body is `{ add?, remove? }` and never a whole list: replacing the list from a screen that shows one project's vocabulary would silently erase the steps that person holds on **another** project. Ids are checked to belong to the project both ways, so a foreign id can neither be added nor — which matters more — removed |
 | `/api/departments` | Department reference — studio-wide, or per project; `PUT /departments/order` |
-| `/api/tasks` | Tasks CRUD, statuses, assignment; `GET /tasks/board?projectId=` returns a whole kanban in one request |
+| `/api/tasks` | Tasks CRUD, statuses, assignment; `GET /tasks/board?projectId=` returns a whole kanban in one request. A task carries a `description` — plain text, up to 4 000 characters, `null` to clear it, absent to leave it alone — and `POST /api/comments/:id/task` sets it from the review note |
 | `/api/versions` | Versions, publication (publish lock), `POST /:id/decision`, `GET /:id/decisions`, restore and purge |
 | `GET`/`PUT /api/versions/:id/reviewers`, `PATCH …/reviewers/:userId` | Who the version was handed to, and the brief written for each of them |
 | `/api/review-statuses` | Studio review statuses (approval circuit) |
@@ -139,9 +142,9 @@ paths they own, in the order Express tries them.
 | `POST /api/media/upload-url` | Simple presigned PUT upload, for small files |
 | `POST /api/media/multipart/{init,:id/parts,:id/complete,:id/abort}` | Resumable multipart upload (16 MiB parts), deduplicated by content hash |
 | `POST /api/media/sequence/{init,:id/urls,:id/complete}`, `GET /api/media/sequence/:id/frames` | Image sequences: N files become **one** media — see below |
-| `POST /api/media/:id/finalize` | Close an upload: magic-byte check, size, quotas, enqueue processing |
-| `GET /api/media`, `/reviews`, `/drafts`, `/:id`, `/:id/url` | Listing, review feed, drafts, detail, presigned read URL |
-| `POST /api/media/:id/publish`, `/reprocess`, `/thumbnail`, `/auto-thumbnail` | Publish (optionally handing the version over, briefs included), retry a failed job, set or compute a thumbnail |
+| `POST /api/media/:id/finalize` | Close an upload: magic-byte check, size, quotas, enqueue processing. Takes an optional `{ note }`, refused with `400 UPLOAD_NOTE_REQUIRED` or `400 UPLOAD_NOTE_TOO_SHORT` when the project demands one |
+| `GET /api/media`, `/reviews`, `/drafts`, `/:id`, `/:id/url` | Listing, review feed, drafts, detail, presigned read URL. The detail carries `uploadNote` (what the author said on delivering), `deliveryAspect` (the review frame's ratio, inherited from the project) and `permissions` (what **this** caller may write, so a screen does not offer a save the service would refuse) |
+| `POST /api/media/:id/publish`, `/reprocess`, `/thumbnail`, `/auto-thumbnail` | Publish (optionally handing the version over, briefs included), retry a failed job, set or compute a thumbnail. A published media may be reprocessed **only after a failure and only once**: `403 REPROCESS_ONLY_AFTER_FAILURE`, then `403 REPROCESS_ALREADY_RETRIED` |
 | `GET /api/media/:id/hls/:file` | HLS manifests and segments |
 | `DELETE /api/media/:id`, `POST /:id/restore`, `DELETE /:id/purge` | Trash, restore, permanent purge |
 | `…/:id/splat-edits`, `/splat-mask`, `/splat-subset`, `/splat-presentation` | Splat edits, masks, subsets and staging |
@@ -162,7 +165,7 @@ that accepts a `%04d`-style pattern.
 |------|--------------|
 | `POST /api/media/sequence/init` | Opens — or resumes — a sequence: `versionId`, `pattern`, the full `frames` list (2 to 10 000 entries, each name ≤ 200 characters, with its size), optional `framerate` |
 | `POST /api/media/sequence/:id/urls` | Presigned PUT URLs for a batch of frame names |
-| `POST /api/media/sequence/:id/complete` | Checks which frames arrived, writes the manifest, enqueues the assembly (proxy, HLS ladder, thumbnail, hover sprite) |
+| `POST /api/media/sequence/:id/complete` | Checks which frames arrived, writes the manifest, enqueues the assembly (proxy, HLS ladder, thumbnail, hover sprite). Carries the same optional `{ note }`, and the same two refusals, as `finalize`: the sequence is not a back door around a mandatory upload note |
 | `GET /api/media/sequence/:id/frames` | The original delivery back, frame by frame, as presigned URLs |
 | `POST /api/media/multipart/:id/abort` | Cancels the upload — this one route aborts a multipart, a simple PUT **and** a sequence |
 
@@ -177,7 +180,7 @@ that accepts a `%04d`-style pattern.
 
 | Prefix | Domain |
 |--------|--------|
-| `/api/comments` | Comments and annotations: threads, resolution, mentions, reactions, voice-note attachments (`POST /attachments/presign`), comment to task (`POST /:id/task`), and `POST /:id/share`, which pushes a note written on an auto-cut timeline into the shot's own review |
+| `/api/comments` | Comments and annotations: threads, resolution, mentions, reactions, voice-note attachments (`POST /attachments/presign`), comment to task (`POST /:id/task`), and `POST /:id/share`, which pushes a note written on an auto-cut timeline into the shot's own review. `PATCH /:id` edits the body, and also `attachments` and `annotation` — erasing one stroke of a 3D annotation is an edit of the note, not a new one |
 | `/api/comments/export` | Notes out: `?scope=media\|version\|shot\|playlist\|timeline&id=&format=csv\|edl\|otio\|sheet`. Declared **before** `/:id` precisely because `export` is not an id; rate-limited to 20 per minute per identity |
 | `/api/chat` | Internal messaging: `conversations`, messages, members, `unread` |
 | `/api/boards` | Excalidraw boards, per project or asset |
@@ -189,7 +192,10 @@ that accepts a `%04d`-style pattern.
 | `/api/announcements` | Studio announcements |
 | `/api/favorites` | Favorites |
 | `/api/search` | Multi-entity search (Ctrl+K) |
-| `/api/dashboard` | Home dashboard aggregates |
+| `/api/dashboard` | Home aggregates: latest reviewed media, activity feed, my tasks, and the four personal counters — `mediaInReview`, `awaitingMyReview`, `myRetakes`, `myOpenTasks` |
+| `GET /api/dashboard/tasks` | What each task counter opens: everything assigned to me across projects, `?scope=blocked` for the retakes, `?projectId=` for the same scope seen through one project |
+| `GET /api/dashboard/comments` | What the comment counter opens: the latest notes in my scope. A `CLIENT` sees only the notes addressed to them |
+| `POST /api/visits`, `POST /api/visits/mark-all` | Acknowledge "I have opened this": one entity, or every sequence, shot or asset of one project. Strictly per-person — it changes nothing for anyone else |
 | `/api/bulk` | Bulk operations on a multi-selection |
 | `/api/share` | Share links: create, list, revoke (supervisor and above) |
 | `/api/client` | Public client access by share token: `GET /:token` (project, media, tree and playlists of the scope), `POST /:token/unlock`, `GET /:token/media/:id/url`, media comments |
@@ -208,6 +214,7 @@ the only write in the application open to an anonymous caller.
 | `/api/admin/webhooks` | Outgoing webhooks: list, create, update, delete, `POST /:id/test`, plus the delivery journal `GET /:id/deliveries?limit=&before=` and `POST /:id/deliveries/:deliveryId/replay` |
 | `/api/admin/service-tokens` | Machine identities for the v1 API (admin only) |
 | `/api/admin/jobs` | BullMQ dashboard: `GET /`, `POST /:queue/:id/retry`, `POST /:queue/clean-failed` — `queue` is one of `media`, `storage-cleanup`, `webhooks` |
+| `/api/admin/ops` | Updates and backups (admin only): `GET /` the version in service, `GET /releases` and `POST /releases/refresh`, `GET /backups`, then `POST /runs` to order an operation and `GET /runs`, `GET /runs/:runId`, `POST /runs/:runId/cancel` to follow it — see [Updates & backups](../admin-guide/updates-and-backups.md) |
 
 > [!WARNING]
 > Replaying a delivery towards a **disabled** webhook is refused with
@@ -225,14 +232,13 @@ the only write in the application open to an anonymous caller.
 | `/api/v1` | The stable pipeline integration surface — see [API v1 — pipeline integration](v1-integration.md). Its own rate-limit budget of 10 000 per 15 min |
 | `/api/docs`, `/api/openapi.json` | The interactive reference and its OpenAPI 3.0 document, both public in read |
 
-> [!CAUTION]
-> An API token (`rvk_…`) is **not** currently confined to `/api/v1`. The middleware that
-> was written for it (`apiTokenSurface`, with its own unit tests) is not mounted in
-> `createApp()`, so `authenticate` accepts an `rvk_` token on any prefix in this page's
-> tables — where neither the fine-grained scopes nor the project binding are consulted.
-> Until it is mounted, treat an API token as carrying the **full power of its bearer over
-> every project they can see**: issue it as a service token with a non-`ADMIN` role, grant
-> the minimum scopes, and set an expiry.
+> [!IMPORTANT]
+> An API token (`rvk_…`) reaches **only** the `/api/v1` row of this table.
+> `apiTokenSurface` is mounted on `/api` ahead of every router listed on this page and
+> answers `403 API_TOKEN_V1_ONLY` everywhere else, `/api/docs` and `/api/openapi.json`
+> excepted. Every other prefix documented here is for JWT sessions, bounded by role and
+> membership. Issue a service token with a non-`ADMIN` role all the same, grant the minimum
+> scopes and set an expiry: inside v1 the token still carries whatever its bearer can see.
 
 ## Related pages
 

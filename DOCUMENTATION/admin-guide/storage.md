@@ -13,6 +13,19 @@ what you need in your head before reading a single number on it.
 each kind of file live**, and **what is taking up the space right now**. The first half is a
 static map of the key conventions; the second is a live scan of the bucket.
 
+It is also where the three **storage limits** are set, which used to sit in the studio settings
+catch-all. They belong on the screen that shows what the bucket already holds:
+
+| Limit | Key | Default | What it does |
+|---|---|---|---|
+| Maximum file size | `max_file_size` | **5 GiB** | One global ceiling for the whole instance, not per media kind. An upload above it is refused with `400 FILE_TOO_LARGE`, and an image sequence is measured as the sum of what it uploads |
+| Default account quota | `storage_limit_user` | **10 GiB** | Applies to accounts with no `storageLimit` of their own; **administrators are exempt**. The per-account field on a user sheet is an override of this |
+| Concurrent uploads | `max_concurrent_uploads` | **5** | Per uploader; beyond it, `429 TOO_MANY_UPLOADS` |
+
+Sizes are typed in MB or GB and stored in bytes, in binary units, so what you type reads back
+unchanged. 5 GiB refuses a lot of plate pulls: set it against what the studio actually delivers,
+because the artist finds out at the **end** of the upload.
+
 ## One bucket, eight named prefixes, and everything else
 
 ![The bucket has eight named top-level prefixes plus an unclassified remainder; projects/ holds the untouched originals and derived/ holds nine kinds of generated file, one per report sub-type.](../assets/admin-guide/bucket-key-map.svg)
@@ -236,7 +249,7 @@ risk lever on a full disk.
 2. If it is not there, look in *Admin → Maintenance → Trash* (projects) and in the project's
    own trash (`GET /api/projects/:projectId/trash`, supervisor or admin), which lists deleted
    sequences, shots, assets, versions and media.
-3. If it is in neither, check the audit log (*Maintenance → Audit*) for `VERSION_DELETE`,
+3. If it is in neither, check the audit log (*Studio → Activity*) for `VERSION_DELETE`,
    `VERSION_PURGE`, `MEDIA_DELETE`, `MEDIA_PURGE` or `PROJECT_PURGE` — every one of those
    records the author and the timestamp.
 4. If the audit shows nothing and the deletion date would be more than `trash_retention_days`

@@ -57,13 +57,12 @@ Both may be **bound to a single project** (`projectId`), which the v1 routes enf
 every resolved project id. That binding is what makes a token safe to deploy on a farm
 working on one film.
 
-> [!CAUTION]
-> The binding, and the "v1 only" rule, hold **inside `/api/v1`**. The middleware written to
-> confine an `rvk_` token to that prefix (`apiTokenSurface`) is not mounted in
-> `createApp()`: an API token pointed at `/api` is accepted there, and the web API consults
-> neither the fine-grained scopes nor the project binding. Until that changes, assume a
-> leaked token carries the **full power of its bearer over every project they can see** —
-> so give it a non-`ADMIN` role, the minimum scopes, and an expiry date.
+> [!IMPORTANT]
+> The "v1 only" rule is enforced by the server: `apiTokenSurface` is mounted on `/api`
+> ahead of every router, and an `rvk_` token pointed anywhere but `/api/v1` is refused with
+> `403 API_TOKEN_V1_ONLY`. The project binding then holds on every project id the v1
+> handlers resolve. An **unbound** token still carries the full reach of its bearer inside
+> v1, so give it a non-`ADMIN` role, the minimum scopes and an expiry date.
 
 ### Issuing a service token
 
@@ -394,9 +393,17 @@ curl -s -X POST "$REVIEW/api/v1/publish/128/complete" \
 
 The path segment is the **media id** returned by step 1, and `complete` requires the same
 two scopes. It validates the file (magic bytes → `detectedExtension`, size, quotas),
-triggers transcoding or thumbnailing, and publishes the media. Three body fields, all
+triggers transcoding or thumbnailing, and publishes the media. Four body fields, all
 optional: `publish` (**omitting it publishes** — only `publish: false` holds the media
-back), `submitForReview`, and `reviewers`.
+back), `submitForReview`, `note`, and `reviewers`.
+
+`note` is the brief that travels with the **delivery** — what the publisher says about the
+file they are handing over. A project can demand one and impose a minimum length, and the
+finalisation is then refused outright with `400 UPLOAD_NOTE_REQUIRED` or
+`400 UPLOAD_NOTE_TOO_SHORT`. It is the same `settings.reviewRequest` rule as the reviewer
+brief below, checked at a different moment and answering with its own codes, so a client can
+tell “write one” from “write more”. The note is kept on the media and returned by
+`GET /api/v1/media/{id}` and `GET /api/media/:id` as `uploadNote`.
 
 `reviewers` hands the version over in the same call, saying who should look at this
 delivery and at what:

@@ -2,7 +2,7 @@
 
 *How USD, glTF and archives become the GLB the viewer shows, and how to put the Blender toolchain in the worker image.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 The 3D viewer reads exactly one format: **GLB**. Everything a studio delivers — a USD stage
 with its payloads, a glTF with a folder of textures, an FBX out of a DCC — is turned into a
@@ -166,8 +166,10 @@ scene…** in the technical sheet. Picking another variant, or another purpose
 The original file is still never modified: the selection is authored into a small USD **overlay
 layer** that sublayers the root, and that overlay is what gets converted. The requested
 selection is stored on the media, so it survives job retries and later reprocessing.
-Recomposing is **refused on a published media** (`403 PUBLISHED_LOCKED`) — publish a new version
-instead.
+Recomposing a **published** media is allowed, and deliberately so: it derives a readable
+representation from the delivered file rather than replacing it, and since a media is
+published the moment it is uploaded, refusing it would mean refusing it outright. See
+[what the publish lock still freezes](transcoding.md#what-the-publish-lock-still-freezes).
 
 An integration that already knows the selection should not go through recomposition at all.
 `POST /api/v1/publish` accepts the same `variants` and `purpose` under a `usd` field, and the

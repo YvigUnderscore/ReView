@@ -16,21 +16,26 @@ secret.
 
 ## Where each branding value lives
 
-![Seven values spread over three admin screens and one API call; the studio name, accent, logo, login page and source-code URL are all public, the two chat webhooks are internal.](../assets/admin-guide/branding-field-map.svg)
+![Seven values spread over three admin screens; the studio name, accent, logo, login page and source-code URL are all public, the two chat webhooks are internal, and five of the seven are set on one screen.](../assets/admin-guide/branding-field-map.svg)
 
-Knowing the split saves a hunt: the **accent colour**, the **source-code URL** and the **Slack
-webhook** are in *Studio → Settings*; the **studio logo** is in *Review contexts → Delivery*,
-because it is primarily a delivery asset; the sign-in page is in *Studio → Login page*; and the
-studio **name** is fixed at first-run setup.
+The split is short now. *Studio → Studio identity* holds five of the seven: the **name**, the
+**accent colour**, the **logo**, the default **language** and the **source-code URL**. The sign-in
+page is next door, in *Studio → Login page*, because it is a layout rather than an identity. The
+two **chat webhooks** are in *Communications → Team chat*. The logo used to be uploaded from
+*Review contexts → Delivery*, on the reasoning that it is a delivery asset; it is also what a
+signed-out visitor sees on the sign-in page, so it moved to the identity screen and *Delivery*
+now carries a pointer to it.
 
 The first five rows of the figure are rows of the generic `Setting` key/value table, written
 through `PUT /api/studio/settings` (`ADMIN`, audited as `SETTING_UPDATE` with the key — never
 the value). The last two live on the `Studio` record itself.
 
 > [!NOTE]
-> Renaming the studio has **no screen**. It is `PATCH /api/studio` with `{ "name": "…" }` as an
-> `ADMIN`, between 2 and 120 characters. The slug derived at setup does not follow, and the name
-> is what a signed-out visitor reads on the sign-in page.
+> Renaming the studio now has a field, at the top of *Studio identity*. It still writes
+> `PATCH /api/studio` with `{ "name": "…" }` as an `ADMIN`, between 2 and 120 characters, and it is
+> the only field on that screen the server can refuse — so the page saves the name first and
+> leaves everything else untouched if it comes back refused. The slug derived at setup does not
+> follow the rename, and the name is what a signed-out visitor reads on the sign-in page.
 
 ## The studio theme
 
@@ -79,7 +84,15 @@ Saving the appearance is audited as `SETTING_UPDATE` on the key `login_appearanc
 
 `GET /api/studio/branding` is served **without authentication** — it has to be, since it styles
 the login page. It returns the studio name, the accent, a presigned logo URL, the full login
-appearance including a presigned background URL, and `sourceUrl`.
+appearance including a presigned background URL, `sourceUrl`, whether password login is
+enabled, and `draftMode`.
+
+`draftMode` travels here for want of anywhere else. It is a routing boolean, not a secret: an
+artist has to know whether *Publish* is still a gesture in this studio, and the administration
+settings that hold the switch are readable by administrators only. This endpoint is the one
+channel everybody can read. See
+[Pipeline settings](pipeline-settings.md#draft-mode-and-the-upload-note) for what the switch
+changes.
 
 Treat everything in that payload as public. The studio name, the tagline and the background
 image are visible to anyone who can reach the instance, including before they log in. If your
@@ -96,8 +109,8 @@ ReView can post one-line messages into a team channel on key events.
 
 | Target | Where it is configured | Stored in |
 |---|---|---|
-| **Slack** | *Admin → Studio → Settings* → *Slack webhook (notifications)* | `slack_webhook_url` |
-| **Discord** | **No screen** — `PATCH /api/studio` (`ADMIN`) with `discordWebhookUrl` | `Studio.discordWebhookUrl` |
+| **Slack** | *Admin → Communications → Team chat* | `slack_webhook_url` |
+| **Discord** | *Admin → Communications → Team chat* — the same screen, one save bar; still `PATCH /api/studio` with `discordWebhookUrl` underneath | `Studio.discordWebhookUrl` |
 
 ![Publications and decisions go through notifyChat to both Slack and Discord; comments and timeline feedback go through sendDiscord to Discord only. Both paths abort after five seconds and render their message from the translation catalogues.](../assets/admin-guide/chat-notification-routing.svg)
 
@@ -141,9 +154,50 @@ collective: nobody in a Slack room has a language of their own.
 > for the secret. And since notifications carry shot codes and version names, do not route them
 > to a workspace with a wider membership than the project.
 
-These two webhooks are also the only outgoing targets that do **not** go through the shared
-`safeFetch` guard: they rely on the host allow-list instead. Do not expect a redirect to be
-refused there the way it is for a ShotGrid site or a push endpoint.
+Both webhooks now go through the shared `safeFetch` guard, like every other outgoing request:
+resolved-address check, refusal to follow a redirect, a 5 s header timeout and a byte cap on
+the reply. The host allow-list is still applied first, but it only ever vetted the URL you
+typed — which is exactly why the guard underneath it was needed. A 4xx from the channel
+(deleted webhook, malformed payload) is logged with its status rather than swallowed.
+
+## Which events notify, and on which channel
+
+A notification is written only if the recipient has left its **kind** open on that **channel**.
+The kinds are a closed registry rather than a free string, because `User.preferences` is a JSON
+bag with no schema: without a registry every call would invent its own key, nobody could list
+them, and the profile screen would show what it believed rather than what the server reads.
+
+| Kind | Fires when | `Notification.type` |
+|---|---|---|
+| `mention` | Someone writes your name in a note | `MENTION` |
+| `reply` | Someone answers in your thread | `REPLY` |
+| `commentAssigned` | A note is addressed to you | `COMMENT_ASSIGNED` |
+| `taskAssigned` | A task is assigned to you | `TASK_ASSIGNED` |
+| `reviewAssigned` | A version is handed to you to review | `REVIEW_ASSIGNED` |
+| `reviewDecision` | A decision is recorded on something you delivered | `REVIEW_DECISION` |
+| `watch` | Something you watch moves | `WATCH` |
+| `live` | A live review session opens | `LIVE` |
+
+Two channels are settable per kind: **`inApp`** (the bell) and **`push`** (the browser). Each
+reader arranges them in *Profile → Notifications*; there is no studio-wide override, and an
+administrator cannot notify past someone's choice.
+
+Three properties are worth knowing before you debug a missing notification:
+
+- **Only an explicit `false` closes a channel.** An absent bag, a kind never touched, a value of
+  an unexpected shape — all let the notification through. An unreadable setting must not quietly
+  silence something nobody asked to silence, and a kind added later therefore arrives switched
+  on for everyone.
+- **The `type` is derived from the kind, never passed in.** It used to be a free string, which
+  is how one review decision came to be written `review_decision` where everything else is
+  upper-case — a type the front end did not recognise, so a click that never opened the review.
+- **The registry is duplicated on purpose**, in `backend/src/lib/notificationKinds.ts` and
+  `frontend/src/v2/lib/notificationKinds.ts`, and a test fails if the two copies drift. Same
+  contract as `i18n/locales.json`.
+
+> [!NOTE]
+> Team chat is not affected by any of this. A Slack or Discord message goes to a channel, not
+> to a person, so it has no per-recipient setting and is rendered in the studio language.
 
 ## Browser push
 
@@ -186,30 +240,34 @@ Studio-wide announcements and outgoing mail are a separate feature — see
 
 ### White-labelling the instance for a studio
 
-1. *Studio → Settings*: set the accent to the studio colour and save. Reload to see it — the
-   branding response is cached for five minutes.
-2. *Review contexts → Delivery*: upload the logo. Remember it is **not** SVG-capable, and that
-   the same file is reused for the login page, the client portal and the burn-in.
+1. *Studio → Studio identity*: set the name and the accent, upload the logo, and save — one bar
+   commits the screen. Reload to see the accent — the branding response is cached for five minutes.
+   The logo is **not** SVG-capable, and the same file is reused for the login page, the client
+   portal and the burn-in.
 3. *Studio → Login page*: choose the layout, add a background and a tagline. Keep the overlay
    opacity high enough that the form stays legible over the image.
 4. Check the result **signed out**, in a private window. Everything on that page is public.
 5. If you have modified the code, fill the source-code URL in *Settings* now: the login page is
    exactly the "remote user" surface the AGPL clause is about.
 
-### Wiring the studio Discord without an admin screen
+### Wiring the studio Discord
 
-*Production wants publish notifications in a Discord channel, and there is no field for it.*
+*Production wants publish notifications in a Discord channel.*
 
 1. Create an incoming webhook in Discord and copy the URL.
-2. There is **no UI**. Call `PATCH /api/studio` as an `ADMIN` with
-   `{ "discordWebhookUrl": "https://discord.com/api/webhooks/…" }`. A URL on any other host is
-   rejected with `400 BAD_WEBHOOK`.
+2. Paste it in *Admin → Communications → Team chat*, beside the Slack field, and save. A URL on
+   any other host is rejected with `400 BAD_WEBHOOK` — the Discord field is validated at save
+   time, the Slack one is not (see above). The underlying call is `PATCH /api/studio` with
+   `{ "discordWebhookUrl": "https://discord.com/api/webhooks/…" }`, if you would rather script it.
 3. Verify by publishing a test media — delivery is fire-and-forget, so a wrong URL fails
    silently in the server log rather than surfacing an error in the interface.
 4. Note the asymmetry before promising anything: Discord also receives new comments and timeline
    feedback; Slack receives only publications and review decisions.
 5. To remove it, send `{ "discordWebhookUrl": null }`. Do remove it rather than leaving it
-   pointing at a deleted channel — the comment path has no timeout.
+   pointing at a deleted channel: every event then buys a refused request and a log line for
+   nothing. Both paths do abort after five seconds — the comment path used to have no
+   timeout at all, and a relay that accepted the connection then went silent held a socket
+   and the message context for good.
 
 ### Push notifications stopped working after a restore
 

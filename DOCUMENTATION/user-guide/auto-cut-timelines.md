@@ -246,8 +246,8 @@ the badge without the entry.
 
 Under the hood this is `PATCH /api/shots/:id` with `omitted` alone, so the rest of the shot is
 left untouched — nothing else is republished to ShotGrid. Open cuts refresh on their own. The
-flag affects the cuts only: the shot still counts in the Production tab's matrix, workload and
-attention lists.
+flag affects the cuts only: the shot still has its row in the Production tab's grid, and still
+counts in the workload and the attention lists.
 
 ## Use cases
 

@@ -4,3 +4,10 @@ LICENSE text eol=lf
 
 # Notices generees (comparaison exacte par validate.sh)
 THIRD-PARTY-NOTICES.md text eol=lf
+
+# Rendus d'animation de la documentation (DOCUMENTATION/assets/, motion/out/). Git les
+# détecte déjà comme binaires, mais autant l'écrire : une seule substitution de fin de ligne
+# détruit le conteneur, et la règle doit survivre à l'ajout d'un « * text=auto ».
+*.mp4 binary
+*.webm binary
+*.gif binary

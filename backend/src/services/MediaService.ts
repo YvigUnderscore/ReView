@@ -680,15 +680,37 @@ export async function announcePublication(
  */
 export async function reprocess(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
-  const media = await prisma.mediaObject.findUnique({ where: { id } });
-  if (!media) throw notFound('Media not found');
-  if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
-  assertReprocessable(media);
-  // Le compteur n'est tenu que pour un média publié : un brouillon se relance sans limite,
-  // et lui poser un compteur ferait échouer sa première relance après publication.
-  const spend = media.published
-    ? { metadata: withPublishedReprocess(media.metadata) as Prisma.InputJsonObject }
-    : {};
+  /*
+   * Lecture, contrôle et dépense du compteur SOUS VERROU DE LIGNE (CP-SEC de la phase 50).
+   *
+   * En lecture-puis-écriture séparées, deux POST simultanés sur le même média publié en échec
+   * lisaient tous les deux 0, écrivaient tous les deux 1, et enfilaient tous les deux un job :
+   * « une seule relance » devenait « autant qu'on peut en tirer en parallèle ». La même
+   * fenêtre perdait aussi l'écriture concurrente d'un worker sur `metadata`, puisque le
+   * compteur réécrit la colonne JSON entière depuis une lecture périmée.
+   *
+   * `FOR UPDATE` suffit ici (pas besoin de sérialisable) : les deux requêtes visent la même
+   * ligne, la seconde attend la première et relit son compteur déjà dépensé.
+   */
+  const media = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "MediaObject" WHERE id = ${id} FOR UPDATE`;
+    const row = await tx.mediaObject.findUnique({ where: { id } });
+    if (!row) throw notFound('Media not found');
+    if (row.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
+    assertReprocessable(row);
+    // Le compteur n'est tenu que pour un média publié : un brouillon se relance sans limite,
+    // et lui poser un compteur ferait échouer sa première relance après publication.
+    if (row.published) {
+      await tx.mediaObject.update({
+        where: { id },
+        data: { metadata: withPublishedReprocess(row.metadata) as Prisma.InputJsonObject },
+      });
+    }
+    return row;
+  });
+  // Le compteur est déjà dépensé dans la transaction ci-dessus : les écritures qui suivent ne
+  // portent plus que le statut.
+  const spend = {};
 
   const ext = getExtension(media.originalName);
   const jobKind = jobKindFor(media.kind, ext);

@@ -2,7 +2,7 @@
 
 *Probes, metrics, alerts and logs — what to scrape, what to alert on, and what each signal actually means.*
 
-> Updated: 2026-09-01
+> Updated: 2026-09-20
 
 An instance of ReView is two Node processes (`backend` and `worker`) sitting on three stateful
 services (PostgreSQL, MinIO, Redis). Everything below exists to answer three questions in that
@@ -155,36 +155,31 @@ Access: set `METRICS_TOKEN` in the backend environment and scrape with `?token=<
 endpoint is **open**. The frontend nginx does not proxy `/metrics`, and the endpoint is mounted
 *before* the `/api` rate limiter, so it is never throttled — keep it on an internal network.
 
-![Prometheus scrapes the backend exporter, which works; the worker exporter is written but never started, so the review_worker series never exist; and the rules directory is not mounted by the shipped compose, so no alert is loaded.](../assets/infrastructure/observability-wiring.svg)
+![Prometheus scrapes both the backend and the worker exporter, loads its ten alert rules from a mounted directory and feeds the provisioned Grafana dashboard; only the media queue is attached to the worker job counters, and Alertmanager stays optional.](../assets/infrastructure/observability-wiring.svg)
 
-### The worker exporter, and why it is silent
+### The worker exporter, and the one queue it covers
 
-`backend/src/workers/metricsServer.ts` defines a second collection point for the worker
-process — **`worker:9101/metrics`**, no host port — with `review_worker_jobs_total`,
+`backend/src/workers/metricsServer.ts` is a second collection point, for the worker process
+— **`worker:9101/metrics`**, no host port — with `review_worker_jobs_total`,
 `review_worker_job_duration_seconds` (buckets stretched to one hour, because a multi-rendition
 HLS encode is not an HTTP request) and `review_worker_info{version,commit}`.
-`monitoring/prometheus.yml` already declares the `review-worker` scrape job for it.
+`monitoring/prometheus.yml` declares the `review-worker` scrape job for it.
 
-**As shipped, nothing starts that server.** `startWorkerMetricsServer()` and
-`attachWorkerMetrics()` have no caller outside their own test file; the worker entrypoint
-(`dist/workers/ffmpeg.worker.js`) starts six queue consumers and no HTTP listener. Three
-consequences an operator must know before trusting a dashboard:
+The worker entrypoint **starts it**, before the consumers and on purpose: the worker is the
+component you most need to know is alive, and one that dies at startup has to be observable.
+A port already taken does not bring the worker down, and the module logs its own shutdown.
+`up{job="review-worker"}` and `review_worker_info` are therefore real, and `ReviewWorkerDown`
+and `ReviewVersionMismatch` evaluate.
 
-- `up{job="review-worker"}` is permanently `0`, so `ReviewWorkerDown` fires for ever and drowns
-  everything else in the alert list;
-- `review_worker_jobs_total` and `review_worker_info` never exist, so `ReviewWorkerJobFailureRate`
-  and `ReviewVersionMismatch` can never evaluate, and two Grafana panels stay empty;
-- "the worker is alive" remains an *inference* from queue depth — a `waiting` count that climbs
-  while `active` stays at 0.
-
-Until the entrypoint calls `startWorkerMetricsServer()`, either comment out the `review-worker`
-job in `monitoring/prometheus.yml` or silence `ReviewWorkerDown`, and watch the queues instead.
-
-> [!WARNING]
-> The same reading applies to the `spatial-thumb` queue. Media finalisation posts thumbnail jobs
-> for 3D and splat media (`MediaService`), but `startSpatialThumbWorker()` is not called either:
-> the jobs pile up in `waiting` and will trip `ReviewQueueBacklog` on a studio that uploads 3D.
-> They are harmless — the worker never touches media status — but they are not being done.
+> [!IMPORTANT]
+> One limit is left, and it is a reporting limit rather than a blind spot: only the **media**
+> queue is attached to the job counters (`attachWorkerMetrics('media', ffmpegWorker)`).
+> `review_worker_jobs_total` and `review_worker_job_duration_seconds` therefore carry one
+> `queue` label out of seven. The media queue is where nearly all the cost lives — transcoding,
+> HLS, thumbnails, 3D conversions — but a failure rate computed on those series is the media
+> failure rate, not the worker's. The other six consumers start through functions that do not
+> return their worker; attaching them means changing those signatures. Until then, watch
+> `review_queue_jobs{state="failed"}` from the backend exporter, which does cover all seven.
 
 ### Useful queries
 

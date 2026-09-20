@@ -2,7 +2,7 @@
 
 *Everything ReView can do, in one page — with a link to the guide for each of them.*
 
-> Updated: 2026-09-17
+> Updated: 2026-09-20
 
 ReView is a collaborative media review platform for VFX studios, post-production teams and
 creative departments. One instance serves one studio: projects, media, review, tasks,
@@ -93,8 +93,9 @@ every viewer.
 ## Production
 
 - **Hierarchy**: project → (episode) → sequence → shot or asset → task → version → media.
-  Drafts before publication, and a **publication lock** — published content is immutable, and
-  you correct it with a new version.
+  An upload is **visible at once** (a studio can restore the held-back draft step with a
+  setting), and a **publication lock** keeps the delivery itself immutable: non-destructive
+  edits and staging stay open, the delivery is corrected with a new version.
 - **Inherited delivery settings** from studio to project to sequence to shot: resolution,
   framerate, frame ranges.
 - **Kanban** built on your own statuses, grouped into collapsible families, with checklists,

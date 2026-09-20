@@ -298,6 +298,71 @@ A DCC that publishes on an artist's behalf should read the rule before it builds
 naming convention. See [Review decisions & approvals](../user-guide/review-approvals.md#the-brief-and-what-a-studio-can-demand-of-it)
 for the gesture itself.
 
+The same rule now also governs the note that accompanies an **upload**, with its own two
+refusal codes — see [the note that travels with an upload](#the-note-that-travels-with-an-upload).
+
+## Draft mode and the upload note
+
+Two settings decide what happens the moment a file lands. They are edited in the same place,
+*Admin → Studio → Project defaults*, under the **Publication** panel.
+
+**Upload as draft** is off by default, and off means a media is **published as soon as it is
+uploaded**. Publishing stopped being a gesture: it only ever existed to catch a review nobody
+actually performed, and it left deliveries invisible to the very team waiting for them. Turn
+the switch on and the whole two-step machinery comes back — the pending-drafts pill, the
+*My drafts* filter, the *Publish* action — which is the historical behaviour, kept for studios
+that want a held-back step.
+
+| Setting | Key | Default | Effect |
+|---|---|---|---|
+| **Upload as draft** | `draftMode` in `Setting` | `false` | `false`: a media is born published. `true`: it is born a draft and its author publishes it |
+
+The value is stored as the literal string `true` or `false`, and `PUT /api/studio/settings`
+refuses anything else: the `Setting` table holds text only, and `“no”` would be read back as
+*false* without a word of warning. The switch is also published on
+`GET /api/studio/branding`, which is the only channel every account can read — an artist has
+to know whether *Publish* is still a gesture here.
+
+Three consequences follow from a media being published on arrival, and all three are worth
+reading before flipping the switch off on a live studio:
+
+- **The publish lock now applies from the first second**, which is why it carries a written
+  table of exceptions rather than one blanket rule. See
+  [what the publish lock still freezes](transcoding.md#what-the-publish-lock-still-freezes).
+- **A failed transcode would otherwise be a dead end**, so a published media gets exactly one
+  reprocess after a failure (`403 REPROCESS_ONLY_AFTER_FAILURE`, then
+  `403 REPROCESS_ALREADY_RETRIED`).
+- **The mandatory note moved to the upload.** That is the next section.
+
+### The note that travels with an upload
+
+The rule that used to demand a word of explanation when a draft was *published* had nowhere
+left to fire once publishing stopped being a gesture: a studio that had ticked “require a
+brief” would simply have stopped receiving any, with nothing to announce it. It therefore
+applies at **upload finalisation**, the last moment when somebody is still in the act of
+delivering. The panel a deliverer sees is titled *Brief for this upload*.
+
+It is the **same `reviewRequest` rule** as the ReViewer brief above — the same *Require a
+brief* switch and the same *Minimum length* — checked at a second moment, with its own codes:
+
+| Code | Status | Meaning |
+|---|---|---|
+| `UPLOAD_NOTE_REQUIRED` | `400` | The project demands a note and none was written |
+| `UPLOAD_NOTE_TOO_SHORT` | `400` | A note was written, but under the project's minimum |
+
+Two refusals rather than one generic failure, because “there must be one” and “that one is
+too short” do not ask the same correction of the person delivering.
+
+The check sits in a shared library, not in a service, because an upload has **two**
+finalisations: a single file (`POST /api/media/:id/finalize`) and an image sequence
+(`POST /api/media/sequence/:id/complete`). Both take the optional `{ note }` and both apply the
+rule — two copies would have made the sequence the service entrance of a mandatory note.
+
+The note is kept on the media and returned by `GET /api/media/:id` as `uploadNote`, shown to
+everyone. It is what answers “what is expected of me?” when nobody has been assigned yet.
+Whitespace is not a note: the text is measured after trimming, and it is truncated to the same
+maximum as a review brief.
+
 ## Default 3D lighting
 
 A project can define a **default HDRI** for its 3D media in *Project → Settings*: an HDRI from
@@ -353,7 +418,7 @@ reviewers may still tweak it for their own session without changing the saved de
    timeline, will point at the wrong stage until it is fixed — and nobody will report it as a
    bug, they will just review the wrong file.
 5. Set the default start frame (`Setting.default_start_frame`, 1001 out of the box) in
-   *Admin → Studio → Settings* if the show uses another convention.
+   *Admin → Studio → Project defaults* if the show uses another convention.
 6. Only then create the structure: sequences and shots (global manager role required), or
    import them from CSV — see [Project organization](project-organization.md).
 7. Leave the naming convention on `warn` for the first week and read the warnings before

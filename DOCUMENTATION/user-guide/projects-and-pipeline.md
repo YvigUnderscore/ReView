@@ -2,7 +2,7 @@
 
 *The shape of a show in ReView — episodes down to media, the two status vocabularies, and who may change what, where.*
 
-> Updated: 2026-09-08
+> Updated: 2026-09-20
 
 One ReView instance is one studio, and inside it a **project** is one show. Everything a
 production needs to say about that show — how it is broken down, who is on which step, what
@@ -240,13 +240,13 @@ the active tab is carried by `?tab=`. Tabs follow the pipe, from the whole to th
 
 | Tab | Content | Visible to |
 |-----|---------|-----------|
-| **Overview** | counts, and the project's latest published media | everyone |
+| **Overview** | a page of blocks each person arranges for themselves | everyone |
 | **Episodes** | episodes and their sequences | everyone, **only where the level is on** |
 | **Sequences** | the whole-film cut, then one row per sequence | everyone |
 | **Shots** | shot cards grouped by sequence, with a badge counting the project total | everyone |
 | **Assets** | asset cards, with a badge counting the project total | everyone |
 | **Playlists** | the project's dailies playlists | everyone |
-| **Production** | statistics, calendar, Gantt | everyone |
+| **Production** | the shots × departments grid, attention lists, retakes, load, calendar and Gantt | managers |
 | **Members** | project memberships and roles | managers |
 | **Shares** | client share links | managers |
 | **Settings** | inheritance, start frame, format and framerate, numbering, Episode level, departments, file naming rule, default 3D lighting, OCIO colour, storage quota, burn-ins, ShotGrid link | managers |
@@ -255,6 +255,17 @@ the active tab is carried by `?tab=`. Tabs follow the pipe, from the whole to th
 
 **Kanban** and **Board** sit as links in the page header, next to the CSV import/export
 actions.
+
+Two tabs deserve a word. **Overview** is no longer a fixed page: it is a grid of blocks — the
+project's structure, your own tasks, the latest published media, task progress, activity, the
+tasks to handle, what is blocking, retakes — that each person arranges for themselves, on a
+default laid out per role by administrators. The two production blocks only exist for managers,
+because their content does. See
+[Personalization](personalization.md#the-project-overview-block-by-block).
+
+**Production** is reserved to supervisors and administrators of the project, clients included in
+the refusal: it names each person's load, their late work and the tasks nobody has taken. See
+[Production & reporting](production-reporting.md#reading-the-tab).
 
 ### Filters and saved views
 

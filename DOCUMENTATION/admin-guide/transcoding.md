@@ -2,7 +2,7 @@
 
 *The studio-wide HLS ladder, everything the worker derives from one upload, and how the bytes actually reach a player.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 Configured in *Admin → Review contexts → Video* (`/admin/video`). The settings are
 studio-wide and **only an `ADMIN` can read or change them**
@@ -10,8 +10,8 @@ studio-wide and **only an `ADMIN` can read or change them**
 `TRANSCODE_CONFIG_UPDATE`).
 
 Changes apply to **new uploads and reprocesses only**. Existing media keep the renditions
-they already have, and reprocessing is refused on published versions with
-`403 PUBLISHED_LOCKED`.
+they already have, and a **published** media can only be reprocessed after a failure, and
+only once — see [what the publish lock still freezes](#what-the-publish-lock-still-freezes).
 
 ## The HLS ladder
 
@@ -227,9 +227,51 @@ marker), colour `#64748b`, capped at **120 markers** per video.
    designed — higher rungs are still encoding. `metadata.hls.building` tells you whether more
    are coming.
 5. If the job keeps failing on one file, do not fight it: fix the source and upload a new
-   version. Reprocessing a **published** version is refused with `403 PUBLISHED_LOCKED`, by
-   design — see the publication lock in
-   [Media processing](../user-guide/media-processing.md).
+   version. A published media gets **one** retry after a failure, then answers
+   `403 REPROCESS_ALREADY_RETRIED` — see
+   [what the publish lock still freezes](#what-the-publish-lock-still-freezes).
+
+## What the publish lock still freezes
+
+A media is published the moment it is uploaded, unless the studio turned **draft mode** on.
+The Phase 11 rule — published means frozen — would therefore freeze a media at the exact
+moment an artist starts working on it, so the lock was kept and its exceptions written down
+one by one.
+
+The dividing line: a write that **corrects how a delivery reads** is allowed; a write that
+**changes the delivery** under people who have already watched and annotated it is refused.
+To change the delivery there is one road left, a new version.
+
+| Write on a published media | Allowed | Why |
+|---|---|---|
+| Splat edits — mask and subsets | **Yes** | Non-destructive by construction: the original file is never touched, everything is replayed on read for every viewer. Cleaning a splat *is* reviewing a splat |
+| USD scene override | **Yes** | Staging replayed when the viewer loads, exactly like `splatPresentation`, which has been an exception since Phase 11 |
+| USD recomposition (variants, purpose) | **Yes** | It derives a representation from the delivered file; it does not replace it |
+| Version transform | No | It is the ground truth of A/B comparison and of frame-anchored annotations. Moving it afterwards falsifies everything that refers to it |
+| Re-finalising an upload | No | It would rewrite the status, size and pipeline of a media whose content has already been served. A media still `UPLOADING` was never served to anyone, and keeps its own path |
+| Reprocess | Only after a failure, once | Below |
+
+The table is exhaustive by construction: the guard is typed on the list of writes, so adding
+a write to the type forces someone to decide its case rather than letting it fall through to
+a default nobody chose. The **thumbnail** and the **splat or 3D staging**
+(`splatPresentation`) are the two older exceptions and never reach the guard at all: both are
+presentation, and the Phase 11 rule already let them through.
+
+**Reprocess has its own two refusals**, because a generic `403 PUBLISHED_LOCKED` would say
+“locked” where the true answer is either “this media is fine” or “you have already used your
+retry”.
+
+| Code | Meaning |
+|---|---|
+| `403 REPROCESS_ONLY_AFTER_FAILURE` | The media is published and its processing succeeded. Nothing to retry — upload a new version |
+| `403 REPROCESS_ALREADY_RETRIED` | The single retry allowed to a published media has been consumed (counted in `metadata.publishedReprocessCount`) |
+
+> [!IMPORTANT]
+> The one retry exists for a real dead end, not as a courtesy. A media published on upload
+> whose transcode fails would otherwise be dead for good: neither retryable (the lock) nor
+> replaceable in place. One retry absorbs an infrastructure incident. Past that, the failure
+> is in the file, and what is needed is a new version — not another attempt occupying the
+> queue.
 
 ## Use case: cutting encoding cost on a delivery-only studio
 

@@ -2,7 +2,7 @@
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="fig-title">Two surfaces, three credentials, one request path</title>
-  <desc id="fig-desc">Three kinds of caller reach the same Express application. The request crosses the HTTP logger, helmet and CORS, the raw-body ShotGrid receiver, the 2 MB JSON parser, the metrics endpoint and the global rate limiter, then lands on the web API, on the versioned integration API, or on the unauthenticated probes that sit outside /api.</desc>
+  <desc id="fig-desc">Three kinds of caller reach the same Express application. The request crosses the HTTP logger, helmet and CORS, the raw-body ShotGrid receiver, the 2 MB JSON parser, the metrics endpoint and the global rate limiter, then lands on the web API, on the versioned integration API, or on the unauthenticated probes that sit outside /api. A banner records that apiTokenSurface, mounted on /api before every router, refuses an API token anywhere outside /api/v1 with 403 API_TOKEN_V1_ONLY.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -124,9 +124,9 @@
 
   <path class="conn-o" d="M129 448 L129 460" marker-end="url(#arrow)"/>
 
-  <rect class="panel-d" x="24" y="462" width="752" height="46" rx="9"/>
-  <text class="l" x="38" y="484">An API token on /api should get 403 API_TOKEN_V1_ONLY — the guard exists, but is not mounted.</text>
-  <text class="d" x="38" y="500">So an rvk_ token currently reaches /api/projects and /api/admin/*, where its project binding is never checked.</text>
+  <rect class="panel-a" x="24" y="462" width="752" height="46" rx="9"/>
+  <text class="l" x="38" y="484">apiTokenSurface is mounted on /api, before every router: an rvk_ token outside /api/v1 gets 403 API_TOKEN_V1_ONLY.</text>
+  <text class="d" x="38" y="500">Only /api/docs and /api/openapi.json are exempt. Inside /api/v1 the scopes and the project binding then apply.</text>
 
   <text class="d" x="24" y="530">Socket.io lives on /socket.io, same origin, credential in the handshake, Redis adapter shared by every replica.</text>
 </svg>

@@ -2,7 +2,7 @@
 
 *What `validate.sh` and CI check, in what order, and the ratchets that may only ever tighten.*
 
-> Updated: 2026-09-16
+> Updated: 2026-09-20
 
 `scripts/validate.sh` is the single answer to "is this committable?". It is a **protected
 principle** of the repository: it may be extended, never weakened. No skipping a step, no
@@ -50,8 +50,10 @@ The script fails at the first red step, and nothing after it runs.
    checks and the ones a reviewer cannot see.
 2. **i18n — four checks**: catalogue coherence (`check-translations.mjs`: a lost `{variable}`,
    a plural category the language does not distinguish, an orphan key, a glossary term
-   translated); hardcoded UI strings (`check-untranslated.mjs`, ceiling 0); raw translation
-   keys reaching the screen (`check-raw-keys.mjs`, ceiling 0); and **backend messages still
+   translated); hardcoded UI strings (`check-untranslated.mjs`, which reads **both**
+   `frontend/src` and `backend/src` — ceiling 0 on the front, a frozen debt of 330 on the
+   back); raw translation keys reaching the screen (`check-raw-keys.mjs`, ceiling 0); and
+   **backend messages still
    written in French** (`check-backend-english.mjs`), which arrive on screen verbatim,
    including on the public client-share page. Incompleteness of a catalogue is tolerated and
    quantified; incoherence is not. See [Internationalisation](i18n.md).
@@ -116,7 +118,8 @@ and each may move in exactly one direction.
 
 | Check | Unit | Current value | Allowed direction | Declared in |
 |---|---|---|---|---|
-| `check-untranslated.mjs` | Hardcoded UI literals | `0` | Down only | `scripts/check-untranslated.mjs` (`CEILING`) |
+| `check-untranslated.mjs` (`frontend/src`) | Hardcoded UI literals | `0` | Down only | `scripts/check-untranslated.mjs` (`CEILINGS`) |
+| `check-untranslated.mjs` (`backend/src`) | Literals in server code, mostly outside any interface | `330` | Down only | `scripts/check-untranslated.mjs` (`BACKEND_DEBT`) |
 | `check-raw-keys.mjs` | Keys reaching the screen unresolved | `0` | Down only | `scripts/check-raw-keys.mjs` (`CEILING`) |
 | `a11y.names.test.ts` | Form controls with no accessible name | `24` | Down only | `frontend/src/a11y.names.test.ts` |
 | `check-coverage.mjs` | Statements and branches, **per folder** | Unset — the provider is not installed yet | Up only | `scripts/coverage-floors.json` |

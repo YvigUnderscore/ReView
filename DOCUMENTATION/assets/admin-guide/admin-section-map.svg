@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 356" width="800" height="356" role="img" aria-labelledby="asm-title asm-desc">
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-  <title id="asm-title">The twenty-seven sections of the admin area, by group</title>
-  <desc id="asm-desc">Five columns matching the sidebar groups — Studio, Content, Review contexts, Communications, Maintenance — each listing its sections with the key that addresses them. Users and Projects carry an accent tick because they also open a per-entity detail page.</desc>
+  <title id="asm-title">The thirty sections of the admin area, by group</title>
+  <desc id="asm-desc">Five columns matching the sidebar groups — Studio, Content, Review contexts, Communications, Maintenance — each listing its sections with the key that addresses them. Users and Projects carry an accent tick because they also open a per-entity detail page. Studio holds seven sections, Content, Review contexts and Communications six each, Maintenance five.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -36,7 +36,7 @@
 
   <rect class="bg" x="0" y="0" width="800" height="356" rx="10"/>
 
-  <text class="d" x="16" y="28">TWENTY-SEVEN SECTIONS, FIVE GROUPS, IN SIDEBAR ORDER</text>
+  <text class="d" x="16" y="28">THIRTY SECTIONS, FIVE GROUPS, IN SIDEBAR ORDER</text>
 
   <!-- Studio -->
   <text class="a" x="16" y="48">STUDIO</text>
@@ -51,30 +51,32 @@
   <text class="m" x="27" y="187">login-appearance</text>
   <text class="l" x="27" y="206">System</text>
   <text class="m" x="27" y="219">system</text>
-  <text class="l" x="27" y="238">Settings</text>
+  <text class="l" x="27" y="238">Studio identity</text>
   <text class="m" x="27" y="251">settings</text>
   <text class="l" x="27" y="270">Project defaults</text>
   <text class="m" x="27" y="283">defaults</text>
 
   <!-- Content -->
   <text class="a" x="172" y="48">CONTENT</text>
-  <rect class="panel" x="172" y="56" width="144" height="172" rx="9"/>
+  <rect class="panel" x="172" y="56" width="144" height="204" rx="9"/>
   <rect class="head-a" x="177" y="69" width="3" height="20" rx="1.5"/>
   <rect class="head-a" x="177" y="101" width="3" height="20" rx="1.5"/>
-  <text class="l" x="186" y="78">Users</text>
-  <text class="m" x="186" y="91">users</text>
-  <text class="l" x="186" y="110">Projects</text>
-  <text class="m" x="186" y="123">projects</text>
+  <text class="l" x="183" y="78">Users</text>
+  <text class="m" x="183" y="91">users</text>
+  <text class="l" x="183" y="110">Projects</text>
+  <text class="m" x="183" y="123">projects</text>
   <text class="l" x="183" y="142">Versions</text>
   <text class="m" x="183" y="155">versions</text>
   <text class="l" x="183" y="174">Comments</text>
   <text class="m" x="183" y="187">comments</text>
   <text class="l" x="183" y="206">Storage</text>
   <text class="m" x="183" y="219">storage</text>
+  <text class="l" x="183" y="238">Hidden elements</text>
+  <text class="m" x="183" y="251">visibility</text>
 
-  <!-- Review contexts -->
+  <!-- Review Contexts -->
   <text class="a" x="328" y="48">REVIEW CONTEXTS</text>
-  <rect class="panel" x="328" y="56" width="144" height="172" rx="9"/>
+  <rect class="panel" x="328" y="56" width="144" height="204" rx="9"/>
   <text class="l" x="339" y="78">3D &amp; Splat</text>
   <text class="m" x="339" y="91">hdri</text>
   <text class="l" x="339" y="110">Colour (OCIO)</text>
@@ -85,10 +87,12 @@
   <text class="m" x="339" y="187">distribution</text>
   <text class="l" x="339" y="206">Statuses</text>
   <text class="m" x="339" y="219">review-statuses</text>
+  <text class="l" x="339" y="238">Live review room</text>
+  <text class="m" x="339" y="251">live</text>
 
   <!-- Communications -->
   <text class="a" x="484" y="48">COMMUNICATIONS</text>
-  <rect class="panel" x="484" y="56" width="144" height="172" rx="9"/>
+  <rect class="panel" x="484" y="56" width="144" height="204" rx="9"/>
   <text class="l" x="495" y="78">Announcements</text>
   <text class="m" x="495" y="91">announcements</text>
   <text class="l" x="495" y="110">SMTP</text>
@@ -99,18 +103,20 @@
   <text class="m" x="495" y="187">service-tokens</text>
   <text class="l" x="495" y="206">ShotGrid</text>
   <text class="m" x="495" y="219">shotgrid</text>
+  <text class="l" x="495" y="238">Team chat</text>
+  <text class="m" x="495" y="251">chat</text>
 
   <!-- Maintenance -->
   <text class="a" x="640" y="48">MAINTENANCE</text>
   <rect class="panel" x="640" y="56" width="144" height="172" rx="9"/>
-  <text class="l" x="651" y="78">Jobs</text>
-  <text class="m" x="651" y="91">jobs</text>
-  <text class="l" x="651" y="110">Trash</text>
-  <text class="m" x="651" y="123">trash</text>
-  <text class="l" x="651" y="142">Retention</text>
-  <text class="m" x="651" y="155">retention</text>
-  <text class="l" x="651" y="174">Audit</text>
-  <text class="m" x="651" y="187">audit</text>
+  <text class="l" x="651" y="78">Updates</text>
+  <text class="m" x="651" y="91">updates</text>
+  <text class="l" x="651" y="110">Jobs</text>
+  <text class="m" x="651" y="123">jobs</text>
+  <text class="l" x="651" y="142">Trash</text>
+  <text class="m" x="651" y="155">trash</text>
+  <text class="l" x="651" y="174">Retention</text>
+  <text class="m" x="651" y="187">retention</text>
   <text class="l" x="651" y="206">Media access</text>
   <text class="m" x="651" y="219">media-access</text>
 

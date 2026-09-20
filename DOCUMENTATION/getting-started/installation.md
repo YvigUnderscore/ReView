@@ -2,7 +2,7 @@
 
 *From `git clone` to a running studio: the installer, host ports, every environment variable, and the guards a production instance must pass.*
 
-> Updated: 2026-09-16
+> Updated: 2026-09-20
 
 ReView ships as a Docker Compose stack, and one instance is one studio. Database, object
 storage, job queue, API, media worker and web front all come up from a single
@@ -434,7 +434,7 @@ a new frontend image refreshes the in-app docs as well.
 
 ReView is AGPL-3.0-or-later. Running it unmodified requires nothing from you. If you
 **modify** it, section 13 obliges you to offer your sources to everyone who uses the instance
-over the network: publish your fork and set its URL in **Admin → Settings → "Code source
+over the network: publish your fork and set its URL in **Admin → Studio → Studio identity → "Code source
 (AGPL §13)"** (setting key `studio_source_url`; it falls back to the upstream repository).
 Republishing the Docker images also redistributes FFmpeg and, when built with
 `INSTALL_USD_TOOLS=1`, Blender — both GPL-2.0-or-later.

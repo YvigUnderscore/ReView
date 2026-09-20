@@ -2,7 +2,7 @@
 
 *The controls behind every request — tokens, roles, presigned bytes, outbound guards, limits and retention.*
 
-> Updated: 2026-09-16
+> Updated: 2026-09-20
 
 ReView is a single-tenant application: one instance is one studio, and everything inside it is
 somebody's unreleased work. The model below is built on that assumption. There is no
@@ -65,6 +65,15 @@ The playback token has its own mirrored gate (`lib/mediaToken` accepts only
 directions are closed: a playback token cannot call the API, and an access token cannot fetch a
 rendition playlist. See [HLS delivery](hls-delivery.md).
 
+Opaque API tokens (`rvk_` + 40 hex) are not JWTs and do not pass through that gate at all. They
+have one of their own: `apiTokenSurface`, mounted on `/api` **before every router**, refuses any
+`rvk_` bearer that is not aiming at `/api/v1` with `403 API_TOKEN_V1_ONLY`, `/api/docs` and
+`/api/openapi.json` excepted. It is a single mount rather than a per-route annotation for the
+reason that matters here: a domain added next month inherits the rule instead of forgetting it.
+Without it, the internal API accepted a token on any route — and consults neither the scopes nor
+the project binding, so a token bound to one show read and wrote every show as soon as it aimed
+at `/api`. See [Authentication & API access](../api/authentication.md#which-surface-a-token-opens).
+
 ### Public surfaces, on purpose
 
 Everything else requires a JWT or an API token. These do not:
@@ -101,6 +110,27 @@ That last line is the important one, and it replaced a duplicated global test th
 backwards: an artist promoted supervisor on one project could not publish or decide there, and an
 artist demoted to client on a project kept the right to contribute. Both are now decided by the
 effective role.
+
+### A department list is an authorization input
+
+Under the studio setting `task_department_policy = 'department'`, the departments a person holds
+decide which tasks they may write: `taskWriteContext` builds `userDepartmentIds` from that
+relation and `canWriteTask` grants write on any task whose department is in it. The list is not
+decoration.
+
+That is why `PUT /api/users/me/departments` was **removed** in phase 50. It let any authenticated
+account set its own department list, with no scope check — so a non-manager could grant itself
+every department and, under that policy, write access to every departmented task in every project
+it could see. Department ids are readable by any authenticated account, so there was nothing to
+guess. The route had no caller at all: no screen, no client, no test.
+
+Two paths remain, both checked:
+
+- `PUT /api/users/:id/departments` — `ADMIN` only, studio-wide.
+- `PATCH /api/projects/:projectId/members/:userId/departments` — a project manager, bounded to
+  that project. It takes named `add`/`remove` lists and validates membership of every id **in
+  both directions**, because the studio-wide service replaces the whole list across all projects
+  and would otherwise erase departments a person holds elsewhere.
 
 - **RBAC middleware on every route**, plus **project-membership filtering on every read** —
   cross-project ids behave as not-found, never as `403` (no IDOR).
@@ -203,6 +233,21 @@ guarded:
 - The ShotGrid client refuses non-HTTPS and non-public addresses. The single escape hatch,
   `SHOTGRID_INSECURE_HOSTS`, exists for the development simulator and is logged as a warning at
   **every** boot so it cannot be forgotten in production.
+- The **Slack and Discord** webhooks go through the same gate. They used to be the last two
+  bare `fetch` calls in the backend, protected only by a host allow-list that vets the URL an
+  administrator typed — which says nothing about where the name resolves, and nothing about a
+  redirect. They now carry the resolved-address check, the refusal to follow a redirect, a 5 s
+  header timeout and a byte cap on the reply. The comment path had no timeout at all: a relay
+  that accepted the connection and then went quiet held a socket and a message context for
+  good, once per notification, never reaching the `catch`.
+- **Web Push endpoints** are checked before being stored (`400 PUSH_ENDPOINT_REFUSED`) and
+  again at send time, because a row may predate the guard and a public name can start
+  resolving elsewhere.
+
+Every one of those paths calls `lib/safeFetch.ts`, which is the one gate: resolved-address
+check, `redirect: 'manual'` with each followed hop re-checked, a header timeout that is
+deliberately lifted once the body streams, and a cap on both the announced and the actual
+byte count. The only direct `fetch` left in the tree is inside that library.
 
 ## Rate limiting
 

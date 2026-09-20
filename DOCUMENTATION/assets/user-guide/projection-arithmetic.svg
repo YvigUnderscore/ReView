@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 396" width="800" height="396" role="img" aria-labelledby="fig-title fig-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" width="800" height="340" role="img" aria-labelledby="projection-title projection-desc">
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-  <title id="fig-title">How the projected end date is built, and why it is never shown alone</title>
-  <desc id="fig-desc">Published media are counted week by week over an observation window of 4, 8, 13 or 26 ISO weeks, empty weeks included. The average gives a rate in media per week; the tasks that are not done give a remainder. The projected end is now plus the ceiling of remaining divided by the rate, times seven, in days. With nothing remaining or a rate of zero, no date is invented.</desc>
+  <title id="projection-title">Two weekly series, one unit, and why the projected end is never shown alone</title>
+  <desc id="projection-desc">The tab counts two separate weekly series over the observation window: media published per week, which is the output drawn on screen, and tasks crossed per week, which is the velocity. Only the velocity divides the remainder, because the remainder counts tasks too. The projected end is now plus the ceiling of remaining divided by the rate, times seven, in days. When there is nothing left, nothing crossed or nothing counted at all, the panel says which of the three it is instead of inventing a date.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -54,54 +54,39 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="800" height="396" rx="10"/>
+  <rect class="bg" x="0" y="0" width="800" height="340" rx="10"/>
 
   <text class="d" x="24" y="30">HOW THE PROJECTED END DATE IS BUILT</text>
 
-  <!-- La fenêtre d'observation, semaine par semaine -->
-  <text class="d" x="231" y="88" text-anchor="middle">observation window — 4, 8, 13 or 26 ISO weeks (default 8)</text>
-  <path class="conn" d="M60 104 L60 96 L402 96 L402 104"/>
+  <rect class="panel" x="24" y="48" width="330" height="58" rx="9"/>
+  <text class="t" x="40" y="72">Media published per week</text>
+  <text class="d" x="40" y="90">output — the bars drawn on screen</text>
 
-  <rect class="panel-a" x="60" y="162" width="34" height="38" rx="3"/>
-  <rect class="panel-a" x="104" y="176" width="34" height="24" rx="3"/>
-  <text class="d" x="165" y="194" text-anchor="middle">0</text>
-  <rect class="panel-a" x="192" y="168" width="34" height="32" rx="3"/>
-  <rect class="panel-a" x="236" y="154" width="34" height="46" rx="3"/>
-  <rect class="panel-a" x="280" y="184" width="34" height="16" rx="3"/>
-  <rect class="panel-a" x="324" y="158" width="34" height="42" rx="3"/>
-  <rect class="panel-a" x="368" y="172" width="34" height="28" rx="3"/>
+  <rect class="panel-a" x="24" y="118" width="330" height="58" rx="9"/>
+  <text class="t" x="40" y="142">Tasks crossed per week</text>
+  <text class="d" x="40" y="160">velocity — first approval on the task</text>
 
-  <path class="conn" d="M52 200 L440 200"/>
-  <text class="d" x="262" y="216" text-anchor="middle">published media, week by week — an empty week stays an empty week</text>
-  <path class="conn-o" d="M60 224 L60 246" marker-end="url(#arrow)"/>
+  <text class="d no" x="40" y="198">The two series are never divided by one another.</text>
 
-  <!-- Le présent -->
-  <text class="a" x="430" y="52" text-anchor="middle">now</text>
-  <path class="conn-a" d="M430 60 L430 312"/>
+  <rect class="panel" x="24" y="212" width="330" height="58" rx="9"/>
+  <text class="t" x="40" y="236">remaining = tasks not done</text>
+  <text class="d" x="40" y="254">inactive statuses excluded</text>
 
-  <!-- Les deux termes du calcul -->
-  <rect class="panel" x="24" y="246" width="276" height="46" rx="9"/>
-  <text class="t" x="44" y="268">rate = media ÷ weeks</text>
-  <text class="d" x="44" y="284">the bars above, averaged</text>
+  <path class="conn-a" d="M354 147 L372 147 L372 194"/>
+  <path class="conn" d="M354 241 L372 241 L372 194"/>
+  <path class="conn-a" d="M372 194 L614 194" marker-end="url(#arrow-a)"/>
+  <text class="m" x="400" y="188">now + ceil(remaining ÷ rate × 7)</text>
 
-  <rect class="panel" x="24" y="302" width="276" height="46" rx="9"/>
-  <text class="t" x="44" y="324">remaining = tasks not done</text>
-  <text class="d" x="44" y="340">inactive statuses excluded</text>
+  <rect class="panel-d" x="420" y="48" width="356" height="110" rx="9"/>
+  <text class="t" x="440" y="72">No date — and it says which</text>
+  <text class="d" x="440" y="96">nothing left to do</text>
+  <text class="d" x="440" y="116">no task crossed over the window</text>
+  <text class="d" x="440" y="136">nothing counted over the window</text>
 
-  <path class="conn" d="M300 269 L380 269 L380 301"/>
-  <path class="conn" d="M300 325 L380 325 L380 301"/>
-  <path class="conn" d="M380 301 L430 301"/>
-  <path class="conn-a" d="M430 301 L640 301" marker-end="url(#arrow-a)"/>
-  <text class="m" x="515" y="320" text-anchor="middle">now + ceil(remaining ÷ rate × 7) days</text>
+  <rect class="panel-a" x="620" y="170" width="156" height="48" rx="9"/>
+  <text class="t" x="698" y="192" text-anchor="middle">Projected end</text>
+  <text class="d" x="698" y="208" text-anchor="middle">at the current pace</text>
 
-  <rect class="panel-a" x="640" y="278" width="136" height="46" rx="9"/>
-  <text class="t" x="708" y="300" text-anchor="middle">Projected end</text>
-  <text class="d" x="708" y="316" text-anchor="middle">a date, not a promise</text>
-
-  <!-- Les deux cas où aucune date n'est inventée -->
-  <rect class="panel-d" x="470" y="180" width="306" height="46" rx="9"/>
-  <text class="t" x="490" y="202">remaining = 0, or rate = 0</text>
-  <text class="d" x="490" y="218">Not enough pace to project an end</text>
-
-  <text class="d" x="400" y="372" text-anchor="middle">The rate counts media and the remainder counts tasks: read the date as an order of magnitude, never without the rate.</text>
+  <text class="d" x="400" y="298" text-anchor="middle">The remainder counts tasks, so the rate has to count tasks as well.</text>
+  <text class="d" x="400" y="320" text-anchor="middle">Observation window: 4, 8, 13 or 26 ISO weeks starting Monday, empty weeks kept.</text>
 </svg>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { MouseEvent, RefObject } from 'react';
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Highlighter } from 'lucide-react';
 import { intlLocale, useT } from '../../i18n';
 import type { DocsPage } from './docsManifest';
 
@@ -54,10 +54,26 @@ function PagerLink({
   );
 }
 
+/**
+ * Ce que la recherche a trouvé **dans cette page** — la contrepartie du surlignage : sans
+ * ce compte, une page ouverte sans aucune occurrence visible à l'écran laisse croire que le
+ * surlignage ne marche pas.
+ */
+function HitCount({ hits }: { hits: number }) {
+  const t = useT();
+  return (
+    <p className="mt-3 flex items-center gap-1.5 text-2xs text-muted-foreground">
+      <Highlighter size={12} aria-hidden="true" />
+      {hits > 0 ? t('docs.hitsOnPage', { count: hits }) : t('docs.noHitOnPage')}
+    </p>
+  );
+}
+
 export default function DocsArticle({
   page,
   sectionLabel,
   html,
+  hits,
   notFound,
   previous,
   next,
@@ -68,6 +84,8 @@ export default function DocsArticle({
   page?: DocsPage;
   sectionLabel: string;
   html: string;
+  /** Occurrences surlignées dans la page, `null` quand aucune recherche n'est en cours. */
+  hits: number | null;
   notFound: boolean;
   previous?: DocsPage;
   next?: DocsPage;
@@ -92,16 +110,18 @@ export default function DocsArticle({
       {notFound ? (
         <p className="p-6 text-sm text-muted-foreground">{t('docs.pageNotFound')}</p>
       ) : (
-        <div className="mx-auto max-w-3xl px-8 py-6">
-          <header className="mb-6 border-b border-border pb-5">
-            <p className="text-2xs font-semibold section-label tracking-wider text-muted-foreground">
-              {sectionLabel}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+        <div className="mx-auto max-w-3xl px-8 py-8">
+          <header className="mb-8 border-b border-border pb-6">
+            {sectionLabel ? (
+              <p className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-2xs font-semibold section-label tracking-wider text-muted-foreground">
+                {sectionLabel}
+              </p>
+            ) : null}
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
               {page?.title ?? ''}
             </h1>
             {page?.summary ? (
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{page.summary}</p>
+              <p className="mt-2 text-base leading-7 text-muted-foreground">{page.summary}</p>
             ) : null}
             {updated ? (
               <p className="mt-3 flex items-center gap-1.5 text-2xs text-muted-foreground">
@@ -109,10 +129,11 @@ export default function DocsArticle({
                 {t('docs.updated', { date: updated })}
               </p>
             ) : null}
+            {hits !== null ? <HitCount hits={hits} /> : null}
           </header>
 
           <article
-            className="prose-doc doc-article text-sm text-card-foreground"
+            className="prose-doc doc-article text-foreground"
             // Markdown du repo ; le HTML brut est échappé dans renderDocHtml.
             dangerouslySetInnerHTML={{ __html: html }}
           />

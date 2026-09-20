@@ -19,7 +19,24 @@
  *      titrées sans identifiant générique (lecteur d'écran), et adaptées au thème sombre.
  *      Une figure lisible en clair seulement est illisible pour la moitié des lecteurs,
  *      le mode sombre étant le défaut de ReView.
- *   5. **Orphelines** — une figure que plus aucune page ne cite est du poids mort.
+ *   5. **Orphelines** — figure ou rendu que plus aucune page ne cite est du poids mort.
+ *   6. **Rendus** — une animation (`.mp4`, `.webm`, `.gif`) tient là où une figure fixe
+ *      échoue : ce qui se passe *dans le temps*. Elle obéit aux mêmes règles qu'une figure
+ *      — rangée dans `assets/<section>/`, citée avec une légende, jamais orpheline — plus
+ *      deux qui lui sont propres : le contenu doit correspondre à l'extension (un fichier
+ *      renommé ne se lit nulle part) et le poids doit rester borné, `DOCUMENTATION/` étant
+ *      versionné : un binaire lourd y reste pour toujours.
+ *
+ * ⚠ D'OÙ VIENNENT LES RENDUS, ET POURQUOI ILS NE SE REFONT PAS. Ils sortent de Remotion,
+ * dans le dossier `motion/` à la racine. Remotion n'est pas un logiciel libre (licence
+ * maison, payante au-delà de trois salariés) et ReView est AGPL-3.0-or-later : `motion/`
+ * est donc **entièrement gitignoré**. Un rendu entre dans le dépôt en étant COPIÉ dans
+ * `DOCUMENTATION/assets/<section>/`, où ce contrôle le surveille comme une figure ; le binaire
+ * sort, jamais la composition qui l'a produit. CONSÉQUENCE ASSUMÉE, décidée par l'utilisateur le 2026-09-20 : **un rendu n'est
+ * pas re-générable par quelqu'un d'autre.** Qui n'a pas le dossier `motion/` ne peut ni le
+ * corriger ni le rejouer à une autre résolution ; il ne peut que le remplacer. Préférer donc
+ * une figure SVG partout où le temps n'est pas le sujet, et réserver le rendu aux cas où il
+ * l'est. Cf. `motion/README.md` (local) et les règles Remotion de `.gitignore`.
  *
  * Usage : node scripts/check-docs.mjs [--list]
  */
@@ -33,6 +50,34 @@ const ROOT = 'DOCUMENTATION';
 
 /** Pages dispensées de préambule : elles ne sont pas servies par la page /docs. */
 const NO_PREAMBLE = new Set(['CHANGELOG.md']);
+
+/**
+ * Rendus acceptés à côté des figures SVG, avec le motif d'octets qui prouve le type. Un
+ * `.mp4` qui n'est pas un MP4 (fichier renommé, sortie tronquée, marqueur LFS resté en
+ * place) s'affiche en carré vide : personne ne le signale, exactement comme pour une image
+ * manquante — sauf que le fichier, lui, existe. On lit donc l'en-tête.
+ */
+export const RENDER_SIGNATURES = {
+  // ISO-BMFF : taille de boîte sur 4 octets, puis le type de boîte « ftyp ».
+  '.mp4': (b) => b.length > 12 && b.subarray(4, 8).toString('latin1') === 'ftyp',
+  // Matroska/WebM : en-tête EBML.
+  '.webm': (b) => b.length > 4 && b.subarray(0, 4).toString('hex') === '1a45dfa3',
+  '.gif': (b) =>
+    b
+      .subarray(0, 6)
+      .toString('latin1')
+      .match(/^GIF8[79]a$/) !== null,
+};
+
+export const RENDER_EXT = Object.keys(RENDER_SIGNATURES);
+
+/**
+ * Plafond de poids d'un rendu. `DOCUMENTATION/` est versionné : un binaire y entre pour
+ * toujours, chaque révision s'ajoutant à la précédente dans l'historique. Quatre mébioctets
+ * laissent largement de quoi tenir une dizaine de secondes en 720p à CRF serré ; au-delà,
+ * c'est que l'animation est trop longue ou trop grande, pas que la limite est trop basse.
+ */
+export const RENDER_MAX_BYTES = 4 * 1024 * 1024;
 
 /**
  * Ancre d'un titre — même forme que `frontend/src/v2/pages/docs/docsRender.ts`. Les deux
@@ -155,12 +200,44 @@ export function figureProblems(svg) {
   return problems;
 }
 
-/** Tous les fichiers d'une extension sous un dossier, chemins relatifs à `DOCUMENTATION/`. */
+/**
+ * Conventions d'un rendu. Ce qu'on peut affirmer d'un binaire sans le décoder : qu'il est
+ * bien du type qu'annonce son nom, et qu'il tient dans le budget du dépôt.
+ *
+ * Ce qui reste hors de portée d'ici — et qui incombe donc à qui produit le rendu : la
+ * lisibilité. Un rendu est un fichier de pixels, il n'a pas de variante sombre ; il se pose
+ * sur une page qui, elle, bascule. La règle est donc d'écrire l'animation dans la palette
+ * SOMBRE de `documentation-style.md`, la seule qui reste lisible sur les deux fonds.
+ */
+export function renderProblems(bytes, file) {
+  const problems = [];
+  const ext = path.extname(file).toLowerCase();
+  const signature = RENDER_SIGNATURES[ext];
+  if (!signature) return [`extension de rendu inconnue (attendu : ${RENDER_EXT.join(', ')})`];
+
+  if (bytes.length === 0) return ['fichier vide (rendu interrompu ?)'];
+  if (!signature(bytes))
+    problems.push(
+      `le contenu n’est pas un ${ext.slice(1).toUpperCase()} — fichier renommé, tronqué, ou pointeur non résolu`,
+    );
+  if (bytes.length > RENDER_MAX_BYTES)
+    problems.push(
+      `${(bytes.length / 1024 / 1024).toFixed(1)} Mio > ${RENDER_MAX_BYTES / 1024 / 1024} Mio — ` +
+        'raccourcir ou réduire (DOCUMENTATION/ est versionné : le poids y reste pour toujours)',
+    );
+  return problems;
+}
+
+/**
+ * Tous les fichiers portant l'une des extensions données sous un dossier, chemins relatifs
+ * à `DOCUMENTATION/`.
+ */
 function* files(dir, ext) {
+  const wanted = Array.isArray(ext) ? ext : [ext];
   for (const entry of readdirSync(path.join(repoRoot, ROOT, dir), { withFileTypes: true })) {
     const rel = dir ? `${dir}/${entry.name}` : entry.name;
     if (entry.isDirectory()) yield* files(rel, ext);
-    else if (entry.name.endsWith(ext)) yield rel;
+    else if (wanted.some((e) => entry.name.toLowerCase().endsWith(e))) yield rel;
   }
 }
 
@@ -180,6 +257,7 @@ function main() {
   const problems = [];
   const pages = [...files('', '.md')];
   const figures = new Set([...files('assets', '.svg')]);
+  const renders = new Set([...files('assets', RENDER_EXT)]);
   const used = new Set();
   const anchorsOf = new Map(
     pages.map((p) => [p, headingAnchors(readFileSync(path.join(repoRoot, ROOT, p), 'utf8'))]),
@@ -209,6 +287,13 @@ function main() {
           add(`ancre introuvable dans la page : #${anchor}`);
         continue;
       }
+      if (RENDER_EXT.includes(path.extname(target).toLowerCase())) {
+        // Cité comme lien, le rendu n'a pas de légende — or la légende est ce qui reste
+        // quand l'animation ne se lit pas (impression, export, lecteur sans codec).
+        add(`rendu cité comme lien : ${ref.target} — l’écrire « ![légende](…) »`);
+        used.add(resolveFrom(page, target));
+        continue;
+      }
       if (!target.endsWith('.md')) continue; // fichier joint (CSV d'exemple…)
       const resolved = resolveFrom(page, target);
       if (!exists(resolved)) {
@@ -225,9 +310,19 @@ function main() {
     if (!used.has(figure)) problems.push(`${ROOT}/${figure}: figure orpheline — aucune page ne la cite`);
   }
 
+  for (const render of renders) {
+    const bytes = readFileSync(path.join(repoRoot, ROOT, render));
+    for (const problem of renderProblems(bytes, render)) problems.push(`${ROOT}/${render}: ${problem}`);
+    if (!used.has(render))
+      problems.push(
+        `${ROOT}/${render}: rendu orphelin — aucune page ne le cite, et sa composition n’est pas ` +
+          'versionnée : personne ne le refera. Le citer, ou le supprimer.',
+      );
+  }
+
   if (problems.length === 0) {
     console.log(
-      `\x1b[0;32m✓ Documentation : ${pages.length} page(s), ${figures.size} figure(s) — préambules, liens, images et figures conformes\x1b[0m`,
+      `\x1b[0;32m✓ Documentation : ${pages.length} page(s), ${figures.size} figure(s), ${renders.size} rendu(s) — préambules, liens, images, figures et rendus conformes\x1b[0m`,
     );
     return;
   }

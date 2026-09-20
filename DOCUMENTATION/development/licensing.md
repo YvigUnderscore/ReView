@@ -2,7 +2,7 @@
 
 *What the AGPL asks when you run, modify or redistribute ReView — and what the tooling actually enforces.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 ReView is free software distributed under the **GNU Affero General Public License, version 3
 or later** (`AGPL-3.0-or-later`). The full text is in [LICENSE](../../LICENSE) at the
@@ -64,7 +64,7 @@ You must offer the corresponding source of *your* version to everyone who uses y
 — your employees, your clients on share links, everyone.
 
 1. Publish your fork (a public Git repository is the customary way).
-2. Set **Admin → Settings → "Source code (AGPL §13)"** to your repository URL.
+2. Set **Admin → Studio → Studio identity → "Source code (AGPL §13)"** to your repository URL.
 
 That setting is `studio_source_url`. It feeds the public `GET /api/studio/branding` endpoint
 and, through it, every "Source code" link in the interface, plus `GET /api/version` and the

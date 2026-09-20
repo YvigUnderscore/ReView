@@ -3,7 +3,6 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  filterSections,
   isInternalDocHref,
   neighbours,
   resolveDocHref,
@@ -57,24 +56,8 @@ const sections: DocsSection[] = [
   { dir: 'api', label: 'Api', pages: [page('api/errors.md', 'Error handling')] },
 ];
 
-describe('filterSections', () => {
-  it('sans requête, rend tout', () => {
-    expect(filterSections(sections, '  ')).toEqual(sections);
-  });
-  it('filtre par titre (insensible à la casse) et retire les sections vides', () => {
-    const out = filterSections(sections, 'VIDEO');
-    expect(out).toHaveLength(1);
-    expect(out[0].pages.map((p) => p.path)).toEqual(['user-guide/review-video.md']);
-  });
-  it('filtre aussi par chemin', () => {
-    const out = filterSections(sections, 'errors');
-    expect(out.map((s) => s.dir)).toEqual(['api']);
-  });
-  it('cherche jusque dans le sous-titre — c’est là que vivent les mots du lecteur', () => {
-    const out = filterSections(sections, 'comparison');
-    expect(out.flatMap((s) => s.pages.map((p) => p.path))).toEqual(['user-guide/review-video.md']);
-  });
-});
+// La recherche (filtre du sommaire et classement de la palette) vit dans `docsSearch` :
+// ses tests sont dans `docsSearch.test.ts`.
 
 describe('sectionOf', () => {
   it('rend la section qui porte la page', () => {

@@ -23,6 +23,7 @@ import {
 } from '../lib/commentAttachments';
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
+import { assertAssignable } from './EntityAssigneeService';
 
 /**
  * Logique métier des commentaires de review (fil, enrichissement auteur/pièces jointes,
@@ -565,6 +566,11 @@ export async function update(user: SessionUser, projectId: number, id: number, b
       : filterAttachments(body.attachments, [ownAttachmentPrefix(user.id), shotgridAttachmentPrefix(id)]);
   if ((body.isVisibleToClient !== undefined || body.assigneeId !== undefined) && !manager)
     throw forbidden('Supervisors and administrators only');
+  // Même garde que pour une tâche (`EntityAssigneeService`) : l'identifiant vient du client,
+  // et rien n'obligeait qu'il désigne quelqu'un de CE projet. Sans elle, un gestionnaire
+  // confiait une note à un compte étranger au projet — désactivé, de service, ou membre d'un
+  // autre projet —, qui en recevait la notification.
+  if (body.assigneeId != null) await assertAssignable(projectId, [body.assigneeId]);
   const resolution = resolutionOf(body.state, body.isResolved);
   if (resolution.isResolved !== undefined && !manager && !isAuthor)
     throw forbidden('You cannot resolve this comment');

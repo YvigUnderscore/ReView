@@ -2,7 +2,7 @@
 
 *Every way to prove who you are — sessions, 2FA, SSO, API tokens, share links, webhooks — and exactly what each one opens.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-20
 
 Three credentials exist, and they are not interchangeable. A human gets a **JWT session**, a
 machine gets an **API token**, a client outside the studio gets a **share session**. They
@@ -373,23 +373,41 @@ enforced first, and the scope only narrows what is left.
 
 ### Which surface a token opens
 
-The design is that an API token opens `/api/v1` and nothing else. Scopes (`requireScope`)
-and project binding (`assertTokenProject`) are posted route by route, and only v1 routes
-post them; `/api` is not annotated per domain and cannot enforce either.
+An API token opens `/api/v1` and nothing else, and the server is the one enforcing it.
+Scopes (`requireScope`) and project binding (`assertTokenProject`) are posted route by
+route, and only v1 routes post them; `/api` is not annotated per domain and could never
+enforce either. So the boundary is drawn one level up, by `apiTokenSurface`.
 
 ```bash
-curl -s -H "Authorization: Bearer rvk_…" "$REVIEW/api/v1/projects"   # this is the way
+curl -s -H "Authorization: Bearer rvk_…" "$REVIEW/api/v1/projects"   # 200
+curl -s -H "Authorization: Bearer rvk_…" "$REVIEW/api/projects"      # 403 API_TOKEN_V1_ONLY
 ```
 
-> [!WARNING]
-> The guard that would enforce this — `apiTokenSurface`, which answers
-> `403 API_TOKEN_V1_ONLY` — exists and is unit-tested, but **`createApp()` never mounts
-> it**. Today `curl -H "Authorization: Bearer rvk_…" "$REVIEW/api/projects"` succeeds, and
-> so do `/api/media/:id/url` and `/api/admin/*`. Worse, a token bound to project 3 reads and
-> writes **every** project as soon as it aims at `/api`, because the binding is only checked
-> inside v1. Until the middleware is mounted, treat the restriction as a rule you keep, not
-> one the server keeps for you: point every integration at `/api/v1`, and do not hand an
-> `rvk_` token to code you have not read.
+`apiTokenSurface` is mounted on `/api` in `createApp()`, **before every business router**
+and before `authenticate`. It reads the `Authorization` header itself, so any bearer
+carrying the `rvk_` prefix that does not target `/api/v1` is refused with
+`403 API_TOKEN_V1_ONLY`. It validates nothing — a forged or revoked token is still rejected
+further down — it only decides which surface the caller may aim at. Being a single mount
+rather than a per-route annotation is the point: a domain added next month inherits the
+rule instead of forgetting it.
+
+| Path a token asks for | Answer |
+|-----------------------|--------|
+| `/api/v1`, `/api/v1/…` | Passed through to the v1 routers, where scopes and the project binding apply |
+| `/api/docs`, `/api/openapi.json` | Passed through — the same bytes are served to everyone, credential or none |
+| Anything else under `/api`, including `/api/health` and `/api/version` | `403 API_TOKEN_V1_ONLY` |
+
+A trailing slash and an absolute request target (`GET http://host/api/v1/…`, legal in
+HTTP/1.1) are normalised before the comparison, and anything the guard cannot parse falls to
+the refusal: it is closed by default.
+
+> [!IMPORTANT]
+> This closed a real hole rather than tightening a healthy rule. Before the mount,
+> `authenticate` accepted an `rvk_` token on any internal route, where neither the scopes
+> nor the project binding are consulted — a token bound to project 3 read and wrote **every**
+> project as soon as it aimed at `/api`. An integration written against that gap now gets a
+> `403`; the v1 equivalents (`/api/v1/me`, `/api/v1/schema`, `/api/v1/media/:id/url`) are what
+> it should call.
 
 Everything an integration needs exists in v1: identity (`/api/v1/me`), accepted values and
 the scope list (`/api/v1/schema`), reading files (`/api/v1/media/:id/url`), the event journal

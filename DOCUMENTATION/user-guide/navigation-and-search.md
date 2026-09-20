@@ -13,13 +13,23 @@ they stop.
 
 ## Where things are
 
-Three screens sit above the projects, and one rail carries you between them.
+Three screens sit above the projects, and one rail carries you between them. Two more exist
+without a rail entry: they are what the personal counters on Home open, and they are ordinary
+pages, so they can be bookmarked, shared and reopened.
 
 | Screen | Path | What it is |
 |--------|------|-----------|
 | **Home** | `/` | A personal dashboard of configurable widgets |
 | **Projects** | `/projects` | Every project you can see, in an **Active** and an **Archived** tab |
 | **Reviews** | `/reviews` | Every published media of your projects, plus your own drafts |
+| **My tasks** | `/my-tasks` | Every task assigned to you, all projects together, with *All my tasks* / *My retakes* in the URL (`?scope=blocked`) |
+| **Recent comments** | `/comments` | The notes posted on media you can open, newest first — one line per note, opening the media it was left on |
+
+**The Reviews filters live in the URL**, not in the page's memory. That is what lets a Home
+counter open exactly its own view (`/reviews?assigned=me&decision=none`), a filtered search be
+bookmarked or pasted into a message, and the browser's Back button undo the last filter instead
+of leaving the page. The five criteria — project, type, published/drafts, decision, assignment —
+each map to one query parameter, and a parameter that belongs to something else is left alone.
 
 The **sidebar** carries three things, in this order: where you go (Home, Projects,
 Reviews), what you are looking at (the **project switcher**, then direct links to the

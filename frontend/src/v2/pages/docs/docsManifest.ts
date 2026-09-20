@@ -6,6 +6,9 @@ import type { MessageKey, Tr } from '../../i18n';
 /**
  * Types et helpers purs de la page /docs (documentation produit).
  * Le manifest est généré par frontend/scripts/build-docs.mjs à partir de DOCUMENTATION/.
+ *
+ * La **recherche** n'est pas ici : elle vit dans `docsSearch`, partagée par le sommaire de
+ * la page et la palette Ctrl+K — deux surfaces, un seul moteur.
  */
 
 export interface DocsPage {
@@ -68,17 +71,6 @@ export function resolveDocHref(currentPath: string, href: string): string {
 /** Href interne de doc = relatif (ni protocole, ni ancre seule, ni chemin absolu). */
 export function isInternalDocHref(href: string): boolean {
   return !/^([a-z]+:|\/|#)/i.test(href);
-}
-
-/** Filtre les sections par sous-chaîne (titre, sous-titre ou chemin), sections vides retirées. */
-export function filterSections(sections: DocsSection[], query: string): DocsSection[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return sections;
-  const matches = (p: DocsPage) =>
-    p.title.toLowerCase().includes(q) ||
-    p.summary.toLowerCase().includes(q) ||
-    p.path.toLowerCase().includes(q);
-  return sections.map((s) => ({ ...s, pages: s.pages.filter(matches) })).filter((s) => s.pages.length > 0);
 }
 
 /** La section qui contient une page — celle dont le panneau latéral doit rester ouvert. */

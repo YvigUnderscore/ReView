@@ -13,4 +13,6 @@ docs/
 plans/
 tmp/
 assets_for_testing/
+# Remotion (rendu des animations de doc) : outil non libre, jamais dans une image ReView.
+motion/
 frontend/public/docs/

@@ -2,7 +2,7 @@
 
 *The stdlib-only Python client and its Blender and Nuke add-ons: install, publish, read back, name files.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-20
 
 The repository ships a client for the [v1 API](v1-integration.md) in
 [`clients/python/`](../../clients/python/README.md), and two thin integrations built on it
@@ -31,13 +31,14 @@ project** — see [Authentication & API access](authentication.md#api-tokens). T
 account's address is derived from the token name: `farm-publisher` becomes
 `svc-farm-publisher@…`, which is what `whoami` prints back.
 
-> [!CAUTION]
-> Two guarantees usually claimed for such a token — "it cannot touch another show" and "it
-> opens `/api/v1` only" — currently rest on a middleware (`apiTokenSurface`) that is
-> written and unit-tested but **not mounted** in the backend. Inside `/api/v1` the project
-> binding is enforced on every resolved project; on `/api` it is not consulted at all. So
-> deploy the token as if it carried its bearer's full reach: non-`ADMIN` role, minimum
-> scopes, an expiry date, and a rotation plan.
+> [!NOTE]
+> Both guarantees usually claimed for such a token — "it cannot touch another show" and "it
+> opens `/api/v1` only" — now hold. `apiTokenSurface` is mounted on `/api`, so an `rvk_`
+> token is answered `403 API_TOKEN_V1_ONLY` anywhere outside `/api/v1`; inside v1 the
+> project binding is enforced on every resolved project, with `403 TOKEN_PROJECT_SCOPE`.
+> Deploy the token as a service identity all the same — non-`ADMIN` role, minimum scopes, an
+> expiry date and a rotation plan — because within its show and its scopes it acts with its
+> bearer's full reach.
 
 ## What sits between a shelf button and the API
 

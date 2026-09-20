@@ -25,6 +25,12 @@ const { db } = vi.hoisted(() => ({
     version: { findUnique: vi.fn(), update: vi.fn() },
     projectMembership: { findUnique: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
+    // Le compteur de relance se lit et se dépense SOUS VERROU DE LIGNE (CP-SEC phase 50) :
+    // `reprocess` passe donc par une transaction interactive. Le bouchon la joue à plat, avec
+    // le même client — ce que le test éprouve est la règle du compteur, pas le verrou, qui
+    // n'a de sens que contre une vraie base (et que le test d'intégration exerce).
+    $transaction: vi.fn((fn: (tx: unknown) => unknown) => fn(db)),
+    $queryRaw: vi.fn(),
   },
 }));
 
