@@ -150,7 +150,9 @@ export function usePresentation(
   const save = async () => {
     const view = captureCamera();
     const presentation: SplatPresentation = {};
-    if (view) presentation.camera = cameraPoseFromView(view);
+    // Le ratio du cadre n'est pas une valeur de caméra : on reconduit celui déjà enregistré
+    // (média déjà annoté) et on n'en grève aucun quand personne ne l'a choisi.
+    if (view) presentation.camera = cameraPoseFromView(view, data.splatPresentation?.camera?.aspect);
     if (rig.aperture > 0)
       presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
     if (reveal) presentation.reveal = reveal;

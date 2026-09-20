@@ -137,6 +137,9 @@ router.patch(
       // Liste complète des pièces jointes après édition (D5) : absente = inchangée. Le
       // service refiltre les clés — ce schéma borne la forme, pas la propriété.
       attachments: attachmentsSchema.optional(),
+      // Liste complète des parts d'annotation après édition (gomme de trait 3D, Phase 50) :
+      // même contrat que les pièces jointes, et réservée à l'auteur par le service.
+      annotation: annotationSchema.optional(),
       // État du fil (D1) ; `isResolved` reste accepté pour l'API v1 et les anciens clients.
       state: z.nativeEnum(CommentState).optional(),
       isResolved: z.boolean().optional(),

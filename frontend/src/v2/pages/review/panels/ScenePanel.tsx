@@ -206,7 +206,7 @@ export default function ScenePanel({
             </Row>
           )}
           {perf.culling && (
-            <Row label={t('viewer.culling.short')} hint={t('viewer.culling.hint')}>
+            <Row label={t('viewer.culling.short')} hint={t('viewer.culling.tradeoff')}>
               <Switch
                 checked={!perf.culling.off}
                 onCheckedChange={(v) => perf.culling?.onOff(!v)}

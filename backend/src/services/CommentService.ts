@@ -516,6 +516,12 @@ export interface UpdateCommentInput {
    * inchangée ; présente = remplace, et ce qui en sort est effacé du stockage.
    */
   attachments?: AttachmentRef[];
+  /**
+   * Liste COMPLÈTE des parts d'annotation après édition — gomme de trait 3D (Phase 50, lot 8).
+   * Absente = inchangée ; présente = remplace. Réservée à l'auteur, comme le contenu : une
+   * annotation est sa remarque, et elle est rejouée pour tous les spectateurs du média.
+   */
+  annotation?: unknown;
   /** État du fil (D1). `isResolved` en découle et reste écrit en parallèle. */
   state?: CommentState;
   isResolved?: boolean;
@@ -549,6 +555,9 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (body.content !== undefined && !isAuthor) throw forbidden("Seul l'auteur peut éditer le contenu");
   if (body.attachments !== undefined && !isAuthor)
     throw forbidden("Seul l'auteur peut éditer les pièces jointes");
+  if (body.annotation !== undefined && !isAuthor) throw forbidden('Only the author can edit the annotation');
+  // Relu par le schéma ici aussi, comme à la création : la route n'est pas le seul appelant.
+  const annotation = body.annotation === undefined ? undefined : (parseAnnotation(body.annotation) ?? []);
   // Même garde qu'à la création — la clé vient du client et sert à signer une lecture — plus
   // le dossier ShotGrid DE CE COMMENTAIRE : une note importée y range ses pièces, et les
   // refuser ici les effacerait à la première correction de texte.
@@ -567,6 +576,7 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     data: {
       ...(body.content !== undefined ? { content: sanitizeHtml(body.content), isEdited: true } : {}),
       ...(attachments !== undefined ? { attachments: jsonAttachments(attachments), isEdited: true } : {}),
+      ...(annotation !== undefined ? { annotation: annotation, isEdited: true } : {}),
       // Trace de résolution (32.A) : qui a résolu et quand ; effacée à la réouverture.
       ...(resolution.state !== undefined
         ? {

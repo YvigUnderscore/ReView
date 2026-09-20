@@ -3,12 +3,19 @@
 
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { isEditable } from '../../../lib/shortcuts';
+import { inhibitOrbit } from './controlsLock';
 
 /**
  * Navigation « fly » type Unreal (10.G-V1) : clic droit maintenu = regard souris + déplacement
  * clavier ZQSD/WASD (codes physiques, donc azerty/qwerty confondus) + A/E descendre/monter,
  * molette = vitesse de vol, Maj = accélérer. OrbitControls est gelé pendant le vol puis recalé
  * (cible replacée devant la caméra, à distance constante) pour une reprise d'orbite cohérente.
+ *
+ * Le clic droit maintenu est un **mode de navigation** : tant qu'il dure, le clavier appartient
+ * au vol et à rien d'autre (le chrome de review et l'éditeur se taisent, cf. `useChromeState`).
+ * Un clic droit **bref**, lui, n'est pas un vol : c'est le menu contextuel, servi par
+ * `useSpatialContextMenu` — ce module ne fait que bloquer le menu natif du navigateur.
  *
  * Implémentation locale plutôt que `FpsMovement` de Spark : celui-ci attache ses listeners
  * `document` dans son constructeur sans jamais les retirer (fuite à chaque remontage du viewer).
@@ -27,6 +34,16 @@ export const FLY_MOVE_MAPPING: Record<string, readonly [number, number, number]>
 
 /** Multiplicateur de vitesse avec Maj enfoncée (comme FpsMovement). */
 export const FLY_SHIFT_MULTIPLIER = 5;
+
+/**
+ * Cette touche appartient-elle au vol ? **Référence unique** des touches de vol : trois
+ * gestionnaires clavier concurrents vivent sur `window`/`document` (ce module, le chrome de
+ * review, l'auto-pause de l'animation caméra) et doivent tous se prononcer sur le même jeu de
+ * codes physiques — recopier la liste, c'est la laisser diverger.
+ */
+export function isFlyMoveCode(code: string): boolean {
+  return code in FLY_MOVE_MAPPING;
+}
 
 /** Sensibilité du regard (radians par pixel de mouvement souris). */
 const LOOK_SPEED = 0.0035;
@@ -72,6 +89,9 @@ export function createFlyControls(
   let speed = 1; // unités/s, recalée sur l'échelle de la scène à chaque départ de vol
   let orbitDistance = 1; // distance caméra→cible au départ, restituée à l'atterrissage
   let pointerId = -1;
+  // Jeton d'inhibition de l'orbite pendant le vol (cf. `controlsLock`) : plus personne n'écrit
+  // `controls.enabled`, sinon le démontage d'un gizmo rendait l'orbite en plein vol.
+  let releaseOrbit: (() => void) | null = null;
   const euler = new THREE.Euler(0, 0, 0, 'YXZ');
   const move = new THREE.Vector3();
 
@@ -83,7 +103,8 @@ export function createFlyControls(
     // Recale la cible d'orbite devant la caméra, à la distance du départ de vol.
     move.set(0, 0, -1).applyQuaternion(camera.quaternion);
     controls.target.copy(camera.position).addScaledVector(move, orbitDistance);
-    controls.enabled = true;
+    releaseOrbit?.();
+    releaseOrbit = null;
     controls.update();
   };
 
@@ -91,9 +112,13 @@ export function createFlyControls(
     if (e.button !== 2 || flying) return;
     flying = true;
     pointerId = e.pointerId;
+    // Le vol part **à l'arrêt**, avec l'état réel de Maj : les touches de direction ne sont
+    // accumulées qu'en vol, et une touche déjà enfoncée à l'appui n'appartient pas au vol.
+    pressed.clear();
+    shift = e.shiftKey;
     orbitDistance = Math.max(camera.position.distanceTo(controls.target), 0.01);
     speed = Math.max(orbitDistance, 0.1);
-    controls.enabled = false; // gèle l'orbite pendant le vol
+    releaseOrbit = inhibitOrbit(controls, 'fly'); // gèle l'orbite pendant le vol
     try {
       dom.setPointerCapture(e.pointerId);
     } catch {
@@ -122,12 +147,19 @@ export function createFlyControls(
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
+    // HORS VOL, le clavier n'appartient pas au vol. Les touches étaient accumulées en
+    // permanence, saisie de texte comprise : maintenir une direction sans cliquer ne faisait
+    // rien de visible, puis le clic droit démarrait un vol **déjà en mouvement**. Le clic droit
+    // maintenu est le mode de navigation — il commence là, et le clavier avec lui.
+    if (!flying || isEditable(e.target)) return;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = true;
-    if (!(e.code in FLY_MOVE_MAPPING)) return;
+    if (!isFlyMoveCode(e.code)) return;
     pressed.add(e.code);
-    if (flying) e.preventDefault();
+    e.preventDefault();
   };
   const onKeyUp = (e: KeyboardEvent) => {
+    // Le relâchement, lui, n'est jamais filtré : une touche relâchée après l'atterrissage (ou
+    // hors de la fenêtre) doit quitter l'ensemble, sinon la direction reste collée.
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = false;
     pressed.delete(e.code);
   };

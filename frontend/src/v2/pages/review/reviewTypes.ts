@@ -76,8 +76,18 @@ export interface SplatPaintStroke {
   /** Coordonnées xyz aplaties (espace objet). */
   points: number[];
   color: string;
-  /** Épaisseur relative (1 à 5). */
+  /**
+   * Épaisseur **en pixels d'écran** — constante quel que soit le zoom (Phase 50, lot 8). Elle
+   * était relative à la taille de la scène, donc en unités monde : le trait grossissait en
+   * approchant et disparaissait en reculant, alors que la barre d'options annonçait des « px ».
+   */
   width: number;
+  /**
+   * Normale approchée du trait en espace objet (direction depuis laquelle il a été peint) —
+   * sert à l'estomper quand on passe derrière la surface. Absente sur les traits antérieurs :
+   * ils restent pleinement visibles.
+   */
+  normal?: [number, number, number];
 }
 
 /**
@@ -232,6 +242,12 @@ export interface MediaResp {
   projectDefaultLighting: LightingConfig | null;
   /** Gestion de couleur OCIO du projet (39.B) : intention display/view, affichée en badge. */
   projectColor: { configId?: string; display?: string; view?: string } | null;
+  /**
+   * Ratio du cadre de review, hérité de la résolution de livraison (studio → projet →
+   * séquence → plan). C'est un DÉFAUT : un aspect déjà gelé dans `splatPresentation` prime —
+   * la règle complète et son pourquoi sont dans `reviewAspect.ts`.
+   */
+  deliveryAspect: number;
   /**
    * Coupe HISTORIQUE (10.G-V10, découpe retirée en Phase 50) : bornes en frames d'un média
    * coupé avant le retrait. Plus rien n'en pose ; la review s'en sert pour dire ce qu'elle

@@ -41,15 +41,17 @@ export function useSplatChrome({
 }) {
   const tool = state.tool;
   const { setTool } = editor;
-  const { setActive } = paint;
+  const { setArmed } = paint;
 
   useEffect(() => {
     setTool(EDITOR_TOOL[tool] ?? 'navigate');
   }, [tool, setTool]);
 
+  // Brosse de surface et gomme de trait partagent le même overlay : le rail dit lequel des deux
+  // est armé, le hook de peinture en déduit ce que fait le clic.
   useEffect(() => {
-    setActive(tool === 'paint');
-  }, [tool, setActive]);
+    setArmed(tool === 'paint' ? 'paint' : tool === 'paint-erase' ? 'erase' : null);
+  }, [tool, setArmed]);
 
   // La mise au point au clic est un mode du rig caméra : on l'arme et on le désarme avec l'outil.
   useEffect(() => {

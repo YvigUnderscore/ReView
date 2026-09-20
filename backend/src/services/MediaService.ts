@@ -9,6 +9,7 @@ import { storage, StorageService } from './StorageService';
 import { validateMediaHeader, getExtension, detectImage } from '../lib/fileSignatures';
 import { resolveProjectIdForVersion, resolveStorageContextForVersion } from '../lib/pipeline';
 import { checkNaming, resolveProjectSettingsById } from '../lib/projectSettings';
+import { resolveDeliveryAspect } from '../lib/deliveryAspect';
 import { assertUploadNote } from '../lib/uploadNote';
 import { slugifyFilename } from '../lib/slug';
 import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
@@ -802,6 +803,7 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     timelineSpriteUrl,
     project,
     projectSettings,
+    deliveryAspect,
     references,
     reviewers,
     version,
@@ -817,6 +819,9 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
     // Éclairage HDRI par défaut du projet (39.F) : rejoué si le média n'a pas le sien.
     resolveProjectSettingsById(projectId),
+    // Ratio du cadre de livraison (Phase 50, lot 8) : réglage pipeline hérité
+    // studio → projet → séquence → plan, comme la cadence d'une séquence d'images.
+    resolveDeliveryAspect(media.versionId, projectId),
     // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
     // assertMediaManage d'ici : un import croisé créerait un cycle).
     prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
@@ -889,6 +894,10 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     projectDefaultLighting: projectSettings.defaultLighting ?? null,
     // Gestion de couleur OCIO du projet (39.B) : intention display/view (badge review).
     projectColor: projectSettings.color ?? null,
+    // Ratio du cadre de review des médias spatiaux : celui de la résolution de livraison
+    // héritée. Il ne se substitue PAS à l'aspect déjà gelé dans une présentation — changer le
+    // cadre d'un média déjà annoté déplacerait des annotations normalisées déjà validées.
+    deliveryAspect,
     // Coupe historique (10.G-V10, retirée en Phase 50) : bornes d'un média coupé avant le
     // retrait. Plus rien n'en pose ; la review s'en sert pour dire ce qu'elle joue.
     trim: meta.trim ?? null,

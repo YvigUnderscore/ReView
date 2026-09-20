@@ -50,7 +50,10 @@ Orbit by dragging, zoom with the wheel, pan with the middle button. **Hold the r
 button** for free flight: the mouse looks around, `W`/`A`/`S`/`D` move (physical key
 positions, so `Z`/`Q`/`S`/`D` on an AZERTY keyboard), `E` goes up and `Q` down, the wheel
 sets the flight speed and `Shift` multiplies it by five. Releasing the button hands the orbit
-back with the target placed in front of the camera.
+back with the target placed in front of the camera. While you fly, the keyboard belongs to the
+flight: no tool letter arms anything, so `S` moves you backwards instead of arming the scale
+gizmo. A **brief** right-click — pressed and released on the spot, under a quarter of a second —
+is not a flight: it opens the prim menu on the object you aimed at.
 
 Every model is **normalised** on load — its largest dimension is brought to a common size and
 the bottom of its bounding box is put on the floor plane, so whatever rested on the ground in
@@ -155,7 +158,7 @@ read from the analyser rather than from the glTF nodes. Prims that exist but are
 | `Alt`+click the eye | **Isolate** — everything else is hidden, DCC style |
 | `F` with a prim selected | Fly the camera to it and frame it |
 | `F` with the pointer **over the scene graph** | **Reveal** the selected prim instead: the tree unfolds down to it, lifting the search if it was hiding it. The camera does not move |
-| Right-click a row, **or the object in the viewer** | The prim menu below (a still right-click; dragging stays flight) |
+| Right-click a row, **or the object in the viewer** | The prim menu below (a *brief* right-click: dragging or holding the button stays flight) |
 | `3` then `T` / `R` / `S` | Move, rotate or scale the selected prims — the gizmo appears on the geometry and the delta goes into the ReView override |
 
 The prim menu carries the **variant sets** of the prim *and of its ancestors* — you click a

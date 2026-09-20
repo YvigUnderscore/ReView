@@ -87,7 +87,7 @@ tooltip, and next to its label when the rail is expanded (chevron at the bottom 
 the choice is remembered per media type).
 
 Tools a viewer does not implement are not shown at all, rather than shown inert: the 3D viewer
-has no surface brush and no screen region, the splat viewer has no screen region, and the
+has no surface brush and no mask brush, the splat viewer has no screen region, and the
 video rail has no zoom button. That last one is a rail entry, not a capability — **the video
 picture does zoom and pan**, from the wheel, the middle button and the keyboard (see
 [Video review](review-video.md#zoom-frame-and-composition-guides)).
@@ -105,9 +105,9 @@ picture does zoom and pan**, from the wheel, the middle button and the keyboard 
 | Mode | Tools |
 | --- | --- |
 | Explore | Navigate `V` · Focus `C` (splat only) · Point of interest `I` |
-| Annotate | Navigate `V` · 3D brush `P` (splat only) · Pin `I` |
+| Annotate | Navigate `V` · Surface brush `P` · Stroke eraser `X` (both splat only) · Pin `I` |
 | Staging | Navigate `V` · Place the camera `T` · Aim the camera `R` · Focus `C` (splat only) |
-| Clean up | Navigate `V` · Rectangle `B` · Lasso `L` · Surface brush `P` · Cutting volume `O` (all four splat only) · Move `T` · Rotate `R` · Scale `S` |
+| Clean up | Navigate `V` · Rectangle `B` · Lasso `L` · Mask brush `M` · Cutting volume `O` (all four splat only) · Move `T` · Rotate `R` · Scale `S` |
 
 Below a separator, the spatial viewers add two **view actions**: **Fit the selection or the
 object** (`F`) and **Home view** (`H`). Video and image do not show them — the image viewer
@@ -124,7 +124,7 @@ video player answers to `0` and `1` instead.
 ## Options bar
 
 The row under the header shows the settings of the **active tool only** — ink, thickness and
-opacity for a drawing tool, radius for the surface brush, axes and snapping for a gizmo. That
+opacity for a drawing tool, radius for the mask brush, axes and snapping for a gizmo. That
 is what allows the workspace to keep every setting without stacking anything: changing tool
 changes the row. The row scrolls horizontally when it is too dense, and always opens with the
 tool's own name and shortcut.

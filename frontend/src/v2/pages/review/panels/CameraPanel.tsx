@@ -27,7 +27,7 @@ export default function CameraPanel({
   onTiltDeg,
   dof,
   layout,
-  aspectLabel,
+  aspect,
   onFrame,
   onHome,
   bookmarks,
@@ -60,8 +60,12 @@ export default function CameraPanel({
     /** Efface la présentation persistée (confirmation en amont — gestionnaire). */
     onClear?: () => void;
   };
-  /** Aspect du cadre de review — hérité des réglages pipeline, en lecture seule. */
-  aspectLabel: string;
+  /**
+   * Cadre de review, en lecture seule : le ratio écrit et sa provenance. `frozen` = il vient
+   * d'une présentation enregistrée, et les réglages pipeline ne s'y appliquent plus —
+   * l'infobulle doit le dire, elle promettait un héritage qui n'avait pas lieu.
+   */
+  aspect: { label: string; frozen: boolean };
   onFrame: () => void;
   onHome: () => void;
   bookmarks?: {
@@ -123,8 +127,11 @@ export default function CameraPanel({
             {t('camera.home')}
           </Button>
         </div>
-        <Row label={t('viewer.format')} hint={t('viewer.format.hint')}>
-          <span className="font-mono text-xs">{aspectLabel}</span>
+        <Row
+          label={t('viewer.format')}
+          hint={aspect.frozen ? t('viewer.format.hint.frozen') : t('viewer.format.hint')}
+        >
+          <span className="font-mono text-xs">{aspect.label}</span>
         </Row>
         {layout && (
           <Row label={layout.label} hint={layout.hint}>

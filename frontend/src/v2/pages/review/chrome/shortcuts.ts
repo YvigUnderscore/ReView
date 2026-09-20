@@ -150,7 +150,14 @@ function chromeRows(): ReviewShortcut[] {
     // Deux rangées plutôt qu'un « Ctrl + Z / Y » : chaque touche est écrite telle qu'on la presse.
     { keys: [ch('Ctrl'), ch('Z')], labelKey: 'common.undo', handler: 'useAnnotationShortcuts' },
     { keys: [ch('Ctrl'), ch('Y')], labelKey: 'common.redo', handler: 'useAnnotationShortcuts' },
-    { keys: [named('key.rightClick')], labelKey: 'shortcuts.contextMenu', handler: 'ReviewContextMenu' },
+    // Le clic droit porte les actions dans les QUATRE viewers depuis le lot 8 : bref, il ouvre le
+    // menu ; maintenu, il vole (spatial seulement). Les deux gestes se départagent dans
+    // `viewer/contextGesture`, et le vol garde sa propre rangée plus bas.
+    {
+      keys: [named('key.rightClick')],
+      labelKey: 'shortcuts.contextMenuBrief',
+      handler: 'useSpatialContextMenu',
+    },
   ];
 }
 

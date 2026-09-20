@@ -93,13 +93,24 @@ const hotspotPart = z
   })
   .strict();
 
-/** Trait du painter 3D (10.G-V9), en espace objet du SplatMesh. */
+/**
+ * Trait de la brosse de surface 3D (10.G-V9), en espace objet du SplatMesh.
+ *
+ * `width` est une épaisseur **d'écran, en pixels** depuis la Phase 50 (lot 8) : elle valait une
+ * grandeur relative à la taille de la scène, donc des unités monde. Les bornes ne changent pas —
+ * un nombre de pixels raisonnable entre dans les anciennes.
+ *
+ * `normal` est la direction depuis laquelle le trait a été peint : elle sert à l'estomper quand
+ * le spectateur passe de l'autre côté de la surface. Facultative — les traits écrits avant son
+ * introduction n'en ont pas, et restent pleinement visibles.
+ */
 const paintPart = z
   .object({
     type: z.literal('splat-paint'),
     points: z.array(world).max(MAX_STROKE_COORDS),
     color,
     width: finite.min(0).max(100),
+    normal: z.tuple([world, world, world]).optional(),
   })
   .strict();
 

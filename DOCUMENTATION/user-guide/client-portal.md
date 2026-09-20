@@ -2,7 +2,7 @@
 
 *What someone outside the studio sees when they open a share link: a home page, four tabs, and the same drawing tools your artists use.*
 
-> Updated: 2026-09-17
+> Updated: 2026-09-20
 
 A share link opens a page that belongs to your studio: your logo, your project, and nothing
 else. There is no sign-in, no application to navigate, and no way out of what the link
@@ -111,7 +111,7 @@ audience table.
 | Download | there is no download route | there is no download route |
 
 A guest's drawing is deliberately narrower than a reviewer's: a client draws and points, but
-cannot attach a 3D scene proposal, a camera animation or 3D brush strokes. Those are
+cannot attach a 3D scene proposal, a camera animation or surface brush strokes. Those are
 authoring gestures that are replayed for everyone who opens the media, and a share link is
 not where they belong.
 

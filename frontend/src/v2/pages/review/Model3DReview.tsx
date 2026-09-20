@@ -44,8 +44,8 @@ import PipFrame from './viewer/PipFrame';
 import UsdRecomposeDialog from './UsdRecomposeDialog';
 import { useUsdScene } from './three/useUsdScene';
 import { normalizeOverride } from './three/sceneOverride';
-import { useUsdPicking } from './three/useUsdPicking';
-import { DEFAULT_REVIEW_ASPECT } from './frameRect';
+import { usePrimPointer } from './three/usePrimPointer';
+import { mediaReviewAspect } from './reviewAspect';
 import { useT } from '../../i18n';
 
 /**
@@ -84,6 +84,8 @@ export default function Model3DReview({
   // « le média est affichable » : les hooks qui lisent la scène de façon impérative n'ont rien
   // à lire tant que le GLB n'est pas chargé, et leur effet ne serait pas rejoué ensuite.
   const ready = model3d.ready;
+  // Cadre de livraison : ratio des réglages pipeline, sauf aspect déjà gelé (`reviewAspect`).
+  const frameAspect = mediaReviewAspect(data).value;
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
   // Éclairage HDRI : défaut rejoué pour tous, tweak spectateur temporaire.
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
@@ -114,11 +116,10 @@ export default function Model3DReview({
     [ann.viewedSceneOverride],
   );
   const scene = useUsdScene(data, model3d.getSceneHandle, ready, commentOverride, ann.setSceneOverride);
-  // Clic droit immobile sur un objet (46.M) : le prim visé alimente le menu qui enveloppe le pane.
-  const [primMenu, setPrimMenu] = useState<string | null>(null);
-  // `resolvePick` (et non `resolvePrim`) : le clic désigne le component englobant, Alt+clic la
-  // feuille exacte. La promotion s'arrête à la résolution du clic — rien d'autre n'en dépend.
-  useUsdPicking(model3d.getSceneHandle, ready, scene.select, scene.resolvePick, setPrimMenu);
+  // Pointeur du viewer : clic gauche immobile = sélection, clic droit BREF = menu du prim visé
+  // (46.M) — maintenu, le même bouton vole. `resolvePick` (et non `resolvePrim`) : le clic
+  // désigne le component englobant, Alt+clic la feuille exacte.
+  const primMenu = usePrimPointer(model3d, ready, scene.select, scene.resolvePick);
   // `F` cadre le prim sélectionné (46.I) — le viewer garde son cadrage global sans sélection.
   const { setFrameTarget } = model3d;
   useEffect(() => {
@@ -174,12 +175,13 @@ export default function Model3DReview({
   // Bascule et rail du modèle 3D (Phase 50, lot 6) : « Mise en scène » n'y figure plus —
   // l'interrupteur du panneau Caméra l'arme — et « Nettoyer » n'apparaît que si le serveur
   // accorde l'écriture de la transformation.
-  const { state, update, modes, tools } = useModel3DModes({
-    canEditTransform: showEditTools,
-    // Une scène USD donne aux gizmos une seconde cible — l'override de scène par prim (46.N),
-    // qui ne passe pas par la transformation de version et n'en a donc pas les droits.
-    hasScenegraph: scene.tree.length > 0,
-  });
+  // Une scène USD donne aux gizmos une seconde cible — l'override de scène par prim (46.N), qui
+  // ne passe pas par la transformation de version et n'en a donc pas les droits. `isFlying` est
+  // la garde de vol du chrome : clic droit maintenu, aucune lettre n'arme d'outil.
+  const { state, update, modes, tools } = useModel3DModes(
+    { canEditTransform: showEditTools, hasScenegraph: scene.tree.length > 0 },
+    model3d.isFlying,
+  );
   // Mode Mise en scène = atelier caméra : y entrer sort de la caméra du plan, en sortir y rentre.
   // Seule écriture du « dans / hors caméra » — modèle en tête de `viewer/useLayoutMode`.
   const { setLayoutMode } = model3d;
@@ -291,8 +293,9 @@ export default function Model3DReview({
         ) : undefined
       }
     >
-      {/* Clic droit immobile sur un objet → actions du prim visé (46.M). `useUsdPicking` arrête
-          l'événement (vol, clic dans le vide) pour que le menu ne s'ouvre jamais à vide. */}
+      {/* Clic droit bref sur un objet → actions du prim visé (46.M). `useSpatialContextMenu`
+          arrête l'événement du canvas (vol, clic dans le vide) : le menu ne s'ouvre jamais à
+          vide, et jamais au milieu d'un vol. */}
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div className="contents">
@@ -303,12 +306,12 @@ export default function Model3DReview({
               overlay={overlay}
               recording={canManage && cam.anim.autoKey}
               settings={<Model3DRenderMenu inspect={inspect} variants={variants} />}
-              aspect={data.splatPresentation?.camera?.aspect}
+              aspect={frameAspect}
               pip={
                 model3d.layoutMode ? (
                   <PipFrame
                     label={t('review.layoutCamera')}
-                    aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
+                    aspect={frameAspect}
                     onRect={model3d.setPipRect}
                   />
                 ) : undefined

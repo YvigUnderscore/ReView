@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isEditable } from '../../../lib/shortcuts';
 import type { SplatCamera } from '../reviewTypes';
-import { FLY_MOVE_MAPPING } from '../viewer/flyControls';
+import { isFlyMoveCode } from '../viewer/flyControls';
 import {
   animDuration,
   animKeyTimes,
@@ -200,7 +201,9 @@ export function useCameraAnim(controller: CameraController) {
       setAutoPaused(true);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.code in FLY_MOVE_MAPPING) pause();
+      // Même référence des touches de vol que `flyControls`, et même garde de saisie : sans elle,
+      // taper « was » dans un commentaire mettait la lecture en pause.
+      if (isFlyMoveCode(e.code) && !isEditable(e.target)) pause();
     };
     dom.addEventListener('pointerdown', pause);
     dom.addEventListener('wheel', pause, { passive: true });

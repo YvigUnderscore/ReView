@@ -12,8 +12,14 @@ const LASSO_STEP = 3;
  * actif, dessine le rectangle, le lasso ou le curseur du pinceau en SVG (tokens de thème via
  * currentColor) et remonte la forme (au lâcher) ou les coups de pinceau (en continu, V3) avec
  * le mode de combinaison (Maj = ajouter, Alt = retirer ; pinceau : le 1ᵉʳ coup sans modificateur
- * remplace, les suivants du même geste ajoutent). La molette est relayée au canvas pour
- * conserver le zoom d'orbite pendant la sélection.
+ * remplace, les suivants du même geste ajoutent).
+ *
+ * **La navigation continue de passer.** L'overlay couvre le canvas : tout ce qu'il ne relaie pas
+ * n'existe plus pour la scène. La molette l'était déjà (zoom d'orbite) ; le **bouton droit** ne
+ * l'était pas, si bien qu'armer un outil de sélection supprimait le vol *et* le menu contextuel
+ * du viewer. Ses événements sont désormais rejoués sur le canvas, et le menu natif reste bloqué
+ * ici comme là-bas — c'est le geste mesuré côté canvas qui décide entre vol et menu
+ * (`viewer/useSpatialContextMenu`), jamais l'overlay.
  */
 export default function SelectionOverlay({
   tool,
@@ -25,7 +31,7 @@ export default function SelectionOverlay({
   tool: 'rect' | 'lasso' | 'brush';
   /** Rayon du pinceau en pixels (outil brush). */
   brushRadius?: number;
-  /** Canvas Three (résolu à la demande) pour relayer la molette à l'orbite. */
+  /** Canvas Three (résolu à la demande) : cible des événements de navigation relayés. */
   getCanvas: () => HTMLElement | null;
   onCommit: (
     shape: SelectionShape,
@@ -55,7 +61,19 @@ export default function SelectionOverlay({
     onBrush?.({ x: p[0], y: p[1] }, combine, viewport());
   };
 
+  /** Le bouton droit est-il en cause (appui/relâchement, ou maintenu pendant un mouvement) ? */
+  const isRightButton = (e: PointerEvent): boolean => e.button === 2 || (e.buttons & 2) !== 0;
+
+  /** Rejoue l'événement sur le canvas Three : le vol et le menu contextuel le reçoivent. */
+  const relay = (type: 'pointerdown' | 'pointermove' | 'pointerup', e: PointerEvent): void => {
+    getCanvas()?.dispatchEvent(new globalThis.PointerEvent(type, e.nativeEvent));
+  };
+
   const onPointerDown = (e: PointerEvent) => {
+    if (isRightButton(e)) {
+      relay('pointerdown', e);
+      return;
+    }
     if (e.button !== 0) return;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -73,6 +91,11 @@ export default function SelectionOverlay({
   };
 
   const onPointerMove = (e: PointerEvent) => {
+    // Vol en cours : le geste appartient à la caméra, on ne trace pas par-dessus.
+    if (isRightButton(e)) {
+      relay('pointermove', e);
+      return;
+    }
     const p = local(e);
     if (tool === 'brush') {
       setCursor(p);
@@ -97,6 +120,10 @@ export default function SelectionOverlay({
   };
 
   const onPointerUp = (e: PointerEvent) => {
+    if (isRightButton(e)) {
+      relay('pointerup', e);
+      return;
+    }
     if (tool === 'brush') {
       brushStroke.current = null;
       return;
@@ -123,6 +150,13 @@ export default function SelectionOverlay({
     getCanvas()?.dispatchEvent(new globalThis.WheelEvent('wheel', e.nativeEvent));
   };
 
+  // Le menu natif du navigateur n'a pas sa place sur le viewer, et l'overlay ne sert aucun menu :
+  // l'événement s'arrête ici. Le menu du viewer s'ouvre depuis le canvas, sur le geste relayé.
+  const onContextMenu = (e: { preventDefault: () => void; stopPropagation: () => void }) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const cur = drag?.points[drag.points.length - 1];
   const rect = drag && cur ? normalizeRect(drag.start[0], drag.start[1], cur[0], cur[1]) : null;
 
@@ -135,6 +169,7 @@ export default function SelectionOverlay({
       onPointerUp={onPointerUp}
       onPointerLeave={() => setCursor(null)}
       onWheel={onWheel}
+      onContextMenu={onContextMenu}
     >
       {tool === 'brush' && cursor && (
         <svg className="pointer-events-none absolute inset-0 h-full w-full text-primary">

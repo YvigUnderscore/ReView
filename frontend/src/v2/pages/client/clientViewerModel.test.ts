@@ -65,16 +65,28 @@ describe('resolveClientSplat', () => {
   });
 });
 
+/**
+ * Réécrit sciemment : la fonction rendait `undefined` dès qu'aucune présentation ne gelait
+ * d'aspect, et chaque appelant recopiait son propre repli 16/9. Elle rend désormais le ratio
+ * de livraison hérité que la route sert — l'invité annote le cadre du projet, pas un 16/9.
+ */
 describe('clientFrameAspect', () => {
   it('rejoue l’aspect du cadre de livraison enregistré', () => {
     const s = source({ splatPresentation: { camera: { position: p(), target: p(), aspect: 2.39 } } });
     expect(clientFrameAspect(s)).toBeCloseTo(2.39);
   });
 
+  it('prend le ratio hérité des réglages pipeline quand rien n’est gelé', () => {
+    expect(clientFrameAspect(source({ deliveryAspect: 2.39 }))).toBeCloseTo(2.39);
+  });
+
   it('ignore un aspect dégénéré plutôt que de produire un cadre de hauteur nulle', () => {
-    const s = source({ splatPresentation: { camera: { position: p(), target: p(), aspect: 0 } } });
-    expect(clientFrameAspect(s)).toBeUndefined();
-    expect(clientFrameAspect(source())).toBeUndefined();
+    const s = source({
+      splatPresentation: { camera: { position: p(), target: p(), aspect: 0 } },
+      deliveryAspect: 1.85,
+    });
+    expect(clientFrameAspect(s)).toBeCloseTo(1.85);
+    expect(clientFrameAspect(source())).toBeCloseTo(16 / 9);
   });
 });
 

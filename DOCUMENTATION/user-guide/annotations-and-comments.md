@@ -214,7 +214,7 @@ card is clicked. On top of that, the composer can bundle:
 
 - a **point of interest** dropped on the surface (the `I` tool), which brings everyone back
   to the exact spot rather than to a general direction;
-- **3D brush strokes** painted on the surface (splat, the `P` tool), stored in object space
+- **Surface brush strokes** painted on the surface (splat, the `P` tool), stored in object space
   so they follow the object if it is transformed;
 - the **camera animation** you built — press *Attach this animation to the next comment* in
   the transport, which only appears once an animation exists. A toast confirms the attachment
@@ -316,7 +316,7 @@ Three things follow from that table, and each one has bitten someone:
 - **A guest draws with the same tools you do**, and the drawing is stored in the same format,
   so a client's note reopens here on the right frame with the shape in the right place. What
   a guest cannot attach is an *authoring* gesture — a 3D scene proposal, a camera animation,
-  3D brush strokes — because those are replayed for everyone who opens the media. See
+  surface brush strokes — because those are replayed for everyone who opens the media. See
   [The client portal](client-portal.md#watching-and-drawing-on-it).
 - **A `CLIENT` account is not a guest.** Signed in as a member of the project, it reads the
   internal thread like anyone else; the *Show to the client* flag governs **share links**,

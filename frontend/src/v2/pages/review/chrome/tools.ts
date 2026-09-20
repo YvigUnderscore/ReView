@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
-  Brush,
   BoxSelect,
   Circle,
   Crosshair,
@@ -18,10 +17,12 @@ import {
   Move3d,
   MoveHorizontal,
   MoveUpRight,
+  Paintbrush,
   Pencil,
   Rotate3d,
   Scale3d,
   Scan,
+  SprayCan,
   Square,
   SquareDashed,
   Type,
@@ -52,6 +53,7 @@ export type ToolId =
   | 'focus'
   | 'pin'
   | 'paint'
+  | 'paint-erase'
   | 'cam-move'
   | 'cam-aim'
   | 'sel-rect'
@@ -108,7 +110,7 @@ export const DRAW_TOOLS: ReviewTool[] = [
     // et la lettre suivante faisait quitter la review, annotation en cours perdue.
     //
     // Le leader `g` n'est pas reconfigurable (`isValidKey` le refuse) : c'est donc l'outil
-    // qui cède. `P` est libre sur les médias plats — `paint` et `sel-brush` la portent, mais
+    // qui cède. `P` est libre sur les médias plats — la brosse de surface la porte, mais
     // seulement en spatial, où le polygone n'existe pas.
     id: 'polygon',
     labelKey: 'tool.polygon',
@@ -179,14 +181,34 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
   annotate: [
     nav(NAV_HINT_SPATIAL),
     {
-      // Le painter 3D n'existe que sur un splat : le viewer 3D le retirait du rail, et la
-      // lettre l'armait quand même. La restriction par type le retire des deux d'un coup.
+      // LA brosse de surface (Phase 50, lot 8). Elle n'existe que sur un splat : le viewer 3D
+      // la retirait du rail, et la lettre l'armait quand même — la restriction par type la
+      // retire des deux d'un coup.
+      //
+      // ARBITRAGE — elle partageait l'icône `Brush` ET la touche `P` avec le pinceau de
+      // sélection du mode « Nettoyer ». Rien ne les distinguait, et `P` ne menait jamais ici :
+      // `toolSearchOrder` cherche « Nettoyer » avant les autres modes, donc depuis
+      // « Explorer » ou « Mise en scène » la lettre armait le pinceau de sélection. C'est donc
+      // le pinceau de sélection qui a cédé la touche (passé en `M`, cf. `clean`) et l'icône
+      // (`SprayCan`) : `P` mène partout à la brosse de surface, et `Paintbrush` ne se confond
+      // ni avec elle ni avec le crayon 2D des médias plats.
       id: 'paint',
-      labelKey: 'tool.paint',
-      icon: Brush,
+      labelKey: 'tool.surfaceBrush',
+      icon: Paintbrush,
       key: 'P',
       kind: 'SPLAT',
-      hintKey: 'tool.paint.hint',
+      hintKey: 'tool.surfaceBrush.hint',
+    },
+    {
+      // Gomme de trait 3D : un clic retire le trait le plus proche — celui qu'on prépare, ou
+      // celui d'un commentaire déjà envoyé dont on est l'auteur. `X` est la lettre de la gomme
+      // des médias plats, et elle n'appartient pas à l'alphabet du vol (ZQSD/WASD + A/E).
+      id: 'paint-erase',
+      labelKey: 'tool.strokeErase',
+      icon: Eraser,
+      key: 'X',
+      kind: 'SPLAT',
+      hintKey: 'tool.strokeErase.hint',
     },
     // L'outil « Région » (`B`) a été RETIRÉ (Phase 50) : les deux viewers spatiaux le
     // masquaient du rail — il n'avait donc aucune implémentation nulle part — et la lettre
@@ -236,12 +258,16 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
       hintKey: 'tool.selLasso.hint',
     },
     {
+      // Pinceau de sélection : il marque les splats à masquer, d'où son nom et sa lettre
+      // (`M`, le masque étant ce que « Nettoyer » écrit). Il a cédé `P` et l'icône de pinceau
+      // à la brosse de surface du mode « Annoter » — cf. l'arbitrage noté là-bas. `M` ne
+      // heurte rien en spatial et reste hors de l'alphabet du vol.
       id: 'sel-brush',
-      labelKey: 'tool.selBrush',
-      icon: Brush,
-      key: 'P',
+      labelKey: 'tool.maskBrush',
+      icon: SprayCan,
+      key: 'M',
       kind: 'SPLAT',
-      hintKey: 'tool.selBrush.hint',
+      hintKey: 'tool.maskBrush.hint',
     },
     {
       id: 'volume',

@@ -2,7 +2,7 @@
 
 *Scans in Spark: DCC navigation, non-destructive clean-up, comparison across versions, presentation and a cleaned SPZ export.*
 
-> Updated: 2026-09-16
+> Updated: 2026-09-20
 
 Gaussian splat media are rendered with **Spark (SparkJS)** inside the Three.js scene, with the
 same DCC-style navigation as [3D review](review-3d.md) — plus a full **non-destructive
@@ -48,6 +48,12 @@ so `Z`/`Q`/`S`/`D` on an AZERTY keyboard), `E` goes up and `Q` down, the wheel s
 speed and `Shift` multiplies it by five. Releasing the button hands the orbit back with the
 target placed in front of the camera.
 
+The right button carries **two** gestures, told apart when you release it. Held — or dragged more
+than a few pixels — it flies. Pressed and released on the spot, in under a quarter of a second, it
+opens the **viewer menu** described below. While you are flying, the keyboard belongs to the
+flight and to nothing else: no tool letter arms anything, so `S` moves you backwards instead of
+arming the scale gizmo, and `T` and `R` no longer change mode under your hand.
+
 `F` fits the selection — or the whole visible cloud when nothing is selected — and `H` returns
 to the home view. Both answer in every mode, published media included. The **ground grid** is
 a switch in the *Scene* panel (*Guides → Ground grid*), remembered in your browser.
@@ -77,11 +83,11 @@ unpublished version.
 |---|---|---|---|
 | **Rectangle** | `B` | Replaces the selection | `Shift` adds, `Alt` removes |
 | **Lasso** | `L` | Replaces the selection | `Shift` adds, `Alt` removes |
-| **Surface brush** | `P` | Replaces the selection, taking **only splats on the visible surface** | `Shift` adds, `Alt` removes; radius 8–150 px in the options bar |
+| **Mask brush** | `M` | Replaces the selection, taking **only splats on the visible surface** | `Shift` adds, `Alt` removes; radius 8–150 px in the options bar |
 | **Cutting volume** | `O` | Drops a **box** or a **sphere** | *Dig* removes what is inside, *Isolate* keeps only what is inside; click a chip to attach the gizmo to it; up to 32 volumes per media |
 | **Move · Rotate · Scale** | `T` · `R` · `S` | Transforms the **whole cloud** when nothing is selected | Transforms just the **selected subset** when a selection is active; numeric fields in the options bar |
 
-The surface brush is the tool that makes a scan workable: it only takes what is actually
+The mask brush is the tool that makes a scan workable: it only takes what is actually
 visible, so sweeping over a halo of floaters leaves the wall behind them standing, where a
 rectangle would swallow everything.
 
@@ -148,10 +154,25 @@ The selector hides itself when the task or asset carries a single version.
 
 The **Annotate** mode carries 3D tools rather than 2D drawing.
 
-- **3D brush** (`P`) paints a stroke on the surface of the cloud. Four ink colours and a
-  thickness from 1 to 5 px in the options bar, with *undo the last stroke* and *clear* next to
+- **Surface brush** (`P`) paints a stroke on the surface of the cloud. Four ink colours and a
+  thickness from 1 to 16 px in the options bar, with *undo the last stroke* and *clear* next to
   a running count. The stroke is stored in object space and travels with the comment — it is an
-  annotation, not an edit, and it never touches the splat data.
+  annotation, not an edit, and it never touches the splat data. Four things are worth knowing
+  about the gesture:
+  - the thickness is **screen thickness**: the stroke keeps the same weight whether you zoom
+    in or pull back, and the ring under the cursor shows that exact width;
+  - the stroke appears **in 3D while you drag**, following the relief; the dashed 2D trail
+    only shows up where the pointer is over nothing, to say that nothing is being painted;
+  - a drag that crosses a hole in the cloud comes out as **several strokes** rather than one
+    straight cord flying across the gap;
+  - a stroke painted on the far side of a surface is **ghosted**, not hidden, once you turn
+    around. This is an approximation from the direction the stroke was painted from — it does
+    not know about walls in between, so a stroke behind one stays visible while you look from
+    the same side.
+- **Stroke eraser** (`X`) removes one stroke per click: one you are still preparing, or one
+  from a comment you wrote yourself, in which case the comment is rewritten on the spot. The
+  dashed ring shows how close the click has to be. Strokes from someone else's comment are
+  refused — the eraser says so rather than pretending.
 - **Pin** (`I`, also on the rail in Explore as *Point of interest*) anchors the comment to a
   point on the surface. Arm it and the viewer takes over: a banner reads *Click the surface to
   place the point*, the cursor becomes a crosshair, and the anchor lands **where you click**.
@@ -201,8 +222,10 @@ slower.
   engages when the framerate stays under 15 fps for five seconds and releases when it recovers
   above 25 fps for five seconds, each time with a toast — so the change in image quality is
   never a mystery. A manager can save the chosen mode as the media's default.
-- **Edge culling** is disabled by default, which is why nothing disappears at strong zoom; the
-  switch is next to the level of detail.
+- **Edge culling** is **on** by default: Spark stops drawing gaussians that leave the picture or
+  grow past the pixel budget, which is what most scans need. Switch it off — next to the level of
+  detail, or from the viewer menu — if splats vanish on you at strong zoom. The choice is
+  remembered in your browser, per person; no studio setting overrides it.
 - The *Info* panel keeps the live counters, measured only while it is open:
 
 | Counter | What it tells you |
@@ -240,8 +263,13 @@ costs the machine almost nothing.
 | **Info** | Live counters · file name and status |
 | **Export** | The four entries below |
 
-The Export panel enumerates everything a splat can produce; the viewer's right-click is
-reserved for flight, so nothing splat-related hides in a context menu.
+The Export panel enumerates everything a splat can produce.
+
+**The viewer menu** — a brief right-click on the cloud — carries what you reach for with a hand
+already on the mouse: *Fit* and *Home view*, *Place a point of interest here* (on the exact point
+you clicked, with no tool to arm first), *Copy the view* to the clipboard, and a *Scene* submenu
+with the ground grid and edge culling switches. It writes nothing into the media: clean-up has its
+own mode, its own tools and the publication lock. Holding the same button still flies.
 
 | Entry | What it gives you |
 |---|---|
@@ -278,7 +306,7 @@ uploaded file is still intact if you got the box wrong.
 
 In a point cloud, "the crack near the door" is meaningless. Arm the **Pin** (`I`), click the
 crack, write the note. Anyone selecting that comment lands on the point. If the note is about
-an area rather than a point, use the 3D brush to paint over it — the stroke sticks to the
+an area rather than a point, use the surface brush to paint over it — the stroke sticks to the
 surface and reads from any angle.
 
 ### Two scanning passes, one decision
@@ -331,7 +359,8 @@ nothing.
 commit group in the options bar, then export.
 
 **Keyboard shortcuts do nothing.** They are inert while you hold the right mouse button
-(flight), while the caret is in a field, and while a dialog is open.
+(flight — the keys belong to the camera then, tool letters included), while the caret is in a
+field, and while a dialog is open.
 
 **The camera presentation saved, but the mask did not.** They are two different endpoints with
 two different rules: presentation stays editable after publication, content edits do not. If
@@ -346,8 +375,8 @@ its mask, volumes or transform. Open it directly to see it cleaned.
 **The image got softer on its own.** Automatic level of detail engaged below 15 fps; a toast
 said so. It releases above 25 fps, or you can force *off* in the *Scene* panel.
 
-**Splats disappear when I zoom right in.** Turn edge culling back off in the *Scene* panel — it
-is off by default precisely because of that.
+**Splats disappear when I zoom right in.** Edge culling is on by default; switch it off in the
+*Scene* panel or from the viewer menu, and the choice is remembered for next time.
 
 **The scan tile is empty in the project lists.** Server-side thumbnails are only rendered for
 `.ply` and `.splat`; compressed containers wait for the first person to open the review. See

@@ -28,12 +28,23 @@ vi.mock('./HdriService', () => hdri);
 vi.mock('../lib/projectSettings', () => ({
   resolveProjectSettingsById: vi.fn(() => Promise.resolve({ defaultLighting: { exposure: 1 } })),
 }));
+// La chaîne d'héritage du ratio a son propre banc (`lib/deliveryAspect`) ; ici on vérifie
+// seulement que l'invité le reçoit — sans lui, son cadre retombe sur un 16/9 arbitraire.
+vi.mock('../lib/deliveryAspect', () => ({ resolveDeliveryAspect: vi.fn(() => Promise.resolve(2.39)) }));
 
 import type { MediaObject } from '@prisma/client';
 import { buildClientMediaSource } from './ClientMediaSourceService';
+import { resolveDeliveryAspect } from '../lib/deliveryAspect';
+
+const VERSION = 77;
 
 const mediaOf = (metadata: Record<string, unknown>): MediaObject =>
-  ({ id: 128, storageKey: 'review/projects/p/SH0100/V01/128/plate.fbx', metadata }) as unknown as MediaObject;
+  ({
+    id: 128,
+    versionId: VERSION,
+    storageKey: 'review/projects/p/SH0100/V01/128/plate.fbx',
+    metadata,
+  }) as unknown as MediaObject;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -101,6 +112,17 @@ describe('buildClientMediaSource — de quoi ouvrir un média chez l’invité',
     expect(source.splatMaskUrl).toBe('https://minio/derived/128/mask.bin?sig');
     expect(source.splatSubsetUrl).toBe('https://minio/derived/128/ops.bin?sig');
     expect(source.splatPresentation).toEqual({ camera: { aspect: 2.39 } });
+  });
+
+  /**
+   * Le ratio du cadre de livraison, hérité des réglages pipeline du plan de la version. Sans
+   * lui, un spatial sans mise en scène s'ouvre chez l'invité dans un 16/9 arbitraire, alors
+   * que le projet livre peut-être en scope — et l'invité annote un cadre qui n'est pas le bon.
+   */
+  it('porte le ratio de livraison hérité, résolu pour le plan de SA version', async () => {
+    const source = await buildClientMediaSource(mediaOf({}), 42);
+    expect(source.deliveryAspect).toBeCloseTo(2.39);
+    expect(vi.mocked(resolveDeliveryAspect)).toHaveBeenCalledWith(VERSION, 42);
   });
 
   // Sans les chemins de prims, l'override USD n'indexe rien et la scène s'ouvre telle que

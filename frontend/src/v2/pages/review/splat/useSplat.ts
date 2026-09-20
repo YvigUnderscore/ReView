@@ -11,7 +11,7 @@ import { frameCameraToMesh } from './scene/frameCamera';
 import { createHotspotMarker } from './scene/hotspotMarker';
 import type { PointCloud } from './scene/pointCloud';
 import { createStatsSampler, type StatsSampler } from './scene/stats';
-import { DEFAULT_CULLING_OFF } from './scene/cullingDefault';
+import { readCullingOff } from './scene/cullingDefault';
 import type { SplatScene, SplatViewer } from './scene/splatViewerTypes';
 import { useCameraHandles } from './scene/useCameraHandles';
 import { useSplatHandles } from './scene/useSplatHandles';
@@ -88,10 +88,10 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
 
       const modules: SplatModules = { THREE, OrbitControls, SparkRenderer, SplatMesh };
       const { renderer, scene, camera, controls, spark } = createScene(modules, container);
-      // Culling neutralisé par défaut (10.G-V1) : rien ne disparaît en bord de cadre/overscale.
-      // Même constante que l'interrupteur du panneau (`useSplatView`) : les deux ne peuvent
-      // plus diverger.
-      applyCulling(spark, DEFAULT_CULLING_OFF);
+      // Culling actif par défaut (lot 8), sauf préférence contraire de l'utilisateur. Même
+      // lecture que l'interrupteur du panneau (`useSplatView`) : les deux ne peuvent plus
+      // diverger, ni entre elles ni avec ce qui est mémorisé.
+      applyCulling(spark, readCullingOff());
       // Navigation fly type Unreal (clic droit + ZQSD/WASD + A/E) — gèle l'orbite en vol.
       const fly = createFlyControls(THREE, camera, controls, renderer.domElement);
       flyRef.current = fly;

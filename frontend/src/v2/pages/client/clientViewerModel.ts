@@ -4,6 +4,7 @@
 import type { ClientComment, ReviewComment } from '../../types/api';
 import type { UsdVariantSet } from '../../types/usd';
 import { DEFAULT_LIGHTING, type LightingConfig } from '../review/reviewTypes';
+import { reviewAspect } from '../review/reviewAspect';
 import type { VariantSelection } from '../review/three/sceneOverrideApply';
 import type { ClientMediaSource } from './clientTypes';
 
@@ -43,13 +44,16 @@ export function resolveClientSplat(
 }
 
 /**
- * Aspect du cadre de livraison rejoué chez l'invité : celui de la caméra de présentation,
- * sinon `undefined` (le pane retombe sur son défaut 16:9). Un aspect aberrant est ignoré —
- * une présentation ancienne ne doit pas produire un cadre de hauteur nulle.
+ * Aspect du cadre de livraison rejoué chez l'invité : exactement la règle de la review
+ * interne (`reviewAspect`) — l'aspect gelé dans la présentation d'abord, sinon le ratio
+ * hérité des réglages pipeline servi par la route de partage. L'invité annote dans le même
+ * cadre que l'artiste, sinon ses annotations normalisées ne tombent pas au même endroit.
  */
-export function clientFrameAspect(source: ClientMediaSource | undefined): number | undefined {
-  const aspect = source?.splatPresentation?.camera?.aspect;
-  return typeof aspect === 'number' && Number.isFinite(aspect) && aspect > 0 ? aspect : undefined;
+export function clientFrameAspect(source: ClientMediaSource | undefined): number {
+  return reviewAspect({
+    presentation: source?.splatPresentation?.camera?.aspect,
+    delivery: source?.deliveryAspect,
+  }).value;
 }
 
 /**

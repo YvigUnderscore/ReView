@@ -7,6 +7,7 @@ import { storage } from './StorageService';
 import { mediaViewKey } from './MediaService';
 import { findWithUrl } from './HdriService';
 import { resolveProjectSettingsById } from '../lib/projectSettings';
+import { resolveDeliveryAspect } from '../lib/deliveryAspect';
 
 /**
  * Ce qu'un invité reçoit pour ouvrir UN média du lien — extrait de `client.routes.ts`, où
@@ -65,19 +66,25 @@ export async function buildClientMediaSource(media: MediaObject, projectId: numb
   // afficher. Un EXR, un DPX ou un TIFF partagés arrivaient sinon en format d'origine,
   // c'est-à-dire en image cassée, alors que le proxy web existe déjà.
   const clientKey = str(meta.clientProxyKey);
-  const [url, glbUrl, splatMaskUrl, splatSubsetUrl, project, projectSettings, hdri] = await Promise.all([
-    storage.getPresignedGetUrl(clientKey ?? mediaViewKey(media)),
-    // Le dérivé GLB appartient au même média, donc à la même portée : un .fbx, un .obj ou
-    // un .usd n'est lisible par aucun navigateur.
-    str(meta.glbKey) ? storage.getPresignedGetUrl(meta.glbKey as string) : Promise.resolve(null),
-    str(meta.splatMaskKey) ? storage.getPresignedGetUrl(meta.splatMaskKey as string) : Promise.resolve(null),
-    str(meta.splatSubsetKey)
-      ? storage.getPresignedGetUrl(meta.splatSubsetKey as string)
-      : Promise.resolve(null),
-    prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
-    resolveProjectSettingsById(projectId),
-    resolveHdri(meta),
-  ]);
+  const [url, glbUrl, splatMaskUrl, splatSubsetUrl, project, projectSettings, deliveryAspect, hdri] =
+    await Promise.all([
+      storage.getPresignedGetUrl(clientKey ?? mediaViewKey(media)),
+      // Le dérivé GLB appartient au même média, donc à la même portée : un .fbx, un .obj ou
+      // un .usd n'est lisible par aucun navigateur.
+      str(meta.glbKey) ? storage.getPresignedGetUrl(meta.glbKey as string) : Promise.resolve(null),
+      str(meta.splatMaskKey)
+        ? storage.getPresignedGetUrl(meta.splatMaskKey as string)
+        : Promise.resolve(null),
+      str(meta.splatSubsetKey)
+        ? storage.getPresignedGetUrl(meta.splatSubsetKey as string)
+        : Promise.resolve(null),
+      prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
+      resolveProjectSettingsById(projectId),
+      // Ratio du cadre de livraison (réglage pipeline hérité studio → projet → séquence → plan) :
+      // sans lui, l'invité ouvre un spatial non mis en scène dans un cadre 16/9 arbitraire.
+      resolveDeliveryAspect(media.versionId, projectId),
+      resolveHdri(meta),
+    ]);
 
   const usd = meta.model?.usd ?? null;
   return {
@@ -97,6 +104,9 @@ export async function buildClientMediaSource(media: MediaObject, projectId: numb
     splatMaskUrl,
     splatSubsetUrl,
     splatPresentation: meta.splatPresentation ?? null,
+    // Ratio du cadre de review : valeur PAR DÉFAUT, que l'aspect gelé dans la présentation
+    // (quand il y en a un) continue de primer — exactement comme dans la review interne.
+    deliveryAspect,
     projectDefaultLighting: projectSettings.defaultLighting ?? null,
     hdri,
   };

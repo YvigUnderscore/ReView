@@ -39,6 +39,8 @@ export interface ClientMediaSource {
   splatSubsetUrl?: string | null;
   /** Présentation persistée : caméra, aspect du cadre, DoF, LOD, éclairage. */
   splatPresentation?: SplatPresentation | null;
+  /** Ratio de livraison hérité des réglages pipeline — défaut du cadre (cf. `reviewAspect.ts`). */
+  deliveryAspect?: number | null;
   /** Éclairage par défaut du projet (39.F), repli quand le média n'a pas le sien. */
   projectDefaultLighting?: LightingConfig | null;
   /** HDRI référencée par la présentation, déjà résolue en URL présignée pour l'invité. */

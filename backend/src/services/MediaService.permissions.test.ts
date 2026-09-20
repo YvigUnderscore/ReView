@@ -56,6 +56,8 @@ vi.mock('../lib/settings', () => ({
   isDraftModeEnabled: vi.fn(() => Promise.resolve(false)),
   SETTING_KEYS: {},
 }));
+// Ratio du cadre de livraison : sa chaîne d'héritage a son propre banc (`lib/deliveryAspect`).
+vi.mock('../lib/deliveryAspect', () => ({ resolveDeliveryAspect: vi.fn(() => Promise.resolve(16 / 9)) }));
 vi.mock('../lib/projectSettings', () => ({
   checkNaming: vi.fn(),
   resolveProjectSettingsById: vi.fn(() =>

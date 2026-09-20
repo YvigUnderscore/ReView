@@ -120,7 +120,7 @@
 
   <text class="a" x="359" y="422" text-anchor="middle">floating badges above it: zoom % · speed · buffering · quality</text>
   <text class="d" x="359" y="444" text-anchor="middle">nothing else covers the picture you are asked to judge</text>
-  <text class="d" x="359" y="470" text-anchor="middle">right-click opens the review menu (video and image)</text>
+  <text class="d" x="359" y="470" text-anchor="middle">right-click opens the viewer menu (all four viewers)</text>
 
   <!-- Dock inspecteur -->
   <rect class="panel" x="608" y="200" width="168" height="330" rx="9"/>

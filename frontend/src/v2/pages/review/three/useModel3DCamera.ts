@@ -100,7 +100,8 @@ export function useModel3DCamera(
     const view = model3d.captureCamera();
     // Préserve les autres champs persistés (dont l'éclairage HDRI, Phase 29).
     const presentation: SplatPresentation = { ...(data.splatPresentation ?? {}) };
-    if (view) presentation.camera = cameraPoseFromView(view);
+    // Idem splat : l'aspect déjà enregistré est reconduit, jamais recapturé de la vue.
+    if (view) presentation.camera = cameraPoseFromView(view, data.splatPresentation?.camera?.aspect);
     if (hasAnimation(anim.anim)) presentation.cameraAnim = anim.anim;
     await persist(presentation);
   }, [model3d, anim.anim, persist, data.splatPresentation]);

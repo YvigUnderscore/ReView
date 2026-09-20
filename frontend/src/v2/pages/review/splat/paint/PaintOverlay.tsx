@@ -2,30 +2,56 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useRef, useState, type PointerEvent, type WheelEvent } from 'react';
+import type { PaintTool } from './useSplatPaint';
+import type { StrokeGesture } from './useStrokeGesture';
+import { ERASE_TOLERANCE_PX } from './surfaceTrace';
 
-/** Distance (px) entre deux échantillons du trait (limite le nombre de raycasts). */
+/** Distance (px) entre deux échantillons du trait — un raycast de surface par échantillon. */
 const SAMPLE_STEP = 6;
 
 /**
- * Overlay de peinture 3D (10.G-V9) : capte le drag quand le painter est actif, dessine la
- * polyligne en SVG (feedback immédiat) et remonte les échantillons écran au lâcher — le hook
- * raycaste alors la surface et construit le tube 3D. Molette relayée au canvas (zoom conservé).
+ * Overlay de la brosse de surface 3D : capte le geste, le remonte échantillon par échantillon
+ * (le hook raycaste et construit le trait 3D dans la foulée) et montre **la taille réelle de la
+ * brosse** — un cercle du diamètre de l'épaisseur, en pixels, puisque l'épaisseur est désormais
+ * constante à l'écran. La molette est relayée au canvas pour conserver le zoom d'orbite.
+ *
+ * Le guide pointillé 2D ne s'affiche que sur la portion du geste **qui ne touche aucune
+ * surface** : il dit « le rayon passe dans le vide, rien ne sera peint ici » au lieu de laisser
+ * croire à un trait. Le reste du temps, ce qu'on voit est la ligne 3D elle-même.
  */
 export default function PaintOverlay({
+  mode,
   color,
+  width,
   getCanvas,
-  onStroke,
+  gesture,
+  onErase,
 }: {
+  mode: PaintTool;
   color: string;
+  /** Épaisseur du trait, en pixels d'écran. */
+  width: number;
   getCanvas: () => HTMLElement | null;
-  onStroke: (points: [number, number][], viewport: { width: number; height: number }) => void;
+  gesture: StrokeGesture;
+  onErase: (point: [number, number], viewport: { width: number; height: number }) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [points, setPoints] = useState<[number, number][] | null>(null);
+  const drawing = useRef(false);
+  const lastRef = useRef<[number, number] | null>(null);
+  const [cursor, setCursor] = useState<[number, number] | null>(null);
+  // Portion du geste tombée dans le vide (depuis le dernier échantillon qui a touché).
+  const [miss, setMiss] = useState<[number, number][]>([]);
 
   const local = (e: PointerEvent): [number, number] => {
     const r = ref.current!.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
+  };
+  const viewport = () => ({ width: ref.current!.clientWidth, height: ref.current!.clientHeight });
+
+  const feed = (point: [number, number]) => {
+    lastRef.current = point;
+    const hit = gesture.sample(point, viewport());
+    setMiss((previous) => (hit ? [] : [...previous, point]));
   };
 
   const onPointerDown = (e: PointerEvent) => {
@@ -33,32 +59,42 @@ export default function PaintOverlay({
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // pointeur synthétique (tests) sans capture possible
+      // pointeur synthétique (tests) sans capture possible — le geste fonctionne quand même
     }
-    setPoints([local(e)]);
+    const point = local(e);
+    setCursor(point);
+    if (mode === 'erase') {
+      onErase(point, viewport());
+      return;
+    }
+    drawing.current = true;
+    gesture.begin();
+    setMiss([]);
+    feed(point);
   };
 
   const onPointerMove = (e: PointerEvent) => {
-    if (!points) return;
-    const p = local(e);
-    setPoints((pts) => {
-      if (!pts) return pts;
-      const last = pts[pts.length - 1];
-      return Math.hypot(p[0] - last[0], p[1] - last[1]) >= SAMPLE_STEP ? [...pts, p] : pts;
-    });
+    const point = local(e);
+    setCursor(point);
+    if (!drawing.current) return;
+    const last = lastRef.current;
+    if (last && Math.hypot(point[0] - last[0], point[1] - last[1]) < SAMPLE_STEP) return;
+    feed(point);
   };
 
   const onPointerUp = () => {
-    if (!points) return;
-    const el = ref.current;
-    setPoints(null);
-    if (!el || points.length < 2) return;
-    onStroke(points, { width: el.clientWidth, height: el.clientHeight });
+    if (!drawing.current) return;
+    drawing.current = false;
+    lastRef.current = null;
+    setMiss([]);
+    gesture.end();
   };
 
   const onWheel = (e: WheelEvent) => {
     getCanvas()?.dispatchEvent(new globalThis.WheelEvent('wheel', e.nativeEvent));
   };
+
+  const radius = mode === 'erase' ? ERASE_TOLERANCE_PX : Math.max(width / 2, 1.5);
 
   return (
     <div
@@ -67,20 +103,31 @@ export default function PaintOverlay({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerLeave={() => setCursor(null)}
       onWheel={onWheel}
     >
-      {points && points.length > 1 && (
-        <svg className="pointer-events-none absolute inset-0 h-full w-full">
+      <svg className="pointer-events-none absolute inset-0 h-full w-full text-muted-foreground">
+        {miss.length > 1 && (
           <polyline
-            points={points.map(([x, y]) => `${x},${y}`).join(' ')}
+            points={miss.map(([x, y]) => `${x},${y}`).join(' ')}
             fill="none"
-            stroke={color}
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            stroke="currentColor"
+            strokeWidth={1}
+            strokeDasharray="3 4"
           />
-        </svg>
-      )}
+        )}
+        {cursor && (
+          <circle
+            cx={cursor[0]}
+            cy={cursor[1]}
+            r={radius}
+            fill="none"
+            stroke={mode === 'erase' ? 'currentColor' : color}
+            strokeWidth={1}
+            strokeDasharray={mode === 'erase' ? '4 3' : undefined}
+          />
+        )}
+      </svg>
     </div>
   );
 }

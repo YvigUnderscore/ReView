@@ -9,7 +9,7 @@ import type { SplatViewer } from './useSplat';
 import { useSceneGrid } from '../viewer/useSceneGrid';
 import { useCameraSceneRig } from '../camera/sceneRig/useCameraSceneRig';
 import PipFrame from '../viewer/PipFrame';
-import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
+import { mediaReviewAspect } from '../reviewAspect';
 import CompareControl from './compare/CompareControl';
 import { useSplatCompare } from './compare/useSplatCompare';
 import SpatialCompareHeader from '../three/SpatialCompareHeader';
@@ -29,13 +29,14 @@ import { useSavedSplatEdits } from './useSavedSplatEdits';
 import { useSplatInput } from './scene/useSplatInput';
 import { useSplatView } from './useSplatView';
 import SplatPane from './SplatPane';
+import SplatContextMenu from './SplatContextMenu';
 import { useT } from '../../../i18n';
 
 /**
  * Bloc splat de la review, monté dans le chrome unifié : rail d'outils à gauche, options de
  * l'outil armé sous l'en-tête, dock inspecteur à droite, transport de l'animation caméra en
  * bas. Plus rien ne flotte au-dessus du nuage — seuls restent les overlays ancrés à la vue
- * (tracés du painter, tracé de sélection, PiP de la caméra layout).
+ * (traits de la brosse 3D, tracé de sélection, PiP de la caméra layout).
  *
  * L'état métier n'a pas bougé : `useSplatEditor` porte l'édition, `usePresentation` la mise
  * en scène, `useSplatCompare` l'A/B. Le rail se contente d'armer l'outil ; `useSplatChrome`
@@ -62,7 +63,7 @@ export default function SplatReview({
   showEdit: boolean;
   /** Gestionnaire : peut persister la présentation (autorisé même publié — mise en scène). */
   canPresent: boolean;
-  /** Painter 3D — instancié par la page (les traits partent avec le commentaire). */
+  /** Brosse de surface 3D — instanciée par la page (les traits partent avec le commentaire). */
   paint: SplatPaintState;
   onSaved: (patch: SplatEditsPatch) => void;
   /** Rôle du spectateur — le client ne voit pas la bascule de mode. */
@@ -83,6 +84,8 @@ export default function SplatReview({
     showEdit,
   );
   const { ready, getSceneHandle } = splat;
+  // Cadre de livraison : ratio des réglages pipeline, sauf aspect déjà gelé (`reviewAspect`).
+  const frameAspect = mediaReviewAspect(data).value;
 
   const grid = useSceneGrid(splat);
   const pres = usePresentation(splat, data, onSaved);
@@ -213,44 +216,55 @@ export default function SplatReview({
         ) : undefined
       }
     >
-      <SplatPane
-        containerRef={splat.containerRef}
-        ready={splat.ready}
-        loadError={splat.loadError}
-        progress={splat.progress}
-        status={data.media.status}
-        aspect={data.splatPresentation?.camera?.aspect}
-        recording={canPresent && pres.anim.autoKey}
-        overlay={overlay}
-        pip={
-          pres.layout.layoutMode && ready ? (
-            <PipFrame
-              label={t('review.layoutCamera')}
-              aspect={data.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT}
-              onRect={splat.setPipRect}
-            />
-          ) : undefined
-        }
-        editorOverlay={
-          paint.active && ready ? (
-            <PaintOverlay
-              color={paint.color}
-              getCanvas={() => getSceneHandle()?.dom ?? null}
-              onStroke={paint.addStroke}
-            />
-          ) : showEdit && selectTool && ready ? (
-            <SelectionOverlay
-              tool={selectTool}
-              brushRadius={editor.brushRadius}
-              getCanvas={() => getSceneHandle()?.dom ?? null}
-              onCommit={editor.selection.commitShape}
-              onBrush={(point, combine, viewport) =>
-                editor.selection.commitBrush(point, editor.brushRadius, combine, viewport)
-              }
-            />
-          ) : null
-        }
-      />
+      {/* Clic droit BREF → menu du viewer (cadrage, point d'intérêt au point visé, copie de la
+          vue, réglages de scène) ; maintenu, le même bouton vole. Le seuil qui départage les deux
+          vit dans `viewer/contextGesture`. */}
+      <SplatContextMenu
+        splat={splat}
+        frameView={frameView}
+        homeView={homeView}
+        onPlacePoint={ann.setHotspot3d}
+        grid={grid}
+        culling={culling}
+      >
+        <SplatPane
+          containerRef={splat.containerRef}
+          ready={splat.ready}
+          loadError={splat.loadError}
+          progress={splat.progress}
+          status={data.media.status}
+          aspect={frameAspect}
+          recording={canPresent && pres.anim.autoKey}
+          overlay={overlay}
+          pip={
+            pres.layout.layoutMode && ready ? (
+              <PipFrame label={t('review.layoutCamera')} aspect={frameAspect} onRect={splat.setPipRect} />
+            ) : undefined
+          }
+          editorOverlay={
+            paint.armed && ready ? (
+              <PaintOverlay
+                mode={paint.armed}
+                color={paint.color}
+                width={paint.width}
+                getCanvas={() => getSceneHandle()?.dom ?? null}
+                gesture={paint.gesture}
+                onErase={paint.eraseAt}
+              />
+            ) : showEdit && selectTool && ready ? (
+              <SelectionOverlay
+                tool={selectTool}
+                brushRadius={editor.brushRadius}
+                getCanvas={() => getSceneHandle()?.dom ?? null}
+                onCommit={editor.selection.commitShape}
+                onBrush={(point, combine, viewport) =>
+                  editor.selection.commitBrush(point, editor.brushRadius, combine, viewport)
+                }
+              />
+            ) : null
+          }
+        />
+      </SplatContextMenu>
     </ReviewChrome>
   );
 }

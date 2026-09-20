@@ -15,7 +15,7 @@ import { focalToFov, fovToFocal } from '../camera/focal';
 import { shouldKeyLens } from '../camera/shotCamera';
 import { evalChannel } from '../camera/channels/hermite';
 import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
-import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
+import { mediaReviewAspect, reviewAspectLabel } from '../reviewAspect';
 import type { MediaResp } from '../reviewTypes';
 import type { SplatEditorState } from './editor/useSplatEditor';
 import type { PresentationState } from './presentation/usePresentation';
@@ -30,19 +30,6 @@ import { intlLocale } from '../../../i18n';
 
 const RAD = Math.PI / 180;
 const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
-
-/** Aspect du cadre de livraison, en texte — hérité des réglages pipeline, non modifiable ici. */
-function aspectLabel(aspect: number | undefined): string {
-  const a = aspect ?? DEFAULT_REVIEW_ASPECT;
-  const known: [number, string][] = [
-    [16 / 9, '16:9'],
-    [2.39, '2.39:1'],
-    [1.85, '1.85:1'],
-    [4 / 3, '4:3'],
-    [1, '1:1'],
-  ];
-  return known.find(([v]) => Math.abs(v - a) < 0.01)?.[1] ?? `${a.toFixed(2)}:1`;
-}
 
 /**
  * Contenu du dock inspecteur pour le viewer splat : un panneau à la fois. Rassemble ce qui
@@ -104,6 +91,9 @@ export default function SplatPanels({
     const rollNow = anim.anim.channels.roll
       ? evalChannel(anim.anim.channels.roll, anim.timeMs, pres.rig.roll)
       : pres.rig.roll;
+    // Cadre de review : ce panneau ne fait que le DIRE — son ratio vient des réglages pipeline,
+    // sauf pour un média dont une présentation a déjà gelé l'aspect (`reviewAspect`).
+    const frame = mediaReviewAspect(data);
     return (
       <CameraPanel
         focalMm={Math.round(fovToFocal(fovNow))}
@@ -134,7 +124,7 @@ export default function SplatPanels({
               ? () => confirmClearPresentation(() => void pres.clear())
               : undefined,
         }}
-        aspectLabel={aspectLabel(data.splatPresentation?.camera?.aspect)}
+        aspect={{ label: reviewAspectLabel(frame.value), frozen: frame.frozen }}
         onFrame={onFrame}
         onHome={onHome}
       />

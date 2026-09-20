@@ -2,7 +2,7 @@
 
 *Everything that leaves the studio: the logo, the watermark, burn-ins, slates, and what one hardened link really bounds.*
 
-> Updated: 2026-09-17
+> Updated: 2026-09-20
 
 Getting a shot out of the building is the one operation nobody can undo. Once a file has been
 watched by someone outside the studio, the only levers left are the ones that were set
@@ -243,8 +243,8 @@ Read-only means *nothing a guest does changes what anyone else sees*. It does no
 page is inert: on a `COMMENT` link the guest gets the studio's own drawing tools, and the
 shapes travel with the comment. They are written to `Comment.annotation`, never to the media
 — the publication lock refuses any write to a published media, whoever asks. The guest
-schema is deliberately narrower than a member's: scene overrides, camera animations and 3D
-brush strokes are refused, because those are replayed for every viewer of the media and a
+schema is deliberately narrower than a member's: scene overrides, camera animations and
+surface brush strokes are refused, because those are replayed for every viewer of the media and a
 link is not an authoring surface. Writes from a link are rate limited per link, and per link
 and address.
 

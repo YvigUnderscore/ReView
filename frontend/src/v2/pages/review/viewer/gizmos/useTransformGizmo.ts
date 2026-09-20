@@ -6,6 +6,7 @@ import type * as THREE from 'three';
 import type { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { SplatTransform } from '../../reviewTypes';
 import type { SceneViewer } from '../sceneHandle';
+import { inhibitOrbit } from '../controlsLock';
 import { DEFAULT_GIZMO_SETTINGS, type GizmoSettings } from './gizmoSettings';
 import { readMeshTransform } from './meshTransform';
 
@@ -82,14 +83,22 @@ export function useTransformGizmo(
       scene.add(helper);
 
       let dragStart: SplatTransform | null = null;
+      // Inhibiteur d'orbite du drag (cf. `controlsLock`). Le gizmo écrivait `controls.enabled`
+      // en clair, et son démontage le remettait à `true` : armer puis désarmer un gizmo pendant
+      // un vol rendait l'orbite EN PLEIN VOL, derrière le dos de `flyControls`. Il ne relâche
+      // plus que son propre jeton.
+      let releaseOrbit: (() => void) | null = null;
       const onDragging = (event: { value: unknown }) => {
-        controls.enabled = !event.value; // gèle l'orbite pendant la manipulation du gizmo
         if (event.value) {
+          releaseOrbit ??= inhibitOrbit(controls, 'gizmo-drag');
           dragStart = readMeshTransform(attached); // début de drag : snapshot pour l'historique
-        } else if (dragStart) {
-          onCommitRef.current?.(dragStart, readMeshTransform(attached));
-          dragStart = null;
+          return;
         }
+        releaseOrbit?.();
+        releaseOrbit = null;
+        if (!dragStart) return;
+        onCommitRef.current?.(dragStart, readMeshTransform(attached));
+        dragStart = null;
       };
       const onObjectChange = () => onChangeRef.current(readMeshTransform(attached));
       control.addEventListener('dragging-changed', onDragging);
@@ -102,7 +111,8 @@ export function useTransformGizmo(
         control.detach();
         scene.remove(helper);
         control.dispose();
-        controls.enabled = true;
+        releaseOrbit?.(); // démontage en plein drag : on rend le jeton, pas l'orbite
+        releaseOrbit = null;
         controlRef.current = null;
       };
     })();

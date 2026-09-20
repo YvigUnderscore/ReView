@@ -33,6 +33,7 @@ import { useModel3DThree } from './review/three/useModel3DThree';
 import { ReviewHeaderSlotsContext } from './review/header/reviewHeaderSlots';
 import ReviewViewer from './review/ReviewViewer';
 import { exactFrameRate } from './review/frameRate';
+import { mediaReviewAspect } from './review/reviewAspect';
 import { ErrorBoundary } from '../components/ui/error-boundary';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
 import { useSplat } from './review/splat/useSplat';
@@ -117,9 +118,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const model3d = useModel3DThree(data, glbSrc);
   // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
   const splatUrl = data?.media.kind === 'SPLAT' ? data.url : null;
-  const splat = useSplat(splatUrl, data?.media.originalName ?? '', data?.splatPresentation?.camera?.aspect);
-  // Painter 3D (10.G-V9) : traits de surface joints au prochain commentaire.
-  const paint = useSplatPaint(splat, data?.media.kind === 'SPLAT');
+  const splat = useSplat(splatUrl, data?.media.originalName ?? '', mediaReviewAspect(data).value);
+  // Brosse de surface 3D : traits joints au prochain commentaire ; la gomme réécrit ceux
+  // d'un commentaire déjà envoyé, d'où l'identifiant du média (invalidation du fil).
+  const paint = useSplatPaint(splat, data?.media.kind === 'SPLAT', id);
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
@@ -170,8 +172,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
       ann.setAnnotating(false);
       ann.setViewed(shapes as unknown as Shape[]);
     } else ann.setViewed(null);
-    // Traits du painter 3D (V9) : rendus sur le splat pour ce commentaire.
-    if (data?.media.kind === 'SPLAT') paint.showFromAnnotation(c.annotation);
+    // Traits de la brosse 3D : rendus sur le splat pour ce commentaire. L'identifiant n'est
+    // passé que si le spectateur en est l'auteur — c'est ce que la gomme peut réécrire.
+    if (data?.media.kind === 'SPLAT')
+      paint.showFromAnnotation(c.annotation, c.author?.id === userId ? c.id : null);
     // Ratio capturé (3D: cameraState.aspect) pour caler l'overlay
     const cam = c.cameraState as { aspect?: number } | null;
     ann.setViewedAspect(cam?.aspect ?? null);

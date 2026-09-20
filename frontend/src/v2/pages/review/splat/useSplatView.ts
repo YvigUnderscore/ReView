@@ -9,7 +9,7 @@ import { useChromeState } from '../chrome/useChromeState';
 import type { MediaResp } from '../reviewTypes';
 import type { EditorTool } from './editor/useSplatEditor';
 import type { PresentationState } from './presentation/usePresentation';
-import { DEFAULT_CULLING_OFF } from './scene/cullingDefault';
+import { readCullingOff, writeCullingOff } from './scene/cullingDefault';
 import type { SplatViewer } from './useSplat';
 
 /** Tracé de sélection armé dans l'overlay ancré à la vue (null : aucun tracé en cours). */
@@ -19,7 +19,7 @@ export interface SplatViewState {
   /** État du chrome (mode, outil, panneau, tiroir) et son patcheur — préférences persistées. */
   state: ChromeState;
   update: (patch: Partial<ChromeState>) => void;
-  /** Interrupteur de culling du panneau — réglage de session, non persisté. */
+  /** Interrupteur de culling du panneau — préférence mémorisée par utilisateur. */
   culling: { off: boolean; onOff: (off: boolean) => void };
   /** Outil armé résolu dans le mode courant (repli : premier outil du mode). */
   activeTool: ReviewTool;
@@ -47,12 +47,15 @@ export function useSplatView({
   /** Outil courant de l'éditeur splat (l'overlay de tracé en dépend). */
   editorTool: EditorTool;
 }): SplatViewState {
-  const { state, update } = useChromeState('SPLAT');
-  // Culling Spark neutralisé par défaut : rien ne disparaît en zoom fort (réglage de session).
-  const [cullingOff, setCullingOffState] = useState(DEFAULT_CULLING_OFF);
+  // Garde de vol : clic droit maintenu = mode de navigation, le clavier appartient au vol et
+  // aucune lettre d'outil n'arme de gizmo (`S` armait l'Échelle en reculant).
+  const { state, update } = useChromeState('SPLAT', { isFlying: splat.isFlying });
+  // Culling Spark actif par défaut, sauf préférence contraire — mémorisée par utilisateur.
+  const [cullingOff, setCullingOffState] = useState(readCullingOff);
   const onCullingOff = useCallback(
     (off: boolean) => {
       setCullingOffState(off);
+      writeCullingOff(off);
       splat.setCullingOff(off);
     },
     [splat],

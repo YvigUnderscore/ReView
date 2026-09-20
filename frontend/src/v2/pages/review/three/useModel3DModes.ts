@@ -22,8 +22,11 @@ import {
  * `reach` dit où les gizmos du mode « Nettoyer » peuvent écrire : la transformation de version
  * (droit rendu par le serveur) ou l'override de scène USD. Sans ni l'un ni l'autre, le mode
  * n'offre qu'un enregistrement refusé — il disparaît.
+ *
+ * `isFlying` est la garde de vol du chrome : clic droit maintenu = mode de navigation, où aucune
+ * lettre n'arme d'outil (`S`, recul en ZQSD comme en WASD, armait le gizmo Échelle).
  */
-export function useModel3DModes(reach: Model3DCleanReach) {
+export function useModel3DModes(reach: Model3DCleanReach, isFlying: () => boolean) {
   const { canEditTransform, hasScenegraph } = reach;
   const canClean = useMemo(
     () => canCleanModel3d({ canEditTransform, hasScenegraph }),
@@ -31,7 +34,7 @@ export function useModel3DModes(reach: Model3DCleanReach) {
   );
   const modes = useMemo(() => model3dSwitcherModes(canClean), [canClean]);
   const toolsOf = useCallback((mode: ModeId) => model3dToolsFor(mode, canClean), [canClean]);
-  const { state, update } = useChromeState('MODEL_3D', { modes, tools: toolsOf });
+  const { state, update } = useChromeState('MODEL_3D', { modes, tools: toolsOf, isFlying });
 
   // Le droit d'écrire la transformation peut tomber sous les pieds de l'utilisateur (version
   // publiée par un superviseur pendant la session) : on ne le laisse pas dans un mode dont le

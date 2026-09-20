@@ -59,7 +59,7 @@ export function useClientModel3D(
   // Aspect et pose caméra sont lus dans une ref : ils appartiennent au montage de la scène,
   // pas au cycle de rendu React — les relire en dépendance remonterait tout le viewer.
   const aspectRef = useRef(DEFAULT_REVIEW_ASPECT);
-  aspectRef.current = clientFrameAspect(source) ?? DEFAULT_REVIEW_ASPECT;
+  aspectRef.current = clientFrameAspect(source);
   const poseRef = useRef<unknown>(null);
   poseRef.current = source?.splatPresentation?.camera ?? null;
 

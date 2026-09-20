@@ -21,6 +21,7 @@ import { useModelCameraHandles } from './useModelCameraHandles';
 import { useModelAnimations } from './useModelAnimations';
 import { useModelLayout } from './useModelLayout';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
+import { mediaReviewAspect } from '../reviewAspect';
 import { createFlyControls, type FlyControls } from '../viewer/flyControls';
 import { useThumbnailCapture } from '../viewer/useThumbnailCapture';
 import { useRenderGate, CAPTURE_WINDOW_MS } from '../viewer/renderScheduler';
@@ -79,10 +80,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   // Rendu à la demande (F14) — porte l'invalidation, les abonnements passifs et la boucle.
   const gate = useRenderGate();
   const flyRef = useRef<FlyControls | null>(null);
-  // Aspect du cadre de livraison (présentation persistée) — la caméra le garde quel que soit
-  // l'écran, la vue étant étendue au conteneur entier (Phase 25, cf. resizeRendererCamera).
+  // Aspect du cadre de livraison (réglages pipeline hérités, ou aspect gelé par une présentation
+  // — cf. `reviewAspect`) : la caméra le garde quel que soit l'écran, la vue étant étendue au
+  // conteneur entier (Phase 25, cf. resizeRendererCamera).
   const frameAspectRef = useRef<number>(DEFAULT_REVIEW_ASPECT);
-  frameAspectRef.current = data?.splatPresentation?.camera?.aspect ?? DEFAULT_REVIEW_ASPECT;
+  frameAspectRef.current = mediaReviewAspect(data).value;
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // Extensions glTF déclarées par le fichier chargé (fiche technique — 39.C).

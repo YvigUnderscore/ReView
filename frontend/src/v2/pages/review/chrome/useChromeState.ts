@@ -25,6 +25,10 @@ import { DEFAULT_TOOL, toolsFor, type ReviewTool } from './tools';
  * Les touches ne sont pas décidées ici : elles sont résolues par `chromeCommandFor`, le registre
  * partagé avec l'aide des raccourcis. Ce hook applique la commande, rien de plus.
  *
+ * Une seule exception à « applique la commande » : **pendant un vol** (clic droit maintenu dans
+ * un viewer spatial), le chrome ne répond à rien. C'est l'un des quatre écouteurs clavier qui
+ * cohabitent sur `window`/`document` — il était le seul sans garde de vol.
+ *
  * Toute mise à jour repasse par `reconcileChrome` : impossible de rester sur un outil qui
  * n'existe pas dans le mode courant.
  */
@@ -51,10 +55,16 @@ export interface ChromeOptions {
    * pas être armable au clavier, sinon la lettre arme un outil sans implémentation.
    */
   tools?: (mode: ModeId) => ReviewTool[];
+  /**
+   * Vol en cours dans un viewer spatial (clic droit maintenu). Tant qu'il dure, le clavier
+   * appartient au vol : **aucune** touche du chrome ne répond. Les deux viewers spatiaux le
+   * fournissent (`splat.isFlying`, `model3d.isFlying`) ; les médias plats n'en ont pas.
+   */
+  isFlying?: () => boolean;
 }
 
 export function useChromeState(kind: MediaKind, options: ChromeOptions = {}) {
-  const { canCompare = true, modes: modesOption, tools: toolsOption } = options;
+  const { canCompare = true, modes: modesOption, tools: toolsOption, isFlying } = options;
   const [state, setState] = useState<ChromeState>(() => initialState(kind));
 
   const update = useCallback(
@@ -101,6 +111,12 @@ export function useChromeState(kind: MediaKind, options: ChromeOptions = {}) {
       // Jamais de raccourci pendant une saisie (commentaire, champ numérique, recherche).
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // GARDE DE VOL : le clic droit maintenu est un mode de navigation, pas un état où l'on
+      // arme des outils. `S` (reculer, en ZQSD comme en WASD) armait le gizmo Échelle en plein
+      // vol ; `T`/`R` le faisaient basculer de mode. Toutes les touches se taisent, pas
+      // seulement celles du vol : changer d'outil au milieu d'un déplacement n'a aucun sens,
+      // et le geste ne se distingue pas d'une faute de frappe.
+      if (isFlying?.()) return;
 
       // Une seule autorité sur ces touches : le registre. Le garde-fou `reservedKeys` a disparu
       // avec le mode Découpe (Phase 50) — il existait parce que `I`/`O` étaient à la fois la
@@ -129,7 +145,7 @@ export function useChromeState(kind: MediaKind, options: ChromeOptions = {}) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [kind, modes, toolsOf, state.mode, state.panel, state.tool, update]);
+  }, [kind, modes, toolsOf, isFlying, state.mode, state.panel, state.tool, update]);
 
   return { state, update };
 }

@@ -1,10 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { isClickGesture, pickPrim, toNdc } from './usdPicking';
+
+/**
+ * Résout le prim visé par un point écran. `exact` (Alt+clic) court-circuite la promotion au
+ * component englobant et descend à la feuille touchée.
+ */
+export type UsdPickAt = (clientX: number, clientY: number, exact?: boolean) => string | null;
 
 /**
  * Sélection d'un prim au clic dans le viewer 3D (Phase 46, 46.C).
@@ -25,6 +31,11 @@ import { isClickGesture, pickPrim, toNdc } from './usdPicking';
  * `resolve` passe lui aussi par une ref : il est reconstruit quand l'index de la scène arrive,
  * **après** l'installation des écouteurs. Capturé dans la portée de l'effet, il resterait celui
  * d'un index vide et tout clic résoudrait `null`.
+ *
+ * Le **clic droit** n'est plus traité ici. Il porte deux gestes contradictoires (vol maintenu,
+ * menu contextuel bref) et les départager est l'affaire d'un seul module, partagé avec le splat :
+ * `viewer/useSpatialContextMenu`. Ce hook lui prête seulement sa résolution de prim, rendue par
+ * `pickAt` — sans quoi le menu s'ouvrirait aussi au milieu d'un vol, où le pointeur a bougé.
  */
 export function useUsdPicking(
   getSceneHandle: () => ViewerSceneHandle | null,
@@ -39,21 +50,30 @@ export function useUsdPicking(
    * sert déjà à la multi-sélection, et Maj à la plage dans l'arbre.
    */
   resolve: (object: THREE.Object3D, opts?: { exact?: boolean }) => string | null,
-  /**
-   * Clic droit **immobile** sur un prim (46.M) : le prim est sélectionné puis ce rappel est
-   * invoqué, et l'événement remonte jusqu'au `ContextMenu` qui enveloppe le viewer. Un clic
-   * droit glissé reste un vol ; dans le vide, rien ne s'ouvre — l'événement est arrêté.
-   */
-  onContext?: (path: string) => void,
-): void {
+): UsdPickAt {
   const down = useRef<{ x: number; y: number } | null>(null);
-  const downRight = useRef<{ x: number; y: number } | null>(null);
   const resolveRef = useRef(resolve);
-  const onContextRef = useRef(onContext);
   useEffect(() => {
     resolveRef.current = resolve;
-    onContextRef.current = onContext;
-  }, [resolve, onContext]);
+  }, [resolve]);
+
+  /**
+   * Prim visé par un point écran. Construit au niveau du hook, et non dans la portée de l'effet :
+   * le menu contextuel spatial s'en sert au relâchement du bouton droit, hors de cet effet.
+   */
+  const pickAt = useCallback<UsdPickAt>(
+    (clientX, clientY, exact = false) => {
+      const handle = getSceneHandle();
+      const dom = handle?.dom;
+      const root = handle?.modelObject;
+      if (!handle || !dom || !root) return null;
+      const rect = dom.getBoundingClientRect();
+      return pickPrim(handle.THREE, handle.camera, root, toNdc(clientX, clientY, rect), (object) =>
+        resolveRef.current(object, { exact }),
+      );
+    },
+    [getSceneHandle],
+  );
 
   useEffect(() => {
     if (!ready) return;
@@ -62,17 +82,8 @@ export function useUsdPicking(
     const root = handle?.modelObject;
     if (!handle || !dom || !root) return;
 
-    // `exact` = Alt+clic : la feuille touchée, sans promotion au component englobant.
-    const pickAt = (clientX: number, clientY: number, exact: boolean) => {
-      const rect = dom.getBoundingClientRect();
-      return pickPrim(handle.THREE, handle.camera, root, toNdc(clientX, clientY, rect), (object) =>
-        resolveRef.current(object, { exact }),
-      );
-    };
-
     const onDown = (e: PointerEvent) => {
-      if (e.button === 2) downRight.current = { x: e.clientX, y: e.clientY };
-      else down.current = { x: e.clientX, y: e.clientY };
+      if (e.button === 0) down.current = { x: e.clientX, y: e.clientY };
     };
     const onUp = (e: PointerEvent) => {
       const start = down.current;
@@ -81,29 +92,6 @@ export function useUsdPicking(
       if (!isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
       // Ctrl/⌘+clic : ajoute ou retire le prim de la sélection (multi-sélection B1).
       onSelect(pickAt(e.clientX, e.clientY, e.altKey), { additive: e.ctrlKey || e.metaKey });
-    };
-    const onCtx = (e: MouseEvent) => {
-      const start = downRight.current;
-      downRight.current = null;
-      e.stopPropagation();
-      // Glissement = vol ; vide = rien : le menu ne s'ouvre jamais sans objet visé.
-      if (!start || !isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
-      const path = pickAt(e.clientX, e.clientY, e.altKey);
-      if (!path) return;
-      onSelect(path);
-      onContextRef.current?.(path);
-      // `flyControls` a déjà `preventDefault()` l'événement sur le canvas (menu natif), et le
-      // ContextMenu enveloppant ignore un événement déjà consommé. On relance donc un événement
-      // **neuf** un cran au-dessus du canvas : il remonte jusqu'au menu sans repasser par les
-      // écouteurs de vol ni par celui-ci.
-      dom.parentElement?.dispatchEvent(
-        new MouseEvent('contextmenu', {
-          clientX: e.clientX,
-          clientY: e.clientY,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
     };
 
     // PHASE DE CAPTURE pour les événements de pointeur.
@@ -120,11 +108,11 @@ export function useUsdPicking(
     // l'orbite continue de fonctionner exactement comme avant.
     dom.addEventListener('pointerdown', onDown, true);
     dom.addEventListener('pointerup', onUp, true);
-    dom.addEventListener('contextmenu', onCtx);
     return () => {
       dom.removeEventListener('pointerdown', onDown, true);
       dom.removeEventListener('pointerup', onUp, true);
-      dom.removeEventListener('contextmenu', onCtx);
     };
-  }, [getSceneHandle, ready, onSelect]);
+  }, [getSceneHandle, ready, onSelect, pickAt]);
+
+  return pickAt;
 }

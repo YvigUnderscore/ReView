@@ -2,7 +2,7 @@
 
 *How delivery format, numbering, departments and colour cascade from the studio down to a shot — and how an override is written, read and handed back.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-20
 
 Pipeline settings describe **what the studio delivers**: frame size, framerate, shot
 numbering, the ordered list of departments, the naming rule applied to uploads, what a
@@ -322,7 +322,9 @@ reviewers may still tweak it for their own session without changing the saved de
 
 - The review viewer letterboxes at the **resolved delivery aspect**; annotations are anchored
   to that frame, so changing a shot's resolution changes where existing annotations sit
-  relative to the guide.
+  relative to the guide. One exception protects work already done: a spatial media whose
+  camera presentation was saved with an aspect keeps that aspect. The pipeline ratio is the
+  default for a frame nobody has staged yet, never a retrofit of a media already reviewed.
 - Frame stepping and timecode use the resolved framerate. The burn-in timecode is drawn at the
   media's probed fps, not at the pipeline framerate — a mismatch between the two shows up as a
   drifting burn-in.

@@ -16,7 +16,7 @@ import { focalToFov, fovToFocal } from '../camera/focal';
 import { shouldKeyLens } from '../camera/shotCamera';
 import { evalChannel } from '../camera/channels/hermite';
 import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
-import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
+import { mediaReviewAspect, reviewAspectLabel } from '../reviewAspect';
 import type { MediaResp } from '../reviewTypes';
 import { downloadAnimGltf } from './exportCameraGltf';
 import type { Model3DBookmarksState } from './useModel3DBookmarks';
@@ -31,19 +31,6 @@ import type { CameraAnimState } from '../camera/useCameraAnim';
 import { useT } from '../../../i18n';
 
 const RAD = Math.PI / 180;
-
-/** Aspect du cadre de livraison, en texte — hérité des réglages pipeline. */
-function aspectLabel(aspect: number | undefined): string {
-  const a = aspect ?? DEFAULT_REVIEW_ASPECT;
-  const known: [number, string][] = [
-    [16 / 9, '16:9'],
-    [2.39, '2.39:1'],
-    [1.85, '1.85:1'],
-    [4 / 3, '4:3'],
-    [1, '1:1'],
-  ];
-  return known.find(([v]) => Math.abs(v - a) < 0.01)?.[1] ?? `${a.toFixed(2)}:1`;
-}
 
 /**
  * Contenu du dock inspecteur pour le viewer 3D. Rassemble ce qui flottait dans `InspectBar`,
@@ -116,6 +103,9 @@ export default function Model3DPanels({
     const rollNow = anim.anim.channels.roll
       ? evalChannel(anim.anim.channels.roll, anim.timeMs, m.roll)
       : m.roll;
+    // Cadre de review : ce panneau ne fait que le DIRE — son ratio vient des réglages pipeline,
+    // sauf pour un média dont une présentation a déjà gelé l'aspect (`reviewAspect`).
+    const frame = mediaReviewAspect(data);
     return (
       <CameraPanel
         focalMm={Math.round(fovToFocal(fovNow))}
@@ -138,7 +128,7 @@ export default function Model3DPanels({
           onOrbit,
           onClear: onClearPresentation ? () => confirmClearPresentation(onClearPresentation) : undefined,
         }}
-        aspectLabel={aspectLabel(data.splatPresentation?.camera?.aspect)}
+        aspect={{ label: reviewAspectLabel(frame.value), frozen: frame.frozen }}
         onFrame={m.frameView}
         onHome={m.homeView}
         bookmarks={{

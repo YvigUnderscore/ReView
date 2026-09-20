@@ -65,6 +65,8 @@ const mediaResp = (kind: MediaKind, patch: Partial<MediaResp> = {}): MediaResp =
   splatPresentation: null,
   projectDefaultLighting: null,
   projectColor: null,
+  // Ratio du cadre de review servi par le serveur (réglages pipeline hérités) — 16:9 ici.
+  deliveryAspect: 16 / 9,
   trim: null,
   trimProxyReady: false,
   hls: null,
