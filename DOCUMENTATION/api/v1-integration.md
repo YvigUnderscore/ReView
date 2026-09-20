@@ -2,7 +2,7 @@
 
 *The stable contract for pipeline tools: pipeline paths, idempotent publish, reading back, scopes and events.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-20
 
 **`/api/v1`** is the surface meant for tools: DCCs (Maya, Blender, Houdini, Nuke), pipeline
 managers (Prism), bots and third-party synchronisations. It sits next to `/api`, which
@@ -586,7 +586,7 @@ Three variants, and `expiresIn` is bounded to 60 – 86 400 seconds (default 3 6
 | `variant` | What you get |
 |---|---|
 | `source` (default) | The file as published — or the transcoded proxy once the original has been reclaimed |
-| `proxy` | The review MP4, **including the non-destructive trim** when one exists: what the review actually plays |
+| `proxy` | The review MP4 — and, on a media carrying a legacy cut, the cut proxy: what the review actually plays |
 | `thumbnail` | The still used in lists and playlists |
 
 A variant the media does not carry answers `404 VARIANT_UNAVAILABLE` rather than a URL that

@@ -134,8 +134,6 @@ export default function SplatReview({
 
   return (
     <ReviewChrome
-      // Verrou de publication : les modes qui altèrent le média sont grisés, pas offerts.
-      published={data.media.published}
       kind="SPLAT"
       state={state}
       onState={update}

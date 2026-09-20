@@ -32,7 +32,7 @@ export type ShotgridJobData =
 export interface MediaJobData {
   mediaObjectId: number;
   // 'scan' (37.E) : antivirus seul, pour les médias servis tels quels (GLB natif, splats).
-  kind: 'transcode' | 'thumbnail' | 'convert3d' | 'trim' | 'scan';
+  kind: 'transcode' | 'thumbnail' | 'convert3d' | 'scan';
 }
 
 export const mediaQueue = new Queue<MediaJobData, void, string>(QUEUE_NAMES.MEDIA, {

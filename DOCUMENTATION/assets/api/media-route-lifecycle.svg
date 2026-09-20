@@ -92,7 +92,7 @@
   <path class="conn" d="M300 369 L258 369" marker-end="url(#arrow)"/>
   <rect class="panel-w" x="28" y="340" width="228" height="124" rx="9"/>
   <text class="l" x="42" y="362">The lock refuses</text>
-  <text class="d" x="42" y="384">trim · reprocess</text>
+  <text class="d" x="42" y="384">reprocess</text>
   <text class="d" x="42" y="402">splat-edits · splat-mask</text>
   <text class="d" x="42" y="420">splat-subset · transform</text>
   <text class="d" x="42" y="442">403 PUBLISHED_LOCKED</text>

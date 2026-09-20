@@ -100,7 +100,7 @@
 
   <rect class="panel-d" x="24" y="286" width="368" height="46" rx="9"/>
   <text class="l" x="40" y="308">403 PUBLISHED_LOCKED</text>
-  <text class="d" x="40" y="324">splat edits and masks, trim, reprocess, 3D transform</text>
+  <text class="d" x="40" y="324">splat edits and masks, reprocess, 3D transform</text>
 
   <rect class="panel" x="408" y="286" width="368" height="46" rx="9"/>
   <text class="l" x="424" y="308">Still editable</text>

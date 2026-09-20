@@ -97,8 +97,9 @@ describe('GET /api/v1/media/:id/url', () => {
     expect(res.body.url).toContain('derived/128/proxy.mp4');
   });
 
-  // La coupe non-destructive est ce que la review joue : un outil doit obtenir la même image.
-  it('sert le proxy trimé quand une coupe existe', async () => {
+  // Coupe historique (la découpe a été retirée en Phase 50) : c'est toujours elle que la
+  // review joue, donc celle qu'un outil doit obtenir — sinon il conforme un plan plus long.
+  it('sert le proxy coupé quand une coupe historique existe', async () => {
     db.mediaObject.findUnique.mockResolvedValue({
       ...media,
       metadata: {

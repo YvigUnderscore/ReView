@@ -64,8 +64,11 @@ const ROOTS = ['frontend/src', 'backend/src'];
  * plus comptés — une requête paramétrée déclarait jusqu'ici autant de « textes en dur »
  * qu'elle avait de fragments, ce qui poussait à concaténer le SQL pour satisfaire le contrôle.
  * Le plafond descend d'autant : ce qu'il reste est de la dette réelle, pas du bruit.
+ *
+ * 2026-09-20 : 332 -> 330. Le service et le routeur de la découpe vidéo ont été supprimés
+ * avec la fonctionnalité (Phase 50, lot 4) ; leurs messages d'erreur partent avec eux.
  */
-const BACKEND_DEBT = 332;
+const BACKEND_DEBT = 330;
 
 /**
  * Reliquat toléré **par arborescence** — dette à résorber, jamais à relever.

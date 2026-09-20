@@ -50,7 +50,6 @@ export default function ReviewViewer({
   reprocessing,
   role,
   canEditTransform,
-  canTrim,
   canEditSplat,
   canManage,
   onClearSelection,
@@ -87,8 +86,6 @@ export default function ReviewViewer({
   reprocessing: boolean;
   role?: Role;
   canEditTransform: boolean;
-  /** Montage vidéo (points d'entrée/sortie) — faux dès que le média est publié (Phase 11). */
-  canTrim: boolean;
   /** Éditions splat (masque, sous-ensemble) — non destructives, vraies après publication. */
   canEditSplat: boolean;
   /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
@@ -198,9 +195,6 @@ export default function ReviewViewer({
           fps={fps}
           ann={ann}
           role={role}
-          canEdit={canTrim}
-          videoRef={videoRef}
-          onSaved={onSplatEditsSaved}
           onExportFrame={mediaExport.onExportFrame}
           onContactSheet={mediaExport.onContactSheet}
           compare={{
@@ -257,7 +251,6 @@ export default function ReviewViewer({
           onFullscreen={onFullscreen}
           onToggleAnnotate={onToggleAnnotate}
           onClearSelection={onClearSelection}
-          onSaved={onSplatEditsSaved}
           compareIds={compareIds}
           compareMode={compareMode}
           onCompareModeChange={onCompareModeChange}

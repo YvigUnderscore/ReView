@@ -2,7 +2,7 @@
 
 *Where every object lives in the one bucket, what is filling it, and which bytes reach a browser without ever touching the API.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 The whole instance stores everything in **one S3/MinIO bucket** — `S3_BUCKET`, default
 `review`. There is no bucket per project, no bucket per media type: a single flat namespace,
@@ -20,7 +20,7 @@ static map of the key conventions; the second is a live scan of the bucket.
 Two prefixes carry almost all the weight of a working studio, and they are opposites:
 
 - **`projects/{slug}/…` — the originals.** The uploaded file is the source of truth and is
-  **never modified**. Every transformation the application offers — transcodes, trims, splat
+  **never modified**. Every transformation the application offers — transcodes, splat
   edits, USD overrides, colour work — produces derived objects or non-destructive metadata,
   never a rewrite of the source. This is also the only prefix a browser writes directly, by
   presigned `PUT`.
@@ -48,7 +48,7 @@ Anything that matches none of the eight is counted as **`other`**.
 | Board image | `projects/{projectId}/boards/project/{fileId}` or `…/boards/asset/{assetId}/{fileId}` | browser (presigned `PUT`) |
 | HLS | `derived/{mediaId}/hls/master.m3u8`, `{height}p.m3u8`, `{height}p_NNN.ts` | FFmpeg worker |
 | Thumbnail | `derived/{mediaId}/thumbnail.jpg` (worker) or `.png`/`.webp` (client-supplied) | FFmpeg worker / review |
-| Video proxy | `derived/{mediaId}/proxy.mp4` (+ `proxy-trim.mp4`) | FFmpeg worker |
+| Video proxy | `derived/{mediaId}/proxy.mp4` (+ a legacy `proxy-trim.mp4`, no longer produced) | FFmpeg worker |
 | Client MP4 (slate + burn-ins) | `derived/{mediaId}/client.mp4` | FFmpeg worker |
 | Timeline sprite | `derived/{mediaId}/timeline-sprite.jpg` | FFmpeg worker |
 | Converted GLB (3D/USD) | `derived/{mediaId}/model.glb` | conversion worker |

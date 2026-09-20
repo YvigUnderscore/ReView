@@ -2,7 +2,7 @@
 
 *What the worker makes of a file once it lands: proxies, HLS ladders, thumbnails, waveforms and GLBs — and what becomes of the original.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 When an upload is finalised, the backend enqueues a job (BullMQ on Redis) and the media
 worker picks it up. The media stays usable in the interface while processing runs, and its
@@ -81,26 +81,13 @@ burn-in that cannot be resolved is logged and skipped rather than failing the jo
 
 > [!IMPORTANT]
 > **Once the derivatives exist, the original video object is deleted.** The MP4 proxy becomes
-> the only remaining source file: later trims and reprocesses restart from it, not from the
+> the only remaining source file: a later reprocess restarts from it, not from the
 > master you uploaded. This is a space decision, and it is why a version is published rather
 > than corrected — the delivered master is not kept twice.
 >
 > An **image sequence is the exception**: its frames and manifest are never deleted. They are
 > the reference deliverable, they stay served by their own route, and a reprocess always
 > restarts from them.
-
-### Trimming
-
-Videos can be **trimmed** (in/out) before publication. The trim is non-destructive: a separate
-trimmed proxy is rendered, so changing your mind costs one job and no re-upload.
-
-Two consequences worth knowing:
-
-- Changing or clearing the trim while its job is running is safe. The worker re-reads the trim
-  before recording its output and discards the render if the values moved.
-- A failed trim does **not** mark the media as failed — the untrimmed proxy is still served.
-
-Trims are locked once the version is published (publish lock).
 
 ## Image sequences
 
@@ -208,7 +195,7 @@ one listing away:
 |---|---|
 | `derived/<id>/proxy.mp4` | The video proxy — and, after the source is deleted, the source |
 | `derived/<id>/hls/…` | The adaptive ladder and its master playlist |
-| `derived/<id>/proxy-trim.mp4` | The trimmed proxy, when a trim is set |
+| `derived/<id>/proxy-trim.mp4` | A legacy cut proxy — no longer produced, still served when one exists |
 | `derived/<id>/client.mp4` | The slated derivative served to client shares |
 | `derived/<id>/timeline-sprite.jpg` | The hover strip of the scrub bar |
 | `derived/<id>/proxy.jpg` | The full-resolution web proxy of a production image |
@@ -233,11 +220,9 @@ Processing can be retried without re-uploading — the 3D viewer offers a **Reco
 next to the stored error, and the API exposes the same route. Reprocessing is blocked on
 published versions (publish lock); publish a new version instead.
 
-Two job kinds deliberately never mark a media as failed:
-
-- `trim`, because the original proxy is still perfectly playable;
-- `scan`, because an unreachable ClamAV daemon is an infrastructure problem, not a bad file.
-  BullMQ retries; only an actual detection quarantines the media.
+One job kind deliberately never marks a media as failed: `scan`, because an unreachable
+ClamAV daemon is an infrastructure problem, not a bad file. BullMQ retries; only an actual
+detection quarantines the media.
 
 ### What to check first
 

@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ReactNode } from 'react';
-import { Eraser, LogIn, LogOut, Redo2, Undo2, X } from 'lucide-react';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
+import { Eraser, Redo2, Undo2 } from 'lucide-react';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import { SegmentedControl } from '../../../components/ui/segmented-control';
 import { USER_COLORS } from '../../../lib/userColor';
-import OptionsBar, { CommitGroup } from '../chrome/OptionsBar';
+import OptionsBar from '../chrome/OptionsBar';
 import type { ModeId } from '../chrome/modes';
 import type { ReviewTool } from '../chrome/tools';
 import type { CompareMode } from '../useCompareState';
@@ -32,16 +30,15 @@ const compare_modes = (t: Tr) => [
 
 /**
  * Barre d'options des viewers plats (vidéo, image) : les paramètres du seul outil armé.
- * Remplace la palette d'annotation qui vivait sous le champ de commentaire et la barre de
- * trim posée sous le lecteur — les outils sont passés au rail, il ne reste ici que l'encre,
- * l'épaisseur, l'opacité et les actions de l'outil.
+ * Remplace la palette d'annotation qui vivait sous le champ de commentaire — les outils sont
+ * passés au rail, il ne reste ici que l'encre, l'épaisseur, l'opacité et les actions de
+ * l'outil.
  */
 export default function MediaOptions({
   tool,
   mode,
   ann,
   compare,
-  trim,
 }: {
   tool: ReviewTool;
   mode: ModeId;
@@ -54,36 +51,13 @@ export default function MediaOptions({
     /** Réglages A et B (`CompareAB`) — montés par le chrome, absents en vidéo. */
     ab?: ReactNode;
   };
-  /** Découpe vidéo (gestionnaire, pré-publication). */
-  trim?: {
-    inFrame: number | null;
-    outFrame: number | null;
-    onIn: () => void;
-    onOut: () => void;
-    onClear: () => void;
-    onApply: () => void;
-    dirty: boolean;
-    busy: boolean;
-    label: string;
-  };
 }) {
   const t = useT();
   const id = tool.id;
   const drawing = DRAWING.has(id);
 
-  const commit =
-    mode === 'edit' && trim ? (
-      <CommitGroup
-        dirty={trim.dirty}
-        saving={trim.busy}
-        label={t('common.save')}
-        hint={t('review.trim.unsaved')}
-        onSave={trim.onApply}
-      />
-    ) : undefined;
-
   return (
-    <OptionsBar tool={tool} commit={commit}>
+    <OptionsBar tool={tool}>
       {/* L'aide de l'outil s'efface en comparaison : la ligne y porte les réglages A et B. */}
       {(id === 'nav' || id === 'zoom') && mode !== 'compare' && (
         <span className="rv-optbar__hint">{t(tool.hintKey)}</span>
@@ -199,36 +173,6 @@ export default function MediaOptions({
               ? t('draw.shapesAttached', { count: ann.annot.length })
               : t('draw.goesWithComment')}
           </span>
-        </>
-      )}
-
-      {(id === 'in' || id === 'out') && trim && (
-        <>
-          <span className="rv-optbar__hint">{trim.label}</span>
-          <span className="rv-rule" />
-          <Button size="sm" variant="outline" onClick={trim.onIn}>
-            <LogIn size={13} />
-            {t('review.markerHere')}
-          </Button>
-          <Button size="sm" variant="outline" onClick={trim.onOut}>
-            <LogOut size={13} />
-            {t('video.outHere')}
-          </Button>
-          <IconButton
-            icon={X}
-            label={t('review.clearTrim')}
-            bordered
-            onClick={trim.onClear}
-            disabled={trim.inFrame == null && trim.outFrame == null}
-          />
-        </>
-      )}
-
-      {id === 'range' && (
-        <>
-          <span className="rv-optbar__hint">{t('video.loopHint')}</span>
-          <span className="rv-rule" />
-          <Badge variant="secondary">{t('review.rangeAttached')}</Badge>
         </>
       )}
     </OptionsBar>

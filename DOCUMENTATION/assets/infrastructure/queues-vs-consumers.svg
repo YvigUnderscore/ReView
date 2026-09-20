@@ -62,7 +62,7 @@
   <!-- Ligne 1 : media-processing -->
   <rect class="panel-a" x="30" y="44" width="300" height="46" rx="9"/>
   <text class="m" x="44" y="64">media-processing</text>
-  <text class="d" x="44" y="80">transcode, thumbnail, convert3d, trim, scan</text>
+  <text class="d" x="44" y="80">transcode, thumbnail, convert3d, scan</text>
   <path class="conn-a" d="M330 67 L440 67" marker-end="url(#arrow-a)"/>
   <rect class="panel-a" x="440" y="44" width="330" height="46" rx="9"/>
   <text class="m" x="454" y="64">ffmpeg.worker</text>

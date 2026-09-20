@@ -109,7 +109,6 @@
   <text class="t" x="540" y="316">TIMELINE</text>
   <text class="d" x="540" y="336">comment avatars · ranges</text>
   <text class="d" x="540" y="354">named markers · I/O segment</text>
-  <text class="d" x="540" y="372">shaded out-of-trim regions</text>
 
   <!-- Bande 3 : forme d'onde -->
   <rect class="panel" x="24" y="374" width="496" height="40" rx="9"/>

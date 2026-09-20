@@ -232,7 +232,11 @@ export interface MediaResp {
   projectDefaultLighting: LightingConfig | null;
   /** Gestion de couleur OCIO du projet (39.B) : intention display/view, affichée en badge. */
   projectColor: { configId?: string; display?: string; view?: string } | null;
-  /** Trim vidéo non-destructif (10.G-V10) : bornes en frames, proxy trimé prêt ou en cours. */
+  /**
+   * Coupe HISTORIQUE (10.G-V10, découpe retirée en Phase 50) : bornes en frames d'un média
+   * coupé avant le retrait. Plus rien n'en pose ; la review s'en sert pour dire ce qu'elle
+   * joue (fiche technique, panneau Export) et pour écarter l'échelle HLS, qui ignore la coupe.
+   */
   trim: { inFrame: number; outFrame: number } | null;
   trimProxyReady: boolean;
   /** HLS adaptatif (Phase 23) : renditions disponibles → lecture via le proxy `/hls/master.m3u8`. */

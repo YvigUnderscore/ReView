@@ -759,7 +759,12 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(cleared.body.splatPresentation).toBeNull();
   });
 
-  it('trim vidéo (10.G-V10) : non-destructif, bornes validées, verrouillé à la publication', async () => {
+  /**
+   * La découpe vidéo a été retirée (Phase 50, lot 4). Ce test tenait l'ancien comportement —
+   * poser, effacer, se heurter au verrou de publication. Il est réécrit sur ce qui reste :
+   * la route n'existe plus, et une coupe **historique** continue d'être lue et servie.
+   */
+  it('découpe retirée : plus de route, mais une coupe historique reste servie', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
@@ -797,59 +802,36 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     });
     const mediaId = up.body.mediaObjectId;
     // Pas de finalize ici : il enqueuerait un job transcode que le worker de la stack docker
-    // traiterait pendant le test (réécriture du metadata → perte du trim). L'objet du test est
-    // le trim et son verrou de publication — le média est figé READY directement.
-    // `published: false` explicite : depuis la Phase 50 le média naît PUBLIÉ, et le trim est
-    // l'une des écritures que la publication refuse encore. Sans ce retour au brouillon, le
-    // premier trim du test serait déjà un 403 et le scénario n'éprouverait plus rien.
+    // traiterait pendant le test (réécriture du metadata → perte de la coupe simulée).
     await prisma.mediaObject.update({
       where: { id: mediaId },
-      data: { status: MediaStatus.READY, published: false, metadata: { fps: 24 } },
+      data: { status: MediaStatus.READY, metadata: { fps: 24 } },
     });
 
-    // Bornes invalides → 400.
-    const bad = await request(app)
-      .patch(`/api/media/${mediaId}/trim`)
-      .set(auth)
-      .send({ trim: { inFrame: 50, outFrame: 10 } });
-    expect(bad.status).toBe(400);
-
-    // Trim valide (brouillon) : bornes exposées, proxy pas encore produit.
-    const set = await request(app)
+    // La route de découpe n'est plus montée : plus rien ne peut poser de coupe.
+    const gone = await request(app)
       .patch(`/api/media/${mediaId}/trim`)
       .set(auth)
       .send({ trim: { inFrame: 10, outFrame: 50 } });
-    expect(set.status).toBe(200);
-    expect(set.body.trim).toEqual({ inFrame: 10, outFrame: 50 });
-    expect(set.body.trimProxyReady).toBe(false);
+    expect(gone.status).toBe(404);
+
+    // Coupe historique, telle qu'un média coupé avant le retrait la porte en base : elle
+    // reste exposée et le proxy coupé reste celui que la review joue.
+    await prisma.mediaObject.update({
+      where: { id: mediaId },
+      data: {
+        metadata: {
+          fps: 24,
+          proxyKey: `derived/${mediaId}/proxy.mp4`,
+          trim: { inFrame: 10, outFrame: 50 },
+          trimProxyKey: `derived/${mediaId}/proxy-trim.mp4`,
+        },
+      },
+    });
     const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(detail.body.trim).toEqual({ inFrame: 10, outFrame: 50 });
-
-    // Effacement du trim (brouillon) → retour au proxy d'origine.
-    const clear = await request(app).patch(`/api/media/${mediaId}/trim`).set(auth).send({ trim: null });
-    expect(clear.status).toBe(200);
-    const cleared2 = await request(app).get(`/api/media/${mediaId}`).set(auth);
-    expect(cleared2.body.trim).toBeNull();
-
-    // Re-pose puis publication → verrou définitif (Phase 11) : tout trim est refusé (403).
-    await request(app)
-      .patch(`/api/media/${mediaId}/trim`)
-      .set(auth)
-      .send({ trim: { inFrame: 10, outFrame: 50 } });
-    await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
-    const retrim = await request(app)
-      .patch(`/api/media/${mediaId}/trim`)
-      .set(auth)
-      .send({ trim: { inFrame: 0, outFrame: 30 } });
-    expect(retrim.status).toBe(403);
-    const clearAfterPublish = await request(app)
-      .patch(`/api/media/${mediaId}/trim`)
-      .set(auth)
-      .send({ trim: null });
-    expect(clearAfterPublish.status).toBe(403);
-    // Le trim posé avant publication reste servi tel quel.
-    const lockedDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
-    expect(lockedDetail.body.trim).toEqual({ inFrame: 10, outFrame: 50 });
+    expect(detail.body.trimProxyReady).toBe(true);
+    expect(detail.body.proxyUrl).toContain('proxy-trim.mp4');
   });
 });
 

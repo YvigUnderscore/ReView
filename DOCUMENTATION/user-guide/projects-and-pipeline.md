@@ -440,7 +440,7 @@ uploaded them: nobody else on the project — supervisors included — sees a dr
 it is published. Publishing makes it visible to the project and **permanently locks its
 content**:
 
-- locked after publish: splat edits and masks, video trim, reprocessing, 3D transform (any
+- locked after publish: splat edits and masks, reprocessing, 3D transform (any
   structural write answers `403 PUBLISHED_LOCKED`);
 - still editable: the splat **presentation** (staging: camera framing, depth of field,
   reveal) and the thumbnail;

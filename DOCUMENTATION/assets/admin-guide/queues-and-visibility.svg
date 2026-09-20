@@ -71,7 +71,7 @@
   <text class="l" x="725" y="76" text-anchor="middle">Retry button</text>
 
   <text class="m" x="46" y="107">media (media-processing)</text>
-  <text class="d" x="236" y="107">transcode, thumbnail, 3D convert, trim, scan — 2 at once</text>
+  <text class="d" x="236" y="107">transcode, thumbnail, 3D convert, scan — 2 at once</text>
   <text class="d ok" x="614" y="107" text-anchor="middle">Yes</text>
   <text class="d ok" x="725" y="107" text-anchor="middle">Yes</text>
 

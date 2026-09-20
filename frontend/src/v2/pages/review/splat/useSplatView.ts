@@ -47,7 +47,7 @@ export function useSplatView({
   /** Outil courant de l'éditeur splat (l'overlay de tracé en dépend). */
   editorTool: EditorTool;
 }): SplatViewState {
-  const { state, update } = useChromeState('SPLAT', data.media.published);
+  const { state, update } = useChromeState('SPLAT');
   // Culling Spark neutralisé par défaut : rien ne disparaît en zoom fort (réglage de session).
   const [cullingOff, setCullingOffState] = useState(DEFAULT_CULLING_OFF);
   const onCullingOff = useCallback(

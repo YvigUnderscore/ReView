@@ -130,7 +130,7 @@
   <text class="d" x="755" y="290" text-anchor="end">hls</text>
   <text class="m" x="345" y="310">thumbnail.jpg</text>
   <text class="d" x="755" y="310" text-anchor="end">thumbnails</text>
-  <text class="m" x="345" y="330">proxy.mp4 · proxy-trim.mp4</text>
+  <text class="m" x="345" y="330">proxy.mp4 · client.mp4</text>
   <text class="d" x="755" y="330" text-anchor="end">proxies</text>
   <text class="m" x="345" y="350">client.mp4</text>
   <text class="d" x="755" y="350" text-anchor="end">client</text>

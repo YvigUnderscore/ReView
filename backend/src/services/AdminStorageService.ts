@@ -51,6 +51,9 @@ export function derivedSubtype(rest: string): string {
   if (rest.startsWith('hls/')) return 'hls';
   if (rest.startsWith('thumbnail.')) return 'thumbnails';
   if (rest === 'model.glb') return 'glb';
+  // `proxy-trim.mp4` : la découpe a été retirée (Phase 50, lot 4), mais ce classement est de
+  // la CLASSIFICATION d'objets existants, pas de la production. Le retirer ferait basculer
+  // les dérivés historiques de `proxies` vers `other` dans le tableau de bord de stockage.
   if (rest === 'proxy.mp4' || rest === 'proxy-trim.mp4') return 'proxies';
   if (rest === 'client.mp4') return 'client';
   if (rest === 'timeline-sprite.jpg') return 'sprites';

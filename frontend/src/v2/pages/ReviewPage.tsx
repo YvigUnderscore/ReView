@@ -129,8 +129,6 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // sous-ensemble) et override USD, toutes rejouées à la lecture.
   const published = data?.media.published ?? true;
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
-  /** Montage vidéo : refusé après publication (403 `PUBLISHED_LOCKED`). */
-  const canTrim = canManageMedia && !published;
   /** Éditions splat : non destructives, donc offertes même après publication. */
   const canEditSplat = canManageMedia;
   const canEditTransform = !published && (role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST');
@@ -362,7 +360,6 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
                 reprocessing={reprocessing}
                 role={role}
                 canEditTransform={canEditTransform}
-                canTrim={canTrim}
                 canEditSplat={canEditSplat}
                 canManage={canManageMedia}
                 onSplatEditsSaved={onSplatEditsSaved}

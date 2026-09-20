@@ -65,8 +65,13 @@ type MediaMeta = { proxyKey?: string; trim?: unknown; trimProxyKey?: string };
 
 /**
  * Clé de stockage d'une variante, ou `null` si ce média ne la porte pas.
+ *
  * `proxy` suit la coupe non-destructive quand elle a été produite : c'est le fichier que
- * la review joue, donc celui qu'un outil doit récupérer pour montrer la même chose.
+ * la review joue, donc celui qu'un outil doit récupérer pour montrer la même chose. La
+ * découpe a été retirée en Phase 50 (lot 4) et plus rien ne produit de `trimProxyKey` ;
+ * cette lecture reste pour les coupes **historiques**. Sans elle, un client externe qui
+ * récupère `proxy` pour un conform recevrait un fichier plus long qu'à la review, sans
+ * erreur ni avertissement.
  */
 export function variantKey(media: ReadableMedia, variant: MediaVariant): string | null {
   const meta = (media.metadata ?? {}) as MediaMeta;

@@ -1,53 +1,47 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useRef } from 'react';
 import { useGuides } from '../../stores/useGuides';
+import GuideLayer from './guides/GuideLayer';
+import { actionSafeRect, centerCrossSegments, thirdsLines, titleSafeRect } from './guides/guideGeometry';
+import { guideDashArray } from './guides/guideStyle';
+import { useGuideBox } from './guides/useGuideBox';
 
 /**
- * Guides de composition (34.G) : tiers, croix centrale, safe areas action (90 %) et
- * titre (80 %) — SVG en surimpression du cadre du média (pointer-events-none), activés
- * par le menu clic droit de la review. Traits fins constants (non-scaling-stroke).
+ * Repères de composition (34.G) : tiers, croix centrale, safe areas action (90 %) et titre
+ * (80 %) — SVG en surimpression du cadre du média (`pointer-events-none`), activés par le
+ * menu clic droit de la review.
+ *
+ * Tout le style vient de `guides/guideStyle` (mêmes traits que le liseré du cadre de
+ * livraison), la géométrie de `guides/guideGeometry` (croix carrée quel que soit l'aspect),
+ * et l'épaisseur est compensée du zoom du lecteur : 1 px à l'écran, à toutes les échelles.
  */
 export default function CompositionGuides() {
   const guides = useGuides((s) => s.guides);
-  if (!guides.thirds && !guides.center && !guides.actionSafe && !guides.titleSafe) return null;
-  const stroke = { vectorEffect: 'non-scaling-stroke' as const, strokeWidth: 1 };
+  const ref = useRef<HTMLDivElement>(null);
+  const on = guides.thirds || guides.center || guides.actionSafe || guides.titleSafe;
+  const { w, h, scale } = useGuideBox(ref, on);
+  if (!on) return null;
+
+  const [crossH, crossV] = centerCrossSegments(w, h);
   return (
-    <svg
-      className="pointer-events-none absolute inset-0 z-20 h-full w-full text-primary/60"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      aria-hidden
-    >
-      {guides.thirds && (
-        <g stroke="currentColor" {...stroke}>
-          <line x1="33.333" y1="0" x2="33.333" y2="100" />
-          <line x1="66.667" y1="0" x2="66.667" y2="100" />
-          <line x1="0" y1="33.333" x2="100" y2="33.333" />
-          <line x1="0" y1="66.667" x2="100" y2="66.667" />
-        </g>
-      )}
-      {guides.center && (
-        <g stroke="currentColor" {...stroke}>
-          <line x1="46" y1="50" x2="54" y2="50" />
-          <line x1="50" y1="46" x2="50" y2="54" />
-        </g>
-      )}
-      {guides.actionSafe && (
-        <rect x="5" y="5" width="90" height="90" fill="none" stroke="currentColor" {...stroke} />
-      )}
-      {guides.titleSafe && (
-        <rect
-          x="10"
-          y="10"
-          width="80"
-          height="80"
-          fill="none"
-          stroke="currentColor"
-          strokeDasharray="4 3"
-          {...stroke}
-        />
-      )}
-    </svg>
+    <div ref={ref} className="pointer-events-none absolute inset-0 z-20">
+      <GuideLayer w={w} h={h} scale={scale} className="h-full w-full">
+        {guides.thirds &&
+          thirdsLines(w, h).map((l, i) => <line key={`third-${i}`} {...l} data-guide="thirds" />)}
+        {guides.center && (
+          <>
+            <line {...crossH} data-guide="center" />
+            <line {...crossV} data-guide="center" />
+          </>
+        )}
+        {guides.actionSafe && <rect {...actionSafeRect(w, h)} data-guide="actionSafe" />}
+        {/* Le repère titre se distingue par ses tirets, jamais par son épaisseur. */}
+        {guides.titleSafe && (
+          <rect {...titleSafeRect(w, h)} strokeDasharray={guideDashArray(scale)} data-guide="titleSafe" />
+        )}
+      </GuideLayer>
+    </div>
   );
 }

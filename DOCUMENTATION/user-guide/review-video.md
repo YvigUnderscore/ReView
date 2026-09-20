@@ -1,8 +1,8 @@
 # Video review
 
-*Frame-accurate playback, loops and markers, sound, zoom, A/B comparison and trim — everything specific to video.*
+*Frame-accurate playback, loops and markers, sound, zoom and A/B comparison — everything specific to video.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 ![Video review: transport with timecode and frame counter, tool rail on the left, inspector dock and comment thread on the right.](../assets/user-guide/review-video.png)
 
@@ -123,7 +123,7 @@ zoom in on a difference.
 
 > [!WARNING]
 > `1` is also the mode key for *Watch*, and the two handlers do not know about each other.
-> Pressing `1` in *Compare* or *Trim* will zoom to 100 % **and** drop you back into *Watch*.
+> Pressing `1` in *Compare* will zoom to 100 % **and** drop you back into *Watch*.
 > Prefer `0` and the wheel while you are working in another mode.
 
 **Composition guides** — rule of thirds, centre cross, action safe (90 %) and title safe
@@ -146,8 +146,16 @@ The quality selector sits at the right of the transport.
   after which it stops insisting rather than looping.
 - A media with no usable HLS ladder shows a single **Original** entry and plays the MP4 proxy.
   Three things cause that: the media was transcoded before the adaptive ladder existed, the
-  ladder is disabled in the studio transcoding settings, or **the media is trimmed** — see the
-  next chapter but one.
+  ladder is disabled in the studio transcoding settings, or the media carries a **legacy cut**
+  (see the note below).
+
+> [!NOTE]
+> ReView used to offer a non-destructive in/out cut from the review. It was withdrawn: the
+> cut was only writable before publication, and since media are published on upload the mode
+> was refused more often than it was used. A media cut **before** the withdrawal keeps
+> playing its cut proxy, and keeps the single *Original* quality entry that goes with it —
+> the HLS ladder is built from the whole master and ignores the bounds. To deliver a shorter
+> clip today, cut it upstream and upload a new version.
 
 ## Comparing versions
 
@@ -181,36 +189,6 @@ to zero; a single toast, replacing itself, announces the current offset. The key
 their **position** on the keyboard, so they work on an AZERTY layout. The offset is capped at
 ±240 frames, applies to every B pane at once, and is dropped when you leave the media — the
 next shot has no reason to share the same conform.
-
-## Trim
-
-A video can be trimmed from the review before it is published.
-
-![Trimming an unpublished media places bounds, saves them, and a worker builds a trimmed MP4 proxy; until it is ready the whole clip plays with the dropped parts shaded, and once it is ready the HLS ladder is bypassed.](../assets/user-guide/trim-lifecycle.svg)
-
-1. Switch to the **Trim** mode (key `3`).
-2. Arm *In point* (`I`) or *Out point* (`O`). The options bar then offers **Marker here** and
-   **Out here**, which place the bound at the current frame, plus a `×` that clears both. It
-   also summarises the bounds and the number of frames kept. The rail buttons arm the tool; the
-   options-bar buttons are what actually write a bound.
-3. Save from the commit group at the right of the options bar. The out point must come after
-   the in point, or the save is refused with a message.
-
-The worker then produces a **trimmed proxy** and the original file is never modified; the proxy
-is served to everyone on the next load. Until it is ready, the out-of-trim regions are simply
-shaded on the timeline and the whole clip still plays. Clearing the trim returns the full
-video, and saving new bounds discards the previous proxy.
-
-> [!IMPORTANT]
-> **A trimmed media loses its quality ladder.** The HLS renditions are built from the whole
-> master and carry no trim, so the player deliberately refuses them once the trimmed proxy is
-> ready — otherwise your in and out points would have no effect on playback. From that moment
-> the quality selector shows a single *Original* entry and the single MP4 proxy plays. It is
-> the price of a non-destructive trim, and it is why trimming is a delivery decision rather
-> than a review habit.
-
-Trim is only offered to someone who can manage the media, and only before publication — see the
-troubleshooting section below.
 
 ## Fullscreen, theatre and the detachable player
 
@@ -312,27 +290,9 @@ beginning".
 Put the version in a playlist, share it, and drive a live session. Your comparison choice, your
 wipe position, your playhead and your mouse cursor are replicated to everyone watching, so "the
 shot on the left, at 1012" needs no explanation. The client, on a `CLIENT` account, sees only
-the Watch mode: no trim, no annotation tools, nothing that could alter the media.
-
-### Cutting the slate off a playblast
-
-The version arrives with ten frames of slate and eight of black tail. In **Trim** mode, put the
-in point after the slate and the out point before the tail, save, and the whole team gets the
-clean proxy on their next load. The uploaded file is untouched, so nothing is lost if the
-bounds were wrong — set them again and save. Expect the quality selector to fall back to
-*Original* once the proxy lands.
+the Watch mode: no annotation tools, nothing that could alter the media.
 
 ## Troubleshooting
-
-**"Video not ready yet (still processing)" when saving a trim.** The media is still being
-transcoded. Wait for the status to become ready, then set the bounds again.
-
-**Trim, reprocess and thumbnail are refused with a 403.** The version is published, and a
-published media is frozen for good. Publish a new version instead — the trim, like every other
-edit, is part of what the publish lock protects.
-
-**The Trim mode exists but its options bar is empty.** Trimming is limited to users who can
-manage the media (its uploader, a supervisor or an admin) and to unpublished media.
 
 **No hover thumbnail, and no contact sheet in the right-click menu.** Both come from the same
 timeline filmstrip, generated during transcoding. If the media predates the feature, reprocess
@@ -340,7 +300,8 @@ it.
 
 **The quality selector is stuck on "Original".** Either the media has no HLS renditions — it
 was transcoded to a single MP4 proxy, or the ladder is disabled in the studio transcoding
-settings — or the media is **trimmed**, in which case the ladder is bypassed on purpose.
+settings — or the media carries a **legacy cut**, in which case the ladder is bypassed on
+purpose.
 
 **There is no waveform entry in the timeline menu.** The media carries no audio track, or it
 was transcoded before waveforms were computed. Reprocess it.

@@ -2,7 +2,7 @@
 
 *What the worker container actually runs, how a job fails, and what happens to a media left in PROCESSING.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 Everything that takes longer than a request is queued in **BullMQ** (Redis) and executed by
 the dedicated `worker` container. The API never blocks on media processing: it writes a row,
@@ -78,7 +78,6 @@ unreachable.
 | `transcode` | Video upload finalized, or an image-sequence upload | Proxy MP4, multi-rendition HLS ladder, thumbnail, timeline sprite, audio waveform, scene markers, client burn-in derivative |
 | `thumbnail` | Image upload finalized, or a manual request | Card and preview images, plus a full-resolution **web proxy** for formats a browser cannot decode |
 | `convert3d` | Non-GLB 3D upload | `derived/{mediaId}/model.glb` via Blender (USD), `guc` or assimp |
-| `trim` | Trim requested in review, before publication | Re-cut proxy |
 | `scan` | Any upload finalized while `CLAMAV_HOST` is set and no other job applies | Antivirus verdict; a detection quarantines the object |
 
 Splat media are served from their original file; their non-destructive edits are written by
@@ -95,7 +94,6 @@ an FFmpeg that has been stuck for six hours. The percentage bands are fixed per 
 | `transcode` | download 0–8, probe 8–10, proxy 10–32, thumbnail 32–36, renditions 36–84, client derivative 84–90, scene detection 90–93, sprite 93–98 |
 | `thumbnail` | download 0–30, probe 30–40, thumbnail 40–95 |
 | `convert3d` | download 0–20, convert 20–90 |
-| `trim` | download 0–20, trim 20–90 |
 | `scan` | download 0–50, scan 50–95 |
 
 A write is only issued when the integer percentage moves, so a job produces at most about a
@@ -166,9 +164,9 @@ visible as a stuck media rather than as nothing at all.
 
 - A failure stores the message on `MediaObject.metadata.processingError`, truncated to 500
   characters, and sets `FAILED`.
-- `trim` and `scan` failures deliberately **do not** mark the media `FAILED`: a failed trim
-  still leaves a playable proxy, and an unreachable `clamd` must never condemn a file that was
-  never found to be infected. Both are still retried by BullMQ.
+- A `scan` failure deliberately **does not** mark the media `FAILED`: an unreachable `clamd`
+  must never condemn a file that was never found to be infected. It is still retried by
+  BullMQ, and the media records that it went unscanned.
 - HLS renditions are recorded **incrementally**: each one is uploaded, the master is
   regenerated, and `metadata.hls` is updated with `building: true` until the last. A crash
   after the first rendition therefore leaves a playable but truncated ladder with `building`
@@ -319,7 +317,7 @@ default. In practice:
   bypass the limiter. `/health` is mounted outside `/api` and keeps answering, which is why the
   container healthcheck stays green while the application is unusable — check `/api/health`
   too when a stack looks healthy and behaves otherwise.
-- Any request that enqueues a job (`POST /api/media/:id/finalize`, `/reprocess`, `/trim`, USD
+- Any request that enqueues a job (`POST /api/media/:id/finalize`, `/reprocess`, USD
   recompose, timeline export, webhook test) **hangs** rather than erroring, if it gets past the
   limiter at all. No route sets a request timeout, so the client sees a stalled connection.
 - `finalize` writes `PROCESSING` before enqueuing, so a lost enqueue strands the media — until

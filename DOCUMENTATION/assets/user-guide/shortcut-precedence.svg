@@ -102,7 +102,7 @@
   <text class="a" x="355" y="329" text-anchor="middle">yes</text>
   <rect class="panel" x="380" y="314" width="396" height="46" rx="9"/>
   <text class="l" x="392" y="336">The transport wins</text>
-  <text class="d" x="392" y="352">I sets a loop in point; it does not jump to Trim</text>
+  <text class="d" x="392" y="352">I sets a loop in point; no tool claims that letter</text>
 
   <path class="conn" d="M179 360 L179 382" marker-end="url(#arrow)"/>
   <text class="d" x="188" y="376">no</text>

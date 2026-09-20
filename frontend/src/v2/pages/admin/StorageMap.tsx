@@ -26,7 +26,7 @@ const MAP: { typeKey: MessageKey; path: string; noteKey: MessageKey }[] = [
   },
   {
     typeKey: 'storage.k.proxy',
-    path: 'derived/{mediaId}/proxy.mp4 (+ proxy-trim.mp4 if trimmed)',
+    path: 'derived/{mediaId}/proxy.mp4',
     noteKey: 'storage.k.proxy.note',
   },
   {

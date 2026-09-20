@@ -2,7 +2,7 @@
 
 *A route map of the web API: which router owns which prefix, and why the mount order explains the surprises.*
 
-> Updated: 2026-09-17
+> Updated: 2026-09-20
 
 `/api` is the surface the web interface consumes. It is assembled in
 `backend/src/app.ts` from one router per domain (`backend/src/routes/*.routes.ts`), and
@@ -144,7 +144,6 @@ paths they own, in the order Express tries them.
 | `POST /api/media/:id/publish`, `/reprocess`, `/thumbnail`, `/auto-thumbnail` | Publish (optionally handing the version over, briefs included), retry a failed job, set or compute a thumbnail |
 | `GET /api/media/:id/hls/:file` | HLS manifests and segments |
 | `DELETE /api/media/:id`, `POST /:id/restore`, `DELETE /:id/purge` | Trash, restore, permanent purge |
-| `POST /api/media/:id/trim` | Non-destructive video trim, before publication |
 | `…/:id/splat-edits`, `/splat-mask`, `/splat-subset`, `/splat-presentation` | Splat edits, masks, subsets and staging |
 | `…/:id/usd/recompose`, `/usd/override` | USD variant recomposition and the ReView override layer |
 | `…/:id/markers` (+ `/:markerId`) | Shared timeline markers |

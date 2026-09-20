@@ -38,7 +38,6 @@ const ALL_WRITES: PublishedWrite[] = [
   'splatEdit',
   'usdOverride',
   'usdRecompose',
-  'videoTrim',
   'versionTransform',
   'uploadFinalize',
 ];
@@ -57,8 +56,11 @@ describe('publishLock.assertWritable — table des exceptions au verrou', () => 
     }
   });
 
-  it('garde verrouillés le trim, la transform de version et la re-finalisation', () => {
-    for (const write of ['videoTrim', 'versionTransform', 'uploadFinalize'] as PublishedWrite[]) {
+  // `videoTrim` a quitté la table avec la découpe elle-même (Phase 50, lot 4) : il ne reste
+  // pas d'écriture « refusée pour mémoire » — une entrée sans appelant serait une règle que
+  // plus rien n'applique.
+  it('garde verrouillées la transform de version et la re-finalisation', () => {
+    for (const write of ['versionTransform', 'uploadFinalize'] as PublishedWrite[]) {
       expect(isAllowedWhilePublished(write)).toBe(false);
       expect(refusal(() => assertWritable({ published: true }, write))).toEqual({
         status: 403,

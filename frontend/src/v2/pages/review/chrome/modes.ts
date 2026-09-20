@@ -15,13 +15,13 @@ import type { MediaKind, Role } from '../../../types/api';
 import type { MessageKey } from '../../../i18n';
 
 /**
- * Bascule de mode — l'emplacement qui décide de ce qui existe à l'écran. Les quatre types de
- * média portent les mêmes quatre modes, pris aux touches 1 à 4 dans tous les viewers.
+ * Bascule de mode — l'emplacement qui décide de ce qui existe à l'écran. Les modes sont pris
+ * aux touches 1 à 4 dans tous les viewers.
  *
  * Le premier mode (`explore`) est le seul servi aux clients : `role === 'CLIENT'` ne voit pas
  * la bascule et reste en lecture seule.
  */
-export type ModeId = 'explore' | 'annotate' | 'compare' | 'edit' | 'stage' | 'clean';
+export type ModeId = 'explore' | 'annotate' | 'compare' | 'stage' | 'clean';
 
 export interface ReviewMode {
   value: ModeId;
@@ -66,17 +66,17 @@ const SPATIAL_MODES: ReviewMode[] = [
 ];
 
 /**
- * Une image n'a pas de quatrième mode (D1). « Ajuster » n'exposait qu'une pipette et un
- * zoom, alors que son aide promettait exposition, gamma et canaux : un mode entier pour
- * deux outils déjà présents ailleurs, et une promesse que rien ne tenait.
+ * Les médias plats ont les mêmes trois modes. L'image avait perdu « Ajuster » en D1 (une
+ * pipette et un zoom pour une aide qui promettait exposition, gamma et canaux) ; la vidéo a
+ * perdu « Découpe » en Phase 50 — la coupe non destructive n'était utilisable qu'avant
+ * publication, et le média naît publié depuis que `draftMode` est éteint par défaut.
  */
 function mediaModes(kind: MediaKind): ReviewMode[] {
-  const video = kind === 'VIDEO';
   return [
     {
       value: 'explore',
       labelKey: 'mode.watch',
-      icon: video ? Play : Eye,
+      icon: kind === 'VIDEO' ? Play : Eye,
       hintKey: 'mode.watch.hint',
     },
     {
@@ -91,16 +91,6 @@ function mediaModes(kind: MediaKind): ReviewMode[] {
       icon: Columns2,
       hintKey: 'mode.compare.hint',
     },
-    ...(video
-      ? [
-          {
-            value: 'edit' as const,
-            labelKey: 'mode.trim' as const,
-            icon: Scissors,
-            hintKey: 'mode.trim.hint' as const,
-          },
-        ]
-      : []),
   ];
 }
 
@@ -130,28 +120,6 @@ export function switcherModesFor(kind: MediaKind, canCompare = true): ReviewMode
 
 /** Mode par défaut — celui servi aux clients. */
 export const DEFAULT_MODE: ModeId = 'explore';
-
-/**
- * Modes que le verrou de publication (Phase 11) interdit — la table exacte, et rien de plus.
- *
- * Il n'en reste qu'un : `edit`, le montage d'une vidéo. Les points d'entrée/sortie écrivent
- * sur le média lui-même, et le serveur les refuse en 403 `PUBLISHED_LOCKED` dès qu'il est
- * publié. L'interface offrait pourtant le mode en entier — on posait ses points, et l'on
- * perdait son travail sur un toast d'erreur.
- *
- * `clean` n'en est plus (Phase 50) : les éditions splat — masque, sous-ensemble — ne
- * touchent jamais au fichier d'origine, elles sont rejouées pour tous, et le serveur les
- * accepte après publication. Les griser interdisait à l'écran ce que le serveur autorise.
- *
- * `stage` n'en a jamais été : la mise en scène (caméra, présentation) reste autorisée après
- * publication — le média n'est pas altéré.
- */
-const PUBLICATION_LOCKED_MODES: ReadonlySet<ModeId> = new Set<ModeId>(['edit']);
-
-/** Ce mode est-il hors d'atteinte parce que le média est publié ? */
-export function isLockedByPublication(mode: ModeId, published: boolean): boolean {
-  return published && PUBLICATION_LOCKED_MODES.has(mode);
-}
 
 /**
  * La bascule de mode est-elle offerte ? Le client reste en exploration, en lecture seule ;

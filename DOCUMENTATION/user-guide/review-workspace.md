@@ -2,7 +2,7 @@
 
 *The five fixed places every viewer shares — mode switch, tool rail, options bar, inspector dock, bottom row.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-20
 
 Every media type — video, image, 3D model, Gaussian splat — opens in the **same workspace**.
 Only the tools change; their places never do. Nothing floats over the media except what is
@@ -56,7 +56,7 @@ number key — **the position in the switch is the key**: first mode `1`, second
 
 | Media | Modes in the switch | Keys |
 | --- | --- | --- |
-| Video | Watch · Compare · Trim | `1` `2` `3` |
+| Video | Watch · Compare | `1` `2` |
 | Image | Watch · Compare | `1` `2` |
 | 3D model / splat | Explore · Staging · Clean up | `1` `2` `3` |
 
@@ -67,10 +67,9 @@ all arm the tool *and* switch to Annotate. On video and image, finishing the ann
 you back to the first mode.
 
 The same rule applies to the other modes: pressing the letter of a tool that belongs to
-another mode switches to that mode. The exception is the video transport, which keeps `I`,
-`O`, `J`, `K`, `L` and `M` for itself — pressing `I` sets a loop in point instead of jumping
-to Trim, and `M` opens the comment composer instead of arming *Move a shape*. Those keys still
-work as tool letters **inside the mode that owns them**: in Trim, `I` arms the *In point* tool.
+another mode switches to that mode. On a video the transport keeps `I`, `O`, `J`, `K` and `L`
+for itself — no tool claims those letters — and `M` opens the comment composer instead of
+arming *Move a shape*.
 
 The first mode (**Watch** / **Explore**) is the only one served to clients: an account with
 the `CLIENT` role does not see the switch and stays in read-only exploration. The switch also
@@ -100,7 +99,6 @@ picture does zoom and pan**, from the wheel, the middle button and the keyboard 
 | Watch | Navigate `V` · Zoom `Z` (image only) |
 | Annotate | Navigate `V` · Freehand `D` · Rectangle `R` · Ellipse `E` · Arrow `A` · Polygon `G` · Text `T` · Move a shape `M` · Eraser `X` |
 | Compare | Navigate `V` · Wipe bar `W` · Zoom `Z` (image only) |
-| Trim (video) | Navigate `V` · In point `I` · Out point `O` · Annotation range `P` |
 
 **Spatial media (3D model, splat)**
 
@@ -126,12 +124,12 @@ video player answers to `0` and `1` instead.
 ## Options bar
 
 The row under the header shows the settings of the **active tool only** — ink, thickness and
-opacity for a drawing tool, radius for the surface brush, axes and snapping for a gizmo, the
-trim bounds and the number of frames kept for *In point*. That is what allows the workspace to
-keep every setting without stacking anything: changing tool changes the row. The row scrolls
-horizontally when it is too dense, and always opens with the tool's own name and shortcut.
+opacity for a drawing tool, radius for the surface brush, axes and snapping for a gizmo. That
+is what allows the workspace to keep every setting without stacking anything: changing tool
+changes the row. The row scrolls horizontally when it is too dense, and always opens with the
+tool's own name and shortcut.
 
-In modes that write (Clean up, Staging, video Trim), a **commit group** is pinned at the
+In modes that write (Clean up, Staging), a **commit group** is pinned at the
 right-hand end, outside the scrolling area, so the primary action is always reachable: undo,
 redo, and the save button. An unsaved state shows as a dot inside the button; a clean state
 shows a check, and hovering the button names what is not saved. There is never a status label
@@ -229,7 +227,7 @@ box) or while a dialog is open — so typing a comment never arms a tool by acci
 > **`1` does two things on a video.** The player's zoom listens to `0`, `1`, `+` and `-`, and
 > the mode switch listens to the bare digits; neither stops the other. Pressing `1` on a video
 > therefore snaps the picture to 100 % **and** returns to *Watch*. It goes unnoticed while you
-> are already in *Watch*; it will pull you out of *Compare* or *Trim*. Use `0` to go back to a
+> are already in *Watch*; it will pull you out of *Compare*. Use `0` to go back to a
 > fitted picture — `0` is not a mode key.
 
 The shortcut panel is also reachable from the keyboard icon in the review header. Its

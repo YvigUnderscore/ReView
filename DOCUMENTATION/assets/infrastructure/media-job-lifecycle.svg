@@ -92,7 +92,7 @@
   <text class="d" x="480" y="168">a media can read FAILED after try 1,</text>
   <text class="d" x="480" y="184">then flip back to READY on try 2.</text>
 
-  <text class="d" x="30" y="250">trim and scan failures never mark the media FAILED — a failed trim still leaves a playable proxy.</text>
+  <text class="d" x="30" y="250">A scan failure never marks the media FAILED — an unreachable clamd is not a bad file.</text>
   <text class="d" x="30" y="268">processingError is only cleared on the convert3d success path: a video that failed once keeps a stale message.</text>
 
   <!-- Ce que fait un worker tué en plein travail -->

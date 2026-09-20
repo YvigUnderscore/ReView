@@ -2,7 +2,7 @@
 
 *A cut that rebuilds itself at every publish: gaps shown, stages targeted, revisions frozen, notes routed.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 Every sequence — and the project as a whole — carries a **cut** that keeps itself up to
 date. Its content is never stored: it is recomputed from the current state of production
@@ -128,7 +128,7 @@ the screening.
   step. Volume, mute, loop-all and both fullscreens (the page, or the image alone) are there;
   this page registers no playback keyboard shortcuts of its own — no spacebar play/pause, no
   next-shot key.
-- The cut page has **one mode**, *Explore*: A/B comparison and trimming apply to a media, not
+- The cut page has **one mode**, *Explore*: A/B comparison applies to a media, not
   to an assembled film, and the image zoom of the review is hidden here rather than offered
   as an inert button. The rail is the hand tool, plus the drawing tools once annotation is
   armed.

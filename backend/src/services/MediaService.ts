@@ -781,7 +781,10 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
       tileH: number;
     };
   };
-  // Proxy trimé (10.G-V10) : sert la coupe non-destructive à tous dès qu'elle est produite.
+  // Compatibilité des coupes historiques (Phase 50, lot 4) : la découpe vidéo a été retirée,
+  // plus rien ne produit de `trimProxyKey`. La LECTURE reste : un média coupé avant le
+  // retrait continue de jouer sa coupe. Retirer cet arbitrage rejouerait soudain la version
+  // non coupée d'un média déjà validé et commenté par d'autres.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
   const sourceKey = mediaSourceKey(media);
   // Image de production (EXR, DPX, TIFF, TGA) : le viewer reçoit le proxy web, jamais
@@ -874,7 +877,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     projectDefaultLighting: projectSettings.defaultLighting ?? null,
     // Gestion de couleur OCIO du projet (39.B) : intention display/view (badge review).
     projectColor: projectSettings.color ?? null,
-    // Trim vidéo non-destructif (10.G-V10) : bornes + proxy trimé prêt ou en cours.
+    // Coupe historique (10.G-V10, retirée en Phase 50) : bornes d'un média coupé avant le
+    // retrait. Plus rien n'en pose ; la review s'en sert pour dire ce qu'elle joue.
     trim: meta.trim ?? null,
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),
     // HLS adaptatif (Phase 23) : présent → master servi via /api/media/:id/hls/master.m3u8.

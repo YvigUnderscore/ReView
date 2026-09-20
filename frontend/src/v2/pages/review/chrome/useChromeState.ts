@@ -11,15 +11,14 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { isLockedByPublication, switcherModesFor } from './modes';
+import { switcherModesFor } from './modes';
 import { panelsFor } from './panels';
-import { canSwitchModeWith } from './reservedKeys';
 import { DEFAULT_TOOL, toolSearchOrder, toolsFor } from './tools';
 
 /**
  * État du chrome pour un média : préférences relues au montage (rail déplié, panneau ouvert,
  * commentaires visibles), mode/outil/tiroir éphémères, et les raccourcis communs aux quatre
- * viewers — touches 1 à 4 pour les modes, lettres d'outils du rail, Échap pour revenir à la
+ * viewers — touches numériques pour les modes, lettres d'outils du rail, Échap pour revenir à la
  * navigation, `Tab` pour replier le dock.
  *
  * Toute mise à jour repasse par `reconcileChrome` : impossible de rester sur un outil qui
@@ -36,7 +35,7 @@ function initialState(kind: MediaKind): ChromeState {
  * `canCompare` : au moins une version voisine existe. Faux, le mode « Compare » quitte la
  * bascule **et** les touches numériques — un mode qui ne peut rien montrer ne s'arme pas.
  */
-export function useChromeState(kind: MediaKind, published = false, canCompare = true) {
+export function useChromeState(kind: MediaKind, canCompare = true) {
   const [state, setState] = useState<ChromeState>(() => initialState(kind));
 
   const update = useCallback(
@@ -97,20 +96,18 @@ export function useChromeState(kind: MediaKind, published = false, canCompare = 
       const index = Number(e.key) - 1;
       if (Number.isInteger(index) && index >= 0 && index < modes.length) {
         e.preventDefault();
-        // Le verrou de publication vaut aussi au clavier : sans cela, la touche 3 entrait dans
-        // un mode que la bascule vient de griser, et l'on retombait sur le 403 du serveur.
-        if (!isLockedByPublication(modes[index].value, published)) update({ mode: modes[index].value });
+        update({ mode: modes[index].value });
         return;
       }
       // Lettre d'outil : le mode courant d'abord, sinon les autres modes — armer l'outil d'un
       // autre mode y bascule (T/R/S ramènent à « Nettoyer », un outil de tracé arme
       // l'annotation), au lieu de ne rien faire.
       //
-      // Sauf pour les touches du transport (D1) : sur une vidéo, `I` posait le point
-      // d'entrée de la boucle *et* faisait basculer tout l'écran en mode Découpe.
+      // Le garde-fou `reservedKeys` a disparu avec le mode Découpe (Phase 50) : il existait
+      // parce que `I`/`O` étaient à la fois la boucle du transport et les points de coupe.
+      // Plus aucun outil ne porte ces lettres, la collision ne peut plus se produire.
       const key = e.key.toUpperCase();
       for (const mode of toolSearchOrder(kind, state.mode)) {
-        if (!canSwitchModeWith(kind, key, mode === state.mode)) continue;
         const tool = toolsFor(mode, kind).find((t) => t.key === key);
         if (tool) {
           e.preventDefault();
@@ -121,7 +118,7 @@ export function useChromeState(kind: MediaKind, published = false, canCompare = 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [kind, modes, published, state.mode, state.panel, state.tool, update]);
+  }, [kind, modes, state.mode, state.panel, state.tool, update]);
 
   return { state, update };
 }

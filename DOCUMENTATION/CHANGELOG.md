@@ -3,6 +3,20 @@
 Product release notes, newest first. Each `##` entry appears in the in-app **What's new**
 panel. Keep entries short and user-facing (features and notable fixes, not internals).
 
+## 2026-09-20 — Video review drops the Trim mode
+
+The **Trim** mode is gone from the video review, with its *In point*, *Out point* and
+*Annotation range* tools. The cut it offered was non-destructive but only writable before
+publication, and media are published on upload since the draft became a studio setting — so
+the mode was refused far more often than it was used, and the *Annotation range* tool it
+hosted never had an implementation behind its tooltip. Video and image now carry exactly the
+same two modes, **Watch** and **Compare**, and `I` and `O` belong to the transport alone.
+
+A media cut **before** this release still plays its cut, in the review and through the API —
+nothing was re-rendered and nothing was deleted. Those media keep the single *Original*
+quality entry that has always gone with a cut. To deliver a shorter clip from now on, cut it
+upstream and upload a new version.
+
 ## 2026-09-17 — The client portal: a home page, four tabs, and the drawing tools
 
 A share link no longer opens on a flat grid of files. It opens on a **home page** carrying the

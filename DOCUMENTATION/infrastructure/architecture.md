@@ -2,7 +2,7 @@
 
 *How the API, the worker, Redis, PostgreSQL and MinIO fit together — and which one takes the instance down.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 One instance is one studio. It is six containers in the default stack, seven in production,
 and it holds exactly three kinds of state: rows in PostgreSQL, objects in MinIO, and
@@ -103,7 +103,7 @@ when `INSTALL_USD_TOOLS=1`, a heavier image (1.6 GB → 3.6 GB) that also carrie
 
 | Queue | Concurrency | Work | Retries |
 |-------|------------|------|---------|
-| `media-processing` | 2 | HLS ladder, MP4 proxy, thumbnails, sprite sheet, trim, image-sequence assembly, 3D → GLB conversion, splat processing, antivirus scan | 3, exponential from 5 s |
+| `media-processing` | 2 | HLS ladder, MP4 proxy, thumbnails, sprite sheet, image-sequence assembly, 3D → GLB conversion, splat processing, antivirus scan | 3, exponential from 5 s |
 | `storage-cleanup` | 2 | Retry of MinIO deletions orphaned after a commit | 8, exponential from 15 s |
 | `webhooks` | 3 | Outgoing signed HTTP deliveries | 5, exponential from 10 s |
 | `timeline-export` | 1 | Auto-cut timeline exports | 2, exponential from 10 s |

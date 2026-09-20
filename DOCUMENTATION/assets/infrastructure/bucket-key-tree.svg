@@ -94,8 +94,8 @@
   <text class="d" x="330" y="268">the adaptive ladder — segments bypass the API</text>
   <text class="d" x="764" y="268" text-anchor="end">worker</text>
 
-  <text class="m" x="56" y="286">proxy.mp4 , proxy-trim.mp4</text>
-  <text class="d" x="330" y="286">MP4 fallback, and the trimmed variant</text>
+  <text class="m" x="56" y="286">proxy.mp4 , client.mp4</text>
+  <text class="d" x="330" y="286">MP4 fallback, and the slated client cut</text>
   <text class="d" x="764" y="286" text-anchor="end">worker</text>
 
   <text class="m" x="56" y="304">proxy.jpg</text>

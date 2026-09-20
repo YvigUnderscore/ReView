@@ -3,6 +3,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { DEFAULT_REVIEW_ASPECT, reviewFrame, type FrameRect } from './frameRect';
+import GuideLayer from './guides/GuideLayer';
+import { outlineRect } from './guides/guideGeometry';
+import { GUIDE_SCRIM_OPACITY, guideStrokeWidth } from './guides/guideStyle';
 
 /**
  * Cadre de review (Phase 25 — viewer plein espace). Les enfants (canvas WebGL + HUD) occupent
@@ -11,6 +14,9 @@ import { DEFAULT_REVIEW_ASPECT, reviewFrame, type FrameRect } from './frameRect'
  * passés en `frame` (overlay d'annotation) sont ancrés au guide : les annotations normalisées
  * 0..1 restent alignées pour tous les écrans — le cadre ne se resize plus selon la fenêtre
  * (la caméra est étendue au conteneur par `setViewOffset`, cf. `resizeRendererCamera`).
+ *
+ * Le liseré partage le langage visuel des repères de composition (`guides/guideStyle`) : même
+ * blanc, même épaisseur, même ombre portée — il avait jusqu'ici sa propre bordure CSS.
  */
 export default function ReviewFrame({
   aspect = DEFAULT_REVIEW_ASPECT,
@@ -38,6 +44,8 @@ export default function ReviewFrame({
 
   const guide: FrameRect | null = size ? reviewFrame(a, size.w, size.h) : null;
   const showGuide = !!guide && !!size && (guide.width < size.w - 1 || guide.height < size.h - 1);
+  // Voile des zones hors cadre — même valeur pour les quatre bandes, depuis les constantes.
+  const scrim = { backgroundColor: `rgb(0 0 0 / ${GUIDE_SCRIM_OPACITY})` };
 
   return (
     <div ref={outerRef} className="relative h-full w-full">
@@ -47,23 +55,34 @@ export default function ReviewFrame({
       {/* Guide letterbox : hors-cadre assombri + liseré du cadre de livraison */}
       {showGuide && guide && size && (
         <div className="pointer-events-none absolute inset-0 z-[5]">
-          <div className="absolute left-0 top-0 w-full bg-black/40" style={{ height: guide.top }} />
+          <div className="absolute left-0 top-0 w-full" style={{ ...scrim, height: guide.top }} />
           <div
-            className="absolute bottom-0 left-0 w-full bg-black/40"
-            style={{ height: size.h - guide.top - guide.height }}
+            className="absolute bottom-0 left-0 w-full"
+            style={{ ...scrim, height: size.h - guide.top - guide.height }}
           />
           <div
-            className="absolute left-0 bg-black/40"
-            style={{ top: guide.top, height: guide.height, width: guide.left }}
+            className="absolute left-0"
+            style={{ ...scrim, top: guide.top, height: guide.height, width: guide.left }}
           />
           <div
-            className="absolute right-0 bg-black/40"
-            style={{ top: guide.top, height: guide.height, width: size.w - guide.left - guide.width }}
+            className="absolute right-0"
+            style={{
+              ...scrim,
+              top: guide.top,
+              height: guide.height,
+              width: size.w - guide.left - guide.width,
+            }}
           />
-          <div
-            className="absolute border border-white/25"
+          {/* Liseré du cadre de livraison : aucun ancêtre transformé ici (le zoom 3D/splat
+              passe par la caméra), l'échelle du calque vaut donc 1. */}
+          <GuideLayer
+            w={guide.width}
+            h={guide.height}
+            className="absolute"
             style={{ left: guide.left, top: guide.top, width: guide.width, height: guide.height }}
-          />
+          >
+            <rect {...outlineRect(guide.width, guide.height, guideStrokeWidth(1))} data-guide="frame" />
+          </GuideLayer>
         </div>
       )}
 

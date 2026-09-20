@@ -39,9 +39,12 @@ describe('switcherModesFor', () => {
     for (const kind of KINDS) expect(switcherModesFor(kind)[0]?.value).toBe(DEFAULT_MODE);
   });
 
-  it('réserve la découpe à la vidéo et la mise en scène aux médias spatiaux', () => {
-    expect(switcherModesFor('VIDEO').map((m) => m.value)).toContain('edit');
-    expect(switcherModesFor('IMAGE').map((m) => m.value)).not.toContain('edit');
+  it('donne les mêmes modes à la vidéo et à l’image, et la mise en scène aux spatiaux', () => {
+    // La découpe vidéo a été retirée (Phase 50) : les deux médias plats portent désormais la
+    // même bascule. Ce test disait l'inverse — il est réécrit, pas désactivé.
+    expect(switcherModesFor('VIDEO').map((m) => m.value)).toEqual(
+      switcherModesFor('IMAGE').map((m) => m.value),
+    );
     expect(switcherModesFor('MODEL_3D').map((m) => m.value)).toContain('stage');
     expect(switcherModesFor('SPLAT').map((m) => m.value)).toContain('stage');
   });
@@ -50,14 +53,18 @@ describe('switcherModesFor', () => {
 describe('allowedModesFor — « Compare » exige une version voisine', () => {
   it('retire le segment quand il n’y a rien à comparer', () => {
     expect(switcherModesFor('IMAGE', false).map((m) => m.value)).toEqual(['explore']);
-    expect(switcherModesFor('VIDEO', false).map((m) => m.value)).toEqual(['explore', 'edit']);
+    // Depuis le retrait de la découpe, la vidéo est logée à la même enseigne : sans version
+    // voisine, il ne lui reste que « Regarder ».
+    expect(switcherModesFor('VIDEO', false).map((m) => m.value)).toEqual(['explore']);
   });
 
-  it('laisse la bascule disparaître quand l’image n’a plus qu’un mode', () => {
-    // Une image sans version voisine n'a plus que « Regarder » : un segment unique ne bascule
-    // vers rien, et la bascule s'efface au lieu de se montrer inerte.
-    expect(canSwitchMode('ARTIST', switcherModesFor('IMAGE', false).length)).toBe(false);
-    expect(canSwitchMode('ARTIST', switcherModesFor('IMAGE', true).length)).toBe(true);
+  it('laisse la bascule disparaître quand un média plat n’a plus qu’un mode', () => {
+    // Sans version voisine, il ne reste que « Regarder » : un segment unique ne bascule vers
+    // rien, et la bascule s'efface au lieu de se montrer inerte.
+    for (const kind of ['IMAGE', 'VIDEO'] as const) {
+      expect(canSwitchMode('ARTIST', switcherModesFor(kind, false).length)).toBe(false);
+      expect(canSwitchMode('ARTIST', switcherModesFor(kind, true).length)).toBe(true);
+    }
   });
 
   it('ne touche pas aux médias spatiaux, qui n’ont pas ce mode', () => {

@@ -13,7 +13,7 @@ import MediaChrome from './MediaChrome';
 import DisplayTransformOverlay from './color/DisplayTransformOverlay';
 import { useDisplayTransform } from './color/useDisplayTransform';
 import { imageCompareOverlay } from './header/headerComposition';
-import { VIEWER_ZONE, type MediaResp, type SplatEditsPatch } from './reviewTypes';
+import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import type { useImageCompareSync } from './useImageCompareSync';
 import type { Annotations } from './useAnnotations';
 import type { CompareMode } from './useCompareState';
@@ -39,7 +39,6 @@ export default function ImageReviewSection({
   onFullscreen,
   onToggleAnnotate,
   onClearSelection,
-  onSaved,
   compareIds,
   compareMode,
   onCompareModeChange,
@@ -60,7 +59,6 @@ export default function ImageReviewSection({
   onFullscreen: () => void;
   onToggleAnnotate: () => void;
   onClearSelection: () => void;
-  onSaved: (patch: SplatEditsPatch) => void;
   compareIds: number[];
   compareMode: CompareMode;
   onCompareModeChange: (mode: CompareMode) => void;
@@ -85,9 +83,6 @@ export default function ImageReviewSection({
       fps={fps}
       ann={ann}
       role={role}
-      canEdit={false}
-      videoRef={videoRef}
-      onSaved={onSaved}
       compare={{
         mode: compareMode,
         onMode: onCompareModeChange,

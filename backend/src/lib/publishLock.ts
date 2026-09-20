@@ -27,7 +27,7 @@ import { forbidden } from './errors';
 
 /** Les écritures qui se présentent devant le verrou, nommées une fois pour toutes. */
 export type PublishedWrite =
-  'splatEdit' | 'usdOverride' | 'usdRecompose' | 'videoTrim' | 'versionTransform' | 'uploadFinalize';
+  'splatEdit' | 'usdOverride' | 'usdRecompose' | 'versionTransform' | 'uploadFinalize';
 
 /**
  * La table. `true` = l'écriture reste permise sur un média publié ; la raison est à côté.
@@ -49,10 +49,6 @@ const ALLOWED_WHILE_PUBLISHED: Record<PublishedWrite, boolean> = {
   // qui rend une scène lisible ; il ne remplace pas le fichier livré, il en dérive une
   // représentation.
   usdRecompose: true,
-  // Trim vidéo : refusé. Il coupe ce que les autres ont vu et commenté — un commentaire
-  // horodaté pointerait soudain sur une autre image. Ce chantier disparaîtra avec le trim
-  // lui-même (lot ultérieur) ; d'ici là, la règle ne bouge pas.
-  videoTrim: false,
   // Transform d'une version publiée : c'est l'assise de la comparaison A/B et des
   // annotations ancrées au cadre. La déplacer après coup fausse tout ce qui s'y réfère.
   versionTransform: false,

@@ -2,7 +2,7 @@
 
 *From dropping a file to publishing it: where it lands, what is checked on the way, and what publication locks forever.*
 
-> Updated: 2026-09-11
+> Updated: 2026-09-20
 
 Delivering into ReView is a drag and a drop. Everything that follows — hashing, resuming,
 deduplicating, checking, transcoding, publishing — happens without holding you on the page:
@@ -143,8 +143,8 @@ Your own drafts are reachable in two places:
   delete. In a narrow window the pill shrinks to its icon;
 - the **Reviews** page, with the status filter set to **My drafts**.
 
-A draft can be reviewed, trimmed (video), transformed (3D) and edited (splat) freely — that
-is the point of the state.
+A draft can be reviewed, transformed (3D) and edited (splat) freely — that is the point of
+the state.
 
 > [!NOTE]
 > A media dropped onto a version that is **already published** is born published. That is the
@@ -217,7 +217,7 @@ antivirus, nor the real-size control.
 ## The publish lock
 
 Publishing is final for the **content**. Any structural edit on a published media returns
-`403 PUBLISHED_LOCKED`: splat edits and masks, video trim, reprocessing, 3D transform.
+`403 PUBLISHED_LOCKED`: splat edits and masks, reprocessing, 3D transform.
 
 Only two things stay editable after publication:
 
@@ -277,7 +277,7 @@ cleaned up first.
 
 ### Fixing something already published
 
-You cannot. Trim, transform, splat edits and reprocessing all return `403` on a published
+You cannot. Transform, splat edits and reprocessing all return `403` on a published
 media, and that is deliberate: a published version is what the supervisor approved and what
 the client link serves.
 

@@ -10,7 +10,7 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { allowedModesFor, isLockedByPublication, modesFor, switcherModesFor } from './modes';
+import { allowedModesFor, modesFor, switcherModesFor } from './modes';
 import { panelsFor } from './panels';
 import { toolSearchOrder, toolsFor, viewActionsFor } from './tools';
 
@@ -21,15 +21,16 @@ describe('modes', () => {
     }
   });
 
-  it('donne un quatrième mode à tout le monde sauf à l’image (D1)', () => {
-    // « Ajuster » n'exposait qu'une pipette et un zoom, alors que son aide promettait
-    // exposition, gamma et canaux : le mode entier a été retiré.
-    expect(modesFor('VIDEO')).toHaveLength(4);
+  it('donne un quatrième mode aux seuls médias spatiaux', () => {
+    // Les deux médias plats en sont à trois : l'image a perdu « Ajuster » (D1, une pipette
+    // et un zoom pour une aide qui promettait exposition, gamma et canaux), la vidéo a perdu
+    // « Découpe » (Phase 50). Ce test affirmait « quatre modes pour la vidéo » : il est
+    // réécrit sur le nouvel état, qui est le choix qu'on veut tenir.
     expect(modesFor('MODEL_3D')).toHaveLength(4);
     expect(modesFor('SPLAT')).toHaveLength(4);
+    expect(modesFor('VIDEO')).toHaveLength(3);
     expect(modesFor('IMAGE')).toHaveLength(3);
-    expect(modesFor('VIDEO')[3].labelKey).toBe('mode.trim');
-    expect(modesFor('IMAGE').map((m) => m.value)).not.toContain('edit');
+    expect(modesFor('VIDEO').map((m) => m.value)).toEqual(modesFor('IMAGE').map((m) => m.value));
   });
 
   it('donne les mêmes modes au modèle 3D et au splat', () => {
@@ -39,7 +40,7 @@ describe('modes', () => {
   it('la bascule ne liste pas Annoter, qui reste un mode valide', () => {
     for (const kind of ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'] as const) {
       expect(switcherModesFor(kind).map((m) => m.value)).not.toContain('annotate');
-      expect(switcherModesFor(kind)).toHaveLength(kind === 'IMAGE' ? 2 : 3);
+      expect(switcherModesFor(kind)).toHaveLength(kind === 'IMAGE' || kind === 'VIDEO' ? 2 : 3);
       // `reconcileChrome` valide contre la liste complète : l'annotation s'arme ailleurs.
       expect(modesFor(kind).map((m) => m.value)).toContain('annotate');
     }
@@ -117,7 +118,7 @@ describe('tools', () => {
 
   it('propose Cadrer et Vue d’origine en 3D, Ajuster et 1:1 à plat', () => {
     expect(viewActionsFor('SPLAT').map((a) => a.key)).toEqual(['F', 'H']);
-    expect(viewActionsFor('VIDEO')[0].labelKey).toBe('action.fitMedia');
+    expect(viewActionsFor('VIDEO').map((a) => a.labelKey)).toEqual(['action.fitMedia', 'action.resetMedia']);
   });
 });
 
@@ -250,32 +251,17 @@ describe('préférences', () => {
   });
 });
 
-describe('verrou de publication sur les modes', () => {
-  it('ferme le montage vidéo une fois publié', () => {
-    // Le serveur le refuse en 403 `PUBLISHED_LOCKED` ; l'interface l'offrait quand même,
-    // et l'on perdait ses points de trim sur un toast d'erreur.
-    expect(isLockedByPublication('edit', true)).toBe(true);
-  });
-
-  it('laisse les éditions splat ouvertes après publication (Phase 50)', () => {
-    // Masque et sous-ensemble sont rejoués sans toucher au fichier d'origine : le serveur
-    // les accepte sur un média publié, l'écran ne doit donc plus les griser.
-    expect(isLockedByPublication('clean', true)).toBe(false);
-  });
-
-  it('laisse la mise en scène ouverte après publication — exception documentée', () => {
-    expect(isLockedByPublication('stage', true)).toBe(false);
-  });
-
-  it('n’entrave rien tant que le média n’est pas publié', () => {
-    for (const mode of ['explore', 'annotate', 'compare', 'edit', 'stage', 'clean'] as const) {
-      expect(isLockedByPublication(mode, false)).toBe(false);
+/**
+ * Le verrou de publication ne touche plus AUCUN mode : `edit` — la découpe vidéo — était le
+ * dernier, et il a disparu avec la fonctionnalité (Phase 50, lot 4). `isLockedByPublication`
+ * et la table qu'il lisait ont donc été retirés plutôt que laissés à répondre « non » à
+ * toutes les questions. Ce qui reste verrouillé côté serveur (transform de version,
+ * re-finalisation) n'est pas un mode du chrome : son test vit dans `lib/publishLock.test.ts`.
+ */
+describe('modes et publication', () => {
+  it('n’offre plus aucun mode que la publication fermerait', () => {
+    for (const kind of ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'] as const) {
+      expect(modesFor(kind).map((m) => String(m.value))).not.toContain('edit');
     }
-  });
-
-  it('ne touche pas aux modes de lecture', () => {
-    expect(isLockedByPublication('explore', true)).toBe(false);
-    expect(isLockedByPublication('compare', true)).toBe(false);
-    expect(isLockedByPublication('annotate', true)).toBe(false);
   });
 });

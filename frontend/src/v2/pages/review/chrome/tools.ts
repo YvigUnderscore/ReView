@@ -12,8 +12,6 @@ import {
   Hexagon,
   Home,
   Lasso,
-  LogIn,
-  LogOut,
   Maximize2,
   MapPin,
   Move,
@@ -22,7 +20,6 @@ import {
   MoveUpRight,
   Pencil,
   Rotate3d,
-  Ruler,
   Scale3d,
   Scan,
   Square,
@@ -54,9 +51,6 @@ export type ToolId =
   | 'shape-move'
   | 'erase'
   | 'wipe'
-  | 'in'
-  | 'out'
-  | 'range'
   | 'focus'
   | 'pin'
   | 'paint'
@@ -149,32 +143,6 @@ function mediaTools(mode: ModeId): ReviewTool[] {
         hintKey: 'tool.wipe.hint',
       },
       ZOOM,
-    ];
-  // Seule la vidéo a un mode « edit » (Découpe) : celui des images a été retiré en D1.
-  if (mode === 'edit')
-    return [
-      start,
-      {
-        id: 'in',
-        labelKey: 'tool.in',
-        icon: LogIn,
-        key: 'I',
-        hintKey: 'tool.in.hint',
-      },
-      {
-        id: 'out',
-        labelKey: 'tool.out',
-        icon: LogOut,
-        key: 'O',
-        hintKey: 'tool.out.hint',
-      },
-      {
-        id: 'range',
-        labelKey: 'tool.range',
-        icon: Ruler,
-        key: 'P',
-        hintKey: 'tool.range.hint',
-      },
     ];
   return [start, ZOOM];
 }

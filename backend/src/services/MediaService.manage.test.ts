@@ -51,9 +51,9 @@ beforeEach(() => {
  * A1-03 — `assertMediaManage` décidait sur le rôle GLOBAL (`user.role === ADMIN ||
  * SUPERVISOR`) après n'avoir vérifié que l'appartenance au projet. Un ARTIST rétrogradé
  * CLIENT (38.E) gardait son `ProjectMembership`, donc `checkProjectAccess` disait oui, et
- * il continuait de corbeiller, reprocesser, retrimmer et retoucher les médias qu'il avait
+ * il continuait de corbeiller, reprocesser et retoucher les médias qu'il avait
  * déposés. C'est la porte d'entrée de toute la gestion média : corbeille, reprocess,
- * miniature, trim, éditions splat, overrides USD, actions en lot.
+ * miniature, éditions splat, overrides USD, actions en lot.
  */
 describe('assertMediaManage — rôle effectif par projet (38.E)', () => {
   const artist = { id: 7, role: Role.ARTIST };

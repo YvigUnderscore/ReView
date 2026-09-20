@@ -2,7 +2,7 @@
 
 *One bucket, every binary: key layout, the three ways in, presigned lifetimes, quotas, and the ways storage fails.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 Every binary an instance holds — originals, HLS segments, thumbnails, converted models, splat
 masks, HDRIs, avatars, attachments — lives in **one** S3-compatible bucket, referenced from
@@ -73,7 +73,7 @@ Three conventions carry most of the consequences:
 
 - **Originals are never modified.** `{parent}` is `shots/{sequence}/{shot}` for a shot version
   or `assets/{asset}` for an asset version. Every transformation the application offers —
-  transcode, trim, splat edit, USD override, colour work — produces a derived object or
+  transcode, splat edit, USD override, colour work — produces a derived object or
   non-destructive metadata, never a rewrite of the source.
 - **Derived objects are keyed by media id**, not filed next to the original's project path.
   Renaming a project therefore never orphans a derivative, and deleting a media removes its
@@ -259,7 +259,7 @@ Three media types make the "never modify the original" rule visible:
 - **Image sequences** — `sequence.json` plus the `frames/` prefix are the delivery; the assembled
   master is a derivative like any other.
 
-Once a media is **published**, the lock is stronger still: splat edits, masks, trims, reprocess
+Once a media is **published**, the lock is stronger still: splat edits, masks, reprocess
 and transforms all answer `403`. Correcting a published media means uploading a new version.
 
 ## Failure modes

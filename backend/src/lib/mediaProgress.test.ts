@@ -62,7 +62,7 @@ describe('mediaJobProgress', () => {
   });
 
   it('chaque type de travail reste dans 0-100', () => {
-    const kinds = ['transcode', 'thumbnail', 'convert3d', 'trim', 'scan'] as const;
+    const kinds = ['transcode', 'thumbnail', 'convert3d', 'scan'] as const;
     const steps: MediaJobStep[] = [
       'download',
       'probe',
@@ -73,7 +73,6 @@ describe('mediaJobProgress', () => {
       'scenes',
       'sprite',
       'convert',
-      'trim',
       'scan',
       'done',
     ];

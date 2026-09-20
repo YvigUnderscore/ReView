@@ -12,7 +12,7 @@
  * l'échelle HLS pèse la moitié du travail.
  */
 
-export type MediaJobKind = 'transcode' | 'thumbnail' | 'convert3d' | 'trim' | 'scan';
+export type MediaJobKind = 'transcode' | 'thumbnail' | 'convert3d' | 'scan';
 
 export type MediaJobStep =
   | 'download'
@@ -24,7 +24,6 @@ export type MediaJobStep =
   | 'scenes'
   | 'sprite'
   | 'convert'
-  | 'trim'
   | 'scan'
   | 'done';
 
@@ -63,11 +62,6 @@ const RANGES: Record<MediaJobKind, Partial<Record<MediaJobStep, Range>>> = {
   convert3d: {
     download: [0, 20],
     convert: [20, 90],
-    done: [100, 100],
-  },
-  trim: {
-    download: [0, 20],
-    trim: [20, 90],
     done: [100, 100],
   },
   scan: {

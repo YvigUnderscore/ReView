@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ReactNode, RefObject } from 'react';
+import type { ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import type { MediaKind, Role } from '../../types/api';
@@ -16,11 +16,10 @@ import MediaOptions from './options/MediaOptions';
 import MediaPanels from './panels/MediaPanels';
 import VersionAssets from './VersionAssets';
 import { useVersionMedia } from './useVersionMedia';
-import type { MediaResp, SplatEditsPatch } from './reviewTypes';
+import type { MediaResp } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { CompareMode } from './useCompareState';
 import { IMAGE_HIDDEN_TOOLS, VIDEO_HIDDEN_TOOLS, useMediaChrome } from './useMediaChrome';
-import { useVideoTrim } from './useVideoTrim';
 import { useT } from '../../i18n';
 
 /**
@@ -34,9 +33,6 @@ export default function MediaChrome({
   fps,
   ann,
   role,
-  canEdit,
-  videoRef,
-  onSaved,
   compare,
   onExportFrame,
   onContactSheet,
@@ -47,10 +43,6 @@ export default function MediaChrome({
   fps: number;
   ann: Annotations;
   role?: Role;
-  /** Découpe autorisée (gestionnaire, média non publié) — vidéo seulement. */
-  canEdit: boolean;
-  videoRef: RefObject<HTMLVideoElement | null>;
-  onSaved: (patch: SplatEditsPatch) => void;
   compare: {
     mode: CompareMode;
     onMode: (mode: CompareMode) => void;
@@ -64,12 +56,11 @@ export default function MediaChrome({
   children: ReactNode;
 }) {
   const t = useT();
-  const { id: mediaId, versionId, published } = data.media;
+  const { id: mediaId, versionId } = data.media;
   // Versions voisines : seule autorité sur l'existence du mode « Compare ».
   const neighbours = useCompareTargets(versionId);
-  const { state, update } = useChromeState(kind, published, neighbours.hasTargets);
+  const { state, update } = useChromeState(kind, neighbours.hasTargets);
   useMediaChrome({ state, update, ann });
-  const trim = useVideoTrim({ data, fps, videoRef, onSaved });
 
   const comparing = state.mode === 'compare';
   const { targets, firstMediaId } = useCompareMedia(neighbours.versions, mediaId, kind, comparing);
@@ -86,22 +77,18 @@ export default function MediaChrome({
 
   const tools = toolsFor(state.mode, kind);
   const activeTool = tools.find((tool) => tool.id === state.tool) ?? tools[0];
-  const canTrim = kind === 'VIDEO' && canEdit;
   // Le tiroir des assets n'a de sens qu'à partir de deux médias : la bascule ouvrait sinon
   // une bande vide, et occupait une ligne pour rien.
   const hasAssets = useVersionMedia(versionId).length > 1;
 
   return (
     <ReviewChrome
-      // Verrou de publication : les modes qui altèrent le média sont grisés, pas offerts.
-      published={published}
       kind={kind}
       state={state}
       onState={update}
       role={role ?? 'ARTIST'}
       modes={switcherModesFor(kind, neighbours.hasTargets)}
       hiddenTools={kind === 'VIDEO' ? VIDEO_HIDDEN_TOOLS : IMAGE_HIDDEN_TOOLS}
-      dirty={canTrim && state.mode === 'edit' ? trim.dirty : undefined}
       options={
         <MediaOptions
           tool={activeTool}
@@ -123,7 +110,6 @@ export default function MediaChrome({
                 />
               ) : undefined,
           }}
-          trim={canTrim ? trim : undefined}
         />
       }
       panel={

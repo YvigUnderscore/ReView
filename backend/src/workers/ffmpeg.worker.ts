@@ -304,7 +304,6 @@ function applyVideoChain(
   return ['-map', '[vout]', '-map', '0:a?'];
 }
 
-/** Transcode une vidéo en proxy MP4 web (h264 + aac, faststart), avec fenêtre de trim en option. */
 /**
  * Exécute un encodage avec l'encodeur configuré (37.D) ; si NVENC échoue (pas de GPU,
  * drivers absents), retombe automatiquement sur libx264.
@@ -321,19 +320,28 @@ async function withEncoderFallback(run: (encoder: VideoEncoder) => Promise<void>
   }
 }
 
+/**
+ * Réglages du proxy. Un **objet** plutôt qu'une suite d'arguments positionnels : la fenêtre
+ * de découpe occupait le quatrième rang et l'appelant normal y passait `undefined`. La
+ * retirer aurait décalé quatre arguments voisins de types compatibles — un décalage que le
+ * typecheck n'aurait pas vu.
+ */
+interface ProxyOptions {
+  burnin?: BurninJob | null;
+  /** Hauteur de la source : le proxy ne dépasse jamais 1080 p, ni la source elle-même. */
+  srcHeight?: number;
+  encoder?: VideoEncoder;
+  traits?: SourceTraits;
+}
+
+/** Transcode une vidéo en proxy MP4 web (h264 + aac, faststart). */
 function transcodeProxy(
   input: string,
   output: string,
   run: FfmpegRun,
-  window?: { startSec: number; durationSec: number },
-  burnin?: BurninJob | null,
-  srcHeight?: number,
-  encoder: VideoEncoder = 'libx264',
-  traits: SourceTraits = NO_TRAITS,
+  { burnin, srcHeight, encoder = 'libx264', traits = NO_TRAITS }: ProxyOptions = {},
 ): Promise<void> {
   const cmd = ffmpeg(input);
-  // Trim non-destructif (10.G-V10) : seek + durée, ré-encodage → coupe précise à la frame.
-  if (window) cmd.setStartTime(window.startSec).setDuration(window.durationSec);
   const proxyHeight = Math.min(1080, srcHeight && srcHeight > 0 ? srcHeight : 1080);
   const mapping = applyVideoChain(
     cmd,
@@ -779,8 +787,8 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
     // `reprocess` repart toujours des frames, jamais du proxy : contrairement à une vidéo,
     // le livrable d'origine est toujours là.
     const sequence = media.imageSequence;
-    // Source vidéo supprimée après transcodage (gain de place) : les retraitements
-    // (trim, reprocess) repartent du proxy MP4 — seul fichier « source » restant.
+    // Source vidéo supprimée après transcodage (gain de place) : un `reprocess` repart du
+    // proxy MP4 — seul fichier « source » restant.
     const sourceGone = !sequence && metadata.sourceDeleted === true && typeof metadata.proxyKey === 'string';
     // Conserver l'extension d'origine (assimp/ffmpeg détectent le format par extension)
     const ext = sourceGone ? '.mp4' : extname(media.originalName) || '.bin';
@@ -932,11 +940,12 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
             durationSec,
             onFraction: (fraction) => report('proxy', { fraction }),
           },
-          undefined,
-          burnin,
-          typeof metadata.height === 'number' ? metadata.height : undefined,
-          encoder,
-          traits,
+          {
+            burnin,
+            srcHeight: typeof metadata.height === 'number' ? metadata.height : undefined,
+            encoder,
+            traits,
+          },
         ),
       );
       const proxyKey = `derived/${mediaId}/proxy.mp4`;
@@ -1131,51 +1140,6 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           .catch((err) =>
             logger.warn({ err }, `[ffmpeg.worker] suppression source échouée media=${mediaId}`),
           );
-    } else if (kind === 'trim') {
-      // Trim non-destructif (10.G-V10) : proxy trimé depuis l'original, borné par metadata.trim.
-      const trim = metadata.trim as { inFrame?: number; outFrame?: number } | undefined;
-      const fps = typeof metadata.fps === 'number' && metadata.fps > 0 ? metadata.fps : 24;
-      if (!trim || typeof trim.inFrame !== 'number' || typeof trim.outFrame !== 'number') {
-        logger.warn(`[ffmpeg.worker] trim media=${mediaId} sans metadata.trim — ignoré`);
-        return;
-      }
-      const startSec = trim.inFrame / fps;
-      const durationSec = Math.max((trim.outFrame - trim.inFrame) / fps, 1 / fps);
-      const trimPath = join(dir, 'proxy-trim.mp4');
-      report('trim');
-      await withEncoderFallback((encoder) =>
-        transcodeProxy(
-          src,
-          trimPath,
-          {
-            label: 'trim',
-            timeoutMs: ffmpegTimeoutMs(durationSec),
-            durationSec,
-            onFraction: (fraction) => report('trim', { fraction }),
-          },
-          { startSec, durationSec },
-          null,
-          undefined,
-          encoder,
-        ),
-      );
-      const trimProxyKey = `derived/${mediaId}/proxy-trim.mp4`;
-      await storage.uploadFile(trimProxyKey, trimPath, 'video/mp4');
-      // Relit le metadata au moment de l'écriture (le trim a pu être modifié/effacé pendant
-      // le job — dans ce cas la clé posée ne correspondrait plus : on ne l'écrit que si le
-      // trim en base est toujours celui traité).
-      const fresh = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
-      const freshMeta: Record<string, unknown> = { ...((fresh?.metadata ?? {}) as object) };
-      const freshTrim = freshMeta.trim as { inFrame?: number; outFrame?: number } | undefined;
-      if (freshTrim?.inFrame === trim.inFrame && freshTrim?.outFrame === trim.outFrame) {
-        freshMeta.trimProxyKey = trimProxyKey;
-        await prisma.mediaObject.update({
-          where: { id: mediaId },
-          data: { metadata: freshMeta as Prisma.InputJsonObject },
-        });
-      } else {
-        await storage.deleteObject(trimProxyKey).catch(() => undefined);
-      }
     } else if (kind === 'thumbnail') {
       // Image : sonde dimensions + miniature (+ proxy web si le navigateur ne sait pas lire).
       report('probe');
@@ -1307,16 +1271,15 @@ export const ffmpegWorker = new Worker<MediaJobData>(
       await handle(job.data.mediaObjectId, job.data.kind, progressReporter(job));
       await job.updateProgress(mediaJobProgress(job.data.kind, 'done')).catch(() => undefined);
     } catch (err) {
-      // Un trim raté ne condamne pas le média (proxy d'origine servi) ; un scan en erreur
-      // (clamd injoignable) non plus — BullMQ retente, seule une détection met FAILED.
-      // Mais un scan en erreur laisse un média servi SANS avoir été scanné : il le dit
-      // désormais sur le média, faute de quoi l'absence de scan était indistinguable d'un
-      // scan propre (cf. `recordScanOutcome`).
+      // Un scan en erreur (clamd injoignable) ne condamne pas le média — BullMQ retente,
+      // seule une détection met FAILED. Mais il laisse un média servi SANS avoir été
+      // scanné : il le dit désormais sur le média, faute de quoi l'absence de scan était
+      // indistinguable d'un scan propre (cf. `recordScanOutcome`).
       if (job.data.kind === 'scan') {
         await recordScanOutcome(job.data.mediaObjectId, {
           failed: err instanceof Error ? err.message : String(err),
         });
-      } else if (job.data.kind !== 'trim') {
+      } else {
         await markFailed(job.data.mediaObjectId, err);
       }
       throw err;
