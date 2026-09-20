@@ -66,6 +66,24 @@ export interface WidgetDragHandle {
   handleProps: ButtonHTMLAttributes<HTMLButtonElement>;
 }
 
+/**
+ * Ce qu'apporte une page dont la grille est en **rangées** (la vue d'ensemble d'un projet).
+ *
+ * Le cadre ne connaît ni la rampe de hauteurs, ni le geste qui la parcourt : il reçoit la
+ * classe de grille à poser, le réglage à montrer dans le panneau à la place de l'échelle
+ * historique, et la poignée à placer au coin. Absent, le cadre se rend exactement comme
+ * avant — largeur seule et hauteur `short`/`normal`/`tall` —, ce qui laisse l'accueil
+ * inchangé.
+ */
+export interface WidgetRowSizing {
+  /** Classe portant l'emprise verticale (`row-span-N`), écrite en toutes lettres. */
+  className: string;
+  /** Réglage de hauteur du panneau — remplace l'échelle historique. */
+  control: ReactNode;
+  /** Poignée de coin : rendue par la page, positionnée par le cadre. */
+  handle: ReactNode;
+}
+
 export interface WidgetShellProps {
   /** Identifiant du bloc : sert à nommer les entrées de menu et le `data-widget`. */
   id: string;
@@ -84,6 +102,8 @@ export interface WidgetShellProps {
   canMoveAfter: boolean;
   /** Fourni par le seul mode réagencement ; absent, le cadre ne connaît pas dnd-kit. */
   drag?: WidgetDragHandle;
+  /** Fourni par les seules pages dont la grille a des rangées. */
+  rowSizing?: WidgetRowSizing;
   children: ReactNode;
 }
 
@@ -101,6 +121,7 @@ export default function WidgetShell({
   canMoveBefore,
   canMoveAfter,
   drag,
+  rowSizing,
   children,
 }: WidgetShellProps) {
   const t = useT();
@@ -159,7 +180,14 @@ export default function WidgetShell({
     <section
       ref={drag?.ref}
       style={drag?.style}
-      className={`col-span-12 ${spanClass(settings.span)} ${drag?.dragging ? 'z-10 opacity-60' : ''}`}
+      // `grid grid-rows-1` n'est pas décoratif : entre ce cadre et la carte, le menu
+      // contextuel pose son propre conteneur, sans hauteur. Le `h-full` de la carte s'y
+      // résoudrait en « hauteur du contenu », et l'emprise réglée ne réserverait qu'un
+      // vide sous elle. Une rangée unique en `1fr` fait descendre la hauteur jusqu'à la
+      // carte ; la poignée, absolue, reste hors flux.
+      className={`col-span-12 ${spanClass(settings.span)} ${
+        rowSizing ? `relative grid grid-rows-1 ${rowSizing.className}` : ''
+      } ${drag?.dragging ? 'z-10 opacity-60' : ''}`}
       data-widget={id}
     >
       <EntityContextMenu entries={entries} nested>
@@ -205,12 +233,14 @@ export default function WidgetShell({
                       </div>
                       <div className="space-y-1.5">
                         <p className="text-xs font-medium text-muted-foreground">{t('home.widget.height')}</p>
-                        {choice<WidgetHeight>(
-                          settings.height,
-                          ['short', 'normal', 'tall'],
-                          (v) => t(HEIGHT_LABEL[v]),
-                          (v) => onSettings({ height: v }),
-                        )}
+                        {rowSizing
+                          ? rowSizing.control
+                          : choice<WidgetHeight>(
+                              settings.height,
+                              ['short', 'normal', 'tall'],
+                              (v) => t(HEIGHT_LABEL[v]),
+                              (v) => onSettings({ height: v }),
+                            )}
                       </div>
                       {variants.length > 1 && (
                         <div className="space-y-1.5">
@@ -256,9 +286,15 @@ export default function WidgetShell({
               )}
             </header>
           )}
-          <div className={`min-h-0 flex-1 ${heightClass(settings.height)}`}>{children}</div>
+          {/* Grille en rangées : la carte a une hauteur imposée, donc c'est le contenu qui
+              défile — jamais la carte qui grandit, sinon l'emprise réglée ne voudrait plus
+              rien dire. */}
+          <div className={`min-h-0 flex-1 ${rowSizing ? 'overflow-y-auto' : heightClass(settings.height)}`}>
+            {children}
+          </div>
         </div>
       </EntityContextMenu>
+      {rowSizing?.handle}
     </section>
   );
 }

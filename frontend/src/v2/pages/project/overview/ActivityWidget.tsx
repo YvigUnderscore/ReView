@@ -6,8 +6,14 @@ import { FileVideo, Layers } from 'lucide-react';
 import { useProjectActivity } from './useProjectActivity';
 import { intlLocale, useT } from '../../../i18n';
 
-/** Les dernières mises à jour du projet : versions déposées et médias publiés. */
-export default function ActivityWidget({ projectId }: { projectId: number }) {
+/**
+ * Les dernières mises à jour du projet : versions déposées et médias publiés.
+ *
+ * `limit` est ce que la carte peut montrer — la hauteur réglée traduite en lignes. Une
+ * carte haute montre donc réellement plus de choses ; sans cela, l'agrandir n'aurait
+ * ajouté que du vide.
+ */
+export default function ActivityWidget({ projectId, limit }: { projectId: number; limit: number }) {
   const t = useT();
   const { recent, error } = useProjectActivity(projectId);
 
@@ -16,7 +22,7 @@ export default function ActivityWidget({ projectId }: { projectId: number }) {
 
   return (
     <ul className="space-y-1.5">
-      {recent.map((item) => {
+      {recent.slice(0, limit).map((item) => {
         const to =
           item.type === 'media' ? `/review/${item.mediaId}` : item.taskId ? `/tasks/${item.taskId}` : '#';
         return (

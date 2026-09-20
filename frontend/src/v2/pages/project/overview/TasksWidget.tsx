@@ -19,10 +19,21 @@ import { useT } from '../../../i18n';
  * Les deux mutations écrivent d'abord le cache, appellent ensuite : un statut qui met une
  * seconde à s'afficher se re-clique, et se re-clique à tort. L'échec invalide, ce qui remet
  * la ligne dans l'état du serveur.
+ *
+ * `limit` est ce que la carte peut montrer — la hauteur réglée traduite en lignes : une
+ * carte haute liste réellement plus de tâches, là où le plafond figé de vingt-cinq lignes
+ * débordait d'une petite carte et laissait du vide dans une grande.
  */
-const MAX_ROWS = 25;
 
-export default function TasksWidget({ projectId, canManage }: { projectId: number; canManage: boolean }) {
+export default function TasksWidget({
+  projectId,
+  canManage,
+  limit,
+}: {
+  projectId: number;
+  canManage: boolean;
+  limit: number;
+}) {
   const t = useT();
   const qc = useQueryClient();
   const { tasks } = useProjectActivity(projectId);
@@ -65,7 +76,7 @@ export default function TasksWidget({ projectId, canManage }: { projectId: numbe
 
   return (
     <ul className="space-y-1.5">
-      {tasks.slice(0, MAX_ROWS).map((task) => (
+      {tasks.slice(0, limit).map((task) => (
         <li
           key={task.id}
           className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-background px-2 py-1.5 text-xs"

@@ -21,6 +21,7 @@ export default function SplatPane({
   overlay,
   editorOverlay,
   pip,
+  settings,
   aspect,
   recording,
 }: {
@@ -35,6 +36,12 @@ export default function SplatPane({
   editorOverlay?: ReactNode;
   /** Fenêtre PiP du mode layout (PipFrame — le rendu WebGL est dessiné dessous en scissor). */
   pip?: ReactNode;
+  /**
+   * Menus du viewer, posés en HAUT À GAUCHE (Phase 50, lot 12) : édition du nuage et réglages
+   * de rendu, au même coin et dans le même langage que ceux du modèle 3D (lot 6). Absent du
+   * partage client, qui ne règle rien.
+   */
+  settings?: ReactNode;
   /** Aspect du cadre de review fixe (issu de la caméra de présentation) — défaut 16:9 (V6). */
   aspect?: number;
   /** Auto-key armé : liseré d'enregistrement sur le viewport (façon DCC). */
@@ -60,6 +67,10 @@ export default function SplatPane({
 
         {pip}
       </ReviewFrame>
+
+      {/* Au-dessus du cadre, jamais dedans : le guide letterbox et l'overlay d'annotation
+          gardent leurs coordonnées — ce coin ne touche pas au cadrage. */}
+      {settings && <div className="absolute top-2 left-2 z-20">{settings}</div>}
 
       {/* États de repli — centrés dans toute la zone (hors letterbox) */}
       {loadError ? (

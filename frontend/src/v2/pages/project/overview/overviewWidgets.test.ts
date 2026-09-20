@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { WidgetsPref } from '../../../lib/widgetLayout';
+import { OVERVIEW_ROWS } from './overviewSizing';
 import {
   ALL_OVERVIEW_IDS,
   BUILTIN_ROLE_LAYOUTS,
@@ -14,6 +15,7 @@ import {
   reorderOverviewWidgets,
   resolveOverviewLayout,
   roleLayout,
+  setOverviewWidgetSize,
   toggleOverviewWidget,
   visibleOverviewWidgets,
 } from './overviewWidgets';
@@ -146,5 +148,44 @@ describe('gestes de composition', () => {
     expect(overviewWidgetSettings('counts', { settings: { counts: { span: 3 } } }).span).toBe(
       OVERVIEW_WIDGET_DEFS.counts.span,
     );
+  });
+
+  it('enregistre largeur et hauteur d’un seul geste', () => {
+    const next = setOverviewWidgetSize(
+      'activity',
+      { span: 12, rows: 6 },
+      { settings: { activity: { span: 4 } } },
+    );
+    expect(next.settings?.activity).toEqual({ span: 12, rows: 6 });
+  });
+});
+
+describe('hauteurs', () => {
+  it('donne à chaque bloc une hauteur par défaut', () => {
+    for (const id of ALL_OVERVIEW_IDS)
+      expect(OVERVIEW_ROWS).toContain(overviewWidgetSettings(id, undefined).rows);
+  });
+
+  it('applique la hauteur enregistrée', () => {
+    expect(overviewWidgetSettings('activity', { settings: { activity: { rows: 6 } } }).rows).toBe(6);
+  });
+
+  it('relit sans casse une disposition enregistrée avant les hauteurs', () => {
+    // Ni hauteur ni rangées : le bloc reprend son défaut, et rien n'est réécrit.
+    expect(overviewWidgetSettings('counts', { settings: { counts: { span: 6 } } }).rows).toBe(
+      OVERVIEW_WIDGET_DEFS.counts.rows,
+    );
+    // L'ancienne échelle, elle, est traduite — on ne perd pas le bloc haut qu'on s'était réglé.
+    expect(overviewWidgetSettings('activity', { settings: { activity: { height: 'tall' } } }).rows).toBe(5);
+  });
+
+  it('porte les hauteurs jusque dans les dispositions livrées par rôle', () => {
+    // Le défaut par rôle du lot 10 doit continuer de fonctionner ET dire une hauteur :
+    // sinon la page d'un artiste rouvrirait sur les cartes courtes qu'on vient de corriger.
+    const artist = resolveOverviewLayout(undefined, BUILTIN_ROLE_LAYOUTS.ARTIST);
+    expect(overviewWidgetSettings('myTasks', artist).rows).toBe(5);
+    expect(overviewWidgetSettings('activity', artist).rows).toBe(5);
+    const client = resolveOverviewLayout(undefined, BUILTIN_ROLE_LAYOUTS.CLIENT);
+    expect(overviewWidgetSettings('latestMedia', client).rows).toBe(4);
   });
 });

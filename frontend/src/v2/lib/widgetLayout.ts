@@ -25,6 +25,15 @@ export type WidgetVariant = 'list' | 'grid' | 'kpi';
 export interface WidgetSettings {
   span?: WidgetSpan;
   height?: WidgetHeight;
+  /**
+   * Hauteur en **rangées de grille**, pour les pages dont la grille en a (la vue d'ensemble
+   * d'un projet). Le nombre de rangées offertes et leur traduction en classes vivent dans
+   * la page, pas ici : seule la forme enregistrée est commune.
+   *
+   * Absente, la page retombe sur `height` puis sur son propre défaut — c'est ce qui rend
+   * relisible une disposition enregistrée avant que les hauteurs existent.
+   */
+  rows?: number;
   density?: WidgetDensity;
   variant?: WidgetVariant;
   /** Sans en-tête ni cadre : le bloc affleure la page. C'est ce qui la rend « épurée ». */

@@ -44,12 +44,29 @@ const isWidgetId = (value: string): boolean => (OVERVIEW_WIDGETS as readonly str
 const spanSchema = z.union([z.literal(3), z.literal(4), z.literal(6), z.literal(8), z.literal(12)]);
 
 /**
+ * Hauteurs admises, en **rangées** de la grille de la vue d'ensemble.
+ *
+ * Recopie de la rampe `OVERVIEW_ROWS` (`frontend/…/overview/overviewSizing.ts`), gardée par
+ * le même test que la liste des blocs : l'écran ne sait rendre que ces emprises, et une
+ * hauteur hors rampe s'enregistrerait pour ne jamais être relue. La clé `height` reste
+ * admise à côté — c'est celle des dispositions enregistrées avant les rangées, que l'écran
+ * traduit à la lecture.
+ */
+export const OVERVIEW_ROWS = [2, 3, 4, 5, 6] as const;
+
+const rowsSchema = z
+  .number()
+  .int()
+  .refine((value) => (OVERVIEW_ROWS as readonly number[]).includes(value));
+
+/**
  * Réglages d'un bloc. `.strict()` : une clé de réglage inventée est un défaut d'écriture,
  * pas une extension — elle ne serait relue par personne.
  */
 const widgetSettingsSchema = z
   .object({
     span: spanSchema.optional(),
+    rows: rowsSchema.optional(),
     height: z.enum(['short', 'normal', 'tall']).optional(),
     density: z.enum(['comfortable', 'compact']).optional(),
     variant: z.enum(['list', 'grid', 'kpi']).optional(),

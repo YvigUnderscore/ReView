@@ -9,27 +9,44 @@ import { qk } from '../../../lib/query';
 import { reviewPath } from '../../../lib/slug';
 import { Skeleton } from '../../../components/ui/skeleton';
 import type { MediaRef } from '../../../types/api';
+import { tileCapacity, tileGridClass, type OverviewRows } from './overviewSizing';
+import type { WidgetSpan } from '../../../lib/widgetLayout';
 import { useT } from '../../../i18n';
 
-/** Les derniers médias publiés du projet, en vignettes cliquables vers la review. */
+/**
+ * Les derniers médias publiés du projet, en vignettes cliquables vers la review.
+ *
+ * C'est le bloc que l'utilisatrice a entouré en premier : huit vignettes sur une ligne, et
+ * du vide sous elles quelle que soit la place. La grille de vignettes suit maintenant
+ * l'emprise du bloc — la largeur décide du nombre de colonnes, la hauteur du nombre de
+ * lignes — et un bloc plus grand montre réellement plus de médias.
+ */
 
 type RecentMedia = MediaRef & { thumbnailUrl: string | null };
 
-const TILES = 8;
-
-export default function LatestMediaWidget({ projectId }: { projectId: number }) {
+export default function LatestMediaWidget({
+  projectId,
+  rows,
+  span,
+}: {
+  projectId: number;
+  rows: OverviewRows;
+  span: WidgetSpan;
+}) {
   const t = useT();
+  const tiles = tileCapacity(rows, span);
+  const columns = tileGridClass(span);
   const { data, isError } = useQuery({
     queryKey: qk.projectMedia(projectId),
     queryFn: () =>
       api.get<{ items: RecentMedia[] }>(`/api/media?projectId=${projectId}`).then((d) => d.items),
   });
-  const media = isError ? [] : (data?.slice(0, TILES) ?? null);
+  const media = isError ? [] : (data?.slice(0, tiles) ?? null);
 
   if (media === null)
     return (
-      <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">
-        {Array.from({ length: TILES }, (_, i) => (
+      <div className={`grid gap-3 ${columns}`}>
+        {Array.from({ length: tiles }, (_, i) => (
           <Skeleton key={i} className="aspect-video w-full" />
         ))}
       </div>
@@ -38,7 +55,7 @@ export default function LatestMediaWidget({ projectId }: { projectId: number }) 
   if (media.length === 0) return <p className="text-xs text-muted-foreground">{t('overview.noPublished')}</p>;
 
   return (
-    <div className="grid grid-cols-4 gap-3 lg:grid-cols-8">
+    <div className={`grid gap-3 ${columns}`}>
       {media.map((m) => (
         <Link
           key={m.id}

@@ -14,6 +14,7 @@ import {
   type WidgetSettings,
   type WidgetsPref,
 } from '../../../lib/widgetLayout';
+import { resolveRows, type OverviewRows, type WidgetSize } from './overviewSizing';
 import type { Role } from '../../../types/api';
 
 /**
@@ -55,20 +56,35 @@ export const OVERVIEW_PREFERENCE_KEY = 'projectOverview';
  */
 export interface OverviewWidgetDefinition extends WidgetDefinition {
   manage?: boolean;
+  /** Hauteur par défaut, en rangées de grille (cf. `overviewSizing`). */
+  rows: OverviewRows;
 }
 
-/** Ordre de déclaration = disposition livrée avec le produit, avant tout défaut de rôle. */
+/**
+ * Ordre de déclaration = disposition livrée avec le produit, avant tout défaut de rôle.
+ *
+ * Chaque bloc porte maintenant sa hauteur autant que sa largeur : les compteurs et la
+ * jauge tiennent en deux rangées, les listes en quatre. C'est cette hauteur qui empêche
+ * la page de s'ouvrir sur des cartes de trois lignes suivies de vide.
+ */
 export const OVERVIEW_WIDGET_DEFS: Record<OverviewWidgetId, OverviewWidgetDefinition> = {
-  counts: { labelKey: 'overview.widget.counts', span: 12, spans: [4, 6, 8, 12], variants: ['kpi'] },
-  myTasks: { labelKey: 'home.myTasks', span: 6, spans: [4, 6, 8, 12], variants: ['list'] },
-  latestMedia: { labelKey: 'playlist.latestPublished', span: 12, spans: [6, 8, 12], variants: ['grid'] },
-  progress: { labelKey: 'activity.title', span: 12, spans: [6, 8, 12], variants: ['kpi'] },
-  activity: { labelKey: 'home.recentActivity', span: 6, spans: [4, 6, 8, 12], variants: ['list'] },
-  tasks: { labelKey: 'overview.widget.tasks', span: 6, spans: [4, 6, 8, 12], variants: ['list'] },
+  counts: { labelKey: 'overview.widget.counts', span: 12, spans: [4, 6, 8, 12], rows: 2, variants: ['kpi'] },
+  myTasks: { labelKey: 'home.myTasks', span: 6, spans: [4, 6, 8, 12], rows: 4, variants: ['list'] },
+  latestMedia: {
+    labelKey: 'playlist.latestPublished',
+    span: 12,
+    spans: [6, 8, 12],
+    rows: 3,
+    variants: ['grid'],
+  },
+  progress: { labelKey: 'activity.title', span: 12, spans: [6, 8, 12], rows: 2, variants: ['kpi'] },
+  activity: { labelKey: 'home.recentActivity', span: 6, spans: [4, 6, 8, 12], rows: 4, variants: ['list'] },
+  tasks: { labelKey: 'overview.widget.tasks', span: 6, spans: [4, 6, 8, 12], rows: 4, variants: ['list'] },
   attention: {
     labelKey: 'production.section.attention',
     span: 12,
     spans: [6, 8, 12],
+    rows: 4,
     variants: ['list'],
     manage: true,
   },
@@ -76,6 +92,7 @@ export const OVERVIEW_WIDGET_DEFS: Record<OverviewWidgetId, OverviewWidgetDefini
     labelKey: 'production.retakes.title',
     span: 12,
     spans: [6, 8, 12],
+    rows: 4,
     variants: ['list'],
     manage: true,
   },
@@ -97,23 +114,37 @@ export const BUILTIN_ROLE_LAYOUTS: Record<Role, WidgetsPref> = {
   ADMIN: {
     order: ['attention', 'progress', 'tasks', 'retakes', 'latestMedia', 'activity', 'counts', 'myTasks'],
     hidden: ['myTasks'],
-    settings: { activity: { span: 6 }, tasks: { span: 6 } },
+    settings: {
+      attention: { rows: 5 },
+      progress: { rows: 2 },
+      activity: { span: 6, rows: 5 },
+      tasks: { span: 6, rows: 5 },
+    },
   },
   SUPERVISOR: {
     order: ['attention', 'progress', 'tasks', 'retakes', 'latestMedia', 'activity', 'counts', 'myTasks'],
     hidden: ['myTasks'],
-    settings: { activity: { span: 6 }, tasks: { span: 6 } },
+    settings: {
+      attention: { rows: 5 },
+      progress: { rows: 2 },
+      activity: { span: 6, rows: 5 },
+      tasks: { span: 6, rows: 5 },
+    },
   },
   ARTIST: {
     order: ['myTasks', 'latestMedia', 'activity', 'progress', 'counts', 'tasks'],
     hidden: ['tasks', 'counts'],
-    settings: { myTasks: { span: 6 }, activity: { span: 6 } },
+    settings: {
+      myTasks: { span: 6, rows: 5 },
+      activity: { span: 6, rows: 5 },
+      latestMedia: { rows: 3 },
+    },
   },
   // Un client vient voir ce qu'il y a à regarder, pas l'organisation interne du studio.
   CLIENT: {
     order: ['latestMedia', 'activity', 'counts', 'progress', 'myTasks', 'tasks'],
     hidden: ['counts', 'progress', 'myTasks', 'tasks'],
-    settings: { activity: { span: 12 } },
+    settings: { latestMedia: { rows: 4 }, activity: { span: 12, rows: 4 } },
   },
 };
 
@@ -179,17 +210,41 @@ export function addableOverviewWidgets(
   return hiddenOverviewWidgets(pref).filter((id) => canManage || !OVERVIEW_WIDGET_DEFS[id].manage);
 }
 
-/** Réglages effectifs d'un bloc : ceux de la disposition, complétés par le registre. */
+/** Réglages d'un bloc de cette page : ceux de toute page composable, plus la hauteur. */
+export interface OverviewResolvedSettings extends ResolvedWidgetSettings {
+  rows: OverviewRows;
+}
+
+/**
+ * Réglages effectifs d'un bloc : ceux de la disposition, complétés par le registre.
+ *
+ * La hauteur se relit en trois temps (`resolveRows`) — rangées enregistrées, ancienne
+ * échelle `short`/`normal`/`tall` traduite, défaut du bloc. C'est ce qui fait qu'une
+ * disposition enregistrée avant ce lot s'ouvre sans trou et sans réécriture.
+ */
 export const overviewWidgetSettings = (
   id: OverviewWidgetId,
   pref: WidgetsPref | undefined,
-): ResolvedWidgetSettings => genericSettings(OVERVIEW_WIDGET_DEFS, id, pref);
+): OverviewResolvedSettings => ({
+  ...genericSettings(OVERVIEW_WIDGET_DEFS, id, pref),
+  rows: resolveRows(pref?.settings?.[id], OVERVIEW_WIDGET_DEFS[id].rows),
+});
 
 export const setOverviewWidgetSetting = (
   id: OverviewWidgetId,
   patch: WidgetSettings,
   pref: WidgetsPref | undefined,
 ): WidgetsPref => genericSetSetting(id, patch, pref);
+
+/**
+ * Enregistre une taille d'un seul geste : largeur et hauteur partent ensemble, parce que
+ * la poignée les règle ensemble et qu'un enregistrement par axe doublerait les écritures.
+ */
+export const setOverviewWidgetSize = (
+  id: OverviewWidgetId,
+  size: WidgetSize,
+  pref: WidgetsPref | undefined,
+): WidgetsPref => genericSetSetting(id, { span: size.span, rows: size.rows }, pref);
 
 export const reorderOverviewWidgets = (
   activeId: OverviewWidgetId,

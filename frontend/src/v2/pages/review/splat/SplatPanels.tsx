@@ -7,7 +7,6 @@ import { Button } from '../../../components/ui/button';
 import { Download, Upload } from 'lucide-react';
 import type { PanelId } from '../chrome/panels';
 import CameraPanel from '../panels/CameraPanel';
-import DisplayPanel from '../panels/DisplayPanel';
 import ExportPanel, { CaptureViewButton } from '../panels/ExportPanel';
 import InfoPanel, { type InfoRow } from '../panels/InfoPanel';
 import ScenePanel from '../panels/ScenePanel';
@@ -21,7 +20,6 @@ import type { SplatEditorState } from './editor/useSplatEditor';
 import type { PresentationState } from './presentation/usePresentation';
 import type { SplatStats } from './scene/stats';
 import type { SplatViewer } from './useSplat';
-import type { SplatCompareState } from './compare/useSplatCompare';
 import { buildCleanSpz, cleanExportName, downloadBytes, type ExportEdits } from './export/exportSplat';
 import { downloadAnimGltf } from '../three/exportCameraGltf';
 import { useT } from '../../../i18n';
@@ -35,6 +33,10 @@ const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
  * Contenu du dock inspecteur pour le viewer splat : un panneau à la fois. Rassemble ce qui
  * flottait dans `TopRightControls`, `ViewerSettingsPanel`, `StatsPanel`, `SplatExportPanel`,
  * `CameraBar` et `SectionBar` — mêmes réglages, même effet, à un endroit fixe.
+ *
+ * L'onglet **Affichage** n'est plus ici (Phase 50, lot 12) : les réglages de rendu se prennent
+ * en regardant le nuage, pas à l'autre bout de l'écran. Le **même** `DisplayPanel` est monté
+ * dans le popover « Rendu » du viewer (`SplatViewerMenus`), comme en 3D depuis le lot 6.
  */
 export default function SplatPanels({
   panel,
@@ -42,8 +44,6 @@ export default function SplatPanels({
   splat,
   pres,
   editor,
-  showEdit,
-  compare,
   grid,
   culling,
   exportEdits,
@@ -58,10 +58,6 @@ export default function SplatPanels({
   splat: SplatViewer;
   pres: PresentationState;
   editor: SplatEditorState;
-  /** Éditeur monté : le mode de rendu et l'orientation ne sont réglables qu'en édition. */
-  showEdit: boolean;
-  /** Comparaison A/B de la version — porte l'échelle brute des nuages. */
-  compare?: SplatCompareState;
   grid: { visible: boolean; toggle: () => void };
   culling: { off: boolean; onOff: (off: boolean) => void };
   exportEdits: ExportEdits;
@@ -130,28 +126,6 @@ export default function SplatPanels({
       />
     );
   }
-
-  if (panel === 'display')
-    return (
-      <DisplayPanel
-        // Le mode de rendu et l'orientation sont des éditions : réservés à l'éditeur monté.
-        splat={
-          showEdit
-            ? {
-                mode: editor.renderMode,
-                onMode: editor.setRenderMode,
-                baseFlip: editor.baseFlip,
-                onBaseFlip: () => editor.toggleBaseFlip(),
-              }
-            : undefined
-        }
-        realSize={
-          compare?.enabled ? { value: !compare.normalized, onChange: compare.toggleNormalized } : undefined
-        }
-        debugMode={pres.debugMode}
-        onDebugMode={pres.setDebugMode}
-      />
-    );
 
   if (panel === 'scene')
     return (

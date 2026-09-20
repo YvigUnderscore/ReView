@@ -27,6 +27,7 @@ export default function SelectionOverlay({
   getCanvas,
   onCommit,
   onBrush,
+  onBrushEnd,
 }: {
   tool: 'rect' | 'lasso' | 'brush';
   /** Rayon du pinceau en pixels (outil brush). */
@@ -44,6 +45,12 @@ export default function SelectionOverlay({
     combine: SelectCombine,
     viewport: { width: number; height: number },
   ) => void;
+  /**
+   * Fin du coup de pinceau (lâcher ou pointeur perdu). C'est ce qui fait du trait **un seul**
+   * cran d'historique : sans cette borne, la sélection ne saurait pas où s'arrête le geste et
+   * Ctrl+Z ne rendrait qu'un stamp sur des dizaines.
+   */
+  onBrushEnd?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ start: [number, number]; points: [number, number][] } | null>(null);
@@ -126,6 +133,7 @@ export default function SelectionOverlay({
     }
     if (tool === 'brush') {
       brushStroke.current = null;
+      onBrushEnd?.();
       return;
     }
     if (!drag) return;
@@ -167,6 +175,12 @@ export default function SelectionOverlay({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      // Pointeur perdu en plein trait (capture volée, geste système) : le trait se ferme quand
+      // même, sinon son cran d'historique resterait ouvert et avalerait le trait suivant.
+      onPointerCancel={() => {
+        brushStroke.current = null;
+        onBrushEnd?.();
+      }}
       onPointerLeave={() => setCursor(null)}
       onWheel={onWheel}
       onContextMenu={onContextMenu}

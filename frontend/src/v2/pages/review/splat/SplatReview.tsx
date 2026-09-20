@@ -29,6 +29,7 @@ import { useSavedSplatEdits } from './useSavedSplatEdits';
 import { useSplatInput } from './scene/useSplatInput';
 import { useSplatView } from './useSplatView';
 import SplatPane from './SplatPane';
+import SplatViewerMenus from './SplatViewerMenus';
 import SplatContextMenu from './SplatContextMenu';
 import { useT } from '../../../i18n';
 
@@ -92,7 +93,7 @@ export default function SplatReview({
   const compare = useSplatCompare(splat, data.media);
   // État de vue : chrome (mode/outil/panneau), culling, tracé de sélection armé, écart entre
   // l'animation courante et la présentation persistée.
-  const { state, update, culling, activeTool, selectTool, animDirty } = useSplatView({
+  const { state, update, modes, culling, activeTool, selectTool, animDirty } = useSplatView({
     splat,
     data,
     pres,
@@ -141,6 +142,10 @@ export default function SplatReview({
       state={state}
       onState={update}
       role={role ?? 'ARTIST'}
+      // La bascule du splat : « Mise en scène » et « Nettoyer » l'ont quittée (`splatChrome`),
+      // il n'y reste qu'« Explorer » — elle s'efface donc. Même liste que celle des touches
+      // numériques, pour qu'un segment absent de l'en-tête ne s'arme pas au clavier.
+      modes={modes}
       headerRight={
         <SpatialCompareHeader
           versionId={data.media.versionId}
@@ -172,8 +177,6 @@ export default function SplatReview({
           splat={splat}
           pres={pres}
           editor={editor}
-          showEdit={showEdit}
-          compare={compare}
           grid={grid}
           culling={culling}
           exportEdits={
@@ -236,6 +239,16 @@ export default function SplatReview({
           aspect={frameAspect}
           recording={canPresent && pres.anim.autoKey}
           overlay={overlay}
+          settings={
+            <SplatViewerMenus
+              state={state}
+              onState={update}
+              editor={editor}
+              showEdit={showEdit}
+              pres={pres}
+              compare={compare}
+            />
+          }
           pip={
             pres.layout.layoutMode && ready ? (
               <PipFrame label={t('review.layoutCamera')} aspect={frameAspect} onRect={splat.setPipRect} />
@@ -260,6 +273,7 @@ export default function SplatReview({
                 onBrush={(point, combine, viewport) =>
                   editor.selection.commitBrush(point, editor.brushRadius, combine, viewport)
                 }
+                onBrushEnd={editor.selection.endBrush}
               />
             ) : null
           }

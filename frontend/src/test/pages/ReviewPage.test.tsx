@@ -167,6 +167,43 @@ describe('ReviewPage — viewer monté selon le type de média', () => {
 });
 
 /**
+ * Chrome du viewer splat (Phase 50, lot 12), sur l'écran réel.
+ *
+ * Deux segments quittent l'en-tête — « Mise en scène », qui doublait l'interrupteur du panneau
+ * Caméra, et « Nettoyer », dont les outils passent sur le viewer. Rien n'est supprimé pour
+ * autant : la mise en scène garde son interrupteur, et les réglages de rendu sont au coin
+ * haut-gauche du viewer, là où le modèle 3D a les siens depuis le lot 6.
+ */
+describe('ReviewPage — chrome du viewer splat', () => {
+  it('n’offre ni segment « Mise en scène » ni segment « Nettoyer »', async () => {
+    mount('SPLAT');
+
+    expect(await screen.findByRole('button', { name: t('tool.focus') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('mode.stage') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('mode.clean') })).not.toBeInTheDocument();
+  });
+
+  it('pose les réglages de rendu dans le viewer, teinte d’inspection comprise', async () => {
+    const { user } = mount('SPLAT');
+
+    await user.click(await screen.findByRole('button', { name: t('viewer.render.title') }));
+    expect(screen.getByText(t('viewer.inspectionTint'))).toBeInTheDocument();
+  });
+
+  it('garde la mise en scène joignable : son interrupteur est au panneau Caméra', async () => {
+    const { container, user } = mount('SPLAT');
+
+    // Requête bornée au dock : la piste du transport porte aussi le libellé « Camera ».
+    await screen.findByRole('button', { name: t('panel.info') });
+    const dock = within(container.querySelector('.rv-dock') as HTMLElement);
+    await user.click(dock.getByRole('button', { name: t('panel.camera') }));
+    // Nommé par le mode qu'il arme, et non par la fenêtre PiP qu'il ouvre.
+    expect(dock.getByText(t('mode.stage'))).toBeInTheDocument();
+    expect(dock.getByRole('switch', { name: t('viewer.pip.hint') })).toBeInTheDocument();
+  });
+});
+
+/**
  * Bascule de mode et réglages de rendu du viewer 3D (Phase 50, lot 6).
  *
  * Trois retraits à constater sur l'écran réel, parce que chacun visait un geste qui ne menait
@@ -177,12 +214,14 @@ describe('ReviewPage — viewer monté selon le type de média', () => {
  * coin haut-gauche du viewer.
  */
 describe('ReviewPage — chrome du viewer 3D', () => {
-  it('n’offre ni segment « Mise en scène » ni onglet « Affichage »', async () => {
+  it('n’offre pas de segment « Mise en scène »', async () => {
     mount('MODEL_3D');
 
     expect(await screen.findByRole('button', { name: t('mode.explore') })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('mode.stage') })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: t('panel.display') })).not.toBeInTheDocument();
+    // L'onglet « Affichage » ne s'affirme plus par son libellé : la clé a été retirée des
+    // catalogues quand le splat a suivi le 3D (lot 12) et que plus aucun dock ne le porte.
+    // C'est `panelsFor` qui l'atteste (`chrome/chromeState.test`), seule autorité des onglets.
   });
 
   it('offre « Nettoyer » quand le serveur accorde l’écriture de la transformation', async () => {

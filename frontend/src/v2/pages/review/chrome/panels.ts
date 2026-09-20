@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Axis3d, Download, Eye, Info, Sun, Video, type LucideIcon } from 'lucide-react';
+import { Axis3d, Download, Info, Sun, Video, type LucideIcon } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
 import { isSpatialKind } from './modes';
 import type { MessageKey } from '../../../i18n';
@@ -11,7 +11,7 @@ import type { MessageKey } from '../../../i18n';
  * qu'on oublie, par opposition au rail où l'on arme un geste. Un seul panneau ouvert à la
  * fois ; le dock se replie sur sa bande d'onglets de 44 px.
  */
-export type PanelId = 'info' | 'export' | 'camera' | 'light' | 'display' | 'scene';
+export type PanelId = 'info' | 'export' | 'camera' | 'light' | 'scene';
 
 export interface ReviewPanel {
   id: PanelId;
@@ -26,7 +26,6 @@ const SPATIAL_PANELS: ReviewPanel[] = [
   { id: 'camera', labelKey: 'panel.camera', icon: Video },
   // L'éclairage n'a de sens que sur un modèle : un splat porte sa propre lumière cuite.
   { id: 'light', labelKey: 'panel.lighting', icon: Sun },
-  { id: 'display', labelKey: 'panel.display', icon: Eye },
   { id: 'scene', labelKey: 'panel.scene', icon: Axis3d },
   INFO,
   EXPORT,
@@ -54,16 +53,16 @@ const MEDIA_PANELS: ReviewPanel[] = [INFO, EXPORT];
 /**
  * Panneaux du dock pour un type de média, dans l'ordre d'affichage.
  *
- * Deux écarts entre les deux médias spatiaux :
- *   - **Éclairage** n'existe que sur un modèle : un nuage porte sa lumière cuite ;
- *   - **Affichage** n'existe plus que sur un splat. Le dock 3D le réglait à dix-sept
- *     centimètres du modèle, derrière un onglet, pour des bascules qu'on essaie en rafale en
- *     regardant la géométrie. Ses réglages n'ont pas disparu : ils sont passés en popover au
- *     coin haut-gauche du viewer (`Model3DRenderMenu`), avec le même `DisplayPanel` dedans.
+ * Un seul écart entre les deux médias spatiaux : **Éclairage** n'existe que sur un modèle, un
+ * nuage portant sa lumière cuite.
+ *
+ * L'onglet **Affichage** a quitté le dock des deux : il réglait à dix-sept centimètres du média,
+ * derrière un repli, des bascules qu'on essaie en rafale en le regardant. Ses réglages n'ont pas
+ * disparu — ils sont passés en popover au coin haut-gauche du viewer, avec le même
+ * `DisplayPanel` dedans (3D au lot 6 : `Model3DRenderMenu` ; splat au lot 12 :
+ * `SplatViewerMenus`), pour qu'un réglage ajouté demain arrive aux deux ou à aucun.
  */
 export function panelsFor(kind: MediaKind): ReviewPanel[] {
   if (!isSpatialKind(kind)) return MEDIA_PANELS;
-  return SPATIAL_PANELS.filter(
-    (p) => (p.id !== 'light' || kind === 'MODEL_3D') && (p.id !== 'display' || kind !== 'MODEL_3D'),
-  );
+  return SPATIAL_PANELS.filter((p) => p.id !== 'light' || kind === 'MODEL_3D');
 }

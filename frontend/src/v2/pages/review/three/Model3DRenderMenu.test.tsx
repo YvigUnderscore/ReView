@@ -45,9 +45,12 @@ function open(inspect: Model3DInspectState, variants = variantsState()) {
 }
 
 describe('dock 3D', () => {
-  it('n’a plus d’onglet « Affichage » — le splat garde le sien', () => {
-    expect(panelsFor('MODEL_3D').map((p) => p.id)).not.toContain('display');
-    expect(panelsFor('SPLAT').map((p) => p.id)).toContain('display');
+  it('n’a plus d’onglet « Affichage » — le splat a suivi au lot 12', () => {
+    // Ce test affirmait « le splat garde le sien » ; il est réécrit, pas désactivé : le splat
+    // a pris le même chemin, ses réglages de rendu vivant désormais sur son viewer
+    // (`splat/SplatViewerMenus`). Plus aucun dock ne porte cet onglet.
+    for (const kind of ['MODEL_3D', 'SPLAT'] as const)
+      expect(panelsFor(kind).map((p) => p.id)).not.toContain('display');
   });
 });
 

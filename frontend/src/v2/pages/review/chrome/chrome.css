@@ -330,6 +330,20 @@
   font-weight: var(--weight-medium);
 }
 
+/* ---- Liste d'outils en MENU (popover du viewer splat) --------------------------------
+   Les mêmes boutons que le rail, posés dans un popover : ils s'y lisent dépliés (icône,
+   libellé, raccourci). `.rv-railbtn` centre son contenu tant qu'il est plié — c'est le rail
+   déplié qui l'aligne à gauche, et un popover n'a pas de bande pliée. */
+.rv-menulist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rv-menulist .rv-railbtn {
+  justify-content: flex-start;
+  padding: 0 0.5rem;
+}
+
 /* ---- Barre d'outils HORIZONTALE (page client) ----------------------------------------
    Les mêmes boutons que le rail, posés en ligne. `.rv-railbtn` est taillé pour une colonne
    (`width: 100%`) : sans cette largeur automatique, chaque outil prend sa propre ligne — la

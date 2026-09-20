@@ -17,8 +17,12 @@ import { useT } from '../../../i18n';
  * La liste est celle de « mes tâches », vue par le trou d'un projet : même route, même
  * périmètre serveur (`lib/homeScope`), même ligne actionnable. Deux lectures différentes
  * auraient fini par donner deux chiffres différents pour la même question.
+ *
+ * `limit` est ce que la carte peut montrer — la hauteur réglée traduite en lignes. La
+ * sentinelle ne reste que tant que la carte a de la place : une fois pleine, réclamer une
+ * page de plus ne servirait à afficher rien de plus.
  */
-export default function MyTasksWidget({ projectId }: { projectId: number }) {
+export default function MyTasksWidget({ projectId, limit }: { projectId: number; limit: number }) {
   const t = useT();
   const filter = `project=${projectId}`;
   const list = useInfiniteList<MyTaskItem>(qk.myTasks(filter), `/api/dashboard/tasks?projectId=${projectId}`);
@@ -38,11 +42,15 @@ export default function MyTasksWidget({ projectId }: { projectId: number }) {
   return (
     <>
       <div className="space-y-1">
-        {list.data.map((task) => (
+        {list.data.slice(0, limit).map((task) => (
           <AssignedTaskRow key={task.id} task={task} />
         ))}
       </div>
-      <ListSentinel hasMore={list.hasMore} isLoading={list.isFetchingMore} onLoadMore={list.loadMore} />
+      <ListSentinel
+        hasMore={list.hasMore && list.data.length < limit}
+        isLoading={list.isFetchingMore}
+        onLoadMore={list.loadMore}
+      />
     </>
   );
 }

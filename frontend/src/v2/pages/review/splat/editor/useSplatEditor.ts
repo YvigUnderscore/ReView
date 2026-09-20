@@ -63,8 +63,11 @@ export function useSplatEditor(
   // Masque de suppression cumulé (indices masqués), sérialisé en bitset à l'enregistrement.
   const deletedRef = useRef<Set<number>>(new Set());
   const isHidden = useCallback((index: number) => deletedRef.current.has(index), []);
-  const selection = useSelection(splat, isHidden);
   const history = useEditHistory();
+  // La sélection entre dans le MÊME historique que les éditions (Phase 50, lot 12) : un lasso,
+  // un coup de pinceau ou un « tout désélectionner » sont des crans au même titre que la
+  // suppression qu'ils préparent, et Ctrl+Z les rend dans l'ordre où ils ont été faits.
+  const selection = useSelection(splat, isHidden, history.push);
   const volumes = useVolumes(splat, history.push, markDirty, enabled ? (saved?.volumes ?? null) : null);
   const [deletedCount, setDeletedCount] = useState(0);
   // Journal des transformations de sous-ensembles (Phase 28) — cumulé, sérialisé à l'enregistrement.
@@ -226,10 +229,14 @@ export function useSplatEditor(
     const hidden = hideSplats(handle, selection.selected);
     if (!hidden) return;
     const deleted = deletedRef.current;
+    // La sélection qui a produit la suppression fait partie de la suppression : elle est vidée
+    // SANS cran propre (`restore`), et le cran de suppression la rend. Un seul Ctrl+Z ramène
+    // donc les splats **et** la sélection — deux crans pour un geste ne se comprendraient pas.
+    const selectedBefore = selection.selected;
     for (const i of hidden.indices) deleted.add(i);
     setDeletedCount(deleted.size);
     setDirty(true);
-    selection.clear();
+    selection.restore(new Set());
     selection.markDirty(hidden.indices);
     splat.reflectHidden(hidden.indices, true); // reflet immédiat en mode points
     history.push({
@@ -238,6 +245,7 @@ export function useSplatEditor(
         restoreSplats(handle, hidden);
         for (const i of hidden.indices) deleted.delete(i);
         setDeletedCount(deleted.size);
+        selection.restore(selectedBefore);
         selection.markDirty(hidden.indices);
         splat.reflectHidden(hidden.indices, false);
       },
@@ -245,6 +253,7 @@ export function useSplatEditor(
         rehideSplats(handle, hidden);
         for (const i of hidden.indices) deleted.add(i);
         setDeletedCount(deleted.size);
+        selection.restore(new Set());
         selection.markDirty(hidden.indices);
         splat.reflectHidden(hidden.indices, true);
       },

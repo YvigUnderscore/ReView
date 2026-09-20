@@ -197,20 +197,38 @@ and for the same reason: an artist, a supervisor and a producer do not open the 
 first comes to see what is asked of them, the second what is blocking, the third where the show
 stands.
 
-| Block | Default width | Widths offered | Shapes |
-|-------|--------------:|----------------|--------|
-| **Structure** | 12 | 4, 6, 8, 12 | KPI |
-| **My tasks** | 6 | 4, 6, 8, 12 | list |
-| **Latest published media** | 12 | 6, 8, 12 | grid |
-| **Task progress** | 12 | 6, 8, 12 | KPI |
-| **Recent activity** | 6 | 4, 6, 8, 12 | list |
-| **Tasks to handle** | 6 | 4, 6, 8, 12 | list |
-| **What is blocking** | 12 | 6, 8, 12 | list |
-| **Retakes** | 12 | 6, 8, 12 | list |
+| Block | Default width | Widths offered | Default height | Shapes |
+|-------|--------------:|----------------|---------------:|--------|
+| **Structure** | 12 | 4, 6, 8, 12 | 2 | KPI |
+| **My tasks** | 6 | 4, 6, 8, 12 | 4 | list |
+| **Latest published media** | 12 | 6, 8, 12 | 3 | grid |
+| **Task progress** | 12 | 6, 8, 12 | 2 | KPI |
+| **Recent activity** | 6 | 4, 6, 8, 12 | 4 | list |
+| **Tasks to handle** | 6 | 4, 6, 8, 12 | 4 | list |
+| **What is blocking** | 12 | 6, 8, 12 | 4 | list |
+| **Retakes** | 12 | 6, 8, 12 | 4 | list |
 
 The last two read [production data](production-reporting.md) and therefore **only exist for
 supervisors and administrators of the project** — not in the page, and not in the *Add*
 catalogue either, because a block that could only show an error has no business being offered.
+
+### Sizing a block
+
+A block carries a **height** as well as a width, counted in grid rows, and the **handle at its
+bottom-right corner** sets both at once: drag it and the block follows the cursor, settling on
+the widths its definition offers and on the heights on offer — 2, 3, 4, 5 or 6 rows. Nothing is
+written until you let go. The handle is a control rather than an ornament: focus it and the
+arrow keys walk the same steps, left and right for the width, up and down for the height. The
+height is also in the block's settings panel, where the old *short / normal / tall* choice used
+to be, and an arrangement saved before heights existed keeps its old choice — it is read as a
+row count, not rewritten.
+
+Because a height is a row count and not a pixel size, an arrangement replays identically on
+another screen: only the columns stretch. The grid then **packs** — a block shorter than its
+neighbour leaves rows free, and the first following block that fits moves up into them, so a
+short block no longer leaves a hole nobody can use. The content follows the size as well: a
+taller card lists more rows, a taller or wider media block shows more thumbnails and lays them
+out in more columns.
 
 Two arrangements are layered. **Yours** lives on your account under one key, so the page you
 built follows you from project to project rather than asking to be rebuilt on each one.
