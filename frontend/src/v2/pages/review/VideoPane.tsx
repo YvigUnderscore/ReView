@@ -13,7 +13,7 @@ import { useVideoFullscreen } from './useVideoFullscreen';
 import { shouldLoopBack, useLoopPoints, usePlaybackSpeed, useVideoBuffering } from './videoPaneHooks';
 import type { TimelineSpriteMeta } from './timelineSprite';
 import { RangeAnnotationsOverlay } from './RangeAnnotations';
-import CompositionGuides from './CompositionGuides';
+import ZoomedGuidesLayer from './guides/ZoomedGuidesLayer';
 import VideoTimeline from './VideoTimeline';
 import VideoTransport from './VideoTransport';
 import ViewerBadges from './ViewerBadges';
@@ -262,8 +262,6 @@ export default function VideoPane({
           />
           {/* Annotations sur plage in→out (34.A) : visibles pendant toute la plage. */}
           <RangeAnnotationsOverlay comments={comments} currentFrame={currentFrame} selectedId={selectedId} />
-          {/* Guides de composition (34.G) : tiers / croix / safe areas, via clic droit. */}
-          <CompositionGuides />
           {/* Curseurs des autres participants de la salle live : dans le calque
               transformé, donc justes au zoom comme à l'ajustement. */}
           <LivePointers />
@@ -277,6 +275,9 @@ export default function VideoPane({
             {compareOverlay}
           </div>
         )}
+        {/* Après la comparaison, sans quoi elle les recouvrirait : le calque média est un
+            contexte d'empilement dès qu'il est zoomé (34.G). */}
+        <ZoomedGuidesLayer box={box} zoomStyle={zoom.style} />
         {/* Repères flottants : zoom, vitesse de lecture, chargement. */}
         <ViewerBadges
           zoom={zoom}
