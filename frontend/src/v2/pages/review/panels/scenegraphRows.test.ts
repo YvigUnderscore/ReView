@@ -11,9 +11,9 @@ import type { UsdModelInfo, UsdPrim } from '../../../types/api';
  * L'arithmétique des rangées du scenegraph.
  *
  * Ce qui est vérifié ici : on n'aplatit que ce qui est déplié (c'est tout l'intérêt — le
- * virtualiseur ne sait compter que des rangées), la recherche déplie sans construire
- * l'ensemble de tous les chemins, les clones restent sous leur prim source, et les jeux de
- * variantes sont indexés une fois au lieu d'être refiltrés par rangée.
+ * virtualiseur ne sait compter que des rangées), la recherche ne déplie que le chemin menant à
+ * ses résultats, les clones restent sous leur prim source, et les jeux de variantes sont
+ * indexés une fois au lieu d'être refiltrés par rangée.
  */
 
 const prim = (path: string): UsdPrim => ({
@@ -38,8 +38,15 @@ describe('buildRows — aplatissement de l’arbre visible', () => {
     expect(rows.map((r) => r.kind === 'prim' && r.open)).toEqual([true, false, false]);
   });
 
-  it('déplie tout pendant une recherche, sans jeu de chemins à construire', () => {
-    const rows = buildRows(tree, new Set(), emptyOverride(), true);
+  it('déplie de force le chemin menant au résultat, et lui seul', () => {
+    // `forceOpen` vient de `searchPrimTree` : c'est la lignée des correspondances. `/World/A`
+    // s'ouvre parce qu'on cherche sous lui ; `/World/B`, replié, le reste.
+    const rows = buildRows(tree, new Set(), emptyOverride(), new Set(['/World', '/World/A']));
+    expect(rows.map((r) => r.path)).toEqual(['/World', '/World/A', '/World/A/A1', '/World/A/A2', '/World/B']);
+  });
+
+  it('cumule le dépliage de l’utilisateur et celui de la recherche', () => {
+    const rows = buildRows(tree, new Set(['/World']), emptyOverride(), new Set(['/World/A']));
     expect(rows.map((r) => r.path)).toEqual(['/World', '/World/A', '/World/A/A1', '/World/A/A2', '/World/B']);
   });
 

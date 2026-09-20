@@ -7,6 +7,7 @@ import ScenegraphPanel from './ScenegraphPanel';
 import { ROW_ESTIMATE } from './scenegraphRows';
 import { buildPrimTree, flattenTree, type PrimNode } from '../three/usdScenegraph';
 import { emptyOverride } from '../three/sceneOverride';
+import { useScenegraphView } from '../three/useScenegraphView';
 import type { UsdSceneState } from '../three/useUsdScene';
 import type { UsdModelInfo, UsdPrim } from '../../../types/api';
 
@@ -94,6 +95,12 @@ const makePrims = () => {
 };
 const TREE = buildPrimTree(makePrims());
 
+/** Un objet de scène à quatre niveaux : le dernier est replié par défaut. */
+const DEEP = buildPrimTree(
+  ['/World', '/World/Chair', '/World/Chair/Geom', '/World/Chair/Geom/seat'].map(prim),
+);
+const SEAT = '/World/Chair/Geom/seat';
+
 /** Fiche USD minimale : seuls les jeux de variantes intéressent l'arbre. */
 const usdWith = (variantSets: UsdModelInfo['variantSets']): UsdModelInfo => ({
   rootLayer: 'scene.usda',
@@ -130,6 +137,7 @@ function fakeScene(tree: PrimNode[], over: Partial<UsdSceneState> = {}): UsdScen
     select: vi.fn(),
     selectMany: vi.fn(),
     resolvePrim: () => null,
+    resolvePick: () => null,
     locked: new Set<string>(),
     toggleLock: vi.fn(),
     selectedObjects: () => [],
@@ -146,6 +154,8 @@ function fakeScene(tree: PrimNode[], over: Partial<UsdSceneState> = {}): UsdScen
     setVariant: vi.fn(),
     variantChoiceRenderable: () => true,
     revert: vi.fn(),
+    // Remplacée par le vrai état de vue dans `Harness` : le panneau n'en porte plus la mémoire.
+    view: { query: '', setQuery: vi.fn(), expanded: new Set<string>(), toggle: vi.fn(), expand: vi.fn() },
     dirty: false,
     localDelta: emptyOverride(),
     merged: emptyOverride(),
@@ -153,8 +163,18 @@ function fakeScene(tree: PrimNode[], over: Partial<UsdSceneState> = {}): UsdScen
   };
 }
 
+/**
+ * Recherche et dépliage vivent désormais dans l'état de scène (`useScenegraphView`), pour
+ * survivre au démontage du panneau quand on change d'onglet du dock. Le harnais les fournit
+ * pour de vrai : sans cela, aucun chevron ni aucune recherche ne ferait rien ici.
+ */
+function Harness({ scene, usd }: { scene: UsdSceneState; usd: UsdModelInfo | null }) {
+  const view = useScenegraphView(scene.tree, 1);
+  return <ScenegraphPanel scene={{ ...scene, view }} usd={usd} />;
+}
+
 const mount = (scene: UsdSceneState, usd: UsdModelInfo | null = USD) =>
-  render(<ScenegraphPanel scene={scene} usd={usd} />);
+  render(<Harness scene={scene} usd={usd} />);
 
 /** Chemins des prims réellement montés, dans l'ordre du DOM. */
 const mountedPaths = (el: HTMLElement) =>
@@ -276,10 +296,118 @@ describe('ScenegraphPanel — ce que voit l’utilisateur n’a pas changé', ()
     expect(mountedPaths(container)).not.toContain(far);
 
     const selected = fakeScene(TREE, { primary: far, selected: [far] });
-    rerender(<ScenegraphPanel scene={selected} usd={USD} />);
+    rerender(<Harness scene={selected} usd={USD} />);
     expect(mountedPaths(container)).toContain(far);
     const row = container.querySelector(`[data-prim-path="${far}"]`) as HTMLElement;
     expect(row.className).toContain('bg-primary/20');
+  });
+});
+
+describe('ScenegraphPanel — la recherche ne déplie que le chemin du résultat', () => {
+  it('ne ramène pas la descendance d’un nœud trouvé', () => {
+    // Le défaut : le filtre comparait le CHEMIN, donc « G0 » retenait les quarante meshes de
+    // `/World/G0`, et le dépliage total les montait tous. Chercher un groupe montre le groupe.
+    const { container } = mount(fakeScene(TREE));
+    fireEvent.change(container.querySelector('input') as HTMLInputElement, { target: { value: 'G0' } });
+    expect(mountedPaths(container)).toEqual(['/World', '/World/G0']);
+  });
+
+  it('ouvre en revanche la lignée qui mène à un résultat profond', () => {
+    const { container } = mount(fakeScene(DEEP));
+    // `seat` est sous un `Geom` replié : la recherche doit l'ouvrir pour montrer le résultat.
+    expect(mountedPaths(container)).not.toContain(SEAT);
+    fireEvent.change(container.querySelector('input') as HTMLInputElement, { target: { value: 'seat' } });
+    expect(mountedPaths(container)).toEqual(['/World', '/World/Chair', '/World/Chair/Geom', SEAT]);
+  });
+});
+
+describe('ScenegraphPanel — `F` au survol révèle la sélection', () => {
+  /** Le cadrage caméra global : posé en bulle sur `window`, comme `useFrameShortcuts`. */
+  const watchWindow = () => {
+    const framed = vi.fn();
+    window.addEventListener('keydown', framed);
+    return { framed, stop: () => window.removeEventListener('keydown', framed) };
+  };
+  /** La frappe part du corps du document : personne n'a le focus dans l'arbre. */
+  const pressF = () => fireEvent.keyDown(document.body, { key: 'f' });
+
+  it('déplie jusqu’au prim sélectionné dans le viewer, et retient la frappe', () => {
+    const { container } = mount(fakeScene(DEEP, { primary: SEAT, selected: [SEAT] }));
+    const root = container.firstElementChild as HTMLElement;
+    expect(mountedPaths(container)).not.toContain(SEAT);
+    const { framed, stop } = watchWindow();
+    try {
+      fireEvent.pointerEnter(root);
+      pressF();
+      expect(mountedPaths(container)).toContain(SEAT);
+      // La caméra ne cadre pas en plus : la frappe a été consommée au survol de l'arbre.
+      expect(framed).not.toHaveBeenCalled();
+    } finally {
+      stop();
+    }
+  });
+
+  it('lève la recherche quand elle cache le prim sélectionné', () => {
+    const { container } = mount(fakeScene(DEEP, { primary: SEAT, selected: [SEAT] }));
+    const root = container.firstElementChild as HTMLElement;
+    const search = container.querySelector('input') as HTMLInputElement;
+    fireEvent.change(search, { target: { value: 'Chair' } });
+    expect(mountedPaths(container)).not.toContain(SEAT);
+    fireEvent.pointerEnter(root);
+    pressF();
+    expect(search.value).toBe('');
+    expect(mountedPaths(container)).toContain(SEAT);
+  });
+
+  it('laisse filer la frappe hors du survol — le viewer cadre comme avant', () => {
+    const { container } = mount(fakeScene(DEEP, { primary: SEAT, selected: [SEAT] }));
+    const { framed, stop } = watchWindow();
+    try {
+      pressF();
+      expect(framed).toHaveBeenCalled();
+      expect(mountedPaths(container)).not.toContain(SEAT);
+    } finally {
+      stop();
+    }
+  });
+
+  it('laisse filer la frappe sans rien de sélectionné', () => {
+    const { container } = mount(fakeScene(DEEP));
+    const root = container.firstElementChild as HTMLElement;
+    const { framed, stop } = watchWindow();
+    try {
+      fireEvent.pointerEnter(root);
+      pressF();
+      expect(framed).toHaveBeenCalled();
+    } finally {
+      stop();
+    }
+  });
+
+  it('ne vole pas la frappe au champ de recherche', () => {
+    // Taper « seat » dans la recherche, c'est écrire un « f » de plus quelque part : la lettre
+    // appartient à la saisie, et l'arbre ne doit pas se déplier sous les doigts.
+    const { container } = mount(fakeScene(DEEP, { primary: SEAT, selected: [SEAT] }));
+    const root = container.firstElementChild as HTMLElement;
+    fireEvent.pointerEnter(root);
+    fireEvent.keyDown(container.querySelector('input') as HTMLInputElement, { key: 'f' });
+    expect(mountedPaths(container)).not.toContain(SEAT);
+  });
+
+  it('ignore la frappe accompagnée d’un modificateur', () => {
+    const { container } = mount(fakeScene(DEEP, { primary: SEAT, selected: [SEAT] }));
+    fireEvent.pointerEnter(container.firstElementChild as HTMLElement);
+    fireEvent.keyDown(document.body, { key: 'f', ctrlKey: true });
+    expect(mountedPaths(container)).not.toContain(SEAT);
+  });
+
+  it('cesse de répondre une fois le pointeur sorti', () => {
+    const { container } = mount(fakeScene(DEEP, { primary: SEAT, selected: [SEAT] }));
+    const root = container.firstElementChild as HTMLElement;
+    fireEvent.pointerEnter(root);
+    fireEvent.pointerLeave(root);
+    pressF();
+    expect(mountedPaths(container)).not.toContain(SEAT);
   });
 });
 
@@ -329,7 +457,7 @@ describe('ScenegraphPanel — mémoïsation des rangées', () => {
 
     // Le dock se rend à chaque image pendant que la caméra bouge : l'état de scène est un
     // objet neuf, mais ses membres sont les mêmes — aucune rangée n'a de raison de rejouer.
-    for (let i = 0; i < 6; i += 1) rerender(<ScenegraphPanel scene={{ ...scene }} usd={USD} />);
+    for (let i = 0; i < 6; i += 1) rerender(<Harness scene={{ ...scene }} usd={USD} />);
     expect(reads).toBe(first);
 
     // Idem pour le défilement, qui émet des dizaines d'événements par seconde.

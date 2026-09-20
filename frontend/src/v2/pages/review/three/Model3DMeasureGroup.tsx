@@ -38,6 +38,7 @@ export default function Model3DMeasureGroup({
   return (
     <Group
       title={t('measure.title')}
+      collapsible
       action={
         <IconButton
           icon={Ruler}

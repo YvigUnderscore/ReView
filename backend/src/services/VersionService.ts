@@ -207,6 +207,11 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   // Verrou de publication : la transform 3D d'une version publiée reste figée. C'est
   // l'assise de l'A/B et des annotations ancrées au cadre — la déplacer après coup fausse
   // tout ce qui s'y réfère (table de `lib/publishLock`).
+  //
+  // La conjonction de CE verrou et de la garde auteur/gestionnaire ci-dessus est ce que
+  // `lib/versionPermissions.canEditVersionTransform` rend à l'interface (`permissions` du
+  // détail média) : toucher à l'une des deux gardes oblige à y repasser, sinon l'écran
+  // recommence à offrir un bouton que ce service refuse.
   if (body.transform !== undefined) assertWritable(version, 'versionTransform');
 
   const updated = await prisma.version.update({

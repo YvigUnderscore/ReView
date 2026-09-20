@@ -258,6 +258,22 @@ export interface MediaResp {
   reviewers: ReviewAssignee[];
   /** Ce que le projet exige d'une consigne — l'écran refuse avant l'aller-retour. */
   reviewRequest: ReviewRequestRule;
+  /**
+   * Ce que CET appelant a le droit d'écrire, calculé par le serveur (`lib/versionPermissions`).
+   * L'écran ne recopie plus la règle : il la lit. C'est ce qui retire à la fois le bouton
+   * « Enregistrer » mort et le 403 silencieux qui le suivait.
+   */
+  permissions: MediaPermissions;
+}
+
+/** Droits d'écriture de l'appelant sur ce média, tels que le serveur les tranche. */
+export interface MediaPermissions {
+  /**
+   * Transformation TRS de la version : auteur de la version ou gestionnaire du projet, et
+   * version non publiée. C'est le seul outil d'édition du mode « Nettoyer » d'un modèle 3D —
+   * faux, le mode entier disparaît plutôt que d'offrir un enregistrement refusé.
+   */
+  editTransform: boolean;
 }
 
 /** Image de référence épinglée au canvas de la review image (figée, liée à un commentaire). */

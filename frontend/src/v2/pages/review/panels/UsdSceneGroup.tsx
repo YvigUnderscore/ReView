@@ -3,6 +3,7 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { Group, ReadRow } from '../chrome/DockGroup';
+import { isLongDockGroup } from '../chrome/dockGroupSize';
 import type { UsdModelInfo } from '../../../types/api';
 import { purposeLabel, unitLabel, variantValue } from '../usdDisplay';
 import { useT } from '../../../i18n';
@@ -21,6 +22,23 @@ import { useT } from '../../../i18n';
  * suffisent à reconnaître le dossier oublié, et le total reste affiché à côté du titre.
  */
 const LISTED = 8;
+
+/**
+ * Nombre de lignes que la section rendra vraiment — l'entrée du seuil de repli. Compté plutôt
+ * que deviné : la section va de six lignes (une scène nue) à onze (variantes, animation, rig,
+ * références manquantes), et c'est au-delà du seuil du dock qu'elle vaut d'arriver fermée.
+ */
+function rowCount(usd: UsdModelInfo): number {
+  const optional = [
+    usd.missingAssets.length > 0,
+    Boolean(usd.defaultPrim),
+    Boolean(usd.frameRange),
+    usd.hasSkeleton,
+    usd.variantSets.length > 0,
+  ];
+  // rootLayer, upAxis, unit, layers, prims, purpose : toujours là.
+  return 6 + optional.filter(Boolean).length;
+}
 
 /** Références non résolues : le seul défaut de la scène que le viewer ne peut pas montrer. */
 function MissingAssets({ usd }: { usd: UsdModelInfo }) {
@@ -75,8 +93,17 @@ function VariantSets({ usd }: { usd: UsdModelInfo }) {
 
 export default function UsdSceneGroup({ usd }: { usd: UsdModelInfo }) {
   const t = useT();
+  const rows = rowCount(usd);
   return (
-    <Group title={t('usd.scene')}>
+    <Group
+      title={t('usd.scene')}
+      collapsible
+      // Une section longue arrive fermée — SAUF si elle porte des références non résolues :
+      // c'est la seule information de la fiche que le viewer ne peut pas montrer, et la
+      // replier d'office reviendrait à la cacher au moment où elle explique tout l'écran.
+      defaultCollapsed={isLongDockGroup(rows) && usd.missingAssets.length === 0}
+      count={rows}
+    >
       {usd.missingAssets.length > 0 && <MissingAssets usd={usd} />}
       <ReadRow label={t('usd.rootLayer')} value={usd.rootLayer} stack />
       {usd.defaultPrim && <ReadRow label={t('usd.defaultPrim')} value={usd.defaultPrim} stack />}

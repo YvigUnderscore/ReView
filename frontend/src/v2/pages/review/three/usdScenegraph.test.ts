@@ -3,15 +3,19 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  ancestorPaths,
   buildPrimTree,
   buildRenderedPrimTree,
-  filterPrimTree,
   flattenTree,
+  initialExpansion,
   isSelfOrDescendant,
   leafName,
   matchPrimPath,
   parentPath,
+  primKinds,
   primSegments,
+  promoteToKind,
+  searchPrimTree,
   type PrimNode,
 } from './usdScenegraph';
 import type { UsdPrim } from '../../../types/api';
@@ -37,6 +41,11 @@ describe('chemins USD', () => {
     expect(parentPath('/World/Asset/Geo')).toBe('/World/Asset');
     expect(parentPath('/World')).toBeNull();
     expect(leafName('/World/Asset/Geo')).toBe('Geo');
+  });
+
+  it('énumère les ancêtres, de la racine au parent', () => {
+    expect(ancestorPaths('/World/Asset/Geo')).toEqual(['/World', '/World/Asset']);
+    expect(ancestorPaths('/World')).toEqual([]);
   });
 
   it('reconnaît un descendant sans confondre les préfixes voisins', () => {
@@ -146,27 +155,136 @@ describe('buildRenderedPrimTree', () => {
   });
 });
 
-describe('flattenTree / filterPrimTree', () => {
+describe('flattenTree / searchPrimTree', () => {
   const tree = buildPrimTree([
     prim('/root'),
     prim('/root/chairA'),
     prim('/root/chairA/seat'),
     prim('/root/table'),
+    prim('/root/table/leg'),
+    prim('/root/table/leg/screw'),
   ]);
 
   it('aplatit en pré-ordre (ordre d’affichage) — plage Maj+clic', () => {
-    expect(flattenTree(tree)).toEqual(['/root', '/root/chairA', '/root/chairA/seat', '/root/table']);
+    expect(flattenTree(tree)).toEqual([
+      '/root',
+      '/root/chairA',
+      '/root/chairA/seat',
+      '/root/table',
+      '/root/table/leg',
+      '/root/table/leg/screw',
+    ]);
   });
 
   it('filtre en gardant les ancêtres des résultats, insensible à la casse', () => {
-    expect(flattenTree(filterPrimTree(tree, 'seat'))).toEqual(['/root', '/root/chairA', '/root/chairA/seat']);
-    expect(flattenTree(filterPrimTree(tree, 'CHAIR'))).toEqual([
+    expect(flattenTree(searchPrimTree(tree, 'seat').tree)).toEqual([
       '/root',
       '/root/chairA',
       '/root/chairA/seat',
     ]);
-    expect(filterPrimTree(tree, 'introuvable')).toEqual([]);
-    // Requête vide : arbre inchangé (même référence).
-    expect(filterPrimTree(tree, '  ')).toBe(tree);
+    expect(flattenTree(searchPrimTree(tree, 'CHAIR').tree)).toEqual(['/root', '/root/chairA']);
+    expect(searchPrimTree(tree, 'introuvable').tree).toEqual([]);
+    // Requête vide : arbre inchangé (même référence), et rien à déplier de force.
+    const blank = searchPrimTree(tree, '  ');
+    expect(blank.tree).toBe(tree);
+    expect(blank.expand.size).toBe(0);
+  });
+
+  it('ne retient QUE le nom : chercher « table » ne ramène pas toute sa descendance', () => {
+    // Le défaut corrigé : la comparaison portait sur le chemin complet, et `/root/table/leg`
+    // comme `/root/table/leg/screw` contenaient « table ». Tout le sous-arbre remontait.
+    expect(flattenTree(searchPrimTree(tree, 'table').tree)).toEqual(['/root', '/root/table']);
+  });
+
+  it('ne déplie que le chemin menant au résultat', () => {
+    // `/root` mène à la correspondance et s'ouvre ; `/root/table`, qui EST la correspondance,
+    // reste fermé — on n'a pas demandé sa descendance.
+    expect([...searchPrimTree(tree, 'table').expand]).toEqual(['/root']);
+    // Une correspondance profonde ouvre toute sa lignée, et elle seule.
+    expect([...searchPrimTree(tree, 'screw').expand].sort()).toEqual([
+      '/root',
+      '/root/table',
+      '/root/table/leg',
+    ]);
+  });
+
+  it('accepte une intention de chemin explicite quand la requête porte une barre', () => {
+    expect(flattenTree(searchPrimTree(tree, 'table/leg').tree)).toEqual([
+      '/root',
+      '/root/table',
+      '/root/table/leg',
+      '/root/table/leg/screw',
+    ]);
+  });
+});
+
+describe('initialExpansion', () => {
+  it('ouvre les deux premiers niveaux, pas le troisième', () => {
+    const tree = buildPrimTree([prim('/root'), prim('/root/table'), prim('/root/table/leg')]);
+    expect([...initialExpansion(tree)].sort()).toEqual(['/root', '/root/table']);
+  });
+
+  it('tient un arbre vide', () => {
+    expect(initialExpansion([]).size).toBe(0);
+  });
+});
+
+describe('promoteToKind — le clic désigne le component, pas la feuille', () => {
+  /** Une chaise de scène de production : le component porte sa géométrie sous lui. */
+  const KITCHEN = [
+    prim('/Kitchen_set', { kind: 'assembly' }),
+    prim('/Kitchen_set/Props_grp', { kind: 'group' }),
+    prim('/Kitchen_set/Props_grp/ChairB_1', { kind: 'component' }),
+    prim('/Kitchen_set/Props_grp/ChairB_1/Geom'),
+    prim('/Kitchen_set/Props_grp/ChairB_1/Geom/seat'),
+  ];
+  const SEAT = '/Kitchen_set/Props_grp/ChairB_1/Geom/seat';
+  const CHAIR = '/Kitchen_set/Props_grp/ChairB_1';
+  const kinds = primKinds(KITCHEN);
+  const selectable = new Set(KITCHEN.map((p) => p.path));
+
+  it('remonte de la feuille touchée au component englobant', () => {
+    expect(promoteToKind(SEAT, { kinds, selectable })).toBe(CHAIR);
+  });
+
+  it('rend le component lui-même quand c’est lui qu’on touche', () => {
+    expect(promoteToKind(CHAIR, { kinds, selectable })).toBe(CHAIR);
+  });
+
+  it('ne promeut pas ce qui est au-dessus du component', () => {
+    // Un groupe reste un groupe : la promotion ne monte jamais jusqu'à l'assembly.
+    expect(promoteToKind('/Kitchen_set/Props_grp', { kinds, selectable })).toBe('/Kitchen_set/Props_grp');
+  });
+
+  it('garde le chemin quand l’ancêtre component manque à l’arbre (arbre tronqué)', () => {
+    // `MAX_PRIMS_REPORTED` : l'analyseur n'a pas rapporté la chaise, seulement sa feuille.
+    const truncated = primKinds([prim(SEAT)]);
+    expect(promoteToKind(SEAT, { kinds: truncated })).toBe(SEAT);
+  });
+
+  it('traverse les prims implicites, au `kind` vide, sans s’y arrêter', () => {
+    // `/Geom` est un niveau sans kind : il ne doit ni arrêter la remontée, ni être rendu à la
+    // place du component.
+    expect(promoteToKind('/Kitchen_set/Props_grp/ChairB_1/Geom', { kinds, selectable })).toBe(CHAIR);
+  });
+
+  it('ignore un component qui ne porte aucun objet manipulable', () => {
+    // Sans objet indexé, le promouvoir donnerait une sélection sans halo, sans cadrage et sans
+    // gizmo : mieux vaut garder la feuille, qui en a un.
+    const withoutChair = new Set(selectable);
+    withoutChair.delete(CHAIR);
+    expect(promoteToKind(SEAT, { kinds, selectable: withoutChair })).toBe(SEAT);
+  });
+
+  it('sans liste de chemins manipulables, ne filtre rien', () => {
+    expect(promoteToKind(SEAT, { kinds })).toBe(CHAIR);
+  });
+
+  it('rend null pour un chemin nul — un clic qui ne résout rien reste un clic dans le vide', () => {
+    expect(promoteToKind(null, { kinds, selectable })).toBeNull();
+  });
+
+  it('vise le `kind` demandé, pas seulement `component`', () => {
+    expect(promoteToKind(SEAT, { kinds, kind: 'assembly' })).toBe('/Kitchen_set');
   });
 });

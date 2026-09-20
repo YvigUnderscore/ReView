@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { Button } from '../../../components/ui/button';
 import type { PanelId } from '../chrome/panels';
 import CameraPanel from '../panels/CameraPanel';
-import DisplayPanel from '../panels/DisplayPanel';
 import ExportPanel from '../panels/ExportPanel';
 import LightingPanel from '../panels/LightingPanel';
 import Model3DInfo from './Model3DInfo';
@@ -23,7 +22,6 @@ import type { Model3DBookmarksState } from './useModel3DBookmarks';
 import type { Model3DInspectState } from './useModel3DInspect';
 import type { Model3DLightingState } from './useModel3DLighting';
 import type { Model3DThreeState } from './useModel3DThree';
-import type { Model3DVariantsState } from './useModel3DVariants';
 import type { ModelMeasureState } from './useModelMeasure';
 import type { SectionPlaneState } from './useSectionPlane';
 import type { TurntableState } from './useTurntable';
@@ -49,8 +47,10 @@ function aspectLabel(aspect: number | undefined): string {
 /**
  * Contenu du dock inspecteur pour le viewer 3D. Rassemble ce qui flottait dans `InspectBar`,
  * `Model3DVariantsBar`, `LightingBar`, `BookmarksBar`, `TurntableBar`, `SectionBar`,
- * `ModelInfoPanel` et `CameraBar` — même contenu, six onglets fixes. L'onglet Infos vit dans
- * `Model3DInfo` : c'est le seul dont le contenu ne tient pas en quelques lignes ici.
+ * `ModelInfoPanel` et `CameraBar`. Cinq onglets depuis la Phase 50 : « Affichage » est passé
+ * en popover au coin haut-gauche du viewer (`Model3DRenderMenu`), là où l'on essaie un mode de
+ * rendu en regardant le modèle. L'onglet Infos vit dans `Model3DInfo` : c'est le seul dont le
+ * contenu ne tient pas en quelques lignes ici.
  */
 export default function Model3DPanels({
   panel,
@@ -59,7 +59,7 @@ export default function Model3DPanels({
   anim,
   lighting,
   inspect,
-  variants,
+  staging,
   bookmarks,
   turntable,
   section,
@@ -79,7 +79,13 @@ export default function Model3DPanels({
   anim: CameraAnimState;
   lighting: Model3DLightingState;
   inspect: Model3DInspectState;
-  variants: Model3DVariantsState;
+  /**
+   * Mise en scène — l'interrupteur du panneau Caméra EST son entrée depuis la Phase 50 :
+   * la bascule de mode ne porte plus de segment « Mise en scène », qui ne faisait qu'allumer
+   * le layout que cet interrupteur allumait déjà. Il arme donc le mode entier (vue PiP,
+   * caméra-objet, outils caméra au rail, bouton « Publier » en barre d'options).
+   */
+  staging: { active: boolean; toggle: () => void };
   bookmarks: Model3DBookmarksState;
   turntable: TurntableState;
   section: SectionPlaneState;
@@ -122,8 +128,12 @@ export default function Model3DPanels({
           if (anim.autoKey) anim.addKey('roll', anim.timeMs, deg * RAD);
         }}
         layout={{
-          active: m.layoutMode,
-          onToggle: () => m.setLayoutMode(!m.layoutMode),
+          active: staging.active,
+          onToggle: staging.toggle,
+          // Nommé par le mode qu'il arme, pas par la fenêtre qu'il ouvre : c'est « Mise en
+          // scène » que l'utilisateur cherche depuis que le segment a quitté la bascule.
+          label: t('mode.stage'),
+          hint: t('mode.stage.hint'),
           onOrbit,
           onClear: onClearPresentation ? () => confirmClearPresentation(onClearPresentation) : undefined,
         }}
@@ -149,31 +159,6 @@ export default function Model3DPanels({
         lighting={lighting}
         colorDisplay={data.projectColor?.display}
         colorView={data.projectColor?.view}
-      />
-    );
-
-  if (panel === 'display')
-    return (
-      <DisplayPanel
-        model={{
-          mode: inspect.mode,
-          onMode: inspect.setMode,
-          variants: {
-            names: variants.variants,
-            active: variants.variants[variants.current] ?? null,
-            onSelect: (name) => variants.selectVariant(variants.variants.indexOf(name)),
-          },
-          cameras: {
-            names: variants.cameras.map((c) => c.name),
-            active: null,
-            onSelect: (name) => variants.goToCamera(variants.cameras.findIndex((c) => c.name === name)),
-          },
-          skeleton: {
-            has: inspect.hasSkeleton,
-            shown: inspect.showSkeleton,
-            onShow: inspect.setShowSkeleton,
-          },
-        }}
       />
     );
 

@@ -90,7 +90,13 @@ export default function Model3DOptions({
         <span className="rv-optbar__hint">{tr('camera.objectHint')}</span>
       )}
 
-      {transforming && (
+      {/* Les champs chiffrés éditent la transformation de la VERSION. Sans le droit de
+          l'enregistrer, ils n'ouvraient qu'une impasse : la valeur changeait à l'écran, aucun
+          bouton ne l'écrivait et le badge d'état était masqué. L'outil reste armé — le gizmo
+          sert aussi à déplacer un prim de la scène USD, qui a son propre enregistrement. */}
+      {transforming && !canEdit && <span className="rv-optbar__hint">{tr(tool.hintKey)}</span>}
+
+      {transforming && canEdit && (
         <>
           {/* La transformation du modèle est une rotation par angles d'Euler et une échelle
               uniforme : les trois gizmos partagent donc les mêmes champs. */}

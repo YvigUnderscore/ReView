@@ -43,22 +43,25 @@ export interface CloneRowItem {
 
 export type ScenegraphRowItem = PrimRowItem | CloneRowItem;
 
+/** Rien à déplier de force : instance partagée, pour ne pas invalider la mémoïsation. */
+const NONE: ReadonlySet<string> = new Set<string>();
+
 /**
  * Rangées visibles, dans l'ordre d'affichage : prim, ses clones, puis ses enfants s'il est
- * déplié. `expandAll` couvre la recherche — pendant qu'une requête est active, l'arbre filtré
- * est intégralement déplié, sans avoir à construire l'ensemble de tous ses chemins à chaque
- * frappe (l'ancien `new Set(flattenTree(...))`, reconstruit à chaque rendu).
+ * déplié. `forceOpen` couvre la recherche : ce sont les nœuds du chemin menant à une
+ * correspondance (`searchPrimTree`), et eux seuls — l'ancien dépliage total de l'arbre filtré
+ * déroulait toute la descendance d'un résultat, ce que personne n'avait demandé.
  */
 export function buildRows(
   tree: readonly PrimNode[],
   expanded: ReadonlySet<string>,
   override: SceneOverride,
-  expandAll = false,
+  forceOpen: ReadonlySet<string> = NONE,
 ): ScenegraphRowItem[] {
   const rows: ScenegraphRowItem[] = [];
   const walk = (nodes: readonly PrimNode[], depth: number) => {
     for (const node of nodes) {
-      const open = (expandAll || expanded.has(node.path)) && node.children.length > 0;
+      const open = (expanded.has(node.path) || forceOpen.has(node.path)) && node.children.length > 0;
       rows.push({ kind: 'prim', path: node.path, node, depth, open });
       for (const clone of clonesOf(override, node.path))
         rows.push({

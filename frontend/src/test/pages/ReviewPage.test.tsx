@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import ReviewPage from '../../v2/pages/ReviewPage';
 import type { MediaKind, ReviewComment } from '../../v2/types/api';
 import type { MediaResp } from '../../v2/pages/review/reviewTypes';
@@ -73,6 +73,9 @@ const mediaResp = (kind: MediaKind, patch: Partial<MediaResp> = {}): MediaResp =
   references: [],
   reviewers: [],
   reviewRequest: { requireNote: false, minNoteLength: 5 },
+  // Droits rendus par le serveur : le viewer 3D n'offre le mode « Nettoyer » que si
+  // l'écriture de la transformation est accordée (cf. `lib/versionPermissions`).
+  permissions: { editTransform: true },
   ...patch,
 });
 
@@ -90,12 +93,12 @@ const comment = (patch: Partial<ReviewComment> = {}): ReviewComment => ({
   ...patch,
 });
 
-const mount = (kind: MediaKind, extra: Record<string, MockResolver> = {}) =>
+const mount = (kind: MediaKind, extra: Record<string, MockResolver> = {}, patch: Partial<MediaResp> = {}) =>
   renderWithProviders(<ReviewPage />, {
     route: `/review/${MEDIA_ID}`,
     path: '/review/:mediaId',
     api: {
-      [`GET /api/media/${MEDIA_ID}`]: mediaResp(kind),
+      [`GET /api/media/${MEDIA_ID}`]: mediaResp(kind, patch),
       'GET /api/comments': { items: [] },
       [`GET /api/context/media/${MEDIA_ID}`]: {
         context: {
@@ -158,6 +161,61 @@ describe('ReviewPage — viewer monté selon le type de média', () => {
     // Un nuage de splats porte sa propre couleur : pas de panneau d'éclairage.
     expect(screen.queryByRole('button', { name: t('panel.lighting') })).not.toBeInTheDocument();
     expect(container.querySelector('video')).toBeNull();
+  });
+});
+
+/**
+ * Bascule de mode et réglages de rendu du viewer 3D (Phase 50, lot 6).
+ *
+ * Trois retraits à constater sur l'écran réel, parce que chacun visait un geste qui ne menait
+ * nulle part : le segment « Mise en scène » (deux commandes pour un seul état), le segment
+ * « Nettoyer » sans le droit d'enregistrer (bouton refusé en 403), et l'onglet « Affichage »
+ * (réglages à traverser l'écran). Et trois présences : l'interrupteur de mise en scène dans le
+ * panneau Caméra, le mode « Nettoyer » quand le serveur l'accorde, et les réglages de rendu au
+ * coin haut-gauche du viewer.
+ */
+describe('ReviewPage — chrome du viewer 3D', () => {
+  it('n’offre ni segment « Mise en scène » ni onglet « Affichage »', async () => {
+    mount('MODEL_3D');
+
+    expect(await screen.findByRole('button', { name: t('mode.explore') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('mode.stage') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('panel.display') })).not.toBeInTheDocument();
+  });
+
+  it('offre « Nettoyer » quand le serveur accorde l’écriture de la transformation', async () => {
+    mount('MODEL_3D', {}, { permissions: { editTransform: true } });
+
+    expect(await screen.findByRole('button', { name: t('mode.clean') })).toBeInTheDocument();
+  });
+
+  it('retire « Nettoyer » quand le serveur la refuse — plus de bouton mort', async () => {
+    // C'est le cas d'un ARTIST membre du projet qui n'est pas l'auteur de la version : le
+    // mode ne lui proposait qu'un « Enregistrer » que `VersionService.update` refuse en 403.
+    mount('MODEL_3D', {}, { permissions: { editTransform: false } });
+
+    expect(await screen.findByRole('button', { name: t('tool.poi') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('mode.clean') })).not.toBeInTheDocument();
+  });
+
+  it('pose les réglages de rendu dans le viewer, et le mode de rendu dedans', async () => {
+    const { user } = mount('MODEL_3D');
+
+    await user.click(await screen.findByRole('button', { name: t('viewer.render.title') }));
+    expect(screen.getByRole('group', { name: t('viewer.render.model') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('viewer.mode.wireframe') })).toBeInTheDocument();
+  });
+
+  it('garde la mise en scène joignable : son interrupteur est au panneau Caméra', async () => {
+    const { container, user } = mount('MODEL_3D');
+
+    // Requête bornée au dock : la piste du transport porte aussi le libellé « Camera ».
+    await screen.findByRole('button', { name: t('panel.info') });
+    const dock = within(container.querySelector('.rv-dock') as HTMLElement);
+    await user.click(dock.getByRole('button', { name: t('panel.camera') }));
+    // Nommé par le mode qu'il arme, et non par la fenêtre PiP qu'il ouvre.
+    expect(dock.getByText(t('mode.stage'))).toBeInTheDocument();
+    expect(dock.getByRole('switch')).toBeInTheDocument();
   });
 });
 

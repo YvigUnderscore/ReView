@@ -30,8 +30,15 @@ export function useUsdPicking(
   getSceneHandle: () => ViewerSceneHandle | null,
   ready: boolean,
   onSelect: (path: string | null, opts?: { additive?: boolean }) => void,
-  /** Traduit l'objet touché en prim — l'index de la scène, seule table faisant autorité. */
-  resolve: (object: THREE.Object3D) => string | null,
+  /**
+   * Traduit l'objet touché en prim — l'index de la scène, seule table faisant autorité.
+   *
+   * Le viewer y branche `resolvePick`, qui **promeut** la feuille touchée au `component` USD
+   * englobant : on clique une chaise, on sélectionne la chaise. `exact` court-circuite cette
+   * promotion pour descendre à la pièce précise ; c'est **Alt+clic** qui le demande — Ctrl/⌘
+   * sert déjà à la multi-sélection, et Maj à la plage dans l'arbre.
+   */
+  resolve: (object: THREE.Object3D, opts?: { exact?: boolean }) => string | null,
   /**
    * Clic droit **immobile** sur un prim (46.M) : le prim est sélectionné puis ce rappel est
    * invoqué, et l'événement remonte jusqu'au `ContextMenu` qui enveloppe le viewer. Un clic
@@ -55,9 +62,12 @@ export function useUsdPicking(
     const root = handle?.modelObject;
     if (!handle || !dom || !root) return;
 
-    const pickAt = (clientX: number, clientY: number) => {
+    // `exact` = Alt+clic : la feuille touchée, sans promotion au component englobant.
+    const pickAt = (clientX: number, clientY: number, exact: boolean) => {
       const rect = dom.getBoundingClientRect();
-      return pickPrim(handle.THREE, handle.camera, root, toNdc(clientX, clientY, rect), resolveRef.current);
+      return pickPrim(handle.THREE, handle.camera, root, toNdc(clientX, clientY, rect), (object) =>
+        resolveRef.current(object, { exact }),
+      );
     };
 
     const onDown = (e: PointerEvent) => {
@@ -70,7 +80,7 @@ export function useUsdPicking(
       if (e.button !== 0 || !start) return;
       if (!isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
       // Ctrl/⌘+clic : ajoute ou retire le prim de la sélection (multi-sélection B1).
-      onSelect(pickAt(e.clientX, e.clientY), { additive: e.ctrlKey || e.metaKey });
+      onSelect(pickAt(e.clientX, e.clientY, e.altKey), { additive: e.ctrlKey || e.metaKey });
     };
     const onCtx = (e: MouseEvent) => {
       const start = downRight.current;
@@ -78,7 +88,7 @@ export function useUsdPicking(
       e.stopPropagation();
       // Glissement = vol ; vide = rien : le menu ne s'ouvre jamais sans objet visé.
       if (!start || !isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
-      const path = pickAt(e.clientX, e.clientY);
+      const path = pickAt(e.clientX, e.clientY, e.altKey);
       if (!path) return;
       onSelect(path);
       onContextRef.current?.(path);

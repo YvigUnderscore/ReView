@@ -6,7 +6,7 @@ import { RotateCcw, Search } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../../components/ui/context-menu';
 import type { UsdBakedVariant, UsdModelInfo } from '../../../types/api';
-import { filterPrimTree, flattenTree } from '../three/usdScenegraph';
+import { ancestorPaths, flattenTree, searchPrimTree } from '../three/usdScenegraph';
 import { isHidden, isHiddenByAncestor } from '../three/sceneOverride';
 import type { UsdSceneState } from '../three/useUsdScene';
 import PrimMenuItems from './PrimMenuItems';
@@ -20,6 +20,7 @@ import {
   variantTitleIndex,
 } from './scenegraphRows';
 import { useT } from '../../../i18n';
+import { isEditable } from '../../../lib/shortcuts';
 
 /**
  * Scenegraph USD du dock (Phase 46, 46.C/46.E ; B1/B2) : l'arbre réel de la scène, sélection
@@ -56,33 +57,25 @@ export default function ScenegraphPanel({
   // Méthodes extraites de l'état de scène : les listes de dépendances portent alors sur les
   // fonctions elles-mêmes — stables — et non sur l'objet, reconstruit à chaque rendu du viewer.
   const { primary, select, selectMany, isolate, setPrim } = scene;
-  const [query, setQuery] = useState('');
-  // Les deux premiers niveaux ouverts : assez pour situer la scène sans noyer l'utilisateur.
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(scene.tree.flatMap((n) => [n.path, ...n.children.map((c) => c.path)])),
-  );
-  const toggle = useCallback(
-    (path: string) =>
-      setExpanded((s) => {
-        const next = new Set(s);
-        if (next.has(path)) next.delete(path);
-        else next.add(path);
-        return next;
-      }),
-    [],
-  );
+  // Recherche et dépliage vivent dans l'état de scène : le dock démonte ce panneau dès qu'on
+  // passe sur un autre onglet, et tout repartait replié, requête effacée.
+  const { query, setQuery, expanded, toggle, expand } = scene.view;
 
-  // Recherche : l'arbre filtré garde les ancêtres des résultats ; tout est déplié pendant
-  // qu'une requête est active (sinon un résultat resterait caché sous un nœud replié).
-  const displayTree = useMemo(() => filterPrimTree(scene.tree, query), [scene.tree, query]);
+  // Recherche : l'arbre filtré garde les ancêtres des résultats, et `search.expand` ne déplie
+  // que le chemin qui y mène — le reste de l'arbre garde le pli que l'utilisateur lui a donné.
+  const search = useMemo(() => searchPrimTree(scene.tree, query), [scene.tree, query]);
+  const displayTree = search.tree;
   const searching = query.trim().length > 0;
   const rows = useMemo(
-    () => buildRows(displayTree, expanded, scene.override, searching),
-    [displayTree, expanded, scene.override, searching],
+    () => buildRows(displayTree, expanded, scene.override, search.expand),
+    [displayTree, expanded, scene.override, search.expand],
   );
   const variants = useMemo(() => variantTitleIndex(usd), [usd]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Racine du panneau : cible des écouteurs de survol, hors du flux React (voir `reveal`).
+  const rootRef = useRef<HTMLDivElement>(null);
+  const hovered = useRef(false);
   // Le compilateur React renonce à mémoïser un composant qui appelle `useVirtualizer` : le
   // virtualiseur rend des fonctions liées à un état mutable, qu'on figerait à tort. Sans
   // conséquence ici — les rangées sont mémoïsées à la main et ne reçoivent que des valeurs.
@@ -163,11 +156,60 @@ export default function ScenegraphPanel({
     [onAim],
   );
 
-  if (scene.tree.length === 0)
-    return <p className="p-2 text-xs text-muted-foreground">{t('review.scenegraph.empty')}</p>;
+  /**
+   * `F` au survol du panneau : **révéler** le prim sélectionné dans l'arbre, au lieu de cadrer
+   * la caméra. On déplie ses ancêtres ; s'il est hors du filtre courant, la recherche est levée,
+   * sans quoi il n'y aurait rien à montrer. Le défilement par index ci-dessus fait le reste.
+   */
+  const reveal = useCallback(() => {
+    if (!primary) return;
+    if (!flattenTree(displayTree).includes(primary)) setQuery('');
+    expand(ancestorPaths(primary));
+  }, [primary, displayTree, setQuery, expand]);
+
+  /**
+   * Survol + `F`. Deux points délicats :
+   *  - le survol se relève avec des écouteurs **natifs** (`pointerenter`/`pointerleave`) : le
+   *    clavier n'a pas de focus dans l'arbre, la frappe ne traverse donc jamais ce sous-arbre
+   *    et aucun gestionnaire React ne la verrait ;
+   *  - l'écoute est en **capture sur `window`**, alors que le cadrage caméra global
+   *    (`useFrameShortcuts`) écoute en bulle sur le même `window` : la capture passe d'abord, et
+   *    `stopPropagation` l'empêche de cadrer en plus. Sans prim sélectionné, on laisse filer —
+   *    le viewer cadre comme avant.
+   */
+  const empty = scene.tree.length === 0;
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const enter = () => {
+      hovered.current = true;
+    };
+    const leave = () => {
+      hovered.current = false;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (!hovered.current || e.key.toLowerCase() !== 'f' || !primary) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isEditable(e.target)) return;
+      // Même garde que le cadrage caméra : un dialogue ouvert prend la main sur les raccourcis.
+      if (document.querySelector('[role="dialog"]')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      reveal();
+    };
+    root.addEventListener('pointerenter', enter);
+    root.addEventListener('pointerleave', leave);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      root.removeEventListener('pointerenter', enter);
+      root.removeEventListener('pointerleave', leave);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [reveal, primary, empty]);
+
+  if (empty) return <p className="p-2 text-xs text-muted-foreground">{t('review.scenegraph.empty')}</p>;
 
   return (
-    <div className="flex max-h-[50vh] flex-col">
+    <div ref={rootRef} className="flex max-h-[50vh] flex-col">
       <div className="flex items-center gap-1.5 border-b border-border px-2 py-1">
         <Search size={11} className="shrink-0 text-muted-foreground" />
         <input

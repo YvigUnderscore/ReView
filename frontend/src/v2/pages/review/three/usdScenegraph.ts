@@ -43,6 +43,60 @@ export function isSelfOrDescendant(path: string, ancestor: string): boolean {
   return path === ancestor || path.startsWith(`${ancestor}/`);
 }
 
+/** Ancêtres d'un chemin, de la racine à son parent (`/a/b/c` → `['/a','/a/b']`). */
+export function ancestorPaths(path: string): string[] {
+  const out: string[] = [];
+  for (let parent = parentPath(path); parent; parent = parentPath(parent)) out.unshift(parent);
+  return out;
+}
+
+/**
+ * `kind` USD de la hiérarchie de modèle visé par défaut : le niveau « objet » d'une scène de
+ * production (une chaise, une casserole), celui dans lequel un chef déco raisonne.
+ */
+const COMPONENT_KIND = 'component';
+
+/** Table `chemin → kind` d'une liste de prims — entrée de `promoteToKind`. */
+export function primKinds(prims: readonly UsdPrim[]): Map<string, string> {
+  return new Map(prims.map((p) => [p.path, p.kind]));
+}
+
+export interface PromoteOptions {
+  /** `kind` par chemin de prim (`primKinds`) — seule source de la promotion. */
+  kinds: ReadonlyMap<string, string>;
+  /**
+   * Chemins réellement manipulables, c'est-à-dire indexés dans la scène Three. Un ancêtre qui
+   * n'y est pas ne porte **aucun objet** : le promouvoir donnerait une sélection sans halo, sans
+   * cadrage et sans gizmo. Absent ⇒ pas de filtre (usage purement sémantique).
+   */
+  selectable?: ReadonlySet<string>;
+  /** `kind` visé — `component` par défaut. */
+  kind?: string;
+}
+
+/**
+ * Remonte un chemin de prim jusqu'au **component** englobant : le clic dans le viewer touche une
+ * feuille (`.../Chair_1/Geom/Seat`), mais l'objet que l'utilisateur désigne est la chaise.
+ *
+ * Le repli ne perd **jamais** la sélection : sans ancêtre éligible — arbre tronqué
+ * (`MAX_PRIMS_REPORTED`), niveaux implicites au `kind` vide, ancêtre non indexé — le chemin
+ * d'origine est rendu tel quel. Un chemin nul (aucune correspondance) reste nul.
+ *
+ * Pure et sans dépendance à Three : c'est la seule promotion du module, et elle n'a lieu qu'à la
+ * **résolution du clic** — jamais à l'écriture d'un override, dont les chemins déjà enregistrés
+ * visent des feuilles.
+ */
+export function promoteToKind(path: string | null, opts: PromoteOptions): string | null {
+  if (!path) return null;
+  const target = opts.kind ?? COMPONENT_KIND;
+  for (let p: string | null = path; p; p = parentPath(p)) {
+    if (opts.kinds.get(p) !== target) continue;
+    if (opts.selectable && !opts.selectable.has(p)) continue;
+    return p;
+  }
+  return path;
+}
+
 /** Prim synthétique pour un niveau intermédiaire absent de la liste (arbre tronqué). */
 function implicitPrim(path: string): UsdPrim {
   return {
@@ -167,18 +221,46 @@ export function flattenTree(tree: PrimNode[]): string[] {
   return out;
 }
 
+/** Deux premiers niveaux : dépliage par défaut du scenegraph, assez pour situer la scène. */
+export function initialExpansion(tree: readonly PrimNode[]): Set<string> {
+  return new Set(tree.flatMap((n) => [n.path, ...n.children.map((c) => c.path)]));
+}
+
+/** Résultat d'une recherche dans l'arbre : ce qui reste visible, et ce qu'il faut déplier. */
+export interface PrimSearch {
+  /** Arbre filtré : les correspondances et leurs ancêtres, rien d'autre. */
+  tree: PrimNode[];
+  /**
+   * Nœuds à déplier de force — **uniquement** le chemin menant à une correspondance. Ce sont
+   * les nœuds internes de l'arbre filtré : une correspondance sans descendance retenue reste
+   * fermée, et taper « table » ne déroule plus toute la table.
+   */
+  expand: ReadonlySet<string>;
+}
+
+/** Aucun dépliage forcé : instance partagée pour que la mémoïsation des rangées tienne. */
+const NO_EXPANSION: ReadonlySet<string> = new Set<string>();
+
 /**
- * Filtre l'arbre sur un texte (nom ou chemin, insensible à la casse) : un nœud reste si lui ou
- * l'un de ses descendants correspond — les ancêtres d'un résultat restent visibles pour situer
- * le prim dans la scène (recherche du scenegraph, B2).
+ * Recherche dans l'arbre (insensible à la casse) : un nœud reste si lui ou l'un de ses
+ * descendants correspond — les ancêtres d'un résultat restent visibles pour situer le prim.
+ *
+ * La correspondance porte sur le **nom**, pas sur le chemin : comparer le chemin complet faisait
+ * correspondre tout ce qui descend d'un nœud trouvé (« table » retenait `/…/table/…/vis_037`),
+ * et l'arbre se dépliait entièrement. Une requête contenant une barre est en revanche une
+ * intention de chemin explicite, et se compare au chemin.
  */
-export function filterPrimTree(tree: PrimNode[], query: string): PrimNode[] {
+export function searchPrimTree(tree: PrimNode[], query: string): PrimSearch {
   const q = query.trim().toLowerCase();
-  if (!q) return tree;
+  if (!q) return { tree, expand: NO_EXPANSION };
+  const byPath = q.includes('/');
+  const expand = new Set<string>();
   const keep = (node: PrimNode): PrimNode | null => {
     const children = node.children.map(keep).filter((n): n is PrimNode => n !== null);
-    const self = node.name.toLowerCase().includes(q) || node.path.toLowerCase().includes(q);
-    return self || children.length ? { ...node, children } : null;
+    const self = (byPath ? node.path : node.name).toLowerCase().includes(q);
+    if (!self && children.length === 0) return null;
+    if (children.length > 0) expand.add(node.path);
+    return { ...node, children };
   };
-  return tree.map(keep).filter((n): n is PrimNode => n !== null);
+  return { tree: tree.map(keep).filter((n): n is PrimNode => n !== null), expand };
 }

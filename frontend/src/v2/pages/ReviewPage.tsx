@@ -127,11 +127,16 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // montage vidéo et le `transform` d'une version. Restent autorisées les écritures qui ne
   // touchent pas au fichier d'origine — miniature, mise en scène, éditions splat (masque,
   // sous-ensemble) et override USD, toutes rejouées à la lecture.
-  const published = data?.media.published ?? true;
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
   /** Éditions splat : non destructives, donc offertes même après publication. */
   const canEditSplat = canManageMedia;
-  const canEditTransform = !published && (role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST');
+  /**
+   * Transform 3D : le droit vient du SERVEUR (`permissions.editTransform`), plus d'une règle
+   * de rôle recopiée ici. L'ancienne — « non publiée + rôle interne » — offrait les gizmos et
+   * le bouton « Enregistrer » à un artiste qui n'est pas l'auteur de la version, que
+   * `VersionService.update` refuse ensuite en 403. Absent (détail pas encore chargé) : non.
+   */
+  const canEditTransform = data?.permissions.editTransform ?? false;
   // Miniature auto à la 1re vue (splat + 3D), tous viewers, si absente (Phase 20).
   useAutoThumbnail(id, data, 'SPLAT', splat.ready, splat.captureThumbnail);
   useAutoThumbnail(id, data, 'MODEL_3D', model3d.ready, model3d.captureThumbnail);

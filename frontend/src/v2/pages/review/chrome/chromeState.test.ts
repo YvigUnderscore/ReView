@@ -147,15 +147,15 @@ describe('panels', () => {
     }
   });
 
-  it('ne touche pas au dock spatial, qui garde ses six onglets', () => {
-    expect(panelsFor('MODEL_3D').map((p) => p.id)).toEqual([
-      'camera',
-      'light',
-      'display',
-      'scene',
-      'info',
-      'export',
-    ]);
+  it('laisse au splat ses six onglets, et retire « Affichage » au modèle 3D', () => {
+    // Ce test affirmait six onglets pour les deux médias spatiaux ; il est RÉÉCRIT sur la
+    // décision du lot 6 de Phase 50 — l'onglet « Affichage » du dock 3D réglait à l'autre
+    // bout de l'écran, derrière un repli, des bascules qu'on essaie en rafale en regardant la
+    // géométrie. Ses réglages n'ont pas disparu : ils sont passés en popover au coin
+    // haut-gauche du viewer (`Model3DRenderMenu`), avec le même `DisplayPanel` dedans. Le
+    // splat, dont le panneau porte en plus le rendu du nuage et l'orientation, garde le sien.
+    expect(panelsFor('SPLAT').map((p) => p.id)).toEqual(['camera', 'display', 'scene', 'info', 'export']);
+    expect(panelsFor('MODEL_3D').map((p) => p.id)).toEqual(['camera', 'light', 'scene', 'info', 'export']);
   });
 });
 

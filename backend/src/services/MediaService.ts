@@ -33,6 +33,7 @@ import {
 import { signMediaPlaybackToken, verifyMediaPlaybackToken } from '../lib/mediaToken';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { assertReprocessable, assertWritable, withPublishedReprocess } from '../lib/publishLock';
+import { canEditVersionTransform } from '../lib/versionPermissions';
 import { bornsPublished, shouldPublishVersion } from '../lib/publishState';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { assertProjectQuota } from '../lib/projectQuota';
@@ -803,6 +804,8 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     projectSettings,
     references,
     reviewers,
+    version,
+    manager,
   ] = await Promise.all([
     storage.getPresignedGetUrl(viewKey),
     media.thumbnailKey ? storage.getPresignedGetUrl(media.thumbnailKey) : Promise.resolve(null),
@@ -832,6 +835,15 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     // Qui est attendu sur cette version, et sa consigne. La garde de lecture est celle de
     // la fonction : on n'arrive ici qu'après l'avoir passée.
     listReviewers(media.versionId),
+    // Droits d'écriture rendus avec le média (`permissions`) : l'auteur de la version et
+    // son état de publication sont les deux entrées du prédicat, le rôle effectif sur le
+    // projet la troisième. Sans eux, l'écran devinait — et offrait un bouton qui finissait
+    // en 403 (cf. `lib/versionPermissions`).
+    prisma.version.findUnique({
+      where: { id: media.versionId },
+      select: { authorId: true, published: true },
+    }),
+    isProjectManager(user.id, user.role, projectId),
   ]);
   return {
     media: serializeMedia(media),
@@ -903,6 +915,14 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     // La règle du projet, rendue avec le média : l'écran peut refuser une consigne trop
     // courte sans aller-retour, et dire au passage ce qu'il attend.
     reviewRequest: projectSettings.reviewRequest,
+    // Ce que CET appelant a le droit d'écrire. Le viewer 3D s'en sert pour ne pas offrir un
+    // mode « Nettoyer » dont le bouton « Enregistrer » serait refusé — la règle est celle du
+    // service d'écriture, pas une approximation de rôle recopiée côté écran.
+    permissions: {
+      editTransform: version
+        ? canEditVersionTransform(version, user.id, manager)
+        : /* version disparue entre les deux lectures : rien n'est éditable */ false,
+    },
   };
 }
 

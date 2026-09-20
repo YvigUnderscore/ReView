@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { MediaResp } from '../reviewTypes';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
-import { buildRenderedPrimTree, type PrimNode } from './usdScenegraph';
+import { buildRenderedPrimTree, primKinds, promoteToKind, type PrimNode } from './usdScenegraph';
+import { useScenegraphView, type ScenegraphView } from './useScenegraphView';
 import { createSelectionGlow } from './selectionGlow';
 import {
   emptyOverride,
@@ -69,9 +70,15 @@ export interface UsdSceneState {
   select: (path: string | null, opts?: { additive?: boolean }) => void;
   /** Remplace la sélection entière (Maj+clic plage dans l'arbre). */
   selectMany: (paths: string[]) => void;
-  /** Prim auquel appartient un objet de la scène — sélection au clic dans le viewer.
+  /** Prim auquel appartient un objet de la scène — la feuille exacte, table de référence.
    *  Renvoie null pour un prim **verrouillé** (exclu du picking). */
   resolvePrim: (object: THREE.Object3D) => string | null;
+  /**
+   * Prim désigné par un **clic dans le viewer** : la feuille touchée, promue au `component`
+   * USD englobant (`exact` — Alt+clic — court-circuite la promotion). Seule la résolution du
+   * clic promeut ; `resolvePrim` reste la feuille pour tout le reste.
+   */
+  resolvePick: (object: THREE.Object3D, opts?: { exact?: boolean }) => string | null;
   /** Prims verrouillés : insélectionnables au clic dans le viewer (B2). */
   locked: ReadonlySet<string>;
   toggleLock: (path: string) => void;
@@ -109,6 +116,8 @@ export interface UsdSceneState {
   revert: () => void;
   /** Vrai si l'exploration locale diffère de ce qui est enregistré. */
   dirty: boolean;
+  /** Recherche et dépliage de l'arbre — hors du panneau, pour survivre au changement d'onglet. */
+  view: ScenegraphView;
   /** Delta local seul — c'est lui qu'on joint à un commentaire. */
   localDelta: SceneOverride;
   /** Override complet à enregistrer comme base (prépublish). */
@@ -251,6 +260,10 @@ export function useUsdScene(
    */
   const tree = useMemo(() => buildRenderedPrimTree(usd?.prims ?? [], loadedPaths), [usd, loadedPaths]);
 
+  // Recherche et dépliage de l'arbre : portés par la scène, pas par le panneau, qui est démonté
+  // dès qu'on change d'onglet du dock.
+  const view = useScenegraphView(tree, mediaId);
+
   /**
    * Chemins réellement affichés compte tenu des variantes retenues : les rangées d'une option
    * inactive sont grisées, comme les prims que l'analyseur connaît mais que le GLB n'a pas.
@@ -276,6 +289,35 @@ export function useUsdScene(
       return path && lockedRef.current.has(path) ? null : path;
     },
     [baseResolver],
+  );
+  /**
+   * Clic dans le viewer : on désigne le **component** englobant, pas la feuille touchée.
+   *
+   * Dans une scène de production, cliquer une chaise touche `.../Chair_1/Geom/seat/Mesh` ;
+   * l'objet que l'utilisateur croit désigner est la chaise, c'est-à-dire le prim `component`
+   * de la hiérarchie de modèle USD. La promotion n'a lieu **qu'ici** : `resolvePrim` reste la
+   * feuille, et rien n'est jamais promu à l'écriture d'un override — les chemins déjà
+   * enregistrés visent des feuilles, et un override posé sur le component ne se superposerait
+   * plus au même prim.
+   *
+   * Deux garde-fous : l'ancêtre doit être **indexé** (sinon la sélection n'aurait ni halo, ni
+   * cadrage, ni gizmo), et le verrou est revérifié **après** promotion — sinon verrouiller une
+   * chaise n'aurait plus empêché de l'attraper par l'un de ses meshes.
+   *
+   * `exact` (Alt+clic) descend à la feuille, pour viser une pièce précise de l'objet.
+   */
+  const kinds = useMemo(() => primKinds(usd?.prims ?? []), [usd]);
+  const pickable = useMemo(() => new Set(loadedPaths), [loadedPaths]);
+  const resolvePick = useCallback(
+    (object: THREE.Object3D, opts?: { exact?: boolean }) => {
+      const leaf = resolvePrim(object);
+      // Un clone de mise en scène (`/prim#id`) n'a pas d'ancêtre USD : « remonter » le ferait
+      // retomber sur son prim source, et cliquer une copie sélectionnerait l'original.
+      if (opts?.exact || leaf === null || parseClonePath(leaf)) return leaf;
+      const promoted = promoteToKind(leaf, { kinds, selectable: pickable });
+      return promoted !== null && lockedRef.current.has(promoted) ? null : promoted;
+    },
+    [resolvePrim, kinds, pickable],
   );
   const toggleLock = useCallback((path: string) => {
     setLocked((prev) => {
@@ -408,6 +450,7 @@ export function useUsdScene(
     select,
     selectMany,
     resolvePrim,
+    resolvePick,
     locked,
     toggleLock,
     selectedObjects,
@@ -424,6 +467,7 @@ export function useUsdScene(
     setVariant,
     variantChoiceRenderable,
     revert,
+    view,
     dirty: !isEmptyOverride(local),
     localDelta: local,
     merged: override,

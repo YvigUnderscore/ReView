@@ -21,6 +21,7 @@ export default function Model3DThreePane({
   aspect,
   pip,
   notice,
+  settings,
   recording,
   canReprocess,
   reprocessing,
@@ -37,6 +38,12 @@ export default function Model3DThreePane({
   pip?: ReactNode;
   /** Bandeau flottant en haut du viewer (46.T : retour à la scène par défaut). */
   notice?: ReactNode;
+  /**
+   * Réglages de rendu, posés en HAUT À GAUCHE du viewer (Phase 50, lot 6) — l'onglet
+   * « Affichage » du dock a disparu au profit de ce coin-là : on change de mode de rendu en
+   * regardant le modèle, pas en traversant l'écran. Absent du partage client, qui ne règle rien.
+   */
+  settings?: ReactNode;
   /** Auto-key armé : liseré d'enregistrement sur le viewport (façon DCC). */
   recording?: boolean;
   canReprocess: boolean;
@@ -63,6 +70,9 @@ export default function Model3DThreePane({
         {pip}
       </ReviewFrame>
       {notice}
+      {/* Au-dessus du cadre, jamais dedans : le guide letterbox et l'overlay d'annotation
+          gardent leurs coordonnées — ce coin ne touche pas au cadrage. */}
+      {settings && <div className="absolute top-2 left-2 z-20">{settings}</div>}
 
       {status === 'PROCESSING' ? (
         <div className="absolute inset-0 flex items-center justify-center">

@@ -33,8 +33,9 @@ import Model3DPanels from './three/Model3DPanels';
 import { useModel3DChrome } from './three/useModel3DChrome';
 import Model3DOptions from './options/Model3DOptions';
 import ReviewChrome from './chrome/ReviewChrome';
-import { useChromeState } from './chrome/useChromeState';
-import { toolsFor } from './chrome/tools';
+import { DEFAULT_MODE } from './chrome/modes';
+import { useModel3DModes } from './three/useModel3DModes';
+import Model3DRenderMenu from './three/Model3DRenderMenu';
 import SpatialTransport from './transport/SpatialTransport';
 import ClipTransport from './transport/ClipTransport';
 import CurvesDrawer from './transport/CurvesDrawer';
@@ -51,7 +52,8 @@ import { useT } from '../../i18n';
  * Bloc modèle 3D de la review, monté dans le chrome unifié — mêmes cinq emplacements que le
  * splat, avec un panneau Éclairage en plus (un modèle s'éclaire, un nuage porte sa lumière).
  * Les onze barres flottantes de l'ancien HUD sont réparties entre le rail (gizmos, épingle,
- * caméra-objet), la barre d'options, les six panneaux du dock et le transport à deux pistes.
+ * caméra-objet), la barre d'options, les cinq panneaux du dock, le popover de rendu au coin
+ * haut-gauche du viewer et le transport à deux pistes.
  */
 export default function Model3DReview({
   data,
@@ -114,7 +116,9 @@ export default function Model3DReview({
   const scene = useUsdScene(data, model3d.getSceneHandle, ready, commentOverride, ann.setSceneOverride);
   // Clic droit immobile sur un objet (46.M) : le prim visé alimente le menu qui enveloppe le pane.
   const [primMenu, setPrimMenu] = useState<string | null>(null);
-  useUsdPicking(model3d.getSceneHandle, ready, scene.select, scene.resolvePrim, setPrimMenu);
+  // `resolvePick` (et non `resolvePrim`) : le clic désigne le component englobant, Alt+clic la
+  // feuille exacte. La promotion s'arrête à la résolution du clic — rien d'autre n'en dépend.
+  useUsdPicking(model3d.getSceneHandle, ready, scene.select, scene.resolvePick, setPrimMenu);
   // `F` cadre le prim sélectionné (46.I) — le viewer garde son cadrage global sans sélection.
   const { setFrameTarget } = model3d;
   useEffect(() => {
@@ -168,9 +172,17 @@ export default function Model3DReview({
     getBasePose: model3d.getActivationView,
   });
 
-  const { state, update } = useChromeState('MODEL_3D');
-  // Mode Mise en scène = atelier caméra : entrer dans le mode active le layout (PiP +
-  // caméra-objet), en sortir le désactive. L'interrupteur du panneau Caméra reste en override.
+  // Bascule et rail du modèle 3D (Phase 50, lot 6) : « Mise en scène » n'y figure plus —
+  // l'interrupteur du panneau Caméra l'arme — et « Nettoyer » n'apparaît que si le serveur
+  // accorde l'écriture de la transformation.
+  const { state, update, modes, tools } = useModel3DModes({
+    canEditTransform: showEditTools,
+    // Une scène USD donne aux gizmos une seconde cible — l'override de scène par prim (46.N),
+    // qui ne passe pas par la transformation de version et n'en a donc pas les droits.
+    hasScenegraph: scene.tree.length > 0,
+  });
+  // Mode Mise en scène = atelier caméra : y entrer active le layout (PiP + caméra-objet), en
+  // sortir le désactive. L'interrupteur du panneau Caméra est désormais la seule entrée.
   const { setLayoutMode } = model3d;
   useEffect(() => {
     setLayoutMode(state.mode === 'stage');
@@ -189,7 +201,6 @@ export default function Model3DReview({
   // Palette Ctrl+K (B3) : commandes cadrer/lecture/clé/orbite, extraites dans leur hook.
   useModel3DCommands(cam, model3d, canManage, !!data.splatPresentation, measure);
 
-  const tools = toolsFor(state.mode, 'MODEL_3D');
   const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0];
   const trackSwitch = (
     <TrackSwitch track={track} onTrack={setTrack} hasClips={model3d.animations.length > 0} />
@@ -201,6 +212,8 @@ export default function Model3DReview({
       state={state}
       onState={update}
       role={role ?? 'ARTIST'}
+      modes={modes}
+      tools={tools}
       headerRight={
         <SpatialCompareHeader
           versionId={data.media.versionId}
@@ -233,7 +246,10 @@ export default function Model3DReview({
           anim={cam.anim}
           lighting={lighting}
           inspect={inspect}
-          variants={variants}
+          staging={{
+            active: state.mode === 'stage',
+            toggle: () => update({ mode: state.mode === 'stage' ? DEFAULT_MODE : 'stage' }),
+          }}
           bookmarks={bookmarks}
           turntable={turntable}
           section={section}
@@ -287,6 +303,7 @@ export default function Model3DReview({
               containerRef={model3d.containerRef}
               overlay={overlay}
               recording={canManage && cam.anim.autoKey}
+              settings={<Model3DRenderMenu inspect={inspect} variants={variants} />}
               aspect={data.splatPresentation?.camera?.aspect}
               pip={
                 model3d.layoutMode ? (

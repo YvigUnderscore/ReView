@@ -51,8 +51,19 @@ const SPATIAL_PANELS: ReviewPanel[] = [
  */
 const MEDIA_PANELS: ReviewPanel[] = [INFO, EXPORT];
 
-/** Panneaux du dock pour un type de média, dans l'ordre d'affichage. */
+/**
+ * Panneaux du dock pour un type de média, dans l'ordre d'affichage.
+ *
+ * Deux écarts entre les deux médias spatiaux :
+ *   - **Éclairage** n'existe que sur un modèle : un nuage porte sa lumière cuite ;
+ *   - **Affichage** n'existe plus que sur un splat. Le dock 3D le réglait à dix-sept
+ *     centimètres du modèle, derrière un onglet, pour des bascules qu'on essaie en rafale en
+ *     regardant la géométrie. Ses réglages n'ont pas disparu : ils sont passés en popover au
+ *     coin haut-gauche du viewer (`Model3DRenderMenu`), avec le même `DisplayPanel` dedans.
+ */
 export function panelsFor(kind: MediaKind): ReviewPanel[] {
   if (!isSpatialKind(kind)) return MEDIA_PANELS;
-  return SPATIAL_PANELS.filter((p) => p.id !== 'light' || kind === 'MODEL_3D');
+  return SPATIAL_PANELS.filter(
+    (p) => (p.id !== 'light' || kind === 'MODEL_3D') && (p.id !== 'display' || kind !== 'MODEL_3D'),
+  );
 }

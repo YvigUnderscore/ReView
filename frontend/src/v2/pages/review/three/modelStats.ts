@@ -10,7 +10,16 @@ import { t } from '../../../i18n';
  * canal). Purement lecture — aucune mutation de la scène. Testable sans contexte WebGL.
  */
 
-/** Canaux de texture inspectés (slots standard glTF/Three). */
+/**
+ * Canaux de texture inspectés.
+ *
+ * Les neuf premiers sont les slots du glTF de base (`MeshStandardMaterial`). Les suivants
+ * viennent des extensions `KHR_materials_*`, que le chargeur glTF de Three résout tout seul
+ * en `MeshPhysicalMaterial` : le viewer les **rendait** déjà, mais la fiche technique ne les
+ * balayait pas — un shader de verre ou de vernis n'affichait donc aucune texture, et l'on
+ * cherchait la cause du poids ou du flou ailleurs. L'ordre suit celui des extensions
+ * (clearcoat, transmission, volume, sheen, specular, iridescence, anisotropy).
+ */
 export const TEXTURE_SLOTS = [
   'map',
   'normalMap',
@@ -21,6 +30,19 @@ export const TEXTURE_SLOTS = [
   'alphaMap',
   'bumpMap',
   'displacementMap',
+  'clearcoatMap',
+  'clearcoatRoughnessMap',
+  'clearcoatNormalMap',
+  'transmissionMap',
+  'thicknessMap',
+  'sheenColorMap',
+  'sheenRoughnessMap',
+  'specularIntensityMap',
+  'specularColorMap',
+  'iridescenceMap',
+  'iridescenceThicknessMap',
+  'anisotropyMap',
+  'lightMap',
 ] as const;
 
 export type TextureSlot = (typeof TEXTURE_SLOTS)[number];

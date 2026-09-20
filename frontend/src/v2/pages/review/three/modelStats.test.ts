@@ -35,6 +35,33 @@ describe('collectModelStats — fiche technique du modèle (39.C)', () => {
     expect(stats.textures[0].width).toBe(1);
   });
 
+  it('relève aussi les textures des extensions KHR_materials_*', () => {
+    // Le chargeur glTF de Three résout ces extensions en `MeshPhysicalMaterial` : le viewer
+    // les RENDAIT déjà, mais la fiche technique ne balayait que les neuf slots de base — un
+    // shader de verre ou de vernis n'affichait donc aucune texture.
+    const root = new THREE.Group();
+    const mat = new THREE.MeshPhysicalMaterial({ name: 'Glass' });
+    mat.clearcoatMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    mat.transmissionMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    mat.thicknessMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    mat.sheenColorMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    mat.iridescenceMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    mat.anisotropyMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    root.add(new THREE.Mesh(new THREE.BoxGeometry(), mat));
+
+    const slots = collectModelStats(root).textures.map((tex) => tex.slot);
+    expect(slots).toEqual(
+      expect.arrayContaining([
+        'clearcoatMap',
+        'transmissionMap',
+        'thicknessMap',
+        'sheenColorMap',
+        'iridescenceMap',
+        'anisotropyMap',
+      ]),
+    );
+  });
+
   it('modèle vide : compteurs à zéro, listes vides', () => {
     const stats = collectModelStats(new THREE.Group());
     expect(stats).toMatchObject({ meshes: 0, triangles: 0, vertices: 0, materials: [], textures: [] });

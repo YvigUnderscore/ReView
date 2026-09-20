@@ -2,7 +2,7 @@
 
 *A DCC-style viewport for models and USD scenes: navigation, scene graph, ReView overrides, inspection, comparison and lighting.*
 
-> Updated: 2026-09-16
+> Updated: 2026-09-20
 
 3D media open in a Three.js viewer built to feel like a DCC viewport rather than a web
 preview: you orbit and fly, you select a prim, you switch a variant, you put a gizmo on
@@ -127,13 +127,25 @@ read from the analyser rather than from the glTF nodes. Prims that exist but are
   every mesh under the selected prim, so selecting a group highlights the whole branch.
   Clicking empty space clears it. Dragging orbits as usual: only a click that does not move
   selects.
+- Clicking in the **viewer** selects the **component**, not the single mesh under the cursor:
+  the ray hits `.../ChairB_1/Geom/seat`, and what gets selected is the chair — the nearest
+  ancestor whose USD `kind` is `component`. That is the level a set dresser thinks in. Click a
+  row in the **tree** and you get exactly that row, as always.
+- **`Alt`+click in the viewer** goes finer: it selects the exact prim under the cursor, for
+  when the note is about one part of the object. A scene with no model hierarchy (no `kind`
+  authored), a tree truncated before the component, or a component that carries no geometry of
+  its own all fall back to the exact prim — a click never comes back empty.
 - **`Ctrl`/`⌘`+click** (tree or viewer) toggles a prim in the selection; **`Shift`+click** in
   the tree selects a range. The gizmo then transforms the **whole group** around its common
   centre, as one undo step.
 - The **padlock** on a row makes a prim unpickable in the viewer — the tree still selects it,
-  and unlocks it. Objects that are not currently drawn are never picked and never outlined.
-- The **search field** at the top of the tree keeps the ancestors of every match visible and
-  unfolds everything while a query is active.
+  and unlocks it. Locking a component protects it whichever of its meshes you aim at. Objects
+  that are not currently drawn are never picked and never outlined.
+- The **search field** at the top of the tree matches **prim names** and unfolds only the path
+  leading to each match — searching `table` shows the table, not everything bolted to it. A
+  query containing a `/` is read as a path instead, and then matches whole paths. The rest of
+  the tree keeps the folds you gave it, and so does the query: both survive a trip to another
+  dock panel, and are cleared only when you move to another media.
 
 ### Acting on a prim
 
@@ -142,6 +154,7 @@ read from the analyser rather than from the glTF nodes. Prims that exist but are
 | Eye on the row | Hide or show the prim — its children go with it; a prim hidden by a parent is greyed and cannot be re-shown on its own |
 | `Alt`+click the eye | **Isolate** — everything else is hidden, DCC style |
 | `F` with a prim selected | Fly the camera to it and frame it |
+| `F` with the pointer **over the scene graph** | **Reveal** the selected prim instead: the tree unfolds down to it, lifting the search if it was hiding it. The camera does not move |
 | Right-click a row, **or the object in the viewer** | The prim menu below (a still right-click; dragging stays flight) |
 | `3` then `T` / `R` / `S` | Move, rotate or scale the selected prims — the gizmo appears on the geometry and the delta goes into the ReView override |
 
