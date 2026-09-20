@@ -8,9 +8,6 @@ import type { EditorTool } from './editor/useSplatEditor';
 import type { SplatEditorState } from './editor/useSplatEditor';
 import type { SplatPaintState } from './paint/useSplatPaint';
 
-/** Outils du rail qui n'ont pas d'implémentation dans le viewer splat. */
-export const SPLAT_HIDDEN_TOOLS: ToolId[] = ['region'];
-
 /** Traduction rail → outil de l'éditeur splat. Tout le reste laisse l'éditeur au repos. */
 const EDITOR_TOOL: Partial<Record<ToolId, EditorTool>> = {
   'sel-rect': 'select-rect',

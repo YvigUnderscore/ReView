@@ -13,6 +13,7 @@ const zoomAt = (scale: number, reset = () => {}): ViewportZoom => ({
   consumeClick: () => false,
   zoomBy: () => {},
   reset,
+  oneToOne: () => {},
   fit: scale === 1,
 });
 

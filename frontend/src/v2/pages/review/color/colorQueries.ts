@@ -54,15 +54,12 @@ export interface DisplayLut {
  * LUT 3D d'un couple display/view : demande son URL présignée au backend (qui la cuit si
  * elle manque et qu'il sait le faire), puis télécharge et parse le `.cube`.
  */
-export function useDisplayLut(
-  target: { configId: string; display: string; view: string } | null,
-  enabled = true,
-) {
+export function useDisplayLut(target: { configId: string; display: string; view: string } | null) {
   return useQuery({
     queryKey: target
       ? ocioLutKey(target.configId, target.display, target.view)
       : (['ocio', 'lut', 'none'] as const),
-    enabled: !!target && enabled,
+    enabled: !!target,
     staleTime: LUT_STALE_MS,
     gcTime: LUT_STALE_MS,
     retry: 0,

@@ -108,23 +108,37 @@ const mount = (kind: MediaKind, extra: Record<string, MockResolver> = {}) =>
   });
 
 describe('ReviewPage — viewer monté selon le type de média', () => {
-  it('monte le lecteur vidéo et son panneau de lecture pour une vidéo', async () => {
+  /**
+   * Ces trois tests se reconnaissaient au panneau « Lecture » du dock vidéo. Il a disparu en
+   * Phase 50, avec les quatre autres onglets des médias plats : le dock plat est désormais
+   * Infos + Export, et c'est lui qu'on affirme. Le viewer, lui, se reconnaît toujours à ce
+   * qu'il monte et aux outils qu'il offre.
+   */
+  it('monte le lecteur vidéo et le dock plat pour une vidéo', async () => {
     const { container } = mount('VIDEO');
 
     await waitFor(() => expect(container.querySelector('video')).not.toBeNull());
-    expect(screen.getByRole('button', { name: t('panel.playback') })).toBeInTheDocument();
-    // Outils propres à la 2D image et à la 3D : absents.
-    expect(screen.queryByRole('button', { name: t('tool.zoom') })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('panel.info') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('panel.export') })).toBeInTheDocument();
+    // Outils et panneaux propres au spatial : absents. L'outil « Zoom » ne figure plus dans
+    // cette liste — il a été SUPPRIMÉ en Phase 50, faute d'implémentation : le zoom des deux
+    // viewers plats est un geste permanent (molette, glissement, `+`/`-`, `F`, `H`).
+    expect(screen.queryByRole('button', { name: t('tool.poi') })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('panel.lighting') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('panel.camera') })).not.toBeInTheDocument();
   });
 
-  it('monte le viewer image et ses outils de zoom pour une image', async () => {
+  it('monte le viewer image et le rail plat pour une image', async () => {
     const { container } = mount('IMAGE');
 
     await waitFor(() => expect(container.querySelector('img')).not.toBeNull());
-    expect(screen.getByRole('button', { name: t('tool.zoom') })).toBeInTheDocument();
+    // Le rail plat est au repos : l'outil de navigation, et rien d'autre. Ce test attendait
+    // l'outil « Zoom », supprimé en Phase 50 — il était visible ici et n'armait rien.
+    expect(screen.getByRole('button', { name: t('tool.nav') })).toBeInTheDocument();
     expect(container.querySelector('video')).toBeNull();
-    expect(screen.queryByRole('button', { name: t('panel.playback') })).not.toBeInTheDocument();
+    // Même dock que la vidéo, aux mêmes deux onglets.
+    expect(screen.getByRole('button', { name: t('panel.info') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('panel.camera') })).not.toBeInTheDocument();
   });
 
   it('monte le viewer 3D, son éclairage et sa scène pour un modèle', async () => {
@@ -134,7 +148,6 @@ describe('ReviewPage — viewer monté selon le type de média', () => {
     expect(screen.getByRole('button', { name: t('panel.scene') })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: t('tool.poi') })).toBeInTheDocument();
     expect(container.querySelector('video')).toBeNull();
-    expect(screen.queryByRole('button', { name: t('panel.playback') })).not.toBeInTheDocument();
   });
 
   it('monte le viewer splat, qui a une mise au point mais pas d’éclairage', async () => {
@@ -179,6 +192,6 @@ describe('ReviewPage — panneau de commentaires', () => {
 
     // Le message du serveur remplace le squelette — et aucun viewer n'est monté à vide.
     expect(await screen.findByText('Media not found')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: t('panel.playback') })).toBeNull();
+    expect(screen.queryByRole('button', { name: t('panel.info') })).toBeNull();
   });
 });

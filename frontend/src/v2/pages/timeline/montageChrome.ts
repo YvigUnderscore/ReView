@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Hand } from 'lucide-react';
-import { modesFor, type ReviewMode } from '../review/chrome/modes';
+import { modesFor, type ModeId, type ReviewMode } from '../review/chrome/modes';
 import { DRAW_TOOLS, type ReviewTool } from '../review/chrome/tools';
 
 /**
@@ -30,3 +30,9 @@ const MONTAGE_NAV: ReviewTool = {
 export function montageTools(annotating: boolean): ReviewTool[] {
   return annotating ? [MONTAGE_NAV, ...DRAW_TOOLS] : [MONTAGE_NAV];
 }
+
+/**
+ * Le même rail, vu par mode — c'est ce que le clavier doit suivre. Défini au niveau du module
+ * pour garder une identité stable : le hook du chrome s'y abonne.
+ */
+export const montageToolsFor = (mode: ModeId): ReviewTool[] => montageTools(mode === 'annotate');

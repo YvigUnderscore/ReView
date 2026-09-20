@@ -11,6 +11,13 @@ import type { ShortcutId } from './shortcutRegistry';
  * Les touches actives viennent du registre résolu (`bindings`, surcharges compte incluses).
  * Inactifs dans les champs de saisie et quand un dialog est ouvert
  * (Ctrl+K vit dans CommandPalette, qui doit primer partout).
+ *
+ * La séquence **consomme ses deux frappes** (`stopPropagation`). Ce gestionnaire est posé sur
+ * `document`, le rail d'outils de la review sur `window` : la remontée traverse le premier
+ * avant le second, et sans cela une même frappe faisait deux choses. `g` armait l'outil
+ * polygone *et* amorçait la séquence ; la frappe suivante quittait la page — annotation en
+ * cours perdue. Le leader `g` n'étant pas reconfigurable, c'est lui qui garde la main, et la
+ * lettre de l'outil a été déplacée (`chrome/tools.ts`).
  */
 
 /** Types d'input qui ne saisissent pas de texte : le focus dessus ne bloque pas les raccourcis. */
@@ -45,6 +52,10 @@ export function useGlobalShortcuts({
       if (pendingG.current) {
         pendingG.current = false;
         window.clearTimeout(timer.current);
+        // Seconde frappe de la séquence : elle appartient à la séquence, aboutie ou non. La
+        // laisser filer armait un outil du rail au passage (`g b` armait la sélection
+        // rectangle d'un splat en même temps qu'il ouvrait le board).
+        e.stopPropagation();
         if (key === bindings['nav.projects']) {
           e.preventDefault();
           void navigate('/projects');
@@ -59,6 +70,7 @@ export function useGlobalShortcuts({
       }
       if (key === 'g') {
         pendingG.current = true;
+        e.stopPropagation();
         timer.current = window.setTimeout(() => {
           pendingG.current = false;
         }, 1000);

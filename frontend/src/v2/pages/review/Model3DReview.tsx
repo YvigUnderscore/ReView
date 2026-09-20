@@ -30,7 +30,7 @@ import { useSceneGrid } from './viewer/useSceneGrid';
 import Model3DThreePane from './Model3DThreePane';
 import Model3DCompareBar from './Model3DCompareBar';
 import Model3DPanels from './three/Model3DPanels';
-import { MODEL_HIDDEN_TOOLS, useModel3DChrome } from './three/useModel3DChrome';
+import { useModel3DChrome } from './three/useModel3DChrome';
 import Model3DOptions from './options/Model3DOptions';
 import ReviewChrome from './chrome/ReviewChrome';
 import { useChromeState } from './chrome/useChromeState';
@@ -201,7 +201,6 @@ export default function Model3DReview({
       state={state}
       onState={update}
       role={role ?? 'ARTIST'}
-      hiddenTools={MODEL_HIDDEN_TOOLS}
       headerRight={
         <SpatialCompareHeader
           versionId={data.media.versionId}

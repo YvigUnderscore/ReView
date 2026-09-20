@@ -184,12 +184,12 @@ export function useReviewShortcuts({
           // frappe faisait les deux : le composer s'ouvrait *et* tout l'écran basculait en
           // mode Annoter, canvas de tracé par-dessus l'image, clic-pour-lire perdu.
           //
-          // M reste au transport, parce que c'est ce que la liste des raccourcis promet à
-          // l'utilisateur (components/ShortcutsHelp) et que noter un retour à la frame
-          // exacte est le geste central d'une review. `stopPropagation` suffit à trancher :
-          // ce gestionnaire est posé sur `document`, celui du rail sur `window`, et la phase
-          // de remontée traverse le premier avant le second. L'outil de déplacement de forme
-          // reste accessible au rail, d'un clic.
+          // M reste au transport, parce que noter un retour à la frame exacte est le geste
+          // central d'une review. Le partage n'était qu'à moitié réglé : `stopPropagation`
+          // (ce gestionnaire vit sur `document`, le rail sur `window`, et la remontée traverse
+          // le premier en premier) empêchait bien le double effet, mais le bouton du rail
+          // continuait d'annoncer `M` sur une vidéo, où la lettre ne l'armait jamais. L'outil
+          // a donc changé de touche en Phase 50 (`S`) ; la coupure reste, en garde-fou.
           e.preventDefault();
           e.stopPropagation();
           stopShuttle();

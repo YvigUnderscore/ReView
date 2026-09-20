@@ -25,7 +25,6 @@ import {
   Square,
   SquareDashed,
   Type,
-  ZoomIn,
   type LucideIcon,
 } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
@@ -41,7 +40,6 @@ import { isSpatialKind, modesFor, type ModeId } from './modes';
  */
 export type ToolId =
   | 'nav'
-  | 'zoom'
   | 'draw'
   | 'rect'
   | 'ellipse'
@@ -54,7 +52,6 @@ export type ToolId =
   | 'focus'
   | 'pin'
   | 'paint'
-  | 'region'
   | 'cam-move'
   | 'cam-aim'
   | 'sel-rect'
@@ -97,14 +94,6 @@ const nav = (hintKey: MessageKey): ReviewTool => ({
   hintKey,
 });
 
-const ZOOM: ReviewTool = {
-  id: 'zoom',
-  labelKey: 'tool.zoom',
-  icon: ZoomIn,
-  key: 'Z',
-  hintKey: 'tool.zoom.hint',
-};
-
 /** Outils de tracé du mode « Annoter » — vidéo et image. */
 export const DRAW_TOOLS: ReviewTool[] = [
   { id: 'draw', labelKey: 'tool.draw', icon: Pencil, key: 'D', hintKey: 'tool.draw.hint' },
@@ -112,23 +101,43 @@ export const DRAW_TOOLS: ReviewTool[] = [
   { id: 'ellipse', labelKey: 'tool.ellipse', icon: Circle, key: 'E', hintKey: 'tool.ellipse.hint' },
   { id: 'arrow', labelKey: 'tool.arrow', icon: MoveUpRight, key: 'A', hintKey: 'tool.arrow.hint' },
   {
+    // ARBITRAGE — le polygone était sur `G`, la touche du LEADER de navigation globale
+    // (`g` puis une lettre : `g p` → projets, `g k` → kanban, `g b` → board). Les deux
+    // gestionnaires sont posés sur des cibles différentes (`document` pour le global,
+    // `window` pour le rail) : une frappe armait le polygone *et* amorçait la séquence,
+    // et la lettre suivante faisait quitter la review, annotation en cours perdue.
+    //
+    // Le leader `g` n'est pas reconfigurable (`isValidKey` le refuse) : c'est donc l'outil
+    // qui cède. `P` est libre sur les médias plats — `paint` et `sel-brush` la portent, mais
+    // seulement en spatial, où le polygone n'existe pas.
     id: 'polygon',
     labelKey: 'tool.polygon',
     icon: Hexagon,
-    key: 'G',
+    key: 'P',
     hintKey: 'tool.polygon.hint',
   },
   { id: 'text', labelKey: 'tool.text', icon: Type, key: 'T', hintKey: 'tool.text.hint' },
   {
+    // ARBITRAGE — le déplacement de forme était sur `M`, la touche du transport vidéo
+    // (« pause + commentaire à la frame courante »). Le transport la gardait en coupant la
+    // remontée de l'événement : sur une vidéo, le bouton du rail annonçait donc `M` et la
+    // lettre n'armait rien — elle ouvrait le composer. `S` est libre sur les médias plats.
     id: 'shape-move',
     labelKey: 'tool.shapeMove',
     icon: Move,
-    key: 'M',
+    key: 'S',
     hintKey: 'tool.shapeMove.hint',
   },
   { id: 'erase', labelKey: 'tool.erase', icon: Eraser, key: 'X', hintKey: 'tool.erase.hint' },
 ];
 
+/**
+ * L'outil « Zoom » (`Z`) a été RETIRÉ (Phase 50) : il n'a jamais rien armé. Le zoom des deux
+ * viewers plats est un geste permanent — molette pour zoomer sous le curseur, glissement pour
+ * déplacer, `+`/`-` au clavier — et ne dépend d'aucun outil ; le lecteur vidéo le masquait
+ * même du rail tout en le laissant armable au clavier. Ajuster et 1:1 restent offerts par les
+ * deux actions de vue (`F` et `H`), qui, elles, agissent.
+ */
 function mediaTools(mode: ModeId): ReviewTool[] {
   const start = nav(NAV_HINT_MEDIA);
   if (mode === 'annotate') return [start, ...DRAW_TOOLS];
@@ -142,9 +151,8 @@ function mediaTools(mode: ModeId): ReviewTool[] {
         key: 'W',
         hintKey: 'tool.wipe.hint',
       },
-      ZOOM,
     ];
-  return [start, ZOOM];
+  return [start];
 }
 
 const FOCUS: ReviewTool = {
@@ -171,19 +179,18 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
   annotate: [
     nav(NAV_HINT_SPATIAL),
     {
+      // Le painter 3D n'existe que sur un splat : le viewer 3D le retirait du rail, et la
+      // lettre l'armait quand même. La restriction par type le retire des deux d'un coup.
       id: 'paint',
       labelKey: 'tool.paint',
       icon: Brush,
       key: 'P',
+      kind: 'SPLAT',
       hintKey: 'tool.paint.hint',
     },
-    {
-      id: 'region',
-      labelKey: 'tool.region',
-      icon: SquareDashed,
-      key: 'B',
-      hintKey: 'tool.region.hint',
-    },
+    // L'outil « Région » (`B`) a été RETIRÉ (Phase 50) : les deux viewers spatiaux le
+    // masquaient du rail — il n'avait donc aucune implémentation nulle part — et la lettre
+    // l'armait quand même au clavier.
     {
       id: 'pin',
       labelKey: 'tool.pin',

@@ -148,9 +148,9 @@ of the armed one.
 | Rectangle | `R` | |
 | Ellipse | `E` | |
 | Arrow | `A` | |
-| Polygon | `G` | one click per vertex, **double-click to close**; fewer than three vertices is discarded |
+| Polygon | `P` | one click per vertex, **double-click to close**; fewer than three vertices is discarded |
 | Text | `T` | click to place, type, then `Enter` or click away to commit — `Esc` cancels, empty text is dropped |
-| Move a shape | `M` | pick up a shape already drawn |
+| Move a shape | `S` | pick up a shape already drawn |
 | Eraser | `X` | click, or drag over several shapes |
 
 - Five ink swatches are offered directly, plus a free colour picker that opens outside the

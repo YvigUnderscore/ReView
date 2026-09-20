@@ -68,8 +68,8 @@ the viewer. Pressing it opens the same tool bar your artists use:
 
 | | |
 |---|---|
-| `D` Freehand · `R` Rectangle · `E` Ellipse | `A` Arrow · `G` Polygon · `T` Text |
-| `M` Move a shape · `X` Eraser | Ink, thickness, undo, redo, clear all |
+| `D` Freehand · `R` Rectangle · `E` Ellipse | `A` Arrow · `P` Polygon · `T` Text |
+| `S` Move a shape · `X` Eraser | Ink, thickness, undo, redo, clear all |
 
 The drawing is attached to the comment, not to the media: it travels with the note, and a
 note with a drawing is marked in the thread so the client knows a click will put the shape

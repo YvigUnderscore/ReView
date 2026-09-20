@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnnotationCanvas, type Shape, type Tool } from './AnnotationCanvas';
 import ImageViewerHud from './image/ImageViewerHud';
+import { useViewShortcuts } from '../pages/review/zoom/useViewShortcuts';
 
 /**
  * Visionneuse d'image pour la review : zoom (molette) + pan, avec overlay d'annotation ancré
@@ -42,6 +43,7 @@ export default function ImageReviewViewer({
   viewApiRef,
   onUserView,
   onViewChange,
+  viewShortcuts = false,
 }: {
   src: string;
   alt: string;
@@ -65,6 +67,12 @@ export default function ImageReviewViewer({
   onUserView?: () => void;
   /** Vue émise à chaque changement (fit inclus) — réplication A/B de la comparaison (34.D). */
   onViewChange?: (v: ImageView) => void;
+  /**
+   * Cette visionneuse porte les raccourcis de vue `F` (ajuster) et `H` (taille réelle) — les
+   * deux actions que le rail annonce. Réservé au viewer **principal** de la review : les panes
+   * de comparaison répondraient sinon à la même frappe, chacun de leur côté.
+   */
+  viewShortcuts?: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -199,6 +207,9 @@ export default function ImageReviewViewer({
     setOffset((o) => ({ x: cx - (cx - o.x) * k, y: cy - (cy - o.y) * k }));
     setScale(next);
   };
+  // `F` ajuste, `H` revient au 100 % : les deux boutons du HUD, au clavier. Le rail les
+  // déclarait depuis toujours sans que personne les écoute.
+  useViewShortcuts(viewShortcuts ? { fit: reset, oneToOne } : null);
   const rootRef = useRef<HTMLDivElement>(null);
   // Plein écran : celui fourni par la page (bloc review complet) sinon repli local à l'image.
   const fullscreen = onFullscreen ?? (() => void rootRef.current?.requestFullscreen?.());

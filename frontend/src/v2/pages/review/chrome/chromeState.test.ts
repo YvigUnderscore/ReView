@@ -128,23 +128,34 @@ describe('panels', () => {
     expect(panelsFor('SPLAT').map((p) => p.id)).not.toContain('light');
   });
 
-  it('ouvre la vidéo sur Lecture et l’image sur Couleur', () => {
-    expect(panelsFor('VIDEO')[0].id).toBe('playback');
-    expect(panelsFor('IMAGE')[0].id).toBe('image');
-  });
-
-  it('retire de l’image les trois onglets qui ne faisaient rien (Phase 50)', () => {
-    // « Comparaison » redisait l'en-tête sans offrir de B, « Affichage » annonçait une cadence
-    // et une vitesse de lecture qui n'existent pas sur une image fixe, et « Repères » n'avait
-    // aucun effet — l'overlay n'étant monté que dans le lecteur vidéo.
-    expect(panelsFor('IMAGE').map((p) => p.id)).toEqual(['image', 'info', 'export']);
-    // La vidéo garde les siens : la cadence y est réelle et les repères s'y affichaient.
-    expect(panelsFor('VIDEO').map((p) => p.id)).toEqual(['playback', 'image', 'guides', 'info', 'export']);
-  });
-
-  it('n’offre plus d’onglet Comparaison à aucun média plat', () => {
+  it('le dock plat n’a plus que Infos et Export, vidéo comme image', () => {
+    // Ce test affirmait cinq onglets côté vidéo et trois côté image ; il est réécrit sur la
+    // décision de Phase 50, prise par l'utilisateur en connaissance de la conséquence. Chacun
+    // des cinq partis redisait le lecteur ou réglait au dock ce qu'on règle sur l'image :
+    // « Comparaison » (le B vit dans la barre d'options), « Affichage » (une cadence sur une
+    // image fixe), « Lecture » (la cadence, déjà dans la fiche technique), « Repères » (les
+    // quatre interrupteurs sont au clic droit du viewer) et « Image » — le panneau Color, dont
+    // le display/view reste celui du projet et continue de s'appliquer au viewer.
     for (const kind of ['VIDEO', 'IMAGE'] as const)
-      expect(panelsFor(kind).map((p) => p.id)).not.toContain('compare');
+      expect(panelsFor(kind).map((p) => p.id)).toEqual(['info', 'export']);
+  });
+
+  it('n’offre plus au dock plat aucun des onglets retirés', () => {
+    for (const kind of ['VIDEO', 'IMAGE'] as const) {
+      const ids = panelsFor(kind).map((p) => String(p.id));
+      for (const gone of ['compare', 'view', 'playback', 'image', 'guides']) expect(ids).not.toContain(gone);
+    }
+  });
+
+  it('ne touche pas au dock spatial, qui garde ses six onglets', () => {
+    expect(panelsFor('MODEL_3D').map((p) => p.id)).toEqual([
+      'camera',
+      'light',
+      'display',
+      'scene',
+      'info',
+      'export',
+    ]);
   });
 });
 
@@ -192,6 +203,15 @@ describe('reconcileChrome', () => {
     expect(reconcileChrome(state({ panel: null }), 'SPLAT').panel).toBeNull();
   });
 
+  it('rabat sur Infos un panneau retiré du dock plat (Phase 50)', () => {
+    // Un état porté d'un média spatial ou d'un onglet supprimé ne doit pas laisser le dock
+    // ouvert sur du vide : le premier panneau du média prend la place.
+    for (const kind of ['VIDEO', 'IMAGE'] as const) {
+      expect(reconcileChrome(state({ panel: 'camera' }), kind).panel).toBe('info');
+      expect(reconcileChrome(state({ panel: 'export' }), kind).panel).toBe('export');
+    }
+  });
+
   it('ferme le tiroir qui n’appartient pas à la famille de média', () => {
     expect(reconcileChrome(state({ drawer: 'curves' }), 'SPLAT').drawer).toBe('curves');
     expect(reconcileChrome(state({ drawer: 'curves' }), 'VIDEO').drawer).toBeNull();
@@ -234,10 +254,17 @@ describe('préférences', () => {
     expect(readChromePrefs('SPLAT', '{oops')).toEqual(fallback);
     // `light` n'existe pas dans le dock d'un splat.
     expect(readChromePrefs('SPLAT', JSON.stringify({ panel: 'light' })).panel).toBeNull();
-    // Préférence héritée d'un panneau supprimé (`view`, `compare`, `guides` côté image) :
-    // le dock se replie au lieu d'ouvrir un onglet qui n'existe plus.
-    for (const panel of ['view', 'compare', 'guides'])
-      expect(readChromePrefs('IMAGE', JSON.stringify({ panel })).panel).toBeNull();
+    // Préférence héritée d'un panneau supprimé (`view`, `compare`, `guides`, et depuis la
+    // Phase 50 `playback` et `image`) : le dock se replie au lieu d'ouvrir un onglet qui
+    // n'existe plus. C'est le défaut du dock, et c'est plus juste que d'imposer Infos à qui
+    // n'a jamais demandé Infos — `reconcileChrome`, lui, garde un dock déjà ouvert et prend
+    // le premier panneau.
+    for (const panel of ['view', 'compare', 'guides', 'playback', 'image'])
+      for (const kind of ['VIDEO', 'IMAGE'] as const)
+        expect(readChromePrefs(kind, JSON.stringify({ panel })).panel).toBeNull();
+    // Les deux onglets qui restent, eux, sont relus tels quels.
+    for (const panel of ['info', 'export'])
+      expect(readChromePrefs('VIDEO', JSON.stringify({ panel })).panel).toBe(panel);
   });
 
   it('borne la hauteur du tiroir et ignore une valeur invalide', () => {

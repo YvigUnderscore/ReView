@@ -19,7 +19,7 @@ import { useVersionMedia } from './useVersionMedia';
 import type { MediaResp } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { CompareMode } from './useCompareState';
-import { IMAGE_HIDDEN_TOOLS, VIDEO_HIDDEN_TOOLS, useMediaChrome } from './useMediaChrome';
+import { useMediaChrome } from './useMediaChrome';
 import { useT } from '../../i18n';
 
 /**
@@ -59,7 +59,7 @@ export default function MediaChrome({
   const { id: mediaId, versionId } = data.media;
   // Versions voisines : seule autorité sur l'existence du mode « Compare ».
   const neighbours = useCompareTargets(versionId);
-  const { state, update } = useChromeState(kind, neighbours.hasTargets);
+  const { state, update } = useChromeState(kind, { canCompare: neighbours.hasTargets });
   useMediaChrome({ state, update, ann });
 
   const comparing = state.mode === 'compare';
@@ -88,7 +88,6 @@ export default function MediaChrome({
       onState={update}
       role={role ?? 'ARTIST'}
       modes={switcherModesFor(kind, neighbours.hasTargets)}
-      hiddenTools={kind === 'VIDEO' ? VIDEO_HIDDEN_TOOLS : IMAGE_HIDDEN_TOOLS}
       options={
         <MediaOptions
           tool={activeTool}

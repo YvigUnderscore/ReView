@@ -6,38 +6,14 @@
  * WebGL vit dans `renderTransform.ts`, ce qui rend la chaîne de traitement relisible et
  * testable sans GPU.
  *
- * Chaîne appliquée, dans cet ordre — c'est l'ordre d'un viewer de lookdev :
- *   1. décodage sRGB du code source (un JPEG/PNG de review est encodé sRGB) ;
- *   2. **exposition** en diaphragmes, appliquée en linéaire de scène (`× 2^EV`) ;
- *   3. ré-encodage sRGB : la LUT a pour domaine le code d'entrée dans [0,1], exactement ce que
- *      cuit `ociobakelut --inputspace … --displayview …` ;
- *   4. **LUT 3D** display/view de la config du studio (sautée si la transformée est coupée) ;
- *   5. **gamma d'affichage**, après la transformée, pour ouvrir les basses lumières.
+ * La chaîne est désormais celle du studio, et elle seule : le code source de l'image sert
+ * directement de domaine à la **LUT 3D** display/view de la config du projet — exactement ce
+ * que cuit `ociobakelut --inputspace … --displayview …`.
  *
- * Limite assumée : la source est 8 bits et déjà écrêtée ; une exposition positive ne fait pas
- * réapparaître des hautes lumières qui ne sont pas dans le fichier.
+ * L'exposition et le gamma d'affichage ont disparu avec le panneau Color (Phase 50) : plus
+ * personne ne pouvait les régler, et un aller-retour sRGB ↔ linéaire à exposition nulle ne
+ * faisait que recopier les pixels.
  */
-
-/** Corps commun : conversions sRGB ↔ linéaire, exposition, gamma. */
-const COMMON = /* glsl */ `
-vec3 rvSrgbToLinear(vec3 c) {
-  vec3 lo = c / 12.92;
-  vec3 hi = pow(max((c + 0.055) / 1.055, vec3(0.0)), vec3(2.4));
-  return mix(lo, hi, step(vec3(0.04045), c));
-}
-vec3 rvLinearToSrgb(vec3 c) {
-  vec3 lo = c * 12.92;
-  vec3 hi = 1.055 * pow(max(c, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055;
-  return mix(lo, hi, step(vec3(0.0031308), c));
-}
-vec3 rvExpose(vec3 code, float ev) {
-  vec3 lin = rvSrgbToLinear(clamp(code, 0.0, 1.0)) * exp2(ev);
-  return clamp(rvLinearToSrgb(lin), 0.0, 1.0);
-}
-vec3 rvViewGamma(vec3 c, float g) {
-  return pow(max(c, vec3(0.0)), vec3(1.0 / g));
-}
-`;
 
 export const VERTEX_300 = /* glsl */ `#version 300 es
 in vec2 aPos;
@@ -55,21 +31,13 @@ in vec2 vUv;
 out vec4 fragColor;
 uniform sampler2D uSrc;
 uniform sampler3D uLut;
-uniform float uExposure;
-uniform float uGamma;
 uniform float uLutSize;
-uniform float uUseLut;
-${COMMON}
 void main() {
   vec4 src = texture(uSrc, vUv);
-  vec3 code = rvExpose(src.rgb, uExposure);
-  if (uUseLut > 0.5) {
-    // Échantillonnage au centre des texels : sans ce recadrage, les extrémités de la LUT
-    // sont lues à moitié hors grille et les noirs/blancs dérivent.
-    vec3 uvw = code * ((uLutSize - 1.0) / uLutSize) + (0.5 / uLutSize);
-    code = texture(uLut, uvw).rgb;
-  }
-  fragColor = vec4(rvViewGamma(code, uGamma), src.a);
+  // Échantillonnage au centre des texels : sans ce recadrage, les extrémités de la LUT
+  // sont lues à moitié hors grille et les noirs/blancs dérivent.
+  vec3 uvw = clamp(src.rgb, 0.0, 1.0) * ((uLutSize - 1.0) / uLutSize) + (0.5 / uLutSize);
+  fragColor = vec4(texture(uLut, uvw).rgb, src.a);
 }
 `;
 
@@ -88,12 +56,8 @@ precision highp float;
 varying vec2 vUv;
 uniform sampler2D uSrc;
 uniform sampler2D uLut;
-uniform float uExposure;
-uniform float uGamma;
 uniform float uLutSize;
-uniform float uUseLut;
 uniform vec2 uTiles;
-${COMMON}
 vec2 rvTileUv(float slice, vec2 rg) {
   float col = mod(slice, uTiles.x);
   float row = floor(slice / uTiles.x);
@@ -111,9 +75,7 @@ vec3 rvSampleTiled(vec3 code) {
 }
 void main() {
   vec4 src = texture2D(uSrc, vUv);
-  vec3 code = rvExpose(src.rgb, uExposure);
-  if (uUseLut > 0.5) code = rvSampleTiled(code);
-  gl_FragColor = vec4(rvViewGamma(code, uGamma), src.a);
+  gl_FragColor = vec4(rvSampleTiled(clamp(src.rgb, 0.0, 1.0)), src.a);
 }
 `;
 

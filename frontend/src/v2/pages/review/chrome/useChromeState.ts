@@ -11,15 +11,19 @@ import {
   reconcileChrome,
   type ChromeState,
 } from './chromeState';
-import { switcherModesFor } from './modes';
+import { switcherModesFor, type ModeId, type ReviewMode } from './modes';
 import { panelsFor } from './panels';
-import { DEFAULT_TOOL, toolSearchOrder, toolsFor } from './tools';
+import { chromeCommandFor } from './shortcuts';
+import { DEFAULT_TOOL, toolsFor, type ReviewTool } from './tools';
 
 /**
  * État du chrome pour un média : préférences relues au montage (rail déplié, panneau ouvert,
  * commentaires visibles), mode/outil/tiroir éphémères, et les raccourcis communs aux quatre
  * viewers — touches numériques pour les modes, lettres d'outils du rail, Échap pour revenir à la
  * navigation, `Tab` pour replier le dock.
+ *
+ * Les touches ne sont pas décidées ici : elles sont résolues par `chromeCommandFor`, le registre
+ * partagé avec l'aide des raccourcis. Ce hook applique la commande, rien de plus.
  *
  * Toute mise à jour repasse par `reconcileChrome` : impossible de rester sur un outil qui
  * n'existe pas dans le mode courant.
@@ -31,11 +35,26 @@ function initialState(kind: MediaKind): ChromeState {
   return { ...base, ...prefs, drawer: drawerOpen ? drawerForKind(kind) : null };
 }
 
-/**
- * `canCompare` : au moins une version voisine existe. Faux, le mode « Compare » quitte la
- * bascule **et** les touches numériques — un mode qui ne peut rien montrer ne s'arme pas.
- */
-export function useChromeState(kind: MediaKind, canCompare = true) {
+export interface ChromeOptions {
+  /**
+   * Au moins une version voisine existe. Faux, le mode « Compare » quitte la bascule **et** les
+   * touches numériques — un mode qui ne peut rien montrer ne s'arme pas.
+   */
+  canCompare?: boolean;
+  /**
+   * Modes réellement offerts par la bascule. Le lecteur de montage n'en a qu'un : sans cette
+   * option, la touche `2` l'envoyait dans un mode « Compare » que son en-tête ne propose pas.
+   */
+  modes?: ReviewMode[];
+  /**
+   * Outils réellement au rail. Le montage fournit les siens ; un outil absent du rail ne doit
+   * pas être armable au clavier, sinon la lettre arme un outil sans implémentation.
+   */
+  tools?: (mode: ModeId) => ReviewTool[];
+}
+
+export function useChromeState(kind: MediaKind, options: ChromeOptions = {}) {
+  const { canCompare = true, modes: modesOption, tools: toolsOption } = options;
   const [state, setState] = useState<ChromeState>(() => initialState(kind));
 
   const update = useCallback(
@@ -70,7 +89,11 @@ export function useChromeState(kind: MediaKind, canCompare = true) {
     );
   }, [kind, state]);
 
-  const modes = useMemo(() => switcherModesFor(kind, canCompare), [kind, canCompare]);
+  const modes = useMemo(
+    () => modesOption ?? switcherModesFor(kind, canCompare),
+    [modesOption, kind, canCompare],
+  );
+  const toolsOf = useMemo(() => toolsOption ?? ((mode: ModeId) => toolsFor(mode, kind)), [toolsOption, kind]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -79,46 +102,34 @@ export function useChromeState(kind: MediaKind, canCompare = true) {
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      if (e.key === 'Tab') {
-        e.preventDefault();
+      // Une seule autorité sur ces touches : le registre. Le garde-fou `reservedKeys` a disparu
+      // avec le mode Découpe (Phase 50) — il existait parce que `I`/`O` étaient à la fois la
+      // boucle du transport et les points de coupe, et plus aucun outil ne porte ces lettres.
+      const command = chromeCommandFor(e.key, {
+        kind,
+        mode: state.mode,
+        tool: state.tool,
+        modes,
+        toolsOf,
+      });
+      if (!command) return;
+      e.preventDefault();
+      if (command.action === 'panel') {
         // Tab replie le dock ouvert, ou rouvre le premier panneau du média.
         update({ panel: state.panel ? null : (panelsFor(kind)[0]?.id ?? null) });
-        return;
-      }
-      if (e.key === 'Escape') {
-        // Échap ramène au repos : la navigation, quel que soit le mode.
-        if (state.tool !== DEFAULT_TOOL) {
-          e.preventDefault();
-          update({ tool: DEFAULT_TOOL });
-        }
-        return;
-      }
-      const index = Number(e.key) - 1;
-      if (Number.isInteger(index) && index >= 0 && index < modes.length) {
-        e.preventDefault();
-        update({ mode: modes[index].value });
-        return;
-      }
-      // Lettre d'outil : le mode courant d'abord, sinon les autres modes — armer l'outil d'un
-      // autre mode y bascule (T/R/S ramènent à « Nettoyer », un outil de tracé arme
-      // l'annotation), au lieu de ne rien faire.
-      //
-      // Le garde-fou `reservedKeys` a disparu avec le mode Découpe (Phase 50) : il existait
-      // parce que `I`/`O` étaient à la fois la boucle du transport et les points de coupe.
-      // Plus aucun outil ne porte ces lettres, la collision ne peut plus se produire.
-      const key = e.key.toUpperCase();
-      for (const mode of toolSearchOrder(kind, state.mode)) {
-        const tool = toolsFor(mode, kind).find((t) => t.key === key);
-        if (tool) {
-          e.preventDefault();
-          update(mode === state.mode ? { tool: tool.id } : { mode, tool: tool.id });
-          return;
-        }
+      } else if (command.action === 'rest') {
+        update({ tool: DEFAULT_TOOL });
+      } else if (command.action === 'mode') {
+        update({ mode: command.mode });
+      } else {
+        update(
+          command.mode === state.mode ? { tool: command.tool } : { mode: command.mode, tool: command.tool },
+        );
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [kind, modes, state.mode, state.panel, state.tool, update]);
+  }, [kind, modes, toolsOf, state.mode, state.panel, state.tool, update]);
 
   return { state, update };
 }

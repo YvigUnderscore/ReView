@@ -56,7 +56,13 @@ describe('useViewportZoom', () => {
     expect(result.current.fit).toBe(false);
   });
 
-  it('le clavier zoome, ajuste et affiche à 100 %', () => {
+  /**
+   * Ce test attendait `1` pour le 100 % et `0` pour l'ajustement. Les deux touches ont été
+   * RETIRÉES en Phase 50 : les chiffres nus appartiennent à la bascule de mode du chrome, et
+   * `1` faisait les deux à la fois — premier mode *et* 100 %. Le rôle passe à `H` et `F`, les
+   * lettres que le rail annonce (`action.resetMedia`, `action.fitMedia`).
+   */
+  it('le clavier zoome par crans, et les chiffres ne lui appartiennent plus', () => {
     const { result } = setup(() => 4);
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '+' }));
@@ -68,10 +74,19 @@ describe('useViewportZoom', () => {
     expect(result.current.state.scale).toBeCloseTo(1, 5);
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '0' }));
+    });
+    expect(result.current.state.scale).toBeCloseTo(1, 5);
+  });
+
+  it('H affiche à 100 %, F ramène à l’ajustement', () => {
+    const { result } = setup(() => 4);
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
     });
     expect(result.current.state.scale).toBe(4);
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '0' }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' }));
     });
     expect(result.current.fit).toBe(true);
   });

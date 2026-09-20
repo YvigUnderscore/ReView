@@ -23,7 +23,7 @@ import SplatOptions from '../options/SplatOptions';
 import SpatialTransport from '../transport/SpatialTransport';
 import CurvesDrawer from '../transport/CurvesDrawer';
 import SplatPanels from './SplatPanels';
-import { SPLAT_HIDDEN_TOOLS, useSplatChrome } from './useSplatChrome';
+import { useSplatChrome } from './useSplatChrome';
 import { useSavedSplatEdits } from './useSavedSplatEdits';
 import { useSplatInput } from './scene/useSplatInput';
 import { useSplatView } from './useSplatView';
@@ -138,7 +138,6 @@ export default function SplatReview({
       state={state}
       onState={update}
       role={role ?? 'ARTIST'}
-      hiddenTools={SPLAT_HIDDEN_TOOLS}
       headerRight={
         <SpatialCompareHeader
           versionId={data.media.versionId}

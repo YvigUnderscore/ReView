@@ -59,9 +59,7 @@ export default function MediaOptions({
   return (
     <OptionsBar tool={tool}>
       {/* L'aide de l'outil s'efface en comparaison : la ligne y porte les réglages A et B. */}
-      {(id === 'nav' || id === 'zoom') && mode !== 'compare' && (
-        <span className="rv-optbar__hint">{t(tool.hintKey)}</span>
-      )}
+      {id === 'nav' && mode !== 'compare' && <span className="rv-optbar__hint">{t(tool.hintKey)}</span>}
 
       {/* Comparaison : les réglages restent affichés quel que soit l'outil armé — c'est le
           mode qui compare, pas l'outil, et le choix de B doit se voir. */}

@@ -40,7 +40,6 @@ export default function ReviewChrome({
   comments,
   onViewAction,
   dirty,
-  hiddenTools,
   children,
 }: {
   kind: MediaKind;
@@ -85,8 +84,6 @@ export default function ReviewChrome({
   onViewAction?: (action: ViewAction['id']) => void;
   /** Éditions en attente — vient des hooks d'édition, pas de l'état du chrome. */
   dirty?: boolean;
-  /** Outils du mode que ce viewer n'implémente pas — retirés du rail. */
-  hiddenTools?: ToolId[];
   /** Le viewport, plein espace. */
   children: ReactNode;
 }) {
@@ -104,9 +101,10 @@ export default function ReviewChrome({
   // Le mode reste valide — pendant l'annotation, aucun segment n'est actif et c'est le bouton
   // du composer qui joue l'indicateur ; le pied de page garde le bon rappel.
   const modes = modesProp ?? switcherModesFor(kind);
-  // Un viewer retire du rail les outils qu'il n'implémente pas : mieux vaut un rail court
-  // qu'un bouton qui ne fait rien.
-  const tools = (toolsProp ?? toolsFor(state.mode, kind)).filter((t) => !hiddenTools?.includes(t.id));
+  // Plus de liste d'outils « masqués » (Phase 50) : elle ne filtrait que le rail, et la lettre
+  // armait quand même l'outil retiré. Un outil qu'un viewer n'implémente pas n'existe plus du
+  // tout — soit il porte son type de média (`kind`), soit il a été supprimé de `tools.ts`.
+  const tools = toolsProp ?? toolsFor(state.mode, kind);
   const panels = panelsFor(kind);
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
   const switchable = canSwitchMode(role, modes.length);

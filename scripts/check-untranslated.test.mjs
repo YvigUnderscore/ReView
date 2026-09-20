@@ -89,6 +89,22 @@ describe('scan', () => {
       scanSource('export const A = () => <a className="flex items-center" href="/api/docs" />;'),
     ).toEqual([]);
   });
+
+  /**
+   * Angle mort fermé en Phase 50 : l'aide des raccourcis passait ses noms de touches en LISTE
+   * (`keys={['Espace', 'Maj']}`), et le contrôle s'arrêtait au crochet ouvrant. Les treize
+   * autres langues affichaient « Espace » et « Maj ».
+   */
+  it('relève un nom de touche en dur passé dans une liste', () => {
+    const found = scanSource('export const A = () => <Keys keys={["Espace", "Maj"]} />;');
+    expect(found).toContain('Espace');
+    expect(found).toContain('Maj');
+  });
+
+  it('laisse passer les noms de touches qu’aucune langue ne rend autrement', () => {
+    // Chaque élément est jugé seul : collés bout à bout, « Ctrl K » passerait pour une phrase.
+    expect(scanSource('export const A = () => <Keys keys={["Ctrl", "K"]} />;')).toEqual([]);
+  });
 });
 
 /**

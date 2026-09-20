@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Axis3d, Download, Eye, Grid3x3, Image, Info, Play, Sun, Video, type LucideIcon } from 'lucide-react';
+import { Axis3d, Download, Eye, Info, Sun, Video, type LucideIcon } from 'lucide-react';
 import type { MediaKind } from '../../../types/api';
 import { isSpatialKind } from './modes';
 import type { MessageKey } from '../../../i18n';
@@ -11,8 +11,7 @@ import type { MessageKey } from '../../../i18n';
  * qu'on oublie, par opposition au rail où l'on arme un geste. Un seul panneau ouvert à la
  * fois ; le dock se replie sur sa bande d'onglets de 44 px.
  */
-export type PanelId =
-  'playback' | 'image' | 'guides' | 'info' | 'export' | 'camera' | 'light' | 'display' | 'scene';
+export type PanelId = 'info' | 'export' | 'camera' | 'light' | 'display' | 'scene';
 
 export interface ReviewPanel {
   id: PanelId;
@@ -33,29 +32,27 @@ const SPATIAL_PANELS: ReviewPanel[] = [
   EXPORT,
 ];
 
-const COLOR: ReviewPanel = { id: 'image', labelKey: 'panel.image', icon: Image };
-
 /**
- * Dock des médias plats. Trois onglets sont tombés côté image (Phase 50) : « Comparaison »
- * redisait l'en-tête sans offrir de B — le choix vit maintenant dans la barre d'options du
- * mode « Compare » ; « Affichage » annonçait une cadence et une vitesse de lecture qui
- * n'existent pas sur une image fixe ; « Repères » n'avait aucun effet, l'overlay n'étant
- * monté que dans le lecteur vidéo — il est désormais monté sur l'image, et ses interrupteurs
- * vivent au clic droit.
+ * Dock des médias plats : **Infos et Export**, rien d'autre. Les cinq onglets qui s'y
+ * trouvaient ont tous disparu en Phase 50, chacun pour la même raison — ils redisaient ce que
+ * le lecteur a déjà sous les yeux, ou ils réglaient au dock ce qu'on règle mieux sur l'image :
+ *
+ *   - « Comparaison » redisait l'en-tête sans offrir de version B — le choix vit désormais dans
+ *     la barre d'options du mode « Compare » ;
+ *   - « Affichage » annonçait sur une image fixe une cadence et une vitesse de lecture qui
+ *     n'existent pas ;
+ *   - « Lecture » n'affichait que la cadence, déjà dans la fiche technique de l'onglet Infos ;
+ *   - « Repères » doublait le clic droit du viewer, où les quatre interrupteurs vivent pour les
+ *     deux médias plats ;
+ *   - « Image » — le panneau Color — offrait un display/view, une exposition et un gamma au
+ *     moment de la review. Choix de l'utilisateur, fait en connaissance de la conséquence :
+ *     la gestion couleur reste celle du **projet** (`ProjectColorSection`), qui continue de
+ *     s'appliquer au viewer image ; c'est le réglage au coup par coup qui part.
  */
-const MEDIA_PANELS = (kind: MediaKind): ReviewPanel[] =>
-  kind === 'VIDEO'
-    ? [
-        { id: 'playback', labelKey: 'panel.playback', icon: Play },
-        COLOR,
-        { id: 'guides', labelKey: 'panel.guides', icon: Grid3x3 },
-        INFO,
-        EXPORT,
-      ]
-    : [COLOR, INFO, EXPORT];
+const MEDIA_PANELS: ReviewPanel[] = [INFO, EXPORT];
 
 /** Panneaux du dock pour un type de média, dans l'ordre d'affichage. */
 export function panelsFor(kind: MediaKind): ReviewPanel[] {
-  if (!isSpatialKind(kind)) return MEDIA_PANELS(kind);
+  if (!isSpatialKind(kind)) return MEDIA_PANELS;
   return SPATIAL_PANELS.filter((p) => p.id !== 'light' || kind === 'MODEL_3D');
 }

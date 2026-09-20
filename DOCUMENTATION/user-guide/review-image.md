@@ -78,11 +78,10 @@ pressing a tool letter — a drawing letter switches the workspace into Annotate
 | Rectangle | `R` | Box in an area |
 | Ellipse | `E` | Circle a detail |
 | Arrow | `A` | Point at an element |
-| Polygon | `G` | One click per vertex, double-click to close |
+| Polygon | `P` | One click per vertex, double-click to close |
 | Text | `T` | Drop a label |
-| Move a shape | `M` | Pick up a shape of the stroke in progress |
+| Move a shape | `S` | Pick up a shape of the stroke in progress |
 | Eraser | `X` | Click or drag to erase |
-| Zoom | `Z` | Rail entry shared with video; on a still the wheel and the cluster do the zooming |
 | Wipe bar | `W` | Compare mode only — opens the comparison options |
 
 The options bar carries the ink (five swatches plus a free colour picker), the **thickness**

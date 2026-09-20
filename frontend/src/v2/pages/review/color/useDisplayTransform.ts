@@ -2,20 +2,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef, useState } from 'react';
-import { useColorGrade } from './useColorGrade';
 import { resolveDisplayView, type ProjectColor } from './colorSettings';
 import { useDisplayLut, useOcioDisplays, useSourceImage } from './colorQueries';
 import { canvasToObjectUrl, renderTransform } from './renderTransform';
 
 /**
- * Transformée d'affichage d'une image de review : lit les réglages du lecteur, récupère la
- * LUT du couple display/view du projet, applique le tout au GPU et rend une **image
- * transformée superposée** à l'originale dans le plan zoomé du viewer.
+ * Transformée d'affichage d'une image de review : récupère la LUT du couple display/view **du
+ * projet**, l'applique au GPU et rend une **image transformée superposée** à l'originale dans
+ * le plan zoomé du viewer.
+ *
+ * Il n'y a plus de réglage au moment de la review (Phase 50) : la gestion couleur est celle du
+ * studio, définie dans les paramètres du projet. Le hook n'a donc plus d'état à lire — la
+ * config du projet suffit à décider ce qui s'affiche.
  *
  * Pourquoi une superposition plutôt qu'un remplacement de la source : la visionneuse refait
  * son cadrage à chaque changement de `src` (elle remet `base` à zéro). Remplacer la source
- * remettrait le zoom et le pan à plat à chaque cran d'exposition. La superposition laisse la
- * visionneuse, ses annotations, ses références épinglées et la synchro de session intactes.
+ * remettrait le zoom et le pan à plat. La superposition laisse la visionneuse, ses
+ * annotations, ses références épinglées et la synchro de session intactes.
  */
 
 export interface DisplayTransform {
@@ -23,27 +26,18 @@ export interface DisplayTransform {
   url: string | null;
 }
 
-/**
- * Ce que le hook **ne** rend pas : l'état de la cuisson. Le panneau Color le lit lui-même
- * (même clé de requête, donc même réponse, sans un appel de plus) et l'absence de WebGL
- * passe par le store — le viewer n'a rien à afficher, il n'a besoin que d'une image.
- */
-
-/** Délai avant re-rendu : scruber l'exposition ne doit pas lancer un encodage par pixel bougé. */
+/** Délai avant re-rendu : un changement de média ne doit pas lancer deux encodages. */
 const RENDER_DEBOUNCE_MS = 140;
 
 export function useDisplayTransform(src: string, projectColor: ProjectColor | null): DisplayTransform {
-  const settings = useColorGrade((s) => s.settings);
   const displaysQuery = useOcioDisplays(projectColor?.configId);
-  const target = resolveDisplayView(settings, projectColor, displaysQuery.data ?? []);
+  const target = resolveDisplayView(projectColor, displaysQuery.data ?? []);
 
-  const lutQuery = useDisplayLut(target, settings.enabled);
-  const lut = settings.enabled ? (lutQuery.data?.lut ?? null) : null;
-  const graded = settings.exposure !== 0 || settings.gamma !== 1;
-  const wanted = settings.enabled && (!!lut || graded);
+  const lutQuery = useDisplayLut(target);
+  // Sans LUT cuite, il n'y a rien à appliquer : l'image d'origine est déjà la bonne réponse.
+  const lut = lutQuery.data?.lut ?? null;
 
-  const imageQuery = useSourceImage(src, wanted);
-  const markUnsupported = useColorGrade((s) => s.markUnsupported);
+  const imageQuery = useSourceImage(src, !!lut);
   const [url, setUrl] = useState<string | null>(null);
   const held = useRef<string | null>(null);
 
@@ -57,24 +51,20 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
   };
 
   const image = imageQuery.data ?? null;
-  const { exposure, gamma } = settings;
 
   useEffect(() => {
     let cancelled = false;
     // Tout passe par le délai, y compris l'effacement : poser l'état pendant le corps de
-    // l'effet enchaînerait un rendu de plus à chaque cran d'exposition.
+    // l'effet enchaînerait un rendu de plus à chaque changement de média.
     const timer = setTimeout(() => {
-      if (!wanted || !image) {
+      if (!lut || !image) {
         publish(null);
         return;
       }
-      const result = renderTransform(image, image.naturalWidth, image.naturalHeight, {
-        exposure,
-        gamma,
-        lut,
-      });
+      const result = renderTransform(image, image.naturalWidth, image.naturalHeight, lut);
+      // Navigateur sans WebGL : on rend l'image d'origine plutôt qu'une superposition périmée.
       if (!result) {
-        markUnsupported();
+        publish(null);
         return;
       }
       void canvasToObjectUrl(result.canvas).then((objectUrl) => {
@@ -90,7 +80,7 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
       clearTimeout(timer);
     };
     // `publish` est stable (refs + setState) ; la liste porte tout ce qui change l'image.
-  }, [wanted, image, exposure, gamma, lut, markUnsupported]);
+  }, [image, lut]);
 
   // Dernière URL libérée au démontage : sans cela un aller-retour dans la review fuit un blob
   // par média visité.
@@ -104,5 +94,5 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
 
   // L'image superposée est **dérivée** : dès que la transformée n'a plus lieu d'être, elle
   // disparaît au rendu courant, sans attendre que l'effet ait libéré le blob.
-  return { url: wanted ? url : null };
+  return { url: lut ? url : null };
 }

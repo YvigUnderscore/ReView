@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { isEditable } from '../../../lib/shortcuts';
+import { useViewShortcuts } from './useViewShortcuts';
 import {
   isFit,
   panBy,
@@ -28,14 +29,22 @@ export interface ViewportZoom {
   /** Un glissement vient d'avoir lieu : le clic de relâchement ne doit pas lancer la lecture. */
   consumeClick: () => boolean;
   zoomBy: (factor: number) => void;
+  /** Ajuster à l'écran (`F`, et le bouton « Ajuster » du rail). */
   reset: () => void;
+  /** Taille réelle 1:1 (`H`) — sans échelle connue, ne fait rien. */
+  oneToOne: () => void;
   fit: boolean;
 }
 
 /**
  * Zoom et déplacement du lecteur vidéo — même geste que la visionneuse image : molette
  * pour zoomer sous le curseur, glissement pour déplacer, et le clavier pour s'en sortir
- * (`+` / `-`, `0` ajuste, `1` affiche à 100 %).
+ * (`+` / `-`, puis `F` pour ajuster et `H` pour le 100 %).
+ *
+ * `0` et `1` tenaient ces deux derniers rôles et ont été retirés (Phase 50) : les chiffres nus
+ * appartiennent à la bascule de mode du chrome, et `1` faisait les deux à la fois. `F` et `H`
+ * sont les touches que le rail annonce depuis toujours (`action.fitMedia`, `action.resetMedia`)
+ * sans que personne les écoute.
  *
  * Le bouton gauche sert déjà à lecture/pause et, en mode annotation, au tracé : il ne
  * déplace donc que sur la vidéo elle-même et seulement une fois zoomé — le bouton du
@@ -90,19 +99,22 @@ export function useViewportZoom({
     const down = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || isEditable(e.target)) return;
       if (document.querySelector('[role="dialog"]')) return;
-      const center = (target: number) => setState((s) => zoomTo(s, target, 0, 0));
       if (e.key === '+' || e.key === '=') setState((s) => applyZoomBy(s, 1.25));
       else if (e.key === '-') setState((s) => applyZoomBy(s, 1 / 1.25));
-      else if (e.key === '0') setState(ZOOM_FIT);
-      else if (e.key === '1') {
-        const target = oneToOneRef.current?.();
-        if (target && target > 0) center(target);
-      } else return;
+      else return;
       e.preventDefault();
     };
     window.addEventListener('keydown', down);
     return () => window.removeEventListener('keydown', down);
   }, []);
+
+  const reset = useCallback(() => setState(ZOOM_FIT), []);
+  const oneToOne = useCallback(() => {
+    const target = oneToOneRef.current?.();
+    if (target && target > 0) setState((s) => zoomTo(s, target, 0, 0));
+  }, []);
+  // Les deux actions de vue du rail, au clavier : `F` ajuste, `H` revient à la taille réelle.
+  useViewShortcuts({ fit: reset, oneToOne });
 
   const onPointerDown = (e: React.PointerEvent) => {
     const onMedia = (e.target as Element | null)?.tagName === 'VIDEO';
@@ -144,7 +156,8 @@ export function useViewportZoom({
     handlers: { onPointerDown, onPointerMove, onPointerUp },
     consumeClick,
     zoomBy: useCallback((factor: number) => setState((s) => applyZoomBy(s, factor)), []),
-    reset: useCallback(() => setState(ZOOM_FIT), []),
+    reset,
+    oneToOne,
     fit: isFit(state),
   };
 }

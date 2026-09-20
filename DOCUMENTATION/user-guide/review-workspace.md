@@ -62,14 +62,14 @@ number key — **the position in the switch is the key**: first mode `1`, second
 
 **Annotate is a mode, but it is not in the switch.** You enter it from the comment space (the
 *Annotate* button of the composer, or right-click in the viewer on video and image), or simply
-by pressing a drawing tool letter — `D`, `R`, `E`, `A`, `G`, `T`, `X`, and `M` on an image,
+by pressing a drawing tool letter — `D`, `R`, `E`, `A`, `P`, `T`, `X`, and `S` on an image,
 all arm the tool *and* switch to Annotate. On video and image, finishing the annotation takes
 you back to the first mode.
 
 The same rule applies to the other modes: pressing the letter of a tool that belongs to
 another mode switches to that mode. On a video the transport keeps `I`, `O`, `J`, `K` and `L`
-for itself — no tool claims those letters — and `M` opens the comment composer instead of
-arming *Move a shape*.
+for itself — no tool claims those letters — and `M` opens the comment composer. *Move a shape*
+answers to `S`, precisely so that the two stop fighting over the same letter.
 
 The first mode (**Watch** / **Explore**) is the only one served to clients: an account with
 the `CLIENT` role does not see the switch and stays in read-only exploration. The switch also
@@ -96,9 +96,9 @@ picture does zoom and pan**, from the wheel, the middle button and the keyboard 
 
 | Mode | Tools |
 | --- | --- |
-| Watch | Navigate `V` · Zoom `Z` (image only) |
-| Annotate | Navigate `V` · Freehand `D` · Rectangle `R` · Ellipse `E` · Arrow `A` · Polygon `G` · Text `T` · Move a shape `M` · Eraser `X` |
-| Compare | Navigate `V` · Wipe bar `W` · Zoom `Z` (image only) |
+| Watch | Navigate `V` · Fit `F` · Actual size `H` |
+| Annotate | Navigate `V` · Freehand `D` · Rectangle `R` · Ellipse `E` · Arrow `A` · Polygon `P` · Text `T` · Move a shape `S` · Eraser `X` |
+| Compare | Navigate `V` · Wipe bar `W` · Fit `F` · Actual size `H` |
 
 **Spatial media (3D model, splat)**
 

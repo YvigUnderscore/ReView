@@ -16,7 +16,8 @@ import type { MessageKey } from '../../../i18n';
 
 /**
  * Bascule de mode — l'emplacement qui décide de ce qui existe à l'écran. Les modes sont pris
- * aux touches 1 à 4 dans tous les viewers.
+ * aux touches numériques dans tous les viewers, dans l'ordre de la bascule — trois en spatial,
+ * deux sur un média plat (`switcherModesFor`, qui ne liste pas « Annoter »).
  *
  * Le premier mode (`explore`) est le seul servi aux clients : `role === 'CLIENT'` ne voit pas
  * la bascule et reste en lecture seule.

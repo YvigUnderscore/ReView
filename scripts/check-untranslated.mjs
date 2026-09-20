@@ -103,6 +103,10 @@ const VISIBLE_PROPS = new Set([
   'heading',
   'help',
   'hint',
+  // Un raccourci clavier s'écrit en LISTE de touches (`keys={['Espace', 'Maj']}`), et la
+  // prop échappait au contrôle pour cette seule raison : elle ne s'appelait pas `label`.
+  // Les noms de touches restaient donc en français dans les treize autres catalogues.
+  'keys',
   'label',
   'message',
   'placeholder',
@@ -379,6 +383,22 @@ export function literalOf(node) {
   return null;
 }
 
+/**
+ * Les littéraux qu'une prop visible reçoit — un seul, ou toute une **liste**.
+ *
+ * `keys={['Espace', 'Maj']}` : le contrôle s'arrêtait au crochet ouvrant, et les noms de touches
+ * de l'aide des raccourcis sont restés en français dans les treize autres catalogues pendant
+ * toute la migration i18n. Chaque élément est rendu **séparément** : une liste de touches n'est
+ * pas une phrase, et les coller bout à bout ferait passer `['Ctrl', 'K']` — deux noms que
+ * personne ne traduit — pour du texte d'interface.
+ */
+export function literalsOf(node) {
+  const inner = node && ts.isJsxExpression(node) ? node.expression : node;
+  if (inner && ts.isArrayLiteralExpression(inner)) return inner.elements.map(literalOf).filter(Boolean);
+  const single = literalOf(node);
+  return single ? [single] : [];
+}
+
 /** `??` et `||` : les deux façons d'écrire une valeur de repli. */
 const FALLBACK_OPERATORS = new Set([ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken]);
 
@@ -588,8 +608,7 @@ export function scan(file) {
     if (ts.isJsxText(node)) {
       if (!insideCode(node, src)) push(node.text, true);
     } else if (ts.isJsxAttribute(node) && VISIBLE_PROPS.has(node.name.getText(src))) {
-      const value = literalOf(node.initializer);
-      if (value) push(value);
+      for (const value of literalsOf(node.initializer)) push(value);
     } else if (
       ts.isPropertyAssignment(node) &&
       (VISIBLE_PROPS.has(node.name.getText(src).replace(/['"]/g, '')) || inLabelTable(node))
@@ -600,8 +619,7 @@ export function scan(file) {
       // Le contexte technique s'applique ici aussi : une variable nommée `monthLabel` fait
       // passer `{ month: 'long', year: 'numeric' }` pour une table de libellés, alors que ce
       // sont les options d'`Intl.DateTimeFormat`.
-      const value = literalOf(node.initializer);
-      if (value && !inTechnicalContext(node, src)) push(value);
+      if (!inTechnicalContext(node, src)) for (const value of literalsOf(node.initializer)) push(value);
     } else if (ts.isCallExpression(node) && SPEAKING_CALLS.test(calleeName(node.expression))) {
       for (const arg of node.arguments) {
         const value = literalOf(arg);

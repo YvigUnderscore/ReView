@@ -140,6 +140,8 @@ export default function ImageReviewSection({
                   alpha={ann.alpha}
                   info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
                   onFullscreen={onFullscreen}
+                  // Le viewer jugé porte `F` / `H` ; les panes de comparaison, non.
+                  viewShortcuts
                   viewApiRef={imageViewApiRef}
                   onUserView={onImageUserView}
                   onViewChange={compareId != null ? imageSync.onMasterView : undefined}

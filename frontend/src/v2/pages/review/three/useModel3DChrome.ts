@@ -15,9 +15,6 @@ import { useT } from '../../../i18n';
 /** Cible vide stable pour le gizmo par prim quand aucune scène USD n'est montée. */
 const EMPTY_TARGETS = () => [];
 
-/** Outils du rail sans implémentation dans le viewer 3D (le pinceau et la zone sont splat). */
-export const MODEL_HIDDEN_TOOLS: ToolId[] = ['paint', 'region'];
-
 /** Traduction rail → mode du gizmo TRS. */
 const GIZMO_MODE: Partial<Record<ToolId, TransformMode>> = {
   translate: 'translate',

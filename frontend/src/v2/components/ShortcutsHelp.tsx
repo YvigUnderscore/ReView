@@ -14,60 +14,23 @@ import {
   type ShortcutDef,
   type ShortcutId,
 } from '../lib/shortcutRegistry';
+import { reviewShortcutGroups, type KeyToken } from '../pages/review/chrome/shortcuts';
 
 /**
  * Panneau récapitulatif des raccourcis clavier (10.A3), ouvert avec `?`.
- * La section « Navigation » est pilotée par le registre (`shortcutRegistry`) et **éditable** :
- * cliquer une touche capture la prochaine frappe et persiste la surcharge (42.A2). Les autres
- * sections restent une référence statique (raccourcis contextuels gérés dans les vues review).
+ *
+ * Rien n'y est écrit à la main. La section « Navigation » vient de `lib/shortcutRegistry` et
+ * reste **éditable** : cliquer une touche capture la prochaine frappe et persiste la surcharge
+ * (42.A2). Les sections de review viennent de `pages/review/chrome/shortcuts`, le registre que
+ * les gestionnaires eux-mêmes consultent — c'est ce qui empêche l'aide et le code de diverger,
+ * comme ils l'avaient fait : dix raccourcis actifs manquaient à l'appel, un outil « Zoom »
+ * inerte y figurait, et les noms de touches y étaient codés en dur en français, donc affichés en
+ * français dans les treize autres langues.
  */
 
-// Raccourcis contextuels de review — référence non reconfigurable (gérés dans les vues).
-// Table de libellés recalculée au rendu : en constante de module, elle resterait figée
-// dans la langue chargée au démarrage.
-const staticGroups = (
-  t: (key: MessageKey) => string,
-): { title: string; shortcuts: { keys: string[]; label: string }[] }[] => [
-  {
-    title: t('shortcuts.videoReview'),
-    shortcuts: [
-      { keys: ['Espace'], label: t('shortcuts.playPause') },
-      { keys: ['←', '→'], label: t('shortcuts.frameStep') },
-      { keys: ['Maj', '←/→'], label: t('shortcuts.frameStep10') },
-      { keys: ['J'], label: t('shortcuts.playBackward') },
-      { keys: ['K'], label: t('shortcuts.pause') },
-      { keys: ['L'], label: t('shortcuts.playForward') },
-      { keys: ['I', 'O'], label: t('shortcuts.loopPoints') },
-      { keys: ['M'], label: t('shortcuts.commentAtFrame') },
-    ],
-  },
-  {
-    title: t('shortcuts.allTypes'),
-    shortcuts: [
-      { keys: [t('common.escKey')], label: t('review.annotation.hide') },
-      { keys: ['Ctrl', 'V'], label: t('shortcuts.pasteReference') },
-      { keys: ['Clic droit'], label: t('shortcuts.contextMenu') },
-    ],
-  },
-  {
-    title: 'Review splat',
-    shortcuts: [
-      {
-        keys: ['Clic droit', 'ZQSD'],
-        label: t('shortcuts.splatFly'),
-      },
-      { keys: ['T', 'R', 'S'], label: t('shortcuts.gizmos') },
-      {
-        keys: ['B', 'L', 'P'],
-        label: t('shortcuts.splatSelect'),
-      },
-      { keys: ['F'], label: t('shortcuts.frameSelection') },
-      { keys: ['H'], label: t('action.resetSpatial') },
-      { keys: ['Suppr'], label: t('shortcuts.deleteSelection') },
-      { keys: ['Ctrl', 'Z / Y'], label: t('shortcuts.undoRedo') },
-    ],
-  },
-];
+/** Libellé d'une touche : caractère technique tel quel, nom de touche traduit. */
+const keyLabel = (token: KeyToken, t: (key: MessageKey) => string): string =>
+  'char' in token ? token.char : t(token.nameKey);
 
 function Keys({ keys }: { keys: string[] }) {
   return (
@@ -200,14 +163,16 @@ export default function ShortcutsHelp({
         </DialogHeader>
         <div className="space-y-4">
           <NavShortcuts />
-          {staticGroups(t).map((g) => (
-            <div key={g.title}>
-              <p className="mb-2 text-xs font-semibold section-label text-muted-foreground">{g.title}</p>
+          {reviewShortcutGroups().map((g) => (
+            <div key={g.titleKey}>
+              <p className="mb-2 text-xs font-semibold section-label text-muted-foreground">
+                {t(g.titleKey)}
+              </p>
               <ul className="space-y-1.5">
                 {g.shortcuts.map((s) => (
-                  <li key={s.keys.join('+')} className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-muted-foreground">{s.label}</span>
-                    <Keys keys={s.keys} />
+                  <li key={s.labelKey} className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-muted-foreground">{t(s.labelKey)}</span>
+                    <Keys keys={s.keys.map((token) => keyLabel(token, t))} />
                   </li>
                 ))}
               </ul>

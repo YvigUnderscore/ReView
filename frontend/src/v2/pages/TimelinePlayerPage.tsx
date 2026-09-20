@@ -28,7 +28,7 @@ import { useStillSource } from './timeline/useStillSource';
 import MontageTimeline from './timeline/MontageTimeline';
 import MontagePanels from './timeline/MontagePanels';
 import MontageHeader, { ShareToShotItem } from './timeline/MontageHeader';
-import { MONTAGE_MODES, montageTools } from './timeline/montageChrome';
+import { MONTAGE_MODES, montageToolsFor } from './timeline/montageChrome';
 import TimelineTrack from './timeline/TimelineTrack';
 import { useContinuousPlayback } from './timeline/useContinuousPlayback';
 import { localTimeAt } from './timeline/timelinePlayback';
@@ -93,7 +93,13 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
   // à l'élément vidéo échoue au démultiplexage et bloquait la lecture de tout le montage.
   const stillUrl = useStillSource(clip);
 
-  const { state, update } = useChromeState('VIDEO');
+  // Le montage n'a qu'un mode et qu'un rail : le clavier suit les deux. Sans cela, la touche
+  // `2` armait un mode « Compare » que l'en-tête ne propose pas, et les lettres des outils de
+  // la review armaient des outils absents de ce rail.
+  const { state, update } = useChromeState('VIDEO', {
+    modes: MONTAGE_MODES,
+    tools: montageToolsFor,
+  });
   const ann = useAnnotations({ defaultColor: userColor(userId) });
   const renderOverlay = useAnnotationOverlay(ann);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -107,7 +113,7 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
   const name = timeline.name ?? label;
   const fps = timeline.framerate || 24;
   const localTime = clip ? localTimeAt(clip, playback.time) : 0;
-  const tools = montageTools(state.mode === 'annotate');
+  const tools = montageToolsFor(state.mode);
   const activeTool = tools.find((x) => x.id === state.tool) ?? tools[0];
   const applyVolume = (v: number, mute: boolean) => {
     for (const ref of [videoA, videoB]) {
@@ -191,9 +197,6 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
           role={role ?? 'ARTIST'}
           modes={MONTAGE_MODES}
           tools={tools}
-          // Le zoom d'image n'existe pas sur un montage : mieux vaut un rail court qu'un
-          // bouton inerte.
-          hiddenTools={['zoom']}
           headerLeft={<MontageHeader name={name} clip={clip} timeline={timeline} />}
           options={<MediaOptions tool={activeTool} mode={state.mode} ann={ann} />}
           panel={

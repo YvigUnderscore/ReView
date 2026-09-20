@@ -5,21 +5,14 @@ import { toTiles, type CubeLut } from './cubeLut';
 import { SHADERS, type ShaderFlavor } from './displayShader';
 
 /**
- * Application GPU de la transformée d'affichage à une image fixe. Un canvas hors écran, un
+ * Application GPU de la LUT display/view du projet à une image fixe. Un canvas hors écran, un
  * triangle plein cadre, le shader de `displayShader.ts`, et on rend le résultat sous forme
  * d'image : le viewer de review garde son zoom, son pan, ses annotations et sa capture de
  * vue, qui continuent de travailler sur une simple balise `img`.
  *
  * WebGL2 quand il existe (texture 3D en matériel), WebGL1 sinon (atlas 2D). Si aucun contexte
- * n'est disponible, on rend `null` : l'appelant affiche l'image d'origine et le dit.
+ * n'est disponible, on rend `null` : l'appelant affiche l'image d'origine.
  */
-
-export interface TransformParams {
-  exposure: number;
-  gamma: number;
-  /** LUT display/view, ou `null` : exposition et gamma restent appliqués. */
-  lut: CubeLut | null;
-}
 
 export interface TransformResult {
   canvas: HTMLCanvasElement;
@@ -140,7 +133,7 @@ export function renderTransform(
   image: TexImageSource,
   width: number,
   height: number,
-  params: TransformParams,
+  lut: CubeLut,
 ): TransformResult | null {
   if (width <= 0 || height <= 0) return null;
   const canvas = document.createElement('canvas');
@@ -153,7 +146,8 @@ export function renderTransform(
   const prog = program(gl, flavor);
   const src = prog ? sourceTexture(gl, image) : null;
   if (!prog || !src) return null;
-  const lutTex = params.lut ? lutTexture(gl, params.lut) : null;
+  const lutTex = lutTexture(gl, lut);
+  if (!lutTex) return null;
 
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -166,19 +160,11 @@ export function renderTransform(
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, src);
   gl.uniform1i(gl.getUniformLocation(prog, 'uSrc'), 0);
-  if (lutTex) {
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(
-      flavor === 'webgl2' ? (gl as WebGL2RenderingContext).TEXTURE_3D : gl.TEXTURE_2D,
-      lutTex.tex,
-    );
-    gl.uniform1i(gl.getUniformLocation(prog, 'uLut'), 1);
-    gl.uniform2f(gl.getUniformLocation(prog, 'uTiles'), lutTex.tiles[0], lutTex.tiles[1]);
-  }
-  gl.uniform1f(gl.getUniformLocation(prog, 'uExposure'), params.exposure);
-  gl.uniform1f(gl.getUniformLocation(prog, 'uGamma'), params.gamma || 1);
-  gl.uniform1f(gl.getUniformLocation(prog, 'uLutSize'), params.lut?.size ?? 2);
-  gl.uniform1f(gl.getUniformLocation(prog, 'uUseLut'), params.lut ? 1 : 0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(flavor === 'webgl2' ? (gl as WebGL2RenderingContext).TEXTURE_3D : gl.TEXTURE_2D, lutTex.tex);
+  gl.uniform1i(gl.getUniformLocation(prog, 'uLut'), 1);
+  gl.uniform2f(gl.getUniformLocation(prog, 'uTiles'), lutTex.tiles[0], lutTex.tiles[1]);
+  gl.uniform1f(gl.getUniformLocation(prog, 'uLutSize'), lut.size);
 
   gl.viewport(0, 0, width, height);
   gl.clearColor(0, 0, 0, 0);
@@ -187,7 +173,7 @@ export function renderTransform(
 
   gl.deleteBuffer(buffer);
   gl.deleteTexture(src);
-  if (lutTex) gl.deleteTexture(lutTex.tex);
+  gl.deleteTexture(lutTex.tex);
   gl.deleteProgram(prog);
   return { canvas, flavor };
 }

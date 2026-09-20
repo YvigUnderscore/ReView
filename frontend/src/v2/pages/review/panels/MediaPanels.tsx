@@ -5,9 +5,6 @@ import { Camera, FileDown, LayoutGrid, Scissors } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { MediaKind } from '../../../types/api';
 import type { PanelId } from '../chrome/panels';
-import { Group, Row } from '../chrome/DockGroup';
-import GuidesPanel from './GuidesPanel';
-import ColorPanel from '../color/ColorPanel';
 import { sheetRows } from './mediaSheet';
 import InfoPanel from './InfoPanel';
 import ExportPanel from './ExportPanel';
@@ -15,10 +12,11 @@ import type { MediaResp } from '../reviewTypes';
 import { useT } from '../../../i18n';
 
 /**
- * Contenu du dock inspecteur pour les viewers plats — ce qu'on règle une fois.
+ * Contenu du dock inspecteur pour les viewers plats : la fiche technique et l'export.
  *
- * L'onglet « Comparaison » en est parti : il redisait l'en-tête sans offrir de version B. Les
- * réglages A et B vivent dans la barre d'options du mode « Compare », où l'on regarde déjà.
+ * Les autres onglets sont partis en Phase 50 — `chrome/panels.ts` dit lequel et pourquoi. Ce
+ * qu'ils réglaient vit maintenant là où l'on regarde : la comparaison A/B dans la barre
+ * d'options du mode « Compare », les repères de composition au clic droit du viewer.
  */
 export default function MediaPanels({
   panel,
@@ -36,20 +34,6 @@ export default function MediaPanels({
   onContactSheet?: () => void;
 }) {
   const t = useT();
-  if (panel === 'playback')
-    return (
-      <Group title={t('tokens.read')}>
-        <Row label={t('review.frameRate')}>
-          <span className="font-mono text-xs">{fps} fps</span>
-        </Row>
-      </Group>
-    );
-
-  // Panneau Color : agissant sur l'image fixe (transformée d'affichage appliquée aux pixels),
-  // encore en lecture seule ailleurs — la vidéo garde son décodage natif.
-  if (panel === 'image') return <ColorPanel projectColor={data.projectColor} applies={kind === 'IMAGE'} />;
-
-  if (panel === 'guides') return <GuidesPanel />;
 
   if (panel === 'info') return <InfoPanel sheet={sheetRows(t, data, kind, fps)} />;
 
@@ -73,6 +57,9 @@ export default function MediaPanels({
                 {t('ctx.contactSheet')}
               </Button>
             )}
+            {/* Le proxy déjà découpé ne se refait plus (la découpe a disparu en Phase 50),
+                mais le dire reste dû : le fichier d'origine exporté ici est plus long que ce
+                que le lecteur montre. */}
             {kind === 'VIDEO' && data.trim && (
               <span className="rv-optbar__hint whitespace-normal">
                 <Scissors size={12} /> {t('review.trimmedProxy')}
