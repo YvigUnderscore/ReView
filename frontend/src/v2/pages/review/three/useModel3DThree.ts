@@ -202,7 +202,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       // Le mixer cible la racine glTF (pas le wrapper de normalisation) : une piste sur le nœud
       // racine ne casse plus le cadrage (40.A).
       const mixer = model.animations.length ? new THREE.AnimationMixer(model.animRoot) : null;
-      const layoutCam = new THREE.PerspectiveCamera(45, 16 / 9, 0.01, 1000);
+      // Focale de départ = celle de la vue courante, comme côté splat : un PiP qui s'ouvre sur
+      // une autre focale que la scène n'a jamais rien à voir avec le plan que l'on règle.
+      const layoutCam = new THREE.PerspectiveCamera(scene.camera.fov, 16 / 9, 0.01, 1000);
       runtimeRef.current = {
         scene,
         mixer,
@@ -368,7 +370,8 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     setLayoutMode: layout.setLayoutMode,
     layoutController: layout.layoutController,
     setPipRect: layout.setPipRect,
-    getActivationView: layout.getActivationView,
+    /** État complet du « dans / hors caméra » — consommé tel quel par la caméra-objet. */
+    layout,
   };
 }
 

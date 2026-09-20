@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Diamond } from 'lucide-react';
-import type { ChannelId } from '../channels/model';
+import type { CameraAnimV2, ChannelId, Extrapolation, TangentType } from '../channels/model';
 import { CHANNEL_META, channelColor } from './channelMeta';
+import ChannelMenu from './ChannelMenu';
 import { useT } from '../../../../i18n';
 
 /**
@@ -11,14 +12,23 @@ import { useT } from '../../../../i18n';
  * libellé, cliquable pour afficher/masquer la F-curve dans le graph editor. Un canal sans clé
  * est grisé. En édition, chaque ligne porte un losange « poser une clé sur **ce** canal au
  * playhead » — la clé complète 8 canaux n'est plus le seul geste.
+ *
+ * **Clic droit sur une ligne** (Phase 50, lot 7) : tout ce qui vise la courbe ENTIÈRE — profil de
+ * tangente, pré/post-infinity, sélection de ses clés, recadrage vertical (`ChannelMenu`).
  */
 export default function ChannelList({
+  anim,
   keyedChannels,
   visible,
   onToggle,
   editable,
   onKeyChannel,
+  onProfile,
+  onInfinity,
+  onSelectAll,
+  onFit,
 }: {
+  anim: CameraAnimV2;
   /** Canaux qui portent au moins une clé (les autres sont inertes). */
   keyedChannels: ReadonlySet<ChannelId>;
   visible: ReadonlySet<ChannelId>;
@@ -26,6 +36,13 @@ export default function ChannelList({
   editable?: boolean;
   /** Pose une clé sur ce canal seul, au temps courant (depuis la vue). */
   onKeyChannel?: (id: ChannelId) => void;
+  /** Applique un profil de tangente à toutes les clés de la courbe. */
+  onProfile: (id: ChannelId, type: TangentType) => void;
+  /** Règle l'extrapolation du canal hors de ses clés. */
+  onInfinity: (id: ChannelId, patch: { pre?: Extrapolation; post?: Extrapolation }) => void;
+  onSelectAll: (id: ChannelId) => void;
+  /** Recadre l'axe des valeurs sur cette seule courbe. */
+  onFit: (id: ChannelId) => void;
 }) {
   const t = useT();
   return (
@@ -33,8 +50,8 @@ export default function ChannelList({
       {CHANNEL_META.map((c) => {
         const keyed = keyedChannels.has(c.id);
         const on = visible.has(c.id);
-        return (
-          <div key={c.id} className="group flex items-center">
+        const row = (
+          <div className="group flex items-center">
             <button
               disabled={!keyed}
               onClick={() => onToggle(c.id)}
@@ -63,6 +80,23 @@ export default function ChannelList({
               </button>
             )}
           </div>
+        );
+        const ch = anim.channels[c.id];
+        return (
+          <ChannelMenu
+            key={c.id}
+            id={c.id}
+            editable={!!editable}
+            pre={ch?.pre ?? 'constant'}
+            post={ch?.post ?? 'constant'}
+            onProfile={onProfile}
+            onInfinity={onInfinity}
+            onSelectAll={onSelectAll}
+            onFit={onFit}
+            onKey={(id) => onKeyChannel?.(id)}
+          >
+            {row}
+          </ChannelMenu>
         );
       })}
     </div>

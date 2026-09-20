@@ -54,6 +54,29 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     expect(annotationSchema.safeParse(parts).success).toBe(true);
   });
 
+  it('accepte une animation caméra à tangentes séparées, pondérées et cyclées', () => {
+    // Le schéma de l'animation jointe est STRICT : un champ de clé oublié ici ne serait pas
+    // silencieusement retiré, il ferait échouer l'envoi du commentaire.
+    const parts = [
+      {
+        type: 'camera-anim',
+        version: 2,
+        loop: false,
+        channels: {
+          px: {
+            keys: [
+              { t: 0, v: 1, mode: 'free', modeIn: 'flat', modeOut: 'free', tin: 0, tout: 0.2 },
+              { t: 500, v: 2, mode: 'free', broken: true, tin: 0.1, tout: 0.3, wIn: 1, wOut: 1.5 },
+            ],
+            pre: 'constant',
+            post: 'cycleOffset',
+          },
+        },
+      },
+    ];
+    expect(annotationSchema.safeParse(parts).success).toBe(true);
+  });
+
   it('accepte une proposition de mise en scène 3D (46.D)', () => {
     const parts = [
       {

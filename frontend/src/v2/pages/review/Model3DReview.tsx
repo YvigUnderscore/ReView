@@ -166,10 +166,9 @@ export default function Model3DReview({
     getSceneHandle: model3d.getSceneHandle,
     subscribeFrame: model3d.subscribeFrame,
     ready,
-    active: model3d.layoutMode,
     editable: canManage,
     anim: cam.anim,
-    getBasePose: model3d.getActivationView,
+    layout: model3d.layout,
   });
 
   // Bascule et rail du modèle 3D (Phase 50, lot 6) : « Mise en scène » n'y figure plus —
@@ -181,8 +180,8 @@ export default function Model3DReview({
     // qui ne passe pas par la transformation de version et n'en a donc pas les droits.
     hasScenegraph: scene.tree.length > 0,
   });
-  // Mode Mise en scène = atelier caméra : y entrer active le layout (PiP + caméra-objet), en
-  // sortir le désactive. L'interrupteur du panneau Caméra est désormais la seule entrée.
+  // Mode Mise en scène = atelier caméra : y entrer sort de la caméra du plan, en sortir y rentre.
+  // Seule écriture du « dans / hors caméra » — modèle en tête de `viewer/useLayoutMode`.
   const { setLayoutMode } = model3d;
   useEffect(() => {
     setLayoutMode(state.mode === 'stage');

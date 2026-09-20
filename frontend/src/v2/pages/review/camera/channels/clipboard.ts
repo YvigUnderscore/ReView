@@ -9,7 +9,9 @@ import {
   type CurveKey,
   type KeyRef,
   type TangentMode,
+  type TangentType,
 } from './model';
+import { clampWeight, TANGENT_TYPES } from './tangents';
 
 /**
  * Presse-papier de clés du curve editor (Phase 40, 40.E) : copier/coller des clés (valeur, mode et
@@ -71,6 +73,9 @@ export function pasteKeys(
 }
 
 // ── Persistance cross-média (localStorage) ─────────────────────────────────────
+const sideType = (v: unknown): TangentType | undefined =>
+  TANGENT_TYPES.includes(v as TangentType) ? (v as TangentType) : undefined;
+
 function parseKey(input: unknown): CurveKey | null {
   if (!input || typeof input !== 'object') return null;
   const k = input as Record<string, unknown>;
@@ -79,6 +84,15 @@ function parseKey(input: unknown): CurveKey | null {
   const key: CurveKey = { t: k.t, v: k.v, mode };
   if (typeof k.tin === 'number') key.tin = k.tin;
   if (typeof k.tout === 'number') key.tout = k.tout;
+  // Côtés séparés, brisure et poids : sans eux, un collage venu du stockage rendait une clé
+  // appauvrie là où le collage en mémoire, lui, gardait tout.
+  const modeIn = sideType(k.modeIn);
+  const modeOut = sideType(k.modeOut);
+  if (modeIn) key.modeIn = modeIn;
+  if (modeOut) key.modeOut = modeOut;
+  if (k.broken === true) key.broken = true;
+  if (typeof k.wIn === 'number') key.wIn = clampWeight(k.wIn);
+  if (typeof k.wOut === 'number') key.wOut = clampWeight(k.wOut);
   return key;
 }
 

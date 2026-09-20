@@ -2,10 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect } from 'react';
+import { isAutoKeySuspended } from './autoKeyGate';
 
 /**
  * Auto-key (Phase 27) : activé, tout geste caméra sur le canvas (drag orbite/pan au-delà de
  * 3 px, molette débouncée) pose une clé de la vue courante au temps de lecture — façon DCC.
+ *
+ * Hors caméra (mode layout), le portier `autoKeyGate` le suspend : les gestes du canvas y bougent
+ * la caméra **libre**, pas celle du plan, et le `pointerup` d'un drag de gizmo écrasait la clé que
+ * le gizmo venait d'écrire. Le portier est consulté au moment de poser la clé, jamais à
+ * l'abonnement : le mode change sans démonter l'écoute.
  */
 export function useCameraAutoKey(
   autoKey: boolean,
@@ -29,11 +35,13 @@ export function useCameraAutoKey(
       if (Math.hypot(e.clientX - sx, e.clientY - sy) > 3) moved = true;
     };
     const onUp = () => {
-      if (moved) insertKeyAtView();
+      if (moved && !isAutoKeySuspended()) insertKeyAtView();
     };
     const onWheel = () => {
       window.clearTimeout(wheelTimer);
-      wheelTimer = window.setTimeout(() => insertKeyAtView(), 250);
+      wheelTimer = window.setTimeout(() => {
+        if (!isAutoKeySuspended()) insertKeyAtView();
+      }, 250);
     };
     dom.addEventListener('pointerdown', onDown);
     dom.addEventListener('pointermove', onMove);

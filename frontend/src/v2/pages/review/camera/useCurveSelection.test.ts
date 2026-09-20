@@ -4,6 +4,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyAnim, upsertKey, type CameraAnimV2, type KeyRef } from './channels/model';
+import { isBroken, isWeighted } from './channels/tangents';
 import { useCurveSelection } from './useCurveSelection';
 
 const both: KeyRef[] = [
@@ -39,12 +40,32 @@ describe('useCurveSelection — sélection', () => {
     expect(result.current.selection).toEqual([]);
   });
 
-  it('applique un mode de tangente à toutes les clés sélectionnées', () => {
+  it('applique un profil de tangente à toutes les clés sélectionnées', () => {
     const { result, commit, animRef } = setup();
     act(() => result.current.setSelection(both));
-    act(() => result.current.setSelectionMode('linear'));
+    act(() => result.current.applyTangentType('linear'));
     expect(commit).toHaveBeenCalledTimes(1);
     expect(modes(animRef.current)).toEqual(['linear', 'linear']);
+  });
+
+  it('applique un profil au seul côté visé, ce qui brise les clés', () => {
+    const { result, animRef } = setup();
+    act(() => result.current.setSelection(both));
+    act(() => result.current.applyTangentType('flat', 'out'));
+    const keys = animRef.current.channels.px ?? { keys: [] };
+    expect(keys.keys.map((k) => k.modeOut)).toEqual(['flat', 'flat']);
+    expect(keys.keys.every(isBroken)).toBe(true);
+  });
+
+  it('brise, unifie et pondère la sélection', () => {
+    const { result, animRef } = setup();
+    act(() => result.current.setSelection(both));
+    act(() => result.current.setSelectionBroken(true));
+    expect((animRef.current.channels.px?.keys ?? []).every(isBroken)).toBe(true);
+    act(() => result.current.setSelectionBroken(false));
+    expect((animRef.current.channels.px?.keys ?? []).some(isBroken)).toBe(false);
+    act(() => result.current.setSelectionWeighted(true));
+    expect((animRef.current.channels.px?.keys ?? []).every(isWeighted)).toBe(true);
   });
 
   it('supprime les clés sélectionnées et rend la sélection vide', () => {
@@ -56,9 +77,11 @@ describe('useCurveSelection — sélection', () => {
     expect(result.current.selection).toEqual([]);
   });
 
-  it('sans sélection, mode et suppression ne touchent pas à l’animation', () => {
+  it('sans sélection, ni les tangentes ni la suppression ne touchent à l’animation', () => {
     const { result, commit } = setup();
-    act(() => result.current.setSelectionMode('step'));
+    act(() => result.current.applyTangentType('step'));
+    act(() => result.current.setSelectionBroken(true));
+    act(() => result.current.setSelectionWeighted(true));
     act(() => result.current.removeSelection());
     expect(commit).not.toHaveBeenCalled();
   });

@@ -47,6 +47,35 @@ export const panTime = (view: TimeView, deltaMs: number): TimeView => ({
   t1: view.t1 + deltaMs,
 });
 
+/** Étendue minimale de l'axe des valeurs — un canal en radians se zoome très loin. */
+const MIN_VALUE_SPAN = 1e-6;
+
+/** Zoom vertical centré sur la valeur `pivotV` (Ctrl+molette) — `factor` < 1 = zoom avant. */
+export function zoomValue(view: ValueView, pivotV: number, factor: number): ValueView {
+  const v0 = pivotV - (pivotV - view.v0) * factor;
+  const v1 = pivotV + (view.v1 - pivotV) * factor;
+  return { ...view, v0, v1: Math.max(v1, v0 + MIN_VALUE_SPAN) };
+}
+
+/** Décale la fenêtre des valeurs de `deltaV` (pan vertical). */
+export const panValue = (view: ValueView, deltaV: number): ValueView => ({
+  ...view,
+  v0: view.v0 + deltaV,
+  v1: view.v1 + deltaV,
+});
+
+/**
+ * Position (%) d'un temps sur une piste de largeur fixe (transport), **bornée à la piste**.
+ *
+ * Sans ce bornage, un temps au-delà de la durée (scrub loin dans la timeline, lecture hors boucle
+ * qui dépasse d'une frame) plaçait la tête de lecture à `left: 400%` : elle sortait de sa piste, et
+ * le transport — qui défile en `overflow-x: auto` — se dotait d'une scrollbar horizontale.
+ */
+export function trackPct(t: number, span: number): number {
+  if (!(span > 0)) return 0;
+  return Math.min(100, Math.max(0, (t / span) * 100));
+}
+
 /** Arrondit un temps (ms) à la frame la plus proche au framerate du pipeline. */
 export function snapToFrame(ms: number, fps: number): number {
   if (!(fps > 0)) return Math.max(0, ms);

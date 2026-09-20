@@ -5,14 +5,17 @@ import { describe, expect, it } from 'vitest';
 import {
   fitValueRange,
   panTime,
+  panValue,
   rulerTicks,
   snapToFrame,
   timecode,
   timeToX,
+  trackPct,
   xToTime,
   valueToY,
   yToValue,
   zoomTime,
+  zoomValue,
 } from './viewTransform';
 
 describe('viewTransform — temps ↔ pixel', () => {
@@ -45,6 +48,38 @@ describe('viewTransform — zoom/pan', () => {
     const p = panTime({ t0: 0, t1: 1000, width: 200 }, 100);
     expect(p.t0).toBe(100);
     expect(p.t1).toBe(1100);
+  });
+
+  it('zoomValue resserre l’axe des valeurs autour du pivot', () => {
+    const z = zoomValue({ v0: 0, v1: 10, height: 100 }, 5, 0.5);
+    expect(z.v0).toBe(2.5);
+    expect(z.v1).toBe(7.5);
+  });
+
+  it('zoomValue garde une étendue non nulle même à l’extrême', () => {
+    const z = zoomValue({ v0: 0, v1: 10, height: 100 }, 5, 0);
+    expect(z.v1).toBeGreaterThan(z.v0);
+  });
+
+  it('panValue décale la fenêtre des valeurs', () => {
+    const p = panValue({ v0: 0, v1: 10, height: 100 }, -2);
+    expect(p.v0).toBe(-2);
+    expect(p.v1).toBe(8);
+  });
+});
+
+describe('trackPct — tête de lecture bornée à sa piste', () => {
+  it('reste dans [0, 100] quel que soit le temps', () => {
+    expect(trackPct(500, 1000)).toBe(50);
+    expect(trackPct(0, 1000)).toBe(0);
+    expect(trackPct(1000, 1000)).toBe(100);
+    // Au-delà de la durée, la tête débordait de la piste et faisait apparaître une scrollbar.
+    expect(trackPct(60_000, 1000)).toBe(100);
+    expect(trackPct(-200, 1000)).toBe(0);
+  });
+
+  it('une durée nulle ne divise pas par zéro', () => {
+    expect(trackPct(42, 0)).toBe(0);
   });
 });
 

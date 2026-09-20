@@ -3,12 +3,25 @@
 
 import { useRef, useState } from 'react';
 import type { CameraAnimV2, ChannelId, KeyRef } from '../channels/model';
-import { timeToX, valueToY, xToTime, yToValue, type TimeView, type ValueView } from './viewTransform';
+import { keyBounds, scaleFactor, scaleKeyMoves, type KeyBounds } from '../channels/scaleKeys';
+import { weightFromSpan, type TangentSide } from '../channels/tangents';
+import type { ScaleGrip } from './TransformBox';
+import {
+  snapToFrame,
+  timeToX,
+  valueToY,
+  xToTime,
+  yToValue,
+  type TimeView,
+  type ValueView,
+} from './viewTransform';
 
 /** En deçà, un rubber-band n'a pas bougé : le geste vaut un simple clic (scrub). */
 const BAND_CLICK_PX = 3;
 /** Sous cet écart temporel, la pente d'une tangente n'a plus de sens (division instable). */
 const MIN_SLOPE_DT = 1e-3;
+/** Sous cette distance au pivot, un facteur d'échelle n'a plus de sens (une frame en temps). */
+const MIN_SCALE_DT = 1;
 
 /** Origine d'un déplacement groupé : clé (canal+index) et ses valeurs de départ (baseline). */
 interface KeyOrigin {
@@ -18,8 +31,8 @@ interface KeyOrigin {
   v0: number;
 }
 
-/** Côté de tangente manipulé — distinct dès maintenant (tangentes séparées à venir). */
-export type TangentSide = 'in' | 'out';
+/** Côté de tangente manipulé — le type canonique vit avec leur sémantique (`channels/tangents`). */
+export type { TangentSide };
 
 /** Rectangle du rubber-band, en pixels locaux du SVG. */
 export interface BandRect {
@@ -44,7 +57,18 @@ export interface KeyMove {
  */
 type DragState =
   | { kind: 'keys'; baseline: CameraAnimV2; tDown: number; vDown: number; origins: KeyOrigin[] }
+  | {
+      kind: 'scale';
+      baseline: CameraAnimV2;
+      refs: readonly KeyRef[];
+      grip: ScaleGrip;
+      pivotT: number;
+      pivotV: number;
+      fromT: number;
+      fromV: number;
+    }
   | { kind: 'tangent'; side: TangentSide; channel: ChannelId; index: number }
+  | { kind: 'pan'; x: number; y: number }
   | { kind: 'band'; x0: number; y0: number };
 
 /** Une clé (canal + index) appartient-elle à la sélection ? */
@@ -57,7 +81,16 @@ export interface CurveGestureCallbacks {
   onSelect: (sel: KeyRef[]) => void;
   onBeginStroke: () => void;
   onMoveKeys: (baseline: CameraAnimV2, moves: KeyMove[]) => void;
-  onSetTangent: (channel: ChannelId, index: number, patch: { tin?: number; tout?: number }) => void;
+  /** Pente (et poids, si la clé est pondérée) d'un côté de tangente — cf. `setTangentSlope`. */
+  onSetTangent: (
+    channel: ChannelId,
+    index: number,
+    side: TangentSide,
+    slope: number,
+    weight?: number,
+  ) => void;
+  /** Pan de la vue au bouton du milieu (temps en ms, valeur en unités du canal). */
+  onPanView?: (deltaMs: number, deltaV: number) => void;
 }
 
 /**
@@ -80,10 +113,12 @@ export function useCurveGestures(
     editable: boolean;
     /** Canaux dessinés : cible du rubber-band (un canal masqué ne se sélectionne pas). */
     bandChannels: readonly ChannelId[];
+    /** Framerate du pipeline : les clés déplacées atterrissent SUR une frame (Alt pour libérer). */
+    fps: number;
   } & CurveGestureCallbacks,
 ) {
-  const { anim, timeView: tv, valueView: vv, selection, editable, bandChannels } = opts;
-  const { onScrub, onSelect, onBeginStroke, onMoveKeys, onSetTangent } = opts;
+  const { anim, timeView: tv, valueView: vv, selection, editable, bandChannels, fps } = opts;
+  const { onScrub, onSelect, onBeginStroke, onMoveKeys, onSetTangent, onPanView } = opts;
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<DragState | null>(null);
   const [band, setBand] = useState<BandRect | null>(null);
@@ -92,14 +127,49 @@ export function useCurveGestures(
   const localY = (clientY: number) => clientY - (svgRef.current?.getBoundingClientRect().top ?? 0);
   const capture = (e: React.PointerEvent) => (e.currentTarget as SVGElement).setPointerCapture(e.pointerId);
 
-  /** Tangente : pente = (v pointeur − v clé) / (t pointeur − t clé), appliquée au côté dragué. */
+  /**
+   * Tangente : pente = (v pointeur − v clé) / (t pointeur − t clé), appliquée au côté dragué. Sur
+   * une clé **pondérée**, l'éloignement du pointeur règle aussi la longueur de la poignée (poids) —
+   * c'est tout l'intérêt d'une tangente pondérée.
+   */
   const dragTangent = (d: Extract<DragState, { kind: 'tangent' }>, e: React.PointerEvent) => {
-    const key = anim.channels[d.channel]?.keys[d.index];
-    if (!key) return;
+    const keys = anim.channels[d.channel]?.keys;
+    const key = keys?.[d.index];
+    if (!keys || !key) return;
     const deltaT = xToTime(localX(e.clientX), tv) - key.t;
     if (Math.abs(deltaT) < MIN_SLOPE_DT) return;
     const slope = (yToValue(localY(e.clientY), vv) - key.v) / deltaT;
-    onSetTangent(d.channel, d.index, d.side === 'out' ? { tout: slope } : { tin: slope });
+    const weighted = (d.side === 'in' ? key.wIn : key.wOut) != null;
+    const weight = weighted ? weightFromSpan(keys, d.index, d.side, deltaT) : null;
+    onSetTangent(d.channel, d.index, d.side, slope, weight ?? undefined);
+  };
+
+  /** Temps d'une clé déplacée : sur une frame, sauf Alt (même règle que le scrub). */
+  const timeOf = (t: number, free: boolean) => (free ? Math.max(0, t) : snapToFrame(t, fps));
+
+  /**
+   * Mise à l'échelle en direct : chaque axe saisi prend le rapport des distances au pivot (l'arête
+   * opposée), les autres restent à 1. Passe par `onMoveKeys` — donc par la baseline du drag et
+   * l'undo unique du geste, comme un déplacement ordinaire.
+   */
+  const dragScale = (d: Extract<DragState, { kind: 'scale' }>, e: React.PointerEvent) => {
+    const onTime = d.grip === 'left' || d.grip === 'right' || d.grip === 'corner';
+    const onValue = d.grip === 'top' || d.grip === 'bottom' || d.grip === 'corner';
+    const toT = xToTime(localX(e.clientX), tv);
+    const toV = yToValue(localY(e.clientY), vv);
+    const scaleT = onTime ? scaleFactor(d.fromT, toT, d.pivotT, MIN_SCALE_DT) : 1;
+    const valueEpsilon = Math.abs(vv.v1 - vv.v0) * 1e-3;
+    const scaleV = onValue ? scaleFactor(d.fromV, toV, d.pivotV, valueEpsilon) : 1;
+    onMoveKeys(
+      d.baseline,
+      scaleKeyMoves(d.baseline, d.refs, {
+        pivotT: d.pivotT,
+        scaleT,
+        pivotV: d.pivotV,
+        scaleV,
+        snapTime: (t) => timeOf(t, e.altKey),
+      }),
+    );
   };
 
   /** Clés contenues dans le rectangle ; `additive` ajoute à la sélection courante (Maj). */
@@ -128,12 +198,29 @@ export function useCurveGestures(
       setBand({ x0: d.x0, y0: d.y0, x1: localX(e.clientX), y1: localY(e.clientY) });
       return;
     }
+    if (d.kind === 'pan') {
+      // La vue suit le pointeur : la fenêtre se déplace donc à l'inverse en temps.
+      const x = localX(e.clientX);
+      const y = localY(e.clientY);
+      const deltaMs = (-(x - d.x) / (tv.width || 1)) * (tv.t1 - tv.t0);
+      const deltaV = ((y - d.y) / (vv.height || 1)) * (vv.v1 - vv.v0);
+      onPanView?.(deltaMs, deltaV);
+      d.x = x;
+      d.y = y;
+      return;
+    }
+    if (d.kind === 'scale') {
+      dragScale(d, e);
+      return;
+    }
     if (d.kind === 'keys') {
       const dt = xToTime(localX(e.clientX), tv) - d.tDown;
       const dv = yToValue(localY(e.clientY), vv) - d.vDown;
+      // Snap à la frame comme le scrub et le retime de colonne — Alt libère le placement.
+      const timeAt = (t0: number) => timeOf(t0 + dt, e.altKey);
       onMoveKeys(
         d.baseline,
-        d.origins.map((o) => ({ channel: o.channel, index: o.index, t: o.t0 + dt, v: o.v0 + dv })),
+        d.origins.map((o) => ({ channel: o.channel, index: o.index, t: timeAt(o.t0), v: o.v0 + dv })),
       );
       return;
     }
@@ -154,15 +241,26 @@ export function useCurveGestures(
     setBand(null);
   };
 
-  /** Fond du graphe seulement (`target === currentTarget`) : démarre le rubber-band. */
+  /**
+   * Bouton du milieu : pan de la vue, où que soit le pointeur (usage de tous les curve editors).
+   * Bouton gauche sur le **fond** du graphe (`target === currentTarget`) : rubber-band.
+   */
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.target !== e.currentTarget) return;
+    if (e.button === 1 && onPanView) {
+      e.preventDefault();
+      drag.current = { kind: 'pan', x: localX(e.clientX), y: localY(e.clientY) };
+      capture(e);
+      return;
+    }
+    if (e.button !== 0 || e.target !== e.currentTarget) return;
     drag.current = { kind: 'band', x0: localX(e.clientX), y0: localY(e.clientY) };
     capture(e);
   };
 
   /** Clic sur une clé : met à jour la sélection (Maj = bascule) puis arme le déplacement groupé. */
   const startKeyGesture = (e: React.PointerEvent, id: ChannelId, i: number) => {
+    // Le bouton du milieu appartient au pan : il doit remonter jusqu'à la surface.
+    if (e.button !== 0) return;
     e.stopPropagation();
     const already = inSel(selection, id, i);
     let next: KeyRef[];
@@ -189,8 +287,30 @@ export function useCurveGestures(
     capture(e);
   };
 
+  /**
+   * Clic sur une poignée de la boîte de transformation : l'arête opposée devient le pivot, et le
+   * geste met la sélection à l'échelle jusqu'au relâchement.
+   */
+  const startScaleGesture = (e: React.PointerEvent, grip: ScaleGrip, bounds: KeyBounds) => {
+    if (e.button !== 0 || !editable) return;
+    e.stopPropagation();
+    onBeginStroke();
+    drag.current = {
+      kind: 'scale',
+      baseline: anim,
+      refs: [...selection],
+      grip,
+      pivotT: grip === 'left' ? bounds.tMax : bounds.tMin,
+      pivotV: grip === 'bottom' ? bounds.vMax : bounds.vMin,
+      fromT: xToTime(localX(e.clientX), tv),
+      fromV: yToValue(localY(e.clientY), vv),
+    };
+    capture(e);
+  };
+
   /** Clic sur une poignée de tangente : arme le geste côté `in` ou `out` de la clé primaire. */
   const startTangentGesture = (e: React.PointerEvent, side: TangentSide, id: ChannelId, i: number) => {
+    if (e.button !== 0) return;
     e.stopPropagation();
     onBeginStroke();
     drag.current = { kind: 'tangent', side, channel: id, index: i };
@@ -207,5 +327,8 @@ export function useCurveGestures(
     surface: { onPointerDown, onPointerMove, onPointerUp },
     startKeyGesture,
     startTangentGesture,
+    startScaleGesture,
+    /** Étendue de la sélection (boîte de transformation), `null` si elle ne désigne rien. */
+    selectionBounds: keyBounds(anim, selection),
   };
 }

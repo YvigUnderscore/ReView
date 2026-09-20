@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { z } from 'zod';
+import { cameraAnimShape, channelSchema, curveKeySchema } from './cameraAnimSchema';
 import { badRequest } from './errors';
 import { sceneOverrideSchema } from './sceneOverride';
 
@@ -102,27 +103,14 @@ const paintPart = z
   })
   .strict();
 
-const curveKey = z
-  .object({
-    t: finite.min(-3_600_000).max(3_600_000),
-    v: finite.min(-1e6).max(1e6),
-    tin: finite.optional(),
-    tout: finite.optional(),
-    mode: z.enum(['auto', 'linear', 'step', 'free']),
-  })
-  .strict();
+/** Clé de F-curve — forme partagée avec la présentation persistée (`lib/cameraAnimSchema`). */
+const curveKey = curveKeySchema({ minTime: -3_600_000, maxTime: 3_600_000, maxValue: 1e6 }).strict();
 
 /** Animation caméra « par canaux » v2 (Phase 17) jointe au commentaire en mode layout. */
 const cameraAnimPart = z
   .object({
     type: z.literal('camera-anim'),
-    version: z.literal(2),
-    loop: z.boolean(),
-    durationMs: z.number().int().min(0).max(3_600_000).optional(),
-    channels: z.record(
-      z.enum(['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'roll']),
-      z.object({ keys: z.array(curveKey).max(MAX_ANIM_KEYS) }).strict(),
-    ),
+    ...cameraAnimShape(channelSchema(curveKey, { max: MAX_ANIM_KEYS }).strict()),
   })
   .strict();
 

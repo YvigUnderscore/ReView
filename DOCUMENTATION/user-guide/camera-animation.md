@@ -2,7 +2,7 @@
 
 *Building a camera move in the Staging mode, and having it replay identically for every viewer.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-20
 
 A 3D or Gaussian splat media can carry an **animated camera**: a move authored once, stored
 with the media, and replayed the same way for everyone who opens the review — including a
@@ -75,7 +75,7 @@ clips, a track switch on its left chooses between the **camera** track described
 | Set a key | writes a full key from the current view | managers |
 | Key track | drag anywhere to scrub — **snaps to the frame**, hold `Alt` for free positioning; clicking a diamond lands exactly on that key | everyone |
 | Time field | seconds, stepping by one frame, next to the `s:ff` timecode; drag the label to scrub, `Shift` multiplies by ten | everyone |
-| **Duration** | overrides "the last key" as the playback length, and therefore the loop length — up to 600 s | managers |
+| **Duration** | overrides "the last key" as the playback length, and therefore the loop length — up to an hour, the same ceiling the server stores | managers |
 | Auto-key | arms recording | managers |
 | Loop | repeats from zero to the playback length | everyone |
 | Undo / redo | walks the animation history (100 steps) | managers |
@@ -113,29 +113,95 @@ edge — the height is remembered per media type, with the rest of your chrome p
 
 - The **time ruler** carries the timecode at major ticks and frames at minor ones, and it
   shares the **exact same horizontal scale** as the graph below, so a key column stays
-  vertically aligned with its keys. Drag the ruler to scrub, use the wheel to zoom, and the
-  **Fit** button (top left of the drawer) to frame the whole animation again.
+  vertically aligned with its keys. Drag the ruler to scrub. The graph's background grid is
+  drawn on **those same graduations**: there is one time scale in the drawer, read once, in
+  the ruler.
 - The ruler doubles as a **dopesheet**: each diamond is a key column across all channels.
   **Drag** it to retime every channel at once, **`Alt`+click** it to delete the whole column.
 - The **channel list** on the left lists the eight channels; a channel with no key is greyed
   out. Click a channel to hide or show its curve in the graph, and use the small diamond that
-  appears on hover to key **that channel alone** at the playhead.
-- The **graph** shows one curve per visible channel. The wheel zooms at the cursor and
-  **`Shift`+wheel pans** horizontally. That combination belongs to the graph: on the ruler
-  the wheel always zooms.
+  appears on hover to key **that channel alone** at the playhead. **Right-click a channel**
+  for everything that applies to the curve as a whole — tangent profile, infinity, select all
+  its keys, fit it vertically.
+- The **graph** shows one curve per visible channel.
 - **`Shift`+click** a key toggles it in and out of the selection; a marquee drag
   band-selects, and holding `Shift` adds to what is already selected.
-- With keys selected, a floating bar offers the **tangent mode** — *Auto*, *Linear*,
-  *Stepped* or *Free*. It applies to the whole selection, and free handles stay draggable on
-  the last key you selected.
-- **`Ctrl/⌘+C`** copies the selection with its modes and tangents, **`Ctrl/⌘+V`** pastes it
+- **Dragging keys snaps them to the pipeline frame**, like the scrub and the dopesheet; hold
+  `Alt` to drop a key between two frames.
+- With **two keys or more** selected, a dashed **transform box** appears around them. Drag an
+  edge to scale the selection: the opposite edge holds still, so the left and right grips
+  retime a move without reshaping it, and the top and bottom grips amplify or flatten it.
+- With keys selected, a floating bar offers the **tangent tools** — see below.
+- **`Ctrl/⌘+C`** copies the selection with its profiles and tangents, **`Ctrl/⌘+V`** pastes it
   at the playhead. The clipboard lives in your browser, so it crosses from one media to
   another.
 - With no keys yet, the drawer explains how to start and offers the **Orbit preset**.
 
+### Navigating the graph
+
+| Gesture | What it does |
+|---|---|
+| Wheel | zooms **time**, at the cursor |
+| `Ctrl/⌘`+wheel | zooms **values**, at the cursor |
+| `Shift`+wheel | pans time |
+| Middle-button drag | pans both axes at once |
+| **Fit the selection** (top left of the drawer) | frames the selected keys on both axes |
+| **Fit the view** (top left of the drawer) | returns both axes to automatic — the whole animation |
+
+Both axes are automatic until you touch them, and stay where you put them afterwards. The
+value axis used to be recomputed on every edit, which made it impossible to look closely at a
+curve while working on it.
+
 > [!NOTE]
 > A drag of a key column, of a key, or of a tangent handle is a single undo step, however
 > long the gesture lasts. `Ctrl+Z` walks back the whole move, not the last pixel of it.
+
+## Tangents, profiles and infinity
+
+A key has **two sides**: the tangent the curve arrives with, and the one it leaves with. The
+floating bar over the graph edits them for the **whole selection**, which may span several
+curves; the right-click menu of a channel row does the same for one curve entirely.
+
+The three icons on the left of the bar choose what the profile applies to: the **in** side,
+**both** sides, or the **out** side.
+
+| Profile | What the curve does |
+|---|---|
+| *Auto* | smoothed on its neighbours — the default, and what every key written by `K` starts as |
+| *Linear* | straight to the neighbouring key on that side |
+| *Flat* | leaves or arrives horizontally: the classic way to hold an extreme |
+| *Stepped* | holds the value until the next key, with no interpolation at all (out side only) |
+| *Free* | the handle you drag yourself; it starts exactly where the curve already went |
+
+Two switches sit at the right of the bar.
+
+- **Break / unify the handles.** Unified — the default — dragging one handle turns the other
+  with it, so the curve stays smooth through the key. Broken, each side moves alone, which is
+  how you get a sharp change of direction on a single key.
+- **Weighted handles.** Off, a handle only carries a direction. On, its **length** counts too:
+  pull it out to make the curve linger on its way out of the key, push it in to make it leave
+  abruptly. Turning weighting on changes nothing on its own — the handles simply become
+  stretchable.
+
+**Infinity** is what a channel does **outside** its own keys, and it is set per channel from
+the right-click menu of its row — *before the keys* and *after the keys* separately.
+
+| Infinity | Outside the keys, the curve… |
+|---|---|
+| *Constant* | holds the value of the nearest key — the default, and what channels have always done |
+| *Cycle* | repeats the curve |
+| *Cycle with offset* | repeats it, each turn starting where the last one ended |
+| *Linear* | carries on along the tangent that touches the curve |
+| *Oscillate* | plays back and forth, one round trip per cycle |
+
+A channel keyed over one second, cycled, and played on a twelve-second duration loops twelve
+times while everything else keeps moving once. Infinity is stored with the presentation and
+replayed for every viewer, like the rest of the animation.
+
+> [!NOTE]
+> Profiles, sides, weights and infinity are all saved with the move. Animations authored
+> before they existed keep their exact shape: a key that only carries the old unified mode is
+> read as having that same profile on both sides.
 
 ## The eight channels
 
@@ -278,7 +344,15 @@ it (or set it to zero) to go back to "the last key is the end".
 you are in **Staging**. In Clean up, the same keys drive the splat or model editor instead.
 
 **The `Shift`+wheel pan does not work on the ruler.** It is a graph gesture. On the ruler the
-wheel always zooms; use the **Fit** button to come back to the whole animation.
+wheel always zooms; use the **Fit the view** button to come back to the whole animation.
+
+**Dragging one handle moves the other one too.** The key's handles are unified, which keeps
+the curve smooth through it. Click **Break the handles** in the tangent bar to move each side
+on its own.
+
+**A key lands between two frames.** Key drags snap to the pipeline frame. If a key sits off
+the grid, it was dropped with `Alt` held, or imported from a file authored at another rate;
+drag it once without `Alt` to put it back on a frame.
 
 **My animation disappeared.** Either an import, the Orbit preset or a comment selection
 replaced it — all three call the same "load this animation" path, which also clears the undo

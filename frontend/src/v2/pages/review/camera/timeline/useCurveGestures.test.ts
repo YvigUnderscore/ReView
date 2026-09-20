@@ -5,6 +5,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { emptyAnim, upsertKey, type KeyRef } from '../channels/model';
+import { setWeighted } from '../channels/tangents';
 import { inSel, useCurveGestures, type TangentSide } from './useCurveGestures';
 import type { TimeView, ValueView } from './viewTransform';
 
@@ -19,36 +20,51 @@ const anim = upsertKey(upsertKey(emptyAnim(), 'px', 0, 0), 'px', 500, 50);
  * Événement pointeur minimal : le hook ne lit que ces champs. Le `svgRef` n'étant jamais attaché en
  * test, le rectangle du SVG vaut l'origine — les coordonnées client sont donc les coordonnées locales.
  */
-function ptr(x: number, y: number, opts: { shift?: boolean; onKey?: boolean } = {}) {
+function ptr(
+  x: number,
+  y: number,
+  opts: { shift?: boolean; alt?: boolean; onKey?: boolean; button?: number } = {},
+) {
   const el = { setPointerCapture: vi.fn(), releasePointerCapture: vi.fn() };
   const e = {
     clientX: x,
     clientY: y,
     pointerId: 7,
+    button: opts.button ?? 0,
     shiftKey: opts.shift ?? false,
+    altKey: opts.alt ?? false,
     currentTarget: el,
     // Un geste sur une clé/poignée a un `target` distinct du `currentTarget` du fond.
     target: opts.onKey ? {} : el,
     stopPropagation: vi.fn(),
+    preventDefault: vi.fn(),
   };
   return { e: e as unknown as ReactPointerEvent, el };
 }
 
-function setup(over: { selection?: readonly KeyRef[]; editable?: boolean } = {}) {
+/**
+ * 10 fps : la frame vaut 100 ms tout rond, soit 10 px dans cette vue calibrée (1 px = 10 ms). Le
+ * snap des clés déplacées tombe donc sur des comptes lisibles.
+ */
+const FPS = 10;
+
+function setup(over: { selection?: readonly KeyRef[]; editable?: boolean; anim?: typeof anim } = {}) {
   const cb = {
     onScrub: vi.fn(),
     onSelect: vi.fn(),
     onBeginStroke: vi.fn(),
     onMoveKeys: vi.fn(),
     onSetTangent: vi.fn(),
+    onPanView: vi.fn(),
   };
   const { result } = renderHook(() =>
     useCurveGestures({
-      anim,
+      anim: over.anim ?? anim,
       timeView: tv,
       valueView: vv,
       selection: over.selection ?? [],
       editable: over.editable ?? true,
+      fps: FPS,
       bandChannels: ['px'],
       ...cb,
     }),
@@ -166,16 +182,22 @@ describe('useCurveGestures — déplacement de clés', () => {
 });
 
 describe('useCurveGestures — tangentes', () => {
-  it.each<[TangentSide, 'tin' | 'tout']>([
-    ['out', 'tout'],
-    ['in', 'tin'],
-  ])('le côté %s écrit la pente dans %s', (side, patchKey) => {
+  it.each<TangentSide>(['out', 'in'])('le côté %s remonte sa pente, sans poids', (side) => {
     const { result, cb } = setup();
     act(() => result.current.startTangentGesture(ptr(50, 50).e, side, 'px', 1));
     expect(cb.onBeginStroke).toHaveBeenCalledTimes(1);
     // Pointeur en (60, 40) : Δt = +100 ms, Δv = +10 → pente 0,1 unité/ms.
     act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
-    expect(cb.onSetTangent).toHaveBeenCalledWith('px', 1, { [patchKey]: 0.1 });
+    expect(cb.onSetTangent).toHaveBeenCalledWith('px', 1, side, 0.1, undefined);
+  });
+
+  it('sur une clé pondérée, l’éloignement du pointeur règle aussi le poids', () => {
+    const weighted = setWeighted(anim, [{ channel: 'px', index: 1 }], true);
+    const { result, cb } = setup({ anim: weighted });
+    act(() => result.current.startTangentGesture(ptr(50, 50).e, 'in', 'px', 1));
+    // Poignée tirée à 100 ms de la clé, sur un segment voisin de 500 ms → poids 3 × 100 / 500.
+    act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
+    expect(cb.onSetTangent).toHaveBeenCalledWith('px', 1, 'in', 0.1, 0.6);
   });
 
   it('à l’aplomb de la clé, la pente n’a pas de sens : rien n’est écrit', () => {
@@ -190,5 +212,71 @@ describe('useCurveGestures — tangentes', () => {
     act(() => result.current.startTangentGesture(ptr(50, 50).e, 'out', 'px', 42));
     act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
     expect(cb.onSetTangent).not.toHaveBeenCalled();
+  });
+});
+
+describe('useCurveGestures — snap à la frame et pan', () => {
+  it('une clé déplacée atterrit SUR une frame, Alt libère le placement', () => {
+    const { result, cb } = setup();
+    act(() => result.current.startKeyGesture(ptr(50, 50).e, 'px', 1));
+    // +1,5 px = +15 ms : 515 ms tombe entre deux frames (100 ms) → 500 ms.
+    act(() => result.current.surface.onPointerMove(ptr(51.5, 50).e));
+    expect(cb.onMoveKeys).toHaveBeenLastCalledWith(anim, [{ channel: 'px', index: 1, t: 500, v: 50 }]);
+    act(() => result.current.surface.onPointerMove(ptr(51.5, 50, { alt: true }).e));
+    expect(cb.onMoveKeys).toHaveBeenLastCalledWith(anim, [{ channel: 'px', index: 1, t: 515, v: 50 }]);
+  });
+
+  it('le bouton du milieu déplace la vue au lieu de sélectionner', () => {
+    const { result, cb } = setup();
+    const down = ptr(50, 50, { button: 1 });
+    act(() => result.current.surface.onPointerDown(down.e));
+    expect(down.el.setPointerCapture).toHaveBeenCalledWith(7);
+    // +10 px en X = fenêtre décalée de −100 ms ; −10 px en Y = −10 en valeur.
+    act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
+    expect(cb.onPanView).toHaveBeenCalledWith(-100, -10);
+    expect(result.current.band).toBeNull();
+    expect(cb.onSelect).not.toHaveBeenCalled();
+  });
+
+  it('le bouton du milieu sur une clé n’arme pas de déplacement', () => {
+    const { result, cb } = setup();
+    act(() => result.current.startKeyGesture(ptr(50, 50, { button: 1 }).e, 'px', 1));
+    expect(cb.onSelect).not.toHaveBeenCalled();
+    expect(cb.onBeginStroke).not.toHaveBeenCalled();
+  });
+});
+
+describe('useCurveGestures — boîte de transformation', () => {
+  const selection: KeyRef[] = [
+    { channel: 'px', index: 0 },
+    { channel: 'px', index: 1 },
+  ];
+
+  it('la boîte suit l’étendue de la sélection', () => {
+    const { result } = setup({ selection });
+    expect(result.current.selectionBounds).toEqual({ tMin: 0, tMax: 500, vMin: 0, vMax: 50 });
+    expect(setup().result.current.selectionBounds).toBeNull();
+  });
+
+  it('tirer l’arête droite met les clés à l’échelle, l’arête gauche servant de pivot', () => {
+    const { result, cb } = setup({ selection });
+    const bounds = { tMin: 0, tMax: 500, vMin: 0, vMax: 50 };
+    act(() => result.current.startScaleGesture(ptr(50, 50).e, 'right', bounds));
+    expect(cb.onBeginStroke).toHaveBeenCalledTimes(1);
+    // Pointeur de 500 ms à 600 ms, pivot à 0 : facteur 1,2 sur le temps, valeurs intactes.
+    act(() => result.current.surface.onPointerMove(ptr(60, 50).e));
+    expect(cb.onMoveKeys).toHaveBeenLastCalledWith(anim, [
+      { channel: 'px', index: 0, t: 0, v: 0 },
+      { channel: 'px', index: 1, t: 600, v: 50 },
+    ]);
+  });
+
+  it('en lecture seule, la boîte ne met rien à l’échelle', () => {
+    const { result, cb } = setup({ selection, editable: false });
+    const bounds = { tMin: 0, tMax: 500, vMin: 0, vMax: 50 };
+    act(() => result.current.startScaleGesture(ptr(50, 50).e, 'right', bounds));
+    act(() => result.current.surface.onPointerMove(ptr(60, 50).e));
+    expect(cb.onBeginStroke).not.toHaveBeenCalled();
+    expect(cb.onMoveKeys).not.toHaveBeenCalled();
   });
 });

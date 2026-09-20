@@ -166,13 +166,13 @@ export function usePresentation(
     setReveal(null);
   };
 
-  /** Preset orbite : un tour complet autour de la cible courante, en boucle. `radiusScale` règle la
-   *  distance ; avertit avant d'écraser une animation existante (Phase 27). */
-  const applyOrbitPreset = (radiusScale = 1) => {
+  /** Preset orbite : un tour complet autour de la cible courante, en boucle — à la distance de la
+   *  vue. Avertit avant d'écraser une animation existante (Phase 27). */
+  const applyOrbitPreset = () => {
     const view = captureCamera();
     if (!view) return;
     const run = () => {
-      anim.setAnim(orbitPresetV2(view, { radiusScale }));
+      anim.setAnim(orbitPresetV2(view));
       anim.play();
     };
     if (anim.hasAnimation) confirmReplaceAnim(run);

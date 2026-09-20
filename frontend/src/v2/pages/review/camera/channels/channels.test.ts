@@ -20,6 +20,7 @@ import {
   upsertPoseAt,
 } from './model';
 import { evalChannel, sampleAnimV2 } from './hermite';
+import { setTangentSlope, setWeighted } from './tangents';
 
 const base: SplatCamera = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } };
 const pose = (x: number): SplatCamera => ({ position: { x, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } });
@@ -131,6 +132,33 @@ describe('hermite — échantillonnage', () => {
     let a = upsertKey(emptyAnim(true), 'px', 0, 0, 'linear');
     a = upsertKey(a, 'px', 1000, 10, 'linear');
     expect(sampleAnimV2(a, 1500, base).position.x).toBeCloseTo(5); // 1500 % 1000 = 500
+  });
+});
+
+describe('hermite — tangentes pondérées', () => {
+  /** Rampe lissée en trois clés : de quoi comparer le chemin pondéré et le chemin Hermite. */
+  const curve = () => {
+    let a = upsertKey(emptyAnim(), 'px', 0, 0);
+    a = upsertKey(a, 'px', 1000, 10);
+    return upsertKey(a, 'px', 2000, 30);
+  };
+
+  it('un poids de 1 reproduit l’Hermite (un Hermite EST le Bézier de poids 1)', () => {
+    const plain = curve();
+    const weighted = setWeighted(plain, [{ channel: 'px', index: 0 }], true);
+    for (const t of [100, 400, 900]) {
+      expect(evalChannel(weighted.channels.px, t, 0)).toBeCloseTo(evalChannel(plain.channels.px, t, 0), 6);
+    }
+  });
+
+  it('un poids allongé change la forme mais garde les clés exactes', () => {
+    let a = setWeighted(curve(), [{ channel: 'px', index: 0 }], true);
+    a = setTangentSlope(a, 'px', 0, 'out', 0.02, 1.5);
+    expect(a.channels.px?.keys[0].wOut).toBeCloseTo(1.5, 9);
+    // Les clés restent sur la courbe, et le segment s'écarte du non pondéré.
+    expect(evalChannel(a.channels.px, 0, 0)).toBeCloseTo(0, 6);
+    expect(evalChannel(a.channels.px, 1000, 0)).toBeCloseTo(10, 6);
+    expect(evalChannel(a.channels.px, 500, 0)).not.toBeCloseTo(evalChannel(curve().channels.px, 500, 0), 3);
   });
 });
 

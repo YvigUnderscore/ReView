@@ -16,6 +16,8 @@ const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
+import { cameraAnimShape, channelSchema, curveKeySchema } from '../lib/cameraAnimSchema';
+
 const finite = z.number().finite();
 const vec3 = z.tuple([finite, finite, finite]);
 const quat = z.tuple([finite, finite, finite, finite]);
@@ -162,29 +164,16 @@ router.patch(
             .optional(),
           // Animation caméra « par canaux » (Phase 17, v2) : F-curves éditables (position/cible/
           // focale/tilt), tangentes Hermite. Remplace le format v1 (keyframes + easing).
+          // Forme partagée avec le payload de commentaire (`lib/cameraAnimSchema`).
           cameraAnim: z
-            .object({
-              version: z.literal(2),
-              loop: z.boolean(),
-              durationMs: z.number().int().min(0).max(3600000).optional(),
-              channels: z.record(
-                z.enum(['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'roll']),
-                z.object({
-                  keys: z
-                    .array(
-                      z.object({
-                        t: finite.min(0).max(3600000), // ms depuis le début
-                        v: finite,
-                        tin: finite.optional(),
-                        tout: finite.optional(),
-                        mode: z.enum(['auto', 'linear', 'step', 'free']),
-                      }),
-                    )
-                    .min(1)
-                    .max(256),
+            .object(
+              cameraAnimShape(
+                channelSchema(curveKeySchema({ minTime: 0, maxTime: 3_600_000 }), {
+                  min: 1,
+                  max: 256,
                 }),
               ),
-            })
+            )
             .optional(),
         })
         .nullable(),

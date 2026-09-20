@@ -43,18 +43,18 @@ export default function CameraPanel({
     focusPick: boolean;
     onToggleFocusPick: () => void;
   };
-  /** Mode layout : vue de la caméra dans une fenêtre PiP, preset d'animation, remise à zéro. */
+  /**
+   * Atelier caméra (« Mise en scène ») : on sort de la caméra du plan pour la régler de
+   * l'extérieur, sa vue restant dans la fenêtre PiP. L'interrupteur **pilote le mode du chrome**
+   * dans les deux viewers — c'est la seule entrée du mode, et donc la seule source de vérité du
+   * « dans / hors caméra » (modèle : `viewer/useLayoutMode`).
+   */
   layout?: {
     active: boolean;
     onToggle: () => void;
-    /**
-     * Libellé et infobulle de l'interrupteur, quand il vaut plus que « vue PiP ». Le viewer 3D
-     * y passe le nom du mode « Mise en scène » : depuis la Phase 50, cet interrupteur EST son
-     * entrée (le segment a quitté la bascule), et il arme donc bien plus que la fenêtre PiP.
-     * Le splat, qui garde son segment, laisse le libellé par défaut.
-     */
-    label?: string;
-    hint?: string;
+    /** Libellé et infobulle : le nom du mode armé, pas celui de la fenêtre qu'il ouvre. */
+    label: string;
+    hint: string;
     /** Preset orbite : un tour complet autour de la cible courante (gestionnaire). */
     onOrbit?: () => void;
     /** Efface la présentation persistée (confirmation en amont — gestionnaire). */
@@ -127,7 +127,7 @@ export default function CameraPanel({
           <span className="font-mono text-xs">{aspectLabel}</span>
         </Row>
         {layout && (
-          <Row label={layout.label ?? t('viewer.pip')} hint={layout.hint ?? t('review.camera.exitToPip')}>
+          <Row label={layout.label} hint={layout.hint}>
             <Switch checked={layout.active} onCheckedChange={layout.onToggle} label={t('viewer.pip.hint')} />
           </Row>
         )}

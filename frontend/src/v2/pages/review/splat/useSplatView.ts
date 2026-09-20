@@ -58,8 +58,10 @@ export function useSplatView({
     [splat],
   );
 
-  // Mode Mise en scène = atelier caméra : entrer dans le mode active le layout (PiP +
-  // caméra-objet), en sortir le désactive. L'interrupteur du panneau Caméra reste en override.
+  // Mode Mise en scène = atelier caméra : entrer dans le mode sort de la caméra du plan (PiP +
+  // caméra-objet), en sortir y rentre. **Seule écriture** du mode layout côté splat depuis la
+  // Phase 50 : l'interrupteur du panneau Caméra pilote `state.mode`, comme en 3D, au lieu
+  // d'appeler `setLayoutMode` en parallèle (deux sources de vérité qui pouvaient diverger).
   const { setLayoutMode } = pres.layout;
   useEffect(() => {
     setLayoutMode(state.mode === 'stage');

@@ -85,19 +85,16 @@ export function useModel3DCamera(
     }
   }, [ready, pres, restoreCamera, setFov, setRoll, setAnim, play]);
 
-  const applyOrbitPreset = useCallback(
-    (radiusScale = 1) => {
-      const view = model3d.captureCamera();
-      if (!view) return;
-      const run = () => {
-        anim.setAnim(orbitPresetV2(view, { radiusScale }));
-        anim.play();
-      };
-      if (anim.hasAnimation) confirmReplaceAnim(run);
-      else run();
-    },
-    [model3d, anim],
-  );
+  const applyOrbitPreset = useCallback(() => {
+    const view = model3d.captureCamera();
+    if (!view) return;
+    const run = () => {
+      anim.setAnim(orbitPresetV2(view));
+      anim.play();
+    };
+    if (anim.hasAnimation) confirmReplaceAnim(run);
+    else run();
+  }, [model3d, anim]);
 
   const save = useCallback(async () => {
     const view = model3d.captureCamera();

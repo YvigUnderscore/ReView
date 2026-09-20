@@ -16,12 +16,21 @@ import {
   moveKeysBatch,
   poseToChannelValues,
   setAnimDuration,
-  setKeyTangent,
+  setChannelExtrapolation,
   upsertKey,
   upsertPoseAt,
   type CameraAnimV2,
   type ChannelId,
+  type Extrapolation,
+  type TangentType,
 } from './channels/model';
+import {
+  channelRefs,
+  setTangentSlope,
+  setTangentType,
+  type TangentSide,
+  type TangentTarget,
+} from './channels/tangents';
 import { evalChannel } from './channels/hermite';
 import { sampleAnimV2 } from './channels/hermite';
 import { useCameraAutoKey } from './useCameraAutoKey';
@@ -83,7 +92,9 @@ export function useCameraAnim(controller: CameraController) {
     selection,
     setSelection,
     clearSelection,
-    setSelectionMode,
+    applyTangentType,
+    setSelectionBroken,
+    setSelectionWeighted,
     removeSelection,
     copySelection,
     paste,
@@ -102,9 +113,14 @@ export function useCameraAnim(controller: CameraController) {
       setAnimState(moveKeysBatch(baseline, moves)),
     [],
   );
+  /**
+   * Pente (et poids) d'un côté de tangente, en direct pendant le drag d'une poignée. Le côté
+   * opposé est matérialisé par `setTangentSlope` : sans cela, tirer UNE poignée faisait lire
+   * l'autre comme nulle et aplatissait la courbe.
+   */
   const strokeSetTangent = useCallback(
-    (channel: ChannelId, index: number, patch: { tin?: number; tout?: number }) =>
-      setAnimState(setKeyTangent(animRef.current, channel, index, patch)),
+    (channel: ChannelId, index: number, side: TangentSide, slope: number, weight?: number) =>
+      setAnimState(setTangentSlope(animRef.current, channel, index, side, slope, weight)),
     [],
   );
   /** Écrit/écrase plusieurs canaux au temps `t` (drag de la caméra-objet — auto-key). Live. */
@@ -263,6 +279,26 @@ export function useCameraAnim(controller: CameraController) {
     [commit],
   );
 
+  /** Applique un profil de tangente à **toute** une courbe (clic droit sur la ligne du canal). */
+  const applyChannelTangent = useCallback(
+    (channel: ChannelId, type: TangentType, target?: TangentTarget) =>
+      commit(setTangentType(animRef.current, channelRefs(animRef.current, channel), type, target)),
+    [commit],
+  );
+
+  /** Extrapolation d'un canal hors de ses clés (pré/post-infinity) — persistée avec l'animation. */
+  const setExtrapolation = useCallback(
+    (channel: ChannelId, patch: { pre?: Extrapolation; post?: Extrapolation }) =>
+      commit(setChannelExtrapolation(animRef.current, channel, patch)),
+    [commit],
+  );
+
+  /** Sélectionne toutes les clés d'une courbe (puis les outils de tangente s'y appliquent). */
+  const selectChannel = useCallback(
+    (channel: ChannelId) => setSelection(channelRefs(animRef.current, channel)),
+    [setSelection],
+  );
+
   // Auto-key (Phase 27) : tout geste caméra pose une clé de la vue au temps de lecture.
   useCameraAutoKey(autoKey, getDom, insertKeyAtView);
 
@@ -291,7 +327,12 @@ export function useCameraAnim(controller: CameraController) {
     insertChannelKeyAtView,
     strokeMoveColumn,
     removeColumn,
-    setSelectionMode,
+    applyTangentType,
+    setSelectionBroken,
+    setSelectionWeighted,
+    applyChannelTangent,
+    setExtrapolation,
+    selectChannel,
     removeSelection,
     copySelection,
     paste,

@@ -12,6 +12,7 @@ import ExportPanel, { CaptureViewButton } from '../panels/ExportPanel';
 import InfoPanel, { type InfoRow } from '../panels/InfoPanel';
 import ScenePanel from '../panels/ScenePanel';
 import { focalToFov, fovToFocal } from '../camera/focal';
+import { shouldKeyLens } from '../camera/shotCamera';
 import { evalChannel } from '../camera/channels/hermite';
 import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
@@ -59,6 +60,7 @@ export default function SplatPanels({
   grid,
   culling,
   exportEdits,
+  staging,
   onFrame,
   onHome,
   onImportAnim,
@@ -76,6 +78,8 @@ export default function SplatPanels({
   grid: { visible: boolean; toggle: () => void };
   culling: { off: boolean; onOff: (off: boolean) => void };
   exportEdits: ExportEdits;
+  /** Atelier caméra : l'interrupteur du panneau pilote le **mode** du chrome, seule entrée. */
+  staging: { active: boolean; toggle: () => void };
   onFrame: () => void;
   onHome: () => void;
   onImportAnim: (file: File) => void;
@@ -106,12 +110,12 @@ export default function SplatPanels({
         onFocalMm={(mm) => {
           const fov = focalToFov(Math.min(Math.max(mm, 7), 400));
           pres.rig.setFov(fov);
-          if (anim.autoKey) anim.addKey('fov', anim.timeMs, fov);
+          if (shouldKeyLens(staging.active, anim.autoKey)) anim.addKey('fov', anim.timeMs, fov);
         }}
         tiltDeg={Math.round(rollNow / RAD)}
         onTiltDeg={(deg) => {
           pres.rig.setRoll(deg * RAD);
-          if (anim.autoKey) anim.addKey('roll', anim.timeMs, deg * RAD);
+          if (shouldKeyLens(staging.active, anim.autoKey)) anim.addKey('roll', anim.timeMs, deg * RAD);
         }}
         dof={{
           aperture: pres.rig.aperture,
@@ -120,8 +124,10 @@ export default function SplatPanels({
           onToggleFocusPick: pres.rig.toggleFocusPick,
         }}
         layout={{
-          active: pres.layout.layoutMode,
-          onToggle: () => pres.layout.setLayoutMode(!pres.layout.layoutMode),
+          active: staging.active,
+          onToggle: staging.toggle,
+          label: t('mode.stage'),
+          hint: t('mode.stage.hint'),
           onOrbit: canPresent ? () => pres.applyOrbitPreset() : undefined,
           onClear:
             canPresent && data.splatPresentation

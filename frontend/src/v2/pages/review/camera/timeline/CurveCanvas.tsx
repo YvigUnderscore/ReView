@@ -3,12 +3,13 @@
 
 import type { CameraAnimV2, ChannelId, KeyRef } from '../channels/model';
 import { evalChannel } from '../channels/hermite';
+import type { TangentSide } from '../channels/tangents';
 import { CHANNEL_META, channelColor } from './channelMeta';
 import CurveGrid from './CurveGrid';
+import TangentHandles from './TangentHandles';
+import TransformBox from './TransformBox';
 import { inSel, useCurveGestures, type KeyMove } from './useCurveGestures';
-import { timeToX, valueToY, xToTime, type TimeView, type ValueView } from './viewTransform';
-
-const HANDLE_PX = 34; // longueur écran des poignées de tangente
+import { timeToX, valueToY, xToTime, yToValue, type TimeView, type ValueView } from './viewTransform';
 
 /** Points d'une F-curve échantillonnée sur la fenêtre visible (polyline SVG). */
 function curvePath(anim: CameraAnimV2, id: ChannelId, tv: TimeView, vv: ValueView): string {
@@ -25,10 +26,11 @@ function curvePath(anim: CameraAnimV2, id: ChannelId, tv: TimeView, vv: ValueVie
 
 /**
  * Graph editor F-curves (Phase 17/27) : grille de fond, une courbe par canal visible, ses clés en
- * points **déplaçables** (multi-sélection : rubber-band + Maj pour ajouter, déplacement groupé) et,
- * pour la clé primaire, des **poignées de tangente** draggables. Double-clic sur une courbe = ajouter
- * une clé ; molette = zoom temporel ; guide vertical = durée réglable. En lecture seule, l'édition
- * est inerte (playhead + affichage).
+ * points **déplaçables** (multi-sélection : rubber-band + Maj pour ajouter, déplacement groupé,
+ * snap à la frame) et, pour la clé primaire, des **poignées de tangente** draggables. Double-clic
+ * sur une courbe = ajouter une clé. Navigation : molette = zoom temporel, **Ctrl+molette = zoom
+ * vertical**, Maj+molette = pan temporel, **bouton du milieu = pan des deux axes**. Guide vertical =
+ * durée réglable. En lecture seule, l'édition est inerte (playhead + affichage).
  *
  * Ce fichier ne porte que le **rendu et la composition** : les gestes (déplacement, rubber-band,
  * tangentes) vivent dans `useCurveGestures`.
@@ -44,8 +46,11 @@ export default function CurveCanvas({
   width,
   height,
   guideT,
+  fps,
   onZoom,
+  onZoomValue,
   onPan,
+  onPanView,
   onScrub,
   onSelect,
   onBeginStroke,
@@ -64,14 +69,26 @@ export default function CurveCanvas({
   height: number;
   /** Guide de durée de lecture (ms) — trait vertical repère (Phase 27). */
   guideT?: number;
+  /** Framerate du pipeline : graduations de la grille et snap des clés déplacées. */
+  fps: number;
   onZoom: (pivotT: number, factor: number) => void;
+  /** Zoom vertical (Ctrl+molette) au pivot de valeur. */
+  onZoomValue?: (pivotV: number, factor: number) => void;
   /** Pan horizontal (Maj+molette) — décale la fenêtre temporelle en ms. */
   onPan?: (deltaMs: number) => void;
+  /** Pan des deux axes (bouton du milieu). */
+  onPanView?: (deltaMs: number, deltaV: number) => void;
   onScrub: (t: number) => void;
   onSelect: (sel: KeyRef[]) => void;
   onBeginStroke: () => void;
   onMoveKeys: (baseline: CameraAnimV2, moves: KeyMove[]) => void;
-  onSetTangent: (channel: ChannelId, index: number, patch: { tin?: number; tout?: number }) => void;
+  onSetTangent: (
+    channel: ChannelId,
+    index: number,
+    side: TangentSide,
+    slope: number,
+    weight?: number,
+  ) => void;
   onAddKey: (channel: ChannelId, t: number, v: number) => void;
 }) {
   const tv: TimeView = { ...timeView, width };
@@ -80,18 +97,30 @@ export default function CurveCanvas({
 
   const visibleChannels = CHANNEL_META.filter((c) => visible.has(c.id) && anim.channels[c.id]?.keys.length);
 
-  const { svgRef, band, localX, surface, startKeyGesture, startTangentGesture } = useCurveGestures({
+  const {
+    svgRef,
+    band,
+    localX,
+    localY,
+    surface,
+    startKeyGesture,
+    startTangentGesture,
+    startScaleGesture,
+    selectionBounds,
+  } = useCurveGestures({
     anim,
     timeView: tv,
     valueView: vv,
     selection,
     editable,
+    fps,
     bandChannels: visibleChannels.map((c) => c.id),
     onScrub,
     onSelect,
     onBeginStroke,
     onMoveKeys,
     onSetTangent,
+    onPanView,
   });
 
   return (
@@ -102,14 +131,20 @@ export default function CurveCanvas({
       className="min-w-0 flex-1 touch-none select-none"
       {...surface}
       onWheel={(e) => {
+        const factor = e.deltaY < 0 ? 0.85 : 1.18;
+        // Ctrl/Cmd+molette = zoom de l'axe des VALEURS (l'axe du temps garde la molette nue).
+        if (onZoomValue && (e.ctrlKey || e.metaKey)) {
+          onZoomValue(yToValue(localY(e.clientY), vv), factor);
+          return;
+        }
         // Maj+molette (ou molette horizontale de trackpad) = pan temporel ; sinon zoom au pivot.
         const horiz = e.shiftKey ? e.deltaY : e.deltaX;
         if (onPan && horiz !== 0 && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)))
           onPan((horiz / (tv.width || 1)) * (tv.t1 - tv.t0));
-        else onZoom(xToTime(localX(e.clientX), tv), e.deltaY < 0 ? 0.85 : 1.18);
+        else onZoom(xToTime(localX(e.clientX), tv), factor);
       }}
     >
-      <CurveGrid timeView={timeView} valueView={valueView} width={width} height={height} />
+      <CurveGrid timeView={timeView} valueView={valueView} width={width} height={height} fps={fps} />
 
       {guideT != null && guideT > 0 && (
         <line
@@ -158,37 +193,14 @@ export default function CurveCanvas({
               return (
                 <g key={i}>
                   {isPrimary && editable && (
-                    <>
-                      {(['in', 'out'] as const).map((side) => {
-                        const dir = side === 'out' ? 1 : -1;
-                        const slope = side === 'out' ? (k.tout ?? 0) : (k.tin ?? 0);
-                        const hx = kx + dir * HANDLE_PX;
-                        const hy = valueToY(k.v + slope * (xToTime(hx, tv) - k.t), vv);
-                        return (
-                          <g key={side}>
-                            <line
-                              x1={kx}
-                              y1={ky}
-                              x2={hx}
-                              y2={hy}
-                              stroke={color}
-                              strokeWidth={1}
-                              opacity={0.6}
-                            />
-                            <circle
-                              cx={hx}
-                              cy={hy}
-                              r={3.5}
-                              fill="hsl(var(--card))"
-                              stroke={color}
-                              strokeWidth={1.5}
-                              style={{ cursor: 'move' }}
-                              onPointerDown={(e) => startTangentGesture(e, side, c.id, i)}
-                            />
-                          </g>
-                        );
-                      })}
-                    </>
+                    <TangentHandles
+                      keys={keys}
+                      index={i}
+                      color={color}
+                      timeView={tv}
+                      valueView={vv}
+                      onStart={(e, side) => startTangentGesture(e, side, c.id, i)}
+                    />
                   )}
                   <circle
                     cx={kx}
@@ -206,6 +218,16 @@ export default function CurveCanvas({
           </g>
         );
       })}
+
+      {/* Boîte de transformation : deux clés au moins, sinon il n'y a rien à mettre à l'échelle. */}
+      {editable && selection.length > 1 && selectionBounds && (
+        <TransformBox
+          bounds={selectionBounds}
+          timeView={tv}
+          valueView={vv}
+          onGrip={(e, grip) => startScaleGesture(e, grip, selectionBounds)}
+        />
+      )}
 
       {band && (
         <rect

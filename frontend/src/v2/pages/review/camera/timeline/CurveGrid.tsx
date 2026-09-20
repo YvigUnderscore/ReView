@@ -2,27 +2,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { niceTicks } from './gridTicks';
-import { timeToX, valueToY, type TimeView, type ValueView } from './viewTransform';
+import { rulerTicks, timeToX, valueToY, type TimeView, type ValueView } from './viewTransform';
 
 /**
- * Grille de fond du graph editor (Phase 27) : lignes verticales (temps, libellé en secondes) et
- * horizontales (valeur), graduations « rondes » (`niceTicks`). Couleurs = tokens du thème. Purement
+ * Grille de fond du graph editor (Phase 27) : lignes verticales (temps) et horizontales (valeur),
+ * graduations « rondes » (`niceTicks`) pour les valeurs. Couleurs = tokens du thème. Purement
  * visuelle (aucune interaction) — rendue sous les courbes.
+ *
+ * Les verticales sont **celles de la règle de temps** (`rulerTicks`), et ne portent aucun libellé :
+ * le tiroir affichait deux systèmes de graduations temporelles concurrents — timecode `s:ff` dans
+ * la règle, secondes décimales dans le graphe — qui ne tombaient jamais aux mêmes endroits. Le
+ * timecode reste lu une seule fois, dans la règle, juste au-dessus.
  */
 export default function CurveGrid({
   timeView,
   valueView,
   width,
   height,
+  fps,
 }: {
   timeView: TimeView;
   valueView: ValueView;
   width: number;
   height: number;
+  /** Framerate du pipeline — la grille tombe sur les mêmes graduations que la règle. */
+  fps: number;
 }) {
   const tv: TimeView = { ...timeView, width };
   const vv: ValueView = { ...valueView, height };
-  const timeTicks = niceTicks(tv.t0, tv.t1, 8);
+  const ticks = rulerTicks(tv, fps);
   const valueTicks = niceTicks(vv.v0, vv.v1, 5);
   return (
     <g pointerEvents="none">
@@ -45,25 +53,30 @@ export default function CurveGrid({
           </g>
         );
       })}
-      {timeTicks.map((t) => {
-        const x = timeToX(t, tv);
-        return (
-          <g key={`t${t}`}>
-            <line
-              x1={x}
-              x2={x}
-              y1={0}
-              y2={height}
-              stroke="hsl(var(--border))"
-              strokeWidth={0.5}
-              opacity={0.5}
-            />
-            <text x={x + 2} y={height - 2} fontSize={9} fill="hsl(var(--muted-foreground))">
-              {(t / 1000).toFixed(t % 1000 === 0 ? 0 : 1)}s
-            </text>
-          </g>
-        );
-      })}
+      {ticks.minor.map((t) => (
+        <line
+          key={`n${t}`}
+          x1={timeToX(t, tv)}
+          x2={timeToX(t, tv)}
+          y1={0}
+          y2={height}
+          stroke="hsl(var(--border))"
+          strokeWidth={0.5}
+          opacity={0.22}
+        />
+      ))}
+      {ticks.major.map(({ t }) => (
+        <line
+          key={`t${t}`}
+          x1={timeToX(t, tv)}
+          x2={timeToX(t, tv)}
+          y1={0}
+          y2={height}
+          stroke="hsl(var(--border))"
+          strokeWidth={0.5}
+          opacity={0.55}
+        />
+      ))}
     </g>
   );
 }

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteKeys, setKeyMode, type CameraAnimV2, type KeyRef, type TangentMode } from './channels/model';
+import { deleteKeys, type CameraAnimV2, type KeyRef, type TangentType } from './channels/model';
+import { setBroken, setTangentType, setWeighted, type TangentTarget } from './channels/tangents';
 import {
   copyKeys,
   loadClipboard,
@@ -42,14 +43,36 @@ export function useCurveSelection(opts: {
   /** Vide la sélection — après un remplacement d'animation, les index ne désignent plus rien. */
   const clearSelection = useCallback(() => setSelectionState([]), []);
 
-  /** Applique un mode de tangente à toutes les clés sélectionnées (segmented du graph editor). */
-  const setSelectionMode = useCallback(
-    (mode: TangentMode) => {
+  /**
+   * Applique un profil de tangente aux clés sélectionnées — sur les deux côtés par défaut, sur un
+   * seul côté si on le demande (la clé se brise alors d'elle-même). La sélection pouvant s'étendre
+   * à plusieurs canaux, c'est aussi le chemin « appliquer à tout un ensemble de courbes ».
+   */
+  const applyTangentType = useCallback(
+    (type: TangentType, target: TangentTarget = 'both') => {
       const sels = selectionRef.current;
       if (!sels.length) return;
-      let next = animRef.current;
-      for (const s of sels) next = setKeyMode(next, s.channel, s.index, mode);
-      commit(next);
+      commit(setTangentType(animRef.current, sels, type, target));
+    },
+    [animRef, commit],
+  );
+
+  /** Brise (poignées indépendantes) ou unifie les tangentes des clés sélectionnées. */
+  const setSelectionBroken = useCallback(
+    (broken: boolean) => {
+      const sels = selectionRef.current;
+      if (!sels.length) return;
+      commit(setBroken(animRef.current, sels, broken));
+    },
+    [animRef, commit],
+  );
+
+  /** Active/coupe la pondération des tangentes des clés sélectionnées (longueur de poignée). */
+  const setSelectionWeighted = useCallback(
+    (weighted: boolean) => {
+      const sels = selectionRef.current;
+      if (!sels.length) return;
+      commit(setWeighted(animRef.current, sels, weighted));
     },
     [animRef, commit],
   );
@@ -88,7 +111,9 @@ export function useCurveSelection(opts: {
     selection,
     setSelection,
     clearSelection,
-    setSelectionMode,
+    applyTangentType,
+    setSelectionBroken,
+    setSelectionWeighted,
     removeSelection,
     copySelection,
     paste,

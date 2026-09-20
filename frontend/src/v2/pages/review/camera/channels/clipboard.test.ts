@@ -77,4 +77,45 @@ describe('clipboard — copier/coller de clés (40.E)', () => {
     expect(parseClipboard({ channels: {} })).toBeNull();
     expect(parseClipboard({ channels: { px: [{ t: 'x', v: 1, mode: 'auto' }] } })).toBeNull();
   });
+
+  it('le relecteur garde les côtés de tangente, la brisure et les poids', () => {
+    // Le collage en mémoire les gardait déjà : un aller-retour par le stockage rendait sinon une
+    // clé appauvrie, donc une courbe différente d'un média à l'autre.
+    const rich = {
+      channels: {
+        px: [
+          {
+            t: 0,
+            v: 1,
+            mode: 'free',
+            modeIn: 'flat',
+            modeOut: 'free',
+            broken: true,
+            tin: 0,
+            tout: 0.4,
+            wIn: 1,
+            wOut: 9,
+          },
+        ],
+      },
+    };
+    const parsed = parseClipboard(rich);
+    expect(parsed?.channels.px?.[0]).toEqual({
+      t: 0,
+      v: 1,
+      mode: 'free',
+      modeIn: 'flat',
+      modeOut: 'free',
+      broken: true,
+      tin: 0,
+      tout: 0.4,
+      wIn: 1,
+      // Poids hors bornes : ramené au maximum lisible plutôt que recopié tel quel.
+      wOut: 1.5,
+    });
+    expect(
+      parseClipboard({ channels: { px: [{ t: 0, v: 1, mode: 'free', modeIn: 'wobble' }] } })?.channels.px?.[0]
+        .modeIn,
+    ).toBeUndefined();
+  });
 });

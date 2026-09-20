@@ -247,6 +247,11 @@
   display: flex;
   align-items: center;
   cursor: pointer;
+  /* La piste ne débordera plus sur le transport, qui défile en overflow-x : une tête de lecture
+     hors bornes y faisait apparaître une scrollbar horizontale. La marge de rognage laisse
+     passer la moitié d'un losange de clé aux deux extrémités, elle, voulue. */
+  overflow-x: clip;
+  overflow-clip-margin: 0.3rem;
 }
 .rv-track__rail {
   position: absolute;

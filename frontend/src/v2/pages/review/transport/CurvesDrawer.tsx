@@ -2,58 +2,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Maximize2 } from 'lucide-react';
+import { Crosshair, Maximize2 } from 'lucide-react';
 import { isEditable } from '../../../lib/shortcuts';
-import { CHANNEL_IDS, type ChannelId, type TangentMode } from '../camera/channels/model';
+import { CHANNEL_IDS, type ChannelId } from '../camera/channels/model';
 import type { CameraAnimState } from '../camera/useCameraAnim';
 import ChannelList from '../camera/timeline/ChannelList';
 import CurveCanvas from '../camera/timeline/CurveCanvas';
+import CurveTools from '../camera/timeline/CurveTools';
 import TimeRuler, { RULER_HEIGHT } from '../camera/timeline/TimeRuler';
-import { fitValueRange, panTime, zoomTime, type TimeView } from '../camera/timeline/viewTransform';
+import { useCurveView } from '../camera/timeline/useCurveView';
 import { DRAWER_DEFAULT_H, DRAWER_MAX_H, DRAWER_MIN_H } from '../chrome/chromeState';
 import { useT } from '../../../i18n';
-
-/** Modes de tangente applicables à la sélection de clés (segmented flottant du graph editor). */
-function TangentModeBar({
-  current,
-  onMode,
-}: {
-  current: TangentMode | undefined;
-  onMode: (m: TangentMode) => void;
-}) {
-  const t = useT();
-  const labels: Record<TangentMode, string> = {
-    auto: t('camera.tangent.auto'),
-    linear: t('camera.tangent.linear'),
-    step: t('camera.tangent.step'),
-    free: t('camera.tangent.free'),
-  };
-  return (
-    <div className="absolute top-1 right-2 z-10 flex overflow-hidden rounded border border-border bg-card/90 text-2xs">
-      {(['auto', 'linear', 'step', 'free'] as const).map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => onMode(m)}
-          className={`px-1.5 py-0.5 transition-colors ${
-            current === m
-              ? 'bg-primary/15 text-primary'
-              : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
-          }`}
-        >
-          {labels[m]}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /**
  * Tiroir « Courbes » ancré sous le transport : le séquenceur de l'animation caméra — règle
  * temporelle graduée (scrub au drag, timecode `s:ff`) au-dessus du graph editor, **même échelle
- * horizontale** pour les deux (les clés restent alignées verticalement). Zoom molette partout,
- * pan Maj+molette, bouton Fit pour recadrer la fenêtre sur l'animation, hauteur redimensionnable
- * par le bord supérieur (persistée avec les préférences du chrome).
+ * horizontale** pour les deux (les clés restent alignées verticalement), et la grille du graphe
+ * tombe désormais sur les graduations de cette règle plutôt que sur des secondes décimales.
+ *
+ * Navigation : molette = zoom temporel, Ctrl+molette = zoom vertical, Maj+molette = pan temporel,
+ * bouton du milieu = pan des deux axes, boutons « ajuster » (tout) et « cadrer la sélection ».
+ * Hauteur redimensionnable par le bord supérieur (persistée avec les préférences du chrome).
  */
 export default function CurvesDrawer({
   anim,
@@ -65,7 +34,7 @@ export default function CurvesDrawer({
 }: {
   anim: CameraAnimState;
   editable: boolean;
-  /** Framerate du pipeline (snap du scrub à la frame, timecode). */
+  /** Framerate du pipeline (snap du scrub et des clés, timecode, graduations). */
   fps: number;
   /** Hauteur persistée du tiroir (préférences du chrome). */
   height?: number;
@@ -77,8 +46,6 @@ export default function CurvesDrawer({
   const bodyRef = useRef<HTMLDivElement>(null);
   const [graph, setGraph] = useState({ w: 400, h: height - RULER_HEIGHT });
   const resize = useRef<{ y0: number; h0: number } | null>(null);
-  // Fenêtre temporelle : `null` = ajustée à la durée ; un zoom/pan pose un override.
-  const [override, setOverride] = useState<{ t0: number; t1: number } | null>(null);
   const [hidden, setHidden] = useState<ReadonlySet<ChannelId>>(new Set());
 
   useEffect(() => {
@@ -120,19 +87,19 @@ export default function CurvesDrawer({
     for (const id of keyedChannels) if (!hidden.has(id)) s.add(id);
     return s;
   }, [keyedChannels, hidden]);
-  const valueRange = useMemo(() => {
-    const values: number[] = [];
-    for (const id of visible) for (const k of anim.anim.channels[id]?.keys ?? []) values.push(k.v);
-    return fitValueRange(values);
-  }, [visible, anim.anim]);
 
-  const timeView: TimeView = {
-    ...(override ?? { t0: 0, t1: Math.max(anim.playDuration * 1.1, 3000) }),
+  const view = useCurveView({
+    anim: anim.anim,
+    visible,
+    playDuration: anim.playDuration,
     width: graph.w,
-  };
+    height: graph.h,
+  });
+
   const guideT =
     anim.anim.durationMs && anim.anim.durationMs > 0 ? anim.anim.durationMs : anim.duration || undefined;
-  const zoomAt = (pivotT: number, factor: number) => setOverride(zoomTime(timeView, pivotT, factor));
+  const primary = anim.selection[anim.selection.length - 1];
+  const primaryKey = primary ? anim.anim.channels[primary.channel]?.keys[primary.index] : undefined;
 
   return (
     <div className="relative flex flex-shrink-0 flex-col border-t border-border bg-card" style={{ height }}>
@@ -155,12 +122,22 @@ export default function CurvesDrawer({
         />
       )}
       <div className="flex shrink-0 border-b border-border/60" style={{ height: RULER_HEIGHT }}>
-        <div className="flex w-24 shrink-0 items-center justify-end border-r border-border pr-1">
+        <div className="flex w-24 shrink-0 items-center justify-end gap-0.5 border-r border-border pr-1">
+          <button
+            type="button"
+            title={t('camera.fitSelection')}
+            aria-label={t('camera.fitSelection')}
+            disabled={!anim.selection.length}
+            onClick={() => view.fitKeys(anim.selection)}
+            className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground disabled:opacity-35"
+          >
+            <Crosshair size={12} />
+          </button>
           <button
             type="button"
             title={t('camera.fitView')}
             aria-label={t('camera.fitView')}
-            onClick={() => setOverride(null)}
+            onClick={view.fitAll}
             className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
             <Maximize2 size={12} />
@@ -168,14 +145,14 @@ export default function CurvesDrawer({
         </div>
         <div className="relative min-w-0 flex-1 overflow-hidden pl-1">
           <TimeRuler
-            view={timeView}
+            view={view.timeView}
             fps={fps}
             keyTimes={anim.keyTimes}
             playheadT={anim.timeMs}
             guideT={guideT}
             editable={editable}
             onScrub={anim.scrub}
-            onZoom={zoomAt}
+            onZoom={view.zoomAt}
             onBeginStroke={anim.beginStroke}
             onMoveColumn={anim.strokeMoveColumn}
             onRemoveColumn={anim.removeColumn}
@@ -184,6 +161,7 @@ export default function CurvesDrawer({
       </div>
       <div className="flex min-h-0 flex-1">
         <ChannelList
+          anim={anim.anim}
           keyedChannels={keyedChannels}
           visible={visible}
           onToggle={(id) =>
@@ -196,15 +174,18 @@ export default function CurvesDrawer({
           }
           editable={editable}
           onKeyChannel={(id) => anim.insertChannelKeyAtView(id)}
+          onProfile={(id, type) => anim.applyChannelTangent(id, type)}
+          onInfinity={anim.setExtrapolation}
+          onSelectAll={anim.selectChannel}
+          onFit={(id) => view.fitValues((anim.anim.channels[id]?.keys ?? []).map((k) => k.v))}
         />
         <div ref={bodyRef} className="relative min-w-0 flex-1 overflow-hidden pl-1">
           {editable && anim.selection.length > 0 && (
-            <TangentModeBar
-              current={(() => {
-                const p = anim.selection[anim.selection.length - 1];
-                return p ? anim.anim.channels[p.channel]?.keys[p.index]?.mode : undefined;
-              })()}
-              onMode={anim.setSelectionMode}
+            <CurveTools
+              primary={primaryKey}
+              onType={anim.applyTangentType}
+              onBroken={anim.setSelectionBroken}
+              onWeighted={anim.setSelectionWeighted}
             />
           )}
           {anim.keyTimes.length === 0 && (
@@ -224,16 +205,19 @@ export default function CurvesDrawer({
           <CurveCanvas
             anim={anim.anim}
             visible={visible}
-            timeView={timeView}
-            valueView={{ ...valueRange, height: graph.h }}
+            timeView={view.timeView}
+            valueView={view.valueView}
             playheadT={anim.timeMs}
             selection={anim.selection}
             editable={editable}
             width={graph.w}
             height={graph.h}
             guideT={guideT}
-            onZoom={zoomAt}
-            onPan={(deltaMs) => setOverride(panTime(timeView, deltaMs))}
+            fps={fps}
+            onZoom={view.zoomAt}
+            onZoomValue={view.zoomValueAt}
+            onPan={(deltaMs) => view.panBy(deltaMs)}
+            onPanView={view.panBy}
             onScrub={anim.scrub}
             onSelect={anim.setSelection}
             onBeginStroke={anim.beginStroke}

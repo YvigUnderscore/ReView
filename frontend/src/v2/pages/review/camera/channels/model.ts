@@ -15,8 +15,28 @@ import type { SplatCamera, SplatCameraKeyframe } from '../../reviewTypes';
 export type ChannelId = 'px' | 'py' | 'pz' | 'tx' | 'ty' | 'tz' | 'fov' | 'roll';
 export const CHANNEL_IDS: readonly ChannelId[] = ['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'roll'];
 
-/** Mode de tangente d'une clé (comme un DCC) : lissée auto, linéaire, palier, ou libre (poignées). */
+/**
+ * Mode de tangente **unifié** d'une clé (forme d'origine de la v2) : lissée auto, linéaire, palier,
+ * ou libre (poignées). Reste écrit dans chaque clé même quand les deux côtés divergent — c'est le
+ * résumé que lisent les lecteurs antérieurs aux côtés séparés (schémas Zod du serveur, animations
+ * jointes aux commentaires déjà en base). Voir `tangents.ts` pour l'invariant.
+ */
 export type TangentMode = 'auto' | 'linear' | 'step' | 'free';
+
+/**
+ * Type de tangente d'**un côté** d'une clé (façon Maya) : `auto` (lissée), `linear`, `flat` (pente
+ * nulle), `step` (palier — côté sortant seulement) et `free` (poignée éditée). Absent d'une clé, le
+ * côté retombe sur `mode` : les animations enregistrées avant les côtés séparés se relisent à
+ * l'identique, sans réécriture des données.
+ */
+export type TangentType = 'auto' | 'linear' | 'flat' | 'step' | 'free';
+
+/**
+ * Extrapolation d'un canal **hors** de ses clés (pré/post-infinity, façon Maya). `constant`
+ * (défaut, et comportement d'origine) maintient la valeur de la clé extrême ; `cycle` rejoue la
+ * courbe, `cycleOffset` en cumulant l'écart, `linear` prolonge la pente, `oscillate` va-et-vient.
+ */
+export type Extrapolation = 'constant' | 'cycle' | 'cycleOffset' | 'linear' | 'oscillate';
 
 /** Clé d'un canal : temps (ms), valeur, tangentes entrante/sortante (pente, unités/ms) si `free`. */
 export interface CurveKey {
@@ -25,10 +45,24 @@ export interface CurveKey {
   tin?: number;
   tout?: number;
   mode: TangentMode;
+  /** Type du côté entrant (absent = `mode`). */
+  modeIn?: TangentType;
+  /** Type du côté sortant (absent = `mode`). */
+  modeOut?: TangentType;
+  /** Poignées désolidarisées : tirer un côté ne fait plus tourner l'autre (absent = unifiées). */
+  broken?: boolean;
+  /** Pondération du côté entrant (longueur de poignée, 1 = Hermite non pondéré ; absent = 1). */
+  wIn?: number;
+  /** Pondération du côté sortant (absent = 1). */
+  wOut?: number;
 }
 
 export interface Channel {
   keys: CurveKey[];
+  /** Extrapolation avant la première clé (absent = `constant`). */
+  pre?: Extrapolation;
+  /** Extrapolation après la dernière clé (absent = `constant`). */
+  post?: Extrapolation;
 }
 
 /** Animation caméra v2 : canaux indépendants + boucle. La durée = plus grand temps de clé. */
@@ -91,12 +125,18 @@ export function hasAnimation(anim: CameraAnimV2): boolean {
 
 const sortKeys = (keys: CurveKey[]): CurveKey[] => [...keys].sort((a, b) => a.t - b.t);
 
-/** Copie profonde légère d'un canal (immutabilité des opérations). */
+/** Copie profonde légère d'un canal (immutabilité des opérations) — extrapolations comprises. */
 const cloneChannel = (ch: Channel | undefined): Channel => ({
+  ...ch,
   keys: ch ? ch.keys.map((k) => ({ ...k })) : [],
 });
 
-function withChannel(anim: CameraAnimV2, id: ChannelId, mut: (ch: Channel) => void): CameraAnimV2 {
+/**
+ * Applique une mutation à un canal cloné, re-trie ses clés et rend une animation neuve. Exportée
+ * pour les opérations de tangente (`tangents.ts`) : elles ont besoin de la liste complète des clés
+ * du canal pour matérialiser une pente, ce qu'une mutation clé par clé ne permet pas.
+ */
+export function updateChannel(anim: CameraAnimV2, id: ChannelId, mut: (ch: Channel) => void): CameraAnimV2 {
   const ch = cloneChannel(anim.channels[id]);
   mut(ch);
   ch.keys = sortKeys(ch.keys);
@@ -114,7 +154,7 @@ export function upsertKey(
   v: number,
   mode: TangentMode = 'auto',
 ): CameraAnimV2 {
-  return withChannel(anim, id, (ch) => {
+  return updateChannel(anim, id, (ch) => {
     const existing = ch.keys.find((k) => k.t === t);
     if (existing) {
       existing.v = v;
@@ -126,7 +166,7 @@ export function upsertKey(
 
 /** Insère/écrase une clé **complète** (mode + tangentes) au temps `key.t` d'un canal (copier/coller 40.E). */
 export function upsertFullKey(anim: CameraAnimV2, id: ChannelId, key: CurveKey): CameraAnimV2 {
-  return withChannel(anim, id, (ch) => {
+  return updateChannel(anim, id, (ch) => {
     const idx = ch.keys.findIndex((k) => k.t === key.t);
     if (idx >= 0) ch.keys[idx] = { ...key };
     else ch.keys.push({ ...key });
@@ -156,7 +196,7 @@ export function moveKey(
   index: number,
   patch: { t?: number; v?: number },
 ): CameraAnimV2 {
-  return withChannel(anim, id, (ch) => {
+  return updateChannel(anim, id, (ch) => {
     const k = ch.keys[index];
     if (!k) return;
     if (patch.t != null) k.t = Math.max(0, patch.t);
@@ -165,7 +205,7 @@ export function moveKey(
 }
 
 export function deleteKey(anim: CameraAnimV2, id: ChannelId, index: number): CameraAnimV2 {
-  return withChannel(anim, id, (ch) => ch.keys.splice(index, 1));
+  return updateChannel(anim, id, (ch) => ch.keys.splice(index, 1));
 }
 
 /** Une clé désignée par (canal, index) — sélection du graph editor (Phase 27). */
@@ -216,37 +256,29 @@ export function deleteKeys(anim: CameraAnimV2, refs: readonly KeyRef[]): CameraA
   }
   let next = anim;
   for (const [id, indices] of byChannel) {
-    next = withChannel(next, id, (ch) => {
+    next = updateChannel(next, id, (ch) => {
       for (const index of [...indices].sort((a, b) => b - a)) ch.keys.splice(index, 1);
     });
   }
   return next;
 }
 
-export function setKeyMode(
+/**
+ * Règle l'extrapolation d'un canal hors de ses clés (pré/post-infinity). `constant` efface le
+ * réglage : le canal retrouve la forme d'origine, où rien n'était persisté.
+ */
+export function setChannelExtrapolation(
   anim: CameraAnimV2,
   id: ChannelId,
-  index: number,
-  mode: TangentMode,
+  patch: { pre?: Extrapolation; post?: Extrapolation },
 ): CameraAnimV2 {
-  return withChannel(anim, id, (ch) => {
-    if (ch.keys[index]) ch.keys[index].mode = mode;
-  });
-}
-
-/** Règle les tangentes libres d'une clé (mode passe à `free`). Pente en unités/ms. */
-export function setKeyTangent(
-  anim: CameraAnimV2,
-  id: ChannelId,
-  index: number,
-  patch: { tin?: number; tout?: number },
-): CameraAnimV2 {
-  return withChannel(anim, id, (ch) => {
-    const k = ch.keys[index];
-    if (!k) return;
-    k.mode = 'free';
-    if (patch.tin != null) k.tin = patch.tin;
-    if (patch.tout != null) k.tout = patch.tout;
+  return updateChannel(anim, id, (ch) => {
+    for (const side of ['pre', 'post'] as const) {
+      const next = patch[side];
+      if (next === undefined) continue;
+      if (next === 'constant') delete ch[side];
+      else ch[side] = next;
+    }
   });
 }
 

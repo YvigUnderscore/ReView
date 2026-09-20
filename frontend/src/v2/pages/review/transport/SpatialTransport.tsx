@@ -21,8 +21,15 @@ import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import type { CameraAnimState } from '../camera/useCameraAnim';
-import { snapToFrame, timecode } from '../camera/timeline/viewTransform';
+import { snapToFrame, timecode, trackPct } from '../camera/timeline/viewTransform';
 import { useT } from '../../../i18n';
+
+/**
+ * Plafond des champs de temps et de durée, en secondes — **le même que celui du serveur**
+ * (`3 600 000 ms`). Les deux champs étaient bornés à 600 s : une animation plus longue, pourtant
+ * enregistrable, ne pouvait plus ni se régler ni se rejoindre au clavier.
+ */
+const MAX_SECONDS = 3600;
 
 /**
  * Ligne du bas des viewers spatiaux : le temps. Reprend `AnimToolbar` (qui flottait avec le
@@ -53,8 +60,11 @@ export default function SpatialTransport({
   const t = useT();
   // `keyTimes` fusionne déjà les clés de tous les canaux, triées.
   const times = anim.keyTimes;
+  // Plancher de 1 ms : une animation d'une seule colonne de clés ne divise pas par zéro.
   const span = Math.max(anim.playDuration, times[times.length - 1] ?? 0, 1);
-  const pct = (t: number) => (t / span) * 100;
+  // `trackPct` borne la position à la piste — au-delà, la tête de lecture débordait et le
+  // transport se dotait d'une scrollbar horizontale.
+  const pct = (t: number) => trackPct(t, span);
   const goToKey = (dir: -1 | 1) => {
     const next =
       dir === 1
@@ -146,7 +156,7 @@ export default function SpatialTransport({
         value={Number((anim.timeMs / 1000).toFixed(3))}
         onChange={(s) => anim.scrub(snapToFrame(Math.max(0, s) * 1000, fps))}
         min={0}
-        max={600}
+        max={MAX_SECONDS}
         step={1 / (fps > 0 ? fps : 24)}
         unit="s"
       />
@@ -162,7 +172,7 @@ export default function SpatialTransport({
             value={Number((anim.playDuration / 1000).toFixed(2))}
             onChange={(s) => anim.setDuration(s > 0 ? Math.round(s * 1000) : undefined)}
             min={0}
-            max={600}
+            max={MAX_SECONDS}
             step={0.5}
             unit="s"
           />

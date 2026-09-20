@@ -19,6 +19,7 @@ import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import ReviewChrome from '../chrome/ReviewChrome';
+import { DEFAULT_MODE } from '../chrome/modes';
 import SplatOptions from '../options/SplatOptions';
 import SpatialTransport from '../transport/SpatialTransport';
 import CurvesDrawer from '../transport/CurvesDrawer';
@@ -100,10 +101,9 @@ export default function SplatReview({
     getSceneHandle: splat.getSceneHandle,
     subscribeFrame: splat.subscribeFrame,
     ready: splat.ready,
-    active: pres.layout.layoutMode,
     editable: canPresent,
     anim: pres.anim,
-    getBasePose: pres.layout.getActivationView,
+    layout: pres.layout,
   });
 
   useSplatChrome({
@@ -184,6 +184,10 @@ export default function SplatReview({
           onHome={homeView}
           onImportAnim={importLayout}
           canPresent={canPresent}
+          staging={{
+            active: state.mode === 'stage',
+            toggle: () => update({ mode: state.mode === 'stage' ? DEFAULT_MODE : 'stage' }),
+          }}
         />
       }
       transport={
