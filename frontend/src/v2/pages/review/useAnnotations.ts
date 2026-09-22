@@ -163,17 +163,21 @@ export function useAnnotations(opts?: {
   };
 
   /**
-   * Masque l'annotation du commentaire sélectionné. `keepScene` (46.T) conserve la proposition
-   * de scène 3D : un mouvement de vue efface le dessin (qui n'a de sens que depuis la caméra
-   * d'origine) mais la scène modifiée doit rester navigable — on en sort par Échap ou le
-   * bouton de retour du viewer.
+   * Relâche TOUT ce que le commentaire sélectionné montrait — dessin, points d'intérêt, ratio de
+   * capture, animation caméra, proposition de scène.
+   *
+   * C'est la sortie **explicite** de la lecture (pilule du viewer, Échap, autre commentaire,
+   * entrée en rédaction), et elle seule. Un mouvement de vue ne passe plus par ici : il ne masque
+   * que le dessin 2D, seul à être tracé dans le plan de l'écran — les points d'intérêt, les traits
+   * de brosse et la scène proposée sont ancrés dans la scène et restent affichés pendant qu'on
+   * navigue (d'où la disparition du drapeau `keepScene`, qui ne protégeait que la scène).
    */
-  const clearViewed = (opts?: { keepScene?: boolean }) => {
+  const clearViewed = () => {
     setViewed(null);
     setViewedPoi([]);
     setViewedAspect(null);
     setViewedCameraAnim(null);
-    if (!opts?.keepScene) setViewedSceneOverride(null);
+    setViewedSceneOverride(null);
   };
 
   return {

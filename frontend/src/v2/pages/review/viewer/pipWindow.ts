@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type * as THREE from 'three';
+import { renderWithoutHelpers } from './sceneHelpers';
 
 /** Rectangle du PiP en pixels CSS, origine **haut-gauche** du conteneur (coords DOM). */
 export interface PipRect {
@@ -47,6 +48,14 @@ export function toGlRect(rect: PipRect, ch: number): PipRect {
  * 2ᵉ passe de rendu du PiP (vue de la caméra layout) : scissor + viewport sur le rect de la
  * fenêtre, profondeur seule effacée (le fond reste le rendu principal), puis restauration du
  * viewport plein cadre. Partagée par les viewers 3D et splat (Phase 27 — lot F).
+ *
+ * Le PiP est **l'image du plan**, pas une seconde vue de travail : les objets d'aide du rig caméra
+ * en sont retirés (`viewer/sceneHelpers`), sans quoi le frustum filaire et le marqueur de cible —
+ * rigides par rapport à la caméra du plan — y dessinaient une image immobile.
+ *
+ * `depthFrom` : la caméra dont le PiP reprend near/far. Le cadrage (`F`, « taille réelle », import)
+ * recale ces plans sur l'échelle de la scène pour la caméra libre uniquement ; la caméra du PiP
+ * restait sur ceux du chargement, et tronquait la vue du plan sur une scène très grande.
  */
 export function renderPipPass(
   renderer: THREE.WebGLRenderer,
@@ -55,17 +64,22 @@ export function renderPipPass(
   rect: PipRect,
   cw: number,
   ch: number,
+  depthFrom?: { near: number; far: number },
 ): void {
   if (rect.w <= 0 || rect.h <= 0 || cw <= 0 || ch <= 0) return;
   const gl = toGlRect(rect, ch);
   camera.aspect = rect.w / rect.h;
+  if (depthFrom) {
+    camera.near = depthFrom.near;
+    camera.far = depthFrom.far;
+  }
   camera.updateProjectionMatrix();
   renderer.setScissorTest(true);
   renderer.setScissor(gl.x, gl.y, gl.w, gl.h);
   renderer.setViewport(gl.x, gl.y, gl.w, gl.h);
   renderer.autoClear = false;
   renderer.clearDepth(); // scissor actif → n'efface la profondeur que dans le PiP
-  renderer.render(scene, camera);
+  renderWithoutHelpers(() => renderer.render(scene, camera));
   renderer.autoClear = true;
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, cw, ch);

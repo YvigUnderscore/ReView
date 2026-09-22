@@ -1704,6 +1704,10 @@
   "review.splat.strokeEraseFailed": "The stroke could not be removed",
   "review.splat.strokeNotYours": "Only the author can remove this comment's strokes",
   "review.redoStroke": "Redo the last stroke",
+  "review.camera.animAttached": "🎥 Camera animation attached to this comment",
+  "review.camera.detachAnimation": "Camera animation attached to the next comment — detach it",
+  "review.camera.detached": "Camera animation detached from the next comment",
+  "review.camera.nothingToAttach": "Set at least two camera keys before attaching an animation",
   "rail.tools": "Tools",
   "rail.hideLabels": "Hide the tool labels",
   "rail.showLabels": "Show the tool labels",
@@ -3685,7 +3689,10 @@
   "notifKind.reply": "New reply to your comment",
   "notifKind.commentAssigned": "A comment was assigned to you",
   "poi.count": { "one": "{count} point", "other": "{count} points" },
-  "poi.attached": { "one": "{count} point of interest attached", "other": "{count} points of interest attached" },
+  "poi.attached": {
+    "one": "{count} point of interest attached",
+    "other": "{count} points of interest attached"
+  },
   "poi.clearAll": "Remove every point",
   "poi.optionsHint": "Click in the view to drop a point · drag a numbered badge to move it",
   "poi.pointLabel": "Point {n}",
@@ -3695,7 +3702,12 @@
   "poi.focus": "Bring the camera back to point {n}",
   "poi.max": { "one": "At most {count} point per comment", "other": "At most {count} points per comment" },
   "poi.noSurface": "No surface to place a point on there",
-  "poi.imagesDropped": { "one": "{count} image could not be attached", "other": "{count} images could not be attached" },
+  "poi.imagesDropped": {
+    "one": "{count} image could not be attached",
+    "other": "{count} images could not be attached"
+  },
   "poi.listLabel": "Points of interest",
-  "poi.clickToPlaceNext": "Click a surface to drop point {n}"
+  "poi.clickToPlaceNext": "Click a surface to drop point {n}",
+  "poi.card.open": "Read the note on point {n}",
+  "poi.card.close": "Collapse the note on point {n}"
 }

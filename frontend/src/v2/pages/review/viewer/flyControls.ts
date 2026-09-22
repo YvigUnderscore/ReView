@@ -4,7 +4,7 @@
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { isEditable } from '../../../lib/shortcuts';
-import { applyRoll, rollFromUp } from '../three/cameraRoll';
+import { applyRoll, rollFromCamera } from '../three/cameraRoll';
 import { inhibitOrbit } from './controlsLock';
 
 /**
@@ -170,19 +170,25 @@ export function createFlyControls(
 
   const onPointerMove = (e: PointerEvent) => {
     if (!flying) return;
-    // Le tilt est relu depuis `camera.up` à chaque mouvement, puis remis en phase avec la
-    // nouvelle direction de vue : la lecture est idempotente (`rollFromUp` inverse exactement
-    // `applyRoll`), et un réglage du panneau en plein vol est pris tel quel. Vue quasi
-    // verticale exceptée : le repère de mesure y est dégénéré, on garde le dernier tilt lu
-    // plutôt que de laisser la caméra tournoyer au zénith.
+    // Le tilt est relu depuis l'**orientation** de la caméra à chaque mouvement, puis remis en
+    // phase avec la nouvelle direction de vue : la lecture est idempotente (`rollFromUp` inverse
+    // exactement `applyRoll`), et un réglage du panneau en plein vol est pris tel quel. Le lire
+    // dans `camera.up` ne marche plus : hors vol, le tilt n'y est plus figé mais recomposé dans
+    // l'orientation à chaque tour (cf. `cameraRoll.updateOrbitKeepingRoll`), et `up` est à plat —
+    // le premier mouvement de souris remettait donc le roulis à zéro. Vue quasi verticale
+    // exceptée : le repère de mesure y est dégénéré, on garde le dernier tilt lu plutôt que de
+    // laisser la caméra tournoyer au zénith.
     forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    if (Math.abs(forward.y) < VERTICAL_LIMIT) roll = rollFromUp(THREE, forward, camera.up);
+    if (Math.abs(forward.y) < VERTICAL_LIMIT) roll = rollFromCamera(THREE, camera);
     euler.setFromQuaternion(camera.quaternion);
     const look = flyLookEuler(euler, { x: e.movementX, y: e.movementY }, roll);
     euler.x = look.x;
     euler.y = look.y;
     euler.z = look.z;
     camera.quaternion.setFromEuler(euler);
+    // `camera.up` reste tenu en phase pendant le vol : c'est lui que lit le `lookAt` du
+    // `controls.update()` de l'atterrissage (`endFlight`), avant que la boucle ne reprenne la
+    // main — sans quoi le tilt tomberait à plat le temps d'une frame en reposant l'orbite.
     forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
     applyRoll(THREE, camera, forward, roll);
   };

@@ -149,8 +149,7 @@ export default function SplatReview({
   usePoiPlacement({
     viewer: splat,
     armed: placingPoi,
-    poi: ann.poi,
-    showingDraft: ann.viewedPoi.length === 0,
+    ann,
     onExit: () => update({ tool: DEFAULT_TOOL }),
   });
 
@@ -219,7 +218,7 @@ export default function SplatReview({
           anim={pres.anim}
           editable={canPresent}
           fps={data.fps ?? 24}
-          onAttach={attachLayout}
+          attach={attachLayout}
           drawerOpen={state.drawer === 'curves'}
           onDrawer={() => update({ drawer: state.drawer === 'curves' ? null : 'curves' })}
         />

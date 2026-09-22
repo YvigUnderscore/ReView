@@ -30,12 +30,22 @@ const shape: Shape = {
 };
 
 /** Composer réel, avec (ou sans) l'annotation d'un commentaire en lecture. */
-function Host({ viewed, children }: { viewed: boolean; children: (ann: Annotations) => ReactNode }) {
+function Host({
+  viewed,
+  poi,
+  children,
+}: {
+  viewed: boolean;
+  /** Le commentaire relu ne montre que ses points d'intérêt — pas de dessin 2D. */
+  poi?: boolean;
+  children: (ann: Annotations) => ReactNode;
+}) {
   const ann = useAnnotations();
-  const { setViewed } = ann;
+  const { setViewed, setViewedPoi } = ann;
   useEffect(() => {
     if (viewed) setViewed([shape]);
-  }, [viewed, setViewed]);
+    if (poi) setViewedPoi([{ position: '0 0 0', normal: '0 0 1', space: 'object' }]);
+  }, [viewed, poi, setViewed, setViewedPoi]);
   return <>{children(ann)}</>;
 }
 
@@ -76,6 +86,17 @@ describe('ReviewAnnotationBar — quitter la lecture d’un commentaire annoté'
       <Host viewed={false}>{(ann) => <ReviewAnnotationBar ann={ann} onClearSelection={vi.fn()} />}</Host>,
     );
     expect(noPill()).not.toBeInTheDocument();
+  });
+
+  it('reste offerte quand le commentaire ne montre que ses points d’intérêt', () => {
+    // Les points survivent au mouvement de vue (ils sont ancrés dans la scène) : ils sont donc ce
+    // qui reste le plus longtemps à l'écran, et sans eux la lecture n'aurait plus de sortie.
+    render(
+      <Host viewed={false} poi>
+        {(ann) => <ReviewAnnotationBar ann={ann} onClearSelection={vi.fn()} anchor="viewer" />}
+      </Host>,
+    );
+    expect(pill()).toBeInTheDocument();
   });
 
   it('rend la main à la rédaction : le clic relâche l’annotation et la pilule s’efface', () => {

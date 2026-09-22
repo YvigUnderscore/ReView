@@ -78,6 +78,29 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     expect(annotationSchema.safeParse(parts).success).toBe(true);
   });
 
+  it('garde la durée de lecture de l’animation jointe', () => {
+    // Le rejeu doit être à l'identique : `durationMs` fixe la fin de boucle, et sans elle
+    // l'animation reçue rebouclerait sur son dernier temps de clé. Le front la laissait sur le
+    // quai ; ce cas dit qu'elle traverse l'écriture sans être retirée en silence.
+    const part = {
+      type: 'camera-anim',
+      version: 2,
+      loop: true,
+      durationMs: 4_000,
+      channels: {
+        px: {
+          keys: [
+            { t: 0, v: 0, mode: 'auto' },
+            { t: 2_000, v: 10, mode: 'auto' },
+          ],
+        },
+      },
+    };
+    const [parsed] = annotationSchema.parse([part]) as [typeof part];
+    expect(parsed.durationMs).toBe(4_000);
+    expect(parsed.channels.px.keys).toHaveLength(2);
+  });
+
   it('accepte une proposition de mise en scène 3D (46.D)', () => {
     const parts = [
       {

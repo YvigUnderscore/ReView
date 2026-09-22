@@ -1704,6 +1704,10 @@
   "review.splat.strokeEraseFailed": "रेखा हटाई नहीं जा सकी",
   "review.splat.strokeNotYours": "इस टिप्पणी की रेखाएँ केवल लेखक हटा सकता है",
   "review.redoStroke": "अंतिम स्ट्रोक पुनः करें",
+  "review.camera.animAttached": "🎥 कैमरा एनिमेशन इस टिप्पणी से जुड़ा",
+  "review.camera.detachAnimation": "कैमरा एनिमेशन अगली टिप्पणी से जुड़ा — हटाएँ",
+  "review.camera.detached": "कैमरा एनिमेशन अगली टिप्पणी से हटाया गया",
+  "review.camera.nothingToAttach": "एनिमेशन जोड़ने से पहले कम से कम दो कैमरा कुंजियाँ लगाएँ",
   "rail.tools": "उपकरण",
   "rail.hideLabels": "उपकरणों के लेबल छिपाएँ",
   "rail.showLabels": "उपकरणों के लेबल दिखाएँ",
@@ -3698,7 +3702,12 @@
   "poi.focus": "कैमरा बिंदु {n} पर वापस लाएँ",
   "poi.max": { "one": "प्रति टिप्पणी अधिकतम {count} बिंदु", "other": "प्रति टिप्पणी अधिकतम {count} बिंदु" },
   "poi.noSurface": "वहाँ बिंदु रखने के लिए कोई सतह नहीं है",
-  "poi.imagesDropped": { "one": "{count} छवि संलग्न नहीं हो सकी", "other": "{count} छवियाँ संलग्न नहीं हो सकीं" },
+  "poi.imagesDropped": {
+    "one": "{count} छवि संलग्न नहीं हो सकी",
+    "other": "{count} छवियाँ संलग्न नहीं हो सकीं"
+  },
   "poi.listLabel": "रुचि बिंदु",
-  "poi.clickToPlaceNext": "बिंदु {n} रखने के लिए किसी सतह पर क्लिक करें"
+  "poi.clickToPlaceNext": "बिंदु {n} रखने के लिए किसी सतह पर क्लिक करें",
+  "poi.card.open": "बिंदु {n} की टिप्पणी पढ़ें",
+  "poi.card.close": "बिंदु {n} की टिप्पणी समेटें"
 }

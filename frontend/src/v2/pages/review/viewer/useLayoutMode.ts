@@ -40,6 +40,20 @@ import { suspendAutoKey } from '../camera/autoKeyGate';
  * CE QUI EST INTERDIT HORS CAMÉRA
  * - L'**auto-key** est suspendu (`camera/autoKeyGate`) : orbiter la caméra libre ne décrit pas le
  *   plan, et le `pointerup` d'un drag de gizmo écrasait la clé que le gizmo venait d'écrire.
+ *   Corollaire à dire franchement : hors caméra, **la souris sur le canvas ne touche pas au plan**.
+ *   Ce qui l'écrit, c'est le gizmo de la caméra-objet, le curve editor, la focale et le tilt du
+ *   panneau. Poser une clé (`K`) échantillonne la pose du plan, pas la vue libre — pour cadrer un
+ *   plan à la souris, on rentre dans la caméra.
+ *
+ * CE QUE L'ARTISTE DOIT VOIR (lot 13 — le mode ne valait rien sans ce retour)
+ * - Le **PiP est l'image du plan** : les objets d'aide du rig en sont retirés à la passe de rendu
+ *   (`viewer/sceneHelpers`). Ils sont rigides par rapport à la caméra du plan — frustum filaire
+ *   partant de devant l'objectif, marqueur de cible au centre — et y dessinaient une image
+ *   immobile, qui donnait un PiP figé alors que le plan bougeait.
+ * - La **caméra-objet est dessinée par-dessus la scène** (`sceneRig/cameraObject`) : à l'intérieur
+ *   d'un nuage de splats ou derrière le modèle, la profondeur la faisait simplement disparaître.
+ * - Un geste de gizmo **amène la tête de lecture** au temps où il écrit (`sceneRig/useCameraSceneRig`) :
+ *   la scène montre le temps de lecture, donc éditer une clé d'un autre instant ne se voyait pas.
  *
  * ENTRÉE ET SORTIE
  * - À l'entrée, la vue courante est retenue (`getActivationView`) : la caméra layout et la

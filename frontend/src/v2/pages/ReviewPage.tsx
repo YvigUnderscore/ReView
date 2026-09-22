@@ -152,11 +152,13 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     videoRef.current.currentTime = t;
   };
 
-  // Désélectionne le commentaire courant et masque toute annotation affichée.
-  // `keepScene` (46.T) : un mouvement de vue 3D garde la proposition de scène navigable.
-  const clearSelection = (opts?: { keepScene?: boolean }) => {
+  // Désélectionne le commentaire courant et relâche tout ce qu'il affichait — dessin, points
+  // d'intérêt, traits de brosse, scène proposée. C'est la sortie EXPLICITE (pilule du viewer,
+  // Échap, autre commentaire, entrée en rédaction) : un mouvement de vue, lui, ne masque plus que
+  // le dessin 2D, seul à dépendre de la caméra d'origine (cf. `ReviewViewer`).
+  const clearSelection = () => {
     setSelectedCommentId(null);
-    ann.clearViewed(opts);
+    ann.clearViewed();
     paint.showFromAnnotation(null);
   };
 

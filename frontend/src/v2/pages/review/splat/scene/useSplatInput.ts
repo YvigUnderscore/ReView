@@ -21,8 +21,11 @@ export interface SplatInput {
   frameView: () => void;
   /** Rétablit la vue d'origine (cadrage automatique du mesh) — touche H. */
   homeView: () => void;
-  /** Joint l'animation caméra courante au commentaire en cours de rédaction. */
-  attachLayout: () => void;
+  /**
+   * Joint — ou détache — l'animation caméra du commentaire en cours de rédaction, et dit si elle
+   * l'est déjà : le bouton du transport allume cet état, sans quoi seul un toast l'annonçait.
+   */
+  attachLayout: { toggle: () => void; attached: boolean };
   /** Importe une animation caméra (.abc) et la joue aussitôt. */
   importLayout: (file: File) => void;
 }
@@ -85,8 +88,18 @@ export function useSplatInput({
     }
   }, [viewedCameraAnim, animSetAnim, animPlay]);
 
-  const attachLayout = useCallback(() => {
-    if (!pres.anim.hasAnimation) return;
+  // Joindre / détacher : le bouton porte l'état, il doit donc aussi savoir le défaire. Et rien
+  // ne part plus en silence — un appui sans animation le dit au lieu de ne rien faire.
+  const toggleAttach = useCallback(() => {
+    if (ann.cameraAnim) {
+      ann.setCameraAnim(null);
+      toast.info(t('review.camera.detached'));
+      return;
+    }
+    if (!pres.anim.hasAnimation) {
+      toast.warning(t('review.camera.nothingToAttach'));
+      return;
+    }
     ann.setCameraAnim(pres.anim.anim);
     toast.success(t('review.camera.attached'));
   }, [pres.anim, ann, t]);
@@ -138,5 +151,7 @@ export function useSplatInput({
     hasPresentation: !!data.splatPresentation,
   });
 
+  // L'action et son état partent ensemble : le bouton du transport doit dire ce qui est joint.
+  const attachLayout = { toggle: toggleAttach, attached: ann.cameraAnim != null };
   return { frameView, homeView, attachLayout, importLayout };
 }

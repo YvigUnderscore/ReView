@@ -1704,6 +1704,10 @@
   "review.splat.strokeEraseFailed": "Der Strich het nit könne entfernt werde",
   "review.splat.strokeNotYours": "Nur der Autor cha d'Striche vo däm Kommentar entfärne",
   "review.redoStroke": "D'r letscht Strich widderherstelle",
+  "review.camera.animAttached": "🎥 Kameraanimation an dem Kommentar ahghängt",
+  "review.camera.detachAnimation": "Kameraanimation am nächschte Kommentar ahghängt — abhänge",
+  "review.camera.detached": "Kameraanimation vum nächschte Kommentar abghängt",
+  "review.camera.nothingToAttach": "Setz mindeschtens zwei Kamera-Keys, bevor de e Animation ahhängsch",
   "rail.tools": "Werkzyg",
   "rail.hideLabels": "D'Werkzygbeschriftunge ussblende",
   "rail.showLabels": "D'Werkzygbeschriftunge ahzeige",
@@ -3688,7 +3692,10 @@
   "notifKind.reply": "Nöii Antwort uf Ihre Kommentar",
   "notifKind.commentAssigned": "Ihne isch e Kommentar zuegwiese worre",
   "poi.count": { "one": "{count} Punkt", "other": "{count} Punkt" },
-  "poi.attached": { "one": "{count} interessanter Punkt aagheftet", "other": "{count} interessanti Punkt aagheftet" },
+  "poi.attached": {
+    "one": "{count} interessanter Punkt aagheftet",
+    "other": "{count} interessanti Punkt aagheftet"
+  },
   "poi.clearAll": "Alli Punkt entferne",
   "poi.optionsHint": "In d Aasicht klicke, zum e Punkt setze · numeriirti Marke zieh, zum si verschiebe",
   "poi.pointLabel": "Punkt {n}",
@@ -3696,9 +3703,17 @@
   "poi.addImages": "Bilder a däne Punkt aahefte",
   "poi.removePoint": "Däne Punkt entferne",
   "poi.focus": "D Kamera zrugg uf Punkt {n} bringe",
-  "poi.max": { "one": "Höchstens {count} Punkt pro Kommentar", "other": "Höchstens {count} Punkt pro Kommentar" },
+  "poi.max": {
+    "one": "Höchstens {count} Punkt pro Kommentar",
+    "other": "Höchstens {count} Punkt pro Kommentar"
+  },
   "poi.noSurface": "Dert isch kei Flächi zum e Punkt setze",
-  "poi.imagesDropped": { "one": "{count} Bild het nid aagheftet wärde chöne", "other": "{count} Bilder hen nid aagheftet wärde chöne" },
+  "poi.imagesDropped": {
+    "one": "{count} Bild het nid aagheftet wärde chöne",
+    "other": "{count} Bilder hen nid aagheftet wärde chöne"
+  },
   "poi.listLabel": "Interessanti Punkt",
-  "poi.clickToPlaceNext": "Uf e Flächi klicke, zum Punkt {n} setze"
+  "poi.clickToPlaceNext": "Uf e Flächi klicke, zum Punkt {n} setze",
+  "poi.card.open": "D Bemerkung vum Punkt {n} läse",
+  "poi.card.close": "D Bemerkung vum Punkt {n} züeklappe"
 }

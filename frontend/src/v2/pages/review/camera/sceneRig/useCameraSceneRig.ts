@@ -6,6 +6,7 @@ import type { TransformControls } from 'three/addons/controls/TransformControls.
 import type { ViewerSceneHandle } from '../../viewer/sceneHandle';
 import type { LayoutModeState } from '../../viewer/useLayoutMode';
 import { objectBoundingSphere } from '../../viewer/frameCamera';
+import { registerSceneHelpers } from '../../viewer/sceneHelpers';
 import { sampleAnimV2 } from '../channels/hermite';
 import { gizmoKeyTime } from '../shotCamera';
 import type { CameraAnimState } from '../useCameraAnim';
@@ -16,6 +17,19 @@ const BASE_POSE = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 }
 
 /** Mode du gizmo de la caméra-objet : déplacer la pose ou réorienter le regard. */
 export type RigGizmoMode = 'translate' | 'rotate';
+
+/**
+ * Temps (ms) auquel un geste de gizmo écrit ses clés : celui de la clé « primaire » (dernière de la
+ * multi-sélection) si le geste en reprend une, sinon la tête de lecture (règle : `gizmoKeyTime`).
+ *
+ * Quand il s'écarte de la tête de lecture, le geste l'y amène (cf. `onDragging`) : la scène et le
+ * PiP montrent le temps de lecture, donc une clé éditée à un autre instant ne se voyait pas bouger.
+ */
+export function strokeTime(a: Pick<CameraAnimState, 'selection' | 'anim' | 'timeMs'>): number {
+  const primary = a.selection[a.selection.length - 1];
+  const selTime = primary ? a.anim.channels[primary.channel]?.keys[primary.index]?.t : undefined;
+  return gizmoKeyTime(selTime, a.timeMs);
+}
 
 /**
  * Caméra-objet dans la scène (Phase 17, mode layout) : monte le mesh caméra + sa trajectoire dans
@@ -78,6 +92,9 @@ export function useCameraSceneRig(opts: {
       control.enabled = editable;
       const helper = control.getHelper();
       scene.add(helper);
+      // Objet d'aide : le gizmo est posé sur la caméra du plan, donc pile devant l'objectif —
+      // laissé dans la passe PiP, il barrait la vue du plan (cf. `viewer/sceneHelpers`).
+      const unregisterHelper = registerSceneHelpers(helper);
       controlRef.current = control;
 
       // Cible courante du gizmo : corps (position/orientation) ou marqueur (cible du regard).
@@ -87,18 +104,28 @@ export function useCameraSceneRig(opts: {
       const fwd = new THREE.Vector3();
       const onDragging = (e: { value: unknown }) => {
         controls.enabled = !e.value; // gèle l'orbite pendant la manipulation
-        if (e.value) {
-          animRef.current.beginStroke();
-          rotateDist = obj.body.position.distanceTo(obj.targetMarker.position) || 1;
-        }
+        if (!e.value) return;
+        const a = animRef.current;
+        a.beginStroke();
+        // La tête de lecture rejoint le temps où le geste va écrire. La scène et le PiP montrent
+        // **le temps de lecture** : reprendre au gizmo une clé posée à un autre instant ne se
+        // voyait donc pas — la caméra-objet revenait chaque frame sur la pose du playhead, et
+        // l'artiste concluait que le gizmo ne bougeait rien.
+        const t = strokeTime(a);
+        if (t !== Math.round(a.timeMs)) a.scrub(t);
+        // Distance de regard lue de la pose **échantillonnée à ce temps**, et non du maillage :
+        // celui-ci ne rattrapera le nouveau temps qu'à la frame suivante.
+        const pose = sampleAnimV2(a.anim, t, getActivationView() ?? BASE_POSE);
+        rotateDist =
+          Math.hypot(
+            pose.target.x - pose.position.x,
+            pose.target.y - pose.position.y,
+            pose.target.z - pose.position.z,
+          ) || 1;
       };
       const onObjectChange = () => {
         const a = animRef.current;
-        // Clé « primaire » (dernière de la multi-sélection) → auto-key au temps de cette clé,
-        // sinon à la tête de lecture (et non plus à t=0 dès que l'animation était vide).
-        const primary = a.selection[a.selection.length - 1];
-        const selTime = primary ? a.anim.channels[primary.channel]?.keys[primary.index]?.t : undefined;
-        const t = gizmoKeyTime(selTime, a.timeMs);
+        const t = strokeTime(a);
         if (editing === 'body' && modeRef.current === 'rotate') {
           // Rotation du corps → réoriente la cible (+Z du corps), distance de regard conservée.
           const p = obj.body.position;
@@ -144,6 +171,7 @@ export function useCameraSceneRig(opts: {
       dom.addEventListener('pointerdown', onPointerDown);
 
       cleanupGizmo = () => {
+        unregisterHelper();
         dom.removeEventListener('pointerdown', onPointerDown);
         control.removeEventListener('dragging-changed', onDragging);
         control.removeEventListener('objectChange', onObjectChange);

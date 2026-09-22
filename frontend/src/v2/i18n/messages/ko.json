@@ -1649,6 +1649,10 @@
   "review.splat.strokeEraseFailed": "획을 지울 수 없습니다",
   "review.splat.strokeNotYours": "이 코멘트의 획은 작성자만 지울 수 있습니다",
   "review.redoStroke": "마지막 획 다시 실행",
+  "review.camera.animAttached": "🎥 카메라 애니메이션이 이 댓글에 첨부됨",
+  "review.camera.detachAnimation": "카메라 애니메이션이 다음 댓글에 첨부됨 — 분리",
+  "review.camera.detached": "카메라 애니메이션을 다음 댓글에서 분리했습니다",
+  "review.camera.nothingToAttach": "애니메이션을 첨부하기 전에 카메라 키를 두 개 이상 만드세요",
   "rail.tools": "도구",
   "rail.hideLabels": "도구 이름 숨기기",
   "rail.showLabels": "도구 이름 표시",
@@ -3567,5 +3571,7 @@
   "poi.noSurface": "그곳에는 지점을 놓을 표면이 없습니다",
   "poi.imagesDropped": { "other": "이미지 {count}개를 첨부하지 못했습니다" },
   "poi.listLabel": "관심 지점",
-  "poi.clickToPlaceNext": "표면을 클릭하면 지점 {n}이 놓입니다"
+  "poi.clickToPlaceNext": "표면을 클릭하면 지점 {n}이 놓입니다",
+  "poi.card.open": "지점 {n}의 메모 읽기",
+  "poi.card.close": "지점 {n}의 메모 접기"
 }

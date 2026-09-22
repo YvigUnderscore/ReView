@@ -64,7 +64,17 @@ export function useModelLayout(opts: {
     const rect = pipRectRef.current;
     if (!rt || !rect) return;
     const dom = rt.scene.renderer.domElement;
-    renderPipPass(rt.scene.renderer, rt.scene.scene, rt.layoutCam, rect, dom.clientWidth, dom.clientHeight);
+    // La profondeur suit la caméra libre : `F`, « taille réelle » et le chargement d'un autre
+    // modèle recalent near/far sur l'échelle de la scène, la caméra du PiP gardait les anciens.
+    renderPipPass(
+      rt.scene.renderer,
+      rt.scene.scene,
+      rt.layoutCam,
+      rect,
+      dom.clientWidth,
+      dom.clientHeight,
+      rt.scene.camera,
+    );
   }, [runtimeRef, layoutModeRef]);
 
   return { ...core, renderPip, setPipRect };

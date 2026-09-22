@@ -1649,6 +1649,10 @@
   "review.splat.strokeEraseFailed": "線を削除できませんでした",
   "review.splat.strokeNotYours": "この線を削除できるのは作成者だけです",
   "review.redoStroke": "直前のストロークをやり直す",
+  "review.camera.animAttached": "🎥 カメラアニメーションをこのコメントに添付しました",
+  "review.camera.detachAnimation": "カメラアニメーションを次のコメントに添付済み — 解除",
+  "review.camera.detached": "カメラアニメーションを次のコメントから解除しました",
+  "review.camera.nothingToAttach": "アニメーションを添付する前にカメラのキーを 2 つ以上打ってください",
   "rail.tools": "ツール",
   "rail.hideLabels": "ツール名を隠す",
   "rail.showLabels": "ツール名を表示",
@@ -3569,5 +3573,7 @@
   "poi.noSurface": "そこには点を置ける面がありません",
   "poi.imagesDropped": { "other": "画像 {count} 件を添付できませんでした" },
   "poi.listLabel": "注目点",
-  "poi.clickToPlaceNext": "面をクリックして点 {n} を置きます"
+  "poi.clickToPlaceNext": "面をクリックして点 {n} を置きます",
+  "poi.card.open": "点 {n} のメモを読む",
+  "poi.card.close": "点 {n} のメモを折りたたむ"
 }

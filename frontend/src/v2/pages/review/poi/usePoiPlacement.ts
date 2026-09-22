@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import type { MarkerHandlers } from '../three/objectHotspot';
 import type { Hotspot3D } from '../reviewTypes';
 import { isClickGesture } from '../three/usdPicking';
-import type { PoiDraftState } from './usePoiDraft';
+import type { Annotations } from '../useAnnotations';
 import { useT } from '../../../i18n';
 
 /**
@@ -40,31 +40,45 @@ export interface PoiViewer {
 export function usePoiPlacement({
   viewer,
   armed,
-  poi,
-  showingDraft,
+  ann,
   onExit,
 }: {
   viewer: PoiViewer;
   /** L'outil « Point d'intérêt » est armé dans le rail : le viewer est EN PLACEMENT. */
   armed: boolean;
-  poi: PoiDraftState;
   /**
-   * Les pastilles affichées sont bien celles du brouillon. Faux quand un commentaire est
-   * sélectionné : ce sont alors SES points qui sont à l'écran, et tirer la pastille n° 1
-   * déplacerait un point du brouillon qui n'est pas celui que l'on voit.
+   * Le composer ET la lecture : le hook y prend son brouillon (`ann.poi`) et ce qu'un commentaire
+   * relu affiche (`ann.viewedPoi`). Les deux viewers passaient les mêmes dérivations, mot pour
+   * mot — la règle vit ici une seule fois.
    */
-  showingDraft: boolean;
+  ann: Annotations;
   /** Échap : le rail reprend son outil de repos. */
   onExit: () => void;
 }): void {
   const t = useT();
   const { ready, getSceneHandle, hotspotAtPointer, setPoiHandlers, setPoiActive } = viewer;
+  const { poi, setViewedPoi } = ann;
+  /*
+   * Ce qui est à l'écran : les points du commentaire relu s'il y en a un, sinon le brouillon
+   * (`usePoiDisplay` leur donne la priorité — cliquer un commentaire doit le montrer, même au
+   * milieu d'une rédaction).
+   *
+   * Deux conséquences, et c'est tout le rôle de ce drapeau : les pastilles d'un commentaire relu
+   * restent INERTES (tirer la pastille n° 1 déplacerait un point du brouillon que l'on ne voit
+   * pas), et armer l'outil les RELÂCHE — armer, c'est vouloir poser ses propres points, et depuis
+   * qu'un mouvement de vue ne les efface plus, rien d'autre ne leur cède la place.
+   */
+  const showingDraft = ann.viewedPoi.length === 0;
   // Les rappels changent à chaque rendu (la liste de points bouge) : les rejouer par une ref
   // évite de réinstaller les écouteurs au milieu d'un geste.
   const live = useRef({ poi, onExit, t });
   useEffect(() => {
     live.current = { poi, onExit, t };
   });
+
+  useEffect(() => {
+    if (armed && !showingDraft) setViewedPoi([]);
+  }, [armed, showingDraft, setViewedPoi]);
 
   // Pastilles manipulables tant qu'un point du brouillon est à l'écran ; inertes sinon (relecture).
   const editable = showingDraft && poi.points.length > 0;

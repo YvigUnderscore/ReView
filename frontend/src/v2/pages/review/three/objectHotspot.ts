@@ -3,6 +3,7 @@
 
 import type * as THREE from 'three';
 import type { Hotspot3D } from '../reviewTypes';
+import { announcePoiAnchors, POI_ANCHOR_ATTR } from '../poi/poiAnchor';
 import { isDrawn } from './sceneOverrideApply';
 import { isClickGesture } from './usdPicking';
 
@@ -69,6 +70,10 @@ export function toMarkerPoint(three: typeof import('three'), hs: Hotspot3D): Mar
  * (`setInteractive`) : c'est le cas pendant la rédaction, où un point se déplace en tirant sa
  * pastille et se désigne en la cliquant. En relecture, elles restent inertes — un commentaire
  * envoyé ne se réécrit pas au passage de la souris.
+ *
+ * Chaque pastille porte son rang (`poi/poiAnchor`) et son apparition est annoncée sur le
+ * conteneur : le calque React des cartes de commentaire s'y ancre par portail, et suit donc le
+ * point sans reprojeter quoi que ce soit. C'est le seul lien entre ce fichier et React.
  */
 export interface MarkerHandlers {
   /** Pastille tirée puis lâchée ailleurs : le point de ce rang se repose sous le pointeur. */
@@ -130,6 +135,9 @@ export function createObjectMarker(three: typeof import('three'), container: HTM
       el = document.createElement('div');
       el.textContent = String(i + 1);
       el.style.display = 'none';
+      // Rang publié sur la pastille : c'est par lui qu'un calque React s'y ancre (`poi/poiAnchor`)
+      // pour suivre le point sans se reprojeter lui-même.
+      el.setAttribute(POI_ANCHOR_ATTR, String(i));
       // Un seul jeu d'écouteurs par pastille, posé à la création : ils lisent `handlers` au
       // moment du geste, donc (dés)armer n'ajoute ni ne retire rien.
       let down: { x: number; y: number } | null = null;
@@ -156,6 +164,7 @@ export function createObjectMarker(three: typeof import('three'), container: HTM
       els[i] = el;
       skin(el, i);
       container.appendChild(el);
+      announcePoiAnchors(container);
     }
     return el;
   };
@@ -190,6 +199,10 @@ export function createObjectMarker(three: typeof import('three'), container: HTM
       active = index;
       els.forEach(skin);
     },
-    remove: () => els.forEach((el) => el.remove()),
+    remove: () => {
+      els.forEach((el) => el.remove());
+      els.length = 0;
+      announcePoiAnchors(container);
+    },
   };
 }

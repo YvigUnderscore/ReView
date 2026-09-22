@@ -833,7 +833,10 @@
   "docs.sectionInfrastructure": "Infrastructura",
   "docs.sectionDevelopment": "Desvolopament",
   "docs.clearSearch": "Escafar la recèrca",
-  "docs.hitsOnPage": { "one": "{count} ocurréncia dins aquesta pagina", "other": "{count} ocurréncias dins aquesta pagina" },
+  "docs.hitsOnPage": {
+    "one": "{count} ocurréncia dins aquesta pagina",
+    "other": "{count} ocurréncias dins aquesta pagina"
+  },
   "docs.noHitOnPage": "Cap d’ocurréncia dins aquesta pagina",
   "task.noPlayableMedia": "Cap de mèdia legible per aquesta version",
   "task.noVersion": "Cap de version",
@@ -1705,6 +1708,10 @@
   "review.splat.strokeEraseFailed": "Lo traç a pas pogut èsser levat",
   "review.splat.strokeNotYours": "Sol l'autor pòt levar los traçes d'aqueste comentari",
   "review.redoStroke": "Tornar far lo darrièr traçat",
+  "review.camera.animAttached": "🎥 Animacion de camera junta a aqueste comentari",
+  "review.camera.detachAnimation": "Animacion de camera junta al comentari venent — la desjónher",
+  "review.camera.detached": "Animacion de camera desjunta del comentari venent",
+  "review.camera.nothingToAttach": "Pausatz almens doas claus de camera abans de jónher una animacion",
   "rail.tools": "Aisinas",
   "rail.hideLabels": "Amagar las etiquetas de las aisinas",
   "rail.showLabels": "Afichar las etiquetas de las aisinas",
@@ -3706,9 +3713,17 @@
   "poi.addImages": "Jónher d’imatges a aqueste punt",
   "poi.removePoint": "Levar aqueste punt",
   "poi.focus": "Tornar menar la camèra sul punt {n}",
-  "poi.max": { "one": "{count} punt al maximum per comentari", "other": "{count} punts al maximum per comentari" },
+  "poi.max": {
+    "one": "{count} punt al maximum per comentari",
+    "other": "{count} punts al maximum per comentari"
+  },
   "poi.noSurface": "Cap de surfàcia per pausar un punt aquí",
-  "poi.imagesDropped": { "one": "{count} imatge a pas pogut èsser junt", "other": "{count} imatges an pas pogut èsser junts" },
+  "poi.imagesDropped": {
+    "one": "{count} imatge a pas pogut èsser junt",
+    "other": "{count} imatges an pas pogut èsser junts"
+  },
   "poi.listLabel": "Punts d’interès",
-  "poi.clickToPlaceNext": "Clicatz una surfàcia per pausar lo punt {n}"
+  "poi.clickToPlaceNext": "Clicatz una surfàcia per pausar lo punt {n}",
+  "poi.card.open": "Legir la nòta del punt {n}",
+  "poi.card.close": "Plegar la nòta del punt {n}"
 }

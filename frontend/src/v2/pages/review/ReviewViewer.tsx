@@ -13,6 +13,7 @@ import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import { hlsMasterUrl } from './videoSource';
 import { useMediaExport } from './useMediaExport';
 import { useAnnotationOverlay, usePoiDisplay } from './useAnnotationOverlay';
+import { isPoiCardGesture } from './poi/poiAnchor';
 import { useImageCompareSync } from './useImageCompareSync';
 import type { CompareMode } from './useCompareState';
 import type { useAnnotations } from './useAnnotations';
@@ -90,7 +91,8 @@ export default function ReviewViewer({
   canEditSplat: boolean;
   /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
   canManage: boolean;
-  onClearSelection: (opts?: { keepScene?: boolean }) => void;
+  /** Sortie explicite de la lecture d'un commentaire : tout ce qu'il montrait est relâché. */
+  onClearSelection: () => void;
   onSelectComment: (c: ReviewComment) => void;
   onManualSeek: () => void;
   onMarker: () => void;
@@ -145,8 +147,8 @@ export default function ReviewViewer({
   const closeCompare = () => (onCompareModeChange('side'), onCloseCompare());
 
   // Points d'intérêt 3D/splat (extrait — budget 300) : ceux du commentaire sélectionné, sinon
-  // ceux en cours de rédaction.
-  usePoiDisplay(kind, ann, splat, model3d);
+  // ceux en cours de rédaction. Rend aussi les cartes du commentaire ancrées dans la scène.
+  const poiCards = usePoiDisplay(kind, ann, splat, model3d, comments, selectedCommentId);
 
   // Overlay d'annotation 2D (extrait — budget 300 lignes).
   const renderOverlay = useAnnotationOverlay(ann);
@@ -168,23 +170,42 @@ export default function ReviewViewer({
       ? `${wmUser.name ?? wmUser.email} — ${new Date().toLocaleDateString(intlLocale())}`
       : null;
 
-  // Un déplacement de la vue 3D/splat (orbite, vol, zoom) masque l'annotation du commentaire
-  // sélectionné (elle n'a de sens que depuis la caméra d'origine). Vidéo : idem via seek/lecture
-  // ; image : annotations ancrées au pixel, conservées au zoom/pan.
-  const clearOnViewMove = () => {
-    if ((kind === 'MODEL_3D' || kind === 'SPLAT') && (selectedCommentId != null || ann.viewed))
-      // La proposition de scène 3D d'un commentaire reste appliquée (46.T) : on peut naviguer
-      // dans la scène modifiée ; Échap ou le bouton du viewer la relâchent.
-      onClearSelection({ keepScene: kind === 'MODEL_3D' });
+  /**
+   * Un déplacement de la vue 3D/splat (orbite, vol, zoom) ne masque plus que le **dessin 2D** du
+   * commentaire sélectionné : lui seul est tracé dans le plan de l'écran et n'a de sens que depuis
+   * la caméra d'origine.
+   *
+   * Tout le reste est ancré DANS la scène — points d'intérêt et traits de brosse en espace objet,
+   * proposition de scène, animation caméra — et reste donc affiché pendant qu'on navigue : c'était
+   * la demande (« qu'on bouge la caméra, que le staging et les points d'intérêt restent
+   * affichés »). On en sort explicitement : la pilule du viewer, Échap, un autre commentaire, ou
+   * l'entrée en rédaction. Le commentaire reste aussi sélectionné dans le fil — on est encore en
+   * train de le lire.
+   *
+   * Vidéo : le masquage passe par le seek/la lecture ; image : les annotations sont ancrées au
+   * pixel et survivent au zoom/pan.
+   */
+  const hideDrawingOnViewMove = (e: { target: unknown }) => {
+    if (kind !== 'MODEL_3D' && kind !== 'SPLAT') return;
+    // Déplier une carte ancrée, ou faire défiler son texte, n'est pas naviguer.
+    if (isPoiCardGesture(e.target)) return;
+    if (ann.viewed) {
+      ann.setViewed(null);
+      ann.setViewedAspect(null);
+    }
   };
 
   return (
     <section
       className="relative flex min-w-0 flex-1 flex-col gap-2"
-      onPointerDownCapture={clearOnViewMove}
-      onWheelCapture={clearOnViewMove}
+      onPointerDownCapture={hideDrawingOnViewMove}
+      onWheelCapture={hideDrawingOnViewMove}
     >
       {watermarkText && <WatermarkOverlay text={watermarkText} opacity={wmQ.data?.opacity} />}
+      {/* Cartes du commentaire relu, ancrées à leurs points dans la scène. Rendues ici pour la
+          seule raison qu'il faut bien les rendre quelque part : elles se posent par portail dans
+          les pastilles du viewer, leur place dans cet arbre n'a aucun effet à l'écran. */}
+      {poiCards}
       {/* Ce qu'on vous demande de regarder, quand la review vous a été confiée : au-dessus
           du viewer, à l'ouverture, et non trois clics plus loin dans un dialogue. */}
       {data && <ReviewBriefBanner reviewers={data.reviewers} currentUserId={wmUser?.id} />}

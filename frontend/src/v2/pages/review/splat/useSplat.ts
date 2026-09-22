@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createScene, type SplatModules } from './scene/createScene';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import { resizeRendererCamera } from '../three/sceneConfig';
+import { updateOrbitKeepingRoll } from '../three/cameraRoll';
 import { createFlyControls } from '../viewer/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
 import { meshBounds } from './editor/selection/bounds';
@@ -190,17 +191,20 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
         isBusy: () => fly.flying || frameCbs.current.size > 0 || !!captureReq.current,
         update: (dt) => {
           // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
-          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
+          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé. Hors vol,
+          // l'orbite conserve le tilt réglé (cf. `cameraRoll.updateOrbitKeepingRoll`).
           if (fly.flying) fly.update(dt);
-          else controls.update();
+          else updateOrbitKeepingRoll(THREE, camera, controls);
           frameCbs.current.forEach((cb) => cb(dt));
         },
         draw: (now) => {
           renderer.render(scene, camera);
           const { clientWidth: w, clientHeight: h } = container;
           // PiP du mode layout (Phase 27) : vue de la caméra layout dans la fenêtre flottante.
+          // La profondeur suit la caméra libre : le cadrage (`F`, taille réelle) recale near/far
+          // sur l'échelle de la scène, et la caméra du PiP restait sur ceux du chargement.
           const pip = pipRectRef.current;
-          if (pip) renderPipPass(renderer, scene, layoutCam, pip, w, h);
+          if (pip) renderPipPass(renderer, scene, layoutCam, pip, w, h, camera);
           statsRef.current?.frame(now);
           // Projette les points monde → pixels et positionne les pastilles (ou les masque).
           projectPoi(camera, mesh, w, h);

@@ -83,7 +83,11 @@ export default function ReviewCommentsColumn({
       composerRef={composerRef}
       hints={{
         annotation: ann.annot.length > 0,
-        camera: kind === 'MODEL_3D' && ann.annotating,
+        // La vue caméra est capturée pour TOUT commentaire spatial (`useSubmitComment`), splat
+        // compris, et sans attendre le mode annotation : l'indice disait donc faux deux fois.
+        camera: kind === 'MODEL_3D' || kind === 'SPLAT',
+        // Animation caméra jointe (bouton du transport) : dite ici, là où l'on relit ce qui part.
+        cameraAnim: ann.cameraAnim != null,
         references: ann.stagedRefs.length,
         // Une plage n'est un indice que si elle est complète et orientée : `out > in`.
         range: kind === 'VIDEO' && loop.in != null && loop.out != null && loop.out > loop.in,

@@ -832,7 +832,10 @@
   "docs.sectionInfrastructure": "Azpiegitura",
   "docs.sectionDevelopment": "Garapena",
   "docs.clearSearch": "Garbitu bilaketa",
-  "docs.hitsOnPage": { "one": "emaitza {count} orrialde honetan", "other": "{count} emaitza orrialde honetan" },
+  "docs.hitsOnPage": {
+    "one": "emaitza {count} orrialde honetan",
+    "other": "{count} emaitza orrialde honetan"
+  },
   "docs.noHitOnPage": "Ez dago emaitzarik orrialde honetan",
   "task.noPlayableMedia": "Version honentzat ez dago erreproduzi daitekeen mediarik",
   "task.noVersion": "Version-ik ez",
@@ -1704,6 +1707,10 @@
   "review.splat.strokeEraseFailed": "Ezin izan da marra kendu",
   "review.splat.strokeNotYours": "Egileak bakarrik ken ditzake iruzkin honen marrak",
   "review.redoStroke": "Berregin azken trazua",
+  "review.camera.animAttached": "🎥 Kamera-animazioa iruzkin honi erantsita",
+  "review.camera.detachAnimation": "Kamera-animazioa hurrengo iruzkinari erantsita — kendu",
+  "review.camera.detached": "Kamera-animazioa hurrengo iruzkinetik kenduta",
+  "review.camera.nothingToAttach": "Ezarri gutxienez bi kamera-gako animazio bat erantsi aurretik",
   "rail.tools": "Tresnak",
   "rail.hideLabels": "Ezkutatu tresnen etiketak",
   "rail.showLabels": "Erakutsi tresnen etiketak",
@@ -3688,7 +3695,10 @@
   "notifKind.reply": "Erantzun berria zure iruzkinari",
   "notifKind.commentAssigned": "Iruzkin bat esleitu zaizu",
   "poi.count": { "one": "puntu {count}", "other": "{count} puntu" },
-  "poi.attached": { "one": "intereseko puntu {count} erantsita", "other": "intereseko {count} puntu erantsita" },
+  "poi.attached": {
+    "one": "intereseko puntu {count} erantsita",
+    "other": "intereseko {count} puntu erantsita"
+  },
   "poi.clearAll": "Puntu guztiak kendu",
   "poi.optionsHint": "Egin klik ikuspegian puntu bat jartzeko · arrastatu zenbakitutako txapa lekuz aldatzeko",
   "poi.pointLabel": "{n}. puntua",
@@ -3696,9 +3706,17 @@
   "poi.addImages": "Erantsi irudiak puntu honi",
   "poi.removePoint": "Kendu puntu hau",
   "poi.focus": "Eraman kamera berriro {n}. puntura",
-  "poi.max": { "one": "Gehienez puntu {count} iruzkin bakoitzeko", "other": "Gehienez {count} puntu iruzkin bakoitzeko" },
+  "poi.max": {
+    "one": "Gehienez puntu {count} iruzkin bakoitzeko",
+    "other": "Gehienez {count} puntu iruzkin bakoitzeko"
+  },
   "poi.noSurface": "Ez dago gainazalik han puntu bat jartzeko",
-  "poi.imagesDropped": { "one": "Irudi {count} ezin izan da erantsi", "other": "{count} irudi ezin izan dira erantsi" },
+  "poi.imagesDropped": {
+    "one": "Irudi {count} ezin izan da erantsi",
+    "other": "{count} irudi ezin izan dira erantsi"
+  },
   "poi.listLabel": "Intereseko puntuak",
-  "poi.clickToPlaceNext": "Egin klik gainazal batean {n}. puntua jartzeko"
+  "poi.clickToPlaceNext": "Egin klik gainazal batean {n}. puntua jartzeko",
+  "poi.card.open": "Irakurri {n}. puntuaren oharra",
+  "poi.card.close": "Tolestu {n}. puntuaren oharra"
 }

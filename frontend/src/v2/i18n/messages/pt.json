@@ -833,7 +833,10 @@
   "docs.sectionInfrastructure": "Infraestrutura",
   "docs.sectionDevelopment": "Desenvolvimento",
   "docs.clearSearch": "Limpar a pesquisa",
-  "docs.hitsOnPage": { "one": "{count} ocorrência nesta página", "other": "{count} ocorrências nesta página" },
+  "docs.hitsOnPage": {
+    "one": "{count} ocorrência nesta página",
+    "other": "{count} ocorrências nesta página"
+  },
   "docs.noHitOnPage": "Nenhuma ocorrência nesta página",
   "task.noPlayableMedia": "Nenhuma mídia reproduzível para esta version",
   "task.noVersion": "Nenhuma version",
@@ -1705,6 +1708,10 @@
   "review.splat.strokeEraseFailed": "Não foi possível remover o traço",
   "review.splat.strokeNotYours": "Só o autor pode remover os traços deste comentário",
   "review.redoStroke": "Refazer o último traço",
+  "review.camera.animAttached": "🎥 Animação de câmera anexada a este comentário",
+  "review.camera.detachAnimation": "Animação de câmera anexada ao próximo comentário — desanexar",
+  "review.camera.detached": "Animação de câmera desanexada do próximo comentário",
+  "review.camera.nothingToAttach": "Defina pelo menos duas chaves de câmera antes de anexar uma animação",
   "rail.tools": "Ferramentas",
   "rail.hideLabels": "Ocultar os rótulos das ferramentas",
   "rail.showLabels": "Mostrar os rótulos das ferramentas",
@@ -3698,7 +3705,10 @@
   "notifKind.reply": "Nova resposta ao seu comentário",
   "notifKind.commentAssigned": "Foi-lhe atribuído um comentário",
   "poi.count": { "one": "{count} ponto", "other": "{count} pontos" },
-  "poi.attached": { "one": "{count} ponto de interesse anexado", "other": "{count} pontos de interesse anexados" },
+  "poi.attached": {
+    "one": "{count} ponto de interesse anexado",
+    "other": "{count} pontos de interesse anexados"
+  },
   "poi.clearAll": "Remover todos os pontos",
   "poi.optionsHint": "Clique na vista para colocar um ponto · arraste um selo numerado para o mover",
   "poi.pointLabel": "Ponto {n}",
@@ -3706,9 +3716,17 @@
   "poi.addImages": "Anexar imagens a este ponto",
   "poi.removePoint": "Remover este ponto",
   "poi.focus": "Levar a câmara de volta ao ponto {n}",
-  "poi.max": { "one": "No máximo {count} ponto por comentário", "other": "No máximo {count} pontos por comentário" },
+  "poi.max": {
+    "one": "No máximo {count} ponto por comentário",
+    "other": "No máximo {count} pontos por comentário"
+  },
   "poi.noSurface": "Não há superfície para colocar um ponto ali",
-  "poi.imagesDropped": { "one": "{count} imagem não pôde ser anexada", "other": "{count} imagens não puderam ser anexadas" },
+  "poi.imagesDropped": {
+    "one": "{count} imagem não pôde ser anexada",
+    "other": "{count} imagens não puderam ser anexadas"
+  },
   "poi.listLabel": "Pontos de interesse",
-  "poi.clickToPlaceNext": "Clique numa superfície para colocar o ponto {n}"
+  "poi.clickToPlaceNext": "Clique numa superfície para colocar o ponto {n}",
+  "poi.card.open": "Ler a nota do ponto {n}",
+  "poi.card.close": "Recolher a nota do ponto {n}"
 }

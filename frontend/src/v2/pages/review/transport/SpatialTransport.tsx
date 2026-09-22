@@ -41,7 +41,7 @@ export default function SpatialTransport({
   editable,
   fps,
   trackSwitch,
-  onAttach,
+  attach,
   drawerOpen,
   onDrawer,
 }: {
@@ -52,8 +52,15 @@ export default function SpatialTransport({
   fps: number;
   /** Sélecteur de piste, quand le média porte aussi des clips d'animation. */
   trackSwitch?: ReactNode;
-  /** Joindre l'animation au prochain commentaire (mode layout). */
-  onAttach?: () => void;
+  /**
+   * Joindre — ou détacher — l'animation du prochain commentaire (mode layout).
+   *
+   * L'état voyage AVEC l'action, et non à côté : joindre ne laissait qu'un toast, si bien que le
+   * temps d'écrire la remarque, plus rien à l'écran ne disait si l'animation partirait — et on
+   * envoyait en croyant l'avoir jointe. Le bouton reste donc allumé tant qu'elle est jointe, et
+   * un second appui la détache.
+   */
+  attach?: { toggle: () => void; attached: boolean };
   drawerOpen: boolean;
   onDrawer: () => void;
 }) {
@@ -204,12 +211,13 @@ export default function SpatialTransport({
           <IconButton icon={Redo2} label={t('common.redo')} onClick={anim.redo} disabled={!anim.canRedo} />
         </>
       )}
-      {onAttach && anim.hasAnimation && (
+      {attach && (anim.hasAnimation || attach.attached) && (
         <IconButton
           icon={MessageSquarePlus}
-          label={t('review.attachAnimation')}
+          label={attach.attached ? t('review.camera.detachAnimation') : t('review.attachAnimation')}
           bordered
-          onClick={onAttach}
+          active={attach.attached}
+          onClick={attach.toggle}
         />
       )}
 

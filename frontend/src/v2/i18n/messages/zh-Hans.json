@@ -1649,6 +1649,10 @@
   "review.splat.strokeEraseFailed": "无法删除该笔迹",
   "review.splat.strokeNotYours": "只有作者才能删除该评论的笔迹",
   "review.redoStroke": "重做上一笔",
+  "review.camera.animAttached": "🎥 摄像机动画已附加到这条评论",
+  "review.camera.detachAnimation": "摄像机动画已附加到下一条评论 — 点击取消",
+  "review.camera.detached": "摄像机动画已从下一条评论中移除",
+  "review.camera.nothingToAttach": "请先设置至少两个摄像机关键点，再附加动画",
   "rail.tools": "工具",
   "rail.hideLabels": "隐藏工具名称",
   "rail.showLabels": "显示工具名称",
@@ -3567,5 +3571,7 @@
   "poi.noSurface": "那里没有可放置点的表面",
   "poi.imagesDropped": { "other": "有 {count} 张图片未能附加" },
   "poi.listLabel": "关注点",
-  "poi.clickToPlaceNext": "点击表面以放置点 {n}"
+  "poi.clickToPlaceNext": "点击表面以放置点 {n}",
+  "poi.card.open": "阅读点 {n} 的备注",
+  "poi.card.close": "收起点 {n} 的备注"
 }

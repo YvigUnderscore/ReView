@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, renderHook } from '@testing-library/react';
 import type { MarkerHandlers } from '../three/objectHotspot';
 import type { Hotspot3D } from '../reviewTypes';
-import { usePoiDraft, type PoiDraftState } from './usePoiDraft';
+import { useAnnotations, type Annotations } from '../useAnnotations';
+import type { PoiDraftState } from './usePoiDraft';
 import { usePoiPlacement, type PoiViewer } from './usePoiPlacement';
 
 /**
@@ -35,18 +36,27 @@ function viewerStub(name: string) {
   return { name, dom, pick, viewer, active, markerHandlers: () => handlers };
 }
 
-function mount(stub: ReturnType<typeof viewerStub>, armed = true, showingDraft = true) {
+/**
+ * Le hook prend le composer ENTIER (`ann`), pas seulement le brouillon : c'est lui qui sait que les
+ * pastilles à l'écran sont celles d'un commentaire relu, et qui les relâche quand on arme l'outil.
+ * Le harnais monte donc le vrai `useAnnotations` — les deux viewers n'en dérivaient rien d'autre.
+ */
+function mount(stub: ReturnType<typeof viewerStub>, armed = true) {
   const onExit = vi.fn();
   const hook = renderHook(
     ({ isArmed }: { isArmed: boolean }) => {
-      const poi = usePoiDraft();
-      usePoiPlacement({ viewer: stub.viewer, armed: isArmed, poi, showingDraft, onExit });
-      return poi;
+      const ann = useAnnotations();
+      usePoiPlacement({ viewer: stub.viewer, armed: isArmed, ann, onExit });
+      return ann;
     },
     { initialProps: { isArmed: armed } },
   );
-  return { hook, onExit, poi: (): PoiDraftState => hook.result.current };
+  const ann = (): Annotations => hook.result.current;
+  return { hook, onExit, ann, poi: (): PoiDraftState => hook.result.current.poi };
 }
+
+/** Point tel qu'un commentaire relu l'affiche — les pastilles de la scène sont alors les siennes. */
+const viewedPoint: Hotspot3D = { position: '5 5 0', normal: '0 0 1', space: 'object' };
 
 /** Clic gauche immobile dans la vue — le geste qui pose un point. */
 function clickAt(dom: HTMLElement, x: number, y: number) {
@@ -98,6 +108,17 @@ describe.each([viewerStub('modèle 3D'), viewerStub('splat')])(
       expect(poi().points).toHaveLength(1);
     });
 
+    it('armer l’outil rend l’écran au brouillon : les points relus sont relâchés', () => {
+      const { ann, hook } = mount(stub, false);
+      act(() => ann().setViewedPoi([viewedPoint]));
+      expect(ann().viewedPoi).toHaveLength(1);
+      // L'outil s'arme alors qu'un commentaire est à l'écran : ses points cèdent la place, sinon
+      // on poserait des points sans les voir (les pastilles affichées seraient les siennes). Un
+      // mouvement de vue ne les efface plus — plus rien d'autre ne leur cède la place.
+      hook.rerender({ isArmed: true });
+      expect(ann().viewedPoi).toEqual([]);
+    });
+
     it('Échap rend l’outil de repos au rail', () => {
       const { onExit } = mount(stub);
       act(() => {
@@ -122,8 +143,12 @@ describe.each([viewerStub('modèle 3D'), viewerStub('splat')])(
     });
 
     it('les pastilles d’un commentaire RELU restent inertes, brouillon ou pas', () => {
-      const { poi } = mount(stub, true, false);
-      act(() => clickAt(stub.dom, 12, 12));
+      // Réécrit avec le nouveau contrat : le drapeau `showingDraft` n'est plus passé par le
+      // viewer, le hook le dérive de `ann.viewedPoi`. L'outil reste au repos ici, sinon armer
+      // relâcherait justement ces points — c'est le test suivant.
+      const { poi, ann } = mount(stub, false);
+      act(() => ann().setViewedPoi([viewedPoint]));
+      act(() => poi().add({ position: '1 1 0', normal: '0 0 1', space: 'object' }));
       expect(poi().points).toHaveLength(1);
       // Ce sont les points du commentaire sélectionné qui sont à l'écran : tirer la pastille
       // n° 1 déplacerait un point du brouillon que l'on ne voit pas.

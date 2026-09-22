@@ -833,7 +833,10 @@
   "docs.sectionInfrastructure": "Infrastructure",
   "docs.sectionDevelopment": "Développement",
   "docs.clearSearch": "Effacer la recherche",
-  "docs.hitsOnPage": { "one": "{count} occurrence dans cette page", "other": "{count} occurrences dans cette page" },
+  "docs.hitsOnPage": {
+    "one": "{count} occurrence dans cette page",
+    "other": "{count} occurrences dans cette page"
+  },
   "docs.noHitOnPage": "Aucune occurrence dans cette page",
   "task.noPlayableMedia": "Aucun média lisible pour cette version",
   "task.noVersion": "Aucune version",
@@ -1706,6 +1709,10 @@
   "review.splat.strokeEraseFailed": "Le trait n'a pas pu être retiré",
   "review.splat.strokeNotYours": "Seul l'auteur peut retirer les traits de ce commentaire",
   "review.redoStroke": "Rétablir le dernier tracé",
+  "review.camera.animAttached": "🎥 Animation caméra jointe à ce commentaire",
+  "review.camera.detachAnimation": "Animation caméra jointe au prochain commentaire — la détacher",
+  "review.camera.detached": "Animation caméra détachée du prochain commentaire",
+  "review.camera.nothingToAttach": "Posez au moins deux clés caméra avant de joindre une animation",
   "rail.tools": "Outils",
   "rail.hideLabels": "Masquer les libellés des outils",
   "rail.showLabels": "Afficher les libellés des outils",
@@ -3707,9 +3714,17 @@
   "poi.addImages": "Joindre des images à ce point",
   "poi.removePoint": "Retirer ce point",
   "poi.focus": "Ramener la caméra sur le point {n}",
-  "poi.max": { "one": "{count} point au maximum par commentaire", "other": "{count} points au maximum par commentaire" },
+  "poi.max": {
+    "one": "{count} point au maximum par commentaire",
+    "other": "{count} points au maximum par commentaire"
+  },
   "poi.noSurface": "Aucune surface pour poser un point ici",
-  "poi.imagesDropped": { "one": "{count} image n’a pas pu être jointe", "other": "{count} images n’ont pas pu être jointes" },
+  "poi.imagesDropped": {
+    "one": "{count} image n’a pas pu être jointe",
+    "other": "{count} images n’ont pas pu être jointes"
+  },
   "poi.listLabel": "Points d’intérêt",
-  "poi.clickToPlaceNext": "Cliquez une surface pour poser le point {n}"
+  "poi.clickToPlaceNext": "Cliquez une surface pour poser le point {n}",
+  "poi.card.open": "Lire la remarque du point {n}",
+  "poi.card.close": "Replier la remarque du point {n}"
 }

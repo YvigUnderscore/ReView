@@ -1702,6 +1702,10 @@
   "review.splat.strokeEraseFailed": "N'eus ket bet gallet lemel an treset",
   "review.splat.strokeNotYours": "An aozer hepken a c'hall lemel tresoù an evezhiadenn-mañ",
   "review.redoStroke": "Adober an tres diwezhañ",
+  "review.camera.animAttached": "🎥 Fiñvskeudenn gamera staget ouzh an evezhiadenn-mañ",
+  "review.camera.detachAnimation": "Fiñvskeudenn gamera staget ouzh an evezhiadenn a zeu — distagañ anezhi",
+  "review.camera.detached": "Fiñvskeudenn gamera distaget diouzh an evezhiadenn a zeu",
+  "review.camera.nothingToAttach": "Lakait div alc’hwez kamera da nebeutañ a-raok stagañ ur fiñvskeudenn",
   "rail.tools": "Binvioù",
   "rail.hideLabels": "Kuzhat skritelloù ar binvioù",
   "rail.showLabels": "Diskouez skritelloù ar binvioù",
@@ -3727,9 +3731,17 @@
   "poi.addImages": "Stagañ skeudennoù ouzh ar poent-mañ",
   "poi.removePoint": "Lemel ar poent-mañ",
   "poi.focus": "Degas ar gamera war ar poent {n}",
-  "poi.max": { "one": "{count} poent d’ar muiañ dre evezhiadenn", "other": "{count} poent d’ar muiañ dre evezhiadenn" },
+  "poi.max": {
+    "one": "{count} poent d’ar muiañ dre evezhiadenn",
+    "other": "{count} poent d’ar muiañ dre evezhiadenn"
+  },
   "poi.noSurface": "Gorre ebet evit lakaat ur poent el lec’h-se",
-  "poi.imagesDropped": { "one": "{count} skeudenn n’eus ket bet gallet stagañ", "other": "{count} skeudenn n’eus ket bet gallet stagañ" },
+  "poi.imagesDropped": {
+    "one": "{count} skeudenn n’eus ket bet gallet stagañ",
+    "other": "{count} skeudenn n’eus ket bet gallet stagañ"
+  },
   "poi.listLabel": "Poentoù a zedenn",
-  "poi.clickToPlaceNext": "Klikit war ur gorre evit lakaat ar poent {n}"
+  "poi.clickToPlaceNext": "Klikit war ur gorre evit lakaat ar poent {n}",
+  "poi.card.open": "Lenn notenn ar poent {n}",
+  "poi.card.close": "Plegañ notenn ar poent {n}"
 }

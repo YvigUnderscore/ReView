@@ -832,7 +832,10 @@
   "docs.sectionInfrastructure": "Infrastruttura",
   "docs.sectionDevelopment": "Sviluppu",
   "docs.clearSearch": "Sguassà a ricerca",
-  "docs.hitsOnPage": { "one": "{count} occurrenza in sta pagina", "other": "{count} occurrenze in sta pagina" },
+  "docs.hitsOnPage": {
+    "one": "{count} occurrenza in sta pagina",
+    "other": "{count} occurrenze in sta pagina"
+  },
   "docs.noHitOnPage": "Nisuna occurrenza in sta pagina",
   "task.noPlayableMedia": "Nisun media leghjibile per sta version",
   "task.noVersion": "Nisuna version",
@@ -1704,6 +1707,10 @@
   "review.splat.strokeEraseFailed": "U trattu ùn hà pussutu esse cacciatu",
   "review.splat.strokeNotYours": "Solu l'autore pò caccià i tratti di stu cummentu",
   "review.redoStroke": "Rifà l’ultimu trattu",
+  "review.camera.animAttached": "🎥 Animazione di camera attaccata à stu cummentu",
+  "review.camera.detachAnimation": "Animazione di camera attaccata à u prossimu cummentu — staccà la",
+  "review.camera.detached": "Animazione di camera staccata da u prossimu cummentu",
+  "review.camera.nothingToAttach": "Mette almenu duie chjave di camera prima d’attaccà un’animazione",
   "rail.tools": "Strumenti",
   "rail.hideLabels": "Piattà l’etichette di i strumenti",
   "rail.showLabels": "Affissà l’etichette di i strumenti",
@@ -3688,7 +3695,10 @@
   "notifKind.reply": "Nova risposta à u vostru cumentu",
   "notifKind.commentAssigned": "Un cumentu v'hè statu assignatu",
   "poi.count": { "one": "{count} puntu", "other": "{count} punti" },
-  "poi.attached": { "one": "{count} puntu d’interessu aghjuntu", "other": "{count} punti d’interessu aghjunti" },
+  "poi.attached": {
+    "one": "{count} puntu d’interessu aghjuntu",
+    "other": "{count} punti d’interessu aghjunti"
+  },
   "poi.clearAll": "Caccià tutti i punti",
   "poi.optionsHint": "Cliccate nella vista per pone un puntu · tirate una pastiglia numerata per la move",
   "poi.pointLabel": "Puntu {n}",
@@ -3696,9 +3706,17 @@
   "poi.addImages": "Aghjunghje imagine à stu puntu",
   "poi.removePoint": "Caccià stu puntu",
   "poi.focus": "Rimenà a camera à u puntu {n}",
-  "poi.max": { "one": "À u massimu {count} puntu per cummentu", "other": "À u massimu {count} punti per cummentu" },
+  "poi.max": {
+    "one": "À u massimu {count} puntu per cummentu",
+    "other": "À u massimu {count} punti per cummentu"
+  },
   "poi.noSurface": "Nisuna superficia per pone un puntu quì",
-  "poi.imagesDropped": { "one": "{count} imagina ùn hè micca stata aghjunta", "other": "{count} imagine ùn sò micca state aghjunte" },
+  "poi.imagesDropped": {
+    "one": "{count} imagina ùn hè micca stata aghjunta",
+    "other": "{count} imagine ùn sò micca state aghjunte"
+  },
   "poi.listLabel": "Punti d’interessu",
-  "poi.clickToPlaceNext": "Cliccate una superficia per pone u puntu {n}"
+  "poi.clickToPlaceNext": "Cliccate una superficia per pone u puntu {n}",
+  "poi.card.open": "Leghje a nota di u puntu {n}",
+  "poi.card.close": "Pieghjà a nota di u puntu {n}"
 }

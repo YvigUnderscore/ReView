@@ -85,6 +85,8 @@ export default function CommentsPanel({
   hints: {
     annotation: boolean;
     camera: boolean;
+    /** Animation caméra jointe (mode layout) : elle sera rejouée à la sélection du commentaire. */
+    cameraAnim?: boolean;
     references?: number;
     /** Boucle I/O active (34.A) : le commentaire portera la plage in→out. */
     range?: boolean;
@@ -224,6 +226,9 @@ export default function CommentsPanel({
         {poi && <PoiDraftRows poi={poi} />}
         {hints.range && <p className="mb-1.5 text-xs text-primary">{t('review.rangeAttached')}</p>}
         {hints.camera && <p className="mb-1.5 text-xs text-primary">{t('review.camViewSaved')}</p>}
+        {/* L'animation caméra ne se voyait nulle part une fois le toast passé : on envoyait en
+            croyant l'avoir jointe. Le composeur énumère ce qui part, elle en fait partie. */}
+        {hints.cameraAnim && <p className="mb-1.5 text-xs text-primary">{t('review.camera.animAttached')}</p>}
         <div className="relative">
           <MentionMenu mentions={mentions} />
           <Textarea

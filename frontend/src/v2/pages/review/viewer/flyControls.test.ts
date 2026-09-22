@@ -10,7 +10,7 @@ import {
   isFlyMoveCode,
   moveDirection,
 } from './flyControls';
-import { applyRoll, rollFromUp } from '../three/cameraRoll';
+import { applyRoll, rollFromCamera } from '../three/cameraRoll';
 import { orbitInhibitors, inhibitOrbit } from './controlsLock';
 
 describe('moveDirection', () => {
@@ -176,18 +176,15 @@ describe('l’orbite est retenue par un compteur, pas par un booléen', () => {
 });
 
 /**
- * Le tilt (roulis du panneau Caméra) vit dans `camera.up`, que seul `lookAt` consulte — donc
- * personne pendant le vol. Sur du vrai Three : la pose composée en vol porte bien le roulis, et
- * l'orientation obtenue est celle que `lookAt` produirait avec le `up` de `applyRoll`, si bien que
- * rien ne saute à l'atterrissage.
+ * Le tilt (roulis du panneau Caméra) ne survit pas tout seul au vol : hors vol, il est porté par
+ * l'orientation de la caméra (l'orbite le recompose à chaque tour, cf. `cameraRoll`), et pendant le
+ * vol c'est la pose composée qui doit le reprendre. Sur du vrai Three : la pose de vol porte bien
+ * le roulis, et l'orientation obtenue est celle que `lookAt` produirait avec le `up` d'`applyRoll`,
+ * si bien que rien ne saute à l'atterrissage.
  */
 describe('le tilt fait partie de la pose de vol', () => {
-  /** Roulis réellement affiché par une caméra : angle de son `up` autour de sa direction de vue. */
-  const shownRoll = (camera: three.PerspectiveCamera) => {
-    const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-    const up = new three.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
-    return rollFromUp(three, forward, up);
-  };
+  /** Roulis réellement affiché par une caméra (celui que lit le vol). */
+  const shownRoll = (camera: three.PerspectiveCamera) => rollFromCamera(three, camera);
 
   /** Caméra posée par l'orbite avec un tilt : exactement l'état d'avant le clic droit. */
   const tiltedCamera = (roll: number) => {
@@ -212,9 +209,21 @@ describe('le tilt fait partie de la pose de vol', () => {
     expect(shownRoll(camera)).toBeCloseTo(roll, 4); // pose de départ : le tilt est bien là
     // Ce que fait `onPointerMove` : relire le tilt, composer la pose, remettre `up` en phase.
     const euler = new three.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion);
-    const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-    const read = rollFromUp(three, forward, camera.up);
-    const look = flyLookEuler(euler, { x: 40, y: 12 }, read);
+    const look = flyLookEuler(euler, { x: 40, y: 12 }, rollFromCamera(three, camera));
+    euler.set(look.x, look.y, look.z, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+    expect(shownRoll(camera)).toBeCloseTo(roll, 4);
+  });
+
+  it('relit le tilt dans l’ORIENTATION, `up` étant laissé à plat par l’orbite', () => {
+    const roll = 0.35;
+    const camera = tiltedCamera(roll);
+    // État réel d'avant le clic droit : la boucle d'orbite porte le tilt dans l'orientation et
+    // laisse `up` à plat. Le lire dans `up` rendait 0 — et le vol partait horizon droit.
+    camera.up.set(0, 1, 0);
+    expect(rollFromCamera(three, camera)).toBeCloseTo(roll, 4);
+    const euler = new three.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion);
+    const look = flyLookEuler(euler, { x: 25, y: -10 }, rollFromCamera(three, camera));
     euler.set(look.x, look.y, look.z, 'YXZ');
     camera.quaternion.setFromEuler(euler);
     expect(shownRoll(camera)).toBeCloseTo(roll, 4);

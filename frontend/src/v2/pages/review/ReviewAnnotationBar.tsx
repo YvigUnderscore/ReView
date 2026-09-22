@@ -43,7 +43,10 @@ export default function ReviewAnnotationBar({
   anchor?: keyof typeof ANCHOR;
 }) {
   const t = useT();
-  const visible = !!ann.viewed;
+  // Les points d'intérêt comptent autant que le dessin : depuis qu'ils survivent à un mouvement
+  // de vue (ils sont ancrés dans la scène), ils sont même ce qui reste le plus longtemps à
+  // l'écran — sans eux dans cette condition, la lecture d'un commentaire n'aurait plus de sortie.
+  const visible = !!ann.viewed || ann.viewedPoi.length > 0;
   useEffect(() => {
     if (!visible) return;
     const onKey = (e: KeyboardEvent) => {

@@ -65,13 +65,15 @@ export function useSubmitComment(opts: {
       const parts: unknown[] = [];
       if (kind === 'SPLAT') parts.push(...paint.serializePending()); // traits du painter (V9)
       // Mode layout : anim caméra (F-curves v2) jointe au commentaire (au lieu de dessiner).
-      if (ann.cameraAnim)
-        parts.push({
-          type: 'camera-anim',
-          version: ann.cameraAnim.version,
-          loop: ann.cameraAnim.loop,
-          channels: ann.cameraAnim.channels,
-        });
+      //
+      // La part EST l'animation, étalée telle quelle. Elle était recopiée champ par champ
+      // (`version`, `loop`, `channels`), et `durationMs` — la durée de lecture réglable, Phase 27
+      // — restait sur le quai : l'animation arrivait bien, mais bouclait sur son dernier temps de
+      // clé au lieu de la durée voulue. Un rejeu qui n'est pas à l'identique est une présentation
+      // perdue. `CameraAnimV2` et `cameraAnimShape` (Zod) décrivent la même forme, à quatre
+      // champs : rien d'étranger ne peut partir vers un schéma `strict()`, et un champ ajouté
+      // demain voyage sans qu'on ait à y repenser ici.
+      if (ann.cameraAnim) parts.push({ type: 'camera-anim', ...ann.cameraAnim });
       // Proposition de scène 3D (46.D) : les modifications locales du reviewer voyagent avec
       // le commentaire et ne sont rejouées qu'à sa sélection — la scène commune ne bouge pas.
       if (ann.sceneOverride) parts.push({ type: 'scene-override', override: ann.sceneOverride });

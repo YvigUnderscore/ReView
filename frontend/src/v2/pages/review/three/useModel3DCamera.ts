@@ -44,8 +44,18 @@ export function useModel3DCamera(
     }
   }, [viewedCameraAnim, setAnim, play]);
 
-  const attach = useCallback(() => {
-    if (!hasAnimation(anim.anim)) return;
+  // Joindre / détacher : le bouton porte l'état, il doit donc aussi savoir le défaire. Et rien
+  // ne part plus en silence — un appui sans animation le dit au lieu de ne rien faire.
+  const toggleAttach = useCallback(() => {
+    if (ann.cameraAnim) {
+      ann.setCameraAnim(null);
+      toast.info(t('review.camera.detached'));
+      return;
+    }
+    if (!hasAnimation(anim.anim)) {
+      toast.warning(t('review.camera.nothingToAttach'));
+      return;
+    }
     ann.setCameraAnim(anim.anim);
     toast.success(t('review.camera.attached'));
   }, [anim.anim, ann, t]);
@@ -114,7 +124,8 @@ export function useModel3DCamera(
   return {
     anim,
     busy,
-    attach,
+    // L'action et son état partent ensemble : le bouton du transport doit dire ce qui est joint.
+    attach: { toggle: toggleAttach, attached: ann.cameraAnim != null },
     importGltf,
     applyOrbitPreset,
     save: canManage ? save : undefined,

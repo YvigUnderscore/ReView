@@ -9,6 +9,7 @@ import { api } from '../../../../lib/apiClient';
 import { qk } from '../../../lib/query';
 import { DEFAULT_TRANSFORM, type MediaResp, type Transform } from '../reviewTypes';
 import { applyEulerTransform } from './applyTransform';
+import { updateOrbitKeepingRoll } from './cameraRoll';
 import { createModelScene, type ModelScene } from './createModelScene';
 import { loadModel } from './loadModel';
 import { fitDistance, resizeRendererCamera } from './sceneConfig';
@@ -268,9 +269,10 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         isBusy: () => fly.flying || frameCbs.current.size > 0 || actionRef.current?.isRunning() === true,
         update: (dt) => {
           // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
-          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé.
+          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé. Hors vol,
+          // l'orbite conserve le tilt réglé (cf. `cameraRoll.updateOrbitKeepingRoll`).
           if (fly.flying) fly.update(dt);
-          else scene.controls.update();
+          else updateOrbitKeepingRoll(THREE, scene.camera, scene.controls);
           mixer?.update(dt);
           frameCbs.current.forEach((cb) => cb(dt));
         },

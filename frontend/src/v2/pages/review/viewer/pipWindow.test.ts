@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { clampPipRect, defaultPipRect, PIP_MIN_WIDTH, toGlRect } from './pipWindow';
+import * as THREE from 'three';
+import { clampPipRect, defaultPipRect, PIP_MIN_WIDTH, renderPipPass, toGlRect } from './pipWindow';
+import { registerSceneHelpers } from './sceneHelpers';
 
 const ASPECT = 16 / 9;
 
@@ -55,5 +57,74 @@ describe('toGlRect — conversion DOM → GL', () => {
       w: 200,
       h: 100,
     });
+  });
+});
+
+/** Renderer minimal : la passe PiP n'a besoin que de ces réglages d'état (aucun WebGL). */
+function fakeRenderer() {
+  const calls: string[] = [];
+  return {
+    calls,
+    autoClear: true,
+    setScissorTest: (on: boolean) => calls.push(`scissorTest:${on}`),
+    setScissor: () => calls.push('scissor'),
+    setViewport: (x: number, y: number, w: number, h: number) => calls.push(`viewport:${x},${y},${w},${h}`),
+    clearDepth: () => calls.push('clearDepth'),
+    render: (): void => {
+      calls.push('render');
+    },
+  };
+}
+
+describe('renderPipPass — la passe du PiP', () => {
+  const rect = { x: 10, y: 20, w: 320, h: 180 };
+
+  it('reprend near/far de la caméra libre (le cadrage les recale, le PiP les gardait)', () => {
+    const renderer = fakeRenderer();
+    const layoutCam = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
+    renderPipPass(renderer as unknown as THREE.WebGLRenderer, new THREE.Scene(), layoutCam, rect, 1000, 600, {
+      near: 2,
+      far: 40000,
+    });
+    expect(layoutCam.near).toBe(2);
+    expect(layoutCam.far).toBe(40000);
+    expect(layoutCam.aspect).toBeCloseTo(320 / 180);
+    // Viewport plein cadre restauré : le rendu principal de la frame suivante en dépend.
+    expect(renderer.calls.at(-1)).toBe('viewport:0,0,1000,600');
+  });
+
+  it('ne dessine pas les objets d’aide du rig (ils y étaient rigides, donc immobiles)', () => {
+    const renderer = fakeRenderer();
+    const helper = new THREE.Object3D();
+    const off = registerSceneHelpers(helper);
+    let visibleAtRender: boolean | null = null;
+    renderer.render = (): void => {
+      visibleAtRender = helper.visible;
+      renderer.calls.push('render');
+    };
+    renderPipPass(
+      renderer as unknown as THREE.WebGLRenderer,
+      new THREE.Scene(),
+      new THREE.PerspectiveCamera(),
+      rect,
+      1000,
+      600,
+    );
+    expect(visibleAtRender).toBe(false);
+    expect(helper.visible).toBe(true); // et rendu à la vue libre juste après
+    off();
+  });
+
+  it('rect ou conteneur dégénéré : aucune passe', () => {
+    const renderer = fakeRenderer();
+    renderPipPass(
+      renderer as unknown as THREE.WebGLRenderer,
+      new THREE.Scene(),
+      new THREE.PerspectiveCamera(),
+      { x: 0, y: 0, w: 0, h: 180 },
+      1000,
+      600,
+    );
+    expect(renderer.calls).toHaveLength(0);
   });
 });

@@ -213,8 +213,7 @@ export default function Model3DReview({
   usePoiPlacement({
     viewer: model3d,
     armed: placingPoi,
-    poi: ann.poi,
-    showingDraft: ann.viewedPoi.length === 0,
+    ann,
     onExit: () => update({ tool: DEFAULT_TOOL }),
   });
   const hasClips = model3d.animations.length > 0;
@@ -287,7 +286,7 @@ export default function Model3DReview({
             editable={canManage}
             fps={data.fps ?? 24}
             trackSwitch={trackSwitch}
-            onAttach={cam.attach}
+            attach={cam.attach}
             drawerOpen={state.drawer === 'curves'}
             onDrawer={() => update({ drawer: state.drawer === 'curves' ? null : 'curves' })}
           />
