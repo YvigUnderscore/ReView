@@ -6,9 +6,11 @@ import { isEditable } from '../../../lib/shortcuts';
 import type { SplatCamera } from '../reviewTypes';
 import { isFlyMoveCode } from '../viewer/flyControls';
 import {
+  animBase,
   animDuration,
   animKeyTimes,
   animPlayDuration,
+  baseChannelValues,
   CHANNEL_IDS,
   deleteColumn,
   emptyAnim,
@@ -290,15 +292,18 @@ export function useCameraAnim(controller: CameraController) {
   /**
    * Pose une clé sur **un seul canal** au playhead, depuis la vue courante (ligne du dopesheet).
    * Si la vue ne porte pas la valeur (fov/roll absents de la capture), retombe sur la valeur
-   * échantillonnée du canal — poser une clé n'altère alors pas la courbe.
+   * échantillonnée du canal — poser une clé n'altère alors pas la courbe. Un canal VIDE
+   * s'échantillonne depuis la base, jamais depuis zéro : sans cela, une clé de focale posée sur
+   * une animation neuve écrivait 0°.
    */
   const insertChannelKeyAtView = useCallback(
     (channel: ChannelId, t?: number) => {
       const time = Math.max(0, Math.round(t ?? timeRef.current));
       const view = captureCamera();
+      const next = seedBase(view);
       const fromView = view ? poseToChannelValues(view)[channel] : undefined;
-      const v = fromView ?? evalChannel(animRef.current.channels[channel], time, 0);
-      commit(upsertKey(seedBase(view), channel, time, v));
+      const fallback = baseChannelValues(animBase(next, baseRef.current))[channel];
+      commit(upsertKey(next, channel, time, fromView ?? evalChannel(next.channels[channel], time, fallback)));
     },
     [captureCamera, commit, seedBase],
   );

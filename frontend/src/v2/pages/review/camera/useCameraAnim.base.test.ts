@@ -114,6 +114,17 @@ describe('useCameraAnim — base d’une animation neuve', () => {
     expect(result.current.anim.base).toEqual(poseToBase(shot));
   });
 
+  it('une clé de focale sur un canal vide part de la base, pas de zéro', () => {
+    const { result, capture } = harness();
+    // Une clé sur le seul canal `px` : l'animation adopte la base, et `fov` reste VIDE.
+    act(() => result.current.addKey('px', 0, 1));
+    // La capture cesse ensuite de porter la focale : la valeur ne peut plus venir que du canal,
+    // vide, donc de la base. Le repli valait 0 — une caméra à 0° de champ.
+    capture.current = { position: shot.position, target: shot.target };
+    act(() => result.current.insertChannelKeyAtView('fov', 500));
+    expect(result.current.anim.channels.fov?.keys[0]?.v).toBe(50);
+  });
+
   it('sans vue capturable, aucune base n’est inventée', () => {
     const { result, capture } = harness();
     capture.current = undefined;

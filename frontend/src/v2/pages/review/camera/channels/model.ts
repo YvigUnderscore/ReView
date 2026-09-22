@@ -142,6 +142,25 @@ export function animBase(anim: CameraAnimV2, fallback: CameraAnimBase): CameraAn
 }
 
 /**
+ * Valeurs par canal de la base — ce que `sampleAnimV2` lit quand un canal n'a aucune clé. Poser
+ * une clé sur un canal vide doit écrire CETTE valeur : à défaut, la courbe part de zéro, c'est-
+ * à-dire une focale de 0° ou un axe collé à l'origine. Les valeurs de repli de `fov`/`roll` sont
+ * celles de l'échantillonnage.
+ */
+export function baseChannelValues(base: CameraAnimBase): Record<ChannelId, number> {
+  return {
+    px: base.position.x,
+    py: base.position.y,
+    pz: base.position.z,
+    tx: base.target.x,
+    ty: base.target.y,
+    tz: base.target.z,
+    fov: base.fov ?? 60,
+    roll: base.roll ?? 0,
+  };
+}
+
+/**
  * Adopte `view` comme base de l'animation — **seulement si elle est neuve** : aucune base, aucune
  * clé. Une animation qui porte déjà des clés sans base est héritée ; lui en donner une changerait
  * son rejeu (présentations persistées, animations jointes à des commentaires déjà en base), ce qui
