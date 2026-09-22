@@ -95,11 +95,14 @@ the *Clean up* mode together. They were briefly moved into a popover of their ow
 click between you and every tool; the rail is where a tool belongs.
 
 > [!NOTE]
-> The *Edit* group of the rail does not exist on a published splat, nor for anyone who cannot
-> manage the media, and the render mode and orientation switch go with it. That is not a bug:
-> the orientation flip is stored with the edits, and the publish lock covers it. The *Render*
-> popover stays, with the inspection colouring everyone is allowed. The seven letters are
-> inert in the same conditions — the keyboard never reaches a tool the rail does not show.
+> The *Edit* group of the rail does not exist for anyone who cannot manage the media, and the
+> render mode and orientation switch go with it. The *Render* popover stays, with the
+> inspection colouring everyone is allowed. The seven letters are inert in the same
+> conditions — the keyboard never reaches a tool the rail does not show.
+>
+> Publication does **not** remove the group. What it removes is *Save*: after publication an
+> edit is a proposal carried by a comment, not a rewrite of the cloud everyone is looking at.
+> See [What publication freezes](#what-publication-freezes).
 
 > [!TIP]
 > **Navigate**, at the top of the rail, is the way out of the clean-up with the mouse. Arming a
@@ -111,7 +114,7 @@ click between you and every tool; the rail is where a tool belongs.
 The original splat file is **never modified**. Every edit is stored as metadata — a selection
 mask bitset plus an edit list — and **replayed identically for every viewer**. All of it lives
 in the **Clean up** mode, armed from the *Edit* group of the tool rail or by pressing a tool
-letter, and only for someone who can manage the media on an unpublished version.
+letter, and only for someone who can manage the media.
 
 | Tool | Key | A plain drag | Modifiers and options |
 |---|---|---|---|
@@ -132,7 +135,9 @@ splat, capped at four megabytes, which covers clouds of some thirty million spla
 
 **Saving** — the commit group at the right of the options bar carries undo, redo and *Save*,
 with a dot while something is pending. Saving writes the mask, the subset transforms and the
-edit list; from then on every reviewer opens the cleaned cloud.
+edit list; from then on every reviewer opens the cleaned cloud. *Save* is offered **only while
+the version is unpublished**; after publication the same place reads *Splat edit attached to the
+next comment*, and undo and redo stay where they were.
 
 **Undo covers the selections too.** `Ctrl/⌘+Z`, `Ctrl/⌘+Y` and `Ctrl/⌘+Shift+Z` walk one single
 history, and a change of selection is a step in it like a deletion or a volume: a lasso that
@@ -150,16 +155,35 @@ restores the selection that produced it.
 
 ![Before publication every content edit is allowed; after it, mask, cutting volumes, transform and orientation are refused, while the camera, depth of field, reveal effect, default level of detail and thumbnail stay editable.](../assets/user-guide/splat-publish-lock.svg)
 
-A published media is finished work, so the cloud itself is frozen — the backend refuses every
-content edit with a `403`. The **presentation**, on the other hand, is staging rather than
-content: it is how the scan is shown, not what it contains, and it stays editable for as long
-as the media exists.
+A published media is work other people are already commenting on, so the cloud everyone sees is
+frozen — the backend refuses every content edit with a `403`. The **presentation**, on the other
+hand, is staging rather than content: it is how the scan is shown, not what it contains, and it
+stays editable for as long as the media exists.
+
+This matters most in a studio that does not use drafts, where a media is published the moment it
+is uploaded: there, *Save* never appears above the viewer at all, and that is the intended
+reading of the rule rather than a second rule of its own.
+
+**Editing does not stop with publication — it changes address.** Move, rotate, scale the cloud,
+drop cutting volumes, flip the orientation, then write your comment: the edit travels **with the
+comment** and is replayed for whoever selects it, exactly as a scene proposal does on a
+[3D model](review-3d.md). `Esc`, or the banner above the cloud, gives the delivered cloud back.
+
+**The proposal carries the whole gesture**, deletions included — cleaning a cloud is most of the
+work on a cloud, and a proposal that left it out would have no address at all in a studio that
+publishes on upload. The cloud transform, the cutting volumes and the orientation flip travel
+inside the comment. The **deletion mask** and the **subset transforms** are binary: they travel
+as attachments of that comment, and the proposal only carries their keys — same storage, same
+signed reads and same purge as any image you attach, so they leave when the comment is edited or
+deleted. Each of the two is capped at four megabytes, the cap the media's own mask already had;
+past that the edit stays local and the composer says so.
 
 That split is the answer to the two questions this page gets asked most:
 
 - *My mask did not save but my camera did.* Correct, and deliberate: two endpoints, two rules.
-- *How do I fix the geometry after publishing?* You do not. Publish a new version — that is
-  what versions are for. See [Upload & publishing](upload-and-publishing.md).
+- *How do I fix the geometry after publishing?* Propose it in a comment, or publish a new
+  version — that is what versions are for. See
+  [Upload & publishing](upload-and-publishing.md).
 
 ## Comparing splats
 
@@ -352,8 +376,9 @@ brush** from the *Edit* group of the rail or with `M`, and sweep over the
 floaters — the brush only takes what is actually visible, so the wall behind survives. Swept too
 far? `Ctrl+Z` gives the selection back. `Delete` hides them. For the car park, drop a box volume
 with `O`, set it to *Isolate*, and scale it around the set: everything
-outside disappears. Save from the commit group and every reviewer opens the cleaned scan — the
-uploaded file is still intact if you got the box wrong.
+outside disappears. Save from the commit group — while the version is still unpublished — and
+every reviewer opens the cleaned scan; the uploaded file is still intact if you got the box
+wrong. Once published, the same gestures become a proposal attached to your comment.
 
 ### A note on a detail nobody else can find
 
@@ -402,9 +427,13 @@ distance on the subject, and the scan presents itself. See
 server-side, so what you upload is what the viewer has to read.
 
 **There is no Edit group on the tool rail.** Splat editing requires that you can manage the
-media *and* that it is not published. After publication the backend refuses every content edit
-with a `403`, so the group, the render mode and the orientation switch all disappear together —
-the *Render* popover stays, with the inspection colouring.
+media. Without that right the group, the render mode and the orientation switch disappear
+together — the *Render* popover stays, with the inspection colouring. Publication does not
+remove the group.
+
+**The Edit group is there but there is no Save button.** The version is published. The backend
+refuses every content edit with a `403`, so the whole edit — deletions included — goes into your
+next comment instead, and the options bar says so where *Save* used to be.
 
 **I am stuck in the clean-up and there is no mode switch to leave it.** Click **Navigate** at the
 top of the rail, or press `1`. A tool letter (`B`, `L`, `M`, `O`, `T`, `R`, `S`) arms its tool
@@ -414,8 +443,10 @@ top of the rail, or press `1`. A tool letter (`B`, `L`, `M`, `O`, `T`, `R`, `S`)
 splat standing. Check the volume modes: an *Isolate* volume placed outside the geometry keeps
 nothing.
 
-**My last selection is not in the exported file.** Exports use the saved edits. Save from the
-commit group in the options bar, then export.
+**My last selection is not in the exported file.** Exports use the saved edits — the cloud as it
+is delivered — not a proposal read from a comment. Save from the commit group in the options bar,
+then export. On a published media there is nothing to save to: export before publishing, or
+publish a new version.
 
 **Keyboard shortcuts do nothing.** They are inert while you hold the right mouse button
 (flight — the keys belong to the camera then, tool letters included), while the caret is in a

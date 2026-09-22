@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { cameraAnimShape, channelSchema, curveKeySchema } from './cameraAnimSchema';
 import { badRequest } from './errors';
 import { MAX_COMMENT_ATTACHMENTS } from './commentAttachments';
+import { splatEditBlobRef } from './commentSplatEdit';
 import { sceneOverrideSchema } from './sceneOverride';
 
 /**
@@ -136,6 +137,58 @@ const sceneOverridePart = z
   .object({ type: z.literal('scene-override'), override: sceneOverrideSchema.nullable() })
   .strict();
 
+/**
+ * Volumes de crop d'une proposition d'édition de nuage. Même plafond que la route d'écriture
+ * globale (`media-splat.routes`) : la proposition ne peut pas être plus riche que ce qu'un
+ * gestionnaire pourrait enregistrer pour tous.
+ */
+const MAX_SPLAT_EDIT_VOLUMES = 32;
+
+/** Échelle d'un nuage ou d'un volume — strictement positive et bornée, comme côté route. */
+const splatScale = finite.positive().max(1_000);
+const splatVec3 = z.tuple([world, world, world]);
+const splatQuat = z.tuple([finite, finite, finite, finite]);
+const splatScale3 = z.tuple([splatScale, splatScale, splatScale]);
+const splatTrs = { position: splatVec3, quaternion: splatQuat, scale: splatScale3 };
+
+/**
+ * Proposition d'**édition de nuage** jointe à un commentaire (Phase 50, lot 14) : la
+ * transformation TRS du nuage, ses volumes de crop SDF, le flip d'orientation à l'import —
+ * et les **suppressions**, qui sont l'essentiel du travail sur un nuage.
+ *
+ * Jumelle de `scene-override` pour le splat : rejouée à la seule lecture du commentaire, et
+ * jamais écrite dans le média. Comme l'override 3D, elle voyage ENTIÈRE — rien du geste ne
+ * reste sur le quai, sans quoi supprimer des splats pour les autres n'aurait plus d'adresse
+ * dans un studio qui publie d'office.
+ *
+ * Les deux blobs (masque de suppression par indice, ops de sous-ensemble) ne tiennent pas
+ * dans une annotation : la part n'en porte que la RÉFÉRENCE, et l'objet voyage comme une
+ * pièce jointe du commentaire — même dossier, même présignature, même purge. Tout est dit
+ * dans `lib/commentSplatEdit`, y compris le plafond de taille que le serveur vérifie.
+ */
+const splatEditPart = z
+  .object({
+    type: z.literal('splat-edit'),
+    transform: z.object(splatTrs).strict().nullable(),
+    volumes: z
+      .array(
+        z
+          .object({
+            shape: z.enum(['box', 'sphere']),
+            mode: z.enum(['delete', 'isolate']),
+            ...splatTrs,
+          })
+          .strict(),
+      )
+      .max(MAX_SPLAT_EDIT_VOLUMES),
+    baseFlip: z.boolean().optional(),
+    /** Masque de suppression : clé de l'objet joint + nombre de splats retirés. */
+    mask: splatEditBlobRef.nullable().optional(),
+    /** Ops de sous-ensemble ajoutées par l'auteur (delta, pas celles déjà au média). */
+    subset: splatEditBlobRef.nullable().optional(),
+  })
+  .strict();
+
 /** Plage vidéo in→out (34.A) : l'annotation reste visible pendant toute la plage. */
 const rangePart = z
   .object({
@@ -179,6 +232,7 @@ const annotationPart = z.union([
   paintPart,
   cameraAnimPart,
   sceneOverridePart,
+  splatEditPart,
   rangePart,
   shapePart,
 ]);
@@ -264,11 +318,12 @@ export function parseAnnotation(value: unknown): unknown {
  * Annotation d'un **invité** — plus étroite que celle d'un membre, et volontairement.
  *
  * Un client dessine sur l'image et pose un point sur une surface : ce sont des remarques.
- * Les trois parts retirées ici sont des gestes d'AUTEUR, rejoués pour tous les spectateurs
- * du média : `scene-override` (proposition de mise en scène 3D, 46.D), `camera-anim` (une
- * animation caméra par canaux) et `splat-paint` (les traits du painter 3D). Aucune n'a de
- * sens venue d'un lien de partage, et les accepter donnerait à un anonyme muni d'une URL un
- * moyen d'écrire dans ce que voient les autres.
+ * Les quatre parts retirées ici sont des gestes d'AUTEUR, rejoués aux spectateurs qui lisent
+ * le commentaire : `scene-override` (proposition de mise en scène 3D, 46.D), `splat-edit`
+ * (proposition d'édition de nuage), `camera-anim` (une animation caméra par canaux) et
+ * `splat-paint` (les traits du painter 3D). Aucune n'a de sens venue d'un lien de partage, et
+ * les accepter donnerait à un anonyme muni d'une URL un moyen d'écrire dans ce que voient
+ * les autres.
  *
  * Les volumes sont resserrés dans la même intention : cinq fois moins de parts et huit fois
  * moins d'octets que pour un membre. C'est large pour une page de retours, étroit pour un

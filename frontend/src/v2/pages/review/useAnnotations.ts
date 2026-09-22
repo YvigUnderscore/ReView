@@ -14,6 +14,7 @@ import {
 import { NO_BANDS, pastedRefBox, placeRefBox, type StagedReference, type ViewerBands } from './referenceBox';
 import { useAnnotationShortcuts } from './useAnnotationShortcuts';
 import type { SplatLayoutAnim } from './reviewTypes';
+import type { SplatEditDraft, SplatEditProposal } from './splat/splatEditPart';
 import { usePoiDraft } from './poi/usePoiDraft';
 import type { PoiPoint } from './poi/poiPoints';
 
@@ -119,6 +120,23 @@ export function useAnnotations(opts?: {
   // Modifications de scène en cours, jointes au prochain commentaire envoyé (comme les points
   // d'intérêt et l'animation caméra).
   const [sceneOverride, setSceneOverride] = useState<unknown>(null);
+  // Proposition d'édition de nuage du commentaire sélectionné : même mécanique que la scène 3D
+  // ci-dessus, pour l'autre viewer spatial (Phase 50, lot 14).
+  const [viewedSplatEdit, setViewedSplatEdit] = useState<SplatEditProposal | null>(null);
+  /**
+   * Celle en cours de rédaction, elle, n'est PAS un état : l'éditeur splat la fournit à la
+   * demande, au moment de l'envoi.
+   *
+   * Un masque de suppression pèse jusqu'à quelques centaines de kilo-octets de binaire ;
+   * l'encoder à chaque rendu de l'éditeur pour le poser dans un état — et le comparer pour
+   * éviter la boucle de rendus — coûterait cher pour une valeur qu'un seul appelant lit, une
+   * seule fois. `sent` rend la main à l'éditeur quand le commentaire est parti.
+   */
+  const splatEditSource = useRef<{ build: () => SplatEditDraft | null; sent: () => void } | null>(null);
+  const provideSplatEdit = useCallback((source: typeof splatEditSource.current) => {
+    splatEditSource.current = source;
+  }, []);
+  const takeSplatEdit = useCallback(() => splatEditSource.current?.build() ?? null, []);
 
   /** `stepKey` : même valeur sur tout un geste (glisser d'une forme) = un seul cran. */
   const setShapes = (next: Shape[], stepKey?: string) => {
@@ -158,6 +176,10 @@ export function useAnnotations(opts?: {
     // La proposition de scène est partie avec le commentaire : comme les points, elle ne doit
     // pas se rejoindre d'elle-même au commentaire suivant (46.T).
     setSceneOverride(null);
+    // L'édition de nuage qui vient de partir quitte l'éditeur : elle vit désormais dans le
+    // commentaire, et ne doit pas se rejoindre d'elle-même au suivant (46.T) — ni y téléverser
+    // son masque une deuxième fois. C'est la mécanique du modèle 3D, à la lettre.
+    splatEditSource.current?.sent();
     setStagedRefs([]);
     setAnnotating(false);
   };
@@ -178,6 +200,7 @@ export function useAnnotations(opts?: {
     setViewedAspect(null);
     setViewedCameraAnim(null);
     setViewedSceneOverride(null);
+    setViewedSplatEdit(null);
   };
 
   return {
@@ -219,6 +242,10 @@ export function useAnnotations(opts?: {
     setViewedSceneOverride,
     sceneOverride,
     setSceneOverride,
+    viewedSplatEdit,
+    setViewedSplatEdit,
+    provideSplatEdit,
+    takeSplatEdit,
     resetComposer,
     clearViewed,
   };

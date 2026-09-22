@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { SplatSceneHandle } from '../../useSplat';
-import { applySubsetDelta, snapshotSubset } from '../operations/transformSplats';
+import {
+  applySubsetDelta,
+  restoreSubset,
+  snapshotSubset,
+  type SubsetSnapshot,
+} from '../operations/transformSplats';
 import { t } from '../../../../../i18n';
 
 /**
@@ -83,9 +88,32 @@ export async function fetchSubsetOps(url: string): Promise<SubsetOp[]> {
 
 /** Rejoue les ops dans l'ordre sur les données paquées (au chargement — éditeur comme spectateur). */
 export function applySubsetOps(handle: SplatSceneHandle, ops: readonly SubsetOp[]): void {
+  applySubsetOpsReversible(handle, ops);
+}
+
+/**
+ * Même rejeu, mais en rendant de quoi le DÉFAIRE (Phase 50, lot 14).
+ *
+ * Les ops d'un chargement de média sont définitives : elles décrivent le nuage tel qu'il est
+ * livré. Celles d'une **proposition de commentaire** ne le sont pas — on les relâche en quittant
+ * le commentaire, et sans instantané le nuage resterait déplacé jusqu'au prochain rechargement.
+ */
+export function applySubsetOpsReversible(
+  handle: SplatSceneHandle,
+  ops: readonly SubsetOp[],
+): SubsetSnapshot[] {
   const m = new handle.THREE.Matrix4();
+  const snaps: SubsetSnapshot[] = [];
   for (const op of ops) {
     const snap = snapshotSubset(handle, op.indices);
-    if (snap) applySubsetDelta(handle, snap, m.fromArray(op.delta));
+    if (!snap) continue;
+    applySubsetDelta(handle, snap, m.fromArray(op.delta));
+    snaps.push(snap);
   }
+  return snaps;
+}
+
+/** Défait un rejeu, du dernier au premier : deux ops peuvent avoir touché le même splat. */
+export function revertSubsetOps(handle: SplatSceneHandle, snaps: readonly SubsetSnapshot[]): void {
+  for (let i = snaps.length - 1; i >= 0; i--) restoreSubset(handle, snaps[i]);
 }

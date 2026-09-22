@@ -18,8 +18,11 @@ import { useGizmoSettings } from '../../viewer/gizmos/useGizmoSettings';
 import { useTransformGizmo, type GizmoMode } from '../../viewer/gizmos/useTransformGizmo';
 import { hideSplats, rehideSplats, restoreSplats } from './operations/deleteSplats';
 import { useEditHistory } from './operations/history';
-import type { SubsetOp } from './persistence/subsetOps';
+import { encodeMask } from './persistence/mask';
+import { encodeSubsetOps, type SubsetOp } from './persistence/subsetOps';
 import { useSplatPersistence } from './persistence/useSplatPersistence';
+import { useEditorSuspend } from './useEditorSuspend';
+import type { SplatEditDraft } from '../splatEditPart';
 import { meshBounds, selectionBounds } from './selection/bounds';
 import { useSelection } from './selection/useSelection';
 import { useSubsetTransform } from './selection/useSubsetTransform';
@@ -48,6 +51,11 @@ export function useSplatEditor(
   savedSubsetUrl: string | null,
   onSaved: (patch: SplatEditsPatch) => void,
   enabled: boolean,
+  /**
+   * Une proposition d'édition venue d'un commentaire est-elle en cours de lecture ? L'éditeur
+   * rend alors la main au rejeu, et la reprend intacte à la sortie (`useEditorSuspend`).
+   */
+  suspended = false,
 ) {
   const t = useT();
   const { applyTransform, setBaseFlip: applyBaseFlip, setRenderMode: applyRenderMode, ready } = splat;
@@ -72,6 +80,9 @@ export function useSplatEditor(
   const [deletedCount, setDeletedCount] = useState(0);
   // Journal des transformations de sous-ensembles (Phase 28) — cumulé, sérialisé à l'enregistrement.
   const subsetOpsRef = useRef<SubsetOp[]>([]);
+  // Volumes binaires trouvés au chargement (masque du média, ops déjà enregistrées) : ce qui est
+  // au-delà est le geste de CETTE session, et c'est lui seul qu'une proposition emporte (lot 14).
+  const basesRef = useRef({ mask: 0, subset: 0 });
 
   const isGizmoTool = GIZMO_TOOLS.includes(tool);
 
@@ -277,16 +288,23 @@ export function useSplatEditor(
   // Raccourcis clavier (extraits dans un hook dédié pour tenir le budget de taille).
   useEditorShortcuts({ enabled, splat, history, deleteSelection, frameSelection, frameHome });
 
-  // Persistance (chargement masque/ops + enregistrement/réinitialisation) — hook dédié.
+  // Lecture d'une proposition de commentaire : l'édition locale se retire de la scène, et y
+  // revient telle quelle à la sortie (lot 14). Sans cela, le rejeu et l'éditeur écriraient dans
+  // le même nuage — c'est la raison pour laquelle le rejeu était coupé aux gestionnaires.
+  useEditorSuspend({
+    enabled,
+    suspended,
+    splat,
+    runtimesRef: volumes.runtimesRef,
+    transform,
+    baseFlip,
+  });
+
+  // Persistance (chargement masque/ops + enregistrement) — hook dédié.
   const buildEdits = useCallback(
     (): SplatEdits => ({ transform, volumes: volumes.serialize(), baseFlip }),
     [transform, volumes, baseFlip],
   );
-  const afterReset = useCallback(() => {
-    applyTransform(null);
-    setTransform(IDENTITY_SPLAT_TRANSFORM);
-    setBaseFlipState(true); // retour à la convention d'import (l'effet ré-applique le flip)
-  }, [applyTransform]);
   const onClean = useCallback(() => setDirty(false), []);
   const persistence = useSplatPersistence({
     splat,
@@ -299,11 +317,50 @@ export function useSplatEditor(
     setDeletedCount,
     notifyHiddenChanged: selection.markDirty,
     buildEdits,
-    afterReset,
-    history,
+    basesRef,
     onSaved,
     onClean,
   });
+
+  /**
+   * Ce que l'édition en cours propose au prochain commentaire (lot 14) : le borné, plus les
+   * deux binaires encodés à la demande.
+   *
+   * Encodés **à la demande**, et non dans un état : un masque pèse jusqu'à quelques centaines
+   * de kilo-octets, et le re-sérialiser à chaque rendu de l'éditeur serait absurde.
+   *
+   * Deux traitements différents, pour une raison : le masque est idempotent (le rejeu masque ce
+   * qui ne l'est pas déjà), il part donc ENTIER dès que l'auteur y a ajouté quelque chose ; les
+   * ops de sous-ensemble ne le sont pas, seules celles qu'il a ajoutées voyagent — celles du
+   * média sont déjà appliquées chez le lecteur.
+   */
+  const buildProposal = useCallback((): SplatEditDraft => {
+    const deleted = deletedRef.current;
+    const addedOps = subsetOpsRef.current.slice(basesRef.current.subset);
+    return {
+      edits: buildEdits(),
+      mask: deleted.size > basesRef.current.mask ? { bytes: encodeMask(deleted), count: deleted.size } : null,
+      subset: addedOps.length > 0 ? { bytes: encodeSubsetOps(addedOps), count: addedOps.length } : null,
+    };
+  }, [buildEdits]);
+
+  /**
+   * Reprise locale : l'édition qui vient de partir dans un commentaire quitte l'éditeur.
+   *
+   * C'est la mécanique du modèle 3D, à la lettre (`Model3DReview` : proposition envoyée ⇒
+   * `scene.revert()`). Sans elle, la même proposition se rejoindrait d'elle-même au commentaire
+   * suivant (46.T) — et téléverserait son masque une deuxième fois.
+   */
+  const revertEdits = useCallback(() => {
+    history.undoAll(); // restaure les splats masqués et retire les volumes ajoutés dans la session
+    // Retour à ce que le média porte — pas à l'identité : l'éditeur reprend là où il aurait
+    // ouvert. Les volumes enregistrés, créés hors historique, sont restés en place.
+    applyTransform(savedTransform);
+    setTransform(saved?.transform ?? IDENTITY_SPLAT_TRANSFORM);
+    setBaseFlipState(saved?.baseFlip ?? true);
+    history.clear();
+    setDirty(false);
+  }, [applyTransform, history, saved, savedTransform]);
 
   return {
     tool,
@@ -318,6 +375,11 @@ export function useSplatEditor(
     baseFlip,
     toggleBaseFlip,
     dirty,
+    // Sérialisation de l'édition en cours : lue par la persistance, et — binaires compris —
+    // par la proposition jointe au commentaire (lot 14).
+    buildEdits,
+    buildProposal,
+    revertEdits,
     busy: persistence.busy,
     selection,
     deleteSelection,
@@ -325,7 +387,6 @@ export function useSplatEditor(
     volumes,
     history,
     save: persistence.save,
-    reset: persistence.reset,
   };
 }
 

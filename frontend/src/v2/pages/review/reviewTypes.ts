@@ -4,6 +4,7 @@
 import type { Media, ModelSource, ReviewRequestRule } from '../../types/api';
 import type { ReviewAssignee } from '../../types/entities';
 import { normalizeAnim } from './camera/channels/model';
+import { readSplatEditPart, type SplatEditPartData } from './splat/splatEditPart';
 import type { CameraAnimV2 } from './camera/channels/model';
 
 /** Types et utilitaires partagés de la review (découpage 10.C2). */
@@ -111,10 +112,18 @@ export function splitAnnotationParts(annotation: unknown): {
   cameraAnim: SplatLayoutAnim | null;
   /** Proposition de scène 3D jointe au commentaire (46.D) — rejouée à sa sélection. */
   sceneOverride: unknown;
+  /**
+   * Proposition d'édition de nuage jointe au commentaire (Phase 50, lot 14) — jumelle de
+   * `sceneOverride` pour le splat, rejouée à la sélection et jamais écrite dans le média. Les
+   * deux binaires (masque, ops) y figurent par leur clé : `resolveSplatEditProposal` les
+   * résout dans les pièces jointes du commentaire porteur.
+   */
+  splatEdit: SplatEditPartData | null;
   /** Plage vidéo in→out (34.A) : l'annotation reste visible pendant toute la plage. */
   range: { inFrame: number; outFrame: number } | null;
 } {
-  if (!Array.isArray(annotation)) return { shapes: [], cameraAnim: null, range: null, sceneOverride: null };
+  if (!Array.isArray(annotation))
+    return { shapes: [], cameraAnim: null, range: null, sceneOverride: null, splatEdit: null };
   const parts = annotation as Array<{ type?: string; inFrame?: number; outFrame?: number }>;
   const anim = parts.find((x) => x?.type === 'camera-anim');
   const rangePart = parts.find((x) => x?.type === 'range');
@@ -127,7 +136,8 @@ export function splitAnnotationParts(annotation: unknown): {
       x.type !== 'splat-paint' &&
       x.type !== 'camera-anim' &&
       x.type !== 'range' &&
-      x.type !== 'scene-override',
+      x.type !== 'scene-override' &&
+      x.type !== 'splat-edit',
   );
   const range =
     rangePart &&
@@ -141,6 +151,7 @@ export function splitAnnotationParts(annotation: unknown): {
     cameraAnim: normalizeAnim(anim),
     range,
     sceneOverride: scenePart?.override ?? null,
+    splatEdit: readSplatEditPart(parts),
   };
 }
 

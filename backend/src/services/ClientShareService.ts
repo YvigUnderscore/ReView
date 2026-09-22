@@ -16,6 +16,7 @@ import { imageTypeFromKey } from '../lib/uploadContentType';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { buildShareBrowse, type ShareBrowse } from './shareBrowse';
 import { createGuest, publicAttachments } from './CommentService';
+import { splatEditBlobKeys } from '../lib/commentSplatEdit';
 import { decideAsGuest, guestStatuses } from './ReviewDecisionService';
 import { logAudit } from './AuditService';
 import { AppError, forbidden, notFound, unauthorized } from '../lib/errors';
@@ -405,6 +406,14 @@ export async function findShareMedia(share: ShareScopeRef, id: number): Promise<
  * n'appartient qu'à ce montage tant que personne ne l'a renvoyé sur la review du plan. Le
  * fil interne pose ce garde-fou depuis la Phase 46 ; la route publique l'avait oublié.
  */
+/** Pièces jointes d'un commentaire, moins les binaires que sa proposition d'édition référence. */
+export function dropSplatEditBlobs(attachments: unknown, annotation: unknown): unknown {
+  if (!Array.isArray(attachments)) return attachments;
+  const keys = splatEditBlobKeys(annotation);
+  if (keys.length === 0) return attachments;
+  return (attachments as { key?: string }[]).filter((a) => !a.key || !keys.includes(a.key));
+}
+
 export async function listShareComments(mediaObjectId: number) {
   const rows = await prisma.comment.findMany({
     where: {
@@ -435,7 +444,11 @@ export async function listShareComments(mediaObjectId: number) {
   return Promise.all(
     rows.map(async ({ attachments, ...comment }) => ({
       ...comment,
-      attachments: await publicAttachments(attachments),
+      // Les binaires d'une proposition d'édition de nuage (masque, ops) sont stockés comme des
+      // pièces jointes — c'est ce qui leur donne la purge — mais ce ne sont pas des fichiers que
+      // l'on offre : sur une page publique ils descendraient en URL présignée vers un bitset que
+      // personne n'ouvre. Écartés par leur clé, avant présignature.
+      attachments: await publicAttachments(dropSplatEditBlobs(attachments, comment.annotation)),
     })),
   );
 }

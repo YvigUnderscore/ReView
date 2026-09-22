@@ -10,7 +10,8 @@ import * as SplatEditService from '../services/SplatEditService';
 /**
  * Éditions non-destructives d'un splat (10.G) — sous-routeur monté sous /api/media.
  * Écriture réservée aux gestionnaires du média, splat non publié uniquement (vérifié par
- * le service). Le fichier splat original n'est jamais modifié.
+ * le service ; après publication, une édition ne part plus que dans un commentaire). Le
+ * fichier splat original n'est jamais modifié.
  */
 const router = Router();
 router.use(authenticate);

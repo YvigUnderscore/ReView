@@ -32,15 +32,20 @@ export function useSplatPersistence(opts: {
   notifyHiddenChanged: (indices: Iterable<number>) => void;
   /** Sérialise l'état courant (transform + volumes + baseFlip) au moment d'enregistrer. */
   buildEdits: () => SplatEdits;
-  /** Remet l'état local de l'éditeur à zéro après la purge serveur (reset). */
-  afterReset: () => void;
-  history: { undoAll: () => void; clear: () => void };
+  /**
+   * Volumes binaires DÉJÀ enregistrés au média, relevés ici au chargement (Phase 50, lot 14).
+   *
+   * C'est ce qui permet de distinguer ce que l'auteur a ajouté de ce qu'il a simplement trouvé :
+   * une proposition jointe à un commentaire ne doit porter que son geste à lui, sinon chaque
+   * note rejouerait sur le nuage du lecteur des ops déjà appliquées chez lui.
+   */
+  basesRef: RefObject<{ mask: number; subset: number }>;
   onSaved: (patch: SplatEditsPatch) => void;
   onClean: () => void;
 }) {
   const t = useT();
   const { splat, mediaId, enabled, savedMaskUrl, savedSubsetUrl, deletedRef, subsetOpsRef } = opts;
-  const { setDeletedCount, notifyHiddenChanged, buildEdits, afterReset, history, onSaved, onClean } = opts;
+  const { setDeletedCount, notifyHiddenChanged, buildEdits, basesRef, onSaved, onClean } = opts;
   const { ready } = splat;
   const [busy, setBusy] = useState(false);
   const maskInitRef = useRef(false);
@@ -56,11 +61,12 @@ export function useSplatPersistence(opts: {
     fetchMaskIndices(savedMaskUrl)
       .then((indices) => {
         deletedRef.current = applyMaskIndices(handle, indices);
+        basesRef.current.mask = deletedRef.current.size;
         setDeletedCount(deletedRef.current.size);
         notifyHiddenChanged(deletedRef.current);
       })
       .catch(() => toast.error(t('splat.maskUnreadable')));
-  }, [enabled, ready, savedMaskUrl, splat, deletedRef, setDeletedCount, notifyHiddenChanged, t]);
+  }, [enabled, ready, savedMaskUrl, splat, deletedRef, basesRef, setDeletedCount, notifyHiddenChanged, t]);
 
   // Recharge les transformations de sous-ensembles persistées (une fois) : rejouées sur les
   // données paquées + journal initialisé, pour que les ops suivantes s'y cumulent.
@@ -73,9 +79,10 @@ export function useSplatPersistence(opts: {
       .then((ops) => {
         applySubsetOps(handle, ops);
         subsetOpsRef.current = ops;
+        basesRef.current.subset = ops.length;
       })
       .catch(() => toast.error(t('splat.transformUnreadable')));
-  }, [enabled, ready, savedSubsetUrl, splat, subsetOpsRef, t]);
+  }, [enabled, ready, savedSubsetUrl, splat, subsetOpsRef, basesRef, t]);
 
   /** Enregistre toutes les éditions : transform + volumes (JSON), masque et ops binaires. */
   const save = useCallback(async () => {
@@ -122,32 +129,10 @@ export function useSplatPersistence(opts: {
     }
   }, [mediaId, buildEdits, deletedRef, subsetOpsRef, savedMaskUrl, savedSubsetUrl, onSaved, onClean, t]);
 
-  /** Réinitialise tout : annule l'historique, purge serveur (JSON + binaires), état local à zéro. */
-  const reset = useCallback(async () => {
-    setBusy(true);
-    try {
-      history.undoAll(); // restaure les splats masqués et retire les volumes de la scène
-      await api.patch(`/api/media/${mediaId}/splat-edits`, { edits: null });
-      if (savedMaskUrl) await api.del(`/api/media/${mediaId}/splat-mask`);
-      if (savedSubsetUrl) await api.del(`/api/media/${mediaId}/splat-subset`);
-      subsetOpsRef.current = [];
-      afterReset();
-      history.clear();
-      onSaved({
-        splatEdits: null,
-        splatMaskUrl: null,
-        splatMaskCount: 0,
-        splatSubsetUrl: null,
-        splatSubsetCount: 0,
-      });
-      onClean();
-      toast.success(t('splat.editsReset'));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('splat.editsResetFailed'));
-    } finally {
-      setBusy(false);
-    }
-  }, [mediaId, history, savedMaskUrl, savedSubsetUrl, subsetOpsRef, afterReset, onSaved, onClean, t]);
-
-  return { busy, save, reset };
+  // Une « réinitialisation » purgeant les trois points d'écriture serveur a vécu ici jusqu'au
+  // lot 14 : aucun appelant dans tout le front ne l'invoquait (code mort, interdit par le
+  // CLAUDE.md du projet), et l'écriture globale se referme désormais à la publication. Le
+  // besoin qu'elle servait — revenir à ce qui est enregistré — est tenu par la reprise locale
+  // de `useSplatEditor` (`revertEdits`), qui ne touche à rien côté serveur.
+  return { busy, save };
 }

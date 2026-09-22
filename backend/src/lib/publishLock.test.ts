@@ -65,8 +65,8 @@ describe('publishLock.assertWritable — table des exceptions au verrou', () => 
     }
   });
 
-  it('ouvre les éditions non destructives sur un média publié', () => {
-    for (const write of ['splatEdit', 'usdOverride', 'usdRecompose'] as PublishedWrite[]) {
+  it('ouvre la mise en scène USD sur un média publié', () => {
+    for (const write of ['usdOverride', 'usdRecompose'] as PublishedWrite[]) {
       expect(isAllowedWhilePublished(write)).toBe(true);
       expect(() => assertWritable({ published: true }, write)).not.toThrow();
     }
@@ -75,14 +75,31 @@ describe('publishLock.assertWritable — table des exceptions au verrou', () => 
   // `videoTrim` a quitté la table avec la découpe elle-même (Phase 50, lot 4) : il ne reste
   // pas d'écriture « refusée pour mémoire » — une entrée sans appelant serait une règle que
   // plus rien n'applique.
-  it('garde verrouillées la transform de version et la re-finalisation', () => {
-    for (const write of ['versionTransform', 'uploadFinalize'] as PublishedWrite[]) {
+  //
+  // `splatEdit` a rejoint les refus au lot 14. Ce test attendait l'inverse, et il est réécrit
+  // sciemment : l'écriture « pour tout le monde » d'un nuage avait été ouverte après
+  // publication, ce qui faisait paraître un bouton « Enregistrer » permanent dans un studio
+  // sans brouillons — et réécrivait le nuage sous les yeux de ceux qui le commentaient.
+  // L'édition n'est pas perdue : elle part dans un commentaire (part `splat-edit`).
+  it('garde verrouillés l’édition de nuage, la transform de version et la re-finalisation', () => {
+    for (const write of ['splatEdit', 'versionTransform', 'uploadFinalize'] as PublishedWrite[]) {
       expect(isAllowedWhilePublished(write)).toBe(false);
       expect(refusal(() => assertWritable({ published: true }, write))).toEqual({
         status: 403,
         code: 'PUBLISHED_LOCKED',
       });
     }
+  });
+
+  /**
+   * La PRÉSENTATION du splat (`splatPresentation` : caméra de base, DoF, reveal, LOD,
+   * éclairage) reste permise après publication — et le reste parce qu'elle ne se présente pas
+   * devant le verrou du tout : `SplatEditService.setSplatPresentation` n'appelle pas
+   * `assertWritable`. Ce test garde cette absence : le jour où quelqu'un ajouterait
+   * `splatPresentation` à la table, il faudrait choisir sa valeur, et il le verrait ici.
+   */
+  it('ne fait pas passer la mise en scène du splat par le verrou', () => {
+    expect(PUBLISHED_WRITES).not.toContain('splatPresentation');
   });
 });
 

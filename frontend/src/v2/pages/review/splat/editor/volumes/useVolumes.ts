@@ -181,6 +181,11 @@ export function useVolumes(
     toggleMode,
     select,
     serialize,
+    /**
+     * Objets Three vivants, par identifiant — lus par la suspension de l'éditeur (lot 14), qui
+     * les détache de la scène le temps qu'un commentaire montre la sienne, puis les rend.
+     */
+    runtimesRef: runtimes,
   };
 }
 

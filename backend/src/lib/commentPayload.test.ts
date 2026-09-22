@@ -361,3 +361,76 @@ describe('poiPart — un commentaire porteur, des points numerotes', () => {
     expect(annotationSchema.safeParse(parts).success).toBe(true);
   });
 });
+
+describe('splatEditPart — une édition de nuage proposée dans un commentaire', () => {
+  const trs = {
+    position: [1, 0, -2] as [number, number, number],
+    quaternion: [0, 0.7071, 0, 0.7071] as [number, number, number, number],
+    scale: [1.5, 1.5, 1.5] as [number, number, number],
+  };
+  const volume = { shape: 'box', mode: 'delete', ...trs };
+  const part = (over: Record<string, unknown> = {}) => [
+    { type: 'splat-edit', transform: trs, volumes: [volume], ...over },
+  ];
+
+  it('accepte la transformation, les volumes et le flip d’orientation', () => {
+    expect(annotationSchema.safeParse(part()).success).toBe(true);
+    expect(annotationSchema.safeParse(part({ baseFlip: false })).success).toBe(true);
+    expect(annotationSchema.safeParse(part({ transform: null, volumes: [] })).success).toBe(true);
+  });
+
+  /**
+   * Les suppressions voyagent, et c'est le cœur du lot : le geste le plus courant sur un nuage
+   * est de le nettoyer. Elles voyagent par RÉFÉRENCE — la part porte la clé d'une pièce jointe
+   * du commentaire, jamais le binaire, qui ne tiendrait pas dans une annotation.
+   */
+  it('accepte les références des deux binaires (masque, ops de sous-ensemble)', () => {
+    const refs = { mask: { key: 'comments/attachments/1/splat-mask.bin', count: 3 } };
+    expect(annotationSchema.safeParse(part(refs)).success).toBe(true);
+    const both = {
+      mask: { key: 'comments/attachments/1/splat-mask.bin', count: 3 },
+      subset: { key: 'comments/attachments/1/splat-subset.bin', count: 1 },
+    };
+    expect(annotationSchema.safeParse(part(both)).success).toBe(true);
+    // Un nettoyage au seul masque : rien ne bouge, et la proposition existe quand même.
+    expect(annotationSchema.safeParse(part({ ...both, transform: null, volumes: [] })).success).toBe(true);
+  });
+
+  /**
+   * La référence reste BORNÉE, et le binaire reste dehors : le blob lui-même, une clé sans
+   * compte, un compte sans clé, ou un champ libre glissé dans la part doivent être refusés par
+   * le schéma — pas seulement omis par le client.
+   */
+  it('refuse le binaire lui-même, une référence incomplète, un champ libre', () => {
+    for (const extra of [
+      { mask: 'AAAA' },
+      { mask: { key: 'comments/attachments/1/splat-mask.bin' } },
+      { mask: { count: 3 } },
+      { mask: { key: 'k', count: 3, data: 'AAAA' } },
+      { splatMaskKey: 'comments/attachments/1/mask.bin' },
+      { subsetOps: 'AAAA' },
+      { deleted: [1, 2, 3] },
+    ]) {
+      expect(annotationSchema.safeParse(part(extra)).success).toBe(false);
+    }
+  });
+
+  it('refuse une proposition hors bornes : trop de volumes, échelle nulle, TRS incomplète', () => {
+    const many = part({ volumes: Array.from({ length: 33 }, () => volume) });
+    expect(annotationSchema.safeParse(many).success).toBe(false);
+    const flat = part({ transform: { ...trs, scale: [0, 1, 1] } });
+    expect(annotationSchema.safeParse(flat).success).toBe(false);
+    const short = part({ transform: { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: [1, 1] } });
+    expect(annotationSchema.safeParse(short).success).toBe(false);
+    const far = part({ transform: { ...trs, position: [1e9, 0, 0] } });
+    expect(annotationSchema.safeParse(far).success).toBe(false);
+  });
+
+  it('reste refusée à un invité : c’est un geste d’auteur, pas une remarque', () => {
+    expect(guestAnnotationSchema.safeParse(part()).success).toBe(false);
+  });
+
+  it('passe par parseAnnotation, comme toute part écrite hors route', () => {
+    expect(parseAnnotation(part())).toEqual(part());
+  });
+});

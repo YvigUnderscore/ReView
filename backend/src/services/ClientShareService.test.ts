@@ -8,6 +8,7 @@ vi.mock('./StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } })
 
 import { ShareScope } from '@prisma/client';
 import {
+  dropSplatEditBlobs,
   publishedMediaWhere,
   shareMediaWhere,
   sharePlaylistWhere,
@@ -171,5 +172,33 @@ describe('publishedMediaWhere — le masquage suit jusque sur le lien public', (
       { sequenceId: null },
       { sequence: { deletedAt: null, hiddenAt: null } },
     ]);
+  });
+});
+
+/**
+ * Lot 14 — le masque et les ops d'une proposition d'édition de nuage sont stockés comme des
+ * pièces jointes du commentaire : c'est ce qui leur donne la purge. Sur une page PUBLIQUE, les
+ * présigner reviendrait à offrir au client un bitset qu'il n'ouvrira jamais, et à faire
+ * descendre une URL vers un objet interne. Ils sont donc écartés avant présignature, par leur
+ * clé — un vrai fichier joint par le studio, lui, continue de descendre.
+ */
+describe('dropSplatEditBlobs — ce qu’un lien public ne présigne pas', () => {
+  const mask = { key: 'comments/attachments/1/mask.bin', name: 'splat-mask.bin' };
+  const pdf = { key: 'comments/attachments/1/notes.pdf', name: 'notes.pdf' };
+  const annotation = [
+    { type: 'splat-edit', transform: null, volumes: [], mask: { key: mask.key, count: 3 }, subset: null },
+  ];
+
+  it('écarte le binaire que la proposition référence', () => {
+    expect(dropSplatEditBlobs([mask, pdf], annotation)).toEqual([pdf]);
+  });
+
+  it('ne touche à rien sans proposition', () => {
+    expect(dropSplatEditBlobs([mask, pdf], [{ type: 'poi', points: [] }])).toEqual([mask, pdf]);
+  });
+
+  it('garde un fichier homonyme qui n’est pas celui de la proposition', () => {
+    const other = { key: 'comments/attachments/2/mask.bin', name: 'splat-mask.bin' };
+    expect(dropSplatEditBlobs([other], annotation)).toEqual([other]);
   });
 });

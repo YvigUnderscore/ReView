@@ -2,7 +2,7 @@
 
 *The studio-wide HLS ladder, everything the worker derives from one upload, and how the bytes actually reach a player.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-22
 
 Configured in *Admin → Review contexts → Video* (`/admin/video`). The settings are
 studio-wide and **only an `ADMIN` can read or change them**
@@ -244,7 +244,7 @@ To change the delivery there is one road left, a new version.
 
 | Write on a published media | Allowed | Why |
 |---|---|---|
-| Splat edits — mask and subsets | **Yes** | Non-destructive by construction: the original file is never touched, everything is replayed on read for every viewer. Cleaning a splat *is* reviewing a splat |
+| Splat edits — mask, cutting volumes, subsets | No | These are written *for everyone*, and a published cloud is the one people are commenting on. The gesture is not lost: after publication an edit travels inside a comment and is replayed when that comment is selected. See [Gaussian splat review](../user-guide/review-splat.md#what-publication-freezes) |
 | USD scene override | **Yes** | Staging replayed when the viewer loads, exactly like `splatPresentation`, which has been an exception since Phase 11 |
 | USD recomposition (variants, purpose) | **Yes** | It derives a representation from the delivered file; it does not replace it |
 | Version transform | No | It is the ground truth of A/B comparison and of frame-anchored annotations. Moving it afterwards falsifies everything that refers to it |
@@ -253,7 +253,9 @@ To change the delivery there is one road left, a new version.
 
 The table is exhaustive by construction: the guard is typed on the list of writes, so adding
 a write to the type forces someone to decide its case rather than letting it fall through to
-a default nobody chose. The **thumbnail** and the **splat or 3D staging**
+a default nobody chose. Splat edits sat on the *allowed* side until the studio feedback of
+2026-09: with draft mode off, a permanent *Save* button sat above every cloud and rewrote,
+for everyone, the media they were commenting on. The **thumbnail** and the **splat or 3D staging**
 (`splatPresentation`) are the two older exceptions and never reach the guard at all: both are
 presentation, and the Phase 11 rule already let them through.
 

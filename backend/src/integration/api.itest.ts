@@ -6,6 +6,7 @@ import request from 'supertest';
 import { createApp } from '../app';
 import { MediaStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { storage } from '../services/StorageService';
 import { MAX_PAGE_SIZE } from '../lib/pagination';
 
 /**
@@ -596,6 +597,14 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
+    // Studio en mode BROUILLON le temps de ce test : l'écriture des éditions « pour tout le
+    // monde » ne vit qu'avant publication (verrou Phase 11, refermé au lot 14). `draftMode` est
+    // éteint par défaut depuis la Phase 50 — un média naît publié —, et le réglage est rendu juste
+    // avant la publication explicite, pour que la suite retrouve le comportement par défaut.
+    const setDraftMode = (value: string) =>
+      request(app).put('/api/studio/settings').set(auth).send({ key: 'draftMode', value });
+    expect((await setDraftMode('true')).status).toBe(200);
+
     // Média splat (PLY) → READY.
     const ply = Buffer.concat([Buffer.from('ply\n', 'ascii'), Buffer.alloc(60)]);
     const up = await request(app).post('/api/media/upload-url').set(auth).send({
@@ -612,6 +621,11 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     });
     const mediaId = up.body.mediaObjectId;
     await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
+    // Le média est bien un BROUILLON : c'est l'état de départ de tout ce bloc. Sans le réglage
+    // posé plus haut, il naîtrait publié et la première écriture répondrait 403 — ce qui n'aurait
+    // rien dit du verrou, seulement du mode d'un studio.
+    const draftDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
+    expect(draftDetail.body.media.published).toBe(false);
 
     // Éditions invalides (échelle négative) → 400.
     const bad = await request(app)
@@ -726,28 +740,32 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       });
     expect(badPres.status).toBe(400);
 
-    // Publication → les éditions splat RESTENT permises (Phase 50). Ce bloc attendait des
-    // 403 : le verrou gelait tout. Il a été réécrit sciemment, parce que le média est
-    // désormais publié dès son upload — geler les éditions à la publication revenait à les
-    // interdire tout court, alors que nettoyer un splat EST le travail de review d'un splat.
-    // Elles sont non destructives : le fichier déposé n'est jamais touché.
+    // Publication → les éditions splat « pour tout le monde » sont REFUSÉES (Phase 50, lot 14).
+    // Ce bloc attendait des 200 : les éditions avaient été ouvertes après publication, ce qui
+    // laissait paraître un bouton « Enregistrer » permanent dans un studio sans brouillons et
+    // réécrivait le nuage sous les yeux de ceux qui le commentaient. Il est réécrit sciemment :
+    // après publication, une édition de nuage ne part plus que dans un commentaire.
+    //
+    // État de départ : éditions et masque écrits AVANT publication (bloc précédent) — c'est
+    // précisément ce que le verrou doit laisser intact.
+    expect((await setDraftMode('false')).status).toBe(200);
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
     const postPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-edits`)
       .set(auth)
       .send({ edits });
-    expect(postPublish.status).toBe(200);
+    expect(postPublish.status).toBe(403);
+    expect(postPublish.body.code).toBe('PUBLISHED_LOCKED');
     const maskAfterPublish = await request(app)
       .put(`/api/media/${mediaId}/splat-mask`)
       .set(auth)
       .send({ data: mask.toString('base64'), count: 3 });
-    expect(maskAfterPublish.status).toBe(200);
+    expect(maskAfterPublish.status).toBe(403);
     const clearAfterPublish = await request(app).delete(`/api/media/${mediaId}/splat-mask`).set(auth);
-    expect(clearAfterPublish.status).toBe(200);
-    // Les éditions sont bien celles qu'on vient d'écrire, et le masque est reparti.
+    expect(clearAfterPublish.status).toBe(403);
+    // Le refus n'a rien effacé : les éditions écrites avant publication sont toujours là.
     const editedDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(editedDetail.body.splatEdits).toEqual(edits);
-    expect(editedDetail.body.splatMaskUrl).toBeNull();
 
     // La présentation (mise en scène, V5) reste modifiable elle aussi.
     const presAfterPublish = await request(app)
@@ -757,6 +775,61 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(presAfterPublish.status).toBe(200);
     const cleared = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(cleared.body.splatPresentation).toBeNull();
+
+    // ---- Ce que devient l'édition après publication : une PROPOSITION dans un commentaire.
+    //
+    // Le geste voyage entier — transformation et volumes dans la part, suppressions et ops de
+    // sous-ensemble en pièces jointes citées par leur clé. Trois choses se vérifient ici, et
+    // aucune ne se voit dans un test unitaire : le dépôt présigné accepte le binaire, la
+    // référence est refusée si elle n'est pas une pièce jointe du commentaire, et l'objet
+    // QUITTE le stockage avec le commentaire.
+    const presign = await request(app)
+      .post('/api/comments/attachments/presign')
+      .set(auth)
+      .send({ filename: 'splat-mask.bin', contentType: 'application/octet-stream' });
+    expect(presign.status).toBe(200);
+    const blobKey = presign.body.key as string;
+    const putBlob = await fetch(presign.body.url as string, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/octet-stream' },
+      body: mask,
+    });
+    expect(putBlob.ok).toBe(true);
+
+    const proposal = {
+      type: 'splat-edit',
+      transform: edits.transform,
+      volumes: edits.volumes,
+      mask: { key: blobKey, count: 3 },
+    };
+    // Référence non jointe : refusée. C'est ce refus qui garantit qu'aucun objet ne peut être
+    // cité sans être ramassé — la fuite déjà fermée pour les images de commentaire.
+    const unattached = await request(app)
+      .post('/api/comments')
+      .set(auth)
+      .send({ mediaObjectId: mediaId, content: 'masque orphelin', annotation: [proposal] });
+    expect(unattached.status).toBe(400);
+    expect(unattached.body.code).toBe('SPLAT_EDIT_UNATTACHED');
+
+    const withProposal = await request(app)
+      .post('/api/comments')
+      .set(auth)
+      .send({
+        mediaObjectId: mediaId,
+        content: 'nettoyage proposé',
+        annotation: [proposal],
+        attachments: [{ key: blobKey, name: 'splat-mask.bin', contentType: 'application/octet-stream' }],
+      });
+    expect(withProposal.status).toBe(201);
+    const proposalId = withProposal.body.comment.id as number;
+    // La pièce revient présignée : c'est par elle, et par elle seule, que le viewer du lecteur
+    // télécharge le masque proposé.
+    expect(withProposal.body.comment.attachments[0].url).toBeTruthy();
+    expect((await storage.statObject(blobKey)).size).toBe(mask.length);
+
+    const removed = await request(app).delete(`/api/comments/${proposalId}`).set(auth);
+    expect(removed.status).toBe(204);
+    await expect(storage.statObject(blobKey)).rejects.toBeDefined();
   });
 
   /**

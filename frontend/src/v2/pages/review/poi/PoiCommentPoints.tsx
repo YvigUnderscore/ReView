@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import { Lightbox } from '../../../components/ui/lightbox';
 import { isImageAttachment, type CommentAttachment } from '../../../../lib/commentAttachments';
+import PoiNoteBody from './PoiNoteBody';
+import type { PoiCardImage } from './poiCards';
 import type { PoiPoint } from './poiPoints';
 import { useT } from '../../../i18n';
 
@@ -17,6 +19,9 @@ import { useT } from '../../../i18n';
  *
  * Sans `onFocus` — l'écran n'a pas de viewer spatial sous la main — les numéros restent du
  * texte : on lit la remarque, on ne vole pas vers elle.
+ *
+ * La remarque elle-même est rendue par `PoiNoteBody`, partagé avec les cartes de la scène :
+ * retours à la ligne, trois lignes au plus, miniature à côté.
  */
 export default function PoiCommentPoints({
   points,
@@ -32,12 +37,10 @@ export default function PoiCommentPoints({
 }) {
   const t = useT();
   // Carrousel commun : l'index porte sur les images de CE point (le lot ouvert), pas du fil.
-  const [lightbox, setLightbox] = useState<{ images: { src: string; alt: string }[]; at: number } | null>(
-    null,
-  );
+  const [lightbox, setLightbox] = useState<{ images: PoiCardImage[]; at: number } | null>(null);
   if (points.length === 0) return null;
 
-  const imagesOf = (point: PoiPoint) =>
+  const imagesOf = (point: PoiPoint): PoiCardImage[] =>
     (point.images ?? [])
       .map((key) => attachments?.find((a) => a.key === key))
       .filter((a): a is CommentAttachment => !!a?.url && isImageAttachment(a.contentType))
@@ -67,31 +70,14 @@ export default function PoiCommentPoints({
                 {index + 1}
               </span>
             )}
-            <span className="min-w-0 flex-1">
-              <span className="whitespace-pre-wrap">{point.text ?? ''}</span>
-              {images.length > 0 && (
-                <span className="mt-1 flex flex-wrap gap-1.5">
-                  {images.map((img, at) => (
-                    <button
-                      key={img.src}
-                      type="button"
-                      onClick={(e) => {
-                        stop(e);
-                        setLightbox({ images, at });
-                      }}
-                      title={img.alt || t('comments.openAttachment')}
-                      aria-label={t('comments.openAttachment')}
-                    >
-                      <img
-                        src={img.src}
-                        alt={img.alt}
-                        className="h-12 w-12 rounded border border-border object-cover"
-                      />
-                    </button>
-                  ))}
-                </span>
-              )}
-            </span>
+            <div className="min-w-0 flex-1">
+              <PoiNoteBody
+                text={point.text ?? ''}
+                images={images}
+                onImage={(at) => setLightbox({ images, at })}
+                stop={stop}
+              />
+            </div>
           </li>
         );
       })}

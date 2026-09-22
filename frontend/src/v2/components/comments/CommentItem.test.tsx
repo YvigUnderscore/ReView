@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../../test/renderWithProviders';
+import { stubLayoutMetrics } from '../../../test/layoutMetrics';
 import type { ReviewComment } from '../../types/api';
 import CommentItem from './CommentItem';
-import { COLLAPSE_CHARS, VISIBLE_REPLIES } from './collapse';
+import { VISIBLE_REPLIES } from './collapse';
 import { t } from '../../i18n';
 
 const base = (id: number, content: string, patch: Partial<ReviewComment> = {}): ReviewComment => ({
@@ -76,10 +77,24 @@ describe('CommentItem — fil long', () => {
   });
 });
 
+/**
+ * Le repliage d'un commentaire se décide sur ce que la colonne masque VRAIMENT : happy-dom ne
+ * met rien en page, on lui prête donc la largeur d'un panneau de review.
+ */
 describe('CommentItem — commentaire trop grand', () => {
-  const wall = 'z'.repeat(COLLAPSE_CHARS + 40);
+  const wall = 'z'.repeat(640);
+
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+  const layout = () => {
+    restore = stubLayoutMetrics({ charsPerLine: 40 });
+  };
 
   it('replie un mur de texte en gardant le texte trouvable', () => {
+    layout();
     mount(base(1, wall));
     expect(
       screen.getByRole('button', { name: t('comments.expandComment', { count: wall.length }) }),
@@ -88,7 +103,56 @@ describe('CommentItem — commentaire trop grand', () => {
   });
 
   it('laisse un commentaire court intact', () => {
+    layout();
     mount(base(1, 'trop sombre'));
     expect(screen.queryByRole('button', { name: t('comments.collapseComment') })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Lot 14 — une proposition d'édition de nuage dépose son masque et ses ops de sous-ensemble en
+ * pièces jointes du commentaire : c'est ce qui leur donne le stockage, la présignature et la
+ * purge. Ce ne sont pas pour autant des fichiers offerts au lecteur — un bitset ne s'ouvre pas.
+ * La liste des pièces jointes les écarte par leur CLÉ, jamais par leur type : un `.bin` que
+ * quelqu'un joint vraiment reste proposé.
+ */
+describe('CommentItem — binaires d’une proposition de nuage', () => {
+  const withProposal = () =>
+    base(1, 'nettoyage proposé', {
+      annotation: [
+        {
+          type: 'splat-edit',
+          transform: null,
+          volumes: [],
+          mask: { key: 'comments/attachments/1/mask.bin', count: 12 },
+          subset: null,
+        },
+      ],
+      attachments: [
+        {
+          key: 'comments/attachments/1/mask.bin',
+          name: 'splat-mask.bin',
+          contentType: 'application/octet-stream',
+          url: 'u1',
+        },
+        {
+          key: 'comments/attachments/1/notes.pdf',
+          name: 'notes.pdf',
+          contentType: 'application/pdf',
+          url: 'u2',
+        },
+      ],
+    });
+
+  it('n’affiche pas le masque déposé pour la proposition', () => {
+    stubLayoutMetrics({ charsPerLine: 60 });
+    mount(withProposal());
+    expect(screen.queryByText('splat-mask.bin')).toBeNull();
+  });
+
+  it('laisse les vraies pièces jointes du commentaire', () => {
+    stubLayoutMetrics({ charsPerLine: 60 });
+    mount(withProposal());
+    expect(screen.getByText('notes.pdf')).toBeTruthy();
   });
 });

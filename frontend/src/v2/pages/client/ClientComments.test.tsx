@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { render as mountInDom, screen } from '@testing-library/react';
 import ClientComments from './ClientComments';
+import { stubLayoutMetrics } from '../../../test/layoutMetrics';
+import { t } from '../../i18n';
 import type { ClientComment } from '../../types/api';
 
 const comment = (patch: Partial<ClientComment> = {}): ClientComment => ({
@@ -22,25 +25,27 @@ const comment = (patch: Partial<ClientComment> = {}): ClientComment => ({
 
 const wall = 'z'.repeat(700);
 
+const element = (props: Partial<Parameters<typeof ClientComments>[0]> = {}) => (
+  <ClientComments
+    comments={[comment()]}
+    canComment={false}
+    timed
+    fps={24}
+    startFrame={1001}
+    selectedId={null}
+    hasAnnotation={false}
+    guestName=""
+    onGuestName={vi.fn()}
+    onSelect={vi.fn()}
+    onSeek={vi.fn()}
+    onSubmit={vi.fn()}
+    composerRef={createRef<HTMLTextAreaElement>()}
+    {...props}
+  />
+);
+
 const render = (props: Partial<Parameters<typeof ClientComments>[0]> = {}) =>
-  renderToStaticMarkup(
-    <ClientComments
-      comments={[comment()]}
-      canComment={false}
-      timed
-      fps={24}
-      startFrame={1001}
-      selectedId={null}
-      hasAnnotation={false}
-      guestName=""
-      onGuestName={vi.fn()}
-      onSelect={vi.fn()}
-      onSeek={vi.fn()}
-      onSubmit={vi.fn()}
-      composerRef={createRef<HTMLTextAreaElement>()}
-      {...props}
-    />,
-  );
+  renderToStaticMarkup(element(props));
 
 /**
  * Le fil client décide de deux choses seulement, mais elles comptent : le lien de permission
@@ -132,15 +137,47 @@ describe('ClientComments — pièces jointes du studio', () => {
   });
 });
 
-/** Une note trop grande s'ouvre repliée — mais son texte reste dans la page, donc trouvable. */
+/**
+ * Une note trop grande s'ouvre repliée — mais son texte reste dans la page, donc trouvable.
+ *
+ * L'indicateur, lui, se décide sur ce que la colonne masque VRAIMENT (cf. `CollapsibleText`) :
+ * il n'apparaît donc qu'une fois la page mise en page, jamais dans un balisage rendu à plat.
+ * Ces deux cas passent par un vrai DOM, à la largeur d'une colonne de partage client, et le
+ * balisage plat sert encore à ce qu'il prouve le mieux : le texte entier y est.
+ */
 describe('ClientComments — note trop grande', () => {
+  const longNote = [comment({ content: wall, timestamp: null })];
+
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+  const layout = () => {
+    restore = stubLayoutMetrics({ charsPerLine: 40 });
+  };
+
+  /**
+   * Seule exception à la règle du fichier : l'indicateur se désigne par son libellé, parce que
+   * la rangée du commentaire est elle aussi un bouton — compter les boutons ne dirait rien.
+   */
+  const expandName = (text: string) => t('comments.expandComment', { count: text.length });
+
   it('pose un indicateur de dépliage et conserve le texte entier', () => {
-    const html = render({ timed: false, comments: [comment({ content: wall, timestamp: null })] });
-    expect(html).toContain(wall);
-    expect(html).toContain('<button');
+    layout();
+    mountInDom(element({ timed: false, comments: longNote }));
+    expect(screen.getByText(wall)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: expandName(wall) })).toBeInTheDocument();
   });
 
   it('ne replie pas une note courte', () => {
-    expect(render({ timed: false, comments: [comment({ timestamp: null })] })).not.toContain('<button');
+    layout();
+    const short = comment({ timestamp: null });
+    mountInDom(element({ timed: false, comments: [short] }));
+    expect(screen.queryByRole('button', { name: expandName(short.content) })).not.toBeInTheDocument();
+  });
+
+  it('garde le texte entier hors de tout navigateur : rien n’est tronqué à la source', () => {
+    expect(render({ timed: false, comments: longNote })).toContain(wall);
   });
 });

@@ -72,7 +72,8 @@ router.get(
 );
 
 // POST /api/comments/attachments/presign — URL présignée pour une pièce jointe au fil
-// (images en vignettes ; PDF/zip/texte en chips ; audio = notes vocales lues inline, 32.F)
+// (images en vignettes ; PDF/zip/texte en chips ; audio = notes vocales lues inline, 32.F ;
+// octet-stream = blobs d'une proposition d'édition de nuage, cf. `lib/commentSplatEdit`)
 router.post(
   '/attachments/presign',
   validate({
@@ -81,7 +82,7 @@ router.post(
       contentType: z
         .string()
         .regex(
-          /^(image\/(png|jpe?g|webp|gif)|application\/pdf|application\/zip|text\/plain|audio\/(webm|ogg|mp4|mpeg|wav))(;.*)?$/,
+          /^(image\/(png|jpe?g|webp|gif)|application\/(pdf|zip|octet-stream)|text\/plain|audio\/(webm|ogg|mp4|mpeg|wav))(;.*)?$/,
         ),
     }),
   }),

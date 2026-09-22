@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ReactNode } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
 import type { Role } from '../../../types/api';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
@@ -23,7 +23,6 @@ import { useSpatialAnnotate } from '../chrome/useSpatialAnnotate';
 import { DEFAULT_MODE } from '../chrome/modes';
 import { DEFAULT_TOOL } from '../chrome/tools';
 import { usePoiPlacement } from '../poi/usePoiPlacement';
-import PoiNotice from '../poi/PoiNotice';
 import SplatOptions from '../options/SplatOptions';
 import SpatialTransport from '../transport/SpatialTransport';
 import CurvesDrawer from '../transport/CurvesDrawer';
@@ -35,6 +34,9 @@ import { useSplatView } from './useSplatView';
 import SplatPane from './SplatPane';
 import SplatViewerMenus from './SplatViewerMenus';
 import SplatContextMenu from './SplatContextMenu';
+import { hasSplatEditProposal } from './splatEditPart';
+import Model3DNotice from '../three/Model3DNotice';
+import { useCommentSceneEscape } from '../three/useCommentSceneEscape';
 import { useT } from '../../../i18n';
 
 /**
@@ -65,7 +67,7 @@ export default function SplatReview({
 }: {
   data: MediaResp;
   splat: SplatViewer;
-  /** Éditeur monté (média non publié + gestionnaire + viewer prêt). */
+  /** Éditeur monté (gestionnaire + viewer prêt) — publié ou non : l'édition reste offerte. */
   showEdit: boolean;
   /** Gestionnaire : peut persister la présentation (autorisé même publié — mise en scène). */
   canPresent: boolean;
@@ -82,6 +84,16 @@ export default function SplatReview({
 }) {
   const t = useT();
   const saved = data.splatEdits;
+  /**
+   * Écrire les éditions du nuage POUR TOUT LE MONDE s'arrête à la publication — la même ligne
+   * que le modèle 3D, et la même que le serveur applique désormais (`lib/publishLock`). Dans un
+   * studio qui n'utilise pas les brouillons, le média naît publié : aucun bouton « Enregistrer »
+   * ne paraît donc jamais au-dessus du viewer, sans qu'il ait fallu inventer une seconde règle.
+   * Éditer, en revanche, reste offert : l'édition part dans un commentaire.
+   */
+  const canSaveForAll = showEdit && !data.media.published;
+  /** Proposition d'édition portée par le commentaire sélectionné — rejouée, jamais écrite. */
+  const viewedEdit = ann.viewedSplatEdit;
   const editor = useSplatEditor(
     splat,
     data.media.id,
@@ -90,6 +102,9 @@ export default function SplatReview({
     data.splatSubsetUrl,
     onSaved,
     showEdit,
+    // Lire la proposition d'un commentaire suspend l'éditeur : un seul nuage, et c'est le
+    // commentaire qui parle. L'édition locale revient intacte à la sortie.
+    viewedEdit != null,
   );
   const { ready, getSceneHandle } = splat;
   // Cadre de livraison : ratio des réglages pipeline, sauf aspect déjà gelé (`reviewAspect`).
@@ -130,9 +145,9 @@ export default function SplatReview({
     cameraRig,
   });
 
-  // Lecture seule : rejeu des éditions persistées (transformation, flip, volumes, masque,
-  // sous-ensembles) — l'éditeur les gère lui-même quand il est monté.
-  useSavedSplatEdits(splat, data, showEdit);
+  // Rejeu des éditions en lecture (transformation, flip, volumes, masque, sous-ensembles) : celles
+  // du média hors éditeur, celles d'un commentaire dès qu'il en propose — gestionnaire compris.
+  useSavedSplatEdits(splat, data, showEdit, viewedEdit);
 
   // Câblage pointeur/clavier : transport caméra, cadrage F/H, palette Ctrl+K, et les deux
   // actions d'animation caméra (joindre au commentaire, importer un fichier).
@@ -158,6 +173,40 @@ export default function SplatReview({
     onExit: () => update({ tool: DEFAULT_TOOL }),
   });
 
+  /**
+   * L'édition en cours se joint au **prochain commentaire**, exactement comme la proposition de
+   * mise en scène 3D : c'est la seule voie une fois la version publiée, et elle reste ouverte
+   * avant. Ce qui part est le geste entier — transformation, volumes de crop, flip, suppressions
+   * et transformations de sous-ensembles.
+   *
+   * L'éditeur est FOURNISSEUR, et non producteur d'un état : la proposition n'est assemblée
+   * qu'à l'envoi (le masque pèse jusqu'à quelques centaines de kilo-octets — l'encoder à chaque
+   * rendu pour le comparer serait absurde), et `sent` la retire de l'éditeur quand elle est
+   * partie, sans quoi elle se rejoindrait d'elle-même au commentaire suivant (46.T).
+   */
+  const { provideSplatEdit } = ann;
+  const { dirty: editDirty, buildProposal, revertEdits } = editor;
+  useEffect(() => {
+    provideSplatEdit({
+      build: () => {
+        if (!showEdit || !editDirty) return null;
+        // « Modifié » ne veut pas dire « proposé » : un volume ajouté puis retiré laisse
+        // l'éditeur sale sans rien laisser à dire. Rien ne part alors, pas même un objet vide.
+        const proposal = buildProposal();
+        return hasSplatEditProposal(proposal) ? proposal : null;
+      },
+      sent: () => {
+        if (editDirty) revertEdits();
+      },
+    });
+    return () => provideSplatEdit(null);
+  }, [provideSplatEdit, showEdit, editDirty, buildProposal, revertEdits]);
+
+  // Échap relâche la proposition du commentaire lu — même touche et même sens que côté 3D.
+  const { setViewedSplatEdit } = ann;
+  const releaseCommentEdit = useCallback(() => setViewedSplatEdit(null), [setViewedSplatEdit]);
+  useCommentSceneEscape(viewedEdit != null, releaseCommentEdit);
+
   return (
     <ReviewChrome
       kind="SPLAT"
@@ -181,13 +230,14 @@ export default function SplatReview({
           {compare.enabled && <CompareControl compare={compare} />}
         </SpatialCompareHeader>
       }
-      dirty={showEdit ? editor.dirty : undefined}
+      dirty={canSaveForAll ? editor.dirty : undefined}
       onViewAction={(action) => (action === 'fit' ? frameView() : homeView())}
       options={
         <SplatOptions
           tool={activeTool}
           mode={state.mode}
           editor={editor}
+          saveForAll={canSaveForAll}
           paint={paint}
           presentation={
             canPresent ? { dirty: animDirty, busy: pres.busy, onSave: () => void pres.save() } : undefined
@@ -264,7 +314,14 @@ export default function SplatReview({
           aspect={frameAspect}
           recording={canPresent && pres.anim.autoKey}
           overlay={overlay}
-          notice={placingPoi ? <PoiNotice count={ann.poi.points.length} /> : undefined}
+          notice={
+            <Model3DNotice
+              placingPoi={placingPoi}
+              poiCount={ann.poi.points.length}
+              commentScene={viewedEdit != null}
+              onReleaseScene={releaseCommentEdit}
+            />
+          }
           exit={exit}
           settings={<SplatViewerMenus editor={editor} showEdit={showEdit} pres={pres} compare={compare} />}
           pip={

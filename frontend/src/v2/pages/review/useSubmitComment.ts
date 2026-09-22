@@ -12,6 +12,8 @@ import type { MediaResp } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import { buildPoiPart, poiContent } from './poi/poiPoints';
+import { buildSplatEditPart } from './splat/splatEditPart';
+import { uploadSplatEditBlobs } from './splat/splatEditUpload';
 import { poiStoredPoints, poiUploadPlan } from './poi/poiUpload';
 import { useT, t as translate } from '../../i18n';
 
@@ -93,6 +95,21 @@ export function useSubmitComment(opts: {
     try {
       if (plan.dropped > 0) toast.warning(t('poi.imagesDropped', { count: plan.dropped }));
       const uploaded = plan.files.length > 0 ? await uploadCommentAttachments(plan.files) : [];
+      // Proposition d'édition de nuage (lot 14) : même mécanique que la scène 3D, pour l'autre
+      // viewer spatial. Depuis que le verrou referme l'écriture globale à la publication, c'est
+      // par là qu'une édition de splat atteint les autres — rejouée à la lecture du commentaire,
+      // jamais écrite dans le média.
+      //
+      // Elle s'assemble ICI, et pour la même raison que la part `poi` : ses deux binaires (masque
+      // de suppression, ops de sous-ensemble) sont des pièces jointes du commentaire, et leurs
+      // clés n'existent qu'une fois déposées.
+      const draft = kind === 'SPLAT' ? ann.takeSplatEdit() : null;
+      const blobs = await uploadSplatEditBlobs(draft, uploaded.length);
+      if (blobs.dropped === 'size') toast.warning(t('splat.proposalTooLarge'));
+      if (blobs.dropped === 'room') toast.warning(t('splat.proposalNoRoom'));
+      const splatPart = buildSplatEditPart(draft?.edits ?? null, blobs.refs);
+      if (splatPart) annotation = [...(Array.isArray(annotation) ? annotation : []), splatPart];
+      const attachments = [...uploaded, ...blobs.attachments];
       // La part `poi` ne peut être assemblée qu'ICI : les clés des images n'existent qu'après
       // le téléversement, et c'est par elles qu'un point reconnaît les siennes.
       const poi = buildPoiPart(poiStoredPoints(poiPoints, plan, uploaded));
@@ -104,7 +121,7 @@ export function useSubmitComment(opts: {
         timestamp,
         cameraState,
         annotation,
-        attachments: uploaded.length > 0 ? uploaded : undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
       await linkStagedReferences(qc, id, ann, comment.id);
       ann.resetComposer();

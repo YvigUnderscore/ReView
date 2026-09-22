@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Circle, Cuboid, Eraser, Focus, Plus, Trash2, X } from 'lucide-react';
+import { Circle, Cuboid, Eraser, Focus, Plus, Redo2, Trash2, Undo2, X } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
@@ -30,6 +30,7 @@ export default function SplatOptions({
   tool,
   mode,
   editor,
+  saveForAll,
   paint,
   presentation,
   poi,
@@ -37,6 +38,12 @@ export default function SplatOptions({
   tool: ReviewTool;
   mode: ModeId;
   editor: SplatEditorState;
+  /**
+   * L'édition du nuage peut-elle encore être écrite POUR TOUT LE MONDE ? Faux dès la
+   * publication (verrou serveur) : le bouton disparaît alors, et l'édition part dans le
+   * prochain commentaire — la mécanique du scenegraph USD, au même endroit de l'écran.
+   */
+  saveForAll: boolean;
   paint: SplatPaintState;
   /** Mise en scène : enregistrement de la présentation par le gestionnaire. */
   presentation?: { dirty: boolean; busy: boolean; onSave: () => void };
@@ -50,19 +57,38 @@ export default function SplatOptions({
   const transforming = id === 'translate' || id === 'rotate' || id === 'scale';
   const selectedCount = editor.selection.selected.size;
 
+  const history = editor.history;
   const commit =
-    mode === 'clean' ? (
+    mode === 'clean' && saveForAll ? (
       <CommitGroup
         dirty={editor.dirty}
         saving={editor.busy}
         label={t('common.save')}
         hint={t('review.splat.unsavedEdits')}
         onSave={() => void editor.save()}
-        onUndo={editor.history.undo}
-        onRedo={editor.history.redo}
-        canUndo={editor.history.canUndo}
-        canRedo={editor.history.canRedo}
+        onUndo={history.undo}
+        onRedo={history.redo}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
       />
+    ) : mode === 'clean' ? (
+      // Annuler/rétablir restent — ce sont les gestes de l'édition elle-même ; seule
+      // l'écriture pour tous s'en va, remplacée par ce qu'elle devient.
+      <div className="rv-optbar__commit">
+        <IconButton
+          icon={Undo2}
+          label={t('review.undoShortcut')}
+          onClick={history.undo}
+          disabled={!history.canUndo}
+        />
+        <IconButton
+          icon={Redo2}
+          label={t('review.redoShortcut')}
+          onClick={history.redo}
+          disabled={!history.canRedo}
+        />
+        <span className="rv-optbar__hint">{t('review.splat.editAttached')}</span>
+      </div>
     ) : mode === 'stage' && presentation ? (
       <CommitGroup
         dirty={presentation.dirty}

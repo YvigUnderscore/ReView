@@ -17,6 +17,7 @@ import { useDeleteComment, useSetCommentState } from '../../lib/commentsApi';
 import type { ReviewComment } from '../../types/api';
 import PoiCommentPoints from '../../pages/review/poi/PoiCommentPoints';
 import { readPoiPoints, stripPoiBlock, type PoiPoint } from '../../pages/review/poi/poiPoints';
+import { splatEditBlobKeys } from '../../pages/review/splat/splatEditPart';
 import { useT } from '../../i18n';
 
 export interface CommentItemProps {
@@ -81,6 +82,13 @@ export default function CommentItem({
   // client, export de notes, ShotGrid), il n'a pas à s'afficher deux fois ici.
   const poiPoints = readPoiPoints(c.annotation);
   const body = stripPoiBlock(c.content, poiPoints);
+  // Une proposition d'édition de nuage dépose son masque et ses ops en pièces jointes — c'est ce
+  // qui leur donne la purge. Elles n'ont rien à faire dans la liste des fichiers du commentaire :
+  // un bitset ne s'ouvre pas. Écartées par leur clé, jamais par leur type.
+  const blobKeys = splatEditBlobKeys(c.annotation);
+  const attachments = Array.isArray(c.attachments)
+    ? c.attachments.filter((a) => !a.key || !blobKeys.includes(a.key))
+    : [];
   const selected = selectedId === c.id;
   const selectable = !isReply && (c.timestamp != null || c.cameraState != null || hasAnnotation);
   // Empêche un clic sur une action interne de déclencher la sélection de la carte. Les
@@ -176,8 +184,8 @@ export default function CommentItem({
         )}
 
         {/* Pièces jointes : 2 vignettes max + tuile « +x images » (lightbox), chips PDF/zip/texte */}
-        {!editing && Array.isArray(c.attachments) && c.attachments.length > 0 && (
-          <CommentAttachmentList attachments={c.attachments} stop={stop} />
+        {!editing && attachments.length > 0 && (
+          <CommentAttachmentList attachments={attachments} stop={stop} />
         )}
 
         {/* Réactions + actions */}

@@ -38,6 +38,7 @@ import { mediaReviewAspect } from './review/reviewAspect';
 import { ErrorBoundary } from '../components/ui/error-boundary';
 import { useSplatPaint } from './review/splat/paint/useSplatPaint';
 import { useSplat } from './review/splat/useSplat';
+import { resolveSplatEditProposal } from './review/splat/splatEditPart';
 import { useReviewHeaderSlots } from './review/header/useReviewHeaderSlots';
 import ReviewPageHeader from './review/header/ReviewPageHeader';
 import TheaterExitButton from './review/TheaterExitButton';
@@ -132,11 +133,15 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
   // Verrou de publication (Phase 11, table révisée en Phase 50) : un média publié refuse le
-  // montage vidéo et le `transform` d'une version. Restent autorisées les écritures qui ne
-  // touchent pas au fichier d'origine — miniature, mise en scène, éditions splat (masque,
-  // sous-ensemble) et override USD, toutes rejouées à la lecture.
+  // montage vidéo, le `transform` d'une version et l'écriture des éditions splat « pour tout le
+  // monde ». Restent autorisées les écritures qui ne touchent pas au fichier d'origine et ne
+  // réécrivent pas ce que les autres commentent — miniature, mise en scène, override USD.
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
-  /** Éditions splat : non destructives, donc offertes même après publication. */
+  /**
+   * Éditeur de splat MONTÉ : gestionnaire, publié ou non. Éditer reste offert après publication —
+   * c'est l'ENREGISTREMENT pour tous qui s'arrête là (`SplatReview`, verrou serveur) ; au-delà,
+   * l'édition part dans un commentaire, comme la proposition de scène 3D.
+   */
   const canEditSplat = canManageMedia;
   /**
    * Transform 3D : le droit vient du SERVEUR (`permissions.editTransform`), plus d'une règle
@@ -170,14 +175,19 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Sélection d'un commentaire : restaure ensemble seek + annotation 2D/3D + caméra (animée).
   const selectComment = (c: ReviewComment) => {
     setSelectedCommentId(c.id);
-    const { shapes, cameraAnim, sceneOverride } = splitAnnotationParts(c.annotation);
+    const { shapes, cameraAnim, sceneOverride, splatEdit } = splitAnnotationParts(c.annotation);
     // Points d'intérêt du commentaire : la lecture unifie la part `poi` et le `hotspot` unique
     // des commentaires antérieurs — une pastille numérotée dans les deux cas.
     ann.setViewedPoi(readPoiPoints(c.annotation));
     // Mode layout : anim caméra jointe → rejouée par le viewer (3D/splat).
     ann.setViewedCameraAnim(cameraAnim);
-    // Proposition de scène 3D jointe (46.D) : rejouée pour ce commentaire seulement.
+    // Proposition de scène 3D jointe (46.D) : rejouée pour ce commentaire seulement. Sa jumelle
+    // pour le nuage (lot 14) suit la même règle — lue ici, rejouée par le viewer splat.
     ann.setViewedSceneOverride(sceneOverride);
+    // Les deux binaires de la proposition de nuage sont des pièces jointes DE CE commentaire :
+    // leurs URL présignées se lisent là, et nulle part ailleurs — une clé étrangère glissée dans
+    // la part ne donne donc rien à rejouer.
+    ann.setViewedSplatEdit(resolveSplatEditProposal(splatEdit, c.attachments));
     if (shapes.length > 0) {
       ann.setAnnotating(false);
       ann.setViewed(shapes as unknown as Shape[]);

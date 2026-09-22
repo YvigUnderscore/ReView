@@ -14,7 +14,9 @@ import { publish as publishApiEvent } from './ApiEventService';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { badRequest, forbidden } from '../lib/errors';
 import { parseAnnotation, parseCameraState, parseGuestAnnotation } from '../lib/commentPayload';
+import { assertSplatEditBlobs } from '../lib/commentSplatEdit';
 import {
+  attachmentKeys,
   filterAttachments,
   orphanedKeys,
   ownAttachmentPrefix,
@@ -292,6 +294,14 @@ export async function create(user: SessionUser, projectId: number, body: CreateC
   // pour tous les appelants du service (cf. `lib/commentPayload`).
   const annotation = parseAnnotation(body.annotation);
   const cameraState = parseCameraState(body.cameraState);
+  // Proposition d'édition de nuage (lot 14) : ses deux blobs doivent être des pièces jointes
+  // de CE commentaire, exister, et tenir sous le plafond du masque de média. La liste des
+  // pièces a déjà été filtrée par préfixe — c'est donc elle qui porte la propriété, et la
+  // purge qui la relit ramassera les blobs comme le reste.
+  await assertSplatEditBlobs(annotation, {
+    attachedKeys: attachments.map((a) => a.key),
+    stat: (key) => storage.statObject(key),
+  });
 
   const comment = await prisma.comment.create({
     data: {
@@ -564,6 +574,14 @@ export async function update(user: SessionUser, projectId: number, id: number, b
     body.attachments === undefined
       ? undefined
       : filterAttachments(body.attachments, [ownAttachmentPrefix(user.id), shotgridAttachmentPrefix(id)]);
+  // Même garde qu'à la création pour les blobs d'une proposition d'édition de nuage — contre
+  // la liste APRÈS édition, celle qui décide désormais de la vie des objets. Retirer la pièce
+  // jointe et garder la part reviendrait à décrire un blob que la purge vient d'emporter.
+  if (annotation !== undefined)
+    await assertSplatEditBlobs(annotation, {
+      attachedKeys: attachments ? attachments.map((a) => a.key) : attachmentKeys(existing.attachments),
+      stat: (key) => storage.statObject(key),
+    });
   if ((body.isVisibleToClient !== undefined || body.assigneeId !== undefined) && !manager)
     throw forbidden('Supervisors and administrators only');
   // Même garde que pour une tâche (`EntityAssigneeService`) : l'identifiant vient du client,

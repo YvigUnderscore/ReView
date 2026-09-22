@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { stubLayoutMetrics } from '../../../../test/layoutMetrics';
 import { t } from '../../../i18n';
 import PoiSceneCards from './PoiSceneCards';
 import { announcePoiAnchors, POI_ANCHOR_ATTR } from './poiAnchor';
@@ -40,10 +41,22 @@ function viewer(count: number) {
 const openPill = (n: number) => screen.getByRole('button', { name: t('poi.card.open', { n }) });
 const closeButton = (n: number) => screen.queryByRole('button', { name: t('poi.card.close', { n }) });
 
+/**
+ * La carte ancrée est la surface ÉTROITE : 15 rem, soit une vingtaine de caractères par ligne.
+ * Le repliage s'y mesure, et happy-dom ne met rien en page — on lui prête donc cette largeur.
+ */
+let restore: (() => void) | null = null;
+
 // Avant, et non après : le nettoyage de React Testing Library doit démonter l'arbre (portails et
 // Lightbox comprises) tant que leurs nœuds sont encore là — vitest joue les `afterEach` à l'envers.
 beforeEach(() => {
   document.body.replaceChildren();
+  restore = stubLayoutMetrics({ charsPerLine: 22 });
+});
+
+afterEach(() => {
+  restore?.();
+  restore = null;
 });
 
 describe('PoiSceneCards — le commentaire se lit à son point', () => {
@@ -84,6 +97,27 @@ describe('PoiSceneCards — le commentaire se lit à son point', () => {
     render(<PoiSceneCards containerRef={{ current: container }} cards={cards} />);
     fireEvent.click(screen.getByRole('button', { name: t('comments.openAttachment') }));
     expect(screen.getByRole('dialog', { name: t('comments.imagePreview') })).toBeInTheDocument();
+  });
+
+  it('borne la carte ouverte : trois lignes, miniature à côté, le reste sur un clic', () => {
+    const long = '/mnt/prod/seq010/sh0420/comp/v012/sh0420_comp_v012_beauty_linear_exr_sequence';
+    const { container } = viewer(1);
+    render(
+      <PoiSceneCards
+        containerRef={{ current: container }}
+        cards={[{ index: 0, text: long, images: cards[0].images }]}
+      />,
+    );
+    // La carte ne masque pas la scène : elle se coupe à trois lignes, et se déroule au clic.
+    expect(container.querySelector('.line-clamp-3')).not.toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: t('comments.expandComment', { count: long.length }) }),
+    );
+    expect(container.querySelector('.line-clamp-3')).toBeNull();
+    // La miniature vit dans la même rangée que le texte — à côté, pas dessous.
+    const strip = screen.getByRole('img').closest('div');
+    expect(strip?.parentElement?.firstElementChild?.textContent).toContain(long);
+    expect(strip?.className).toContain('shrink-0');
   });
 
   it('attend sa pastille : un point que le viewer n’a pas encore projeté ne rend rien', () => {

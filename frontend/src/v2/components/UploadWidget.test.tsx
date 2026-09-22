@@ -32,14 +32,25 @@ const row = (over: Partial<UploadItem>): string =>
   renderToStaticMarkup(<UploadRow item={item(over)} onDismiss={() => {}} />);
 
 /**
- * happy-dom ouvre une fenêtre de 1024 px, soit SOUS le seuil « étroit » (1100 px) : sans
- * réglage explicite, tout test tombe dans la variante repliée sans le dire.
+ * happy-dom ouvre une fenêtre de 1024 px. Le seuil de repli est descendu à 560 px, donc le
+ * défaut montre désormais la variante complète — on règle quand même la largeur
+ * explicitement : un test qui parle de repli doit dire de quelle largeur il parle.
  */
 const setViewportWidth = (width: number): void => {
   (window as unknown as { happyDOM: { setViewport: (v: { width: number }) => void } }).happyDOM.setViewport({
     width,
   });
 };
+
+/**
+ * Le nom accessible de la pastille — c'est lui qui porte le x/y et, quand un envoi est en
+ * vol, l'état en cours. Le lot 14 l'a rendu parlant : le nom d'avant (« Transferts (2) »)
+ * ne disait ni combien étaient arrivés ni ce qui se passait.
+ */
+const triggerName = (done: number, total: number, status?: string): string =>
+  status === undefined
+    ? t('uploads.summaryAria', { done, total })
+    : t('uploads.summaryBusyAria', { done, total, status });
 
 /** Les deux files sont des singletons de module : un test ne doit rien laisser au suivant. */
 beforeEach(() => {
@@ -72,9 +83,11 @@ describe('UploadWidget', () => {
       uploads: [item({}), item({ id: 'u2', filename: 'sh020_v001.mov' })],
     });
     render(<UploadWidget />);
-    // Replié : le compte et rien d'autre — aucun nom de fichier n'occupe la rangée.
-    const trigger = screen.getByRole('button', { name: t('uploads.title', { count: 2 }) });
-    expect(trigger).toHaveTextContent('2');
+    // Replié : le compte, l'état — mais aucun nom de fichier n'occupe la rangée.
+    const trigger = screen.getByRole('button', {
+      name: triggerName(0, 2, t('uploads.sending', { pct: 40 })),
+    });
+    expect(trigger).toHaveTextContent('0/2');
     expect(screen.queryByText('sh010_v003.mov')).toBeNull();
     await userEvent.click(trigger);
     expect(await screen.findByText('sh010_v003.mov')).toBeInTheDocument();
@@ -88,13 +101,118 @@ describe('UploadWidget', () => {
     expect(bars).toContain('40%');
   });
 
-  it('replie l’avancement en fenêtre étroite, où la rangée n’a plus de place', () => {
+  /**
+   * Le repli se faisait sous 1100 px, le seuil « fenêtre étroite » de la coquille. Contresens
+   * assumé et corrigé : c'est la largeur où la rangée gagne le plus de place (la recherche y
+   * tombe à une icône), et « voir le texte du statut pendant un upload » vise justement le
+   * portable et la fenêtre partagée. Ce cas remplace celui qui figeait l'ancien comportement.
+   */
+  it('garde le texte d’état bien en dessous de 1100 px — portable, fenêtre partagée', () => {
     setViewportWidth(900);
     useUploadStore.setState({ uploads: [item({ progress: 30 })] });
     const { container } = render(<UploadWidget />);
+    expect(screen.getByText(t('uploads.sending', { pct: 30 }))).toBeInTheDocument();
+    expect([...container.querySelectorAll('span')].map((el) => el.style.width)).toContain('30%');
+  });
+
+  it('ne garde que le compte à la largeur d’un téléphone, où le fil d’Ariane n’a plus rien', () => {
+    setViewportWidth(420);
+    useUploadStore.setState({ uploads: [item({ progress: 30 })] });
+    const { container } = render(<UploadWidget />);
     expect([...container.querySelectorAll('span')].map((el) => el.style.width)).not.toContain('30%');
-    // Le compte, lui, reste : c'est ce qui dit qu'un envoi est en cours.
-    expect(screen.getByRole('button', { name: t('uploads.title', { count: 1 }) })).toHaveTextContent('1');
+    expect(screen.queryByText(t('uploads.sending', { pct: 30 }))).toBeNull();
+    // Le x/y, lui, reste : c'est ce qui dit qu'un envoi est en cours et où il en est.
+    const trigger = screen.getByRole('button', {
+      name: triggerName(0, 1, t('uploads.sending', { pct: 30 })),
+    });
+    expect(trigger).toHaveTextContent('0/1');
+  });
+
+  /**
+   * L'autre moitié de la contrainte : le texte visible ne doit pas chasser le fil d'Ariane de
+   * la rangée. La pastille vit dans le flux (lot 13) et ne rétrécit pas — c'est donc au texte
+   * d'être borné et de se tronquer, quelle que soit la longueur de la traduction.
+   */
+  it('borne le texte d’état : il se tronque au lieu de pousser le fil d’Ariane dehors', () => {
+    setViewportWidth(900);
+    useUploadStore.setState({ uploads: [item({ progress: 30 })] });
+    render(<UploadWidget />);
+    const classes = [...screen.getByText(t('uploads.sending', { pct: 30 })).classList];
+    expect(classes).toContain('truncate');
+    expect(classes.some((c) => /^max-w-\[/.test(c))).toBe(true);
+  });
+
+  /**
+   * « x/y » : ce qui est arrivé sur ce qui a été demandé. Une ligne en échec n'est pas un
+   * aboutissement — elle reste au dénominateur jusqu'à ce qu'on la retire, sans quoi une
+   * pastille « 3/3 » annoncerait un envoi complet alors qu'un plan manque.
+   */
+  it('compte les lignes terminées sur le total, l’échec n’étant pas un aboutissement', () => {
+    useUploadStore.setState({
+      uploads: [
+        item({ id: 'a', status: 'done', progress: 100 }),
+        item({ id: 'b', status: 'error', progress: 60, error: 'PUT 403' }),
+        item({ id: 'c', status: 'uploading', progress: 20 }),
+      ],
+    });
+    render(<UploadWidget />);
+    expect(screen.getByText('1/3')).toBeInTheDocument();
+  });
+
+  it('montre le texte de l’état en cours sans qu’on déplie — « on voit ce qui se passe »', () => {
+    useUploadStore.setState({ uploads: [item({ status: 'uploading', progress: 42 })] });
+    const { rerender } = render(<UploadWidget />);
+    expect(screen.getByText(t('uploads.sending', { pct: 42 }))).toBeInTheDocument();
+    // Et il suit la phase, pas seulement l'octet : le transcodage se lit aussi.
+    useUploadStore.setState({ uploads: [item({ status: 'processing', kind: 'VIDEO' })] });
+    rerender(<UploadWidget />);
+    expect(screen.getByText(t('uploads.transcoding'))).toBeInTheDocument();
+  });
+
+  /**
+   * Trois transferts montent à la fois, les suivants attendent : l'état *majoritaire* d'un
+   * dépôt de trente plans resterait « En attente » du début à la fin. La pastille montre
+   * donc la ligne la plus avancée — celle dont l'état changera le prochain.
+   */
+  it('choisit la ligne la plus avancée quand plusieurs sont en vol', () => {
+    useUploadStore.setState({
+      uploads: [
+        item({ id: 'a', status: 'pending', progress: 0 }),
+        item({ id: 'b', status: 'uploading', progress: 70 }),
+        item({ id: 'c', status: 'pending', progress: 0 }),
+      ],
+    });
+    render(<UploadWidget />);
+    expect(screen.getByText(t('uploads.sending', { pct: 70 }))).toBeInTheDocument();
+    expect(screen.queryByText(t('uploads.pending'))).toBeNull();
+  });
+
+  it('n’affiche aucun état au repos : tout est arrivé, il n’y a plus rien à raconter', () => {
+    useUploadStore.setState({ uploads: [item({ status: 'done', progress: 100 })] });
+    render(<UploadWidget />);
+    expect(screen.getByRole('button', { name: triggerName(1, 1) })).toBeInTheDocument();
+    expect(screen.queryByText(t('project.status.completed'))).toBeNull();
+    expect(screen.queryByText(t('uploads.sending', { pct: 100 }))).toBeNull();
+  });
+
+  /**
+   * « Rendre plus visible cet encart quand il est actif » : au repos c'est une icône de
+   * barre parmi d'autres, en vol c'est une surface encadrée — celle de l'aperçu de la cloche.
+   */
+  it('se distingue d’une icône de barre quand un envoi est en vol', () => {
+    useUploadStore.setState({ uploads: [item({ status: 'uploading', progress: 10 })] });
+    const { rerender } = render(<UploadWidget />);
+    const classesOf = (name: string): string[] => [...screen.getByRole('button', { name }).classList];
+    const busy = classesOf(triggerName(0, 1, t('uploads.sending', { pct: 10 })));
+    expect(busy).toContain('border');
+    expect(busy).toContain('bg-secondary/40');
+    expect(busy).not.toContain('text-muted-foreground');
+
+    useUploadStore.setState({ uploads: [item({ status: 'done', progress: 100 })] });
+    rerender(<UploadWidget />);
+    const idle = classesOf(triggerName(1, 1));
+    expect(idle).not.toContain('border');
+    expect(idle).toContain('text-muted-foreground');
   });
 
   it('ne laisse aucune trace quand la dernière ligne est retirée', () => {

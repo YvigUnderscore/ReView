@@ -13,8 +13,10 @@ import { assertMediaManage } from './MediaService';
  * (JSON `metadata.splatEdits`) et masque de suppression par splat (bitset binaire dans MinIO,
  * référencé par `metadata.splatMaskKey`). Le fichier splat original n'est jamais modifié ;
  * les éditions sont ré-appliquées au chargement du viewer. Écriture réservée aux gestionnaires,
- * **splat non publié uniquement** (verrou Phase 11) — seule la présentation (mise en scène)
- * reste modifiable après publication.
+ * **splat non publié uniquement** (verrou Phase 11, refermé en Phase 50 lot 14) — seule la
+ * présentation (mise en scène) reste modifiable après publication. Après publication, une
+ * édition de nuage ne s'exprime plus que **dans un commentaire** (part `splat-edit`), rejouée
+ * à la lecture de ce commentaire et jamais écrite ici.
  */
 
 type SessionUser = { id: number; role: import('@prisma/client').Role };
@@ -43,12 +45,12 @@ export interface SplatEditsInput {
 const MAX_MASK_BYTES = 4_000_000;
 
 /**
- * Gestionnaire + média splat.
+ * Gestionnaire + média splat, et publication non encore faite.
  *
- * Les éditions splat ne sont plus verrouillées par la publication (Phase 50) : elles sont
- * non destructives — le fichier déposé n'est jamais touché, tout est rejoué à la lecture
- * pour tous. Nettoyer un splat EST le travail de review d'un splat. Le verrou reste
- * consulté, la table de `lib/publishLock` porte la raison.
+ * L'écriture « pour tout le monde » s'arrête à la publication, exactement comme la
+ * transformation d'une version : au-delà, ce que voient ceux qui commentent ne se réécrit plus
+ * sous leurs yeux. Le geste d'édition reste offert au reviewer, mais dans un commentaire.
+ * Le verrou reste l'autorité : la table de `lib/publishLock` porte la raison.
  */
 async function assertEditableSplat(user: SessionUser, id: number) {
   await assertMediaManage(id, user);

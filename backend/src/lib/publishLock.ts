@@ -10,8 +10,8 @@ import { forbidden } from './errors';
  * La Phase 11 avait posé une règle d'un seul mot : publié = figé. Elle tenait parce que la
  * publication était un geste de fin de course. Depuis que le média est publié **dès son
  * upload** (réglage `draftMode` désactivé par défaut), la même règle gèlerait le média au
- * moment où l'artiste commence à peine à travailler dessus : nettoyer un splat, recomposer
- * une scène USD, relancer un transcodage raté deviendraient impossibles sans réuploader.
+ * moment où l'artiste commence à peine à travailler dessus : recomposer une scène USD ou
+ * relancer un transcodage raté deviendraient impossibles sans réuploader.
  *
  * Le verrou est donc **conservé, et sa table d'exceptions écrite noir sur blanc**. Ce qui
  * reste verrouillé l'est par choix, pas par oubli — c'est précisément pour cela que chaque
@@ -37,11 +37,21 @@ export type PublishedWrite =
  * personne n'a choisi.
  */
 const ALLOWED_WHILE_PUBLISHED: Record<PublishedWrite, boolean> = {
-  // Éditions splat (splat-edits, masque de suppression, sous-ensembles) : non destructives
-  // par construction — le fichier d'origine n'est jamais touché, tout est rejoué à la
-  // lecture pour tous les spectateurs. Nettoyer un splat EST le travail de review d'un
-  // splat ; l'interdire après publication revenait à l'interdire tout court.
-  splatEdit: true,
+  // Éditions splat écrites POUR TOUT LE MONDE (splat-edits JSON, masque de suppression,
+  // sous-ensembles) : refermées en Phase 50, lot 14. Elles avaient été ouvertes pour que
+  // nettoyer un nuage reste possible après une publication d'office — le résultat était
+  // qu'un studio sans brouillons voyait un bouton « Enregistrer » permanent au-dessus du
+  // viewer, qui réécrivait sous les yeux de tous ce qu'ils étaient en train de commenter.
+  //
+  // Le nettoyage n'est pas perdu pour autant : il part désormais DANS un commentaire, comme
+  // la proposition de mise en scène 3D (part `splat-edit` de `lib/commentPayload`), et n'est
+  // rejoué qu'à la lecture de ce commentaire. Le splat s'aligne ainsi sur le modèle 3D : la
+  // base commune se fixe avant publication, la proposition après.
+  //
+  // Ce qui RESTE permis après publication, et ne passe volontairement pas par cette table :
+  // `splatPresentation` (mise en scène — caméra de base, DoF, reveal, LOD, éclairage), qui
+  // est de la présentation et non du contenu.
+  splatEdit: false,
   // Override de scène USD (46.D) : une mise en scène rejouée au chargement du viewer. Même
   // nature que `splatPresentation`, qui était déjà une exception depuis la Phase 11.
   usdOverride: true,

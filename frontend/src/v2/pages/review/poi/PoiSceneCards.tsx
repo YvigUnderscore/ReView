@@ -5,6 +5,7 @@ import { useEffect, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronUp, Images } from 'lucide-react';
 import { Lightbox } from '../../../components/ui/lightbox';
+import PoiNoteBody from './PoiNoteBody';
 import { POI_CARD_ATTR, sameAnchors, subscribePoiAnchors } from './poiAnchor';
 import {
   poiCardAbove,
@@ -26,8 +27,8 @@ import { useT } from '../../../i18n';
  *    déplie pas ; les autres points restent des étiquettes d'une ligne ;
  *  - une seule carte ouverte à la fois : deux cartes ouvertes se recouvrent dès que deux points
  *    sont proches, et c'est précisément le cas qui devait rester lisible ;
- *  - la carte est bornée (largeur fixe, texte qui défile) : un commentaire long ou six images ne
- *    masquent pas la scène, on les parcourt sur place ;
+ *  - la carte est bornée (largeur fixe, trois lignes de texte, miniature à côté — `PoiNoteBody`) :
+ *    un commentaire long ou six images ne masquent pas la scène, on les déroule sur place ;
  *  - les images s'ouvrent en grand dans la Lightbox partagée, celle du fil et de la review image.
  *
  * Le coût de rendu est nul côté viewer : le calque ne se projette pas, il s'ancre dans la pastille
@@ -118,25 +119,13 @@ function PoiCard({
           <ChevronUp size={12} />
         </button>
       </div>
-      {body && <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-foreground">{body}</p>}
-      {card.images.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {card.images.map((img, at) => (
-            <button
-              key={img.src}
-              type="button"
-              onClick={() => onImage(card.images, at)}
-              title={img.alt || t('comments.openAttachment')}
-              aria-label={t('comments.openAttachment')}
-            >
-              <img
-                src={img.src}
-                alt={img.alt}
-                className="h-12 w-12 rounded border border-border object-cover"
-              />
-            </button>
-          ))}
-        </div>
+      {(body || card.images.length > 0) && (
+        <PoiNoteBody
+          text={body}
+          images={card.images}
+          onImage={(at) => onImage(card.images, at)}
+          className="text-xs text-foreground"
+        />
       )}
     </div>
   );

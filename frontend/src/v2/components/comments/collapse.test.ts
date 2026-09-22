@@ -2,39 +2,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import {
-  COLLAPSE_CHARS,
-  COLLAPSE_LINES,
-  VISIBLE_REPLIES,
-  isLongText,
-  lineCount,
-  plainLength,
-  splitReplies,
-} from './collapse';
+import { CLIP_SLACK, VISIBLE_REPLIES, isClipped, plainLength, splitReplies } from './collapse';
 
 describe('mesure du contenu — le balisage ne compte pas', () => {
-  it('mesure le texte brut, pas les balises', () => {
+  it('compte le texte brut, pas les balises', () => {
     expect(plainLength('<span class="text-primary">@yvig</span> ok')).toBe('@yvig ok'.length);
-  });
-
-  it('compte les lignes du texte brut', () => {
-    expect(lineCount('a\nb\nc')).toBe(3);
   });
 });
 
-describe('isLongText — les deux seuils de repliage', () => {
-  it('laisse déplié un commentaire court', () => {
-    expect(isLongText('trop sombre sur la frame 1012')).toBe(false);
+/**
+ * L'indicateur de repliage se décidait au nombre de caractères : la même remarque recevait la
+ * même réponse dans une carte de 15 rem et dans le fil, bien plus large, et le clic ne révélait
+ * rien. C'est le débordement de l'élément replié qu'on mesure désormais.
+ */
+describe('isClipped — le repliage cache-t-il quelque chose ?', () => {
+  it('ne voit rien de caché quand tout le contenu tient', () => {
+    expect(isClipped({ scrollHeight: 48, clientHeight: 48 })).toBe(false);
   });
 
-  it('replie au-delà du plafond de caractères', () => {
-    expect(isLongText('x'.repeat(COLLAPSE_CHARS))).toBe(false);
-    expect(isLongText('x'.repeat(COLLAPSE_CHARS + 1))).toBe(true);
+  it('voit ce que le repliage masque', () => {
+    expect(isClipped({ scrollHeight: 80, clientHeight: 48 })).toBe(true);
   });
 
-  it('replie un texte court mais haut', () => {
-    expect(isLongText('x\n'.repeat(COLLAPSE_LINES - 2))).toBe(false);
-    expect(isLongText('x\n'.repeat(COLLAPSE_LINES + 2))).toBe(true);
+  it('ignore un écart qui ne cache aucun texte', () => {
+    expect(isClipped({ scrollHeight: 48 + CLIP_SLACK, clientHeight: 48 })).toBe(false);
+    expect(isClipped({ scrollHeight: 48 + CLIP_SLACK + 1, clientHeight: 48 })).toBe(true);
+  });
+
+  it('ne conclut rien sans élément à mesurer', () => {
+    expect(isClipped(null)).toBe(false);
   });
 });
 
