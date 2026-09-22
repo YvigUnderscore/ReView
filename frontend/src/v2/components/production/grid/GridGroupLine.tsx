@@ -20,12 +20,15 @@ import { useT } from '../../../i18n';
 export default function GridGroupLine({
   group,
   columns,
+  colWidth,
   collapsed,
   onToggle,
 }: {
   group: SequenceGroup;
   /** Nombre de colonnes visibles — la ligne doit faire la largeur de la table. */
   columns: number;
+  /** Largeur d'une colonne de département, réglée par la table. */
+  colWidth: number;
   collapsed: boolean;
   onToggle: () => void;
 }) {
@@ -35,7 +38,7 @@ export default function GridGroupLine({
     <div
       role="row"
       className="flex h-full items-center border-b border-border bg-secondary/40"
-      style={{ width: lineWidth(columns) }}
+      style={{ width: lineWidth(columns, colWidth) }}
     >
       <div
         role="rowheader"

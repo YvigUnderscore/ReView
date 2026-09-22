@@ -7,6 +7,7 @@ import { timeAgo } from '../../lib/time';
 import { reviewPath } from '../../lib/slug';
 import { MEDIA_KIND_ICON } from '../task/taskTypes';
 import { stripHtml } from '../../lib/richText';
+import { contentCapacity, type WidgetRows } from '../../components/widgets/widgetSizing';
 import type { DashboardReview } from './homeTypes';
 import { useT } from '../../i18n';
 
@@ -58,10 +59,22 @@ function CommentLine({ review }: { review: DashboardReview }) {
   );
 }
 
-/** Hero « Dernières reviews » : dernier média commenté en grand + reviews récentes. */
-export default function LatestReviews({ reviews }: { reviews: DashboardReview[] }) {
+/**
+ * Hauteur d'une carte de la colonne de droite : sa vignette (`h-14`, 56 px), ses marges
+ * (`p-2`) et l'interligne (`space-y-2`) — environ 80 px.
+ */
+const REVIEW_CARD = 80;
+
+/**
+ * Hero « Dernières reviews » : dernier média commenté en grand + reviews récentes.
+ *
+ * Le héros occupe sa propre colonne ; c'est donc la hauteur du bloc qui décide de ce que la
+ * colonne de droite montre à côté de lui (lot 13). Une carte plus haute montre réellement
+ * plus de reviews, au lieu d'en aligner deux et de laisser du vide sous elles.
+ */
+export default function LatestReviews({ reviews, rows }: { reviews: DashboardReview[]; rows: WidgetRows }) {
   const t = useT();
-  const [hero, ...rest] = reviews;
+  const [hero, ...rest] = reviews.slice(0, 1 + contentCapacity(rows, REVIEW_CARD));
   return (
     <>
       {!hero ? (

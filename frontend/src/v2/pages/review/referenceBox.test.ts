@@ -3,24 +3,32 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  clampRefBox,
   fitBands,
+  MEDIA_CANVAS,
   NO_BANDS,
+  onCanvasRefBox,
   pastedRefBox,
+  placeRefBox,
   REF_MIN_WIDTH,
   REF_PASTE_WIDTH,
   REF_POS_LIMIT,
+  rescueRefBox,
   type ViewerBands,
 } from './referenceBox';
 
 /**
- * Deux défauts opposés se sont succédé : le collage posait d'abord à x = 1.05 sans bornage
- * (invisible, irrattrapable), puis tout a été borné à 0..1 (la référence se collait d'office
- * SUR l'image). La règle tient les deux bouts : la zone atteignable est le média **plus** les
- * bandes que le letterbox laisse autour de lui.
+ * Trois bornages se sont succédé et aucun n'a rendu le geste libre : le collage posait d'abord
+ * à x = 1.05 sans limite (invisible, irrattrapable), puis tout a été borné à 0..1 (la référence
+ * se collait d'office SUR l'image), puis aux bandes du letterbox — qui interdisent encore les
+ * côtés dès que le letterbox est horizontal.
+ *
+ * La règle tient désormais les deux bouts en séparant les deux moments : le geste ne connaît
+ * aucune bande (`placeRefBox`), et l'affichage ne rattrape que ce qu'aucun viewer ne montrerait
+ * (`rescueRefBox`).
  */
 const bands = (over: Partial<ViewerBands> = {}): ViewerBands => ({ ...NO_BANDS, ...over });
 const SIDE = bands({ left: 0.5, right: 0.5 });
+const VERTICAL = bands({ top: 0.4, bottom: 0.4 });
 
 describe('fitBands', () => {
   it('donne des bandes latérales quand le viewer est plus large que le média', () => {
@@ -45,48 +53,116 @@ describe('fitBands', () => {
   });
 });
 
-describe('clampRefBox', () => {
-  it('conserve une référence posée hors cadre, dans la bande', () => {
-    expect(clampRefBox({ x: 1.1, y: 0.2, width: 0.3 }, SIDE).x).toBeCloseTo(1.1);
-    expect(clampRefBox({ x: -0.4, y: 0.2, width: 0.3 }, SIDE).x).toBeCloseTo(-0.4);
+describe('placeRefBox', () => {
+  it('garde le point de dépôt tel quel, hors du cadre du média comme dedans', () => {
+    expect(placeRefBox({ x: 1.4, y: -0.6, width: 0.3 })).toEqual({ x: 1.4, y: -0.6, width: 0.3 });
+    expect(placeRefBox({ x: 0.2, y: 0.3, width: 0.4 })).toEqual({ x: 0.2, y: 0.3, width: 0.4 });
   });
 
-  it('ne laisse pas sortir la référence de la bande', () => {
-    expect(clampRefBox({ x: 5, y: 0, width: 0.3 }, SIDE).x).toBeCloseTo(1.2);
-    expect(clampRefBox({ x: -5, y: 0, width: 0.3 }, SIDE).x).toBeCloseTo(-0.5);
-    const vertical = bands({ top: 0.4, bottom: 0.4 });
-    expect(clampRefBox({ x: 0.2, y: -3, width: 0.3 }, vertical).y).toBeCloseTo(-0.4);
-    expect(clampRefBox({ x: 0.2, y: 9, width: 0.3 }, vertical).y).toBeCloseTo(1.35);
+  it('garde un dépôt bien au-delà du cadre : aucune bande n’entre dans le geste', () => {
+    expect(placeRefBox({ x: 2.5, y: 1.8, width: 0.3 })).toEqual({ x: 2.5, y: 1.8, width: 0.3 });
   });
 
-  it('plafonne une bande démesurée : la référence reste rattrapable', () => {
-    expect(clampRefBox({ x: -99, y: 0, width: 0.3 }, bands({ left: 99 })).x).toBe(-REF_POS_LIMIT);
-  });
-
-  it('ramène dans le cadre une position héritée quand aucune bande ne l’accueille', () => {
-    const box = clampRefBox({ x: 1.05, y: 0, width: 0.3 });
-    expect(box.x).toBeCloseTo(0.7);
-    expect(box.x + box.width).toBeLessThanOrEqual(1);
-    // Une bande trop courte pour la largeur ne suffit pas non plus.
-    expect(clampRefBox({ x: 1.05, y: 0, width: 0.3 }, bands({ right: 0.1 })).x).toBeCloseTo(0.8);
-  });
-
-  it('laisse intacte une position déjà dans le cadre', () => {
-    expect(clampRefBox({ x: 0.2, y: 0.3, width: 0.4 })).toEqual({ x: 0.2, y: 0.3, width: 0.4 });
-  });
-
-  it('borne les débordements sans bande, et la hauteur utile', () => {
-    expect(clampRefBox({ x: -2, y: -1, width: 0.2 })).toEqual({ x: 0, y: 0, width: 0.2 });
-    expect(clampRefBox({ x: 0, y: 4, width: 0.2 }).y).toBeLessThan(1);
+  it('s’arrête au plafond partagé avec le serveur, qui refuserait l’envoi', () => {
+    expect(placeRefBox({ x: 9, y: -9, width: 0.3 })).toEqual({
+      x: REF_POS_LIMIT,
+      y: -REF_POS_LIMIT,
+      width: 0.3,
+    });
   });
 
   it('plafonne la largeur à l’image et garde une taille attrapable', () => {
-    expect(clampRefBox({ x: 0, y: 0, width: 3 })).toEqual({ x: 0, y: 0, width: 1 });
-    expect(clampRefBox({ x: 0.5, y: 0.5, width: 0 }).width).toBe(REF_MIN_WIDTH);
+    expect(placeRefBox({ x: 0, y: 0, width: 3 }).width).toBe(1);
+    expect(placeRefBox({ x: 0.5, y: 0.5, width: 0 }).width).toBe(REF_MIN_WIDTH);
   });
 
   it('ne propage pas un NaN venu d’un glisser sur un conteneur non mesuré', () => {
-    expect(clampRefBox({ x: NaN, y: NaN, width: NaN })).toEqual({
+    expect(placeRefBox({ x: NaN, y: NaN, width: NaN })).toEqual({
+      x: 0,
+      y: 0,
+      width: REF_MIN_WIDTH,
+    });
+  });
+});
+
+describe('onCanvasRefBox', () => {
+  /** Ce que mesure un viewer plus large et plus haut que le média : de la place tout autour. */
+  const CANVAS = { left: -1, top: -0.5, right: 2, bottom: 1.5 };
+
+  it('laisse la référence n’importe où sur le canevas, hors du cadre du média', () => {
+    expect(onCanvasRefBox({ x: 1.6, y: -0.4, width: 0.3 }, 0.4, CANVAS)).toEqual({
+      x: 1.6,
+      y: -0.4,
+      width: 0.3,
+    });
+  });
+
+  it('retient au bord ce qui sortirait du viewer, donc de toute prise', () => {
+    expect(onCanvasRefBox({ x: 2.5, y: 0, width: 0.3 }, 0.4, CANVAS).x).toBeCloseTo(1.95);
+    expect(onCanvasRefBox({ x: -2, y: 0, width: 0.3 }, 0.4, CANVAS).x).toBeCloseTo(-1.25);
+    expect(onCanvasRefBox({ x: 0, y: 2.5, width: 0.3 }, 0.4, CANVAS).y).toBeCloseTo(1.45);
+    expect(onCanvasRefBox({ x: 0, y: -2, width: 0.3 }, 0.4, CANVAS).y).toBeCloseTo(-0.85);
+  });
+
+  it('s’en tient au cadre du média faute de canevas mesuré', () => {
+    const box = onCanvasRefBox({ x: 1.6, y: 0.2, width: 0.3 }, 0.4, MEDIA_CANVAS);
+    expect(box.x).toBeCloseTo(0.95);
+  });
+
+  it('se rabat sur la part attrapable quand la hauteur n’est pas mesurable', () => {
+    expect(onCanvasRefBox({ x: 0, y: -2, width: 0.3 }, 0, CANVAS).y).toBeCloseTo(-0.5);
+    expect(onCanvasRefBox({ x: 0, y: -2, width: 0.3 }, NaN, CANVAS).y).toBeCloseTo(-0.5);
+  });
+
+  it('ne dépasse jamais le plafond que le serveur accepte, canevas immense ou non', () => {
+    const huge = { left: -20, top: -20, right: 20, bottom: 20 };
+    expect(onCanvasRefBox({ x: 40, y: -40, width: 0.3 }, 0.4, huge)).toEqual({
+      x: REF_POS_LIMIT,
+      y: -REF_POS_LIMIT,
+      width: 0.3,
+    });
+  });
+});
+
+describe('rescueRefBox', () => {
+  it('laisse exactement en place une référence dont on voit assez', () => {
+    expect(rescueRefBox({ x: 0.2, y: 0.3, width: 0.4 })).toEqual({ x: 0.2, y: 0.3, width: 0.4 });
+    expect(rescueRefBox({ x: 1.1, y: 0.2, width: 0.3 }, SIDE).x).toBeCloseTo(1.1);
+    expect(rescueRefBox({ x: -0.4, y: 0.2, width: 0.3 }, SIDE).x).toBeCloseTo(-0.4);
+    expect(rescueRefBox({ x: 0.2, y: -0.4, width: 0.3 }, VERTICAL).y).toBeCloseTo(-0.4);
+  });
+
+  it('laisse dépasser la référence du viewer tant qu’on en reconnaît une part', () => {
+    expect(rescueRefBox({ x: 1.4, y: 0.2, width: 0.3 }, SIDE).x).toBeCloseTo(1.4);
+  });
+
+  it('ramène dans la zone visible ce qui n’y mord plus assez', () => {
+    expect(rescueRefBox({ x: 1.45, y: 0, width: 0.3 }, SIDE).x).toBeCloseTo(1.2);
+    expect(rescueRefBox({ x: 5, y: 0, width: 0.3 }, SIDE).x).toBeCloseTo(1.2);
+    expect(rescueRefBox({ x: -5, y: 0, width: 0.3 }, SIDE).x).toBeCloseTo(-0.5);
+    expect(rescueRefBox({ x: 0.2, y: -3, width: 0.3 }, VERTICAL).y).toBeCloseTo(-0.4);
+    expect(rescueRefBox({ x: 0.2, y: 9, width: 0.3 }, VERTICAL).y).toBeCloseTo(1.35);
+  });
+
+  it('ramène dans le cadre une position héritée quand aucune bande ne l’accueille', () => {
+    const box = rescueRefBox({ x: 1.05, y: 0, width: 0.3 });
+    expect(box.x).toBeCloseTo(0.7);
+    expect(box.x + box.width).toBeLessThanOrEqual(1);
+    // Une bande trop courte pour en montrer une part reconnaissable ne suffit pas non plus.
+    expect(rescueRefBox({ x: 1.05, y: 0, width: 0.3 }, bands({ right: 0.1 })).x).toBeCloseTo(0.8);
+  });
+
+  it('rattrape une position héritée aberrante sur les deux axes', () => {
+    expect(rescueRefBox({ x: -2, y: -1, width: 0.2 })).toEqual({ x: 0, y: 0, width: 0.2 });
+    expect(rescueRefBox({ x: 0, y: 4, width: 0.2 }).y).toBeLessThan(1);
+  });
+
+  it('plafonne une bande démesurée : la référence reste rattrapable', () => {
+    expect(rescueRefBox({ x: -99, y: 0, width: 0.3 }, bands({ left: 99 })).x).toBe(-REF_POS_LIMIT);
+  });
+
+  it('ne propage pas un NaN enregistré en base', () => {
+    expect(rescueRefBox({ x: NaN, y: NaN, width: NaN })).toEqual({
       x: 0,
       y: 0,
       width: REF_MIN_WIDTH,
@@ -108,6 +184,17 @@ describe('pastedRefBox', () => {
     expect(box.x).toBeGreaterThanOrEqual(-0.6);
   });
 
+  it('pose SOUS le média quand le letterbox est horizontal', () => {
+    const box = pastedRefBox(0, bands({ top: 0.6, bottom: 0.6 }));
+    expect(box.y).toBeGreaterThan(1);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(1);
+  });
+
+  it('pose AU-DESSUS du média quand seule la bande haute l’accueille', () => {
+    expect(pastedRefBox(0, bands({ top: 0.6 })).y).toBeLessThan(0);
+  });
+
   it('retombe sur un coin du média quand rien ne l’entoure', () => {
     const box = pastedRefBox(0);
     expect(box.x).toBeGreaterThan(0);
@@ -117,11 +204,13 @@ describe('pastedRefBox', () => {
   });
 
   it('retombe aussi sur un coin quand la bande est trop courte pour la référence', () => {
-    const narrow = pastedRefBox(0, bands({ right: REF_PASTE_WIDTH / 2 }));
-    expect(narrow.x).toBeLessThan(1);
+    expect(pastedRefBox(0, bands({ right: REF_PASTE_WIDTH / 2 })).x).toBeLessThan(1);
+    const flat = pastedRefBox(0, bands({ top: 0.2, bottom: 0.2 }));
+    expect(flat.y).toBeGreaterThan(0);
+    expect(flat.y).toBeLessThan(0.5);
   });
 
-  it('cascade dans la bande sans en sortir', () => {
+  it('cascade le long de la bande sans en sortir', () => {
     const first = pastedRefBox(0, SIDE);
     const second = pastedRefBox(1, SIDE);
     expect(second.x).toBeCloseTo(first.x);

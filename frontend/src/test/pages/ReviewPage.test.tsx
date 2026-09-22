@@ -294,3 +294,56 @@ describe('ReviewPage — panneau de commentaires', () => {
     expect(screen.queryByRole('button', { name: t('panel.info') })).toBeNull();
   });
 });
+
+/**
+ * Sortie de la lecture d'un commentaire annoté (Phase 50, lot 13).
+ *
+ * La pilule se posait dans la section de review, dont le premier enfant est l'en-tête unifié du
+ * chrome : elle tombait sur la bascule de mode — centrée, elle aussi — ou sur la bande de
+ * consigne. Elle vit désormais dans la zone média, au même bord pour l'image, le modèle 3D et le
+ * nuage de points. On l'affirme donc *à l'intérieur* de `[data-viewer-zone]`, pas seulement à
+ * l'écran : c'est la position qui était en cause.
+ */
+describe('ReviewPage — quitter la lecture d’un commentaire annoté', () => {
+  /** Commentaire porteur d'une annotation : c'est ce qui rend la carte sélectionnable. */
+  const annotated = comment({
+    annotation: [{ id: 'a1', type: 'arrow', color: '#ffffff', width: 3, x1: 0.2, y1: 0.2, x2: 0.6, y2: 0.6 }],
+  });
+
+  const openAnnotation = async (kind: MediaKind) => {
+    const { container, user } = mount(kind, { 'GET /api/comments': { items: [annotated] } });
+    const card = (await screen.findByText(annotated.content)).closest('[role="button"]');
+    await user.click(card as HTMLElement);
+    return { container, user };
+  };
+
+  const exitButton = (container: HTMLElement) =>
+    within(container.querySelector('[data-viewer-zone]') as HTMLElement).getByRole('button', {
+      name: t('ctx.hideAnnotation'),
+    });
+
+  it('pose le bouton dans le viewer image', async () => {
+    const { container } = await openAnnotation('IMAGE');
+    expect(exitButton(container)).toBeInTheDocument();
+  });
+
+  it('pose le même bouton dans le viewer 3D', async () => {
+    const { container } = await openAnnotation('MODEL_3D');
+    expect(exitButton(container)).toBeInTheDocument();
+  });
+
+  it('pose le même bouton dans le viewer splat', async () => {
+    const { container } = await openAnnotation('SPLAT');
+    expect(exitButton(container)).toBeInTheDocument();
+  });
+
+  it('rend la main à la rédaction : le bouton disparaît avec la lecture', async () => {
+    const { container, user } = await openAnnotation('IMAGE');
+    await user.click(exitButton(container));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: t('ctx.hideAnnotation') })).not.toBeInTheDocument(),
+    );
+    // Le composer reste sous la main : l'annotation lue partie, on écrit la suivante.
+    expect(screen.getByPlaceholderText(t('comments.placeholder'))).toBeInTheDocument();
+  });
+});

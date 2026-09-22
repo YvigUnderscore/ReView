@@ -7,6 +7,7 @@ import ProductionGrid from './ProductionGrid';
 import { httpError, type MockRequest, type MockResolver } from '../../../../test/apiMock';
 import { renderWithProviders } from '../../../../test/renderWithProviders';
 import { t } from '../../../i18n';
+import { COL_W_MIN, columnWidth } from './gridLayout';
 import type { GridCell, GridRow, ProjectGrid } from './gridWire';
 
 /**
@@ -16,7 +17,8 @@ import type { GridCell, GridRow, ProjectGrid } from './gridWire';
  * - les colonnes portaient des clés techniques triées alphabétiquement, alors qu'un
  *   référentiel de départements ordonné existe ;
  * - une case vide pouvait aussi bien vouloir dire « à faire » que « rien à faire ici » ;
- * - les cinq couleurs de statut n'étaient nommées que dans un attribut `title` ;
+ * - les couleurs de statut n'étaient nommées nulle part : la case écrit désormais le nom
+ *   de son statut, et garde sa couleur ;
  * - la maille séquence était le seul niveau offert, sans jamais descendre au plan.
  */
 
@@ -162,10 +164,75 @@ describe('ProductionGrid', () => {
   it('distingue une case « à faire » d’une case hors programme', async () => {
     render();
     await screen.findByRole('link', { name: 'SH010' });
-    expect(screen.getByRole('gridcell', { name: `Compositing · ${t('production.grid.idle')}` })).toBeTruthy();
-    expect(
-      screen.getAllByRole('gridcell', { name: `Lighting · ${t('production.grid.unscheduled')}` }),
-    ).toHaveLength(2);
+    const idle = screen.getByRole('gridcell', { name: `Compositing · ${t('production.grid.idle')}` });
+    const offPlan = screen.getAllByRole('gridcell', {
+      name: `Lighting · ${t('production.grid.unscheduled')}`,
+    });
+    expect(offPlan).toHaveLength(2);
+    // Aucune des deux n'écrit de nom : elles n'ont pas de statut, et c'est ce vide qui les
+    // sépare d'une case engagée. Elles restent distinguées par leur marque et leur libellé.
+    expect(idle.textContent).toBe('');
+    expect(offPlan[0].textContent).toBe('');
+    expect(idle.getAttribute('title')).not.toBe(offPlan[0].getAttribute('title'));
+  });
+
+  it('écrit le nom du statut DANS la case, sans rien demander au survol', async () => {
+    render();
+    const done = await screen.findByRole('button', { name: /Approved/ });
+    // `textContent`, pas l'étiquette : c'est ce que l'œil lit sans survoler ni tabuler.
+    expect(done.textContent).toContain('Approved');
+    expect(screen.getByRole('button', { name: /Retake/ }).textContent).toContain('Retake');
+  });
+
+  it('garde la couleur du référentiel à côté du nom — on ajoute, on ne remplace pas', async () => {
+    render();
+    const done = await screen.findByRole('button', { name: /Approved/ });
+    // La pastille est le premier élément stylé de la case ; la teinte est celle du statut.
+    const dot = done.querySelector('span[style]');
+    expect(dot?.getAttribute('style')).toMatch(/#22cc55|rgb\(34, ?204, ?85\)/i);
+  });
+
+  it('traduit l’enum figé dans la case quand le studio n’a aucun référentiel', async () => {
+    const noRefRow: GridRow = {
+      ...ROWS[0],
+      shotId: 3,
+      code: 'SH030',
+      cells: [
+        cell('anim', {
+          taskId: 301,
+          // Ce que sert le serveur sans référentiel : nom vide, enum dans le code.
+          status: { id: null, code: 'PENDING_REVIEW', name: '', color: null, family: 'review' },
+        }),
+      ],
+    };
+    render({ ...GRID, rows: [noRefRow], total: 1 });
+    const label = t('task.status.toReview');
+    const button = await screen.findByRole('button', { name: new RegExp(label) });
+    expect(button.textContent).toContain(label);
+    // Et jamais l'identifiant lui-même, qui n'est pas un mot d'interface.
+    expect(button.textContent).not.toContain('PENDING_REVIEW');
+  });
+
+  it('taille la colonne sur le nom le plus long servi, sans la laisser grossir sans fin', async () => {
+    render();
+    const header = await screen.findByRole('columnheader', { name: 'Animation' });
+    // « In progress », le plus long des statuts de la page.
+    const width = columnWidth('In progress'.length);
+    expect(header.style.width).toBe(`${width}px`);
+    // Et le bouton de la case porte cette largeur EN PIXELS : le menu contextuel interpose
+    // un `<div>` sans largeur, où un `w-full` se résoudrait en « largeur du contenu » et
+    // laisserait le nom déborder la colonne.
+    expect(screen.getByRole('button', { name: /Approved/ }).style.width).toBe(`${width - 1}px`);
+  });
+
+  it('ne prend pas un pixel de plus qu’avant quand tous les noms sont courts', async () => {
+    const short = (over: Partial<GridCell>): GridCell => ({
+      ...cell('anim', over),
+      status: { id: 9, code: 'fin', name: 'Final', color: null, family: 'done' },
+    });
+    render({ ...GRID, rows: [{ ...ROWS[0], cells: [short({ taskId: 401 })] }], total: 1 });
+    const header = await screen.findByRole('columnheader', { name: 'Animation' });
+    expect(header.style.width).toBe(`${COL_W_MIN}px`);
   });
 
   it('porte au survol ce que la case ne montre pas : versions, activité, échéance', async () => {
@@ -213,7 +280,12 @@ describe('ProductionGrid', () => {
     await screen.findByRole('columnheader', { name: 'Lighting' });
     await user.click(screen.getByRole('checkbox', { name: t('production.grid.hideEmptyColumns') }));
     expect(screen.queryByRole('columnheader', { name: 'Lighting' })).toBeNull();
-    expect(screen.getByRole('columnheader', { name: 'Compositing' })).toBeTruthy();
+    const kept = screen.getByRole('columnheader', { name: 'Compositing' });
+    expect(kept).toBeTruthy();
+    // La grille se resserre sans que les cases restantes perdent leur nom, et la largeur
+    // reste celle du nom le plus long des colonnes ENCORE visibles.
+    expect(screen.getByRole('button', { name: /Approved/ }).textContent).toContain('Approved');
+    expect(kept.style.width).toBe(`${columnWidth('In progress'.length)}px`);
   });
 
   it('passe le filtre de département au serveur, et redemande une liste neuve', async () => {

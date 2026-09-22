@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ComponentProps, RefObject } from 'react';
+import type { ComponentProps, ReactNode, RefObject } from 'react';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import ReviewCanvasRefs, { ReviewCanvasRefsControls } from './ReviewCanvasRefs';
 import ReviewContextMenu from './ReviewContextMenu';
@@ -36,6 +36,7 @@ export default function ImageReviewSection({
   imageSync,
   imageViewApiRef,
   onImageUserView,
+  exit,
   onFullscreen,
   onToggleAnnotate,
   onClearSelection,
@@ -56,6 +57,12 @@ export default function ImageReviewSection({
   imageSync: ReturnType<typeof useImageCompareSync>;
   imageViewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onImageUserView?: () => void;
+  /**
+   * Sortie de la lecture d'un commentaire annoté — posée DANS la zone média, hors du calque
+   * zoomé (qui crée son propre contexte d'empilement) : la pilule reste au-dessus du dessin
+   * et à l'échelle de l'écran, quel que soit l'agrandissement.
+   */
+  exit?: ReactNode;
   onFullscreen: () => void;
   onToggleAnnotate: () => void;
   onClearSelection: () => void;
@@ -126,7 +133,7 @@ export default function ImageReviewSection({
             onClearSelection={onClearSelection}
             annShapes={ann.viewed ?? ann.annot}
           >
-            <div className={VIEWER_ZONE}>
+            <div className={VIEWER_ZONE} data-viewer-zone>
               <div className="absolute inset-0">
                 <ImageReviewViewer
                   src={data.url}
@@ -166,6 +173,9 @@ export default function ImageReviewSection({
                 />
               </div>
               <ReviewCanvasRefsControls ann={ann} annotating={ann.annotating} />
+              {/* Rendue après le calque zoomé, donc au-dessus de lui sans dépendre d'un z-index
+                  qu'un contexte d'empilement local aurait avalé. */}
+              {exit}
             </div>
           </ReviewContextMenu>
           {/* Comparaison A/B image côte à côte — zoom/pan répliqué. */}

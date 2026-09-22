@@ -26,9 +26,9 @@ export interface WidgetSettings {
   span?: WidgetSpan;
   height?: WidgetHeight;
   /**
-   * Hauteur en **rangées de grille**, pour les pages dont la grille en a (la vue d'ensemble
-   * d'un projet). Le nombre de rangées offertes et leur traduction en classes vivent dans
-   * la page, pas ici : seule la forme enregistrée est commune.
+   * Hauteur en **rangées de grille** — la vue d'ensemble d'un projet et l'accueil. La rampe
+   * des hauteurs offertes et leur traduction en classes vivent dans le modèle de taille
+   * (`components/widgets/widgetSizing`), pas ici : seule la forme enregistrée est commune.
    *
    * Absente, la page retombe sur `height` puis sur son propre défaut — c'est ce qui rend
    * relisible une disposition enregistrée avant que les hauteurs existent.
@@ -193,6 +193,3 @@ const HEIGHT_CLASS: Record<WidgetHeight, string> = {
 
 export const spanClass = (span: WidgetSpan): string => SPAN_CLASS[span];
 export const heightClass = (height: WidgetHeight): string => HEIGHT_CLASS[height];
-
-/** Classes de la grille de douze colonnes, partagées par les pages composables. */
-export const WIDGET_GRID_CLASS = 'grid grid-cols-12 items-start gap-6';

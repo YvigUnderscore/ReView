@@ -61,10 +61,13 @@ function ShotStatusChip({ row, actions }: { row: GridRow; actions: GridActions }
 export default function GridRowLine({
   row,
   columns,
+  colWidth,
   actions,
 }: {
   row: GridRow;
   columns: GridDepartment[];
+  /** Largeur d'une colonne de département — la même pour toutes, réglée par la table. */
+  colWidth: number;
   actions: GridActions;
 }) {
   // Les cases arrivent dans l'ordre de TOUT le référentiel ; les colonnes visibles n'en
@@ -74,7 +77,7 @@ export default function GridRowLine({
     <div
       role="row"
       className="flex h-full items-center border-b border-border/40"
-      style={{ width: lineWidth(columns.length) }}
+      style={{ width: lineWidth(columns.length, colWidth) }}
     >
       <div
         role="rowheader"
@@ -95,6 +98,7 @@ export default function GridRowLine({
           key={department.key}
           cell={byKey.get(department.key)}
           department={department}
+          colWidth={colWidth}
           actions={actions}
         />
       ))}

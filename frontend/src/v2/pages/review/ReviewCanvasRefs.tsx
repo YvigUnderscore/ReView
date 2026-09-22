@@ -9,7 +9,7 @@ import { api } from '../../../lib/apiClient';
 import { qk } from '../../lib/query';
 import { fileToImageDataUrl, imageFilesFromClipboard } from '../../lib/useImagePaste';
 import StagedRefLayer from './StagedRefLayer';
-import { clampRefBox } from './referenceBox';
+import { rescueRefBox } from './referenceBox';
 import { useViewerBands } from './useViewerBands';
 import type { Annotations } from './useAnnotations';
 import type { MediaResp, ReviewReferenceItem } from './reviewTypes';
@@ -21,10 +21,12 @@ const MAX_REFS = 12;
  * Images de référence épinglées au canvas de la review image — **liées à un commentaire**.
  * Ici les références **persistées** : figées, visibles quand leur commentaire est sélectionné
  * (les références historiques sans commentaire restent visibles). Celles en préparation vivent
- * dans `StagedRefLayer`. Coordonnées en fractions de l'image de base : une référence peut être
- * posée **à côté** du média, dans les bandes du letterbox, et l'affichage la recadre dans les
- * bandes de CE viewer — sans quoi les positions héritées (x = 1.05, hors de toute bande)
- * resteraient invisibles.
+ * dans `StagedRefLayer`.
+ *
+ * Coordonnées en fractions de l'image de base : une référence se pose n'importe où sur le
+ * canvas, dedans comme dehors du cadre du média. L'affichage la laisse exactement où elle est
+ * dès qu'on en voit assez, et ne rattrape que celle qu'aucun viewer ne montrerait — les
+ * positions héritées (x = 1.05, du temps où le collage ne bornait rien) seraient invisibles.
  */
 export default function ReviewCanvasRefs({
   mediaId,
@@ -42,7 +44,7 @@ export default function ReviewCanvasRefs({
   const t = useT();
   const qc = useQueryClient();
   // Ce calque épouse le média : il sert de mètre pour les bandes du viewer, dont dépendent le
-  // placement au collage, le bornage du déplacement et le recadrage à l'affichage.
+  // placement au collage et le rattrapage des positions héritées — pas le déplacement, libre.
   const layerRef = useRef<HTMLDivElement>(null);
   const bands = useViewerBands(layerRef);
   const { setRefBands } = ann;
@@ -68,7 +70,7 @@ export default function ReviewCanvasRefs({
     <>
       <div ref={layerRef} className="pointer-events-none absolute inset-0 overflow-visible">
         {visible.map((r) => {
-          const box = clampRefBox(r, bands);
+          const box = rescueRefBox(r, bands);
           return (
             <div
               key={r.id}

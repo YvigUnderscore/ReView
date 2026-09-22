@@ -14,11 +14,15 @@ import {
   gridSearch,
   groupBySequence,
   hasFilters,
+  statusName,
   visibleDepartments,
+  widestStatus,
   type GridCell,
+  type GridCellStatus,
   type GridDepartment,
   type GridRow,
 } from './gridWire';
+import { t } from '../../../i18n';
 import type { StatusFamily } from '../productionWire';
 
 /**
@@ -67,6 +71,18 @@ const idle = (key: string): GridCell => ({
 /** Une case dont le département n'est pas au programme du plan. */
 const offPlan = (key: string): GridCell => ({ ...idle(key), scheduled: false });
 
+/** Une case à tâche portant exactement ce statut. */
+const withStatus = (key: string, status: GridCellStatus): GridCell => ({ ...task(key, 'progress'), status });
+
+/** Le statut d'un studio SANS référentiel : le serveur laisse `name` vide et met l'enum dans `code`. */
+const legacy = (code: string, family: StatusFamily): GridCellStatus => ({
+  id: null,
+  code,
+  name: '',
+  color: null,
+  family,
+});
+
 const row = (shotId: number, sequenceId: number | null, cells: GridCell[]): GridRow => ({
   shotId,
   code: `SH${shotId}`,
@@ -93,6 +109,73 @@ describe('cellKind / cellFamily', () => {
 
   it('retient la famille du serveur quand la tâche existe', () => {
     expect(cellFamily(task('comp', 'blocked'))).toBe('blocked');
+  });
+});
+
+describe('statusName', () => {
+  it('écrit le NOM du référentiel, pas son code — « pending_review » n’est pas un mot', () => {
+    const status: GridCellStatus = {
+      id: 4,
+      code: 'pending_review',
+      name: 'To Review',
+      color: '#F59E0B',
+      family: 'review',
+    };
+    expect(statusName(status, t)).toBe('To Review');
+  });
+
+  it('traduit l’enum figé quand le studio n’a aucun référentiel', () => {
+    expect(statusName(legacy('PENDING_REVIEW', 'review'), t)).toBe(t('task.status.toReview'));
+    expect(statusName(legacy('IN_PROGRESS', 'progress'), t)).toBe(t('task.status.inProgress'));
+  });
+
+  it('retombe sur la famille pour un code que le catalogue ne connaît pas', () => {
+    expect(statusName(legacy('ON_HOLD', 'blocked'), t)).toBe(t('kanban.family.blocked'));
+  });
+
+  it('ne rend jamais un identifiant à l’écran', () => {
+    for (const status of [legacy('PENDING_REVIEW', 'review'), legacy('ON_HOLD', 'blocked')]) {
+      expect(statusName(status, t)).not.toContain('_');
+      expect(statusName(status, t)).not.toContain('.');
+    }
+  });
+
+  it('nomme la case sans statut au lieu de la laisser muette', () => {
+    expect(statusName(null, t)).toBe(t('production.grid.idle'));
+  });
+});
+
+describe('widestStatus', () => {
+  it('mesure le nom le plus long des cases à tâche', () => {
+    const rows = [
+      row(1, 10, [
+        withStatus('anim', { id: 1, code: 'fin', name: 'Final', color: null, family: 'done' }),
+        withStatus('comp', { id: 2, code: 'rev', name: 'Pending Review', color: null, family: 'review' }),
+      ]),
+    ];
+    expect(widestStatus(rows, DEPARTMENTS, t)).toBe('Pending Review'.length);
+  });
+
+  it('ignore les cases sans tâche : elles n’écrivent rien', () => {
+    const rows = [row(1, 10, [idle('anim'), offPlan('comp')])];
+    expect(widestStatus(rows, DEPARTMENTS, t)).toBe(0);
+  });
+
+  it('ne compte que les colonnes visibles — une colonne masquée n’élargit plus la grille', () => {
+    const rows = [
+      row(1, 10, [
+        withStatus('anim', { id: 1, code: 'fin', name: 'Final', color: null, family: 'done' }),
+        withStatus('light', {
+          id: 3,
+          code: 'apr',
+          name: 'Pending Client Approval',
+          color: null,
+          family: 'review',
+        }),
+      ]),
+    ];
+    expect(widestStatus(rows, DEPARTMENTS, t)).toBe('Pending Client Approval'.length);
+    expect(widestStatus(rows, [DEPARTMENTS[0]], t)).toBe('Final'.length);
   });
 });
 

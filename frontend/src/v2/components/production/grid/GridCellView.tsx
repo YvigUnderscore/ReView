@@ -4,41 +4,33 @@
 import Avatar from '../../Avatar';
 import EntityContextMenu from '../../ui/entity-menu';
 import { initialsFrom } from '../../../lib/initials';
-import { TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
 import { FAMILY_BAR } from '../productionWire';
-import { COL_W } from './gridLayout';
-import { FAMILY_LABEL, cellKind, type GridCell, type GridCellStatus, type GridDepartment } from './gridWire';
+import { cellKind, statusName, type GridCell, type GridCellStatus, type GridDepartment } from './gridWire';
 import type { GridActions } from './useGridActions';
-import { intlLocale, useT, type MessageKey, type Tr } from '../../../i18n';
+import { intlLocale, useT, type Tr } from '../../../i18n';
 
 /**
  * Une case de la grille : où en est CE département sur CE plan.
  *
- * La case ne montre que deux choses — une pastille de statut et le visage de qui la tient —
- * parce qu'une grille de douze cents cases ne se lit pas si chacune raconte sa vie. Le
- * reste (versions livrées, dernière activité, échéance) attend le survol ; les gestes
- * attendent le clic droit.
+ * La case **écrit le nom du statut** à côté de sa pastille. Elle ne le faisait pas : la
+ * couleur seule obligeait à survoler chaque case pour savoir ce qu'elle disait, et une
+ * légende ne nommait que les cinq familles — pas les statuts du référentiel du projet.
+ * La couleur reste, et c'est bien le partage : elle se lit d'un coup d'œil sur une colonne
+ * entière, le nom se lit ligne à ligne.
+ *
+ * Le reste (versions livrées, dernière activité, échéance) attend toujours le survol, et
+ * les gestes le clic droit : douze cents cases ne se lisent pas si chacune raconte sa vie.
  *
  * Trois états, trois dessins, et c'est la distinction qui manquait le plus à l'écran
- * d'avant : une pastille pleine pour un travail engagé, un anneau vide pour « au programme,
- * pas commencé », un simple tiret pour « pas au programme de ce plan ».
+ * d'avant : une pastille pleine **et un nom** pour un travail engagé, un anneau vide pour
+ * « au programme, pas commencé », un simple tiret pour « pas au programme de ce plan ».
  */
 
-/** Libellés de l'enum figé, indexables — un code inconnu retombe sur sa famille. */
-const LEGACY_LABEL: Record<string, MessageKey | undefined> = TASK_STATUS_LABEL_KEY;
-
-const CELL = 'flex h-full items-center justify-center border-l border-border/40';
+const CELL = 'flex h-full items-center border-l border-border/40';
 
 /** Date courte, dans la langue du lecteur — jamais un format figé. */
 const shortDate = (iso: string): string =>
   new Date(iso).toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short' });
-
-/** Le nom du statut : celui du studio, à défaut le libellé de l'enum, à défaut la famille. */
-function statusName(status: GridCellStatus | null, t: Tr): string {
-  if (!status) return t('production.grid.idle');
-  if (status.name) return status.name;
-  return t(LEGACY_LABEL[status.code] ?? FAMILY_LABEL[status.family]);
-}
 
 /**
  * Tout ce que la case sait, en une phrase — survol et synthèse vocale.
@@ -75,20 +67,31 @@ function StatusDot({ status }: { status: GridCellStatus | null }) {
 export default function GridCellView({
   cell,
   department,
+  colWidth,
   actions,
 }: {
   /** Absente quand le plan ne porte aucune case pour cette colonne — traité comme hors programme. */
   cell: GridCell | undefined;
   department: GridDepartment;
+  /** Largeur de colonne du moment — réglée par le nom de statut le plus long de la page. */
+  colWidth: number;
   actions: GridActions;
 }) {
   const t = useT();
   const kind = cell ? cellKind(cell) : 'unscheduled';
 
+  // Les deux cases sans tâche gardent leur marque centrée, et rien d'écrit : elles n'ont
+  // pas de statut à nommer, et c'est ce vide même qui les distingue d'une case engagée.
   if (!cell || kind === 'unscheduled') {
     const label = `${department.name} · ${t('production.grid.unscheduled')}`;
     return (
-      <div role="gridcell" aria-label={label} title={label} className={CELL} style={{ width: COL_W }}>
+      <div
+        role="gridcell"
+        aria-label={label}
+        title={label}
+        className={`${CELL} justify-center`}
+        style={{ width: colWidth }}
+      >
         <span aria-hidden className="h-px w-3 bg-border" />
       </div>
     );
@@ -97,7 +100,13 @@ export default function GridCellView({
   if (kind === 'idle') {
     const label = `${department.name} · ${t('production.grid.idle')}`;
     return (
-      <div role="gridcell" aria-label={label} title={label} className={CELL} style={{ width: COL_W }}>
+      <div
+        role="gridcell"
+        aria-label={label}
+        title={label}
+        className={`${CELL} justify-center`}
+        style={{ width: colWidth }}
+      >
         <span aria-hidden className="size-2.5 rounded-full border border-border" />
       </div>
     );
@@ -105,7 +114,7 @@ export default function GridCellView({
 
   const label = cellLabel(cell, department, t);
   return (
-    <div role="gridcell" className={CELL} style={{ width: COL_W }}>
+    <div role="gridcell" className={CELL} style={{ width: colWidth }}>
       <EntityContextMenu entries={actions.cellMenuFor(cell)}>
         <button
           type="button"
@@ -122,9 +131,24 @@ export default function GridCellView({
               }),
             )
           }
-          className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring"
+          // Largeur en PIXELS, pas un `w-full` : `EntityContextMenu` interpose un `<div>`
+          // sans largeur entre la case et le bouton, et un pourcentage s'y résoudrait en
+          // « largeur du contenu » — le nom déborderait la colonne au lieu d'y être coupé.
+          // C'est le même piège que la carte de l'accueil qui se résolvait en hauteur nulle.
+          // La case mesure `colWidth` bord compris (`border-box`), d'où le filet retiré.
+          style={{ width: colWidth - 1 }}
+          // Le bouton occupe toute la case : les pastilles s'alignent alors d'une ligne à
+          // l'autre — c'est ce qui rend la colonne scannable — et la cible du clic droit
+          // fait la taille de ce qu'on voit.
+          className="flex min-w-0 items-center gap-1 rounded px-1.5 py-1 transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <StatusDot status={cell.status} />
+          {/* `truncate` plutôt qu'un nom raccourci à la main : la largeur de colonne est
+              déjà taillée pour le nom le plus long de la page, et le rare débordement se
+              relit au survol. Aucune mesure de texte n'a lieu par case. */}
+          <span className="min-w-0 flex-1 truncate text-left text-2xs leading-none">
+            {statusName(cell.status, t)}
+          </span>
           {cell.assignee && (
             <Avatar
               seed={cell.assignee.id}

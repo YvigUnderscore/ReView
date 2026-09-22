@@ -11,6 +11,9 @@ import { intlLocale, useT } from '../../i18n';
  * Flux d'activité cross-projets : nouvelles versions et médias publiés.
  * Refonte G : groupé par jour (Aujourd'hui / Hier / date) — la liste plate mélangeait
  * des événements d'il y a une heure et d'il y a une semaine sans repère.
+ *
+ * `limit` est le nombre de lignes que la taille du bloc offre (lot 13) : le flux est coupé
+ * **avant** le groupement, pour qu'un jour ne perde pas son titre en chemin.
  */
 
 /** Libellé de groupe d'un jour donné (clé stable AAAA-MM-JJ → libellé affichable). */
@@ -26,11 +29,11 @@ function dayLabel(iso: string, t: ReturnType<typeof useT>): string {
   return d.toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'short' });
 }
 
-export default function ActivityFeed({ items }: { items: DashboardActivityItem[] }) {
+export default function ActivityFeed({ items, limit }: { items: DashboardActivityItem[]; limit: number }) {
   const t = useT();
   // Groupes par jour, dans l'ordre du flux (déjà trié desc côté serveur).
   const groups: Array<{ label: string; items: DashboardActivityItem[] }> = [];
-  for (const it of items) {
+  for (const it of items.slice(0, limit)) {
     const label = dayLabel(it.at, t);
     const last = groups[groups.length - 1];
     if (last && last.label === label) last.items.push(it);

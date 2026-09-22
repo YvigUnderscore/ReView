@@ -7,17 +7,40 @@ import type { useAnnotations } from './useAnnotations';
 import { useT } from '../../i18n';
 
 /**
- * Pilule flottante « Masquer l'annotation », affichée **sur le viewer** (haut, centrée)
- * quand l'annotation d'un commentaire est visible — accessible sans quitter l'image des
- * yeux, fermable aussi avec Échap. Les outils de dessin vivent sous le champ de
- * commentaire ; depuis la refonte du chrome, ils vivent dans le rail et la barre d'options.
+ * Emplacements de la pilule. Ancrée `viewer`, elle vit **dans la zone média** (en bas,
+ * centrée) : c'est le seul bord qu'aucune surface du viewer n'occupe déjà — les bandeaux
+ * d'état (placement d'un point, scène proposée par un commentaire) tiennent le haut centré,
+ * les menus de rendu le coin haut-gauche, les repères de zoom le bas-droit. Elle y est aussi
+ * au plus près du fil de commentaires, d'où l'on vient et où l'on retourne écrire.
+ *
+ * `page` est l'ancien ancrage, relatif au bloc qui enveloppe le viewer : il reste celui du
+ * lecteur vidéo et du partage client, dont la zone média n'accueille pas encore la pilule.
+ */
+const ANCHOR = {
+  viewer: 'bottom-3 left-1/2 -translate-x-1/2',
+  page: 'left-1/2 top-2 -translate-x-1/2',
+} as const;
+
+/**
+ * Pilule flottante « Masquer l'annotation », affichée quand l'annotation d'un commentaire
+ * est visible — accessible sans quitter l'image des yeux, fermable aussi avec Échap. Les
+ * outils de dessin vivent sous le champ de commentaire ; depuis la refonte du chrome, ils
+ * vivent dans le rail et la barre d'options.
+ *
+ * Elle se posait dans la section de review, dont le premier enfant est l'en-tête unifié du
+ * chrome : la pilule tombait donc **sur la bascule de mode** (centrée, elle aussi) ou sur la
+ * bande de consigne. D'où l'ancrage : dans le viewer, au même endroit pour l'image, le
+ * modèle 3D et le nuage de points.
  */
 export default function ReviewAnnotationBar({
   ann,
   onClearSelection,
+  anchor = 'page',
 }: {
   ann: ReturnType<typeof useAnnotations>;
   onClearSelection: () => void;
+  /** Conteneur qui porte la pilule — `viewer` dès que la zone média la reçoit. */
+  anchor?: keyof typeof ANCHOR;
 }) {
   const t = useT();
   const visible = !!ann.viewed;
@@ -32,7 +55,7 @@ export default function ReviewAnnotationBar({
 
   if (!visible) return null;
   return (
-    <div className="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2">
+    <div className={`pointer-events-none absolute z-30 ${ANCHOR[anchor]}`}>
       <button
         onClick={onClearSelection}
         title={t('review.annotation.hide')}

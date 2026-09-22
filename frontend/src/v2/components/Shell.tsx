@@ -204,6 +204,10 @@ export default function Shell() {
           {/* Titre / fil d'Ariane projeté par la page courante (PageShell). */}
           <div ref={headerRef} className="flex min-w-0 flex-1 items-center gap-3" />
           <PendingDrafts />
+          {/* Suivi des envois, à GAUCHE de la cloche (lot 13) : il flottait en bas à droite,
+              par-dessus tout ce que ce coin contient déjà. Ici il vit dans le flux de la
+              rangée — il pousse, il ne recouvre pas — et se déplie au clic. */}
+          <UploadWidget />
           {/* Notifications à GAUCHE de la recherche (lot 9) : elles occupaient le coin bas
               droit, où le widget d'upload et les toasts se recouvraient mutuellement. Ici
               elles vivent dans le flux de l'en-tête et ne masquent rien. */}
@@ -271,7 +275,6 @@ export default function Shell() {
           du navigateur reste bloqué (A3). */}
       <ContextMenuGuard />
       <OnboardingTour />
-      <UploadWidget />
       {/* La consigne exigée avant l'envoi : montée ici, elle sert les cinq points de dépôt. */}
       <UploadNoteDialog />
       {/* Conversation ouverte : ancrée au bord de la sidebar, elle survit à la navigation. */}

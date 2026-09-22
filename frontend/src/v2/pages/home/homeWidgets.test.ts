@@ -9,12 +9,14 @@ import {
   reorderWidgets,
   resetWidgets,
   setWidgetSetting,
+  setWidgetSize,
   spanClass,
   toggleWidget,
   visibleWidgets,
   widgetSettings,
   type HomeWidgetsPref,
 } from './homeWidgets';
+import { WIDGET_ROWS } from '../../components/widgets/widgetSizing';
 
 describe('visibleWidgets', () => {
   it('rend la disposition de déclaration sans préférence', () => {
@@ -76,6 +78,64 @@ describe('widgetSettings', () => {
     const pref = setWidgetSetting('projects', { span: 12 }, { settings: { myTasks: { bare: true } } });
     expect(widgetSettings('myTasks', pref).bare).toBe(true);
     expect(widgetSettings('projects', pref).span).toBe(12);
+  });
+});
+
+describe('widgetSettings — la hauteur en rangées (lot 13)', () => {
+  it('applique la hauteur par défaut du bloc', () => {
+    for (const id of ALL_WIDGET_IDS) {
+      expect(widgetSettings(id, undefined).rows).toBe(HOME_WIDGETS[id].rows);
+      // Une hauteur hors rampe ne produirait aucune classe `row-span-*`.
+      expect(WIDGET_ROWS).toContain(HOME_WIDGETS[id].rows);
+    }
+  });
+
+  it('applique la hauteur enregistrée', () => {
+    const pref = setWidgetSize('activity', { span: 8, rows: 6 }, undefined);
+    expect(widgetSettings('activity', pref).rows).toBe(6);
+  });
+
+  it('relit un accueil composé AVANT les rangées, sans réécrire la préférence', () => {
+    // Les dispositions d'avant ce lot ne portent que l'échelle `short`/`normal`/`tall` :
+    // elle se traduit à la lecture, pour que personne ne perde le bloc haut qu'il s'était
+    // réglé — et la préférence enregistrée, elle, reste telle quelle.
+    const before: HomeWidgetsPref = {
+      settings: { activity: { height: 'tall' }, myTasks: { height: 'short' }, stats: { span: 8 } },
+    };
+    expect(widgetSettings('activity', before).rows).toBe(5);
+    expect(widgetSettings('myTasks', before).rows).toBe(2);
+    // Aucune hauteur enregistrée : le bloc garde son défaut de registre.
+    expect(widgetSettings('stats', before).rows).toBe(HOME_WIDGETS.stats.rows);
+    expect(before.settings).toEqual({
+      activity: { height: 'tall' },
+      myTasks: { height: 'short' },
+      stats: { span: 8 },
+    });
+  });
+
+  it('refuse une hauteur hors rampe plutôt que de l’appliquer de travers', () => {
+    const pref: HomeWidgetsPref = { settings: { stats: { rows: 9 } } };
+    expect(widgetSettings('stats', pref).rows).toBe(HOME_WIDGETS.stats.rows);
+  });
+});
+
+describe('setWidgetSize', () => {
+  it('enregistre largeur et hauteur d’un seul geste', () => {
+    // La poignée règle les deux axes ensemble ; un enregistrement par axe doublerait les
+    // écritures de préférence.
+    const pref = setWidgetSize('myTasks', { span: 12, rows: 5 }, undefined);
+    expect(pref.settings?.myTasks).toEqual({ span: 12, rows: 5 });
+    const settings = widgetSettings('myTasks', pref);
+    expect([settings.span, settings.rows]).toEqual([12, 5]);
+  });
+
+  it('conserve les autres réglages du bloc', () => {
+    const base = setWidgetSetting('myTasks', { bare: true, density: 'compact' }, undefined);
+    const pref = setWidgetSize('myTasks', { span: 8, rows: 2 }, base);
+    const settings = widgetSettings('myTasks', pref);
+    expect(settings.bare).toBe(true);
+    expect(settings.density).toBe('compact');
+    expect(settings.rows).toBe(2);
   });
 });
 

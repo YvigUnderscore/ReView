@@ -25,19 +25,21 @@ const refParams = z.object({ id: z.coerce.number().int(), refId: z.coerce.number
 const POS_LIMIT = 3;
 
 /**
- * Position et taille en fractions de l'image. Une référence se pose **à côté** du média, dans
- * les bandes que le letterbox laisse autour de lui : le bornage 0..1 la collait d'office sur
- * l'image. Sont refusés les seuls cas irrécupérables — au-delà de trois largeurs/hauteurs
- * d'image de débordement, aucun viewer ne la montre et personne ne peut la ramener, et un
- * `NaN`/`Infinity` ferait un `left: NaN%` qui ne s'affiche pas. Des positions héritées
- * excèdent ce cadre : l'affichage les recadre dans les bandes du viewer qui les lit.
+ * Position et taille en fractions de l'image. Une référence se pose **n'importe où** sur le
+ * canvas du viewer, dedans comme dehors du cadre du média : le bornage 0..1 la collait d'office
+ * sur l'image, et les bandes du letterbox interdisaient encore les côtés d'un plan large. Le
+ * schéma ne refuse donc que l'irrécupérable — au-delà de trois largeurs/hauteurs d'image de
+ * débordement plus aucun viewer ne la montre, et un `NaN`/`Infinity` ferait un `left: NaN%` qui
+ * ne s'affiche pas (`1e999` traverse JSON en `Infinity`). Des positions héritées excèdent ce
+ * cadre : l'affichage rattrape celles qu'aucun viewer ne montrerait.
  */
+const fraction = z.number().finite();
 const referenceBody = z.object({
   dataUrl: z.string().min(1).max(8_400_000),
   commentId: z.number().int(),
-  x: z.number().min(-POS_LIMIT).max(POS_LIMIT).optional(),
-  y: z.number().min(-POS_LIMIT).max(POS_LIMIT).optional(),
-  width: z.number().min(0.02).max(1).optional(),
+  x: fraction.min(-POS_LIMIT).max(POS_LIMIT).optional(),
+  y: fraction.min(-POS_LIMIT).max(POS_LIMIT).optional(),
+  width: fraction.min(0.02).max(1).optional(),
 });
 
 // POST /api/media/:id/references — joint une image (data URL base64) à un commentaire

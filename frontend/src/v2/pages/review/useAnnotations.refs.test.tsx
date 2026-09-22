@@ -4,14 +4,16 @@
 import { act, fireEvent, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useAnnotations, type Annotations } from './useAnnotations';
-import type { ViewerBands } from './referenceBox';
+import { REF_POS_LIMIT, type ViewerBands } from './referenceBox';
 import type { Shape } from '../../components/AnnotationCanvas';
 
 /**
- * Quatre défauts verrouillés ici :
+ * Cinq défauts verrouillés ici :
  * - la référence collée était posée hors cadre (x = 1.05), donc invisible ;
  * - la correction l'a ensuite collée d'office **sur** l'image : elle se pose maintenant dans
- *   la bande du letterbox dès que le viewer en laisse une ;
+ *   la bande du letterbox dès que le viewer en laisse une, latérale comme horizontale ;
+ * - le déplacement restait borné à cette bande, donc impossible sur les côtés d'un plan large :
+ *   la référence atterrit désormais exactement là où on la lâche ;
  * - déplacer empilait un cran d'annulation **par mouvement de souris** : Ctrl+Z ne rendait
  *   qu'un pixel ;
  * - aucun Ctrl+Z / Ctrl+Y / Ctrl+Maj+Z n'existait dans la review image.
@@ -19,6 +21,8 @@ import type { Shape } from '../../components/AnnotationCanvas';
 const DATA_URL = 'data:image/png;base64,AA';
 /** Ce que publie le calque quand le viewer est plus large que le média (bandes latérales). */
 const SIDE_BANDS = { left: 0.5, right: 0.5, top: 0, bottom: 0 };
+/** Et quand le média est plus large que le viewer (letterbox horizontal). */
+const FLAT_BANDS = { left: 0, right: 0, top: 0.5, bottom: 0.5 };
 const shape = (id: string, x = 0): Shape => ({ id, type: 'rect', color: '#fff', width: 3, x, y: 0 });
 
 /**
@@ -70,24 +74,37 @@ describe('référence collée', () => {
     expect(ref().x).toBeGreaterThanOrEqual(1);
   });
 
-  it('garde un déplacement hors cadre tant qu’il reste dans la bande', () => {
+  it('se pose SOUS le média quand le letterbox est horizontal', () => {
+    const { ref } = composer(true, FLAT_BANDS);
+    expect(ref().y).toBeGreaterThan(1);
+  });
+
+  it('atterrit exactement là où on la lâche, hors du cadre comme dedans', () => {
     const { ann, ref } = composer(true, SIDE_BANDS);
     act(() => ann().updateStagedRef(ref().key, { x: -0.4, y: 0.2 }, 'geste'));
     expect(ref().x).toBeCloseTo(-0.4);
+    expect(ref().y).toBeCloseTo(0.2);
   });
 
-  it('ne sort jamais de la zone atteignable, même poussée au-delà', () => {
-    const { ann, ref } = composer(true, SIDE_BANDS);
-    act(() => ann().updateStagedRef(ref().key, { x: 9, y: 9 }, 'geste'));
-    expect(ref().x + ref().width).toBeLessThanOrEqual(1 + SIDE_BANDS.right);
-    expect(ref().y).toBeLessThan(1);
+  it('sort sur les côtés même quand le letterbox est horizontal', () => {
+    const { ann, ref } = composer(true, FLAT_BANDS);
+    act(() => ann().updateStagedRef(ref().key, { x: 1.6, y: -0.7 }, 'geste'));
+    expect(ref().x).toBeCloseTo(1.6);
+    expect(ref().y).toBeCloseTo(-0.7);
   });
 
-  it('s’en tient au cadre du média quand aucune bande n’est mesurée', () => {
+  it('se pose hors du cadre même quand aucune bande n’est mesurée', () => {
     const { ann, ref } = composer();
-    act(() => ann().updateStagedRef(ref().key, { x: 3, y: 3 }, 'geste'));
-    expect(ref().x + ref().width).toBeLessThanOrEqual(1);
-    expect(ref().y).toBeLessThan(1);
+    act(() => ann().updateStagedRef(ref().key, { x: 1.4, y: 1.4 }, 'geste'));
+    expect(ref().x).toBeCloseTo(1.4);
+    expect(ref().y).toBeCloseTo(1.4);
+  });
+
+  it('s’arrête au plafond que le serveur accepte, pour ne pas perdre l’envoi', () => {
+    const { ann, ref } = composer(true, SIDE_BANDS);
+    act(() => ann().updateStagedRef(ref().key, { x: 9, y: -9 }, 'geste'));
+    expect(ref().x).toBe(REF_POS_LIMIT);
+    expect(ref().y).toBe(-REF_POS_LIMIT);
   });
 });
 

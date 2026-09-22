@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { api } from '../../../../lib/apiClient';
@@ -14,13 +14,14 @@ import GridGroupLine from './GridGroupLine';
 import GridLegend from './GridLegend';
 import GridRowLine from './GridRowLine';
 import { useGridActions } from './useGridActions';
-import { COL_W, HEAD_W, LINE_H, OVERSCAN, lineWidth } from './gridLayout';
+import { HEAD_W, LINE_H, OVERSCAN, columnWidth, lineWidth } from './gridLayout';
 import {
   NO_FILTERS,
   flattenGrid,
   gridSearch,
   groupBySequence,
   visibleDepartments,
+  widestStatus,
   type GridFilters,
   type ProjectGrid,
 } from './gridWire';
@@ -65,11 +66,23 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
     enabled: projectId > 0,
   });
 
-  const pages = gridQ.data?.pages ?? [];
-  const rows = pages.flatMap((page) => page.rows);
-  const columns = visibleDepartments(pages[0]?.departments ?? [], rows, hideEmpty);
+  // Les pages telles que TanStack les garde, sans repli : un `?? []` neuf à chaque rendu
+  // invaliderait la mémoïsation ci-dessous, donc la passe se referait à chaque cran de
+  // défilement.
+  const pages = gridQ.data?.pages;
+
+  // Les colonnes visibles et leur largeur se calculent en UNE passe sur les données, gardée
+  // d'un rendu à l'autre : le défilement virtualisé re-rend cette table à chaque cran, et
+  // la largeur dépend du nom de statut le plus long de la page — jamais d'une mesure de
+  // texte, qui coûterait douze cents lectures de mise en page par cran.
+  const { rows, columns, colWidth } = useMemo(() => {
+    const served = (pages ?? []).flatMap((page) => page.rows);
+    const shown = visibleDepartments(pages?.[0]?.departments ?? [], served, hideEmpty);
+    return { rows: served, columns: shown, colWidth: columnWidth(widestStatus(served, shown, t)) };
+  }, [pages, hideEmpty, t]);
+
   const lines = flattenGrid(groupBySequence(rows), collapsed);
-  const total = pages[0]?.total ?? 0;
+  const total = pages?.[0]?.total ?? 0;
 
   // Le compilateur React renonce à mémoïser un composant qui appelle `useVirtualizer` :
   // le virtualiseur rend des fonctions liées à un état mutable, qu'on figerait à tort.
@@ -95,7 +108,7 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
   if (gridQ.error) return <p className="text-sm text-destructive">{gridQ.error.message}</p>;
   if (gridQ.isLoading) return <SkeletonRows count={6} />;
 
-  const width = lineWidth(columns.length);
+  const width = lineWidth(columns.length, colWidth);
 
   return (
     <div className="space-y-3">
@@ -139,7 +152,7 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
                 role="columnheader"
                 title={department.name}
                 className="flex h-full flex-col justify-center border-l border-border/40 bg-card px-1"
-                style={{ width: COL_W }}
+                style={{ width: colWidth }}
               >
                 <span className="truncate text-center text-2xs font-semibold">{department.name}</span>
                 {/* La teinte du référentiel, pas une couleur inventée par l'écran : c'est
@@ -168,11 +181,12 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
                     <GridGroupLine
                       group={line.group}
                       columns={columns.length}
+                      colWidth={colWidth}
                       collapsed={collapsed.has(line.group.key)}
                       onToggle={() => toggle(line.group.key)}
                     />
                   ) : (
-                    <GridRowLine row={line.row} columns={columns} actions={actions} />
+                    <GridRowLine row={line.row} columns={columns} colWidth={colWidth} actions={actions} />
                   )}
                 </div>
               );

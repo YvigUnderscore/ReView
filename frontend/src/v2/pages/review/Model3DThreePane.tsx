@@ -21,6 +21,7 @@ export default function Model3DThreePane({
   aspect,
   pip,
   notice,
+  exit,
   settings,
   recording,
   canReprocess,
@@ -38,6 +39,11 @@ export default function Model3DThreePane({
   pip?: ReactNode;
   /** Bandeau flottant en haut du viewer (46.T : retour à la scène par défaut). */
   notice?: ReactNode;
+  /**
+   * Sortie de la lecture d'un commentaire annoté, en BAS du viewer : le haut centré est déjà
+   * celui des bandeaux d'état (`notice`), et deux pilules au même bord s'y recouvriraient.
+   */
+  exit?: ReactNode;
   /**
    * Réglages de rendu, posés en HAUT À GAUCHE du viewer (Phase 50, lot 6) — l'onglet
    * « Affichage » du dock a disparu au profit de ce coin-là : on change de mode de rendu en
@@ -70,6 +76,7 @@ export default function Model3DThreePane({
         {pip}
       </ReviewFrame>
       {notice}
+      {exit}
       {/* Au-dessus du cadre, jamais dedans : le guide letterbox et l'overlay d'annotation
           gardent leurs coordonnées — ce coin ne touche pas au cadrage. */}
       {settings && <div className="absolute top-2 left-2 z-20">{settings}</div>}

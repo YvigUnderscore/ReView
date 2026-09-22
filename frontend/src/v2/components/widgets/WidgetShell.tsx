@@ -67,13 +67,14 @@ export interface WidgetDragHandle {
 }
 
 /**
- * Ce qu'apporte une page dont la grille est en **rangées** (la vue d'ensemble d'un projet).
+ * Ce qu'apporte une page dont la grille est en **rangées** — la vue d'ensemble d'un projet
+ * (lot 12), puis l'accueil (lot 13), qui demandait « les mêmes réglages ».
  *
  * Le cadre ne connaît ni la rampe de hauteurs, ni le geste qui la parcourt : il reçoit la
  * classe de grille à poser, le réglage à montrer dans le panneau à la place de l'échelle
- * historique, et la poignée à placer au coin. Absent, le cadre se rend exactement comme
- * avant — largeur seule et hauteur `short`/`normal`/`tall` —, ce qui laisse l'accueil
- * inchangé.
+ * historique, et la poignée à placer au coin. Absent, le cadre retombe sur la largeur seule
+ * et l'échelle `short`/`normal`/`tall` : c'est le rendu d'avant les rangées, que plus aucune
+ * page ne demande aujourd'hui.
  */
 export interface WidgetRowSizing {
   /** Classe portant l'emprise verticale (`row-span-N`), écrite en toutes lettres. */

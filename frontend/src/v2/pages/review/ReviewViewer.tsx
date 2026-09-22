@@ -9,7 +9,7 @@ import WatermarkOverlay from '../../components/WatermarkOverlay';
 import ReviewBriefBanner from '../../components/review/ReviewBriefBanner';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { Skeleton } from '../../components/ui/skeleton';
-import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './reviewTypes';
+import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import { hlsMasterUrl } from './videoSource';
 import { useMediaExport } from './useMediaExport';
 import { useAnnotationOverlay, usePoiDisplay } from './useAnnotationOverlay';
@@ -138,8 +138,6 @@ export default function ReviewViewer({
   // Exports du dock (frame courante en PNG, planche contact) — les deux boutons du panneau
   // « Export » n'étaient rendus que si on leur passait leurs actions.
   const mediaExport = useMediaExport(data, videoRef);
-  const model3dReady =
-    kind === 'MODEL_3D' && data?.media.status !== 'PROCESSING' && !!resolveGlbSrc(data) && !model3d.loadError;
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
   // Verrou de publication (Phase 11) : les outils d'édition (canEditTransform) disparaissent
   // dès la publication (backend en 403) ; la présentation reste pilotable (canManage).
@@ -152,6 +150,14 @@ export default function ReviewViewer({
 
   // Overlay d'annotation 2D (extrait — budget 300 lignes).
   const renderOverlay = useAnnotationOverlay(ann);
+
+  // Sortie de la lecture d'un commentaire annoté : une seule pilule, descendue DANS la zone
+  // média des trois viewers qui savent l'accueillir (image, 3D, splat) — au même bord et dans
+  // le même langage que leurs autres repères flottants. Rendue au niveau de la section, elle
+  // retombait sur l'en-tête du chrome (la bascule de mode est centrée, elle aussi).
+  const exitViewedAnnotation = (
+    <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} anchor="viewer" />
+  );
 
   // Le compte connecté : le watermark spectateur (35.B) y lit un nom, la bande de consigne
   // y lit un identifiant — c'est la même lecture, faite une fois.
@@ -182,9 +188,9 @@ export default function ReviewViewer({
       {/* Ce qu'on vous demande de regarder, quand la review vous a été confiée : au-dessus
           du viewer, à l'ouverture, et non trois clics plus loin dans un dialogue. */}
       {data && <ReviewBriefBanner reviewers={data.reviewers} currentUserId={wmUser?.id} />}
-      {(kind === 'IMAGE' || kind === 'VIDEO' || model3dReady || splatReady) && (
-        <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} />
-      )}
+      {/* Le lecteur vidéo garde la pilule au niveau de la section : sa zone média est celle
+          d'un autre chantier. Les trois autres la reçoivent dans leur viewer (voir plus bas). */}
+      {kind === 'VIDEO' && <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} />}
 
       {/* Skeleton du viewer pendant le chargement (10.B5) */}
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
@@ -249,6 +255,7 @@ export default function ReviewViewer({
           imageSync={imageSync}
           imageViewApiRef={imageViewApiRef}
           onImageUserView={onImageUserView}
+          exit={exitViewedAnnotation}
           onFullscreen={onFullscreen}
           onToggleAnnotate={onToggleAnnotate}
           onClearSelection={onClearSelection}
@@ -273,6 +280,7 @@ export default function ReviewViewer({
           onReprocess={onReprocess}
           onSaved={onSplatEditsSaved}
           overlay={renderOverlay(ann.viewedAspect ?? undefined)}
+          exit={exitViewedAnnotation}
         />
       )}
 
@@ -286,6 +294,7 @@ export default function ReviewViewer({
           onSaved={onSplatEditsSaved}
           role={role}
           overlay={renderOverlay()}
+          exit={exitViewedAnnotation}
           ann={ann}
         />
       )}

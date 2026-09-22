@@ -5,13 +5,13 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { Toaster } from 'sonner';
 import { api } from '../lib/apiClient';
 import { queryClient, qk } from './lib/query';
 import { useAuth } from './stores/useAuth';
 import { useTheme } from './stores/useTheme';
 import { useBranding } from './lib/branding';
 import Shell from './components/Shell';
+import ToastHost from './components/ToastHost';
 import LoginPage from './pages/LoginPage';
 import InvitePage from './pages/InvitePage';
 import SetupPage from './pages/SetupPage';
@@ -116,7 +116,9 @@ function AppRoutes() {
 
   return (
     <BrowserRouter>
-      <Toaster position="bottom-right" richColors closeButton theme={theme} />
+      {/* Les toasts passent en haut : en bas à droite ils recouvraient le suivi des envois,
+          la conversation ancrée et le HUD du viewer. Placement justifié dans `ToastHost`. */}
+      <ToastHost theme={theme} />
       <Routes>
         {needsSetup ? (
           <>

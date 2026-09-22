@@ -15,8 +15,11 @@ import { useT } from '../../i18n';
  * Le bloc ne porte plus l'ancre `#my-tasks` : deux compteurs y menaient, et l'ancre
  * disparaissait avec le bloc dès qu'on le retirait de son accueil — le clic ne faisait
  * alors rien. Ils ouvrent maintenant la page `/my-tasks`, qui existe toujours.
+ *
+ * `limit` est le nombre de lignes que la taille du bloc offre (lot 13) : agrandir la carte
+ * montre réellement plus de tâches, et le lien de fin mène au reste.
  */
-export default function MyTasksCard({ tasks }: { tasks: DashboardTask[] }) {
+export default function MyTasksCard({ tasks, limit }: { tasks: DashboardTask[]; limit: number }) {
   const tr = useT();
   if (tasks.length === 0) {
     return (
@@ -28,7 +31,7 @@ export default function MyTasksCard({ tasks }: { tasks: DashboardTask[] }) {
   }
   return (
     <div className="space-y-1">
-      {tasks.map((t) => (
+      {tasks.slice(0, limit).map((t) => (
         <AssignedTaskRow key={t.id} task={t} />
       ))}
       <Link

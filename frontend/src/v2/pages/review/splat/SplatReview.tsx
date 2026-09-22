@@ -59,6 +59,7 @@ export default function SplatReview({
   onSaved,
   role,
   overlay,
+  exit,
   ann,
 }: {
   data: MediaResp;
@@ -73,6 +74,8 @@ export default function SplatReview({
   /** Rôle du spectateur — le client ne voit pas la bascule de mode. */
   role?: Role;
   overlay: ReactNode;
+  /** Sortie de la lecture d'un commentaire annoté — descendue dans le viewer, comme l'overlay. */
+  exit: ReactNode;
   /** Annotations (mode layout : joindre/rejouer une animation caméra dans les commentaires). */
   ann: Annotations;
 }) {
@@ -255,6 +258,7 @@ export default function SplatReview({
           recording={canPresent && pres.anim.autoKey}
           overlay={overlay}
           notice={placingPoi ? <PoiNotice count={ann.poi.points.length} /> : undefined}
+          exit={exit}
           settings={
             <SplatViewerMenus
               state={state}

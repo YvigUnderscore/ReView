@@ -5,8 +5,9 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import EntityThumb from '../../components/entity/EntityThumb';
 import { projectPath } from '../../lib/slug';
+import { contentCapacity, type WidgetRows } from '../../components/widgets/widgetSizing';
 import type { DashboardProject } from './homeTypes';
-import type { WidgetVariant } from './homeWidgets';
+import type { WidgetSpan, WidgetVariant } from './homeWidgets';
 import { useT } from '../../i18n';
 
 /**
@@ -17,7 +18,28 @@ import { useT } from '../../i18n';
  * « grille » en fait l'élément le plus grand de l'accueil : une vignette par projet,
  * cliquable en entier, avec son avancement. Un studio qui n'a qu'un projet obtient une
  * tuile pleine largeur.
+ *
+ * Lot 13 : le bloc porte une emprise (largeur en colonnes, hauteur en rangées) et son
+ * contenu la suit. La **largeur** décide du nombre de colonnes de tuiles — une tuile de
+ * projet est bien plus grande qu'une vignette de média, elle a donc sa propre rampe — et la
+ * **hauteur** décide du nombre de rangées montrées. « Tous les projets », en haut du bloc,
+ * mène au reste.
  */
+
+/** Colonnes de tuiles selon la largeur du bloc, et les classes qui les portent. */
+const TILE_COLUMNS: Record<WidgetSpan, { count: number; className: string }> = {
+  3: { count: 1, className: 'grid-cols-1' },
+  4: { count: 2, className: 'grid-cols-1 sm:grid-cols-2' },
+  6: { count: 2, className: 'grid-cols-1 sm:grid-cols-2' },
+  8: { count: 3, className: 'grid-cols-2 lg:grid-cols-3' },
+  12: { count: 4, className: 'grid-cols-2 lg:grid-cols-4' },
+};
+
+/** Hauteur d'une tuile : son 16/9 (environ 150 px à quatre colonnes) plus son pied. */
+const TILE_LINE = 200;
+
+/** Hauteur d'une ligne de liste : sa vignette (`h-8`) et ses marges (`py-1.5`). */
+const ROW_LINE = 44;
 
 function Progress({ p, compact }: { p: DashboardProject; compact?: boolean }) {
   if (p.totalTasks === 0) return null;
@@ -36,12 +58,21 @@ function Progress({ p, compact }: { p: DashboardProject; compact?: boolean }) {
 export default function RecentProjects({
   projects,
   variant = 'list',
+  rows,
+  span,
 }: {
   projects: DashboardProject[];
   variant?: WidgetVariant;
+  rows: WidgetRows;
+  span: WidgetSpan;
 }) {
   const t = useT();
   const grid = variant === 'grid';
+  const tiles = TILE_COLUMNS[span];
+  const shown = projects.slice(
+    0,
+    grid ? tiles.count * contentCapacity(rows, TILE_LINE) : contentCapacity(rows, ROW_LINE, 2),
+  );
 
   return (
     <>
@@ -53,14 +84,10 @@ export default function RecentProjects({
       {projects.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">{t('home.noProject')}</p>
       ) : grid ? (
-        // Une seule tuile quand il n'y a qu'un projet : la couper en trois colonnes pour
-        // n'en remplir qu'une donnerait un bloc bancal.
-        <div
-          className={`grid gap-3 ${
-            projects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-          }`}
-        >
-          {projects.map((p) => (
+        // Une seule tuile quand il n'y a qu'un projet à montrer : ouvrir plusieurs colonnes
+        // pour n'en remplir qu'une donnerait un bloc bancal.
+        <div className={`grid gap-3 ${shown.length === 1 ? 'grid-cols-1' : tiles.className}`}>
+          {shown.map((p) => (
             <Link
               key={p.id}
               to={projectPath(p)}
@@ -84,7 +111,7 @@ export default function RecentProjects({
         </div>
       ) : (
         <div className="space-y-1">
-          {projects.map((p) => (
+          {shown.map((p) => (
             <Link
               key={p.id}
               to={projectPath(p)}

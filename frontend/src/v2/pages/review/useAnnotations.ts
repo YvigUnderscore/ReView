@@ -11,7 +11,7 @@ import {
   type AnnotationHistory,
   type AnnotationSnapshot,
 } from './annotationHistory';
-import { clampRefBox, NO_BANDS, pastedRefBox, type StagedReference, type ViewerBands } from './referenceBox';
+import { NO_BANDS, pastedRefBox, placeRefBox, type StagedReference, type ViewerBands } from './referenceBox';
 import { useAnnotationShortcuts } from './useAnnotationShortcuts';
 import type { SplatLayoutAnim } from './reviewTypes';
 import { usePoiDraft } from './poi/usePoiDraft';
@@ -61,8 +61,9 @@ export function useAnnotations(opts?: {
   // pas envoyé, puis figées côté serveur (liées au commentaire créé).
   const [stagedRefs, setStagedRefs] = useState<StagedReference[]>([]);
   // Bandes libres autour du média, publiées par le calque des références (seul à connaître la
-  // géométrie du viewer). Dans une `ref` : le placement au collage et le bornage du déplacement
-  // les lisent au moment du geste, et une remesure ne doit pas relancer un rendu du composer.
+  // géométrie du viewer). Elles ne servent plus qu'à choisir où tombe un collage — le
+  // déplacement, lui, n'est plus borné. Dans une `ref` : lues au moment du collage, et une
+  // remesure ne doit pas relancer un rendu du composer.
   const refBands = useRef<ViewerBands>(NO_BANDS);
   const setRefBands = useCallback((bands: ViewerBands) => {
     refBands.current = bands;
@@ -95,9 +96,9 @@ export function useAnnotations(opts?: {
     stepKey?: string,
   ) => {
     openStep(stepKey);
-    setStagedRefs((rs) =>
-      rs.map((r) => (r.key === key ? { ...r, ...clampRefBox({ ...r, ...patch }, refBands.current) } : r)),
-    );
+    // La référence atterrit là où le pointeur la lâche, dedans comme dehors du cadre du média :
+    // aucune bande n'entre ici, seul le plafond partagé avec le serveur borne le geste.
+    setStagedRefs((rs) => rs.map((r) => (r.key === key ? { ...r, ...placeRefBox({ ...r, ...patch }) } : r)));
   };
   const removeStagedRef = (key: string) => {
     openStep();

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { MessageKey } from '../../../i18n';
+import { TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
+import type { MessageKey, Tr } from '../../../i18n';
 import type { StatusFamily } from '../productionWire';
 
 /**
@@ -96,6 +97,52 @@ export const FAMILY_LABEL: Record<StatusFamily, MessageKey> = {
   blocked: 'kanban.family.blocked',
   inactive: 'kanban.family.inactive',
 };
+
+// -- Nom d'un statut ----------------------------------------------------------
+
+/** Libellés de l'enum figé, indexables — un code inconnu retombe sur sa famille. */
+const LEGACY_LABEL: Record<string, MessageKey | undefined> = TASK_STATUS_LABEL_KEY;
+
+/**
+ * Le nom du statut, tel qu'une case l'ÉCRIT.
+ *
+ * C'est le **nom** et non le `code` : le code n'est court que dans un référentiel ShotGrid
+ * (`ip`, `fin`, `rev`) ; le vocabulaire local, celui que toute instance reçoit à la
+ * migration, porte des codes `in_progress`, `pending_review` — plus longs et moins
+ * lisibles que les noms « In Progress » et « To Review » que le studio a écrits pour être
+ * lus. Le nom est donc la bonne réponse dans la case, et le code ne sert à rien à l'écran.
+ *
+ * Sans référentiel du tout, le serveur laisse `name` vide et met la valeur de l'enum figé
+ * dans `code` : c'est un identifiant, jamais un mot, et on rend son libellé traduit.
+ */
+export function statusName(status: GridCellStatus | null, t: Tr): string {
+  if (!status) return t('production.grid.idle');
+  if (status.name.trim() !== '') return status.name;
+  return t(LEGACY_LABEL[status.code] ?? FAMILY_LABEL[status.family]);
+}
+
+/**
+ * Longueur, en caractères, du nom le plus long qu'une case de la page va écrire.
+ *
+ * C'est ce qui règle la largeur des colonnes : une passe sur les DONNÉES, une seule fois
+ * par rendu — pas une mesure de texte par case, qui ferait douze cents lectures de mise
+ * en page à chaque cran de défilement.
+ *
+ * Seules les colonnes visibles comptent : sous « masquer les colonnes vides », le nom
+ * interminable d'un département retiré n'a plus à élargir la grille de tout le monde.
+ */
+export function widestStatus(rows: GridRow[], columns: GridDepartment[], t: Tr): number {
+  const shown = new Set(columns.map((department) => department.key));
+  let longest = 0;
+  for (const row of rows) {
+    for (const cell of row.cells) {
+      // Une case sans tâche n'écrit rien : elle garde son anneau ou son tiret.
+      if (cell.taskId === null || !shown.has(cell.departmentKey)) continue;
+      longest = Math.max(longest, statusName(cell.status, t).length);
+    }
+  }
+  return longest;
+}
 
 // -- Filtres ------------------------------------------------------------------
 

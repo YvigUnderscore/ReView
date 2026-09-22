@@ -25,6 +25,7 @@ export default function SplatPane({
   aspect,
   recording,
   notice,
+  exit,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
@@ -49,6 +50,11 @@ export default function SplatPane({
   recording?: boolean;
   /** Bandeau d'état posé au-dessus du nuage (placement d'un point d'intérêt) — jumeau du 3D. */
   notice?: ReactNode;
+  /**
+   * Sortie de la lecture d'un commentaire annoté, en BAS du viewer — même bord et même pilule
+   * que le modèle 3D et l'image ; le haut centré appartient au bandeau d'état.
+   */
+  exit?: ReactNode;
 }) {
   const t = useT();
   return (
@@ -72,6 +78,7 @@ export default function SplatPane({
       </ReviewFrame>
 
       {notice}
+      {exit}
 
       {/* Au-dessus du cadre, jamais dedans : le guide letterbox et l'overlay d'annotation
           gardent leurs coordonnées — ce coin ne touche pas au cadrage. */}

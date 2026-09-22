@@ -67,6 +67,7 @@ export default function Model3DReview({
   onReprocess,
   onSaved,
   overlay,
+  exit,
 }: {
   data: MediaResp;
   model3d: Model3DThreeState;
@@ -79,6 +80,8 @@ export default function Model3DReview({
   onReprocess: () => void;
   onSaved: (patch: SplatEditsPatch) => void;
   overlay: ReactNode;
+  /** Sortie de la lecture d'un commentaire annoté — descendue dans le viewer, comme l'overlay. */
+  exit: ReactNode;
 }) {
   const t = useT();
   // Scène Three réellement construite (modèle chargé, runtime posé). À ne pas confondre avec
@@ -142,11 +145,12 @@ export default function Model3DReview({
     if (hadProposal.current && !has && sceneDirty) revert();
     hadProposal.current = has;
   }, [ann.sceneOverride, sceneDirty, revert]);
-  // Échap relâche la scène proposée par le commentaire sélectionné (46.T).
-  const hasCommentScene = ann.viewedSceneOverride != null;
+  // Échap relâche la scène proposée par le commentaire sélectionné (46.T). Lu deux fois —
+  // ici et par le bandeau du viewer — mais sans nom intermédiaire : le budget de ce fichier
+  // est atteint, et le lot 13 y descend la sortie de lecture du commentaire.
   const { setViewedSceneOverride } = ann;
   const releaseCommentScene = useCallback(() => setViewedSceneOverride(null), [setViewedSceneOverride]);
-  useCommentSceneEscape(hasCommentScene, releaseCommentScene);
+  useCommentSceneEscape(ann.viewedSceneOverride != null, releaseCommentScene);
   // Recomposition et override USD : réservés aux gestionnaires, et autorisés APRÈS
   // publication (Phase 50) — la couche d'override est rejouée par-dessus le fichier
   // d'origine, qui n'est jamais réécrit. Le verrou ne garde que le montage et le `transform`.
@@ -213,9 +217,8 @@ export default function Model3DReview({
     showingDraft: ann.viewedPoi.length === 0,
     onExit: () => update({ tool: DEFAULT_TOOL }),
   });
-  const trackSwitch = (
-    <TrackSwitch track={track} onTrack={setTrack} hasClips={model3d.animations.length > 0} />
-  );
+  const hasClips = model3d.animations.length > 0;
+  const trackSwitch = <TrackSwitch track={track} onTrack={setTrack} hasClips={hasClips} />;
 
   return (
     <ReviewChrome
@@ -314,6 +317,7 @@ export default function Model3DReview({
               loadError={model3d.loadError}
               containerRef={model3d.containerRef}
               overlay={overlay}
+              exit={exit}
               recording={canManage && cam.anim.autoKey}
               settings={<Model3DRenderMenu inspect={inspect} variants={variants} />}
               aspect={frameAspect}
@@ -334,7 +338,7 @@ export default function Model3DReview({
                 <Model3DNotice
                   placingPoi={placingPoi}
                   poiCount={ann.poi.points.length}
-                  commentScene={hasCommentScene}
+                  commentScene={ann.viewedSceneOverride != null}
                   onReleaseScene={releaseCommentScene}
                 />
               }

@@ -8,12 +8,13 @@ import { useT } from '../../../i18n';
 /**
  * Légende des familles de statut.
  *
- * C'est la première raison pour laquelle l'écran d'avant était illisible : les cinq
- * couleurs n'étaient nommées que dans un attribut `title`, c'est-à-dire nulle part pour
- * qui ne survole pas exactement la bonne case — et nulle part du tout au clavier.
+ * Elle ne sert plus à décoder les cases, qui écrivent désormais le nom de leur statut :
+ * elle nomme les couleurs de la **barre d'avancement** d'une sequence repliée, seule
+ * surface où une famille reste une couleur et rien d'autre.
  *
- * Les deux marques sans famille y figurent aussi : une case « à faire, pas commencé » et
- * une case hors programme se ressemblent assez pour qu'on les confonde sans un repère écrit.
+ * Les deux marques sans famille y figurent aussi, et c'est même leur seul écrit : une case
+ * « à faire, pas commencé » et une case hors programme n'ont pas de statut à nommer, et se
+ * ressemblent assez pour qu'on les confonde sans un repère.
  */
 export default function GridLegend() {
   const t = useT();

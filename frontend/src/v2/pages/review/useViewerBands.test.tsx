@@ -4,8 +4,8 @@
 import { useRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { useViewerBands } from './useViewerBands';
-import type { ViewerBands } from './referenceBox';
+import { useViewerBands, viewerCanvas } from './useViewerBands';
+import { MEDIA_CANVAS, type ViewerBands } from './referenceBox';
 
 /**
  * Les bandes se mesurent sur les **aspects** (média, zone qui rogne) et jamais sur les deux
@@ -68,5 +68,49 @@ describe('useViewerBands', () => {
     geometry({ width: 0, height: 0 }, { width: 0, height: 0 });
     render(<Host />);
     expect(bands()).toEqual({ left: 0, right: 0, top: 0, bottom: 0 });
+  });
+});
+
+/**
+ * Le canevas, lui, se mesure **en pixels et en position** : c'est ce que le viewer montre au
+ * zoom courant, et c'est là qu'une référence peut aller sans devenir insaisissable.
+ */
+describe('viewerCanvas', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height }) as DOMRect;
+  const planted: HTMLElement[] = [];
+
+  /** Un calque épousant le média, dans un viewer qui rogne (ou non) ce qui dépasse. */
+  const layerIn = (media: DOMRect, clip?: DOMRect) => {
+    const viewer = document.createElement('div');
+    if (clip) {
+      viewer.style.overflow = 'hidden';
+      viewer.getBoundingClientRect = () => clip;
+    }
+    const layer = document.createElement('div');
+    layer.getBoundingClientRect = () => media;
+    viewer.appendChild(layer);
+    document.body.appendChild(viewer);
+    planted.push(viewer);
+    return layer;
+  };
+
+  afterEach(() => {
+    for (const el of planted.splice(0)) el.remove();
+  });
+
+  it('donne la zone visible en fractions du média, letterbox compris', () => {
+    // Média 400×300 au centre d'un viewer 1200×600 : une largeur de média libre de chaque côté,
+    // une demi-hauteur en haut comme en bas.
+    const layer = layerIn(rect(400, 150, 400, 300), rect(0, 0, 1200, 600));
+    expect(viewerCanvas(layer)).toEqual({ left: -1, top: -0.5, right: 2, bottom: 1.5 });
+  });
+
+  it('s’en tient au cadre du média quand rien ne rogne', () => {
+    expect(viewerCanvas(layerIn(rect(0, 0, 400, 300)))).toEqual(MEDIA_CANVAS);
+  });
+
+  it('s’en tient au cadre du média quand rien n’est mesurable', () => {
+    expect(viewerCanvas(layerIn(rect(0, 0, 0, 0), rect(0, 0, 1200, 600)))).toEqual(MEDIA_CANVAS);
   });
 });
