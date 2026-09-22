@@ -10,10 +10,11 @@ const presentationAnim = z.object(
   cameraAnimShape(channelSchema(curveKeySchema({ minTime: 0, maxTime: 3_600_000 }), { min: 1, max: 2 })),
 );
 
-const anim = (keys: unknown[], extra: Record<string, unknown> = {}) => ({
+const anim = (keys: unknown[], extra: Record<string, unknown> = {}, over: Record<string, unknown> = {}) => ({
   version: 2,
   loop: true,
   channels: { px: { keys, ...extra } },
+  ...over,
 });
 
 describe('cameraAnimSchema', () => {
@@ -57,6 +58,39 @@ describe('cameraAnimSchema', () => {
     expect(presentationAnim.safeParse(anim([{ t: 0, v: 0, mode: 'auto' }], { post: 'spiral' })).success).toBe(
       false,
     );
+  });
+
+  it('accepte une animation avec et sans base, et garde la base entière', () => {
+    // Sans base : la forme d'avant la Phase 50 lot 13 reste servable telle quelle.
+    const sans = presentationAnim.parse(anim([{ t: 0, v: 1, mode: 'auto' }]));
+    expect(sans.base).toBeUndefined();
+    // Avec base : omise du schéma, `z.object` la retirerait en silence et la caméra du spectateur
+    // suivant retomberait sur l'origine du monde — canaux non clés sans repli.
+    const base = {
+      position: { x: 9, y: 3, z: 4 },
+      target: { x: 1, y: 0.5, z: -2 },
+      fov: 50,
+      roll: 0.25,
+    };
+    const avec = presentationAnim.parse(anim([{ t: 0, v: 1, mode: 'auto' }], {}, { base }));
+    expect(avec.base).toEqual(base);
+  });
+
+  it('refuse une base amputée ou hors domaine', () => {
+    const ok = { position: { x: 0, y: 0, z: 0 }, target: { x: 1, y: 1, z: 1 } };
+    expect(presentationAnim.safeParse(anim([{ t: 0, v: 1, mode: 'auto' }], {}, { base: ok })).success).toBe(
+      true,
+    );
+    for (const base of [
+      { position: { x: 0, y: 0 }, target: { x: 1, y: 1, z: 1 } },
+      { target: { x: 1, y: 1, z: 1 } },
+      { ...ok, fov: 400 },
+      { ...ok, roll: 12 },
+    ]) {
+      expect(presentationAnim.safeParse(anim([{ t: 0, v: 1, mode: 'auto' }], {}, { base })).success).toBe(
+        false,
+      );
+    }
   });
 
   it('tient les bornes de volume et de temps de son appelant', () => {

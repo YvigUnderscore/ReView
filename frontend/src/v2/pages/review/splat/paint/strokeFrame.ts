@@ -3,7 +3,7 @@
 
 import type * as THREE from 'three';
 import type { Line2 } from 'three/addons/lines/Line2.js';
-import type { SplatSceneHandle } from '../useSplat';
+import type { PaintSceneHandle } from './surfaceRay';
 import type { Vec3 } from './surfaceTrace';
 
 /**
@@ -50,7 +50,7 @@ export function ghostOpacity(facing: number): number {
  */
 export function attachStrokeFrame(
   line: Line2,
-  handle: SplatSceneHandle,
+  handle: PaintSceneHandle,
   normal: Vec3 | null,
   center: Vec3,
 ): void {

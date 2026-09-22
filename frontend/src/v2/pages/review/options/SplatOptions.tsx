@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Circle, Cuboid, Eraser, Focus, Plus, Redo2, Trash2, Undo2, X } from 'lucide-react';
+import { Circle, Cuboid, Eraser, Focus, Plus, Trash2, X } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
@@ -11,15 +11,12 @@ import type { ReviewTool, ToolId } from '../chrome/tools';
 import type { ModeId } from '../chrome/modes';
 import type { SplatEditorState } from '../splat/editor/useSplatEditor';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
-import { MAX_STROKE_PX, MIN_STROKE_PX } from '../splat/paint/strokes';
+import PaintOptions from './PaintOptions';
 import TransformOptions from './TransformOptions';
 import PoiOptions from '../poi/PoiOptions';
 import type { PoiDraftState } from '../poi/usePoiDraft';
 import { useT } from '../../../i18n';
 import { intlLocale } from '../../../i18n';
-
-/** Couleurs de trait du painter 3D — données d'annotation, pas des tokens de thème. */
-const INK = ['#ff4d4d', '#ffb020', '#3ddc68', '#38b6ff'];
 
 /**
  * Barre d'options du viewer splat : les paramètres du seul outil armé. Remplace
@@ -49,8 +46,6 @@ export default function SplatOptions({
   const t = useT();
   const id: ToolId = tool.id;
   const selecting = id === 'sel-rect' || id === 'sel-lasso' || id === 'sel-brush';
-  // Brosse de surface et gomme de trait partagent la pile de traits en préparation : les deux
-  // outils offrent donc « annuler le dernier » et « tout effacer ».
   const painting = id === 'paint' || id === 'paint-erase';
   const transforming = id === 'translate' || id === 'rotate' || id === 'scale';
   const selectedCount = editor.selection.selected.size;
@@ -86,71 +81,8 @@ export default function SplatOptions({
 
       {id === 'pin' && <PoiOptions poi={poi} />}
 
-      {painting && (
-        <>
-          {id === 'paint-erase' && <span className="rv-optbar__hint">{t(tool.hintKey)}</span>}
-          {id === 'paint' && (
-            <>
-              <span className="rv-row__label">{t('draw.ink')}</span>
-              <span className="flex gap-1">
-                {INK.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    title={t('draw.inkColor', { color: c })}
-                    aria-label={t('draw.inkColor', { color: c })}
-                    aria-pressed={paint.color === c}
-                    onClick={() => paint.setColor(c)}
-                    className={`h-5 w-5 rounded-full border-2 ${
-                      paint.color === c ? 'border-foreground' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </span>
-              {/* L'unité dit enfin vrai : l'épaisseur est tenue en pixels d'écran par
-                  `LineMaterial`, elle ne dépend plus de la distance au nuage. */}
-              <NumberField
-                label={t('review.thickness')}
-                value={paint.width}
-                onChange={paint.setWidth}
-                min={MIN_STROKE_PX}
-                max={MAX_STROKE_PX}
-                step={1}
-                unit="px"
-              />
-            </>
-          )}
-          <span className="rv-rule" />
-          <IconButton
-            icon={Undo2}
-            label={t('review.undoStroke')}
-            bordered
-            onClick={paint.undoStroke}
-            disabled={paint.pendingCount === 0}
-          />
-          {/* Le bouton d'annulation n'avait pas de réciproque : un trait annulé était perdu. */}
-          <IconButton
-            icon={Redo2}
-            label={t('review.redoStroke')}
-            bordered
-            onClick={paint.redoStroke}
-            disabled={paint.redoCount === 0}
-          />
-          <IconButton
-            icon={Eraser}
-            label={t('review.splat.clearStrokes')}
-            bordered
-            onClick={paint.clearPending}
-            disabled={paint.pendingCount === 0}
-          />
-          <span className="rv-optbar__hint">
-            {paint.pendingCount > 0
-              ? t('draw.pendingStrokes', { count: paint.pendingCount })
-              : t('draw.strokesGoWithComment')}
-          </span>
-        </>
-      )}
+      {/* Brosse de surface et gomme de trait : les MÊMES réglages que sur le modèle 3D. */}
+      {painting && <PaintOptions tool={tool} paint={paint} />}
 
       {(id === 'cam-move' || id === 'cam-aim') && (
         <span className="rv-optbar__hint">{t('camera.objectHint')}</span>

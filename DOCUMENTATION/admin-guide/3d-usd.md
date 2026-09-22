@@ -2,7 +2,7 @@
 
 *How USD, glTF and archives become the GLB the viewer shows, and how to put the Blender toolchain in the worker image.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-22
 
 The 3D viewer reads exactly one format: **GLB**. Everything a studio delivers — a USD stage
 with its payloads, a glTF with a folder of textures, an FBX out of a DCC — is turned into a
@@ -159,9 +159,10 @@ enabled but switching has no effect — re-upload a version to get baked variant
 
 ## Choosing variants and purposes
 
-If the scene exposes variant sets, reviewers who can manage the media see **Recompose the
-scene…** in the technical sheet. Picking another variant, or another purpose
-(render / proxy / guide), re-runs the conversion.
+If the scene exposes variant sets, reviewers who can manage the media get a **Recompose the USD
+scene** group in the review's *Scene* panel, right under the scene graph (the technical sheet
+keeps a shortcut to it). Picking another variant, or another purpose (render / proxy / guide),
+re-runs the conversion.
 
 The original file is still never modified: the selection is authored into a small USD **overlay
 layer** that sublayers the root, and that overlay is what gets converted. The requested

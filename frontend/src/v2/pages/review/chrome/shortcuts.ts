@@ -205,6 +205,9 @@ function spatialRows(): ReviewShortcut[] {
     },
     ...viewRows('SPLAT', 'useFrameShortcuts'),
     { keys: [named('key.delete')], labelKey: 'shortcuts.deleteSelection', handler: 'useEditorShortcuts' },
+    // Même touche, deux viewers : sur un splat elle retire les points sélectionnés, sur une
+    // scène USD elle masque le prim désigné — un override, jamais une suppression de fichier.
+    { keys: [named('key.delete')], labelKey: 'shortcuts.hidePrim', handler: 'useSceneEditShortcuts' },
     {
       keys: [ch('Alt'), ch('1'), ch('9')],
       labelKey: 'shortcuts.cameraBookmark',

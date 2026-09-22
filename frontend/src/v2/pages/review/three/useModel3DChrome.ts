@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import type { ChromeState } from '../chrome/chromeState';
 import type { ToolId } from '../chrome/tools';
 import { useEditHistory } from '../splat/editor/operations/history';
+import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import { useTransformGizmo, type TransformMode } from '../viewer/gizmos/useTransformGizmo';
 import { eulerTransformFromMesh } from './modelGizmoTransform';
 import type { Model3DThreeState } from './useModel3DThree';
@@ -23,18 +24,25 @@ const GIZMO_MODE: Partial<Record<ToolId, TransformMode>> = {
 };
 
 /**
- * Branche le rail sur le gizmo du modèle : l'outil armé décide du mode de transformation, et
- * chaque drag reste annulable. Reprend le montage qui vivait dans `Model3DTransformBar` —
- * seule la barre disparaît, l'historique et le gizmo sont inchangés.
+ * Branche le rail sur les hooks qui portent réellement le geste : le gizmo du modèle (l'outil
+ * armé décide du mode de transformation, et chaque drag reste annulable) et la brosse de
+ * surface. Reprend le montage qui vivait dans `Model3DTransformBar` — seule la barre disparaît,
+ * l'historique et le gizmo sont inchangés. Jumeau de `splat/useSplatChrome`.
  */
 export function useModel3DChrome({
   state,
   m,
+  paint,
   cameraRig,
   usdScene,
 }: {
   state: ChromeState;
   m: Model3DThreeState;
+  /**
+   * Brosse de surface — le MÊME hook que le splat depuis le lot 13. Le rail dit lequel des deux
+   * outils est armé, le hook de peinture en déduit ce que fait le clic.
+   */
+  paint: SplatPaintState;
   cameraRig?: { mode: 'translate' | 'rotate'; setMode: (mode: 'translate' | 'rotate') => void };
   /** Scène USD : un prim sélectionné détourne le gizmo TRS vers ce prim (46.N). */
   usdScene?: UsdSceneState;
@@ -90,6 +98,11 @@ export function useModel3DChrome({
       });
     },
   });
+
+  const { setArmed } = paint;
+  useEffect(() => {
+    setArmed(state.tool === 'paint' ? 'paint' : state.tool === 'paint-erase' ? 'erase' : null);
+  }, [state.tool, setArmed]);
 
   useEffect(() => {
     if (!cameraRig) return;

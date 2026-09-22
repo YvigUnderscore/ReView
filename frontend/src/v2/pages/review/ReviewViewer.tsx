@@ -300,6 +300,7 @@ export default function ReviewViewer({
           reprocessing={reprocessing}
           onReprocess={onReprocess}
           onSaved={onSplatEditsSaved}
+          paint={paint}
           overlay={renderOverlay(ann.viewedAspect ?? undefined)}
           exit={exitViewedAnnotation}
         />

@@ -65,6 +65,25 @@ export interface Channel {
   post?: Extrapolation;
 }
 
+/**
+ * Pose de repli **persistée avec l'animation** (Phase 50, lot 13) : exactement les grandeurs qu'un
+ * canal **sans clé** lit à l'échantillonnage (`hermite.sampleAnimV2`).
+ *
+ * Elle existe parce que ce repli était *dynamique* — la vue de celui qui regarde — et que deux
+ * échantillonneurs le prenaient à deux endroits : le lecteur keyframe sur une pose capturée
+ * seulement dans certains parcours (`setAnim`, première clé posée à la vue), l'origine du monde
+ * sinon ; le rig de scène sur la vue d'activation du mode layout. Une animation construite AU
+ * GIZMO, qui ne clé que la position, voyait donc sa cible sauter à l'origine dès le premier scrub.
+ * La base voyage désormais avec l'animation : mêmes canaux non clés, même pose, en lecture comme
+ * hors lecture, pour tout spectateur, et à l'export glTF.
+ */
+export interface CameraAnimBase {
+  position: { x: number; y: number; z: number };
+  target: { x: number; y: number; z: number };
+  fov?: number;
+  roll?: number;
+}
+
 /** Animation caméra v2 : canaux indépendants + boucle. La durée = plus grand temps de clé. */
 export interface CameraAnimV2 {
   version: 2;
@@ -73,6 +92,13 @@ export interface CameraAnimV2 {
   /** Durée de lecture réglable (ms) — override du plus grand temps de clé (Phase 27). Guide dans
    *  le graph ; la lecture en boucle va de 0 à cette durée. Édition de clés au-delà autorisée. */
   durationMs?: number;
+  /**
+   * Pose de repli des canaux sans clé (Phase 50, lot 13). **Facultative** : une animation
+   * enregistrée avant elle n'en porte pas et garde le repli dynamique d'alors — son rejeu ne
+   * change pas d'un caractère (migration à la lecture, comme `fromV1`). Une animation neuve
+   * l'adopte (`seedAnimBase`) et devient, elle, déterministe.
+   */
+  base?: CameraAnimBase;
 }
 
 export const emptyAnim = (loop = true): CameraAnimV2 => ({ version: 2, loop, channels: {} });
@@ -89,6 +115,41 @@ export function poseToChannelValues(pose: SplatCamera): Record<ChannelId, number
     fov: pose.fov,
     roll: pose.roll,
   };
+}
+
+/**
+ * Projette une pose caméra sur la forme minimale d'une base : les seules valeurs que
+ * l'échantillonnage lit en repli. L'aspect et la profondeur de champ n'en font pas partie — ils
+ * ne sont pas animables, et la base n'est pas une deuxième présentation.
+ */
+export function poseToBase(pose: SplatCamera): CameraAnimBase {
+  const base: CameraAnimBase = {
+    position: { x: pose.position.x, y: pose.position.y, z: pose.position.z },
+    target: { x: pose.target.x, y: pose.target.y, z: pose.target.z },
+  };
+  if (pose.fov != null) base.fov = pose.fov;
+  if (pose.roll != null) base.roll = pose.roll;
+  return base;
+}
+
+/**
+ * Base effective d'une animation : la sienne si elle en porte une, sinon `fallback` (le repli
+ * dynamique d'avant). **Seul arbitre du dépôt** — les deux échantillonneurs passent par
+ * `sampleAnimV2`, qui passe par ici : ils ne peuvent plus lire deux bases différentes.
+ */
+export function animBase(anim: CameraAnimV2, fallback: CameraAnimBase): CameraAnimBase {
+  return anim.base ?? fallback;
+}
+
+/**
+ * Adopte `view` comme base de l'animation — **seulement si elle est neuve** : aucune base, aucune
+ * clé. Une animation qui porte déjà des clés sans base est héritée ; lui en donner une changerait
+ * son rejeu (présentations persistées, animations jointes à des commentaires déjà en base), ce qui
+ * est exclu. Idempotent, donc appelable à chaque écriture de clé. Pur/testable.
+ */
+export function seedAnimBase(anim: CameraAnimV2, view: SplatCamera | undefined): CameraAnimV2 {
+  if (!view || anim.base || animKeyTimes(anim).length > 0) return anim;
+  return { ...anim, base: poseToBase(view) };
 }
 
 /** Temps (ms) triés et dédupliqués de toutes les clés, tous canaux confondus (colonnes dopesheet). */
@@ -306,6 +367,12 @@ export function moveColumn(anim: CameraAnimV2, t: number, deltaMs: number, tol =
   return next;
 }
 
+/** Vecteur 3D exploitable dans une donnée réseau : trois coordonnées finies. */
+const isVec3 = (v: unknown): boolean => {
+  const p = v as Record<string, unknown> | null;
+  return !!p && typeof p === 'object' && ['x', 'y', 'z'].every((k) => Number.isFinite(p[k]));
+};
+
 // ── Conversion depuis le format v1 (keyframes { t, pose, easing }) ──────────────
 const easingToMode = (easing: string): TangentMode => (easing === 'linear' ? 'linear' : 'auto');
 
@@ -324,7 +391,15 @@ export function fromV1(keyframes: SplatCameraKeyframe[], loop: boolean): CameraA
 export function normalizeAnim(input: unknown): CameraAnimV2 | null {
   if (!input || typeof input !== 'object') return null;
   const a = input as { version?: number; keyframes?: SplatCameraKeyframe[]; loop?: boolean };
-  if (a.version === 2) return hasAnimation(input as CameraAnimV2) ? (input as CameraAnimV2) : null;
+  if (a.version === 2) {
+    const v2 = input as CameraAnimV2;
+    if (!hasAnimation(v2)) return null;
+    // Base illisible (donnée forgée) : on la retire au lieu de faire tomber la boucle de rendu sur
+    // `base.position.x`. Le repli dynamique reprend — soit le comportement d'avant la base.
+    if (v2.base != null && !(isVec3(v2.base.position) && isVec3(v2.base.target)))
+      return { ...v2, base: undefined };
+    return v2;
+  }
   if (Array.isArray(a.keyframes) && a.keyframes.length >= 2) return fromV1(a.keyframes, !!a.loop);
   return null;
 }

@@ -2,7 +2,7 @@
 
 *Scans in Spark: DCC navigation, non-destructive clean-up, comparison across versions, presentation and a cleaned SPZ export.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-22
 
 Gaussian splat media are rendered with **Spark (SparkJS)** inside the Three.js scene, with the
 same DCC-style navigation as [3D review](review-3d.md) — plus a full **non-destructive
@@ -21,7 +21,7 @@ other mode is still there, armed from where the work happens:
 | Mode | How you enter it | How you leave it |
 |---|---|---|
 | **Explore** | the resting state, and `1` | — |
-| **Clean up** | the **Edit** popover in the top-left corner of the viewer, or any of its tool letters (`B`, `L`, `M`, `O`, `T`, `R`, `S`) | the same switch, or `1` |
+| **Clean up** | the *Edit* group of the tool rail, or any of its tool letters (`B`, `L`, `M`, `O`, `T`, `R`, `S`) | **Navigate** at the top of the rail, or `1` |
 | **Staging** | the **Staging** switch of the *Camera* panel (*Framing* group) | the same switch, or `1` |
 | **Annotate** | the *Annotate* button of the comment composer, or a tool letter (`P`, `X`, `I`) | `Esc` drops the tool; `1` returns to Explore |
 
@@ -72,14 +72,13 @@ arming the scale gizmo, and `T` and `R` no longer change mode under your hand.
 to the home view. Both answer in every mode, published media included. The **ground grid** is
 a switch in the *Scene* panel (*Guides → Ground grid*), remembered in your browser.
 
-## The two viewer popovers
+## The Render popover
 
-Two popovers sit in the **top-left corner of the viewer**, above the cloud rather than at the
-other end of the screen: **Render** and, for whoever may edit, **Edit**. They are the splat
-twins of the *Render* menu the 3D viewer already had, and they replaced the *Display* tab of the
-dock, which asked you to reach across the window for switches you try in bursts while looking at
-the scan. They are drawn outside the review frame, so the letterbox guide and the annotation
-coordinates are exactly where they were.
+A popover sits in the **top-left corner of the viewer**, above the cloud rather than at the other
+end of the screen: **Render**. It is the splat twin of the *Render* menu the 3D viewer already
+had, and it replaced the *Display* tab of the dock, which asked you to reach across the window
+for switches you try in bursts while looking at the scan. It is drawn outside the review frame,
+so the letterbox guide and the annotation coordinates are exactly where they were.
 
 **Render** carries what changes the image without changing the data:
 
@@ -90,26 +89,28 @@ coordinates are exactly where they were.
 | **Real size** | Everyone, once more than one cloud is loaded | Turns off the size unification used by the comparison — see [Comparing splats](#comparing-splats) |
 | **Corrected orientation** | Editor only | Flips the Y-down convention some exporters use — this one *is* an edit, and it is saved with the rest |
 
-**Edit** carries the clean-up: a switch that arms and disarms the *Clean up* mode, and under it
-the seven editing tools, each with its keyboard letter. The buttons are the rail's own buttons,
-not copies, and arming one closes the popover — you draw on the cloud immediately after.
+The **editing tools** are not in a popover: they are a second group of the **tool rail**,
+titled *Edit*, always in view under the tools of the current mode. Clicking one arms the tool and
+the *Clean up* mode together. They were briefly moved into a popover of their own, which put a
+click between you and every tool; the rail is where a tool belongs.
 
 > [!NOTE]
-> The **Edit** popover does not exist on a published splat, nor for anyone who cannot manage
-> the media, and the render mode and orientation switch go with it. That is not a bug: the
-> orientation flip is stored with the edits, and the publish lock covers it. The *Render*
-> popover stays, with the inspection colouring everyone is allowed.
+> The *Edit* group of the rail does not exist on a published splat, nor for anyone who cannot
+> manage the media, and the render mode and orientation switch go with it. That is not a bug:
+> the orientation flip is stored with the edits, and the publish lock covers it. The *Render*
+> popover stays, with the inspection colouring everyone is allowed. The seven letters are
+> inert in the same conditions — the keyboard never reaches a tool the rail does not show.
 
 > [!TIP]
-> The switch is the only way out of the clean-up with the mouse. Arming a tool with its letter
-> from anywhere puts you in *Clean up*; without the switch there would be no segment left to
+> **Navigate**, at the top of the rail, is the way out of the clean-up with the mouse. Arming a
+> tool with its letter from anywhere puts you in *Clean up*; there is no header segment left to
 > click to get out again — `1` is the keyboard answer to the same question.
 
 ## Cleaning up, without touching the file
 
 The original splat file is **never modified**. Every edit is stored as metadata — a selection
 mask bitset plus an edit list — and **replayed identically for every viewer**. All of it lives
-in the **Clean up** mode, armed from the **Edit** popover of the viewer or by pressing a tool
+in the **Clean up** mode, armed from the *Edit* group of the tool rail or by pressing a tool
 letter, and only for someone who can manage the media on an unpublished version.
 
 | Tool | Key | A plain drag | Modifiers and options |
@@ -193,8 +194,9 @@ The selector hides itself when the task or asset carries a single version.
 
 The **Annotate** mode carries 3D tools rather than 2D drawing.
 
-- **Surface brush** (`P`) paints a stroke on the surface of the cloud. Four ink colours and a
-  thickness from 1 to 16 px in the options bar, with *undo the last stroke*, *redo the last
+- **Surface brush** (`P`) paints a stroke on the surface of the cloud — and on the geometry of a
+  3D model, where the tool, the options and the gesture are the same one. Four ink colours and a
+  thickness from 1 to 32 px in the options bar, with *undo the last stroke*, *redo the last
   stroke* and *clear* next to a running count — or `Ctrl+Z`, `Ctrl+Y` and `Ctrl+Shift+Z`, which
   walk the strokes you are preparing as deep as you have gone. The stroke is stored in object space and travels with the comment — it is an
   annotation, not an edit, and it never touches the splat data. Four things are worth knowing
@@ -309,7 +311,7 @@ costs the machine almost nothing.
 | **Export** | The four entries below |
 
 There is no *Display* tab: the render settings moved to the **Render** popover of the viewer,
-described in [The two viewer popovers](#the-two-viewer-popovers). The 3D dock lost the same tab
+described in [The Render popover](#the-render-popover). The 3D dock lost the same tab
 for the same reason, so a setting added to one of the two spatial viewers tomorrow arrives in
 both or in neither.
 
@@ -345,8 +347,8 @@ the file in storage is never touched, so it works after publication too — and 
 
 ### Cleaning a set scan before it goes to layout
 
-The scan arrives with a halo of floaters and half a car park behind the wall. Open the **Edit**
-popover in the top-left corner of the viewer, arm the **mask brush** with `M`, and sweep over the
+The scan arrives with a halo of floaters and half a car park behind the wall. Arm the **mask
+brush** from the *Edit* group of the rail or with `M`, and sweep over the
 floaters — the brush only takes what is actually visible, so the wall behind survives. Swept too
 far? `Ctrl+Z` gives the selection back. `Delete` hides them. For the car park, drop a box volume
 with `O`, set it to *Isolate*, and scale it around the set: everything
@@ -399,14 +401,14 @@ distance on the subject, and the scan presents itself. See
 `.spz`, `.splat`, `.ksplat`, `.sog`, or the file is corrupt. Re-upload — nothing is converted
 server-side, so what you upload is what the viewer has to read.
 
-**There is no Edit popover on the viewer.** Splat editing requires that you can manage the media
-*and* that it is not published. After publication the backend refuses every content edit with a
-`403`, so the popover, the render mode and the orientation switch all disappear together — the
-*Render* popover stays, with the inspection colouring.
+**There is no Edit group on the tool rail.** Splat editing requires that you can manage the
+media *and* that it is not published. After publication the backend refuses every content edit
+with a `403`, so the group, the render mode and the orientation switch all disappear together —
+the *Render* popover stays, with the inspection colouring.
 
-**I am stuck in the clean-up and there is no mode switch to leave it.** Turn the switch at the
-top of the **Edit** popover off, or press `1`. A tool letter (`B`, `L`, `M`, `O`, `T`, `R`, `S`)
-arms its tool *and* the mode from anywhere, which is how you got there.
+**I am stuck in the clean-up and there is no mode switch to leave it.** Click **Navigate** at the
+top of the rail, or press `1`. A tool letter (`B`, `L`, `M`, `O`, `T`, `R`, `S`) arms its tool
+*and* the mode from anywhere, which is how you got there.
 
 **"Nothing to export (everything is masked or cropped)".** The saved mask and volumes leave no
 splat standing. Check the volume modes: an *Isolate* volume placed outside the geometry keeps

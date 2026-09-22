@@ -6,7 +6,7 @@ import { t } from '../../i18n';
 
 /**
  * Logique d'affichage partagée entre `UsdSceneGroup` (section USD de la fiche technique) et
- * `UsdRecomposeDialog` (Phase 45, 45.F). Extraite ici pour être testable et n'exister qu'une
+ * `UsdRecomposeGroup` (Phase 45, 45.F). Extraite ici pour être testable et n'exister qu'une
  * fois : les deux composants doivent afficher **la même** valeur courante de variante, et le
  * même mot pour le purpose que l'on relit avant de recomposer.
  */

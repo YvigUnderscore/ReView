@@ -3,6 +3,7 @@
 
 import {
   BoxSelect,
+  Brush,
   Circle,
   Crosshair,
   Eraser,
@@ -16,7 +17,6 @@ import {
   Move,
   Move3d,
   MoveUpRight,
-  Paintbrush,
   Pencil,
   Rotate3d,
   Scale3d,
@@ -174,33 +174,38 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
   annotate: [
     nav(NAV_HINT_SPATIAL),
     {
-      // LA brosse de surface (Phase 50, lot 8). Elle n'existe que sur un splat : le viewer 3D
-      // la retirait du rail, et la lettre l'armait quand même — la restriction par type la
-      // retire des deux d'un coup.
+      // LA brosse de surface — **les deux types spatiaux** (Phase 50, lot 13). Elle portait
+      // `kind: 'SPLAT'` depuis le lot 8, alors que la demande disait « dans les outils
+      // d'annotation 3D/splat » : la restriction n'a pas fermé un trou, elle a acté un manque.
+      // Sur un modèle, le mode « Annoter » n'offrait donc que la navigation et l'épingle. Le
+      // geste, lui, ne demande rien de propre au nuage — un rayon vers une surface, un trait
+      // en espace objet, une résolution d'écran : `paint/` ne connaît plus que la poignée de
+      // scène commune (`viewer/sceneHandle`), que les deux viewers remplissent.
       //
-      // ARBITRAGE — elle partageait l'icône `Brush` ET la touche `P` avec le pinceau de
-      // sélection du mode « Nettoyer ». Rien ne les distinguait, et `P` ne menait jamais ici :
-      // `toolSearchOrder` cherche « Nettoyer » avant les autres modes, donc depuis
-      // « Explorer » ou « Mise en scène » la lettre armait le pinceau de sélection. C'est donc
-      // le pinceau de sélection qui a cédé la touche (passé en `M`, cf. `clean`) et l'icône
-      // (`SprayCan`) : `P` mène partout à la brosse de surface, et `Paintbrush` ne se confond
-      // ni avec elle ni avec le crayon 2D des médias plats.
+      // ARBITRAGE d'icône — `Paintbrush` est, à 17 px, la même silhouette que `Pencil` : un
+      // outil fin en diagonale. Or c'est exactement la confusion à lever (« bien différencier
+      // la brush 2D/3D en terme d'icône »). `Brush` porte une tête large et une trace de
+      // peinture : il se lit « posé SUR une surface », là où le crayon reste un tracé d'écran.
+      // Le pinceau de sélection du masque garde `SprayCan` (cf. `clean`).
+      //
+      // `P` est libre sur cette liste : le pinceau de masque du mode « Nettoyer » répond à `M`,
+      // et `toolSearchOrder` le cherche d'abord. Les deux pinceaux ne se disputent donc rien.
       id: 'paint',
       labelKey: 'tool.surfaceBrush',
-      icon: Paintbrush,
+      icon: Brush,
       key: 'P',
-      kind: 'SPLAT',
       hintKey: 'tool.surfaceBrush.hint',
     },
     {
       // Gomme de trait 3D : un clic retire le trait le plus proche — celui qu'on prépare, ou
       // celui d'un commentaire déjà envoyé dont on est l'auteur. `X` est la lettre de la gomme
       // des médias plats, et elle n'appartient pas à l'alphabet du vol (ZQSD/WASD + A/E).
+      // Elle suit la brosse sur les deux types spatiaux : une brosse sans gomme laisse le seul
+      // « tout effacer » comme retour en arrière, ce qui était le défaut d'avant le lot 8.
       id: 'paint-erase',
       labelKey: 'tool.strokeErase',
       icon: Eraser,
       key: 'X',
-      kind: 'SPLAT',
       hintKey: 'tool.strokeErase.hint',
     },
     // L'outil « Région » (`B`) a été RETIRÉ (Phase 50) : les deux viewers spatiaux le
@@ -284,6 +289,25 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
 export function toolsFor(mode: ModeId, kind: MediaKind): ReviewTool[] {
   const tools = isSpatialKind(kind) ? (SPATIAL_TOOLS[mode] ?? []) : mediaTools(mode);
   return tools.filter((t) => !t.kind || t.kind === kind);
+}
+
+/**
+ * Groupe du rail : les outils d'un mode, sous un titre, armant ce mode au clic.
+ *
+ * Le rail n'avait qu'une liste — celle du mode courant — et un mode absent de la bascule
+ * d'en-tête devenait donc inatteignable à la souris. C'est ce qui est arrivé à l'édition du
+ * nuage au lot 12 : le segment « Nettoyer » retiré, ses outils ont fini derrière un popover du
+ * viewer, alors que la demande était de retirer le segment, pas de ranger les outils. Un second
+ * groupe les ramène **à leur place**, sans rendre le segment.
+ *
+ * Le titre et les outils restent des données de `tools.ts` : le rail comme le clavier lisent
+ * `toolsFor`, et un groupe ne peut donc rien offrir qui ne soit déjà un outil déclaré.
+ */
+export interface RailSection {
+  /** Mode armé par un clic dans ce groupe. */
+  mode: ModeId;
+  titleKey: MessageKey;
+  tools: ReviewTool[];
 }
 
 /**

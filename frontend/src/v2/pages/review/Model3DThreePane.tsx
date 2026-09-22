@@ -18,6 +18,7 @@ export default function Model3DThreePane({
   loadError,
   containerRef,
   overlay,
+  editorOverlay,
   aspect,
   pip,
   notice,
@@ -33,6 +34,12 @@ export default function Model3DThreePane({
   loadError: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   overlay: ReactNode;
+  /**
+   * Overlay interactif des outils de la scène — la brosse de surface (lot 13). Contrairement à
+   * `overlay`, il CAPTE le pointeur : c'est le même slot, au même endroit, que celui du pane
+   * splat, pour que la brosse se comporte à l'identique dans les deux viewers.
+   */
+  editorOverlay?: ReactNode;
   /** Aspect du cadre de review fixe (issu de la présentation persistée) — défaut 16:9. */
   aspect?: number;
   /** Fenêtre PiP du mode layout (PipFrame — le rendu WebGL est dessiné dessous en scissor). */
@@ -73,6 +80,10 @@ export default function Model3DThreePane({
       >
         {/* Conteneur de la scène Three.js (rempli par useModel3DThree) — toujours monté */}
         <div ref={containerRef} className="absolute inset-0" />
+
+        {/* Overlay des outils de la scène (brosse) — au-dessus du canvas, sous les états */}
+        {editorOverlay}
+
         {pip}
       </ReviewFrame>
       {notice}

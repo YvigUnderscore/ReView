@@ -5,20 +5,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import SplatViewerMenus from './SplatViewerMenus';
 import { splatEditTools } from './splatChrome';
-import { defaultChromeState, type ChromeState } from '../chrome/chromeState';
 import { panelsFor } from '../chrome/panels';
 import type { SplatCompareState } from './compare/useSplatCompare';
 import type { SplatEditorState } from './editor/useSplatEditor';
 import { t } from '../../../i18n';
 
 /**
- * Les outils d'ÉDITION et les réglages de RENDU du splat vivent sur le viewer (Phase 50, lot
- * 12), dans le même langage que le popover de rendu du modèle 3D (lot 6).
+ * Les réglages de RENDU du splat vivent sur le viewer (Phase 50, lot 12), dans le même langage
+ * que le popover de rendu du modèle 3D (lot 6) : l'onglet « Affichage » du dock a disparu avec
+ * eux, et c'est l'état de l'éditeur — celui-là même qui les applique à la scène — qui les porte.
  *
- * Ce qui est vérifié ici est exactement ce que le retrait des deux segments d'en-tête doit
- * préserver : chaque outil de « Nettoyer » reste atteignable à la souris, il arme le même
- * couple mode + outil que sa lettre, l'édition se quitte sans bascule, et les réglages de rendu
- * passent par l'état de l'éditeur — celui-là même qui les applique à la scène.
+ * Les cas du popover « Édition » ont été RETIRÉS en connaissance de cause au lot 13 : ce popover
+ * n'existe plus. Il portait les outils du mode « Nettoyer », or l'utilisateur avait demandé de
+ * retirer le SEGMENT de l'en-tête, pas de ranger les outils derrière un clic. Ils sont revenus au
+ * rail (`splatChrome.splatEditRail`, vérifié par `splatChrome.test.ts` et `ToolRail.test.tsx`), et
+ * le dernier cas ci-dessous verrouille l'absence du doublon.
  */
 
 const editorState = (over: Partial<SplatEditorState> = {}) =>
@@ -32,30 +33,19 @@ const editorState = (over: Partial<SplatEditorState> = {}) =>
 
 const presState = () => ({ debugMode: 'none' as const, setDebugMode: vi.fn() });
 
-function mount(
-  opts: {
-    state?: Partial<ChromeState>;
-    showEdit?: boolean;
-    editor?: SplatEditorState;
-    compare?: SplatCompareState;
-  } = {},
-) {
-  const onState = vi.fn();
+function mount(opts: { showEdit?: boolean; editor?: SplatEditorState; compare?: SplatCompareState } = {}) {
   const editor = opts.editor ?? editorState();
   render(
     <SplatViewerMenus
-      state={{ ...defaultChromeState(), ...opts.state }}
-      onState={onState}
       editor={editor}
       showEdit={opts.showEdit ?? true}
       pres={presState()}
       compare={opts.compare}
     />,
   );
-  return { onState, editor };
+  return { editor };
 }
 
-const openEdit = () => fireEvent.click(screen.getByRole('button', { name: t('viewer.edit.title') }));
 const openRender = () => fireEvent.click(screen.getByRole('button', { name: t('viewer.render.title') }));
 
 describe('dock du splat', () => {
@@ -63,55 +53,6 @@ describe('dock du splat', () => {
     // Le libellé de l'onglet a été retiré des catalogues avec lui : c'est la composition du
     // dock qui l'atteste, seule source de vérité des onglets.
     expect(panelsFor('SPLAT').map((p) => p.id)).toEqual(['camera', 'scene', 'info', 'export']);
-  });
-});
-
-describe('SplatViewerMenus — menu d’édition', () => {
-  it('n’existe que quand l’éditeur est monté', () => {
-    mount({ showEdit: false });
-    expect(screen.queryByRole('button', { name: t('viewer.edit.title') })).not.toBeInTheDocument();
-    // Le rendu, lui, reste offert : il ne règle rien qui s'enregistre.
-    expect(screen.getByRole('button', { name: t('viewer.render.title') })).toBeInTheDocument();
-  });
-
-  it('porte tous les outils d’édition, avec leur raccourci', () => {
-    mount();
-    openEdit();
-    for (const tool of splatEditTools()) {
-      const button = screen.getByRole('button', { name: t(tool.labelKey) });
-      expect(button).toBeInTheDocument();
-      // Le raccourci est annoncé à côté du libellé, comme au rail : c'est ce qui apprend la
-      // lettre à qui clique, et la lettre reste le chemin le plus court.
-      expect(button.querySelector('.rv-railbtn__key')).toHaveTextContent(tool.key);
-    }
-  });
-
-  it('arme le même couple mode + outil que la lettre du clavier', () => {
-    const { onState } = mount();
-    openEdit();
-    fireEvent.click(screen.getByRole('button', { name: t('tool.selLasso') }));
-    expect(onState).toHaveBeenCalledWith({ mode: 'clean', tool: 'sel-lasso' });
-  });
-
-  it('montre l’outil armé comme actif, et lui seul', () => {
-    mount({ state: { mode: 'clean', tool: 'volume' } });
-    openEdit();
-    expect(screen.getByRole('button', { name: t('tool.volume') })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: t('tool.selRect') })).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  it('arme et quitte l’édition par son interrupteur — la seule sortie à la souris', () => {
-    const { onState } = mount();
-    openEdit();
-    fireEvent.click(screen.getByRole('switch', { name: t('viewer.edit.hint') }));
-    expect(onState).toHaveBeenCalledWith({ mode: 'clean' });
-  });
-
-  it('revient à l’exploration quand l’interrupteur retombe', () => {
-    const { onState } = mount({ state: { mode: 'clean', tool: 'sel-brush' } });
-    openEdit();
-    fireEvent.click(screen.getByRole('switch', { name: t('viewer.edit.hint') }));
-    expect(onState).toHaveBeenCalledWith({ mode: 'explore' });
   });
 });
 
@@ -152,5 +93,15 @@ describe('SplatViewerMenus — menu de rendu', () => {
     openRender();
     fireEvent.click(screen.getByRole('switch', { name: t('viewer.realScale.hint') }));
     expect(toggleNormalized).toHaveBeenCalled();
+  });
+});
+
+describe('le viewer ne double plus le rail', () => {
+  it('n’a plus de menu « Édition » : ses outils sont au rail, à un clic', () => {
+    mount();
+    expect(screen.queryByRole('button', { name: t('viewer.edit.title') })).not.toBeInTheDocument();
+    // Et aucun de ses outils n'est atteignable ici : un seul emplacement les porte.
+    for (const tool of splatEditTools())
+      expect(screen.queryByRole('button', { name: t(tool.labelKey) })).not.toBeInTheDocument();
   });
 });

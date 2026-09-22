@@ -14,8 +14,9 @@ import { z } from 'zod';
  *
  * Le champ manquant ne serait pas une erreur visible : `z.object` **retire** silencieusement ce
  * qu'il ne connaît pas, donc un profil de tangente nouveau serait enregistré sans son côté séparé
- * et la courbe changerait de forme d'un rechargement à l'autre. Tout nouveau champ de clé se
- * déclare ici, en `optional()`, le jour où il est écrit côté client.
+ * et la courbe changerait de forme d'un rechargement à l'autre. Tout nouveau champ de clé — et
+ * tout nouveau champ d'animation, comme la base de la Phase 50 lot 13 — se déclare ici, en
+ * `optional()`, le jour où il est écrit côté client.
  */
 
 const finite = z.number().finite();
@@ -61,6 +62,23 @@ export function channelSchema(keys: z.ZodTypeAny, bounds: { min?: number; max: n
   });
 }
 
+const vec3 = z.object({ x: finite, y: finite, z: finite });
+
+/**
+ * Pose de repli persistée **avec** l'animation (Phase 50, lot 13) : les canaux sans clé la lisent à
+ * l'échantillonnage, chez tout spectateur et à l'export. Facultative — une animation enregistrée
+ * avant elle n'en porte pas et garde le repli dynamique du client, dont le rejeu ne change pas.
+ * Bornes reprises de la pose caméra de la présentation (`media-splat.routes`) : c'est la même vue,
+ * capturée par le même viewer. Elle ne porte que les grandeurs échantillonnées — ni aspect, ni
+ * profondeur de champ : la base n'est pas une deuxième présentation.
+ */
+const cameraAnimBase = z.object({
+  position: vec3,
+  target: vec3,
+  fov: finite.min(5).max(150).optional(),
+  roll: finite.min(-Math.PI).max(Math.PI).optional(),
+});
+
 /** Animation complète (hors discriminant `type` du payload de commentaire). */
 export function cameraAnimShape(channels: z.ZodTypeAny) {
   return {
@@ -68,5 +86,6 @@ export function cameraAnimShape(channels: z.ZodTypeAny) {
     loop: z.boolean(),
     durationMs: z.number().int().min(0).max(3_600_000).optional(),
     channels: z.record(z.enum(CHANNEL_ID_VALUES), channels),
+    base: cameraAnimBase.optional(),
   };
 }

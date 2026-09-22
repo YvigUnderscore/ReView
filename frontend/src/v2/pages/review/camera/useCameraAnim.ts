@@ -16,6 +16,7 @@ import {
   moveColumn,
   moveKeysBatch,
   poseToChannelValues,
+  seedAnimBase,
   setAnimDuration,
   setChannelExtrapolation,
   upsertKey,
@@ -69,10 +70,38 @@ export function useCameraAnim(controller: CameraController) {
 
   const timeRef = useRef(0);
   const animRef = useRef(anim);
+  /**
+   * Repli **hérité** des canaux sans clé : il ne sert plus qu'aux animations qui ne portent pas
+   * leur propre base (`CameraAnimV2.base`) — celles enregistrées avant elle, dont le rejeu ne doit
+   * pas changer. Une animation neuve emporte sa base, et c'est elle qui l'emporte à
+   * l'échantillonnage (`channels/model.animBase`).
+   */
   const baseRef = useRef<SplatCamera>({ position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } });
   useEffect(() => {
     animRef.current = anim;
   }, [anim]);
+
+  /**
+   * Toute écriture susceptible de créer la **première** clé passe par ici : une animation neuve y
+   * adopte la vue courante comme base persistée, si bien que ses canaux sans clé valent la même
+   * chose pour le lecteur, pour le rig de scène et pour tout spectateur. Sans base, une animation
+   * construite au gizmo (position clée, cible non clée) voyait sa cible sauter à l'origine du monde
+   * au premier scrub. Une animation héritée est rendue telle quelle : son rejeu ne change pas.
+   *
+   * La réf est mise à jour **sur-le-champ** : dans un même tour d'événements, le geste du gizmo
+   * enchaîne `beginStroke` → `scrub` → écriture de clés, et l'effet de synchronisation d'`animRef`
+   * n'a pas encore tourné — le scrub échantillonnerait donc encore sans la base.
+   */
+  const seedBase = useCallback(
+    (view?: SplatCamera) => {
+      const next = seedAnimBase(animRef.current, view ?? captureCamera());
+      if (next === animRef.current) return next;
+      animRef.current = next;
+      setAnimState(next);
+      return next;
+    },
+    [captureCamera],
+  );
 
   // ── Édition avec historique : chaque mutation empile l'état courant (undo). ──
   const pushHistory = useCallback(() => {
@@ -104,7 +133,10 @@ export function useCameraAnim(controller: CameraController) {
 
   // Geste continu (drag d'une/plusieurs clés/tangente) : un seul snapshot au début, puis mises à
   // jour live sans empiler — un undo annule tout le geste.
-  const beginStroke = useCallback(() => pushHistory(), [pushHistory]);
+  const beginStroke = useCallback(() => {
+    pushHistory();
+    seedBase();
+  }, [pushHistory, seedBase]);
   /**
    * Déplacement groupé (multi-sélection) recalculé depuis le baseline capturé au début du drag :
    * les index restent cohérents pendant tout le geste (Phase 27).
@@ -125,15 +157,18 @@ export function useCameraAnim(controller: CameraController) {
     [],
   );
   /** Écrit/écrase plusieurs canaux au temps `t` (drag de la caméra-objet — auto-key). Live. */
-  const strokeUpsertAt = useCallback((t: number, values: Partial<Record<ChannelId, number>>) => {
-    let next = animRef.current;
-    const time = Math.max(0, Math.round(t));
-    for (const id of CHANNEL_IDS) {
-      const v = values[id];
-      if (v != null) next = upsertKey(next, id, time, v);
-    }
-    setAnimState(next);
-  }, []);
+  const strokeUpsertAt = useCallback(
+    (t: number, values: Partial<Record<ChannelId, number>>) => {
+      let next = seedBase();
+      const time = Math.max(0, Math.round(t));
+      for (const id of CHANNEL_IDS) {
+        const v = values[id];
+        if (v != null) next = upsertKey(next, id, time, v);
+      }
+      setAnimState(next);
+    },
+    [seedBase],
+  );
 
   const undo = useCallback(() => {
     setPast((p) => {
@@ -241,16 +276,15 @@ export function useCameraAnim(controller: CameraController) {
       if (!view) return;
       const time = t != null ? Math.max(0, Math.round(t)) : Math.round(timeRef.current);
       if (!animHasAnimation(animRef.current)) baseRef.current = view;
-      commit(upsertPoseAt(animRef.current, time, view));
+      commit(upsertPoseAt(seedBase(view), time, view));
     },
-    [captureCamera, commit],
+    [captureCamera, commit, seedBase],
   );
 
   /** Ajoute une clé sur un canal précis (double-clic sur une courbe du graph editor). */
   const addKey = useCallback(
-    (channel: ChannelId, t: number, v: number) =>
-      commit(upsertKey(animRef.current, channel, Math.max(0, t), v)),
-    [commit],
+    (channel: ChannelId, t: number, v: number) => commit(upsertKey(seedBase(), channel, Math.max(0, t), v)),
+    [commit, seedBase],
   );
 
   /**
@@ -264,9 +298,9 @@ export function useCameraAnim(controller: CameraController) {
       const view = captureCamera();
       const fromView = view ? poseToChannelValues(view)[channel] : undefined;
       const v = fromView ?? evalChannel(animRef.current.channels[channel], time, 0);
-      commit(upsertKey(animRef.current, channel, time, v));
+      commit(upsertKey(seedBase(view), channel, time, v));
     },
-    [captureCamera, commit],
+    [captureCamera, commit, seedBase],
   );
 
   /** Retime en direct une colonne du dopesheet (drag d'un losange de la règle). Live — appeler

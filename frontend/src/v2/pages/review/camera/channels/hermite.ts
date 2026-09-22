@@ -4,9 +4,11 @@
 import type { SplatCamera, SplatCameraKeyframe } from '../../reviewTypes';
 import { extrapolateValue } from './extrapolate';
 import {
+  animBase,
   animDuration,
   animKeyTimes,
   animPlayDuration,
+  type CameraAnimBase,
   type Channel,
   type CameraAnimV2,
   type CurveKey,
@@ -17,7 +19,10 @@ import { slopeIn, slopeOut, typeOut, weightOf } from './tangents';
  * Échantillonnage des F-curves (Phase 17) : interpolation d'Hermite cubique par segment, tangentes
  * selon le profil de **chaque côté** de chaque clé (`tangents.ts` — lissée, linéaire, plate, palier,
  * libre). Pur/testable. La pose à un temps `t` échantillonne chaque canal ; un canal absent retombe
- * sur la valeur de la pose de base (`base`).
+ * sur la valeur de la **base** : celle que l'animation porte si elle en porte une (Phase 50, lot
+ * 13), sinon le `base` que l'appelant prête. C'est `model.animBase` qui arbitre, et cet unique
+ * point de passage est ce qui garantit que le lecteur keyframe et le rig de scène — les deux
+ * échantillonneurs — lisent la même chose.
  *
  * Deux extensions de la Phase 50 (lot 7), toutes deux **inertes par défaut** — une présentation
  * enregistrée avant elles se rejoue au caractère près :
@@ -97,10 +102,11 @@ export function evalChannel(channel: Channel | undefined, t: number, fallback: n
 
 /**
  * Pose caméra au temps `timeMs`. En boucle, le temps est enroulé sur la durée ; sinon borné.
- * Les canaux absents prennent la valeur de `base` (pose de référence). `null` si l'animation n'est
- * pas jouable (moins de 2 temps de clés — le garde-fou est côté appelant, ici on renvoie `base`).
+ * Les canaux absents prennent la valeur de la base effective — celle de l'animation si elle en
+ * porte une, sinon le `base` prêté (`model.animBase`). `null` si l'animation n'est pas jouable
+ * (moins de 2 temps de clés — le garde-fou est côté appelant, ici on renvoie la base).
  */
-export function sampleAnimV2(anim: CameraAnimV2, timeMs: number, base: SplatCamera): SplatCamera {
+export function sampleAnimV2(anim: CameraAnimV2, timeMs: number, base: CameraAnimBase): SplatCamera {
   // Durée de lecture effective (override réglable ou dernier temps de clé) — Phase 27.
   const duration = animPlayDuration(anim);
   const t =
@@ -110,29 +116,33 @@ export function sampleAnimV2(anim: CameraAnimV2, timeMs: number, base: SplatCame
         ? ((timeMs % duration) + duration) % duration
         : Math.min(Math.max(timeMs, 0), duration);
   const ch = anim.channels;
+  // Base persistée si l'animation en porte une, sinon celle que l'appelant prête (repli hérité).
+  const b = animBase(anim, base);
   const pose: SplatCamera = {
     position: {
-      x: evalChannel(ch.px, t, base.position.x),
-      y: evalChannel(ch.py, t, base.position.y),
-      z: evalChannel(ch.pz, t, base.position.z),
+      x: evalChannel(ch.px, t, b.position.x),
+      y: evalChannel(ch.py, t, b.position.y),
+      z: evalChannel(ch.pz, t, b.position.z),
     },
     target: {
-      x: evalChannel(ch.tx, t, base.target.x),
-      y: evalChannel(ch.ty, t, base.target.y),
-      z: evalChannel(ch.tz, t, base.target.z),
+      x: evalChannel(ch.tx, t, b.target.x),
+      y: evalChannel(ch.ty, t, b.target.y),
+      z: evalChannel(ch.tz, t, b.target.z),
     },
   };
-  if (ch.fov || base.fov != null) pose.fov = evalChannel(ch.fov, t, base.fov ?? 60);
-  if (ch.roll || base.roll != null) pose.roll = evalChannel(ch.roll, t, base.roll ?? 0);
+  if (ch.fov || b.fov != null) pose.fov = evalChannel(ch.fov, t, b.fov ?? 60);
+  if (ch.roll || b.roll != null) pose.roll = evalChannel(ch.roll, t, b.roll ?? 0);
   return pose;
 }
 
 /**
  * « Bake » l'animation v2 en keyframes v1 échantillonnées (export glTF) : les courbes lissées sont
  * échantillonnées à `fps` sur toute la durée, plus les temps de clés exacts, pour préserver la
- * forme des F-curves dans le format d'échange (interpolation linéaire entre samples).
+ * forme des F-curves dans le format d'échange (interpolation linéaire entre samples). Les canaux
+ * non clés suivent la base de l'animation quand elle en porte une : le fichier exporté ne dépend
+ * plus de la vue de celui qui exporte.
  */
-export function bakeToKeyframes(anim: CameraAnimV2, base: SplatCamera, fps = 24): SplatCameraKeyframe[] {
+export function bakeToKeyframes(anim: CameraAnimV2, base: CameraAnimBase, fps = 24): SplatCameraKeyframe[] {
   const duration = animDuration(anim);
   const times = new Set<number>(animKeyTimes(anim));
   const step = 1000 / fps;

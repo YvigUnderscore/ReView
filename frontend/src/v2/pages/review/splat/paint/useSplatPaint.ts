@@ -11,20 +11,27 @@ import { UNDO_PRIORITY, useUndoScope } from '../../../../lib/undoScope';
 import { useUndoToast } from '../../../../lib/useUndoToast';
 import { useT } from '../../../../i18n';
 import type { SplatPaintStroke } from '../../reviewTypes';
-import type { SplatViewer } from '../useSplat';
+import type { SceneViewer } from '../../viewer/sceneHandle';
 import { loadLineModules, type LineModules } from './lineModules';
 import { DEFAULT_STROKE_PX, buildStrokeLine, decodeStrokes, disposeStrokeLine } from './strokes';
-import { makeProjector, type Viewport } from './surfaceRay';
+import { makeProjector, paintHandle, type PaintSceneHandle, type Viewport } from './surfaceRay';
 import { pickStroke } from './surfaceTrace';
 import { useStrokeGesture } from './useStrokeGesture';
 
 /**
- * Brosse de surface 3D de la review : traits peints sur la surface du splat, stockés en **espace
- * objet** et rattachés au commentaire en cours de rédaction (tableau `annotation`, comme le
- * hotspot) — non destructifs, visibles pour tous, et suivant la transformation du média.
+ * Brosse de surface 3D de la review : traits peints sur la surface de la scène, stockés en
+ * **espace objet** et rattachés au commentaire en cours de rédaction (tableau `annotation`, comme
+ * le hotspot) — non destructifs, visibles pour tous, et suivant la transformation du média.
+ *
+ * Elle sert les **deux types spatiaux** depuis le lot 13 : le hook ne reçoit plus le viewer splat
+ * mais un `SceneViewer` (`viewer/sceneHandle`), que le modèle 3D remplit aussi. Le nom du fichier
+ * et celui du hook sont restés — le type de part stocké dans les commentaires est `splat-paint`,
+ * et renommer l'un sans pouvoir renommer l'autre n'aurait fait qu'ajouter un nom de plus pour la
+ * même chose.
  *
  * Ce hook tient l'état et la persistance ; le geste vit dans `useStrokeGesture`, la géométrie
- * dans `surfaceTrace`, le rendu dans `strokes`/`strokeFrame`.
+ * dans `surfaceTrace`, le rendu dans `strokes`/`strokeFrame`, le rayon dans `surfaceRay` — seul
+ * endroit qui sache encore qu'un nuage et un maillage ne se raycastent pas pareil.
  *
  * La gomme est le second outil de la brosse (`armed === 'erase'`) : elle retire un trait en
  * préparation, et — si le spectateur est l'auteur du commentaire consulté — un trait déjà
@@ -40,8 +47,13 @@ interface ShownStroke {
   partIndex: number;
 }
 
-export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: number) {
-  const { getSceneHandle } = splat;
+export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: number) {
+  const { getSceneHandle: sceneHandle, ready } = viewer;
+  // Poignée **peignable** : la poignée commune rend `mesh` facultatif, la brosse en a besoin.
+  const getSceneHandle = useCallback(
+    (): PaintSceneHandle | null => paintHandle(sceneHandle()),
+    [sceneHandle],
+  );
   const t = useT();
   const qc = useQueryClient();
   const { done } = useUndoToast();
@@ -72,17 +84,30 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
     linesRef.current = lines;
   }, [viewed, lines]);
 
-  // Classes Line2 importées dès qu'un splat est ouvert : tout le reste est ensuite synchrone.
+  /*
+   * Classes Line2 importées dès que la scène est MONTÉE : tout le reste est ensuite synchrone.
+   *
+   * Attendre `ready` n'est pas une précaution de style — avant lui, il n'y a ni surface à peindre
+   * ni trait à afficher, et l'import se faisait en concurrence du chargement du viewer, qui a
+   * bien d'autres modules à aller chercher. L'échec de l'import est attrapé ici : la promesse
+   * d'un `import()` qui se rejette sans `catch` remonte en rejet non capturé, et la brosse se
+   * contente alors de ne pas peindre (la barre d'options reste, elle n'écrira simplement rien).
+   */
   useEffect(() => {
-    if (!isSplat) return;
+    if (!spatial || !ready) return;
     let cancelled = false;
-    void loadLineModules().then((loaded) => {
-      if (!cancelled) setLines(loaded);
-    });
+    void loadLineModules().then(
+      (loaded) => {
+        if (!cancelled) setLines(loaded);
+      },
+      () => {
+        if (!cancelled) toast.error(t('review.brush.unavailable'));
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [isSplat]);
+  }, [spatial, ready, t]);
 
   /** Construit et monte des traits dans la scène, sans toucher à la pile de rétablissement. */
   const attachStrokes = useCallback(
@@ -160,7 +185,7 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
    * mêmes touches (`lib/undoScope`), et se retire dès qu'il n'a plus rien à rendre.
    */
   useUndoScope({
-    enabled: isSplat && (armed !== null || pendingCount > 0 || redoCount > 0),
+    enabled: spatial && (armed !== null || pendingCount > 0 || redoCount > 0),
     priority: UNDO_PRIORITY.brush3d,
     canUndo: pendingCount > 0,
     canRedo: redoCount > 0,
@@ -273,11 +298,9 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
   );
 
   return {
-    isSplat,
     /** Outil de brosse armé par le rail (null : aucun — l'overlay n'est pas monté). */
-    armed: isSplat ? armed : null,
+    armed: spatial ? armed : null,
     setArmed,
-    active: isSplat && armed !== null,
     color,
     setColor,
     width,

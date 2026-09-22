@@ -10,6 +10,8 @@ import type { ReviewTool } from '../chrome/tools';
 import { DEFAULT_TRANSFORM } from '../reviewTypes';
 import type { Model3DThreeState } from '../three/useModel3DThree';
 import type { useEditHistory } from '../splat/editor/operations/history';
+import type { SplatPaintState } from '../splat/paint/useSplatPaint';
+import PaintOptions from './PaintOptions';
 import PoiOptions from '../poi/PoiOptions';
 import type { PoiDraftState } from '../poi/usePoiDraft';
 import { useT, type Tr } from '../../../i18n';
@@ -25,6 +27,10 @@ const rotations = (t: Tr) =>
  * Barre d'options du viewer 3D : les paramètres du seul outil armé. Remplace
  * `Model3DTransformBar`, qui flottait au-dessus de la scène avec ses quatre modes — les modes
  * sont devenus des outils du rail, il ne reste ici que leurs valeurs.
+ *
+ * La brosse de surface et sa gomme y arrivent au lot 13, avec **exactement** les réglages du
+ * splat (`PaintOptions`) : le mode « Annoter » d'un modèle n'offrait que la navigation et
+ * l'épingle, et l'on ne pouvait donc régler ni l'encre ni l'épaisseur du trait.
  */
 export default function Model3DOptions({
   tool,
@@ -34,6 +40,7 @@ export default function Model3DOptions({
   dirty,
   canEdit,
   poi,
+  paint,
   presentation,
 }: {
   tool: ReviewTool;
@@ -45,11 +52,14 @@ export default function Model3DOptions({
   canEdit: boolean;
   /** Points d'intérêt en préparation — mêmes options que sur le splat. */
   poi: PoiDraftState;
+  /** Brosse de surface — mêmes réglages que sur le splat, même hook. */
+  paint: SplatPaintState;
   presentation?: { busy: boolean; onSave: () => void };
 }) {
   const tr = useT();
   const t = m.transform;
   const transforming = tool.id === 'translate' || tool.id === 'rotate' || tool.id === 'scale';
+  const painting = tool.id === 'paint' || tool.id === 'paint-erase';
 
   const commit =
     mode === 'clean' && canEdit ? (
@@ -78,6 +88,8 @@ export default function Model3DOptions({
       {tool.id === 'nav' && <span className="rv-optbar__hint">{tr(tool.hintKey)}</span>}
 
       {tool.id === 'pin' && <PoiOptions poi={poi} />}
+
+      {painting && <PaintOptions tool={tool} paint={paint} />}
 
       {(tool.id === 'cam-move' || tool.id === 'cam-aim') && (
         <span className="rv-optbar__hint">{tr('camera.objectHint')}</span>

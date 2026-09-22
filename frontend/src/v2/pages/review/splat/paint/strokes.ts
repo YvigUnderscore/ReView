@@ -3,15 +3,21 @@
 
 import type { Line2 } from 'three/addons/lines/Line2.js';
 import type { SplatPaintStroke } from '../../reviewTypes';
-import type { SplatSceneHandle } from '../useSplat';
 import type { LineModules } from './lineModules';
 import { attachStrokeFrame } from './strokeFrame';
+import type { PaintSceneHandle } from './surfaceRay';
 import { strokeCenter, type Vec3 } from './surfaceTrace';
 
 /**
  * Traits de la brosse de surface 3D : (dé)sérialisation depuis le tableau `Comment.annotation`
- * (parties typées, comme les hotspots) et construction de la ligne 3D — **enfant du SplatMesh**
- * (espace objet → suit la transformation du média).
+ * (parties typées, comme les hotspots) et construction de la ligne 3D — **enfant de l'objet
+ * peint** (espace objet → suit la transformation du média), le nuage côté splat, le groupe racine
+ * côté modèle.
+ *
+ * Le type de part reste `splat-paint` bien que la brosse serve les deux types spatiaux : c'est un
+ * discriminant **écrit dans les commentaires existants**, et le renommer rendrait muets tous les
+ * traits déjà envoyés. Le schéma Zod du serveur (`lib/commentPayload`) ne regarde d'ailleurs pas
+ * le type de média.
  *
  * L'épaisseur est en **pixels d'écran** : `LineMaterial` la tient constante quel que soit le
  * zoom (cf. `lineModules`), là où l'ancien tube en unités monde grossissait en approchant et
@@ -19,9 +25,17 @@ import { strokeCenter, type Vec3 } from './surfaceTrace';
  * 1 à 5 « relatif », il vaut 1 à 5 pixels : à peu près le même trait à l'écran.
  */
 
-/** Bornes de l'épaisseur, en pixels d'écran (la barre d'options s'y tient aussi). */
+/**
+ * Bornes de l'épaisseur, en pixels d'écran — **la même unité que l'anneau du curseur** de
+ * l'overlay et que le champ de la barre d'options : `linewidth` est une largeur en pixels quand
+ * `worldUnits` est faux, et `strokeFrame` donne au matériau la résolution en pixels CSS. Ce que
+ * l'on règle est donc exactement ce que l'on voit sous le pointeur.
+ *
+ * Le plafond est passé de 16 à 32 px (lot 13) : entourer un objet entier dans un plan large
+ * demandait un trait plus épais que ce que la brosse acceptait.
+ */
 export const MIN_STROKE_PX = 1;
-export const MAX_STROKE_PX = 16;
+export const MAX_STROKE_PX = 32;
 export const DEFAULT_STROKE_PX = 3;
 
 /** Épaisseur ramenée dans les bornes — un trait relu ne peut pas être nul ni démesuré. */
@@ -71,13 +85,23 @@ export function decodeStrokes(annotation: unknown): SplatPaintStroke[] {
 }
 
 /**
- * Construit la ligne 3D d'un trait (à ajouter comme enfant du SplatMesh).
+ * Construit la ligne 3D d'un trait (à ajouter comme enfant de l'objet peint).
  *
  * `frustumCulled` est laissé à faux : la sphère englobante d'une `LineGeometry` ignore
  * l'épaisseur écran, et un trait rasant le bord du cadre disparaissait d'un coup.
+ *
+ * Deux réglages tiennent le trait sur une **vraie surface**, ce que le nuage n'imposait pas :
+ *
+ *  - `polygonOffset` rapproche le trait de l'œil dans le tampon de profondeur. Un trait peint
+ *    exactement sur un maillage y est coplanaire : sans ce décalage, il s'y bat en z et sort en
+ *    pointillés clignotants. Le nuage n'écrivant pas la profondeur, le réglage y est sans effet.
+ *  - `raycast` devient inerte : les traits sont enfants de l'objet peint, et le rayon de la
+ *    brosse descend la hiérarchie sur un modèle. Sans cela, peindre par-dessus un trait existant
+ *    accrocherait le trait au lieu de la surface — et la gomme, qui mesure à l'écran, n'a pas
+ *    besoin d'être touchée par un rayon.
  */
 export function buildStrokeLine(
-  handle: SplatSceneHandle,
+  handle: PaintSceneHandle,
   lines: LineModules,
   stroke: SplatPaintStroke,
 ): Line2 {
@@ -90,10 +114,14 @@ export function buildStrokeLine(
     worldUnits: false,
     // L'occlusion approchée module l'opacité : sans transparence, elle n'aurait aucun effet.
     transparent: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -4,
   });
   const line = new lines.Line2(geometry, material);
   line.renderOrder = 5; // au-dessus des splats (qui n'écrivent pas la profondeur)
   line.frustumCulled = false;
+  line.raycast = () => {};
   attachStrokeFrame(line, handle, stroke.normal ?? null, strokeCenter(stroke.points));
   return line;
 }

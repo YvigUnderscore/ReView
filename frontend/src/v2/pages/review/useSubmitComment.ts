@@ -63,7 +63,9 @@ export function useSubmitComment(opts: {
     let annotation: unknown;
     if (spatial) {
       const parts: unknown[] = [];
-      if (kind === 'SPLAT') parts.push(...paint.serializePending()); // traits du painter (V9)
+      // Traits de la brosse de surface (V9) : les DEUX types spatiaux depuis le lot 13 — la
+      // brosse était restée au splat, et un trait peint sur un modèle n'aurait pas été envoyé.
+      parts.push(...paint.serializePending());
       // Mode layout : anim caméra (F-curves v2) jointe au commentaire (au lieu de dessiner).
       //
       // La part EST l'animation, étalée telle quelle. Elle était recopiée champ par champ

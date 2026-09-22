@@ -4,10 +4,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Line2 } from 'three/addons/lines/Line2.js';
 import type { SplatPaintStroke } from '../../reviewTypes';
-import type { SplatSceneHandle } from '../useSplat';
 import type { LineModules } from './lineModules';
 import { buildStrokeLine, disposeStrokeLine } from './strokes';
-import { raycastSurface, type Viewport } from './surfaceRay';
+import { raycastSurface, type PaintSceneHandle, type Viewport } from './surfaceRay';
 import { breaksRun, flattenObject, runNormal, type SurfaceSample } from './surfaceTrace';
 
 /**
@@ -45,7 +44,7 @@ export function useStrokeGesture({
   width,
   onStrokes,
 }: {
-  getSceneHandle: () => SplatSceneHandle | null;
+  getSceneHandle: () => PaintSceneHandle | null;
   /** Classes `Line2`, ou `null` si l'import à la demande n'est pas encore arrivé. */
   getLines: () => LineModules | null;
   color: string;
@@ -70,7 +69,7 @@ export function useStrokeGesture({
   }, []);
 
   /** Reconstruit la ligne d'aperçu de la portion en cours (WYSIWYG : le trait final, déjà). */
-  const refresh = useCallback((handle: SplatSceneHandle, lines: LineModules, run: Run) => {
+  const refresh = useCallback((handle: PaintSceneHandle, lines: LineModules, run: Run) => {
     if (run.samples.length < 2) return;
     if (run.line) disposeStrokeLine(run.line);
     const normal = runNormal(run.samples);

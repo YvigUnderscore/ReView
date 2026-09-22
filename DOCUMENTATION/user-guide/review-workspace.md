@@ -2,7 +2,7 @@
 
 *The five fixed places every viewer shares — mode switch, tool rail, options bar, inspector dock, bottom row.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-22
 
 Every media type — video, image, 3D model, Gaussian splat — opens in the **same workspace**.
 Only the tools change; their places never do. Nothing floats over the media except what is
@@ -72,7 +72,7 @@ write, and the modes that were listed twice now have a single control each:
 | --- | --- |
 | **Annotate** | the *Annotate* button of the comment composer, right-click in the viewer on video and image, or any drawing-tool letter |
 | **Staging** (3D, splat) | the **Staging** switch of the *Camera* panel, in its *Framing* group |
-| **Clean up** (splat) | the **Edit** popover in the top-left corner of the viewer, or any of its tool letters |
+| **Clean up** (splat) | the *Edit* group of the tool rail, or any of its tool letters |
 
 In all cases `1` brings you back to the first mode, and it is the way out when the switch is not
 there to click.
@@ -105,7 +105,7 @@ tooltip, and next to its label when the rail is expanded (chevron at the bottom 
 the choice is remembered per media type).
 
 Tools a viewer does not implement are not shown at all, rather than shown inert: the 3D viewer
-has no surface brush and no mask brush, the splat viewer has no screen region, and the
+has no mask brush, the splat viewer has no screen region, and the
 video rail has no zoom button. That last one is a rail entry, not a capability — **the video
 picture does zoom and pan**, from the wheel, the middle button and the keyboard (see
 [Video review](review-video.md#zoom-frame-and-composition-guides)).
@@ -127,13 +127,16 @@ and on the video player's own keys.
 | Mode | Tools |
 | --- | --- |
 | Explore | Navigate `V` · Focus `C` (splat only) · Point of interest `I` |
-| Annotate | Navigate `V` · Surface brush `P` · Stroke eraser `X` (both splat only) · Pin `I` |
+| Annotate | Navigate `V` · Surface brush `P` · Stroke eraser `X` · Pin `I` |
 | Staging | Navigate `V` · Place the camera `T` · Aim the camera `R` · Focus `C` (splat only) |
 | Clean up | Navigate `V` · Rectangle `B` · Lasso `L` · Mask brush `M` · Cutting volume `O` (all four splat only) · Move `T` · Rotate `R` · Scale `S` |
 
-On a splat the seven *Clean up* tools are also listed in the **Edit** popover of the viewer, with
-the same buttons and the same letters — one list, shown in two places, rather than two lists to
-keep in step.
+On an editable splat the rail carries a **second group**, titled *Edit*: the seven *Clean up*
+tools, always visible, under the tools of the current mode. Clicking one arms the tool and the
+mode in a single gesture — there is no switch to throw first. The group appears only while the
+editor is mounted (you can manage the media, the version is unpublished, the viewer is ready);
+without it those seven letters do nothing either, so the keyboard never reaches a tool the rail
+does not show. **Navigate**, at the top of the first group, is how you leave the clean-up.
 
 Below a separator, the spatial viewers add two **view actions**: **Fit the selection or the
 object** (`F`) and **Home view** (`H`). Video and image do not show them — the image viewer
@@ -147,8 +150,8 @@ video player answers to `0` and `1` instead.
 > you are — they are the standard DCC transform keys, and the rail is searched in that order.
 > Staging keeps `T` and `R` for its camera tools while you are already in Staging. This is the
 > keyboard path into a mode whose header segment no longer exists, and it is why the mode still
-> needs a switch to *leave* it: the **Edit** popover on a splat, the *Staging* switch of the
-> *Camera* panel, or `1`.
+> needs something else to *leave* it: **Navigate** at the top of the rail, the *Staging* switch
+> of the *Camera* panel, or `1`.
 
 ## Options bar
 
@@ -234,7 +237,7 @@ allowed on top of the picture.
 | Wipe bar, A/B and diff overlays | Compare mode — the overlay takes the **same** zoom and pan transform as the picture, so the two images stay superimposed at any magnification |
 | Composition guides | The viewer right-click menu, on video and image |
 | Camera PiP, axis triad | 3D and splat viewers |
-| The **Render** popover, and **Edit** on an editable splat | Top-left corner of the two spatial viewers. They sit outside the review frame, so the letterbox guide and the annotation coordinates are unaffected, and they open downwards along the left edge rather than over the middle of the picture |
+| The **Render** popover | Top-left corner of the two spatial viewers. It sits outside the review frame, so the letterbox guide and the annotation coordinates are unaffected, and it opens downwards along the left edge rather than over the middle of the picture |
 | Live participant cursors | A live session: the driver's pointer, normalised to the media frame, in the author's colour, gone after 2.5 s of stillness |
 | Corner badges | Zoom rate (click it to return to fit), playback speed when it is not ×1, buffering, quality switching |
 
@@ -342,7 +345,7 @@ is in a text field no shortcut fires.
 **The mode switch is missing entirely.** Either you are signed in with the `CLIENT` role
 (read-only exploration by design), or the media is left with a single listed mode — which is
 always the case on a splat. Nothing is out of reach: the *Camera* panel arms **Staging**, the
-**Edit** popover of the viewer arms the splat clean-up, the composer arms **Annotate**, and `1`
+*Edit* group of the tool rail arms the splat clean-up, the composer arms **Annotate**, and `1`
 takes you back to *Explore*.
 
 **A panel I used to open is not in the dock any more.** Five tabs left the flat viewers in

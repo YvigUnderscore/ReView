@@ -4,14 +4,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { normalizeAnim } from '../camera/channels/model';
 import type { ChromeState } from '../chrome/chromeState';
-import type { ReviewMode } from '../chrome/modes';
-import { toolsFor, type ReviewTool } from '../chrome/tools';
+import { DEFAULT_MODE, type ModeId, type ReviewMode } from '../chrome/modes';
+import { toolsFor, type RailSection, type ReviewTool } from '../chrome/tools';
 import { useChromeState } from '../chrome/useChromeState';
 import type { MediaResp } from '../reviewTypes';
 import type { EditorTool } from './editor/useSplatEditor';
 import type { PresentationState } from './presentation/usePresentation';
 import { readCullingOff, writeCullingOff } from './scene/cullingDefault';
-import { splatSwitcherModes } from './splatChrome';
+import { splatEditRail, splatSwitcherModes, splatToolsFor } from './splatChrome';
 import type { SplatViewer } from './useSplat';
 
 /** Tracé de sélection armé dans l'overlay ancré à la vue (null : aucun tracé en cours). */
@@ -37,6 +37,11 @@ export interface SplatViewState {
   culling: { off: boolean; onOff: (off: boolean) => void };
   /** Outil armé résolu dans le mode courant (repli : premier outil du mode). */
   activeTool: ReviewTool;
+  /**
+   * Second groupe du rail : les outils d'édition du nuage, ramenés à gauche au lot 13. Absent
+   * sans éditeur monté — et la même absence vaut pour le clavier (`splatToolsFor`).
+   */
+  railExtra?: RailSection;
   /** Tracé de sélection à armer dans l'overlay, déduit de l'outil de l'éditeur. */
   selectTool: SplatSelectTool | null;
   /** L'animation caméra diffère de la présentation persistée (bouton « Enregistrer »). */
@@ -54,12 +59,15 @@ export function useSplatView({
   data,
   pres,
   editorTool,
+  showEdit,
 }: {
   splat: SplatViewer;
   data: MediaResp;
   pres: PresentationState;
   /** Outil courant de l'éditeur splat (l'overlay de tracé en dépend). */
   editorTool: EditorTool;
+  /** Éditeur monté : sans lui, les outils d'édition ne sont ni au rail ni au clavier. */
+  showEdit: boolean;
 }): SplatViewState {
   // Garde de vol : clic droit maintenu = mode de navigation, le clavier appartient au vol et
   // aucune lettre d'outil n'arme de gizmo (`S` armait l'Échelle en reculant).
@@ -67,10 +75,13 @@ export function useSplatView({
   // `modes` est la bascule que le splat offre VRAIMENT : « Mise en scène » et « Nettoyer » l'ont
   // quittée (cf. `splatChrome`), il n'y reste qu'« Explorer » — la bascule s'efface donc. Les
   // touches numériques lisent la même liste : un segment absent de l'en-tête ne s'arme pas au
-  // clavier. Les LETTRES d'outils, elles, continuent de mener aux deux modes, `toolsFor` restant
-  // la seule autorité du rail comme du clavier.
+  // clavier. Les LETTRES d'outils, elles, continuent de mener aux deux modes — et à eux seuls :
+  // `toolsOf` est la MÊME liste que celle du rail, éditeur absent compris, donc aucune lettre
+  // n'arme un outil qui n'est nulle part à l'écran.
+  const toolsOf = useCallback((mode: ModeId) => splatToolsFor(mode, showEdit), [showEdit]);
   const { state, update } = useChromeState('SPLAT', {
     modes: SWITCHER_MODES,
+    tools: toolsOf,
     isFlying: splat.isFlying,
   });
   // Culling Spark actif par défaut, sauf préférence contraire — mémorisée par utilisateur.
@@ -110,8 +121,11 @@ export function useSplatView({
           ? 'brush'
           : null;
 
+  // Repli en deux crans : le premier outil du mode, sinon celui du mode par défaut — « Nettoyer »
+  // sans éditeur monté n'a aucun outil, et la barre d'options a besoin d'un descripteur.
+  const modeTools = toolsOf(state.mode);
   const activeTool =
-    toolsFor(state.mode, 'SPLAT').find((tool) => tool.id === state.tool) ?? toolsFor(state.mode, 'SPLAT')[0];
+    modeTools.find((tool) => tool.id === state.tool) ?? modeTools[0] ?? toolsFor(DEFAULT_MODE, 'SPLAT')[0];
 
   return {
     state,
@@ -119,6 +133,7 @@ export function useSplatView({
     modes: SWITCHER_MODES,
     culling: { off: cullingOff, onOff: onCullingOff },
     activeTool,
+    railExtra: splatEditRail(showEdit),
     selectTool,
     animDirty,
   };

@@ -13,12 +13,13 @@ import { mediaReviewAspect } from '../reviewAspect';
 import CompareControl from './compare/CompareControl';
 import { useSplatCompare } from './compare/useSplatCompare';
 import SpatialCompareHeader from '../three/SpatialCompareHeader';
-import PaintOverlay from './paint/PaintOverlay';
+import SurfaceBrushLayer from './paint/SurfaceBrushLayer';
 import type { SplatPaintState } from './paint/useSplatPaint';
 import { usePresentation } from './presentation/usePresentation';
 import { useSplatEditor } from './editor/useSplatEditor';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import ReviewChrome from '../chrome/ReviewChrome';
+import { useSpatialAnnotate } from '../chrome/useSpatialAnnotate';
 import { DEFAULT_MODE } from '../chrome/modes';
 import { DEFAULT_TOOL } from '../chrome/tools';
 import { usePoiPlacement } from '../poi/usePoiPlacement';
@@ -99,12 +100,16 @@ export default function SplatReview({
   const compare = useSplatCompare(splat, data.media);
   // État de vue : chrome (mode/outil/panneau), culling, tracé de sélection armé, écart entre
   // l'animation courante et la présentation persistée.
-  const { state, update, modes, culling, activeTool, selectTool, animDirty } = useSplatView({
+  const { state, update, modes, culling, activeTool, railExtra, selectTool, animDirty } = useSplatView({
     splat,
     data,
     pres,
     editorTool: editor.tool,
+    showEdit,
   });
+  // Bouton « Annoter » du composer ↔ mode « Annoter » du rail : sans ce pont, cliquer « Annoter »
+  // sur un nuage n'armait que le crayon 2D et les outils de la scène restaient invisibles.
+  useSpatialAnnotate({ state, update, ann });
 
   // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo des clés.
   const cameraRig = useCameraSceneRig({
@@ -163,6 +168,9 @@ export default function SplatReview({
       // il n'y reste qu'« Explorer » — elle s'efface donc. Même liste que celle des touches
       // numériques, pour qu'un segment absent de l'en-tête ne s'arme pas au clavier.
       modes={modes}
+      // Second groupe du rail : les outils d'édition du nuage. Le segment « Nettoyer » reste hors
+      // de l'en-tête, mais ses outils sont de nouveau à un clic (lot 13).
+      railExtra={railExtra}
       headerRight={
         <SpatialCompareHeader
           versionId={data.media.versionId}
@@ -258,31 +266,15 @@ export default function SplatReview({
           overlay={overlay}
           notice={placingPoi ? <PoiNotice count={ann.poi.points.length} /> : undefined}
           exit={exit}
-          settings={
-            <SplatViewerMenus
-              state={state}
-              onState={update}
-              editor={editor}
-              showEdit={showEdit}
-              pres={pres}
-              compare={compare}
-            />
-          }
+          settings={<SplatViewerMenus editor={editor} showEdit={showEdit} pres={pres} compare={compare} />}
           pip={
             pres.layout.layoutMode && ready ? (
               <PipFrame label={t('review.layoutCamera')} aspect={frameAspect} onRect={splat.setPipRect} />
             ) : undefined
           }
           editorOverlay={
-            paint.armed && ready ? (
-              <PaintOverlay
-                mode={paint.armed}
-                color={paint.color}
-                width={paint.width}
-                getCanvas={() => getSceneHandle()?.dom ?? null}
-                gesture={paint.gesture}
-                onErase={paint.eraseAt}
-              />
+            paint.armed ? (
+              <SurfaceBrushLayer paint={paint} ready={ready} getCanvas={splat.getDom} />
             ) : showEdit && selectTool && ready ? (
               <SelectionOverlay
                 tool={selectTool}

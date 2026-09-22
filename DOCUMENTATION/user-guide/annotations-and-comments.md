@@ -2,7 +2,7 @@
 
 *One commenting system for all four viewers: threads, states, payloads, mentions, deep links and hand-off.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-22
 
 Every review — video, image, 3D, splat — shares the same commenting system: threads, states,
 mentions, reactions, attachments, voice notes, deep links and kanban hand-off. What changes
@@ -214,7 +214,8 @@ card is clicked. On top of that, the composer can bundle:
 
 - a **point of interest** dropped on the surface (the `I` tool), which brings everyone back
   to the exact spot rather than to a general direction;
-- **Surface brush strokes** painted on the surface (splat, the `P` tool), stored in object space
+- **Surface brush strokes** painted on the surface (the `P` tool, on 3D models as well as
+  splats), stored in object space
   so they follow the object if it is transformed;
 - the **camera animation** you built — press *Attach this animation to the next comment* in
   the transport, which only appears once an animation exists. A toast confirms the attachment

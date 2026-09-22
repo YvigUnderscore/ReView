@@ -79,13 +79,52 @@ describe('chromeCommandFor — une frappe, une commande', () => {
     });
   });
 
-  it('le painter 3D reste au splat : la lettre ne l’arme pas sur un modèle', () => {
-    expect(chromeCommandFor('p', ctx('SPLAT', 'annotate'))).toEqual({
-      action: 'tool',
-      mode: 'annotate',
-      tool: 'paint',
-    });
-    expect(chromeCommandFor('p', ctx('MODEL_3D', 'annotate'))).toBeNull();
+  /**
+   * RÉÉCRIT en connaissance de cause (Phase 50, lot 13). Le cas précédent verrouillait
+   * « le painter 3D reste au splat » — la restriction `kind: 'SPLAT'` posée au lot 8, alors que
+   * la demande disait « dans les outils d'annotation 3D/splat ». Elle n'a donc jamais fermé un
+   * trou : elle a acté un manque, et sur un modèle le mode « Annoter » n'offrait que la
+   * navigation et l'épingle. La brosse et sa gomme servent maintenant les deux types spatiaux.
+   */
+  it('la brosse de surface et sa gomme s’arment sur les DEUX types spatiaux', () => {
+    for (const kind of ['SPLAT', 'MODEL_3D'] as const) {
+      expect(chromeCommandFor('p', ctx(kind, 'annotate'))).toEqual({
+        action: 'tool',
+        mode: 'annotate',
+        tool: 'paint',
+      });
+      expect(chromeCommandFor('x', ctx(kind, 'annotate'))).toEqual({
+        action: 'tool',
+        mode: 'annotate',
+        tool: 'paint-erase',
+      });
+      // Et depuis n'importe quel mode : la lettre bascule vers celui qui porte l'outil.
+      expect(chromeCommandFor('p', ctx(kind, 'explore'))).toEqual({
+        action: 'tool',
+        mode: 'annotate',
+        tool: 'paint',
+      });
+    }
+  });
+
+  it('le mode « Annoter » d’un modèle ne se réduit plus à la navigation et l’épingle', () => {
+    const ids = toolsFor('annotate', 'MODEL_3D').map((tool) => tool.id);
+    expect(ids).toContain('paint');
+    expect(ids).toContain('paint-erase');
+    // Les outils de nuage, eux, restent propres au splat : ils masquent des splats.
+    expect(toolsFor('clean', 'MODEL_3D').map((tool) => tool.id)).not.toContain('sel-rect');
+  });
+
+  it('aucun outil du rail n’est sans lettre, et aucune lettre ne sert deux outils d’un mode', () => {
+    // Le défaut soldé au lot 4 : une lettre orpheline, ou deux outils d'un même mode sur la même
+    // touche — la seconde n'aurait jamais répondu, `chromeCommandFor` rendant la première.
+    for (const kind of KINDS)
+      for (const mode of modesFor(kind)) {
+        const tools = toolsFor(mode.value, kind);
+        const keys = tools.map((tool) => tool.key);
+        expect(new Set(keys).size).toBe(keys.length);
+        for (const tool of tools) expect(tool.key).toMatch(/^[A-Z]$/);
+      }
   });
 
   /**

@@ -9,9 +9,16 @@ import { SegmentedControl } from '../../../components/ui/segmented-control';
 import ToolRail from './ToolRail';
 import InspectorDock from './InspectorDock';
 import { useReviewHeaderSlots } from '../header/reviewHeaderSlots';
-import { canSwitchMode, switcherModesFor, type ModeId, type ReviewMode } from './modes';
+import { DEFAULT_MODE, canSwitchMode, switcherModesFor, type ModeId, type ReviewMode } from './modes';
 import { panelsFor, type PanelId } from './panels';
-import { toolsFor, viewActionsFor, type ReviewTool, type ToolId, type ViewAction } from './tools';
+import {
+  toolsFor,
+  viewActionsFor,
+  type RailSection,
+  type ReviewTool,
+  type ToolId,
+  type ViewAction,
+} from './tools';
 import type { ChromeState } from './chromeState';
 import './chrome.css';
 import { useT } from '../../../i18n';
@@ -31,6 +38,7 @@ export default function ReviewChrome({
   role,
   modes: modesProp,
   tools: toolsProp,
+  railExtra,
   headerLeft,
   headerRight,
   options,
@@ -58,6 +66,17 @@ export default function ReviewChrome({
    * siens, dont un outil de navigation qui ne promet ni panoramique ni zoom — il n'en a pas.
    */
   tools?: ReviewTool[];
+  /**
+   * Groupe d'outils supplémentaire, sous celui du mode courant : le rail d'un mode **valide mais
+   * absent de la bascule**. C'est par là que l'édition du nuage revient au rail (Phase 50, lot
+   * 13) — le segment « Nettoyer » a quitté l'en-tête, ses outils ne devaient pas quitter la
+   * gauche de l'écran pour autant.
+   *
+   * Tant que ce mode est le mode courant, le premier groupe montre celui du mode par défaut :
+   * le rail garde la même forme d'un bout à l'autre, et cliquer un de ses outils est la sortie
+   * du mode — sans quoi l'on s'y enfermerait, la bascule n'ayant plus de segment à rendre.
+   */
+  railExtra?: RailSection;
   /**
    * Média, version, navigation — à gauche de l'en-tête. La review les fournit par contexte
    * (`ReviewHeaderSlots`) ; cette prop sert au lecteur de montage, qui n'a pas ce contexte.
@@ -104,7 +123,15 @@ export default function ReviewChrome({
   // Plus de liste d'outils « masqués » (Phase 50) : elle ne filtrait que le rail, et la lettre
   // armait quand même l'outil retiré. Un outil qu'un viewer n'implémente pas n'existe plus du
   // tout — soit il porte son type de média (`kind`), soit il a été supprimé de `tools.ts`.
-  const tools = toolsProp ?? toolsFor(state.mode, kind);
+  //
+  // Mode du PREMIER groupe : celui du chrome, sauf quand c'est le mode du groupe supplémentaire
+  // — on montre alors celui du mode par défaut, qui est la sortie.
+  const mainMode = railExtra?.mode === state.mode ? DEFAULT_MODE : state.mode;
+  const tools = toolsProp ?? toolsFor(mainMode, kind);
+  const sections: RailSection[] = [
+    { mode: mainMode, titleKey: 'rail.tools', tools },
+    ...(railExtra && railExtra.tools.length > 0 ? [railExtra] : []),
+  ];
   const panels = panelsFor(kind);
   // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
   const switchable = canSwitchMode(role, modes.length);
@@ -149,10 +176,11 @@ export default function ReviewChrome({
 
       <div className="flex min-h-0 flex-1">
         <ToolRail
-          tools={tools}
+          sections={sections}
           actions={onViewAction ? viewActionsFor(kind) : []}
+          mode={state.mode}
           tool={state.tool}
-          onTool={(tool: ToolId) => onState({ tool })}
+          onTool={(tool: ToolId, mode: ModeId) => onState({ tool, mode })}
           onAction={(action) => onViewAction?.(action)}
           labels={state.labels}
           onLabels={() => onState({ labels: !state.labels })}

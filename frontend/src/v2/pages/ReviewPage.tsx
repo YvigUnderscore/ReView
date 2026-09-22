@@ -120,9 +120,14 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
   const splatUrl = data?.media.kind === 'SPLAT' ? data.url : null;
   const splat = useSplat(splatUrl, data?.media.originalName ?? '', mediaReviewAspect(data).value);
-  // Brosse de surface 3D : traits joints au prochain commentaire ; la gomme réécrit ceux
-  // d'un commentaire déjà envoyé, d'où l'identifiant du média (invalidation du fil).
-  const paint = useSplatPaint(splat, data?.media.kind === 'SPLAT', id);
+  // Brosse de surface : traits joints au prochain commentaire ; la gomme réécrit ceux d'un
+  // commentaire déjà envoyé, d'où l'identifiant du média (invalidation du fil).
+  //
+  // Le MÊME hook sert les deux types spatiaux depuis le lot 13 (il ne lit que la poignée de
+  // scène commune) : on lui passe donc le viewer du média ouvert. Un seul appel, un seul état —
+  // deux instances auraient donné deux piles de traits, dont une invisible à l'envoi.
+  const spatialMedia = data?.media.kind === 'MODEL_3D' || data?.media.kind === 'SPLAT';
+  const paint = useSplatPaint(data?.media.kind === 'MODEL_3D' ? model3d : splat, spatialMedia, id);
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
@@ -177,10 +182,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
       ann.setAnnotating(false);
       ann.setViewed(shapes as unknown as Shape[]);
     } else ann.setViewed(null);
-    // Traits de la brosse 3D : rendus sur le splat pour ce commentaire. L'identifiant n'est
-    // passé que si le spectateur en est l'auteur — c'est ce que la gomme peut réécrire.
-    if (data?.media.kind === 'SPLAT')
-      paint.showFromAnnotation(c.annotation, c.author?.id === userId ? c.id : null);
+    // Traits de la brosse : rendus dans la scène pour ce commentaire — modèle comme nuage
+    // (lot 13). L'identifiant n'est passé que si le spectateur en est l'auteur : c'est ce que la
+    // gomme peut réécrire.
+    if (spatialMedia) paint.showFromAnnotation(c.annotation, c.author?.id === userId ? c.id : null);
     // Ratio capturé (3D: cameraState.aspect) pour caler l'overlay
     const cam = c.cameraState as { aspect?: number } | null;
     ann.setViewedAspect(cam?.aspect ?? null);

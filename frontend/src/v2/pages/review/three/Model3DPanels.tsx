@@ -11,6 +11,7 @@ import Model3DInfo from './Model3DInfo';
 import Model3DPerfGroup from './Model3DPerfGroup';
 import ScenePanel from '../panels/ScenePanel';
 import ScenegraphPanel from '../panels/ScenegraphPanel';
+import UsdRecomposeGroup from '../panels/UsdRecomposeGroup';
 import { focalToFov, fovToFocal } from '../camera/focal';
 import { shouldKeyLens } from '../camera/shotCamera';
 import { evalChannel } from '../camera/channels/hermite';
@@ -55,6 +56,7 @@ export default function Model3DPanels({
   scene,
   onSaveOverride,
   savingOverride,
+  canRecompose,
   onRecompose,
   onImportAnim,
   onOrbit,
@@ -84,7 +86,13 @@ export default function Model3DPanels({
   /** Enregistre l'override de base — absent apres publication ou sans droits (46.D). */
   onSaveOverride?: () => void;
   savingOverride?: boolean;
-  /** Recomposition USD — gestionnaire, média non publié, source USD présente. */
+  /** Recomposition USD autorisée (gestionnaire + source USD) : son groupe vit au panneau Scène. */
+  canRecompose?: boolean;
+  /**
+   * Raccourci de la fiche technique vers ce groupe. Il ouvrait une modale qui recouvrait le
+   * viewer ; il n'ouvre plus rien — il amène au panneau Scène, où la recomposition se règle
+   * sans quitter la scène des yeux.
+   */
   onRecompose?: () => void;
   onImportAnim?: (file: File) => void;
   /** Preset orbite (gestionnaire). */
@@ -189,6 +197,13 @@ export default function Model3DPanels({
                 onSave={onSaveOverride}
                 saving={savingOverride}
               />
+            ) : undefined
+          }
+          // Recomposition au contact de l'arbre qu'elle change (lot 13) : la modale qui
+          // recouvrait le viewer est devenue ce groupe, qui défile avec le panneau.
+          recompose={
+            canRecompose && data.modelSource?.usd ? (
+              <UsdRecomposeGroup mediaId={data.media.id} usd={data.modelSource.usd} />
             ) : undefined
           }
         />

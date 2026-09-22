@@ -32,6 +32,7 @@ import Model3DCompareBar from './Model3DCompareBar';
 import Model3DPanels from './three/Model3DPanels';
 import { useModel3DChrome } from './three/useModel3DChrome';
 import Model3DOptions from './options/Model3DOptions';
+import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import ReviewChrome from './chrome/ReviewChrome';
 import { DEFAULT_MODE } from './chrome/modes';
 import { DEFAULT_TOOL } from './chrome/tools';
@@ -42,8 +43,8 @@ import ClipTransport from './transport/ClipTransport';
 import CurvesDrawer from './transport/CurvesDrawer';
 import TrackSwitch, { type TrackId } from './transport/TrackSwitch';
 import PipFrame from './viewer/PipFrame';
-import UsdRecomposeDialog from './UsdRecomposeDialog';
 import { useUsdScene } from './three/useUsdScene';
+import { useSceneEditShortcuts } from './three/useSceneEditShortcuts';
 import { normalizeOverride } from './three/sceneOverride';
 import { usePrimPointer } from './three/usePrimPointer';
 import { mediaReviewAspect } from './reviewAspect';
@@ -66,6 +67,7 @@ export default function Model3DReview({
   reprocessing,
   onReprocess,
   onSaved,
+  paint,
   overlay,
   exit,
 }: {
@@ -79,6 +81,11 @@ export default function Model3DReview({
   reprocessing: boolean;
   onReprocess: () => void;
   onSaved: (patch: SplatEditsPatch) => void;
+  /**
+   * Brosse de surface — instanciée par la page, comme pour le splat : les traits partent avec le
+   * commentaire, et c'est le même hook des deux côtés (lot 13).
+   */
+  paint: SplatPaintState;
   overlay: ReactNode;
   /** Sortie de la lecture d'un commentaire annoté — descendue dans le viewer, comme l'overlay. */
   exit: ReactNode;
@@ -154,7 +161,7 @@ export default function Model3DReview({
   // Recomposition et override USD : réservés aux gestionnaires, et autorisés APRÈS
   // publication (Phase 50) — la couche d'override est rejouée par-dessus le fichier
   // d'origine, qui n'est jamais réécrit. Le verrou ne garde que le montage et le `transform`.
-  const [recomposeOpen, setRecomposeOpen] = useState(false);
+  // La recomposition n'est plus une modale (lot 13) : son groupe vit au panneau Scène.
   const saveOverride = useSaveSceneOverride({
     mediaId: data.media.id,
     allowed: canManage,
@@ -182,17 +189,11 @@ export default function Model3DReview({
   // Une scène USD donne aux gizmos une seconde cible — l'override de scène par prim (46.N), qui
   // ne passe pas par la transformation de version et n'en a donc pas les droits. `isFlying` est
   // la garde de vol du chrome : clic droit maintenu, aucune lettre n'arme d'outil.
-  const { state, update, modes, tools } = useModel3DModes(
+  const { state, update, modes, tools, activeTool, brushLayer } = useModel3DModes(
     { canEditTransform: showEditTools, hasScenegraph: scene.tree.length > 0 },
-    model3d.isFlying,
+    model3d,
+    { ann, paint },
   );
-  // Mode Mise en scène = atelier caméra : y entrer sort de la caméra du plan, en sortir y rentre.
-  // Seule écriture du « dans / hors caméra » — modèle en tête de `viewer/useLayoutMode`.
-  const { setLayoutMode } = model3d;
-  useEffect(() => {
-    setLayoutMode(state.mode === 'stage');
-  }, [state.mode, setLayoutMode]);
-
   // Raccourcis du transport caméra (piste caméra seulement — la piste clips a son transport).
   useCameraShortcuts({
     anim: cam.anim,
@@ -201,12 +202,20 @@ export default function Model3DReview({
     undoActive: state.mode === 'stage',
     fps: data.fps ?? 24,
   });
-  const { history, dirty } = useModel3DChrome({ state, m: model3d, cameraRig: rig, usdScene: scene });
+  const { history, dirty } = useModel3DChrome({ state, m: model3d, paint, cameraRig: rig, usdScene: scene });
+  // Réagencement de la scène USD au clavier : Suppr masque la sélection (override non
+  // destructif), Ctrl+Z/Y la rendent — sur l'historique du viewer, pas une pile de plus.
+  // L'éditeur de courbes garde Suppr quand il est ouvert : ce sont ses clés qu'on y supprime.
+  useSceneEditShortcuts({
+    scene,
+    history,
+    deleteEnabled: state.drawer !== 'curves',
+    isFlying: model3d.isFlying,
+  });
 
   // Palette Ctrl+K (B3) : commandes cadrer/lecture/clé/orbite, extraites dans leur hook.
   useModel3DCommands(cam, model3d, canManage, !!data.splatPresentation, measure);
 
-  const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0];
   // Points d'intérêt : ARMER L'OUTIL, C'EST ÊTRE EN PLACEMENT — le clic suivant dans la vue
   // pose un point, sans bouton intermédiaire. Même hook et même geste que sur le splat.
   const placingPoi = activeTool.id === 'pin';
@@ -216,8 +225,7 @@ export default function Model3DReview({
     ann,
     onExit: () => update({ tool: DEFAULT_TOOL }),
   });
-  const hasClips = model3d.animations.length > 0;
-  const trackSwitch = <TrackSwitch track={track} onTrack={setTrack} hasClips={hasClips} />;
+  const trackSwitch = <TrackSwitch track={track} onTrack={setTrack} hasClips={!!model3d.animations.length} />;
 
   return (
     <ReviewChrome
@@ -248,6 +256,7 @@ export default function Model3DReview({
           dirty={dirty}
           canEdit={showEditTools}
           poi={ann.poi}
+          paint={paint}
           presentation={canManage ? { busy: cam.busy, onSave: () => void cam.save?.() } : undefined}
         />
       }
@@ -271,7 +280,8 @@ export default function Model3DReview({
           scene={scene}
           onSaveOverride={saveOverride.run}
           savingOverride={saveOverride.busy}
-          onRecompose={canRecompose ? () => setRecomposeOpen(true) : undefined}
+          canRecompose={canRecompose}
+          onRecompose={canRecompose ? () => update({ panel: 'scene' }) : undefined}
           onImportAnim={canManage ? cam.importGltf : undefined}
           onOrbit={canManage ? () => cam.applyOrbitPreset() : undefined}
           onClearPresentation={cam.clear && data.splatPresentation ? () => void cam.clear?.() : undefined}
@@ -316,6 +326,7 @@ export default function Model3DReview({
               loadError={model3d.loadError}
               containerRef={model3d.containerRef}
               overlay={overlay}
+              editorOverlay={brushLayer}
               exit={exit}
               recording={canManage && cam.anim.autoKey}
               settings={<Model3DRenderMenu inspect={inspect} variants={variants} />}
@@ -356,14 +367,6 @@ export default function Model3DReview({
           </ContextMenuContent>
         )}
       </ContextMenu>
-      {canRecompose && usd && (
-        <UsdRecomposeDialog
-          open={recomposeOpen}
-          onOpenChange={setRecomposeOpen}
-          mediaId={data.media.id}
-          usd={usd}
-        />
-      )}
     </ReviewChrome>
   );
 }

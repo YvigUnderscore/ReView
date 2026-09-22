@@ -51,6 +51,7 @@ export default function ScenePanel({
   turntable,
   perf,
   scenegraph,
+  recompose,
 }: {
   grid: { visible: boolean; onToggle: (v: boolean) => void };
   axes?: { visible: boolean; onToggle: (v: boolean) => void };
@@ -75,6 +76,12 @@ export default function ScenePanel({
   };
   /** Arbre de prims USD (46.C) — absent pour un media sans scenegraph. */
   scenegraph?: ReactNode;
+  /**
+   * Recomposition de la scène USD (45.F) — absente sans source USD ou sans droits. Posée ici,
+   * et non plus dans une modale : elle change les variantes que l'arbre juste au-dessus
+   * affiche, et on la règle en tournant autour de la scène.
+   */
+  recompose?: ReactNode;
   perf: {
     /** LOD et culling : splat uniquement. */
     lod?: { mode: LodMode; onMode: (m: LodMode) => void };
@@ -92,6 +99,7 @@ export default function ScenePanel({
     <>
       {/* Scenegraph USD (46.C) en tête : c'est la structure de la scene, le reste la decore. */}
       {scenegraph && <Group title={t('scenegraph.title')}>{scenegraph}</Group>}
+      {recompose}
       <Group title={t('viewer.guides.title')}>
         <Row label={t('viewer.guides.grid')}>
           <Switch checked={grid.visible} onCheckedChange={grid.onToggle} label={t('viewer.guides.grid')} />

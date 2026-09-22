@@ -78,6 +78,32 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     expect(annotationSchema.safeParse(parts).success).toBe(true);
   });
 
+  it('garde la base de pose de l’animation jointe', () => {
+    // La part est STRICTE : une base omise du schéma partagé ferait échouer l'envoi du
+    // commentaire. Et retirée en silence, elle ferait rejouer les canaux non clés sur la vue de
+    // chaque spectateur — la cible sauterait à l'origine du monde chez le relecteur.
+    const base = { position: { x: 9, y: 3, z: 4 }, target: { x: 1, y: 0.5, z: -2 }, fov: 50 };
+    const part = {
+      type: 'camera-anim',
+      version: 2,
+      loop: true,
+      base,
+      channels: {
+        px: {
+          keys: [
+            { t: 0, v: 0, mode: 'auto' },
+            { t: 1_000, v: 10, mode: 'auto' },
+          ],
+        },
+      },
+    };
+    const [parsed] = annotationSchema.parse([part]) as [typeof part];
+    expect(parsed.base).toEqual(base);
+    // Et une animation sans base reste acceptée : les commentaires déjà envoyés n'en ont pas.
+    const { base: _sansBase, ...nu } = part;
+    expect(annotationSchema.safeParse([nu]).success).toBe(true);
+  });
+
   it('garde la durée de lecture de l’animation jointe', () => {
     // Le rejeu doit être à l'identique : `durationMs` fixe la fin de boucle, et sans elle
     // l'animation reçue rebouclerait sur son dernier temps de clé. Le front la laissait sur le

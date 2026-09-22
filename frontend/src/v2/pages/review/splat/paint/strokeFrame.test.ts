@@ -4,8 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { Line2 } from 'three/addons/lines/Line2.js';
-import type { SplatSceneHandle } from '../useSplat';
 import { GHOST_OPACITY, attachStrokeFrame, ghostOpacity } from './strokeFrame';
+import type { PaintSceneHandle } from './surfaceRay';
 
 /** Entretien par image, appelé avec le minimum dont il se sert réellement. */
 type Upkeep = (
@@ -26,7 +26,7 @@ function fakeHandle(meshPosition: THREE.Vector3 = new THREE.Vector3()) {
   const mesh = new THREE.Object3D();
   mesh.position.copy(meshPosition);
   mesh.updateMatrixWorld(true);
-  return { THREE, mesh } as unknown as SplatSceneHandle;
+  return { THREE, mesh } as unknown as PaintSceneHandle;
 }
 
 const renderer = { getSize: (target: THREE.Vector2) => target.set(1280, 720) };

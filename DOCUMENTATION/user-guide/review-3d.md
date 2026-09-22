@@ -2,7 +2,7 @@
 
 *A DCC-style viewport for models and USD scenes: navigation, scene graph, ReView overrides, inspection, comparison and lighting.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-22
 
 3D media open in a Three.js viewer built to feel like a DCC viewport rather than a web
 preview: you orbit and fly, you select a prim, you switch a variant, you put a gizmo on
@@ -21,7 +21,7 @@ a second command in the header:
 | **Explore** | the first segment, `1` — the resting state, and the only mode a client is served |
 | **Clean up** | the second segment, `2`, or any of `T` / `R` / `S`. The segment appears only when the gizmos have somewhere to write: the right to edit the version transform, or a USD scene graph to override |
 | **Staging** | the **Staging** switch of the *Camera* panel (*Framing* group), which arms the whole camera workshop |
-| **Annotate** | the *Annotate* button of the comment composer, or a tool letter (`I`) |
+| **Annotate** | the *Annotate* button of the comment composer, or a tool letter (`P`, `X` or `I`) |
 
 ## Opening a 3D media
 
@@ -168,6 +168,8 @@ read from the analyser rather than from the glTF nodes. Prims that exist but are
 | `F` with the pointer **over the scene graph** | **Reveal** the selected prim instead: the tree unfolds down to it, lifting the search if it was hiding it. The camera does not move |
 | Right-click a row, **or the object in the viewer** | The prim menu below (a *brief* right-click: dragging or holding the button stays flight) |
 | `T` / `R` / `S` | Move, rotate or scale the selected prims — the letters reach the **Clean up** gizmos from any mode, the gizmo appears on the geometry, and the delta goes into the ReView override |
+| `Delete` | **Hide** the selected prims, as many as are selected, in one step. It hides exactly what is outlined — the component when you picked in the viewer, the exact prim after an `Alt`+click or a click in the tree — and writes it into the ReView override. Nothing is removed from the USD file, which is never rewritten; a staging clone is not hidden this way, it is deleted from its own menu |
+| `Ctrl`/`⌘`+`Z`, `Ctrl`+`Y`, `Ctrl`+`Shift`+`Z` | Undo and redo what you just did to the scene — a hide, a gizmo move, a group transform — in the order you did it. One keystroke reaches one history: a drawing in progress takes it first, the viewer's own history otherwise, and the curve editor keeps `Delete` for its selected keys while it is open |
 
 The prim menu carries the **variant sets** of the prim *and of its ancestors* — you click a
 mesh, but the variant is authored higher up, and that is where it has to be written — then
@@ -313,11 +315,22 @@ actually opened and composed:
 | **Rig** | Present when the scene carries `UsdSkel` skinning |
 | **Variant sets** | Each set with the value currently in place; when the converter could not apply the selection that was asked for, the group says so |
 
-At the bottom of the panel, **Recompose from the USD** re-runs the conversion through an
-overlay layer with another **purpose** (Render, Proxy or Guide) and a different option for
-each variant set. The original USD file is never modified. The button appears only for someone
-who can manage the media, on an unpublished version — after publication, recomposing is
-refused and the answer is a new version.
+**Recomposing** re-runs the conversion through an overlay layer with another **purpose**
+(Render, Proxy or Guide) and a different option for each variant set. The original USD file is
+never modified — that is why it stays available after publication; only someone who can manage
+the media sees it.
+
+It lives in the *Scene* panel, in a **Recompose the USD scene** group right under the scene
+graph: pick the purpose, pick an option per variant set, then press **Recompose from the USD**.
+The variant list scrolls on its own, so the button stays where you left it however many sets the
+scene exposes. *Recompose from the USD* at the bottom of the *Info* panel is a shortcut to that
+group, next to the sheet that describes the same variants.
+
+This used to be a modal dialog. It was centred with no height limit and no scrolling, so a
+production scene with dozens of variant sets ran off both edges of the window — half the lists
+and the submit button out of reach, by wheel or by keyboard — and its overlay made the viewer
+untouchable, exactly when you want to orbit the scene you are recomposing. In the dock it sits
+beside the viewport instead: you change a setting, you fly around, you look.
 
 ## Lighting & environment
 
@@ -376,6 +389,28 @@ and the file's clips:
 Skinning is reliable: rigs are normalised without their animation fighting the framing, and
 skinned or morphed meshes stay visible throughout the motion, with no culling pop.
 
+## Painting on the surface
+
+An area is not a point. The **surface brush** (`P`) paints a stroke that sticks to the geometry,
+in **Annotate**, next to the **stroke eraser** (`X`) that takes one stroke back per click. It is
+the same tool the splat viewer carries, with the same options bar — four ink colours, a thickness
+from 1 to 32 px, undo, redo and clear — and the same gesture, described in full on
+[Splat review](review-splat.md#annotating-brush-pin-camera). Two things are proper to a model:
+the ray follows the **mesh**, so a stroke lands on the face you can see rather than on a bounding
+box, and a stroke sitting flat on a surface is drawn slightly in front of it so it cannot flicker
+in and out of the geometry it describes.
+
+Strokes are stored in **object space**: they follow the prim if it is moved, and they replay for
+every viewer of the comment. They are an annotation, never an edit — the model is not touched.
+
+> [!NOTE]
+> The *Annotate* button of the composer now arms the **mode**, not just the flat pencil. Before
+> this, clicking it on a scene armed a 2D drawing layer over the whole frame with its default
+> pencil and nothing else: the rail stayed in *Explore*, so the brush, the eraser, the pin and
+> their settings were nowhere to be found, and the layer swallowed the clicks meant for the
+> surface. Arming a scene tool puts the flat pencil away for the same reason — one of them has
+> to have the pointer.
+
 ## Pinning a point, and what a comment replays
 
 The **pin** answers "which face exactly?", and it answers it several times over: one comment
@@ -411,6 +446,7 @@ were looking at:
 | The **section plane** | Active or not, axis, position, flip |
 | The **HDRI lighting** | Environment, exposure, rotation, background, shadow ground |
 | The surface pins | The numbered points on the geometry |
+| The **surface strokes** | What the brush painted, on the faces it was painted on |
 | A scene proposal | The prim override described above |
 | A camera animation | Played back, from Staging |
 | 2D drawings | Anchored to the delivery frame |
@@ -425,8 +461,8 @@ another HDRI.
 |---|---|
 | **Camera** | Focal length in mm (7–400) · tilt · saved views with their `Alt`+*n* chips · delivery aspect (read-only) · fit and home · the **Staging** switch · Orbit preset · Clear the presentation |
 | **Lighting** | HDRI, exposure, Y rotation, HDRI as background, shadow ground · save or clear the project default · OCIO display and view |
-| **Scene** | USD scenegraph (search, eye, padlock, right-click, *Undo* / *Save for everyone*) · ground grid · section plane · turntable · performance counters |
-| **Info** | Live render counters · technical sheet · dimensions, real size and the measure tool · USD scene sheet · textures · **Recompose from the USD** |
+| **Scene** | USD scenegraph (search, eye, padlock, right-click, *Undo* / *Save for everyone*) · **Recompose the USD scene** · ground grid · section plane · turntable · performance counters |
+| **Info** | Live render counters · technical sheet · dimensions, real size and the measure tool · USD scene sheet · textures · a shortcut to **Recompose from the USD** |
 | **Export** | Original file · **Import an animation** (glTF/GLB, or an Alembic camera exported to JSON samples) · **Camera animation (glTF)** · **Capture the view** |
 
 Camera import and export are detailed on [Camera animation](camera-animation.md) and
@@ -493,7 +529,7 @@ replayed only when someone selects it, so the published asset stays exactly as d
 The USD carries a `lookVariant` with *clean* and *dirty*. Right-click the prim in the tree —
 or the object itself in the viewer — and switch: the option is already baked into the
 converted file, so the change is instant and works on published media. If the combination you
-want was not baked, the menu says so; recompose from the *Info* panel, before publication.
+want was not baked, the menu says so; recompose from the *Scene* panel, just under the tree.
 
 ### Lighting a whole show the same way
 
@@ -530,9 +566,9 @@ When there is no unresolved reference and the model is still grey, look at the *
 row instead — without the `native` badge, materials were approximated.
 
 **A variant option is greyed out or marked as not baked.** The conversion only bakes the
-combinations it was asked for. Recompose the scene from the *Info* panel with that selection —
-possible on unpublished media only. If the USD scene group says the selection was not applied,
-the converter that ran does not handle variants at all.
+combinations it was asked for. Recompose the scene from the *Scene* panel with that selection —
+the original file is untouched, so this works on published media too. If the USD scene group says
+the selection was not applied, the converter that ran does not handle variants at all.
 
 **Moving a prim is refused, or nothing saves.** Saving the media's override needs both the
 right to manage the media and an unpublished version. After publication the override is

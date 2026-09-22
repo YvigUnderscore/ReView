@@ -3,13 +3,15 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { SplatSceneHandle } from '../useSplat';
-import { makeProjector, raycastSurface } from './surfaceRay';
+import { makeProjector, paintHandle, raycastSurface, type PaintSceneHandle } from './surfaceRay';
 
 /**
  * Le nuage est remplacé par un **plan** : `SplatMesh.raycast` est la seule chose que la brosse
  * lui demande, et un plan la satisfait exactement comme une surface réelle. Rien ici ne touche
  * au GPU — `Raycaster`, `Matrix4` et la caméra sont du calcul pur.
+ *
+ * Depuis le lot 13 la brosse sert aussi le modèle 3D : le second jeu de cas décrit la différence
+ * — un nuage répond au rayon lui-même, un modèle porte sa géométrie dans ses enfants.
  */
 const VIEWPORT = { width: 200, height: 200 };
 
@@ -33,7 +35,42 @@ function fakeHandle(meshPosition = new THREE.Vector3(), planeZ = 0) {
       hits.push({ distance: raycaster.ray.origin.distanceTo(point), point, object: mesh });
     },
   });
-  return { THREE, camera, mesh } as unknown as SplatSceneHandle;
+  return { THREE, camera, mesh } as unknown as PaintSceneHandle;
+}
+
+/** Objet dont le raycast pose un point à `z`, à la façon d'une surface plane. */
+function planeAt(z: number, name: string) {
+  const object = new THREE.Object3D();
+  object.name = name;
+  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -z);
+  Object.assign(object, {
+    raycast: (
+      raycaster: THREE.Raycaster,
+      hits: { distance: number; point: THREE.Vector3; object: THREE.Object3D }[],
+    ) => {
+      const point = new THREE.Vector3();
+      if (!raycaster.ray.intersectPlane(plane, point)) return;
+      hits.push({ distance: raycaster.ray.origin.distanceTo(point), point, object });
+    },
+  });
+  return object;
+}
+
+/**
+ * Poignée d'un **modèle** : `mesh` est le groupe racine (espace des traits, comme côté splat) et
+ * `modelObject` l'objet du modèle chargé — c'est lui, et lui seul, que le rayon interroge.
+ */
+function fakeModelHandle() {
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+  camera.position.set(0, 0, 10);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  camera.updateProjectionMatrix();
+  const mesh = new THREE.Object3D();
+  const modelObject = new THREE.Object3D();
+  mesh.add(modelObject);
+  mesh.updateMatrixWorld(true);
+  return { THREE, camera, mesh, modelObject } as unknown as PaintSceneHandle;
 }
 
 describe('raycastSurface', () => {
@@ -88,5 +125,48 @@ describe('makeProjector', () => {
   it('refuse un point derrière la caméra au lieu de rendre un pixel plausible', () => {
     const project = makeProjector(fakeHandle(), VIEWPORT);
     expect(project(0, 0, 20)).toBeNull();
+  });
+});
+
+describe('surface peinte d’un modèle 3D', () => {
+  it('descend dans les enfants du modèle — un groupe ne répond pas lui-même au rayon', () => {
+    const handle = fakeModelHandle();
+    // Sans enfant peignable, le rayon ne touche rien : le groupe racine n'a pas de géométrie.
+    expect(raycastSurface(handle, [100, 100], VIEWPORT, 0)).toBeNull();
+    handle.modelObject!.add(planeAt(0, 'surface'));
+    handle.mesh.updateMatrixWorld(true);
+    const sample = raycastSurface(handle, [100, 100], VIEWPORT, 0);
+    expect(sample).not.toBeNull();
+    expect(sample!.depth).toBeCloseTo(10, 5);
+  });
+
+  it('ignore ce qui n’est pas la surface du modèle — traits déjà posés, clones de comparaison', () => {
+    const handle = fakeModelHandle();
+    handle.modelObject!.add(planeAt(0, 'surface'));
+    // Un trait est enfant du groupe RACINE, plus près de la caméra que la surface : sans le
+    // ciblage sur `modelObject`, peindre par-dessus un trait accrocherait le trait.
+    handle.mesh.add(planeAt(5, 'trait'));
+    handle.mesh.updateMatrixWorld(true);
+    const sample = raycastSurface(handle, [100, 100], VIEWPORT, 0);
+    expect(sample!.depth).toBeCloseTo(10, 5);
+  });
+
+  it('écarte les options de variante invisibles, toutes cuites au même endroit', () => {
+    const handle = fakeModelHandle();
+    const hidden = planeAt(5, 'variante cachée');
+    hidden.visible = false;
+    handle.modelObject!.add(hidden, planeAt(0, 'variante visible'));
+    handle.mesh.updateMatrixWorld(true);
+    const sample = raycastSurface(handle, [100, 100], VIEWPORT, 0);
+    expect(sample!.depth).toBeCloseTo(10, 5);
+  });
+});
+
+describe('paintHandle', () => {
+  it('refuse une poignée sans objet à peindre — la scène n’est pas montée', () => {
+    expect(paintHandle(null)).toBeNull();
+    expect(paintHandle({ THREE } as unknown as PaintSceneHandle)).toBeNull();
+    const handle = fakeModelHandle();
+    expect(paintHandle(handle)).toBe(handle);
   });
 });

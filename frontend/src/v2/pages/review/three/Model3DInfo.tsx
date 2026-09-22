@@ -66,7 +66,11 @@ export default function Model3DInfo({
   /** Dimensions réelles + outil de mesure (39.G). */
   measure: ModelMeasureState;
   m: Model3DThreeState;
-  /** Recomposition USD — gestionnaire, média non publié, source USD présente. */
+  /**
+   * Raccourci vers la recomposition USD, qui vit au panneau Scène depuis le lot 13. Le bouton
+   * n'ouvre plus de modale : il amène là où la sélection de variantes se règle en regardant
+   * la scène. Absent sans droits ou sans source USD.
+   */
   onRecompose?: () => void;
 }) {
   const t = useT();
@@ -111,7 +115,7 @@ export default function Model3DInfo({
       }
       action={
         onRecompose && (
-          <Button size="sm" variant="outline" onClick={onRecompose}>
+          <Button size="sm" variant="outline" title={t('usd.recomposeInScene')} onClick={onRecompose}>
             <Layers size={13} />
             {t('usd.recomposeFrom')}
           </Button>
