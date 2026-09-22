@@ -378,14 +378,30 @@ skinned or morphed meshes stay visible throughout the motion, with no culling po
 
 ## Pinning a point, and what a comment replays
 
-The **pin** answers "which face exactly?". It is on the rail in **Explore** (as *Point of
-interest*) and in **Annotate** (as *Pin*), both under `I`, and it works the same way in both:
-arm it — the button in the options bar, or the tool letter — and the viewer takes over. A
-banner reads *Click the surface to place the point*, the cursor becomes a crosshair, and the
-point lands **where you click**. A click in empty space places nothing and keeps the previous
-point; a drag stays an orbit; `Esc` disarms.
+The **pin** answers "which face exactly?", and it answers it several times over: one comment
+can carry a whole list of numbered points.
 
-Selecting the comment later brings everyone back to that point — and to the rest of what you
+Arming the tool **is** placing. It sits on the rail in **Explore** (as *Point of interest*) and
+in **Annotate** (as *Pin*), both under `I`; the moment it is armed the viewer takes over — a
+banner reads *Click the surface to place the point*, the cursor becomes a crosshair, and the
+point lands where you click. There is no second button to press. A click in empty space places
+nothing and says so; a drag stays an orbit; `Esc` hands the rail back to the resting tool.
+
+Keep clicking and the points stack up, numbered in the order you placed them. While the comment
+is still being written, each badge is live: drag one to move its point, click one to jump to its
+row, and the row's cross removes it. Every point takes a remark of its own, and images of its
+own — the same thumbnails and carousel as any comment attachment.
+
+Sending produces **one** comment carrying the whole set. Its remarks are copied into the body,
+numbered, so the client portal, the note export and the ShotGrid bridge need no special case.
+Reading it back, the numbered rows sit under the text: click a number and the camera flies to
+that point. Points are stored in **object space**, so the replay holds for every viewer, and
+follows the object if it is moved.
+
+The same tool, the same badges and the same rows work on a gaussian splat: there is one
+implementation, not two.
+
+Selecting the comment later brings everyone back to those points — and to the rest of what you
 were looking at:
 
 | A 3D comment carries | Replayed when the comment is selected |
@@ -394,7 +410,7 @@ were looking at:
 | The **display mode** | Shaded, wireframe, normals, matcap or UV checker |
 | The **section plane** | Active or not, axis, position, flip |
 | The **HDRI lighting** | Environment, exposure, rotation, background, shadow ground |
-| The surface pin | The point on the geometry |
+| The surface pins | The numbered points on the geometry |
 | A scene proposal | The prim override described above |
 | A camera animation | Played back, from Staging |
 | 2D drawings | Anchored to the delivery frame |

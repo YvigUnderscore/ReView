@@ -213,19 +213,25 @@ The **Annotate** mode carries 3D tools rather than 2D drawing.
   from a comment you wrote yourself, in which case the comment is rewritten on the spot. The
   dashed ring shows how close the click has to be. Strokes from someone else's comment are
   refused — the eraser says so rather than pretending.
-- **Pin** (`I`, also on the rail in Explore as *Point of interest*) anchors the comment to a
-  point on the surface. Arm it and the viewer takes over: a banner reads *Click the surface to
-  place the point*, the cursor becomes a crosshair, and the anchor lands **where you click**.
-  A click in empty space places nothing and keeps the previous point; a drag stays an orbit;
-  `Esc` disarms. The pin is stored in object space too, so it follows the cloud if the
-  transform changes.
+- **Pin** (`I`, also on the rail in Explore as *Point of interest*) anchors the comment to one
+  or more points on the surface. Arming the tool **is** placing: a banner reads *Click the
+  surface to place the point*, the cursor becomes a crosshair, and each click drops a point,
+  numbered in the order you place them. A click in empty space places nothing and says so; a
+  drag stays an orbit; `Esc` hands the rail back. While the comment is being written the badges
+  are live — drag one to move its point, click one to reach its row, remove it from there. Each
+  point takes its own remark and its own images, and sending produces **one** comment carrying
+  the set, with the remarks copied numbered into the body. Clicking a number on the comment
+  flies the camera back to that point. Points are stored in object space, so they follow the
+  cloud if the transform changes. The right-click entry *Place a point of interest here* adds to
+  the same list — two ways to aim, one set of points, and the same implementation as the 3D
+  viewer.
 
 A splat comment can carry more than a stroke and a point:
 
 | Attached | Replayed when the comment is selected |
 |---|---|
 | The camera view | The viewpoint you were on |
-| The surface pin | The point on the cloud |
+| The surface pins | The numbered points on the cloud |
 | Paint strokes | The strokes, from any angle |
 | A **camera animation** | Loaded into the transport and **played**, from the Staging mode |
 | Reference images | Staged in the composer, pinned to the comment |
@@ -350,7 +356,8 @@ uploaded file is still intact if you got the box wrong.
 ### A note on a detail nobody else can find
 
 In a point cloud, "the crack near the door" is meaningless. Arm the **Pin** (`I`), click the
-crack, write the note. Anyone selecting that comment lands on the point. If the note is about
+crack, write the note. Anyone selecting that comment lands on the point — and if the pass turned
+up four cracks, click all four: they leave as one comment, numbered, each with its own remark. If the note is about
 an area rather than a point, use the surface brush to paint over it — the stroke sticks to the
 surface and reads from any angle.
 
