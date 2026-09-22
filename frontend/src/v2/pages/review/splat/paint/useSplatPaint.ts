@@ -184,7 +184,7 @@ export function useSplatPaint(splat: SplatViewer, isSplat: boolean, mediaId: num
   }, []);
 
   // Rendu des traits du commentaire consulté. L'index de part est conservé trait par trait :
-  // c'est lui qui permet d'en retirer un sans toucher aux autres parts (hotspot, anim caméra).
+  // c'est lui qui permet d'en retirer un sans toucher aux autres parts (points, anim caméra).
   useEffect(() => {
     for (const shown of shownRef.current) disposeStrokeLine(shown.line);
     shownRef.current = [];

@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, type RefObject } from 'react';
-import type { Hotspot3D, SplatTransform } from '../../reviewTypes';
+import type { SplatTransform } from '../../reviewTypes';
 import type { FlyControls } from '../../viewer/flyControls';
 import type { PipRect } from '../../viewer/pipWindow';
 import type { RenderGate } from '../../viewer/renderScheduler';
-import { toNdc } from '../../three/usdPicking';
-import { applySplatTransform, parseHotspotPoint } from './meshPose';
+import { applySplatTransform } from './meshPose';
 import type { PointCloud } from './pointCloud';
-import { raycastAt, raycastCenter as raycastCenterCore } from './raycast';
 import { applyRenderModeToScene, type RenderMode } from './renderModes';
 import type { SplatHandles, SplatScene, SplatSceneHandle } from './splatViewerTypes';
 import type { SplatStats, StatsSampler } from './stats';
@@ -19,7 +17,6 @@ import { applyCulling } from './viewerConfig';
 export interface SplatSceneRefs {
   sceneRef: RefObject<SplatScene | null>;
   threeRef: RefObject<typeof import('three') | null>;
-  hotspotRef: RefObject<ReturnType<typeof parseHotspotPoint>>;
   captureReq: RefObject<((d: string | null) => void) | null>;
   pointsRef: RefObject<PointCloud | null>;
   statsRef: RefObject<StatsSampler | null>;
@@ -31,41 +28,15 @@ export interface SplatSceneRefs {
 }
 
 /**
- * Poignées impératives du viewer splat : raycast, hotspot, miniature, transformation, modes de
- * rendu, stats, culling, PiP. Extraites de `useSplat` (budget lignes), qui garde le cycle de vie
+ * Poignées impératives du viewer splat : miniature, transformation, modes de rendu, stats,
+ * culling, PiP. Les points d'intérêt n'en font plus partie : ils sont passés au hook partagé
+ * `poi/usePoiMarkers`, le même que celui du viewer 3D. Extraites de `useSplat` (budget lignes), qui garde le cycle de vie
  * de la scène et la boucle de rendu — ici, rien ne monte ni ne démonte quoi que ce soit, chaque
  * fonction lit les refs au moment de l'appel. Ordre d'origine conservé.
  */
 export function useSplatHandles(refs: SplatSceneRefs): SplatHandles {
-  const { sceneRef, threeRef, hotspotRef, captureReq, pointsRef, statsRef } = refs;
+  const { sceneRef, threeRef, captureReq, pointsRef, statsRef } = refs;
   const { frameCbs, flyRef, pipRectRef, gate } = refs;
-
-  const raycastCenter = useCallback((): Hotspot3D | null => {
-    const s = sceneRef.current;
-    const THREE = threeRef.current;
-    if (!s || !THREE) return null;
-    return raycastCenterCore(THREE, s.camera, s.mesh);
-  }, [sceneRef, threeRef]);
-
-  /** Hotspot posé sous le pointeur (coordonnées client) — placement au clic dans le viewer. */
-  const hotspotAtPointer = useCallback(
-    (clientX: number, clientY: number): Hotspot3D | null => {
-      const s = sceneRef.current;
-      const THREE = threeRef.current;
-      if (!s || !THREE) return null;
-      const rect = s.renderer.domElement.getBoundingClientRect();
-      return raycastAt(THREE, s.camera, s.mesh, toNdc(clientX, clientY, rect));
-    },
-    [sceneRef, threeRef],
-  );
-
-  const showHotspot = useCallback(
-    (hs: Hotspot3D | null) => {
-      const THREE = threeRef.current;
-      hotspotRef.current = hs && THREE ? parseHotspotPoint(THREE, hs) : null;
-    },
-    [hotspotRef, threeRef],
-  );
 
   const captureThumbnail = useCallback(
     (): Promise<string | null> =>
@@ -176,9 +147,6 @@ export function useSplatHandles(refs: SplatSceneRefs): SplatHandles {
   );
 
   return {
-    raycastCenter,
-    hotspotAtPointer,
-    showHotspot,
     captureThumbnail,
     applyTransform,
     setBaseFlip,

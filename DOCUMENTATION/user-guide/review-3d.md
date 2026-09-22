@@ -11,9 +11,17 @@ delta ReView stores next to the media and replays.
 
 All four media types share the same five places — mode switch, tool rail, options bar,
 inspector dock, bottom row. See [The review workspace](review-workspace.md) for the layout,
-the modes and the keyboard map; this page covers what is specific to 3D models. The mode
-switch offers **Explore** (`1`), **Staging** (`2`) and **Clean up** (`3`); **Annotate** is
-armed from the comment composer or by pressing a tool letter.
+the modes and the keyboard map; this page covers what is specific to 3D models.
+
+The mode switch is short here, because a mode that already had a switch of its own does not need
+a second command in the header:
+
+| Mode | How you enter it |
+|---|---|
+| **Explore** | the first segment, `1` — the resting state, and the only mode a client is served |
+| **Clean up** | the second segment, `2`, or any of `T` / `R` / `S`. The segment appears only when the gizmos have somewhere to write: the right to edit the version transform, or a USD scene graph to override |
+| **Staging** | the **Staging** switch of the *Camera* panel (*Framing* group), which arms the whole camera workshop |
+| **Annotate** | the *Annotate* button of the comment composer, or a tool letter (`I`) |
 
 ## Opening a 3D media
 
@@ -159,7 +167,7 @@ read from the analyser rather than from the glTF nodes. Prims that exist but are
 | `F` with a prim selected | Fly the camera to it and frame it |
 | `F` with the pointer **over the scene graph** | **Reveal** the selected prim instead: the tree unfolds down to it, lifting the search if it was hiding it. The camera does not move |
 | Right-click a row, **or the object in the viewer** | The prim menu below (a *brief* right-click: dragging or holding the button stays flight) |
-| `3` then `T` / `R` / `S` | Move, rotate or scale the selected prims — the gizmo appears on the geometry and the delta goes into the ReView override |
+| `T` / `R` / `S` | Move, rotate or scale the selected prims — the letters reach the **Clean up** gizmos from any mode, the gizmo appears on the geometry, and the delta goes into the ReView override |
 
 The prim menu carries the **variant sets** of the prim *and of its ancestors* — you click a
 mesh, but the variant is authored higher up, and that is where it has to be written — then
@@ -211,7 +219,8 @@ set-dressing notes, not for instancing a crowd.
 
 ### Render modes
 
-The *Display* panel offers five modes, as a row of icons (hover for the name): **Shaded**,
+The **Render** popover in the **top-left corner of the viewer** offers five modes, as a row of
+icons (hover for the name): **Shaded**,
 **Wireframe**, **Normals**, **Matcap** and **UV checker**. Matcap replaces every material
 with a neutral clay ball, which is how you judge a silhouette without the textures arguing
 about it; the UV checker maps a coloured chequerboard so stretched or badly oriented UVs show
@@ -221,9 +230,15 @@ materials are restored when you return to Shaded, and the file is never touched.
 A **Rig skeleton** switch overlays the bones, drawn through the geometry, to debug skinning;
 it follows the animation. The row only appears on rigged models.
 
+These settings used to be a *Display* tab of the dock — at the far side of the window, behind a
+fold, for switches you try in bursts (shaded → wireframe → matcap → shaded) while your eyes are
+on the geometry. The tab is gone; the popover holds the same content, rendered by the same
+component as the splat viewer's own **Render** popover, so a setting added to one arrives in
+both or in neither.
+
 ### File variants and embedded cameras
 
-When the converted file declares them, the *Display* panel adds a *File variants* group — the
+When the converted file declares them, the *Render* popover adds a *File variants* group — the
 group is hidden entirely when the model has neither:
 
 - **Material variants** (`KHR_materials_variants`) — a dropdown switches the whole model
@@ -336,7 +351,8 @@ colour management is inherited from the project, never set per review. See
   the pipeline settings. Annotations are anchored to that frame, so they line up for every
   reviewer whatever their window size. The aspect itself is a read-only readout.
 - A **camera object** can be placed in the scene, oriented with a gizmo and animated in the
-  **Staging** mode; a picture-in-picture window shows its point of view. Everything about it
+  **Staging** mode, which the switch of the same name in the *Camera* panel arms; a
+  picture-in-picture window shows its point of view. Everything about it
   is on [Camera animation](camera-animation.md).
 - A **whole-model transform** — `T` move, `R` rotate, `S` scale in the **Clean up** mode, with
   undo and redo, and numeric fields for the three Euler angles and a uniform scale — orients
@@ -391,9 +407,8 @@ another HDRI.
 
 | Panel | What is in it |
 |---|---|
-| **Camera** | Focal length in mm (7–400) · tilt · saved views with their `Alt`+*n* chips · delivery aspect (read-only) · fit and home · picture-in-picture switch · Orbit preset · Clear the presentation |
+| **Camera** | Focal length in mm (7–400) · tilt · saved views with their `Alt`+*n* chips · delivery aspect (read-only) · fit and home · the **Staging** switch · Orbit preset · Clear the presentation |
 | **Lighting** | HDRI, exposure, Y rotation, HDRI as background, shadow ground · save or clear the project default · OCIO display and view |
-| **Display** | Render modes · rig skeleton · *File variants*: material variants and embedded cameras |
 | **Scene** | USD scenegraph (search, eye, padlock, right-click, *Undo* / *Save for everyone*) · ground grid · section plane · turntable · performance counters |
 | **Info** | Live render counters · technical sheet · dimensions, real size and the measure tool · USD scene sheet · textures · **Recompose from the USD** |
 | **Export** | Original file · **Import an animation** (glTF/GLB, or an Alembic camera exported to JSON samples) · **Camera animation (glTF)** · **Capture the view** |
@@ -418,10 +433,10 @@ media thumbnail, which stays a small JPEG (see
 
 ### A modelling review on a hero asset
 
-Open the model, `H` for the home view, and go around it by dragging. Switch the *Display*
-panel to **Wireframe** to check the topology density on the silhouette, then to **Normals** to
-catch the inverted face nobody noticed in the DCC, then to **Matcap** to look at the shape
-alone once the textures stop flattering it. Nothing you do here is written to the file — the
+Open the model, `H` for the home view, and go around it by dragging. Open the **Render** popover
+at the top left of the viewer and take it to **Wireframe** to check the topology density on the
+silhouette, then to **Normals** to catch the inverted face nobody noticed in the DCC, then to
+**Matcap** to look at the shape alone once the textures stop flattering it. Nothing you do here is written to the file — the
 mode override is restored the moment you go back to Shaded. Arm the **Pin** with `I`, click
 the bad face, and the modeller lands on it from the comment, in the same render mode you were
 using.
@@ -451,9 +466,9 @@ to measure the door frame it is supposed to fit through.
 
 ### The prop is in the wrong place, and you can prove it
 
-The set dressing puts a crate through a wall. Select the crate in the scene graph, press `3`
-for Clean up, `T`, and drag it where it should be. If the media is not published yet,
-*Save for everyone* makes that the scene everybody opens. If it is published, do not fight the
+The set dressing puts a crate through a wall. Select the crate in the scene graph, press `T` —
+which arms the move gizmo and the Clean up mode with it — and drag it where it should be. If the
+media is not published yet, *Save for everyone* makes that the scene everybody opens. If it is published, do not fight the
 lock: send the move as a **comment proposal** — the delta travels with your note and is
 replayed only when someone selects it, so the published asset stays exactly as delivered.
 
@@ -474,7 +489,7 @@ disturbing anyone.
 ### Checking an animated rig
 
 Switch the bottom transport to the model's clip track, play, and turn on the **rig skeleton**
-in the *Display* panel: the bones are drawn through the geometry, so a shoulder that collapses
+in the *Render* popover: the bones are drawn through the geometry, so a shoulder that collapses
 at frame 40 is visible rather than deduced. Cross-fading between clips while playing lets you
 check a transition without reloading.
 
@@ -518,6 +533,12 @@ The tabs for the models of the *current* version appear on their own as soon as 
 
 **The comparison tabs vanished.** An editing tool is armed. Go back to Navigate (`V` or `Esc`),
 or leave the Clean up mode, and they come back.
+
+**The mode switch has only one segment, or none at all.** *Clean up* is drawn only when its
+gizmos have somewhere to write — the right to edit the version transform, or a USD scene graph
+to override — and a switch with a single segment switches to nothing, so it is not drawn. There
+is no *Staging* segment in any case: that mode is armed by the switch of the same name in the
+*Camera* panel.
 
 **A number key changes mode instead of recalling a saved view.** The bare digits are the mode
 switch, in every viewer and with nothing else on them. Saved views answer to `Alt`+`1` to

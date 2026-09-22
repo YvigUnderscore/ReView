@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   MAX_ANNOTATION_BYTES,
+  MAX_POI_POINTS,
   annotationSchema,
   cameraStateSchema,
   guestAnnotationSchema,
@@ -260,5 +261,54 @@ describe('guestAnnotationSchema — ce qu’un lien de partage a le droit d’é
     expect(() =>
       parseGuestAnnotation([{ type: 'splat-paint', points: [], color: '#fff', width: 1 }]),
     ).toThrowError(expect.objectContaining({ statusCode: 400 }));
+  });
+});
+
+describe('poiPart — un commentaire porteur, des points numerotes', () => {
+  const point = { position: '1 2 3', normal: '0 1 0', space: 'object' as const };
+
+  it('accepte une part unique portant plusieurs points, avec texte et images', () => {
+    const parts = [
+      {
+        type: 'poi',
+        points: [
+          { ...point, text: 'la soudure', images: ['comments/attachments/3/a.png'] },
+          { position: '4 5 6', normal: '0 0 1' },
+        ],
+      },
+    ];
+    expect(annotationSchema.safeParse(parts).success).toBe(true);
+    expect(parseAnnotation(parts)).toEqual(parts);
+  });
+
+  it('exige au moins un point, et n’en accepte pas plus que le plafond', () => {
+    expect(annotationSchema.safeParse([{ type: 'poi', points: [] }]).success).toBe(false);
+    const many = (n: number) => [{ type: 'poi', points: Array.from({ length: n }, () => point) }];
+    expect(annotationSchema.safeParse(many(MAX_POI_POINTS)).success).toBe(true);
+    expect(annotationSchema.safeParse(many(MAX_POI_POINTS + 1)).success).toBe(false);
+  });
+
+  it('borne chaque champ et refuse toute cle libre', () => {
+    const over = [{ type: 'poi', points: [{ ...point, text: 'x'.repeat(2_001) }] }];
+    expect(annotationSchema.safeParse(over).success).toBe(false);
+    const extra = [{ type: 'poi', points: [{ ...point, author: 'moi' }] }];
+    expect(annotationSchema.safeParse(extra).success).toBe(false);
+    const images = [{ type: 'poi', points: [{ ...point, images: Array.from({ length: 9 }, () => 'k') }] }];
+    expect(annotationSchema.safeParse(images).success).toBe(false);
+  });
+
+  it('reste refusee a un invite : un lien de partage ne pose qu’un hotspot', () => {
+    const parts = [{ type: 'poi', points: [point] }];
+    expect(annotationSchema.safeParse(parts).success).toBe(true);
+    expect(guestAnnotationSchema.safeParse(parts).success).toBe(false);
+  });
+
+  it('cohabite avec les autres parts du meme commentaire', () => {
+    const parts = [
+      { type: 'poi', points: [point] },
+      { type: 'splat-paint', points: [0, 0, 0], color: '#ffffff', width: 2 },
+      { type: 'rect', x: 0, y: 0, w: 0.1, h: 0.1 },
+    ];
+    expect(annotationSchema.safeParse(parts).success).toBe(true);
   });
 });

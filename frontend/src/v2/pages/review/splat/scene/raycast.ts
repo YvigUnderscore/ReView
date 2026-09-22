@@ -30,12 +30,3 @@ export function raycastAt(
   const local = p.clone().applyMatrix4(new THREE.Matrix4().copy(mesh.matrixWorld).invert());
   return { position: `${local.x} ${local.y} ${local.z}`, normal: `${n.x} ${n.y} ${n.z}`, space: 'object' };
 }
-
-/** Hotspot au centre du viewer (NDC 0,0) — repli sans pointeur (palette, raccourci). */
-export function raycastCenter(
-  THREE: typeof import('three'),
-  camera: THREE.PerspectiveCamera,
-  mesh: SplatMesh,
-): Hotspot3D | null {
-  return raycastAt(THREE, camera, mesh, { x: 0, y: 0 });
-}

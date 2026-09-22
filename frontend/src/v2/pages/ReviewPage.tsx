@@ -16,6 +16,7 @@ import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import type { ImageViewApi } from '../components/ImageReviewViewer';
 import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
+import { readPoiPoints, type PoiPoint } from './review/poi/poiPoints';
 import { usePublishSceneOverride } from './review/usePublishSceneOverride';
 import { useAnnotations } from './review/useAnnotations';
 import { loadDraft, saveDraft } from './review/commentDraft';
@@ -162,8 +163,10 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Sélection d'un commentaire : restaure ensemble seek + annotation 2D/3D + caméra (animée).
   const selectComment = (c: ReviewComment) => {
     setSelectedCommentId(c.id);
-    const { hotspot, shapes, cameraAnim, sceneOverride } = splitAnnotationParts(c.annotation);
-    ann.setViewed3d(hotspot);
+    const { shapes, cameraAnim, sceneOverride } = splitAnnotationParts(c.annotation);
+    // Points d'intérêt du commentaire : la lecture unifie la part `poi` et le `hotspot` unique
+    // des commentaires antérieurs — une pastille numérotée dans les deux cas.
+    ann.setViewedPoi(readPoiPoints(c.annotation));
     // Mode layout : anim caméra jointe → rejouée par le viewer (3D/splat).
     ann.setViewedCameraAnim(cameraAnim);
     // Proposition de scène 3D jointe (46.D) : rejouée pour ce commentaire seulement.
@@ -221,21 +224,28 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   // Barre de wipe : état hissé + prise de main d'un co-pilote dès la poignée saisie.
   const sharedWipe = compare.makeSharedWipe(live.claimInteraction);
 
-  const placeHotspotCenter = () => {
-    const h = data?.media.kind === 'SPLAT' ? splat.raycastCenter() : model3d.hotspotAtCenter();
-    if (h) ann.setHotspot3d(h);
+  /**
+   * Ramène la caméra sur un point d'intérêt relu (numéro cliqué dans le fil). Le point est en
+   * espace OBJET : le cadrage retombe au même endroit pour tout spectateur, quelle que soit la
+   * transformation du média — même règle que la présentation caméra.
+   */
+  const focusPoi = (point: PoiPoint) => {
+    if (data?.media.kind === 'SPLAT') splat.focusPoi(point);
+    else if (data?.media.kind === 'MODEL_3D') model3d.focusPoi(point);
   };
 
-  // Démarre/arrête l'annotation. À l'ouverture sur un modèle 3D ou un splat, place un
-  // hotspot de surface au centre du viewer (raycast).
+  /**
+   * Démarre/arrête l'annotation.
+   *
+   * Elle POSAIT jusqu'ici un point de surface au centre du viewer à l'ouverture, sur un modèle
+   * 3D comme sur un splat : un point que personne n'avait désigné rejoignait le commentaire à
+   * chaque bascule. Les points se posent maintenant là où on clique, avec l'outil du rail —
+   * entrer en annotation n'en crée plus aucun.
+   */
   const toggleAnnotating = () => {
     ann.setAnnotating((prev) => {
       const next = !prev;
-      if (next) {
-        clearSelection();
-        const k = data?.media.kind;
-        if (k === 'MODEL_3D' || k === 'SPLAT') setTimeout(placeHotspotCenter, 0);
-      }
+      if (next) clearSelection();
       return next;
     });
   };
@@ -321,6 +331,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     loop,
     submitComment,
     toggleAnnotating,
+    onPoiFocus: focusPoi,
   });
 
   return (

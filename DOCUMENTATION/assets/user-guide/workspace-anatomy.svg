@@ -72,8 +72,8 @@
   <rect class="band" x="24" y="104" width="752" height="46" rx="9"/>
   <text class="d" x="36" y="130">WORKSPACE HEADER</text>
   <rect class="panel-a" x="290" y="110" width="220" height="32" rx="9"/>
-  <text class="t" x="400" y="125" text-anchor="middle">MODE SWITCH — 1 · 2 · 3</text>
-  <text class="d" x="400" y="138" text-anchor="middle">hidden for CLIENT accounts</text>
+  <text class="t" x="400" y="125" text-anchor="middle">MODE SWITCH — 1 · 2</text>
+  <text class="d" x="400" y="138" text-anchor="middle">hidden for CLIENT · single-mode media</text>
   <rect class="panel" x="520" y="110" width="248" height="32" rx="9"/>
   <text class="d" x="644" y="130" text-anchor="middle">Compare… — 3D and splat</text>
 
@@ -119,29 +119,31 @@
   <text class="d" x="359" y="370" text-anchor="middle">the A/B overlay takes the very same transform</text>
 
   <text class="a" x="359" y="422" text-anchor="middle">floating badges above it: zoom % · speed · buffering · quality</text>
-  <text class="d" x="359" y="444" text-anchor="middle">nothing else covers the picture you are asked to judge</text>
-  <text class="d" x="359" y="470" text-anchor="middle">right-click opens the viewer menu (all four viewers)</text>
+  <text class="a" x="359" y="444" text-anchor="middle">3D and splat, top-left: the Render menu — and Edit on an editable splat</text>
+  <text class="d" x="359" y="466" text-anchor="middle">nothing else covers the picture you are asked to judge</text>
+  <text class="d" x="359" y="488" text-anchor="middle">right-click opens the viewer menu (all four viewers)</text>
 
   <!-- Dock inspecteur -->
   <rect class="panel" x="608" y="200" width="168" height="330" rx="9"/>
   <text class="d" x="692" y="222" text-anchor="middle">INSPECTOR DOCK</text>
-  <rect class="panel" x="618" y="232" width="148" height="20" rx="6"/>
-  <text class="d" x="692" y="246" text-anchor="middle">Playback</text>
-  <rect class="panel" x="618" y="258" width="148" height="20" rx="6"/>
-  <text class="d" x="692" y="272" text-anchor="middle">Image</text>
-  <rect class="panel" x="618" y="284" width="148" height="20" rx="6"/>
-  <text class="d" x="692" y="298" text-anchor="middle">Guides</text>
+  <rect class="panel-o" x="618" y="232" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="246" text-anchor="middle">Camera</text>
+  <rect class="panel-o" x="618" y="258" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="272" text-anchor="middle">Lighting</text>
+  <rect class="panel-o" x="618" y="284" width="148" height="20" rx="6"/>
+  <text class="d" x="692" y="298" text-anchor="middle">Scene</text>
   <rect class="panel" x="618" y="310" width="148" height="20" rx="6"/>
-  <text class="d" x="692" y="324" text-anchor="middle">Comparison</text>
+  <text class="d" x="692" y="324" text-anchor="middle">Info</text>
   <rect class="panel" x="618" y="336" width="148" height="20" rx="6"/>
-  <text class="d" x="692" y="350" text-anchor="middle">Info</text>
-  <rect class="panel" x="618" y="362" width="148" height="20" rx="6"/>
-  <text class="d" x="692" y="376" text-anchor="middle">Export</text>
-  <text class="d" x="692" y="404" text-anchor="middle">one panel at a time</text>
-  <text class="d" x="692" y="422" text-anchor="middle">Tab collapses it</text>
-  <text class="d" x="692" y="440" text-anchor="middle">starts collapsed</text>
-  <text class="d" x="692" y="466" text-anchor="middle">remembered per</text>
-  <text class="d" x="692" y="484" text-anchor="middle">media type</text>
+  <text class="d" x="692" y="350" text-anchor="middle">Export</text>
+  <text class="d" x="692" y="372" text-anchor="middle">dashed: 3D and splat</text>
+  <text class="d" x="692" y="390" text-anchor="middle">only — Lighting on a</text>
+  <text class="d" x="692" y="408" text-anchor="middle">model alone</text>
+  <text class="d" x="692" y="430" text-anchor="middle">one panel at a time</text>
+  <text class="d" x="692" y="448" text-anchor="middle">Tab collapses it</text>
+  <text class="d" x="692" y="466" text-anchor="middle">starts collapsed</text>
+  <text class="d" x="692" y="484" text-anchor="middle">remembered per</text>
+  <text class="d" x="692" y="502" text-anchor="middle">media type</text>
 
   <!-- Rangée du bas -->
   <rect class="panel" x="24" y="538" width="752" height="66" rx="9"/>

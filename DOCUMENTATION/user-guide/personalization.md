@@ -215,7 +215,8 @@ catalogue either, because a block that could only show an error has no business 
 ### Sizing a block
 
 A block carries a **height** as well as a width, counted in grid rows, and the **handle at its
-bottom-right corner** sets both at once: drag it and the block follows the cursor, settling on
+bottom-right corner** — drawn only while you are arranging the page, like the drag handle — sets
+both at once: drag it and the block follows the cursor, settling on
 the widths its definition offers and on the heights on offer — 2, 3, 4, 5 or 6 rows. Nothing is
 written until you let go. The handle is a control rather than an ornament: focus it and the
 arrow keys walk the same steps, left and right for the width, up and down for the height. The

@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useRef, useState } from 'react';
-import type * as THREE from 'three';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createScene, type SplatModules } from './scene/createScene';
 import { DEFAULT_REVIEW_ASPECT } from '../frameRect';
 import { resizeRendererCamera } from '../three/sceneConfig';
 import { createFlyControls } from '../viewer/flyControls';
 import { frameCameraToMesh } from './scene/frameCamera';
-import { createHotspotMarker } from './scene/hotspotMarker';
+import { meshBounds } from './editor/selection/bounds';
+import { raycastAt } from './scene/raycast';
+import { usePoiMarkers, type PoiSceneAccess } from '../poi/usePoiMarkers';
 import type { PointCloud } from './scene/pointCloud';
 import { createStatsSampler, type StatsSampler } from './scene/stats';
 import { readCullingOff } from './scene/cullingDefault';
@@ -29,14 +30,15 @@ export type { SplatSceneHandle, SplatViewer } from './scene/splatViewerTypes';
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
  * Orchestrateur mince : délègue le montage de la scène à `scene/createScene`, l'auto-cadrage à
  * `scene/frameCamera`, le raycast à `scene/raycast` et la miniature à `scene/thumbnail`. Gère
- * ici le cycle de vie React, la boucle de rendu, le marqueur de hotspot et la vue caméra
+ * ici le cycle de vie React, la boucle de rendu, les pastilles de points et la vue caméra
  * (stockée dans `Comment.cameraState`, comme la review 3D). Aucune dépendance à model-viewer.
  *
  * three + OrbitControls + Spark sont importés dynamiquement (uniquement à l'ouverture d'un
  * splat) pour rester hors du bundle initial — les imports type-only ci-dessus sont erased.
  *
- * Les poignées impératives (raycast, hotspot, miniature, modes de rendu, stats, culling, PiP)
- * vivent dans `scene/useSplatHandles` : elles ne lisent que les refs montées ici.
+ * Les poignées impératives (miniature, modes de rendu, stats, culling, PiP) vivent dans
+ * `scene/useSplatHandles` ; les points d'intérêt, dans `poi/usePoiMarkers` — le même hook que le
+ * viewer 3D. Les deux ne lisent que les refs montées ici.
  */
 export function useSplat(url: string | null, fileName: string, frameAspect?: number): SplatViewer {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,11 +48,27 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   frameAspectRef.current = frameAspect ?? DEFAULT_REVIEW_ASPECT;
   const sceneRef = useRef<SplatScene | null>(null);
   const threeRef = useRef<typeof import('three') | null>(null);
-  // Hotspot à afficher (null = masqué), lu par la boucle de rendu. `objectSpace` : le point
-  // est en espace-objet du mesh (V10) et suit sa transformation ; sinon espace monde (ancien).
-  const hotspotRef = useRef<{ point: THREE.Vector3; objectSpace: boolean } | null>(null);
   // Résolveur d'une capture de miniature en attente (rempli après le prochain rendu).
   const captureReq = useRef<((d: string | null) => void) | null>(null);
+  // Points d'intérêt : le MÊME hook que le viewer 3D (`poi/usePoiMarkers`). Ne diffèrent ici
+  // que l'objet porteur (le SplatMesh), le rayon de la scène et le rayon de surface — un splat
+  // n'a pas de triangles, c'est `raycastAt` qui interroge le nuage.
+  const poiAccess = useCallback((): PoiSceneAccess | null => {
+    const scene = sceneRef.current;
+    const THREE = threeRef.current;
+    if (!scene || !THREE) return null;
+    return {
+      three: THREE,
+      camera: scene.camera,
+      controls: scene.controls,
+      object: scene.mesh,
+      dom: scene.renderer.domElement,
+      radius: meshBounds({ THREE, mesh: scene.mesh })?.radius ?? 1,
+      pick: (ndc) => raycastAt(THREE, scene.camera, scene.mesh, ndc),
+    };
+  }, []);
+  const poi = usePoiMarkers(poiAccess);
+  const { mountMarker, project: projectPoi } = poi;
   // Overlay « nuage de points » du mode points (enfant du mesh, construit à la demande) —
   // réactif à la sélection et aux suppressions (setSelection/setHidden).
   const pointsRef = useRef<PointCloud | null>(null);
@@ -103,8 +121,9 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       const fly = createFlyControls(THREE, camera, controls, renderer.domElement);
       flyRef.current = fly;
 
-      // Marqueur de hotspot (DOM, projeté à l'écran) — n'intercepte pas les events (orbite libre).
-      const marker = createHotspotMarker(THREE, container);
+      // Pastilles numérotées des points d'intérêt (DOM, projetées à l'écran) : inertes en
+      // relecture, manipulables pendant la rédaction (cf. `objectHotspot.setInteractive`).
+      const unmountMarker = mountMarker(THREE, container);
 
       // Auto-cadrage : après chargement, cale caméra + cible sur la bbox du splat (une seule fois).
       let framed = false;
@@ -183,8 +202,8 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
           const pip = pipRectRef.current;
           if (pip) renderPipPass(renderer, scene, layoutCam, pip, w, h);
           statsRef.current?.frame(now);
-          // Projette le hotspot monde → pixels et positionne le marqueur (ou le masque).
-          marker.update(hotspotRef.current, camera, mesh, w, h);
+          // Projette les points monde → pixels et positionne les pastilles (ou les masque).
+          projectPoi(camera, mesh, w, h);
           // Capture de miniature demandée : le buffer de dessin est intact juste après le rendu.
           const shot = captureReq.current;
           captureReq.current = null;
@@ -204,7 +223,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
         (mesh as unknown as { dispose?: () => void }).dispose?.();
         renderer.dispose();
         renderer.domElement.remove();
-        marker.remove();
+        unmountMarker();
       };
     })().catch(() => !cancelled && setLoadError(true));
 
@@ -213,24 +232,22 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       cleanup?.();
       sceneRef.current = null;
       threeRef.current = null;
-      hotspotRef.current = null;
       pipRectRef.current = null;
       statsRef.current = null;
       frameCallbacks.clear();
       captureReq.current?.(null);
       captureReq.current = null;
     };
-  }, [url, fileName, gate]);
+  }, [url, fileName, gate, mountMarker, projectPoi]);
 
   // Handles de pose caméra (capture/restauration vue libre + PiP layout) — hook dédié (budget).
   const { captureCamera, restoreCamera, restorePipCamera } = useCameraHandles(sceneRef, threeRef);
 
-  // Poignées impératives (raycast, hotspot, miniature, transformation, modes, stats, culling,
-  // PiP) — hook dédié (budget) : elles ne font que lire les refs montées ci-dessus.
+  // Poignées impératives (miniature, transformation, modes, stats, culling, PiP) — hook dédié
+  // (budget) : elles ne font que lire les refs montées ci-dessus.
   const handles = useSplatHandles({
     sceneRef,
     threeRef,
-    hotspotRef,
     captureReq,
     pointsRef,
     statsRef,
@@ -249,6 +266,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     restoreCamera,
     restorePipCamera,
     captureView,
+    ...poi,
     ...handles,
   };
 }

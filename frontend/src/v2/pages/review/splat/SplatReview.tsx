@@ -20,6 +20,9 @@ import { useSplatEditor } from './editor/useSplatEditor';
 import SelectionOverlay from './editor/selection/SelectionOverlay';
 import ReviewChrome from '../chrome/ReviewChrome';
 import { DEFAULT_MODE } from '../chrome/modes';
+import { DEFAULT_TOOL } from '../chrome/tools';
+import { usePoiPlacement } from '../poi/usePoiPlacement';
+import PoiNotice from '../poi/PoiNotice';
 import SplatOptions from '../options/SplatOptions';
 import SpatialTransport from '../transport/SpatialTransport';
 import CurvesDrawer from '../transport/CurvesDrawer';
@@ -123,9 +126,9 @@ export default function SplatReview({
   // sous-ensembles) — l'éditeur les gère lui-même quand il est monté.
   useSavedSplatEdits(splat, data, showEdit);
 
-  // Câblage pointeur/clavier : hotspot au clic, transport caméra, cadrage F/H, palette Ctrl+K,
-  // et les deux actions d'animation caméra (joindre au commentaire, importer un fichier).
-  const { armHotspot, frameView, homeView, attachLayout, importLayout } = useSplatInput({
+  // Câblage pointeur/clavier : transport caméra, cadrage F/H, palette Ctrl+K, et les deux
+  // actions d'animation caméra (joindre au commentaire, importer un fichier).
+  const { frameView, homeView, attachLayout, importLayout } = useSplatInput({
     splat,
     data,
     ann,
@@ -134,6 +137,18 @@ export default function SplatReview({
     showEdit,
     canPresent,
     stageMode: state.mode === 'stage',
+  });
+
+  // Points d'intérêt : ARMER L'OUTIL, C'EST ÊTRE EN PLACEMENT — le clic suivant dans le nuage
+  // pose un point. Même hook, même geste, mêmes options que le viewer 3D : c'est la parité
+  // demandée, obtenue en supprimant le chemin propre au splat plutôt qu'en le doublant.
+  const placingPoi = activeTool.id === 'pin';
+  usePoiPlacement({
+    viewer: splat,
+    armed: placingPoi,
+    poi: ann.poi,
+    showingDraft: ann.viewedPoi.length === 0,
+    onExit: () => update({ tool: DEFAULT_TOOL }),
   });
 
   return (
@@ -167,7 +182,7 @@ export default function SplatReview({
           presentation={
             canPresent ? { dirty: animDirty, busy: pres.busy, onSave: () => void pres.save() } : undefined
           }
-          onPlaceHotspot={armHotspot}
+          poi={ann.poi}
         />
       }
       panel={
@@ -226,7 +241,7 @@ export default function SplatReview({
         splat={splat}
         frameView={frameView}
         homeView={homeView}
-        onPlacePoint={ann.setHotspot3d}
+        onPlacePoint={ann.poi.add}
         grid={grid}
         culling={culling}
       >
@@ -239,6 +254,7 @@ export default function SplatReview({
           aspect={frameAspect}
           recording={canPresent && pres.anim.autoKey}
           overlay={overlay}
+          notice={placingPoi ? <PoiNotice count={ann.poi.points.length} /> : undefined}
           settings={
             <SplatViewerMenus
               state={state}

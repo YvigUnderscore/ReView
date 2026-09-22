@@ -12,7 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { resolveGlbSrc, type MediaResp, type SplatEditsPatch } from './reviewTypes';
 import { hlsMasterUrl } from './videoSource';
 import { useMediaExport } from './useMediaExport';
-import { useAnnotationOverlay, useHotspotDisplay } from './useAnnotationOverlay';
+import { useAnnotationOverlay, usePoiDisplay } from './useAnnotationOverlay';
 import { useImageCompareSync } from './useImageCompareSync';
 import type { CompareMode } from './useCompareState';
 import type { useAnnotations } from './useAnnotations';
@@ -146,8 +146,9 @@ export default function ReviewViewer({
   // Comparaison A/B : côte-à-côte ou wipe (14.C) — mode hissé (répliqué en live).
   const closeCompare = () => (onCompareModeChange('side'), onCloseCompare());
 
-  // Hotspot 3D/splat (10.G, extrait — budget 300) : commentaire sélectionné ou placement.
-  useHotspotDisplay(kind, ann, splat, model3d);
+  // Points d'intérêt 3D/splat (extrait — budget 300) : ceux du commentaire sélectionné, sinon
+  // ceux en cours de rédaction.
+  usePoiDisplay(kind, ann, splat, model3d);
 
   // Overlay d'annotation 2D (extrait — budget 300 lignes).
   const renderOverlay = useAnnotationOverlay(ann);

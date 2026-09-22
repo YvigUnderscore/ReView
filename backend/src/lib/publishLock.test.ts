@@ -9,6 +9,7 @@ import {
   isAllowedWhilePublished,
   publishedReprocessCount,
   PUBLISHED_REPROCESS_ALLOWANCE,
+  PUBLISHED_WRITES,
   withPublishedReprocess,
   type PublishedWrite,
 } from './publishLock';
@@ -41,6 +42,21 @@ const ALL_WRITES: PublishedWrite[] = [
   'versionTransform',
   'uploadFinalize',
 ];
+
+describe('publishLock — périmètre de la table', () => {
+  /**
+   * Commenter et annoter un média PUBLIÉ restent possibles : ce sont des remarques, pas des
+   * éditions du contenu. Rien ne les soumet au verrou — ni la table (vérifiée ici), ni
+   * `CommentService.create`, qui ne demande rien au verrou. Le jour où une écriture de
+   * commentaire s'y présenterait, ce test tomberait.
+   */
+  it('ne connaît que des écritures de contenu — aucune de commentaire ni d’annotation', () => {
+    expect([...PUBLISHED_WRITES].sort()).toEqual([...ALL_WRITES].sort());
+    for (const write of PUBLISHED_WRITES) {
+      expect(write).not.toMatch(/comment|annotation|poi/i);
+    }
+  });
+});
 
 describe('publishLock.assertWritable — table des exceptions au verrou', () => {
   it('laisse passer TOUTE écriture sur un brouillon', () => {

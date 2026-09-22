@@ -3,6 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildGuestAnnotation, frameOf, guestCommentContent } from './clientAnnotation';
+import { readPoiPoints } from '../review/poi/poiPoints';
 import { splitAnnotationParts } from '../review/reviewTypes';
 import type { Shape } from '../../components/AnnotationCanvas';
 
@@ -42,9 +43,9 @@ describe('buildGuestAnnotation — ce que l’invité joint à son retour', () =
       shapes: [rect],
       hotspot: { position: '1,2,3', normal: '0,1,0' },
     });
-    const read = splitAnnotationParts(parts);
-    expect(read.shapes).toEqual([rect]);
-    expect(read.hotspot).toEqual({ position: '1,2,3', normal: '0,1,0', space: undefined });
+    expect(splitAnnotationParts(parts).shapes).toEqual([rect]);
+    // Le hotspot d'un invité se relit comme un point d'intérêt numéroté « 1 ».
+    expect(readPoiPoints(parts)).toEqual([{ position: '1,2,3', normal: '0,1,0' }]);
   });
 });
 

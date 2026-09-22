@@ -247,9 +247,9 @@ your machine.
 
 **A local history — `Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`.** Wherever you are building something
 that has not been sent yet, the keys walk a genuine stack, as deep as your session: the
-annotation you are drawing, the 3D strokes of a surface brush, a splat clean-up, a camera
-animation in Staging, a board. Nothing is shared until you send it, so nothing is lost by
-walking back.
+annotation you are drawing, the 3D strokes of a surface brush, a splat clean-up — its mask
+selections as well as its edits — a camera animation in Staging, a board. Nothing is shared
+until you send it, so nothing is lost by walking back.
 
 **A single step — the `Undo` button in the confirmation toast.** Everything that writes to the
 server is confirmed by a toast, and when the previous value is known the toast carries `Undo`
@@ -264,8 +264,8 @@ write, so it can be refused — and says so instead of pretending.
 > Only one history answers a key press. When several could — you are painting 3D strokes on a
 > splat you are also cleaning up — the one holding the gesture wins: the annotation in
 > progress first, then the 3D brush, then the media editor, and the camera animation takes
-> precedence over all of them while **Staging** is open. A history with nothing left to give
-> stands aside and lets the next one answer.
+> precedence over all of them while the **Staging** switch of the *Camera* panel is on. A
+> history with nothing left to give stands aside and lets the next one answer.
 
 **And some things do not come back.** Deleting a task is final: nothing restores it, and
 re-creating it would produce a different task — new identifier, lost history, broken comment

@@ -13,10 +13,12 @@ import {
 } from './annotationHistory';
 import { clampRefBox, NO_BANDS, pastedRefBox, type StagedReference, type ViewerBands } from './referenceBox';
 import { useAnnotationShortcuts } from './useAnnotationShortcuts';
-import type { Hotspot3D, SplatLayoutAnim } from './reviewTypes';
+import type { SplatLayoutAnim } from './reviewTypes';
+import { usePoiDraft } from './poi/usePoiDraft';
+import type { PoiPoint } from './poi/poiPoints';
 
 /**
- * État de l'annotation du composer (dessin 2D, hotspot 3D, références collées) et de
+ * État de l'annotation du composer (dessin 2D, points d'intérêt 3D, références collées) et de
  * l'annotation d'un commentaire sélectionné, lue seule (`viewed*`).
  *
  * Un seul historique couvre le dessin et les références, au clavier comme aux boutons.
@@ -52,7 +54,9 @@ export function useAnnotations(opts?: {
   // Geste en cours : tous les changements qui le portent tiennent dans un seul cran.
   const step = useRef<string | null>(null);
   const [annotating, setAnnotating] = useState(false);
-  const [hotspot3d, setHotspot3d] = useState<Hotspot3D | null>(null);
+  // Points d'intérêt du commentaire en cours : posés au clic dans le viewer, numérotés dans
+  // l'ordre de pose, déplaçables et supprimables tant que rien n'est envoyé (Phase 50, lot 12).
+  const poi = usePoiDraft();
   // Images de référence en préparation : posées/déplaçables tant que le commentaire n'est
   // pas envoyé, puis figées côté serveur (liées au commentaire créé).
   const [stagedRefs, setStagedRefs] = useState<StagedReference[]>([]);
@@ -104,14 +108,15 @@ export function useAnnotations(opts?: {
   const [cameraAnim, setCameraAnim] = useState<SplatLayoutAnim | null>(null);
   // Annotation d'un commentaire sélectionné (lecture seule)
   const [viewed, setViewed] = useState<Shape[] | null>(null);
-  const [viewed3d, setViewed3d] = useState<Hotspot3D | null>(null);
+  // Points d'intérêt du commentaire sélectionné — pastilles numérotées, inertes (lecture seule).
+  const [viewedPoi, setViewedPoi] = useState<PoiPoint[]>([]);
   const [viewedAspect, setViewedAspect] = useState<number | null>(null);
   // Animation caméra du commentaire sélectionné — rejouée par le viewer.
   const [viewedCameraAnim, setViewedCameraAnim] = useState<SplatLayoutAnim | null>(null);
   // Proposition de scène 3D du commentaire sélectionné (46.D) — jamais globale.
   const [viewedSceneOverride, setViewedSceneOverride] = useState<unknown>(null);
-  // Modifications de scène en cours, jointes au prochain commentaire envoyé (comme le
-  // hotspot et l'animation caméra).
+  // Modifications de scène en cours, jointes au prochain commentaire envoyé (comme les points
+  // d'intérêt et l'animation caméra).
   const [sceneOverride, setSceneOverride] = useState<unknown>(null);
 
   /** `stepKey` : même valeur sur tout un geste (glisser d'une forme) = un seul cran. */
@@ -147,9 +152,9 @@ export function useAnnotations(opts?: {
     setHist(EMPTY_HISTORY);
     step.current = null;
     setTool(drawTool.current);
-    setHotspot3d(null);
+    poi.clear();
     setCameraAnim(null);
-    // La proposition de scène est partie avec le commentaire : comme le hotspot, elle ne doit
+    // La proposition de scène est partie avec le commentaire : comme les points, elle ne doit
     // pas se rejoindre d'elle-même au commentaire suivant (46.T).
     setSceneOverride(null);
     setStagedRefs([]);
@@ -164,7 +169,7 @@ export function useAnnotations(opts?: {
    */
   const clearViewed = (opts?: { keepScene?: boolean }) => {
     setViewed(null);
-    setViewed3d(null);
+    setViewedPoi([]);
     setViewedAspect(null);
     setViewedCameraAnim(null);
     if (!opts?.keepScene) setViewedSceneOverride(null);
@@ -189,8 +194,7 @@ export function useAnnotations(opts?: {
     canRedo,
     annotating,
     setAnnotating,
-    hotspot3d,
-    setHotspot3d,
+    poi,
     cameraAnim,
     setCameraAnim,
     stagedRefs,
@@ -200,8 +204,8 @@ export function useAnnotations(opts?: {
     setRefBands,
     viewed,
     setViewed,
-    viewed3d,
-    setViewed3d,
+    viewedPoi,
+    setViewedPoi,
     viewedAspect,
     setViewedAspect,
     viewedCameraAnim,

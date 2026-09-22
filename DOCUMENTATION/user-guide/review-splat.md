@@ -12,9 +12,22 @@ changes.
 
 All four media types share the same five places — mode switch, tool rail, options bar,
 inspector dock, bottom row. See [The review workspace](review-workspace.md) for the layout,
-the modes and the keyboard map; this page covers what is specific to splats. The mode switch
-offers **Explore** (`1`), **Staging** (`2`) and **Clean up** (`3`); **Annotate** is armed from
-the comment composer or by pressing a tool letter.
+the modes and the keyboard map; this page covers what is specific to splats.
+
+A splat is the one media with **no mode switch in the header**. It has a single listed mode,
+*Explore*, and a single segment switches to nothing — so the control is not drawn at all. Every
+other mode is still there, armed from where the work happens:
+
+| Mode | How you enter it | How you leave it |
+|---|---|---|
+| **Explore** | the resting state, and `1` | — |
+| **Clean up** | the **Edit** popover in the top-left corner of the viewer, or any of its tool letters (`B`, `L`, `M`, `O`, `T`, `R`, `S`) | the same switch, or `1` |
+| **Staging** | the **Staging** switch of the *Camera* panel (*Framing* group) | the same switch, or `1` |
+| **Annotate** | the *Annotate* button of the comment composer, or a tool letter (`P`, `X`, `I`) | `Esc` drops the tool; `1` returns to Explore |
+
+This is the same reasoning applied to the 3D viewer one lot earlier: a mode that already had a
+switch somewhere did not need a second command in the header, and tools you use while staring
+at the cloud belong over the cloud.
 
 ## Opening a splat
 
@@ -59,26 +72,45 @@ arming the scale gizmo, and `T` and `R` no longer change mode under your hand.
 to the home view. Both answer in every mode, published media included. The **ground grid** is
 a switch in the *Scene* panel (*Guides → Ground grid*), remembered in your browser.
 
-The *Display* panel carries what changes the image without changing the data:
+## The two viewer popovers
+
+Two popovers sit in the **top-left corner of the viewer**, above the cloud rather than at the
+other end of the screen: **Render** and, for whoever may edit, **Edit**. They are the splat
+twins of the *Render* menu the 3D viewer already had, and they replaced the *Display* tab of the
+dock, which asked you to reach across the window for switches you try in bursts while looking at
+the scan. They are drawn outside the review frame, so the letterbox guide and the annotation
+coordinates are exactly where they were.
+
+**Render** carries what changes the image without changing the data:
 
 | Control | Who sees it | Effect |
 |---|---|---|
 | **Cloud render mode** — Splats · Ellipses · Points | Only while the editor is mounted (manager, unpublished media) | How each gaussian is drawn; Points is the fastest way to read the structure of a dense scan |
-| **Corrected orientation** | Same | Flips the Y-down convention some exporters use — this one *is* an edit, and it is saved with the rest |
-| **Inspection colouring** — none · normals · depth | Everyone | A session-local tint, never saved on the media |
+| **Inspection colouring** — None · Normals · Depth | Everyone | A session-local tint, never saved on the media |
 | **Real size** | Everyone, once more than one cloud is loaded | Turns off the size unification used by the comparison — see [Comparing splats](#comparing-splats) |
+| **Corrected orientation** | Editor only | Flips the Y-down convention some exporters use — this one *is* an edit, and it is saved with the rest |
+
+**Edit** carries the clean-up: a switch that arms and disarms the *Clean up* mode, and under it
+the seven editing tools, each with its keyboard letter. The buttons are the rail's own buttons,
+not copies, and arming one closes the popover — you draw on the cloud immediately after.
 
 > [!NOTE]
-> The render mode and the orientation switch disappear on a published splat, or for anyone
-> who cannot manage the media. That is not a bug: the orientation flip is stored with the
-> edits, and the publish lock covers it.
+> The **Edit** popover does not exist on a published splat, nor for anyone who cannot manage
+> the media, and the render mode and orientation switch go with it. That is not a bug: the
+> orientation flip is stored with the edits, and the publish lock covers it. The *Render*
+> popover stays, with the inspection colouring everyone is allowed.
+
+> [!TIP]
+> The switch is the only way out of the clean-up with the mouse. Arming a tool with its letter
+> from anywhere puts you in *Clean up*; without the switch there would be no segment left to
+> click to get out again — `1` is the keyboard answer to the same question.
 
 ## Cleaning up, without touching the file
 
 The original splat file is **never modified**. Every edit is stored as metadata — a selection
 mask bitset plus an edit list — and **replayed identically for every viewer**. All of it lives
-in the **Clean up** mode (`3`), and only for someone who can manage the media on an
-unpublished version.
+in the **Clean up** mode, armed from the **Edit** popover of the viewer or by pressing a tool
+letter, and only for someone who can manage the media on an unpublished version.
 
 | Tool | Key | A plain drag | Modifiers and options |
 |---|---|---|---|
@@ -99,8 +131,14 @@ splat, capped at four megabytes, which covers clouds of some thirty million spla
 
 **Saving** — the commit group at the right of the options bar carries undo, redo and *Save*,
 with a dot while something is pending. Saving writes the mask, the subset transforms and the
-edit list; from then on every reviewer opens the cleaned cloud. `Ctrl/⌘+Z`, `Ctrl/⌘+Y` and
-`Ctrl/⌘+Shift+Z` walk the edit history.
+edit list; from then on every reviewer opens the cleaned cloud.
+
+**Undo covers the selections too.** `Ctrl/⌘+Z`, `Ctrl/⌘+Y` and `Ctrl/⌘+Shift+Z` walk one single
+history, and a change of selection is a step in it like a deletion or a volume: a lasso that
+took the wrong half, one brush stroke too many, a *deselect everything* you regret all come
+back. A whole brush stroke counts as **one** step rather than one per splat, a gesture that
+selects exactly what was already selected costs no step at all, and undoing a deletion also
+restores the selection that produced it.
 
 > [!TIP]
 > None of these shortcuts fire while you hold the right mouse button (you are flying), while
@@ -141,7 +179,7 @@ The selector hides itself when the task or asset carries a single version.
   to the origin.
 - **Show all** fades everyone in and slides them apart, the spacing derived from the widest
   visible bounding box.
-- **Real size**, in the *Display* panel, turns off the size unification: by default every
+- **Real size**, in the *Render* popover, turns off the size unification: by default every
   compared cloud is scaled onto the reference's bounding sphere so the shapes can be read
   against each other; turn it on to see the raw scales the files actually carry.
 
@@ -205,7 +243,7 @@ control.
 
 | Part | Where it is set |
 |---|---|
-| Camera pose and animation | The **Staging** mode and its transport — see [Camera animation](camera-animation.md) |
+| Camera pose and animation | The **Staging** switch of the *Camera* panel, then the transport — see [Camera animation](camera-animation.md) |
 | **Depth of field** | The **Focus** tool (`C`) sets the focus distance on the point you click; the **Aperture** field of the *Camera* panel opens it, from `0` (sharp everywhere) to `0.1` |
 | **Reveal on open** | *Scene* panel: fade, sweep or dissolve, with a duration from 0.2 s to 10 s and a *replay* button. Persisted, so it plays for whoever opens the review |
 | **Default level of detail** | *Scene* panel, saved with the presentation |
@@ -259,11 +297,15 @@ costs the machine almost nothing.
 
 | Panel | What is in it |
 |---|---|
-| **Camera** | Focal length in mm (7–400) · tilt · aperture and *focus at click* · delivery aspect (read-only) · fit and home · picture-in-picture switch · Orbit preset · Clear the presentation |
-| **Display** | Cloud render mode and corrected orientation (editor only) · inspection colouring · Real size for comparison |
+| **Camera** | Focal length in mm (7–400) · tilt · aperture and *focus at click* · delivery aspect (read-only) · fit and home · the **Staging** switch · Orbit preset · Clear the presentation |
 | **Scene** | Ground grid · level of detail · edge culling · reveal effect and its duration |
 | **Info** | Live counters · file name and status |
 | **Export** | The four entries below |
+
+There is no *Display* tab: the render settings moved to the **Render** popover of the viewer,
+described in [The two viewer popovers](#the-two-viewer-popovers). The 3D dock lost the same tab
+for the same reason, so a setting added to one of the two spatial viewers tomorrow arrives in
+both or in neither.
 
 The Export panel enumerates everything a splat can produce.
 
@@ -297,10 +339,11 @@ the file in storage is never touched, so it works after publication too — and 
 
 ### Cleaning a set scan before it goes to layout
 
-The scan arrives with a halo of floaters and half a car park behind the wall. Press `3` for
-Clean up, arm the surface brush with `P`, and sweep over the floaters — the brush only takes
-what is actually visible, so the wall behind survives. `Delete` hides them. For the car park,
-drop a box volume with `O`, set it to *Isolate*, and scale it around the set: everything
+The scan arrives with a halo of floaters and half a car park behind the wall. Open the **Edit**
+popover in the top-left corner of the viewer, arm the **mask brush** with `M`, and sweep over the
+floaters — the brush only takes what is actually visible, so the wall behind survives. Swept too
+far? `Ctrl+Z` gives the selection back. `Delete` hides them. For the car park, drop a box volume
+with `O`, set it to *Isolate*, and scale it around the set: everything
 outside disappears. Save from the commit group and every reviewer opens the cleaned scan — the
 uploaded file is still intact if you got the box wrong.
 
@@ -337,9 +380,9 @@ it is.
 
 ### A guided tour rather than a free-for-all
 
-A splat scan is impressive and unreadable if everyone navigates it themselves. In **Staging**,
-fly to a first viewpoint, press `K`, scrub forward, fly to the next, `K` again, and publish the
-presentation: the move plays on its own for every viewer. Add a *reveal on open* and a focus
+A splat scan is impressive and unreadable if everyone navigates it themselves. Turn on the
+**Staging** switch in the *Camera* panel, fly to a first viewpoint, press `K`, scrub forward, fly
+to the next, `K` again, and publish the presentation: the move plays on its own for every viewer. Add a *reveal on open* and a focus
 distance on the subject, and the scan presents itself. See
 [Camera animation](camera-animation.md).
 
@@ -349,9 +392,14 @@ distance on the subject, and the scan presents itself. See
 `.spz`, `.splat`, `.ksplat`, `.sog`, or the file is corrupt. Re-upload — nothing is converted
 server-side, so what you upload is what the viewer has to read.
 
-**Editing tools are missing from the Clean up mode.** Splat editing requires that you can
-manage the media *and* that it is not published. After publication the backend refuses every
-content edit with a `403`, and the render mode and orientation switch disappear with them.
+**There is no Edit popover on the viewer.** Splat editing requires that you can manage the media
+*and* that it is not published. After publication the backend refuses every content edit with a
+`403`, so the popover, the render mode and the orientation switch all disappear together — the
+*Render* popover stays, with the inspection colouring.
+
+**I am stuck in the clean-up and there is no mode switch to leave it.** Turn the switch at the
+top of the **Edit** popover off, or press `1`. A tool letter (`B`, `L`, `M`, `O`, `T`, `R`, `S`)
+arms its tool *and* the mode from anywhere, which is how you got there.
 
 **"Nothing to export (everything is masked or cropped)".** The saved mask and volumes leave no
 splat standing. Check the volume modes: an *Isolate* volume placed outside the geometry keeps

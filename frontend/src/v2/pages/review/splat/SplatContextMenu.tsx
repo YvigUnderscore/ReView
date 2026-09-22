@@ -34,8 +34,9 @@ import { useT } from '../../../i18n';
  *  1. **Cadrer** et **Vue d'origine** : les deux gestes de recadrage du viewer. Ils existent en
  *     `F`/`H` et au bas du rail, mais c'est la main sur la souris qu'on les veut, au moment où
  *     l'on s'est perdu dans le nuage.
- *  2. **Poser un point d'intérêt ici** : l'action **au point visé**. L'outil du rail demande de
- *     l'armer (`I`) *puis* de cliquer ; ici le point désigné est celui du clic droit, en un geste.
+ *  2. **Poser un point d'intérêt ici** : l'action **au point visé**, en un geste, sans armer
+ *     l'outil du rail (`I`). Le point rejoint la même liste numérotée que ceux posés au clic —
+ *     un seul chemin de données, deux façons de désigner.
  *  3. **Copier la vue** : la capture du cadre courant dans le presse-papiers. Le panneau *Export*
  *     ne produit que des fichiers ; « montrer ce que je vois » dans un message n'existait pas.
  *  4. Sous-menu **Scène** : grille de sol et culling de bord — les deux interrupteurs qu'on
@@ -77,7 +78,7 @@ export default function SplatContextMenu({
   const placePoint = () => {
     const hotspot = tap && splat.hotspotAtPointer(tap.x, tap.y);
     if (!hotspot) {
-      toast.error(t('ctx.splatNoSurface'));
+      toast.error(t('poi.noSurface'));
       return;
     }
     onPlacePoint(hotspot);
@@ -87,7 +88,8 @@ export default function SplatContextMenu({
     void splat
       .captureThumbnail()
       .then((dataUrl) => {
-        if (!dataUrl) throw new Error(t('ctx.splatNoSurface'));
+        // Capture impossible : le message doit parler de la CAPTURE, pas d'une surface absente.
+        if (!dataUrl) throw new Error(t('ctx.actionFailed', { action: t('ctx.copyImage') }));
         return copyImageToClipboard(dataUrl);
       })
       .then(() => toast.success(t('ctx.imageCopied')))

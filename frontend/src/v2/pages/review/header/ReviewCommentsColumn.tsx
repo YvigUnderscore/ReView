@@ -7,6 +7,7 @@ import type { ReviewComment } from '../../../types/api';
 import type { MediaResp } from '../reviewTypes';
 import type { useAnnotations } from '../useAnnotations';
 import type { useTimelineMarkers } from '../useTimelineMarkers';
+import type { PoiPoint } from '../poi/poiPoints';
 
 type Ann = ReturnType<typeof useAnnotations>;
 type MarkersApi = ReturnType<typeof useTimelineMarkers>;
@@ -30,6 +31,8 @@ interface Props {
   loop: Loop;
   onSubmit: Parameters<typeof CommentsPanel>[0]['onSubmit'];
   onToggleAnnotate: () => void;
+  /** Retour caméra sur un point d'intérêt relu (numéro cliqué dans une carte du fil). */
+  onPoiFocus: (point: PoiPoint, index: number) => void;
 }
 
 /**
@@ -40,6 +43,9 @@ interface Props {
  * annotation, point 3D, caméra, références, plage) se déduisent tous de l'état de la
  * review. Les calculer ici plutôt que de les passer un par un garde la règle avec ce
  * qu'elle décrit, au lieu de l'étaler dans la liste de props de l'appelant.
+ *
+ * Les points d'intérêt ne sont plus un indice booléen : ils ont leurs rangées dans le composeur
+ * (`poi`), qui disent combien il y en a et ce que chacun porte.
  */
 export default function ReviewCommentsColumn({
   mediaObjectId,
@@ -59,6 +65,7 @@ export default function ReviewCommentsColumn({
   loop,
   onSubmit,
   onToggleAnnotate,
+  onPoiFocus,
 }: Props) {
   return (
     <CommentsPanel
@@ -76,7 +83,6 @@ export default function ReviewCommentsColumn({
       composerRef={composerRef}
       hints={{
         annotation: ann.annot.length > 0,
-        hotspot: !!ann.hotspot3d,
         camera: kind === 'MODEL_3D' && ann.annotating,
         references: ann.stagedRefs.length,
         // Une plage n'est un indice que si elle est complète et orientée : `out > in`.
@@ -85,6 +91,8 @@ export default function ReviewCommentsColumn({
       onSubmit={onSubmit}
       annotating={ann.annotating}
       onToggleAnnotate={onToggleAnnotate}
+      poi={ann.poi}
+      onPoiFocus={onPoiFocus}
     />
   );
 }

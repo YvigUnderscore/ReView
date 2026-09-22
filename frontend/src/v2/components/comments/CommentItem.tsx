@@ -15,6 +15,8 @@ import CommentMeta from './CommentMeta';
 import { STATE_CARD_CLASS, isClosed, stateOf, toggleState, type CommentState } from './commentState';
 import { useDeleteComment, useSetCommentState } from '../../lib/commentsApi';
 import type { ReviewComment } from '../../types/api';
+import PoiCommentPoints from '../../pages/review/poi/PoiCommentPoints';
+import { readPoiPoints, stripPoiBlock, type PoiPoint } from '../../pages/review/poi/poiPoints';
 import { useT } from '../../i18n';
 
 export interface CommentItemProps {
@@ -28,6 +30,8 @@ export interface CommentItemProps {
   selectedId: number | null;
   onSelect: (c: ReviewComment) => void;
   isReply?: boolean;
+  /** Retour caméra sur un point d'intérêt de ce commentaire (numéro cliqué). */
+  onPoiFocus?: (point: PoiPoint, index: number) => void;
 }
 
 /** Un commentaire de review (badges frame/caméra/annotation, réactions, réponses, édition). */
@@ -42,6 +46,7 @@ export default function CommentItem({
   selectedId,
   onSelect,
   isReply = false,
+  onPoiFocus,
 }: CommentItemProps) {
   const t = useT();
   const [replying, setReplying] = useState(false);
@@ -71,6 +76,11 @@ export default function CommentItem({
   const replies = allReplies ? (c.replies ?? []) : shown;
 
   const hasAnnotation = Array.isArray(c.annotation) && c.annotation.length > 0;
+  // Points d'intérêt portés par CE commentaire : rendus en rangées numérotées, et retirés du
+  // texte — le bloc numéroté y est recopié pour tout ce qui ne lit que `content` (portail
+  // client, export de notes, ShotGrid), il n'a pas à s'afficher deux fois ici.
+  const poiPoints = readPoiPoints(c.annotation);
+  const body = stripPoiBlock(c.content, poiPoints);
   const selected = selectedId === c.id;
   const selectable = !isReply && (c.timestamp != null || c.cameraState != null || hasAnnotation);
   // Empêche un clic sur une action interne de déclencher la sélection de la carte. Les
@@ -147,12 +157,22 @@ export default function CommentItem({
         ) : (
           /* Un commentaire trop grand s'ouvre replié (D6) — texte entier conservé dans le
              document, donc toujours trouvable par une recherche. */
-          <CollapsibleText text={c.content}>
-            <div
-              className="prose-doc mt-0.5 max-w-none whitespace-pre-wrap text-sm"
-              dangerouslySetInnerHTML={{ __html: highlightMentions(c.content) }}
+          <>
+            {body && (
+              <CollapsibleText text={body}>
+                <div
+                  className="prose-doc mt-0.5 max-w-none whitespace-pre-wrap text-sm"
+                  dangerouslySetInnerHTML={{ __html: highlightMentions(body) }}
+                />
+              </CollapsibleText>
+            )}
+            <PoiCommentPoints
+              points={poiPoints}
+              attachments={c.attachments}
+              onFocus={onPoiFocus}
+              stop={stop}
             />
-          </CollapsibleText>
+          </>
         )}
 
         {/* Pièces jointes : 2 vignettes max + tuile « +x images » (lightbox), chips PDF/zip/texte */}
@@ -245,6 +265,7 @@ export default function CommentItem({
                 startFrame={startFrame}
                 selectedId={selectedId}
                 onSelect={onSelect}
+                onPoiFocus={onPoiFocus}
                 isReply
               />
             ))}

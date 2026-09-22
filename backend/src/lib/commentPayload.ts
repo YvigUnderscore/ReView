@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { cameraAnimShape, channelSchema, curveKeySchema } from './cameraAnimSchema';
 import { badRequest } from './errors';
+import { MAX_COMMENT_ATTACHMENTS } from './commentAttachments';
 import { sceneOverrideSchema } from './sceneOverride';
 
 /**
@@ -50,6 +51,11 @@ const MAX_PATH_POINTS = 4_000;
 /** Coordonnées xyz aplaties d'un trait du painter 3D (soit ~4 000 points). */
 const MAX_STROKE_COORDS = 12_000;
 const MAX_ANIM_KEYS = 2_000;
+/**
+ * Points d'intérêt par commentaire. Le plafond est celui d'une remarque numérotée que quelqu'un
+ * relit — au-delà de vingt points, c'est une autre review, pas un commentaire. Miroir du front.
+ */
+export const MAX_POI_POINTS = 20;
 /**
  * Plafond global du blob d'annotation, en octets de JSON. Les bornes par champ laissent
  * encore, multipliées entre elles, une place démesurée (300 parts × 4 000 points) : ce
@@ -139,8 +145,37 @@ const rangePart = z
   })
   .strict();
 
+/**
+ * Un point d'intérêt d'un commentaire porteur (Phase 50, lot 12) : la même géométrie qu'un
+ * `hotspot`, plus la remarque qui lui est propre et les pièces jointes du commentaire qui lui
+ * appartiennent (référencées par leur clé MinIO — le stockage des pièces ne change pas).
+ */
+const poiPointSchema = z
+  .object({
+    position: z.string().max(120),
+    normal: z.string().max(120),
+    space: z.literal('object').optional(),
+    text: z.string().max(2_000).optional(),
+    images: z.array(z.string().max(512)).max(MAX_COMMENT_ATTACHMENTS).optional(),
+  })
+  .strict();
+
+/**
+ * Points d'intérêt d'un commentaire — **une seule part pour tous les points**, numérotés par
+ * leur rang dans le tableau.
+ *
+ * La forme a été arbitrée ainsi plutôt qu'en un commentaire par point : un seul commentaire
+ * part, il porte le texte de chaque point et les images, et il traverse donc le produit entier
+ * (portail client, export de notes, ShotGrid) sans cas particulier. `hotspotPart` reste accepté
+ * en écriture : le portail client n'en pose qu'un, et rien ne se réécrit en base.
+ */
+const poiPart = z
+  .object({ type: z.literal('poi'), points: z.array(poiPointSchema).min(1).max(MAX_POI_POINTS) })
+  .strict();
+
 const annotationPart = z.union([
   hotspotPart,
+  poiPart,
   paintPart,
   cameraAnimPart,
   sceneOverridePart,

@@ -127,8 +127,9 @@ zoom in on a difference.
 > Prefer `0` and the wheel while you are working in another mode.
 
 **Composition guides** — rule of thirds, centre cross, action safe (90 %) and title safe
-(80 %) — are toggled from the viewer's right-click menu or from the *Guides* panel of the dock.
-The preference is local to your browser and applies to every video you open.
+(80 %) — are toggled from the **viewer's right-click menu**, which is the only place they live
+now that the dock's *Guides* panel is gone. The preference is local to your browser and applies
+to every video and every image you open.
 
 ## Playback quality
 
@@ -165,7 +166,7 @@ the same task or asset.
 ![Compare opens a checkbox list: one version checked gives A/B with side-by-side, wipe and diff sub-modes; two or three give a 2x2 grid where wipe and diff are unavailable.](../assets/user-guide/video-compare-modes.svg)
 
 - **One version checked — A/B**: the second version plays muted and synchronised with the
-  master. Three sub-modes, from the options bar of Compare mode or the *Comparison* panel:
+  master. Three sub-modes, from the options bar of Compare mode:
   **side by side**, **Wipe** and **Diff**. Entering Compare mode already arms the wipe, so the
   tool rail carries no comparison tool of its own.
 - The **wipe bar** carries two handles: the round grip at its centre slides it across the

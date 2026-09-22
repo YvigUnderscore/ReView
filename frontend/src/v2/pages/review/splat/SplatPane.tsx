@@ -24,6 +24,7 @@ export default function SplatPane({
   settings,
   aspect,
   recording,
+  notice,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
@@ -46,6 +47,8 @@ export default function SplatPane({
   aspect?: number;
   /** Auto-key armé : liseré d'enregistrement sur le viewport (façon DCC). */
   recording?: boolean;
+  /** Bandeau d'état posé au-dessus du nuage (placement d'un point d'intérêt) — jumeau du 3D. */
+  notice?: ReactNode;
 }) {
   const t = useT();
   return (
@@ -67,6 +70,8 @@ export default function SplatPane({
 
         {pip}
       </ReviewFrame>
+
+      {notice}
 
       {/* Au-dessus du cadre, jamais dedans : le guide letterbox et l'overlay d'annotation
           gardent leurs coordonnées — ce coin ne touche pas au cadrage. */}

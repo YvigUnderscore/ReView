@@ -26,6 +26,9 @@ import { useMentions } from '../../components/comments/useMentions';
 import MentionMenu from '../../components/comments/MentionMenu';
 import VoiceRecorderButton from '../../components/comments/VoiceRecorderButton';
 import { clearDraft, loadDraft, saveDraft } from './commentDraft';
+import PoiDraftRows from './poi/PoiDraftRows';
+import type { PoiDraftState } from './poi/usePoiDraft';
+import type { PoiPoint } from './poi/poiPoints';
 import { useT, type MessageKey } from '../../i18n';
 
 /** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
@@ -40,8 +43,8 @@ const filters = (t: Tr): { value: ResolutionFilter; label: string }[] => [
 ];
 
 /**
- * Panneau latéral des commentaires : liste (avec skeleton de chargement) +
- * composer (texte, images jointes, indicateurs d'annotation/hotspot/caméra).
+ * Panneau latéral des commentaires : liste (avec skeleton de chargement) + composer (texte,
+ * images jointes, rangées des points d'intérêt, indicateurs d'annotation/caméra/plage).
  * L'envoi est délégué à `onSubmit` (l'orchestrateur joint timestamp, caméra
  * et annotations) ; le panneau ne vide sa saisie que si l'envoi a réussi.
  */
@@ -62,6 +65,8 @@ export default function CommentsPanel({
   onSubmit,
   annotating,
   onToggleAnnotate,
+  poi,
+  onPoiFocus,
   extraActions,
 }: {
   comments: ReviewComment[] | null;
@@ -79,7 +84,6 @@ export default function CommentsPanel({
   composerRef: RefObject<HTMLTextAreaElement | null>;
   hints: {
     annotation: boolean;
-    hotspot: boolean;
     camera: boolean;
     references?: number;
     /** Boucle I/O active (34.A) : le commentaire portera la plage in→out. */
@@ -89,6 +93,10 @@ export default function CommentsPanel({
   /** Mode annotation actif (bouton « Annoter » sous le champ, Phase 24). */
   annotating?: boolean;
   onToggleAnnotate?: () => void;
+  /** Points d'intérêt en préparation : une rangée par point, au-dessus du champ de texte. */
+  poi?: PoiDraftState;
+  /** Retour caméra sur un point relu (numéro cliqué dans une carte du fil). */
+  onPoiFocus?: (point: PoiPoint, index: number) => void;
   /** Entrées de clic droit propres à l'écran (montage : renvoyer sur la review du shot). */
   extraActions?: (comment: ReviewComment) => ReactNode;
 }) {
@@ -115,8 +123,8 @@ export default function CommentsPanel({
   // Autocomplete des mentions @membre (32.B).
   const mentions = useMentions(content, setContent, composerRef);
 
-  // Une annotation (dessin, hotspot, référence) suffit : le texte est optionnel.
-  const hasPayload = hints.annotation || hints.hotspot || (hints.references ?? 0) > 0;
+  // Une annotation (dessin, point d'intérêt, référence) suffit : le texte est optionnel.
+  const hasPayload = hints.annotation || (poi?.points.length ?? 0) > 0 || (hints.references ?? 0) > 0;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!content.trim() && attachFiles.length === 0 && !hasPayload) return;
@@ -197,6 +205,7 @@ export default function CommentsPanel({
             markers={markers}
             onMarkerSeek={onMarkerSeek}
             extraActions={extraActions}
+            onPoiFocus={onPoiFocus}
           />
         )}
       </div>
@@ -210,7 +219,9 @@ export default function CommentsPanel({
             🖼 {t('comment.referencesAttached', { count: hints.references ?? 0 })}
           </p>
         )}
-        {hints.hotspot && <p className="mb-1.5 text-xs text-primary">{t('review.hotspotAttached')}</p>}
+        {/* Points d'intérêt en préparation : leur texte et leurs images se règlent ici, où l'on
+            lit ce qui va partir — un seul commentaire les emporte tous. */}
+        {poi && <PoiDraftRows poi={poi} />}
         {hints.range && <p className="mb-1.5 text-xs text-primary">{t('review.rangeAttached')}</p>}
         {hints.camera && <p className="mb-1.5 text-xs text-primary">{t('review.camViewSaved')}</p>}
         <div className="relative">

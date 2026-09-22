@@ -33,7 +33,9 @@ export function useClientSubmitComment(opts: {
 
   return useCallback(
     async (guestName: string, text: string) => {
-      const annotation = buildGuestAnnotation({ shapes: ann.annot, hotspot: ann.hotspot3d });
+      // Le portail client ne pose qu'un point : le premier de la liste part comme `hotspot`,
+      // la part que le schéma INVITÉ accepte. Un retour de client reste un retour de client.
+      const annotation = buildGuestAnnotation({ shapes: ann.annot, hotspot: ann.poi.points[0] ?? null });
       const content = guestCommentContent(text, annotation);
       // Ni texte ni dessin : il n'y a rien à envoyer.
       if (content === null) return;

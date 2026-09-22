@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Undo2 } from 'lucide-react';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../components/ui/context-menu';
 import PrimMenuItems from './panels/PrimMenuItems';
 import { useSaveSceneOverride } from './three/useSaveSceneOverride';
@@ -21,7 +20,8 @@ import { useSectionPlane } from './three/useSectionPlane';
 import { useModel3DCompare } from './three/useModel3DCompare';
 import { useModel3DViewState } from './three/useModel3DViewState';
 import { useModelMeasure } from './three/useModelMeasure';
-import { useHotspotPlacement } from './three/useHotspotPlacement';
+import { usePoiPlacement } from './poi/usePoiPlacement';
+import Model3DNotice from './three/Model3DNotice';
 import SpatialCompareHeader from './three/SpatialCompareHeader';
 import { useCameraSceneRig } from './camera/sceneRig/useCameraSceneRig';
 import { useCameraShortcuts } from './camera/useCameraShortcuts';
@@ -34,6 +34,7 @@ import { useModel3DChrome } from './three/useModel3DChrome';
 import Model3DOptions from './options/Model3DOptions';
 import ReviewChrome from './chrome/ReviewChrome';
 import { DEFAULT_MODE } from './chrome/modes';
+import { DEFAULT_TOOL } from './chrome/tools';
 import { useModel3DModes } from './three/useModel3DModes';
 import Model3DRenderMenu from './three/Model3DRenderMenu';
 import SpatialTransport from './transport/SpatialTransport';
@@ -105,8 +106,7 @@ export default function Model3DReview({
   const measure = useModelMeasure(model3d, data.modelSource?.usd?.metersPerUnit ?? 1);
   // Mode d'affichage + plan de coupe + HDRI joints à la vue caméra du commentaire.
   useModel3DViewState({ model3d, inspect, section, lighting });
-  // Hotspot posé au clic (et non plus au centre de l'écran) : l'outil s'arme, puis on désigne.
-  const hotspot = useHotspotPlacement(model3d, (hs) => ann.setHotspot3d(hs));
+
   // Scenegraph USD + « ReView override » (46.C) : l'override de base du média est rejoué pour
   // tous, l'exploration locale du spectateur reste dans sa session.
   // Mémoïsé : sans cela l'override serait un objet neuf à chaque rendu et la scène serait
@@ -127,7 +127,7 @@ export default function Model3DReview({
     return () => setFrameTarget(null);
   }, [setFrameTarget, scene.selectedObjects]);
   // L'envoi d'un commentaire emporte la proposition (le composer est vidé) : l'exploration
-  // locale repart à zéro — comme le hotspot posé. Sans cela, le pied du scenegraph promettrait
+  // locale repart à zéro — comme les points posés. Sans cela, le pied du scenegraph promettrait
   // un delta que le prochain commentaire ne porterait plus. Le commentaire fraîchement créé,
   // une fois sélectionné, rejoue exactement ce qui vient d'être proposé.
   //
@@ -203,6 +203,16 @@ export default function Model3DReview({
   useModel3DCommands(cam, model3d, canManage, !!data.splatPresentation, measure);
 
   const activeTool = tools.find((t) => t.id === state.tool) ?? tools[0];
+  // Points d'intérêt : ARMER L'OUTIL, C'EST ÊTRE EN PLACEMENT — le clic suivant dans la vue
+  // pose un point, sans bouton intermédiaire. Même hook et même geste que sur le splat.
+  const placingPoi = activeTool.id === 'pin';
+  usePoiPlacement({
+    viewer: model3d,
+    armed: placingPoi,
+    poi: ann.poi,
+    showingDraft: ann.viewedPoi.length === 0,
+    onExit: () => update({ tool: DEFAULT_TOOL }),
+  });
   const trackSwitch = (
     <TrackSwitch track={track} onTrack={setTrack} hasClips={model3d.animations.length > 0} />
   );
@@ -235,7 +245,7 @@ export default function Model3DReview({
           history={history}
           dirty={dirty}
           canEdit={showEditTools}
-          onPlaceHotspot={hotspot.arm}
+          poi={ann.poi}
           presentation={canManage ? { busy: cam.busy, onSave: () => void cam.save?.() } : undefined}
         />
       }
@@ -321,20 +331,12 @@ export default function Model3DReview({
               processingError={data.processingError}
               onReprocess={onReprocess}
               notice={
-                hotspot.armed ? (
-                  <p className="absolute top-2 left-1/2 z-20 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow-lg">
-                    {t('hotspot.clickToPlace')}
-                  </p>
-                ) : hasCommentScene ? (
-                  <button
-                    onClick={() => setViewedSceneOverride(null)}
-                    title={t('review.resetScene')}
-                    className="absolute top-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow-lg ring-2 ring-primary/30 hover:opacity-90"
-                  >
-                    <Undo2 size={12} /> {t('review.commentScene')}
-                    <kbd className="rounded bg-primary-foreground/20 px-1 text-2xs">{t('common.escKey')}</kbd>
-                  </button>
-                ) : undefined
+                <Model3DNotice
+                  placingPoi={placingPoi}
+                  poiCount={ann.poi.points.length}
+                  commentScene={hasCommentScene}
+                  onReleaseScene={releaseCommentScene}
+                />
               }
             />
           </div>

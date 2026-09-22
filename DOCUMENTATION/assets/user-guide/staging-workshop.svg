@@ -2,7 +2,7 @@
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="stg-title">The Staging workshop of a spatial review</title>
-  <desc id="stg-desc">Entering Staging lights up a tool rail for the camera, puts the camera object and its picture-in-picture frame in the viewer, adds the Camera panel entries to the dock, and fills the bottom transport with the key controls and the Curves drawer.</desc>
+  <desc id="stg-desc">The Staging switch of the Camera panel is the only way into the mode: there is no Staging segment in the header. Throwing it lights up a tool rail for the camera, puts the camera object and its picture-in-picture frame in the viewer, and fills the bottom transport with the key controls and the Curves drawer.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -56,18 +56,19 @@
 
   <rect class="bg" x="0" y="0" width="800" height="500" rx="10"/>
 
-  <text class="d" x="28" y="26">WHAT ENTERING STAGING TURNS ON — the accented parts are new to the mode</text>
+  <text class="d" x="28" y="26">WHAT THE STAGING SWITCH TURNS ON — the accented parts are new to the mode</text>
 
-  <!-- En-tête : bascule de mode -->
+  <!-- Entrée du mode : l'interrupteur du panneau Caméra, seul chemin -->
   <rect class="panel" x="20" y="40" width="760" height="44" rx="9"/>
-  <text class="d" x="34" y="59">REVIEW HEADER</text>
-  <text class="d" x="34" y="75">keys 1 · 2 · 3</text>
-  <rect class="panel" x="300" y="49" width="100" height="26" rx="9"/>
-  <text class="l" x="350" y="66" text-anchor="middle">Explore</text>
-  <rect class="panel-a" x="406" y="49" width="100" height="26" rx="9"/>
-  <text class="t" x="456" y="66" text-anchor="middle">Staging</text>
-  <rect class="panel" x="512" y="49" width="100" height="26" rx="9"/>
-  <text class="l" x="562" y="66" text-anchor="middle">Clean up</text>
+  <text class="d" x="34" y="58">THE ONLY WAY IN</text>
+  <text class="d" x="34" y="74">no Staging segment in the header; 1 leaves the mode</text>
+  <rect class="panel" x="356" y="49" width="118" height="26" rx="9"/>
+  <text class="l" x="415" y="66" text-anchor="middle">Camera panel</text>
+  <path class="conn-a" d="M474 62 L504 62" marker-end="url(#arrow-a)"/>
+  <rect class="panel-a" x="508" y="49" width="262" height="26" rx="9"/>
+  <text class="t" x="620" y="66" text-anchor="middle">Framing → Staging</text>
+  <rect class="panel" x="734" y="56" width="24" height="12" rx="6"/>
+  <circle class="head-a" cx="752" cy="62" r="4"/>
 
   <!-- Rail d'outils -->
   <rect class="panel" x="20" y="96" width="150" height="210" rx="9"/>
@@ -100,13 +101,15 @@
 
   <!-- Dock inspecteur -->
   <rect class="panel" x="610" y="96" width="170" height="210" rx="9"/>
-  <text class="d" x="620" y="116">INSPECTOR DOCK</text>
+  <text class="d" x="620" y="116">DOCK — CAMERA PANEL</text>
   <rect class="panel-a" x="618" y="126" width="154" height="30" rx="9"/>
-  <text class="l" x="628" y="145">Camera — focal, tilt</text>
-  <rect class="panel-a" x="618" y="160" width="154" height="30" rx="9"/>
-  <text class="l" x="628" y="179">PiP switch</text>
-  <rect class="panel-a" x="618" y="194" width="154" height="30" rx="9"/>
+  <text class="l" x="628" y="145">Staging switch</text>
+  <rect class="panel" x="618" y="160" width="154" height="30" rx="9"/>
+  <text class="l" x="628" y="179">Focal · tilt · aspect</text>
+  <rect class="panel" x="618" y="194" width="154" height="30" rx="9"/>
   <text class="l" x="628" y="213">Clear presentation</text>
+  <text class="d" x="620" y="248">the switch is there in</text>
+  <text class="d" x="620" y="264">or out of the mode</text>
   <text class="d" x="620" y="282">Tab folds the dock</text>
 
   <text class="d" x="180" y="326">A red border around the viewer means auto-key is armed: every camera move writes a key.</text>
@@ -136,5 +139,5 @@
   <rect class="band" x="28" y="438" width="744" height="18" rx="6"/>
   <text class="d" x="36" y="451">graph editor — one curve per channel, on the same horizontal scale as the ruler</text>
 
-  <text class="d" x="28" y="484">Leaving Staging turns the workshop off again — the animation itself is untouched.</text>
+  <text class="d" x="28" y="484">Turning the switch off turns the workshop off again — the animation itself is untouched.</text>
 </svg>

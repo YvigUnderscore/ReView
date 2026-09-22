@@ -98,13 +98,15 @@ export interface SplatPaintStroke {
 export type SplatLayoutAnim = CameraAnimV2;
 
 /**
- * Sépare les parties d'une annotation de commentaire : hotspot 3D, animation caméra (mode
- * layout) et formes 2D — les traits du painter (`splat-paint`, V9) et l'anim caméra sont exclus
- * des formes (rendus dédiés). L'animation est **normalisée en v2** (les anciennes annotations
- * v1 sont migrées à la lecture).
+ * Sépare les parties d'une annotation de commentaire : animation caméra (mode layout) et formes
+ * 2D — les traits du painter (`splat-paint`, V9), l'anim caméra et les points d'intérêt (`poi`,
+ * comme le `hotspot` hérité) sont exclus des formes : chacun a son rendu. L'animation est
+ * **normalisée en v2** (les anciennes annotations v1 sont migrées à la lecture).
+ *
+ * Les points d'intérêt se lisent par `poi/poiPoints.readPoiPoints`, qui unifie la part `poi` et
+ * le `hotspot` unique d'avant la Phase 50 — ils ne passent plus par ici.
  */
 export function splitAnnotationParts(annotation: unknown): {
-  hotspot: Hotspot3D | null;
   shapes: unknown[];
   cameraAnim: SplatLayoutAnim | null;
   /** Proposition de scène 3D jointe au commentaire (46.D) — rejouée à sa sélection. */
@@ -112,17 +114,8 @@ export function splitAnnotationParts(annotation: unknown): {
   /** Plage vidéo in→out (34.A) : l'annotation reste visible pendant toute la plage. */
   range: { inFrame: number; outFrame: number } | null;
 } {
-  if (!Array.isArray(annotation))
-    return { hotspot: null, shapes: [], cameraAnim: null, range: null, sceneOverride: null };
-  const parts = annotation as Array<{
-    type?: string;
-    position?: string;
-    normal?: string;
-    space?: 'object';
-    inFrame?: number;
-    outFrame?: number;
-  }>;
-  const hs = parts.find((x) => x?.type === 'hotspot');
+  if (!Array.isArray(annotation)) return { shapes: [], cameraAnim: null, range: null, sceneOverride: null };
+  const parts = annotation as Array<{ type?: string; inFrame?: number; outFrame?: number }>;
   const anim = parts.find((x) => x?.type === 'camera-anim');
   const rangePart = parts.find((x) => x?.type === 'range');
   const scenePart = parts.find((x) => x?.type === 'scene-override') as { override?: unknown } | undefined;
@@ -130,6 +123,7 @@ export function splitAnnotationParts(annotation: unknown): {
     (x) =>
       x &&
       x.type !== 'hotspot' &&
+      x.type !== 'poi' &&
       x.type !== 'splat-paint' &&
       x.type !== 'camera-anim' &&
       x.type !== 'range' &&
@@ -143,7 +137,6 @@ export function splitAnnotationParts(annotation: unknown): {
       ? { inFrame: rangePart.inFrame, outFrame: rangePart.outFrame }
       : null;
   return {
-    hotspot: hs?.position && hs.normal ? { position: hs.position, normal: hs.normal, space: hs.space } : null,
     shapes,
     cameraAnim: normalizeAnim(anim),
     range,

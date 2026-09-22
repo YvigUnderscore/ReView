@@ -12,6 +12,7 @@ import type { useAnnotations } from '../useAnnotations';
 import type { useCompareState } from '../useCompareState';
 import type { useLiveSession } from '../useLiveSession';
 import type { useTimelineMarkers } from '../useTimelineMarkers';
+import type { PoiPoint } from '../poi/poiPoints';
 
 interface Params {
   id: number;
@@ -40,6 +41,8 @@ interface Params {
   loop: { in: number | null; out: number | null };
   submitComment: Parameters<typeof ReviewCommentsColumn>[0]['onSubmit'];
   toggleAnnotating: () => void;
+  /** Retour caméra sur un point d'intérêt relu (numéro cliqué dans le fil). */
+  onPoiFocus: (point: PoiPoint, index: number) => void;
 }
 
 export interface ReviewHeaderSlots {
@@ -105,6 +108,7 @@ export function useReviewHeaderSlots(p: Params): ReviewHeaderSlots {
           loop={p.loop}
           onSubmit={p.submitComment}
           onToggleAnnotate={p.toggleAnnotating}
+          onPoiFocus={p.onPoiFocus}
         />
       ) : null,
   };

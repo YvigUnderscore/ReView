@@ -249,7 +249,7 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
               selectedId={selectedId}
               onSelect={selectComment}
               composerRef={composerRef}
-              hints={{ annotation: ann.annot.length > 0, hotspot: false, camera: false }}
+              hints={{ annotation: ann.annot.length > 0, camera: false }}
               onSubmit={submitComment}
               annotating={ann.annotating}
               onToggleAnnotate={() => {

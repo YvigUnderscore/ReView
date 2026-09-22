@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { MapPin, RotateCcw } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
+import { RotateCcw } from 'lucide-react';
 import { IconButton } from '../../../components/ui/icon-button';
 import { NumberField } from '../../../components/ui/number-field';
 import OptionsBar, { CommitGroup } from '../chrome/OptionsBar';
@@ -11,6 +10,8 @@ import type { ReviewTool } from '../chrome/tools';
 import { DEFAULT_TRANSFORM } from '../reviewTypes';
 import type { Model3DThreeState } from '../three/useModel3DThree';
 import type { useEditHistory } from '../splat/editor/operations/history';
+import PoiOptions from '../poi/PoiOptions';
+import type { PoiDraftState } from '../poi/usePoiDraft';
 import { useT, type Tr } from '../../../i18n';
 
 const rotations = (t: Tr) =>
@@ -32,7 +33,7 @@ export default function Model3DOptions({
   history,
   dirty,
   canEdit,
-  onPlaceHotspot,
+  poi,
   presentation,
 }: {
   tool: ReviewTool;
@@ -42,7 +43,8 @@ export default function Model3DOptions({
   dirty: boolean;
   /** Transformation éditable (pré-publication + droits). */
   canEdit: boolean;
-  onPlaceHotspot: () => void;
+  /** Points d'intérêt en préparation — mêmes options que sur le splat. */
+  poi: PoiDraftState;
   presentation?: { busy: boolean; onSave: () => void };
 }) {
   const tr = useT();
@@ -75,16 +77,7 @@ export default function Model3DOptions({
     <OptionsBar tool={tool} commit={commit}>
       {tool.id === 'nav' && <span className="rv-optbar__hint">{tr(tool.hintKey)}</span>}
 
-      {tool.id === 'pin' && (
-        <>
-          <span className="rv-optbar__hint">{tr('review.markerHint')}</span>
-          <span className="rv-rule" />
-          <Button size="sm" variant="outline" onClick={onPlaceHotspot}>
-            <MapPin size={13} />
-            {tr('review.markerPlace')}
-          </Button>
-        </>
-      )}
+      {tool.id === 'pin' && <PoiOptions poi={poi} />}
 
       {(tool.id === 'cam-move' || tool.id === 'cam-aim') && (
         <span className="rv-optbar__hint">{tr('camera.objectHint')}</span>

@@ -4,6 +4,7 @@
 import type * as THREE from 'three';
 import type { Hotspot3D } from '../reviewTypes';
 import { isDrawn } from './sceneOverrideApply';
+import { isClickGesture } from './usdPicking';
 
 /**
  * Point de surface visé par un rayon caméra (NDC). Comme pour la sélection de prim, les objets
@@ -27,9 +28,9 @@ export function raycastSurface(
  * `null` si le rayon ne touche rien.
  *
  * Historique : le hotspot ne pouvait se poser qu'au centre de l'écran, ce qui obligeait à
- * recadrer la caméra pour désigner un défaut — alors que le picking au clic existait déjà
- * juste à côté (`usdPicking`). Le centre reste disponible (`raycastModelCenter`) pour la
- * palette de commandes et les raccourcis, où il n'y a pas de pointeur.
+ * recadrer la caméra pour désigner un défaut — alors que le picking au clic existait déjà juste
+ * à côté (`usdPicking`). Le repli « au centre » a été RETIRÉ en Phase 50 (lot 12) : son seul
+ * appelant posait un point d'office à l'entrée en annotation, sans que personne l'ait désigné.
  */
 export function raycastModelPoint(
   three: typeof import('three'),
@@ -46,15 +47,6 @@ export function raycastModelPoint(
   return { position: `${local.x} ${local.y} ${local.z}`, normal: `${n.x} ${n.y} ${n.z}`, space: 'object' };
 }
 
-/** Hotspot au centre du viewer (NDC 0,0) — repli sans pointeur (palette, raccourci). */
-export function raycastModelCenter(
-  three: typeof import('three'),
-  camera: THREE.PerspectiveCamera,
-  object: THREE.Object3D,
-): Hotspot3D | null {
-  return raycastModelPoint(three, camera, object, { x: 0, y: 0 });
-}
-
 /** Point d'ancrage d'un marqueur : position (espace objet ou monde) et son numéro d'affichage. */
 export interface MarkerPoint {
   point: THREE.Vector3;
@@ -69,46 +61,108 @@ export function toMarkerPoint(three: typeof import('three'), hs: Hotspot3D): Mar
 }
 
 /**
- * Marqueurs DOM des hotspots (pastilles numérotées) projetés à l'écran chaque frame —
- * équivalent 3D du marqueur splat, générique sur un `Object3D` (les points en espace-objet
- * suivent sa matrice monde). Le numéro n'est plus figé à « 1 » : un commentaire peut désigner
- * plusieurs défauts, et chaque pastille porte son rang.
+ * Marqueurs DOM des points d'intérêt (pastilles numérotées) projetés à l'écran chaque frame —
+ * générique sur un `Object3D`, donc le MÊME code sert au modèle 3D et au splat (les points en
+ * espace-objet suivent la matrice monde de l'objet passé).
+ *
+ * Les pastilles deviennent manipulables quand l'appelant fournit des gestionnaires
+ * (`setInteractive`) : c'est le cas pendant la rédaction, où un point se déplace en tirant sa
+ * pastille et se désigne en la cliquant. En relecture, elles restent inertes — un commentaire
+ * envoyé ne se réécrit pas au passage de la souris.
  */
+export interface MarkerHandlers {
+  /** Pastille tirée puis lâchée ailleurs : le point de ce rang se repose sous le pointeur. */
+  onMove: (index: number, clientX: number, clientY: number) => void;
+  /** Pastille cliquée sans déplacement : le point de ce rang devient celui qu'on édite. */
+  onSelect: (index: number) => void;
+  /** Libellé accessible d'une pastille, numéro compris — traduit par l'appelant. */
+  label: (index: number) => string;
+}
+
 export interface ObjectMarker {
   update(
-    points: MarkerPoint[] | MarkerPoint | null,
+    points: MarkerPoint[] | null,
     camera: THREE.PerspectiveCamera,
     object: THREE.Object3D,
     width: number,
     height: number,
   ): void;
+  /** Arme (ou désarme, avec `null`) le déplacement et la désignation des pastilles. */
+  setInteractive(handlers: MarkerHandlers | null): void;
+  /** Rang mis en avant (la rangée du composeur qu'on édite), ou `null`. */
+  setActive(index: number | null): void;
   remove(): void;
 }
 
 const MARKER_CLASS =
-  'pointer-events-none absolute left-0 top-0 z-[5] flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary text-xs font-semibold text-primary-foreground shadow';
+  'absolute left-0 top-0 z-[5] flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs font-semibold shadow';
+/** Pastille au repos : elle ne doit pas voler le pointeur à l'orbite. */
+const IDLE_CLASS = 'pointer-events-none border-background bg-primary text-primary-foreground';
+/** Pastille manipulable — le curseur annonce qu'elle se tire. */
+const LIVE_CLASS = 'cursor-grab border-background bg-primary text-primary-foreground';
+/** Pastille du point en cours d'édition : le même jeu de tokens, en inverse. */
+const ACTIVE_CLASS = 'cursor-grab border-primary bg-background text-primary';
 
 export function createObjectMarker(three: typeof import('three'), container: HTMLElement): ObjectMarker {
   const els: HTMLDivElement[] = [];
   const proj = new three.Vector3();
+  let handlers: MarkerHandlers | null = null;
+  let active: number | null = null;
+
+  const skin = (el: HTMLDivElement, index: number) => {
+    const state = !handlers ? IDLE_CLASS : index === active ? ACTIVE_CLASS : LIVE_CLASS;
+    el.className = `${MARKER_CLASS} ${state}`;
+    if (handlers) {
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', handlers.label(index));
+      el.title = handlers.label(index);
+    } else {
+      el.removeAttribute('role');
+      el.removeAttribute('aria-label');
+      el.removeAttribute('title');
+    }
+  };
 
   /** Pastille de rang `i`, créée à la demande (un seul point = un seul nœud dans le DOM). */
   const elementAt = (i: number): HTMLDivElement => {
     let el = els[i];
     if (!el) {
       el = document.createElement('div');
-      el.className = MARKER_CLASS;
       el.textContent = String(i + 1);
       el.style.display = 'none';
-      container.appendChild(el);
+      // Un seul jeu d'écouteurs par pastille, posé à la création : ils lisent `handlers` au
+      // moment du geste, donc (dés)armer n'ajoute ni ne retire rien.
+      let down: { x: number; y: number } | null = null;
+      el.addEventListener('pointerdown', (e) => {
+        if (!handlers || e.button !== 0) return;
+        down = { x: e.clientX, y: e.clientY };
+        // Le canvas ne doit ni orbiter ni poser un point de plus sous la pastille.
+        e.stopPropagation();
+        e.preventDefault();
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          // Pointeurs synthétiques sans capture (tests) : le geste reste fonctionnel.
+        }
+      });
+      el.addEventListener('pointerup', (e) => {
+        const start = down;
+        down = null;
+        if (!handlers || !start || e.button !== 0) return;
+        e.stopPropagation();
+        if (isClickGesture(e.clientX - start.x, e.clientY - start.y)) handlers.onSelect(i);
+        else handlers.onMove(i, e.clientX, e.clientY);
+      });
       els[i] = el;
+      skin(el, i);
+      container.appendChild(el);
     }
     return el;
   };
 
   return {
     update(points, camera, object, width, height) {
-      const list = points == null ? [] : Array.isArray(points) ? points : [points];
+      const list = points ?? [];
       for (let i = 0; i < Math.max(list.length, els.length); i++) {
         const el = els[i] ?? (i < list.length ? elementAt(i) : null);
         if (!el) continue;
@@ -127,6 +181,14 @@ export function createObjectMarker(three: typeof import('three'), container: HTM
         }
         if (el.style.display !== 'none') el.style.display = 'none';
       }
+    },
+    setInteractive(next) {
+      handlers = next;
+      els.forEach(skin);
+    },
+    setActive(index) {
+      active = index;
+      els.forEach(skin);
     },
     remove: () => els.forEach((el) => el.remove()),
   };

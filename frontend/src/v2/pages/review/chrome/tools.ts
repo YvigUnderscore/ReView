@@ -207,11 +207,15 @@ const SPATIAL_TOOLS: Record<string, ReviewTool[]> = {
     // masquaient du rail — il n'avait donc aucune implémentation nulle part — et la lettre
     // l'armait quand même au clavier.
     {
+      // MÊME outil que dans « Explorer » : même libellé, même consigne, même geste. Il portait
+      // ici son propre couple de clés (« Épingle » / « ancrer le commentaire à un point »), qui
+      // décrivait un autre outil que le bouton d'à côté — un seul point d'intérêt, ancré au
+      // commentaire, au lieu d'une liste numérotée posée au clic.
       id: 'pin',
-      labelKey: 'tool.pin',
+      labelKey: 'tool.poi',
       icon: MapPin,
       key: 'I',
-      hintKey: 'tool.pin.hint',
+      hintKey: 'tool.poi.hint',
     },
   ],
   stage: [

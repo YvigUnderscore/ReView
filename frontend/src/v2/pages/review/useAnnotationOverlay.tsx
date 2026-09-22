@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { AnnotationCanvas, type Shape } from '../../components/AnnotationCanvas';
 import { shapesOutsideFrame } from './frameRect';
@@ -18,22 +18,38 @@ import { useT } from '../../i18n';
  * Phase 25) — signalé une fois à l'auteur.
  */
 /**
- * Hotspot 3D/splat (10.G, extrait de ReviewViewer) : affiche celui du commentaire
- * sélectionné, sinon celui en cours de placement — marqueur projeté par le viewer.
+ * Points d'intérêt 3D/splat (extrait de ReviewViewer) : affiche les pastilles numérotées du
+ * commentaire sélectionné, sinon celles en cours de rédaction — projetées par le viewer.
+ *
+ * Les deux viewers reçoivent la même liste par la même poignée (`showPoiPoints`) : c'est la
+ * numérotation de la scène, et elle vaut pour le modèle 3D comme pour le splat.
  */
-export function useHotspotDisplay(
+export function usePoiDisplay(
   kind: string | undefined,
   ann: ReturnType<typeof useAnnotations>,
   splat: SplatViewer,
   model3d: ReturnType<typeof useModel3DThree>,
 ) {
-  const { showHotspot } = splat;
-  const { showHotspot: showModelHotspot } = model3d;
-  const hotspot3d = kind === 'SPLAT' || kind === 'MODEL_3D' ? (ann.viewed3d ?? ann.hotspot3d) : null;
+  const { showPoiPoints } = splat;
+  const { showPoiPoints: showModelPoi } = model3d;
+  const spatial = kind === 'SPLAT' || kind === 'MODEL_3D';
+  const viewed = ann.viewedPoi;
+  const draft = ann.poi.points;
+  // Une liste stable d'un rendu à l'autre : sans ce mémo, l'effet réécrirait les pastilles à
+  // chaque rendu du composeur (frappe au clavier comprise).
+  const points = useMemo(
+    () =>
+      !spatial
+        ? []
+        : viewed.length > 0
+          ? viewed
+          : draft.map(({ position, normal, space }) => ({ position, normal, space })),
+    [spatial, viewed, draft],
+  );
   useEffect(() => {
-    if (kind === 'SPLAT') showHotspot(hotspot3d);
-    else if (kind === 'MODEL_3D') showModelHotspot(hotspot3d);
-  }, [kind, hotspot3d, showHotspot, showModelHotspot]);
+    if (kind === 'SPLAT') showPoiPoints(points);
+    else if (kind === 'MODEL_3D') showModelPoi(points);
+  }, [kind, points, showPoiPoints, showModelPoi]);
 }
 
 export function useAnnotationOverlay(ann: ReturnType<typeof useAnnotations>) {

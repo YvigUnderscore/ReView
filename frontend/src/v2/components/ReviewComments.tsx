@@ -21,6 +21,7 @@ import { useCommentTaskDialog } from '../lib/useCommentTaskDialog';
 import { useProjectRole } from '../lib/useProjectRole';
 import { useProjectContext } from '../stores/useProjectContext';
 import type { ReviewComment, TimelineMarker } from '../types/api';
+import type { PoiPoint } from '../pages/review/poi/poiPoints';
 import { useT } from '../i18n';
 
 /** Fil de commentaires de review (racines + réponses imbriquées, clic droit par carte),
@@ -38,6 +39,7 @@ export default function ReviewComments({
   markers,
   onMarkerSeek,
   extraActions,
+  onPoiFocus,
 }: {
   comments: ReviewComment[];
   mediaObjectId: number;
@@ -60,6 +62,8 @@ export default function ReviewComments({
    * place habituelle : un même geste ne doit pas ouvrir un menu différent selon la page.
    */
   extraActions?: (comment: ReviewComment) => ReactNode;
+  /** Retour caméra sur un point d'intérêt relu (numéro cliqué dans une carte). */
+  onPoiFocus?: (point: PoiPoint, index: number) => void;
 }) {
   const t = useT();
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
@@ -98,6 +102,7 @@ export default function ReviewComments({
             startFrame={startFrame}
             selectedId={selectedId}
             onSelect={onSelect}
+            onPoiFocus={onPoiFocus}
           />
         </div>
       </ContextMenuTrigger>

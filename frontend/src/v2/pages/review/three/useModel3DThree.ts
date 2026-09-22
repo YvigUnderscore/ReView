@@ -12,11 +12,10 @@ import { applyEulerTransform } from './applyTransform';
 import { createModelScene, type ModelScene } from './createModelScene';
 import { loadModel } from './loadModel';
 import { fitDistance, resizeRendererCamera } from './sceneConfig';
-import { createObjectMarker } from './objectHotspot';
+import { useModelPoi } from './useModelPoi';
 import { createSampler, type Sampler } from './statsSampler';
 import type { ModelPerfSample } from './perfStats';
 import { useModelScale } from './useModelScale';
-import { useModelHotspots } from './useModelHotspots';
 import { useModelCameraHandles } from './useModelCameraHandles';
 import { useModelAnimations } from './useModelAnimations';
 import { useModelLayout } from './useModelLayout';
@@ -72,10 +71,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   // Compteurs de performance (FPS, draw calls, triangles) — alimentés par la boucle de rendu,
   // lus par le panneau Scène. Rien n'est mesuré tant que personne n'est abonné.
   const statsRef = useRef<Sampler<ModelPerfSample> | null>(null);
-  const { hotspotRef, hotspotAtCenter, hotspotAtPointer, showHotspot } = useModelHotspots({
-    runtimeRef,
-    threeRef,
-  });
+  // Points d'intérêt : le MÊME hook que le splat (`poi/usePoiMarkers`), via son adaptateur.
+  const { mountMarker, project, hotspotAtPointer, showPoiPoints, setPoiHandlers, setPoiActive, focusPoi } =
+    useModelPoi(runtimeRef, threeRef);
   const frameCbs = useRef(new Set<(dt: number) => void>());
   // Rendu à la demande (F14) — porte l'invalidation, les abonnements passifs et la boucle.
   const gate = useRenderGate();
@@ -180,7 +178,9 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       if (cancelled || !containerRef.current) return;
       threeRef.current = THREE;
       const scene = createModelScene({ THREE, OrbitControls }, container);
-      const marker = createObjectMarker(THREE, container);
+      // Pastilles des points d'intérêt (DOM, projetées à l'écran) — leur cycle de vie et leur
+      // état appartiennent au hook partagé, le viewer ne fait que les monter et les projeter.
+      const unmountMarker = mountMarker(THREE, container);
       // Compteurs de rendu : `renderer.info` est remis à zéro à chaque frame par Three, on le
       // lit donc à la fin de la boucle, pas à l'abonnement.
       statsRef.current = createSampler<ModelPerfSample>(() => ({
@@ -195,12 +195,12 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       } catch {
         if (!cancelled) setLoadError(true);
         scene.dispose();
-        marker.remove();
+        unmountMarker();
         return;
       }
       if (cancelled) {
         scene.dispose();
-        marker.remove();
+        unmountMarker();
         return;
       }
       scene.root.add(model.object);
@@ -278,7 +278,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
           scene.renderer.render(scene.scene, scene.camera);
           renderPip(); // PiP de la caméra layout (no-op hors mode layout)
           const { clientWidth: w, clientHeight: h } = container;
-          marker.update(hotspotRef.current, scene.camera, scene.root, w, h);
+          project(scene.camera, scene.root, w, h);
           statsRef.current?.frame(now);
           captureFrame(scene.renderer.domElement); // miniature auto (Phase 20)
         },
@@ -289,7 +289,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         stopLoop();
         fly.dispose();
         flyRef.current = null;
-        marker.remove();
+        unmountMarker();
         scene.dispose();
       };
     })().catch(() => !cancelled && setLoadError(true));
@@ -304,11 +304,10 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       setReady(false);
       runtimeRef.current = null;
       threeRef.current = null;
-      hotspotRef.current = null;
       actionRef.current = null;
       statsRef.current = null;
     };
-  }, [active, glbSrc, animInit, renderPip, captureFrame, hotspotRef, gate]);
+  }, [active, glbSrc, animInit, renderPip, captureFrame, mountMarker, project, gate]);
 
   // Applique la transformation (orientation + échelle) au groupe parent, en live.
   useEffect(() => {
@@ -347,9 +346,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     // Transport d'animation GLB (40.A) : animations, currentAnim, playing, timeMs, durationMs,
     // speed, loop, play, pause, selectAnim, scrub, setSpeed, setLoop.
     ...animApi,
-    hotspotAtCenter,
     hotspotAtPointer,
-    showHotspot,
+    showPoiPoints,
+    setPoiHandlers,
+    setPoiActive,
+    focusPoi,
     captureThumbnail,
     /** PNG plein cadre de la vue courante (panneau Export) — `null` si la capture a échoué. */
     captureView,

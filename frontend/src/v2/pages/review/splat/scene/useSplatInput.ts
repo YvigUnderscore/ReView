@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { useCameraShortcuts } from '../../camera/useCameraShortcuts';
 import type { MediaResp } from '../../reviewTypes';
 import { importCameraFile } from '../../three/importCameraAbc';
-import { useHotspotPlacement } from '../../three/useHotspotPlacement';
 import type { Annotations } from '../../useAnnotations';
 import { frameCameraToSphere } from '../../viewer/frameCamera';
 import { useFrameShortcuts } from '../../viewer/useFrameShortcuts';
@@ -18,8 +17,6 @@ import { frameCameraToMesh } from './frameCamera';
 import { useT } from '../../../../i18n';
 
 export interface SplatInput {
-  /** Arme (ou désarme) la pose de hotspot au clic. */
-  armHotspot: () => void;
   /** Cadre la sélection si présente (édition), sinon le splat visible — touche F. */
   frameView: () => void;
   /** Rétablit la vue d'origine (cadrage automatique du mesh) — touche H. */
@@ -31,9 +28,12 @@ export interface SplatInput {
 }
 
 /**
- * Câblage pointeur/clavier du bloc splat : pose de hotspot au clic, transport caméra, cadrage
- * F/H, palette Ctrl+K, et les deux actions d'animation caméra (joindre au commentaire, importer
- * un fichier). Extrait de `SplatReview` (budget lignes) — le composant compose, il ne câble plus.
+ * Câblage pointeur/clavier du bloc splat : transport caméra, cadrage F/H, palette Ctrl+K, et les
+ * deux actions d'animation caméra (joindre au commentaire, importer un fichier). Extrait de
+ * `SplatReview` (budget lignes) — le composant compose, il ne câble plus.
+ *
+ * La pose des points d'intérêt n'est plus ici : elle suit l'outil du rail (`poi/usePoiPlacement`,
+ * appelé par `SplatReview`), exactement comme dans le viewer 3D.
  *
  * L'ordre de montage reprend celui d'avant l'extraction (transport caméra avant cadrage F/H) :
  * ces hooks posent des écouteurs clavier sur `window`, et on ne présume pas que l'ordre
@@ -51,7 +51,7 @@ export function useSplatInput({
 }: {
   splat: SplatViewer;
   data: MediaResp;
-  /** Annotations : hotspot posé au clic, animation caméra jointe/rejouée. */
+  /** Annotations : animation caméra jointe au commentaire, et celle du commentaire relu. */
   ann: Annotations;
   pres: PresentationState;
   /** Sélection de l'éditeur — F cadre dessus quand elle n'est pas vide. */
@@ -65,9 +65,6 @@ export function useSplatInput({
 }): SplatInput {
   const t = useT();
   const { ready, getSceneHandle } = splat;
-
-  // Hotspot posé au clic (et non plus au centre de l'écran), comme dans le viewer 3D.
-  const hotspot = useHotspotPlacement(splat, ann.setHotspot3d);
 
   // Raccourcis du transport caméra : Espace, K, ←/→, Début/Fin ; Ctrl+Z de l'anim en mode Layout.
   useCameraShortcuts({
@@ -141,5 +138,5 @@ export function useSplatInput({
     hasPresentation: !!data.splatPresentation,
   });
 
-  return { armHotspot: hotspot.arm, frameView, homeView, attachLayout, importLayout };
+  return { frameView, homeView, attachLayout, importLayout };
 }

@@ -11,13 +11,21 @@ import type { ReviewComment } from '../../types/api';
 import type { MediaResp } from './reviewTypes';
 import type { Annotations } from './useAnnotations';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
+import { buildPoiPart, poiContent } from './poi/poiPoints';
+import { poiStoredPoints, poiUploadPlan } from './poi/poiUpload';
 import { useT, t as translate } from '../../i18n';
 
 /**
  * Envoi d'un commentaire de review (extrait de ReviewPage, budget 10.F4) : assemble
- * timestamp/caméra/annotation (hotspot + painter + anim caméra + dessins 2D), téléverse
- * les pièces jointes, crée le commentaire puis lie les **images de référence en
+ * timestamp/caméra/annotation (points d'intérêt + painter + anim caméra + dessins 2D),
+ * téléverse les pièces jointes, crée le commentaire puis lie les **images de référence en
  * préparation** (position figée côté serveur). Renvoie true si l'envoi a réussi.
+ *
+ * **Un seul commentaire part**, quel que soit le nombre de points d'intérêt posés : il porte
+ * tous les points (part `poi`), la remarque de chacun recopiée numérotée dans son texte, et
+ * leurs images dans la liste de pièces jointes du commentaire. C'est la forme arrêtée avec
+ * l'utilisateur, et c'est elle qui laisse le portail client, l'export de notes et le pont
+ * ShotGrid inchangés — ils ne lisent que `content`.
  */
 export function useSubmitComment(opts: {
   id: number;
@@ -46,17 +54,15 @@ export function useSubmitComment(opts: {
     let timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
     if (range && loop) timestamp = loop.in!;
     const cameraState = kind === 'MODEL_3D' || kind === 'SPLAT' ? captureCamera() : undefined;
-    // Annotation : 3D/splat = hotspot de surface + dessins 2D ; autres = dessins 2D.
+    // Les images des points et celles du composeur partent ensemble : le plan décide de
+    // l'ordre (les points d'abord) et de ce qui tombe au plafond.
+    const spatial = kind === 'MODEL_3D' || kind === 'SPLAT';
+    const poiPoints = spatial ? ann.poi.points : [];
+    const plan = poiUploadPlan(poiPoints, files);
+    // Annotation : 3D/splat = points d'intérêt + dessins 2D ; autres = dessins 2D.
     let annotation: unknown;
-    if (kind === 'MODEL_3D' || kind === 'SPLAT') {
+    if (spatial) {
       const parts: unknown[] = [];
-      if (ann.hotspot3d)
-        parts.push({
-          type: 'hotspot',
-          position: ann.hotspot3d.position,
-          normal: ann.hotspot3d.normal,
-          space: ann.hotspot3d.space, // espace-objet (splat, V10) — suit la transformation
-        });
       if (kind === 'SPLAT') parts.push(...paint.serializePending()); // traits du painter (V9)
       // Mode layout : anim caméra (F-curves v2) jointe au commentaire (au lieu de dessiner).
       if (ann.cameraAnim)
@@ -81,15 +87,20 @@ export function useSubmitComment(opts: {
       annotation = parts;
     }
     try {
-      const attachments = files.length > 0 ? await uploadCommentAttachments(files) : undefined;
+      if (plan.dropped > 0) toast.warning(t('poi.imagesDropped', { count: plan.dropped }));
+      const uploaded = plan.files.length > 0 ? await uploadCommentAttachments(plan.files) : [];
+      // La part `poi` ne peut être assemblée qu'ICI : les clés des images n'existent qu'après
+      // le téléversement, et c'est par elles qu'un point reconnaît les siennes.
+      const poi = buildPoiPart(poiStoredPoints(poiPoints, plan, uploaded));
+      if (poi) annotation = [poi, ...(Array.isArray(annotation) ? annotation : [])];
       const { comment } = await api.post<{ comment: ReviewComment }>('/api/comments', {
         mediaObjectId: id,
         // Texte optionnel (annotation seule) : placeholder minimal pour la contrainte backend.
-        content: text.trim() || (annotation ? '(annotation)' : '(image)'),
+        content: poiContent(text, poiPoints, annotation ? '(annotation)' : '(image)'),
         timestamp,
         cameraState,
         annotation,
-        attachments,
+        attachments: uploaded.length > 0 ? uploaded : undefined,
       });
       await linkStagedReferences(qc, id, ann, comment.id);
       ann.resetComposer();

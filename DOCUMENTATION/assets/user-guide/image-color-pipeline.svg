@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 404" width="800" height="404" role="img" aria-labelledby="fig-title fig-desc">
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-  <title id="fig-title">What the colour panel does to the pixels of a still image</title>
-  <desc id="fig-desc">A stack read from bottom to top: the original file in storage, the decoded image or its JPEG proxy, exposure, the display transform, viewing gamma, and the GPU render laid over the original. A side panel lists what the panel does not touch, and the three messages the panel can report about where the transform comes from.</desc>
+  <title id="fig-title">How a still image reaches the screen of a review</title>
+  <desc id="fig-desc">A stack read from bottom to top: the original file in storage, the decoded image or its JPEG proxy, the baked LUT of the project display and view couple, and the GPU render laid over the original. A side panel lists what the transform leaves untouched, and where the look is decided.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -56,37 +56,30 @@
 
   <rect class="bg" x="0" y="0" width="800" height="404" rx="10"/>
 
-  <text class="d" x="28" y="30">WHAT YOU END UP LOOKING AT</text>
-  <text class="d" x="496" y="30">WHAT IT DOES NOT TOUCH</text>
+  <text class="d" x="28" y="30">HOW THE PICTURE REACHES YOUR SCREEN</text>
+  <text class="d" x="496" y="30">WHAT IT LEAVES ALONE</text>
 
   <!-- Sens de lecture de la pile : du fichier d'origine à l'image affichée -->
   <path class="conn-a" d="M46 380 L46 40" marker-end="url(#arrow-a)"/>
 
-  <!-- Couche 6 (sommet) : rendu GPU superposé dans le plan zoomé -->
+  <!-- Couche 4 (sommet) : rendu GPU superposé dans le plan zoomé -->
   <rect class="panel-a" x="70" y="44" width="400" height="46" rx="9"/>
   <text class="t" x="88" y="64">GPU (WebGL) render</text>
   <text class="d" x="88" y="80">laid over the original — zoom, pan and notes stay untouched</text>
 
-  <rect class="panel" x="70" y="102" width="400" height="46" rx="9"/>
-  <text class="l" x="88" y="122">Viewing gamma</text>
-  <text class="d" x="88" y="138">applied after the display transform, to read into the shadows</text>
+  <!-- Couche 3 : la LUT cuite du couple display/view du PROJET -->
+  <rect class="panel-a" x="70" y="140" width="400" height="46" rx="9"/>
+  <text class="t" x="88" y="160">Baked LUT of the project display / view</text>
+  <text class="d" x="88" y="176">no couple, or no baked LUT: nothing is applied</text>
 
-  <rect class="panel-a" x="70" y="160" width="400" height="46" rx="9"/>
-  <text class="t" x="88" y="180">Display transform</text>
-  <text class="d" x="88" y="196">from the project OCIO couple — the switch turns the stack off</text>
-
-  <rect class="panel" x="70" y="218" width="400" height="46" rx="9"/>
-  <text class="l" x="88" y="238">Exposure</text>
-  <text class="d" x="88" y="254">a gain in stops applied in linear light — drag EV to scrub</text>
-
-  <rect class="panel" x="70" y="276" width="400" height="46" rx="9"/>
-  <text class="l" x="88" y="296">Decoded image</text>
-  <text class="d" x="88" y="312">EXR, DPX, TIFF, TGA: the worker's full-resolution JPEG proxy</text>
+  <rect class="panel" x="70" y="236" width="400" height="46" rx="9"/>
+  <text class="l" x="88" y="256">Decoded image</text>
+  <text class="d" x="88" y="272">EXR, DPX, TIFF, TGA: the worker's full-resolution JPEG proxy</text>
 
   <!-- Couche 1 (base) : le fichier déposé, jamais réécrit -->
-  <rect class="panel" x="70" y="334" width="400" height="46" rx="9"/>
-  <text class="l" x="88" y="354">Original file in object storage</text>
-  <text class="d" x="88" y="370">never rewritten, whatever you do in this panel</text>
+  <rect class="panel" x="70" y="332" width="400" height="46" rx="9"/>
+  <text class="l" x="88" y="352">Original file in object storage</text>
+  <text class="d" x="88" y="368">never rewritten, by anyone, at any point of the review</text>
 
   <!-- Colonne de droite : ce que la transformée laisse intact -->
   <rect class="panel" x="496" y="44" width="280" height="200" rx="9"/>
@@ -97,17 +90,17 @@
   <text class="l" x="514" y="142">Download the image</text>
   <text class="d" x="514" y="156">you get the file the viewer is served,</text>
   <text class="d" x="514" y="170">untransformed</text>
-  <text class="l" x="514" y="192">Other reviewers</text>
-  <text class="d" x="514" y="206">the settings live in your browser and</text>
-  <text class="d" x="514" y="220">never reach the server</text>
+  <text class="l" x="514" y="192">Zoom, pan, notes, references</text>
+  <text class="d" x="514" y="206">the render is an overlay inside the</text>
+  <text class="d" x="514" y="220">zoom layer, not a new source</text>
 
-  <!-- Les trois états que le panneau affiche sous ses réglages -->
+  <!-- Où le look se décide : pas dans la review -->
   <rect class="panel" x="496" y="260" width="280" height="110" rx="9"/>
-  <text class="t" x="514" y="282">Where the transform comes from</text>
+  <text class="t" x="514" y="282">Where the look is decided</text>
   <circle class="ok" cx="520" cy="302" r="4"/>
-  <text class="l" x="534" y="306">LUT baked from the OCIO config</text>
+  <text class="l" x="534" y="306">Project settings — Colour management</text>
   <circle class="head" cx="520" cy="324" r="4"/>
-  <text class="l" x="534" y="328">Colorimetric conversion only</text>
+  <text class="l" x="534" y="328">Info panel: the couple, read-only</text>
   <circle class="no" cx="520" cy="346" r="4"/>
-  <text class="l" x="534" y="350">No colour config on the project</text>
+  <text class="l" x="534" y="350">Nothing to set inside the review</text>
 </svg>

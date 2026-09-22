@@ -20,7 +20,7 @@ a client uploads — or a containerised worker. ReView does neither today. Inste
 camera **once per shot** with an external tool, and import the resulting JSON in the review
 through the same control that accepts glTF cameras.
 
-![Outside ReView, a one-time extractor turns shot_cam.abc into a JSON of samples; inside the review, the Import control of the Export panel reads it into a v2 camera animation on eight channels, which is then published in Staging as the media presentation.](../assets/admin-guide/alembic-camera-pipeline.svg)
+![Outside ReView, a one-time extractor turns shot_cam.abc into a JSON of samples; inside the review, the Import control of the Export panel reads it into a v2 camera animation on eight channels, which is then published from the Staging mode as the media presentation.](../assets/admin-guide/alembic-camera-pipeline.svg)
 
 > [!NOTE]
 > A containerised worker reading Ogawa directly (PyAlembic, or a Blender step folded into the
@@ -132,8 +132,10 @@ blender --background --python abc_camera.py -- /path/shot_cam.abc /path/shot_cam
    splat — use the same control, and it routes on the extension: `.json` is read as Alembic
    samples, anything else as a glTF/GLB camera.
 3. The keys land on the channels and the move starts playing. Scrub it, reshape it in the
-   **Curves** drawer, then switch the review to **Staging** mode and press **Publish** in the
-   options bar to save it as the media's presentation.
+   **Curves** drawer, then turn on the **Staging** switch in the *Framing* group of the *Camera*
+   panel and press **Publish** in the options bar to save it as the media's presentation. That
+   switch is the only entry to the mode — there is no *Staging* segment in the header of either
+   spatial viewer.
 
 An import **replaces** the animation currently loaded and resets its undo history, so publish or
 attach what you have before importing over it.
@@ -212,7 +214,7 @@ comment you are about to write. It then plays only when someone selects that not
 | The move plays too fast or too slow | `fps` missing, so frames were divided by 24 | Set `fps`, or emit `t` in seconds and skip the question |
 | The import worked, **Publish** fails | More than 256 keys on a channel, or a key past one hour | Raise `STEP` and re-extract, or thin the keys in the curve editor |
 | The camera does not roll although the DCC camera does | The derived roll was below 0.0001 rad and was dropped | Confirm the roll in the DCC; key `roll` by hand if the move genuinely needs a small tilt |
-| The move is right but nobody else sees it | It was imported, not published | Switch to **Staging** and press **Publish** — that is what is replayed |
+| The move is right but nobody else sees it | It was imported, not published | Turn on the **Staging** switch of the *Camera* panel and press **Publish** — that is what is replayed |
 | Members see the move, the client on the share link does not | Share pages restore the pose, not the animation | Expected; send a rendered video, or run a live review session |
 
 ## Security notes

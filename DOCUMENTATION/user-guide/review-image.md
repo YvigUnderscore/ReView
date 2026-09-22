@@ -1,6 +1,6 @@
 # Image review
 
-*Pan-and-zoom stills with pixel-anchored notes, pinned references, version comparison, and a colour panel that changes what you see and nothing else.*
+*Pan-and-zoom stills with pixel-anchored notes, pinned references, version comparison, and the studio's own display transform.*
 
 > Updated: 2026-09-20
 
@@ -37,7 +37,8 @@ though the pixels on screen come from its proxy.
 
 > [!NOTE]
 > A DPX in log or Cineon encoding comes out flat, because that proxy applies no curve of its
-> own. Opening it up is the job of the [colour panel](#colour-management), not of the proxy.
+> own. Putting the curve back is the job of the project's
+> [display transform](#colour-management), not of the proxy.
 
 An image sequence is not an image media: a thousand EXR frames become a single media of kind
 `VIDEO` and are reviewed in the video workspace. See [Image sequences](image-sequences.md).
@@ -91,8 +92,8 @@ Annotations are anchored to the **image pixels**: they share the picture's zoom 
 transform, so a stroke stays on the detail it was drawn on however far you zoom, and it
 survives a window resize or a fullscreen switch. You may draw up to **half an image width
 beyond each edge**, which is what makes an arrow pointing in from outside possible. There is
-no delivery-aspect letterbox guide on an image — that is a 3D and splat feature — and the
-dock's *Guides* switches draw on the video viewer only.
+no delivery-aspect letterbox guide on an image — that is a 3D and splat feature — but the four
+**composition guides** of the viewer's right-click menu do draw here, as they do on a video.
 
 > [!IMPORTANT]
 > A stroke belongs to the comment you are writing. It is sent with it, and from then on it is
@@ -143,9 +144,8 @@ asset. An image comparison is **exclusive**: ticking a version replaces the curr
 than building a grid — the 2×2 grid is a video feature. A version that carries no image media
 is reported as such instead of opening onto an error.
 
-Three modes, chosen from the options bar of Compare mode or from the *Comparison* panel of
-the dock. Entering Compare mode already arms the wipe, so the rail carries no comparison tool
-of its own:
+Three modes, chosen from the **options bar of Compare mode**, which is also where B is picked.
+Entering Compare mode already arms the wipe, so the rail carries no comparison tool of its own:
 
 | Mode | What you get |
 |---|---|
@@ -163,45 +163,34 @@ it always shows the raw picture.
 
 ## Colour management
 
-The **Image** panel of the dock is the colour panel, and on a still image it is the one place
-in the review that changes the pixels you look at.
+**There is nothing to set here.** A still image is shown through the **display transform of the
+project**, applied for everyone who opens it, and the review carries no colour controls of its
+own — no display/view picker, no exposure, no gamma, no on/off switch. That was a deliberate
+choice when the dock was cut back in Phase 50: a colour decision taken per reviewer, per media,
+in a fold of the dock, is a colour decision nobody can quote afterwards. Colour management is the
+studio's, set once in *Project → Settings → Colour management* — see
+[Colour management](../admin-guide/color-management.md).
 
-![The colour panel stacks exposure, the display transform and viewing gamma on top of the decoded picture, renders the result on the GPU and lays it over the original inside the zoom layer; comparisons, downloads and other reviewers are untouched.](../assets/user-guide/image-color-pipeline.svg)
+![The project's display and view resolve to a baked LUT; the decoded image is rendered through it on the GPU and laid over the original inside the zoom layer. Without a LUT, or without WebGL, the original file is what you see, and the comparison overlays always show raw images.](../assets/user-guide/image-color-pipeline.svg)
 
-| Control | What it does | Default |
-|---|---|---|
-| **Display** / **View** | The couple taken from the project's OCIO config. Picking another one here affects your screen only, and only couples that exist in the project's config are honoured. | *Project default* |
-| **Exposure** | A gain in stops, applied in linear light **before** the display transform. Drag the `EV` label to scrub, or type a value. | `0`, range −6 to +6, step 0.05 |
-| **Gamma** | A viewing gamma applied **after** the display transform, to read into the shadows. | `1`, range 0.2 to 4, step 0.01 |
-| **Display transform** | The on/off switch, and it governs the whole stack: turned off, exposure and gamma stop applying too and you are back on the raw file. | On |
-| **Reset** | Back to the project's display and view, exposure 0, gamma 1. Greyed out when nothing is set. | — |
+What that leaves you is a picture you can trust and two readouts:
 
-Under the controls, the panel says where the transform comes from. The message is worth
-reading before doubting the image:
-
-| Message | What it means |
+| Where | What it says |
 |---|---|
-| *LUT baked from the studio OCIO config.* | Exact: the display/view couple was baked by the worker's OCIO tooling |
-| *Colorimetric conversion only — no rendering curve.* | Gamut and transfer function only, without the tone map an ACES output transform would add |
-| *No baked LUT for this view yet…* | The view needs a rendering curve and the worker has no OpenColorIO tooling installed. Exposure and gamma still work; see [Colour management](../admin-guide/color-management.md#baked-luts) |
-| *No colour configuration on this project.* | Nothing to apply. Exposure and gamma still work |
-| *Display transform off — you are seeing the raw file.* | The switch is off |
-| *This browser has no WebGL: the pixels are left as they are.* | The render needs a GPU context this browser does not give; the raw file is shown instead |
-| *Applied to still images; video and 3D keep their own display.* | You opened the panel on another kind of media |
+| *Info* panel | The project's **Display** and **View**, read-only — the couple the picture went through |
+| *Project → Settings → Colour management* | Where the couple is chosen, by someone who can manage the project |
 
-> [!IMPORTANT]
-> **These are reading preferences.** Nothing is sent to the server, the media file is never
-> rewritten, and other reviewers keep their own settings — the panel says so under the
-> controls. They are stored in your browser and follow you from one media to the next.
+Three things are worth knowing about the transform itself:
 
-Two consequences worth knowing:
-
-- The transform runs on the GPU and the result is laid **over** the original inside the zoom
-  layer, so zoom, pan, annotations and pinned references are untouched by it. Scrubbing the
-  exposure re-renders after a short pause (about a seventh of a second), and the previous
-  image stays on screen meanwhile.
-- The **comparison overlays** — wipe, difference, side by side — show raw images. Comparing
-  two versions means looking at both in the same state.
+- **It needs a baked LUT.** The worker bakes one per display/view couple with its OCIO tooling.
+  When there is no LUT for the project's couple — no colour configuration on the project, or an
+  instance whose worker ships without OpenColorIO — nothing is applied and you are looking at the
+  decoded file. See [Colour management](../admin-guide/color-management.md#baked-luts).
+- **It is laid over the original inside the zoom layer**, on the GPU, rather than replacing the
+  source. Zoom, pan, annotations, pinned references and the live-session sync are untouched by it,
+  and a browser with no WebGL falls back to the original file instead of an empty frame.
+- **The comparison overlays — wipe, difference, side by side — show raw images.** Comparing two
+  versions means looking at both in the same state.
 
 ## Right-click, exports and notes
 
@@ -225,8 +214,8 @@ frame has to be captured and a timeline sprite exists to compose from.
 > Both download paths hand you **the picture the viewer is served**, saved under the
 > delivered name. On a plate delivered in EXR, DPX, TIFF or TGA that is the JPEG proxy, not
 > the original file — which stays in storage and is reachable through the API
-> (`downloadUrl` on `GET /api/media/:id`). Neither download carries the exposure, the gamma
-> or the display transform.
+> (`downloadUrl` on `GET /api/media/:id`). Neither download carries the display transform: you
+> get the picture as it sits in storage, not as your screen showed it.
 
 ## In a live review session
 
@@ -261,12 +250,14 @@ Press `1:1` in the control cluster: one image pixel is now one screen pixel, so 
 judging is the actual resolution rather than a browser resample. Pan with the middle button
 while keeping the eraser armed if you are cleaning up a previous note.
 
-### Reading into the blacks of an EXR without asking for a new render
+### The plate looks too dark, and you want to be sure
 
-Open the *Image* panel, drag the `EV` label up two stops and watch the shadow detail arrive.
-Toggling **Display transform** off puts you back on the raw file — exposure included — which
-is the honest before/after. Nothing of this reaches the artist: if the shot is genuinely too
-dark, that is a comment, not a slider.
+There is no exposure slider to reach for — and that is the answer, not a gap. The picture you see
+went through the project's display transform, so it is what the studio agreed a delivery looks
+like, and every other reviewer is looking at the same thing. Check the couple in the *Info*
+panel, and if the shot is genuinely too dark, that is a comment, not a slider. If the couple
+itself is wrong, it is a project setting, and it is wrong for everybody — see
+[Colour management](../admin-guide/color-management.md).
 
 ### Before / after on a retouch
 
@@ -285,9 +276,10 @@ notified. See [Review decisions & approvals](review-approvals.md).
 **Zoom and pan do nothing.** You are in wipe or difference comparison, which replace the
 viewer. Switch back to side by side, or close the comparison.
 
-**The image is there but it looks nothing like my render.** Check the colour panel's status
-line first. A DPX in log encoding, or an EXR seen without the studio's display transform, is
-expected to look wrong — that is what the panel is for.
+**The image is there but it looks nothing like my render.** Check the **Display** and **View**
+rows of the *Info* panel: they name the couple the picture went through. A DPX in log encoding, or
+an EXR on a project with no colour configuration, is expected to look flat — nothing was applied
+because there was nothing baked to apply.
 
 **`Ctrl+V` did not pin my screenshot.** The paste only becomes a pinned reference when the
 focus is outside a text field. With the caret in the composer, the same paste attaches the
@@ -297,23 +289,21 @@ says so when you reach it.
 **My reference image vanished after I sent the comment.** By design: once sent, a reference
 belongs to its comment and is only drawn when that comment is selected.
 
-**The dock has a Guides panel but nothing appears on the image.** The composition guide
-overlay is drawn on the video viewer only.
+**I cannot find the composition guides.** They are in the viewer's right-click menu, for both
+video and image; the dock's *Guides* panel is gone. The preference is per browser and applies to
+every flat media you open.
 
-**The colour panel says no baked LUT.** The display and view you picked need a rendering
-curve (an ACES output transform), and the worker of this instance has no OpenColorIO tooling
-installed, so ReView refuses to guess the curve. An administrator can enable it — see
-[Colour management](../admin-guide/color-management.md#baked-luts). Until then, `Raw` and
-un-tone-mapped views, exposure and gamma still work.
+**The picture is raw and no transform seems to be applied.** Two causes with the same symptom.
+Either the project's display/view couple has no baked LUT — an ACES output transform needs a
+rendering curve, and the worker of this instance may ship without OpenColorIO tooling, in which
+case ReView refuses to guess rather than invent a look; see
+[Colour management](../admin-guide/color-management.md#baked-luts). Or this browser gives no
+WebGL context (hardware acceleration disabled, a remote desktop, a locked-down profile), and the
+original file is shown instead of an empty frame.
 
-**The colour panel says this browser has no WebGL.** A different cause with the same symptom:
-the transform needs a GPU context this browser will not give (hardware acceleration disabled,
-a remote desktop, a locked-down profile). The raw file is shown, and the panel stops
-pretending otherwise.
-
-**Moving the exposure takes a moment to show.** The transformed image is re-encoded after each
-change; on a 6K plate that is a fraction of a second, and the previous image stays on screen
-meanwhile.
+**The transform appears a moment after the image.** The transformed picture is rendered and
+encoded once the LUT and the decoded image are both in; on a 6K plate that is a fraction of a
+second, and the original stays on screen meanwhile.
 
 **I downloaded the image and got a JPEG.** Downloads in the review serve the picture the
 viewer is served, which is the proxy for a production format. The delivered file is untouched

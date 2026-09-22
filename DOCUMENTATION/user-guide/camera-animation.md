@@ -8,16 +8,21 @@ A 3D or Gaussian splat media can carry an **animated camera**: a move authored o
 with the media, and replayed the same way for everyone who opens the review — including a
 client on a share link, who never has to fly the scene themselves.
 
-The camera workshop is the **Staging** mode of the review header: the second segment of the
-mode switch, key `2`. Everything on this page happens there, except playback, which happens
-everywhere.
+The camera workshop is the **Staging** mode, and it is armed by the **Staging** switch in the
+*Framing* group of the *Camera* panel — in both spatial viewers, and in both it is the only way
+in. There is no *Staging* segment in the mode switch: the panel already carried this switch, two
+controls for one state contradicted each other as soon as you changed mode, and the switch is
+the one that sits next to the focal length and the tilt you are about to key. `1` leaves the
+mode, as does turning the switch back off.
+
+Everything on this page happens there, except playback, which happens everywhere.
 
 ## What Staging turns on
 
-![Entering Staging lights up a tool rail for the camera, puts the camera object and its picture-in-picture frame in the viewer, and fills the bottom transport with the key controls and the Curves drawer.](../assets/user-guide/staging-workshop.svg)
+![The Staging switch of the Camera panel lights up a tool rail for the camera, puts the camera object and its picture-in-picture frame in the viewer, and fills the bottom transport with the key controls and the Curves drawer.](../assets/user-guide/staging-workshop.svg)
 
-Entering the mode turns the whole workshop on at once, and leaving it turns it off again —
-the animation itself is untouched either way.
+Throwing the switch turns the whole workshop on at once, and turning it off turns the workshop
+off again — the animation itself is untouched either way.
 
 - The **camera object** appears in the scene. It exists even before any key does: until you
   key it, it sits on the viewpoint you had when you entered the mode.
@@ -33,8 +38,9 @@ the animation itself is untouched either way.
 - The **transport** at the bottom gains the key controls, and the **Curves** button opens the
   sequencer under it.
 
-The *PiP* switch in the *Camera* panel of the dock remains available as a manual override, in
-or out of the mode.
+That switch is also what shows the picture-in-picture window, which is why it used to be read as
+a *PiP* switch. It is one state and one control: the mode, the camera object, the camera tools
+and the PiP come and go together.
 
 > [!TIP]
 > You never have to use the gizmos. Flying to a viewpoint and pressing `K` is the fastest way
@@ -282,8 +288,8 @@ edits are untouched.
 
 ### A turntable for a modelling review, in thirty seconds
 
-Open the model, press `2` for Staging, frame the asset the way you want the turn to start,
-then take the **Orbit preset** from the empty Curves drawer. You get a twelve-second loop
+Open the model, turn on the **Staging** switch in the *Camera* panel, frame the asset the way
+you want the turn to start, then take the **Orbit preset** from the empty Curves drawer. You get a twelve-second loop
 around the current target at your current height. Save the presentation, and every reviewer —
 including the client on a share link — sees exactly that move, without touching a control.
 

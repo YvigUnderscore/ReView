@@ -7,8 +7,9 @@
 Every media type — video, image, 3D model, Gaussian splat — opens in the **same workspace**.
 Only the tools change; their places never do. Nothing floats over the media except what is
 anchored to the view itself: annotation strokes, pins, the wipe bar, composition guides, the
-camera PiP, the axis triad, the cursors of the people watching with you, and a few corner
-badges that vanish when they have nothing to say.
+camera PiP, the axis triad, the cursors of the people watching with you, a few corner
+badges that vanish when they have nothing to say — and, on the two spatial viewers, the small
+menus in the top-left corner that set how the scene is drawn and, on a splat, how it is edited.
 
 Reading the workspace is therefore always the same sentence: *what am I doing* (mode) → *with
 what gesture* (rail) → *tuned how* (options bar), and separately *how is it displayed* (dock).
@@ -34,8 +35,9 @@ Two header rows sit above all of it, and they do different jobs:
   also carries **Compare…**, the checkbox list of the other versions.
 - The **workspace header** carries the mode switch — and, on 3D and splat, the **Compare…**
   selector, which those two viewers gained once the shared scene could host a second version.
-  Choosing a version to compare is a header gesture in all four viewers; the *Comparison*
-  panel of the dock only picks the sub-mode.
+  Choosing a version to compare is a header gesture in all four viewers — on an image the
+  options bar of *Compare* mode offers the same list — and the sub-mode (side by side, wipe,
+  difference) is picked in that options bar.
 
 On a draft, *Publish* opens **Publish and hand over the review**: the people who should
 look at this delivery, and the brief written for each of them. Afterwards, the same list
@@ -52,13 +54,28 @@ viewer the moment you open the media — you do not have to go looking for it. S
 ## Modes
 
 The mode switch sits in the middle of the workspace header, and each mode is also bound to a
-number key — **the position in the switch is the key**: first mode `1`, second `2`, third `3`.
+number key — **the position in the switch is the key**: first mode `1`, second `2`.
 
-| Media | Modes in the switch | Keys |
-| --- | --- | --- |
-| Video | Watch · Compare | `1` `2` |
-| Image | Watch · Compare | `1` `2` |
-| 3D model / splat | Explore · Staging · Clean up | `1` `2` `3` |
+| Media | Modes in the switch | Keys | What is not in the switch |
+| --- | --- | --- | --- |
+| Video | Watch · Compare | `1` `2` | Annotate |
+| Image | Watch · Compare | `1` `2` | Annotate |
+| 3D model | Explore · Clean up | `1` `2` | Annotate, Staging |
+| Splat | Explore | `1` — no switch is drawn | Annotate, Staging, Clean up |
+
+A mode missing from the switch is **not** a mode that was removed. It is a mode reached from
+where it is used, which is the rule the workspace follows everywhere: *Compare* only exists when
+a neighbouring version exists, *Clean up* on a 3D model only when its gizmos have somewhere to
+write, and the modes that were listed twice now have a single control each:
+
+| Mode | Where it is armed |
+| --- | --- |
+| **Annotate** | the *Annotate* button of the comment composer, right-click in the viewer on video and image, or any drawing-tool letter |
+| **Staging** (3D, splat) | the **Staging** switch of the *Camera* panel, in its *Framing* group |
+| **Clean up** (splat) | the **Edit** popover in the top-left corner of the viewer, or any of its tool letters |
+
+In all cases `1` brings you back to the first mode, and it is the way out when the switch is not
+there to click.
 
 **Annotate is a mode, but it is not in the switch.** You enter it from the comment space (the
 *Annotate* button of the composer, or right-click in the viewer on video and image), or simply
@@ -73,8 +90,9 @@ answers to `S`, precisely so that the two stop fighting over the same letter.
 
 The first mode (**Watch** / **Explore**) is the only one served to clients: an account with
 the `CLIENT` role does not see the switch and stays in read-only exploration. The switch also
-disappears when a media has a single mode — an auto-updating cut, for instance, only has
-*Watch*.
+disappears whenever a media is left with a single listed mode, because a lone segment switches
+to nothing: a splat always, a 3D model whose *Clean up* is out of reach, and an auto-updating
+cut, which only has *Watch*.
 
 Changing mode never destroys anything: it only changes which tools exist. If the tool you were
 holding does not exist in the new mode, you fall back to navigation.
@@ -96,9 +114,13 @@ picture does zoom and pan**, from the wheel, the middle button and the keyboard 
 
 | Mode | Tools |
 | --- | --- |
-| Watch | Navigate `V` · Fit `F` · Actual size `H` |
+| Watch | Navigate `V` |
 | Annotate | Navigate `V` · Freehand `D` · Rectangle `R` · Ellipse `E` · Arrow `A` · Polygon `P` · Text `T` · Move a shape `S` · Eraser `X` |
-| Compare | Navigate `V` · Fit `F` · Actual size `H` |
+| Compare | Navigate `V` |
+
+Outside Annotate a flat viewer has nothing to arm but navigation, and it shows exactly that: one
+button. Fit and actual size are not rail entries here — they are in the image's control cluster
+and on the video player's own keys.
 
 **Spatial media (3D model, splat)**
 
@@ -108,6 +130,10 @@ picture does zoom and pan**, from the wheel, the middle button and the keyboard 
 | Annotate | Navigate `V` · Surface brush `P` · Stroke eraser `X` (both splat only) · Pin `I` |
 | Staging | Navigate `V` · Place the camera `T` · Aim the camera `R` · Focus `C` (splat only) |
 | Clean up | Navigate `V` · Rectangle `B` · Lasso `L` · Mask brush `M` · Cutting volume `O` (all four splat only) · Move `T` · Rotate `R` · Scale `S` |
+
+On a splat the seven *Clean up* tools are also listed in the **Edit** popover of the viewer, with
+the same buttons and the same letters — one list, shown in two places, rather than two lists to
+keep in step.
 
 Below a separator, the spatial viewers add two **view actions**: **Fit the selection or the
 object** (`F`) and **Home view** (`H`). Video and image do not show them — the image viewer
@@ -119,7 +145,10 @@ video player answers to `0` and `1` instead.
 > [!TIP]
 > On 3D and splat media, `T`, `R` and `S` always reach the **Clean up** gizmos from wherever
 > you are — they are the standard DCC transform keys, and the rail is searched in that order.
-> Staging keeps `T` and `R` for its camera tools while you are already in Staging.
+> Staging keeps `T` and `R` for its camera tools while you are already in Staging. This is the
+> keyboard path into a mode whose header segment no longer exists, and it is why the mode still
+> needs a switch to *leave* it: the **Edit** popover on a splat, the *Staging* switch of the
+> *Camera* panel, or `1`.
 
 ## Options bar
 
@@ -131,14 +160,15 @@ tool's own name and shortcut.
 
 In modes that write (Clean up, Staging), a **commit group** is pinned at the
 right-hand end, outside the scrolling area, so the primary action is always reachable: undo,
-redo, and the save button. An unsaved state shows as a dot inside the button; a clean state
+redo, and the save button — *Save* for a clean-up, *Publish* for a staging. It is there whatever
+armed the mode: those two modes lost their header segments, not their options bar. An unsaved state shows as a dot inside the button; a clean state
 shows a check, and hovering the button names what is not saved. There is never a status label
 next to it — the footer of the workspace carries the *Saved* / *Not saved* badge.
 
 ## Inspector dock
 
-The right column holds what you set once and forget: playback, colour management, guides,
-comparison, technical sheet, exports — and in 3D, camera, lighting, display and scene.
+The right column holds what you set once and forget: the technical sheet, the exports — and on
+spatial media the camera, the lighting and the scene.
 
 - One panel at a time, in a 280 px body next to a 44 px tab strip. Clicking the open tab
   closes it again, leaving the strip of icons.
@@ -147,12 +177,24 @@ comparison, technical sheet, exports — and in 3D, camera, lighting, display an
 
 | Media | Panels |
 | --- | --- |
-| Video | Playback · Image · Guides · Comparison · Info · Export |
-| Image | Display · Image · Guides · Comparison · Info · Export |
-| 3D model | Camera · Lighting · Display · Scene · Info · Export |
-| Splat | Camera · Display · Scene · Info · Export |
+| Video | Info · Export |
+| Image | Info · Export |
+| 3D model | Camera · Lighting · Scene · Info · Export |
+| Splat | Camera · Scene · Info · Export |
 
 Lighting only exists for 3D models: a splat carries its own baked light.
+
+**The dock got much shorter in Phase 50, and nothing was lost.** A tab was removed whenever it
+restated what the viewer already shows, or set at arm's length something that is better set on
+the picture:
+
+| Tab that left | Where its controls are now |
+| --- | --- |
+| *Guides* (video, image) | the four composition switches of the viewer's right-click menu |
+| *Comparison* (video, image) | the options bar of **Compare** mode, which is also where B is chosen on an image |
+| *Playback*, *Display* (video, image) | the frame rate is in the *Info* sheet; a still image never had a frame rate or a playback speed to set |
+| *Image* — the colour panel | colour management is inherited from the project (*Project → Settings*) and no longer set per review; the *Info* sheet repeats the project's OCIO display and view, read-only |
+| *Display* (3D, splat) | the **Render** popover in the top-left corner of the viewer |
 
 The **Export** panel is no longer about the media file alone. Below the original download (and
 the cleaned `.spz` / transformed `.glb` on spatial media) it hosts *Review notes* — CSV and a
@@ -190,8 +232,9 @@ allowed on top of the picture.
 | --- | --- |
 | Annotation strokes, pins and hotspots | The Annotate mode, or a selected comment |
 | Wipe bar, A/B and diff overlays | Compare mode — the overlay takes the **same** zoom and pan transform as the picture, so the two images stay superimposed at any magnification |
-| Composition guides | The *Guides* panel, or the viewer right-click (video) |
+| Composition guides | The viewer right-click menu, on video and image |
 | Camera PiP, axis triad | 3D and splat viewers |
+| The **Render** popover, and **Edit** on an editable splat | Top-left corner of the two spatial viewers. They sit outside the review frame, so the letterbox guide and the annotation coordinates are unaffected, and they open downwards along the left edge rather than over the middle of the picture |
 | Live participant cursors | A live session: the driver's pointer, normalised to the media frame, in the author's colour, gone after 2.5 s of stillness |
 | Corner badges | Zoom rate (click it to return to fit), playback speed when it is not ×1, buffering, quality switching |
 
@@ -202,7 +245,7 @@ lives in the rail, the options bar, the dock, the bottom row or the footer.
 
 | Keys | Action |
 | --- | --- |
-| `1`–`3` | Mode, in switch order (`1`–`2` on an image) |
+| `1`–`2` | Mode, in switch order — `1` alone on a splat, which lists a single mode |
 | `Alt`+`1`–`9` | Recall a saved camera view — **3D only** |
 | `V` | Navigate (rest) |
 | Tool letters | Arm the tool — and switch to its mode if it belongs to another one |
@@ -220,8 +263,10 @@ lives in the rail, the options bar, the dock, the bottom row or the footer.
 are drawing, the 3D strokes of the surface brush, the splat or model editor, the camera
 animation — and each of them listens to the same three keys. They are served in the order of
 what you have in your hands: the annotation in progress first, then the 3D brush, then the
-media editor, with the camera animation taking precedence over all of them while **Staging** is
-open. A history with nothing left to give stands aside, so `Ctrl+Z` reaches the next one instead
+media editor, with the camera animation taking precedence over all of them while the **Staging**
+switch of the *Camera* panel is on. On a splat, the media editor's history holds the mask
+**selections** as well as the edits, so a lasso that took the wrong half comes back.
+A history with nothing left to give stands aside, so `Ctrl+Z` reaches the next one instead
 of doing two things at once. Actions that write to the server are not part of any of these
 stacks: they are confirmed by a toast that carries its own `Undo` — see
 [Navigation & search](navigation-and-search.md).
@@ -261,8 +306,8 @@ lighting", "the cut at 1042", "the tracking on the sign". Each gets a notificati
 opens straight onto the review, and finds their own line above the viewer; none of them
 reads the other two.
 
-Once notes are in, the versions themselves are chosen in the header (*Compare…*); the
-**Comparison** panel of the dock only decides between side by side, wipe and diff. What you
+Once notes are in, the versions themselves are chosen in the header (*Compare…*); the options
+bar of **Compare** mode only decides between side by side, wipe and diff. What you
 keep per person is the workspace state: an artist who reviews on a laptop collapses the dock
 with `Tab` and works full width; a supervisor who lives in the technical sheet leaves *Info*
 open. Both preferences are stored per media type, so they survive from one shot to the next.
@@ -295,7 +340,15 @@ is in a text field no shortcut fires.
 **The rail is missing the fit and home buttons.** They only exist on 3D and splat media.
 
 **The mode switch is missing entirely.** Either you are signed in with the `CLIENT` role
-(read-only exploration by design), or the media has a single mode.
+(read-only exploration by design), or the media is left with a single listed mode — which is
+always the case on a splat. Nothing is out of reach: the *Camera* panel arms **Staging**, the
+**Edit** popover of the viewer arms the splat clean-up, the composer arms **Annotate**, and `1`
+takes you back to *Explore*.
+
+**A panel I used to open is not in the dock any more.** Five tabs left the flat viewers in
+Phase 50 — *Comparison*, *Guides*, *Playback*, *Display* and the *Image* colour panel — and
+*Display* left the two spatial ones. None of their controls left with them: the table in
+[Inspector dock](#inspector-dock) says where each one went.
 
 **The Export panel says only the original file is available.** Its *Current frame → PNG* and
 *Contact sheet* buttons are video-only, and the contact sheet additionally needs the timeline

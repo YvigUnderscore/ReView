@@ -10,6 +10,12 @@ import type { SplatSceneHandle } from '../../useSplat';
  * splat entier, exprimées en **monde** (la transformation du mesh — gizmos — est appliquée).
  * Les splats masqués (opacité 0, suppression non-destructive) sont ignorés.
  */
+/**
+ * Ce qu'un cadrage a besoin de lire : le module Three et le mesh, rien de plus. Le type était
+ * la poignée de scène entière, ce qui obligeait à en fabriquer une pour mesurer un rayon.
+ */
+export type SplatBoundsSource = Pick<SplatSceneHandle, 'THREE' | 'mesh'>;
+
 export interface BoundsSphere {
   center: THREE.Vector3;
   radius: number;
@@ -17,7 +23,7 @@ export interface BoundsSphere {
 
 /** Sphère englobante des splats sélectionnés (monde), ou null si sélection vide/dégénérée. */
 export function selectionBounds(
-  handle: SplatSceneHandle,
+  handle: SplatBoundsSource,
   selected: ReadonlySet<number>,
 ): BoundsSphere | null {
   if (selected.size === 0) return null;
@@ -36,7 +42,7 @@ export function selectionBounds(
 }
 
 /** Sphère englobante des splats visibles du mesh (monde), ou null si indisponible (11.D). */
-export function meshBounds(handle: SplatSceneHandle): BoundsSphere | null {
+export function meshBounds(handle: SplatBoundsSource): BoundsSphere | null {
   const { THREE, mesh } = handle;
   const local = visibleLocalBox(THREE, mesh);
   if (!local) return null;

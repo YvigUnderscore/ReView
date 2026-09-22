@@ -5,6 +5,7 @@ import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import type { Hotspot3D, SplatCamera, SplatTransform } from '../../reviewTypes';
+import type { MarkerHandlers } from '../../three/objectHotspot';
 import type { PipRect } from '../../viewer/pipWindow';
 import type { RenderMode } from './renderModes';
 import type { SplatStats } from './stats';
@@ -50,12 +51,16 @@ export interface SplatViewer {
   progress: number | null;
   captureCamera: () => SplatCamera | undefined;
   restoreCamera: (state: unknown) => void;
-  /** Hotspot sur la surface au centre du viewer (raycast), sinon null si le rayon ne touche rien. */
-  raycastCenter: () => Hotspot3D | null;
-  /** Hotspot sur la surface **sous le pointeur** (coordonnées client) — pose au clic. */
+  /** Point d'intérêt sur la surface **sous le pointeur** (coordonnées client) — pose au clic. */
   hotspotAtPointer: (clientX: number, clientY: number) => Hotspot3D | null;
-  /** Affiche (ou masque si null) le marqueur de hotspot, projeté à l'écran à chaque frame. */
-  showHotspot: (hs: Hotspot3D | null) => void;
+  /** Pastilles numérotées à projeter à chaque frame (liste vide = aucune). */
+  showPoiPoints: (points: readonly Hotspot3D[]) => void;
+  /** Arme (ou désarme) le déplacement et la désignation des pastilles — rédaction seulement. */
+  setPoiHandlers: (handlers: MarkerHandlers | null) => void;
+  /** Rang de la pastille mise en avant (rangée du composeur en cours d'édition), ou null. */
+  setPoiActive: (index: number | null) => void;
+  /** Ramène la caméra sur un point relu (numéro cliqué dans le fil). */
+  focusPoi: (point: Hotspot3D) => boolean;
   /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
   captureThumbnail: () => Promise<string | null>;
   /** PNG plein cadre de la vue courante (panneau Export) — `null` si la capture a échoué. */
@@ -98,9 +103,6 @@ export interface SplatViewer {
  */
 export type SplatHandles = Pick<
   SplatViewer,
-  | 'raycastCenter'
-  | 'hotspotAtPointer'
-  | 'showHotspot'
   | 'captureThumbnail'
   | 'applyTransform'
   | 'setBaseFlip'

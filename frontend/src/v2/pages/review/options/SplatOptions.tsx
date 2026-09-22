@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Circle, Cuboid, Eraser, Focus, MapPin, Plus, Redo2, Trash2, Undo2, X } from 'lucide-react';
+import { Circle, Cuboid, Eraser, Focus, Plus, Redo2, Trash2, Undo2, X } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
@@ -13,6 +13,8 @@ import type { SplatEditorState } from '../splat/editor/useSplatEditor';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import { MAX_STROKE_PX, MIN_STROKE_PX } from '../splat/paint/strokes';
 import TransformOptions from './TransformOptions';
+import PoiOptions from '../poi/PoiOptions';
+import type { PoiDraftState } from '../poi/usePoiDraft';
 import { useT } from '../../../i18n';
 import { intlLocale } from '../../../i18n';
 
@@ -33,7 +35,7 @@ export default function SplatOptions({
   editor,
   paint,
   presentation,
-  onPlaceHotspot,
+  poi,
 }: {
   tool: ReviewTool;
   mode: ModeId;
@@ -41,7 +43,8 @@ export default function SplatOptions({
   paint: SplatPaintState;
   /** Mise en scène : enregistrement de la présentation par le gestionnaire. */
   presentation?: { dirty: boolean; busy: boolean; onSave: () => void };
-  onPlaceHotspot: () => void;
+  /** Points d'intérêt en préparation — mêmes options que sur le modèle 3D. */
+  poi: PoiDraftState;
 }) {
   const t = useT();
   const id: ToolId = tool.id;
@@ -81,16 +84,7 @@ export default function SplatOptions({
 
       {id === 'focus' && <span className="rv-optbar__hint">{t('splat.focusHintDock')}</span>}
 
-      {id === 'pin' && (
-        <>
-          <span className="rv-optbar__hint">{t('review.markerHint')}</span>
-          <span className="rv-rule" />
-          <Button size="sm" variant="outline" onClick={onPlaceHotspot}>
-            <MapPin size={13} />
-            {t('review.markerPlace')}
-          </Button>
-        </>
-      )}
+      {id === 'pin' && <PoiOptions poi={poi} />}
 
       {painting && (
         <>

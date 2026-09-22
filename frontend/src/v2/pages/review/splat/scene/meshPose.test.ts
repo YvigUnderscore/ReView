@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { SplatMesh } from '@sparkjsdev/spark';
-import { applySplatTransform, parseHotspotPoint } from './meshPose';
+import { applySplatTransform } from './meshPose';
 
 const mesh = () => new THREE.Object3D() as unknown as SplatMesh;
 
@@ -23,17 +23,5 @@ describe('applySplatTransform — TRS enregistré → mesh', () => {
     expect(m.position.toArray()).toEqual([0, 0, 0]);
     applySplatTransform(m, { position: 'x' } as never);
     expect(m.scale.toArray()).toEqual([1, 1, 1]);
-  });
-});
-
-describe('parseHotspotPoint — position texte → point Three', () => {
-  it('interprète « x y z » et l’espace objet', () => {
-    const p = parseHotspotPoint(THREE, { position: '1 2 3', normal: '0 1 0', space: 'object' });
-    expect(p?.point.toArray()).toEqual([1, 2, 3]);
-    expect(p?.objectSpace).toBe(true);
-  });
-
-  it('rejette une chaîne invalide', () => {
-    expect(parseHotspotPoint(THREE, { position: 'a b c', normal: '0 1 0' })).toBeNull();
   });
 });

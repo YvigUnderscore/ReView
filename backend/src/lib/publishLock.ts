@@ -58,6 +58,16 @@ const ALLOWED_WHILE_PUBLISHED: Record<PublishedWrite, boolean> = {
   uploadFinalize: false,
 };
 
+/**
+ * Les écritures que le verrou connaît, énumérées — c'est ce qui rend son PÉRIMÈTRE vérifiable.
+ *
+ * Le verrou ne garde que des écritures du CONTENU d'un média. Commenter et annoter n'en font pas
+ * partie et n'ont pas à y entrer : une remarque n'est pas une édition du média, et un média publié
+ * est précisément celui qu'on est en train de reviewer. Un ajout à cette liste se voit donc en
+ * test, au lieu de fermer en silence une porte que personne n'a voulu fermer.
+ */
+export const PUBLISHED_WRITES = Object.keys(ALLOWED_WHILE_PUBLISHED) as PublishedWrite[];
+
 /** L'écriture est-elle permise sur un média publié ? Lecture de la table, sans lever. */
 export function isAllowedWhilePublished(write: PublishedWrite): boolean {
   return ALLOWED_WHILE_PUBLISHED[write];
