@@ -19,6 +19,12 @@
   gap: 2px;
   flex-shrink: 0;
   width: 2.75rem;
+  /* Le rail défile plutôt que d'écraser ses boutons : depuis que le splat y pose un second
+     groupe (lot 13), une quinzaine d'entrées s'y empilent, et sur un écran court la colonne
+     bornée les comprimait sous leur hauteur — même piège que `.rv-row`, sans même un
+     ascenseur pour rattraper. */
+  overflow-y: auto;
+  scrollbar-width: thin;
   border-right: 1px solid hsl(var(--border));
   background: hsl(var(--card));
   padding: 0.375rem;
@@ -46,6 +52,9 @@
   justify-content: center;
   gap: 0.625rem;
   min-height: 2.25rem;
+  /* Un `min-height` EXPLICITE remplace la taille minimale automatique du flex : sans ce
+     `flex-shrink: 0`, le bouton redevient compressible dans la colonne bornée du rail. */
+  flex-shrink: 0;
   width: 100%;
   border: none;
   background: transparent;
@@ -150,6 +159,8 @@
   gap: 2px;
   flex-shrink: 0;
   width: 2.75rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
   padding: 0.375rem;
   order: 2;
   border-left: 1px solid hsl(var(--border));
@@ -200,12 +211,22 @@
   letter-spacing: var(--tracking-wide);
   color: hsl(var(--muted-foreground));
 }
+/*
+ * Rangée libellé/contrôle. `min-height` donne le pas régulier des panneaux, mais une hauteur
+ * minimale EXPLICITE remplace la taille minimale automatique du flex : posée dans une colonne
+ * bornée (`max-h-*` + `overflow-y-auto`), la rangée se laissait comprimer jusqu'à ce pas alors
+ * que sa forme empilée (libellé AU-DESSUS du contrôle) en fait près du double — son contenu
+ * débordait de sa boîte et venait se peindre sur la rangée voisine, et la colonne n'avait plus
+ * rien à faire défiler. `flex-shrink: 0` rend la hauteur naturelle intouchable : c'est la
+ * colonne qui défile.
+ */
 .rv-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   min-height: 1.75rem;
+  flex-shrink: 0;
   font-size: var(--text-xs);
 }
 .rv-row__label {

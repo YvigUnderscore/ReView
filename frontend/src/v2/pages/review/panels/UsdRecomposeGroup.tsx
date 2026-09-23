@@ -38,6 +38,13 @@ type Tr = (key: MessageKey) => string;
  *
  * La liste des variantes porte en plus son propre défilement : au-delà d'une dizaine de jeux,
  * le bouton « Recomposer » restait au fond d'un panneau interminable.
+ *
+ * Ce défilement ne défilait pourtant pas (lot 15) : la colonne est bornée en hauteur, et
+ * `.rv-row` déclarait une hauteur minimale explicite sans refuser la compression. Les rangées
+ * retombaient donc au pas de 1,75 rem — la moitié de ce que mesure un libellé empilé sur son
+ * select — et leur contenu se peignait sur la rangée voisine, « modelingVariant » par-dessus la
+ * liste déroulante. Le correctif vit dans `chrome.css` : il vaut pour toute rangée de dock
+ * posée dans une colonne bornée, pas seulement pour cette fenêtre.
  */
 
 const purposes = (t: Tr): { value: UsdPurpose; label: string; hint: string }[] => [
@@ -91,12 +98,21 @@ export default function UsdRecomposeGroup({ mediaId, usd }: { mediaId: number; u
       ) : (
         <div
           // Le bouton d'envoi doit rester atteignable quelle que soit la richesse de la scène :
-          // c'est la liste qui défile, pas la fenêtre entière.
+          // c'est la liste qui défile, pas la fenêtre entière. Le défilement tient au refus de
+          // compression des rangées (`.rv-row { flex-shrink: 0 }`) : sans lui, la colonne bornée
+          // écrase ses rangées au lieu de leur donner un ascenseur.
           data-testid="usd-variant-scroll"
           className="custom-scrollbar flex max-h-56 flex-col gap-1 overflow-y-auto pr-1"
         >
           {usd.variantSets.map((set) => (
-            <Row key={`${set.prim}-${set.name}`} label={set.name} hint={set.prim} stack>
+            <Row
+              key={`${set.prim}-${set.name}`}
+              // Un nom de jeu de variantes est un identifiant USD, parfois plus long que les
+              // 280 px du dock : il se coupe, et le chemin du prim reste en infobulle.
+              label={<span className="truncate">{set.name}</span>}
+              hint={set.prim}
+              stack
+            >
               <Select
                 value={variantValue(variants, set.prim, set.name, set.selected)}
                 onChange={(e) => choose(set.prim, set.name, e.target.value)}

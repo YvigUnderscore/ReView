@@ -92,6 +92,32 @@ describe('UsdRecomposeGroup', () => {
     expect(list.className).toMatch(/max-h-/);
   });
 
+  it('pose chaque jeu dans une rangée de dock, au sein d’une colonne bornée-défilante', () => {
+    mount(MANY);
+    const list = screen.getByTestId('usd-variant-scroll');
+    // Ce test ne prouve PAS le correctif du lot 15 — il passe aussi avec le défaut en place, et
+    // son titre le disait autrefois à tort. Le refus de compression est une propriété de
+    // `.rv-row`, et il se vérifie dans `DockGroup.test.tsx`. Ce qui se vérifie ICI, c'est
+    // l'autre moitié du contrat : que la colonne est bien bornée-défilante et que ses enfants
+    // sont précisément les rangées que cette règle couvre.
+    expect(list.className).toMatch(/max-h-/);
+    expect(list.className).toContain('overflow-y-auto');
+    const rows = Array.from(list.children);
+    expect(rows).toHaveLength(MANY.variantSets.length);
+    for (const row of rows) {
+      expect(row.className.split(' ')).toContain('rv-row');
+      expect(row.className.split(' ')).toContain('rv-row--stack');
+    }
+  });
+
+  it('coupe le nom d’un jeu de variantes plutôt que de le laisser déborder du dock', () => {
+    mount(ONE);
+    // Un identifiant USD n'a pas de raison de tenir dans 280 px ; le chemin du prim, lui,
+    // reste en infobulle de la rangée.
+    expect(screen.getByText('lookVariant').className.split(' ')).toContain('truncate');
+    expect(screen.getByText('lookVariant').closest('.rv-row')).toHaveAttribute('title', '/World/Chair');
+  });
+
   it('garde le bouton d’envoi hors de la liste défilante — il reste atteignable', () => {
     mount(MANY);
     expect(screen.getByTestId('usd-variant-scroll').contains(submit())).toBe(false);

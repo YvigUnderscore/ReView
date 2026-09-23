@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import ToolRail from './ToolRail';
@@ -67,5 +69,42 @@ describe('ToolRail — groupes', () => {
   it('se réduit à un seul groupe quand le viewer n’en fournit qu’un', () => {
     mount({ sections: [MAIN] });
     expect(screen.queryByRole('button', { name: t('tool.selRect') })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Lot 15 — contrat de hauteur du rail, le même piège que `.rv-row` : un `min-height` EXPLICITE
+ * remplace la taille minimale automatique du flex, donc rouvre la compression que celle-ci
+ * interdisait. Le rail est une colonne bornée par la hauteur du viewer, et depuis que le splat y
+ * pose un second groupe il porte une quinzaine d'entrées : sans refus de compression, les boutons
+ * s'écrasent sous leur hauteur et leur contenu déborde — et sans ascenseur, rien ne rattrape.
+ *
+ * Les classes du rail vivent dans une feuille que vitest ne charge pas, et happy-dom ne met rien
+ * en page : la feuille est donc lue comme un texte. C'est une preuve de structure, pas de rendu.
+ */
+const CHROME_CSS = readFileSync(resolve(process.cwd(), 'src/v2/pages/review/chrome/chrome.css'), 'utf8');
+const COMMENT = /\/\*[\s\S]*?\*\//g;
+
+/** Corps d'une règle, sélecteur exact : `.rv-rail` ne ramène ni `.rv-rail--labels` ni `.rv-rail__title`. */
+function ruleOf(selector: string): string {
+  const start = CHROME_CSS.indexOf(`\n${selector} {`);
+  expect(start, `règle ${selector} introuvable dans chrome.css`).toBeGreaterThan(-1);
+  const open = CHROME_CSS.indexOf('{', start);
+  // Les COMMENTAIRES sont retirés : celui de `.rv-railbtn` cite la déclaration qu'on cherche, et
+  // l'assertion passerait alors même que la déclaration aurait disparu.
+  return CHROME_CSS.slice(open, CHROME_CSS.indexOf('}', open)).replace(COMMENT, '');
+}
+
+describe('rail — contrat de hauteur', () => {
+  it('refuse de comprimer ses boutons sous leur hauteur', () => {
+    const rule = ruleOf('.rv-railbtn');
+    // Le couple compte : c'est le `min-height` explicite qui défait la protection automatique.
+    expect(rule).toContain('min-height: 2.25rem');
+    expect(rule).toContain('flex-shrink: 0');
+  });
+
+  it('défile quand il porte plus d’entrées que la hauteur du viewer', () => {
+    expect(ruleOf('.rv-rail')).toContain('overflow-y: auto');
+    expect(ruleOf('.rv-dock__tabs')).toContain('overflow-y: auto');
   });
 });
