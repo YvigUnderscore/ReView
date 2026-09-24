@@ -2,7 +2,7 @@
 
 *Link a project to ShotGrid and keep both sides honest: what is exchanged, when it travels, and what cannot be undone.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-24
 
 Link a ReView project to a ShotGrid project and keep both in step. Sequences, shots,
 assets, tasks, statuses, schedule and published media flow into ReView; review decisions,
@@ -124,6 +124,8 @@ from ShotGrid, and what it writes back. Each cell is an independent switch.
 Two rows are read-only by design. ReView does not redefine a studio's status vocabulary on
 its own site, and a synchronisation never creates a ReView account — bringing people in is a
 separate, explicit gesture (see [Bringing the crew into ReView](#bringing-the-crew-into-review)).
+
+![ReView for the artist on one side, ShotGrid for production on the other: a shot arrives from ShotGrid, the artist approves it in ReView with a note, and the ShotGrid row turns approved.](../assets/admin-guide/shotgrid-sync.gif)
 
 ![Seven ShotGrid entity types map onto ReView entities, with the fields that travel between them; the Episode pair is optional and drawn dashed.](../assets/admin-guide/shotgrid-entity-mapping.svg)
 

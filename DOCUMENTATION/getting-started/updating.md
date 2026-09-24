@@ -2,7 +2,7 @@
 
 *Move an instance to a new version in one command: backup first, switch, wait for a real health gate, roll back automatically if it does not come up.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-24
 
 Updating a ReView instance is one command. It backs up first, switches, waits for the instance
 to report itself healthy from the inside, and puts the previous version back if it does not.
@@ -25,6 +25,8 @@ health gate, automatic rollback. See [Updates & backups](../admin-guide/updates-
 
 That screen is also worth opening on an instance that has no agent: it still names the running
 release and prints the command to copy. What follows is what the command does, whoever pressed it.
+
+![Admin → Maintenance → Updates: Update to v2.0.1 asks for the administrator's password with the backup ticked, the run then goes through its phases, the screen says the instance is restarting while the API is away, and it ends on Done with the new version in service.](../assets/admin-guide/update-run.gif)
 
 ## What it does, in order
 

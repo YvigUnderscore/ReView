@@ -2,7 +2,7 @@
   <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
   <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
   <title id="fig-title">What scripts/install.sh does, in order</title>
-  <desc id="fig-desc">Eight ordered steps: prerequisites, four questions, six secrets, untracked files written, certificate, build and start, wait for readiness, print the setup URL. The TLS mode decides what happens at the certificate step, and two failures stop the run.</desc>
+  <desc id="fig-desc">Eight ordered steps: prerequisites, six questions, six secrets, untracked files written, certificate, build and start, wait for readiness, print the setup URL. The TLS mode decides what happens at the certificate step, and two failures stop the run.</desc>
   <style>
     .bg { fill: #f7f9fc; }
     .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -67,8 +67,8 @@
   <path class="conn" d="M218 106 L218 130" marker-end="url(#arrow)"/>
 
   <rect class="panel" x="40" y="130" width="356" height="46" rx="9"/>
-  <text class="t" x="218" y="152" text-anchor="middle">2 · Four questions</text>
-  <text class="d" x="218" y="168" text-anchor="middle">domain, TLS mode, timezone, data root</text>
+  <text class="t" x="218" y="152" text-anchor="middle">2 · Six questions</text>
+  <text class="d" x="218" y="168" text-anchor="middle">domain, TLS, timezone, data root, images, ops agent</text>
   <path class="conn" d="M218 176 L218 200" marker-end="url(#arrow)"/>
 
   <rect class="panel" x="40" y="200" width="356" height="46" rx="9"/>
@@ -103,8 +103,8 @@
   <!-- Colonne des conséquences -->
   <path class="conn-a" d="M396 153 L444 153" marker-end="url(#arrow-a)"/>
   <rect class="panel-o" x="444" y="130" width="306" height="46" rx="9"/>
-  <text class="l" x="462" y="152">With --tls letsencrypt</text>
-  <text class="d" x="462" y="168">a fifth question: the contact address</text>
+  <text class="l" x="462" y="152">Two questions only when they apply</text>
+  <text class="d" x="462" y="168">letsencrypt: contact · published images: tag</text>
 
   <path class="conn-a" d="M396 363 L444 363" marker-end="url(#arrow-a)"/>
   <rect class="panel-o" x="444" y="300" width="306" height="136" rx="9"/>

@@ -2,7 +2,7 @@
 
 *Build a dailies playlist, play it end to end, and drive one synchronized room from a single screen.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-24
 
 ReView supports the classic **dailies** workflow in two halves that fit together: a
 **playlist** is the running order, and a **live session** is the room watching it. You can
@@ -130,6 +130,8 @@ playlist (`?playlist=` present) or media. The session key is literally `playlist
 `media:<id>`. The first participant becomes the **pilot**; the URL gains `?live=1` and is
 shareable. Anyone opening it joins the same room, subject to project access, which the
 server re-checks at join.
+
+![Two screens in one live room. Lena, pilot and driver, plays and pauses both; her pointer shows on Sam's screen in her colour and vanishes when it leaves the frame. Kenji, co-pilot, scrubs: the driver ring moves to him and his pointer shows on both screens.](../assets/user-guide/live-review.gif)
 
 ### Who may steer
 

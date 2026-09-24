@@ -2,7 +2,7 @@
 
 *Create the studio and its first administrator, set the defaults that matter, and prove the instance is really wired.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-24
 
 A freshly started stack holds an empty database. There is no studio, no account, and no way
 in — which is why every route of the application redirects to a one-time wizard at `/setup`.
@@ -19,6 +19,8 @@ On an empty database, every route redirects to **`/setup`** — the URL `scripts
 prints when it finishes. The wizard has two steps and creates exactly two things: the
 **studio** (one ReView instance hosts exactly one studio) and the first **administrator**
 account.
+
+![The setup wizard at /setup: the studio is named, the first administrator is filled in, and Create studio signs them in on the home dashboard of an empty studio.](../assets/getting-started/setup-wizard.gif)
 
 ![An empty database redirects every route to the setup wizard; one POST creates the studio and its first administrator inside a Serializable transaction; from then on the wizard is gone and accounts come from the administration.](../assets/getting-started/instance-bootstrap-states.svg)
 

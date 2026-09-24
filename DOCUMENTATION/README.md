@@ -2,7 +2,7 @@
 
 *Six sections, one per audience — start where you stand, and follow the links from there.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-24
 
 ReView is a collaborative media review platform for VFX, post-production and creative teams:
 frame-accurate video review, image and EXR-sequence review with overlay annotations, 3D and
@@ -59,7 +59,7 @@ Every page opens the same way — a title, a one-line subtitle in italics, and a
 The reader renders those three from the manifest and removes them from the body, so the header
 of every page looks the same and the date is shown in the reader's own language.
 
-The rest — chapters, callouts, tables, the SVG figure contract and its palette, screenshots,
+The rest — chapters, callouts, tables, the SVG figure contract and its palette, screenshots and animated renders,
 links and anchors, and how to register a new page — is written down in
 **[Writing documentation](development/documentation-style.md)**.
 

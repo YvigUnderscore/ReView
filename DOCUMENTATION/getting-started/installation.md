@@ -2,14 +2,14 @@
 
 *From `git clone` to a running studio: the installer, host ports, every environment variable, and the guards a production instance must pass.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-24
 
 ReView ships as a Docker Compose stack, and one instance is one studio. Database, object
 storage, job queue, API, media worker and web front all come up from a single
 `docker compose up` — there is no cluster to assemble and no external service to sign up for.
 
 Two paths lead there. `scripts/install.sh` produces a working, TLS-terminated instance from
-four answers and never touches a versioned file; the manual path exists for a workstation,
+a handful of answers and never touches a versioned file; the manual path exists for a workstation,
 for CI, and for the day you want to see exactly which knob does what. This page covers both,
 then every variable the two containers read.
 
@@ -34,14 +34,17 @@ cd ReView-app
 bash scripts/install.sh
 ```
 
-The installer asks four questions — domain, TLS mode, timezone, where the data lives — plus
-a fifth, the Let's Encrypt contact address, when you choose that TLS mode. Everything else it
+![The three commands typed in a terminal, then the installer's steps checked off one by one: the host check, the questions, the secrets, the files it writes, the certificate, the stack started, and the address of the setup wizard.](../assets/getting-started/install.gif)
+
+The installer asks six questions — domain, TLS mode, timezone, where the data lives, published
+images or a local build, and whether to install the operations agent — plus the Let's Encrypt
+contact address when you choose that TLS mode, and the release tag when you run published images. Everything else it
 does by itself: it draws every secret, writes `.env`, creates the data directories, renders
 the nginx configuration for your domain, obtains or generates a certificate, starts the
 stack, waits until the API reports its dependencies healthy, and prints the URL of the setup
 wizard.
 
-![The installer checks the prerequisites, asks four questions, draws six secrets, writes .env and deploy/, obtains a certificate according to the TLS mode, builds and starts the stack, then polls readiness inside the backend container before printing the setup URL.](../assets/getting-started/install-script-sequence.svg)
+![The installer checks the prerequisites, asks six questions, draws six secrets, writes .env and deploy/, obtains a certificate according to the TLS mode, builds and starts the stack, then polls readiness inside the backend container before printing the setup URL.](../assets/getting-started/install-script-sequence.svg)
 
 Secrets are drawn with `openssl rand -hex 32` when OpenSSL is present, and read from
 `/dev/urandom` otherwise — a minimal NAS does not always ship OpenSSL, and an instance that

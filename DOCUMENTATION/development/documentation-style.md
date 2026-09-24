@@ -2,7 +2,7 @@
 
 *The shape of a page, the five callouts, and the figure contract every diagram must honour.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-24
 
 `DOCUMENTATION/` is a deliverable, not a scratchpad. It is committed with the code, read on
 GitHub, and served inside the application at `/docs` — where a reader browses it by chapter,
@@ -209,6 +209,32 @@ panel they will hunt for. They date faster than anything else on the page, so ke
 `assets/<section>/<feature>.png`, captured against the local Docker stack, alt text written as
 a caption. A screenshot never carries information that is not also in the text: a reader on a
 slow link, or one using a screen reader, must lose nothing.
+
+## Renders
+
+A render is an animated GIF, for the one thing a figure cannot show: something that happens in
+time. A note that shows on one frame and on a whole range, a panel going through the phases of
+an update, a pointer crossing from one screen of a live room to another. When time is not the
+subject, draw an SVG figure instead.
+
+Renders are made with **Tesseract**, the motion-design engine of Mirage, in the local
+`motion/` folder: one composition per render in `motion/src/`, and
+`python make.py <name> --publish` builds it, renders it and copies the GIF to the place the page
+cites. Tesseract is not free software, so neither the tool nor the compositions enter the
+repository, only what they output. The consequence is deliberate: without that folder a render
+cannot be corrected or re-rendered, only replaced.
+
+| Rule | Why |
+|------|-----|
+| A GIF in `assets/<section>/`, cited with the image syntax of a figure, its alt text written as a caption | The application shows images through `<img>`, which plays a GIF and not a video; GitHub does the same |
+| At most 4 MiB, checked; aim for under 1.5 MB | `DOCUMENTATION/` is versioned, and the pages ship inside the frontend image |
+| About 800 px wide, 10 to 12 frames per second, 5 to 15 seconds | The reading column is 768 px; text drawn at 26 to 30 px on the 1920 px canvas lands at 11 to 13 px |
+| The first frame shows the result | It is what GitHub shows when animated images are turned off, and what the page looks like before the loop starts |
+| Interface wording taken from `en.json`, no staging titles, no sound | The caption carries the meaning; a render shows the product, not a slide |
+| The application's dark palette | A GIF has no light variant, and dark is ReView's default theme |
+
+A render that shows the interface dates at the next redesign, exactly like a screenshot: keep
+them few, and on gestures that do not move often.
 
 ## Links, anchors and new pages
 

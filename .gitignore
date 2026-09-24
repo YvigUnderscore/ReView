@@ -65,17 +65,20 @@ ops/state/
 __pycache__/
 *.pyc
 
-# Remotion (`motion/`) — outil de rendu des animations de la documentation.
+# Tesseract (`motion/`) — atelier des rendus animés de la documentation. Il remplace depuis le
+# 2026-09-24 le projet Remotion qui occupait ce dossier.
 #
-# ⚠ Remotion n'est PAS un logiciel libre : licence maison, gratuite pour un particulier ou
-# une société de moins de quatre salariés, payante au-delà. ReView est AGPL-3.0-or-later et
-# `scripts/generate-notices.mjs` refuse toute licence hors allow-list. Sa source ne peut donc
-# pas vivre dans ce dépôt : le dossier reste sur le poste de qui rend les animations.
+# ⚠ Tesseract (Mirage) n'est PAS un logiciel libre : licence propriétaire, gratuite en deçà
+# d'un seuil de chiffre d'affaires. ReView est AGPL-3.0-or-later : l'outil n'entre pas dans ce
+# dépôt, et les compositions, qui ne se rendent qu'avec lui (et dont les projets .tsrct
+# embarquent les polices), restent sur le poste de qui rend les animations.
 #
-# Seuls les RENDUS sont versionnés — une sortie binaire n'emporte aucune licence Remotion.
+# Seuls les RENDUS sont versionnés — les conditions de Tesseract laissent la sortie à son
+# auteur, et un GIF n'emporte aucune licence de l'outil qui l'a produit.
 # CONSÉQUENCE ASSUMÉE : les compositions n'étant pas versionnées, un rendu n'est PAS
-# re-générable par quelqu'un d'autre. Cf. `motion/README.md` et l'en-tête de
-# `scripts/check-docs.mjs`.
+# re-générable par quelqu'un d'autre. Cf. `motion/README.md` (local), l'en-tête de
+# `scripts/check-docs.mjs` et le chapitre « Renders » de
+# `DOCUMENTATION/development/documentation-style.md`.
 # Le dossier entier est ignoré, RENDUS COMPRIS — et ce n'est pas une contradiction : un rendu
 # entre dans le dépôt en étant COPIÉ dans `DOCUMENTATION/assets/<section>/`, là où il sert.
 # C'est le seul endroit que `check-docs.mjs` surveille (légende obligatoire, jamais orphelin,

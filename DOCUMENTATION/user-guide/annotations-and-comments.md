@@ -2,7 +2,7 @@
 
 *One commenting system for all four viewers: threads, states, payloads, mentions, deep links and hand-off.*
 
-> Updated: 2026-09-22
+> Updated: 2026-09-24
 
 Every review — video, image, 3D, splat — shares the same commenting system: threads, states,
 mentions, reactions, attachments, voice notes, deep links and kanban hand-off. What changes
@@ -165,6 +165,8 @@ Enter the **Annotate** mode from the *Annotate* button of the composer, from the
 right-click menu on video and image, or simply by pressing a drawing tool letter. The rail
 then fills with the drawing tools and the options bar carries the ink, thickness and opacity
 of the armed one.
+
+![On a paused frame an ellipse is drawn around two gulls, with an arrow and the label hold 2 frames; the comment lands in the thread, then a reply nests under it.](../assets/user-guide/annotate-and-reply.gif)
 
 | Tool | Key | Notes |
 |---|---|---|

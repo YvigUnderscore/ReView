@@ -2,7 +2,7 @@
 
 *Where every shot stands step by step, what is late, what goes in circles, who carries it, and at what rhythm — all derived, nothing typed.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-24
 
 The **Production** tab answers five questions about a project — where it stands, what is
 blocked, what keeps coming back, who is carrying it, at what rhythm — and then adds a
@@ -108,6 +108,8 @@ Inactive statuses come from the ShotGrid synchronisation, which flags the site c
 
 The first tab holds a grid: **one row per shot, one column per department, one task per
 cell**. It answers what no summary could — *which shot is waiting on what, and who has it*.
+
+![The Shots by department grid of a project, then its kanban, where a Compositing card moves from In review to Done.](../assets/user-guide/production-to-kanban.gif)
 
 ![A filter bar and a legend sit above a table whose rows are shots grouped under a line per sequence carrying the progress tally of the group, and whose columns are the project departments in pipeline order; a filled dot marks a task and who holds it, a hollow ring a department scheduled but not started, and a dash a department the shot never goes through.](../assets/user-guide/production-grid-anatomy.svg)
 

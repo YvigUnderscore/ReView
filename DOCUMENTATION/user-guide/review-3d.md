@@ -2,7 +2,7 @@
 
 *A DCC-style viewport for models and USD scenes: navigation, scene graph, ReView overrides, inspection, comparison and lighting.*
 
-> Updated: 2026-09-22
+> Updated: 2026-09-24
 
 3D media open in a Three.js viewer built to feel like a DCC viewport rather than a web
 preview: you orbit and fly, you select a prim, you switch a variant, you put a gizmo on
@@ -132,6 +132,8 @@ read from the analyser rather than from the glTF nodes. Prims that exist but are
 (inactive variant, filtered purpose) appear greyed out; prims carrying variant sets show a
 `var` badge; a very large scene shows a *Tree truncated* notice at the bottom.
 
+![The Scene panel lists the Kitchen Set's real prim tree; a search for Chair unfolds only the matching paths, and ChairB_1 is picked in the viewport.](../assets/user-guide/usd-scenegraph.gif)
+
 ### Selecting
 
 - **Click** a prim in the tree, or click the object in the viewer. The selection is outlined —
@@ -189,6 +191,8 @@ the override, with no reconversion. Clones appear as child rows with a `clone` b
 selectable and movable like prims, can be deleted from the row or the menu, and travel with a
 comment or the saved override like any other scene change.
 
+![With the gizmo, a chair is pulled out and turned while the Transform values follow, then a second chair is turned and a stool is moved: every change goes into the ReView override, the USD file is never rewritten.](../assets/user-guide/usd-edits.gif)
+
 ### Where a change is written
 
 ![A scene change is written into one of three layers stacked on the converted file: the media override saved for everyone, a proposal carried by a comment, or your own local exploration, which is never saved.](../assets/user-guide/usd-override-layers.svg)
@@ -208,6 +212,8 @@ never modified. The delta can live at three levels:
    the scene graph says so plainly: *Attached to the next comment*.
 3. **Your local exploration.** Never saved unless you do one of the two above. *Undo* returns
    to the saved state, and switching to another asset of the version resets it.
+
+![A proposal carried by a comment: selecting the note applies the proposed layout, Esc returns to the published set, and selecting the note again brings the proposal back.](../assets/user-guide/usd-proposal.gif)
 
 An override holds at most **500 edited prims**, and **50 clones per prim** — enough for
 set-dressing notes, not for instancing a crowd.

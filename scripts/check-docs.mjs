@@ -27,16 +27,18 @@
  *      renommé ne se lit nulle part) et le poids doit rester borné, `DOCUMENTATION/` étant
  *      versionné : un binaire lourd y reste pour toujours.
  *
- * ⚠ D'OÙ VIENNENT LES RENDUS, ET POURQUOI ILS NE SE REFONT PAS. Ils sortent de Remotion,
- * dans le dossier `motion/` à la racine. Remotion n'est pas un logiciel libre (licence
- * maison, payante au-delà de trois salariés) et ReView est AGPL-3.0-or-later : `motion/`
- * est donc **entièrement gitignoré**. Un rendu entre dans le dépôt en étant COPIÉ dans
- * `DOCUMENTATION/assets/<section>/`, où ce contrôle le surveille comme une figure ; le binaire
- * sort, jamais la composition qui l'a produit. CONSÉQUENCE ASSUMÉE, décidée par l'utilisateur le 2026-09-20 : **un rendu n'est
+ * ⚠ D'OÙ VIENNENT LES RENDUS, ET POURQUOI ILS NE SE REFONT PAS. Ils sortent de Tesseract
+ * (Mirage), dans le dossier `motion/` à la racine — qui tenait jusqu'au 2026-09-24 un projet
+ * Remotion. Tesseract n'est pas un logiciel libre (licence propriétaire) et ReView est
+ * AGPL-3.0-or-later : `motion/` est donc **entièrement gitignoré**. Un rendu entre dans le
+ * dépôt en étant COPIÉ dans `DOCUMENTATION/assets/<section>/` (`make.py --publish`), où ce
+ * contrôle le surveille comme une figure ; le binaire sort, jamais la composition qui l'a
+ * produit. CONSÉQUENCE ASSUMÉE, décidée par l'utilisateur le 2026-09-20 : **un rendu n'est
  * pas re-générable par quelqu'un d'autre.** Qui n'a pas le dossier `motion/` ne peut ni le
  * corriger ni le rejouer à une autre résolution ; il ne peut que le remplacer. Préférer donc
  * une figure SVG partout où le temps n'est pas le sujet, et réserver le rendu aux cas où il
- * l'est. Cf. `motion/README.md` (local) et les règles Remotion de `.gitignore`.
+ * l'est. Cf. `motion/README.md` (local), le chapitre « Renders » de
+ * `DOCUMENTATION/development/documentation-style.md` et les règles de `.gitignore`.
  *
  * Usage : node scripts/check-docs.mjs [--list]
  */

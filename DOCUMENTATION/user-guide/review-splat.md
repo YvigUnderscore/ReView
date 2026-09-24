@@ -2,13 +2,15 @@
 
 *Scans in Spark: DCC navigation, non-destructive clean-up, comparison across versions, presentation and a cleaned SPZ export.*
 
-> Updated: 2026-09-22
+> Updated: 2026-09-24
 
 Gaussian splat media are rendered with **Spark (SparkJS)** inside the Three.js scene, with the
 same DCC-style navigation as [3D review](review-3d.md) — plus a full **non-destructive
 editor**. A scan arrives dirty: floaters, half a car park behind the wall, an axis convention
 nobody agreed on. You clean it here, in front of everyone, and the uploaded file never
 changes.
+
+![The camera flies into a scanned cereal bowl rendered as a Gaussian splat, while a comment and its reply arrive in the thread.](../assets/user-guide/splat-review.gif)
 
 All four media types share the same five places — mode switch, tool rail, options bar,
 inspector dock, bottom row. See [The review workspace](review-workspace.md) for the layout,

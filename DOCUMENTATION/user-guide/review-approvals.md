@@ -2,7 +2,7 @@
 
 *Recording what a review concluded on a version — customisable statuses, a history that never changes, and who was asked to look.*
 
-> Updated: 2026-09-14
+> Updated: 2026-09-24
 
 A **review decision** is the studio's answer to one question: what did we conclude about
 this version? It is deliberately distinct from the task's kanban status. The kanban says
@@ -80,6 +80,8 @@ The first two open the same dialog:
   on the studio default when there is none;
 - an optional **comment**, up to **2000 characters**, kept visible in the history;
 - *Set the decision*, and below it the full history, newest first.
+
+![The review decision dialog on V03: Approved is picked, a decision comment is typed, and the decision is set.](../assets/user-guide/review-decision.gif)
 
 Deciding is reserved to supervision. The chips are shown to `SUPERVISOR` and `ADMIN`;
 everyone else opens the same dialog and reads the history — which is the point, the record

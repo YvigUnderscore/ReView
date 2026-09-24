@@ -2,7 +2,7 @@
 
 *Frame-accurate playback, loops and markers, sound, zoom and A/B comparison — everything specific to video.*
 
-> Updated: 2026-09-20
+> Updated: 2026-09-24
 
 ![Video review: transport with timecode and frame counter, tool rail on the left, inspector dock and comment thread on the right.](../assets/user-guide/review-video.png)
 
@@ -78,6 +78,8 @@ both.
   drawings stay visible for the whole range during playback, and the range shows as a coloured
   segment (the author's colour) with handles on the timeline. Click a segment to select the
   comment.
+
+![A note on frame 1043 shows on that frame only: dragging the playhead hides it, clicking its card brings the frame back. With O and I set at 1100 and 1070, a note sent with Ctrl+Enter carries the range: its drawing stays up for the whole loop, a segment in the author's colour marks it on the timeline, and past the out point it is gone.](../assets/user-guide/annotation-range.gif)
 
 **Timeline markers** are named, coloured, shared with the whole team and persisted on the
 media:
@@ -164,6 +166,8 @@ Use the **Compare…** selector in the review header — a checkbox list of the 
 the same task or asset.
 
 ![Compare opens a checkbox list: one version checked gives A/B with side-by-side, wipe and diff sub-modes; two or three give a 2x2 grid where wipe and diff are unavailable.](../assets/user-guide/video-compare-modes.svg)
+
+![A wipe between two versions of a night shot: V02 without the aurora pass on one side of the bar, V03 with it on the other, the bar sweeping across the frame.](../assets/user-guide/compare-wipe.gif)
 
 - **One version checked — A/B**: the second version plays muted and synchronised with the
   master. Three sub-modes, from the options bar of Compare mode:

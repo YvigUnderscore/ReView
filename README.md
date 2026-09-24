@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://discord.gg/vw7h6BqcNc">
-    <img src="https://img.shields.io/discord/1462953450907238614?color=5865F2&label=Discord&logo=discord&logoColor=white" alt="Discord Server" />
+    <img src="https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white" alt="Discord server" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue" alt="AGPL-3.0-or-later licence" />
@@ -54,7 +54,7 @@ it keeps working the way artists already talk: a frame, a note, a version, a dec
 
 ### Draw on the exact frame
 
-<p align="center"><img src=".github/readme/review.gif" alt="A paused frame: an ellipse is drawn around two gulls with an arrow and the note “hold 2 frames”, then a comment and a threaded reply appear." width="800"></p>
+<p align="center"><img src="DOCUMENTATION/assets/user-guide/annotate-and-reply.gif" alt="A paused frame: an ellipse is drawn around two gulls with an arrow and the note “hold 2 frames”, then a comment and a threaded reply appear." width="800"></p>
 
 Adaptive HLS playback, frame-by-frame navigation with `J` / `K` / `L`, in→out loops and hover
 thumbnails. Annotations are anchored to the delivery frame; comments come in **threads** with
@@ -66,7 +66,7 @@ states. A comment can become a kanban task in one click.
 
 ### Compare every version
 
-<p align="center"><img src=".github/readme/compare.gif" alt="Two versions of a night shot in one viewer, separated by a wipe bar that sweeps across: V02 without the aurora pass, V03 with it." width="800"></p>
+<p align="center"><img src="DOCUMENTATION/assets/user-guide/compare-wipe.gif" alt="Two versions of a night shot in one viewer, separated by a wipe bar that sweeps across: V02 without the aurora pass, V03 with it." width="800"></p>
 
 Side by side, through an orientable **wipe**, as a GPU-composited **difference** with a heatmap,
 or four at once in a **2×2 grid**, with a letterbox guide, centre cross and action/title safe
@@ -79,12 +79,12 @@ ingested as a single media and reviewed like a clip.
 
 ### The real USD, in the review
 
-<p align="center"><img src=".github/readme/usd-edits.gif" alt="The Kitchen Set in the 3D viewer: a chair is pulled out and turned with the translate and rotate gizmo while its values update in the Transform panel, then a second chair is turned and a stool is moved." width="720"></p>
+<p align="center"><img src="DOCUMENTATION/assets/user-guide/usd-edits.gif" alt="The Kitchen Set in the 3D viewer: a chair is pulled out and turned with the translate and rotate gizmo while its values update in the Transform panel, then a second chair is turned and a stool is moved." width="720"></p>
 
 <table>
   <tr>
-    <td width="50%"><img src=".github/readme/usd-scenegraph.gif" alt="The Scene panel lists the real prim tree of the Kitchen Set, a search for “Chair” filters it, and ChairB_1 is selected." width="100%"></td>
-    <td width="50%"><img src=".github/readme/usd-proposal.gif" alt="A proposal note appears; Esc returns to the published set, and selecting the note brings the proposed layout back." width="100%"></td>
+    <td width="50%"><img src="DOCUMENTATION/assets/user-guide/usd-scenegraph.gif" alt="The Scene panel lists the real prim tree of the Kitchen Set, a search for “Chair” filters it, and ChairB_1 is selected." width="100%"></td>
+    <td width="50%"><img src="DOCUMENTATION/assets/user-guide/usd-proposal.gif" alt="A proposal note appears; Esc returns to the published set, and selecting the note brings the proposed layout back." width="100%"></td>
   </tr>
   <tr>
     <td>The <b>Scene panel</b> shows the real prim tree: search it, click in the viewport to select, <code>F</code> to frame.</td>
@@ -105,7 +105,7 @@ that can be imported from Alembic.
 
 ### Gaussian splats
 
-<p align="center"><img src=".github/readme/splats.gif" alt="The camera flies into a scanned cereal bowl rendered as a Gaussian splat, while a comment and its reply appear in the thread." width="800"></p>
+<p align="center"><img src="DOCUMENTATION/assets/user-guide/splat-review.gif" alt="The camera flies into a scanned cereal bowl rendered as a Gaussian splat, while a comment and its reply appear in the thread." width="800"></p>
 
 A **Spark (SparkJS)** viewer inside the three.js scene, reading PLY, SPZ and SOG/SOGS. The editor
 is **non-destructive**: brush and volume selection, masking, tint, transform. The original file
@@ -127,7 +127,7 @@ the public API; **Blender and Nuke publishers** ship in [`clients/dcc`](clients/
 
 ### Decide, on the record
 
-<p align="center"><img src=".github/readme/decide.gif" alt="The review decision dialog: Approved is picked, a decision comment is typed and the decision is set." width="800"></p>
+<p align="center"><img src="DOCUMENTATION/assets/user-guide/review-decision.gif" alt="The review decision dialog: Approved is picked, a decision comment is typed and the decision is set." width="800"></p>
 
 Decisions use the studio's own statuses. Each one is recorded per version with its comment, and
 shows as a badge everywhere that version appears.
@@ -136,7 +136,7 @@ shows as a badge everywhere that version appears.
 
 ### Run the production
 
-<p align="center"><img src=".github/readme/production.gif" alt="The shots by department grid, then the kanban where a Compositing card moves from In review to Done." width="800"></p>
+<p align="center"><img src="DOCUMENTATION/assets/user-guide/production-to-kanban.gif" alt="The shots by department grid, then the kanban where a Compositing card moves from In review to Done." width="800"></p>
 
 Project → episode → sequence → shot or asset → task → version. A **shots × departments** grid,
 a **kanban** built on your statuses, **auto-cut timelines**, a deadline calendar, a per-sequence
@@ -149,7 +149,7 @@ framerate, frame ranges) are inherited from studio to shot.
 
 ### Ships with ShotGrid
 
-<p align="center"><img src=".github/readme/shotgrid.gif" alt="Two panels, ReView for artists and ShotGrid for production: a shot arrives from ShotGrid, the artist approves it in ReView with a note, and the ShotGrid row turns approved." width="800"></p>
+<p align="center"><img src="DOCUMENTATION/assets/admin-guide/shotgrid-sync.gif" alt="Two panels, ReView for artists and ShotGrid for production: a shot arrives from ShotGrid, the artist approves it in ReView with a note, and the ShotGrid row turns approved." width="800"></p>
 
 A **bidirectional** integration: shots, assets, tasks, crew, statuses and notes, with a hard
 project boundary on every request. Production stays in ShotGrid, artists review in ReView, and
@@ -197,7 +197,7 @@ client**. Any DCC that can make an HTTP request can publish to ReView.
 
 ## 🚀 Install
 
-<p align="center"><img src=".github/readme/install.gif" alt="Install in one script: git clone, cd, bash scripts/install.sh, then seven steps are checked off, from the host check to the setup wizard at https://your-domain/setup." width="880"></p>
+<p align="center"><img src="DOCUMENTATION/assets/getting-started/install.gif" alt="Install in one script: git clone, cd, bash scripts/install.sh, then seven steps are checked off, from the host check to the setup wizard at https://your-domain/setup." width="880"></p>
 
 **Requirements:** Docker Engine and Docker Compose v2 (≥ 2.24), about 4 GB of RAM for the
 stack, plus disk for your media.
@@ -353,6 +353,10 @@ English is the source language. ReView ships **thirteen more**, chosen so a stud
 its own, including regional languages that rarely get software written for them: Breton,
 Basque, Corsican, Alsatian and Occitan, alongside French, Spanish, German, Portuguese,
 Simplified Chinese, Korean, Japanese and Hindi.
+
+<p align="center">
+  <img src=".github/readme/languages.png" alt="The fourteen languages of ReView: English is the base; the thirteen others, the five regional languages among them, were machine-translated with no human proofreading yet." width="880">
+</p>
 
 > ### ⚠️ These translations are machine-generated
 >

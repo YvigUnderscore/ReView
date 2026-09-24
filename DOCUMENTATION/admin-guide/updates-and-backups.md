@@ -2,7 +2,7 @@
 
 *See which release runs, read what a newer one changes, and — when the instance is allowed to act on itself — back up and switch without opening a terminal.*
 
-> Updated: 2026-09-10
+> Updated: 2026-09-24
 
 **Admin → Maintenance → Updates** answers two questions an operator asks at different moments:
 *what is running here, and what would change if I moved?* — and then, sometimes, *do it*.
@@ -72,6 +72,8 @@ it**: the API it was talking to is the container being recreated.
 4. When the API answers again, it is the **new** version answering. It reads the same run file,
    written by an operation the previous version started, and the screen picks the output back up
    at the byte where it stopped.
+
+![An update seen from this screen: the password and the ticked backup, then Queued, Checking, Backing up and Switching; while the API is recreated the panel only says the instance is restarting, then Waiting for the instance, Done, and the release panel reads v2.0.1, up to date.](../assets/admin-guide/update-run.gif)
 
 Keep the page open. Reloading during the cut is not harmful — the operation is remembered — but
 the page will not be served while the frontend container is being recreated either.
