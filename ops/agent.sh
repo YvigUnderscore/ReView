@@ -3,32 +3,31 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 #
-# Agent d'exploitation ReView — exécute, pour le compte de l'administration, les trois
-# seules opérations qu'elle sait commander : sauvegarder, vérifier une sauvegarde, mettre
-# à jour. Rien d'autre. Il n'y a pas de commande libre dans ce fichier, et c'est le point.
+# ReView operations agent — runs, on behalf of the admin screen, the only three operations
+# it can order: back up, verify a backup, update. Nothing else. There is no free-form
+# command anywhere in this file, and that is the point.
 #
-# ── Pourquoi un conteneur à part, dans un PROJET compose à part ───────────────
+# ── Why a separate container, in a separate compose PROJECT ──────────────────
 #
-# `scripts/update.sh` fait `docker compose up -d` sans liste de services : tout ce qui
-# appartient au projet principal est recréé. Un exécuteur logé dans cette pile se
-# détruirait donc au milieu de sa propre exécution, laissant l'instance à moitié basculée
-# et personne pour jouer le retour arrière. L'agent vit dans le projet `review-ops`, que
-# rien de la pile principale ne touche.
+# `scripts/update.sh` runs `docker compose up -d` without a service list: everything in the
+# main project is recreated. An executor living in that stack would destroy itself halfway
+# through its own run, leaving the instance half-switched with nobody left to roll back.
+# The agent lives in the `review-ops` project, which nothing in the main stack touches.
 #
-# ── Pourquoi un spool de fichiers plutôt qu'une file Redis ───────────────────
+# ── Why a file spool rather than a Redis queue ───────────────────────────────
 #
-# Parce que le conteneur qui commande est celui qu'on détruit. L'ordre, le journal et le
-# verdict doivent survivre au backend qui les a demandés — et être relus, ensuite, par un
-# backend d'une AUTRE version. Un fichier sur l'hôte est la seule chose qui traverse ça.
-# C'est aussi ce qu'un exploitant peut lire avec `cat`, le jour où plus rien ne répond.
+# Because the container that gives the order is the one being destroyed. The order, the
+# log and the verdict must outlive the backend that requested them — and be read back
+# afterwards by a backend of ANOTHER version. A file on the host is the only thing that
+# survives that. It is also what an operator can read with `cat` when nothing else answers.
 #
-# ── Le partage des privilèges ────────────────────────────────────────────────
+# ── Privilege split ──────────────────────────────────────────────────────────
 #
-# Le backend écrit dans `ops/queue` et ne lit `ops/state` qu'en lecture seule ; l'agent
-# fait l'inverse. Le backend est joignable depuis internet et tourne en root : s'il
-# pouvait écrire dans `state/`, il pourrait y pré-poser un lien symbolique et faire
-# écrire l'agent — donc le démon docker — n'importe où sur l'hôte. Les deux montages
-# distincts SONT la barrière ; les contrôles ci-dessous n'en sont que le second tour.
+# The backend writes to `ops/queue` and only reads `ops/state` (read-only mount); the agent
+# does the opposite. The backend is reachable from the internet and runs as root: if it
+# could write to `state/`, it could plant a symlink there and make the agent — hence the
+# docker daemon — write anywhere on the host. The two separate mounts ARE the barrier; the
+# checks below are only the second line of defence.
 #
 set -euo pipefail
 
@@ -36,61 +35,60 @@ PROTOCOL=1
 AGENT_VERSION="${OPS_AGENT_VERSION:-unknown}"
 POLL_SEC="${OPS_POLL_SEC:-2}"
 MAX_RUNTIME_CAP="${OPS_MAX_RUNTIME:-3600}"
-# ⚠ Pas d'apostrophe dans ce message : le mot de `${var:?mot}` subit le traitement des
-# guillemets, une apostrophe y ouvre une chaîne et le script entier cesse de s'analyser.
-ROOT="${REVIEW_ROOT:?REVIEW_ROOT requis (chemin absolu du depot sur la machine hote)}"
+# ⚠ No apostrophe in this message: the word in `${var:?word}` goes through quote removal,
+# an apostrophe would open a string and the whole script would stop parsing.
+ROOT="${REVIEW_ROOT:?REVIEW_ROOT is required (absolute path of the repository on the host)}"
 QUEUE_DIR="$ROOT/ops/queue"
 STATE_DIR="$ROOT/ops/state"
 RUNS_DIR="$STATE_DIR/runs"
 AGENT_FILE="$STATE_DIR/agent.json"
 CONF_FILE="$ROOT/deploy/agent.conf"
 
-# Autorisations, lues dans un fichier que le backend NE MONTE PAS. C'est la seule barrière
-# qu'une compromission du backend ne franchit pas : un attaquant qui obtient une session
-# d'administration peut commander ce que l'exploitant a autorisé, jamais davantage.
+# Permissions, read from a file the backend does NOT mount. This is the one barrier a
+# compromised backend cannot cross: an attacker holding an admin session can order what
+# the operator has allowed, never more.
 OPS_ALLOW_UPDATE=1
 OPS_ALLOW_BACKUP=1
 OPS_ALLOW_VERIFY=1
 OPS_ALLOW_DOWNGRADE=0
-# Lu par `.` et non interprété autrement : c'est un fichier de l'exploitant, pas un ordre.
+# Sourced with `.` and nothing else: it is the operator's file, not an order.
 # shellcheck source=/dev/null
 if [ -f "$CONF_FILE" ]; then . "$CONF_FILE"; fi
 
 log() { printf '%s agent: %s\n' "$(date -Iseconds)" "$1" >&2; }
 
-# ── Fichier témoin : l'agent voit-il le dépôt AU MÊME CHEMIN que l'hôte ? ─────
+# ── Witness file: does the agent see the repository at the SAME path as the host? ──
 #
-# `scripts/backup.sh` calcule son `pwd` et le passe tel quel à `docker run -v "$HOST_DIR:…"`,
-# que le DÉMON résout côté hôte. Si le dépôt était monté ailleurs que sur son chemin hôte,
-# le miroir MinIO partirait dans un répertoire vide — sans une seule erreur, découvert le
-# jour de la restauration. Ce contrôle transforme cette panne silencieuse en refus net.
+# `scripts/backup.sh` computes its `pwd` and passes it verbatim to `docker run -v "$HOST_DIR:…"`,
+# which the DAEMON resolves on the host side. If the repository were mounted anywhere other
+# than its host path, the MinIO mirror would land in an empty directory — without a single
+# error, discovered on restore day. This check turns that silent failure into a clear refusal.
 ROOT_OK=0
 check_root_path() {
   local witness image
   witness=".witness-$$-$(date +%s)"
   : > "$STATE_DIR/$witness"
   image="${REVIEW_OPS_IMAGE:-alpine}"
-  # ⚠ `--entrypoint test` n'est pas une précaution, c'est ce qui fait marcher le contrôle.
-  # L'image utilisée ici est celle de l'agent (compose pose toujours REVIEW_OPS_IMAGE, le
-  # repli `alpine` ne sert jamais), et son entrypoint EST l'agent : sans cette option,
-  # « test -f … » deviennent de simples ARGUMENTS, le conteneur relance l'agent, qui meurt
-  # aussitôt faute de REVIEW_ROOT. Le témoin échouait donc toujours, `rootOk` restait faux,
-  # et plus aucun ordre n'était jamais exécutable — la moitié utile de l'écran, morte.
-  # `timeout` par-dessus : le jour où l'entrypoint reprendrait la main, il bouclerait sans fin.
+  # ⚠ `--entrypoint test` is not a precaution, it is what makes the check work. The image
+  # used here is the agent's own (compose always sets REVIEW_OPS_IMAGE; the `alpine`
+  # fallback is never used), and its entrypoint IS the agent: without this option,
+  # "test -f …" become mere ARGUMENTS, the container restarts the agent, which dies at once
+  # for lack of REVIEW_ROOT — the check would always fail and no order would ever run.
+  # `timeout` on top: should the entrypoint ever take over again, it would loop forever.
   if timeout 60 docker run --rm --entrypoint test -v "$ROOT/ops/state:/w" "$image" -f "/w/$witness" >/dev/null 2>&1; then
     ROOT_OK=1
   else
     ROOT_OK=0
-    log "le dépôt n'est pas monté sur son chemin hôte ($ROOT) — aucun ordre ne sera accepté"
+    log "the repository is not mounted at its host path ($ROOT) — no order will be accepted"
   fi
   rm -f "$STATE_DIR/$witness"
 }
 
-# ── Battement de cœur ────────────────────────────────────────────────────────
+# ── Heartbeat ────────────────────────────────────────────────────────────────
 #
-# Écrit à chaque tour, à vide comme en cours d'exécution : c'est ce qui permet à l'écran
-# de distinguer « aucune opération » d'« agent mort ». Écriture atomique (tmp + rename) :
-# le backend lit ce fichier en permanence et ne doit jamais tomber sur un demi-JSON.
+# Written on every loop, idle or busy: this is what lets the screen tell "no operation"
+# from "agent dead". Atomic write (tmp + rename): the backend reads this file constantly
+# and must never see half a JSON document.
 write_agent_state() {
   local tmp="$STATE_DIR/.agent.json.$$"
   cat > "$tmp" <<JSON
@@ -103,8 +101,8 @@ JSON
   mv -f "$tmp" "$AGENT_FILE"
 }
 
-# Écrit le statut d'un run, atomiquement. Tous les champs à chaque fois : le backend lit
-# ce fichier seul, sans mémoire de ce qu'il valait au tour précédent.
+# Writes a run's status, atomically. Every field every time: the backend reads this file
+# on its own, with no memory of its previous value.
 write_status() {
   local dir="$1" state="$2" phase="$3" reason="$4" exit_code="$5" ended="$6"
   local tmp="$dir/.status.json.$$"
@@ -120,13 +118,13 @@ JSON
   mv -f "$tmp" "$dir/status.json"
 }
 
-# Un ordre refusé laisse une trace : sans elle, l'écran resterait sur « en attente » pour
-# toujours, et personne ne saurait pourquoi.
+# A rejected order leaves a trace: without it, the screen would show "pending" forever
+# and nobody would know why.
 reject() {
   local id="$1" reason="$2"
-  log "ordre refusé ($id) : $reason"
-  # Un identifiant qui n'est pas un identifiant ne laisse aucune trace : il servirait de
-  # nom de dossier, et c'est précisément ce qu'on refuse de faire avec une valeur douteuse.
+  log "order rejected ($id): $reason"
+  # An id that does not look like an id leaves no trace: it would be used as a directory
+  # name, which is exactly what we refuse to do with a dubious value.
   case "$id" in
     [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
     *) return 0 ;;
@@ -140,15 +138,15 @@ reject() {
   write_status "$RUNS_DIR/$id" rejected none "$reason" "" "$(date -Iseconds)"
 }
 
-# `1` si $1 précède strictement $2. `sort -V` (coreutils) : la comparaison de versions ne
-# se fait pas en texte, « 2.10.0 » suit « 2.9.0 ».
+# True if $1 is strictly lower than $2. `sort -V` (coreutils): versions do not compare as
+# text, "2.10.0" comes after "2.9.0".
 version_lt() {
   [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
 }
 
 # ── Purge ────────────────────────────────────────────────────────────────────
-# Vingt runs suffisent à l'écran, et un dossier qui grossit sans fin sur le pool de
-# données d'un studio est une panne qui arrive des mois plus tard, sans prévenir.
+# Twenty runs are enough for the screen; a directory that grows forever on a studio's data
+# pool is an outage that shows up months later, without warning.
 purge_runs() {
   local keep=20
   ls -1d "$RUNS_DIR"/*/ 2>/dev/null | sort -r | tail -n "+$((keep + 1))" | while read -r dir; do
@@ -156,7 +154,7 @@ purge_runs() {
   done || true
 }
 
-# ── Une exécution ────────────────────────────────────────────────────────────
+# ── One run ──────────────────────────────────────────────────────────────────
 run_order() {
   local order="$1"
   local id kind version stamp skip_backup ready_timeout max_runtime actor
@@ -169,24 +167,24 @@ run_order() {
   max_runtime="$(printf '%s' "$order" | jq -r '.params.maxRuntimeSec // 3600')"
   actor="$(printf '%s' "$order" | jq -c '.actor // null')"
 
-  # Identifiant : c'est un NOM DE DOSSIER, donc la première chose à filtrer.
+  # The id becomes a DIRECTORY NAME, so it is the first thing to filter.
   case "$id" in
     [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
-    *) log "ordre ignoré : identifiant invalide"; return 0 ;;
+    *) log "order ignored: invalid id"; return 0 ;;
   esac
   RUN_KIND="$kind"
 
-  # Chaque champ numérique est refiltré ICI, quoi qu'en dise le backend. `readyTimeoutSec`
-  # atterrit dans une expression arithmétique de update.sh, où bash ré-évalue le contenu
-  # des variables : « x[$(commande)] » s'y exécuterait. Trois passes valent mieux qu'une.
+  # Every numeric field is filtered again HERE, whatever the backend says. `readyTimeoutSec`
+  # ends up in an arithmetic expression in update.sh, where bash re-evaluates variable
+  # contents: "x[$(command)]" would execute there.
   case "$ready_timeout" in ''|*[!0-9]*) reject "$id" BAD_TIMEOUT; return 0 ;; esac
   case "$max_runtime" in ''|*[!0-9]*) reject "$id" BAD_RUNTIME; return 0 ;; esac
   [ "$max_runtime" -le "$MAX_RUNTIME_CAP" ] || max_runtime="$MAX_RUNTIME_CAP"
 
   if [ "$ROOT_OK" -ne 1 ]; then reject "$id" ROOT_MISMATCH; return 0; fi
 
-  # Vocabulaire fermé. Aucun `eval`, aucun `source`, aucun chemin venu de l'ordre : les
-  # arguments sont montés dans un tableau, un par un, à partir de valeurs déjà filtrées.
+  # Closed vocabulary. No `eval`, no `source`, no path taken from the order: arguments are
+  # built into an array, one by one, from values already filtered.
   local -a argv
   case "$kind" in
     update)
@@ -196,8 +194,8 @@ run_order() {
         *) reject "$id" BAD_VERSION; return 0 ;;
       esac
       case "$version" in *[!0-9A-Za-z.v-]*) reject "$id" BAD_VERSION; return 0 ;; esac
-      # Monotonie : c'est CE contrôle, et non la liste blanche du backend, qui empêche un
-      # backend compromis de faire redescendre l'instance sur une version vulnérable.
+      # Monotonicity: THIS check, not the backend's allow-list, is what stops a compromised
+      # backend from downgrading the instance to a vulnerable version.
       local current
       current="$(sed -n 's/^APP_VERSION=//p' "$ROOT/.env" 2>/dev/null | tail -n 1)"
       if [ "$OPS_ALLOW_DOWNGRADE" -ne 1 ] && [ -n "$current" ] &&
@@ -219,15 +217,15 @@ run_order() {
         *) reject "$id" BAD_BACKUP_ID; return 0 ;;
       esac
       [ -d "$ROOT/backups/$stamp" ] || { reject "$id" BACKUP_NOT_FOUND; return 0; }
-      # `verify` seulement : jamais `db`, jamais `all`. Restaurer écrase sans confirmation
-      # et sans terminal ; cela reste un geste d'exploitant, devant un clavier.
+      # `verify` only: never `db`, never `all`. Restoring overwrites without confirmation and
+      # without a terminal; it stays an operator's action, at a keyboard.
       argv=(bash "$ROOT/scripts/restore.sh" verify "backups/$stamp")
       ;;
     *) reject "$id" UNKNOWN_KIND; return 0 ;;
   esac
 
-  # `mkdir` sans -p : il ÉCHOUE si le dossier existe. C'est le refus du rejeu — un même
-  # ordre déposé deux fois ne s'exécute pas deux fois.
+  # `mkdir` without -p: it FAILS if the directory exists. That is the replay guard — the
+  # same order dropped twice does not run twice.
   local dir="$RUNS_DIR/$id"
   if ! mkdir "$dir" 2>/dev/null; then reject "$id" REPLAY; return 0; fi
 
@@ -237,13 +235,13 @@ run_order() {
   : > "$dir/output.log"
   : > "$dir/phases"
   write_status "$dir" running queued "" "" ""
-  log "exécution $id ($kind ${RUN_TARGET:-})"
+  log "running $id ($kind ${RUN_TARGET:-})"
 
-  # `timeout` : un convertisseur bloqué, un registre qui ne répond pas, et l'agent
-  # resterait occupé pour toujours — l'écran afficherait « en cours » sans fin.
+  # `timeout`: a stuck converter or an unresponsive registry would otherwise keep the agent
+  # busy forever — the screen would show "running" endlessly.
   #
-  # `GIT_CONFIG_*` : en mode construction, update.sh fait `git checkout`. Le dépôt de
-  # l'hôte n'appartient pas à l'utilisateur du conteneur, et git refuse alors d'y toucher.
+  # `GIT_CONFIG_*`: in build mode, update.sh runs `git checkout`. The host repository is not
+  # owned by the container user, and git then refuses to touch it.
   OPS_PHASE_FILE="$dir/phases" \
     GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
     timeout -k 30 "$max_runtime" "${argv[@]}" >> "$dir/output.log" 2>&1 &
@@ -253,19 +251,19 @@ run_order() {
   while kill -0 "$child" 2>/dev/null; do
     phase="$(sed -n 's/^OPS_PHASE=//p' "$dir/phases" 2>/dev/null | tail -n 1)"
     [ -n "$phase" ] || phase="$kind"
-    # Annulation — refusée dès que la bascule est engagée : tuer `docker compose up` à
-    # mi-course laisserait la pile dans un état que personne ne sait décrire, et le retour
-    # arrière automatique, lui, n'aurait pas eu lieu.
+    # Cancellation — refused once the switch has started: killing `docker compose up`
+    # midway would leave the stack in a state nobody can describe, and the automatic
+    # rollback would not have happened.
     if [ -e "$QUEUE_DIR/$id.cancel" ] && [ "$cancelled" -eq 0 ]; then
       rm -f "$QUEUE_DIR/$id.cancel"
       case "$phase" in
         switch|health|rollback)
-          log "annulation ignorée ($id) : la bascule est engagée"
-          printf '\n[agent] annulation demandée trop tard : la bascule est engagée.\n' >> "$dir/output.log"
+          log "cancellation ignored ($id): the switch has already started"
+          printf '\n[agent] cancellation requested too late: the switch has already started.\n' >> "$dir/output.log"
           ;;
         *)
           cancelled=1
-          log "annulation ($id)"
+          log "cancelling ($id)"
           kill -TERM "$child" 2>/dev/null || true
           ;;
       esac
@@ -281,8 +279,8 @@ run_order() {
   [ -n "$phase" ] || phase="$kind"
   RUN_BACKUP_ID="$(sed -n 's/^BACKUP_ID=//p' "$dir/output.log" | tail -n 1)"
 
-  # Le verdict se lit dans le code de sortie et le dernier jalon — jamais dans la prose du
-  # journal, qui est écrite pour un humain et change de formulation à chaque version.
+  # The verdict comes from the exit code and the last milestone — never from the log's
+  # prose, which is written for humans and changes wording from one version to the next.
   local state reason=""
   if [ "$cancelled" -eq 1 ]; then
     state=cancelled
@@ -296,22 +294,22 @@ run_order() {
     state=failed
   fi
   write_status "$dir" "$state" "$phase" "$reason" "$rc" "$(date -Iseconds)"
-  log "fin $id : $state (code $rc, jalon $phase)"
+  log "finished $id: $state (exit code $rc, milestone $phase)"
   purge_runs
 }
 
-# ── Démarrage ────────────────────────────────────────────────────────────────
+# ── Startup ──────────────────────────────────────────────────────────────────
 mkdir -p "$QUEUE_DIR" "$RUNS_DIR"
-[ -f "$ROOT/scripts/update.sh" ] || { log "dépôt introuvable sous $ROOT"; exit 1; }
+[ -f "$ROOT/scripts/update.sh" ] || { log "repository not found under $ROOT"; exit 1; }
 
-# `update.sh` est copié hors du dépôt avant chaque exécution : en mode construction, il
-# fait `git checkout`, ce qui RÉÉCRIT le fichier que bash est en train de lire au fil de
-# l'eau. Le script honore `REVIEW_ROOT`, il retrouve donc le dépôt depuis n'importe où.
+# `update.sh` is copied out of the repository before each run: in build mode it runs
+# `git checkout`, which REWRITES the file bash is reading as it goes. The script honours
+# `REVIEW_ROOT`, so it finds the repository from anywhere.
 RUN_SCRIPT="/tmp/review-update.sh"
 
 RUN_ID=""; RUN_KIND=""; RUN_TARGET=""; RUN_STARTED=""; RUN_ACTOR="null"; RUN_BACKUP_ID=""
 
-log "agent $AGENT_VERSION (protocole $PROTOCOL) — dépôt $ROOT"
+log "agent $AGENT_VERSION (protocol $PROTOCOL) — repository $ROOT"
 check_root_path
 write_agent_state
 
@@ -319,22 +317,22 @@ while true; do
   next="$(ls -1 "$QUEUE_DIR"/*.json 2>/dev/null | sort | head -n 1 || true)"
   if [ -n "$next" ]; then
     if [ -L "$next" ]; then
-      log "ordre ignoré : lien symbolique ($next)"
+      log "order ignored: symbolic link ($next)"
       rm -f "$next"
     elif [ ! -f "$next" ] || [ "$(wc -c < "$next")" -gt 8192 ]; then
-      log "ordre ignoré : ni fichier régulier ni taille plausible ($next)"
+      log "order ignored: not a regular file or implausible size ($next)"
       rm -f "$next"
     else
-      # `cat` puis `rm` — jamais `mv`, qui déplacerait la CIBLE d'un lien plutôt que le lien.
+      # `cat` then `rm` — never `mv`, which would move a link's TARGET rather than the link.
       order="$(cat "$next")"
       rm -f "$next"
       if printf '%s' "$order" | jq -e . >/dev/null 2>&1; then
         cp -f "$ROOT/scripts/update.sh" "$RUN_SCRIPT"
-        # Un ordre périmé n'est pas exécuté : entre son dépôt et ce tour, l'exploitant a
-        # pu redémarrer, corriger, ou renoncer. Une mise à jour qui se déclenche une heure
-        # après le clic est une surprise, pas un service.
-        # Comparaison en SECONDES, jamais en texte : deux horodatages ISO écrits dans des
-        # fuseaux différents ne s'ordonnent pas alphabétiquement.
+        # An expired order is not run: between the click and this loop, the operator may
+        # have restarted, fixed things, or changed their mind. An update that fires an hour
+        # after the click is a surprise, not a service.
+        # Compared in SECONDS, never as text: two ISO timestamps written in different time
+        # zones do not sort alphabetically.
         expires="$(printf '%s' "$order" | jq -r '.expiresAt // empty')"
         expires_at="$(date -d "$expires" +%s 2>/dev/null || echo 0)"
         if [ "$expires_at" -gt 0 ] && [ "$(date +%s)" -gt "$expires_at" ]; then
@@ -342,10 +340,10 @@ while true; do
           reject "$(printf '%s' "$order" | jq -r '.id // empty')" EXPIRED
         else
           check_root_path
-          run_order "$order" || log "exécution interrompue par une erreur inattendue"
+          run_order "$order" || log "run interrupted by an unexpected error"
         fi
       else
-        log "ordre ignoré : JSON illisible"
+        log "order ignored: unreadable JSON"
       fi
     fi
   fi

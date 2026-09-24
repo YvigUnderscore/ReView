@@ -1,30 +1,29 @@
-# docker-compose.release.yml — exécuter des IMAGES PUBLIÉES au lieu de les construire.
+# docker-compose.release.yml — run PUBLISHED images instead of building them.
 #
-# Usage (à ajouter à la pile, après la surcouche de production) :
+# Usage (add it to the stack, after the production overlay):
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
 #                  -f docker-compose.release.yml -f deploy/compose.site.yml up -d
-# ou, ce que fait scripts/install.sh, en posant dans .env :
+# or, as scripts/install.sh does, set in .env:
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml:docker-compose.release.yml:deploy/compose.site.yml
 #   REVIEW_IMAGE_PREFIX=ghcr.io/yvigunderscore
 #   REVIEW_IMAGE_TAG=v2.3.0
 #
-# Sans ce fichier, la pile construit tout sur le serveur du studio : 3,6 Go d'image worker
-# à compiler sur un NAS, pour un résultat qui dépend de la date de construction. Avec lui,
-# une mise à jour est une récupération d'images signée par une étiquette de version, et
-# `scripts/update.sh --version vX.Y.Z` sait revenir en arrière.
+# Without this file the stack builds everything on the studio's server (a 3.6 GB worker image
+# compiled on a NAS, with a result that depends on the build date). With it, an update is an
+# image pull pinned to a version tag, and `scripts/update.sh --version vX.Y.Z` can roll back.
 #
-# Les trois images sont publiées par .github/workflows/release.yml.
+# The three images are published by .github/workflows/release.yml.
 #
-# ⚠ `REVIEW_IMAGE_TAG` est REQUIS (`:?`) : pas de `latest` implicite en production. Une
-#   instance doit pouvoir dire quelle version elle exécute — c'est aussi ce que l'AGPL §13
-#   suppose pour offrir les sources *correspondantes*.
+# ⚠ `REVIEW_IMAGE_TAG` is REQUIRED (`:?`): no implicit `latest` in production. An instance
+#   must be able to tell which version it runs, which AGPL §13 also assumes in order to offer
+#   the *corresponding* source.
 services:
   backend:
-    image: ${REVIEW_IMAGE_PREFIX:?REVIEW_IMAGE_PREFIX requis (ex. ghcr.io/yvigunderscore)}/review-backend:${REVIEW_IMAGE_TAG:?REVIEW_IMAGE_TAG requis (ex. v2.3.0)}
+    image: ${REVIEW_IMAGE_PREFIX:?REVIEW_IMAGE_PREFIX is required (e.g. ghcr.io/yvigunderscore)}/review-backend:${REVIEW_IMAGE_TAG:?REVIEW_IMAGE_TAG is required (e.g. v2.3.0)}
 
   worker:
-    # Image distincte du backend : elle seule embarque Blender + usd-core (1,6 → 3,6 Go).
-    image: ${REVIEW_IMAGE_PREFIX:?REVIEW_IMAGE_PREFIX requis}/review-worker:${REVIEW_IMAGE_TAG:?REVIEW_IMAGE_TAG requis}
+    # Separate image from the backend: only this one ships Blender + usd-core (1.6 -> 3.6 GB).
+    image: ${REVIEW_IMAGE_PREFIX:?REVIEW_IMAGE_PREFIX is required}/review-worker:${REVIEW_IMAGE_TAG:?REVIEW_IMAGE_TAG is required}
 
   frontend:
-    image: ${REVIEW_IMAGE_PREFIX:?REVIEW_IMAGE_PREFIX requis}/review-frontend:${REVIEW_IMAGE_TAG:?REVIEW_IMAGE_TAG requis}
+    image: ${REVIEW_IMAGE_PREFIX:?REVIEW_IMAGE_PREFIX is required}/review-frontend:${REVIEW_IMAGE_TAG:?REVIEW_IMAGE_TAG is required}

@@ -4,14 +4,14 @@
 
 set -e
 
-# Messages en anglais : ce script est le point d'entrée de l'image, sa sortie est lue dans
-# `docker logs` par des exploitants qui suivent une documentation elle-même en anglais.
+# Image entry point: its output is read in `docker logs` by operators, so messages stay in
+# English, like the documentation.
 
-# Le client Prisma est généré à la CONSTRUCTION de l'image (npm ci → postinstall). Le
-# régénérer ici coûtait une dizaine de secondes à CHAQUE démarrage, reprises de
-# `restart: always` comprises — et échouerait désormais : le conteneur s'exécute en `node`
-# (uid 1000) alors que node_modules appartient à root, volontairement non inscriptible.
-# La branche de repli reste pour un montage de développement où node_modules vient de l'hôte.
+# The Prisma client is generated when the IMAGE IS BUILT (npm ci -> postinstall). Regenerating
+# it here would cost ~10 s on EVERY start (including `restart: always` restarts) and would
+# fail anyway: the container runs as `node` (uid 1000) while node_modules belongs to root and
+# is deliberately read-only. The fallback branch is for a development mount where
+# node_modules comes from the host.
 if [ -d node_modules/.prisma/client ]; then
   echo "[start] Prisma client already generated at image build."
 else
@@ -19,20 +19,20 @@ else
   npx prisma generate
 fi
 
-# ── Schéma de base de données ────────────────────────────────────────────────────────────
+# ── Database schema ──────────────────────────────────────────────────────────────────────
 #
-# `prisma migrate deploy` et RIEN d'autre. Le repli historique
+# `prisma migrate deploy` and NOTHING else. ⚠ Never add a fallback such as
 #   npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss
-# alignait la base sur le schéma en SUPPRIMANT colonnes et tables dès que `migrate deploy`
-# échouait — migration marquée en échec, drift, Postgres indisponible une seconde de trop
-# au démarrage — et le `2>/dev/null` effaçait la cause. Avec `restart: always`, la séquence
-# se rejouait en boucle jusqu'à ce que la base soit conforme… et vide.
+# It aligns the database with the schema by DROPPING columns and tables whenever
+# `migrate deploy` fails (failed migration, drift, Postgres not ready yet at startup), and
+# `2>/dev/null` hides the cause. With `restart: always` the sequence loops until the database
+# matches the schema... and is empty.
 #
-# On échoue donc bruyamment : stderr conservé, sortie non nulle, base intacte.
+# So fail loudly instead: stderr kept, non-zero exit, database untouched.
 #
-# Initialisation VOLONTAIRE d'une base vide sans migrations versionnées (greenfield, dev) :
-# poser PRISMA_DB_PUSH=1. `db push` est invoqué SANS `--accept-data-loss` — s'il devait
-# détruire des données, il refuse de lui-même. Refusé en production.
+# DELIBERATE initialisation of an empty database without versioned migrations (greenfield,
+# dev): set PRISMA_DB_PUSH=1. `db push` runs WITHOUT `--accept-data-loss`, so it refuses on its
+# own to destroy data. Refused in production.
 if [ "${PRISMA_DB_PUSH:-0}" = "1" ]; then
   if [ "${NODE_ENV:-development}" = "production" ]; then
     echo "[start] FATAL: PRISMA_DB_PUSH=1 is refused when NODE_ENV=production." >&2

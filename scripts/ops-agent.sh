@@ -3,27 +3,28 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 #
-# Agent d'exploitation : installation, état, journaux, mise à jour, retrait.
+# Operations agent: install, status, logs, upgrade, removal.
 #
-# L'agent est ce qui permet à l'écran « Admin → Mises à jour » d'AGIR — sauvegarder,
-# vérifier une sauvegarde, basculer de version — au lieu de se contenter d'afficher les
-# commandes. Il est facultatif : sans lui, l'écran reste entièrement lisible.
+# The agent is what lets the "Admin → Updates" screen ACT — back up, verify a backup,
+# switch versions — instead of only displaying the commands. It is optional: without it,
+# the screen remains fully readable.
 #
-# Usage :
-#   bash scripts/ops-agent.sh install     # démarre l'agent et branche les montages
-#   bash scripts/ops-agent.sh status      # ce que l'agent voit, et depuis quand
-#   bash scripts/ops-agent.sh logs        # journal du conteneur
-#   bash scripts/ops-agent.sh upgrade     # récupère l'image de la version en service
-#   bash scripts/ops-agent.sh uninstall   # arrête l'agent (les sauvegardes restent)
+# Usage:
+#   bash scripts/ops-agent.sh install     # starts the agent and sets up the backend mounts
+#   bash scripts/ops-agent.sh status      # what the agent sees, and since when
+#   bash scripts/ops-agent.sh logs        # container log
+#   bash scripts/ops-agent.sh upgrade     # pulls the agent image of the running version
+#   bash scripts/ops-agent.sh restart     # restarts the agent (re-reads deploy/agent.conf)
+#   bash scripts/ops-agent.sh uninstall   # stops the agent (backups are kept)
 #
-# ⚠ CE QU'INSTALLER L'AGENT SIGNIFIE
+# ⚠ WHAT INSTALLING THE AGENT MEANS
 #
-# L'agent monte `/var/run/docker.sock`. Sur cette machine, cela vaut root : un conteneur
-# qui parle au démon peut en démarrer un autre avec le disque hôte monté. C'est pour cela
-# qu'il est SEUL à l'avoir — le backend, lui, est joignable depuis internet et ne le reçoit
-# jamais — et que son vocabulaire se limite à trois ordres, sans commande libre. Les
-# autorisations vivent dans `deploy/agent.conf`, que le backend ne monte pas : une session
-# d'administration volée ne peut pas s'accorder ce que l'exploitant a refusé.
+# The agent mounts `/var/run/docker.sock`. On this machine that is equivalent to root: a
+# container that talks to the daemon can start another one with the host disk mounted. That
+# is why it is the ONLY one to get it — the backend, reachable from the internet, never
+# does — and why its vocabulary is limited to three orders, with no free-form command.
+# Permissions live in `deploy/agent.conf`, which the backend does not mount: a stolen admin
+# session cannot grant itself what the operator has refused.
 #
 set -euo pipefail
 
@@ -38,9 +39,9 @@ ok() { printf '\033[0;32m  ✓ %s\033[0m\n' "$1"; }
 warn() { printf '\033[0;33m  ! %s\033[0m\n' "$1"; }
 die() { printf '\033[0;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
 
-# Toujours ce fichier, toujours ce projet. Aucune commande de ce script ne touche la pile
-# principale : c'est ce qui garantit qu'un `docker compose up -d` de mise à jour ne recrée
-# pas l'agent en train de l'exécuter.
+# Always this file, always this project. No command in this script touches the main stack:
+# that is what guarantees an update's `docker compose up -d` does not recreate the agent
+# that is running it.
 ops_compose() { docker compose -p "$OPS_PROJECT" -f "$OPS_FILE" "$@"; }
 
 env_get() { sed -n "s/^$1=//p" .env | tail -n 1; }
@@ -54,30 +55,29 @@ env_set() {
   rm -f "$tmp"
 }
 
-[ -f .env ] || die ".env introuvable — cette instance n'est pas installée (bash scripts/install.sh)."
-docker compose version >/dev/null 2>&1 || die "plugin « docker compose » v2 introuvable."
+[ -f .env ] || die ".env not found — this instance is not installed (bash scripts/install.sh)."
+docker compose version >/dev/null 2>&1 || die "\"docker compose\" v2 plugin not found."
 
-# Le piège que ce script existe pour ne pas reproduire.
+# The trap this script exists to avoid: the agent must never be part of the main stack.
 if grep -q "^COMPOSE_FILE=.*$OPS_FILE" .env 2>/dev/null; then
-  die "$OPS_FILE est listé dans COMPOSE_FILE : l'agent appartiendrait à la pile qu'il recrée. Le retirer de .env."
+  die "$OPS_FILE is listed in COMPOSE_FILE: the agent would belong to the stack it recreates. Remove it from .env."
 fi
 
-# ── Montages du backend ──────────────────────────────────────────────────────
+# ── Backend mounts ───────────────────────────────────────────────────────────
 #
-# Écrits dans deploy/ — donc NON versionnés, et donc préservés par un `git checkout` vers
-# une étiquette antérieure. Un fichier compose versionné à la racine disparaîtrait pendant
-# un retour arrière, et toute commande `docker compose` de l'instance échouerait ensuite.
+# Written to deploy/ — hence NOT versioned, and so preserved by a `git checkout` to an
+# older tag. A versioned compose file at the root would vanish during a rollback, and every
+# `docker compose` command of the instance would then fail.
 write_mounts() {
   mkdir -p deploy backups ops/queue ops/state
   chmod 700 ops ops/queue ops/state 2>/dev/null || true
   cat > deploy/compose.mounts.yml <<'YAML'
-# Écrit par scripts/ops-agent.sh — jamais versionné.
+# Written by scripts/ops-agent.sh — never versioned.
 #
-# Le partage des privilèges tient en trois lignes : le backend ÉCRIT dans la file d'ordres,
-# LIT l'état en lecture seule, et ne voit les sauvegardes qu'en lecture. L'agent fait
-# l'inverse. Sans cette asymétrie, un backend compromis — il tourne en root et traite des
-# fichiers d'utilisateurs — pourrait pré-poser un lien dans `state/` et faire écrire le
-# démon docker n'importe où sur l'hôte.
+# The privilege split fits in three lines: the backend WRITES to the order queue, READS the
+# state read-only, and only sees backups read-only. The agent does the opposite. Without
+# this asymmetry, a compromised backend — it runs as root and handles user files — could
+# plant a link in `state/` and make the docker daemon write anywhere on the host.
 services:
   backend:
     volumes:
@@ -89,114 +89,114 @@ services:
       OPS_QUEUE_DIR: /ops/queue
       OPS_STATE_DIR: /ops/state
 YAML
-  ok "deploy/compose.mounts.yml écrit"
+  ok "deploy/compose.mounts.yml written"
 
   local files
   files="$(env_get COMPOSE_FILE)"
   case "$files" in
     *deploy/compose.mounts.yml*) ;;
-    '') die "COMPOSE_FILE absent de .env — instance installée avant scripts/install.sh ? L'ajouter à la main." ;;
-    *) env_set COMPOSE_FILE "$files:deploy/compose.mounts.yml"; ok "COMPOSE_FILE complété" ;;
+    '') die "COMPOSE_FILE missing from .env — instance installed before scripts/install.sh existed? Add it by hand." ;;
+    *) env_set COMPOSE_FILE "$files:deploy/compose.mounts.yml"; ok "COMPOSE_FILE updated" ;;
   esac
 }
 
-# Autorisations de l'agent. Hors de tout montage du backend : c'est LA barrière qu'une
-# compromission de l'application ne franchit pas.
+# Agent permissions. Outside every backend mount: this is THE barrier a compromised
+# application cannot cross.
 write_conf() {
-  [ -f deploy/agent.conf ] && { ok "deploy/agent.conf conservé"; return 0; }
+  [ -f deploy/agent.conf ] && { ok "deploy/agent.conf kept"; return 0; }
   mkdir -p deploy
   cat > deploy/agent.conf <<'CONF'
-# Ce que l'agent d'exploitation accepte d'exécuter. Lu à son démarrage ; après une
-# modification : bash scripts/ops-agent.sh restart
+# What the operations agent agrees to run. Read when the agent starts; after a change:
+#   bash scripts/ops-agent.sh restart
 #
-# Ce fichier n'est monté dans AUCUN conteneur de l'application : personne qui obtiendrait
-# une session d'administration ne peut s'accorder ici ce que vous refusez.
+# This file is mounted in NO application container: nobody who obtains an admin session
+# can grant themselves here what you refuse.
 OPS_ALLOW_UPDATE=1
 OPS_ALLOW_BACKUP=1
 OPS_ALLOW_VERIFY=1
-# Redescendre de version : refusé par défaut. Une version antérieure ne sait pas lire un
-# schéma déjà migré, et l'instance ne remonterait pas.
+# Downgrading: refused by default. An older version cannot read an already-migrated
+# schema, and the instance would not come back up.
 OPS_ALLOW_DOWNGRADE=0
 CONF
   chmod 600 deploy/agent.conf
-  ok "deploy/agent.conf écrit (droits 600)"
+  ok "deploy/agent.conf written (mode 600)"
 }
 
-# Image de l'agent : celle de la version en service, sinon celle du préfixe déclaré.
+# Agent image: the one of the running version, otherwise derived from the declared prefix.
 resolve_image() {
   local image prefix tag
   image="$(env_get REVIEW_OPS_IMAGE)"
   if [ -n "$image" ]; then printf '%s' "$image"; return 0; fi
   prefix="$(env_get REVIEW_IMAGE_PREFIX)"
   tag="$(env_get REVIEW_IMAGE_TAG)"
-  [ -n "$prefix" ] || die "ni REVIEW_OPS_IMAGE ni REVIEW_IMAGE_PREFIX dans .env : poser REVIEW_OPS_IMAGE=<registre>/review-ops:<étiquette>."
+  [ -n "$prefix" ] || die "neither REVIEW_OPS_IMAGE nor REVIEW_IMAGE_PREFIX in .env: set REVIEW_OPS_IMAGE=<registry>/review-ops:<tag>."
   [ -n "$tag" ] || tag="$(env_get APP_VERSION)"
-  [ -n "$tag" ] || die "aucune étiquette d'image connue : poser REVIEW_IMAGE_TAG dans .env."
+  [ -n "$tag" ] || die "no known image tag: set REVIEW_IMAGE_TAG in .env."
   printf '%s/review-ops:%s' "$prefix" "$tag"
 }
 
 cmd_install() {
-  say "Agent d'exploitation"
+  say "Operations agent"
   local image
   image="$(resolve_image)"
   env_set REVIEW_OPS_IMAGE "$image"
   env_set REVIEW_ROOT "$ROOT"
-  ok "image : $image"
+  ok "image: $image"
   write_conf
   write_mounts
 
-  say "Démarrage de l'agent (projet $OPS_PROJECT)"
-  ops_compose pull || warn "image non récupérée (registre injoignable ?) — tentative avec ce qui est local"
+  say "Starting the agent (project $OPS_PROJECT)"
+  ops_compose pull || warn "image not pulled (registry unreachable?) — trying with what is available locally"
   ops_compose up -d
-  ok "agent démarré"
+  ok "agent started"
 
-  say "Prise en compte des montages par le backend"
-  # Sans cette recréation, le backend continue de tourner sans voir la file d'ordres : la
-  # page dirait « aucun agent » alors qu'il tourne, et personne ne comprendrait pourquoi.
+  say "Applying the mounts to the backend"
+  # Without this recreation, the backend keeps running without seeing the order queue: the
+  # page would say "no agent" while it is running, and nobody would understand why.
   docker compose up -d backend
-  ok "backend recréé avec la file d'ordres"
+  ok "backend recreated with the order queue"
 
-  say "Terminé"
-  echo "  L'écran Admin → Mises à jour peut désormais sauvegarder et basculer de version."
-  echo "  État de l'agent : bash scripts/ops-agent.sh status"
+  say "Done"
+  echo "  The Admin → Updates screen can now back up and switch versions."
+  echo "  Agent status: bash scripts/ops-agent.sh status"
 }
 
 cmd_status() {
-  say "Conteneur"
+  say "Container"
   ops_compose ps || true
-  say "Ce que l'agent voit"
+  say "What the agent sees"
   if [ -f ops/state/agent.json ]; then
     cat ops/state/agent.json
   else
-    warn "ops/state/agent.json absent : l'agent n'a encore jamais écrit son état."
+    warn "ops/state/agent.json missing: the agent has never written its state yet."
   fi
-  say "Dernières opérations"
-  ls -1 ops/state/runs 2>/dev/null | tail -n 5 || echo "  (aucune)"
+  say "Latest operations"
+  ls -1 ops/state/runs 2>/dev/null | tail -n 5 || echo "  (none)"
 }
 
 cmd_logs() { ops_compose logs --tail="${2:-100}" -f ops; }
 
 cmd_upgrade() {
-  say "Mise à jour de l'agent"
+  say "Upgrading the agent"
   local image
   image="$(env_get REVIEW_IMAGE_PREFIX)"
   [ -n "$image" ] && env_set REVIEW_OPS_IMAGE "$image/review-ops:$(env_get APP_VERSION)"
   ops_compose pull
   ops_compose up -d
-  ok "agent en version $(env_get APP_VERSION)"
+  ok "agent at version $(env_get APP_VERSION)"
 }
 
 cmd_restart() {
   ops_compose up -d --force-recreate
-  ok "agent redémarré (deploy/agent.conf relu)"
+  ok "agent restarted (deploy/agent.conf re-read)"
 }
 
 cmd_uninstall() {
-  say "Retrait de l'agent"
+  say "Removing the agent"
   ops_compose down || true
-  warn "les montages du backend restent en place (deploy/compose.mounts.yml) : le catalogue"
-  warn "des sauvegardes continue de fonctionner, l'exécution s'arrête."
-  ok "agent arrêté"
+  warn "the backend mounts stay in place (deploy/compose.mounts.yml): the backup catalog"
+  warn "keeps working, only execution stops."
+  ok "agent stopped"
 }
 
 case "${1:-}" in
@@ -207,5 +207,5 @@ case "${1:-}" in
   restart) cmd_restart ;;
   uninstall) cmd_uninstall ;;
   -h|--help|'') sed -n '6,19p' "$0" ;;
-  *) die "commande inconnue : $1 (install | status | logs | upgrade | restart | uninstall)" ;;
+  *) die "unknown command: $1 (install | status | logs | upgrade | restart | uninstall)" ;;
 esac

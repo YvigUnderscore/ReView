@@ -1,16 +1,18 @@
-# Override de DÉVELOPPEMENT — auto-chargé par `docker compose up`.
-# Expose Postgres/Redis à l'hôte pour le dev local (Prisma, scripts, tests).
-# NE PAS utiliser en production : déployer le fichier de base ET l'overlay de production,
-# qui ajoute le frontal TLS et retire tout port hôte (`ports: !reset []`) :
+# DEVELOPMENT override, loaded automatically by a plain `docker compose up`.
+# Publishes Postgres/Redis to the host for local development (Prisma, scripts, tests).
+#
+# ⚠ Never use it in production. Deploy the base file AND the production overlay, which adds
+# the TLS front end and removes every host port (`ports: !reset []`):
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-# Nommer le fichier de base SEUL — ce que cet en-tête conseillait jusqu'ici — n'écarte que
-# cet override : le frontal TLS manque, les ports hôtes restent publiés, et l'API répond
-# donc en clair. C'est aussi ce que prescrivent DOCUMENTATION/getting-started/installation.md
-# et docker-stack.md ; `scripts/install.sh` écrit la même liste dans COMPOSE_FILE.
-# Ces deux services n'ont AUCUNE authentification réseau utile en dev (Redis n'a pas de mot
-# de passe du tout) : ils écoutent donc sur la boucle locale et non sur 0.0.0.0, où ils
-# offriraient la base et la file de jobs à tout le réseau. Poser DEV_BIND=0.0.0.0 pour
-# exposer sciemment (accès depuis une autre machine du LAN).
+# Naming the base file ALONE only drops this override: the TLS front end is missing, host
+# ports stay published, and the API answers in clear text. The same list is prescribed by
+# DOCUMENTATION/getting-started/installation.md and docker-stack.md, and `scripts/install.sh`
+# writes it into COMPOSE_FILE.
+#
+# These two services have NO useful network authentication in dev (Redis has no password at
+# all), so they listen on loopback rather than 0.0.0.0, where they would offer the database
+# and the job queue to the whole network. Set DEV_BIND=0.0.0.0 to expose them deliberately
+# (access from another machine on the LAN).
 services:
   postgres:
     ports:
@@ -18,8 +20,8 @@ services:
   redis:
     ports:
       - "${DEV_BIND:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
-  # En dev local, NODE_ENV=development : les garde-fous de production (secrets forts,
-  # CORS strict — cf. config/env.ts) sont inactifs. La prod déploie SANS cet override.
+  # NODE_ENV=development disables the production safeguards (strong secrets, strict CORS; see
+  # backend/src/config/env.ts). Production deploys WITHOUT this override.
   backend:
     environment:
       NODE_ENV: development

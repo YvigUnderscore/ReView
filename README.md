@@ -423,7 +423,8 @@ ReView is **free software under [AGPL-3.0-or-later](LICENSE)**.
 You may install it and modify it. The only thing asked in return: if you offer a **modified
 version** to others, including simply by hosting it for your clients, you must give them its
 sources (section 13). In practice, publish your fork and set its URL in
-**Admin → Settings → "Source code (AGPL §13)"**. An unmodified instance has nothing to do.
+**Admin → Studio → Studio identity → "Source code (AGPL §13)"**. An unmodified instance has
+nothing to do.
 
 Your media, projects and data are never covered: the licence applies to the software.
 

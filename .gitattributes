@@ -1,13 +1,13 @@
 *.sh text eol=lf
-# Texte de licence : conservé à l'identique de la source FSF (fins de ligne LF)
+# Licence text: kept byte-identical to the FSF source (LF line endings)
 LICENSE text eol=lf
 
-# Notices generees (comparaison exacte par validate.sh)
+# Generated notices (compared byte for byte by validate.sh)
 THIRD-PARTY-NOTICES.md text eol=lf
 
-# Rendus d'animation de la documentation et du README (DOCUMENTATION/assets/, .github/readme/). Git les
-# détecte déjà comme binaires, mais autant l'écrire : une seule substitution de fin de ligne
-# détruit le conteneur, et la règle doit survivre à l'ajout d'un « * text=auto ».
+# Animated renders for the documentation and README (DOCUMENTATION/assets/, .github/readme/).
+# Git already detects them as binary, but this is explicit on purpose: a single line-ending
+# substitution corrupts the file, and the rule must survive a future `* text=auto`.
 *.mp4 binary
 *.webm binary
 *.gif binary

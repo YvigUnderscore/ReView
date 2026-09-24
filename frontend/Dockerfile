@@ -1,29 +1,29 @@
-# Build du frontend. Contexte docker = racine du repo (voir docker-compose.yml) :
-# le script prebuild (scripts/build-docs.mjs) copie DOCUMENTATION/ dans public/docs.
-# Node 22 requis par Vite 7 (Node 18 n'est plus supporté).
+# Frontend build. The docker context is the repo root (see docker-compose.yml): the prebuild
+# script (frontend/scripts/build-docs.mjs) copies DOCUMENTATION/ into public/docs.
+# Node 22 is required by Vite 7.
 FROM node:22-alpine AS build
 
 WORKDIR /app/frontend
 
-# Dépendances (couche cache)
+# Dependencies (cached layer)
 COPY frontend/package*.json ./
 RUN npm install
 
-# Sources frontend + documentation produit (embarquée sur /docs)
+# Frontend sources + product documentation (served in-app on /docs)
 COPY frontend/ ./
 COPY DOCUMENTATION/ ../DOCUMENTATION/
 
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx
-# Version épinglée (et alignée sur le proxy TLS de docker-compose.prod.yml) : `alpine`
-# seul suit la branche courante, et une majeure nginx peut changer le comportement de
-# `location`/`add_header` sur lequel repose frontend/nginx.conf.
+# Pinned version, aligned with the TLS proxy in docker-compose.prod.yml: plain `alpine`
+# follows the mainline branch, and a new nginx major can change the `location`/`add_header`
+# behaviour that frontend/nginx.conf relies on.
 FROM nginx:1.27-alpine
 
-# Mêmes build-args que l'image backend : `release.yml` les passe aux trois images, et un
-# build-arg non déclaré est ignoré sans un mot. Ici ils ne servent qu'à étiqueter l'image —
-# c'est ce qui permet de dire, devant un conteneur qui tourne, de quelle version il sort.
+# Same build-args as the backend image: `release.yml` passes them to all three images, and an
+# undeclared build-arg is silently ignored. Here they only label the image, so that a running
+# container can tell which version it comes from.
 ARG APP_VERSION=
 ARG GIT_SHA=
 ARG BUILD_DATE=
@@ -38,9 +38,9 @@ LABEL org.opencontainers.image.title="ReView (frontend)" \
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Le bundle servi ici agrège des dépendances MIT/BSD/ISC minifiées : leurs notices doivent
-# accompagner la redistribution, et l'AGPL §13 veut que le code correspondant soit offert à
-# quiconque utilise l'instance. Les deux fichiers sont donc servis avec l'application.
+# The bundle served here aggregates minified MIT/BSD/ISC dependencies: their notices must
+# accompany redistribution, and AGPL §13 requires the corresponding source to be offered to
+# anyone using the instance. Both files are therefore served with the application.
 COPY LICENSE THIRD-PARTY-NOTICES.md /usr/share/nginx/html/
 
 EXPOSE 80

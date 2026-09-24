@@ -1,5 +1,6 @@
-# Contexte docker racine (build frontend : accès à frontend/ + DOCUMENTATION/).
-# Tout le reste est exclu pour garder le contexte minimal.
+# Root docker context (frontend build: needs frontend/ + DOCUMENTATION/).
+# Everything else is excluded to keep the context small. The backend image builds from its
+# own context (./backend), which is why backend/ is excluded here.
 .git
 **/node_modules
 **/dist
@@ -13,6 +14,6 @@ docs/
 plans/
 tmp/
 assets_for_testing/
-# Tesseract (rendu des animations de doc) : outil non libre, jamais dans une image ReView.
+# Tesseract (documentation animation renders): proprietary tool, never in a ReView image.
 motion/
 frontend/public/docs/

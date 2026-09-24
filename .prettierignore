@@ -1,11 +1,11 @@
-# Build / génération
+# Build output
 dist/
 build/
 coverage/
 node_modules/
-# Prisma client généré
+# Generated Prisma client
 backend/src/generated/
-# Verrous & rapports
+# Lockfiles & test reports
 package-lock.json
 playwright-report/
 test-results/

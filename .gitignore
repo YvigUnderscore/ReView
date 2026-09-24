@@ -13,76 +13,69 @@ frontend/dist/
 frontend/public/docs/
 *.tsbuildinfo
 
-# Logs & couverture de tests
+# Logs & test coverage
 *.log
 coverage/
 
-# Plans (artefacts de session Claude)
+# Local-only: AI session plans and test assets
 plans/
 /assets_for_testing
 
-# Journaux d'avancées (logs Claude — locaux)
+# Local progress logs
 logs/
 
-# Contexte Claude / agents (local uniquement)
+# AI agent context files (local only)
 CLAUDE.md
 AGENTS.md
 
-# Docs internes (audit, rapports — non nécessaires à l'app)
+# Internal reports (audits...). Not to be confused with DOCUMENTATION/, which is committed.
 /docs/
 
-# Références de design (bundle de handoff) — ne pas versionner
+# Design references (handoff bundle)
 design_handoff_review_chrome/
 
-# Playwright (10.F3)
+# Playwright output
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
 
-# Certificats TLS de prod (montés dans nginx) — jamais commités
+# Production TLS certificates (mounted into nginx): never committed
 nginx/certs/
 
-# Mot de passe du relais SMTP d'Alertmanager (monté dans le conteneur) — jamais commité
+# Alertmanager SMTP relay password (mounted into the container), and local backups
 monitoring/alertmanager/smtp_password
 backups/
 
-# Ce que `scripts/install.sh` rend pour CETTE instance : configuration nginx du site,
-# surcouches compose, certificats Let's Encrypt, réglages de l'agent d'exploitation.
-# Le script annonce en tête qu'il n'écrit aucun fichier versionné ; sans cette ligne, il
-# mentait : après une installation, `git status` était sale et `scripts/update.sh` refusait
-# de basculer (« des fichiers suivis sont modifiés localement »).
+# What `scripts/install.sh` generates for THIS instance: site nginx config, compose overlays,
+# Let's Encrypt certificates, ops agent settings. Must stay ignored: otherwise `git status` is
+# dirty after an install and `scripts/update.sh` refuses to switch versions.
 deploy/
 
-# File d'ordres et journaux d'exécution de l'agent (Admin → Mises à jour). Contient le nom
-# des personnes qui ont commandé une opération : rien qui doive partir dans un dépôt.
+# Ops agent order queue and run logs (Admin -> Updates). They contain the names of the people
+# who ordered an operation: nothing that belongs in a repository.
 #
-# ⚠ Ces deux lignes seulement, jamais `ops/` : le dossier porte AUSSI la source de l'agent
-# (ops/Dockerfile, ops/agent.sh), que `.github/workflows/release.yml` construit.
+# ⚠ Only these two lines, never `ops/`: that folder ALSO holds the agent's source
+# (ops/Dockerfile, ops/agent.sh), which `.github/workflows/release.yml` builds.
 ops/queue/
 ops/state/
 
-# Bytecode Python du client : jamais versionné.
+# Python bytecode
 __pycache__/
 *.pyc
 
-# Tesseract (`motion/`) — atelier des rendus animés de la documentation. Il remplace depuis le
-# 2026-09-24 le projet Remotion qui occupait ce dossier.
+# Tesseract workshop (`motion/`) for the documentation's animated renders.
 #
-# ⚠ Tesseract (Mirage) n'est PAS un logiciel libre : licence propriétaire, gratuite en deçà
-# d'un seuil de chiffre d'affaires. ReView est AGPL-3.0-or-later : l'outil n'entre pas dans ce
-# dépôt, et les compositions, qui ne se rendent qu'avec lui (et dont les projets .tsrct
-# embarquent les polices), restent sur le poste de qui rend les animations.
+# ⚠ Tesseract (Mirage) is NOT free software (proprietary licence). ReView is
+# AGPL-3.0-or-later, so the tool stays out of this repository, and so do the compositions,
+# which only render with it (and whose .tsrct projects embed fonts): they live on the machine
+# of whoever renders.
 #
-# Seuls les RENDUS sont versionnés — les conditions de Tesseract laissent la sortie à son
-# auteur, et un GIF n'emporte aucune licence de l'outil qui l'a produit.
-# CONSÉQUENCE ASSUMÉE : les compositions n'étant pas versionnées, un rendu n'est PAS
-# re-générable par quelqu'un d'autre. Cf. `motion/README.md` (local), l'en-tête de
-# `scripts/check-docs.mjs` et le chapitre « Renders » de
+# Only the RENDERS are versioned (Tesseract's terms leave the output to its author). Accepted
+# consequence: without the compositions, nobody else can regenerate a render. See the header
+# of `scripts/check-docs.mjs` and the "Renders" chapter of
 # `DOCUMENTATION/development/documentation-style.md`.
-# Le dossier entier est ignoré, RENDUS COMPRIS — et ce n'est pas une contradiction : un rendu
-# entre dans le dépôt en étant COPIÉ dans `DOCUMENTATION/assets/<section>/`, là où il sert.
-# C'est le seul endroit que `check-docs.mjs` surveille (légende obligatoire, jamais orphelin,
-# type prouvé par les octets, poids borné). Le versionner AUSSI dans `motion/out/` ouvrirait un
-# second arbre d'assets que rien ne contrôle, et y laisserait pour toujours des rendus d'essai
-# que plus aucune page ne cite.
+# The whole folder is ignored, renders INCLUDED: a render enters the repository by being
+# COPIED into `DOCUMENTATION/assets/<section>/`, where it is used. That is the only place
+# `check-docs.mjs` checks (caption required, never orphaned, type proven by its bytes, size
+# capped). Versioning it in `motion/out/` too would open a second, unchecked asset tree.
 /motion/

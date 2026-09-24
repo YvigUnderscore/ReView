@@ -8,8 +8,8 @@
     {
       "id": 7,
       "type": "table",
-      "title": "Alertes actives (monitoring/rules/alerts.yml)",
-      "description": "Règles évaluées par Prometheus. Aucune ligne = rien ne brûle. Ne dépend pas d'Alertmanager : sans lui, les alertes sont visibles ici mais routées nulle part.",
+      "title": "Active alerts (monitoring/rules/alerts.yml)",
+      "description": "Rules evaluated by Prometheus. No row = nothing is firing. Does not depend on Alertmanager: without it, alerts show up here but are routed nowhere.",
       "gridPos": { "x": 0, "y": 0, "w": 16, "h": 6 },
       "targets": [
         {
@@ -31,8 +31,8 @@
     {
       "id": 8,
       "type": "stat",
-      "title": "Version en service",
-      "description": "review_worker_info : version et commit du worker. Deux lignes pendant une mise à jour, une seule ensuite.",
+      "title": "Running version",
+      "description": "review_worker_info: worker version and commit. Two rows during an update, a single one afterwards.",
       "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
       "options": { "textMode": "name", "colorMode": "none" },
       "targets": [{ "expr": "review_worker_info", "instant": true, "legendFormat": "{{version}} ({{commit}})" }]
@@ -40,7 +40,7 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Requêtes HTTP / s (par statut)",
+      "title": "HTTP requests / s (by status)",
       "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
       "targets": [
         {
@@ -52,7 +52,7 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "Latence HTTP p95 (s)",
+      "title": "HTTP latency p95 (s)",
       "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
       "targets": [
         {
@@ -64,8 +64,8 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Files BullMQ (waiting / active / failed)",
-      "description": "Les cinq files : media, storage-cleanup, webhooks, timeline-export, shotgrid.",
+      "title": "BullMQ queues (waiting / active / failed)",
+      "description": "One series per queue and state (media, storage-cleanup, webhooks, timeline-export, shotgrid, maintenance, spatial-thumb).",
       "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
       "targets": [
         {
@@ -77,16 +77,16 @@
     {
       "id": 4,
       "type": "timeseries",
-      "title": "Mémoire des process (RSS)",
-      "description": "API et worker. Le worker est le seul à devoir être généreux (ffmpeg, Blender).",
+      "title": "Process memory (RSS)",
+      "description": "API and worker. Only the worker is expected to use a lot (ffmpeg, Blender).",
       "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
       "targets": [{ "expr": "process_resident_memory_bytes", "legendFormat": "{{job}}" }]
     },
     {
       "id": 5,
       "type": "timeseries",
-      "title": "Jobs du worker / min (par issue)",
-      "description": "review_worker_jobs_total : ce que le worker termine réellement, réussites et échecs.",
+      "title": "Worker jobs / min (by outcome)",
+      "description": "review_worker_jobs_total: what the worker actually finishes, successes and failures.",
       "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
       "targets": [
         {
@@ -98,8 +98,8 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Durée des jobs p95 (s, par file)",
-      "description": "Une durée qui dérive sans que le volume change annonce un disque saturé ou un encodeur retombé sur le CPU.",
+      "title": "Job duration p95 (s, by queue)",
+      "description": "A duration that drifts while volume stays flat points to a saturated disk or an encoder that fell back to CPU.",
       "gridPos": { "x": 12, "y": 22, "w": 12, "h": 8 },
       "targets": [
         {

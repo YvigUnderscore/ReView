@@ -1,16 +1,16 @@
-# docker-compose.prod.yml — surcharge de production (durcissement 8.7 : TLS + secrets)
+# docker-compose.prod.yml — production overlay (TLS front end + mandatory secrets)
 #
-# Usage :
+# Usage:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# Prérequis :
-#   - Certificats TLS dans ./nginx/certs/ (fullchain.pem + privkey.pem)
-#   - .env renseigné avec des secrets forts (voir .env.example)
+# Prerequisites:
+#   - TLS certificates in ./nginx/certs/ (fullchain.pem + privkey.pem)
+#   - .env filled in with strong secrets (see .env.example)
 #
-# Ce fichier ajoute nginx en reverse-proxy HTTPS devant frontend + backend + MinIO, et
-# retire TOUS les ports hôte de frontend/backend/minio (`!reset` — compose ≥ 2.24).
+# Adds nginx as the HTTPS reverse proxy in front of frontend + backend + MinIO, and removes
+# EVERY host port from frontend/backend/minio (`!reset`, compose >= 2.24).
 services:
-  # ── Nginx reverse-proxy TLS (seul service exposé) ───────────────────────────
+  # ── TLS reverse proxy (the only exposed service) ────────────────────────────
   nginx:
     image: nginx:1.27-alpine
     ports:
@@ -19,14 +19,13 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
-      # Cache HLS (2 Go déclarés par `proxy_cache_path`) et fichiers temporaires de corps de
-      # requête. Sans ce volume, les deux s'écrivent dans la couche inscriptible du conteneur
-      # — /var/lib/docker, soit le système de fichiers de pgdata et miniodata, que l'exploitant
-      # n'a pas choisi — et disparaissent à chaque recréation du conteneur : la première salle
-      # de dailies qui suit une mise à jour retire chaque segment depuis MinIO, sérialisée par
-      # `proxy_cache_lock`, c'est-à-dire exactement la latence que le cache existe pour éviter.
-      # Volume nommé plutôt que tmpfs : 2 Go de RAM permanents pour un cache disque seraient
-      # pris au transcodage, et un tmpfs se viderait lui aussi à chaque recréation.
+      # HLS cache (2 GB, declared by `proxy_cache_path`) and request-body temp files. Without
+      # this volume both are written to the container's writable layer, i.e. /var/lib/docker
+      # (the same filesystem as pgdata and miniodata, which the operator did not choose), and
+      # are lost every time the container is recreated: the first dailies session after an
+      # update then refetches every segment from MinIO, serialised by `proxy_cache_lock`.
+      # A named volume rather than tmpfs: 2 GB of permanent RAM for a disk cache would be taken
+      # from transcoding, and a tmpfs is emptied on recreation too.
       - nginx_cache:/var/cache/nginx
     depends_on:
       backend:
@@ -36,10 +35,10 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      # busybox wget (image nginx:alpine), sur la sonde locale du frontal (`location =
-      # /healthz`, nginx/nginx.conf) : elle ne traverse aucun amont, donc un backend en
-      # panne ne fait pas passer le frontal pour mort. Sans sonde, un nginx dont les
-      # workers sont bloqués restait « running » — et c'est le SEUL service exposé.
+      # busybox wget (nginx:alpine image) on the proxy's own probe (`location = /healthz` in
+      # nginx/nginx.conf): it reaches no upstream, so a failing backend does not make the proxy
+      # look dead. Without a probe, an nginx with stuck workers stays "running", and this is
+      # the ONLY exposed service.
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
       interval: 30s
       timeout: 5s
@@ -52,36 +51,36 @@ services:
         max-file: "5"
     restart: always
 
-  # ── Secrets requis (pas de défaut faible en production) ─────────────────────
+  # ── Mandatory secrets (no weak default in production) ───────────────────────
   postgres:
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fort requis en production (openssl rand -hex 32)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?a strong POSTGRES_PASSWORD is required in production (openssl rand -hex 32)}
 
   minio:
     ports: !reset []
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER requis en production (pas de minioadmin)}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD fort requis en production}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required in production (not minioadmin)}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?a strong MINIO_ROOT_PASSWORD is required in production}
 
   backend:
     ports: !reset []
     environment:
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis en production (≥ 32 caractères aléatoires)}
-      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN requis en production (URL exacte du frontend, pas *)}
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT requis en production (https://<domaine>)}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required in production (at least 32 random characters)}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in production (exact frontend URL, not *)}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT is required in production (https://<domain>)}
 
   worker:
     environment:
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis en production}
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT requis en production}
-      # Exigée comme pour le backend : le worker partage le même schéma d'environnement,
-      # qui rejette '*' en production (il refuserait de démarrer).
-      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN requis en production (URL exacte du frontend, pas *)}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required in production}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT is required in production}
+      # Required here as for the backend: the worker shares the same environment schema, which
+      # rejects '*' in production (the worker would refuse to start).
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in production (exact frontend URL, not *)}
 
   frontend:
     ports: !reset []
 
-# Compose fusionne les sections `volumes:` de tous les fichiers de la pile : celui-ci
-# n'existe donc que quand l'overlay de production est chargé, comme le service qui l'utilise.
+# Compose merges the `volumes:` sections of every file in the stack, so this volume only exists
+# when the production overlay is loaded, like the service that uses it.
 volumes:
   nginx_cache:

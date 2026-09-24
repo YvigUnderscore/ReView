@@ -1,14 +1,11 @@
-# Règles d'alerte ReView (profil compose `monitoring`).
+# ReView alert rules (compose profile `monitoring`).
 #
-# La documentation listait des requêtes PromQL « à surveiller » que rien n'exécutait. Voici
-# les mêmes questions, posées par Prometheus toutes les quinze secondes.
+# Principle: an alert wakes someone up, so each one describes a failure THE OPERATOR CAN
+# ACT ON, with a `for:` long enough not to fire on a restart or a normal burst of work.
+# `severity: critical` = the studio cannot work; `warning` = look at it today.
 #
-# Principe : une alerte réveille quelqu'un, donc chacune décrit une panne QUE L'EXPLOITANT
-# PEUT TRAITER, avec un `for:` assez long pour ne pas se déclencher sur un redémarrage ou
-# une rafale de travail normale. `severity: critical` = le studio ne peut pas travailler ;
-# `warning` = à regarder aujourd'hui.
-#
-# Annotations en anglais : elles sont lues par des exploitants tiers, comme DOCUMENTATION/.
+# Annotations are in English: they reach operators through Alertmanager notifications and
+# the Prometheus/Grafana UIs.
 groups:
   - name: review-availability
     rules:
@@ -59,8 +56,9 @@ groups:
         annotations:
           summary: 'Queue {{ $labels.queue }} holds failed jobs'
           description: >-
-            {{ $value }} failed jobs left in the queue. Inspect them in Admin → Jobs and
-            replay them there; a job that fails three times stays failed until replayed.
+            {{ $value }} failed jobs left in the queue. Inspect them in Admin → Maintenance →
+            Jobs and replay them there; a job that fails three times stays failed until
+            replayed.
 
       - alert: ReviewMediaJobStuck
         expr: review_queue_jobs{queue="media",state="active"} > 0

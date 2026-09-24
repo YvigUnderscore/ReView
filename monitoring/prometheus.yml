@@ -1,29 +1,28 @@
-# Prometheus (37.G) — supervision de ReView (profil compose `monitoring`).
+# Prometheus — ReView monitoring (compose profile `monitoring`).
 #
-# Deux cibles : l'API et le worker. Le worker était absent — donc la durée des encodages,
-# les échecs par type de job et l'existence même du process n'étaient mesurés nulle part.
+# Two targets: the API and the worker. Without the worker, encode durations, failures per
+# job type and whether the process is even alive would not be measured anywhere.
 global:
   scrape_interval: 15s
-  # Évaluation des règles d'alerte : même cadence que le scrape, les règles ci-dessous
-  # portent toutes un `for:` qui absorbe le bruit.
+  # Alert rules are evaluated at the scrape cadence; every rule carries a `for:` that
+  # absorbs the noise.
   evaluation_interval: 15s
   external_labels:
     instance_role: review
 
-# Chemin en glob À DESSEIN : si le répertoire `monitoring/rules/` n'est pas monté dans le
-# conteneur, Prometheus démarre quand même (une glob sans correspondance n'est pas une
-# erreur). Une supervision qui refuse de démarrer parce qu'il manque un fichier d'alertes
-# est pire que pas d'alertes du tout.
+# Glob path ON PURPOSE: if `monitoring/rules/` is not mounted into the container,
+# Prometheus still starts (a glob with no match is not an error). Monitoring that refuses
+# to start because an alert file is missing is worse than no alerts at all.
 #
-# Montage attendu (docker-compose.yml, service `prometheus`) :
+# Expected mount (docker-compose.yml, service `prometheus`):
 #   - ./monitoring/rules:/etc/prometheus/rules:ro
 rule_files:
   - /etc/prometheus/rules/*.yml
 
-# Alertmanager est facultatif : sans lui, les règles restent évaluées et visibles
-# (interface Prometheus, série `ALERTS`, panneau « Alertes actives » du tableau Grafana) —
-# elles ne sont simplement pas routées vers un destinataire. Décommenter après avoir ajouté
-# le service (cf. DOCUMENTATION/infrastructure/monitoring.md).
+# Alertmanager is optional: without it, rules are still evaluated and visible (Prometheus
+# UI, `ALERTS` series, "Active alerts" panel of the Grafana dashboard) — they are just not
+# routed to anyone. Uncomment after adding the service (see
+# monitoring/alertmanager/alertmanager.yml and DOCUMENTATION/infrastructure/monitoring.md).
 # alerting:
 #   alertmanagers:
 #     - static_configs:
@@ -32,16 +31,16 @@ rule_files:
 scrape_configs:
   - job_name: review-backend
     metrics_path: /metrics
-    # Si METRICS_TOKEN est défini côté backend, ajouter :
-    # params: { token: ["<votre jeton>"] }
+    # If METRICS_TOKEN is set on the backend, add:
+    # params: { token: ["<your token>"] }
     static_configs:
       - targets: ["backend:3000"]
 
-  # Point de collecte interne du worker (backend/src/workers/metricsServer.ts) : aucun port
-  # publié sur l'hôte, Prometheus est sur le même réseau compose.
+  # Worker's internal metrics endpoint (backend/src/workers/metricsServer.ts): no port is
+  # published on the host, Prometheus reaches it over the compose network.
   - job_name: review-worker
     metrics_path: /metrics
-    # Même jeton que le backend le cas échéant :
-    # params: { token: ["<votre jeton>"] }
+    # Same token as the backend, if set:
+    # params: { token: ["<your token>"] }
     static_configs:
       - targets: ["worker:9101"]

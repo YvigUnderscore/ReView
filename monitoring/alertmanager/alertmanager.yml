@@ -1,12 +1,12 @@
-# Alertmanager — exemple minimal, à copier puis adapter.
+# Alertmanager — minimal example, to copy and adapt.
 #
-# Facultatif : sans Alertmanager, les règles de monitoring/rules/alerts.yml restent
-# évaluées et visibles (interface Prometheus, panneau « Alertes actives » du tableau
-# Grafana) ; elles ne partent simplement chez personne.
+# Optional: without Alertmanager, the rules in monitoring/rules/alerts.yml are still
+# evaluated and visible (Prometheus UI, "Active alerts" panel of the Grafana dashboard);
+# they just are not sent to anyone.
 #
-# Pour l'activer :
-#   1. décommenter le bloc `alerting:` de monitoring/prometheus.yml ;
-#   2. ajouter le service au profil `monitoring` de docker-compose.yml :
+# To enable it:
+#   1. uncomment the `alerting:` block in monitoring/prometheus.yml;
+#   2. add the service to the `monitoring` profile of docker-compose.yml:
 #
 #        alertmanager:
 #          image: prom/alertmanager:v0.28.1
@@ -17,35 +17,35 @@
 #          logging: *default-logging
 #          restart: always
 #
-#      (plus `alertmanager_data:` dans la section `volumes:`) ;
-#   3. renseigner ci-dessous un vrai SMTP — celui du studio, le même que ReView ;
-#   4. écrire le mot de passe du relais dans `monitoring/alertmanager/smtp_password`
-#      (un seul mot, sans retour à la ligne final : `printf %s 'lemotdepasse' > …`).
-#      Le fichier est ignoré par git : il n'est monté que dans le conteneur, via le
-#      volume ci-dessus, et Alertmanager le lit au démarrage.
+#      (plus `alertmanager_data:` in the top-level `volumes:` section);
+#   3. fill in a real SMTP relay below — the studio's, the same one ReView uses;
+#   4. write the relay password to `monitoring/alertmanager/smtp_password`
+#      (a single word, no trailing newline: `printf %s 'thepassword' > …`).
+#      The file is git-ignored; it reaches the container only through the volume above,
+#      and Alertmanager reads it at startup.
 #
-# Aucun port hôte : Alertmanager n'a pas à être joignable de l'extérieur, Prometheus
-# l'atteint par le réseau du compose.
+# No host port: Alertmanager does not need to be reachable from outside, Prometheus
+# reaches it over the compose network.
 
 global:
   resolve_timeout: 5m
   smtp_smarthost: 'smtp.example.tld:587'
   smtp_from: 'review-alerts@example.tld'
   smtp_auth_username: 'review-alerts@example.tld'
-  # Le mot de passe ne s'écrit pas ici : Alertmanager le lit dans un fichier monté à
-  # côté de cette configuration. Un mot de passe en clair vivrait dans le dépôt, et
-  # les scanners de secrets le signalent comme fuite — même quand c'est un exemple.
+  # The password is not written here but read from a file mounted next to this config:
+  # a clear-text password would live in the repository, and secret scanners flag it as a
+  # leak — even in an example.
   smtp_auth_password_file: '/etc/alertmanager/smtp_password'
 
 route:
   receiver: studio-ops
-  # Un incident produit souvent plusieurs alertes (worker mort → file qui monte) :
-  # on les groupe pour n'envoyer qu'un message.
+  # One incident often raises several alerts (dead worker → growing queue): group them
+  # into a single message.
   group_by: ['alertname', 'job']
   group_wait: 1m
   group_interval: 10m
-  # Rappel toutes les quatre heures tant que ce n'est pas réglé — assez pour ne pas
-  # oublier, assez peu pour ne pas être filtré comme du bruit.
+  # Reminder every four hours until resolved — often enough not to be forgotten, rarely
+  # enough not to be filtered out as noise.
   repeat_interval: 4h
   routes:
     - matchers: ['severity="critical"']
@@ -58,7 +58,7 @@ receivers:
       - to: 'ops@example.tld'
         send_resolved: true
 
-# Ne pas réveiller pour une file qui monte quand l'API est déjà tombée : la cause est connue.
+# Do not page for a growing queue when the API is already down: the cause is known.
 inhibit_rules:
   - source_matchers: ['alertname="ReviewBackendDown"']
     target_matchers: ['severity="warning"']

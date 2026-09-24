@@ -2,7 +2,7 @@
 
 *Where every setting comes from, what bounds each container, and how the stack is probed, pinned and upgraded.*
 
-> Updated: 2026-09-16
+> Updated: 2026-09-25
 
 This page is about the envelope, not the contents: which file wins when two of them set the
 same variable, what stops a container before it can do damage, how much memory each service is
@@ -192,7 +192,7 @@ Memory ceilings, all overridable in `.env`:
 | `backend` | `BACKEND_MEM_LIMIT=2g` | Node heap ≤ ~1.5 GB plus response buffers. The ceiling is not there for normal operation — it is there so a leak cannot take the host |
 | `worker` | `WORKER_MEM_LIMIT=8g` | Two parallel HLS transcodes and, with `INSTALL_USD_TOOLS=1`, a headless Blender loading a whole USD stage. Below ~4 GB heavy conversions get OOM-killed instead of failing cleanly. **Per container**: `--scale worker=3` reserves 24 GB |
 | `postgres` | `POSTGRES_MEM_LIMIT=2g`, `POSTGRES_SHM_SIZE=256mb` | `shared_buffers` stays at its default; `/dev/shm` at the container default of 64 MB makes parallel sorts fail with *could not resize shared memory segment* |
-| `minio` | **none by default** | An OOM-killed storage service corrupts an upload in flight instead of protecting the host. Set `MINIO_MEM_LIMIT` only if the machine forces your hand |
+| `minio` | **none by default** | An OOM-killed storage service corrupts an upload in flight instead of protecting the host. If the machine forces your hand, add a `mem_limit` to the `minio` service in a local compose overlay |
 
 ## Pinned images
 

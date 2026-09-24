@@ -2,7 +2,7 @@
 
 *The containers behind a ReView instance: what each one does, how they gate each other at start-up, and where the data actually lives.*
 
-> Updated: 2026-08-23
+> Updated: 2026-09-25
 
 `docker-compose.yml` defines **six services started by default**, three more behind opt-in
 profiles, and six named volumes. Two overlays layer on top: `docker-compose.override.yml`
@@ -157,7 +157,7 @@ system pool that fills first — the failure then is not ReView, it is the machi
 | `worker` | `WORKER_MEM_LIMIT`, default **8g** | Two simultaneous HLS transcodes plus a headless Blender loading a whole USD scene. Below ~4 GB heavy USD conversions are OOM-killed instead of failing cleanly |
 | `backend` | `BACKEND_MEM_LIMIT`, default **2g** | A single replica; the bound exists so a leak cannot take the host with it |
 | `postgres` | `POSTGRES_MEM_LIMIT`, default **2g**, plus `POSTGRES_SHM_SIZE` **256mb** | The container default of 64 MB for `/dev/shm` is too small for parallel sorts, which fail with *could not resize shared memory segment* |
-| `minio` | deliberately **unbounded** | It buffers multipart uploads; an OOM-kill there would corrupt an upload in flight rather than protect the host. Set `MINIO_MEM_LIMIT` yourself if the machine demands it |
+| `minio` | deliberately **unbounded** | It buffers multipart uploads; an OOM-kill there would corrupt an upload in flight rather than protect the host. If the machine demands a cap, add a `mem_limit` to the `minio` service in a local compose overlay |
 
 Third-party images are pinned rather than tracking `latest`, so two installations made on two
 dates run the same software. Details and overrides:
