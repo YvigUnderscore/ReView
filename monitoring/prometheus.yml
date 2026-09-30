@@ -1,0 +1,46 @@
+# Prometheus — ReView monitoring (compose profile `monitoring`).
+#
+# Two targets: the API and the worker. Without the worker, encode durations, failures per
+# job type and whether the process is even alive would not be measured anywhere.
+global:
+  scrape_interval: 15s
+  # Alert rules are evaluated at the scrape cadence; every rule carries a `for:` that
+  # absorbs the noise.
+  evaluation_interval: 15s
+  external_labels:
+    instance_role: review
+
+# Glob path ON PURPOSE: if `monitoring/rules/` is not mounted into the container,
+# Prometheus still starts (a glob with no match is not an error). Monitoring that refuses
+# to start because an alert file is missing is worse than no alerts at all.
+#
+# Expected mount (docker-compose.yml, service `prometheus`):
+#   - ./monitoring/rules:/etc/prometheus/rules:ro
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+# Alertmanager is optional: without it, rules are still evaluated and visible (Prometheus
+# UI, `ALERTS` series, "Active alerts" panel of the Grafana dashboard) — they are just not
+# routed to anyone. Uncomment after adding the service (see
+# monitoring/alertmanager/alertmanager.yml and DOCUMENTATION/infrastructure/monitoring.md).
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: review-backend
+    metrics_path: /metrics
+    # If METRICS_TOKEN is set on the backend, add:
+    # params: { token: ["<your token>"] }
+    static_configs:
+      - targets: ["backend:3000"]
+
+  # Worker's internal metrics endpoint (backend/src/workers/metricsServer.ts): no port is
+  # published on the host, Prometheus reaches it over the compose network.
+  - job_name: review-worker
+    metrics_path: /metrics
+    # Same token as the backend, if set:
+    # params: { token: ["<your token>"] }
+    static_configs:
+      - targets: ["worker:9101"]

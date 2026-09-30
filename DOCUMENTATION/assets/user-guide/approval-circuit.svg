@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The normal approval circuit of a version</title>
+  <desc id="fig-desc">v01 is uploaded, published, sits at the studio default status, then takes a Retake decision whose comment says what has to change; v01 keeps that decision forever. v02 follows the same chain and is approved, so the version history reads retake then approved.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="380" rx="10"/>
+
+  <!-- Couloir v01 -->
+  <text class="a" x="92" y="66">v01</text>
+
+  <rect class="panel" x="92" y="76" width="104" height="46" rx="9"/>
+  <text class="l" x="144" y="98" text-anchor="middle">Uploaded</text>
+  <text class="d" x="144" y="114" text-anchor="middle">by the artist</text>
+
+  <rect class="panel" x="216" y="76" width="104" height="46" rx="9"/>
+  <text class="l" x="268" y="98" text-anchor="middle">Published</text>
+  <text class="d" x="268" y="114" text-anchor="middle">media locked</text>
+
+  <rect class="panel-w" x="340" y="76" width="112" height="46" rx="9"/>
+  <text class="l" x="396" y="98" text-anchor="middle">Pending</text>
+  <text class="d" x="396" y="114" text-anchor="middle">studio default</text>
+
+  <rect class="panel-d" x="472" y="76" width="148" height="46" rx="9"/>
+  <text class="t" x="546" y="98" text-anchor="middle">Retake</text>
+  <text class="d" x="546" y="114" text-anchor="middle">the comment says why</text>
+
+  <rect class="panel" x="640" y="76" width="144" height="46" rx="9"/>
+  <text class="l" x="712" y="98" text-anchor="middle">Frozen on v01</text>
+  <text class="d" x="712" y="114" text-anchor="middle">status, comment, date</text>
+
+  <path class="conn" d="M196 99 L216 99" marker-end="url(#arrow)"/>
+  <path class="conn" d="M320 99 L340 99" marker-end="url(#arrow)"/>
+  <path class="conn" d="M452 99 L472 99" marker-end="url(#arrow)"/>
+  <path class="conn" d="M620 99 L640 99" marker-end="url(#arrow)"/>
+
+  <!-- Le retake ramène le plan à l'artiste, sur une NOUVELLE version -->
+  <path class="conn-a" d="M546 122 L546 176 L64 176 L64 255 L92 255" marker-end="url(#arrow-a)"/>
+  <text class="a" x="300" y="168" text-anchor="middle">the artist is notified and publishes v02</text>
+
+  <!-- Couloir v02 -->
+  <text class="a" x="92" y="222">v02</text>
+
+  <rect class="panel" x="92" y="232" width="104" height="46" rx="9"/>
+  <text class="l" x="144" y="254" text-anchor="middle">Uploaded</text>
+  <text class="d" x="144" y="270" text-anchor="middle">by the artist</text>
+
+  <rect class="panel" x="216" y="232" width="104" height="46" rx="9"/>
+  <text class="l" x="268" y="254" text-anchor="middle">Published</text>
+  <text class="d" x="268" y="270" text-anchor="middle">media locked</text>
+
+  <rect class="panel-w" x="340" y="232" width="112" height="46" rx="9"/>
+  <text class="l" x="396" y="254" text-anchor="middle">Pending</text>
+  <text class="d" x="396" y="270" text-anchor="middle">studio default</text>
+
+  <rect class="panel-a" x="472" y="232" width="148" height="46" rx="9"/>
+  <text class="t" x="546" y="254" text-anchor="middle">Approved</text>
+  <text class="d" x="546" y="270" text-anchor="middle">approval flag set</text>
+
+  <rect class="panel" x="640" y="232" width="144" height="46" rx="9"/>
+  <text class="l" x="712" y="254" text-anchor="middle">One history</text>
+  <text class="d" x="712" y="270" text-anchor="middle">retake, then approved</text>
+
+  <path class="conn" d="M196 255 L216 255" marker-end="url(#arrow)"/>
+  <path class="conn" d="M320 255 L340 255" marker-end="url(#arrow)"/>
+  <path class="conn" d="M452 255 L472 255" marker-end="url(#arrow)"/>
+  <path class="conn" d="M620 255 L640 255" marker-end="url(#arrow)"/>
+
+  <text class="d" x="400" y="320" text-anchor="middle">the kanban status says where the work is; the review decision says what the review concluded</text>
+  <text class="d" x="400" y="344" text-anchor="middle">on the Reviews page, the decision filter answers what is still waiting: All decisions, No decision, or one status</text>
+</svg>

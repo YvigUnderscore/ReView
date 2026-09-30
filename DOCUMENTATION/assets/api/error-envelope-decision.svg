@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 544" width="800" height="544" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Which of the error shapes did you get?</title>
+  <desc id="fig-desc">A decision tree. A 2xx body is the resource itself. A body carrying a details field is a Zod validation failure with code VALIDATION_FAILED. A body carrying a code is a typed error to branch on. A body with neither is the message-only shape used by the rate limiters and by most 404 answers.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="544" rx="10"/>
+
+  <rect class="panel-a" x="24" y="40" width="250" height="46" rx="9"/>
+  <text class="t" x="149" y="62" text-anchor="middle">HTTP response</text>
+  <text class="d" x="149" y="78" text-anchor="middle">what did the server answer?</text>
+
+  <path class="conn" d="M149 86 L149 102" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="104" width="250" height="34" rx="9"/>
+  <text class="l" x="149" y="125" text-anchor="middle">Status 2xx?</text>
+
+  <path class="conn" d="M274 121 L328 121" marker-end="url(#arrow)"/>
+  <text class="a" x="301" y="115" text-anchor="middle">yes</text>
+
+  <rect class="panel" x="330" y="98" width="446" height="46" rx="9"/>
+  <text class="t" x="346" y="120">The body is the resource</text>
+  <text class="d" x="346" y="136">a mutation returns the updated entity</text>
+
+  <path class="conn" d="M149 138 L149 177" marker-end="url(#arrow)"/>
+  <text class="a" x="157" y="162">no</text>
+
+  <rect class="panel" x="24" y="179" width="250" height="34" rx="9"/>
+  <text class="l" x="149" y="200" text-anchor="middle">Body carries a details field?</text>
+
+  <path class="conn" d="M274 196 L328 196" marker-end="url(#arrow)"/>
+  <text class="a" x="301" y="190" text-anchor="middle">yes</text>
+
+  <rect class="panel" x="330" y="164" width="446" height="64" rx="9"/>
+  <text class="t" x="346" y="186">400 — Zod validation</text>
+  <text class="d" x="346" y="204">code VALIDATION_FAILED</text>
+  <text class="d" x="346" y="222">details maps each field to its errors: { "email": [ "Invalid email" ] }</text>
+
+  <path class="conn" d="M149 213 L149 291" marker-end="url(#arrow)"/>
+  <text class="a" x="157" y="255">no</text>
+
+  <rect class="panel" x="24" y="293" width="250" height="34" rx="9"/>
+  <text class="l" x="149" y="314" text-anchor="middle">Body carries a code field?</text>
+
+  <path class="conn-a" d="M274 310 L328 310" marker-end="url(#arrow-a)"/>
+  <text class="a" x="301" y="304" text-anchor="middle">yes</text>
+
+  <rect class="panel-a" x="330" y="248" width="446" height="124" rx="9"/>
+  <text class="t" x="346" y="270">A typed error — branch on code, never on error</text>
+  <text class="d" x="346" y="288">401 · TOKEN_REQUIRED · SESSION_REVOKED · USER_GONE</text>
+  <text class="d" x="346" y="306">403 · TOKEN_INVALID · API_TOKEN_INVALID · SCOPE_REQUIRED</text>
+  <text class="d" x="346" y="324">403 · TOKEN_PROJECT_SCOPE · PUBLISHED_LOCKED · STORAGE_LIMIT</text>
+  <text class="d" x="346" y="342">409 · ALREADY_SETUP · IDEMPOTENCY_IN_PROGRESS · SHOT_IN_TRASH</text>
+  <text class="d" x="346" y="360">429 · TOO_MANY_UPLOADS · 500 · INTERNAL_ERROR</text>
+
+  <path class="conn" d="M149 327 L149 424 L328 424" marker-end="url(#arrow)"/>
+  <text class="a" x="157" y="375">no</text>
+
+  <rect class="panel-w" x="330" y="392" width="446" height="64" rx="9"/>
+  <text class="t" x="346" y="414">Message only — no code at all</text>
+  <text class="d" x="346" y="432">the rate limiters, and most 404s: the factory attaches its</text>
+  <text class="d" x="346" y="450">fallback code only when the handler wrote no message</text>
+
+  <rect class="panel" x="24" y="478" width="752" height="46" rx="9"/>
+  <text class="l" x="38" y="500">A missing token is 401 TOKEN_REQUIRED; an invalid one is 403 TOKEN_INVALID.</text>
+  <text class="d" x="38" y="516">Messages are English in the handlers; a few older strings, the rate limiters among them, still answer in French.</text>
+</svg>

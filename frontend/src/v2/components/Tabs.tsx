@@ -1,0 +1,200 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { computeVisibleTabs, splitTabs } from '../lib/tabsOverflow';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { useT } from '../i18n';
+
+export interface TabDef {
+  key: string;
+  label: string;
+  icon?: ReactNode;
+  badge?: number;
+}
+
+/** Gouttière réelle entre onglets (`gap-1` = 0.25rem à la taille de police racine). */
+const GAP_PX = 4;
+
+const TAB_CLASS =
+  'relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2 text-sm transition-colors';
+const MORE_CLASS =
+  'flex shrink-0 items-center rounded-md px-2 py-2 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground';
+
+function TabButton({
+  tab,
+  isActive,
+  onClick,
+  measuring,
+}: {
+  tab: TabDef;
+  isActive: boolean;
+  onClick?: () => void;
+  /** Vrai dans le bloc de mesure hors écran : ni tabulation, ni cible pour le soulignement. */
+  measuring: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      // Sans `role="tab"` ni `aria-selected`, rien ne disait à la synthèse vocale que ces
+      // boutons formaient un jeu d'onglets, ni lequel était actif : on entendait quatre
+      // boutons interchangeables. La règle jsx-a11y ne peut pas l'attraper — un `<button>`
+      // nu lui est parfaitement valide ; c'est le MOTIF qui était incomplet.
+      role="tab"
+      aria-selected={isActive}
+      onClick={onClick}
+      tabIndex={measuring ? -1 : undefined}
+      // Cible de la mesure du soulignement : le bloc hors écran n'en porte pas, sinon il
+      // serait trouvé le premier.
+      data-tab={measuring ? undefined : tab.key}
+      className={`${TAB_CLASS} ${isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+    >
+      {tab.icon}
+      {tab.label}
+      {tab.badge != null && tab.badge > 0 && (
+        <span className="rounded-full bg-secondary px-1.5 text-xs text-muted-foreground">{tab.badge}</span>
+      )}
+    </button>
+  );
+}
+
+/**
+ * Barre d'onglets à débordement (A1) : ce qui ne tient pas part dans un menu « … »,
+ * l'onglet actif restant toujours visible. Aucun défilement horizontal — la page projet
+ * peut porter onze onglets et rester utilisable dans une fenêtre de 900 px.
+ */
+export default function Tabs({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: TabDef[];
+  active: string;
+  onChange: (key: string) => void;
+}) {
+  const t = useT();
+  const barRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  // Soulignement de l'onglet actif : un seul nœud déplacé par transition CSS, là où
+  // framer-motion faisait glisser un `layoutId` (F3). Sa position est une mesure du DOM,
+  // écrite directement dans le style — la passer par un état relancerait un rendu complet
+  // de la barre à chaque changement d'onglet.
+  const underlineRef = useRef<HTMLSpanElement>(null);
+  const placed = useRef(false);
+  const [visibleCount, setVisibleCount] = useState(tabs.length);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Signature plutôt que le tableau : les appelants le reconstruisent à chaque rendu,
+  // et réabonner un ResizeObserver soixante fois par seconde ne sert à rien.
+  const signature = tabs.map((tab) => `${tab.key}|${tab.label}|${tab.badge ?? ''}`).join('§');
+
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const measure = measureRef.current;
+    if (!bar || !measure) return;
+    const recompute = () => {
+      const nodes = Array.from(measure.children) as HTMLElement[];
+      const widths = nodes.slice(0, -1).map((node) => node.offsetWidth);
+      const moreWidth = nodes[nodes.length - 1]?.offsetWidth ?? 0;
+      setVisibleCount(computeVisibleTabs(widths, GAP_PX, bar.clientWidth, moreWidth));
+    };
+    recompute();
+    const observer = new ResizeObserver(recompute);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [signature]);
+
+  const activeIndex = tabs.findIndex((tab) => tab.key === active);
+  const { visible, overflow } = splitTabs(tabs, visibleCount, activeIndex);
+
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const line = underlineRef.current;
+    if (!bar || !line) return;
+    const place = () => {
+      const node = Array.from(bar.children).find(
+        (el): el is HTMLElement => el instanceof HTMLElement && el.dataset.tab === active,
+      );
+      if (!node) {
+        line.style.opacity = '0';
+        return;
+      }
+      // Premier placement sans transition : sinon le trait arriverait en glissant depuis
+      // le bord gauche au montage, ce que l'animation de layout ne faisait pas.
+      if (!placed.current) line.style.transition = 'none';
+      line.style.opacity = '1';
+      line.style.width = `${node.offsetWidth}px`;
+      line.style.transform = `translateX(${node.offsetLeft}px)`;
+      if (!placed.current) {
+        void line.offsetWidth; // force le recalcul avant de réarmer la transition
+        line.style.transition = '';
+        placed.current = true;
+      }
+    };
+    place();
+  }, [active, visibleCount, signature]);
+
+  return (
+    <div className="relative mb-5 border-b border-border">
+      {/* Mesure hors écran : largeur naturelle des onglets, sans contrainte du conteneur.
+          Placé à gauche du viewport, il ne peut pas provoquer de défilement. */}
+      <div
+        ref={measureRef}
+        aria-hidden
+        className="pointer-events-none fixed left-[-99999px] top-0 flex gap-1"
+      >
+        {tabs.map((tab) => (
+          <TabButton key={tab.key} tab={tab} isActive={false} measuring />
+        ))}
+        <span className={MORE_CLASS}>
+          <MoreHorizontal size={16} />
+        </span>
+      </div>
+
+      <div ref={barRef} role="tablist" className="relative flex items-center gap-1">
+        {visible.map((tab) => (
+          <TabButton
+            key={tab.key}
+            tab={tab}
+            isActive={tab.key === active}
+            onClick={() => onChange(tab.key)}
+            measuring={false}
+          />
+        ))}
+        {overflow.length > 0 && (
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+            <PopoverTrigger asChild>
+              <button className={MORE_CLASS} title={t('tabs.more')} aria-label={t('tabs.more')}>
+                <MoreHorizontal size={16} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56">
+              {overflow.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onChange(tab.key);
+                  }}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  {tab.icon}
+                  <span className="flex-1 truncate">{tab.label}</span>
+                  {tab.badge != null && tab.badge > 0 && (
+                    <span className="rounded-full bg-secondary px-1.5 text-xs">{tab.badge}</span>
+                  )}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        )}
+        <span
+          ref={underlineRef}
+          aria-hidden
+          className="pointer-events-none absolute -bottom-px left-0 h-0.5 w-0 bg-primary opacity-0 transition-[transform,width] duration-200 ease-out motion-reduce:transition-none"
+        />
+      </div>
+    </div>
+  );
+}

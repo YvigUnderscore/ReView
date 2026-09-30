@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" role="img" aria-labelledby="cstates-title cstates-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="cstates-title">The five comment states, and the two counters that read them</title>
+  <desc id="cstates-desc">Open is the default. The button in the card's top-right corner toggles between Open and Resolved; the three other states, Working on it, Question and Won't fix, are reached from the right-click menu and lead back to Open. Below, the same thread of fifteen notes is read twice: the panel header counts only the resolved flag, while the thread pills give the exact breakdown.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="420" rx="10"/>
+
+  <text class="d" x="28" y="32">THE FIVE STATES</text>
+
+  <!-- Les trois états qui ne passent que par le clic droit -->
+  <rect class="panel" x="190" y="56" width="160" height="46" rx="9"/>
+  <text class="l" x="270" y="78" text-anchor="middle">Working on it</text>
+  <text class="d" x="270" y="94" text-anchor="middle">someone has taken it</text>
+
+  <rect class="panel" x="370" y="56" width="140" height="46" rx="9"/>
+  <text class="l" x="440" y="78" text-anchor="middle">Question</text>
+  <text class="d" x="440" y="94" text-anchor="middle">an answer is expected</text>
+
+  <rect class="panel" x="530" y="56" width="150" height="46" rx="9"/>
+  <text class="l" x="605" y="78" text-anchor="middle">Won't fix</text>
+  <text class="d" x="605" y="94" text-anchor="middle">closed, on purpose</text>
+
+  <!-- Bus du clic droit : un aller-retour depuis Open vers chacun des trois -->
+  <path class="conn" d="M105 166 L105 136 L605 136" marker-start="url(#arrow)"/>
+  <path class="conn" d="M270 136 L270 106" marker-end="url(#arrow)"/>
+  <path class="conn" d="M440 136 L440 106" marker-end="url(#arrow)"/>
+  <path class="conn" d="M605 136 L605 106" marker-end="url(#arrow)"/>
+  <text class="a" x="115" y="152">right-click the card — and back again</text>
+
+  <!-- Le geste principal : le bouton du coin de la carte -->
+  <rect class="panel-a" x="40" y="170" width="130" height="46" rx="9"/>
+  <text class="t" x="105" y="192" text-anchor="middle">Open</text>
+  <text class="d" x="105" y="208" text-anchor="middle">the default</text>
+
+  <rect class="panel-a" x="610" y="170" width="150" height="46" rx="9"/>
+  <text class="t" x="685" y="192" text-anchor="middle">Resolved</text>
+  <text class="d" x="685" y="208" text-anchor="middle">closed, because done</text>
+
+  <path class="conn-a" d="M174 193 L602 193" marker-start="url(#arrow-a)" marker-end="url(#arrow-a)"/>
+  <text class="a" x="388" y="186" text-anchor="middle">the button in the card's top-right corner</text>
+  <text class="d" x="388" y="210" text-anchor="middle">author, SUPERVISOR or ADMIN — root comments only</text>
+
+  <text class="d" x="40" y="244">Resolved and Won't fix dim the card; the badge tooltip says who closed it and when.</text>
+
+  <!-- Les deux lectures du même fil -->
+  <rect class="band" x="28" y="268" width="744" height="124" rx="10"/>
+  <text class="d" x="44" y="292">THE SAME THREAD OF FIFTEEN NOTES, READ TWICE</text>
+
+  <rect class="panel-w" x="44" y="304" width="344" height="70" rx="9"/>
+  <text class="l" x="60" y="326">Panel header: 4 open / 15</text>
+  <text class="d" x="60" y="344">filter All · Open · Resolved — reads the resolved flag,</text>
+  <text class="d" x="60" y="360">so a Won't fix note still counts as open here</text>
+
+  <rect class="panel-a" x="412" y="304" width="344" height="70" rx="9"/>
+  <text class="l" x="428" y="326">Thread pills: Open 3 · Working on it 1 · …</text>
+  <text class="d" x="428" y="344">one pill per state that has notes, from two notes up;</text>
+  <text class="d" x="428" y="360">click one to filter — this is the exact breakdown</text>
+
+  <text class="d" x="44" y="410">The two numbers disagreeing is not a bug — they answer different questions.</text>
+</svg>

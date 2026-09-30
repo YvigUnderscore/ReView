@@ -1,0 +1,202 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { KanbanSquare } from 'lucide-react';
+import PageShell from '../components/PageShell';
+import EntityBreadcrumb from '../components/EntityBreadcrumb';
+import EmptyState from '../components/ui/empty-state';
+import EntityFilters from '../components/EntityFilters';
+import { applyFilters } from '../lib/entityFilters';
+import { TASK_TYPES } from './project/projectTypes';
+import { useKanbanBoard } from './kanban/useKanbanBoard';
+import { useKanbanCardMenu } from './kanban/useKanbanCardMenu';
+import { buildColumns, columnIdOf, groupByFamily, type FamilyKey } from './kanban/kanbanColumns';
+import KanbanFamily from './kanban/KanbanFamily';
+import type { BoardTask } from './kanban/kanbanTypes';
+import { KanbanCardBody } from './kanban/KanbanCard';
+import { parseIdParam } from '../lib/slug';
+import { useT } from '../i18n';
+import { taskTypeLabel } from '../lib/entityTypeLabels';
+import { useUrlFilters } from '../lib/useUrlFilters';
+
+/**
+ * Kanban du projet (C4).
+ *
+ * Colonnes bâties sur le vocabulaire réel du projet — un site ShotGrid en a couramment
+ * quinze, là où le board n'en montrait que six — regroupées en familles dépliables.
+ *
+ * **Tableau plein écran** (Phase 50). Le board était une pile : chaque famille portait sa
+ * propre bande horizontale, chaque colonne faisait 68 % de la hauteur de fenêtre, et les
+ * cinq familles s'ouvraient toutes au chargement — d'où trois écrans de débordement, et des
+ * colonnes qui ne s'alignaient pas d'une famille à l'autre puisque chaque bande défilait
+ * pour son compte. La page occupe maintenant exactement la fenêtre (`flush`), les en-têtes
+ * restent visibles, chaque colonne défile à l'intérieur de sa hauteur, et une seule bande
+ * horizontale porte tout le board : un mouvement de molette déplace les colonnes ensemble.
+ */
+export default function KanbanPage() {
+  const t = useT();
+  const { id } = useParams();
+  const projectId = parseIdParam(id);
+  const board = useKanbanBoard(projectId);
+  // Extraits du board : ces deux-là ont une identité stable et sont les seuls à voyager
+  // jusqu'aux cartes mémoïsées.
+  const { applyOptimisticStatus, move } = board;
+  // Menu de carte (statut, assignation, étape, renommage, suppression) + ses dialogues.
+  // `menuFor` y est mémoïsé sur une signature explicite : cf. `useKanbanCardMenu`.
+  const { menuFor, dialogs } = useKanbanCardMenu(projectId, applyOptimisticStatus);
+  const [filters, setFilters] = useUrlFilters();
+  /**
+   * Le filtre appliqué suit la frappe d'un temps de retard : sur une colonne dense, la
+   * saisie restait en arrière du curseur pendant que le board se recalculait à chaque
+   * lettre. Le champ, lui, reste piloté par `filters` — il répond au clavier tout de suite.
+   */
+  const deferredFilters = useDeferredValue(filters);
+  const [collapsed, setCollapsed] = useState<ReadonlySet<FamilyKey>>(new Set());
+  const [activeId, setActiveId] = useState<number | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const columns = useMemo(() => buildColumns(board.statuses, t), [board.statuses, t]);
+  const groups = useMemo(() => groupByFamily(columns, new Set()), [columns]);
+
+  // Assignés réellement présents sur le board : proposer tout l'annuaire n'aiderait pas.
+  const assignees = useMemo(() => {
+    const m = new Map<number, string | null>();
+    board.tasks.forEach((task) => {
+      if (task.assignee) m.set(task.assignee.id, task.assignee.name);
+    });
+    return [...m].map(([aid, name]) => ({ id: aid, name }));
+  }, [board.tasks]);
+
+  const filtered = useMemo(
+    () =>
+      applyFilters(deferredFilters, board.tasks, (task) => ({
+        text: `${task.name} ${task.parentLabel}`,
+        statusId: task.pipelineStatusId,
+        legacyStatus: task.status,
+        assigneeId: task.assignee?.id ?? null,
+        sequenceId: task.sequenceId,
+        departmentId: task.departmentId,
+        type: task.type,
+      })),
+    [deferredFilters, board.tasks],
+  );
+
+  /** Une passe pour ranger les cartes, plutôt qu'un filtrage par colonne. */
+  const tasksByColumn = useMemo(() => {
+    const map = new Map<string, BoardTask[]>();
+    for (const task of filtered) {
+      const columnId = columnIdOf(task, columns);
+      if (columnId === null) continue;
+      const bucket = map.get(columnId);
+      if (bucket) bucket.push(task);
+      else map.set(columnId, [task]);
+    }
+    return map;
+  }, [filtered, columns]);
+
+  const activeTask = activeId != null ? (board.tasks.find((x) => x.id === activeId) ?? null) : null;
+
+  const onDragStart = useCallback((e: DragStartEvent) => setActiveId(Number(e.active.id)), []);
+  const onDragEnd = useCallback(
+    (e: DragEndEvent) => {
+      setActiveId(null);
+      const target = columns.find((c) => c.id === e.over?.id);
+      if (target) void move(Number(e.active.id), target);
+    },
+    [columns, move],
+  );
+  const onDragCancel = useCallback(() => setActiveId(null), []);
+
+  // Rappel stable, la famille dit laquelle elle est : une fermeture par famille rendrait
+  // toutes les colonnes à chaque rendu de la page.
+  const toggleFamily = useCallback(
+    (key: FamilyKey) =>
+      setCollapsed((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      }),
+    [],
+  );
+
+  return (
+    <PageShell breadcrumb={<EntityBreadcrumb entity="project" id={projectId} tail="Kanban" />} width="flush">
+      {dialogs}
+      <div className="flex min-h-0 flex-1 flex-col p-6">
+        <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">Kanban</h1>
+          <EntityFilters
+            scope={`kanban:${projectId}`}
+            value={filters}
+            onChange={setFilters}
+            statuses={columns.map((c) => ({
+              value: c.statusId != null ? String(c.statusId) : c.id,
+              label: c.label,
+            }))}
+            assignees={assignees}
+            sequences={board.sequences.map((s) => ({ value: String(s.id), label: s.code }))}
+            departments={board.departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            types={TASK_TYPES}
+            typeLabel={(value) => taskTypeLabel(t, value)}
+            searchPlaceholder={t('kanban.searchPlaceholder')}
+          />
+        </div>
+        {board.loadError && <p className="mb-4 shrink-0 text-sm text-destructive">{board.loadError}</p>}
+        {/* Une troncature silencieuse se lirait comme un board complet. */}
+        {board.truncated && (
+          <p className="mb-3 shrink-0 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+            {t('kanban.truncated', { shown: board.tasks.length, total: board.total })}
+          </p>
+        )}
+
+        {!board.isLoading && board.tasks.length === 0 ? (
+          <EmptyState icon={KanbanSquare} title={t('task.noTaskYet')} description={t('kanban.emptyHint')} />
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDragCancel={onDragCancel}
+          >
+            {/* Bande unique : toutes les familles côte à côte dans le même ascenseur
+                horizontal, donc alignées. La hauteur est celle qui reste — les colonnes
+                défilent à l'intérieur, la page ne défile pas. */}
+            <div className="flex min-h-0 flex-1 gap-6 overflow-x-auto pb-2">
+              {groups.map((group) => (
+                <KanbanFamily
+                  key={group.key}
+                  group={group}
+                  tasksByColumn={tasksByColumn}
+                  collapsed={collapsed.has(group.key)}
+                  onToggle={toggleFamily}
+                  menuFor={menuFor}
+                  activeTaskId={activeId}
+                />
+              ))}
+            </div>
+            <DragOverlay>{activeTask && <KanbanCardBody task={activeTask} dragging />}</DragOverlay>
+          </DndContext>
+        )}
+      </div>
+    </PageShell>
+  );
+}

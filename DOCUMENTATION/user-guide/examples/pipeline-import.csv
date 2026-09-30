@@ -1,0 +1,6 @@
+episode,sequence,shot,name,description,shot_status,start_frame,end_frame,frames,tasks,department,task_status,assignee,start_date,due_date
+EP01,SQ010,SH0010,Rooftop wide,Hero lands on the roof at dusk,ip,1001,1096,96,Anim,ANIMATION,ip,mia@studio.tld,2026-09-01,2026-09-15
+EP01,SQ010,SH0010,,,,,,,Comp,COMPOSITING,wtg,leo@studio.tld,,2026-09-22
+EP01,SQ010,SH0020,Rooftop close,,wtg,1001,1048,48,Anim|Comp,,,,,2026-09-25
+EP01,SQ020,SH0010,Stairwell,Same code as SQ010/SH0010 — a different shot,wtg,1001,1120,120,Layout,LAYOUT,wtg,,,
+EP02,SQ030,SH0010,Landing bay,,,1001,,240,Anim,ANIMATION,wtg,Mia Okafor,2026-10-05,2026-10-20

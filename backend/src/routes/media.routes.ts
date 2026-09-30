@@ -1,0 +1,202 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { Router } from 'express';
+import { z } from 'zod';
+import { MediaKind } from '@prisma/client';
+import { authenticate } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { paginationQuery, readPagination } from '../lib/pagination';
+import { reviewNoteSchema } from '../lib/projectSettings';
+import { reviewersSchema } from '../services/ReviewAssignmentService';
+import * as MediaService from '../services/MediaService';
+
+const router = Router();
+router.use(authenticate);
+
+const idParam = z.object({ id: z.coerce.number().int() });
+
+// POST /api/media/upload-url (PUT présigné simple) : déplacé dans media-upload.routes.ts (37.A).
+
+/**
+ * POST /api/media/:id/finalize — appelé après le PUT : lit l'en-tête depuis MinIO, valide les
+ * magic bytes, met la taille à jour, déclenche le traitement. `note` = consigne d'upload (P50).
+ */
+const finalizeBody = z.object({ note: reviewNoteSchema }).default({});
+router.post('/:id/finalize', validate({ params: idParam, body: finalizeBody }), async (req, res) => {
+  res.json(await MediaService.finalize(req.user!, Number(req.params.id), req.body.note));
+});
+
+/**
+ * GET /api/media?projectId=X[&kind=IMAGE] — médias publiés (READY) d'un projet.
+ * Bibliothèque pour l'insertion sur le board mood/reference. Membres uniquement.
+ */
+router.get(
+  '/',
+  validate({
+    query: z
+      .object({ projectId: z.coerce.number().int(), kind: z.nativeEnum(MediaKind).optional() })
+      .merge(paginationQuery),
+  }),
+  async (req, res) => {
+    res.json(
+      await MediaService.listPublished(
+        req.user!,
+        Number(req.query.projectId),
+        req.query.kind as MediaKind | undefined,
+        readPagination(req.query),
+      ),
+    );
+  },
+);
+
+/**
+ * GET /api/media/reviews — page « Reviews » globale (12.C) : médias publiés de mes
+ * projets + mes brouillons, filtres projet/type/statut, tri récent, paginé.
+ */
+router.get(
+  '/reviews',
+  validate({
+    query: z
+      .object({
+        projectId: z.coerce.number().int().optional(),
+        kind: z.nativeEnum(MediaKind).optional(),
+        status: z.enum(['published', 'draft']).optional(),
+        // Filtre par décision de review (Phase 31) : id de statut ou 'none' (sans décision)
+        decision: z.union([z.coerce.number().int(), z.literal('none')]).optional(),
+        // Reviews qui m'ont été confiées (Phase 49) — ce que lit l'encart « Assigned to me ».
+        assigned: z.literal('me').optional(),
+      })
+      .merge(paginationQuery),
+  }),
+  async (req, res) => {
+    const q = req.query;
+    res.json(
+      await MediaService.listReviews(
+        req.user!,
+        {
+          projectId: q.projectId ? Number(q.projectId) : undefined,
+          kind: q.kind as MediaKind | undefined,
+          status: q.status as 'published' | 'draft' | undefined,
+          decision: q.decision === 'none' ? 'none' : q.decision ? Number(q.decision) : undefined,
+          assigned: q.assigned as 'me' | undefined,
+        },
+        readPagination(q),
+      ),
+    );
+  },
+);
+
+/** POST /api/media/:id/publish — publie un média brouillon (réservé à l'uploader). */
+router.post(
+  '/:id/publish',
+  // Le geste de l'upload : publier EN DISANT qui doit regarder quoi — une consigne manquante
+  // refuse alors la publication. Rend `{ media, reviewers }`. Corps absent = publier sans
+  // rien confier, comme avant : sans `.default({})`, un POST sans corps se verrait refusé.
+  validate({ params: idParam, body: z.object({ reviewers: reviewersSchema.optional() }).default({}) }),
+  async (req, res) => {
+    res.json(await MediaService.publish(req.user!, Number(req.params.id), req.body.reviewers));
+  },
+);
+
+/**
+ * GET /api/media/drafts — brouillons (non publiés) de l'utilisateur courant.
+ */
+router.get('/drafts', async (req, res) => {
+  res.json({ drafts: await MediaService.listDrafts(req.user!.id) });
+});
+
+/**
+ * POST /api/media/:id/reprocess — relance le job de traitement d'un média en échec/bloqué.
+ */
+router.post('/:id/reprocess', validate({ params: idParam }), async (req, res) => {
+  res.json(await MediaService.reprocess(req.user!, Number(req.params.id)));
+});
+
+/**
+ * POST /api/media/:id/thumbnail — enregistre une miniature capturée côté client
+ * (rendu Three.js pour splat/3D — pas de rendu headless serveur). Data URL image base64.
+ */
+router.post(
+  '/:id/thumbnail',
+  validate({ params: idParam, body: z.object({ dataUrl: z.string().min(1).max(1_600_000) }) }),
+  async (req, res) => {
+    res.json(await MediaService.setThumbnail(req.user!, Number(req.params.id), req.body.dataUrl));
+  },
+);
+
+/**
+ * POST /api/media/:id/auto-thumbnail — miniature auto capturée à la 1re vue d'un média 3D/splat.
+ * Bootstrap idempotent (n'écrit que si `thumbnailKey` absent), accès lecture (tout membre projet).
+ */
+router.post(
+  '/:id/auto-thumbnail',
+  validate({ params: idParam, body: z.object({ dataUrl: z.string().min(1).max(1_600_000) }) }),
+  async (req, res) => {
+    res.json(await MediaService.setAutoThumbnail(req.user!, Number(req.params.id), req.body.dataUrl));
+  },
+);
+
+/**
+ * GET /api/media/:id — objet média complet + URLs présignées (original, miniature, proxy).
+ * Les éditions splat (transform/volumes/masque) vivent dans media-splat.routes.ts (10.G).
+ */
+router.get('/:id', validate({ params: idParam }), async (req, res) => {
+  res.json(await MediaService.getDetail(req.user!, Number(req.params.id), req.ip));
+});
+
+/**
+ * GET /api/media/:id/url — URL présignée GET pour le serving direct depuis MinIO.
+ */
+router.get('/:id/url', validate({ params: idParam }), async (req, res) => {
+  res.json({ url: await MediaService.getUrl(req.user!, Number(req.params.id)) });
+});
+
+/**
+ * GET /api/media/:id/hls/:file — manifestes HLS (Phase 23, révisé vague 2 : les segments ne
+ * traversent plus Node, cf. MediaService). Le maître paie l'autorisation en base ; `pt` est
+ * le jeton de lecture qu'il a émis, qui en dispense les sous-playlists. `file` est restreint
+ * (ni `/`, ni query) et revalidé côté service. Le cache est décidé par le service : jamais
+ * pour un manifeste (jeton + URL signées), immuable pour un segment servi en repli.
+ */
+router.get(
+  '/:id/hls/:file',
+  validate({
+    params: z.object({ id: z.coerce.number().int(), file: z.string().regex(/^[A-Za-z0-9._-]+$/) }),
+    query: z.object({ pt: z.string().max(2048).optional() }),
+  }),
+  async (req, res) => {
+    const out = await MediaService.getHlsFile(req.user!, Number(req.params.id), String(req.params.file), {
+      playbackToken: req.query.pt as string | undefined,
+      ip: req.ip,
+    });
+    res.setHeader('Content-Type', out.contentType);
+    res.setHeader('Cache-Control', out.cacheControl);
+    if (out.body !== undefined) {
+      res.send(out.body);
+      return;
+    }
+    out.stream?.on('error', () => res.destroy());
+    out.stream?.pipe(res);
+  },
+);
+
+// DELETE /api/media/:id — corbeille (soft-delete, uploader ou superviseur+)
+router.delete('/:id', validate({ params: idParam }), async (req, res) => {
+  await MediaService.trash(req.user!, Number(req.params.id));
+  res.status(204).end();
+});
+
+// POST /api/media/:id/restore (uploader ou superviseur+)
+router.post('/:id/restore', validate({ params: idParam }), async (req, res) => {
+  await MediaService.restore(req.user!, Number(req.params.id));
+  res.status(204).end();
+});
+
+// DELETE /api/media/:id/purge — suppression définitive DB + MinIO (superviseur+)
+router.delete('/:id/purge', validate({ params: idParam }), async (req, res) => {
+  await MediaService.purge(req.user!, Number(req.params.id));
+  res.status(204).end();
+});
+
+export default router;

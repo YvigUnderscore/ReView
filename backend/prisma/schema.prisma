@@ -1,5 +1,10 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+// ReView 2.0 — Schéma PostgreSQL
+// Hiérarchie pipeline : Studio > Projet > Séquence(opt) > Shot > Task > Version > MediaObject
+//                                       > Asset(réutilisable) > Version > MediaObject
+// Décision 8.1 : une instance = un Studio (singleton). RBAC global sur User + ProjectMembership.
 
 generator client {
   provider      = "prisma-client-js"
@@ -7,44 +12,471 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  name      String?
-  role      String    @default("user") // "admin" or "user"
-  avatarPath String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  comments  Comment[]
-  assignedComments Comment[] @relation("AssignedComments")
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
 
-  teamMemberships TeamMembership[]
-
-  ownedTeams Team[]   @relation("TeamOwner")
-
-  teamRoles TeamRole[] @relation("UserRoles")
-  notifications Notification[]
-  notificationPreferences NotificationPreference[]
-  preferences String? @default("{}")
-  reactions Reaction[]
-  mutedProjects Project[] @relation("MutedProjects")
-
-  storageUsed BigInt @default(0)
-  storageLimit BigInt?
-
-  // Reverse relations for uploader tracking
-  uploadedVideos Video[]
-  uploadedThreeDAssets ThreeDAsset[]
-  uploadedImageBundles ImageBundle[]
-  emailQueue EmailQueue[]
-  passwordResets PasswordReset[]
+enum Role {
+  ADMIN
+  SUPERVISOR
+  ARTIST
+  CLIENT
 }
 
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum AssetType {
+  CHARACTER
+  PROP
+  ENVIRONMENT
+  VEHICLE
+  FX
+  OTHER
+}
+
+enum TaskType {
+  MODELING
+  RIGGING
+  ANIMATION
+  FX
+  LIGHTING
+  COMPOSITING
+  LOOKDEV
+  LAYOUT
+  OTHER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  RETAKE
+}
+
+enum VersionStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+}
+
+enum MediaKind {
+  VIDEO
+  IMAGE
+  MODEL_3D
+  SPLAT // Gaussian Splat (viewer Spark/SparkJS, Three.js) — réintro 10.G
+}
+
+enum MediaStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum SharePermission {
+  VIEW
+  COMMENT
+  // Commenter ET se prononcer : « c'est bon pour moi » / « à revoir ». Un troisième niveau
+  // plutôt qu'un droit dérivé du commentaire, parce que donner un avis engageant n'est pas
+  // laisser une note : on envoie un lien de relecture à trois personnes et le mandat de
+  // trancher à une seule.
+  DECIDE
+}
+
+// Ce qu'un lien de partage ouvre réellement. Un lien ne connaissait que son projet : faire
+// valider UN plan à un client lui ouvrait tout le film, séquences non montrées comprises.
+// La portée se choisit à la création et vaut pour TOUTES les lectures du lien (liste,
+// URL présignée, fil de commentaires) — pas seulement pour l'affichage de la liste.
+enum ShareScope {
+  PROJECT
+  PLAYLIST
+  VERSION
+  MEDIA
+}
+
+enum UserStatus {
+  AVAILABLE
+  AWAY
+  DND
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  MAINTENANCE
+}
+
+enum AnnouncementFrequency {
+  PERMANENT // affichée à chaque ouverture tant qu'active
+  FIRST_LOGIN // une seule fois par utilisateur
+  FIRST_OF_DAY // une fois par jour et par utilisateur
+}
+
+// Nature d'un token d'API (API v1) : rattaché à une personne, ou à un compte de service
+// (ferme de rendu, bot Discord, daemon Prism) qui ne peut pas se connecter à l'interface.
+enum ApiTokenKind {
+  PERSONAL
+  SERVICE
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Studio (singleton) & configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Studio {
+  id                Int      @id @default(autoincrement())
+  name              String
+  slug              String   @unique
+  discordWebhookUrl String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  projects         Project[]
+  departments      Department[]
+  visibilityRules  VisibilityRule[]
+  noteTemplates    NoteTemplate[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Départements (B1) — les étapes du pipe, enfin des entités
+// ─────────────────────────────────────────────────────────────────────────────
+// Un département était une entrée `{key, name}` d'un tableau JSON dans les réglages du
+// projet, et `Task.department` une chaîne libre rapprochée d'elle sans casse. Renommer
+// « ANIM » en « ANIMATION » détachait donc silencieusement toutes les tâches concernées,
+// qui basculaient en fin de pipe. Rien ne garantissait non plus qu'une étape importée de
+// ShotGrid (« Art », « Groom ») corresponde à quoi que ce soit : elle finissait dans le
+// fourre-tout « sans département ».
+//
+// La `key` fait foi et reste IMMUABLE après création : c'est elle que portent les tâches,
+// les timelines et les snapshots de montage. Le `name` s'affiche et se renomme librement.
+model Department {
+  id        Int       @id @default(autoincrement())
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId  Int
+  // Null = référentiel du studio, hérité par tous ses projets. Renseigné = étape propre à
+  // ce projet (une série n'a pas le même pipe qu'un long-métrage).
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+  key       String
+  name      String
+  // Rang dans le pipe, de l'amont vers l'aval : c'est lui qui décide de « la dernière
+  // version » d'un plan (cf. lib/pipelineOrder.ts).
+  order     Int       @default(0)
+  // Teinte d'affichage (hex #RRGGBB). Normalisée à l'écran par `statusSwatch`.
+  color     String?
+  // Image du département (clé objet MinIO) : une pastille de couleur ne se distingue plus
+  // au-delà de six étapes, et une grille d'assets en montre vingt à la fois. Le logo du
+  // studio pour « Compositing » se reconnaît d'un coup d'œil là où « #7C3AED » ne dit rien.
+  imageKey  String?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tasks     Task[]
+  versions  Version[]
+  members   User[]     @relation("UserDepartments")
+  assets    Asset[]    @relation("AssetDepartments")
+  shots     Shot[]     @relation("ShotDepartments")
+  sequences Sequence[] @relation("SequenceDepartments")
+
+  // L'unicité réelle est portée par deux index partiels posés dans la migration : la clé
+  // est unique par studio parmi les départements de studio, et unique par projet parmi
+  // les siens. Un `@@unique` ordinaire ne suffirait pas, Postgres tenant les NULL pour
+  // distincts — deux départements de studio pourraient porter la même clé.
+  @@index([studioId, projectId, order])
+  @@index([projectId])
+}
+
+// Réglages clé/valeur configurables depuis l'admin (quotas, limites upload, etc.)
+model Setting {
+  key   String @id
+  value String
+}
+
+// Abonnements Web Push par navigateur (42.B — №66). Un utilisateur = plusieurs appareils.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilisateurs & accès
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id            Int        @id @default(autoincrement())
+  email         String     @unique
+  password      String
+  name          String? // nom complet legacy (affichage de repli)
+  firstName     String?
+  lastName      String?
+  username      String?    @unique // pseudo affiché en priorité
+  jobTitle      String? // 42.B №89 — intitulé de poste (profil enrichi)
+  bio           String? // 42.B №89 — courte présentation
+  phone         String? // 42.B №89 — téléphone de contact
+  avatarKey     String? // clé objet MinIO
+  role          Role       @default(ARTIST)
+  // Compte de service (API v1) : porte les écritures d'un token machine pour garder des
+  // FK et un audit valides. Aucun login interactif, jamais listé dans l'annuaire.
+  isService     Boolean    @default(false)
+  status        UserStatus @default(AVAILABLE) // statut manuel (dispo/absent/ne pas déranger)
+  lastSeenAt    DateTime? // dernière activité connue (présence)
+  // Compte désactivé (offboarding) : l'accès est coupé, l'historique et l'audit restent
+  // attribués. C'est le chemin par défaut d'un départ — la suppression dure emporte, elle,
+  // l'auteur des actions journalisées.
+  disabledAt    DateTime?
+  storageUsed   BigInt     @default(0)
+  storageLimit  BigInt?
+  preferences   Json       @default("{}")
+  // 2FA TOTP (36.A) : secret chiffré (AES-GCM, lib/crypto), null tant que non configuré ;
+  // enabledAt null = enrôlement en cours ; backupCodes = hashs sha256 (consommés un par un).
+  totpSecret    String?
+  totpEnabledAt DateTime?
+  backupCodes   String[]   @default([])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  memberships          ProjectMembership[]
+  // Départements de la personne (B1) : alimente les assignations suggérées et le filtre
+  // « mon département ». `jobTitle` reste du texte libre, il ne sert à aucun regroupement.
+  departments          Department[]         @relation("UserDepartments")
+  uploadedMedia        MediaObject[]        @relation("MediaUploader")
+  authoredVersions     Version[]            @relation("VersionAuthor")
+  assignedTasks        Task[]               @relation("TaskAssignee")
+  comments             Comment[]            @relation("CommentAuthor")
+  assignedComments     Comment[]            @relation("CommentAssignee")
+  resolvedComments     Comment[]            @relation("CommentResolver")
+  shotgridSyncRuns     ShotgridSyncRun[]    @relation("SyncRunTrigger")
+  watches              Watch[]
+  visits               EntityVisit[]
+  reactions            Reaction[]
+  notifications        Notification[]
+  createdShares        ShareLink[]          @relation("ShareCreator")
+  auditLogs            AuditLog[]
+  passwordResets       PasswordReset[]
+  invitation           Invitation[]         @relation("InvitationTarget")
+  sentInvitations      Invitation[]         @relation("InvitationSender")
+  favorites            Favorite[]
+  announcementReads    AnnouncementRead[]
+  reviewReferences     ReviewReference[]
+  reviewDecisions      ReviewDecision[]     @relation("DecisionAuthor")
+  playlists            Playlist[]           @relation("PlaylistAuthor")
+  timelineMarkers      TimelineMarker[]     @relation("TimelineMarkerAuthor")
+  timelineSnapshots    TimelineSnapshot[]   @relation("SnapshotAuthor")
+  pushSubscriptions    PushSubscription[]
+  sessions             UserSession[]
+  apiTokens            ApiToken[]
+  createdApiTokens     ApiToken[]           @relation("ApiTokenCreator")
+  mediaAccesses        MediaAccessLog[]
+  apiEvents            ApiEvent[]           @relation("ApiEventActor")
+  conversations        ConversationMember[]
+  createdConversations Conversation[]       @relation("ConversationCreator")
+  chatMessages         ChatMessage[]        @relation("ChatAuthor")
+  // Assignation directe sur une entité de pipeline. Elle ne remplace pas l'assigné d'une
+  // tâche — qui reste la donnée du travail — mais dit « ce plan est à Alice », ce qu'une
+  // production énonce couramment et que ReView ne savait pas écrire.
+  assignedSequences Sequence[] @relation("SequenceAssignees")
+  assignedShots     Shot[]     @relation("ShotAssignees")
+  assignedAssets    Asset[]    @relation("AssetAssignees")
+  assignedEpisodes  Episode[]  @relation("EpisodeAssignees")
+  // Reviews qu'on m'a confiées (Phase 49) : les versions que je dois regarder, et la
+  // consigne qui accompagne chacune. `sentReviews` : celles que j'ai confiées.
+  assignedReviews   ReviewAssignment[] @relation("ReviewAssignmentReviewer")
+  sentReviews       ReviewAssignment[] @relation("ReviewAssignmentAuthor")
+  entityNotes       EntityNote[]     @relation("EntityNoteAuthor")
+  noteTemplates     NoteTemplate[]   @relation("NoteTemplateAuthor")
+  visibilityRules   VisibilityRule[] @relation("VisibilityRuleAuthor")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identité & API publique (Phase 36)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Session de connexion (36.B) : un login = une session ; le sid est embarqué dans les
+// JWT access+refresh — révoquer la session invalide les deux (cache 30 s côté middleware).
+model UserSession {
+  id         String    @id // sid : 16 octets aléatoires en hex
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime // aligné sur la durée du refresh token
+  revokedAt  DateTime?
+
+  @@index([userId])
+}
+
+// Token d'API (36.C, étendu API v1) : `rvk_<40hex>`, stocké hashé (sha256).
+// Les scopes sont fins (`versions:write`…) ; `read`/`write` restent acceptés et sont
+// développés à la volée (lib/apiScopes) pour ne pas invalider les tokens déjà émis.
+model ApiToken {
+  id          Int          @id @default(autoincrement())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  name        String
+  description String?
+  kind        ApiTokenKind @default(PERSONAL)
+  tokenHash   String       @unique
+  scopes      String[]     @default(["read"])
+  // Token cantonné à un projet (null = tous ceux auxquels le porteur a accès).
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   Int?
+  // Auteur de l'émission — pour un token de service, l'admin qui l'a créé.
+  createdBy   User?        @relation("ApiTokenCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdById])
+}
+
+// Journal d'événements de l'API v1 : alimente le polling `/api/v1/events` (daemon Prism,
+// bot Discord, synchro ShotGrid) et sert de trace aux webhooks sortants. Purgé par âge.
+model ApiEvent {
+  id         Int      @id @default(autoincrement())
+  event      String // ex. version.published, task.status_changed
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  Int?
+  entityType String? // version | task | comment | shot…
+  entityId   Int?
+  payload    Json     @default("{}")
+  actor      User?    @relation("ApiEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId    Int?
+  createdAt  DateTime @default(now())
+
+  // Le polling lit « les événements de mes projets postérieurs à ce curseur, dans l'ordre
+  // des id » : c'est le projet qui filtre et l'id qui trie, donc `(projectId, id)`.
+  // L'index `(id, projectId)` d'origine ne servait à rien que la clé primaire ne fasse
+  // déjà — l'id est en tête des deux.
+  @@index([projectId, id])
+  @@index([actorId])
+  @@index([createdAt])
+  @@index([event])
+}
+
+// Idempotence des écritures v1 (en-tête `Idempotency-Key`) : un DCC qui rejoue sa requête
+// après un timeout réseau retrouve la réponse d'origine au lieu de créer un doublon.
+model IdempotencyRecord {
+  // sha256(clé client + endpoint + token) : deux tokens ne peuvent pas se marcher dessus.
+  fingerprint String   @id
+  statusCode  Int
+  response    Json
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Journal d'accès aux médias (36.E) : qui a visionné quoi/quand (compte OU lien de partage).
+model MediaAccessLog {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId        Int?
+  shareLinkId   Int? // accès anonyme via partage client (pas de FK : le lien peut être purgé)
+  ip            String?
+  createdAt     DateTime    @default(now())
+
+  @@index([mediaObjectId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// Webhook sortant (36.D) : secret chiffré (AES-GCM), events filtrés, signé HMAC-SHA256.
+model Webhook {
+  id      Int      @id @default(autoincrement())
+  url     String
+  secret  String // chiffré via lib/crypto
+  events  String[] // media.published | review.decision | comment.created
+  active  Boolean  @default(true)
+  // Portée. `null` = tout le studio (webhook interne : bot de production, CI). Rattaché à
+  // un projet, le webhook ne reçoit QUE les événements de ce projet : brancher le Slack
+  // d'un client sur `version.published` ne doit pas lui livrer les publications de tous
+  // les films du studio, noms de plans compris.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+
+  lastStatus     Int?
+  lastError      String?
+  lastDeliveryAt DateTime?
+  // Livraisons définitivement perdues depuis le dernier succès. Le premier succès la
+  // remet à zéro ; au-delà du seuil (WebhookService.FAILURE_STREAK_LIMIT) le webhook est
+  // désactivé — un point mort n'a pas à occuper la file indéfiniment.
+  failureStreak  Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  deliveries WebhookDelivery[]
+
+  @@index([projectId])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+// Journal des livraisons de webhook. Sans lui, une livraison épuisée après cinq tentatives
+// disparaissait sans laisser de quoi savoir ce qui avait été perdu ni de quoi. Chaque ligne
+// porte un identifiant stable, repris dans l'en-tête `X-ReView-Delivery` et dans le corps
+// (`id`) : le consommateur peut dédupliquer une reprise, et l'administration peut rejouer.
+model WebhookDelivery {
+  id        Int      @id @default(autoincrement())
+  webhook   Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  webhookId Int
+  event     String
+  payload   Json     @default("{}")
+  // Événement du journal v1 à l'origine de la livraison. Pas de clé étrangère : `ApiEvent`
+  // est purgé à trente jours par `lib/retention`, alors que la trace de livraison a sa
+  // propre durée de vie — même parti pris que `MediaAccessLog.shareLinkId`.
+  apiEventId Int?
+  // Livraison rejouée depuis l'administration : identifiant de l'originale (même raison
+  // qu'au-dessus pour l'absence de clé étrangère — l'originale peut avoir été purgée).
+  replayOfId Int?
+
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  responseStatus Int?
+  responseBody   String? // tronqué (WebhookService.RESPONSE_BODY_MAX)
+  error          String?
+  createdAt      DateTime              @default(now())
+  deliveredAt    DateTime?
+
+  // La liste d'administration lit « les livraisons de CE webhook, les plus récentes
+  // d'abord » : c'est le webhook qui filtre et l'id qui trie.
+  @@index([webhookId, id])
+  @@index([createdAt])
+}
+
+// ⚠ Table morte, conservée sous réserve. Aucune ligne de code ne l'écrit ni ne la lit
+// depuis sa création (seul le balayage de rétention l'énumère), et sa forme est fausse :
+// le jeton y serait stocké EN CLAIR, là où `Invitation` ne garde que son SHA-256. Le jour
+// où « mot de passe oublié » sera implémenté, c'est sur le modèle d'`Invitation`
+// (`tokenHash`) qu'il faudra la refaire — pas sur celle-ci.
 model PasswordReset {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -53,299 +485,1495 @@ model PasswordReset {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-}
-
-model NotificationPreference {
-  id        Int     @id @default(autoincrement())
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    Int
-  type      String  // MENTION, REPLY, PROJECT, VIDEO, STATUS, TEAM_ADD
-  email     Boolean @default(false)
-  inApp     Boolean @default(true)
-  discord   Boolean @default(true)
-
-  @@unique([userId, type])
-}
-
-model TeamRole {
-  id        Int      @id @default(autoincrement())
-  name      String
-  color     String   @default("#3b82f6") // Default blue
-  team      Team     @relation(fields: [teamId], references: [id])
-  teamId    Int
-  users     User[]   @relation("UserRoles")
-  channels  DiscordChannel[] @relation("ChannelRoles")
-  projects  Project[] @relation("ProjectRoles")
-}
-
-model Notification {
-  id          Int      @id @default(autoincrement())
-  content     String
-  type        String   @default("SYSTEM") // MENTION, SYSTEM, REPLY
-  referenceId Int?     // e.g., Comment ID or Video ID
-  projectId   Int?
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  videoId     Int?
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      Int
-}
-
-model Team {
-  id        Int       @id @default(autoincrement())
-  name      String
-  slug      String?   @unique
-
-  owner     User      @relation("TeamOwner", fields: [ownerId], references: [id])
-  ownerId   Int
-
-  members   TeamMembership[]
-  projects  Project[]
-  roles     TeamRole[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  storageUsed BigInt @default(0)
-  storageLimit BigInt?
-
-  startFrame Int @default(1001)
-
-  // Discord Integration
-  discordWebhookUrl String?
-  discordBotName    String?
-  discordBotAvatar  String?
-  discordTiming     String @default("REALTIME") // REALTIME, GROUPED, HYBRID, HOURLY, MAJOR
-  discordBurnAnnotations Boolean @default(true)
-  discordQueue      DiscordQueue[]
-
-  // Digest Video Settings (null = use global default)
-  digestFps        Int?      // Frames per second
-  digestTransition Float?    // Transition duration in seconds
-  digestPause      Float?    // Pause duration in seconds
-  digestVideoEnabled Boolean @default(true)
-  
-  discordChannels DiscordChannel[]
-}
-
-model TeamMembership {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    Int
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId    Int
-  role      String   @default("MEMBER") // 'OWNER', 'ADMIN', 'MEMBER', 'CLIENT'
-  joinedAt  DateTime @default(now())
-
-  @@unique([userId, teamId])
-}
-
-model Invite {
-  id        Int       @id @default(autoincrement())
-  token     String    @unique
-  email     String?
-  role      String    @default("user")
-  used      Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  expiresAt DateTime?
-}
-
-model Project {
-  id          Int      @id @default(autoincrement())
-  name        String
-  slug        String?
-  description String?
-  thumbnailPath String?
-  hasCustomThumbnail Boolean @default(false)
-  status      String   @default("INTERNAL_REVIEW") // INTERNAL_REVIEW, CLIENT_REVIEW, ALL_REVIEWS_DONE
-  clientToken String?  @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  videos      Video[]
-  imageBundles ImageBundle[]
-  threeDAssets ThreeDAsset[]
-
-  team        Team?    @relation(fields: [teamId], references: [id])
-  teamId      Int?
-
-  notifications Notification[]
-  mutedBy     User[]   @relation("MutedProjects")
-
-  deletedAt   DateTime?
-  
-  discordChannels ProjectDiscordChannel[]
-  roles           TeamRole[] @relation("ProjectRoles")
-
-  @@unique([teamId, slug])
-}
-
-model Video {
-  id           Int       @id @default(autoincrement())
-  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId    Int
-  filename     String    // System filename
-  originalName String    // User's filename
-  versionName  String    @default("V01")
-  mimeType     String
-  path         String
-  frameRate    Float     @default(24.0)
-  createdAt    DateTime  @default(now())
-  comments     Comment[]
-  size         BigInt    @default(0)
-
-  uploaderId   Int?
-  uploader     User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
-}
-
-model ThreeDAsset {
-  id           Int       @id @default(autoincrement())
-  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId    Int
-  filename     String    // System filename
-  originalName String    // User's filename
-  versionName  String    @default("V01")
-  mimeType     String
-  path         String
-  createdAt    DateTime  @default(now())
-  comments     Comment[]
-  size         BigInt    @default(0)
-
-  uploaderId   Int?
-  uploader     User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
-}
-
-model ImageBundle {
-  id          Int      @id @default(autoincrement())
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   Int
-  versionName String   @default("V01")
-  createdAt   DateTime @default(now())
-  images      Image[]
-
-  uploaderId   Int?
-  uploader     User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
-}
-
-model Image {
-  id           Int         @id @default(autoincrement())
-  bundle       ImageBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
-  bundleId     Int
-  filename     String
-  originalName String
-  path         String
-  mimeType     String
-  order        Int
-  comments     Comment[]
-  size         BigInt      @default(0)
-}
-
-model Comment {
-  id         Int      @id @default(autoincrement())
-  video      Video?   @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  videoId    Int?
-  image      Image?   @relation(fields: [imageId], references: [id], onDelete: Cascade)
-  imageId    Int?
-  threeDAsset ThreeDAsset? @relation(fields: [threeDAssetId], references: [id], onDelete: Cascade)
-  threeDAssetId Int?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId     Int?
-  guestName  String?
-  content    String
-  timestamp  Float    // Timestamp in seconds (video time)
-  duration   Float?   // Duration of the comment range (if any)
-  annotation String?  // JSON string for visual annotations
-  cameraState String?  // JSON string for 3D camera state (position, target, etc.)
-  hotspots    String?  // JSON string for 3D hotspots (point, surface, dimension)
-  screenshotPath String? // Path to the screenshot file
-  annotationScreenshotPath String? // Path to the burned-in annotation screenshot
-  attachmentPaths String? // JSON array of attachment paths (max 10 images, 5MB each)
-  isResolved Boolean  @default(false)
-  isVisibleToClient Boolean @default(false)
-  isEdited   Boolean  @default(false)
-  createdAt  DateTime @default(now())
-
-  parentId   Int?
-  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    Comment[] @relation("CommentReplies")
-
-  assigneeId Int?
-  assignee   User?     @relation("AssignedComments", fields: [assigneeId], references: [id], onDelete: SetNull)
-
-  reactions  Reaction[]
-  size       BigInt     @default(0)
-}
-
-model Reaction {
-  id        Int      @id @default(autoincrement())
-  emoji     String
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    Int?
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  commentId Int
-  guestName String?
-  createdAt DateTime @default(now())
-
-  @@unique([commentId, userId, emoji])
-}
-
-model SystemSetting {
-  key   String @id
-  value String
-}
-
-model DiscordQueue {
-  id        Int      @id @default(autoincrement())
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId    Int
-  type      String   // COMMENT, STATUS, etc.
-  payload   String   // JSON payload
-  createdAt DateTime @default(now())
-}
-
-model EmailQueue {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    Int
-  type      String   // Notification type
-  payload   String   // JSON payload (stores content, project info, etc.)
-  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
-// Discord Channels - Custom webhooks per department/role
-model DiscordChannel {
-  id              Int       @id @default(autoincrement())
-  name            String
-  webhookUrl      String
-  team            Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId          Int
-  
-  // Notification settings (null = fallback to team settings)
-  botName         String?
-  botAvatar       String?
-  notificationMode String   @default("VIDEO") // "VIDEO" | "IMAGE"
-  timing          String?   // null = use team timing
-  burnAnnotations Boolean?  // null = use team setting
-  
-  // Department filtering - which roles trigger this channel
-  teamRoles       TeamRole[] @relation("ChannelRoles")
-  
-  // Projects explicitly assigned to this channel
-  projects        ProjectDiscordChannel[]
-  
-  createdAt       DateTime  @default(now())
+// Invitation d'un nouveau membre (Phase 47) : le compte existe déjà mais n'a pas encore de
+// mot de passe choisi — le lien reçu par email est la seule façon de l'activer.
+// Seul le SHA-256 du jeton est stocké : la base volée ne donne aucun lien utilisable, au
+// même titre qu'on ne stocke pas les mots de passe en clair.
+model Invitation {
+  id          Int       @id @default(autoincrement())
+  user        User      @relation("InvitationTarget", fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedBy   User?     @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitedById Int?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([invitedById])
 }
 
-// Link table for Project <-> DiscordChannel many-to-many
-model ProjectDiscordChannel {
-  id              Int            @id @default(autoincrement())
-  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId       Int
-  channel         DiscordChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  channelId       Int
-  
-  @@unique([projectId, channelId])
+model ProjectMembership {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  role      Role? // override du rôle global au niveau projet (optionnel)
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, projectId])
+  // « Qui est membre de ce projet » : lu à chaque contrôle d'accès et à chaque écran
+  // d'équipe. L'unicité ci-dessus commence par `userId` et ne répond pas à cette question.
+  @@index([projectId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hiérarchie pipeline
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Project {
+  id           Int           @id @default(autoincrement())
+  studio       Studio        @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId     Int
+  name         String
+  slug         String
+  description  String?
+  thumbnailKey String?
+  status       ProjectStatus @default(ACTIVE)
+  startFrame   Int           @default(1001)
+  // Niveau Épisode (série) : un cran au-dessus de la séquence, DÉSACTIVÉ par défaut.
+  // Un long-métrage ne doit jamais voir ce niveau apparaître — le réglage pilote la
+  // navigation, le fil d'Ariane, les filtres et la création. Colonne plutôt que clé du
+  // JSON `settings` : c'est un interrupteur de structure, lu par le serveur avant toute
+  // écriture d'épisode, et il doit pouvoir se lire sans traverser un schéma Zod.
+  episodesEnabled Boolean    @default(false)
+  // Quota de stockage du projet en octets (38.D) — null = illimité.
+  storageQuota BigInt?
+  // Réglages projet : départements, nomenclature (override des défauts studio). JSON.
+  settings     Json          @default("{}")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+
+  episodes      Episode[]
+  sequences     Sequence[]
+  shots         Shot[]
+  assets        Asset[]
+  departments   Department[]
+  memberships   ProjectMembership[]
+  shareLinks    ShareLink[]
+  notifications Notification[]
+  board         Board?
+  playlists     Playlist[]
+  apiTokens     ApiToken[]
+  apiEvents     ApiEvent[]
+  webhooks      Webhook[]
+  timelines     Timeline[]
+  shotgrid      ShotgridConnection?
+  // Vocabulaire de statuts propre au projet (B2) — vide = celui du studio.
+  pipelineStatuses PipelineStatus[]
+  visibilityRules  VisibilityRule[]
+  entityNotes      EntityNote[]
+  noteTemplates    NoteTemplate[]
+
+  @@unique([studioId, slug])
+}
+
+// Épisode : le cran au-dessus de la séquence, pour la série (100 à 300 plans par épisode).
+//
+// Le niveau est **facultatif par projet** (`Project.episodesEnabled`, faux par défaut) :
+// une séquence sans épisode reste parfaitement valide, et c'est le cas normal du
+// long-métrage. D'où `Sequence.episodeId` nullable et `onDelete: SetNull` — mettre un
+// épisode à la corbeille ne doit jamais faire disparaître ses séquences, encore moins
+// leurs plans, leurs versions et leurs commentaires.
+//
+// Pas de statut propre au périmètre « episode » : l'épisode réutilise le vocabulaire de
+// statuts de portée `sequence` (`PipelineStatusService.Scope`). Un cinquième périmètre
+// aurait fait doublon dans tous les écrans de réglage pour la même liste de valeurs.
+model Episode {
+  id        Int       @id @default(autoincrement())
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  name      String
+  code      String
+  order     Int       @default(0)
+  // Même fiche que celle d'une séquence : description et vignette, pas davantage.
+  description  String?
+  thumbnailKey String?
+  // Marqueur de dernière modification — comme sur Sequence et Shot, il sert à la
+  // détection de conflit de la synchronisation ShotGrid.
+  updatedAt DateTime  @updatedAt
+  createdAt DateTime  @default(now())
+  // Statut d'épisode : ShotGrid en a un (`sg_status_list` sur Episode) ; sans connexion
+  // il reste simplement vide.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
+  deletedAt DateTime?
+  // Masquage (voir VisibilityRule) : l'élément existe, il ne s'affiche plus. Distinct de
+  // `deletedAt` — rien n'est mis à la corbeille, la synchronisation ShotGrid continue de
+  // l'alimenter, mais aucun écran ne le propose.
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
+
+  sequences Sequence[]
+  assignees User[]       @relation("EpisodeAssignees")
+  notes     EntityNote[]
+
+  @@unique([projectId, code])
+  // Même raison que sur Sequence : la liste d'un projet se lit triée par `order` puis
+  // `code`, et les quatre colonnes dans cet ordre évitent le tri en mémoire.
+  @@index([projectId, deletedAt, order, code])
+  @@index([pipelineStatusId])
+}
+
+model Sequence {
+  id        Int       @id @default(autoincrement())
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  // Épisode d'appartenance — null = séquence hors épisode. Toujours licite : c'est le
+  // cas du long-métrage, et celui d'une série dont le découpage n'est pas encore fait.
+  episode   Episode?  @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  episodeId Int?
+  name      String
+  code      String
+  order     Int       @default(0)
+  // Fiche de la séquence (C3) : un plan et un asset en avaient une, pas une séquence —
+  // elle n'avait ni page ni description à porter.
+  description  String?
+  thumbnailKey String?
+  // Réglages pipeline propres (override résolution/fps/frames du projet). JSON.
+  settings  Json      @default("{}")
+  // Marqueur de dernière modification. Sans lui, la synchronisation ShotGrid ne pouvait
+  // pas savoir si ReView avait bougé depuis la dernière passe : elle écrasait donc la
+  // séquence sans jamais détecter le moindre conflit.
+  updatedAt DateTime  @updatedAt
+  // Statut de sequence (Phase 48) — ShotGrid en a un, avec sa propre liste de valeurs.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
+  deletedAt DateTime?
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
+
+  shots     Shot[]
+  assets    Asset[]    @relation("AssetSequences")
+  timelines Timeline[]
+  assignees User[]     @relation("SequenceAssignees")
+  notes     EntityNote[] @relation("SequenceNotes")
+  // Départements que traverse cette séquence (B1) : sert de gabarit à la création de ses
+  // tâches et de filtre d'affichage.
+  departments Department[] @relation("SequenceDepartments")
+
+  @@unique([projectId, code])
+  // La liste des séquences d'un projet se lit paginée, triée par `order` puis `code` : les
+  // quatre colonnes dans cet ordre évitent le tri en mémoire sur un long-métrage.
+  @@index([projectId, deletedAt, order, code])
+  @@index([pipelineStatusId])
+  // « Les séquences de cet épisode » : la page d'épisode et le filtre des listes de plans
+  // ne posent que cette question, et l'ordre y est le même que ci-dessus.
+  @@index([episodeId, deletedAt, order, code])
+}
+
+model Shot {
+  id           Int       @id @default(autoincrement())
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int
+  sequence     Sequence? @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
+  sequenceId   Int?
+  name         String
+  code         String
+  startFrame   Int?
+  endFrame     Int?
+  order        Int       @default(0)
+  // Réglages pipeline propres (override résolution/fps du parent). JSON.
+  settings     Json      @default("{}")
+  // Fiche du plan (C3) : un asset en avait une, pas un plan — les notes de brief
+  // n'avaient donc nulle part où vivre.
+  description  String?
+  thumbnailKey String?
+  // Marqueur de dernière modification — même raison que sur Sequence : la détection de
+  // conflit de statut de plan était morte faute de repère temporel local.
+  updatedAt    DateTime @updatedAt
+  // Statut de shot (Phase 48) — ShotGrid en a un (`sg_status_list` sur Shot) ; sans
+  // connexion il reste simplement vide.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
+  // Omis du montage : le plan est coupé au montage éditorial mais reste en base (son
+  // travail, ses commentaires et son historique demeurent consultables). Les timelines
+  // automatiques le sautent — supprimer le shot ferait perdre tout le reste.
+  omitted      Boolean   @default(false)
+  deletedAt    DateTime?
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
+
+  tasks  Task[]
+  assets Asset[] @relation("AssetShots")
+  // Départements que traverse ce plan (B1).
+  departments Department[] @relation("ShotDepartments")
+  assignees   User[]       @relation("ShotAssignees")
+  notes       EntityNote[] @relation("ShotNotes")
+
+  // Un code de shot (ex: SH001) est unique par séquence : SH001 peut exister
+  // dans SQ001 ET SQ002.
+  //
+  // Les shots « sans séquence » (sequenceId = null) échappaient à cette contrainte, les
+  // NULL étant distincts en SQL : purger une séquence remet `sequenceId` à null sur ses
+  // plans (SetNull), et deux SH010 venus de deux séquences devenaient deux lignes
+  // légitimes que `findFirst` départageait au hasard — une publication DCC atterrissait
+  // sur l'une ou l'autre. Un index partiel posé dans la migration ferme ce trou
+  // (`Shot_project_code_no_sequence_unique`), restreint aux plans vivants pour que le
+  // SetNull d'une purge de séquence ne puisse jamais échouer sur des plans en corbeille.
+  @@unique([projectId, sequenceId, code])
+  // Onglet Plans : filtre projet + corbeille, tri par `order`, pagination. `id` en queue
+  // pour que deux plans d'`order` égal ne changent pas de page d'une requête à l'autre.
+  @@index([projectId, deletedAt, order, id])
+  @@index([sequenceId, deletedAt, order])
+  @@index([pipelineStatusId])
+  // `name`, `code` et `description` sont cherchés par fragment (`ILIKE '%…%'`, palette
+  // Ctrl+K, `lib/search.ts`) : un index B-tree n'y sert à rien, il faut des trigrammes.
+  // Les TROIS colonnes sont indexées parce qu'elles forment un seul `OR` — il suffit
+  // d'une branche non indexable pour ramener le plan entier au balayage complet.
+  //
+  // Déclarés ici et non en SQL brut : `ops: raw(...)` exprime la classe d'opérateurs, et
+  // le contrôle de dérive (`scripts/check-prisma-drift.mjs`) garde alors le schéma et les
+  // migrations d'accord tout seuls. Les deux trigrammes de 2026-08 (`MediaObject.originalName`,
+  // `Version.name`) restent en SQL seul, leur migration ayant cru la chose inexprimable.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Shot_name_trgm_idx")
+  @@index([code(ops: raw("gin_trgm_ops"))], type: Gin, map: "Shot_code_trgm_idx")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "Shot_description_trgm_idx")
+}
+
+model Asset {
+  id           Int       @id @default(autoincrement())
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int
+  name         String
+  type         AssetType @default(OTHER)
+  // Libellé exact du type tel que le studio le nomme (Phase 48). Un site ShotGrid en
+  // définit librement des dizaines — « Station Interior », « Matte Painting », « Mecha » —
+  // qu'aucune énumération figée ne peut représenter. `type` reste pour les filtres et
+  // les statistiques ; c'est `typeLabel` qui s'affiche quand il est renseigné.
+  typeLabel    String?
+  description  String?
+  thumbnailKey String?
+  // Marqueur de dernière modification : la carte d'un asset affiche « mis à jour il y a
+  // deux jours » comme celle d'un plan, et la synchronisation ShotGrid a besoin du même
+  // repère local pour arbitrer un conflit de description.
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  hiddenAt     DateTime?
+  hiddenReason String?
+  // Règle qui a masqué cet élément — null quand la décision est manuelle. C'est ce qui
+  // permet de rejouer les règles sans effacer ce qu'un admin a masqué à la main.
+  hiddenRuleId Int?
+  // Statut d'asset : ShotGrid en a un (`sg_status_list` sur Asset) et il était lu sans
+  // jamais être écrit — la carte d'un asset restait muette là où celle d'un plan parlait.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
+
+  tasks     Task[]
+  versions  Version[]  @relation("AssetVersions")
+  board     Board?
+  shots     Shot[]     @relation("AssetShots")
+  sequences Sequence[] @relation("AssetSequences")
+  // Départements que traverse cet asset (B1) : « cet asset passe par modélisation,
+  // texturing et rig » — ce que l'interface ne permettait pas de dire.
+  departments Department[] @relation("AssetDepartments")
+  assignees   User[]       @relation("AssetAssignees")
+  notes       EntityNote[] @relation("AssetNotes")
+
+  @@unique([projectId, name])
+  @@index([projectId, deletedAt])
+  @@index([pipelineStatusId])
+  // `name` et `description` cherchés par fragment : trigrammes GIN, même raison que pour
+  // Shot (les deux colonnes du même `OR` doivent l'être ensemble).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Asset_name_trgm_idx")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "Asset_description_trgm_idx")
+}
+
+model Task {
+  id         Int        @id @default(autoincrement())
+  type       TaskType   @default(OTHER)
+  status     TaskStatus @default(TODO)
+  // Statut personnalisable (Phase 48) — source d'affichage quand il est présent ;
+  // `status` (enum) reste écrit en parallèle via `PipelineStatus.legacyStatus`.
+  pipelineStatus   PipelineStatus? @relation(fields: [pipelineStatusId], references: [id], onDelete: SetNull)
+  pipelineStatusId Int?
+  name       String
+  // Département du pipeline. C'est lui qui porte l'ORDRE du pipe — `type` reste une
+  // énumération figée, utile aux filtres et aux statistiques, mais incapable d'accueillir
+  // le Setdress ou le Grading d'un studio.
+  //
+  // Depuis B1, la source de vérité est la relation ; `department` reste écrit en parallèle
+  // avec la CLÉ du département, exactement comme `status` accompagne `pipelineStatusId`.
+  // Elle est immuable, donc sûre à dénormaliser, et le pipe (lib/pipelineOrder.ts), les
+  // timelines et les snapshots continuent de travailler dessus sans réécriture.
+  // Null = tâche sans département : rangée en fin de pipe, jamais perdue.
+  departmentRef Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId  Int?
+  department    String?
+  // Consigne de la tâche (Phase 50) : ce qu'il y a à faire, rédigé par la production et
+  // relu par l'artiste sur la fiche. Nullable et sans contrainte — une tâche sans consigne
+  // reste parfaitement valide, et c'est le cas de toutes celles qui existent déjà.
+  description String?
+  order      Int        @default(0)
+  // Planification (43.C — №125/№128) : début planifié (Gantt) et échéance (calendrier + fin Gantt).
+  startDate  DateTime?
+  dueDate    DateTime?
+  // Checklist (38.F) : [{ text, done }] — posée depuis le template par type de tâche.
+  checklist  Json       @default("[]")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Une Task est rattachée à un Shot OU un Asset (réutilisable). Le XOR n'était qu'un
+  // commentaire : une contrainte CHECK (`Task_parent_xor`) le porte désormais en base,
+  // Prisma ne sachant pas l'exprimer. Une tâche rattachée aux deux parents — ou à aucun —
+  // n'apparaissait dans AUCUN listing (tous filtrés par shotId ou assetId) sans qu'aucune
+  // erreur ne le signale.
+  shot    Shot?  @relation(fields: [shotId], references: [id], onDelete: Cascade)
+  shotId  Int?
+  asset   Asset? @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId Int?
+
+  assignee   User? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeId Int?
+
+  // Tâche créée depuis un commentaire de review (32.D) — lien retour frame/annotation.
+  sourceComment   Comment? @relation("TaskSourceComment", fields: [sourceCommentId], references: [id], onDelete: SetNull)
+  sourceCommentId Int?
+
+  versions Version[] @relation("TaskVersions")
+
+  // Une tâche est identifiée, dans son parent, par son étape et son nom : `modeling:main`
+  // et `lookdev:main` cohabitent, deux `modeling:main` non. Sans cette contrainte, deux
+  // publications DCC simultanées (ferme de rendu, synchro ShotGrid concurrente) passaient
+  // toutes deux le `findFirst` de `PipelineEnsureService.ensureTask` et créaient deux
+  // tâches jumelles — chacune avec ses versions, donc un travail coupé en deux.
+  //
+  // Portée volontairement limitée aux tâches QUI ONT une étape : les NULL étant distincts
+  // en SQL, une tâche sans département reste libre de porter un nom déjà pris. C'est
+  // délibéré — une tâche créée depuis un commentaire de review (TaskService.createFromComment)
+  // tire son nom du texte du retour, et deux retours identiques sur le même plan sont
+  // légitimes.
+  @@unique([shotId, departmentId, name])
+  @@unique([assetId, departmentId, name])
+  @@index([departmentId])
+  // Le kanban d'un plan/asset lit ses tâches triées par `order` : la colonne de tri suit
+  // la colonne de filtre dans l'index, qui reste utilisable seul pour la cascade.
+  @@index([shotId, order])
+  @@index([assetId, order])
+  @@index([assigneeId, status])
+  @@index([pipelineStatusId])
+  @@index([sourceCommentId])
+  // `name` et `department` (la clé dénormalisée de l'étape, `lookdev`) cherchés par
+  // fragment : trigrammes GIN, même raison que pour Shot. Le LIBELLÉ du département, lui,
+  // vit dans `Department.name` : `lib/search.ts` le résout en identifiants AVANT
+  // d'interroger les tâches, faute de quoi le `OR` traverserait la jointure et aucun index
+  // de `Task` ne s'appliquerait — un `BitmapOr` ne franchit pas une table.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Task_name_trgm_idx")
+  @@index([department(ops: raw("gin_trgm_ops"))], type: Gin, map: "Task_department_trgm_idx")
+}
+
+// Version livrable (le cahier des charges parle d'« AssetVersion » ; généralisée :
+// une Version appartient à une Task OU directement à un Asset réutilisable).
+model Version {
+  id        Int           @id @default(autoincrement())
+  name      String        @default("V01")
+  status    VersionStatus @default(DRAFT)
+  published Boolean       @default(false)
+  transform Json? // transformation 3D appliquée avant publication (orientation, scale)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+
+  // XOR porté en base par la contrainte CHECK `Version_parent_xor` (cf. Task).
+  task    Task?  @relation("TaskVersions", fields: [taskId], references: [id], onDelete: Cascade)
+  taskId  Int?
+  asset   Asset? @relation("AssetVersions", fields: [assetId], references: [id], onDelete: Cascade)
+  assetId Int?
+
+  author   User? @relation("VersionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId Int?
+
+  // Département de la version (B1) : hérité de sa tâche à la création, corrigeable à la
+  // main. Une version rattachée directement à un asset n'a pas de tâche d'où l'hériter.
+  departmentRef Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId  Int?
+
+  media MediaObject[]
+
+  // Décision de review courante (Phase 31) — dénormalisée depuis le dernier ReviewDecision.
+  reviewStatus   ReviewStatus?    @relation(fields: [reviewStatusId], references: [id], onDelete: SetNull)
+  reviewStatusId Int?
+  decisions      ReviewDecision[]
+
+  // Qui doit regarder cette livraison (Phase 49).
+  //
+  // La décision reste au superviseur ; ce que la base ne savait pas écrire, c'est « c'est à
+  // toi de la regarder ». Ça se disait de vive voix ou dans un fil de discussion, et ça se
+  // perdait avec — personne ne pouvait répondre à « qu'est-ce qu'on attend de moi ? » sans
+  // rouvrir la conversation.
+  //
+  // La liaison était implicite (`_VersionReviewers`, la forme de `ShotAssignees`) ; elle est
+  // devenue un modèle À PART ENTIÈRE pour porter la **consigne** — savoir qu'on est attendu
+  // sans savoir sur quoi ne fait gagner de temps qu'à celui qui assigne. Une table de
+  // liaison implicite ne peut porter aucune colonne : c'est la seule raison du changement,
+  // et la migration reprend les lignes existantes plutôt que de les perdre.
+  reviewers ReviewAssignment[]
+  playlistItems  PlaylistItem[]
+  shareLinks     ShareLink[]
+
+  // Deux V02 sur la même tâche n'ont aucun sens : le nom EST le numéro de livraison.
+  // `ensureVersion` calcule pourtant « la suivante » hors transaction, et deux publications
+  // simultanées visaient la même. La contrainte transforme la course en P2002, que le
+  // service rattrape déjà en recalculant le numéro (`createNextVersion`).
+  //
+  // La corbeille est volontairement DANS la portée : un numéro qui a servi ne resservira
+  // pas, même après suppression — `VersionService.autoName` compte déjà les versions
+  // supprimées pour cette raison, et `ensureVersion` sait répondre `VERSION_IN_TRASH`.
+  @@unique([taskId, name])
+  @@unique([assetId, name])
+  @@index([departmentId])
+  // Historique d'une tâche/d'un asset : versions vivantes, de la plus récente à la plus
+  // ancienne (VersionService.list).
+  @@index([taskId, deletedAt, createdAt])
+  @@index([assetId, deletedAt, createdAt])
+  @@index([authorId])
+  @@index([reviewStatusId])
+  @@index([deletedAt, published, createdAt])
+  // `name` est cherché par fragment (« v012 ») depuis la palette : index GIN de trigrammes
+  // posé en SQL seul par `20260822120000_recherche_plein_texte_commentaires`.
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dailies (Phase 33) : playlists de versions ordonnées, cross-shots, par projet.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Playlist {
+  id          Int      @id @default(autoincrement())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   Int
+  name        String
+  createdBy   User?    @relation("PlaylistAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items      PlaylistItem[]
+  shareLinks ShareLink[]
+
+  @@unique([projectId, name])
+  @@index([createdById])
+}
+
+model PlaylistItem {
+  id         Int      @id @default(autoincrement())
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId Int
+  version    Version  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId  Int
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([playlistId, versionId])
+  @@index([playlistId, order])
+  @@index([versionId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Montage automatique (Phase 45) : une timeline par séquence et une par projet, dont
+// le contenu est RECALCULÉ à chaque lecture — jamais stocké. Ne persistent ici que ce
+// qu'un humain a décidé : le nom du montage, le département visé, et les révisions
+// figées. Une timeline dont les items seraient stockés serait périmée à la publication
+// suivante, ce qui est exactement le problème qu'elle doit résoudre.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Timeline {
+  id         Int       @id @default(autoincrement())
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  Int
+  // Séquence visée, ou null pour le montage du projet entier (toutes séquences bout à bout).
+  sequence   Sequence? @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId Int?
+  // Null tant que personne ne l'a renommé : l'interface affiche alors un libellé traduit.
+  // Stocker « Montage » en base figerait le français pour les treize autres langues.
+  name       String?
+  // Département visé (clé), ou null pour « l'étape la plus avancée du pipe ».
+  department String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  snapshots TimelineSnapshot[]
+  // Retours posés sur le montage lui-même (Phase 46).
+  comments  Comment[]
+
+  // Les NULL étant distincts en SQL, l'unicité du montage de projet (sequenceId null)
+  // n'était garantie que côté service : deux onglets ouverts au même instant créaient deux
+  // montages de projet, dont un seul recevait ensuite les révisions. Un index partiel posé
+  // dans la migration (`Timeline_project_unique_no_sequence`) la porte désormais en base —
+  // `TimelineService.ensure` rattrape déjà l'échec de création en relisant le gagnant.
+  @@unique([projectId, sequenceId])
+  @@index([sequenceId])
+}
+
+// Révision figée d'un montage : ce qui a été montré, tel qu'il a été montré, à une date.
+model TimelineSnapshot {
+  id          Int      @id @default(autoincrement())
+  timeline    Timeline @relation(fields: [timelineId], references: [id], onDelete: Cascade)
+  timelineId  Int
+  revision    Int
+  note        String?
+  createdBy   User?    @relation("SnapshotAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt   DateTime @default(now())
+
+  items TimelineSnapshotItem[]
+
+  @@unique([timelineId, revision])
+  @@index([createdById])
+}
+
+// Ligne figée d'une révision. Les identifiants sont volontairement SANS clé étrangère :
+// une révision doit rester lisible quand le shot est renommé, omis ou mis à la corbeille
+// — c'est un compte rendu, pas une vue. Les libellés sont donc recopiés à la prise.
+model TimelineSnapshotItem {
+  id           Int              @id @default(autoincrement())
+  snapshot     TimelineSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  snapshotId   Int
+  order        Int
+  shotId       Int?
+  shotCode     String
+  sequenceCode String?
+  versionId    Int?
+  versionName  String?
+  mediaId      Int?
+  department   String?
+  duration     Float            @default(0) // secondes
+
+  @@index([snapshotId, order])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Circuit d'approbation (Phase 31) : statuts de review personnalisables (studio)
+// et décisions par version avec historique.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ReviewStatus {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  color      String // hex (#RRGGBB) affiché sur badges/pastilles
+  order      Int      @default(0)
+  isApproval Boolean  @default(false) // statut « validé » (stats, verrous futurs)
+  isRetake   Boolean  @default(false) // statut « à refaire »
+  isDefault  Boolean  @default(false) // proposé par défaut à la pose de décision
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  versions  Version[]
+  decisions ReviewDecision[]
+}
+
+model ReviewDecision {
+  id        Int          @id @default(autoincrement())
+  version   Version      @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId Int
+  status    ReviewStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  statusId  Int
+  comment   String?
+  author    User?        @relation("DecisionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId  Int?
+  createdAt DateTime     @default(now())
+
+  // Avis posé depuis un lien de partage, par quelqu'un qui n'a pas de compte. `authorId`
+  // reste nul : c'est `guestName` qui dit qui a parlé, et `shareLinkId` par quel lien —
+  // sans quoi l'historique afficherait « système » là où un client s'est prononcé.
+  //
+  // Un avis de client ne pilote PAS `Version.reviewStatusId` : il s'inscrit dans
+  // l'historique et s'affiche, le studio tranche. Personne d'extérieur ne fait bouger le
+  // pipeline tout seul (cf. `ReviewDecisionService.decideAsGuest`).
+  guestName   String?
+  shareLink   ShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+  shareLinkId Int?
+
+  @@index([versionId, createdAt])
+  // `onDelete: Restrict` : supprimer un statut de review compte d'abord ses décisions.
+  @@index([statusId])
+  @@index([authorId])
+  // « Ce lien s'est-il déjà prononcé sur cette version ? » — la file d'accueil du portail
+  // client pose cette question pour chaque média servi.
+  @@index([shareLinkId, versionId])
+}
+
+// Personne à qui la review d'une version est confiée, et la consigne qui l'accompagne.
+//
+// « Regarde ça » et « regarde le raccord au 1042, le reste est validé » ne demandent pas le
+// même travail. L'assignation existait sans la seconde moitié : le destinataire ouvrait
+// quatre minutes de playblast sans savoir si on attendait de lui la lumière, le timing ou
+// le raccord.
+//
+// La `note` vit sur l'assignation, pas sur la version : deux personnes confiées à la même
+// livraison n'ont pas la même chose à vérifier, et une note par version aurait forcé à
+// écrire « pour Alice : … ; pour Bruno : … » dans un seul champ. Le cas « même consigne pour
+// tout le monde » s'écrit en la répétant, ce qui ne coûte rien.
+//
+// Le réglage projet `reviewRequest` (lib/projectSettings) décide si la note est obligatoire
+// et sa longueur minimale ; la colonne reste nullable — une base existante, et les projets
+// qui n'exigent rien, n'ont pas de note à fournir.
+model ReviewAssignment {
+  id        Int     @id @default(autoincrement())
+  version   Version @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId Int
+  // Le ReViewer attendu. Cascade : son compte supprimé, l'attente n'a plus d'objet — c'est
+  // ce que faisait déjà la table de liaison qu'il remplace.
+  reviewer   User   @relation("ReviewAssignmentReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId Int
+  // Ce qu'il doit regarder. `null` = confié sans consigne (autorisé tant que le projet ne
+  // l'exige pas) ; jamais une chaîne vide, que le service normalise en `null`.
+  note String?
+  // Qui a confié. SetNull comme ailleurs : le départ d'un superviseur n'efface pas la
+  // consigne qu'il a laissée à l'équipe.
+  assignedBy   User? @relation("ReviewAssignmentAuthor", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedById Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Une personne n'est confiée qu'une fois par version : la reconfier met sa note à jour.
+  @@unique([versionId, reviewerId])
+  // « Ce qu'on attend de moi », de la demande la plus récente à la plus ancienne.
+  @@index([reviewerId, createdAt])
+  @@index([assignedById])
+}
+
+model MediaObject {
+  id           Int         @id @default(autoincrement())
+  version      Version     @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId    Int
+  kind         MediaKind
+  originalName String
+  storageKey   String // clé objet MinIO
+  mimeType     String
+  size         BigInt      @default(0)
+  status       MediaStatus @default(UPLOADING)
+  // Draft : un média non publié n'est visible que par son uploader (review/édition
+  // avant diffusion à l'équipe). Publié explicitement par l'uploader.
+  published    Boolean     @default(false)
+  metadata     Json        @default("{}") // frameRate, dimensions, durée, format splat, etc.
+  thumbnailKey String?
+  createdAt    DateTime    @default(now())
+  deletedAt    DateTime?
+
+  uploader   User? @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  uploaderId Int?
+
+  comments        Comment[]
+  references      ReviewReference[]
+  timelineMarkers TimelineMarker[]
+  accessLogs      MediaAccessLog[]
+  shareSelections ShareLinkMedia[]
+  // Séquence d'images : présente quand le média a été livré en frames plutôt qu'en fichier.
+  imageSequence   ImageSequence?
+
+  // La table n'avait aucun index (B3). Elle est pourtant au bout de tous les filtres
+  // relationnels du pipe (`version → task → shot → project`), que Postgres traduit en
+  // sous-requêtes corrélées : sans index sur la clé étrangère, chacune la balayait.
+  @@index([versionId])
+  // Quota par personne : chaque demande d'upload somme les tailles de ses médias
+  // (MediaService), et supprimer un compte repasse en SetNull sur toute la table. Sans
+  // index de tête sur `uploaderId`, les deux balayaient la table entière.
+  @@index([uploaderId, deletedAt])
+  // L'index `[deletedAt, published, status, createdAt]` a été RETIRÉ par
+  // `20260916090000_index_medias_recents`. Il visait les deux listings triés du produit
+  // (bibliothèque de projet, page Reviews) et ne les a jamais servis : `status` est comparé
+  // par Prisma à `CAST($n::text AS "MediaStatus")`, or `enum_in` est STABLE et non
+  // IMMUTABLE — Postgres ne peut donc ni prouver l'égalité à une constante ni en tirer un
+  // parcours ordonné. Mesuré à 40 000 médias : `idx_scan = 0`, plan `Seq Scan` +
+  // `top-N heapsort`. Deux index partiels posés en SQL seul le remplacent (prédicat
+  // partiel et `DESC` ne s'expriment pas ici) :
+  //  - `MediaObject_alive_recent_idx ("createdAt" DESC, id DESC) WHERE "deletedAt" IS NULL`
+  //    porte l'ORDRE des deux listings. Son prédicat ne retient que `IS NULL`, la seule
+  //    clause que Prisma écrit littéralement et que le prouveur sait donc impliquer ;
+  //  - `MediaObject_trashed_idx ("deletedAt") WHERE "deletedAt" IS NOT NULL` sert le
+  //    balayage de purge de corbeille (`lib/trash.ts`), seul consommateur de l'autre moitié.
+  // `originalName` est cherché par fragment (`ILIKE '%…%'`, palette Ctrl+K) : index GIN de
+  // trigrammes posé en SQL seul par `20260822120000_recherche_plein_texte_commentaires`,
+  // la classe d'opérateurs `gin_trgm_ops` n'étant pas exprimable ici.
+}
+
+// Séquence d'images (vague 5) : le livrable réel du VFX, `plan.1001.exr` → `plan.1200.exr`.
+//
+// UN média, pas mille. Le MediaObject porteur est de type VIDEO — c'est ainsi que la
+// séquence se review, exactement comme un playblast — et sa `storageKey` désigne le
+// manifeste JSON écrit à la finalisation ; les frames vivent sous le préfixe voisin
+// `…/{mediaId}/frames/`. Cette table dit ce que le manifeste seul ne permettrait pas de
+// chercher : le motif, les bornes, le nombre de fichiers, la taille livrée.
+//
+// `onDelete: Cascade` : la séquence n'existe que par son média.
+model ImageSequence {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int         @unique
+  // Motif de nommage au format FFmpeg (`SH0100_comp_v003.%04d.exr`).
+  pattern       String
+  // Extension des frames, en minuscules, point compris.
+  extension     String
+  // Largeur du champ numérique (4 pour `%04d`).
+  digits        Int
+  startFrame    Int
+  endFrame      Int
+  // Fichiers réellement livrés : peut être inférieur à endFrame - startFrame + 1, une
+  // numérotation à trous étant un fait de production et non une erreur de lecture.
+  frameCount    Int
+  // Somme des tailles des frames reçues (une séquence 4K EXR dépasse volontiers 100 Go).
+  totalSize     BigInt      @default(0)
+  // Cadence d'assemblage, héritée du pipeline studio→projet→séquence→shot au dépôt, puis
+  // figée : le master doit pouvoir être reconstruit à l'identique des années plus tard.
+  framerate     Float
+  // Préfixe MinIO des frames, relatif au bucket (se termine par « / »).
+  storagePrefix String
+  createdAt     DateTime    @default(now())
+
+  // Pas de `@@index([mediaObjectId])` : la relation est un-à-un, l'unicité pose déjà
+  // l'index de tête que réclame `scripts/prisma-schema.test.mjs`.
+}
+
+// Marqueurs de timeline nommés/colorés, partagés entre spectateurs (Phase 34.C) :
+// posés par clic droit sur la timeline vidéo, visibles par tous les membres du projet.
+model TimelineMarker {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+  frame         Int // frame du média (0-based, indépendante du startFrame d'affichage)
+  name          String
+  color         String      @default("#22d3ee")
+  author        User?       @relation("TimelineMarkerAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId      Int?
+  createdAt     DateTime    @default(now())
+
+  @@index([mediaObjectId])
+  @@index([authorId])
+}
+
+// Images de référence d'une review 2D (Phase 24, multi-items) : persistées & partagées,
+// épinglées au canvas de la review image (coordonnées en fractions de l'image de base —
+// peuvent déborder autour). Non soumises au verrou de publication (aide de review).
+model ReviewReference {
+  id            Int         @id @default(autoincrement())
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+  storageKey    String // clé objet MinIO (derived/{id}/reference-*.*)
+  x             Float       @default(1.05) // coin haut-gauche (fraction de l'image de base)
+  y             Float       @default(0)
+  width         Float       @default(0.3) // largeur (fraction de la largeur de base)
+  // Commentaire porteur : la référence n'est affichée que lorsque ce commentaire est
+  // sélectionné (null = référence historique, toujours visible). Cascade à la suppression.
+  comment       Comment?    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId     Int?
+  createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById   Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([mediaObjectId])
+  @@index([commentId])
+  @@index([createdById])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Board 2D collaboratif (tldraw)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Board mood/reference (9.B) — rattaché à un Projet OU un Asset (XOR), plus à une version.
+// XOR porté en base par la contrainte CHECK `Board_parent_xor` (cf. Task).
+model Board {
+  id        Int      @id @default(autoincrement())
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?     @unique
+  asset     Asset?   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId   Int?     @unique
+  document  Json     @default("{}") // scène Excalidraw
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Review : commentaires unifiés (un seul modèle pour tous les types de média)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// États d'un commentaire de review (D1) — couleur et filtre du fil.
+enum CommentState {
+  OPEN
+  WIP
+  QUESTION
+  WONT_FIX
+  RESOLVED
+}
+
+model Comment {
+  id                Int         @id @default(autoincrement())
+  media             MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId     Int
+  author            User?       @relation("CommentAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  userId            Int?
+  guestName         String?
+  content           String
+  timestamp         Float? // temps vidéo (s)
+  duration          Float? // durée de la plage commentée (s)
+  annotation        Json? // dessin/annotation 2D
+  cameraState       Json? // viewpoint 3D/splat (position, target, fov…)
+  attachments       Json? // pièces jointes (clés MinIO)
+  // État du commentaire (D1). `isResolved` reste écrit en parallèle — l'API v1, les
+  // compteurs de notes ouvertes et les filtres existants s'y appuient, exactement comme
+  // `status` accompagne `pipelineStatusId` sur une tâche.
+  //
+  // Un fil de review n'avait que deux états : ouvert ou résolu. « En cours », « question »
+  // et « ne sera pas corrigé » se disaient dans le texte, donc nulle part de lisible.
+  state             CommentState @default(OPEN)
+  isResolved        Boolean     @default(false)
+  resolvedBy        User?       @relation("CommentResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedById      Int?
+  resolvedAt        DateTime?
+  isVisibleToClient Boolean     @default(false)
+  isEdited          Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId Int?
+  replies  Comment[] @relation("CommentReplies")
+
+  assignee   User? @relation("CommentAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeId Int?
+
+  // Retour écrit depuis un montage (Phase 46). Le commentaire reste ancré au média du plan
+  // — donc à la bonne frame — mais n'appartient qu'au montage tant que personne ne l'a
+  // renvoyé sur la review du plan (`sharedToShot`). Sans quoi tout retour de montage
+  // arriverait sans prévenir dans la review de l'artiste.
+  timeline     Timeline? @relation(fields: [timelineId], references: [id], onDelete: Cascade)
+  timelineId   Int?
+  // Position dans le film entier (s) — ce que la seule timeline du montage affiche.
+  timelineTime Float?
+  sharedToShot Boolean   @default(false)
+
+  reactions    Reaction[]
+  references   ReviewReference[] // images de référence jointes (affichées à la sélection)
+  spawnedTasks Task[]            @relation("TaskSourceComment") // tâches kanban créées depuis ce commentaire (32.D)
+
+  @@index([timelineId])
+  // Fil d'un média : racines puis réponses, dans l'ordre (B3).
+  @@index([mediaObjectId, parentId, createdAt])
+  @@index([parentId])
+  // Trois clés étrangères vers User sans index : à 50 000 commentaires par projet, la
+  // suppression d'un compte déclenchait trois balayages complets de la table dans la même
+  // transaction, verrous compris.
+  @@index([userId])
+  @@index([resolvedById])
+  @@index([assigneeId])
+  // `content` est cherchable en plein texte (palette Ctrl+K) : index GIN d'expression
+  // `to_tsvector('simple', "content")`, posé en SQL seul par la migration
+  // `20260822120000_recherche_plein_texte_commentaires` — Prisma ne sait pas exprimer un
+  // index d'expression. L'expression est reproduite à l'identique par `lib/searchComments.ts`.
+}
+
+// Réaction emoji à un commentaire. `userId` est OBLIGATOIRE (C1) : le seul écrivain,
+// `CommentService.addReaction`, exige une session, et `guestName` — prévu pour un
+// spectateur anonyme du partage client — n'a jamais été ni écrit ni lu. Les deux colonnes
+// se tenaient : nullable, `userId` sortait l'unicité du jeu (les NULL sont distincts en
+// SQL), et rien n'empêchait cinquante fois le même emoji sur le même commentaire.
+model Reaction {
+  id        Int      @id @default(autoincrement())
+  emoji     String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId Int
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, userId, emoji])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Partage client sécurisé
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ShareLink {
+  id           Int             @id @default(autoincrement())
+  token        String          @unique
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int
+  permission   SharePermission @default(VIEW)
+  label        String? // nom lisible du lien (destinataire) — affiché dans l'admin et le watermark
+  passwordHash String? // bcrypt ; null = pas de mot de passe (35.C)
+  maxViews     Int? // limite de consultations ; null = illimité
+  viewCount    Int             @default(0)
+  lastViewedAt DateTime?
+  expiresAt    DateTime?
+  revoked      Boolean         @default(false)
+  createdBy    User?           @relation("ShareCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById  Int?
+  createdAt    DateTime        @default(now())
+  decisions    ReviewDecision[]
+
+  // Portée du lien. La cible est en Cascade et non en SetNull : la contrainte SQL
+  // `ShareLink_scope_target` exige une cible pour les portées qui en ont une, et un lien
+  // qui survivrait à sa playlist rouvrirait le projet entier au destinataire.
+  scope      ShareScope       @default(PROJECT)
+  playlist   Playlist?        @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId Int?
+  version    Version?         @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  versionId  Int?
+  media      ShareLinkMedia[]
+
+  // L'écran d'administration liste les liens d'un projet ; supprimer un compte repasse en
+  // SetNull sur les siens.
+  @@index([projectId, createdAt])
+  @@index([createdById])
+  @@index([playlistId])
+  @@index([versionId])
+}
+
+// Sélection explicite de médias portée par un lien (`ShareScope.MEDIA`) : le cas
+// « envoie-lui ces trois plans, rien d'autre ». Table de jonction plutôt qu'un tableau
+// d'entiers, pour que la purge définitive d'un média retire aussi le droit de le lire.
+model ShareLinkMedia {
+  id            Int         @id @default(autoincrement())
+  shareLink     ShareLink   @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  shareLinkId   Int
+  media         MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Cascade)
+  mediaObjectId Int
+
+  @@unique([shareLinkId, mediaObjectId])
+  @@index([mediaObjectId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications & audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  // Dérivé du GENRE de l'événement (`lib/notificationKinds`) et jamais écrit à la main :
+  // une décision de review s'écrivait `review_decision`, seule en minuscules, et le front ne
+  // la reconnaissait donc pas. Valeurs : MENTION, REPLY, COMMENT_ASSIGNED, TASK_ASSIGNED,
+  // REVIEW_ASSIGNED, REVIEW_DECISION, WATCH, LIVE (+ SYSTEM, lignes anciennes).
+  type        String   @default("SYSTEM")
+  // Phrase traduisible (D2) : la notification était écrite en français EN BASE, puis
+  // poussée telle quelle — y compris en notification navigateur, où elle échappait à
+  // tout catalogue. La clé et ses paramètres se traduisent au rendu, dans la langue du
+  // lecteur ; `content` reste écrit en anglais et sert de repli aux lignes antérieures.
+  messageKey  String?
+  params      Json?
+  content     String
+  // Cible navigable selon le type : id de tâche (TASK_ASSIGNED), de playlist (LIVE), sinon
+  // de média — et pour les types portés par une version (REVIEW_ASSIGNED, REVIEW_DECISION),
+  // le PREMIER média de cette version, seul id que le viewer sait ouvrir.
+  referenceId Int?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   Int?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // La cloche demande « mes notifications récentes » et « combien de non lues » : deux
+  // requêtes jouées à chaque montage de la coquille (B3).
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
+  @@index([projectId])
+}
+
+// Suivi de notifications (32.G) : un utilisateur « suit » un shot, un asset ou une
+// version ; toute activité (commentaire racine, publication, décision) le notifie.
+enum WatchTargetType {
+  SHOT
+  ASSET
+  VERSION
+}
+
+model Watch {
+  id         Int             @id @default(autoincrement())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  targetType WatchTargetType
+  targetId   Int
+  createdAt  DateTime        @default(now())
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// État « non consulté » (Phase 50, lot 9) : une carte s'allume quand l'entité a
+// bougé depuis que CETTE personne l'a ouverte pour la dernière fois.
+//
+// C'est l'exact pendant lecture de `Watch` : même forme, même façon de viser une
+// entité (couple type + id plutôt qu'une clé étrangère par niveau, parce que huit
+// niveaux feraient huit colonnes dont sept nulles). La différence est qu'on n'y
+// écrit pas une intention mais une date : « vu à ».
+//
+// Les huit valeurs de l'énumération sont posées d'emblée, même si toutes les listes
+// ne les servent pas encore : ajouter une valeur à un type énuméré Postgres demande
+// une migration de plus, et la forme du mécanisme est connue dès maintenant.
+// ─────────────────────────────────────────────────────────────────────────────
+enum VisitTargetType {
+  PROJECT
+  SEQUENCE
+  SHOT
+  ASSET
+  TASK
+  MEDIA
+  PLAYLIST
+  BOARD
+}
+
+model EntityVisit {
+  id         Int             @id @default(autoincrement())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  targetType VisitTargetType
+  targetId   Int
+  // Dernière ouverture par cette personne. Écrasée à chaque visite — on ne garde pas
+  // l'historique : ce qu'on compare, c'est « la dernière fois », et une table qui
+  // grossirait d'une ligne par ouverture de carte se paierait sur huit listes.
+  visitedAt  DateTime        @default(now())
+
+  // Colonnes dans CET ordre, et pas d'index supplémentaire.
+  //
+  // La lecture est toujours la même : « les visites de cette personne, pour ce type,
+  // parmi les ids de la page » — soit `userId = ? AND targetType = ? AND targetId =
+  // ANY(…)`. L'index unique sert cette requête en entier par son préfixe gauche ;
+  // un `@@index([userId, targetType])` de plus serait exactement l'index mort que ce
+  // schéma a déjà eu à retirer ailleurs (cf. `MediaObject`), payé à chaque écriture.
+  @@unique([userId, targetType, targetId])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId     Int?
+  action     String
+  entityType String?
+  entityId   Int?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  // L'écran d'audit lit toujours par ordre antéchronologique (B3).
+  @@index([createdAt])
+  // … et se filtre par acteur (« qu'a fait cette personne »). Supprimer un compte repasse
+  // aussi en SetNull sur toute la table.
+  @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Favoris & documentation
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum EntityType {
+  PROJECT
+  SEQUENCE
+  SHOT
+  ASSET
+}
+
+model Favorite {
+  id        Int        @id @default(autoincrement())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  type      EntityType
+  entityId  Int
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, type, entityId])
+  @@index([userId])
+}
+
+// Annonces studio (bannière/modal au login/Accueil) — modèle complet (Phase 22)
+model Announcement {
+  id        Int                   @id @default(autoincrement())
+  title     String
+  body      String
+  type      AnnouncementType      @default(INFO)
+  frequency AnnouncementFrequency @default(PERMANENT)
+  // Ciblage par rôle (JSON tableau de Role ; vide = tous les rôles).
+  roles     Json                  @default("[]")
+  startsAt  DateTime? // début de la période d'affichage (NULL = immédiat)
+  endsAt    DateTime? // fin de la période (NULL = pas de fin)
+  active    Boolean               @default(true)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  reads AnnouncementRead[]
+}
+
+// Accusé de lecture d'une annonce par un utilisateur (pilote la fréquence d'affichage).
+model AnnouncementRead {
+  id             Int          @id @default(autoincrement())
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  announcementId Int
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, userId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Messagerie interne (MP & groupes de discussion)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Fil de discussion : soit un tête-à-tête (isGroup = false, exactement deux membres),
+// soit un groupe nommé. `lastMessageAt` est dénormalisé pour trier la liste des fils
+// sans agréger les messages à chaque affichage de la sidebar.
+model Conversation {
+  id            Int      @id @default(autoincrement())
+  isGroup       Boolean  @default(false)
+  title         String? // nom du groupe (NULL pour un tête-à-tête : le nom est l'autre membre)
+  createdBy     User?    @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById   Int?
+  createdAt     DateTime @default(now())
+  lastMessageAt DateTime @default(now())
+
+  members  ConversationMember[]
+  messages ChatMessage[]
+
+  @@index([lastMessageAt])
+  @@index([createdById])
+}
+
+// Appartenance à un fil. `lastReadAt` porte le compteur de non-lus ; `mutedAt` coupe la
+// notification sans quitter le fil.
+model ConversationMember {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime     @default(now())
+  mutedAt        DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+// Message écrit. Le corps est du texte brut (le rendu échappe côté client) ; une
+// suppression est douce (`deletedAt`) pour ne pas trouer les fils des autres membres.
+model ChatMessage {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int
+  author         User?        @relation("ChatAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorId       Int?
+  body           String
+  // Message de service (arrivée/départ/renommage) : affiché en gris, sans auteur cliquable.
+  isSystem       Boolean      @default(false)
+  // Phrase traduisible d'un message de service : la clé i18n et ses variables, jamais la
+  // phrase rendue. Elle était écrite en français EN BASE, donc figée pour toujours dans la
+  // langue du serveur — un studio japonais lisait « a rejoint la conversation ». `body`
+  // reste écrit, en anglais, et sert de repli aux lignes antérieures à ce changement
+  // (même dispositif que `Notification.messageKey` / `content`).
+  systemKey      String?
+  systemVars     Json?
+  createdAt      DateTime     @default(now())
+  editedAt       DateTime?
+  deletedAt      DateTime?
+
+  @@index([conversationId, createdAt])
+  @@index([authorId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Statuts de pipeline personnalisables (Phase 48) — pendant de ReviewStatus pour
+// les tâches et les shots. L'enum `TaskStatus` reste écrit en parallèle (colonnes
+// du kanban, statistiques historiques) : c'est `legacyStatus` qui fait le pont.
+// Un studio connecté à ShotGrid voit ici les statuts exacts de son site.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PipelineStatus {
+  id           Int         @id @default(autoincrement())
+  // Portée (B2) : null = référentiel du studio, hérité par les projets qui n'ont pas le
+  // leur. Sans cette colonne, deux projets reliés à des sites ShotGrid différents
+  // partageaient le même vocabulaire, et le second synchronisé écrasait nom, couleur et
+  // `legacyStatus` des codes homonymes du premier — sans que rien ne le signale.
+  project      Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    Int?
+  // « task », « shot », « sequence » ou « asset » : ShotGrid tient une liste par entité —
+  // quatre valeurs sur une séquence, quinze sur un plan — et ReView fait de même. Les
+  // confondre proposait à l'écran des états que le site refusait à l'écriture.
+  scope        String
+  // Code court et stable (repris tel quel de ShotGrid : "ip", "fin", "rev"…).
+  code         String
+  name         String
+  color        String // hex #RRGGBB (converti du bg_color décimal ShotGrid)
+  order        Int         @default(0)
+  isDone       Boolean     @default(false) // statut terminal (stats, jauges)
+  isDefault    Boolean     @default(false)
+  // « local » ou « shotgrid » : d'où vient ce statut. Un studio sans ShotGrid ne doit
+  // pas se voir proposer le vocabulaire d'un site auquel il n'est pas relié, et un
+  // projet relié ne doit pas se voir proposer nos six statuts d'origine.
+  origin       String      @default("local")
+  // Ni à faire, ni fait : « omitted », « n/a », « declined ». Ces statuts existent et
+  // s'affichent, mais ils ne comptent pas dans les jauges d'avancement.
+  isInactive   Boolean     @default(false)
+  // Pont vers l'enum figé : toute écriture de statut renseigne les deux.
+  legacyStatus TaskStatus?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tasks     Task[]
+  shots     Shot[]
+  sequences Sequence[]
+  assets    Asset[]
+  // Un épisode porte un statut du même périmètre (`sequence`) — voir le modèle Episode.
+  episodes  Episode[]
+
+  // Comme pour Department, l'unicité réelle passe par deux index partiels posés dans la
+  // migration : Postgres tient les NULL pour distincts, un `@@unique` ordinaire laisserait
+  // donc passer deux statuts de studio de même code.
+  @@index([projectId, scope, order])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Masquage d'éléments (admin)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Règle de masquage : « ne montre plus ce qui s'appelle ainsi ».
+//
+// Masquer n'est pas supprimer. La séquence de test qu'un studio traîne dans son site
+// ShotGrid, le plan « SH999_TMP » ou l'asset de recette n'ont rien à faire à l'écran, mais
+// les mettre à la corbeille les ferait revenir à la synchronisation suivante — et perdrait
+// leur travail. Une règle est donc **déclarative** et rejouée : elle vaut pour ce qui
+// existe comme pour ce qui arrivera.
+//
+// Deux formes de motif, et c'est délibéré : `exact` couvre le cas courant sans risque, et
+// `regex` le studio qui a une convention (« tout ce qui finit par _TMP »). Une expression
+// invalide est refusée à l'écriture — jamais silencieusement ignorée, sinon la règle
+// paraîtrait active en ne masquant rien.
+model VisibilityRule {
+  id        Int      @id @default(autoincrement())
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId  Int
+  // Null = règle du studio, appliquée à tous ses projets. Renseigné = règle de ce projet.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+  // episode | sequence | shot | asset | all
+  entityType String
+  // exact | regex — sur le code de l'entité, et sur son nom à défaut de code.
+  matchType  String  @default("exact")
+  pattern    String
+  // Motif insensible à la casse (le défaut : les conventions de nommage le sont rarement).
+  ignoreCase Boolean @default(true)
+  // Ce que l'admin veut se rappeler dans six mois. Jamais montré à l'artiste.
+  reason     String?
+  enabled    Boolean @default(true)
+  createdBy   User?    @relation("VisibilityRuleAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId, projectId, enabled])
+  @@index([projectId])
+  @@index([createdById])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fiche markdown d'une entité & modèles de fiche
+// ─────────────────────────────────────────────────────────────────────────────
+
+// La fiche d'un plan, d'une séquence ou d'un asset : du markdown enrichi (titres
+// dépliables, jauges de pourcentage, séparateurs, carrousel de références).
+//
+// `description` reste ce que ShotGrid dicte — une ligne, souvent en lecture seule ici.
+// La fiche est l'inverse : elle appartient à ReView, personne ne l'écrase, et c'est là que
+// vit le brief. Les deux devaient donc rester deux champs.
+//
+// Une seule fiche par entité (les index partiels de la migration le garantissent), et un
+// XOR de cible posé en CHECK comme sur `Task` : une note rattachée à rien n'apparaîtrait
+// dans aucun écran sans qu'aucune erreur ne le signale.
+model EntityNote {
+  id        Int      @id @default(autoincrement())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+
+  episode    Episode?  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  episodeId  Int?
+  sequence   Sequence? @relation("SequenceNotes", fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId Int?
+  shot       Shot?     @relation("ShotNotes", fields: [shotId], references: [id], onDelete: Cascade)
+  shotId     Int?
+  asset      Asset?    @relation("AssetNotes", fields: [assetId], references: [id], onDelete: Cascade)
+  assetId    Int?
+
+  body      String   @default("")
+  updatedBy   User?  @relation("EntityNoteAuthor", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([episodeId])
+  @@index([sequenceId])
+  @@index([shotId])
+  @@index([assetId])
+  @@index([updatedById])
+}
+
+// Modèle de fiche réutilisable : le brief d'un plan a la même forme d'un plan à l'autre.
+// Recopier trente lignes de markdown à chaque nouveau plan revenait à ne pas les écrire.
+model NoteTemplate {
+  id        Int      @id @default(autoincrement())
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId  Int
+  // Null = modèle du studio, proposé partout. Renseigné = modèle propre à ce projet.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int?
+  // Périmètre proposé : episode | sequence | shot | asset | all.
+  scope     String   @default("all")
+  name      String
+  body      String
+  createdBy   User?  @relation("NoteTemplateAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId, projectId, scope])
+  @@index([projectId])
+  @@index([createdById])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Intégration ShotGrid / Flow Production Tracking (Phase 48)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Site ShotGrid (niveau studio) : une paire de credentials pour N projets.
+model ShotgridSite {
+  id         Int      @id @default(autoincrement())
+  name       String
+  baseUrl    String   @unique // https://<studio>.shotgrid.autodesk.com (validée anti-SSRF)
+  // « script » = client_credentials (recommandé) ; « user » = grant password
+  // (legacy login + PAT lié côté ShotGrid), à la manière du plugin Prism.
+  authMode   String   @default("script")
+  scriptName String?
+  scriptKey  String? // chiffré (lib/crypto)
+  login      String?
+  password   String? // chiffré (lib/crypto)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  connections ShotgridConnection[]
+}
+
+// Connexion d'UN projet ReView à UN projet ShotGrid.
+// `sgProjectName` n'est pas décoratif : il est revérifié avant chaque synchronisation
+// (garde-fou anti-mauvais-projet). Si le nom du projet distant ne correspond plus,
+// la synchronisation s'arrête au lieu d'écrire dans le mauvais projet.
+model ShotgridConnection {
+  id            Int       @id @default(autoincrement())
+  site          ShotgridSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteId        Int
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     Int       @unique
+  sgProjectId   Int
+  sgProjectName String
+  active        Boolean   @default(true)
+  // Matrice de droits + réglages (schéma Zod : services/shotgrid/shotgridSettings.ts)
+  settings      Json      @default("{}")
+  webhookToken  String    @unique
+  webhookSecret String? // chiffré (lib/crypto)
+  lastSyncAt    DateTime?
+  lastEventAt   DateTime?
+  lastEventId   BigInt? // curseur EventLogEntry (mode polling)
+  // Dernières écritures refusées par la matrice de droits, agrégées par domaine :
+  // { "<domaine>": { count, at, jobType } }. Sans cette trace, un domaine fermé en
+  // écriture faisait disparaître les envois en silence — le job se terminait « ok ».
+  pushBlocked   Json      @default("{}")
+  // ok | auth_error | project_mismatch | disabled | syncing | error
+  status        String    @default("ok")
+  statusMessage String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  links ShotgridLink[]
+  runs  ShotgridSyncRun[]
+
+  @@unique([siteId, sgProjectId])
+}
+
+// Correspondance locale ↔ ShotGrid. Porte aussi les champs SG sans équivalent
+// natif (durée en minutes, assignés non-membres, chemins de publish…).
+/// Correspondance locale ↔ ShotGrid. Table **polymorphe** : `localType` + `localId`
+/// désignent une ligne dans l'un des douze modèles listés ci-dessous, sans clé étrangère
+/// possible — donc sans `ON DELETE CASCADE`. La purge des liens dont l'entité disparaît
+/// est assurée par des déclencheurs PostgreSQL posés par la migration
+/// `20260908090000_shotgrid_liens_fiables` : un lien ne peut pas survivre à son entité,
+/// y compris quand celle-ci part par cascade SQL (plan → tâches → versions → médias →
+/// commentaires), cas qu'aucun service TypeScript ne voit passer.
+model ShotgridLink {
+  id           Int                @id @default(autoincrement())
+  connection   ShotgridConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId Int
+  // episode | sequence | shot | asset | task | version | media | pipelineStatus | reviewStatus | user | playlist | comment
+  localType    String
+  localId      Int
+  sgType       String
+  sgId         Int
+  sgUpdatedAt  DateTime?
+  data         Json               @default("{}")
+  syncedAt     DateTime           @default(now())
+
+  @@unique([connectionId, sgType, sgId])
+  @@unique([connectionId, localType, localId])
+  @@index([connectionId, localType])
+  // Le déclencheur de purge cherche par (localType, localId) SANS connexion : l'unicité
+  // ci-dessus, préfixée par `connectionId`, ne peut pas le servir. Sans cet index, chaque
+  // suppression d'entité imposait un parcours complet de la table — et une purge de
+  // corbeille en impose deux mille.
+  @@index([localType, localId])
+}
+
+model ShotgridSyncRun {
+  id           Int                @id @default(autoincrement())
+  connection   ShotgridConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId Int
+  // full | incremental | reconcile | webhook | polling | import-versions | diff | push
+  kind         String
+  // running | ok | partial | error | cancelled
+  status       String             @default("running")
+  startedAt    DateTime           @default(now())
+  finishedAt   DateTime?
+  stats        Json               @default("{}")
+  triggeredBy  User?              @relation("SyncRunTrigger", fields: [triggeredById], references: [id], onDelete: SetNull)
+  triggeredById Int?
+
+  logs ShotgridSyncLog[]
+
+  @@index([connectionId, startedAt])
+  @@index([triggeredById])
+}
+
+model ShotgridSyncLog {
+  id        Int             @id @default(autoincrement())
+  run       ShotgridSyncRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId     Int
+  // info | warn | error | conflict
+  level     String
+  // Clé i18n + variables : l'UI traduit, le journal ne fige aucune langue.
+  messageKey String
+  vars      Json            @default("{}")
+  sgType    String?
+  sgId      Int?
+  localType String?
+  localId   Int?
+  // Conflit en attente d'arbitrage (conflictPolicy = manual) : null sinon.
+  resolvedAt DateTime?
+  resolution String? // sg | review
+  createdAt DateTime        @default(now())
+
+  @@index([runId, createdAt])
+  @@index([level, resolvedAt])
 }

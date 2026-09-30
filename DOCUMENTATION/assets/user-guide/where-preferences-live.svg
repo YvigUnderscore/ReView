@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" width="800" height="430" role="img" aria-labelledby="prefs-live-title prefs-live-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="prefs-live-title">Where each preference is stored, and which one wins</title>
+  <desc id="prefs-live-desc">The theme and a few local traces stay in the browser; language, density, shortcuts, saved views, the Home layout and the email subscriptions are kept on the account and follow you to any machine; the studio default only applies to accounts that never chose, and to the emails the server sends them.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="430" rx="10"/>
+
+  <text class="d" x="40" y="30">WHERE A SETTING IS KEPT</text>
+
+  <!-- Couche 1 : l'appareil -->
+  <rect class="panel" x="140" y="56" width="460" height="84" rx="9"/>
+  <text class="t" x="156" y="80">This browser</text>
+  <text class="d" x="156" y="98">never shared with your other machines</text>
+  <rect class="panel-o" x="156" y="106" width="56" height="24" rx="9"/>
+  <text class="d" x="184" y="122" text-anchor="middle">Theme</text>
+  <rect class="panel-o" x="222" y="106" width="130" height="24" rx="9"/>
+  <text class="d" x="287" y="122" text-anchor="middle">Recently visited (5)</text>
+  <rect class="panel-o" x="362" y="106" width="114" height="24" rx="9"/>
+  <text class="d" x="419" y="122" text-anchor="middle">Push subscription</text>
+  <rect class="panel-o" x="486" y="106" width="96" height="24" rx="9"/>
+  <text class="d" x="534" y="122" text-anchor="middle">Changelog seen</text>
+
+  <path class="conn-o" d="M300 140 L300 168"/>
+  <text class="d" x="316" y="152">the theme stays on the device on purpose — a review room</text>
+  <text class="d" x="316" y="166">and a laptop do not want the same one</text>
+
+  <!-- Couche 2 : le compte -->
+  <rect class="panel-a" x="100" y="170" width="600" height="112" rx="9"/>
+  <text class="t" x="116" y="194">Your account</text>
+  <text class="d" x="116" y="212">PATCH /api/users/me/preferences — follows you to any browser</text>
+
+  <rect class="panel" x="116" y="220" width="70" height="24" rx="9"/>
+  <text class="d" x="151" y="236" text-anchor="middle">Language</text>
+  <rect class="panel" x="198" y="220" width="64" height="24" rx="9"/>
+  <text class="d" x="230" y="236" text-anchor="middle">Density</text>
+  <rect class="panel" x="274" y="220" width="122" height="24" rx="9"/>
+  <text class="d" x="335" y="236" text-anchor="middle">Keyboard shortcuts</text>
+  <rect class="panel" x="408" y="220" width="134" height="24" rx="9"/>
+  <text class="d" x="475" y="236" text-anchor="middle">Saved views per list</text>
+  <rect class="panel" x="554" y="220" width="86" height="24" rx="9"/>
+  <text class="d" x="597" y="236" text-anchor="middle">Home layout</text>
+
+  <rect class="panel" x="116" y="250" width="88" height="24" rx="9"/>
+  <text class="d" x="160" y="266" text-anchor="middle">Daily digest</text>
+  <rect class="panel" x="216" y="250" width="93" height="24" rx="9"/>
+  <text class="d" x="262" y="266" text-anchor="middle">Weekly report</text>
+  <rect class="panel" x="321" y="250" width="104" height="24" rx="9"/>
+  <text class="d" x="373" y="266" text-anchor="middle">Onboarding seen</text>
+  <rect class="panel" x="437" y="250" width="140" height="24" rx="9"/>
+  <text class="d" x="507" y="266" text-anchor="middle">Last annotation colour</text>
+
+  <path class="conn" d="M700 310 L700 286" marker-end="url(#arrow)"/>
+  <text class="d" x="690" y="300" text-anchor="end">used only when the account never chose</text>
+
+  <!-- Couche 3 : le studio -->
+  <rect class="panel" x="40" y="310" width="720" height="84" rx="9"/>
+  <text class="t" x="56" y="334">Studio default</text>
+  <text class="d" x="56" y="352">Administration — the accent and the logo apply to everyone; the language, only to accounts that never chose</text>
+  <rect class="panel-o" x="56" y="360" width="70" height="24" rx="9"/>
+  <text class="d" x="91" y="376" text-anchor="middle">Language</text>
+  <rect class="panel-o" x="138" y="360" width="92" height="24" rx="9"/>
+  <text class="d" x="184" y="376" text-anchor="middle">Accent colour</text>
+  <rect class="panel-o" x="242" y="360" width="52" height="24" rx="9"/>
+  <text class="d" x="268" y="376" text-anchor="middle">Logo</text>
+
+  <text class="d" x="40" y="414">A browser that made an explicit choice keeps it; a brand-new one takes the account value.</text>
+</svg>

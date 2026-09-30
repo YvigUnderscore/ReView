@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The fields of one camera sample, and what each one falls back to</title>
+  <desc id="fig-desc">A sample carries an optional time or frame, a required position, an orientation given as a look target or a quaternion, and an optional field of view. Timing resolves from t, then frame divided by fps, then the sample index; orientation from target, then quaternion, then a fallback one unit down minus Z; field of view from the sample, then the document default, then forty-five degrees.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="440" rx="10"/>
+
+  <text class="d" x="30" y="46">WHAT ONE SAMPLE CARRIES</text>
+  <text class="d" x="300" y="46">HOW EACH FIELD RESOLVES, IN ORDER</text>
+
+  <rect class="panel-a" x="30" y="60" width="240" height="210" rx="9"/>
+  <text class="t" x="150" y="84" text-anchor="middle">sample</text>
+
+  <rect class="panel" x="44" y="96" width="212" height="28" rx="9"/>
+  <text class="m" x="56" y="115">t?</text>
+  <text class="d" x="244" y="115" text-anchor="end">seconds</text>
+
+  <rect class="panel" x="44" y="130" width="212" height="28" rx="9"/>
+  <text class="m" x="56" y="149">frame?</text>
+  <text class="d" x="244" y="149" text-anchor="end">with fps</text>
+
+  <rect class="panel-a" x="44" y="164" width="212" height="28" rx="9"/>
+  <text class="m" x="56" y="183">pos[3]</text>
+  <text class="d" x="244" y="183" text-anchor="end">required</text>
+
+  <rect class="panel" x="44" y="198" width="212" height="28" rx="9"/>
+  <text class="m" x="56" y="217">target[3]</text>
+  <text class="d" x="244" y="217" text-anchor="end">or quat[4]</text>
+
+  <rect class="panel" x="44" y="232" width="212" height="28" rx="9"/>
+  <text class="m" x="56" y="251">fov?</text>
+  <text class="d" x="244" y="251" text-anchor="end">degrees</text>
+
+  <text class="d" x="300" y="76">TIMING</text>
+  <rect class="panel" x="300" y="86" width="96" height="30" rx="9"/>
+  <text class="m" x="348" y="106" text-anchor="middle">t</text>
+  <path class="conn" d="M396 101 L420 101" marker-end="url(#arrow)"/>
+  <rect class="panel" x="420" y="86" width="96" height="30" rx="9"/>
+  <text class="m" x="468" y="106" text-anchor="middle">frame/fps</text>
+  <path class="conn" d="M516 101 L540 101" marker-end="url(#arrow)"/>
+  <rect class="panel" x="540" y="86" width="96" height="30" rx="9"/>
+  <text class="m" x="588" y="106" text-anchor="middle">index/fps</text>
+  <path class="conn-o" d="M636 101 L660 101" marker-end="url(#arrow)"/>
+  <rect class="panel-o" x="660" y="86" width="96" height="30" rx="9"/>
+  <text class="m" x="708" y="106" text-anchor="middle">fps = 24</text>
+
+  <text class="d" x="300" y="156">ORIENTATION</text>
+  <rect class="panel" x="300" y="166" width="140" height="30" rx="9"/>
+  <text class="m" x="370" y="186" text-anchor="middle">target</text>
+  <path class="conn" d="M440 181 L470 181" marker-end="url(#arrow)"/>
+  <rect class="panel" x="470" y="166" width="140" height="30" rx="9"/>
+  <text class="m" x="540" y="186" text-anchor="middle">quat, forward -Z</text>
+  <path class="conn" d="M610 181 L640 181" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="640" y="166" width="140" height="30" rx="9"/>
+  <text class="m" x="710" y="186" text-anchor="middle">-Z, one unit</text>
+  <text class="d" x="710" y="212" text-anchor="middle">almost never what you want</text>
+
+  <text class="d" x="300" y="252">FIELD OF VIEW</text>
+  <rect class="panel" x="300" y="262" width="140" height="30" rx="9"/>
+  <text class="m" x="370" y="282" text-anchor="middle">sample fov</text>
+  <path class="conn" d="M440 277 L470 277" marker-end="url(#arrow)"/>
+  <rect class="panel" x="470" y="262" width="140" height="30" rx="9"/>
+  <text class="m" x="540" y="282" text-anchor="middle">document fovDeg</text>
+  <path class="conn" d="M610 277 L640 277" marker-end="url(#arrow)"/>
+  <rect class="panel-o" x="640" y="262" width="140" height="30" rx="9"/>
+  <text class="m" x="710" y="282" text-anchor="middle">45 degrees</text>
+
+  <rect class="panel-w" x="30" y="320" width="750" height="100" rx="9"/>
+  <text class="t" x="50" y="344">Gates, and one silent drop</text>
+  <text class="d" x="50" y="364">A sample whose pos is not three numbers is skipped — the rest of the file still imports.</text>
+  <text class="d" x="50" y="382">Fewer than two usable samples: nothing is imported, and a toast reports the rejected file.</text>
+  <text class="d" x="50" y="400">A roll below 0.0001 rad is dropped, so a nearly level camera comes in with no roll key at all.</text>
+</svg>

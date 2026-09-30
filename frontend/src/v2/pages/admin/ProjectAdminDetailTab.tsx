@@ -1,0 +1,151 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { Link, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
+import Avatar from '../../components/Avatar';
+import { Badge } from '../../components/ui/badge';
+import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
+import { Metric, Panel, Row } from './AdminPrimitives';
+import { fmtBytes, fmtDateTime } from './adminShared';
+import { pipelineLabel, projectStatusLabels, quotaPct } from './adminProjects';
+import ProjectHierarchy from './ProjectHierarchy';
+import type { AdminProjectDetail } from '../../types/api';
+import { useT } from '../../i18n';
+import { Hint } from '../../components/ui/hint';
+
+/** Fiche d'administration d'un projet : membres, réglages résolus, hiérarchie, stats. */
+export default function ProjectAdminDetailTab() {
+  const t = useT();
+  const { id } = useParams();
+  const projectId = Number(id);
+  const detailQ = useQuery({
+    queryKey: qk.adminProject(projectId),
+    queryFn: () => api.get<AdminProjectDetail>(`/api/admin/projects/${projectId}`),
+    enabled: Number.isInteger(projectId) && projectId > 0,
+  });
+
+  if (!detailQ.data) return <QueryState query={detailQ} skeleton={<SkeletonRows count={6} />} />;
+  const { project, members, settings, hierarchy, stats } = detailQ.data;
+  const pct = quotaPct(project.usage, project.quota);
+
+  return (
+    <div className="space-y-6">
+      <Link
+        to="/admin/projects"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft size={13} /> {t('nav.projects')}
+      </Link>
+
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">{project.name}</h2>
+            <Badge variant="secondary">{projectStatusLabels(t)[project.status]}</Badge>
+            {project.deletedAt && <Badge variant="secondary">{t('common.trash')}</Badge>}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {project.slug} · {t('projectAdmin.createdOn', { date: fmtDateTime(project.createdAt) })} ·{' '}
+            {t('projectAdmin.updatedOn', { date: fmtDateTime(project.updatedAt) })}
+          </p>
+          {project.description && (
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">{project.description}</p>
+          )}
+        </div>
+        <Link
+          to={`/projects/${project.id}`}
+          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+        >
+          {t('project.openProject')} <ExternalLink size={13} />
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <Metric
+          label={t('storage.title')}
+          value={fmtBytes(project.usage)}
+          sub={
+            project.quota != null
+              ? t('storage.quotaUsage', { size: fmtBytes(project.quota), pct: pct ?? 0 })
+              : t('common.noQuota')
+          }
+        />
+        <Metric label="Versions" value={stats.versions} to={`/admin/versions?projectId=${project.id}`} />
+        <Metric label={t('trash.group.media')} value={stats.media} sub={fmtBytes(stats.mediaBytes)} />
+        <Metric
+          label={t('admin.tab.comments')}
+          value={stats.comments}
+          to={`/admin/comments?projectId=${project.id}`}
+        />
+        <Metric label="Assets" value={stats.assets} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title={t('members.titleCount', { count: members.length })}>
+          <div className="space-y-1.5">
+            {members.map((m) => (
+              <div key={m.id} className="flex items-center gap-2 text-sm">
+                <Avatar
+                  seed={m.user.id}
+                  initials={m.user.initials ?? '?'}
+                  avatarUrl={m.user.avatarUrl}
+                  size={24}
+                />
+                <Link
+                  to={`/admin/users/${m.user.id}`}
+                  className="min-w-0 flex-1 truncate font-medium hover:underline"
+                >
+                  {m.user.displayName ?? m.user.email}
+                </Link>
+                <Badge variant="secondary">{m.role ?? m.user.role}</Badge>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {t('userDetail.since', { date: fmtDateTime(m.joinedAt) })}
+                </span>
+              </div>
+            ))}
+            {members.length === 0 && <Hint>{t('project.noExplicitMember')}</Hint>}
+          </div>
+        </Panel>
+
+        <Panel title={t('overview.resolvedSettings')}>
+          <dl className="space-y-1 text-sm">
+            <Row label={t('pipeline.title')} value={pipelineLabel(settings)} />
+            <Row label={t('pipeline.startFrame')} value={String(project.startFrame)} />
+            <Row
+              label={t('pipeline.naming')}
+              value={t('pipeline.namingValue', {
+                sequence: settings.nomenclature.sequencePrefix,
+                shot: settings.nomenclature.shotPrefix,
+                step: settings.nomenclature.step,
+              })}
+            />
+            <Row
+              label={t('pipeline.departments')}
+              value={settings.departments.length ? settings.departments.map((d) => d.name).join(', ') : '—'}
+            />
+            <Row
+              label={t('projectAdmin.naming')}
+              value={
+                settings.naming.mode === 'off'
+                  ? t('naming.unrestricted')
+                  : `${settings.naming.mode} (${settings.naming.pattern})`
+              }
+            />
+          </dl>
+          <Hint>{t('projectAdmin.hint')}</Hint>
+        </Panel>
+      </div>
+
+      <ProjectHierarchy
+        sequences={hierarchy.sequences}
+        noSequence={hierarchy.noSequence}
+        project={{ resolution: settings.resolution, framerate: settings.framerate }}
+      />
+    </div>
+  );
+}

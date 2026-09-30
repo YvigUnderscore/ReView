@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 510" width="800" height="510" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Six ways into a playlist, three kinds of picker</title>
+  <desc id="fig-desc">The Reviews page, a version card and an open review open a dialog where you pick or create a playlist; the shot and sequence pages offer a submenu of existing playlists only; the playlist page adds straight into the playlist you have open. All of them end in the same playlist of versions.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="510" rx="10"/>
+
+  <text class="d" x="20" y="46">WHERE YOU START</text>
+  <text class="d" x="310" y="46">WHAT OPENS</text>
+  <text class="d" x="560" y="46">WHAT YOU GET</text>
+
+  <!-- Sources -->
+  <rect class="panel" x="20" y="64" width="250" height="46" rx="9"/>
+  <text class="l" x="34" y="86">Reviews page</text>
+  <text class="d" x="34" y="102">tick cards, then right-click</text>
+
+  <rect class="panel" x="20" y="124" width="250" height="46" rx="9"/>
+  <text class="l" x="34" y="146">Version card</text>
+  <text class="d" x="34" y="162">on a task or asset page</text>
+
+  <rect class="panel" x="20" y="184" width="250" height="46" rx="9"/>
+  <text class="l" x="34" y="206">Open review</text>
+  <text class="d" x="34" y="222">right-click the viewer</text>
+
+  <rect class="panel" x="20" y="244" width="250" height="46" rx="9"/>
+  <text class="l" x="34" y="266">Shot page</text>
+  <text class="d" x="34" y="282">right-click the shot card</text>
+
+  <rect class="panel" x="20" y="304" width="250" height="46" rx="9"/>
+  <text class="l" x="34" y="326">Sequence page</text>
+  <text class="d" x="34" y="342">right-click the sequence</text>
+
+  <rect class="panel" x="20" y="364" width="250" height="46" rx="9"/>
+  <text class="l" x="34" y="386">Playlist page</text>
+  <text class="d" x="34" y="402">the + on a catalogue row, or tick several</text>
+
+  <!-- Regroupement -->
+  <path class="conn" d="M270 87 L290 87"/>
+  <path class="conn" d="M270 147 L290 147"/>
+  <path class="conn" d="M270 207 L290 207"/>
+  <path class="conn" d="M290 87 L290 207"/>
+  <path class="conn" d="M290 147 L310 147" marker-end="url(#arrow)"/>
+
+  <path class="conn" d="M270 267 L290 267"/>
+  <path class="conn" d="M270 327 L290 327"/>
+  <path class="conn" d="M290 267 L290 327"/>
+  <path class="conn" d="M290 297 L310 297" marker-end="url(#arrow)"/>
+
+  <path class="conn" d="M270 387 L310 387" marker-end="url(#arrow)"/>
+
+  <!-- Sélecteurs -->
+  <rect class="panel" x="310" y="109" width="210" height="76" rx="9"/>
+  <text class="t" x="415" y="131" text-anchor="middle">Dialog</text>
+  <text class="d" x="415" y="149" text-anchor="middle">pick a playlist of the project,</text>
+  <text class="d" x="415" y="165" text-anchor="middle">or type a name and create it</text>
+
+  <rect class="panel" x="310" y="259" width="210" height="76" rx="9"/>
+  <text class="t" x="415" y="281" text-anchor="middle">Submenu</text>
+  <text class="d" x="415" y="299" text-anchor="middle">the project's playlists only —</text>
+  <text class="d" x="415" y="315" text-anchor="middle">absent until the first exists</text>
+
+  <rect class="panel" x="310" y="364" width="210" height="46" rx="9"/>
+  <text class="t" x="415" y="386" text-anchor="middle">Straight in</text>
+  <text class="d" x="415" y="402" text-anchor="middle">into the playlist you have open</text>
+
+  <!-- Résultat -->
+  <path class="conn-a" d="M520 147 L536 147 L536 228 L560 228" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M520 297 L548 297 L548 259 L560 259" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M520 387 L540 387 L540 290 L560 290" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="560" y="200" width="220" height="118" rx="9"/>
+  <text class="t" x="670" y="226" text-anchor="middle">Playlist</text>
+  <text class="d" x="670" y="244" text-anchor="middle">versions in your order, one project</text>
+  <text class="d" x="670" y="262" text-anchor="middle">media resolve to their version</text>
+  <text class="d" x="670" y="280" text-anchor="middle">duplicates are skipped:</text>
+  <text class="m" x="670" y="298" text-anchor="middle">n added, n skipped</text>
+
+  <!-- Le piège de l'ajout au niveau séquence -->
+  <rect class="panel-w" x="20" y="432" width="760" height="52" rx="9"/>
+  <text class="t" x="40" y="454">Adding a whole sequence adds the latest version of each task</text>
+  <text class="d" x="40" y="470">capped at 300, with no published-only filter — a shot in comp brings its anim and lighting versions too</text>
+</svg>

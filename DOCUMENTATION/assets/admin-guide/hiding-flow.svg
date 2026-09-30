@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" role="img" width="800" height="300">
+  <title>A visibility rule is declarative: it marks matching elements hidden, and is replayed after every ShotGrid import so elements that arrive later are caught too. Manually hidden elements carry no rule and survive every replay.</title>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="300" rx="10"/>
+
+  <rect class="panel-a" x="24" y="34" width="200" height="60" rx="9"/>
+  <text class="t" x="40" y="58">Rule</text>
+  <text class="m" x="40" y="78">shot contains _TMP</text>
+
+  <rect class="panel" x="300" y="34" width="200" height="60" rx="9"/>
+  <text class="t" x="316" y="58">Replay</text>
+  <text class="d" x="316" y="78">on save, and after import</text>
+
+  <rect class="panel-d" x="576" y="34" width="200" height="60" rx="9"/>
+  <text class="t" x="592" y="58">hiddenAt is set</text>
+  <text class="d" x="592" y="78">gone from every screen</text>
+
+  <path class="conn-a" d="M224 64 L300 64" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M500 64 L576 64" marker-end="url(#arrow-a)"/>
+
+  <rect class="band" x="24" y="126" width="752" height="42" rx="9"/>
+  <text class="l" x="40" y="152">Lists · cut · search · playlists · statistics · dashboard — all filter on that one column</text>
+
+  <rect class="panel-o" x="24" y="196" width="356" height="76" rx="9"/>
+  <text class="t" x="40" y="220">Hidden by hand</text>
+  <text class="d" x="40" y="240">No rule attached, so no replay touches it.</text>
+  <text class="d" x="40" y="258">Only an administrator can bring it back.</text>
+
+  <rect class="panel-w" x="420" y="196" width="356" height="76" rx="9"/>
+  <text class="t" x="436" y="220">Rule deleted or switched off</text>
+  <text class="d" x="436" y="240">The next replay clears what it claimed:</text>
+  <text class="d" x="436" y="258">those elements appear again, everywhere.</text>
+
+  <path class="conn-o" d="M124 94 L124 196" marker-end="url(#arrow)"/>
+  <path class="conn" d="M676 94 L676 196" marker-end="url(#arrow)"/>
+</svg>

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" width="800" height="392" role="img" aria-labelledby="rl-title rl-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="rl-title">What travels with a ReView deployment, and under which licence</title>
+  <desc id="rl-desc">Three layers are redistributed together: ReView's own code under the AGPL, 605 npm production dependencies inside the images, and the operating-system programs baked into the backend image. The database, cache, object store and proxy run in separate containers over the network and keep their own licences.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="800" height="392" rx="10"/>
+
+  <text class="d" x="20" y="30">WHAT TRAVELS WITH A DEPLOYMENT</text>
+
+  <rect class="panel-a" x="20" y="44" width="760" height="72" rx="9"/>
+  <text class="t" x="32" y="66">ReView source, bundles and images</text>
+  <text class="a" x="768" y="66" text-anchor="end">AGPL-3.0-or-later</text>
+  <text class="d" x="32" y="84">an SPDX header in every scanned file — see the coverage table on the page</text>
+  <text class="d" x="32" y="102">the frontend image also serves /LICENSE and /THIRD-PARTY-NOTICES.md as plain text</text>
+
+  <rect class="panel" x="20" y="126" width="760" height="72" rx="9"/>
+  <text class="l" x="32" y="148">npm production dependencies, shipped inside the images</text>
+  <text class="a" x="768" y="148" text-anchor="end">605 packages</text>
+  <text class="d" x="32" y="166">MIT 463 · Apache-2.0 62 · ISC 60 · BSD-3-Clause 10 · 0BSD 2 · MPL-2.0, OFL-1.1, CC0-1.0 and five others once each</text>
+  <text class="d" x="32" y="184">notices preserved verbatim; the generator refuses any licence off the allow-list</text>
+
+  <rect class="panel" x="20" y="208" width="760" height="72" rx="9"/>
+  <text class="l" x="32" y="230">OS programs baked into the backend image</text>
+  <text class="a" x="768" y="230" text-anchor="end">their own licences</text>
+  <text class="d" x="32" y="248">always: ffmpeg (GPL-2.0+) · assimp-utils · fonts-dejavu-core · openssl · ca-certificates · dos2unix</text>
+  <text class="d" x="32" y="266">opt-in: Blender + usd-core (INSTALL_USD_TOOLS=1) · guc (GUC_URL) — republish and you pass on their source offers</text>
+
+  <text class="d" x="400" y="293" text-anchor="middle">not linked, not combined</text>
+
+  <rect class="panel-o" x="20" y="300" width="760" height="72" rx="9"/>
+  <text class="l" x="32" y="322">Separate containers, reached over the network</text>
+  <text class="a" x="768" y="322" text-anchor="end">mere aggregation</text>
+  <text class="d" x="32" y="340">PostgreSQL · Redis · MinIO (AGPL-3.0) · nginx · ClamAV · Prometheus · Grafana</text>
+  <text class="d" x="32" y="358">their licences do not propagate, and ReView's does not reach them</text>
+</svg>

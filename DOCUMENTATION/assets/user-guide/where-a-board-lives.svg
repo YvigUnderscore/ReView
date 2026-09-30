@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What of a board is stored where, and what the caps are</title>
+  <desc id="fig-desc">The browser holds the Excalidraw scene, with small dataURLs kept inline. Postgres holds the lightened document under three hard caps. MinIO holds one object per image above 46 kB, under a key the server rebuilds from the board's scope and the file id.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="400" rx="10"/>
+
+  <text class="d" x="24" y="30">WHERE A BOARD'S CONTENT ACTUALLY SITS</text>
+
+  <!-- Le navigateur : la scène Excalidraw entière -->
+  <rect class="panel-a" x="24" y="48" width="752" height="62" rx="9"/>
+  <text class="t" x="44" y="72">Browser — the Excalidraw canvas</text>
+  <text class="d" x="44" y="90">elements + a files map, exactly what Excalidraw expects to receive</text>
+  <text class="d" x="44" y="104">a dataURL under 64 000 characters stays inline — SVG, icons, tiny crops</text>
+
+  <path class="conn" d="M375 110 L375 156" marker-end="url(#arrow)"/>
+  <text class="d" x="386" y="138">the lightened document</text>
+
+  <path class="conn-a" d="M97 110 L97 190" marker-end="url(#arrow-a)"/>
+  <rect class="panel-o" x="24" y="190" width="146" height="46" rx="9"/>
+  <text class="l" x="97" y="212" text-anchor="middle">Straight to MinIO</text>
+  <text class="d" x="97" y="228" text-anchor="middle">one presigned PUT</text>
+  <path class="conn-a" d="M97 236 L97 295 L190 295" marker-end="url(#arrow-a)"/>
+
+  <!-- Postgres : le document allégé, et ses plafonds -->
+  <rect class="panel" x="190" y="156" width="370" height="62" rx="9"/>
+  <text class="t" x="210" y="180">Postgres — Board.document</text>
+  <text class="d" x="210" y="198">the elements array, kept whole</text>
+  <text class="m" x="210" y="212">files: { id, mimeType }</text>
+
+  <rect class="panel-w" x="580" y="148" width="196" height="78" rx="9"/>
+  <text class="t" x="598" y="170">Hard caps</text>
+  <text class="d" x="598" y="188">1 500 000 bytes serialised</text>
+  <text class="d" x="598" y="204">10 000 elements</text>
+  <text class="d" x="598" y="220">500 files</text>
+
+  <!-- MinIO : un objet par image, sous un préfixe dérivé -->
+  <rect class="panel" x="190" y="264" width="370" height="62" rx="9"/>
+  <text class="t" x="210" y="288">MinIO — one object per image</text>
+  <text class="m" x="210" y="306">projects/&lt;projectId&gt;/boards/project/</text>
+  <text class="m" x="210" y="320">projects/&lt;projectId&gt;/boards/asset/&lt;assetId&gt;/</text>
+
+  <rect class="panel-d" x="580" y="264" width="196" height="62" rx="9"/>
+  <text class="t" x="598" y="288">The key is derived</text>
+  <text class="d" x="598" y="306">rebuilt from the scope</text>
+  <text class="d" x="598" y="320">and the file id, never sent</text>
+
+  <text class="d" x="400" y="356" text-anchor="middle">On load the server signs one GET URL per externalised file, valid an hour, with the content type forced into the signature.</text>
+  <text class="d" x="400" y="374" text-anchor="middle">The prefix sits under the project, so purging the project takes the board's images with it.</text>
+</svg>

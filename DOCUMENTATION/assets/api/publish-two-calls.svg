@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 694" width="800" height="694" role="img" aria-labelledby="publish-title publish-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="publish-title">Publishing from a DCC: two API calls and one idempotency key</title>
+  <desc id="publish-desc">A DCC opens a publication on /api/v1/publish, uploads the file straight to object storage with the presigned URL, then closes the publication with the complete call. The same idempotency key covers both, and a replay returns the original answer instead of creating a second version.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="694" rx="10"/>
+
+  <path class="conn-o" d="M110 78 L110 552"/>
+  <path class="conn-o" d="M400 78 L400 552"/>
+  <path class="conn-o" d="M690 78 L690 552"/>
+
+  <rect class="panel" x="40" y="44" width="140" height="34" rx="9"/>
+  <text class="l" x="110" y="66" text-anchor="middle">DCC / farm node</text>
+
+  <rect class="panel-a" x="310" y="44" width="180" height="34" rx="9"/>
+  <text class="l" x="400" y="66" text-anchor="middle">/api/v1</text>
+
+  <rect class="panel" x="610" y="44" width="160" height="34" rx="9"/>
+  <text class="l" x="690" y="66" text-anchor="middle">Object storage</text>
+
+  <text class="l" x="120" y="100">1 · POST /api/v1/publish</text>
+  <text class="d" x="120" y="115">Idempotency-Key: a uuid · { path, filename, size, contentHash }</text>
+  <path class="conn-a" d="M110 126 L398 126" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="250" y="140" width="340" height="94" rx="9"/>
+  <text class="l" x="266" y="162">What happens before anything is created</text>
+  <text class="d" x="266" y="184">the key is reserved before the handler runs</text>
+  <text class="d" x="266" y="202">project access and token binding checked first</text>
+  <text class="d" x="266" y="220">missing sequence, shot and task are ensured</text>
+
+  <text class="l" x="120" y="258">2 · 201 Created</text>
+  <text class="d" x="120" y="273">{ mediaId, uploadUrl, contentType, version, created[], namingWarning }</text>
+  <path class="conn" d="M400 284 L112 284" marker-end="url(#arrow)"/>
+
+  <text class="l" x="120" y="316">3 · PUT uploadUrl</text>
+  <text class="d" x="120" y="331">no Authorization header — storage refuses two auth mechanisms</text>
+  <path class="conn" d="M110 342 L688 342" marker-end="url(#arrow)"/>
+
+  <text class="l" x="120" y="374">4 · POST /api/v1/publish/{mediaId}/complete</text>
+  <text class="d" x="120" y="389">Idempotency-Key: the same uuid, suffixed · { publish: true }</text>
+  <path class="conn-a" d="M110 400 L398 400" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="250" y="414" width="340" height="76" rx="9"/>
+  <text class="l" x="266" y="436">finalize, then enqueue, then publish</text>
+  <text class="d" x="266" y="458">magic bytes give detectedExtension</text>
+  <text class="d" x="266" y="476">media queue: transcode and thumbnail</text>
+
+  <text class="l" x="120" y="514">5 · 200 OK</text>
+  <text class="d" x="120" y="529">{ media: { status: PROCESSING }, detectedExtension, version, published }</text>
+  <path class="conn" d="M400 540 L112 540" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="40" y="572" width="720" height="96" rx="9"/>
+  <text class="l" x="56" y="594">Replaying the same key</text>
+  <text class="d" x="56" y="616">while the first is still running, the replay gets 409 IDEMPOTENCY_IN_PROGRESS</text>
+  <text class="d" x="56" y="634">after it finished, the original status and body, plus header Idempotency-Replayed: true</text>
+  <text class="d" x="56" y="652">only 2xx are memoised · keys live 24 h · fingerprint = token, method, path and your key</text>
+</svg>

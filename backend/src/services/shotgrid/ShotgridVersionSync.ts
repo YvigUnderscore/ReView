@@ -1,0 +1,640 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { createWriteStream, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pipeline } from 'node:stream/promises';
+import { MediaKind, MediaStatus, TaskType, VersionStatus } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
+import { resolveStorageContextForVersion } from '../../lib/pipeline';
+import { storage, StorageService } from '../StorageService';
+import { enqueueMediaJob } from '../JobService';
+import { belongsToProject, projectFilter } from './shotgridProjectGuard';
+import {
+  asDate,
+  asEntityRef,
+  asNumber,
+  asString,
+  pickVersionMediaField,
+  attachmentId,
+  attachmentName,
+  attachmentUrl,
+  type SgRecord,
+} from './shotgridMapper';
+import {
+  mapSgToLocal,
+  removeLink,
+  shouldImportMedia,
+  upsertLink,
+  type VersionLinkData,
+} from './shotgridLinks';
+import { softDeleteVersion } from '../../lib/trash';
+import { can } from './shotgridSettings';
+import { sgMediaName } from '../../lib/mediaNaming';
+import { realignMediaNames } from './ShotgridMediaNaming';
+import { confirmGone, noteUnknownStatus, touch, type PullContext } from './ShotgridPullService';
+
+/**
+ * Import des Media Publishes : une Version ShotGrid devient une Version ReView avec
+ * son média, prête à être annotée image par image.
+ *
+ * Le média est transféré en flux vers MinIO puis confié au pipeline habituel
+ * (transcodage HLS, miniatures) : un publish venu de ShotGrid se comporte ensuite
+ * exactement comme un envoi manuel. Il naît publié — une Version ShotGrid EST une
+ * publication, la retenir en brouillon n'aurait pas de sens.
+ */
+
+const VERSION_FIELDS = [
+  'code',
+  'description',
+  'entity',
+  'sg_task',
+  'sg_status_list',
+  'user',
+  'sg_first_frame',
+  'sg_last_frame',
+  'sg_path_to_movie',
+  'sg_uploaded_movie',
+  'sg_uploaded_movie_mp4',
+  'sg_uploaded_movie_webm',
+  'project',
+  'updated_at',
+  'created_at',
+];
+
+/** Tâche fourre-tout d'un plan : accueille les publishes sans tâche ShotGrid explicite. */
+const IMPORT_TASK_NAME = 'ShotGrid';
+
+export interface ImportVersionsOptions {
+  since?: Date | null;
+  /** Versions précises à importer (sélection manuelle depuis l'onglet). */
+  onlySgIds?: number[];
+  /** Import du fichier média (désactivé pour un simple inventaire). */
+  withMedia?: boolean;
+}
+
+export async function pullVersions(ctx: PullContext, options: ImportVersionsOptions = {}): Promise<void> {
+  if (!can(ctx.settings, 'versions', 'read')) return;
+
+  const filters: Array<[string, string, unknown]> = [projectFilter(ctx.scope.sgProjectId)];
+  if (options.since) filters.push(['updated_at', 'greater_than', options.since.toISOString()]);
+  if (options.onlySgIds?.length) filters.push(['id', 'in', options.onlySgIds]);
+
+  const records = await ctx.client.search('Version', { fields: VERSION_FIELDS, filters, sort: 'id' });
+  const statusFilter = ctx.settings.media.statusFilter;
+  // Une seule lecture de la table de liens pour tout le lot : elle sert à distinguer la
+  // version déjà connue (qu'on met à jour) de la version neuve (que le filtre peut écarter).
+  const knownVersions = await mapSgToLocal(ctx.connection.id, 'version');
+
+  /**
+   * Versions retirées du site.
+   *
+   * Uniquement sur une demande ciblée — c'est-à-dire un événement de retrait, qui nomme
+   * la version supprimée. Une version absente d'un lot incrémental n'a pas été supprimée,
+   * elle n'a pas changé ; et un balayage complet ne se voit pas confier ce pouvoir ici,
+   * car il mettrait à la corbeille, d'un seul coup et sans que personne l'ait demandé,
+   * tout ce qui a été supprimé du site depuis la mise en service de la connexion.
+   */
+  if (options.onlySgIds?.length) {
+    // `confirmGone` distingue « le site ne l'a plus » de « la garde de projet l'a
+    // écartée » : seule la première est un retrait.
+    const alive = new Set(records.map((r) => r.id));
+    const gone = await confirmGone(ctx, 'Version', options.onlySgIds, alive);
+    await trashRemovedVersions(ctx, gone, knownVersions);
+  }
+
+  for (const record of records) {
+    const verdict = belongsToProject(record, ctx.scope);
+    if (!verdict.ok) {
+      ctx.journal.count('guard', 'skipped');
+      await ctx.journal.log(
+        'error',
+        'shotgrid.log.wrongProject',
+        {
+          sgType: 'Version',
+          sgId: record.id,
+          expected: ctx.scope.sgProjectId,
+          found: verdict.foundProjectId,
+        },
+        { sgType: 'Version', sgId: record.id },
+      );
+      continue;
+    }
+
+    const statusCode = asString(record.sg_status_list);
+    /**
+     * Le filtre de statuts décide de ce qu'on **importe**, pas de ce qu'on **suit**.
+     *
+     * Il s'appliquait à tout le monde : une version déjà importée dont le statut passait
+     * hors filtre (par exemple d'« en review » à « approuvé ») était purement sautée, et
+     * son statut de review restait gelé pour toujours côté ReView. Elle est pourtant déjà
+     * là — c'est justement la version dont on veut voir le statut avancer.
+     *
+     * Une sélection manuelle (`onlySgIds`) passe outre : c'est une décision explicite.
+     */
+    const alreadyImported = knownVersions.has(record.id);
+    if (
+      !alreadyImported &&
+      !options.onlySgIds?.length &&
+      statusFilter.length > 0 &&
+      statusCode &&
+      !statusFilter.includes(statusCode)
+    ) {
+      ctx.journal.count('versions', 'skipped');
+      continue;
+    }
+
+    try {
+      // Version connue mais hors filtre : on rafraîchit ses métadonnées et son statut,
+      // sans rapatrier de média — le filtre garde tout son sens sur ce point.
+      const withMedia =
+        options.withMedia !== false &&
+        (!alreadyImported || statusFilter.length === 0 || !statusCode || statusFilter.includes(statusCode));
+      await importVersion(ctx, record, withMedia);
+    } catch (err) {
+      ctx.journal.count('versions', 'failed');
+      await ctx.journal.log(
+        'error',
+        'shotgrid.log.versionImportFailed',
+        {
+          name: asString(record.code) ?? String(record.id),
+          error: err instanceof Error ? err.message : String(err),
+        },
+        { sgType: 'Version', sgId: record.id },
+      );
+    }
+  }
+}
+
+/**
+ * Versions supprimées sur le site → corbeille de ReView.
+ *
+ * Une version retirée ne revient plus d'aucune recherche : l'identifiant demandé qui
+ * manque à la réponse est la seule trace de sa disparition. C'est la corbeille et non une
+ * suppression, comme pour les plans et les séquences — le média, les commentaires et la
+ * décision de review restent consultables, et un retrait fait par erreur dans ShotGrid se
+ * répare sans rien perdre.
+ *
+ * Le lien survit à la mise à la corbeille : restaurer la version côté site doit rendre
+ * celle d'ici telle qu'elle était, pas en fabriquer une copie.
+ */
+async function trashRemovedVersions(
+  ctx: PullContext,
+  goneSgIds: readonly number[],
+  links: Map<number, { localId: number }>,
+): Promise<void> {
+  for (const sgId of goneSgIds) {
+    const link = links.get(sgId);
+    if (!link) continue;
+
+    const version = await prisma.version.findUnique({ where: { id: link.localId } });
+    // Cible déjà disparue : le lien ne désigne plus rien, et le garder ferait rejouer ce
+    // retrait à chaque passe.
+    if (!version) {
+      await removeLink(ctx.connection.id, 'Version', sgId);
+      continue;
+    }
+    if (version.deletedAt) continue;
+
+    await softDeleteVersion(version.id);
+    ctx.journal.count('versions', 'skipped');
+    await ctx.journal.log(
+      'info',
+      'shotgrid.log.trashedRemotely',
+      { sgType: 'Version', sgId },
+      { sgType: 'Version', sgId, localType: 'version', localId: version.id },
+    );
+    touch(ctx, 'version', version.id, { taskId: version.taskId, assetId: version.assetId });
+  }
+}
+
+/**
+ * Rattachement d'une Version ShotGrid dans l'arborescence ReView.
+ *
+ * ShotGrid autorise une Version sans tâche, rattachée directement au plan. ReView
+ * range les versions sous une tâche ou un asset : plutôt que d'écarter ces publishes,
+ * on leur ouvre une tâche dédiée par plan, visible et identifiable.
+ */
+async function resolveParent(
+  ctx: PullContext,
+  record: SgRecord,
+): Promise<{ taskId: number | null; assetId: number | null } | null> {
+  const taskRef = asEntityRef(record.sg_task);
+  if (taskRef) {
+    const link = await prisma.shotgridLink.findUnique({
+      where: {
+        connectionId_sgType_sgId: { connectionId: ctx.connection.id, sgType: 'Task', sgId: taskRef.id },
+      },
+    });
+    if (link) return { taskId: link.localId, assetId: null };
+  }
+
+  const entityRef = asEntityRef(record.entity);
+  if (!entityRef) return null;
+
+  if (entityRef.type === 'Asset') {
+    const link = await prisma.shotgridLink.findUnique({
+      where: {
+        connectionId_sgType_sgId: { connectionId: ctx.connection.id, sgType: 'Asset', sgId: entityRef.id },
+      },
+    });
+    return link ? { taskId: null, assetId: link.localId } : null;
+  }
+
+  if (entityRef.type === 'Shot') {
+    const shotLink = await prisma.shotgridLink.findUnique({
+      where: {
+        connectionId_sgType_sgId: { connectionId: ctx.connection.id, sgType: 'Shot', sgId: entityRef.id },
+      },
+    });
+    if (!shotLink) return null;
+    const existing = await prisma.task.findFirst({
+      where: { shotId: shotLink.localId, name: IMPORT_TASK_NAME },
+    });
+    if (existing) return { taskId: existing.id, assetId: null };
+    const created = await prisma.task.create({
+      data: { name: IMPORT_TASK_NAME, type: TaskType.OTHER, shotId: shotLink.localId, order: 999 },
+    });
+    await ctx.journal.log(
+      'info',
+      'shotgrid.log.importTaskCreated',
+      { shot: entityRef.name ?? String(entityRef.id) },
+      { localType: 'task', localId: created.id },
+    );
+    return { taskId: created.id, assetId: null };
+  }
+  return null;
+}
+
+export async function importVersion(ctx: PullContext, record: SgRecord, withMedia: boolean): Promise<void> {
+  const name = asString(record.code) ?? `V${record.id}`;
+  const parent = await resolveParent(ctx, record);
+  if (!parent) {
+    ctx.journal.count('versions', 'skipped');
+    await ctx.journal.log(
+      'warn',
+      'shotgrid.log.versionWithoutParent',
+      { name },
+      { sgType: 'Version', sgId: record.id },
+    );
+    return;
+  }
+
+  const statusCode = asString(record.sg_status_list);
+  /**
+   * Statut de review : ReView fait autorité hors correspondance explicite.
+   *
+   * `reviewStatusId` était écrit sans condition — `null` dès qu'un code n'était pas dans
+   * `versionStatusMap`, carte souvent vide ou partielle. Chaque passe effaçait donc la
+   * décision humaine (approuvé, retake) prise dans ReView, sans conflit ni trace. C'est
+   * la donnée dont l'écrasement coûte le plus cher de toute l'intégration.
+   *
+   * On n'écrit donc que si le studio a explicitement traduit le code. Une version sans
+   * statut côté site ne dit rien de la décision de review : elle ne l'efface pas.
+   */
+  const mapped = statusCode ? ctx.settings.versionStatusMap[statusCode] : undefined;
+  const reviewPatch = mapped ? { reviewStatusId: mapped } : {};
+  if (statusCode && !mapped) await noteUnknownStatus(ctx, 'version', statusCode, name);
+  const authorRef = asEntityRef(record.user);
+  const authorLink = authorRef
+    ? await prisma.shotgridLink.findUnique({
+        where: {
+          connectionId_sgType_sgId: {
+            connectionId: ctx.connection.id,
+            sgType: 'HumanUser',
+            sgId: authorRef.id,
+          },
+        },
+      })
+    : null;
+
+  const links = await mapSgToLocal(ctx.connection.id, 'version');
+  const existingLink = links.get(record.id);
+  const existing = existingLink
+    ? await prisma.version.findUnique({ where: { id: existingLink.localId } })
+    : null;
+
+  const data = {
+    name,
+    taskId: parent.taskId,
+    assetId: parent.assetId,
+    authorId: authorLink?.localId ?? null,
+    status: VersionStatus.PUBLISHED,
+    published: true,
+    ...reviewPatch,
+    deletedAt: null,
+  };
+
+  const version = existing
+    ? await prisma.version.update({ where: { id: existing.id }, data })
+    : await prisma.version.create({ data });
+  ctx.journal.count('versions', existing ? 'updated' : 'created');
+  // Même raison que pour la hiérarchie : la review ouverte doit voir arriver la version
+  // et sa décision sans qu'on lui demande de recharger.
+  // Reprise des médias importés avant l'alignement des noms : idempotent, et sans
+  // migration — le code de la Version n'est connu qu'ici.
+  await realignMediaNames(ctx, version.id, name);
+  // Passe par le collecteur : une passe complète alignait douze mille versions, donc
+  // douze mille émissions. `touch` émet tout de suite quand personne n'accumule.
+  touch(ctx, 'version', version.id, { taskId: version.taskId, assetId: version.assetId });
+
+  const previous = existingLink?.data as VersionLinkData | undefined;
+  const linkData: VersionLinkData = {
+    sgStatusCode: statusCode,
+    sgPathToMovie: asString(record.sg_path_to_movie),
+    sgFirstFrame: asNumber(record.sg_first_frame),
+    sgLastFrame: asNumber(record.sg_last_frame),
+    mediaImported: Boolean(previous?.mediaImported),
+    // L'origine ne se redécouvre pas : `upsertLink` remplace `data`, et l'oublier ici
+    // ferait passer une version née dans ReView pour une version du site à la passe
+    // suivante — avec son média rapatrié en double.
+    ...(previous?.createdFromReview ? { createdFromReview: true } : {}),
+  };
+
+  /**
+   * La correspondance est posée AVANT toute tentative sur le média, et c'est capital :
+   * elle dit « cette Version ShotGrid est déjà dans ReView », ce qui est vrai dès
+   * maintenant. Poser le lien après le transfert laissait la version orpheline au
+   * moindre échec de téléchargement — et la synchronisation suivante, ne retrouvant
+   * rien, en recréait une. Une par passe, indéfiniment.
+   */
+  await upsertLink({
+    connectionId: ctx.connection.id,
+    localType: 'version',
+    localId: version.id,
+    sgType: 'Version',
+    sgId: record.id,
+    sgUpdatedAt: asDate(record.updated_at),
+    data: linkData,
+  });
+
+  // Le média est un supplément : son échec n'invalide ni la version ni son statut.
+  if (shouldImportMedia({ withMedia, autoImport: ctx.settings.media.autoImport, link: linkData })) {
+    try {
+      if (await importVersionMedia(ctx, record, version.id, name)) {
+        await upsertLink({
+          connectionId: ctx.connection.id,
+          localType: 'version',
+          localId: version.id,
+          sgType: 'Version',
+          sgId: record.id,
+          sgUpdatedAt: asDate(record.updated_at),
+          data: { ...linkData, mediaImported: true },
+        });
+      }
+    } catch (err) {
+      ctx.journal.count('media', 'failed');
+      await ctx.journal.log(
+        'warn',
+        'shotgrid.log.mediaImportFailed',
+        { name, error: err instanceof Error ? err.message : String(err) },
+        { sgType: 'Version', sgId: record.id, localType: 'version', localId: version.id },
+      );
+    }
+  }
+}
+
+/**
+ * Transfert du fichier média.
+ *
+ * ShotGrid délivre une URL S3 signée de très courte durée : elle est consommée
+ * immédiatement, en flux vers MinIO. Un master de dailies pèse plusieurs gigaoctets —
+ * le charger en mémoire ferait tomber le worker.
+ */
+export async function importVersionMedia(
+  ctx: PullContext,
+  record: SgRecord,
+  versionId: number,
+  versionName: string,
+): Promise<boolean> {
+  const picked = pickVersionMediaField(record, ctx.settings.media.source);
+  if (!picked) {
+    await ctx.journal.log(
+      'info',
+      'shotgrid.log.versionWithoutMedia',
+      { name: versionName },
+      { sgType: 'Version', sgId: record.id },
+    );
+    return false;
+  }
+
+  // L'endpoint dédié d'abord, l'adresse portée par le champ ensuite : selon le site et
+  // le champ, l'un ou l'autre répond.
+  const url =
+    (await ctx.client.downloadUrl('Version', record.id, picked.field)) ?? attachmentUrl(picked.value);
+  if (!url) {
+    await ctx.journal.log(
+      'warn',
+      'shotgrid.log.mediaUrlUnavailable',
+      { name: versionName, field: picked.field },
+      { sgType: 'Version', sgId: record.id },
+    );
+    return false;
+  }
+
+  const sourceFilename = attachmentName(picked.value, `${versionName}.mp4`);
+  const { stream, size, type } = await ctx.client.openStream(url);
+
+  const maxBytes = ctx.settings.media.maxSizeMo ? ctx.settings.media.maxSizeMo * 1024 * 1024 : null;
+  if (maxBytes && size && size > maxBytes) {
+    stream.destroy();
+    ctx.journal.count('media', 'skipped');
+    await ctx.journal.log(
+      'warn',
+      'shotgrid.log.mediaTooLarge',
+      { name: versionName, sizeMo: Math.round(size / 1024 / 1024), limitMo: ctx.settings.media.maxSizeMo },
+      { sgType: 'Version', sgId: record.id },
+    );
+    return false;
+  }
+
+  const storageCtx = await resolveStorageContextForVersion(versionId);
+  if (!storageCtx) {
+    stream.destroy();
+    return false;
+  }
+
+  const contentType = type ?? 'video/mp4';
+  // Le média porte le code de la Version, pas le nom du fichier joint : c'est ce nom-là
+  // que la production lit dans ses playlists et prononce pendant les dailies.
+  const filename =
+    ctx.settings.media.naming === 'filename'
+      ? sourceFilename
+      : sgMediaName({ code: versionName, sourceFilename, mimeType: contentType });
+  const media = await prisma.mediaObject.create({
+    data: {
+      versionId,
+      kind: kindFromContentType(contentType, filename),
+      originalName: filename,
+      storageKey: '',
+      mimeType: contentType,
+      status: MediaStatus.UPLOADING,
+      published: true,
+      metadata: {
+        importedFromShotgrid: true,
+        sgVersionId: record.id,
+        sgField: picked.field,
+        // Le vrai nom du fichier reste lisible dans la fiche technique : la convention de
+        // nommage d'un studio y porte souvent une information que le code ne reprend pas.
+        sourceFilename,
+      },
+    },
+  });
+  const storageKey = StorageService.mediaKey({
+    projectSlug: storageCtx.projectSlug,
+    parentSegment: storageCtx.parentSegment,
+    versionName: storageCtx.versionName,
+    mediaId: media.id,
+    filename: filename.replace(/[^\w.-]+/g, '_'),
+  });
+
+  // Passage par un fichier temporaire plutôt que par un envoi direct du flux réseau :
+  // le stockage objet exige la taille du contenu à l'avance, que ShotGrid ne garantit
+  // pas dans ses réponses. Le disque évite aussi de tenir un master en mémoire.
+  const tmpPath = join(tmpdir(), `sg-${media.id}-${Date.now()}`);
+  let bytes: number | undefined;
+  try {
+    await pipeline(stream, createWriteStream(tmpPath));
+    bytes = statSync(tmpPath).size;
+    if (maxBytes && bytes > maxBytes) {
+      ctx.journal.count('media', 'skipped');
+      await ctx.journal.log(
+        'warn',
+        'shotgrid.log.mediaTooLarge',
+        { name: versionName, sizeMo: Math.round(bytes / 1024 / 1024), limitMo: ctx.settings.media.maxSizeMo },
+        { sgType: 'Version', sgId: record.id },
+      );
+      await prisma.mediaObject.delete({ where: { id: media.id } });
+      return false;
+    }
+    await storage.uploadFile(storageKey, tmpPath, contentType);
+  } finally {
+    rmSync(tmpPath, { force: true });
+  }
+
+  const uploaded = await prisma.mediaObject.update({
+    where: { id: media.id },
+    data: { storageKey, size: BigInt(bytes || size || 0), status: MediaStatus.PROCESSING },
+  });
+
+  /**
+   * Correspondance du média — posée seulement si le site nomme son `Attachment`.
+   *
+   * Elle portait `sgType: 'Attachment'` avec l'identifiant de la **Version** : le type
+   * et l'identifiant parlaient de deux entités différentes. Le lien était faux, et
+   * nuisible : `upsertLink` retirant tout conflit, un vrai `Attachment` portant par
+   * hasard le même numéro qu'une Version voyait son lien effacé au profit du menteur.
+   *
+   * Le fichier est décrit par l'`Attachment` que le champ expose ; c'est son
+   * identifiant qui fait foi. Quand le site n'en renvoie pas (certains champs ne
+   * livrent qu'une URL), on n'écrit aucun lien : le média reste traçable par ses
+   * métadonnées (`sgVersionId`, `sgField`), qui sont, elles, ce qu'elles disent.
+   */
+  const sgAttachmentId = attachmentId(picked.value);
+  if (sgAttachmentId !== null) {
+    await upsertLink({
+      connectionId: ctx.connection.id,
+      localType: 'media',
+      localId: uploaded.id,
+      sgType: 'Attachment',
+      sgId: sgAttachmentId,
+      data: { field: picked.field, filename, sgVersionId: record.id },
+    });
+  } else {
+    logger.debug(
+      { mediaId: uploaded.id, sgVersionId: record.id, field: picked.field },
+      'Attachment ShotGrid sans identifiant — média importé sans correspondance',
+    );
+  }
+
+  const jobKind = uploaded.kind === MediaKind.VIDEO ? 'transcode' : 'thumbnail';
+  await enqueueMediaJob({ mediaObjectId: uploaded.id, kind: jobKind });
+  ctx.journal.count('media', 'created');
+  logger.info({ mediaId: uploaded.id, sgVersionId: record.id, storageKey }, 'Média ShotGrid importé');
+  return true;
+}
+
+function kindFromContentType(contentType: string, filename: string): MediaKind {
+  const lower = `${contentType} ${filename}`.toLowerCase();
+  if (lower.includes('video') || /\.(mov|mp4|mkv|webm|avi)$/.test(lower)) return MediaKind.VIDEO;
+  if (lower.includes('image') || /\.(jpg|jpeg|png|exr|tif|tiff|webp)$/.test(lower)) return MediaKind.IMAGE;
+  return MediaKind.VIDEO;
+}
+
+/**
+ * Publishes de pipeline (`PublishedFile`) : chemins des fichiers de travail.
+ * Conservés en métadonnées sur la version — ReView ne monte pas les stockages du
+ * studio, mais afficher le chemin fait gagner un aller-retour vers ShotGrid.
+ */
+export async function pullPublishedFiles(ctx: PullContext): Promise<void> {
+  if (!can(ctx.settings, 'versions', 'read')) return;
+  const records = await ctx.client.search('PublishedFile', {
+    fields: ['code', 'path', 'version_number', 'entity', 'task', 'version', 'published_file_type', 'project'],
+    filters: [projectFilter(ctx.scope.sgProjectId)],
+    maxRecords: 5000,
+  });
+
+  const byVersion = new Map<number, VersionLinkData['publishedFiles']>();
+  for (const record of records) {
+    if (!belongsToProject(record, ctx.scope).ok) continue;
+    const versionRef = asEntityRef(record.version);
+    if (!versionRef) continue;
+    const path = record.path as { local_path?: string; name?: string } | null;
+    const entry = {
+      id: record.id,
+      name: asString(record.code) ?? `#${record.id}`,
+      path: path?.local_path ?? null,
+      type: asEntityRef(record.published_file_type)?.name ?? null,
+      version: asNumber(record.version_number),
+    };
+    const list = byVersion.get(versionRef.id) ?? [];
+    list.push(entry);
+    byVersion.set(versionRef.id, list);
+  }
+
+  for (const [sgVersionId, files] of byVersion) {
+    const link = await prisma.shotgridLink.findUnique({
+      where: {
+        connectionId_sgType_sgId: { connectionId: ctx.connection.id, sgType: 'Version', sgId: sgVersionId },
+      },
+    });
+    if (!link) continue;
+    await upsertLink({
+      connectionId: ctx.connection.id,
+      localType: 'version',
+      localId: link.localId,
+      sgType: 'Version',
+      sgId: sgVersionId,
+      sgUpdatedAt: link.sgUpdatedAt,
+      data: { ...(link.data as VersionLinkData), publishedFiles: files },
+    });
+    ctx.journal.count('publishedFiles', 'updated');
+  }
+}
+
+/** Versions ShotGrid pas encore importées — alimente la table de sélection manuelle. */
+export async function listImportableVersions(ctx: PullContext) {
+  const records = await ctx.client.search('Version', {
+    fields: VERSION_FIELDS,
+    filters: [projectFilter(ctx.scope.sgProjectId)],
+    sort: '-id',
+    maxRecords: 500,
+  });
+  const links = await mapSgToLocal(ctx.connection.id, 'version');
+  return records
+    .filter((r) => belongsToProject(r, ctx.scope).ok)
+    .map((r) => ({
+      sgId: r.id,
+      code: asString(r.code) ?? `#${r.id}`,
+      status: asString(r.sg_status_list),
+      description: asString(r.description),
+      entity: asEntityRef(r.entity)?.name ?? null,
+      task: asEntityRef(r.sg_task)?.name ?? null,
+      user: asEntityRef(r.user)?.name ?? null,
+      hasMedia: pickVersionMediaField(r, ctx.settings.media.source) !== null,
+      imported: links.has(r.id),
+      updatedAt: asDate(r.updated_at),
+    }));
+}

@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 590" width="800" height="590" role="img" aria-labelledby="gates-title gates-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="gates-title">The five gates a /api/v1 request crosses</title>
+  <desc id="gates-desc">Authentication, then the coarse write-scope gate, then the route scope, then role and project membership, then the token project binding. Each gate has its own refusal code; a session JWT skips the three that only apply to API tokens.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="590" rx="10"/>
+
+  <text class="d" x="28" y="42">EVERY /api/v1 REQUEST, IN ORDER</text>
+  <text class="d" x="440" y="42">IF THE GATE REFUSES</text>
+
+  <rect class="panel" x="28" y="56" width="380" height="46" rx="9"/>
+  <text class="l" x="44" y="78">1 · Authenticated?</text>
+  <text class="d" x="44" y="94">router.use(authenticate) — no public v1 route</text>
+  <path class="conn" d="M408 79 L438 79" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="440" y="56" width="332" height="46" rx="9"/>
+  <text class="l" x="456" y="78">401 · 403</text>
+  <text class="d" x="456" y="94">TOKEN_REQUIRED · TOKEN_INVALID · API_TOKEN_INVALID</text>
+
+  <path class="conn-a" d="M218 102 L218 126" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="28" y="128" width="380" height="46" rx="9"/>
+  <text class="l" x="44" y="150">2 · Any write scope at all?</text>
+  <text class="d" x="44" y="166">API tokens only, on every non-GET method</text>
+  <path class="conn" d="M408 151 L438 151" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="440" y="128" width="332" height="46" rx="9"/>
+  <text class="l" x="456" y="150">403 SCOPE_WRITE_REQUIRED</text>
+  <text class="d" x="456" y="166">a coarse gate, before the route runs</text>
+
+  <path class="conn-a" d="M218 174 L218 198" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="28" y="200" width="380" height="46" rx="9"/>
+  <text class="l" x="44" y="222">3 · Route scope held?</text>
+  <text class="d" x="44" y="238">requireScope('versions:write', 'media:write')</text>
+  <path class="conn" d="M408 223 L438 223" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="440" y="200" width="332" height="46" rx="9"/>
+  <text class="l" x="456" y="222">403 SCOPE_REQUIRED</text>
+  <text class="d" x="456" y="238">names the FIRST missing scope, not all of them</text>
+
+  <path class="conn-a" d="M218 246 L218 270" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="28" y="272" width="380" height="46" rx="9"/>
+  <text class="l" x="44" y="294">4 · Role and project membership</text>
+  <text class="d" x="44" y="310">assertProjectAccess — may you see this project?</text>
+  <path class="conn" d="M408 295 L438 295" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="440" y="272" width="332" height="46" rx="9"/>
+  <text class="l" x="456" y="294">404, not 403</text>
+  <text class="d" x="456" y="310">never a 403 that would confirm existence</text>
+
+  <path class="conn-a" d="M218 318 L218 342" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="28" y="344" width="380" height="46" rx="9"/>
+  <text class="l" x="44" y="366">5 · Token bound to a project?</text>
+  <text class="d" x="44" y="382">assertTokenProject — is this that project?</text>
+  <path class="conn" d="M408 367 L438 367" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="440" y="344" width="332" height="46" rx="9"/>
+  <text class="l" x="456" y="366">403 TOKEN_PROJECT_SCOPE</text>
+  <text class="d" x="456" y="382">this token is scoped to another project</text>
+
+  <path class="conn-a" d="M218 390 L218 414" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="28" y="416" width="380" height="46" rx="9"/>
+  <text class="t" x="44" y="438">The handler runs</text>
+  <text class="d" x="44" y="454">and only now does anything change</text>
+
+  <rect class="panel-o" x="28" y="486" width="744" height="76" rx="9"/>
+  <text class="l" x="44" y="508">A session JWT skips gates 2, 3 and 5</text>
+  <text class="d" x="44" y="530">Scopes exist only for API tokens; a human is bounded by role and project membership alone.</text>
+  <text class="d" x="44" y="548">A scope never grants more than its bearer already has — and granting x:write implies x:read.</text>
+</svg>

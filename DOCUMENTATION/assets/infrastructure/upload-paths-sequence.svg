@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 532" width="800" height="532" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Three ways into storage, one finalize</title>
+  <desc id="fig-desc">A small file takes one presigned PUT, a large one takes the multipart path with resume and deduplication, and an image sequence takes the frame-by-frame path. All three end on the same finalize call, which validates the object and enqueues the processing job.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="532" rx="10"/>
+
+  <text class="d" x="20" y="30">THREE WAYS IN, ONE FINALIZE</text>
+
+  <!-- Voie A : petit fichier -->
+  <rect class="band" x="20" y="42" width="760" height="96" rx="10"/>
+  <text class="t" x="40" y="68">A — under 16 MiB: one presigned PUT</text>
+
+  <rect class="panel" x="40" y="80" width="226" height="46" rx="9"/>
+  <text class="l" x="153" y="101" text-anchor="middle">POST /api/media/upload-url</text>
+  <text class="d" x="153" y="117" text-anchor="middle">201 — uploadUrl valid 15 min</text>
+  <path class="conn" d="M266 103 L284 103" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="288" y="80" width="226" height="46" rx="9"/>
+  <text class="l" x="401" y="101" text-anchor="middle">PUT &lt;uploadUrl&gt;</text>
+  <text class="d" x="401" y="117" text-anchor="middle">browser writes to MinIO direct</text>
+
+  <text class="d" x="649" y="101" text-anchor="middle">Nothing else to do:</text>
+  <text class="d" x="649" y="117" text-anchor="middle">the object is already whole.</text>
+
+  <!-- Voie B : multipart -->
+  <rect class="band" x="20" y="152" width="760" height="96" rx="10"/>
+  <text class="t" x="40" y="178">B — 16 MiB and over: multipart, resumable, deduplicated</text>
+
+  <rect class="panel" x="40" y="190" width="226" height="46" rx="9"/>
+  <text class="l" x="153" y="211" text-anchor="middle">POST /multipart/init</text>
+  <text class="d" x="153" y="227" text-anchor="middle">sha256: resume or instant dedup</text>
+  <path class="conn" d="M266 213 L284 213" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="288" y="190" width="226" height="46" rx="9"/>
+  <text class="l" x="401" y="211" text-anchor="middle">POST /multipart/:id/parts</text>
+  <text class="d" x="401" y="227" text-anchor="middle">64 presigned URLs at a time, 1 h</text>
+  <path class="conn" d="M514 213 L532 213" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="536" y="190" width="226" height="46" rx="9"/>
+  <text class="l" x="649" y="211" text-anchor="middle">POST /multipart/:id/complete</text>
+  <text class="d" x="649" y="227" text-anchor="middle">MinIO assembles the parts</text>
+
+  <!-- Voie C : séquence d'images -->
+  <rect class="band" x="20" y="262" width="760" height="96" rx="10"/>
+  <text class="t" x="40" y="288">C — image sequence: N frames, one media</text>
+
+  <rect class="panel" x="40" y="300" width="226" height="46" rx="9"/>
+  <text class="l" x="153" y="321" text-anchor="middle">POST /sequence/init</text>
+  <text class="d" x="153" y="337" text-anchor="middle">frame names checked first</text>
+  <path class="conn" d="M266 323 L284 323" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="288" y="300" width="226" height="46" rx="9"/>
+  <text class="l" x="401" y="321" text-anchor="middle">POST /sequence/:id/urls</text>
+  <text class="d" x="401" y="337" text-anchor="middle">64 frames per batch</text>
+  <path class="conn" d="M514 323 L532 323" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="536" y="300" width="226" height="46" rx="9"/>
+  <text class="l" x="649" y="321" text-anchor="middle">POST /sequence/:id/complete</text>
+  <text class="d" x="649" y="337" text-anchor="middle">writes sequence.json</text>
+
+  <!-- Fin commune -->
+  <rect class="band" x="20" y="378" width="760" height="110" rx="10"/>
+  <text class="t" x="40" y="404">Then, whichever way you came in</text>
+
+  <rect class="panel-a" x="40" y="416" width="226" height="46" rx="9"/>
+  <text class="t" x="153" y="437" text-anchor="middle">POST /media/:id/finalize</text>
+  <text class="d" x="153" y="453" text-anchor="middle">magic bytes, real size, quotas</text>
+  <path class="conn" d="M266 439 L284 439" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="288" y="416" width="226" height="46" rx="9"/>
+  <text class="l" x="401" y="437" text-anchor="middle">media-processing queue</text>
+  <text class="d" x="401" y="453" text-anchor="middle">the worker takes it from here</text>
+
+  <rect class="panel-d" x="536" y="416" width="226" height="46" rx="9"/>
+  <text class="t" x="649" y="437" text-anchor="middle">Rejected: object deleted</text>
+  <text class="d" x="649" y="453" text-anchor="middle">400 INVALID_FILE, or media FAILED</text>
+  <path class="conn-o" d="M153 462 L153 478 L649 478 L649 466" marker-end="url(#arrow)"/>
+
+  <text class="d" x="400" y="512" text-anchor="middle">The browser never sends file bytes to the API: all three paths write straight to MinIO over a presigned URL.</text>
+</svg>

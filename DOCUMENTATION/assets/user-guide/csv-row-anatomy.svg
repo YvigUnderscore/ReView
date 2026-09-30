@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 530" width="800" height="530" role="img" aria-labelledby="csvrow-title csvrow-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="csvrow-title">Anatomy of one row of the review-notes CSV</title>
+  <desc id="csvrow-desc">The twenty columns of the notes spreadsheet, in their fixed order, grouped by the question each group answers: which note it is and whose reply, where in the pipeline it was written, when in frames and in timecode, who wrote it and in what state and decision, and finally whether a drawing exists and the text itself.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="530" rx="10"/>
+
+  <text class="d" x="30" y="30">ANATOMY OF ONE CSV ROW — TWENTY COLUMNS, ALWAYS IN THIS ORDER</text>
+
+  <!-- Groupe 1 : identité de la note -->
+  <rect class="panel" x="24" y="48" width="752" height="62" rx="9"/>
+  <text class="t" x="38" y="70">Which note, and whose reply it is</text>
+  <text class="d" x="762" y="70" text-anchor="end">columns 1–2</text>
+  <rect class="panel" x="38" y="82" width="66" height="22" rx="6"/>
+  <text class="m" x="71" y="97" text-anchor="middle">note_id</text>
+  <rect class="panel" x="112" y="82" width="72" height="22" rx="6"/>
+  <text class="m" x="148" y="97" text-anchor="middle">reply_to</text>
+
+  <!-- Groupe 2 : emplacement dans le pipe -->
+  <rect class="panel" x="24" y="120" width="752" height="62" rx="9"/>
+  <text class="t" x="38" y="142">Where in the pipeline it was written</text>
+  <text class="d" x="762" y="142" text-anchor="end">columns 3–7</text>
+  <rect class="panel" x="38" y="154" width="72" height="22" rx="6"/>
+  <text class="m" x="74" y="169" text-anchor="middle">sequence</text>
+  <rect class="panel" x="118" y="154" width="48" height="22" rx="6"/>
+  <text class="m" x="142" y="169" text-anchor="middle">shot</text>
+  <rect class="panel" x="174" y="154" width="48" height="22" rx="6"/>
+  <text class="m" x="198" y="169" text-anchor="middle">task</text>
+  <rect class="panel" x="230" y="154" width="66" height="22" rx="6"/>
+  <text class="m" x="263" y="169" text-anchor="middle">version</text>
+  <rect class="panel" x="304" y="154" width="54" height="22" rx="6"/>
+  <text class="m" x="331" y="169" text-anchor="middle">media</text>
+  <text class="d" x="374" y="169">an asset version fills shot, and leaves sequence empty</text>
+
+  <!-- Groupe 3 : temps — la partie qui se lit de deux manières -->
+  <rect class="panel-a" x="24" y="192" width="752" height="62" rx="9"/>
+  <text class="t" x="38" y="214">When — in frames, and in timecode</text>
+  <text class="d" x="762" y="214" text-anchor="end">columns 8–10</text>
+  <rect class="panel" x="38" y="226" width="54" height="22" rx="6"/>
+  <text class="m" x="65" y="241" text-anchor="middle">frame</text>
+  <rect class="panel" x="100" y="226" width="72" height="22" rx="6"/>
+  <text class="m" x="136" y="241" text-anchor="middle">timecode</text>
+  <rect class="panel" x="180" y="226" width="100" height="22" rx="6"/>
+  <text class="m" x="230" y="241" text-anchor="middle">range_frames</text>
+  <text class="a" x="296" y="241">two different numbers, on purpose — see below</text>
+
+  <!-- Groupe 4 : qui, dans quel état, avec quelle décision -->
+  <rect class="panel" x="24" y="264" width="752" height="62" rx="9"/>
+  <text class="t" x="38" y="286">Who wrote it, its state, its decision, and who may see it</text>
+  <text class="d" x="762" y="286" text-anchor="end">columns 11–18</text>
+  <rect class="panel" x="38" y="298" width="60" height="22" rx="6"/>
+  <text class="m" x="68" y="313" text-anchor="middle">author</text>
+  <rect class="panel" x="106" y="298" width="86" height="22" rx="6"/>
+  <text class="m" x="149" y="313" text-anchor="middle">created_at</text>
+  <rect class="panel" x="200" y="298" width="54" height="22" rx="6"/>
+  <text class="m" x="227" y="313" text-anchor="middle">state</text>
+  <rect class="panel" x="262" y="298" width="72" height="22" rx="6"/>
+  <text class="m" x="298" y="313" text-anchor="middle">resolved</text>
+  <rect class="panel" x="342" y="298" width="94" height="22" rx="6"/>
+  <text class="m" x="389" y="313" text-anchor="middle">resolved_by</text>
+  <rect class="panel" x="444" y="298" width="72" height="22" rx="6"/>
+  <text class="m" x="480" y="313" text-anchor="middle">assignee</text>
+  <rect class="panel" x="524" y="298" width="72" height="22" rx="6"/>
+  <text class="m" x="560" y="313" text-anchor="middle">decision</text>
+  <rect class="panel" x="604" y="298" width="112" height="22" rx="6"/>
+  <text class="m" x="660" y="313" text-anchor="middle">client_visible</text>
+
+  <!-- Groupe 5 : le dessin et le texte -->
+  <rect class="panel" x="24" y="336" width="752" height="62" rx="9"/>
+  <text class="t" x="38" y="358">Whether a drawing exists, and the text itself</text>
+  <text class="d" x="762" y="358" text-anchor="end">columns 19–20</text>
+  <rect class="panel" x="38" y="370" width="80" height="22" rx="6"/>
+  <text class="m" x="78" y="385" text-anchor="middle">annotated</text>
+  <rect class="panel" x="126" y="370" width="66" height="22" rx="6"/>
+  <text class="m" x="159" y="385" text-anchor="middle">content</text>
+  <text class="d" x="208" y="385">the drawing itself lives in the printable sheet, not here</text>
+
+  <rect class="band" x="24" y="410" width="752" height="100" rx="9"/>
+  <text class="m" x="38" y="436">frame</text>
+  <text class="d" x="126" y="436">the frame as the review displays it, on the project’s start-frame base</text>
+  <text class="m" x="38" y="456">timecode</text>
+  <text class="d" x="126" y="456">the media’s own non-drop timecode — 00:00:00:00 is the first frame</text>
+  <text class="m" x="38" y="476">content</text>
+  <text class="d" x="126" y="476">any cell that would read as a spreadsheet formula is neutralised</text>
+  <text class="d" x="38" y="498">UTF-8, comma-separated, one row per note — replies included, and linked to their root by reply_to.</text>
+</svg>

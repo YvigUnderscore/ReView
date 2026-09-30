@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 412" width="800" height="412" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Where a configuration value actually comes from</title>
+  <desc id="fig-desc">Four layers of precedence, strongest first: the compose environment block, then the .env file loaded whole, then .env.example as documentation, then the Zod defaults in config/env.ts. Three side notes cover empty values, the PORT variable and COMPOSE_FILE.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="412" rx="10"/>
+
+  <text class="d" x="20" y="30">PRECEDENCE — STRONGEST FIRST</text>
+  <text class="d" x="580" y="30">READ THESE THREE TWICE</text>
+
+  <!-- 1 : bloc environment: du compose -->
+  <rect class="band" x="20" y="42" width="540" height="92" rx="10"/>
+  <text class="t" x="44" y="66">1 — compose environment:</text>
+  <text class="d" x="44" y="84">network topology of the stack — must not be replaced</text>
+  <text class="m" x="44" y="104">DATABASE_URL · REDIS_URL · S3_ENDPOINT · S3_PUBLIC_ENDPOINT</text>
+  <text class="m" x="44" y="122">S3_ACCESS_KEY · S3_SECRET_KEY · S3_BUCKET · PORT=3000 · NODE_ENV</text>
+  <path class="conn" d="M290 134 L290 148" marker-end="url(#arrow)"/>
+
+  <!-- 2 : .env chargé en entier -->
+  <rect class="band" x="20" y="152" width="540" height="92" rx="10"/>
+  <text class="t" x="44" y="176">2 — .env, via env_file (required: false)</text>
+  <text class="d" x="44" y="194">everything an operator sets; loaded whole by backend and worker</text>
+  <text class="m" x="44" y="214">APP_URL · CORS_ORIGIN · SMTP_* · VAPID_* · APP_ENCRYPTION_KEY</text>
+  <text class="m" x="44" y="232">LOG_LEVEL · *_MEM_LIMIT · MINIO_VERSION · COMPOSE_FILE · APP_VERSION</text>
+  <path class="conn" d="M290 244 L290 258" marker-end="url(#arrow)"/>
+
+  <!-- 3 : .env.example -->
+  <rect class="band" x="20" y="262" width="540" height="56" rx="10"/>
+  <text class="t" x="44" y="286">3 — .env.example</text>
+  <text class="d" x="44" y="304">documents all 43 variables; optional ones stay commented out</text>
+  <path class="conn" d="M290 318 L290 332" marker-end="url(#arrow)"/>
+
+  <!-- 4 : défauts Zod -->
+  <rect class="band" x="20" y="336" width="540" height="56" rx="10"/>
+  <text class="t" x="44" y="360">4 — Zod defaults</text>
+  <text class="d" x="44" y="378">backend/src/config/env.ts — what applies when nothing is set</text>
+
+  <!-- Notes -->
+  <rect class="panel-w" x="580" y="42" width="200" height="110" rx="9"/>
+  <text class="l" x="600" y="66">Empty is not absent</text>
+  <text class="d" x="600" y="86">SMTP_HOST= makes the</text>
+  <text class="d" x="600" y="102">backend believe mail is</text>
+  <text class="d" x="600" y="118">configured. Comment the</text>
+  <text class="d" x="600" y="134">line out instead.</text>
+
+  <rect class="panel-w" x="580" y="166" width="200" height="110" rx="9"/>
+  <text class="l" x="600" y="190">PORT is a host port</text>
+  <text class="d" x="600" y="210">PORT in .env publishes</text>
+  <text class="d" x="600" y="226">the frontend on the host.</text>
+  <text class="d" x="600" y="242">The API port is pinned to</text>
+  <text class="d" x="600" y="258">3000 inside compose.</text>
+
+  <rect class="panel-a" x="580" y="290" width="200" height="102" rx="9"/>
+  <text class="t" x="600" y="314">COMPOSE_FILE</text>
+  <text class="d" x="600" y="334">The installer writes the</text>
+  <text class="d" x="600" y="350">exact overlay list, so a</text>
+  <text class="d" x="600" y="366">bare docker compose up</text>
+  <text class="d" x="600" y="382">loads the right stack.</text>
+</svg>

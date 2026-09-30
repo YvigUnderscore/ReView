@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 482" width="800" height="482" role="img" aria-labelledby="spl-title spl-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="spl-title">What the publish lock freezes on a splat, and what it does not</title>
+  <desc id="spl-desc">Before publication every content edit is allowed — mask, cutting volumes, transform, orientation. After publication those four are refused with a 403, while the presentation — camera pose and animation, depth of field, reveal effect, default level of detail and thumbnail — stays editable.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="482" rx="10"/>
+
+  <text class="d" x="20" y="30">WHAT PUBLICATION FREEZES, AND WHAT IT LEAVES OPEN</text>
+
+  <!-- Colonnes -->
+  <rect class="band" x="384" y="44" width="190" height="330" rx="10"/>
+  <rect class="band" x="594" y="44" width="190" height="330" rx="10"/>
+  <text class="t" x="479" y="66" text-anchor="middle">Before publication</text>
+  <text class="t" x="689" y="66" text-anchor="middle">After publication</text>
+  <path class="conn" d="M20 78 L784 78"/>
+
+  <!-- Éditions de contenu -->
+  <text class="a" x="20" y="100">CONTENT EDITS — THE CLOUD ITSELF</text>
+
+  <text class="l" x="20" y="122">Selection mask, deleted splats</text>
+  <text class="l ok" x="479" y="122" text-anchor="middle">allowed</text>
+  <text class="l no" x="689" y="122" text-anchor="middle">refused — 403</text>
+
+  <text class="l" x="20" y="146">Cutting volumes — box or sphere, carve or isolate</text>
+  <text class="l ok" x="479" y="146" text-anchor="middle">allowed</text>
+  <text class="l no" x="689" y="146" text-anchor="middle">refused — 403</text>
+
+  <text class="l" x="20" y="170">Transform of the whole cloud, or of a selection</text>
+  <text class="l ok" x="479" y="170" text-anchor="middle">allowed</text>
+  <text class="l no" x="689" y="170" text-anchor="middle">refused — 403</text>
+
+  <text class="l" x="20" y="194">Corrected orientation (Y-down flip)</text>
+  <text class="l ok" x="479" y="194" text-anchor="middle">allowed</text>
+  <text class="l no" x="689" y="194" text-anchor="middle">refused — 403</text>
+
+  <!-- Mise en scène -->
+  <text class="a" x="20" y="230">PRESENTATION — THE STAGING</text>
+
+  <text class="l" x="20" y="252">Camera pose and animation</text>
+  <text class="l ok" x="479" y="252" text-anchor="middle">allowed</text>
+  <text class="l ok" x="689" y="252" text-anchor="middle">allowed</text>
+
+  <text class="l" x="20" y="276">Depth of field — focus distance and aperture</text>
+  <text class="l ok" x="479" y="276" text-anchor="middle">allowed</text>
+  <text class="l ok" x="689" y="276" text-anchor="middle">allowed</text>
+
+  <text class="l" x="20" y="300">Reveal effect on open</text>
+  <text class="l ok" x="479" y="300" text-anchor="middle">allowed</text>
+  <text class="l ok" x="689" y="300" text-anchor="middle">allowed</text>
+
+  <text class="l" x="20" y="324">Default level of detail</text>
+  <text class="l ok" x="479" y="324" text-anchor="middle">allowed</text>
+  <text class="l ok" x="689" y="324" text-anchor="middle">allowed</text>
+
+  <text class="l" x="20" y="348">Thumbnail</text>
+  <text class="l ok" x="479" y="348" text-anchor="middle">allowed</text>
+  <text class="l ok" x="689" y="348" text-anchor="middle">allowed</text>
+
+  <!-- Ce qui vaut dans les deux colonnes -->
+  <rect class="panel-a" x="20" y="392" width="764" height="70" rx="9"/>
+  <text class="d" x="40" y="416">The uploaded file is never modified in either column: an edit is a mask bitset plus an edit list, replayed</text>
+  <text class="d" x="40" y="433">identically for every viewer. To correct the cloud itself after publication, publish a new version.</text>
+  <text class="d" x="40" y="450">Clear the presentation drops the whole right-hand group at once — file, mask and edits untouched.</text>
+</svg>

@@ -1,0 +1,158 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * Ajoute un lot de clés aux quatorze catalogues d'un coup.
+ *
+ * Une clé n'existe que si elle est présente dans les quatorze langues : quatorze éditions
+ * à la main, c'est quatorze occasions d'en oublier une — et la clé oubliée ne se voit qu'à
+ * l'écran, dans la langue que personne ne relit. Ce script prend le lot une fois et l'écrit
+ * partout.
+ *
+ * Usage :
+ *   node scripts/i18n-add.mjs <lot.json> [--set=frontend|backend]
+ *
+ * Format du lot — une entrée par clé, une entrée par langue, valeur simple ou formes
+ * plurielles :
+ *   {
+ *     "admin.title": { "en": "Administration", "fr": "Administration", "ja": "管理", … },
+ *     "admin.count": { "en": { "one": "{count} item", "other": "{count} items" }, … }
+ *   }
+ *
+ * La clé est insérée à la suite des clés de même préfixe pour que les catalogues restent
+ * lisibles ; une clé déjà présente est mise à jour sur place. Le contrôle de cohérence
+ * (`check-translations.mjs`) reste l'autorité : ce script écrit, il ne valide pas.
+ */
+
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const SETS = {
+  frontend: 'frontend/src/v2/i18n/messages',
+  backend: 'backend/src/i18n/messages',
+};
+
+/** Rend la valeur telle qu'elle s'écrit dans le catalogue — une clé par ligne, style Prettier. */
+export const render = (key, value) => {
+  const body =
+    typeof value === 'string'
+      ? JSON.stringify(value)
+      : `{ ${Object.entries(value)
+          .map(([form, text]) => `${JSON.stringify(form)}: ${JSON.stringify(text)}`)
+          .join(', ')} }`;
+  return `  ${JSON.stringify(key)}: ${body},`;
+};
+
+/**
+ * Fusionne un lot dans le texte brut d'un catalogue — fonction pure, rien n'est lu ni
+ * écrit sur disque. Renvoie le nouveau contenu, le nombre d'écritures et les clés dont
+ * la traduction manque pour cette langue.
+ */
+export function mergeCatalog(raw, batch, locale) {
+  const eol = raw.includes('\r\n') ? '\r\n' : '\n';
+  const lines = raw.split(/\r?\n/);
+  let written = 0;
+  const missing = [];
+
+  for (const [key, byLocale] of Object.entries(batch)) {
+    const value = byLocale[locale];
+    if (value === undefined) {
+      missing.push(`${locale} ← ${key}`);
+      continue;
+    }
+    const line = render(key, value);
+    const existing = lines.findIndex((l) => l.startsWith(`  ${JSON.stringify(key)}:`));
+    if (existing >= 0) {
+      // La dernière entrée du fichier n'a pas de virgule : ne pas lui en donner une.
+      lines[existing] = lines[existing].trimEnd().endsWith(',') ? line : line.slice(0, -1);
+      written += 1;
+      continue;
+    }
+    // À la suite des clés de même préfixe, sinon en fin de catalogue. Une entrée dont la
+    // valeur s'étale sur plusieurs lignes (`"k": {` … `},`) impose de viser sa fermeture :
+    // insérer juste après l'accolade ouvrante casserait le JSON.
+    const prefix = `  "${key.split('.')[0]}.`;
+    let at = -1;
+    lines.forEach((l, i) => {
+      if (l.startsWith(prefix)) at = i;
+    });
+    // `lines[at]` peut être l'accolade ouvrante d'une valeur plurielle : on avance jusqu'à
+    // sa fermeture (` },`), sans jamais dépasser l'accolade finale du document.
+    while (at >= 0 && at < lines.length - 1 && /^\s*("[^"]+":\s*)?\{$/.test(lines[at])) {
+      while (at < lines.length - 1 && !/^\s+\}/.test(lines[at])) at += 1;
+    }
+    if (at < 0) {
+      // En fin de fichier : l'ancienne dernière entrée prend sa virgule, la nouvelle non.
+      //
+      // ⚠ On vise l'accolade finale du DOCUMENT, puis on remonte — et non « la dernière
+      // ligne qui commence par une clé ». La dernière entrée d'un catalogue peut être
+      // plurielle, donc s'étaler sur plusieurs lignes et se refermer sur `  }`, une forme
+      // que ni « commence par deux espaces et un guillemet » ni « vaut `},` » ne décrit :
+      // la recherche retombait alors sur l'accolade OUVRANTE de cette dernière valeur, et
+      // la clé nouvelle s'insérait au milieu d'elle. Les quatorze catalogues devenaient
+      // illisibles d'un coup, et l'application avec eux.
+      let close = lines.length - 1;
+      while (close > 0 && lines[close].trim() !== '}') close -= 1;
+      at = close - 1;
+      while (at > 0 && lines[at].trim() === '') at -= 1;
+      lines[at] = `${lines[at].trimEnd().replace(/,$/, '')},`;
+      lines.splice(at + 1, 0, line.slice(0, -1));
+    } else {
+      lines.splice(at + 1, 0, lines[at].trimEnd().endsWith(',') ? line : line.slice(0, -1));
+      if (!lines[at].trimEnd().endsWith(',')) lines[at] = `${lines[at].trimEnd()},`;
+    }
+    written += 1;
+  }
+
+  return { content: lines.join(eol), written, missing };
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const batchPath = args.find((a) => !a.startsWith('--'));
+  const setName = (args.find((a) => a.startsWith('--set=')) ?? '--set=frontend').slice(6);
+
+  if (!batchPath) {
+    console.error('usage: node scripts/i18n-add.mjs <lot.json> [--set=frontend|backend]');
+    process.exit(2);
+  }
+
+  const dir = SETS[setName];
+  if (!dir) {
+    console.error(`jeu de catalogues inconnu : ${setName} (attendu : ${Object.keys(SETS).join('|')})`);
+    process.exit(2);
+  }
+
+  const batch = JSON.parse(readFileSync(batchPath, 'utf8'));
+  const locales = readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => f.replace(/\.json$/, ''));
+
+  let written = 0;
+  const missing = [];
+
+  for (const locale of locales) {
+    const file = join(dir, `${locale}.json`);
+    const result = mergeCatalog(readFileSync(file, 'utf8'), batch, locale);
+    writeFileSync(file, result.content, 'utf8');
+    written += result.written;
+    missing.push(...result.missing);
+  }
+
+  if (missing.length) {
+    console.error(`\x1b[0;31m✗ ${missing.length} traduction(s) absente(s) du lot :\x1b[0m`);
+    for (const m of missing.slice(0, 20)) console.error(`   ${m}`);
+    if (missing.length > 20) console.error(`   … et ${missing.length - 20} autres`);
+    process.exit(1);
+  }
+
+  console.log(
+    `\x1b[0;32m✓ ${Object.keys(batch).length} clé(s) écrite(s) dans ${locales.length} catalogues (${written} écritures)\x1b[0m`,
+  );
+}
+
+// Exécuté directement (et non importé par un test) → on lance.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

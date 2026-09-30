@@ -1,51 +1,232 @@
+/* SPDX-FileCopyrightText: 2026 Yvig Bidon */
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Thème ReView (Phase 12) — bleu nuit + cyan/magenta.
+   * Le mode SOMBRE est le mode par défaut (palette de référence : background #0B0E14,
+   * surfaces #121620, bordures #1E2433, texte #E6EBEF/#9BA3B2, primaire cyan #00F0FF,
+   * magenta #FF2095 = --accent-2). Le mode CLAIR est dérivé (mêmes teintes, luminosités
+   * inversées ; cyan/magenta assombris pour rester lisibles sur fond clair).
+   * La classe `dark` est posée sur <html> par stores/useTheme.ts.
+   * Toute couleur de l'app passe par ces tokens — statuts inclus (success/warning/info/accent-2).
+   */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /*
+     * Schéma de couleurs déclaré — il ne l'était nulle part.
+     *
+     * Deux conséquences. D'abord les contrôles natifs, les barres de défilement et le fond du
+     * canevas suivaient l'OS et non le thème choisi dans ReView. Ensuite, et surtout, les
+     * **147 figures de la documentation** : servies en `<img src="…svg">`, elles portent
+     * chacune leur variante `@media (prefers-color-scheme: dark)`, qui se résolvait contre le
+     * système. Un lecteur en thème clair dont l'OS est sombre voyait donc des pavés bleu nuit
+     * au milieu d'une page blanche. `color-scheme` se propage à l'image embarquée : la figure
+     * suit désormais le thème de l'application, sans toucher aux 147 fichiers.
+     */
+    color-scheme: light;
+    --background: 220 25% 97%;
+    --foreground: 222 30% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 30% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --popover-foreground: 222 30% 10%;
+    /*
+     * Luminosités calées sur WCAG AA (A2) : chaque teinte de statut doit tenir 4,5:1 à la
+     * fois sur --background et sur le badge `bg-X/15` qui la repose sur ce fond. Les
+     * valeurs d'origine tombaient entre 2,69 et 3,98 — le pire, --warning, était
+     * illisible. Teintes et saturations inchangées : la palette reste la même.
+     */
+    --primary: 187 100% 24%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 92%;
+    --secondary-foreground: 222 30% 12%;
+    --muted: 220 20% 92%;
+    --muted-foreground: 220 12% 42%;
+    --accent: 187 80% 92%;
+    --accent-foreground: 187 100% 22%;
+    --accent-2: 328 90% 38%;
+    --accent-2-foreground: 0 0% 100%;
+    --destructive: 3 85% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 151 90% 23%;
+    --warning: 40 95% 27%;
+    --info: 210 90% 38%;
+    /*
+     * `--border` est le trait *décoratif* : séparateurs, filets de carte, grilles. Il est
+     * posé par défaut sur tout élément par la règle `*` de @layer base, donc le remonter
+     * repeint l'application entière — il reste volontairement discret. Il valait
+     * 220 16% 87%, soit 1,37:1 sur une carte et 1,13:1 sur une surface secondaire : la
+     * séparation existait dans le DOM et pas à l'écran. Remonté au strict nécessaire pour
+     * redevenir perceptible (1,61:1 sur --card, 1,50 sur --background, 1,33 sur
+     * --secondary) sans transformer un filet en trait plein. Un séparateur purement
+     * décoratif n'est soumis à aucun seuil WCAG : ce qui doit se *lire comme un contrôle*
+     * prend `--border-strong` ci-dessous, pas ce token.
+     */
+    --border: 220 16% 81%;
+    /*
+     * `--border-strong` est la limite d'un *contrôle actionnable* (bouton `outline`,
+     * bouton à icône bordé) : même exigence que `--input`, WCAG 1.4.11, 3:1 avec la
+     * surface qui l'entoure. Il manquait — le bouton `outline` posait donc son
+     * `bg-transparent` sur `--border` à 1,37:1 et ne se lisait pas comme un bouton.
+     * Mesuré à 3,79:1 sur --card/--popover, 3,53 sur --background, 3,13 sur
+     * --secondary/--muted (cf. src/theme.a11y.test.ts).
+     *
+     * Il vaut aujourd'hui la même chose qu'`--input`, et c'est attendu : les deux
+     * répondent à la même règle sur la même palette. Deux noms distincts parce que ce
+     * sont deux familles de composants — faire évoluer le trait d'un champ sans toucher
+     * celui d'un bouton reste possible, et le test verrouille les deux séparément.
+     */
+    --border-strong: 220 16% 54%;
+    /*
+     * `--input` est la *limite d'un contrôle*, pas une décoration : WCAG 1.4.11 lui
+     * demande 3:1 avec la surface qui l'entoure, là où `--border` (séparateurs, cartes)
+     * n'est soumis à rien. Les champs de ReView n'ont pas de fond contrasté — ce trait
+     * est leur seule frontière. Il tenait 1,42:1 (220 16% 83%) : un formulaire d'admin
+     * était une zone de texte sans limite perceptible. Mesuré à 3,53:1 sur --background,
+     * 3,79 sur --card/--popover, 3,13 sur --secondary/--muted (cf. src/theme.a11y.test.ts).
+     */
+    --input: 220 16% 54%;
+    --ring: 187 100% 24%;
+    --radius: 0.625rem;
+    /* Courbes de l'éditeur d'animation caméra (Phase 17) — convention DCC X/Y/Z + focale/tilt. */
+    --curve-x: 3 80% 48%;
+    --curve-y: 145 65% 36%;
+    --curve-z: 214 85% 50%;
+    --curve-fov: 40 90% 42%;
+    --curve-roll: 300 65% 50%;
   }
 
   .dark {
-    --background: 222 84% 5%;
-    --foreground: 210 40% 98%;
-    --card: 222 84% 5%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 84% 5%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 213 27% 84%;
+    color-scheme: dark;
+    --background: 220 29% 6%;
+    --foreground: 207 22% 92%;
+    --card: 223 28% 10%;
+    --card-foreground: 207 22% 92%;
+    --popover: 223 28% 11%;
+    --popover-foreground: 207 22% 92%;
+    --primary: 184 100% 50%;
+    --primary-foreground: 220 29% 6%;
+    --secondary: 223 26% 16%;
+    --secondary-foreground: 207 22% 92%;
+    --muted: 223 27% 13%;
+    --muted-foreground: 219 13% 65%;
+    --accent: 184 70% 14%;
+    --accent-foreground: 184 100% 72%;
+    /*
+     * Sombre : ces deux teintes passaient sous 4,5:1 sur un badge posé sur --card.
+     * Leur encre passe au sombre — sur un aplat rouge ou magenta vif, le blanc ne tenait
+     * que 3,4:1 (défaut préexistant), là où l'encre sombre atteint 5,7. C'est déjà le
+     * parti pris de --primary-foreground sur le cyan.
+     */
+    --accent-2: 328 100% 59%;
+    --accent-2-foreground: 220 29% 6%;
+    --destructive: 3 100% 62%;
+    --destructive-foreground: 220 29% 6%;
+    --success: 151 100% 45%;
+    --warning: 45 100% 51%;
+    --info: 199 95% 60%;
+    /*
+     * Sombre : `--border` valait 223 26% 16%, exactement `--secondary` — soit 1,00:1, un
+     * séparateur rigoureusement invisible dès qu'il tombait sur une surface secondaire, et
+     * 1,17:1 sur une carte. Remonté au même cran de discrétion qu'en clair : 1,50:1 sur
+     * --card, 1,62 sur --background, 1,29 sur --secondary.
+     */
+    --border: 223 26% 24%;
+    /* Limite d'un contrôle actionnable, 3:1 (cf. :root) : 3,62:1 sur --card, 3,10 sur --secondary. */
+    --border-strong: 223 26% 49%;
+    /* Même règle qu'en clair : 3,88:1 sur --background, 3,54 sur --popover (était 1,41:1). */
+    --input: 223 26% 49%;
+    --ring: 184 100% 50%;
+    /* Courbes de l'éditeur d'animation caméra (Phase 17), teintes lisibles sur fond sombre. */
+    --curve-x: 3 100% 66%;
+    --curve-y: 145 70% 55%;
+    --curve-z: 210 100% 66%;
+    --curve-fov: 45 100% 60%;
+    --curve-roll: 300 90% 70%;
+  }
+
+  /*
+   * Échelles du design system (typographie, forme, motion) consommées par les feuilles
+   * nommées du chrome de review (`pages/review/chrome/chrome.css`). Les valeurs reprennent
+   * la rampe Tailwind déjà utilisée par les utilitaires : un `var(--text-xs)` vaut
+   * exactement ce que rend `text-xs`. Indépendantes du thème clair/sombre.
+   */
+  :root {
+    --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+    --font-mono:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+    /*
+     * Plancher typographique : le bas de la rampe vaut 11 px en densité normale et ne
+     * descend pas sous 10 px en densité compacte (0.6875rem × 15 px = 10,3 px). Il valait
+     * 0.625rem, soit 10 px — et 9,06 px en compact, sur des libellés de champ, donc de
+     * l'information nécessaire et non décorative. Le plancher est vérifié par
+     * `src/theme.a11y.test.ts` : baisser une valeur de la rampe y échoue.
+     */
+    --text-2xs: 0.6875rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+
+    --weight-normal: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    --tracking-wide: 0.025em;
+
+    /* Échelle de rayons : un seul scalaire `--radius` et ses dérivés (cf. tailwind.config.js). */
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-xs: 0.25rem;
+    --radius-pill: 9999px;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --overlay-blur: blur(8px);
+
+    --focus-ring: hsl(var(--ring));
+    --focus-ring-width: 2px;
+
+    --duration-fast: 150ms;
+    --ease-standard: ease;
+    --transition-colors:
+      color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard);
+
+    /*
+     * Teintes stables par utilisateur — mêmes valeurs que `lib/userColor.ts` (USER_COLORS),
+     * exposées en CSS pour l'encre d'annotation et les pastilles de présence.
+     */
+    --user-1: #ef4444;
+    --user-2: #f97316;
+    --user-3: #f59e0b;
+    --user-4: #84cc16;
+    --user-5: #22c55e;
+    --user-6: #14b8a6;
+    --user-7: #06b6d4;
+    --user-8: #3b82f6;
+    --user-9: #6366f1;
+    --user-10: #8b5cf6;
+    --user-11: #a855f7;
+    --user-12: #ec4899;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --duration-fast: 0ms;
+    }
   }
 }
 
@@ -53,15 +234,114 @@
   * {
     @apply border-border;
   }
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
   }
+  /*
+   * Densité d'affichage (42.A1 — №74) : l'échelle globale de l'UI passe par la taille de
+   * police racine. Comme tout est dimensionné en rem (espacements Tailwind inclus), réduire
+   * `font-size` sur <html> resserre l'ensemble de l'interface sans toucher chaque composant.
+   * L'attribut `data-density` est posé par stores/useDensity.ts.
+   */
+  html {
+    font-size: 16px;
+  }
+  /*
+   * 15 px et non 14,5 : la densité compacte reste un choix de l'utilisateur, mais elle ne
+   * doit pas faire passer le bas de la rampe sous 10 px (14,5 × 0.6875 = 9,97).
+   */
+  html[data-density='compact'] {
+    font-size: 15px;
+  }
   body {
     @apply bg-background text-foreground;
   }
+  /*
+   * Anneau de focus clavier (A2). Six fichiers seulement le déclaraient, pour près de
+   * trois cents boutons : au clavier, on ne savait pas où l'on était. Posé globalement à
+   * partir des tokens, il couvre tout élément focusable sans déclaration par composant.
+   * Les primitives qui gèrent déjà leur focus posent `focus-visible:outline-none` et
+   * neutralisent donc cette règle — pas de double anneau.
+   */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /*
+   * État enfoncé (`:active`) des contrôles.
+   *
+   * L'application n'en avait aucun : un clic maintenu ne produisait aucun retour, et sur
+   * une action lente (upload, transcodage) rien ne distinguait « le clic est parti » de
+   * « le clic n'a pas pris ». Le survol ne le dit pas — il est déjà là avant le clic, et
+   * n'existe pas au tactile.
+   *
+   * Posé ici en une fois, et non variante par variante, parce que l'effet est
+   * *géométrique* : il ne dépend ni du thème, ni de la couleur de fond du contrôle, ni
+   * d'un token. Les primitives ajoutent par-dessus l'assombrissement de leur propre aplat
+   * (`active:bg-…` dans leur `cva`), qui, lui, dépend de la variante.
+   *
+   * `:disabled` est exclu : un bouton inerte ne s'enfonce pas. Le mouvement est d'un pixel
+   * — assez pour être perçu, trop peu pour déplacer la mise en page (le `transform` ne
+   * reflue pas) ou gêner en `prefers-reduced-motion`, où il reste instantané faute de
+   * transition déclarée sur `transform`.
+   */
+  .ui-pressable:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  /*
+   * Étiquette de section — « SHOTS », « PIPELINE », « RACCOURCIS ».
+   *
+   * Les capitales étaient recopiées à la main dans 45 endroits (`uppercase tracking-wide`),
+   * avec assez de variantes pour qu'on ne sache plus si c'était une convention ou une
+   * habitude. C'en est une, et on la garde : dans un outil de production, l'étiquette en
+   * capitales sépare le titre d'un regroupement du contenu qu'il regroupe sans consommer
+   * une ligne de titre. Elle est nommée ici pour être décidée en un seul endroit.
+   *
+   * La classe ne porte QUE la décision de style — casse et interlettrage. Taille, graisse
+   * et couleur restent au site d'appel : ce sont elles qui font réellement tenir la
+   * hiérarchie, et elles doivent la faire tenir *seules*. Trois des quatorze langues de
+   * ReView n'ont pas de casse (zh-Hans, ja, ko) : `text-transform` n'y produit rien, et
+   * une étiquette qui ne se distinguerait que par ses capitales y disparaîtrait dans le
+   * texte courant. C'est la raison pour laquelle on ne renforce pas la convention au-delà
+   * de ce trait, et qu'aucune information ne repose sur lui.
+   *
+   * Les langues à casse particulière sont, elles, correctement servies : `text-transform`
+   * suit l'attribut `lang` du document — posé par `v2/i18n` à chaque changement de langue —
+   * de sorte que le turc obtient bien « İ » et non « I » sur un « i » initial.
+   *
+   * Ce qui n'est PAS une étiquette de section ne prend pas cette classe : une donnée
+   * technique déjà écrite en capitales (extension de fichier, « ACES ») garde son
+   * `uppercase` local — elle n'est pas traduite, et sa casse n'est pas un choix de style.
+   */
+  .section-label {
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+  }
+}
+
+.mv-hotspot {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: 2px solid #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 @layer utilities {
@@ -74,5 +354,336 @@
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors;
+  }
+
+  /* Placeholder pour les zones contentEditable (éditeur de documentation) */
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    @apply text-muted-foreground;
+  }
+
+  /* Rendu de la documentation (texte riche) */
+  .prose-doc h2 {
+    @apply mb-2 mt-4 text-lg font-semibold;
+  }
+  .prose-doc h3 {
+    @apply mb-1.5 mt-3 text-base font-semibold;
+  }
+  .prose-doc p {
+    @apply my-2 leading-relaxed;
+  }
+  .prose-doc ul {
+    @apply my-2 list-disc pl-6;
+  }
+  .prose-doc ol {
+    @apply my-2 list-decimal pl-6;
+  }
+  .prose-doc a {
+    @apply text-primary underline;
+  }
+  .prose-doc blockquote {
+    @apply my-2 border-l-2 border-border pl-3 text-muted-foreground;
+  }
+  /* Extensions markdown (page /docs — documentation produit) */
+  .prose-doc h1 {
+    @apply mb-3 mt-1 text-xl font-bold;
+  }
+  .prose-doc code {
+    @apply rounded bg-secondary px-1 py-0.5 font-mono text-[0.85em];
+  }
+  .prose-doc pre {
+    @apply my-3 overflow-x-auto rounded-md border border-border bg-secondary p-3;
+  }
+  .prose-doc pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-doc table {
+    @apply my-3 w-full border-collapse text-left;
+  }
+  .prose-doc th {
+    @apply border-b border-border px-2 py-1.5 font-semibold;
+  }
+  .prose-doc td {
+    @apply border-b border-border/50 px-2 py-1.5 align-top;
+  }
+  .prose-doc hr {
+    @apply my-4 border-border;
+  }
+  .prose-doc img {
+    @apply my-3 max-w-full rounded-md border border-border;
+  }
+
+  /*
+   * Rendu d'une fiche d'entité (brief).
+   *
+   * La classe existait, ses règles non : un brief rendait ses listes sans puces et ses
+   * tableaux sans colonnes. Elle reprend `.prose-doc` en plus dense — une fiche se lit dans
+   * une fenêtre, pas sur une page — et ajoute ce que la documentation n'a pas : une image
+   * qu'on pose où on veut dans le fil.
+   */
+  .prose-note h1,
+  .prose-note h2,
+  .prose-note h3 {
+    @apply mb-1.5 mt-3 font-semibold;
+  }
+  .prose-note h1 {
+    @apply text-base;
+  }
+  .prose-note h2,
+  .prose-note h3 {
+    @apply text-sm;
+  }
+  .prose-note p {
+    @apply my-2;
+  }
+  .prose-note ul {
+    @apply my-2 list-disc pl-5;
+  }
+  .prose-note ol {
+    @apply my-2 list-decimal pl-5;
+  }
+  .prose-note li {
+    @apply my-0.5;
+  }
+  .prose-note a {
+    @apply text-primary underline;
+  }
+  .prose-note blockquote {
+    @apply my-2 border-l-2 border-border pl-3 text-muted-foreground;
+  }
+  .prose-note code {
+    @apply rounded bg-secondary px-1 py-0.5 font-mono text-[0.85em];
+  }
+  .prose-note pre {
+    @apply my-2 overflow-x-auto rounded-md border border-border bg-secondary p-2.5;
+  }
+  .prose-note pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-note table {
+    @apply my-2 w-full border-collapse text-left;
+  }
+  .prose-note th {
+    @apply border-b border-border px-2 py-1 font-semibold;
+  }
+  .prose-note td {
+    @apply border-b border-border/50 px-2 py-1 align-top;
+  }
+  .prose-note hr {
+    @apply my-3 border-border;
+  }
+  .prose-note img {
+    @apply my-2 max-w-full rounded-md border border-border;
+  }
+  /* Le texte revient sous une image flottée, jamais à côté du bloc suivant. */
+  .prose-note::after {
+    content: '';
+    display: block;
+    clear: both;
+  }
+  .prose-note img[data-align='center'] {
+    @apply mx-auto block;
+  }
+  .prose-note img[data-align='left'] {
+    @apply float-left mb-2 mr-3;
+  }
+  .prose-note img[data-align='right'] {
+    @apply float-right mb-2 ml-3;
+  }
+  /* Image dont l'URL de lecture n'est pas encore là : un cadre, pas une image cassée. */
+  .prose-note [data-note-image-pending] {
+    @apply my-2 block h-32 w-full rounded-md border border-dashed border-border bg-secondary/30;
+  }
+
+  /*
+   * Page /docs — la documentation produit se lit en continu, là où `.prose-doc` sert aussi
+   * aux commentaires et à l'éditeur de texte riche, qui eux doivent rester denses. Ces
+   * règles se posent par-dessus, sur le seul article de documentation : interligne plus
+   * large, titres qui découpent visiblement la page en chapitres, tableaux et blocs de code
+   * présentés comme des objets à part entière.
+   */
+  .doc-article {
+    @apply text-[0.9375rem] leading-7;
+  }
+  .doc-article > :first-child {
+    @apply mt-0;
+  }
+  /*
+   * Titres. Le contrat d'écriture (`documentation-style.md`) fait du chapitre `##` l'unité
+   * de navigation : il doit se voir de loin dans la colonne, sans quoi le sommaire latéral
+   * annonce un découpage que la page ne montre pas. La marge de défilement les décolle du
+   * bord haut quand on y arrive par une ancre ou par la recherche.
+   */
+  .doc-article h2 {
+    @apply mb-3 mt-10 scroll-mt-8 border-b border-border pb-2 text-xl font-semibold tracking-tight text-foreground;
+  }
+  .doc-article h3 {
+    @apply mb-2 mt-7 scroll-mt-8 text-base font-semibold text-foreground;
+  }
+  /* `####` est un dernier recours dans le contrat d'écriture : il se lit comme une étiquette,
+     pas comme un chapitre — sinon il concurrence le `###` au-dessus de lui. */
+  .doc-article h4 {
+    @apply mb-1 mt-5 scroll-mt-8 text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  .doc-article p {
+    @apply my-4 leading-7;
+  }
+  .doc-article ul,
+  .doc-article ol {
+    @apply my-4 space-y-1.5;
+  }
+  /* Une liste imbriquée est un détail de la puce du dessus, pas un nouveau bloc. */
+  .doc-article li > ul,
+  .doc-article li > ol {
+    @apply my-1.5;
+  }
+  .doc-article li::marker {
+    @apply text-muted-foreground;
+  }
+  /* Citation simple — l'encart typé `> [!NOTE]`, lui, a ses propres règles plus bas. */
+  .doc-article blockquote {
+    @apply my-4 border-l-2 border-border py-0.5 pl-4 italic text-muted-foreground;
+  }
+  .doc-article kbd {
+    @apply rounded border border-border-strong bg-secondary px-1.5 py-0.5 font-mono text-2xs text-foreground;
+  }
+  .doc-article a {
+    @apply font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:decoration-primary;
+  }
+  /* Le lien sortant s'annonce : on ne clique pas de la même façon vers l'extérieur. */
+  .doc-article a[data-external]::after {
+    content: '↗';
+    @apply ml-0.5 align-super text-2xs no-underline;
+  }
+  .doc-article hr {
+    @apply my-8 border-border;
+  }
+
+  /*
+   * Tableaux : cadre défilant, en-tête posé sur une surface, dernière ligne sans trait. Le
+   * contrat d'écriture veut que la première colonne soit « la clé que le lecteur parcourt » :
+   * elle est donc posée sur la couleur du texte, le reste sur le gris de lecture.
+   */
+  .doc-article .doc-table {
+    @apply my-5 overflow-x-auto rounded-lg border border-border bg-card;
+  }
+  .doc-article table {
+    @apply my-0 w-full border-collapse text-left text-sm;
+  }
+  .doc-article thead {
+    @apply bg-secondary;
+  }
+  .doc-article th {
+    @apply border-b border-border px-3 py-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .doc-article td {
+    @apply border-b border-border/60 px-3 py-2 align-top;
+  }
+  .doc-article tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .doc-article tbody tr {
+    @apply transition-colors hover:bg-secondary/40;
+  }
+  .doc-article tbody td:first-child {
+    @apply font-medium text-foreground;
+  }
+
+  /* Blocs de code : le langage annoncé au-dessus, sur une pastille. */
+  .doc-article pre {
+    @apply my-5 rounded-lg border border-border bg-secondary/70 p-4 font-mono text-xs leading-6;
+  }
+  .doc-article pre[data-lang]::before {
+    content: attr(data-lang);
+    @apply mb-3 inline-block rounded-full border border-border bg-background px-2 py-0.5 font-sans text-2xs uppercase tracking-wider text-muted-foreground;
+  }
+  .doc-article code {
+    @apply rounded border border-border/60 bg-secondary px-1.5 py-0.5 text-[0.85em] text-foreground;
+  }
+  .doc-article pre code {
+    @apply block border-0 bg-transparent p-0 text-[1em];
+  }
+
+  /*
+   * Figures : l'image et sa légende forment un bloc, la légende sous l'image. Le contrat de
+   * figure veut une carte autonome (fond dessiné dans le SVG) : le cadre ne fait que la
+   * poser dans la colonne, sans lui ajouter de couleur.
+   */
+  .doc-article figure {
+    @apply my-6;
+  }
+  .doc-article figure img {
+    @apply my-0 w-full rounded-lg border border-border;
+  }
+  .doc-article figcaption {
+    @apply mx-auto mt-2 max-w-prose text-center text-xs italic leading-5 text-muted-foreground;
+  }
+
+  /*
+   * Encarts `> [!NOTE]` (syntaxe des alertes GitHub) : un filet coloré à gauche et un
+   * libellé, dans la langue du lecteur — le markdown, lui, reste en anglais.
+   */
+  .doc-article .doc-callout {
+    @apply my-5 rounded-lg border border-l-4 border-border bg-secondary/40 px-4 py-3;
+  }
+  .doc-article .doc-callout > :first-child {
+    @apply mt-0;
+  }
+  .doc-article .doc-callout > :last-child {
+    @apply mb-0;
+  }
+  .doc-article .doc-callout-label {
+    @apply mb-1 mt-0 text-2xs font-semibold uppercase tracking-wide;
+  }
+  /*
+   * Cinq encarts, cinq teintes. Le fond est la teinte du filet à très faible opacité : les
+   * cinq se distinguent d'un coup d'œil sans qu'aucun devienne un pavé de couleur — le
+   * contrat d'écriture n'en admet qu'un par chapitre, il doit se voir, pas crier.
+   */
+  .doc-article .doc-callout[data-callout='note'] {
+    @apply border-l-info bg-info/5;
+  }
+  .doc-article .doc-callout[data-callout='note'] .doc-callout-label {
+    @apply text-info;
+  }
+  .doc-article .doc-callout[data-callout='tip'] {
+    @apply border-l-success bg-success/5;
+  }
+  .doc-article .doc-callout[data-callout='tip'] .doc-callout-label {
+    @apply text-success;
+  }
+  .doc-article .doc-callout[data-callout='important'] {
+    @apply border-l-primary bg-primary/5;
+  }
+  .doc-article .doc-callout[data-callout='important'] .doc-callout-label {
+    @apply text-primary;
+  }
+  .doc-article .doc-callout[data-callout='warning'] {
+    @apply border-l-warning bg-warning/5;
+  }
+  .doc-article .doc-callout[data-callout='warning'] .doc-callout-label {
+    @apply text-warning;
+  }
+  .doc-article .doc-callout[data-callout='caution'] {
+    @apply border-l-destructive bg-destructive/5;
+  }
+  .doc-article .doc-callout[data-callout='caution'] .doc-callout-label {
+    @apply text-destructive;
+  }
+
+  /*
+   * Surlignage de la recherche — dans le corps de la page (`<mark>` posé par
+   * `docsHighlight`) comme dans les libellés du sommaire. Même classe des deux côtés : ce
+   * qu'on cherche se reconnaît au même signe où qu'il apparaisse.
+   *
+   * `mark` a un style natif (fond jaune, texte noir) qui ignore le thème : il est remplacé,
+   * pas complété. La première occurrence de la page est marquée plus franchement — c'est
+   * celle que la page rejoint d'elle-même.
+   */
+  .doc-hit {
+    @apply -mx-0.5 rounded-[3px] bg-primary/25 px-0.5 font-medium text-foreground;
+  }
+  .doc-hit[data-doc-hit='first'] {
+    @apply bg-primary/40 ring-1 ring-primary/50;
   }
 }

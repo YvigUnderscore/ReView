@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 356" width="800" height="356" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">How this documentation is organised</title>
+  <desc id="fig-desc">Six sections branch off the documentation root, each written for one audience: getting started for the operator, the user guide for artists and supervisors, the admin guide for the studio administrator, the API section for integrators, infrastructure for ops and development for contributors.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="356" rx="10"/>
+
+  <rect class="panel-a" x="190" y="20" width="420" height="46" rx="9"/>
+  <text class="t" x="400" y="42" text-anchor="middle">DOCUMENTATION/</text>
+  <text class="d" x="400" y="58" text-anchor="middle">committed with the code · served in-app at /docs · read on GitHub</text>
+
+  <path class="conn" d="M400 66 L400 84"/>
+  <path class="conn" d="M145 84 L655 84"/>
+  <path class="conn" d="M145 84 L145 108" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 84 L400 108" marker-end="url(#arrow)"/>
+  <path class="conn" d="M655 84 L655 108" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="30" y="112" width="230" height="86" rx="9"/>
+  <text class="l" x="46" y="134">Getting started</text>
+  <text class="a" x="244" y="134" text-anchor="end">5 pages</text>
+  <text class="d" x="46" y="154">for whoever runs the instance</text>
+  <text class="d" x="46" y="172">feature tour · installation · first run</text>
+  <text class="d" x="46" y="188">docker stack · updating</text>
+
+  <rect class="panel" x="285" y="112" width="230" height="86" rx="9"/>
+  <text class="l" x="301" y="134">User guide</text>
+  <text class="a" x="499" y="134" text-anchor="end">24 pages</text>
+  <text class="d" x="301" y="154">for artists and supervisors</text>
+  <text class="d" x="301" y="172">the four viewers · annotations</text>
+  <text class="d" x="301" y="188">playlists · kanban · boards · sharing</text>
+
+  <rect class="panel" x="540" y="112" width="230" height="86" rx="9"/>
+  <text class="l" x="556" y="134">Admin guide</text>
+  <text class="a" x="754" y="134" text-anchor="end">19 pages</text>
+  <text class="d" x="556" y="154">for the studio administrator</text>
+  <text class="d" x="556" y="172">users · pipeline · transcoding</text>
+  <text class="d" x="556" y="188">colour · distribution · ShotGrid</text>
+
+  <path class="conn" d="M145 198 L145 222" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 198 L400 222" marker-end="url(#arrow)"/>
+  <path class="conn" d="M655 198 L655 222" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="30" y="226" width="230" height="86" rx="9"/>
+  <text class="l" x="46" y="248">API</text>
+  <text class="a" x="244" y="248" text-anchor="end">5 pages</text>
+  <text class="d" x="46" y="268">for integrators and pipeline TDs</text>
+  <text class="d" x="46" y="286">authentication · domains</text>
+  <text class="d" x="46" y="302">public v1 · Python client</text>
+
+  <rect class="panel" x="285" y="226" width="230" height="86" rx="9"/>
+  <text class="l" x="301" y="248">Infrastructure</text>
+  <text class="a" x="499" y="248" text-anchor="end">8 pages</text>
+  <text class="d" x="301" y="268">for whoever keeps it running</text>
+  <text class="d" x="301" y="286">architecture · storage · workers</text>
+  <text class="d" x="301" y="302">delivery · monitoring · backups</text>
+
+  <rect class="panel" x="540" y="226" width="230" height="86" rx="9"/>
+  <text class="l" x="556" y="248">Development</text>
+  <text class="a" x="754" y="248" text-anchor="end">7 pages</text>
+  <text class="d" x="556" y="268">for contributors</text>
+  <text class="d" x="556" y="286">code structure · conventions</text>
+  <text class="d" x="556" y="302">validation suite · i18n · licensing</text>
+
+  <text class="d" x="400" y="336" text-anchor="middle">assets/ holds the screenshots and figures · CHANGELOG.md feeds the in-app “What’s new”</text>
+</svg>

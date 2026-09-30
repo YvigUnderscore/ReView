@@ -1,0 +1,65 @@
+# Alertmanager — minimal example, to copy and adapt.
+#
+# Optional: without Alertmanager, the rules in monitoring/rules/alerts.yml are still
+# evaluated and visible (Prometheus UI, "Active alerts" panel of the Grafana dashboard);
+# they just are not sent to anyone.
+#
+# To enable it:
+#   1. uncomment the `alerting:` block in monitoring/prometheus.yml;
+#   2. add the service to the `monitoring` profile of docker-compose.yml:
+#
+#        alertmanager:
+#          image: prom/alertmanager:v0.28.1
+#          profiles: ["monitoring"]
+#          volumes:
+#            - ./monitoring/alertmanager:/etc/alertmanager:ro
+#            - alertmanager_data:/alertmanager
+#          logging: *default-logging
+#          restart: always
+#
+#      (plus `alertmanager_data:` in the top-level `volumes:` section);
+#   3. fill in a real SMTP relay below — the studio's, the same one ReView uses;
+#   4. write the relay password to `monitoring/alertmanager/smtp_password`
+#      (a single word, no trailing newline: `printf %s 'thepassword' > …`).
+#      The file is git-ignored; it reaches the container only through the volume above,
+#      and Alertmanager reads it at startup.
+#
+# No host port: Alertmanager does not need to be reachable from outside, Prometheus
+# reaches it over the compose network.
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.example.tld:587'
+  smtp_from: 'review-alerts@example.tld'
+  smtp_auth_username: 'review-alerts@example.tld'
+  # The password is not written here but read from a file mounted next to this config:
+  # a clear-text password would live in the repository, and secret scanners flag it as a
+  # leak — even in an example.
+  smtp_auth_password_file: '/etc/alertmanager/smtp_password'
+
+route:
+  receiver: studio-ops
+  # One incident often raises several alerts (dead worker → growing queue): group them
+  # into a single message.
+  group_by: ['alertname', 'job']
+  group_wait: 1m
+  group_interval: 10m
+  # Reminder every four hours until resolved — often enough not to be forgotten, rarely
+  # enough not to be filtered out as noise.
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: studio-ops
+      repeat_interval: 1h
+
+receivers:
+  - name: studio-ops
+    email_configs:
+      - to: 'ops@example.tld'
+        send_resolved: true
+
+# Do not page for a growing queue when the API is already down: the cause is known.
+inhibit_rules:
+  - source_matchers: ['alertname="ReviewBackendDown"']
+    target_matchers: ['severity="warning"']
+    equal: ['instance_role']

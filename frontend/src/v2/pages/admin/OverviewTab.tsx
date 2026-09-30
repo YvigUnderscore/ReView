@@ -1,0 +1,108 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '../../../lib/apiClient';
+import { qk } from '../../lib/query';
+import { Button } from '../../components/ui/button';
+import { SkeletonRows } from '../../components/ui/skeleton';
+import { QueryState } from '../../components/ui/query-state';
+import { DistList, Metric, Panel, ServiceHealth } from './AdminPrimitives';
+import { fmtBytes, type Stats, type System } from './adminShared';
+import { useT } from '../../i18n';
+
+export default function OverviewTab() {
+  const t = useT();
+  const statsQ = useQuery({ queryKey: qk.admin('stats'), queryFn: () => api.get<Stats>('/api/admin/stats') });
+  const systemQ = useQuery({
+    queryKey: qk.admin('system'),
+    queryFn: () => api.get<System>('/api/admin/system'),
+  });
+  const stats = statsQ.data ?? null;
+  const system = systemQ.data ?? null;
+
+  const retryJobs = async () => {
+    try {
+      const { retried } = await api.post<{ retried: number }>('/api/admin/jobs/retry');
+      toast.success(t('jobs.retriedCount', { count: retried }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('common.error.retry'));
+    }
+  };
+
+  if (!stats) return <QueryState query={statsQ} skeleton={<SkeletonRows count={4} />} />;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+        <Metric
+          label={t('admin.tab.users')}
+          value={stats.users.total}
+          sub={t('admin.onlineCount', { count: stats.users.online })}
+          to="/admin/users"
+        />
+        <Metric label={t('nav.projects')} value={stats.pipeline.projects} to="/admin/projects" />
+        <Metric label={t('sequences.title')} value={stats.pipeline.sequences} to="/admin/projects" />
+        <Metric label={t('shots.title')} value={stats.pipeline.shots} to="/admin/projects" />
+        <Metric label="Assets" value={stats.pipeline.assets} to="/admin/projects" />
+        <Metric label="Versions" value={stats.pipeline.versions} to="/admin/versions" />
+        <Metric label={t('trash.group.media')} value={stats.media.count} to="/reviews" />
+        <Metric label={t('admin.tab.comments')} value={stats.comments} to="/admin/comments" />
+        <Metric label={t('storage.title')} value={fmtBytes(stats.media.storageBytes)} to="/admin/storage" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel title={t('overview.mediaByType')}>
+          <DistList data={stats.media.byKind} />
+        </Panel>
+        <Panel title={t('overview.mediaByStatus')}>
+          <DistList data={stats.media.byStatus} />
+        </Panel>
+        <Panel title={t('overview.jobQueues')}>
+          {stats.jobs ? (
+            <>
+              <DistList data={stats.jobs} />
+              {(stats.jobs.failed ?? 0) > 0 && (
+                <Button variant="outline" size="sm" className="mt-2" onClick={retryJobs}>
+                  <RefreshCw size={13} /> {t('jobs.retryFailed')}
+                </Button>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t('jobs.queueUnavailable')}</p>
+          )}
+        </Panel>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title={t('admin.topStorage')}>
+          <div className="space-y-1.5">
+            {stats.topStorageUsers.map((u) => (
+              <div key={u.id} className="flex items-center justify-between text-sm">
+                <Link to={`/admin/users/${u.id}`} className="truncate hover:underline">
+                  {u.name}
+                </Link>
+                <span className="text-muted-foreground">
+                  {fmtBytes(u.storageUsed)}
+                  {u.storageLimit ? ` / ${fmtBytes(u.storageLimit)}` : ''}
+                </span>
+              </div>
+            ))}
+            {stats.topStorageUsers.length === 0 && (
+              <p className="text-xs text-muted-foreground">{t('common.noData')}</p>
+            )}
+          </div>
+        </Panel>
+        <Panel title={t('overview.serviceHealth')}>
+          {system ? (
+            <ServiceHealth services={system.services} />
+          ) : (
+            <QueryState query={systemQ} skeleton={<SkeletonRows count={2} />} compact />
+          )}
+        </Panel>
+      </div>
+    </div>
+  );
+}

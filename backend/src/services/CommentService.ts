@@ -1,0 +1,695 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { CommentState, Prisma, Role } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { sanitizeHtml } from '../lib/sanitize';
+import { emitToProject } from './SocketService';
+import { notify, sendDiscord } from './NotificationService';
+import { toPublicUser, toPublicUserOrDeleted } from '../lib/userView';
+import { storage } from './StorageService';
+import * as ReviewReferenceService from './ReviewReferenceService';
+import { notifyWatchers } from './WatchService';
+import { publish as publishApiEvent } from './ApiEventService';
+import { assertProjectWritable } from '../lib/projectGuard';
+import { badRequest, forbidden } from '../lib/errors';
+import { parseAnnotation, parseCameraState, parseGuestAnnotation } from '../lib/commentPayload';
+import { assertSplatEditBlobs } from '../lib/commentSplatEdit';
+import {
+  attachmentKeys,
+  filterAttachments,
+  orphanedKeys,
+  ownAttachmentPrefix,
+  shotgridAttachmentPrefix,
+  type AttachmentRef,
+} from '../lib/commentAttachments';
+import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
+import { enqueuePush } from './shotgrid/ShotgridPushService';
+import { assertAssignable } from './EntityAssigneeService';
+
+/**
+ * Logique métier des commentaires de review (fil, enrichissement auteur/pièces jointes,
+ * réactions, notifications). L'accès projet (RBAC) est asserté dans la route ; ces
+ * fonctions reçoivent le projectId déjà résolu et vérifié (10.D8).
+ */
+
+type SessionUser = { id: number; role: Role };
+
+const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
+
+const userSelect = {
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    firstName: true,
+    lastName: true,
+    username: true,
+    avatarKey: true,
+  },
+} as const;
+
+const commentInclude = {
+  author: userSelect,
+  resolvedBy: userSelect,
+  reactions: { select: { id: true, emoji: true, userId: true } },
+} as const;
+
+// Remplace l'auteur brut par une vue publique (displayName, initials, avatarUrl présigné).
+type RawAuthor = {
+  id: number;
+  name: string | null;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+  avatarKey: string | null;
+};
+type RawAttachment = { key: string; name?: string; contentType?: string };
+interface RawComment {
+  author: RawAuthor;
+  /** Nom de qui a écrit sans compte ici : invité, ou intervenant venu de ShotGrid. */
+  guestName?: string | null;
+  resolvedBy?: RawAuthor | null;
+  replies?: RawComment[];
+  attachments?: unknown;
+  [k: string]: unknown;
+}
+
+// Résout les pièces jointes (clés MinIO) en URLs présignées affichables.
+// Le `Content-Type` de la réponse est imposé : le type stocké vient du navigateur au moment
+// du PUT présigné (que la signature ne contraint pas), un fichier déposé en `text/html`
+// s'exécuterait donc sur l'origine de l'application au moment où quelqu'un ouvre le lien.
+// On repart du type enregistré à la création du commentaire, lui-même filtré par la route.
+async function resolveAttachments(attachments: unknown): Promise<unknown> {
+  if (!Array.isArray(attachments)) return attachments ?? undefined;
+  return Promise.all(
+    (attachments as RawAttachment[]).map(async (a) => ({
+      ...a,
+      url: a.key ? await storage.getPresignedGetUrl(a.key, 3600, a.contentType).catch(() => null) : null,
+    })),
+  );
+}
+
+/**
+ * Pièces jointes prêtes pour une surface PUBLIQUE (portail client) : l'URL présignée, le
+ * nom et le type — jamais la clé MinIO. Le fil client affiche enfin les images que le
+ * studio lui joint ; il n'a pas à connaître l'emplacement de l'objet, qui servirait à en
+ * signer d'autres.
+ */
+export async function publicAttachments(
+  attachments: unknown,
+): Promise<{ name?: string; contentType?: string; url: string | null }[]> {
+  if (!Array.isArray(attachments)) return [];
+  return Promise.all(
+    (attachments as RawAttachment[]).map(async (a) => ({
+      name: a.name,
+      contentType: a.contentType,
+      url: a.key ? await storage.getPresignedGetUrl(a.key, 3600, a.contentType).catch(() => null) : null,
+    })),
+  );
+}
+
+async function enrichComment(c: RawComment): Promise<Record<string, unknown>> {
+  return {
+    ...c,
+    // L'auteur peut être `null` : la relation est en SetNull, un compte supprimé laisse
+    // ses commentaires derrière lui. Le déréférencer cassait tout le fil en 500.
+    // `guestName` départage un compte supprimé d'une personne qui n'en a jamais eu.
+    author: await toPublicUserOrDeleted(c.author, c.guestName),
+    resolvedBy: c.resolvedBy ? await toPublicUser(c.resolvedBy) : null,
+    attachments: await resolveAttachments(c.attachments),
+    replies: c.replies ? await Promise.all(c.replies.map(enrichComment)) : undefined,
+  };
+}
+const asRawComment = (c: unknown) => c as RawComment;
+
+/**
+ * Fil de commentaires (racines paginées + réponses imbriquées) d'un média, enrichi.
+ *
+ * Les retours écrits depuis un montage restent chez lui : ils n'apparaissent ici qu'une
+ * fois renvoyés explicitement (Phase 46). Un montage se relit plan par plan et produit
+ * beaucoup de notes de coupe ; les déverser d'office dans la review de l'artiste noierait
+ * les retours qui lui sont adressés.
+ */
+export async function listThread(
+  mediaObjectId: number,
+  p: PaginationParams,
+  viewerRole?: Role,
+): Promise<Paginated<unknown>> {
+  // Un CLIENT ne voit que ce qui lui est explicitement destiné, ici comme partout ailleurs
+  // (partage public, recherche, export). C'est la seule lecture du fil qui l'omettait :
+  // un client membre du projet lisait donc toutes les notes internes depuis l'application.
+  const clientScope = viewerRole === Role.CLIENT ? { isVisibleToClient: true } : {};
+  const where = {
+    mediaObjectId,
+    parentId: null,
+    ...clientScope,
+    OR: [{ timelineId: null }, { sharedToShot: true }],
+  };
+  const [comments, total] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }],
+      ...pageArgs(p),
+      include: {
+        ...commentInclude,
+        replies: {
+          where: clientScope,
+          orderBy: { createdAt: 'asc' },
+          include: commentInclude,
+        },
+      },
+    }),
+    prisma.comment.count({ where }),
+  ]);
+  const items = await Promise.all(comments.map((c) => enrichComment(asRawComment(c))));
+  return paginate(items, total, p);
+}
+
+/**
+ * Fil d'un montage (Phase 46) : les retours posés sur le film, dans son ordre à lui.
+ *
+ * L'ordre est celui de `timelineTime` — la position dans le montage entier — et non celui
+ * du timecode de chaque plan : sur une seule timeline, deux retours de plans différents
+ * n'ont de sens l'un par rapport à l'autre que sur cette échelle.
+ */
+export async function listMontage(timelineId: number, p: PaginationParams): Promise<Paginated<unknown>> {
+  const where = { timelineId, parentId: null };
+  const [comments, total] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: [{ timelineTime: 'asc' }, { createdAt: 'asc' }],
+      ...pageArgs(p),
+      include: { ...commentInclude, replies: { orderBy: { createdAt: 'asc' }, include: commentInclude } },
+    }),
+    prisma.comment.count({ where }),
+  ]);
+  const items = await Promise.all(comments.map((c) => enrichComment(asRawComment(c))));
+  return paginate(items, total, p);
+}
+
+/** URL présignée PUT pour une image jointe au fil. */
+export async function presignAttachment(userId: number, filename: string, contentType: string) {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const key = `comments/attachments/${userId}/${Date.now()}-${safe}`;
+  const url = await storage.getPresignedPutUrl(key, contentType, 900);
+  return { url, key };
+}
+
+/** Jetons `@xxx` d'un texte (mentions 32.B) — dédoublonnés, en minuscules. */
+export function extractMentionTokens(content: string): string[] {
+  const tokens = [...content.matchAll(/(^|[\s([{.,;:!?'"«»])@([a-zA-Z0-9._-]+)/g)].map((m) =>
+    m[2]!.toLowerCase(),
+  );
+  return [...new Set(tokens)];
+}
+
+/**
+ * Notifie les membres du projet mentionnés par `@username` (ou `@partie-locale` de
+ * l'email pour les comptes sans pseudo). L'auteur du commentaire est exclu.
+ */
+async function notifyMentions(
+  actorId: number,
+  projectId: number,
+  mediaObjectId: number,
+  content: string,
+): Promise<number[]> {
+  const tokens = extractMentionTokens(content);
+  if (tokens.length === 0) return [];
+  const members = await prisma.projectMembership.findMany({
+    where: { projectId },
+    select: { user: { select: { id: true, username: true, email: true } } },
+  });
+  const targets = members
+    .map((m) => m.user)
+    .filter((u) => {
+      if (u.id === actorId) return false;
+      const handles = [u.username, u.email.split('@')[0]].filter(Boolean) as string[];
+      return handles.some((h) => tokens.includes(h.toLowerCase()));
+    });
+  await Promise.all(
+    targets.map((u) =>
+      notify({
+        userId: u.id,
+        kind: 'mention',
+        messageKey: 'notification.mentioned',
+        projectId,
+        referenceId: mediaObjectId,
+      }),
+    ),
+  );
+  return targets.map((u) => u.id);
+}
+
+export interface CreateCommentInput {
+  mediaObjectId: number;
+  content: string;
+  timestamp?: number;
+  duration?: number;
+  annotation?: unknown;
+  cameraState?: unknown;
+  attachments?: AttachmentRef[];
+  parentId?: number;
+  /** Retour écrit depuis un montage : il lui appartient (Phase 46). */
+  timelineId?: number;
+  /** Position dans le montage entier (s) — `timestamp` reste la position dans le plan. */
+  timelineTime?: number;
+}
+
+export async function create(user: SessionUser, projectId: number, body: CreateCommentInput) {
+  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+  // Sécurité : la clé de pièce jointe est fournie par le client, elle sert ensuite à
+  // signer une URL de lecture. On n'accepte donc que le dossier que CET utilisateur a pu
+  // remplir via `presignAttachment` — le dossier global laisserait joindre (et donc lire)
+  // la pièce jointe d'un autre utilisateur, sur un autre projet.
+  const attachments = filterAttachments(body.attachments, [ownAttachmentPrefix(user.id)]);
+
+  // Une réponse doit cibler un commentaire du même média.
+  if (body.parentId) {
+    const parent = await prisma.comment.findUnique({
+      where: { id: body.parentId },
+      select: { mediaObjectId: true },
+    });
+    if (!parent || parent.mediaObjectId !== body.mediaObjectId) throw badRequest('Invalid parent comment');
+  }
+
+  // Sécurité : le montage visé est fourni par le client, et la route n'a autorisé QUE le
+  // projet du média. Recopier `timelineId` tel quel laissait écrire dans les notes de
+  // montage d'un projet voisin — refusé en lecture (403), mais ouvert en écriture, sous le
+  // nom de l'auteur. Les identifiants de montage sont de petits entiers séquentiels.
+  if (body.timelineId != null) {
+    const timeline = await prisma.timeline.findUnique({
+      where: { id: body.timelineId },
+      select: { projectId: true },
+    });
+    if (!timeline || timeline.projectId !== projectId) throw badRequest('Invalid timeline');
+  } else if (body.timelineTime != null) {
+    // Une position dans le montage sans montage ne désigne rien : on refuse plutôt que de
+    // persister une valeur orpheline.
+    throw badRequest('timelineTime requires timelineId');
+  }
+
+  // Blobs JSON relus ici et pas seulement à la route : la forme et le volume sont bornés
+  // pour tous les appelants du service (cf. `lib/commentPayload`).
+  const annotation = parseAnnotation(body.annotation);
+  const cameraState = parseCameraState(body.cameraState);
+  // Proposition d'édition de nuage (lot 14) : ses deux blobs doivent être des pièces jointes
+  // de CE commentaire, exister, et tenir sous le plafond du masque de média. La liste des
+  // pièces a déjà été filtrée par préfixe — c'est donc elle qui porte la propriété, et la
+  // purge qui la relit ramassera les blobs comme le reste.
+  await assertSplatEditBlobs(annotation, {
+    attachedKeys: attachments.map((a) => a.key),
+    stat: (key) => storage.statObject(key),
+  });
+
+  const comment = await prisma.comment.create({
+    data: {
+      mediaObjectId: body.mediaObjectId,
+      userId: user.id,
+      content: sanitizeHtml(body.content),
+      timestamp: body.timestamp ?? null,
+      duration: body.duration ?? null,
+      annotation: annotation ?? undefined,
+      cameraState: cameraState ?? undefined,
+      attachments: attachments.length > 0 ? (attachments as object) : undefined,
+      parentId: body.parentId ?? null,
+      timelineId: body.timelineId ?? null,
+      timelineTime: body.timelineTime ?? null,
+    },
+    include: commentInclude,
+  });
+  const enriched = await enrichComment(asRawComment(comment));
+  emitToProject(projectId, 'comment:new', enriched);
+  // Webhooks sortants (36.D) + journal d'événements de l'API v1.
+  publishApiEvent('comment.created', {
+    projectId,
+    entityType: 'comment',
+    entityId: comment.id,
+    actorId: user.id,
+    payload: {
+      commentId: comment.id,
+      mediaObjectId: body.mediaObjectId,
+      projectId,
+      authorId: user.id,
+      parentId: body.parentId ?? null,
+      timestamp: body.timestamp ?? null,
+    },
+  });
+
+  // 48 : le retour part aussi vers ShotGrid, en note rattachée à la version, avec la
+  // frame annotée en pièce jointe. Une réponse dans un fil reste locale — ShotGrid
+  // n'a pas de notion de fil qui corresponde au nôtre.
+  if (!body.parentId)
+    await enqueuePush(projectId, { type: 'comment', commentId: comment.id, actorId: user.id });
+
+  // Mentions @user (32.B) : notification ciblée des membres cités.
+  const mentioned = await notifyMentions(user.id, projectId, body.mediaObjectId, comment.content);
+
+  // Notifications : réponse → auteur du commentaire parent (sauf déjà notifié par
+  // mention) ; sinon ping Discord projet.
+  if (body.parentId) {
+    const parent = await prisma.comment.findUnique({
+      where: { id: body.parentId },
+      select: { userId: true },
+    });
+    if (parent?.userId && parent.userId !== user.id && !mentioned.includes(parent.userId)) {
+      // referenceId = média (et non le commentaire) → navigable vers la review côté front (10.C5).
+      await notify({
+        userId: parent.userId,
+        kind: 'reply',
+        messageKey: 'notification.reply',
+        projectId,
+        referenceId: body.mediaObjectId,
+      });
+    }
+  } else if (body.timelineId) {
+    // Retour de montage : les suiveurs du plan ne sont pas prévenus, puisque le retour
+    // n'apparaît pas encore dans leur review. C'est `share` qui les avertit.
+    void sendDiscord('chat.montageComment', { project: projectId });
+  } else {
+    // Suiveurs (32.G) : nouveau commentaire racine sur la chaîne version/shot/asset.
+    await notifyWatchers({
+      mediaObjectId: body.mediaObjectId,
+      projectId,
+      messageKey: 'notification.watchedComment',
+      exclude: [user.id, ...mentioned],
+    });
+    void sendDiscord('chat.newComment', { project: projectId });
+  }
+  return enriched;
+}
+
+/**
+ * Un invité qui écrit depuis un lien de partage : il n'a pas de compte, donc pas de droits.
+ *
+ * Il ne peut ni mentionner (le texte n'est pas parcouru pour des `@`), ni assigner, ni
+ * résoudre, ni répondre, ni joindre un fichier — sinon le lien public deviendrait une
+ * surface d'écriture sur le projet. Ce qui reste est exactement ce qu'on attend de lui :
+ * un retour daté, visible du client, sur un média qu'il a le droit de voir.
+ */
+export interface GuestActor {
+  /** Nom saisi sur la page publique. Aucun compte ne lui correspond. */
+  name: string;
+  /** Lien emprunté — tracé dans l'événement d'API, seule piste d'audit d'un invité. */
+  shareLinkId: number;
+  /**
+   * Qui a créé le lien. Prévenu même s'il ne suit pas le plan : c'est lui qui a sollicité
+   * le client, et sans cela un retour peut n'atteindre personne (les suiveurs sont un
+   * abonnement volontaire, souvent vide sur un plan livré).
+   */
+  shareOwnerId?: number | null;
+}
+
+export interface CreateGuestCommentInput {
+  mediaObjectId: number;
+  content: string;
+  timestamp?: number;
+  cameraState?: unknown;
+  /** Dessin 2D + point de surface joints au retour — schéma invité, pas celui d'un membre. */
+  annotation?: unknown;
+}
+
+export async function createGuest(guest: GuestActor, projectId: number, body: CreateGuestCommentInput) {
+  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+  // La pose caméra et le dessin arrivent d'une surface PUBLIQUE, sans compte derrière : ce
+  // sont les seuls champs de forme libre qu'un anonyme muni du lien puisse écrire en base,
+  // et ils sont ensuite rediffusés à toutes les sockets du projet. Ils passent donc par
+  // leur schéma — l'annotation par le schéma INVITÉ, plus étroit que celui d'un membre.
+  const cameraState = parseCameraState(body.cameraState);
+  const annotation = parseGuestAnnotation(body.annotation);
+  const comment = await prisma.comment.create({
+    data: {
+      mediaObjectId: body.mediaObjectId,
+      guestName: guest.name,
+      content: sanitizeHtml(body.content),
+      timestamp: body.timestamp ?? null,
+      cameraState: cameraState ?? undefined,
+      annotation: annotation ?? undefined,
+      // Un retour de client se relit forcément côté client : il reste visible du lien.
+      isVisibleToClient: true,
+    },
+    include: commentInclude,
+  });
+  const enriched = await enrichComment(asRawComment(comment));
+  emitToProject(projectId, 'comment:new', enriched);
+
+  // Webhooks sortants + journal v1 : `actorId` reste nul (aucun compte), le lien et le nom
+  // déclaré partent dans la charge utile — c'est ce qui permet de retrouver qui a parlé.
+  publishApiEvent('comment.created', {
+    projectId,
+    entityType: 'comment',
+    entityId: comment.id,
+    actorId: null,
+    payload: {
+      commentId: comment.id,
+      mediaObjectId: body.mediaObjectId,
+      projectId,
+      authorId: null,
+      guestName: guest.name,
+      shareLinkId: guest.shareLinkId,
+      parentId: null,
+      timestamp: body.timestamp ?? null,
+    },
+  });
+
+  // 48 : le retour du client part aussi en note ShotGrid, comme un retour interne.
+  await enqueuePush(projectId, { type: 'comment', commentId: comment.id, actorId: null });
+
+  const notified = await notifyWatchers({
+    mediaObjectId: body.mediaObjectId,
+    projectId,
+    messageKey: 'notification.clientComment',
+    params: { name: guest.name },
+  });
+  if (guest.shareOwnerId && !notified.includes(guest.shareOwnerId)) {
+    // Genre `watch` — le même que `notifyWatchers` : c'est lui qui donne le type `WATCH`,
+    // celui qui fait pointer la notification vers la review du média côté front. Un type
+    // inédit renverrait sur la page du projet, et le lecteur perdrait le plan dont on lui
+    // parle.
+    await notify({
+      userId: guest.shareOwnerId,
+      kind: 'watch',
+      messageKey: 'notification.clientComment',
+      params: { name: guest.name },
+      projectId,
+      referenceId: body.mediaObjectId,
+    });
+  }
+  void sendDiscord('chat.newComment', { project: projectId });
+  return enriched;
+}
+
+/**
+ * Renvoie un retour de montage sur la review du plan (Phase 46).
+ *
+ * Rien n'est recopié : le commentaire est déjà ancré au média du plan et à sa position
+ * DANS ce plan (`timestamp`), calculée au moment où il a été écrit. Le partager ne fait
+ * donc que lever le rideau — il tombe sur la frame exacte, et reste sur le montage.
+ * Une copie, elle, aurait divergé dès la première correction.
+ */
+export async function share(user: SessionUser, projectId: number, id: number) {
+  await assertProjectWritable(projectId);
+  const existing = await prisma.comment.findUnique({
+    where: { id },
+    select: { userId: true, timelineId: true, mediaObjectId: true, sharedToShot: true },
+  });
+  if (!existing) return null; // signalé « introuvable » par la route
+  if (existing.timelineId === null) throw badRequest("Ce commentaire n'appartient pas à un montage");
+  if (!isManager(user.role) && existing.userId !== user.id)
+    throw forbidden("Seul l'auteur ou un superviseur peut renvoyer un retour");
+
+  const comment = await prisma.comment.update({
+    where: { id },
+    data: { sharedToShot: true },
+    include: commentInclude,
+  });
+  const enriched = await enrichComment(asRawComment(comment));
+  emitToProject(projectId, 'comment:new', enriched);
+  // Le retour entre dans la review du plan : ses suiveurs ont maintenant lieu d'être avertis.
+  if (!existing.sharedToShot)
+    await notifyWatchers({
+      mediaObjectId: existing.mediaObjectId,
+      projectId,
+      messageKey: 'notification.montageShared',
+      exclude: [user.id],
+    });
+  return enriched;
+}
+
+export interface UpdateCommentInput {
+  content?: string;
+  /**
+   * Liste COMPLÈTE des pièces jointes après édition (D5) : le `PATCH` les ignorait, on ne
+   * pouvait donc ni ajouter ni retirer une image en corrigeant un commentaire. Absente =
+   * inchangée ; présente = remplace, et ce qui en sort est effacé du stockage.
+   */
+  attachments?: AttachmentRef[];
+  /**
+   * Liste COMPLÈTE des parts d'annotation après édition — gomme de trait 3D (Phase 50, lot 8).
+   * Absente = inchangée ; présente = remplace. Réservée à l'auteur, comme le contenu : une
+   * annotation est sa remarque, et elle est rejouée pour tous les spectateurs du média.
+   */
+  annotation?: unknown;
+  /** État du fil (D1). `isResolved` en découle et reste écrit en parallèle. */
+  state?: CommentState;
+  isResolved?: boolean;
+  isVisibleToClient?: boolean;
+  assigneeId?: number | null;
+}
+
+/**
+ * Les deux formes de la même chose (D1) : l'écran envoie un état, l'API v1 et les
+ * compteurs de notes ouvertes lisent un booléen. Écrire les deux évite qu'un fil résolu
+ * depuis la review reste compté comme ouvert dans le rapport hebdomadaire.
+ */
+export function resolutionOf(
+  state: CommentState | undefined,
+  isResolved: boolean | undefined,
+): { state?: CommentState; isResolved?: boolean } {
+  if (state !== undefined) return { state, isResolved: state === 'RESOLVED' };
+  if (isResolved !== undefined) return { state: isResolved ? 'RESOLVED' : 'OPEN', isResolved };
+  return {};
+}
+
+export async function update(user: SessionUser, projectId: number, id: number, body: UpdateCommentInput) {
+  const existing = await prisma.comment.findUnique({
+    where: { id },
+    select: { userId: true, attachments: true },
+  });
+  if (!existing) return null; // signalé « introuvable » par la route
+  const manager = isManager(user.role);
+  const isAuthor = existing.userId === user.id;
+
+  if (body.content !== undefined && !isAuthor) throw forbidden("Seul l'auteur peut éditer le contenu");
+  if (body.attachments !== undefined && !isAuthor)
+    throw forbidden("Seul l'auteur peut éditer les pièces jointes");
+  if (body.annotation !== undefined && !isAuthor) throw forbidden('Only the author can edit the annotation');
+  // Relu par le schéma ici aussi, comme à la création : la route n'est pas le seul appelant.
+  const annotation = body.annotation === undefined ? undefined : (parseAnnotation(body.annotation) ?? []);
+  // Même garde qu'à la création — la clé vient du client et sert à signer une lecture — plus
+  // le dossier ShotGrid DE CE COMMENTAIRE : une note importée y range ses pièces, et les
+  // refuser ici les effacerait à la première correction de texte.
+  const attachments =
+    body.attachments === undefined
+      ? undefined
+      : filterAttachments(body.attachments, [ownAttachmentPrefix(user.id), shotgridAttachmentPrefix(id)]);
+  // Même garde qu'à la création pour les blobs d'une proposition d'édition de nuage — contre
+  // la liste APRÈS édition, celle qui décide désormais de la vie des objets. Retirer la pièce
+  // jointe et garder la part reviendrait à décrire un blob que la purge vient d'emporter.
+  if (annotation !== undefined)
+    await assertSplatEditBlobs(annotation, {
+      attachedKeys: attachments ? attachments.map((a) => a.key) : attachmentKeys(existing.attachments),
+      stat: (key) => storage.statObject(key),
+    });
+  if ((body.isVisibleToClient !== undefined || body.assigneeId !== undefined) && !manager)
+    throw forbidden('Supervisors and administrators only');
+  // Même garde que pour une tâche (`EntityAssigneeService`) : l'identifiant vient du client,
+  // et rien n'obligeait qu'il désigne quelqu'un de CE projet. Sans elle, un gestionnaire
+  // confiait une note à un compte étranger au projet — désactivé, de service, ou membre d'un
+  // autre projet —, qui en recevait la notification.
+  if (body.assigneeId != null) await assertAssignable(projectId, [body.assigneeId]);
+  const resolution = resolutionOf(body.state, body.isResolved);
+  if (resolution.isResolved !== undefined && !manager && !isAuthor)
+    throw forbidden('You cannot resolve this comment');
+
+  const comment = await prisma.comment.update({
+    where: { id },
+    data: {
+      ...(body.content !== undefined ? { content: sanitizeHtml(body.content), isEdited: true } : {}),
+      ...(attachments !== undefined ? { attachments: jsonAttachments(attachments), isEdited: true } : {}),
+      ...(annotation !== undefined ? { annotation: annotation, isEdited: true } : {}),
+      // Trace de résolution (32.A) : qui a résolu et quand ; effacée à la réouverture.
+      ...(resolution.state !== undefined
+        ? {
+            state: resolution.state,
+            isResolved: resolution.isResolved!,
+            resolvedById: resolution.isResolved ? user.id : null,
+            resolvedAt: resolution.isResolved ? new Date() : null,
+          }
+        : {}),
+      ...(body.isVisibleToClient !== undefined ? { isVisibleToClient: body.isVisibleToClient } : {}),
+      ...(body.assigneeId !== undefined ? { assigneeId: body.assigneeId } : {}),
+    },
+    include: commentInclude,
+  });
+  const enriched = await enrichComment(asRawComment(comment));
+  emitToProject(projectId, 'comment:update', enriched);
+  // Effets MinIO APRÈS commit : les images que l'édition a retirées quittent le stockage.
+  if (attachments !== undefined) await purgeAttachments(orphanedKeys(existing.attachments, attachments));
+
+  // Notifie le nouvel assigné (hors auto-assignation).
+  if (body.assigneeId && body.assigneeId !== user.id) {
+    await notify({
+      userId: body.assigneeId,
+      kind: 'commentAssigned',
+      messageKey: 'notification.commentAssigned',
+      projectId,
+      referenceId: comment.mediaObjectId,
+    });
+  }
+  return enriched;
+}
+
+/**
+ * La liste telle qu'elle s'écrit dans la colonne JSON. Le double passage par `unknown` est
+ * assumé : `AttachmentRef` porte des champs OPTIONNELS, que `InputJsonValue` n'accepte pas
+ * en type (un `undefined` n'est pas du JSON) alors qu'ils sont simplement absents à
+ * l'exécution — c'est déjà ce que fait la création.
+ */
+const jsonAttachments = (refs: AttachmentRef[]): Prisma.InputJsonValue =>
+  refs as unknown as Prisma.InputJsonValue;
+
+/** Objets MinIO devenus orphelins — un échec de stockage ne doit pas faire échouer l'écriture. */
+async function purgeAttachments(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  await storage.deleteObjects(keys).catch(() => undefined);
+}
+
+/** Supprime un commentaire (auteur ou superviseur/admin). `false` si introuvable. */
+export async function remove(user: SessionUser, projectId: number, id: number): Promise<boolean> {
+  const existing = await prisma.comment.findUnique({
+    where: { id },
+    select: { userId: true, attachments: true },
+  });
+  if (!existing) return false;
+  if (!isManager(user.role) && existing.userId !== user.id)
+    throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+  // Purge MinIO des images de référence jointes (les lignes DB partent en cascade).
+  await ReviewReferenceService.purgeForComment(id);
+  // La correspondance ShotGrid du commentaire (`ShotgridLink`) part avec lui, dans cette
+  // transaction : un déclencheur `AFTER DELETE` s'en charge côté PostgreSQL. Le lien
+  // survivait au commentaire, et la synchronisation suivante travaillait sur un fantôme.
+  // Rien à ajouter ici — la table étant polymorphe, la garantie doit vivre dans la base
+  // pour couvrir aussi les commentaires effacés par cascade (média, version, plan).
+  // Voir `services/shotgrid/shotgridLinks.ts` et la migration
+  // `20260908090000_shotgrid_liens_fiables`.
+  // Les pièces jointes du fil supprimé (le commentaire ET ses réponses, qui partent en
+  // cascade) restaient dans MinIO indéfiniment : on relève leurs clés avant l'effacement.
+  const replies = await prisma.comment.findMany({ where: { parentId: id }, select: { attachments: true } });
+  const keys = [existing.attachments, ...replies.map((r) => r.attachments)].flatMap((a) =>
+    orphanedKeys(a, []),
+  );
+  await prisma.comment.delete({ where: { id } });
+  emitToProject(projectId, 'comment:delete', { id });
+  // Effets MinIO après commit : la ligne est partie, les objets suivent.
+  await purgeAttachments(keys);
+  return true;
+}
+
+export async function addReaction(user: SessionUser, projectId: number, id: number, emoji: string) {
+  const reaction = await prisma.reaction.upsert({
+    where: { commentId_userId_emoji: { commentId: id, userId: user.id, emoji } },
+    update: {},
+    create: { commentId: id, userId: user.id, emoji },
+  });
+  emitToProject(projectId, 'comment:reaction', { commentId: id, reaction });
+  return reaction;
+}
+
+export async function removeReaction(userId: number, projectId: number, id: number, emoji: string) {
+  await prisma.reaction
+    .delete({ where: { commentId_userId_emoji: { commentId: id, userId, emoji } } })
+    .catch(() => undefined);
+  emitToProject(projectId, 'comment:reaction:remove', { commentId: id, emoji, userId });
+}

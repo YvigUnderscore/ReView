@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" width="800" height="360" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">How a burn-in setting reaches a file</title>
+  <desc id="fig-desc">The studio template and an optional project override are merged field by field into one effective configuration, which the FFmpeg worker applies at transcode time. The review proxy and the HLS renditions carry the burn-ins but never a slate, the client derivative carries both, and the original file is never re-encoded.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="360" rx="10"/>
+
+  <text class="d" x="28" y="32">WHERE IT IS SET</text>
+  <text class="d" x="28" y="206">WHAT COMES OUT</text>
+
+  <rect class="panel" x="24" y="54" width="214" height="54" rx="9"/>
+  <text class="t" x="42" y="78">Studio template</text>
+  <text class="d" x="42" y="95">Admin → Delivery · all projects</text>
+
+  <rect class="panel-o" x="24" y="130" width="214" height="54" rx="9"/>
+  <text class="l" x="42" y="154">Project override</text>
+  <text class="d" x="42" y="171">Project → Settings · optional</text>
+
+  <path class="conn" d="M238 81 L269 81 L269 105 L296 105" marker-end="url(#arrow)"/>
+  <path class="conn" d="M238 157 L269 157 L269 133 L296 133" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="300" y="92" width="190" height="54" rx="9"/>
+  <text class="t" x="395" y="116" text-anchor="middle">Effective config</text>
+  <text class="d" x="395" y="133" text-anchor="middle">merged field by field</text>
+
+  <path class="conn" d="M490 119 L536 119" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="540" y="92" width="236" height="54" rx="9"/>
+  <text class="t" x="658" y="116" text-anchor="middle">FFmpeg worker</text>
+  <text class="d" x="658" y="133" text-anchor="middle">at transcode time, and only then</text>
+
+  <path class="conn" d="M658 180 L140 180"/>
+  <path class="conn" d="M658 146 L658 212" marker-end="url(#arrow)"/>
+  <path class="conn" d="M140 180 L140 212" marker-end="url(#arrow)"/>
+  <path class="conn" d="M399 180 L399 212" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="22" y="216" width="236" height="72" rx="9"/>
+  <text class="l" x="140" y="240" text-anchor="middle">Review proxy, HLS renditions</text>
+  <text class="d" x="140" y="258" text-anchor="middle">burn-ins yes · slate never</text>
+  <text class="d" x="140" y="276" text-anchor="middle">a slate would shift every annotation</text>
+
+  <rect class="panel-a" x="281" y="216" width="236" height="72" rx="9"/>
+  <text class="t" x="399" y="240" text-anchor="middle">Client derivative</text>
+  <text class="m" x="399" y="258" text-anchor="middle">derived/{id}/client.mp4</text>
+  <text class="d" x="399" y="276" text-anchor="middle">burn-ins + a 3 s slate · shares only</text>
+
+  <rect class="panel-o" x="540" y="216" width="236" height="72" rx="9"/>
+  <text class="l" x="658" y="240" text-anchor="middle">Original file</text>
+  <text class="d" x="658" y="258" text-anchor="middle">never re-encoded, never burned in</text>
+  <text class="d" x="658" y="276" text-anchor="middle">kept, or purged by retention</text>
+
+  <text class="d" x="400" y="314" text-anchor="middle">The master switch gates every burn-in below it, while the slate is independent: a slated derivative with no burn-ins is legitimate.</text>
+  <text class="d" x="400" y="332" text-anchor="middle">Saving never touches media already transcoded, and a published version can no longer be reprocessed.</text>
+</svg>

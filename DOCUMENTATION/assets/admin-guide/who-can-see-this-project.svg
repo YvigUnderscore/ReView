@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 504" width="800" height="504" role="img" aria-labelledby="access-title access-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="access-title">Answering “who has access to this project?”</title>
+  <desc id="access-desc">Five sources of access to a project, each with the screen that lists it: the project members table, every global administrator and supervisor — who never appear as members — the client share links of the project, the service tokens bound to it, and the media access log, which says who actually looked rather than who could.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="504" rx="10"/>
+
+  <text class="d" x="25" y="30">WHO CAN REACH PROJECT P?</text>
+
+  <rect class="panel-a" x="250" y="44" width="300" height="46" rx="9"/>
+  <text class="t" x="400" y="66" text-anchor="middle">Five sources of access</text>
+  <text class="d" x="400" y="82" text-anchor="middle">only the first is a members table</text>
+  <path class="conn" d="M400 90 L400 104" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="25" y="110" width="750" height="56" rx="9"/>
+  <rect class="panel" x="45" y="131" width="14" height="14" rx="3"/>
+  <path class="conn-a" d="M48 138 L52 142 L56 134"/>
+  <text class="t" x="72" y="134">Project members</text>
+  <text class="m" x="72" y="152">/admin/projects/{id} → Members</text>
+  <text class="d" x="755" y="134" text-anchor="end">effective role, override badge</text>
+
+  <rect class="panel-d" x="25" y="176" width="750" height="56" rx="9"/>
+  <rect class="panel" x="45" y="197" width="14" height="14" rx="3"/>
+  <path class="conn-a" d="M48 204 L52 208 L56 200"/>
+  <text class="t" x="72" y="200">Every global ADMIN and SUPERVISOR</text>
+  <text class="m" x="72" y="218">/admin/users, filtered by role</text>
+  <text class="d no" x="755" y="200" text-anchor="end">invisible in the members table</text>
+
+  <rect class="panel" x="25" y="242" width="750" height="56" rx="9"/>
+  <rect class="panel" x="45" y="263" width="14" height="14" rx="3"/>
+  <path class="conn-a" d="M48 270 L52 274 L56 266"/>
+  <text class="t" x="72" y="266">Client share links</text>
+  <text class="m" x="72" y="284">project → Shares tab</text>
+  <text class="d" x="755" y="266" text-anchor="end">no account at all — check expiry, views, password</text>
+
+  <rect class="panel" x="25" y="308" width="750" height="56" rx="9"/>
+  <rect class="panel" x="45" y="329" width="14" height="14" rx="3"/>
+  <path class="conn-a" d="M48 336 L52 340 L56 332"/>
+  <text class="t" x="72" y="332">Service tokens bound to the project</text>
+  <text class="m" x="72" y="350">GET /api/admin/api-tokens</text>
+  <text class="d" x="755" y="332" text-anchor="end">they hold a membership and can write</text>
+
+  <rect class="panel-a" x="25" y="374" width="750" height="56" rx="9"/>
+  <rect class="panel" x="45" y="395" width="14" height="14" rx="3"/>
+  <path class="conn-a" d="M48 402 L52 406 L56 398"/>
+  <text class="t" x="72" y="398">Who actually looked, not who could</text>
+  <text class="m" x="72" y="416">/admin/media-access</text>
+  <text class="d" x="755" y="398" text-anchor="end">one line per viewer per media, 30-min dedup</text>
+
+  <rect class="band" x="25" y="442" width="750" height="46" rx="9"/>
+  <text class="d" x="400" y="466" text-anchor="middle">DISABLING AN ACCOUNT REVOKES ITS SESSIONS AND ITS API TOKENS — NOT THE SHARE LINKS IT CREATED</text>
+</svg>

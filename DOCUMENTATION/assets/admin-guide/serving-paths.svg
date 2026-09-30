@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 690" width="800" height="690" role="img" aria-labelledby="serving-title serving-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="serving-title">Which bytes traverse the API, and which do not</title>
+  <desc id="serving-desc">Reads and uploads go straight between the browser and MinIO through presigned URLs: the API only hands out the signature. HLS is the mixed case — the master manifest costs a full authentication and project check and comes back carrying a playback token, the rendition playlist is rewritten so every segment is an absolute presigned MinIO URL valid two hours, and the segments themselves are fetched from object storage without touching the API again.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="690" rx="10"/>
+
+  <text class="d" x="25" y="30">WHICH BYTES TRAVERSE THE API, AND WHICH DO NOT</text>
+
+  <rect class="band" x="25" y="92" width="750" height="120" rx="9"/>
+  <rect class="band" x="25" y="224" width="750" height="120" rx="9"/>
+  <rect class="band" x="25" y="356" width="750" height="224" rx="9"/>
+
+  <path class="conn-o" d="M110 78 L110 580"/>
+  <path class="conn-o" d="M400 78 L400 580"/>
+  <path class="conn-o" d="M690 78 L690 580"/>
+
+  <rect class="panel-a" x="30" y="44" width="160" height="34" rx="9"/>
+  <text class="l" x="110" y="66" text-anchor="middle">Browser</text>
+  <rect class="panel" x="320" y="44" width="160" height="34" rx="9"/>
+  <text class="l" x="400" y="66" text-anchor="middle">ReView API</text>
+  <rect class="panel-a" x="610" y="44" width="160" height="34" rx="9"/>
+  <text class="l" x="690" y="66" text-anchor="middle">MinIO</text>
+
+  <!-- A : lecture présignée directe -->
+  <text class="d" x="35" y="110">A — DIRECT PRESIGNED (THE NORMAL CASE)</text>
+  <text class="m" x="255" y="134" text-anchor="middle">GET /api/media/:id/url</text>
+  <path class="conn" d="M110 140 L394 140" marker-end="url(#arrow)"/>
+  <text class="l" x="255" y="166" text-anchor="middle">presigned GET — TTL 1 h</text>
+  <path class="conn" d="M400 172 L116 172" marker-end="url(#arrow)"/>
+  <text class="a" x="255" y="186" text-anchor="middle">the same string for 10 minutes, so the browser cache is reused</text>
+  <text class="l" x="400" y="202" text-anchor="middle">the bytes</text>
+  <path class="conn-a" d="M110 208 L684 208" marker-end="url(#arrow-a)"/>
+
+  <!-- B : dépôts -->
+  <text class="d" x="35" y="242">B — UPLOADS (MEDIA, AVATARS, ATTACHMENTS, BOARD IMAGES)</text>
+  <text class="m" x="255" y="266" text-anchor="middle">POST /api/media — createUpload</text>
+  <path class="conn" d="M110 272 L394 272" marker-end="url(#arrow)"/>
+  <text class="l" x="255" y="298" text-anchor="middle">presigned PUT — TTL 15 min (multipart parts: 1 h)</text>
+  <path class="conn" d="M400 304 L116 304" marker-end="url(#arrow)"/>
+  <text class="a" x="255" y="318" text-anchor="middle">the bucket CORS rule allows GET, HEAD and PUT from CORS_ORIGIN</text>
+  <text class="l" x="400" y="334" text-anchor="middle">the bytes</text>
+  <path class="conn-a" d="M110 340 L684 340" marker-end="url(#arrow-a)"/>
+
+  <!-- C : HLS, cas mixte -->
+  <text class="d" x="35" y="374">C — HLS: THE MANIFESTS TRAVERSE THE API, THE VIDEO DOES NOT</text>
+  <text class="m" x="255" y="398" text-anchor="middle">GET master.m3u8</text>
+  <path class="conn" d="M110 404 L394 404" marker-end="url(#arrow)"/>
+  <text class="a" x="255" y="418" text-anchor="middle">the only HLS call that hits the database — and the one that is logged</text>
+  <text class="l" x="255" y="434" text-anchor="middle">master rewritten with ?pt=…</text>
+  <path class="conn" d="M400 440 L116 440" marker-end="url(#arrow)"/>
+  <text class="a" x="255" y="454" text-anchor="middle">short-lived playback token, bound to this media and this account</text>
+  <text class="m" x="255" y="470" text-anchor="middle">GET 720p.m3u8?pt=…</text>
+  <path class="conn" d="M110 476 L394 476" marker-end="url(#arrow)"/>
+  <text class="a" x="255" y="490" text-anchor="middle">the token stands in for the project check</text>
+  <text class="l" x="255" y="506" text-anchor="middle">rendition playlist</text>
+  <path class="conn" d="M400 512 L116 512" marker-end="url(#arrow)"/>
+  <text class="a" x="255" y="526" text-anchor="middle">every segment URI is an absolute presigned MinIO URL — TTL 2 h, 15-min window</text>
+  <text class="l" x="400" y="546" text-anchor="middle">720p_003.ts · 004 · 005 …</text>
+  <path class="conn-a" d="M110 552 L684 552" marker-end="url(#arrow-a)"/>
+  <text class="a" x="400" y="566" text-anchor="middle">the segments never touch the API again</text>
+
+  <rect class="band" x="25" y="594" width="750" height="76" rx="9"/>
+  <text class="d" x="400" y="616" text-anchor="middle">S3_ENDPOINT — REACHED BY THE SERVER AND THE WORKER · S3_PUBLIC_ENDPOINT — THE HOST THAT SIGNS WHAT BROWSERS CONTACT</text>
+  <text class="d" x="400" y="636" text-anchor="middle">unset, it falls back to S3_ENDPOINT: fine inside Docker, broken as soon as a browser outside the compose network follows the URL</text>
+  <text class="d" x="400" y="656" text-anchor="middle">its scheme must match the one users reach the app with — http:// behind an HTTPS front end is a mixed-content failure, not an error</text>
+</svg>

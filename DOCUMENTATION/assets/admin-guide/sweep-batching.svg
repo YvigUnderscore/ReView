@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 564" width="800" height="564" role="img" aria-labelledby="sweep-title sweep-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="sweep-title">How one retention pass deletes without locking the table</title>
+  <desc id="sweep-desc">For each family with a period greater than zero, the sweep selects a batch of expired ids oldest first, deletes them in one statement, sleeps twenty-five milliseconds and loops. A short batch means the family is finished; reaching the batch ceiling — two hundred batches in an automatic pass, ten in a manual run — returns truncated and leaves the remainder to the next pass.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="564" rx="10"/>
+
+  <text class="d" x="25" y="30">ONE FAMILY, ONE PASS</text>
+
+  <rect class="panel-a" x="180" y="44" width="280" height="46" rx="9"/>
+  <text class="t" x="320" y="66" text-anchor="middle">family with days &gt; 0</text>
+  <text class="d" x="320" y="82" text-anchor="middle">cutoff = now − days</text>
+  <text class="d" x="480" y="62">days = 0 → the family is skipped entirely,</text>
+  <text class="d" x="480" y="78">and nothing is even selected</text>
+
+  <path class="conn" d="M320 90 L320 106" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="180" y="110" width="280" height="46" rx="9"/>
+  <text class="l" x="320" y="132" text-anchor="middle">SELECT id … WHERE expired</text>
+  <text class="d" x="320" y="148" text-anchor="middle">ORDER BY id ASC LIMIT batchSize</text>
+  <text class="d" x="480" y="128">oldest first — the primary key is a counter,</text>
+  <text class="d" x="480" y="144">so Postgres reads the index from the start and stops</text>
+
+  <path class="conn" d="M320 156 L320 182" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="180" y="186" width="280" height="46" rx="9"/>
+  <text class="l" x="320" y="208" text-anchor="middle">DELETE WHERE id IN (…)</text>
+  <text class="d" x="320" y="224" text-anchor="middle">one statement per batch</text>
+  <text class="d" x="480" y="196">batchSize: 2000 by default, 100 to 20 000</text>
+  <text class="d" x="480" y="212">a cascading family gets batchSize / 10, floor 100 —</text>
+  <text class="d" x="480" y="228">one ShotGrid run carries up to 2000 log rows</text>
+
+  <path class="conn" d="M320 232 L320 258" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="180" y="262" width="280" height="46" rx="9"/>
+  <text class="l" x="320" y="284" text-anchor="middle">sleep 25 ms</text>
+  <text class="d" x="320" y="300" text-anchor="middle">the database also serves the people working</text>
+  <text class="d" x="480" y="282">no pause after the last batch:</text>
+  <text class="d" x="480" y="298">the pass hands the database back at once</text>
+
+  <path class="conn" d="M320 308 L320 334" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="180" y="338" width="280" height="46" rx="9"/>
+  <text class="l" x="320" y="360" text-anchor="middle">batch full AND batches &lt; ceiling?</text>
+  <text class="d" x="320" y="376" text-anchor="middle">a short batch means the family is finished</text>
+  <text class="d" x="480" y="348">automatic pass: 200 batches ≈ 400 000 rows</text>
+  <text class="d" x="480" y="364">manual run: 10 batches, so the request answers</text>
+  <text class="d" x="480" y="380">per family — the ceiling is not shared</text>
+
+  <!-- Boucle -->
+  <path class="conn-a" d="M180 361 L140 361 L140 268"/>
+  <path class="conn-a" d="M140 236 L140 133 L174 133" marker-end="url(#arrow-a)"/>
+  <text class="a" x="140" y="256" text-anchor="middle">loop</text>
+
+  <!-- Sorties -->
+  <path class="conn" d="M320 384 L320 400"/>
+  <path class="conn" d="M320 400 L210 400 L210 412" marker-end="url(#arrow)"/>
+  <path class="conn" d="M320 400 L590 400 L590 412" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="25" y="418" width="370" height="46" rx="9"/>
+  <text class="t ok" x="210" y="440" text-anchor="middle">finished</text>
+  <text class="m" x="210" y="456" text-anchor="middle">{ deleted, truncated: false }</text>
+
+  <rect class="panel-w" x="405" y="418" width="370" height="46" rx="9"/>
+  <text class="t" x="590" y="440" text-anchor="middle">ceiling reached</text>
+  <text class="m" x="590" y="456" text-anchor="middle">{ truncated: true } — the rest waits</text>
+
+  <rect class="band" x="25" y="482" width="750" height="62" rx="9"/>
+  <text class="d" x="400" y="504" text-anchor="middle">RUNS IN THE MAINTENANCE WORKER — SAME PASS AS THE TRASH PURGE, THE DERIVED PURGE AND THE IDEMPOTENCY PURGE</text>
+  <text class="d" x="400" y="524" text-anchor="middle">every 24 h, plus once about 60 s after the API starts · a family that throws is logged and skipped, the other eight still run</text>
+</svg>

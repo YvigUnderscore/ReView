@@ -1,0 +1,997 @@
+# ShotGrid (Flow Production Tracking) integration
+
+*Link a project to ShotGrid and keep both sides honest: what is exchanged, when it travels, and what cannot be undone.*
+
+> Updated: 2026-09-24
+
+Link a ReView project to a ShotGrid project and keep both in step. Sequences, shots,
+assets, tasks, statuses, schedule and published media flow into ReView; review decisions,
+statuses, dates and assignments flow back. Everything on this page happens under
+**Settings → ShotGrid** on a project, or under **Administration → Communications →
+ShotGrid** for the studio-wide site records.
+
+![The ShotGrid tab of a linked project: the read/write matrix, then the pace and media settings.](../assets/admin-guide/shotgrid-settings.png)
+
+> [!NOTE]
+> ShotGrid was renamed **Autodesk Flow Production Tracking**. This guide says "ShotGrid"
+> throughout, as the API, the URLs and the entity names still do.
+
+## Before you start
+
+You need a **ShotGrid site address** (`https://yourstudio.shotgrid.autodesk.com`) and
+credentials. Two kinds are supported, and they are not equivalent.
+
+### Script key — recommended
+
+A service account created once by a ShotGrid administrator. It survives password rotations
+and people leaving, and its actions stay attributable in the ShotGrid event log.
+
+1. In ShotGrid, open **Admin → Scripts**.
+2. Create a script, for example `review_sync`.
+3. Copy the **Script Name** and the **Application Key** — the key is shown once.
+4. Give the script a permission group that can read (and, if you want write-back, update)
+   Shots, Assets, Tasks, Versions, Notes and Playlists.
+
+### User login — the Prism-style option
+
+The same approach as the Prism ShotGrid plugin. It is offered as a fallback, but it is more
+fragile: it ties the whole integration to one person's account.
+
+Since the migration to Autodesk Identity, an Autodesk password does **not** work against
+the API. Each user must:
+
+1. Enable **Legacy Login** and set a legacy password in
+   `https://<your-site>/page/account_settings`.
+2. Generate a **Personal Access Token** from the Autodesk profile page.
+3. Paste that token into the **Token Code** field of the same ShotGrid page and bind it.
+
+Only then do the login and the legacy password authenticate against the API. Repeated wrong
+passwords lock the ShotGrid account, so test once and read the error rather than retrying.
+ReView helps: after a refusal it stops calling that site for five minutes and replays the
+same error, so a typo cannot turn into a locked account. Saving the site record clears the
+pause immediately.
+
+## Registering a site
+
+Sites are managed studio-wide in **Administration → Communications → ShotGrid**, or created
+on the fly from a project. Credentials are encrypted at rest and never returned by the API:
+editing a site leaves the secret fields blank, and only what you type replaces the stored
+value.
+
+| Rule on the site address | Why |
+|---|---|
+| Public **HTTPS** only | The server fetches this address itself |
+| `localhost`, `*.local`, `*.localhost` refused | Same |
+| RFC 1918 and carrier-grade NAT literals refused | The API process sits inside the application network, next to MinIO, Redis and Postgres |
+| IPv6 loopback, unique-local and link-local literals refused | Same |
+| Only the origin is kept | A path or a trailing slash is stripped before storage — everything else is built on top of it |
+
+Beyond that first check, **every outgoing call to the site goes through the shared SSRF
+guard**: the resolved address is re-verified, redirects are never followed blindly (the
+media download allows three hops and re-checks each one), and a header timeout of 30
+seconds keeps a hung site from holding a worker. That matters because some targets are
+dictated by the site itself — the upload URL it hands back, the download URL of a media —
+and a public hostname can perfectly well resolve to `169.254.169.254`.
+
+> [!TIP]
+> One site record serves every project of that studio: the credentials are entered once,
+> and rotating a key is a single edit that all linked projects pick up.
+
+## Linking a project
+
+Open a project, then **Settings → ShotGrid**. The **ShotGrid** tab only appears once the
+project is linked, so a studio that does not use ShotGrid never sees the integration.
+
+1. Choose the site.
+2. Search the target project **by name** and select it.
+3. Confirm.
+
+The name matters. A studio site hosts every project, often with near-identical names
+("Demo Project", "Demo Project 2"). ReView records both the id and the name, re-checks the
+name before every synchronisation, and stops if it no longer matches — a renamed or reused
+id halts the sync instead of writing into the wrong project. The comparison ignores case
+and surrounding whitespace, nothing else.
+
+**Template projects are refused at link time.** A site usually keeps one or more projects
+that every new project is cloned from (`Template Project`, `_template_show`, `zzz_template`
+…). Writing into one does not break a project — it breaks every project later derived from
+it, and nobody makes the connection for months. Names matching the template patterns are
+rejected with an explicit message, and the same check runs again before any write, in case
+the id was typed by hand or the project was renamed afterwards.
+
+> [!IMPORTANT]
+> **A freshly linked project reads but does not write.** Every domain is opened for reading
+> and closed for writing, and *On publishing in ReView* starts at **Do nothing**. Nobody has
+> yet verified that the target is the right one, and a production site does not forgive a
+> first synchronisation that writes. Open the write columns explicitly, once you have looked
+> at a first comparison.
+
+## What is exchanged
+
+**Settings → What is exchanged** is a grid of seven rows and two columns: what ReView reads
+from ShotGrid, and what it writes back. Each cell is an independent switch.
+
+| Domain (row) | Read brings in | Write sends back | Default on a new link |
+|---|---|---|---|
+| **Sequences, shots, assets** (`hierarchy`) | codes, descriptions, cut ranges (`sg_cut_in`/`sg_cut_out`), sequence and shot statuses, asset types, asset↔shot and asset↔sequence links, the **thumbnail** each one carries on the site, and the **episodes** when the level is on | shot statuses, sequence statuses, asset↔shot / asset↔sequence links | read on, write **off** |
+| **Tasks** (`tasks`) | name (`content`), pipeline step, status, start/due dates, duration, assignees | status, start + due dates, assignee | read on, write **off** |
+| **Status list** (`statuses`) | the exact statuses of your site — code, display name, colour, order, per entity type | *never* — reference data | read on, write **never** |
+| **Versions and published media** (`versions`) | versions, their media, first/last frame, `PublishedFile` paths | review decisions, versions created by publishing in ReView, thumbnails, optionally the media file | read on, write **off** |
+| **Notes** (`notes`) | ShotGrid notes as ReView comments | ReView comments as notes, with the annotated frame attached | read on, write **off** |
+| **Playlists** (`playlists`) | dailies playlists | dailies playlists, ordering included | read on, write **off** |
+| **People** (`users`) | `HumanUser` records, matched to ReView accounts by email address | *never* from a synchronisation | read on, write **never** |
+
+Two rows are read-only by design. ReView does not redefine a studio's status vocabulary on
+its own site, and a synchronisation never creates a ReView account — bringing people in is a
+separate, explicit gesture (see [Bringing the crew into ReView](#bringing-the-crew-into-review)).
+
+![ReView for the artist on one side, ShotGrid for production on the other: a shot arrives from ShotGrid, the artist approves it in ReView with a note, and the ShotGrid row turns approved.](../assets/admin-guide/shotgrid-sync.gif)
+
+![Seven ShotGrid entity types map onto ReView entities, with the fields that travel between them; the Episode pair is optional and drawn dashed.](../assets/admin-guide/shotgrid-entity-mapping.svg)
+
+### Descriptions: which side holds them
+
+The description of a sequence, a shot or an asset now travels. It was already requested from
+the site and then thrown away for sequences and shots — only assets wrote it — so an imported
+shot arrived without its brief, and production retyped it in ReView only to watch it diverge.
+
+**Settings → Descriptions** decides who holds the field:
+
+| Setting | Effect |
+|---|---|
+| **ShotGrid (read-only here)** | The default. The site's description is copied in, and the field is **not editable in ReView** — editing it would create a divergence the next sync would silently overwrite. |
+| **ReView (editable here)** | ReView holds it. An import never overwrites what a supervisor just wrote. |
+| **Send edits back to the site** | Opens the round trip: every local change is written to the site, provided the `hierarchy` domain is open for writing. |
+
+Two switches guard the write-back, and both are needed: the domain (the general permission)
+and this one (the precise one). A studio may well want to send statuses back without sending
+briefs its production writes on the site.
+
+> [!NOTE]
+> The description is not the **brief**. The brief is a markdown note that belongs to ReView,
+> which no synchronisation ever touches — see
+> [The entity header](../user-guide/projects-and-pipeline.md#the-entity-header-team-and-brief).
+> Keeping them as two fields is what allows one to be read-only without losing the other.
+
+### Asset statuses
+
+ShotGrid keeps a `sg_status_list` per entity type, and the lists do not coincide: four values
+on a sequence, fifteen on a shot. ReView imports one vocabulary per type — tasks, shots,
+sequences, and now **assets**, which borrowed the task list until this release and therefore
+displayed states no asset can hold. Changing an asset status in ReView sends it back like any
+other, when the `hierarchy` domain is open for writing.
+
+### The Episode level
+
+ShotGrid's `Episode` entity is imported like any other, and sequences are attached through
+their `sg_episode` field. Two gates control it, and both must be open:
+
+- the `hierarchy` domain must be readable — episodes are part of the production breakdown;
+- the **Episode level** must be switched on for the ReView project, in
+  **Settings → Episode level**. It is off by default; a feature film never sees this level.
+
+On a project without the level, nothing is fetched **and the site is never even asked for
+`sg_episode`** — a studio whose site does not carry that field is not made to fail for a
+level nobody enabled. A sequence whose remote episode is not linked (never imported, or
+belonging to another project) is left detached rather than attached at random.
+
+> [!NOTE]
+> The [comparison screen](#comparing-both-sides) does not cover episodes: it compares
+> sequences, shots, assets, tasks and versions. An episode renamed on the site realigns on
+> the next pass, but a missing one will not be listed as a gap.
+
+### Which local action writes what
+
+Every write is queued as a job, and each job type is governed by exactly one row of the
+matrix. This is the whole mapping:
+
+| Local action | Job | Governed by |
+|---|---|---|
+| Change a task status (task page, kanban, right-click, bulk, API v1) | `task-status` | Tasks |
+| Change a task's start or due date | `task-dates` | Tasks |
+| Assign a task, or assign a shot/asset through its tasks | `task-assignee` | Tasks |
+| Change a shot status | `shot-status` | Sequences, shots, assets |
+| Change a sequence status | `sequence-status` | Sequences, shots, assets |
+| Attach an asset to shots or sequences | `asset-links` | Sequences, shots, assets |
+| Record a review decision (approved, retake…) | `version-status` | Versions and published media |
+| Publish a media in ReView | `version-publish` | Versions and published media |
+| Post a comment on a review | `comment` | Notes |
+| Change a dailies playlist | `playlist` | Playlists |
+
+Task dates travel together in a single request. ShotGrid ties `start_date`, `due_date` and
+`duration`: sending one alone makes the site recompute the others from a duration that no
+longer applies.
+
+Assignment is only pushed when the ReView account has a matching ShotGrid person. Without
+that link nothing is written at all — clearing `task_assignees` on the site would be worse
+than leaving it stale.
+
+### When a write is refused
+
+A write whose domain is closed is **not** silently dropped. Before the job runs, the refusal
+is counted on the connection (domain, count, timestamp, job type) and logged at `info`
+level. The **Synchronisation** section then shows a banner:
+
+> Some changes were not sent to ShotGrid: writing is turned off for *Tasks*, *Notes*. Turn
+> it on in Settings for them to go through.
+
+This is the shape of the most common support request on the whole integration: a supervisor
+changes a status, sees it applied in ReView, and cannot understand why the site does not
+move. The banner answers it without reading a log.
+
+The banner reports a **current** problem, not history: re-opening a domain for writing
+clears its counter immediately, in the same request that saves the settings. Only the five
+writable domains can appear there — *Status list* and *People* have no write side.
+
+Resolving a conflict in favour of ReView goes through the same check up front, so the panel
+can say *"Conflict closed, but nothing was sent"* instead of announcing a write that will
+not happen.
+
+### Editing the matrix safely
+
+Two behaviours protect the write columns.
+
+- **Partial saves merge one level deep.** The interface sends only the section you touched.
+  A flat merge would re-parse the whole `domains` object with its schema defaults — where
+  every domain is read *and* write — so ticking one box re-opened the other six towards a
+  production site. `versionStatusMap` is still replaced wholesale: a mapping you removed
+  must disappear, not survive the merge.
+- **Unreadable settings fall back closed.** If the stored JSON cannot be validated (schema
+  changed, corrupted value), ReView falls back to a read-only configuration rather than to
+  the schema defaults. Sections that validate on their own (`media`, `push`, `reconcile`,
+  `steps`, `versionStatusMap`, `conflictPolicy`) are kept, and each domain is re-integrated
+  with its `read` value but `write: false`.
+
+### Field notes
+
+- **Duplicate codes**: a site may hold several entities with the same code (four sequences
+  named `DO_NOT_USE_`, say). ReView can only hold one per code, so the extra ones are
+  imported with their ShotGrid id appended — `DO_NOT_USE_ (4686)`. The suffix is stable, the
+  comparison ignores it, and a name is only "adopted" by an entity that existed before the
+  link and is not already the counterpart of another remote entity.
+- **Cut ranges**: `sg_cut_in` / `sg_cut_out` become the shot's start and end frames.
+- **Task duration**: ShotGrid stores working minutes (2400 = five 8-hour days). ReView keeps
+  the raw value alongside the link and displays working days.
+- **Statuses**: imported with their site colours (ShotGrid encodes them as decimal RGB),
+  their display names and their per-entity validity — a sequence may offer four statuses
+  where a shot offers fifteen, and ReView keeps those lists separate so it never offers a
+  value the site would refuse.
+- **Pipeline steps**: ShotGrid restricts the steps offered on a project but exposes that
+  setting nowhere in its REST API. Declare them once under **Pipeline steps used by this
+  project**; leave the list empty and ReView infers them from the tasks already present.
+- **Statuses offered**: the same idea, one level down — see
+  [Narrowing the statuses offered](#narrowing-the-statuses-offered).
+
+## Creating entities
+
+By default, **creating sequences, shots and assets in ReView is refused** on a linked
+project: the request returns a link to the matching ShotGrid form, pre-filled with the right
+project. Episodes follow the same rule, with their own form, so the button never sends you
+to the sequence screen by mistake. This keeps ShotGrid the single place where production
+structure is decided.
+
+Turn off *Create in ShotGrid only* in the settings if your studio prefers the opposite.
+
+The same reasoning applies one level down. Assigning an asset from the right-click menu
+writes on its **tasks**, because that is where a responsible person lives on both sides
+(`task_assignees` is a field of `Task`). On a project driven from ShotGrid, a missing task
+is *not* created locally — it must be born on the site, or the next synchronisation would
+see two.
+
+## Bringing the crew into ReView
+
+Linking a project brings in its shots, tasks and media — but not the people. The **Members**
+tab of a linked project therefore offers **Load the ShotGrid crew**: the list comes from
+`Project.users` of the linked project, not from the whole site directory.
+
+![The ShotGrid crew panel: one row per person, with what ReView already knows about them.](../assets/admin-guide/shotgrid-crew.png)
+
+Each person shows one of four states:
+
+| State | What it means | What inviting does |
+| --- | --- | --- |
+| Project member | Already has access here | Records the ShotGrid link, nothing else |
+| Has an account | Same email address exists in ReView | Adds them to this project |
+| No account yet | Nobody in ReView uses this address | Creates the account, emails the invitation, adds them to the project |
+| Cannot be invited | No email, or disabled on the site (`sg_status_list` other than `act`) | Nothing — the row is not selectable |
+
+New accounts are created as **artists**. Promote afterwards, explicitly: an account that
+starts as a supervisor is one nobody decided to make a supervisor.
+
+> [!WARNING]
+> **Creating accounts is reserved to administrators and studio supervisors** — the global
+> role, not the project one. A supervisor *of a project* can add people who already have an
+> account, but cannot mint new ones; the administration screen does not let them either, and
+> going through ShotGrid must not become a way around it. The whole batch is refused up front
+> if it contains a creation the actor may not perform, rather than creating three accounts
+> and failing on the fourth.
+
+Three more rules worth knowing:
+
+- The invitation goes through the usual circuit. **Without a configured mail relay nothing
+  is sent**, and the panel says so before you click: an account created without its
+  activation email is reachable by nobody and holds the address hostage. See
+  [SMTP & announcements](smtp-and-announcements.md).
+- Email matching is **case-insensitive**. An account stored as `Alice@studio.example` would
+  otherwise look absent, and inviting it would collide with the unique index.
+- Two `HumanUser` records sharing one address (common on old sites) are collapsed to one
+  row, keeping the active one.
+
+The ShotGrid link is recorded at the same time — for people who are already members too,
+where it is often missing. It is what lets ReView write to the site *on that person's
+behalf* rather than as an anonymous "ReView".
+
+### The department comes with the person
+
+A site ranks its artists by department, and that is the one piece of the answer the import
+was missing: the accounts arrived, and someone still had to say by hand who does compositing
+and who does lighting. Each row now shows the department the site declares, and inviting
+applies it to the membership.
+
+Two precautions govern it, and both matter more than the feature itself.
+
+- **The schema is probed before anything is asked.** The field is not named the same
+  everywhere — `department` is the standard entity link, `sg_department` the in-house
+  variant found on older sites. Asking for a field the site does not declare does not return
+  *empty*: it fails the whole request, and the crew would stop loading altogether. ReView
+  therefore reads `/schema/HumanUser/fields` first and asks only for what is there. A script
+  user with no right on the schema gets a 403; that counts as *no department*, never as a
+  failed pass.
+- **No department is ever created.** A ShotGrid department is an organisational unit —
+  *2D*, *Production*, *Pipeline* — and not necessarily a step of the pipe. The name is
+  matched against the departments the studio has already declared for this project (case and
+  punctuation ignored); anything else is shown for information and applied to nobody. The
+  row's tooltip says which of the two is happening before you click.
+
+The department is **added**, never substituted: the site knows one, the person may already
+hold several in ReView. Correcting or completing the list is done from the same tab, by
+right-clicking the member — see
+[Users & roles](users-and-roles.md#departments-of-a-member).
+
+**Typical use.** A new show starts. The coordinator links the project, opens **Members →
+Load the ShotGrid crew**, selects everyone with a green *No account yet* state, and clicks
+**Give ReView access**. The panel announces the plan first ("6 accounts to create, 2 to add
+to the project"), so nobody creates twenty accounts by accident.
+
+### When the addresses differ
+
+Matching by email covers the common case, but every studio has a few people whose address
+differs between the two tools — `firstname.lastname@studio.example` on one side, a personal
+address on the other. Those accounts stayed unlinked for good: their writes went back to the
+site as an anonymous "ReView", and the crew import kept offering them for ever.
+
+Each row of the **Members** tab now carries a **ShotGrid account** selector. Open it, pick
+the matching person from the site, done. A link made by hand **wins over the email
+deduction** — otherwise the person you just linked would show up as *No account yet* on the
+next read, having no address in common. Choose *Not linked* to undo a wrong pairing, which
+would otherwise credit someone's work to somebody else.
+
+## Staying up to date
+
+Three mechanisms work together, plus the manual buttons. You are not expected to pick one
+and hope.
+
+![Webhooks, polling, catch-up and the manual buttons all converge on a single gate: one pass at a time per connection, with anything that arrives during a pass merged and replayed.](../assets/admin-guide/shotgrid-sync-triggers.svg)
+
+### Webhooks (near-instant)
+
+The settings show two values, side by side: the **address** and the **secret token**. The
+secret is hidden behind *Show the secret token*; both have a copy button. Then in ShotGrid:
+
+1. Open **Admin → Webhooks → Create Webhook**.
+2. Paste the URL.
+3. Filter on **the linked project** and on the entity types you care about — see the matrix
+   below before you tick, and read the paragraph on *create, change, delete* right after it.
+4. Set the **secret token** to the one ReView shows.
+
+**Step 4 is not optional.** ShotGrid signs every delivery with that value, ReView
+recomputes the signature on the bytes it received, and a mismatch is answered `404` — the
+same answer as an unknown address, so nothing can probe for a valid one. A webhook whose
+secret does not match therefore fails *every* delivery, connection test included, and
+ShotGrid switches the endpoint off after a hundred failures. If the site already carries a
+secret you cannot read, generate a new one on both sides: *Generate a new secret* in ReView,
+then paste it into the webhook. The previous one stops being accepted immediately.
+
+ReView answers within milliseconds and processes in the background: ShotGrid requires a
+reply within six seconds and counts response time against a site-wide budget, so a
+synchronous handler would degrade delivery for the whole studio.
+
+An event is treated as a **doorbell, not as data**. ReView reads only *which* entity
+changed, then re-reads that entity from the API, which is why webhook mode and polling mode
+behave identically. The raw body is accepted up to **5 MB** — the signature is computed on
+the bytes, not on a re-parsed object — and anything larger is rejected outright rather than
+truncated. An unknown token and a bad signature both answer `404`, so nothing lets a caller
+guess that a token exists.
+
+**Which event re-reads what.** Each entity type triggers only the passes it needs, and
+carries the announced ids all the way down. A single version status change no longer replays
+the whole project — statuses, people, sequences, shots, assets, tasks and every version — for
+one entity.
+
+![A matrix of the ten ShotGrid entity types against the passes each of them re-reads; Status and HumanUser are global events that are never narrowed to one entity.](../assets/admin-guide/shotgrid-event-passes.svg)
+
+**Tick the field changes too, not only creations.** ShotGrid's trigger list offers *create*,
+*change* (shown as *update* in the summary), *delete* and *revive* per entity type, and a
+filter that carries only *create, delete, revive* is a common and very quiet mistake: new
+entities arrive, and then nothing ever moves again. A status advanced, a shot renamed, a cut
+range adjusted, a thumbnail replaced — all of those are **changes**, and none of them is
+delivered. The webhook looks healthy, its delivery log is green, and the project drifts. If
+you cannot subscribe to changes, switch the update mode to *Periodic polling*, which reads
+the event log and does not depend on the filter.
+
+**`Status` and `HumanUser` need a second webhook.** ShotGrid will not offer them in the one
+you just built, and no setting changes that: *"Selecting a project limits you to selecting an
+entity that always belongs to a single project […] If you want to select a non-project (or
+multi-project) entity like Person, you should not select a project."* A status list and a
+person belong to the site, not to a project, so a project-filtered webhook cannot carry them.
+
+Create a second webhook alongside the first:
+
+| Field | Value |
+|---|---|
+| URL | **the same address** as the first — it reaches the same connection |
+| Secret token | **the same secret** |
+| Projects | **leave blank** — this is what makes the two entity types appear |
+| Entity filter | `Person` → `login`, `name`, `email`, `sg_status_list` · `Status` → `code`, `name`, `bg_color`, `list_order` |
+
+Leaving the project blank does *not* flood ReView with the rest of the studio: the filter
+carries only those two entity types, and neither belongs to a project. Anything else that
+reached the address with another project on it would be refused by the project guard before
+any work is done.
+
+The consequence for your webhook filter is direct: **tick every entity type in that matrix
+that matters to you**. Omitting `Status` lets the status vocabulary go stale, which is
+exactly what produces the *unknown status code* warnings described
+[below](#statuses-review-does-not-recognise). Omitting `HumanUser` freezes assignments when
+an account changes. Omitting `Episode` strands the series level. `Note` and `Playlist`
+events now run their own passes, so the read direction of those two rows of the matrix is
+real: an event that used to be accepted and then do nothing now imports.
+
+Events on the same entity are coalesced over a 5-second window. Changing the status of a
+hundred tasks in one ShotGrid action produces a hundred events but one re-read per entity.
+
+The address can be renewed at any time; the previous one stops working immediately.
+
+### Polling
+
+If your ReView instance is not reachable from the internet, switch the update mode to
+**Periodic polling**. ReView reads the ShotGrid event log from its last processed entry, up
+to 500 entries per pass, and the cursor only advances over events it has processed — a
+cut-off resumes where it stopped. Slightly delayed, but it needs no inbound connection.
+
+| Setting | Range | Default |
+|---|---|---|
+| Update mode | *Webhooks*, *Periodic polling*, *Manual only* | Webhooks |
+| Polling interval | 15 s – 3600 s | 60 s |
+| Nightly catch-up | on / off | on |
+| Hour of the pass | 0 – 23, server local time | 3 |
+| Look-back window | 1 h – 720 h | 72 h |
+| Catch up when ReView starts | on / off | on |
+
+**Manual only** stops inbound events being acted on at all: incoming webhooks and polled
+events are dropped, and the project moves only when someone presses **Synchronise** or
+**Catch up**. It is the right mode while you are still deciding whether a link is pointed at
+the right project.
+
+Changing the mode, the polling interval or the catch-up hour takes effect **immediately**:
+saving the settings re-lays the repeatable jobs. No restart, no deployment.
+
+### Catch-up after downtime
+
+Neither of the above survives everything: an instance can be stopped for a night, and
+ShotGrid disables a webhook endpoint after a hundred failed deliveries, keeping delivery
+logs for only seven days.
+
+So ReView also re-reads a **look-back window** — nightly, and when the instance starts. Set
+the window to cover the longest outage you want to survive (72 hours by default). The window
+starts from the last successful synchronisation, never from "now": an instance stopped for a
+week re-reads that week, not the last 72 hours.
+
+At boot, catch-up passes are delayed ten seconds and staggered fifteen seconds apart, so
+restarting an instance with a dozen linked projects does not hammer the studio site.
+
+### Concurrent synchronisations
+
+One pass at a time runs per connection. A request that arrives while a pass is running is
+**merged into a pending request and replayed when the current pass ends** — it is never
+dropped.
+
+This used to be the single largest cause of "some statuses do not come through". Each
+webhook is its own job, the worker runs several at a time, and a request arriving during a
+pass was discarded *and reported as successful*. Ten simultaneous status changes on the site
+lost roughly half of themselves, with no error and nothing for the queue to retry.
+
+The merge never narrows the scope:
+
+| Field | Merge rule |
+|---|---|
+| `kind` | `full` if either side is full, otherwise the newer one |
+| `since` | the earlier of the two dates; **null** (meaning "everything") as soon as one request has no window |
+| `onlySgIds` | the union, de-duplicated — but dropped entirely (meaning "the whole project") as soon as one request is not targeted |
+| `passes` | the union; and "no list" (meaning "every pass") absorbs the other |
+| `withMedia` | true if either side wants media |
+
+The API reports such a request as `deferred` rather than as a success, so no screen can
+claim work that has not happened. Both the **Synchronise** and **Catch up** buttons and the
+re-read dot next to an entity say so, each about what you actually asked for — *"A
+synchronisation is already running — this one is queued behind it."* for the buttons, *"A
+sync is already running — this re-read is queued behind it."* for the dot. Neither is shown
+in the green of a finished pass. The run list is authoritative either way: the replayed pass
+appears there when it completes.
+
+### What reaches an open screen
+
+A pass tells the open screens what it changed, once, at the end — not entity by entity. A
+full pass over a feature film touches twelve thousand objects, and one socket event each
+meant the browser spent the whole pass reloading itself instead of showing the result.
+
+| Size of the pass | What is emitted |
+|---|---|
+| Up to **25** distinct entities — a webhook re-read, a re-aligned card | The fine-grained events (`shot:update`, `task:update`, `version:update`…), so the screen refreshes exactly where it should |
+| Beyond that | A single `shotgrid:sync` summary with the count per family, and the client reloads what it displays, once |
+
+The summary is emitted even when the pass fails part-way: what it already realigned is real,
+and the open screens must not stay on the previous state. Creations coming from the site
+reach an open screen the same way.
+
+## Comparing both sides
+
+The **Comparison** section reads both sides live and lists every difference, without
+changing anything:
+
+- present in ShotGrid, missing in ReView;
+- present in ReView, gone from ShotGrid;
+- values that diverge, field by field;
+- local entities that were never linked.
+
+Compared fields, per entity:
+
+| Entity | Fields compared |
+|---|---|
+| Sequence | code, status |
+| Shot | code, start frame, end frame, status |
+| Asset | presence only |
+| Task | name, status, start date, due date |
+| Version | review decision, against the version status mapping |
+
+Episodes are not compared — the level is optional and is realigned by the ordinary passes.
+
+The header also re-checks the remote project name and says so loudly if it no longer
+matches. Trashed local entities are ignored — they are not gaps. The report is capped at 500
+entries and says when it was truncated; the counters above it stay exact.
+
+Use **Realign on ShotGrid** to run a full synchronisation and close the gaps. It is a
+separate, explicit action, because overwriting work should be decided rather than happen
+quietly.
+
+**Typical use.** The instance was down for two days over a long weekend, past the look-back
+window. On Monday: open **Comparison**, check that the counters differ only where you expect
+(a handful of new shots), then **Realign on ShotGrid**.
+
+## Published media
+
+New ShotGrid versions carrying media are imported automatically and enter the normal ReView
+pipeline (transcoding, thumbnails, frame-accurate review). You can:
+
+- choose between the **ShotGrid transcode** (lighter) and the **original file**;
+- cap the size above which media is skipped and logged;
+- restrict the automatic import to certain statuses;
+- import anything else on demand from the **Published media** section.
+
+A version whose ShotGrid task is unknown to ReView is attached to a per-shot task named
+`ShotGrid`, rather than being dropped.
+
+The link between the ShotGrid version and the ReView version is written **before** the media
+transfer is attempted. It states a fact that is already true — "this version is in ReView" —
+and without it a failed download left an orphan that the next pass re-created, once per
+pass, indefinitely.
+
+### Thumbnails carried by the site
+
+A sequence, a shot or an asset carries an image in ShotGrid — the one production recognises
+in every list on the site. ReView brings it in and puts it on the card, under *Publishes →
+**Bring in ShotGrid thumbnails*** (on by default).
+
+Three things are worth knowing about it:
+
+- **The image is copied, not linked.** ShotGrid hands out a signed address that expires in
+  fifteen minutes and is different on every read. A card pointing at it would have been
+  broken a quarter of an hour later.
+- **Nothing is downloaded twice.** The address is content-addressed once its signature is
+  stripped, and that stripped form is kept on the link. A nightly catch-up over an unchanged
+  project transfers nothing at all; a thumbnail replaced on the site is picked up on the
+  next pass — or within seconds, on a webhook, provided the filter subscribes to *changes*.
+- **A thumbnail you set by hand is yours.** A shot, sequence or asset whose image was
+  dropped here is left alone entirely — never overwritten by the site's image, never
+  cleared when the site has none. Remove it here and the site takes over again on the next
+  pass.
+
+Versions are a separate matter: their thumbnail comes from the media pipeline, generated
+from the media itself, not from the site.
+
+### The status filter imports; it does not freeze
+
+The status filter decides what gets **imported**, not what gets **tracked**. A version
+already in ReView keeps having its metadata and its review decision refreshed even when its
+status moves outside the filter — going from *in review* to *approved* must not stop the
+decision from reaching ReView. What the filter still prevents on such a version is
+re-fetching its media.
+
+The filter is re-applied on the targeted path too. An event that names a version hands its
+id straight to the version pass, where an explicit id normally means "a human asked for
+this" and lifts the filter; ReView therefore re-checks the status — and the project — before
+letting a webhook drag in the media of every WIP on a site whose studio chose to follow only
+versions in review. A version already linked always passes: the filter decides what is
+imported, not what continues to be followed.
+
+A manual selection from **Published media** overrides the filter entirely: it is an explicit
+decision.
+
+### Media names
+
+An imported media takes the **code of its ShotGrid version** — `SH010_comp_v003.mov` —
+rather than the name of the attached file. That code is what production reads in its
+playlists and says out loud in dailies, so both tools name the same thing the same way. The
+extension always comes from the delivered file (or its content type), never from the code:
+it is what tells ReView how to validate, transcode and play the file.
+
+The delivered file name is not lost. It is kept and shown as **Source file** in the
+technical sheet of the review — a studio naming convention often carries information the
+code does not repeat (colour space, encoding, retake marker).
+
+Two details worth knowing:
+
+- Media imported before this behaviour existed are renamed on the next synchronisation that
+  reads their version. Nothing to migrate, nothing to click. The rename is idempotent and
+  only touches media flagged as imported from ShotGrid.
+- A file dropped into ReView by hand is **never** renamed, even on a linked project.
+
+Set **Media name** to *Delivered file name* in the settings if your studio would rather keep
+the file names as they arrive.
+
+### Version names created in ReView
+
+On a linked project, the next version created in ReView **imitates the most advanced sibling
+that already carries a site-style code** rather than guessing a convention: project prefix,
+the case of the `v`, and the width of the zero padding are all copied.
+`NEBULA_SH010_anim_v007` therefore yields `NEBULA_SH010_anim_v008`, not `V08`.
+
+With no such sibling, ReView falls back to the usual ShotGrid shape, `<parent>_<step>_v001`
+— and to the short `V01` form when the parent cannot be identified, since `_anim_v001`
+designates nothing. Numbering always continues above the highest number ever used under that
+parent, trashed versions included: counting the survivors would produce a second `v003` for
+different work.
+
+Pausing a connection does not change any of this. A paused project is still a linked
+project; the naming convention should not change shape because synchronisation was suspended
+for an afternoon.
+
+## Writing back to ShotGrid
+
+- **Review decisions** update the ShotGrid version status through the status mapping. If the
+  mapping has no entry, ReView re-derives the code by matching status names against the
+  site's valid values — read-only, creating nothing. Without that second path, un-ticking
+  *Status list → read* was enough to silently stop every review decision from leaving.
+- **Task statuses, dates and assignments** are pushed when the matching domain is open for
+  writing.
+- **Publishing in ReView** creates a ShotGrid version — either with a link back to the
+  ReView review (default, no duplicated storage) or with the media file uploaded.
+- Changes are attributed to the ReView user when their email matches a ShotGrid account
+  (*Write under the ReView user's name*). Otherwise the write is made by the script account.
+
+Writes go through a queue: a ShotGrid outage never makes a local action fail. What could not
+be written is logged, and the catch-up pass closes the gap.
+
+### Publishing modes
+
+| Mode | What lands on the site | When to choose it |
+|---|---|---|
+| **Create a version with a link** (default) | A `Version` with the code, description, task and entity links, a thumbnail, and `sg_path_to_movie` pointing at the ReView review | ReView is where review happens; dailies masters are not duplicated |
+| **Create a version and upload the file** | The above, plus the media in `sg_uploaded_movie`, which triggers ShotGrid's own transcode | ShotGrid must be self-sufficient (external partners, archival) |
+| **Do nothing** | Nothing | Reading only |
+
+Uploads above **2 GB** are skipped with a warning; the version still exists on the site with
+its link and thumbnail. The thumbnail is always sent first: it is small, and it makes the
+version recognisable in ShotGrid lists even when the file itself stays here.
+
+*Do nothing* is the state of a freshly linked project, so the Synchronisation section shows a
+standing notice while it lasts — otherwise versions publish here, nothing goes there, and
+nobody finds out until someone looks for them on the site.
+
+### Never creating a duplicate Version
+
+Before creating a version, ReView searches the linked project for one carrying the same
+code. The case is common: the artist's render tool already created `NEBULA_SH010_comp_v004`
+on the site before they published in ReView. When exactly one match exists, ReView attaches
+to it — uploading the thumbnail, and the file in upload mode — instead of creating a twin the
+site cannot tell apart.
+
+Two edge cases, both deliberate:
+
+- **Two homonyms on the site**: ReView attaches to neither and creates its own version.
+  Attaching to the wrong one costs more than one extra version a human will notice.
+- **The version already has a link**: adding a media to a version in progress enriches *that*
+  version rather than making a second one.
+
+Whenever ReView creates or adopts a version this way, the link is marked as "media already
+here", so the next synchronisation does not download back the file that was just sent.
+
+### When the site refuses a field
+
+Some sites restrict what an account may write. The one met most often is **`note_links`
+refused**: ReView still posts the note, with the version name in the subject and a link back
+to the ReView review, so the note is not lost. Ask a ShotGrid administrator to grant the
+permission if you want notes attached to their version.
+
+## Conflicts
+
+A conflict is declared when a field changed on **both** sides between two synchronisations.
+Both conditions are required:
+
+1. the ReView entity was modified after the link was last synchronised (with one second of
+   tolerance — a local write and the link timestamp are never simultaneous to the
+   millisecond); **and**
+2. the two values actually differ.
+
+The second condition matters more than it looks. `updatedAt` moves for any change to the
+entity, so ticking a checklist item on a task used to declare a *status* conflict, and the
+log filled up with lines reading "review: ip, shotgrid: ip".
+
+### The three policies
+
+Set under **Settings → Conflicts → When both sides changed**. All three are applied.
+
+| Policy | What happens to the field | What is logged |
+|---|---|---|
+| **ShotGrid wins** (default) | The site value replaces the ReView value | `ShotGrid won: the ReView value was replaced` |
+| **ReView wins** | The ReView value is kept **and queued back to the site** | `ReView won: its value was sent back to ShotGrid` |
+| **Ask a human** | Nothing changes on either side; the line waits for a decision | `Nothing was changed: choose a side below` |
+
+Only the **disputed field** is withheld. Names, cut ranges, dates and parent links are not in
+conflict and keep flowing down from the site regardless of the policy.
+
+The log message is written *after* arbitration, not before. It used to interpolate the policy
+into a sentence that always claimed an overwrite — so it could print "review_wins" in the
+very line where it overwrote the local value.
+
+### Resolving by hand
+
+Under **Ask a human**, open conflicts are listed at the top of the **Synchronisation**
+section with the field name and both values in plain sight, and two buttons:
+
+- **Keep ShotGrid** — re-reads that single entity from the site and applies it.
+- **Keep ReView** — restores the ReView value recorded on the conflict line, then queues the
+  corresponding write. The restore step is necessary because under *ShotGrid wins* the local
+  value has already been replaced, and the conflict line is the only place the original
+  survives.
+
+Neither button merely marks the line as read. Closing a conflict without acting would leave
+the gap intact and let it come back at the next pass.
+
+If the matching domain is closed for writing, **Keep ReView** says so instead of announcing a
+write that will not happen.
+
+## Narrowing the statuses offered
+
+A studio site knows every status the studio has ever defined — twenty-one on a shot is
+common. A given show uses six of them. All twenty-one were offered in every right-click
+menu, every picker and every filter, and finding the one you meant took reading the lot.
+
+*ShotGrid tab → Settings → **Statuses offered on this project*** lists the imported
+vocabulary for one scope at a time — tasks, shots, sequences, assets, each with its own
+list on the site — with the site's colour, display name and code. Tick the ones the show
+uses and everything that offers a status follows. Leave a scope empty and it stays whole:
+nothing is deduced from an omission.
+
+Three properties make this safe to use on a live show:
+
+- **Hiding never erases.** Synchronisation keeps importing the real status of an entity, and
+  an entity that already carries a hidden status keeps displaying it. Only the *choice* is
+  narrowed.
+- **A filter that matches nothing is ignored.** Codes renamed on the site, or a list copied
+  from another show, would otherwise leave an empty picker — and an empty picker cannot be
+  repaired from the screen where it is missing. The scope falls back to its full list.
+- **It is judged scope by scope.** A shot list that matched nothing is not rescued by the
+  task statuses that survived alongside it.
+
+The setting lives on the connection (`visibleStatuses`, one list of codes per scope) and
+survives a settings read fallback, like the step list and the status mapping.
+
+> [!NOTE]
+> This narrows what ReView *offers*. It is not a permission: the API refuses a hidden status
+> the same way it refuses one belonging to another project, so a pipeline tool posting
+> `pipelineStatusId` gets the same list as a person.
+
+## Statuses ReView does not recognise
+
+A status code is "unknown" when the site sends a value that is not in the list ReView
+imported for that entity type. This happens in ordinary circumstances: *Status list → read*
+turned off, the site schema momentarily unreadable, a code retired from `valid_values` while
+entities still carry it, or a webhook filter that never subscribed to `Status` events.
+
+Three inputs, three distinct outcomes:
+
+| The site sends | ReView does |
+|---|---|
+| An empty status | Clears the local status — the site deliberately emptied it |
+| A known code | Writes the matching status |
+| An unknown code | **Keeps the local status** and logs a warning |
+
+The warning is emitted once per (entity type, code) and per run: a full pass over three
+thousand shots would otherwise write three thousand identical lines.
+
+> [!CAUTION]
+> The same reasoning protects review decisions. A ShotGrid version status with no entry in
+> the version status mapping leaves `reviewStatusId` untouched. Writing it unconditionally
+> erased the human decision — approved, retake — on every pass, with no conflict and no trace.
+> It is the single most expensive value to overwrite in the whole integration.
+
+When the status reference cannot be read at all, ReView falls back to the statuses it has
+already imported from a site (`origin = shotgrid`, studio-level). That filter is not
+cosmetic: without it the fallback also picked up the studio's own local vocabulary and other
+projects' statuses, and a common code such as `ip` was enough to stamp a shot with a
+neighbouring project's status.
+
+Statuses that disappear from the site are **kept**, not deleted, and reported once — a ReView
+task may still carry one, and stripping its status would be worse than keeping a stale entry.
+
+**Studio codes are first-class.** Values such as `rtk`, `pass` or `suprev` are imported like
+any other: ReView keeps the site's own code, name and colour. Only the *legacy* task enum
+kept for backwards compatibility falls back to `TODO` when a code is not recognised; the
+pipeline status shown in the interface is the site's. Codes are also classified for the
+progress gauges — `omt`, `dis`, `ign`, `na`, `dcl` count as neither work to do nor work done,
+so an omitted shot does not inflate a production's remaining work forever.
+
+## Deleting on the site
+
+Deleting in ShotGrid **moves the ReView counterpart to the bin** — it never erases it. The
+work attached (media, comments, decisions, history) stays readable, the link survives, and
+restoring the entity on the site brings the same one back rather than a copy.
+
+It now happens **on the event**, within seconds, and no longer only on a full pass run by
+hand. The retirement of a sequence, a shot, an asset, a task or a version is applied as
+soon as the webhook delivers it — or on the next poll, in polling mode.
+
+| Deleted on the site | What ReView does |
+|---|---|
+| Sequence, shot, asset | Moved to the bin, with its history |
+| Task | Removed if it is empty; **kept** if it carries versions, and the run log says so — deleting it would take that review work with it |
+| Version | Moved to the bin, media and comments included |
+| Note | **Kept**, and reported in the run log. A comment has no bin of its own, so honouring the deletion would erase a review exchange for good — that decision is left to a person |
+
+Two limits worth knowing:
+
+- **A missed deletion is not caught up.** A nightly catch-up reads what *changed*; an entity
+  it does not receive has simply not moved, and inferring a deletion there would empty the
+  project. So a deletion made while the instance was unreachable is applied by the next
+  **full** *Synchronise*, not by the catch-up. **Comparison** lists those entities in the
+  meantime, as *missing on the site*.
+- **An entity that moved to another project is not a deletion.** ReView re-reads it before
+  trashing anything: if the site still answers for it, nothing is binned, and the project
+  guard reports it as out-of-project instead.
+
+## What cannot be undone
+
+Two mistakes have no recovery path from inside ReView. Both have dedicated guards.
+
+**Writing into the wrong project.** A ShotGrid site hosts every project of the studio, and a
+forgotten filter does not look like a bug — it just imports the neighbour's project over
+yours.
+
+ReView has **one** outbound write path. Every create, update and file upload goes through a
+single writer built from the connection; the client's raw write methods are named `unsafe*`
+and a test fails the build if any of them is called from anywhere else. The writer re-reads
+its target and refuses to touch it if the project does not match or if it sits in a template
+project; on a creation it sets the project itself, refuses a payload that names a different
+one, and re-reads what the site actually filed. Writing into the wrong project is no longer
+something a future change can do by forgetting a check.
+
+Two things that guarantee cannot cover, and no amount of code will: the gap between the
+verification read and the write (ShotGrid offers no conditional write, so the window is
+milliseconds but not zero), and a link pointed at the wrong project from the outset — every
+write is then correct with respect to a wrong premise, which is why linking checks the id
+**and** the name, and why the name is re-checked before every pass.
+
+- Every search carries the project filter (`['project', 'is', {Project, id}]`).
+- Every record received is re-checked with `belongsToProject` before being used. Entities
+  that legitimately have no project (`HumanUser`, `Status`, `Step`, `Department`, `Group`,
+  `PublishedFileType`, `ApiUser`) are listed explicitly rather than accepted by default; a
+  project entity whose `project` field is unreadable is refused, never guessed.
+- Every write re-reads its target and re-checks ownership before touching it — a link may
+  point at an entity deleted and re-created under the same id elsewhere.
+- Every write also re-checks that the target is not inside a template project.
+- The remote project name is compared before each synchronisation; a mismatch halts it.
+- An inbound event is checked against the linked project **before any work is done**: a
+  webhook misconfigured on the site can perfectly well deliver the whole studio's events.
+
+A record that fails the check is skipped, counted under `guard`, and logged as an error with
+both project ids. This should never fire — which is exactly why it exists.
+
+**Creating a duplicate Version.** A site cannot tell two identically named versions apart,
+and the duplicate has to be deleted by hand over there. The homonym search described in
+[Never creating a duplicate Version](#never-creating-a-duplicate-version) is what prevents
+it, together with the "media already here" marker that stops a just-uploaded file from being
+downloaded back.
+
+## Troubleshooting
+
+| Symptom | Cause | What to do |
+|---|---|---|
+| A status changed in ReView never appears on the site | The domain is closed for writing | Look for the *"Some changes were not sent"* banner under **Synchronisation**, then open the matching write column in **Settings** |
+| …and the banner is not there | The entity has no ShotGrid link (created locally, never synchronised) | Hover the sync dot next to it — an amber dot reads *Not in ShotGrid — created here only*. **Comparison** lists it as *Not linked* |
+| …and the entity is linked | The write left but the target moved | Check the run log for *"belongs to project #…"* or a template-project refusal |
+| A status changed on the site never appears in ReView | Unknown status code | Search the log for *Unknown status code* — add the code to the site's valid values, or re-read the status list. Check that your webhook subscribes to `Status` events |
+| Nothing at all comes in, and the log shows no run | The update mode is *Manual only* | Switch it to *Webhooks* or *Periodic polling* |
+| An episode renamed on the site does not follow | The webhook does not subscribe to `Episode`, or the Episode level is off on the ReView project | Add the entity type to the webhook filter; switch the level on under **Settings → Episode level** |
+| Some statuses come through, others do not, with no error | Several passes competed | Fixed: requests are merged and replayed. If it persists, check that the run log shows one run per burst rather than none |
+| A review decision keeps reverting after each sync | The site's version status has no entry in the mapping, and used to blank the decision | Fixed: the decision is now left alone. Map the code under **Settings** if you want it driven from the site |
+| *"ReView wins" behaves like "ShotGrid wins"* | The policy was never read | Fixed. Verify the log line: it now names the actual outcome |
+| Conflicts pile up on entities nobody touched | Any edit moved `updatedAt` | Fixed: a conflict now requires the values to actually differ |
+| A conflict says *"Divergence recorded before the values were captured"* | The line predates value capture | Synchronise again; the next occurrence carries both values |
+| **Keep ReView** reports *"nothing was sent"* | That domain is closed for writing | Open the write column, then resolve the conflict again |
+| *ShotGrid refused the credentials…* | Wrong script name/key, or in user mode: Legacy Login not enabled, or the Personal Access Token not bound | Read the rest of the message — it quotes the site's own words — then re-enter the credentials on the site record |
+| …and it ends with *because the account is locked* | Too many failed attempts; the site locked the account | No local change will help. Have a ShotGrid administrator unlock the account, or wait out the site's lockout window, then save the credentials again |
+| *Remote project name changed* | The linked project was renamed, or its id reused | Confirm the target on the site, then unlink and relink |
+| No events arriving | Webhook disabled after 100 failures, wrong secret, or ReView not reachable | Check the webhook status in ShotGrid; switch to **Periodic polling** if the instance is not public |
+| **Every** delivery fails with `{"error":"not_found"}`, connection test included | The secret token on the site is not the one ReView signs against | Copy it from **Settings → Webhook → Secret token** into the webhook, or *Generate a new secret* and paste that. The server log distinguishes *unknown token* (wrong address) from *invalid signature* (wrong secret) |
+| New entities arrive, but nothing ever changes afterwards | The webhook subscribes to *create / delete / revive* only | Add the *change* triggers for each entity type in the ShotGrid filter, or switch to **Periodic polling** |
+| Thumbnails from the site do not appear on the cards | The setting is off, or the change was never delivered | Check *Publishes → Bring in ShotGrid thumbnails*, then run **Synchronise** — the run log carries a line per thumbnail that could not be brought in |
+| Events accepted but nothing imported for notes or playlists | *(historical)* those events triggered no pass | Fixed: each entity type now runs its own passes |
+| Polling interval changed but nothing happened | *(historical)* the schedule was only laid at boot | Fixed: saving the settings re-lays the repeatable jobs |
+| The interface freezes while a full pass runs | *(historical)* one socket event per realigned entity | Fixed: a large pass emits one summary instead |
+| Media not imported | No media on the version, over the size limit, or outside the status filter | Read the run log — each case has its own line |
+| A version's media is not refreshed although its status is | The version is already imported but its status left the filter | Expected. Import it explicitly from **Published media** |
+| Two identical versions on the site | Two homonyms already existed, so ReView attached to neither | Delete one on the site, then re-publish |
+| A shot exists in ReView but nowhere in ShotGrid | Created locally before the link | The comparison lists it as *Not linked* |
+| An entity disappeared from ReView | Moved to the ShotGrid bin — deletion happens there and propagates here | Restore it in ShotGrid and re-synchronise; the ReView entity is only trashed, with its history |
+| A task deleted in ShotGrid is still in ReView | It carries versions, and deleting it would delete that review work | Move the versions elsewhere, then re-synchronise |
+| A deletion made on the site changes nothing here | *(historical)* the retirement event ran a targeted pass, and binning was reserved to the full pass — the run ended *ok* with empty counts | Fixed: a retirement is applied on the event. For deletions made before this release, run a full **Synchronise** once |
+| A note deleted on the site is still a comment in ReView | Expected — a comment has no bin, so the deletion is reported instead of applied | Read the run log (*the ReView comment is kept*) and delete it here if you want it gone |
+| `Status` and `HumanUser` are missing from the webhook's entity list | The webhook is filtered on a project, and neither belongs to one | Create a second webhook on the same address and secret, with **no project** and those two entity types only |
+| The comparison shows more tasks or versions in ReView | Tasks kept as above, or local versions never pushed | Check *publish mode* |
+| Annotations not attached to notes | Media file missing from storage, or the site refuses `Note.attachments` | Check the run log; ask a ShotGrid administrator for the permission |
+| Media are named after the delivered file, not the version code | *Media name* is set to *Delivered file name*, or the version has not been re-read yet | Switch the setting; names realign on the next pass |
+| A crew member cannot be selected | No email address, or disabled on the site | Fix it on the site, then reload the crew |
+| **Give ReView access** is disabled | No mail relay configured | Configure [SMTP](smtp-and-announcements.md) first |
+
+Every synchronisation is recorded with per-domain counters and a filterable log (info,
+warning, error, conflict), kept under **Synchronisation**. Log lines are stored as message
+keys with their variables, so a run from six months ago reads in the language of whoever
+opens it.
+
+## Development without a ShotGrid site
+
+The repository ships a simulator that reproduces the API surface ReView uses:
+
+```bash
+node scripts/fake-shotgrid.mjs --port 8890
+```
+
+It exposes three projects, two of which deliberately carry entities with identical codes —
+the fixture that proves synchronisation never spills into a neighbouring project — and gives
+each project a distinct crew, so the four crew states can be exercised. Point a site at
+`http://localhost:8890` with script `review_sync` and key `dev-script-key-0000`, after
+allowing the host:
+
+```bash
+SHOTGRID_INSECURE_HOSTS=localhost:8890
+```
+
+That variable is the single escape hatch from the SSRF guard: it lifts the HTTPS and
+private-network checks for the listed hosts only, for both the site address check and every
+outgoing call. It is empty by default and logged loudly at startup — a real ShotGrid site
+never needs it.
+
+The end-to-end scenario runs with:
+
+```bash
+node scripts/test-shotgrid-e2e.mjs
+```
+
+## Related pages
+
+- [Users & roles](users-and-roles.md)
+- [SMTP & announcements](smtp-and-announcements.md)
+- [Pipeline settings](pipeline-settings.md)
+- [Projects & pipeline](../user-guide/projects-and-pipeline.md)
+- [Review decisions & approvals](../user-guide/review-approvals.md)

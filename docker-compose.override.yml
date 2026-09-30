@@ -1,0 +1,30 @@
+# DEVELOPMENT override, loaded automatically by a plain `docker compose up`.
+# Publishes Postgres/Redis to the host for local development (Prisma, scripts, tests).
+#
+# ⚠ Never use it in production. Deploy the base file AND the production overlay, which adds
+# the TLS front end and removes every host port (`ports: !reset []`):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Naming the base file ALONE only drops this override: the TLS front end is missing, host
+# ports stay published, and the API answers in clear text. The same list is prescribed by
+# DOCUMENTATION/getting-started/installation.md and docker-stack.md, and `scripts/install.sh`
+# writes it into COMPOSE_FILE.
+#
+# These two services have NO useful network authentication in dev (Redis has no password at
+# all), so they listen on loopback rather than 0.0.0.0, where they would offer the database
+# and the job queue to the whole network. Set DEV_BIND=0.0.0.0 to expose them deliberately
+# (access from another machine on the LAN).
+services:
+  postgres:
+    ports:
+      - "${DEV_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+  redis:
+    ports:
+      - "${DEV_BIND:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+  # NODE_ENV=development disables the production safeguards (strong secrets, strict CORS; see
+  # backend/src/config/env.ts). Production deploys WITHOUT this override.
+  backend:
+    environment:
+      NODE_ENV: development
+  worker:
+    environment:
+      NODE_ENV: development

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 370" width="800" height="370" role="img" aria-labelledby="twocoord-title twocoord-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="twocoord-title">A note written on the cut, and how it reaches the artist</title>
+  <desc id="twocoord-desc">A note written while watching the cut is stored with two coordinates at once: its position in the film, and the frame inside the clip's own media. It stays on the cut until someone sends it on from the right-click menu, which raises a single flag rather than copying anything, and gives the note a second home on the shot's review at that exact frame.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="370" rx="10"/>
+
+  <text class="d" x="28" y="32">A NOTE WRITTEN WHILE THE CUT IS PLAYING</text>
+
+  <rect class="panel-a" x="28" y="48" width="210" height="46" rx="9"/>
+  <text class="t" x="133" y="70" text-anchor="middle">Pause at 04:12</text>
+  <text class="d" x="133" y="86" text-anchor="middle">draw, then write the note</text>
+
+  <path class="conn-a" d="M238 71 L286 71" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="290" y="48" width="230" height="46" rx="9"/>
+  <text class="l" x="405" y="70" text-anchor="middle">One note, two coordinates</text>
+  <text class="d" x="405" y="86" text-anchor="middle">both written at the same instant</text>
+
+  <path class="conn-o" d="M405 94 L405 106" marker-end="url(#arrow)"/>
+  <rect class="panel" x="290" y="110" width="230" height="34" rx="9"/>
+  <text class="m" x="405" y="131" text-anchor="middle">04:12 — position in the film</text>
+
+  <path class="conn-o" d="M405 144 L405 152" marker-end="url(#arrow)"/>
+  <rect class="panel" x="290" y="156" width="230" height="34" rx="9"/>
+  <text class="m" x="405" y="177" text-anchor="middle">frame 1043 — inside the clip</text>
+
+  <path class="conn" d="M520 71 L566 71" marker-end="url(#arrow)"/>
+  <rect class="panel" x="570" y="48" width="202" height="46" rx="9"/>
+  <text class="l" x="671" y="70" text-anchor="middle">It stays on the cut</text>
+  <text class="d" x="671" y="86" text-anchor="middle">editorial notes stay editorial</text>
+
+  <path class="conn-a" d="M520 173 L566 173" marker-end="url(#arrow-a)"/>
+  <text class="a" x="543" y="166" text-anchor="middle">send</text>
+  <rect class="panel-a" x="570" y="150" width="202" height="46" rx="9"/>
+  <text class="t" x="671" y="172" text-anchor="middle">And on the shot review</text>
+  <text class="d" x="671" y="188" text-anchor="middle">on that exact frame</text>
+
+  <rect class="band" x="28" y="228" width="744" height="118" rx="10"/>
+  <text class="d" x="44" y="252">SENDING IT ON</text>
+  <text class="l" x="44" y="276">Right-click the card → Send to the shot review</text>
+  <text class="d" x="44" y="296">Open to the note's author, or to any supervisor or admin.</text>
+  <text class="d" x="44" y="314">One flag is raised — nothing is moved, nothing is copied; a copy would diverge the moment either side was edited.</text>
+  <text class="d" x="44" y="332">The first send notifies the shot's watchers. A placeholder has no image, so it cannot be commented on at all.</text>
+</svg>

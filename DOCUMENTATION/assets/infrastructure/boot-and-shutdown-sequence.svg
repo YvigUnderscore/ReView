@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 462" width="800" height="462" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Boot and shutdown of the API process</title>
+  <desc id="fig-desc">On boot the bucket is created before the listener opens, then the maintenance jobs are scheduled and a reconciliation pass is armed. On SIGTERM the process stops accepting work, then closes its connections, under an eight-second grace period.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="462" rx="10"/>
+
+  <text class="d" x="20" y="34">BOOT — AFTER start.sh HANDS OVER</text>
+  <text class="d" x="410" y="34">SHUTDOWN — SIGTERM TO EXIT</text>
+
+  <rect class="band" x="20" y="44" width="370" height="398" rx="10"/>
+  <rect class="band" x="410" y="44" width="370" height="398" rx="10"/>
+
+  <!-- Colonne gauche : démarrage -->
+  <rect class="panel" x="44" y="60" width="322" height="46" rx="9"/>
+  <text class="l" x="205" y="81" text-anchor="middle">node dist/server.js</text>
+  <text class="d" x="205" y="97" text-anchor="middle">migrations already applied by start.sh</text>
+  <path class="conn" d="M205 106 L205 120" marker-end="url(#arrow)"/>
+
+  <rect class="panel-d" x="44" y="124" width="322" height="46" rx="9"/>
+  <text class="t" x="205" y="145" text-anchor="middle">await storage.ensureBucket()</text>
+  <text class="d" x="205" y="161" text-anchor="middle">MinIO unreachable: exit 1, crash loop</text>
+  <path class="conn" d="M205 170 L205 184" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="44" y="188" width="322" height="46" rx="9"/>
+  <text class="l" x="205" y="209" text-anchor="middle">createApp() + initSocket()</text>
+  <text class="d" x="205" y="225" text-anchor="middle">Express, Socket.io, Redis adapter</text>
+  <path class="conn" d="M205 234 L205 248" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="44" y="252" width="322" height="46" rx="9"/>
+  <text class="l" x="205" y="273" text-anchor="middle">scheduleMaintenanceJobs()</text>
+  <text class="d" x="205" y="289" text-anchor="middle">digest, weekly report, purge — repeatable</text>
+  <path class="conn" d="M205 298 L205 312" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="44" y="316" width="322" height="46" rx="9"/>
+  <text class="t" x="205" y="337" text-anchor="middle">server.listen(PORT)</text>
+  <text class="d" x="205" y="353" text-anchor="middle">the container starts answering /health</text>
+  <path class="conn-o" d="M205 362 L205 376" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="44" y="380" width="322" height="46" rx="9"/>
+  <text class="l" x="205" y="401" text-anchor="middle">+ 20 s — reconcileStuckMedia()</text>
+  <text class="d" x="205" y="417" text-anchor="middle">media left PROCESSING by a killed worker</text>
+
+  <!-- Colonne droite : extinction -->
+  <rect class="panel" x="434" y="60" width="322" height="46" rx="9"/>
+  <text class="l" x="595" y="81" text-anchor="middle">SIGTERM — docker compose stop</text>
+  <text class="d" x="595" y="97" text-anchor="middle">a second signal exits immediately</text>
+  <path class="conn" d="M595 106 L595 120" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="434" y="124" width="322" height="46" rx="9"/>
+  <text class="l" x="595" y="145" text-anchor="middle">Phase 10 — stop intake</text>
+  <text class="d" x="595" y="161" text-anchor="middle">HTTP, Socket.io, BullMQ consumers</text>
+  <path class="conn" d="M595 170 L595 184" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="434" y="188" width="322" height="46" rx="9"/>
+  <text class="l" x="595" y="209" text-anchor="middle">Phase 20 — disconnect</text>
+  <text class="d" x="595" y="225" text-anchor="middle">worker-events, Redis, Prisma</text>
+  <path class="conn" d="M595 234 L595 248" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="434" y="252" width="322" height="46" rx="9"/>
+  <text class="t" x="595" y="273" text-anchor="middle">Grace 8 s, then force()</text>
+  <text class="d" x="595" y="289" text-anchor="middle">an active transcode loses its lock</text>
+  <path class="conn-o" d="M595 298 L595 312" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="434" y="316" width="322" height="46" rx="9"/>
+  <text class="l" x="595" y="337" text-anchor="middle">SIGKILL at 10 s</text>
+  <text class="d" x="595" y="353" text-anchor="middle">docker's own deadline</text>
+
+  <text class="d" x="595" y="392" text-anchor="middle">The worker installs the same handlers:</text>
+  <text class="d" x="595" y="408" text-anchor="middle">a forced transcode is replayed by BullMQ, and the</text>
+  <text class="d" x="595" y="424" text-anchor="middle">boot pass on the left catches what stayed stuck.</text>
+</svg>

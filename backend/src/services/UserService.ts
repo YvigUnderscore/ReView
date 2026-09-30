@@ -1,0 +1,572 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { randomBytes } from 'node:crypto';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { Prisma, Role, UserStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { invalidateAuthUser } from '../lib/userCache';
+import { logAudit } from './AuditService';
+import * as InvitationService from './InvitationService';
+import { storage, StorageService } from './StorageService';
+import { getOnlineUserIds } from './PresenceService';
+import { toPublicUser } from '../lib/userView';
+import { normalizeEmail } from '../lib/email';
+import { revokeAllCredentials } from '../lib/sessions';
+import { badRequest, forbidden, notFound, unauthorized } from '../lib/errors';
+import { NOTIFICATION_SETTINGS_KEY, notificationSettingsSchema } from '../lib/notificationKinds';
+import { OVERVIEW_PREFERENCE_KEY, overviewLayoutSchema } from '../lib/overviewWidgets';
+
+/**
+ * Logique métier des utilisateurs (profil, présence, administration des comptes).
+ * Les routes ne font que valider (RBAC + Zod) → appeler → répondre (10.D8).
+ */
+
+const publicUser = {
+  id: true,
+  email: true,
+  name: true,
+  firstName: true,
+  lastName: true,
+  username: true,
+  jobTitle: true,
+  bio: true,
+  phone: true,
+  role: true,
+  status: true,
+  lastSeenAt: true,
+  avatarKey: true,
+  storageUsed: true,
+  storageLimit: true,
+  disabledAt: true,
+  createdAt: true,
+} as const;
+
+/**
+ * Refuse de retirer au studio son dernier administrateur.
+ *
+ * Rien n'empêchait l'unique ADMIN de se rétrograder, de se désactiver ou d'être supprimé :
+ * l'instance restait debout mais plus personne ne pouvait créer un compte, nommer un rôle
+ * ou toucher aux réglages, et la porte de secours est fermée (`setup` refuse de rejouer dès
+ * qu'un studio existe). Le seul recours était un UPDATE SQL sur la base.
+ *
+ * Ne comptent que les administrateurs réellement utilisables : un compte de service porte
+ * les écritures d'un token machine et ne se connecte jamais, un compte désactivé non plus.
+ */
+export async function assertNotLastAdmin(id: number): Promise<void> {
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true, isService: true, disabledAt: true },
+  });
+  if (!target || target.role !== Role.ADMIN || target.isService || target.disabledAt) return;
+  const others = await prisma.user.count({
+    where: { id: { not: id }, role: Role.ADMIN, isService: false, disabledAt: null },
+  });
+  if (others === 0) throw badRequest('The last administrator of the studio cannot be removed', 'LAST_ADMIN');
+}
+
+/** Refuse un pseudo/email déjà pris par un autre utilisateur (excludeId = compte édité). */
+async function assertUniqueIdentity(
+  username: string | undefined,
+  email: string | undefined,
+  excludeId: number,
+) {
+  if (username) {
+    const taken = await prisma.user.findFirst({
+      where: { username, id: { not: excludeId } },
+      select: { id: true },
+    });
+    if (taken) throw badRequest('Username already taken', 'USERNAME_TAKEN');
+  }
+  if (email) {
+    const taken = await prisma.user.findFirst({
+      where: { email, id: { not: excludeId } },
+      select: { id: true },
+    });
+    if (taken) throw badRequest('Email already in use', 'EMAIL_TAKEN');
+  }
+}
+
+/**
+ * Liste complète (admin/superviseur) avec état en ligne.
+ * Les comptes de service (tokens machine) sont exclus : ce sont des porteurs d'écritures,
+ * pas des membres du studio — ils n'ont ni présence, ni adresse joignable.
+ */
+export async function listUsers() {
+  const [users, pending] = await Promise.all([
+    prisma.user.findMany({
+      where: { isService: false },
+      select: publicUser,
+      orderBy: { createdAt: 'asc' },
+    }),
+    // Une seule requête pour toute la liste : un compte encore en attente d'activation se
+    // signale dans l'annuaire, sinon on ne sait pas distinguer « invité » de « jamais venu ».
+    prisma.invitation.findMany({
+      where: { acceptedAt: null, expiresAt: { gt: new Date() } },
+      select: { userId: true },
+    }),
+  ]);
+  const online = new Set(getOnlineUserIds());
+  const invited = new Set(pending.map((i) => i.userId));
+  return Promise.all(
+    users.map(async (u) => ({
+      ...(await toPublicUser(u)),
+      online: online.has(u.id),
+      invitePending: invited.has(u.id),
+    })),
+  );
+}
+
+/**
+ * Présence des personnes que le demandeur a le droit de voir.
+ *
+ * L'email est retiré de la réponse : `toPublicUser` recopie l'objet qu'on lui passe
+ * (`...u`), il servait ici à calculer le nom d'affichage et repartait avec. C'était
+ * l'annuaire complet du studio, adresses comprises, offert à n'importe quel invité.
+ *
+ * Le cloisonnement va plus loin depuis C1 : un CLIENT est un intervenant extérieur, il
+ * n'a pas à connaître l'équipe entière ni à pouvoir écrire à n'importe qui. Il ne voit
+ * que les personnes des projets qu'il partage. Les autres rôles voient le studio, comme
+ * avant — ils y travaillent.
+ */
+export async function listPresence(viewer?: { id: number; role: Role }) {
+  const scope =
+    viewer?.role === Role.CLIENT
+      ? {
+          memberships: {
+            some: { project: { memberships: { some: { userId: viewer.id } } } },
+          },
+        }
+      : {};
+  // Un compte désactivé sort de l'annuaire (A5-07), comme il sort déjà de la recherche
+  // globale (`lib/search.ts`). Deux raisons, et la seconde est la plus opérante : le nom
+  // d'un ancien salarié restait publié à tout le studio, comptes CLIENT extérieurs compris ;
+  // et cet annuaire alimente les mentions et le choix d'un destinataire — assigner du travail
+  // à quelqu'un qui ne peut plus se connecter ne rend service à personne.
+  const users = await prisma.user.findMany({
+    where: { isService: false, disabledAt: null, ...scope },
+    select: {
+      id: true,
+      email: true, // nécessaire au repli displayName/initials — retiré de la sortie plus bas
+      name: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      avatarKey: true,
+      status: true,
+      lastSeenAt: true,
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+  const online = new Set(getOnlineUserIds());
+  return Promise.all(
+    users.map(async (u) => {
+      const { email: _email, ...view } = await toPublicUser(u);
+      return { ...view, online: online.has(u.id) };
+    }),
+  );
+}
+
+/**
+ * Fiche publique d'un membre du studio — lisible par tout compte authentifié.
+ *
+ * Les coordonnées (email, téléphone) ne sont servies qu'aux comptes internes : un CLIENT
+ * externe voit l'annuaire pour savoir à qui il parle en review, pas le carnet d'adresses
+ * du studio. Les projets listés sont ceux que les deux personnes partagent — l'intersection
+ * ne révèle donc rien que le lecteur ne voie déjà.
+ */
+export async function getProfile(viewerId: number, viewerRole: Role, id: number) {
+  const user = await prisma.user.findFirst({ where: { id, isService: false }, select: publicUser });
+  if (!user) throw notFound('User not found');
+
+  const shared =
+    viewerId === id
+      ? []
+      : await prisma.project.findMany({
+          where: {
+            // Deux `memberships.some` ne peuvent pas cohabiter dans le même objet (le
+            // second écraserait le premier) : l'intersection passe par un AND explicite.
+            AND: [
+              { memberships: { some: { userId: id } } },
+              ...(viewerRole === Role.ADMIN || viewerRole === Role.SUPERVISOR
+                ? []
+                : [{ memberships: { some: { userId: viewerId } } }]),
+            ],
+          },
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+          take: 20,
+        });
+
+  const isInternal = viewerRole !== Role.CLIENT;
+  const view = await toPublicUser(user);
+  return {
+    ...view,
+    email: isInternal ? view.email : undefined,
+    phone: isInternal ? view.phone : undefined,
+    // Le quota de stockage est une donnée d'administration, pas un élément de fiche.
+    storageUsed: undefined,
+    storageLimit: undefined,
+    online: getOnlineUserIds().includes(id),
+    sharedProjects: shared,
+    isSelf: viewerId === id,
+  };
+}
+
+export interface UpdateMeInput {
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  jobTitle?: string | null;
+  bio?: string | null;
+  phone?: string | null;
+  email?: string;
+  password?: string;
+}
+
+/**
+ * Garde-fou des changements d'identifiant de connexion (mot de passe, email).
+ *
+ * Un token d'API (36.C) est un secret d'automatisation, souvent en clair dans un CI : lui
+ * laisser changer le mot de passe et l'email en ferait un chemin de prise de contrôle
+ * complète du compte, 2FA comprise, puisqu'aucun facteur n'est redemandé. Une vraie session
+ * doit, elle, re-saisir le mot de passe courant : un jeton volé ne suffit pas à verrouiller
+ * le compte de quelqu'un d'autre.
+ */
+export async function assertCredentialChange(
+  userId: number,
+  body: UpdateMeInput & { currentPassword?: string },
+  viaApiToken: boolean,
+): Promise<void> {
+  if (body.password === undefined && body.email === undefined) return;
+  if (viaApiToken)
+    throw forbidden('An API token cannot change the password or the email', 'API_TOKEN_FORBIDDEN');
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+  if (!user) throw unauthorized();
+  if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password)))
+    throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
+}
+
+export async function updateMe(userId: number, body: UpdateMeInput, keepSessionId?: string) {
+  const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
+  await assertUniqueIdentity(body.username || undefined, email, userId);
+  const data: Record<string, unknown> = {};
+  if (body.firstName !== undefined) data.firstName = body.firstName;
+  if (body.lastName !== undefined) data.lastName = body.lastName;
+  if (body.username !== undefined) data.username = body.username;
+  if (body.jobTitle !== undefined) data.jobTitle = body.jobTitle;
+  if (body.bio !== undefined) data.bio = body.bio;
+  if (body.phone !== undefined) data.phone = body.phone;
+  if (email !== undefined) data.email = email;
+  if (body.password !== undefined) data.password = await bcrypt.hash(body.password, 12);
+  const user = await prisma.user.update({ where: { id: userId }, data, select: publicUser });
+  // Changer son mot de passe (ou son email, qui est l'identifiant de connexion) doit
+  // couper les sessions ouvertes ailleurs : sinon un jeton volé survit à la reprise en
+  // main du compte. La session courante est conservée pour ne pas déconnecter l'auteur.
+  if (body.password !== undefined || email !== undefined) {
+    await revokeAllCredentials(userId, keepSessionId);
+  }
+  return toPublicUser(user);
+}
+
+export async function setStatus(userId: number, status: UserStatus) {
+  const user = await prisma.user.update({ where: { id: userId }, data: { status }, select: publicUser });
+  return toPublicUser(user);
+}
+
+export async function presignAvatar(userId: number, contentType: string) {
+  const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : '.jpg';
+  const key = StorageService.avatarKey(userId, ext);
+  const url = await storage.getPresignedPutUrl(key, contentType, 900);
+  return { url, key };
+}
+
+/**
+ * Forme exacte d'une clé d'avatar : `avatars/<id>.<ext>`, telle que `StorageService`
+ * la fabrique. La comparaison se fait sur l'identifiant CAPTURÉ, jamais sur un préfixe :
+ * `'avatars/91.png'.startsWith('avatars/9')` est vrai, et c'est par là que le compte 9
+ * faisait servir l'avatar du compte 91 (A1-04/A2-06). Les deux contrôles du même genre
+ * (`DepartmentService.setImage`, `EntityThumbnailService.set`) sont, eux, délimités.
+ */
+const AVATAR_KEY_RE = /^avatars\/(\d+)\.(?:png|jpe?g|webp)$/;
+
+export async function setAvatar(userId: number, key: string | null) {
+  // Sécurité : la clé doit désigner EXACTEMENT l'avatar de l'utilisateur courant. Le
+  // contrôle vit ici, dans le service : la route est aujourd'hui son seul appelant, mais
+  // c'est le service qui écrit en base — une garde posée seulement à l'entrée HTTP tombe
+  // au premier second appelant (worker, import, script de migration).
+  if (key !== null && AVATAR_KEY_RE.exec(key)?.[1] !== String(userId))
+    throw badRequest('Invalid avatar key', 'BAD_KEY');
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { avatarKey: key },
+    select: publicUser,
+  });
+  return toPublicUser(user);
+}
+
+export interface CreateUserInput {
+  email: string;
+  /** Absent en mode invitation : la personne choisira le sien depuis le lien reçu. */
+  password?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  role: Role;
+}
+
+/**
+ * Crée un compte. Sans mot de passe, le compte naît inactivable autrement que par le lien
+ * d'invitation envoyé par email : son mot de passe est un aléa que personne — pas même
+ * l'administrateur qui vient de créer le compte — n'a jamais vu.
+ */
+export async function createUser(actorId: number, input: CreateUserInput) {
+  const email = normalizeEmail(input.email);
+  if (await prisma.user.findUnique({ where: { email } }))
+    throw badRequest('Email already in use', 'EMAIL_TAKEN');
+  if (input.username && (await prisma.user.findUnique({ where: { username: input.username } })))
+    throw badRequest('Username already taken', 'USERNAME_TAKEN');
+  const byInvitation = input.password === undefined;
+  // Relais et URL publique vérifiés AVANT la création : un compte créé puis privé de son
+  // email d'activation ne serait joignable par personne, et son adresse resterait prise.
+  if (byInvitation) await InvitationService.assertCanInvite();
+
+  const hash = await bcrypt.hash(input.password ?? randomBytes(32).toString('hex'), 12);
+  const user = await prisma.user.create({
+    data: {
+      email,
+      password: hash,
+      name: input.name ?? null,
+      firstName: input.firstName ?? null,
+      lastName: input.lastName ?? null,
+      username: input.username ?? null,
+      role: input.role,
+    },
+    select: publicUser,
+  });
+  if (byInvitation) {
+    try {
+      await InvitationService.sendInvitation(user.id, actorId);
+    } catch (err) {
+      // Le relais a lâché entre la vérification et l'envoi : on ne laisse pas derrière nous
+      // un compte muet qui réserve l'adresse. L'administrateur retente quand c'est réparé.
+      await prisma.user.delete({ where: { id: user.id } });
+      throw err;
+    }
+  }
+  logAudit({
+    userId: actorId,
+    action: 'USER_CREATE',
+    entityType: 'User',
+    entityId: user.id,
+    metadata: { invited: byInvitation },
+  });
+  return toPublicUser(user);
+}
+
+export async function changeRole(actorId: number, id: number, role: Role) {
+  if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('User not found');
+  if (role !== Role.ADMIN) await assertNotLastAdmin(id);
+  const user = await prisma.user.update({ where: { id }, data: { role }, select: publicUser });
+  // Le rôle est mis en cache par requête (lib/userCache) : sans cette invalidation, un
+  // compte rétrogradé garderait ses droits une demi-minute.
+  invalidateAuthUser(id);
+  logAudit({
+    userId: actorId,
+    action: 'USER_ROLE_CHANGE',
+    entityType: 'User',
+    entityId: id,
+    metadata: { role },
+  });
+  return toPublicUser(user);
+}
+
+export interface AdminUpdateUserInput extends UpdateMeInput {
+  name?: string | null;
+  role?: Role;
+  storageLimit?: number | null;
+  /** Désactivation (`true`) ou réactivation (`false`) du compte — cf. `setDisabled`. */
+  disabled?: boolean;
+}
+
+export async function updateUser(actorId: number, id: number, body: AdminUpdateUserInput) {
+  const target = await prisma.user.findUnique({ where: { id }, select: { disabledAt: true } });
+  if (!target) throw notFound('User not found');
+  // Rétrograder ou désactiver l'unique administrateur rendrait le studio inadministrable.
+  if ((body.role !== undefined && body.role !== Role.ADMIN) || body.disabled === true)
+    await assertNotLastAdmin(id);
+  const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
+  await assertUniqueIdentity(body.username || undefined, email, id);
+  const data: Record<string, unknown> = {};
+  if (body.name !== undefined) data.name = body.name;
+  if (body.firstName !== undefined) data.firstName = body.firstName;
+  if (body.lastName !== undefined) data.lastName = body.lastName;
+  if (body.username !== undefined) data.username = body.username;
+  if (email !== undefined) data.email = email;
+  if (body.password !== undefined) data.password = await bcrypt.hash(body.password, 12);
+  if (body.role !== undefined) data.role = body.role;
+  if (body.storageLimit !== undefined)
+    data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
+  // Re-désactiver un compte déjà désactivé ne rajeunit pas la date : c'est la date du départ.
+  if (body.disabled !== undefined) data.disabledAt = body.disabled ? (target.disabledAt ?? new Date()) : null;
+  const user = await prisma.user.update({ where: { id }, data, select: publicUser });
+  invalidateAuthUser(id);
+  // L'audit nomme l'événement notable : une désactivation n'est pas une édition de fiche.
+  const action = body.disabled === undefined ? 'USER_UPDATE' : body.disabled ? 'USER_DISABLE' : 'USER_ENABLE';
+  logAudit({ userId: actorId, action, entityType: 'User', entityId: id });
+  // Un admin qui réinitialise un mot de passe, change l'email de connexion, rétrograde un
+  // rôle ou désactive un compte agit en général sur un compte compromis ou un départ : les
+  // jetons déjà émis (qui portent l'ancien rôle) ne doivent pas survivre à l'opération.
+  if (
+    body.password !== undefined ||
+    email !== undefined ||
+    body.role !== undefined ||
+    body.disabled === true
+  ) {
+    await revokeAllCredentials(id);
+  }
+  return toPublicUser(user);
+}
+
+/**
+ * Désactive (ou réactive) un compte — chemin par défaut d'un départ.
+ *
+ * La suppression dure fait converger vers `User` douze cascades et vingt `SetNull` : elle
+ * emporte les notifications, les abonnements, les sessions… et vide surtout `AuditLog.userId`,
+ * c'est-à-dire l'auteur des actions journalisées. Le registre d'audit d'un studio survit à
+ * ses employés ; le compte, lui, n'a qu'à cesser de fonctionner. La désactivation coupe
+ * l'accès (session et tokens révoqués sur-le-champ) sans rien effacer.
+ */
+export async function setDisabled(actorId: number, id: number, disabled: boolean) {
+  if (disabled && id === actorId) throw badRequest('You cannot disable your own account');
+  return updateUser(actorId, id, { disabled });
+}
+
+/**
+ * Suppression définitive d'un compte — action explicite, jamais le chemin par défaut.
+ * Préférer `setDisabled` : la suppression emporte l'auteur des actions journalisées.
+ */
+export async function deleteUser(actorId: number, id: number) {
+  if (id === actorId) throw badRequest('You cannot delete your own account');
+  await assertNotLastAdmin(id);
+  // Les liens de partage sont en `SetNull` : supprimer le compte les laissait VIVANTS, et
+  // désormais sans propriétaire — un départ ne coupait donc pas les accès publics ouverts
+  // par la personne, alors que c'est précisément ce qu'on attend d'un offboarding.
+  const revoked = await prisma.shareLink.updateMany({
+    where: { createdById: id, revoked: false },
+    data: { revoked: true },
+  });
+  await prisma.user.delete({ where: { id } });
+  invalidateAuthUser(id);
+  logAudit({
+    userId: actorId,
+    action: 'USER_DELETE',
+    entityType: 'User',
+    entityId: id,
+    metadata: { revokedShareLinks: revoked.count },
+  });
+}
+
+// ── Préférences UI (JSON libre par utilisateur : vues kanban, etc.) ──────────
+
+const PREFERENCES_MAX_BYTES = 32_768;
+
+/**
+ * Nombre de clés conservées au premier niveau du sac (A2-04).
+ *
+ * La taille totale ne suffit pas : la fusion est superficielle et n'efface jamais une clé
+ * qu'on ne lui redemande pas, si bien qu'un compte ordinaire pouvait faire grossir la liste
+ * des clés d'un `PATCH` à l'autre jusqu'à saturer le plafond d'octets — et l'y laisser
+ * définitivement, puisque seul un `null` explicite par clé permet d'en reprendre. Borner le
+ * NOMBRE de clés rend l'accumulation refusable avant d'en arriver là, et rend le refus
+ * actionnable : le message dit quoi supprimer. Le type front (`UserPreferences`) en compte
+ * une douzaine ; deux cents laissent toute la marge dont une feature aura besoin.
+ */
+const PREFERENCES_MAX_KEYS = 200;
+
+/**
+ * Feuille admissible d'une préférence. Chaque chaîne est bornée pour la même raison que
+ * dans `lib/commentPayload` : sans cela, un seul champ suffit à remplir tout le budget.
+ */
+const preferenceLeaf = z.union([z.string().max(4_000), z.number().finite(), z.boolean(), z.null()]);
+
+/**
+ * Valeur admissible, construite en DESCENDANT sur une profondeur finie plutôt qu'en
+ * `z.lazy()` récursif : la profondeur devient une propriété du schéma, pas une course entre
+ * la pile de Node et la taille du corps. Cinq niveaux couvrent la plus imbriquée des
+ * préférences réelles (`savedViews` : portée → liste de vues → `filters`).
+ */
+function preferenceValue(depth: number): z.ZodTypeAny {
+  if (depth === 0) return preferenceLeaf;
+  const inner = preferenceValue(depth - 1);
+  return z.union([
+    preferenceLeaf,
+    z.array(inner).max(500),
+    z.record(z.string().max(64), inner).refine((o) => Object.keys(o).length <= PREFERENCES_MAX_KEYS),
+  ]);
+}
+
+/**
+ * Corps admissible de `PATCH /api/users/me/preferences`. La clé était déjà bornée à 64
+ * caractères, la VALEUR ne l'était pas : `z.unknown()` laissait passer n'importe quelle
+ * forme, de n'importe quelle profondeur, jusqu'au plafond du parseur de corps (2 Mo). Le
+ * schéma vit ici, et non dans la route, parce que ce qu'une préférence a le droit de
+ * contenir relève de la même décision que la fusion qui l'écrit.
+ */
+export const preferencesPatchSchema = z
+  .record(z.string().max(64), preferenceValue(5))
+  // Une clé du sac a désormais une FORME arrêtée : les réglages de notification par type
+  // d'événement. Sans ce contrôle, un genre mal orthographié s'écrivait sans broncher et
+  // ne coupait rien — le réglage semblait pris et l'événement continuait d'arriver.
+  .refine(
+    (patch) =>
+      !(NOTIFICATION_SETTINGS_KEY in patch) ||
+      notificationSettingsSchema.nullable().safeParse(patch[NOTIFICATION_SETTINGS_KEY]).success,
+    { message: 'Invalid notification settings', path: [NOTIFICATION_SETTINGS_KEY] },
+  )
+  // Même raison pour la disposition de la vue d'ensemble : un identifiant de bloc inventé
+  // s'enregistrait sans broncher et n'affichait rien. La liste des blocs vit dans
+  // `lib/overviewWidgets`, recopiée côté front, et c'est elle qui fait foi à l'écriture.
+  .refine(
+    (patch) =>
+      !(OVERVIEW_PREFERENCE_KEY in patch) ||
+      overviewLayoutSchema.nullable().safeParse(patch[OVERVIEW_PREFERENCE_KEY]).success,
+    { message: 'Invalid overview layout', path: [OVERVIEW_PREFERENCE_KEY] },
+  );
+
+export async function getPreferences(userId: number): Promise<Record<string, unknown>> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
+  if (!u) throw notFound('User not found');
+  return (u.preferences ?? {}) as Record<string, unknown>;
+}
+
+/** Merge superficiel : clé à `null` = suppression ; taille ET nombre de clés bornés. */
+export async function updatePreferences(
+  userId: number,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const current = await getPreferences(userId);
+  const next = { ...current };
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === null) delete next[k];
+    else next[k] = v;
+  }
+  // Les deux plafonds portent sur le RÉSULTAT de la fusion, pas sur l'appel : c'est
+  // l'accumulation qui est le défaut (A2-04), et un appel isolé est toujours minuscule.
+  //
+  // Le plafond de clés ne bloque que ce qui GROSSIT : un sac déjà trop garni — données
+  // écrites avant le plafond — doit rester réductible, sinon le refus enferme son
+  // propriétaire dans l'état même qu'on lui reproche, `null` de suppression compris.
+  const keyCount = Object.keys(next).length;
+  if (keyCount > PREFERENCES_MAX_KEYS && keyCount >= Object.keys(current).length)
+    throw badRequest('Too many preference keys', 'PREFERENCES_TOO_MANY_KEYS');
+  if (JSON.stringify(next).length > PREFERENCES_MAX_BYTES)
+    throw badRequest('Preferences are too large', 'PREFERENCES_TOO_LARGE');
+  await prisma.user.update({
+    where: { id: userId },
+    data: { preferences: next as Prisma.InputJsonObject },
+  });
+  return next;
+}

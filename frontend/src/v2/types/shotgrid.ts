@@ -1,0 +1,211 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import type { Role, TaskStatus } from './api';
+/** Types de l'intégration ShotGrid (Phase 48) — miroir des vues renvoyées par l'API. */
+
+export type SgAuthMode = 'script' | 'user';
+
+export interface SgSite {
+  id: number;
+  name: string;
+  baseUrl: string;
+  authMode: SgAuthMode;
+  scriptName: string | null;
+  login: string | null;
+  hasCredentials: boolean;
+  connectionCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SgAccess {
+  read: boolean;
+  write: boolean;
+}
+
+export type SgDomain = 'hierarchy' | 'tasks' | 'statuses' | 'versions' | 'notes' | 'playlists' | 'users';
+
+export interface SgSettings {
+  domains: Record<SgDomain, SgAccess>;
+  lockLocalCreation: boolean;
+  /** Étapes de pipeline retenues pour ce projet, par identifiant ShotGrid. */
+  steps: { asset: number[]; shot: number[] };
+  /** Statuts retenus pour ce projet, par périmètre et par code ShotGrid ; vide = tous. */
+  visibleStatuses: Record<StatusScope, string[]>;
+  eventMode: 'webhook' | 'polling' | 'manual';
+  pollingIntervalSec: number;
+  reconcile: { enabled: boolean; hour: number; lookbackHours: number; onBoot: boolean };
+  media: {
+    source: 'transcoded' | 'original';
+    autoImport: boolean;
+    statusFilter: string[];
+    maxSizeMo: number | null;
+    /** `sgCode` : le média porte le code de la Version ShotGrid. `filename` : son nom de fichier. */
+    naming: 'sgCode' | 'filename';
+    /** Rapatrier la vignette que le site porte sur une séquence, un plan ou un asset. */
+    thumbnails: boolean;
+  };
+  push: { publishMode: 'link' | 'upload' | 'off'; attributeToUser: boolean; attachAnnotations: boolean };
+  /**
+   * Qui écrit la description d'une séquence, d'un plan ou d'un asset.
+   *
+   * `shotgrid` (le défaut) : le site fait foi, et le champ est **en lecture seule** dans
+   * ReView — l'y modifier produirait une divergence que la synchronisation suivante
+   * écraserait sans le dire. `writeBack` ouvre l'aller-retour.
+   */
+  descriptions: { source: 'shotgrid' | 'review'; writeBack: boolean };
+  versionStatusMap: Record<string, number>;
+  conflictPolicy: 'sg_wins' | 'review_wins' | 'manual';
+}
+
+export type SgConnectionStatus = 'ok' | 'auth_error' | 'project_mismatch' | 'disabled' | 'syncing' | 'error';
+
+export interface SgConnection {
+  id: number;
+  projectId: number;
+  site: SgSite;
+  sgProjectId: number;
+  sgProjectName: string;
+  sgProjectUrl: string;
+  active: boolean;
+  status: SgConnectionStatus;
+  statusMessage: string | null;
+  settings: SgSettings;
+  lastSyncAt: string | null;
+  lastEventAt: string | null;
+  /** Domaines dont des écritures vers le site ont été refusées par la matrice de droits. */
+  pushBlocked: Record<string, { count: number; at: string }>;
+  webhookUrl: string;
+  hasWebhookSecret: boolean;
+  createdAt: string;
+}
+
+export interface SgRemoteProject {
+  id: number;
+  name: string;
+  status: string | null;
+  archived: boolean;
+}
+
+export interface SgSyncRun {
+  id: number;
+  kind: string;
+  status: 'running' | 'ok' | 'partial' | 'error' | 'cancelled';
+  startedAt: string;
+  finishedAt: string | null;
+  stats: Record<
+    string,
+    { created: number; updated: number; unchanged: number; skipped: number; failed: number }
+  >;
+  triggeredBy: { id: number; name: string | null; email: string } | null;
+  _count: { logs: number };
+}
+
+export interface SgSyncLog {
+  id: number;
+  level: 'info' | 'warn' | 'error' | 'conflict';
+  messageKey: string;
+  vars: Record<string, unknown>;
+  sgType: string | null;
+  sgId: number | null;
+  localType: string | null;
+  localId: number | null;
+  resolvedAt: string | null;
+  resolution: string | null;
+  createdAt: string;
+}
+
+export type SgDiffKind = 'missing_local' | 'missing_remote' | 'field_differs' | 'unlinked';
+
+export interface SgDiffEntry {
+  kind: SgDiffKind;
+  entity: 'Sequence' | 'Shot' | 'Asset' | 'Task' | 'Version';
+  name: string;
+  sgId: number | null;
+  localId: number | null;
+  sgUrl: string | null;
+  fields?: Array<{ field: string; review: string | null; shotgrid: string | null }>;
+}
+
+export interface SgDiffReport {
+  generatedAt: string;
+  sgProjectId: number;
+  sgProjectName: string;
+  projectNameOk: boolean;
+  remoteProjectName: string | null;
+  counts: Record<string, { review: number; shotgrid: number }>;
+  entries: SgDiffEntry[];
+  truncated: boolean;
+}
+
+export interface SgImportableVersion {
+  sgId: number;
+  code: string;
+  status: string | null;
+  description: string | null;
+  entity: string | null;
+  task: string | null;
+  user: string | null;
+  hasMedia: boolean;
+  imported: boolean;
+  updatedAt: string | null;
+}
+
+/**
+ * Les quatre périmètres qui portent un statut de pipeline.
+ *
+ * ShotGrid tient une liste par entité (`sg_status_list` sur Task, Shot, Sequence et Asset),
+ * et elles ne coïncident pas : quatre valeurs sur une séquence, quinze sur un plan. Les
+ * confondre proposait à l'écran des états que le site refuse à l'écriture — et l'asset
+ * empruntait le vocabulaire des tâches faute d'en avoir un.
+ */
+export type StatusScope = 'task' | 'shot' | 'sequence' | 'asset';
+
+export interface PipelineStatus {
+  id: number;
+  scope: StatusScope;
+  code: string;
+  name: string;
+  color: string;
+  order: number;
+  isDone: boolean;
+  isDefault: boolean;
+  /** Valeur de l'énumération que ce statut représente — c'est elle qui porte la famille. */
+  legacyStatus: TaskStatus | null;
+}
+
+/** Ce que ReView sait déjà d'une personne de l'équipe ShotGrid. */
+export type SgCrewState = 'member' | 'account' | 'none' | 'ineligible';
+
+export interface SgCrewPerson {
+  sgId: number;
+  name: string;
+  login: string | null;
+  email: string | null;
+  sgStatus: string | null;
+  state: SgCrewState;
+  userId: number | null;
+  /** Vrai quand le rapprochement vient d'un lien posé à la main, pas de l'adresse. */
+  linkedByHand: boolean;
+  projectRole: Role | null;
+  userRole: Role | null;
+  /** Département tel que le site le nomme, même sans correspondance locale (lot 10). */
+  sgDepartment: string | null;
+  /** Département ReView correspondant, quand le studio en a déjà un sous ce nom. */
+  department: { id: number; name: string } | null;
+}
+
+export interface SgCrewResponse {
+  crew: SgCrewPerson[];
+  /** Faux pour un superviseur de projet : il peut ajouter, pas créer de compte. */
+  canCreateAccounts: boolean;
+  /** Sans relais courriel configuré, aucune invitation ne partira. */
+  smtpReady: boolean;
+}
+
+export interface SgCrewInviteResult {
+  sgId: number;
+  outcome: 'created' | 'added' | 'linked' | 'skipped';
+  reason?: string;
+}

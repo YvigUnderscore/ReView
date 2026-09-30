@@ -1,0 +1,202 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { Router, type Request } from 'express';
+import { CommentState } from '@prisma/client';
+import { z } from 'zod';
+import { authenticate } from '../middleware/auth';
+import { assertProjectAccess } from '../middleware/rbac';
+import { validate } from '../middleware/validate';
+import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pipeline';
+import { notFound } from '../lib/errors';
+import { paginationQuery, readPagination } from '../lib/pagination';
+import { annotationSchema, cameraStateSchema } from '../lib/commentPayload';
+import { attachmentsSchema } from '../lib/commentAttachments';
+import { commentTaskBody } from '../lib/taskPayload';
+import { rateLimit, identityRateKey } from '../middleware/rateLimit';
+import * as CommentService from '../services/CommentService';
+import * as CommentExportService from '../services/CommentExportService';
+import * as TaskService from '../services/TaskService';
+
+const router = Router();
+router.use(authenticate);
+
+const idParam = z.object({ id: z.coerce.number().int() });
+
+/** Résout le projet d'un commentaire + assertion d'accès (RBAC) → renvoie le projectId. */
+async function resolveCommentAccess(req: Request, commentId: number): Promise<number> {
+  const projectId = await resolveProjectIdForComment(commentId);
+  if (!projectId) throw notFound('Comment not found');
+  await assertProjectAccess(req, projectId);
+  return projectId;
+}
+
+// GET /api/comments?mediaObjectId=X — fil (racines paginées + réponses) d'un média (10.D1)
+router.get(
+  '/',
+  validate({ query: z.object({ mediaObjectId: z.coerce.number().int() }).merge(paginationQuery) }),
+  async (req, res) => {
+    const mediaObjectId = Number(req.query.mediaObjectId);
+    const projectId = await resolveProjectIdForMedia(mediaObjectId);
+    if (!projectId) throw notFound('Media not found');
+    await assertProjectAccess(req, projectId);
+    res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query), req.user!.role));
+  },
+);
+
+// GET /api/comments/export?scope=&id=&format= — sortie des notes : CSV pour la production,
+// EDL/OTIO pour le montage, planche imprimable. Déclarée avant `/:id` (« export » n'en est pas un).
+router.get(
+  '/export',
+  rateLimit({ windowMs: 60_000, max: 20, keyGenerator: identityRateKey }),
+  validate({
+    query: z.object({
+      scope: z.enum(['media', 'version', 'shot', 'playlist', 'timeline']),
+      id: z.coerce.number().int().positive(),
+      format: z.enum(['csv', 'edl', 'otio', 'sheet']),
+    }),
+  }),
+  async (req, res) => {
+    const scope = req.query.scope as unknown as CommentExportService.NotesScope;
+    const format = req.query.format as unknown as CommentExportService.NotesFormat;
+    const id = Number(req.query.id);
+    const projectId = await CommentExportService.resolveScopeProject(scope, id);
+    if (projectId === null) throw notFound('Nothing to export here');
+    await assertProjectAccess(req, projectId);
+    const file = await CommentExportService.exportNotes({ scope, id, format, viewer: req.user! });
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    if (file.truncated) res.setHeader('X-Notes-Truncated', '1');
+    res.send(file.body);
+  },
+);
+
+// POST /api/comments/attachments/presign — URL présignée pour une pièce jointe au fil
+// (images en vignettes ; PDF/zip/texte en chips ; audio = notes vocales lues inline, 32.F ;
+// octet-stream = blobs d'une proposition d'édition de nuage, cf. `lib/commentSplatEdit`)
+router.post(
+  '/attachments/presign',
+  validate({
+    body: z.object({
+      filename: z.string().min(1).max(200),
+      contentType: z
+        .string()
+        .regex(
+          /^(image\/(png|jpe?g|webp|gif)|application\/(pdf|zip|octet-stream)|text\/plain|audio\/(webm|ogg|mp4|mpeg|wav))(;.*)?$/,
+        ),
+    }),
+  }),
+  async (req, res) => {
+    const { filename, contentType } = req.body as { filename: string; contentType: string };
+    res.json(await CommentService.presignAttachment(req.user!.id, filename, contentType));
+  },
+);
+
+// POST /api/comments — commentaire de review (vidéo: timestamp ; 3D: cameraState ; image: annotation)
+router.post(
+  '/',
+  validate({
+    body: z.object({
+      mediaObjectId: z.number().int(),
+      content: z.string().min(1).max(10000),
+      timestamp: z.number().nonnegative().optional(),
+      duration: z.number().nonnegative().optional(),
+      // Bornés en forme ET en volume : en `z.any()`, leur seul plafond était les 2 Mo du corps.
+      annotation: annotationSchema.optional(),
+      cameraState: cameraStateSchema.optional(),
+      attachments: attachmentsSchema.optional(),
+      parentId: z.number().int().optional(),
+      // Retour écrit depuis un montage (46) : il lui appartient jusqu'à un renvoi explicite.
+      timelineId: z.number().int().optional(),
+      timelineTime: z.number().nonnegative().optional(),
+    }),
+  }),
+  async (req, res) => {
+    const projectId = await resolveProjectIdForMedia(req.body.mediaObjectId);
+    if (!projectId) throw notFound('Media not found');
+    await assertProjectAccess(req, projectId);
+    res.status(201).json({ comment: await CommentService.create(req.user!, projectId, req.body) });
+  },
+);
+
+// POST /api/comments/:id/share — renvoie un retour de montage sur la review du plan (46)
+router.post('/:id/share', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveCommentAccess(req, id);
+  const comment = await CommentService.share(req.user!, projectId, id);
+  if (!comment) throw notFound('Comment not found');
+  res.json({ comment });
+});
+
+// PATCH /api/comments/:id — édition (auteur), résolution, visibilité client + assignation (superviseur+)
+router.patch(
+  '/:id',
+  validate({
+    params: idParam,
+    body: z.object({
+      content: z.string().min(1).max(10000).optional(),
+      // Liste complète des pièces jointes après édition (D5) : absente = inchangée. Le
+      // service refiltre les clés — ce schéma borne la forme, pas la propriété.
+      attachments: attachmentsSchema.optional(),
+      // Liste complète des parts d'annotation après édition (gomme de trait 3D, Phase 50) :
+      // même contrat que les pièces jointes, et réservée à l'auteur par le service.
+      annotation: annotationSchema.optional(),
+      // État du fil (D1) ; `isResolved` reste accepté pour l'API v1 et les anciens clients.
+      state: z.nativeEnum(CommentState).optional(),
+      isResolved: z.boolean().optional(),
+      isVisibleToClient: z.boolean().optional(),
+      assigneeId: z.number().int().nullable().optional(),
+    }),
+  }),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const projectId = await resolveCommentAccess(req, id);
+    const comment = await CommentService.update(req.user!, projectId, id, req.body);
+    if (!comment) throw notFound('Comment not found');
+    res.json({ comment });
+  },
+);
+
+// DELETE /api/comments/:id — auteur ou superviseur/admin
+router.delete('/:id', validate({ params: idParam }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveCommentAccess(req, id);
+  if (!(await CommentService.remove(req.user!, projectId, id))) throw notFound('Comment not found');
+  res.status(204).end();
+});
+
+// POST /api/comments/:id/task — tâche kanban depuis le commentaire (32.D) : nom et consigne
+// viennent du dialogue de création. Les droits sont assertés par le service, sur le rôle
+// EFFECTIF du projet — ils se lisaient ici sur le rôle GLOBAL, qui refusait à un superviseur
+// nommé sur CE projet une création que le service lui accorde.
+router.post('/:id/task', validate({ params: idParam, body: commentTaskBody }), async (req, res) => {
+  const id = Number(req.params.id);
+  const projectId = await resolveCommentAccess(req, id);
+  res.status(201).json({ task: await TaskService.createFromComment(req.user!, projectId, id, req.body) });
+});
+
+// POST /api/comments/:id/reactions — ajoute/maj une réaction emoji
+router.post(
+  '/:id/reactions',
+  validate({ params: idParam, body: z.object({ emoji: z.string().min(1).max(16) }) }),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const projectId = await resolveCommentAccess(req, id);
+    const reaction = await CommentService.addReaction(req.user!, projectId, id, req.body.emoji);
+    res.status(201).json({ reaction });
+  },
+);
+
+// DELETE /api/comments/:id/reactions/:emoji — retire une réaction
+router.delete(
+  '/:id/reactions/:emoji',
+  validate({ params: z.object({ id: z.coerce.number().int(), emoji: z.string().min(1).max(16) }) }),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const projectId = await resolveCommentAccess(req, id);
+    await CommentService.removeReaction(req.user!.id, projectId, id, String(req.params.emoji));
+    res.status(204).end();
+  },
+);
+
+export default router;

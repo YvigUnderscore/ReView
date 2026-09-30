@@ -1,0 +1,484 @@
+# Gaussian splat review
+
+*Scans in Spark: DCC navigation, non-destructive clean-up, comparison across versions, presentation and a cleaned SPZ export.*
+
+> Updated: 2026-09-24
+
+Gaussian splat media are rendered with **Spark (SparkJS)** inside the Three.js scene, with the
+same DCC-style navigation as [3D review](review-3d.md) — plus a full **non-destructive
+editor**. A scan arrives dirty: floaters, half a car park behind the wall, an axis convention
+nobody agreed on. You clean it here, in front of everyone, and the uploaded file never
+changes.
+
+![The camera flies into a scanned cereal bowl rendered as a Gaussian splat, while a comment and its reply arrive in the thread.](../assets/user-guide/splat-review.gif)
+
+All four media types share the same five places — mode switch, tool rail, options bar,
+inspector dock, bottom row. See [The review workspace](review-workspace.md) for the layout,
+the modes and the keyboard map; this page covers what is specific to splats.
+
+A splat is the one media with **no mode switch in the header**. It has a single listed mode,
+*Explore*, and a single segment switches to nothing — so the control is not drawn at all. Every
+other mode is still there, armed from where the work happens:
+
+| Mode | How you enter it | How you leave it |
+|---|---|---|
+| **Explore** | the resting state, and `1` | — |
+| **Clean up** | the *Edit* group of the tool rail, or any of its tool letters (`B`, `L`, `M`, `O`, `T`, `R`, `S`) | **Navigate** at the top of the rail, or `1` |
+| **Staging** | the **Staging** switch of the *Camera* panel (*Framing* group) | the same switch, or `1` |
+| **Annotate** | the *Annotate* button of the comment composer, or a tool letter (`P`, `X`, `I`) | `Esc` drops the tool; `1` returns to Explore |
+
+This is the same reasoning applied to the 3D viewer one lot earlier: a mode that already had a
+switch somewhere did not need a second command in the header, and tools you use while staring
+at the cloud belong over the cloud.
+
+## Opening a splat
+
+Splat files are served **as-is** — there is no server-side conversion — and loaded natively by
+Spark:
+
+| Format | Notes |
+|---|---|
+| **PLY** | Text or binary, compressed PLY included |
+| **SPZ** | Compact gzip container — the best choice for storage and load time |
+| **SPLAT**, **KSPLAT** | Loaded directly |
+| **SOG / SOGS** | PlayCanvas self-organizing gaussians, a `.sog` zip bundle — **read** support only; a `.sogs` file is handled as a `.sog` bundle |
+
+Large files stream in with a **real download progress bar** and a percentage, so a heavy scene
+shows progress instead of a frozen screen; once the bytes are in, the readout switches to an
+indeterminate decoding state.
+
+A splat also gets an automatic **thumbnail**, rendered server-side straight from the file by a
+point rasteriser — the splat centres are streamed, sampled and projected on the same
+three-quarter view the 3D thumbnails use, so scans and models sit consistently side by side in
+a list. It works on `.ply` and `.splat`; the compressed containers (`.spz`, `.ksplat`, `.sog`,
+`.sogs`) are deliberately **not** queued, because decoding them approximately would produce a
+wrong image nobody would question. Those keep relying on the capture made the first time
+somebody opens the review. See [Spatial thumbnails](../admin-guide/spatial-thumbnails.md).
+
+## Navigating the cloud
+
+Orbit by dragging, zoom with the wheel, pan with the middle button. **Hold the right mouse
+button** for free flight: the mouse looks around, `W`/`A`/`S`/`D` move (physical key positions,
+so `Z`/`Q`/`S`/`D` on an AZERTY keyboard), `E` goes up and `Q` down, the wheel sets the flight
+speed and `Shift` multiplies it by five. Releasing the button hands the orbit back with the
+target placed in front of the camera. A **tilt** set in the *Camera* panel is kept throughout the
+flight — the horizon does not straighten while you walk.
+
+The right button carries **two** gestures, told apart when you release it. Held — or dragged more
+than a few pixels — it flies. Pressed and released on the spot, in under a quarter of a second, it
+opens the **viewer menu** described below. While you are flying, the keyboard belongs to the
+flight and to nothing else: no tool letter arms anything, so `S` moves you backwards instead of
+arming the scale gizmo, and `T` and `R` no longer change mode under your hand.
+
+`F` fits the selection — or the whole visible cloud when nothing is selected — and `H` returns
+to the home view. Both answer in every mode, published media included. The **ground grid** is
+a switch in the *Scene* panel (*Guides → Ground grid*), remembered in your browser.
+
+## The Render popover
+
+A popover sits in the **top-left corner of the viewer**, above the cloud rather than at the other
+end of the screen: **Render**. It is the splat twin of the *Render* menu the 3D viewer already
+had, and it replaced the *Display* tab of the dock, which asked you to reach across the window
+for switches you try in bursts while looking at the scan. It is drawn outside the review frame,
+so the letterbox guide and the annotation coordinates are exactly where they were.
+
+**Render** carries what changes the image without changing the data:
+
+| Control | Who sees it | Effect |
+|---|---|---|
+| **Cloud render mode** — Splats · Ellipses · Points | Only while the editor is mounted (manager, unpublished media) | How each gaussian is drawn; Points is the fastest way to read the structure of a dense scan |
+| **Inspection colouring** — None · Normals · Depth | Everyone | A session-local tint, never saved on the media |
+| **Real size** | Everyone, once more than one cloud is loaded | Turns off the size unification used by the comparison — see [Comparing splats](#comparing-splats) |
+| **Corrected orientation** | Editor only | Flips the Y-down convention some exporters use — this one *is* an edit, and it is saved with the rest |
+
+The **editing tools** are not in a popover: they are a second group of the **tool rail**,
+titled *Edit*, always in view under the tools of the current mode. Clicking one arms the tool and
+the *Clean up* mode together. They were briefly moved into a popover of their own, which put a
+click between you and every tool; the rail is where a tool belongs.
+
+> [!NOTE]
+> The *Edit* group of the rail does not exist for anyone who cannot manage the media, and the
+> render mode and orientation switch go with it. The *Render* popover stays, with the
+> inspection colouring everyone is allowed. The seven letters are inert in the same
+> conditions — the keyboard never reaches a tool the rail does not show.
+>
+> Publication does **not** remove the group. What it removes is *Save*: after publication an
+> edit is a proposal carried by a comment, not a rewrite of the cloud everyone is looking at.
+> See [What publication freezes](#what-publication-freezes).
+
+> [!TIP]
+> **Navigate**, at the top of the rail, is the way out of the clean-up with the mouse. Arming a
+> tool with its letter from anywhere puts you in *Clean up*; there is no header segment left to
+> click to get out again — `1` is the keyboard answer to the same question.
+
+## Cleaning up, without touching the file
+
+The original splat file is **never modified**. Every edit is stored as metadata — a selection
+mask bitset plus an edit list — and **replayed identically for every viewer**. All of it lives
+in the **Clean up** mode, armed from the *Edit* group of the tool rail or by pressing a tool
+letter, and only for someone who can manage the media.
+
+| Tool | Key | A plain drag | Modifiers and options |
+|---|---|---|---|
+| **Rectangle** | `B` | Replaces the selection | `Shift` adds, `Alt` removes |
+| **Lasso** | `L` | Replaces the selection | `Shift` adds, `Alt` removes |
+| **Mask brush** | `M` | Replaces the selection, taking **only splats on the visible surface** | `Shift` adds, `Alt` removes; radius 8–150 px in the options bar |
+| **Cutting volume** | `O` | Drops a **box** or a **sphere** | *Dig* removes what is inside, *Isolate* keeps only what is inside; click a chip to attach the gizmo to it; up to 32 volumes per media |
+| **Move · Rotate · Scale** | `T` · `R` · `S` | Transforms the **whole cloud** when nothing is selected | Transforms just the **selected subset** when a selection is active; numeric fields in the options bar |
+
+The mask brush is the tool that makes a scan workable: it only takes what is actually
+visible, so sweeping over a halo of floaters leaves the wall behind them standing, where a
+rectangle would swallow everything.
+
+**Deleting** — `Delete` or `Backspace` hides the selection. Nothing is destroyed: the splats
+are masked, and clearing the mask brings them back. The options bar keeps the score, both the
+current selection and the running total of masked splats. The stored mask is one bit per
+splat, capped at four megabytes, which covers clouds of some thirty million splats.
+
+**Saving** — the commit group at the right of the options bar carries undo, redo and *Save*,
+with a dot while something is pending. Saving writes the mask, the subset transforms and the
+edit list; from then on every reviewer opens the cleaned cloud. *Save* is offered **only while
+the version is unpublished**; after publication the same place reads *Splat edit attached to the
+next comment*, and undo and redo stay where they were.
+
+**Undo covers the selections too.** `Ctrl/⌘+Z`, `Ctrl/⌘+Y` and `Ctrl/⌘+Shift+Z` walk one single
+history, and a change of selection is a step in it like a deletion or a volume: a lasso that
+took the wrong half, one brush stroke too many, a *deselect everything* you regret all come
+back. A whole brush stroke counts as **one** step rather than one per splat, a gesture that
+selects exactly what was already selected costs no step at all, and undoing a deletion also
+restores the selection that produced it.
+
+> [!TIP]
+> None of these shortcuts fire while you hold the right mouse button (you are flying), while
+> the caret is in a field, or while a dialog is open — so `S` never scales the cloud in the
+> middle of typing a note.
+
+## What publication freezes
+
+![Before publication every content edit is allowed; after it, mask, cutting volumes, transform and orientation are refused, while the camera, depth of field, reveal effect, default level of detail and thumbnail stay editable.](../assets/user-guide/splat-publish-lock.svg)
+
+A published media is work other people are already commenting on, so the cloud everyone sees is
+frozen — the backend refuses every content edit with a `403`. The **presentation**, on the other
+hand, is staging rather than content: it is how the scan is shown, not what it contains, and it
+stays editable for as long as the media exists.
+
+This matters most in a studio that does not use drafts, where a media is published the moment it
+is uploaded: there, *Save* never appears above the viewer at all, and that is the intended
+reading of the rule rather than a second rule of its own.
+
+**Editing does not stop with publication — it changes address.** Move, rotate, scale the cloud,
+drop cutting volumes, flip the orientation, then write your comment: the edit travels **with the
+comment** and is replayed for whoever selects it, exactly as a scene proposal does on a
+[3D model](review-3d.md). `Esc`, or the banner above the cloud, gives the delivered cloud back.
+
+**The proposal carries the whole gesture**, deletions included — cleaning a cloud is most of the
+work on a cloud, and a proposal that left it out would have no address at all in a studio that
+publishes on upload. The cloud transform, the cutting volumes and the orientation flip travel
+inside the comment. The **deletion mask** and the **subset transforms** are binary: they travel
+as attachments of that comment, and the proposal only carries their keys — same storage, same
+signed reads and same purge as any image you attach, so they leave when the comment is edited or
+deleted. Each of the two is capped at four megabytes, the cap the media's own mask already had;
+past that the edit stays local and the composer says so.
+
+That split is the answer to the two questions this page gets asked most:
+
+- *My mask did not save but my camera did.* Correct, and deliberate: two endpoints, two rules.
+- *How do I fix the geometry after publishing?* Propose it in a comment, or publish a new
+  version — that is what versions are for. See
+  [Upload & publishing](upload-and-publishing.md).
+
+## Comparing splats
+
+![The READY splat siblings of the version and the splats checked in the Compare selector are loaded into one Spark scene as children of the same pivot; A/B cross-fades, Show all slides them apart, and a switch chooses between unified size and raw file scales.](../assets/user-guide/splat-compare.svg)
+
+When more than one cloud is in play, the header grows a row of **tabs** — one per splat, plus
+**Show all** — and everything happens inside a single Spark scene, every cloud a child of the
+same pivot, so they share the orientation flip and the camera.
+
+| Source | How it gets there |
+|---|---|
+| The other splats of the **current version** | automatically, as soon as they are `READY` |
+| Splats of **other versions** of the same task or asset | you check them in the **Compare…** selector at the right of the header — up to three |
+
+The selector hides itself when the task or asset carries a single version.
+
+- **One tab active** fades the chosen cloud to full opacity; the others fade out and slide back
+  to the origin.
+- **Show all** fades everyone in and slides them apart, the spacing derived from the widest
+  visible bounding box.
+- **Real size**, in the *Render* popover, turns off the size unification: by default every
+  compared cloud is scaled onto the reference's bounding sphere so the shapes can be read
+  against each other; turn it on to see the raw scales the files actually carry.
+
+> [!IMPORTANT]
+> Compared splats are loaded **raw** — their own mask, cutting volumes and transform are not
+> replayed. You are comparing captures, not somebody else's clean-up. That is on purpose: a
+> comparison that silently applied four different clean-ups would tell you nothing about the
+> scans.
+
+## Annotating: brush, pin, camera
+
+The **Annotate** mode carries 3D tools rather than 2D drawing.
+
+- **Surface brush** (`P`) paints a stroke on the surface of the cloud — and on the geometry of a
+  3D model, where the tool, the options and the gesture are the same one. Four ink colours and a
+  thickness from 1 to 32 px in the options bar, with *undo the last stroke*, *redo the last
+  stroke* and *clear* next to a running count — or `Ctrl+Z`, `Ctrl+Y` and `Ctrl+Shift+Z`, which
+  walk the strokes you are preparing as deep as you have gone. The stroke is stored in object space and travels with the comment — it is an
+  annotation, not an edit, and it never touches the splat data. Four things are worth knowing
+  about the gesture:
+  - the thickness is **screen thickness**: the stroke keeps the same weight whether you zoom
+    in or pull back, and the ring under the cursor shows that exact width;
+  - the stroke appears **in 3D while you drag**, following the relief; the dashed 2D trail
+    only shows up where the pointer is over nothing, to say that nothing is being painted;
+  - a drag that crosses a hole in the cloud comes out as **several strokes** rather than one
+    straight cord flying across the gap;
+  - a stroke painted on the far side of a surface is **ghosted**, not hidden, once you turn
+    around. This is an approximation from the direction the stroke was painted from — it does
+    not know about walls in between, so a stroke behind one stays visible while you look from
+    the same side.
+- **Stroke eraser** (`X`) removes one stroke per click: one you are still preparing, or one
+  from a comment you wrote yourself, in which case the comment is rewritten on the spot. The
+  dashed ring shows how close the click has to be. Strokes from someone else's comment are
+  refused — the eraser says so rather than pretending.
+- **Pin** (`I`, also on the rail in Explore as *Point of interest*) anchors the comment to one
+  or more points on the surface. Arming the tool **is** placing: a banner reads *Click the
+  surface to place the point*, the cursor becomes a crosshair, and each click drops a point,
+  numbered in the order you place them. A click in empty space places nothing and says so; a
+  drag stays an orbit; `Esc` hands the rail back. While the comment is being written the badges
+  are live — drag one to move its point, click one to reach its row, remove it from there. Each
+  point takes its own remark and its own images, and sending produces **one** comment carrying
+  the set, with the remarks copied numbered into the body. Clicking a number on the comment
+  flies the camera back to that point. Points are stored in object space, so they follow the
+  cloud if the transform changes. The right-click entry *Place a point of interest here* adds to
+  the same list — two ways to aim, one set of points, and the same implementation as the 3D
+  viewer.
+
+A splat comment can carry more than a stroke and a point:
+
+| Attached | Replayed when the comment is selected |
+|---|---|
+| The camera view | The viewpoint you were on |
+| The surface pins | The numbered points on the cloud |
+| Paint strokes | The strokes, from any angle |
+| A **camera animation** | Loaded into the transport and **played**, from the Staging mode |
+| Reference images | Staged in the composer, pinned to the comment |
+
+> [!CAUTION]
+> Selecting a comment that carries an animation loads it into the transport and plays it,
+> replacing whatever you were authoring and clearing its undo history. Save your presentation
+> before you go reading the thread. Details on [Camera animation](camera-animation.md).
+
+## Depth of field, and the presentation
+
+Independently of the content edits, the **presentation** is persisted per media and replayed
+identically for every spectator — including a client on a share link who never touches a
+control.
+
+| Part | Where it is set |
+|---|---|
+| Camera pose and animation | The **Staging** switch of the *Camera* panel, then the transport — see [Camera animation](camera-animation.md) |
+| **Depth of field** | The **Focus** tool (`C`) sets the focus distance on the point you click; the **Aperture** field of the *Camera* panel opens it, from `0` (sharp everywhere) to `0.1` |
+| **Reveal on open** | *Scene* panel: fade, sweep or dissolve, with a duration from 0.2 s to 10 s and a *replay* button. Persisted, so it plays for whoever opens the review |
+| **Default level of detail** | *Scene* panel, saved with the presentation |
+
+*Clear the presentation* in the *Camera* panel removes the camera pose, the animation, the
+depth of field, the reveal effect and the default level of detail in one go, behind a
+confirmation. The file, the mask and the edits are untouched.
+
+## Performance
+
+A scan is heavy by nature, so the viewer tells you what it is doing instead of just getting
+slower.
+
+- **Level of detail** has four settings in the *Scene* panel: **off** (maximum quality),
+  **auto**, **on** (forced) and **stream** (pages fetched on demand). *Auto* is the default: it
+  engages when the framerate stays under 15 fps for five seconds and releases when it recovers
+  above 25 fps for five seconds, each time with a toast — so the change in image quality is
+  never a mystery. A manager can save the chosen mode as the media's default.
+- **Edge culling** is **on** by default: Spark stops drawing gaussians that leave the picture or
+  grow past the pixel budget, which is what most scans need. Switch it off — next to the level of
+  detail, or from the viewer menu — if splats vanish on you at strong zoom. The choice is
+  remembered in your browser, per person; no studio setting overrides it.
+- The *Info* panel keeps the live counters, measured only while it is open:
+
+| Counter | What it tells you |
+|---|---|
+| **fps** | Whether the scene is actually playable on this machine |
+| **Rendered splats** | How many gaussians survive the current level of detail |
+| **Total splats** | The size of the cloud as delivered |
+| **Hidden splats** | How many the saved mask removes — the size of the clean-up |
+| **Draw calls** | The cost of the frame |
+
+Like the 3D viewport, the splat viewer draws **on demand** rather than at screen rate. Any
+navigation, any brush stroke, any change made from the dock brings it back to full rate at
+once; a scan left still settles to a heartbeat of **eight frames a second**, so a laptop stops
+heating for an image nobody is changing, and anything arriving late — persisted edits, a
+comparison cloud — still appears within an eighth of a second.
+
+Two things hold the viewer at full rate on purpose, and both are worth knowing if you are
+chasing battery life:
+
+- the **counters above**, for as long as the *Info* panel is open — an fps counter that lowers
+  the rate it measures measures only itself;
+- **level of detail on *auto***, which is the default, because it decides from the framerate
+  and so needs the real one.
+
+Set the level of detail to *off*, *on* or *stream* and close the *Info* panel, and a still scan
+costs the machine almost nothing.
+
+## The dock, panel by panel
+
+| Panel | What is in it |
+|---|---|
+| **Camera** | Focal length in mm (7–400) · tilt · aperture and *focus at click* · delivery aspect (read-only) · fit and home · the **Staging** switch · Orbit preset · Clear the presentation |
+| **Scene** | Ground grid · level of detail · edge culling · reveal effect and its duration |
+| **Info** | Live counters · file name and status |
+| **Export** | The four entries below |
+
+There is no *Display* tab: the render settings moved to the **Render** popover of the viewer,
+described in [The Render popover](#the-render-popover). The 3D dock lost the same tab
+for the same reason, so a setting added to one of the two spatial viewers tomorrow arrives in
+both or in neither.
+
+The Export panel enumerates everything a splat can produce.
+
+**The viewer menu** — a brief right-click on the cloud — carries what you reach for with a hand
+already on the mouse: *Fit* and *Home view*, *Place a point of interest here* (on the exact point
+you clicked, with no tool to arm first), *Copy the view* to the clipboard, and a *Scene* submenu
+with the ground grid and edge culling switches. It writes nothing into the media: clean-up has its
+own mode, its own tools and the publication lock. Holding the same button still flies.
+
+| Entry | What it gives you |
+|---|---|
+| **`.spz` cleaned (edits baked)** | A compact SPZ with the edits applied: masked splats dropped, cutting volumes applied, the global transform baked into each splat |
+| **Original file, without edits** | The raw uploaded file |
+| **Camera animation (glTF)** | The move you built in Staging, for the DCC |
+| **Import an animation** | Reads a camera from glTF/GLB, or an Alembic camera exported to JSON samples |
+| **Capture the view** | The delivery frame as it is framed on screen, as a lossless PNG. It gets its own render — at the delivery resolution, at least 1920 px wide, with the ground grid hidden — so it is not limited by the size of your window |
+
+Two limits to know about the cleaned SPZ: only base colour is exported (SH degree 0 —
+view-dependent spherical harmonics are not included), and the import orientation flip is *not*
+baked, so the file keeps the original axis convention. Generation is entirely client-side and
+the file in storage is never touched, so it works after publication too — and it uses the
+**saved** edits, not your current unsaved selection.
+
+> [!NOTE]
+> The *Review notes* group of the Export panel — the CSV and the printable sheet described in
+> [Exporting review notes](exporting-notes.md) — is not wired on splats, nor on 3D media. To
+> get the thread of a scan out of ReView today, export it from a video or image media of the
+> same shot, or from the playlist that carries it.
+
+## Use cases
+
+### Cleaning a set scan before it goes to layout
+
+The scan arrives with a halo of floaters and half a car park behind the wall. Arm the **mask
+brush** from the *Edit* group of the rail or with `M`, and sweep over the
+floaters — the brush only takes what is actually visible, so the wall behind survives. Swept too
+far? `Ctrl+Z` gives the selection back. `Delete` hides them. For the car park, drop a box volume
+with `O`, set it to *Isolate*, and scale it around the set: everything
+outside disappears. Save from the commit group — while the version is still unpublished — and
+every reviewer opens the cleaned scan; the uploaded file is still intact if you got the box
+wrong. Once published, the same gestures become a proposal attached to your comment.
+
+### A note on a detail nobody else can find
+
+In a point cloud, "the crack near the door" is meaningless. Arm the **Pin** (`I`), click the
+crack, write the note. Anyone selecting that comment lands on the point — and if the pass turned
+up four cracks, click all four: they leave as one comment, numbered, each with its own remark. If the note is about
+an area rather than a point, use the surface brush to paint over it — the stroke sticks to the
+surface and reads from any angle.
+
+### Two scanning passes, one decision
+
+The set was scanned twice and the second pass is supposed to be denser. Open one, check the
+other version in **Compare…**, and flick between the two tabs on a fixed camera: the coverage
+holes show up immediately. Take **Show all** to look at both at once, and turn **Real size** on
+if you suspect the two passes were not reconstructed at the same scale. Remember that neither
+is showing its clean-up — that is what makes the comparison honest.
+
+### Delivering a clean SPZ to another department
+
+Once the mask and the volumes are saved, take *`.spz` cleaned (edits baked)* from the Export
+panel. The masked splats are gone from the file rather than hidden, the transform is baked, and
+the result is a fraction of the original size. Note the two caveats: base colour only, and the
+original axis convention.
+
+### A scan that crawls on a laptop
+
+Leave the level of detail on *auto*. When the reviewer's machine drops below 15 fps, LOD
+engages by itself and a toast says why the image just got softer; when the framerate recovers
+it releases. If a particular scene is always heavy, set the level of detail explicitly in the
+*Scene* panel and save the presentation — the setting travels with the media. Open the *Info*
+panel to see whether the decimation is actually happening: *rendered* well below *total* means
+it is.
+
+### A guided tour rather than a free-for-all
+
+A splat scan is impressive and unreadable if everyone navigates it themselves. Turn on the
+**Staging** switch in the *Camera* panel, fly to a first viewpoint, press `K`, scrub forward, fly
+to the next, `K` again, and publish the presentation: the move plays on its own for every viewer. Add a *reveal on open* and a focus
+distance on the subject, and the scan presents itself. See
+[Camera animation](camera-animation.md).
+
+## Troubleshooting
+
+**"Splat cannot be displayed: the file could not be loaded."** The format is not one of `.ply`,
+`.spz`, `.splat`, `.ksplat`, `.sog`, or the file is corrupt. Re-upload — nothing is converted
+server-side, so what you upload is what the viewer has to read.
+
+**There is no Edit group on the tool rail.** Splat editing requires that you can manage the
+media. Without that right the group, the render mode and the orientation switch disappear
+together — the *Render* popover stays, with the inspection colouring. Publication does not
+remove the group.
+
+**The Edit group is there but there is no Save button.** The version is published. The backend
+refuses every content edit with a `403`, so the whole edit — deletions included — goes into your
+next comment instead, and the options bar says so where *Save* used to be.
+
+**I am stuck in the clean-up and there is no mode switch to leave it.** Click **Navigate** at the
+top of the rail, or press `1`. A tool letter (`B`, `L`, `M`, `O`, `T`, `R`, `S`) arms its tool
+*and* the mode from anywhere, which is how you got there.
+
+**"Nothing to export (everything is masked or cropped)".** The saved mask and volumes leave no
+splat standing. Check the volume modes: an *Isolate* volume placed outside the geometry keeps
+nothing.
+
+**My last selection is not in the exported file.** Exports use the saved edits — the cloud as it
+is delivered — not a proposal read from a comment. Save from the commit group in the options bar,
+then export. On a published media there is nothing to save to: export before publishing, or
+publish a new version.
+
+**Keyboard shortcuts do nothing.** They are inert while you hold the right mouse button
+(flight — the keys belong to the camera then, tool letters included), while the caret is in a
+field, and while a dialog is open.
+
+**The camera presentation saved, but the mask did not.** They are two different endpoints with
+two different rules: presentation stays editable after publication, content edits do not. If
+the media is published, only the presentation will save.
+
+**There is no Compare… selector in the header.** The task or asset carries a single version.
+The tabs for the splats of the *current* version appear on their own as soon as there are two.
+
+**The compared splat looks nothing like what its own review shows.** It is loaded raw, without
+its mask, volumes or transform. Open it directly to see it cleaned.
+
+**The image got softer on its own.** Automatic level of detail engaged below 15 fps; a toast
+said so. It releases above 25 fps, or you can force *off* in the *Scene* panel.
+
+**Splats disappear when I zoom right in.** Edge culling is on by default; switch it off in the
+*Scene* panel or from the viewer menu, and the choice is remembered for next time.
+
+**The scan tile is empty in the project lists.** Server-side thumbnails are only rendered for
+`.ply` and `.splat`; compressed containers wait for the first person to open the review. See
+[Spatial thumbnails](../admin-guide/spatial-thumbnails.md).
+
+## Related pages
+
+- [The review workspace](review-workspace.md)
+- [3D review](review-3d.md)
+- [Camera animation](camera-animation.md)
+- [Annotations & comments](annotations-and-comments.md)
+- [Upload & publishing](upload-and-publishing.md) — the publish lock
+- [Spatial thumbnails (admin)](../admin-guide/spatial-thumbnails.md)

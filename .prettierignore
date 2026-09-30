@@ -1,0 +1,12 @@
+# Build output
+dist/
+build/
+coverage/
+node_modules/
+# Generated Prisma client
+backend/src/generated/
+# Lockfiles & test reports
+package-lock.json
+playwright-report/
+test-results/
+blob-report/

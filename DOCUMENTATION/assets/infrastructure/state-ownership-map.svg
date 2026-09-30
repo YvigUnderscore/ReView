@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 552" width="800" height="552" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Where each piece of state lives</title>
+  <desc id="fig-desc">Four bands: the API process, the worker process, Redis and the durable stores. Almost everything that used to sit in process memory now lives in Redis; only the session-validity cache and the presign memo remain local.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="552" rx="10"/>
+
+  <!-- Band 1 : process API -->
+  <rect class="band" x="20" y="28" width="760" height="96" rx="10"/>
+  <text class="t" x="36" y="50">API process</text>
+  <text class="d" x="764" y="50" text-anchor="end">what is still local to a replica</text>
+
+  <rect class="panel" x="36" y="62" width="236" height="46" rx="9"/>
+  <text class="l" x="154" y="84" text-anchor="middle">HTTP + Socket.io</text>
+  <text class="d" x="154" y="100" text-anchor="middle">Express 5, Redis adapter</text>
+
+  <rect class="panel-a" x="288" y="62" width="236" height="46" rx="9"/>
+  <text class="t" x="406" y="84" text-anchor="middle">Session-validity cache</text>
+  <text class="d" x="406" y="100" text-anchor="middle">in memory, 30 s TTL</text>
+
+  <rect class="panel-a" x="540" y="62" width="236" height="46" rx="9"/>
+  <text class="t" x="658" y="84" text-anchor="middle">Presign memo</text>
+  <text class="d" x="658" y="100" text-anchor="middle">10 min window, 5 000 URLs</text>
+
+  <!-- Band 2 : process worker -->
+  <rect class="band" x="20" y="138" width="760" height="96" rx="10"/>
+  <text class="t" x="36" y="160">Worker process</text>
+  <text class="d" x="764" y="160" text-anchor="end">stateless — safe to scale</text>
+
+  <rect class="panel" x="36" y="172" width="470" height="46" rx="9"/>
+  <text class="l" x="271" y="194" text-anchor="middle">6 BullMQ consumers</text>
+  <text class="d" x="271" y="210" text-anchor="middle">media, cleanup, webhooks, timeline, shotgrid, maintenance</text>
+
+  <rect class="panel" x="526" y="172" width="250" height="46" rx="9"/>
+  <text class="l" x="651" y="194" text-anchor="middle">FFmpeg, Blender, assimp</text>
+  <text class="d" x="651" y="210" text-anchor="middle">temporary files, local disk</text>
+
+  <!-- Band 3 : Redis -->
+  <rect class="band" x="20" y="248" width="760" height="152" rx="10"/>
+  <text class="t" x="36" y="270">Redis 7</text>
+  <text class="d" x="764" y="270" text-anchor="end">volatile, shared by every replica</text>
+
+  <rect class="panel" x="36" y="282" width="236" height="46" rx="9"/>
+  <text class="l" x="154" y="304" text-anchor="middle">BullMQ queues</text>
+  <text class="d" x="154" y="320" text-anchor="middle">8 declared, 6 consumed</text>
+
+  <rect class="panel-d" x="288" y="282" width="236" height="46" rx="9"/>
+  <text class="t" x="406" y="304" text-anchor="middle">Rate-limit counters</text>
+  <text class="d" x="406" y="320" text-anchor="middle">one key space per limiter</text>
+
+  <rect class="panel" x="540" y="282" width="236" height="46" rx="9"/>
+  <text class="l" x="658" y="304" text-anchor="middle">Socket.io adapter</text>
+  <text class="d" x="658" y="320" text-anchor="middle">pub/sub between replicas</text>
+
+  <rect class="panel" x="36" y="340" width="236" height="46" rx="9"/>
+  <text class="l" x="154" y="362" text-anchor="middle">Presence mirror</text>
+  <text class="d" x="154" y="378" text-anchor="middle">review:presence:*</text>
+
+  <rect class="panel" x="288" y="340" width="236" height="46" rx="9"/>
+  <text class="l" x="406" y="362" text-anchor="middle">Live review rooms</text>
+  <text class="d" x="406" y="378" text-anchor="middle">shared state, per-session lock</text>
+
+  <rect class="panel" x="540" y="340" width="236" height="46" rx="9"/>
+  <text class="l" x="658" y="362" text-anchor="middle">worker-events channel</text>
+  <text class="d" x="658" y="378" text-anchor="middle">best-effort push to the API</text>
+
+  <!-- Band 4 : stockage durable -->
+  <rect class="band" x="20" y="414" width="760" height="96" rx="10"/>
+  <text class="t" x="36" y="436">Durable stores</text>
+  <text class="d" x="764" y="436" text-anchor="end">what a restart must not lose</text>
+
+  <rect class="panel" x="36" y="448" width="360" height="46" rx="9"/>
+  <text class="l" x="216" y="470" text-anchor="middle">PostgreSQL 16</text>
+  <text class="d" x="216" y="486" text-anchor="middle">every row of metadata, through Prisma</text>
+
+  <rect class="panel" x="416" y="448" width="360" height="46" rx="9"/>
+  <text class="l" x="596" y="470" text-anchor="middle">MinIO (S3)</text>
+  <text class="d" x="596" y="486" text-anchor="middle">every binary, addressed by object key</text>
+
+  <text class="d" x="400" y="534" text-anchor="middle">Redis is not optional: when it is unreachable the global limiter fails closed and every /api route answers 429.</text>
+</svg>

@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="cpay-title cpay-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="cpay-title">What a comment can carry, by media type</title>
+  <desc id="cpay-desc">Every comment, in every viewer, carries text, attachments, a voice note, reactions, replies and mentions. What differs is the anchor: frame and in-out range on video, pixel-anchored drawings on video and image, pinned references on image, drawings on the delivery frame plus a point of interest and a camera animation on 3D and splat, brush strokes on splat, and a scene proposal on 3D. The last column says which of those payloads is enough to send a comment that carries no text.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="500" rx="10"/>
+
+  <text class="d" x="28" y="30">CARRIED BY EVERY COMMENT, IN EVERY VIEWER</text>
+  <rect class="panel-a" x="28" y="42" width="744" height="72" rx="9"/>
+  <text class="l" x="44" y="66">Text up to 10 000 characters · up to 8 attachments · one voice note · eight reactions · replies</text>
+  <text class="d" x="44" y="86">PNG, JPEG, WebP, GIF, PDF, ZIP and plain text. A reply carries no drawing, no microphone, no send shortcut.</text>
+  <text class="d" x="44" y="104">Typing @ autocompletes project members — six suggestions, matched on the handle or the display name.</text>
+
+  <text class="d" x="28" y="144">WHAT ANCHORS THE NOTE TO THE MEDIA</text>
+
+  <path class="conn-o" d="M700 152 L700 416"/>
+  <text class="d" x="420" y="170" text-anchor="middle">Video</text>
+  <text class="d" x="500" y="170" text-anchor="middle">Image</text>
+  <text class="d" x="580" y="170" text-anchor="middle">3D model</text>
+  <text class="d" x="660" y="170" text-anchor="middle">Splat</text>
+  <text class="d" x="736" y="156" text-anchor="middle">Enough</text>
+  <text class="d" x="736" y="170" text-anchor="middle">on its own?</text>
+
+  <!-- Ligne 1 -->
+  <rect class="band" x="28" y="182" width="744" height="26" rx="4"/>
+  <text class="l" x="44" y="199">Frame anchor — the note lands on the frame you are on</text>
+  <path class="ok" transform="translate(420,195)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <text class="d" x="500" y="199" text-anchor="middle">—</text>
+  <text class="d" x="580" y="199" text-anchor="middle">—</text>
+  <text class="d" x="660" y="199" text-anchor="middle">—</text>
+  <text class="d" x="736" y="199" text-anchor="middle">—</text>
+
+  <!-- Ligne 2 -->
+  <text class="l" x="44" y="225">In→out range, taken from the active I/O loop</text>
+  <path class="ok" transform="translate(420,221)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <text class="d" x="500" y="225" text-anchor="middle">—</text>
+  <text class="d" x="580" y="225" text-anchor="middle">—</text>
+  <text class="d" x="660" y="225" text-anchor="middle">—</text>
+  <text class="d" x="736" y="225" text-anchor="middle">—</text>
+
+  <!-- Ligne 3 -->
+  <rect class="band" x="28" y="234" width="744" height="26" rx="4"/>
+  <text class="l" x="44" y="251">2D drawing, anchored to the pixel</text>
+  <path class="ok" transform="translate(420,247)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="ok" transform="translate(500,247)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <text class="d" x="580" y="251" text-anchor="middle">—</text>
+  <text class="d" x="660" y="251" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(736,247)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+
+  <!-- Ligne 4 -->
+  <text class="l" x="44" y="277">2D drawing, anchored to the delivery frame</text>
+  <text class="d" x="420" y="277" text-anchor="middle">—</text>
+  <text class="d" x="500" y="277" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(580,273)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="ok" transform="translate(660,273)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="ok" transform="translate(736,273)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+
+  <!-- Ligne 5 -->
+  <rect class="band" x="28" y="286" width="744" height="26" rx="4"/>
+  <text class="l" x="44" y="303">Pinned reference images, twelve at most</text>
+  <text class="d" x="420" y="303" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(500,299)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <text class="d" x="580" y="303" text-anchor="middle">—</text>
+  <text class="d" x="660" y="303" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(736,299)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+
+  <!-- Ligne 6 -->
+  <text class="l" x="44" y="329">Point of interest on the surface, the I tool</text>
+  <text class="d" x="420" y="329" text-anchor="middle">—</text>
+  <text class="d" x="500" y="329" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(580,325)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="ok" transform="translate(660,325)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="ok" transform="translate(736,325)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+
+  <!-- Ligne 7 -->
+  <rect class="band" x="28" y="338" width="744" height="26" rx="4"/>
+  <text class="l" x="44" y="355">3D brush strokes in object space, the P tool</text>
+  <text class="d" x="420" y="355" text-anchor="middle">—</text>
+  <text class="d" x="500" y="355" text-anchor="middle">—</text>
+  <text class="d" x="580" y="355" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(660,351)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="no" transform="translate(736,351)" d="M-5.6 -4 L-4 -5.6 L0 -1.6 L4 -5.6 L5.6 -4 L1.6 0 L5.6 4 L4 5.6 L0 1.6 L-4 5.6 L-5.6 4 L-1.6 0 Z"/>
+
+  <!-- Ligne 8 -->
+  <text class="l" x="44" y="381">Camera animation, attached from the transport</text>
+  <text class="d" x="420" y="381" text-anchor="middle">—</text>
+  <text class="d" x="500" y="381" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(580,377)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="ok" transform="translate(660,377)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <path class="no" transform="translate(736,377)" d="M-5.6 -4 L-4 -5.6 L0 -1.6 L4 -5.6 L5.6 -4 L1.6 0 L5.6 4 L4 5.6 L0 1.6 L-4 5.6 L-5.6 4 L-1.6 0 Z"/>
+
+  <!-- Ligne 9 -->
+  <rect class="band" x="28" y="390" width="744" height="26" rx="4"/>
+  <text class="l" x="44" y="407">Scene proposal — prims moved, hidden, re-varianted</text>
+  <text class="d" x="420" y="407" text-anchor="middle">—</text>
+  <text class="d" x="500" y="407" text-anchor="middle">—</text>
+  <path class="ok" transform="translate(580,403)" d="M-7 0.6 L-2.5 5.2 L6.6 -4 L4.8 -5.8 L-2.5 1.6 L-5.2 -1.2 Z"/>
+  <text class="d" x="660" y="407" text-anchor="middle">—</text>
+  <path class="no" transform="translate(736,403)" d="M-5.6 -4 L-4 -5.6 L0 -1.6 L4 -5.6 L5.6 -4 L1.6 0 L5.6 4 L4 5.6 L0 1.6 L-4 5.6 L-5.6 4 L-1.6 0 Z"/>
+
+  <text class="d" x="28" y="442">The last column answers one question: can this payload travel with no text and no file at all?</text>
+  <text class="d" x="28" y="460">The send does nothing until the note carries text, a file, a 2D drawing, a point of interest or a staged reference.</text>
+  <text class="d" x="28" y="478">Saved as a draft in your browser, per media: the composer text and the 2D drawing in progress. Nothing else.</text>
+</svg>

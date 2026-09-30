@@ -1,4 +1,81 @@
 node_modules/
 dev_data/
+storage/
 .env
+.claude
 /.jules
+*.bat
+/tmp/
+
+# Build artifacts
+backend/dist/
+frontend/dist/
+frontend/public/docs/
+*.tsbuildinfo
+
+# Logs & test coverage
+*.log
+coverage/
+
+# Local-only: AI session plans and test assets
+plans/
+/assets_for_testing
+
+# Local progress logs
+logs/
+
+# AI agent context files (local only)
+CLAUDE.md
+AGENTS.md
+
+# Internal reports (audits...). Not to be confused with DOCUMENTATION/, which is committed.
+/docs/
+
+# Design references (handoff bundle)
+design_handoff_review_chrome/
+
+# Playwright output
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+
+# Production TLS certificates (mounted into nginx): never committed
+nginx/certs/
+
+# Alertmanager SMTP relay password (mounted into the container), and local backups
+monitoring/alertmanager/smtp_password
+backups/
+
+# What `scripts/install.sh` generates for THIS instance: site nginx config, compose overlays,
+# Let's Encrypt certificates, ops agent settings. Must stay ignored: otherwise `git status` is
+# dirty after an install and `scripts/update.sh` refuses to switch versions.
+deploy/
+
+# Ops agent order queue and run logs (Admin -> Updates). They contain the names of the people
+# who ordered an operation: nothing that belongs in a repository.
+#
+# ⚠ Only these two lines, never `ops/`: that folder ALSO holds the agent's source
+# (ops/Dockerfile, ops/agent.sh), which `.github/workflows/release.yml` builds.
+ops/queue/
+ops/state/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Tesseract workshop (`motion/`) for the documentation's animated renders.
+#
+# ⚠ Tesseract (Mirage) is NOT free software (proprietary licence). ReView is
+# AGPL-3.0-or-later, so the tool stays out of this repository, and so do the compositions,
+# which only render with it (and whose .tsrct projects embed fonts): they live on the machine
+# of whoever renders.
+#
+# Only the RENDERS are versioned (Tesseract's terms leave the output to its author). Accepted
+# consequence: without the compositions, nobody else can regenerate a render. See the header
+# of `scripts/check-docs.mjs` and the "Renders" chapter of
+# `DOCUMENTATION/development/documentation-style.md`.
+# The whole folder is ignored, renders INCLUDED: a render enters the repository by being
+# COPIED into `DOCUMENTATION/assets/<section>/`, where it is used. That is the only place
+# `check-docs.mjs` checks (caption required, never orphaned, type proven by its bytes, size
+# capped). Versioning it in `motion/out/` too would open a second, unchecked asset tree.
+/motion/

@@ -1,0 +1,99 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import type { BurninConfig } from '../types/share';
+import { useT, type MessageKey } from '../i18n';
+import { Stamp } from 'lucide-react';
+import { Hint } from './ui/hint';
+import { SettingsCard } from './settings/SettingsCard';
+import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
+
+// Recalculé au rendu : en constante de module, les libellés resteraient figés dans la
+// langue chargée au démarrage.
+const flags = (t: (key: MessageKey) => string): { key: keyof BurninConfig & string; label: string }[] => [
+  { key: 'enabled', label: t('burnin.onProxies') },
+  { key: 'showShot', label: t('burnin.shotCode') },
+  { key: 'showVersion', label: t('burnin.versionName') },
+  { key: 'showTimecode', label: t('burnin.timecode') },
+  { key: 'showLogo', label: t('burnin.studioLogo') },
+  { key: 'slate', label: t('burnin.slate') },
+];
+
+/** Valeurs proposées quand on personnalise (l'override remplace le template champ par champ). */
+const CUSTOM_DEFAULTS: Partial<BurninConfig> = {
+  enabled: true,
+  showShot: true,
+  showVersion: true,
+  showTimecode: true,
+  showLogo: false,
+  customText: '',
+  slate: false,
+};
+
+/**
+ * Section « Burn-ins » des réglages projet (35.A) : override du template studio.
+ * Sans override, le projet hérite du template configuré dans Admin → Diffusion.
+ */
+export default function ProjectBurninSection({
+  value,
+  onChange,
+}: {
+  value: Partial<BurninConfig> | undefined;
+  onChange: (v: Partial<BurninConfig> | undefined) => void;
+}) {
+  const t = useT();
+  return (
+    <SettingsCard
+      title={t('burnin.title')}
+      icon={Stamp}
+      tone="accent"
+      keywords={SETTINGS_KEYWORDS.burnin}
+      footnote={t('burnin.hint')}
+    >
+      {!value ? (
+        <div className="flex items-center justify-between gap-3">
+          <Hint>{t('project.burninInherit')}</Hint>
+          <button
+            type="button"
+            className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-secondary/60"
+            onClick={() => onChange({ ...CUSTOM_DEFAULTS })}
+          >
+            {t('project.burninCustom')}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {flags(t).map((f) => (
+            <label key={f.key} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="accent-primary"
+                checked={Boolean(value[f.key])}
+                onChange={(e) => onChange({ ...value, [f.key]: e.target.checked })}
+              />
+              {f.label}
+            </label>
+          ))}
+          <label className="block text-sm">
+            <span className="mb-1 block text-xs text-muted-foreground">{t('burnin.freeText')}</span>
+            <input
+              className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm"
+              value={value.customText ?? ''}
+              onChange={(e) => onChange({ ...value, customText: e.target.value })}
+              placeholder={t('burnin.freeText.placeholder')}
+              aria-label={t('burnin.freeText.placeholder')}
+              maxLength={120}
+            />
+          </label>
+          <button
+            type="button"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary/60"
+            onClick={() => onChange(undefined)}
+          >
+            {t('project.burninRevert')}
+          </button>
+        </div>
+      )}
+    </SettingsCard>
+  );
+}

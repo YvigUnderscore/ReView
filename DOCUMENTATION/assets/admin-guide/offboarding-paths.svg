@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 412" width="800" height="412" role="img" aria-labelledby="off-title off-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="off-title">The two ends of an account: disabled, or destroyed</title>
+  <desc id="off-desc">The delete gesture in the admin area disables an account: credentials are revoked, the history keeps its author, and a PATCH can bring it back. Only an explicit hard delete destroys the row, revokes the share links it created and loses the audit author. Both are refused for the last enabled global administrator, and a disabled account is still accepted at the login screen.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="412" rx="10"/>
+
+  <text class="d" x="20" y="26">OFFBOARDING — WHAT THE DELETE BUTTON REALLY DOES</text>
+
+  <path class="conn-a" d="M40 173 L24 173 L24 67 L280 67" marker-end="url(#arrow-a)"/>
+  <text class="a" x="152" y="60" text-anchor="middle">PATCH disabled:false — no button for it</text>
+
+  <rect class="panel-a" x="280" y="44" width="240" height="46" rx="9"/>
+  <text class="t" x="400" y="66" text-anchor="middle">Active account</text>
+  <text class="d" x="400" y="82" text-anchor="middle">sessions and API tokens valid</text>
+
+  <text class="m" x="400" y="142" text-anchor="middle">DELETE /api/users/:id</text>
+
+  <path class="conn" d="M400 90 L400 118 L190 118 L190 150" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 90 L400 118 L610 118 L610 150" marker-end="url(#arrow)"/>
+  <text class="a" x="250" y="112" text-anchor="middle">sent by the admin button</text>
+  <text class="d no" x="550" y="112" text-anchor="middle">only with ?hard=true</text>
+
+  <rect class="panel-w" x="40" y="150" width="300" height="46" rx="9"/>
+  <text class="t" x="190" y="172" text-anchor="middle">Disabled</text>
+  <text class="d" x="190" y="188" text-anchor="middle">the reversible default</text>
+
+  <text class="d" x="52" y="218">every session and API token revoked at once</text>
+  <text class="d" x="52" y="234">comments, versions and audit keep their author</text>
+  <text class="d" x="52" y="250">a re-disable keeps the original date</text>
+  <text class="d" x="52" y="266">audit entry USER_DISABLE</text>
+
+  <rect class="panel-d" x="460" y="150" width="300" height="46" rx="9"/>
+  <text class="t" x="610" y="172" text-anchor="middle">Deleted</text>
+  <text class="d" x="610" y="188" text-anchor="middle">explicit and irreversible</text>
+
+  <text class="d" x="472" y="218">share links it created are revoked</text>
+  <text class="d" x="472" y="234">the account row is destroyed</text>
+  <text class="d" x="472" y="250">the audit log loses its author</text>
+  <text class="d" x="472" y="266">audit entry USER_DELETE</text>
+
+  <rect class="panel-d" x="40" y="292" width="720" height="46" rx="9"/>
+  <text class="l" x="56" y="314">The last enabled global ADMIN can be neither disabled nor deleted</text>
+  <text class="d" x="56" y="330">refused with LAST_ADMIN — a studio cannot lock itself out of its own instance</text>
+
+  <rect class="panel-w" x="40" y="350" width="720" height="46" rx="9"/>
+  <text class="l" x="56" y="372">A disabled account is still accepted at the login screen</text>
+  <text class="d" x="56" y="388">remove the memberships or demote the global role to actually cut access</text>
+</svg>

@@ -1,0 +1,19 @@
+# Root docker context (frontend build: needs frontend/ + DOCUMENTATION/).
+# Everything else is excluded to keep the context small. The backend image builds from its
+# own context (./backend), which is why backend/ is excluded here.
+.git
+**/node_modules
+**/dist
+**/coverage
+*.log
+backend/
+storage/
+dev_data/
+logs/
+docs/
+plans/
+tmp/
+assets_for_testing/
+# Tesseract (documentation animation renders): proprietary tool, never in a ReView image.
+motion/
+frontend/public/docs/

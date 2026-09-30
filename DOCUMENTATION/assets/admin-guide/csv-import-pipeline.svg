@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520" role="img" aria-labelledby="csv-title csv-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="csv-title">The six stages of a CSV import, from dropped file to audit entry</title>
+  <desc id="csv-desc">A file of any header dialect is read, its columns recognised and optionally re-pointed by hand, then previewed without writing anything. The preview can be corrected and replayed as often as needed; only the commit writes, inside one bounded transaction, and leaves an audit entry carrying the counters.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="520" rx="10"/>
+
+  <text class="d" x="40" y="28">CSV IMPORT — FROM A DROPPED FILE TO A COMMITTED PLAN</text>
+
+  <path class="conn-o" d="M40 275 L22 275 L22 207 L40 207" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="40" y="48" width="250" height="46" rx="9"/>
+  <text class="l" x="165" y="70" text-anchor="middle">1 · File dropped</text>
+  <text class="d" x="165" y="86" text-anchor="middle">any header dialect</text>
+  <text class="d" x="310" y="68">ReView, ShotGrid, ftrack, Kitsu or a plain spreadsheet export.</text>
+  <text class="d" x="310" y="84">Drag and drop, the file picker, or paste the text.</text>
+
+  <path class="conn" d="M165 94 L165 116" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="40" y="116" width="250" height="46" rx="9"/>
+  <text class="l" x="165" y="138" text-anchor="middle">2 · Header recognition</text>
+  <text class="d" x="165" y="154" text-anchor="middle">sixteen fields, wide aliases</text>
+  <text class="d" x="310" y="136">sg_sequence, Parent, cut_in, Task type, Échéance are recognised;</text>
+  <text class="d" x="310" y="152">an ambiguous status column is settled on the whole header.</text>
+
+  <path class="conn" d="M165 162 L165 184" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="40" y="184" width="250" height="46" rx="9"/>
+  <text class="l" x="165" y="206" text-anchor="middle">3 · Column mapping</text>
+  <text class="d" x="165" y="222" text-anchor="middle">optional, by hand</text>
+  <text class="d" x="310" y="204">Re-point a column, or neutralise it, from the preview screen.</text>
+  <text class="d" x="310" y="220">Your file is never edited — only the way it is read.</text>
+
+  <path class="conn" d="M165 230 L165 252" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="40" y="252" width="250" height="46" rx="9"/>
+  <text class="t" x="165" y="274" text-anchor="middle">4 · Preview</text>
+  <text class="d" x="165" y="290" text-anchor="middle">nothing is written</text>
+  <text class="d" x="310" y="272">Ten counters, a per-row outcome for 1 000 rows, 2 000 typed issues.</text>
+  <text class="a" x="310" y="288">Fix the mapping and preview again, as often as you like.</text>
+
+  <path class="conn" d="M165 298 L165 320" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="40" y="320" width="250" height="46" rx="9"/>
+  <text class="l" x="165" y="342" text-anchor="middle">5 · Commit</text>
+  <text class="d" x="165" y="358" text-anchor="middle">one bounded transaction</text>
+  <text class="d" x="310" y="340">The plan is recomputed on the live state just before writing,</text>
+  <text class="d" x="310" y="356">then written by createMany in chunks of 500 rows.</text>
+
+  <path class="conn" d="M165 366 L165 388" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="40" y="388" width="250" height="46" rx="9"/>
+  <text class="l" x="165" y="410" text-anchor="middle">6 · Audit</text>
+  <text class="d" x="165" y="426" text-anchor="middle">PROJECT_IMPORT_CSV</text>
+  <text class="d" x="310" y="408">The ten counters travel with the entry, as its metadata.</text>
+  <text class="d" x="310" y="424">Who imported what, and how much of it, stays readable.</text>
+
+  <rect class="band" x="40" y="456" width="720" height="48" rx="9"/>
+  <text class="l" x="56" y="478">Identity: a shot is (project, sequence, code); a task is (shot, name).</text>
+  <text class="d" x="56" y="494">Replaying the same file rebuilds an all-unchanged plan — a nightly re-import is safe.</text>
+</svg>

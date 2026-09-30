@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 376" width="800" height="376" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Six token kinds, one allow-list</title>
+  <desc id="fig-desc">All six tokens the application issues are signed with the same secret. The authentication middleware lets through only the access token, which carries no kind claim and a numeric id; the refresh, two-factor, share, OIDC and media playback tokens hit a solid gate and are refused. The media playback token is filtered by a mirrored gate that accepts only its own kind, for one media and one user, so an access token cannot fetch a rendition playlist either.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="376" rx="10"/>
+
+  <text class="a" x="292" y="34" text-anchor="middle">ALLOW-LIST</text>
+
+  <!-- La barrière, percée d'une seule ouverture : le jeton d'accès -->
+  <rect class="panel-a" x="280" y="44" width="24" height="20" rx="6"/>
+  <rect class="panel-a" x="280" y="80" width="24" height="210" rx="6"/>
+
+  <!-- Les six jetons, tous signés avec le même secret -->
+  <rect class="panel" x="20" y="52" width="210" height="40" rx="9"/>
+  <text class="l" x="32" y="69">access token</text>
+  <text class="d" x="32" y="84">no kind claim, 7 d</text>
+
+  <rect class="panel" x="20" y="100" width="210" height="40" rx="9"/>
+  <text class="l" x="32" y="117">refresh token</text>
+  <text class="d" x="32" y="132">kind: refresh, 30 d</text>
+
+  <rect class="panel" x="20" y="148" width="210" height="40" rx="9"/>
+  <text class="l" x="32" y="165">2FA exchange token</text>
+  <text class="d" x="32" y="180">kind: 2fa, 5 min</text>
+
+  <rect class="panel" x="20" y="196" width="210" height="40" rx="9"/>
+  <text class="l" x="32" y="213">share session</text>
+  <text class="d" x="32" y="228">kind: share, 24 h</text>
+
+  <rect class="panel" x="20" y="244" width="210" height="40" rx="9"/>
+  <text class="l" x="32" y="261">OIDC state</text>
+  <text class="d" x="32" y="276">kind: oidc, 10 min</text>
+
+  <rect class="panel" x="20" y="292" width="210" height="40" rx="9"/>
+  <text class="l" x="32" y="309">media playback token</text>
+  <text class="d" x="32" y="324">kind: media-playback, 2 h</text>
+
+  <!-- Le seul jeton qui passe -->
+  <path class="conn-a" d="M230 72 L340 72 L340 87 L380 87" marker-end="url(#arrow-a)"/>
+
+  <!-- Les cinq qui rebondissent -->
+  <path class="conn-o" d="M230 120 L262 120"/>
+  <rect class="panel-d" x="264" y="111" width="10" height="18" rx="3"/>
+  <path class="conn-o" d="M230 168 L262 168"/>
+  <rect class="panel-d" x="264" y="159" width="10" height="18" rx="3"/>
+  <path class="conn-o" d="M230 216 L262 216"/>
+  <rect class="panel-d" x="264" y="207" width="10" height="18" rx="3"/>
+  <path class="conn-o" d="M230 264 L262 264"/>
+  <rect class="panel-d" x="264" y="255" width="10" height="18" rx="3"/>
+
+  <!-- Le jeton de lecture passe sous la barrière, vers sa propre porte -->
+  <path class="conn" d="M230 312 L340 312 L340 300 L380 300" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="380" y="52" width="400" height="70" rx="9"/>
+  <text class="t" x="394" y="76">The request is authenticated</text>
+  <text class="d" x="394" y="94">middleware/auth accepts a payload with no kind claim</text>
+  <text class="d" x="394" y="110">and a numeric id, and nothing else.</text>
+
+  <rect class="panel-d" x="380" y="150" width="400" height="70" rx="9"/>
+  <text class="t" x="394" y="174">403 TOKEN_INVALID</text>
+  <text class="d" x="394" y="192">The other five kinds are signed with the same secret</text>
+  <text class="d" x="394" y="208">and bounce off. So would a seventh kind added tomorrow.</text>
+
+  <rect class="panel" x="380" y="248" width="400" height="86" rx="9"/>
+  <text class="t" x="394" y="272">lib/mediaToken, the mirrored gate</text>
+  <text class="d" x="394" y="290">Accepts only kind: media-playback, and only for the media</text>
+  <text class="d" x="394" y="306">and the user it names. An access token bounces off it:</text>
+  <text class="d" x="394" y="322">the two directions are both closed.</text>
+
+  <text class="d" x="28" y="360">All six are signed with the same JWT_SECRET, which is exactly why the gate filters by allow-list rather than by blacklist.</text>
+</svg>

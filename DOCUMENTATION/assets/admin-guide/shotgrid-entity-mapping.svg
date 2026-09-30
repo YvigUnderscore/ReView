@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 486" width="800" height="486" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">What maps onto what, field by field</title>
+  <desc id="fig-desc">Seven ShotGrid entity types map onto ReView entities, with the fields that travel between them listed in the middle. The Episode pair is drawn dashed because the level is optional, and the Version pair is accented because it carries the review decision.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="486" rx="10"/>
+
+  <text class="d" x="24" y="30">SHOTGRID</text>
+  <text class="d" x="182" y="30">WHAT TRAVELS DOWN</text>
+  <text class="d" x="590" y="30">REVIEW</text>
+
+  <!-- Project -->
+  <rect class="panel" x="24" y="52" width="150" height="34" rx="9"/>
+  <text class="l" x="40" y="73">Project</text>
+  <rect class="band" x="182" y="52" width="380" height="34" rx="9"/>
+  <text class="d" x="196" y="73">id and name — the name is re-checked before every pass</text>
+  <path class="conn" d="M562 69 L586 69" marker-end="url(#arrow)"/>
+  <rect class="panel" x="590" y="52" width="186" height="34" rx="9"/>
+  <text class="l" x="606" y="73">Project</text>
+
+  <!-- Episode -->
+  <rect class="panel-o" x="24" y="98" width="150" height="34" rx="9"/>
+  <text class="l" x="40" y="119">Episode</text>
+  <rect class="band" x="182" y="98" width="380" height="34" rx="9"/>
+  <text class="d" x="196" y="119">code, status, and sg_episode on the sequence</text>
+  <path class="conn-o" d="M562 115 L586 115" marker-end="url(#arrow)"/>
+  <rect class="panel-o" x="590" y="98" width="186" height="34" rx="9"/>
+  <text class="l" x="606" y="119">Episode</text>
+
+  <!-- Sequence -->
+  <rect class="panel" x="24" y="144" width="150" height="34" rx="9"/>
+  <text class="l" x="40" y="165">Sequence</text>
+  <rect class="band" x="182" y="144" width="380" height="34" rx="9"/>
+  <text class="d" x="196" y="165">code, description, status</text>
+  <path class="conn" d="M562 161 L586 161" marker-end="url(#arrow)"/>
+  <rect class="panel" x="590" y="144" width="186" height="34" rx="9"/>
+  <text class="l" x="606" y="165">Sequence</text>
+
+  <!-- Shot -->
+  <rect class="panel" x="24" y="190" width="150" height="34" rx="9"/>
+  <text class="l" x="40" y="211">Shot</text>
+  <rect class="band" x="182" y="190" width="380" height="34" rx="9"/>
+  <text class="d" x="196" y="211">code, status, sg_cut_in and sg_cut_out</text>
+  <path class="conn" d="M562 207 L586 207" marker-end="url(#arrow)"/>
+  <rect class="panel" x="590" y="190" width="186" height="34" rx="9"/>
+  <text class="l" x="606" y="211">Shot — start/end frame</text>
+
+  <!-- Asset -->
+  <rect class="panel" x="24" y="236" width="150" height="34" rx="9"/>
+  <text class="l" x="40" y="257">Asset</text>
+  <rect class="band" x="182" y="236" width="380" height="34" rx="9"/>
+  <text class="d" x="196" y="257">code, asset type, links to shots and sequences</text>
+  <path class="conn" d="M562 253 L586 253" marker-end="url(#arrow)"/>
+  <rect class="panel" x="590" y="236" width="186" height="34" rx="9"/>
+  <text class="l" x="606" y="257">Asset</text>
+
+  <!-- Task -->
+  <rect class="panel" x="24" y="282" width="150" height="34" rx="9"/>
+  <text class="l" x="40" y="303">Task</text>
+  <rect class="band" x="182" y="282" width="380" height="34" rx="9"/>
+  <text class="d" x="196" y="303">content, step, status, start and due dates, duration</text>
+  <path class="conn" d="M562 299 L586 299" marker-end="url(#arrow)"/>
+  <rect class="panel" x="590" y="282" width="186" height="34" rx="9"/>
+  <text class="l" x="606" y="303">Task — name, assignees</text>
+
+  <!-- Version -->
+  <rect class="panel-a" x="24" y="328" width="150" height="34" rx="9"/>
+  <text class="t" x="40" y="349">Version</text>
+  <rect class="band" x="182" y="328" width="380" height="34" rx="9"/>
+  <text class="d" x="196" y="349">code, first and last frame, status, PublishedFile paths</text>
+  <path class="conn-a" d="M562 345 L586 345" marker-end="url(#arrow-a)"/>
+  <rect class="panel-a" x="590" y="328" width="186" height="34" rx="9"/>
+  <text class="t" x="606" y="349">Version + Media</text>
+
+  <text class="d" x="24" y="392">Dashed: the Episode level is imported only when it is on for the ReView project — otherwise the site is never asked for sg_episode.</text>
+  <text class="d" x="24" y="412">A version whose ShotGrid task is unknown lands on a per-shot task named ShotGrid rather than being dropped.</text>
+  <text class="d" x="24" y="432">Duplicate site codes are imported with their ShotGrid id appended: DO_NOT_USE_ (4686).</text>
+  <text class="d" x="24" y="452">Task duration is stored in working minutes: 2400 is five 8-hour days, shown as working days.</text>
+  <text class="a" x="24" y="472">The arrows show the read direction. Writing back is a separate switch per row, and every one of them starts closed.</text>
+</svg>

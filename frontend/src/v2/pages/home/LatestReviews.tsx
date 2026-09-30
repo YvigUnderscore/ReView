@@ -1,0 +1,131 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { Link } from 'react-router-dom';
+import { MessageSquare, Clapperboard } from 'lucide-react';
+import { timeAgo } from '../../lib/time';
+import { reviewPath } from '../../lib/slug';
+import { MEDIA_KIND_ICON } from '../task/taskTypes';
+import { stripHtml } from '../../lib/richText';
+import { contentCapacity, type WidgetRows } from '../../components/widgets/widgetSizing';
+import type { DashboardReview } from './homeTypes';
+import { useT } from '../../i18n';
+
+/** Timecode mm:ss du commentaire (temps vidéo en secondes). */
+function tc(s: number): string {
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
+
+function Thumb({ review, large = false }: { review: DashboardReview; large?: boolean }) {
+  const Icon = MEDIA_KIND_ICON[review.kind];
+  if (review.thumbnailUrl)
+    return (
+      <img
+        src={review.thumbnailUrl}
+        alt=""
+        className={`${large ? 'aspect-video w-full' : 'h-14 w-24 shrink-0'} rounded-md object-cover`}
+      />
+    );
+  return (
+    <div
+      className={`${large ? 'aspect-video w-full' : 'h-14 w-24 shrink-0'} flex items-center justify-center rounded-md bg-muted text-muted-foreground`}
+    >
+      <Icon size={large ? 40 : 20} />
+    </div>
+  );
+}
+
+function CommentLine({ review }: { review: DashboardReview }) {
+  const t = useT();
+  const c = review.lastComment;
+  return (
+    <p className="flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground">
+      <span className="flex shrink-0 translate-y-px items-center gap-0.5">
+        <MessageSquare size={12} />
+        {review.commentCount > 1 && <span className="text-2xs tabular-nums">{review.commentCount}</span>}
+      </span>
+      <span className="truncate">
+        <span className="font-medium text-foreground">{c.author ?? t('common.guest')}</span>
+        {c.timestamp != null && <span className="ml-1 text-primary">@ {tc(c.timestamp)}</span>}
+        {/* Le corps d'un commentaire est du HTML : le rendre tel quel dans un aperçu d'une
+            ligne montrerait le balisage au lecteur, ce que l'accueil faisait pour toute note
+            venue de ShotGrid. Ici on n'en veut que le texte — les balises de bloc n'ont rien
+            à faire au milieu d'une phrase. */}
+        <span className="ml-1">« {stripHtml(c.content)} »</span>
+      </span>
+      <span className="ml-auto shrink-0">{timeAgo(c.createdAt)}</span>
+    </p>
+  );
+}
+
+/**
+ * Hauteur d'une carte de la colonne de droite : sa vignette (`h-14`, 56 px), ses marges
+ * (`p-2`) et l'interligne (`space-y-2`) — environ 80 px.
+ */
+const REVIEW_CARD = 80;
+
+/**
+ * Hero « Dernières reviews » : dernier média commenté en grand + reviews récentes.
+ *
+ * Le héros occupe sa propre colonne ; c'est donc la hauteur du bloc qui décide de ce que la
+ * colonne de droite montre à côté de lui (lot 13). Une carte plus haute montre réellement
+ * plus de reviews, au lieu d'en aligner deux et de laisser du vide sous elles.
+ */
+export default function LatestReviews({ reviews, rows }: { reviews: DashboardReview[]; rows: WidgetRows }) {
+  const t = useT();
+  const [hero, ...rest] = reviews.slice(0, 1 + contentCapacity(rows, REVIEW_CARD));
+  return (
+    <>
+      {!hero ? (
+        <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
+          <Clapperboard size={28} />
+          {t('home.noCommentedReview')}
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Link
+            to={reviewPath({ id: hero.mediaId, originalName: hero.name })}
+            className="group block overflow-hidden rounded-md border border-border transition-colors hover:border-primary/60"
+          >
+            <Thumb review={hero} large />
+            <div className="space-y-1.5 p-3">
+              <p className="truncate text-sm font-medium group-hover:text-primary">
+                {hero.name}
+                <span className="ml-2 font-normal text-muted-foreground">
+                  {hero.location && `${hero.location} · `}
+                  {hero.versionName}
+                </span>
+              </p>
+              <CommentLine review={hero} />
+            </div>
+          </Link>
+          <div className="space-y-2">
+            {rest.length === 0 && (
+              <p className="px-1 py-2 text-xs text-muted-foreground">{t('home.noRecentReview')}</p>
+            )}
+            {rest.map((r) => (
+              <Link
+                key={r.mediaId}
+                to={reviewPath({ id: r.mediaId, originalName: r.name })}
+                className="group flex items-center gap-3 rounded-md border border-border p-2 transition-colors hover:border-primary/60"
+              >
+                <Thumb review={r} />
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="truncate text-sm font-medium group-hover:text-primary">
+                    {r.name}
+                    <span className="ml-2 font-normal text-muted-foreground">
+                      {r.location && `${r.location} · `}
+                      {r.versionName}
+                    </span>
+                  </p>
+                  <CommentLine review={r} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

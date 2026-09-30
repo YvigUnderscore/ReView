@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" width="800" height="340" role="img" aria-labelledby="light-order-title light-order-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="light-order-title">Which light a 3D media opens under, and what a deleted HDRI does to it</title>
+  <desc id="light-order-desc">The media's own saved lighting wins; failing that, the project default; failing that, a neutral built-in rig at exposure 1 with no rotation, no background and no shadow ground. If the saved HDRI has been deleted from the library, the environment is dropped altogether and the built-in lights come back to full intensity, while the saved exposure, rotation and toggles are still applied.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="340" rx="10"/>
+
+  <text class="d" x="30" y="32">WHICH LIGHT A 3D MEDIA OPENS UNDER</text>
+
+  <rect class="panel" x="40" y="54" width="290" height="34" rx="9"/>
+  <text class="l" x="56" y="75">Does the media have its own light?</text>
+
+  <path class="conn-a" d="M330 71 L376 71" marker-end="url(#arrow-a)"/>
+  <text class="a" x="353" y="64" text-anchor="middle">yes</text>
+
+  <rect class="panel-a" x="380" y="48" width="380" height="46" rx="9"/>
+  <text class="t" x="396" y="70">Use the saved lighting</text>
+  <text class="d" x="396" y="87">replayed for every viewer, saveable after publication</text>
+
+  <path class="conn" d="M185 88 L185 114" marker-end="url(#arrow)"/>
+  <text class="d" x="197" y="105">no</text>
+
+  <rect class="panel" x="40" y="118" width="290" height="34" rx="9"/>
+  <text class="l" x="56" y="139">Has the project a default light?</text>
+
+  <path class="conn" d="M330 135 L376 135" marker-end="url(#arrow)"/>
+  <text class="d" x="353" y="128" text-anchor="middle">yes</text>
+
+  <rect class="panel" x="380" y="112" width="380" height="46" rx="9"/>
+  <text class="t" x="396" y="134">Use the project default</text>
+  <text class="d" x="396" y="151">hdriId, exposure, rotation, background, shadow ground</text>
+
+  <path class="conn" d="M185 152 L185 199 L376 199" marker-end="url(#arrow)"/>
+  <text class="d" x="197" y="172">no</text>
+
+  <rect class="panel" x="380" y="176" width="380" height="46" rx="9"/>
+  <text class="t" x="396" y="198">Neutral built-in rig</text>
+  <text class="d" x="396" y="215">exposure 1, no rotation, no background, no shadow ground</text>
+
+  <text class="d" x="30" y="246">IF THE SAVED HDRI HAS BEEN DELETED FROM THE LIBRARY</text>
+
+  <rect class="panel-d" x="30" y="256" width="740" height="46" rx="9"/>
+  <text class="t" x="46" y="278">The environment is dropped entirely</text>
+  <text class="d" x="46" y="295">no image-based lighting, no background, and the built-in lights return to full intensity</text>
+
+  <text class="d" x="30" y="326">Exposure, rotation and the two toggles still apply: the look turns brighter and flatter than the one that was approved.</text>
+</svg>

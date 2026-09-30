@@ -1,24 +1,355 @@
+# ReView base stack, for both development and production (production adds
+# docker-compose.prod.yml on top).
+#
+# Requires Compose >= 2.24: the long `env_file` syntax (`required: false`) is used here, and
+# `!reset` in the production overlay.
+
+# Docker log rotation, applied to EVERY service through the YAML anchor below.
+# Without it the default `json-file` driver grows without bound: on a NAS host (TrueNAS), the
+# pino logs of a busy instance fill the system pool and take down the NAS, not just ReView.
+# 10 MB x 5 = at most 50 MB per container, ~450 MB for the whole stack.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
-  frontend:
-    build: ./frontend
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-review}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-review_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-review}
+    # No host port in the base file: internal access only.
+    # Development publishes 5432 through docker-compose.override.yml (loaded automatically).
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-review}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # 2 GiB: shared_buffers stays at its default (128 MB) and the product's queries are short;
+    # the headroom goes to page cache and sorts. Beyond that it is the kernel cache doing the
+    # work, not Postgres. Raise it for a high-volume studio.
+    mem_limit: ${POSTGRES_MEM_LIMIT:-2g}
+    # /dev/shm is 64 MB by default in a container: too small for Postgres parallel sorts, which
+    # then fail with "could not resize shared memory segment".
+    shm_size: ${POSTGRES_SHM_SIZE:-256mb}
+    logging: *default-logging
+    restart: always
+
+  minio:
+    # Pinned version, never `latest`: two installs made on different dates must run the same
+    # MinIO. This is the last release that ships the full web console, which
+    # DOCUMENTATION/infrastructure/storage-minio.md and port 9001 below rely on.
+    # Override with MINIO_VERSION in .env.
+    image: minio/minio:${MINIO_VERSION:-RELEASE.2025-04-22T22-12-26Z}
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    # Bound to loopback by default. These ports are for development, and the MinIO console is
+    # full storage administration, protected in dev only by minioadmin/minioadmin: published
+    # on 0.0.0.0 it hands the whole bucket to anyone on the network.
+    # Set MINIO_BIND=0.0.0.0 to expose them deliberately. docker-compose.prod.yml removes every
+    # host port: in production MinIO is only reachable through nginx.
     ports:
-      - "${PORT:-3429}:80"
-    depends_on:
-      - backend
+      - "${MINIO_BIND:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_BIND:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Deliberately no `mem_limit`: MinIO buffers multipart uploads, and OOM-killing the storage
+    # would corrupt an upload in flight rather than protect the host. If the machine requires a
+    # cap, add a `mem_limit` in a local overlay (MINIO_MEM_LIMIT is not wired in this file).
+    # See DOCUMENTATION/infrastructure/containers-and-configuration.md.
+    logging: *default-logging
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    # No host port in the base file; development publishes it through the override.
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
     restart: always
 
   backend:
     build: ./backend
-    ports:
-      - "${BPORT:-3430}:3000" # Optional: Expose for debugging, though frontend proxies to internal 3000
+    # The whole .env is loaded: the backend's environment schema (backend/src/config/env.ts)
+    # has far more variables than the few listed under `environment:`, and APP_URL, SMTP_*,
+    # VAPID_*, LOG_LEVEL, APP_ENCRYPTION_KEY... only reach the container this way (without
+    # APP_URL, inviting a user fails with APP_URL_MISSING). `environment:` keeps only the
+    # values that must win.
+    #
+    # ⚠ Precedence: `environment:` overrides `env_file:`. The values below describe the compose
+    # NETWORK TOPOLOGY (postgres, minio, redis reachable by service name). A .env holding a
+    # DATABASE_URL that points at localhost (the normal case, for the host's Prisma CLI) must
+    # not replace them.
+    env_file:
+      - path: .env
+        required: false
     environment:
-      - PORT=3000
-      - DATA_PATH=/app/data
-      - DATABASE_URL=file:/app/data/review.db
-      - JWT_SECRET=${JWT_SECRET}
-      - TZ=Europe/Paris
-    volumes:
-      # Map host data path to container data path
-      # The ${DATA_PATH:-/root/ReView/} syntax defaults to /root/ReView/ if DATA_PATH is not set in .env
-      - ${DATA_PATH:-/root/ReView/}:/app/data
+      NODE_ENV: production
+      PORT: 3000
+      # ⚠ `connection_limit` is not decorative. Without it Prisma sizes its pool at
+      # `physical cores x 2 + 1` PER PROCESS. Two processes connect (backend + worker) and the
+      # postgres image keeps `max_connections = 100`: on a 32-core host that is 2 x 65 = 130
+      # connections requested for 100 available, and whichever process starts second loops on
+      # "FATAL: sorry, too many clients already". The bound must be written, not derived from
+      # the hardware. Current total: 2 x ${DB_POOL:-10} = 20 connections at most, leaving room
+      # for psql, backups and migrations.
+      # `statement_timeout` is set by the application (backend/src/lib/prisma.ts), not here, so
+      # that it does not also cap the Prisma CLI DDL run at startup.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-review}:${POSTGRES_PASSWORD:-review_dev}@postgres:5432/${POSTGRES_DB:-review}?schema=public&connection_limit=${DB_POOL:-10}&pool_timeout=${DB_POOL_TIMEOUT:-20}
+      JWT_SECRET: ${JWT_SECRET}
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-review}
+      S3_FORCE_PATH_STYLE: "true"
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # One proxy hop sits in front of the API in this stack: the frontend container (and, in
+      # production, the TLS nginx), which APPENDS the real client address to
+      # `X-Forwarded-For`. That is what makes `req.ip` correct for rate limiters and the audit
+      # log. The value is only safe because the backend port is bound to loopback (below):
+      # with BPORT_BIND=0.0.0.0 the backend can be reached without the proxy and the header can
+      # be forged, so set TRUST_PROXY=0 in .env in that case.
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      # Time zone for digests, weekly reports and timestamped burn-ins. Studios outside France
+      # set TZ in .env.
+      TZ: ${TZ:-Europe/Paris}
+      # Needed by the API too: it triggers the `scan` job for media that need no processing.
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      # ShotGrid hosts allowed without public HTTPS (the development simulator).
+      SHOTGRID_INSECURE_HOSTS: ${SHOTGRID_INSECURE_HOSTS:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      # Token required by GET /metrics (empty = internal network only).
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      # Deliberate initialisation of an EMPTY database (see backend/start.sh):
+      # `PRISMA_DB_PUSH=1 docker compose up backend`. This pass-through line is required:
+      # compose does not forward the host environment, so the shell variable would never reach
+      # the container. Empty by default; only the value "1" does anything, and start.sh
+      # refuses it when NODE_ENV=production.
+      PRISMA_DB_PUSH: ${PRISMA_DB_PUSH:-}
+    # The development ShotGrid simulator runs on the host machine.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Bound to loopback by default, like MinIO and Grafana: this is the development entry
+    # point, plain HTTP with no proxy in front. Published on 0.0.0.0 it would serve the API in
+    # clear text to the whole studio network (login tokens included) and let clients forge
+    # `X-Forwarded-For` to bypass rate limiters. Set BPORT_BIND=0.0.0.0 to expose it
+    # deliberately (docker-compose.prod.yml removes every host port anyway).
+    ports:
+      - "${BPORT_BIND:-127.0.0.1}:${BPORT:-3430}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # HTTP probe of the API (migrations run at boot, before the server listens).
+      #
+      # ⚠ 127.0.0.1, not `localhost`: the server listens on IPv4 0.0.0.0, while Node's `fetch`
+      # resolves `localhost` to ::1 first, so the probe fails on images with IPv6 enabled.
+      #
+      # `/health` is a LIVENESS probe (no I/O, never fails because of a dependency) and is the
+      # right one here: restarting the container because Postgres is down only adds an outage.
+      # `/health/ready` (checks Postgres, Redis and MinIO, 503 on failure) is meant for an
+      # external load balancer or monitoring. HEALTH_PATH in .env overrides the probed route.
+      # See DOCUMENTATION/infrastructure/monitoring.md.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000' + (process.env.HEALTH_PATH || '/health')).then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    # 2 GiB: single replica, Node heap ~1.5 GiB at most plus response buffers. The limit is not
+    # needed in normal operation; it stops a leak (e.g. the storage report that materialises
+    # the bucket listing) from taking down the whole host.
+    mem_limit: ${BACKEND_MEM_LIMIT:-2g}
+    logging: *default-logging
     restart: always
+
+  worker:
+    build:
+      context: ./backend
+      args:
+        # Blender + usd-core, in the worker image only (1.6 GB -> 3.6 GB). Set to empty for a
+        # lighter image; USD then falls back to guc/assimp (see backend/Dockerfile).
+        INSTALL_USD_TOOLS: ${INSTALL_USD_TOOLS:-1}
+    command: ["node", "dist/workers/ffmpeg.worker.js"]
+    # Same reason as the backend: the worker shares the API's environment schema (SMTP, secret
+    # encryption, APP_URL for email links...).
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      # Same explicit bound as the backend (see the comment on `backend`): the worker runs two
+      # FFmpeg jobs in parallel and has no use for a pool sized by the machine's core count.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-review}:${POSTGRES_PASSWORD:-review_dev}@postgres:5432/${POSTGRES_DB:-review}?schema=public&connection_limit=${DB_POOL:-10}&pool_timeout=${DB_POOL_TIMEOUT:-20}
+      JWT_SECRET: ${JWT_SECRET}
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-review}
+      S3_FORCE_PATH_STYLE: "true"
+      REDIS_URL: redis://redis:6379
+      # The worker serves no HTTP, but it shares the backend's environment schema, which
+      # rejects CORS_ORIGIN='*' in production (config/env.ts). Without this line the worker
+      # falls back to '*' and refuses to start, so it gets the same value as the backend.
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      TZ: ${TZ:-Europe/Paris}
+      # h264_nvenc when an NVIDIA GPU is exposed to the container (falls back to libx264).
+      VIDEO_ENCODER: ${VIDEO_ENCODER:-libx264}
+      # Opt-in antivirus scan: point at the clamav service (`antivirus` profile).
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      # ShotGrid hosts allowed without public HTTPS (the development simulator).
+      SHOTGRID_INSECURE_HOSTS: ${SHOTGRID_INSECURE_HOSTS:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      # Native USD->glTF converter (e.g. `guc`, installed with --build-arg GUC_URL). Only used
+      # when Blender is absent. See DOCUMENTATION/admin-guide/3d-usd.md.
+      USD_GLTF_CONVERTER: ${USD_GLTF_CONVERTER:-}
+      # Paths to the USD tooling installed by INSTALL_USD_TOOLS.
+      USD_BLENDER_BIN: ${USD_BLENDER_BIN:-/opt/blender/blender}
+      USD_PYTHON_BIN: ${USD_PYTHON_BIN:-/opt/usdenv/bin/python3}
+      # Conversion safeguards: maximum run time of an external converter, and extraction
+      # limits for 3D archives (path traversal, decompression bombs).
+      MODEL_CONVERT_TIMEOUT_MS: ${MODEL_CONVERT_TIMEOUT_MS:-900000}
+      ARCHIVE_MAX_ENTRIES: ${ARCHIVE_MAX_ENTRIES:-20000}
+      ARCHIVE_MAX_UNCOMPRESSED_BYTES: ${ARCHIVE_MAX_UNCOMPRESSED_BYTES:-8589934592}
+      ARCHIVE_MAX_COMPRESSION_RATIO: ${ARCHIVE_MAX_COMPRESSION_RATIO:-200}
+    # The development ShotGrid simulator runs on the host; the worker performs the sync, so it
+    # must be able to reach it.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # Wait for the backend to apply migrations before touching the database.
+      backend:
+        condition: service_healthy
+    # 8 GiB: the only service that needs to be generous. Two concurrent HLS transcodes
+    # (`media-processing` at concurrency 2) and, with INSTALL_USD_TOOLS=1, a headless Blender
+    # loading a whole USD scene. Below ~4 GiB, heavy USD conversions get OOM-killed instead of
+    # failing cleanly; with no limit at all, they take the host down. Tune with
+    # WORKER_MEM_LIMIT.
+    mem_limit: ${WORKER_MEM_LIMIT:-8g}
+    logging: *default-logging
+    restart: always
+
+  # Opt-in monitoring: `docker compose --profile monitoring up -d`
+  # Grafana on 127.0.0.1:3431, with a provisioned "ReView" dashboard.
+  prometheus:
+    # Pinned to the 3.5 LTS line: `latest` has already changed behaviour between majors.
+    # Override with PROMETHEUS_VERSION in .env.
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.5.0}
+    profiles: ["monitoring"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # ⚠ Without this mount NO alerting rule is loaded. prometheus.yml declares
+      # `rule_files: /etc/prometheus/rules/*.yml`, and a glob that matches nothing is not an
+      # error: Prometheus starts silently with zero rules, and the alerts in
+      # monitoring/rules/alerts.yml are never evaluated.
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    logging: *default-logging
+    restart: always
+
+  grafana:
+    # Pinned: the provisioned dashboard uses schemaVersion 39 (Grafana 10.4+/11.x).
+    # Override with GRAFANA_VERSION in .env.
+    image: grafana/grafana-oss:${GRAFANA_VERSION:-11.6.1}
+    profiles: ["monitoring"]
+    # Loopback only: the dashboard exposes metrics for the whole instance and has no reason to
+    # be reachable from the network. For remote access, use an SSH tunnel or a VPN.
+    ports:
+      - "${GRAFANA_BIND:-127.0.0.1}:${GRAFANA_PORT:-3431}:3000"
+    environment:
+      # Grafana's default admin/admin is a real administrator account: set
+      # GRAFANA_ADMIN_PASSWORD in .env (see .env.example). The variable is optional on
+      # purpose: compose interpolates the WHOLE file, inactive profiles included, so a `:?`
+      # here would break everyone's `docker compose up`. The protection that does not depend
+      # on the operator is the loopback binding above. The fallback is `admin` rather than an
+      # empty string, which would create an admin account WITHOUT a password.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    logging: *default-logging
+    restart: always
+
+  # Opt-in antivirus: `docker compose --profile antivirus up -d`, plus CLAMAV_HOST=clamav.
+  clamav:
+    image: clamav/clamav:stable
+    profiles: ["antivirus"]
+    volumes:
+      - clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    logging: *default-logging
+    restart: always
+
+  frontend:
+    # Build context is the repo root: the build embeds DOCUMENTATION/ (the in-app /docs pages).
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "${PORT:-3429}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # busybox wget (nginx:alpine image): is the SPA being served? Without this probe, an
+      # nginx that rejected its configuration stays "running" and the production TLS proxy
+      # keeps sending it traffic.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    restart: always
+
+volumes:
+  pgdata:
+  miniodata:
+  redisdata:
+  clamav_db:
+  prometheus_data:
+  grafana_data:

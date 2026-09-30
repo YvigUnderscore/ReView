@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400" role="img" aria-labelledby="hsw-title hsw-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="hsw-title">Signing windows, lifetimes, and self-repair</title>
+  <desc id="hsw-desc">Rewritten rendition playlists are memoised per fifteen-minute window, so every viewer in that window receives the same segment URLs and one cache key. The presigned URLs stay valid two hours and ten minutes, the playback token two hours, and an expired segment makes the player reload the manifest.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="400" rx="10"/>
+
+  <text class="d" x="40" y="24">WHY EVERY VIEWER GETS THE SAME URL</text>
+
+  <rect class="panel" x="40" y="34" width="170" height="46" rx="9"/>
+  <text class="l" x="54" y="54">Viewer A, minute 1</text>
+  <text class="d" x="54" y="70">opens the shot</text>
+
+  <rect class="panel" x="40" y="96" width="170" height="46" rx="9"/>
+  <text class="l" x="54" y="116">Viewer B, minute 14</text>
+  <text class="d" x="54" y="132">opens the same shot</text>
+
+  <path class="conn" d="M210 57 L262 57 L262 89"/>
+  <path class="conn" d="M210 119 L262 119 L262 89"/>
+  <path class="conn-a" d="M262 89 L310 89" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="310" y="58" width="300" height="62" rx="9"/>
+  <text class="t" x="460" y="80" text-anchor="middle">One rewritten playlist</text>
+  <text class="d" x="460" y="98" text-anchor="middle">identical segment URLs, one nginx cache key</text>
+  <text class="d" x="460" y="114" text-anchor="middle">memoised per 15-minute window, 32 entries</text>
+
+  <text class="d" x="40" y="168">HOW LONG A PLAYLIST STAYS GOOD</text>
+
+  <text class="l" x="40" y="209">Segment URL</text>
+  <rect class="panel-a" x="170" y="190" width="539" height="30" rx="9"/>
+  <text class="d" x="184" y="209">signed at the slot start, valid 2 h 10 min</text>
+
+  <text class="l" x="40" y="247">Playback token</text>
+  <rect class="panel" x="170" y="228" width="497" height="30" rx="9"/>
+  <text class="d" x="184" y="247">2 h, issued when the player fetches master.m3u8</text>
+
+  <text class="l" x="40" y="281">Playlist cache</text>
+  <rect class="panel" x="170" y="266" width="62" height="22" rx="9"/>
+  <text class="d" x="246" y="281">15 min — every viewer in the window gets byte-identical URLs</text>
+
+  <path class="conn" d="M170 302 L750 302"/>
+  <path class="conn" d="M170 296 L170 302"/>
+  <path class="conn" d="M294 296 L294 302"/>
+  <path class="conn" d="M419 296 L419 302"/>
+  <path class="conn" d="M543 296 L543 302"/>
+  <path class="conn" d="M667 296 L667 302"/>
+  <text class="d" x="170" y="318" text-anchor="middle">0</text>
+  <text class="d" x="294" y="318" text-anchor="middle">30</text>
+  <text class="d" x="419" y="318" text-anchor="middle">60</text>
+  <text class="d" x="543" y="318" text-anchor="middle">90</text>
+  <text class="d" x="667" y="318" text-anchor="middle">120 min</text>
+
+  <text class="d" x="40" y="342">Worst case: the last viewer served from a memoised playlist still has about 1 h 50 min of validity.</text>
+  <text class="d" x="40" y="360">When a segment finally answers 403 the player reloads the manifest, restoring position, playback state and quality.</text>
+  <text class="d" x="40" y="378">It gives up after three attempts — that is what a genuinely revoked access looks like.</text>
+</svg>

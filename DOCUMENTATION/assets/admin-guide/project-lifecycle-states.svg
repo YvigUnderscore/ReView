@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 392" width="800" height="392" role="img" aria-labelledby="pls-title pls-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="pls-title">The four states of a project: active, archived, trashed, purged</title>
+  <desc id="pls-desc">An active project has two exits. Archiving makes it read-only and is undone by un-archiving. Deleting moves it to the studio trash, from which restoring brings it back and purging destroys it — either on demand by an administrator, or automatically once the retention delay has passed.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="392" rx="10"/>
+
+  <text class="d" x="20" y="26">PROJECT LIFECYCLE</text>
+
+  <path class="conn-a" d="M60 173 L30 173 L30 67 L300 67" marker-end="url(#arrow-a)"/>
+  <text class="a" x="165" y="60" text-anchor="middle">Un-archive — nothing was deleted</text>
+  <path class="conn-a" d="M740 173 L770 173 L770 67 L500 67" marker-end="url(#arrow-a)"/>
+  <text class="a" x="635" y="60" text-anchor="middle">Restore — puts it back untouched</text>
+
+  <rect class="panel-a" x="300" y="44" width="200" height="46" rx="9"/>
+  <text class="t" x="400" y="66" text-anchor="middle">Active</text>
+  <text class="d" x="400" y="82" text-anchor="middle">writable</text>
+
+  <path class="conn" d="M400 90 L400 118 L180 118 L180 150" marker-end="url(#arrow)"/>
+  <path class="conn" d="M400 90 L400 118 L620 118 L620 150" marker-end="url(#arrow)"/>
+  <text class="d" x="270" y="110" text-anchor="middle">Archive — Edit → Status</text>
+  <text class="d no" x="540" y="110" text-anchor="middle">Delete — soft, global ADMIN or SUPERVISOR</text>
+
+  <rect class="panel-w" x="60" y="150" width="240" height="46" rx="9"/>
+  <text class="t" x="180" y="172" text-anchor="middle">Archived</text>
+  <text class="d" x="180" y="188" text-anchor="middle">read-only — 403 PROJECT_ARCHIVED</text>
+
+  <text class="d" x="60" y="218">Global ADMIN or SUPERVISOR — reversible either way</text>
+  <text class="d" x="60" y="234">Reviews, boards and comments stay readable</text>
+  <text class="d" x="60" y="250">Archiving does not revoke a share link</text>
+
+  <rect class="panel-o" x="500" y="150" width="240" height="46" rx="9"/>
+  <text class="t" x="620" y="172" text-anchor="middle">Trashed</text>
+  <text class="d" x="620" y="188" text-anchor="middle">hidden, listed in Admin → Trash</text>
+
+  <path class="conn" d="M620 196 L620 250" marker-end="url(#arrow)"/>
+  <text class="l" x="600" y="218" text-anchor="end">Purge — ADMIN only</text>
+  <text class="d" x="600" y="234" text-anchor="end">database rows and MinIO objects</text>
+
+  <rect class="panel-d" x="500" y="250" width="240" height="46" rx="9"/>
+  <text class="t" x="620" y="272" text-anchor="middle">Purged</text>
+  <text class="d" x="620" y="288" text-anchor="middle">rows and files destroyed</text>
+
+  <rect class="panel-d" x="60" y="326" width="680" height="46" rx="9"/>
+  <text class="l" x="76" y="348">The nightly sweep purges anything trashed for longer than trash_retention_days</text>
+  <text class="d" x="76" y="364">30 days by default — no confirmation, no notification, no undo</text>
+</svg>

@@ -1,0 +1,186 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { Router } from 'express';
+import { z } from 'zod';
+import { Role, ProjectStatus } from '@prisma/client';
+import { authenticate } from '../middleware/auth';
+import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
+import { validate } from '../middleware/validate';
+import { effectiveProjectRole } from '../lib/projectRoles';
+import { paginationQuery, readPagination } from '../lib/pagination';
+import { projectSettingsSchema } from '../lib/projectSettings';
+import * as ProjectService from '../services/ProjectService';
+
+const router = Router();
+router.use(authenticate);
+
+const projectIdParam = z.object({ projectId: z.coerce.number().int() });
+
+// GET /api/projects — admin/superviseur : tout ; sinon : projets dont l'user est membre.
+// Paginé : { items, total, page, pageSize } (10.D1). `archived=1` → onglet Archivés (38.B).
+router.get(
+  '/',
+  validate({ query: paginationQuery.extend({ archived: z.enum(['0', '1']).optional() }) }),
+  async (req, res) => {
+    const onlyArchived = req.query.archived === '1';
+    res.json(await ProjectService.listProjects(req.user!, readPagination(req.query), onlyArchived));
+  },
+);
+
+// POST /api/projects (admin/superviseur)
+router.post(
+  '/',
+  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  validate({
+    body: z.object({
+      name: z.string().min(1).max(160),
+      description: z.string().max(2000).optional(),
+      startFrame: z.number().int().optional(),
+    }),
+  }),
+  async (req, res) => {
+    res.status(201).json({ project: await ProjectService.createProject(req.user!, req.body) });
+  },
+);
+
+// GET /api/projects/:projectId — inclut `myRole` (rôle effectif de l'appelant, 38.E)
+router.get('/:projectId', validate({ params: projectIdParam }), requireProjectAccess, async (req, res) => {
+  const projectId = Number(req.params.projectId);
+  const [project, myRole] = await Promise.all([
+    ProjectService.getProject(projectId),
+    effectiveProjectRole(req.user!.id, req.user!.role, projectId),
+  ]);
+  res.json({ project: { ...project, myRole } });
+});
+
+// PATCH /api/projects/:projectId (admin/superviseur)
+router.patch(
+  '/:projectId',
+  validate({
+    params: projectIdParam,
+    body: z.object({
+      name: z.string().min(1).max(160).optional(),
+      description: z.string().max(2000).nullable().optional(),
+      status: z.nativeEnum(ProjectStatus).optional(),
+      // Pas de `thumbnailKey` ici : rien n'a jamais su produire une clé de vignette de
+      // projet (le routeur dédié ne couvre que séquence, plan et asset), et une clé reçue
+      // du client faisait présigner n'importe quel objet du bucket. Le projet retombe sur
+      // la miniature de son premier média publié, comme il l'a toujours fait.
+      startFrame: z.number().int().optional(),
+      // Quota de stockage en octets (38.D) — null = illimité.
+      storageQuota: z.number().int().min(0).nullable().optional(),
+    }),
+  }),
+  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  async (req, res) => {
+    res.json({ project: await ProjectService.updateProject(Number(req.params.projectId), req.body) });
+  },
+);
+
+// DELETE /api/projects/:projectId — soft delete (admin/superviseur)
+router.delete(
+  '/:projectId',
+  validate({ params: projectIdParam }),
+  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  async (req, res) => {
+    await ProjectService.softDelete(req.user!, Number(req.params.projectId));
+    res.status(204).end();
+  },
+);
+
+// GET /api/projects/:projectId/trash — éléments supprimés du projet (admin/superviseur)
+router.get(
+  '/:projectId/trash',
+  validate({ params: projectIdParam }),
+  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  async (req, res) => {
+    res.json(await ProjectService.getTrash(Number(req.params.projectId)));
+  },
+);
+
+// POST /api/projects/:projectId/restore (admin/superviseur)
+router.post(
+  '/:projectId/restore',
+  validate({ params: projectIdParam }),
+  requireRole(Role.ADMIN, Role.SUPERVISOR),
+  async (req, res) => {
+    await ProjectService.restore(req.user!, Number(req.params.projectId));
+    res.status(204).end();
+  },
+);
+
+// DELETE /api/projects/:projectId/purge — suppression définitive DB + MinIO (admin)
+router.delete(
+  '/:projectId/purge',
+  validate({ params: projectIdParam }),
+  requireRole(Role.ADMIN),
+  async (req, res) => {
+    await ProjectService.purge(req.user!, Number(req.params.projectId));
+    res.status(204).end();
+  },
+);
+
+// POST /api/projects/:projectId/members (admin/superviseur)
+router.post(
+  '/:projectId/members',
+  validate({
+    params: projectIdParam,
+    body: z.object({ userId: z.number().int(), role: z.nativeEnum(Role).optional() }),
+  }),
+  requireProjectManage, // 38.E : superviseur local autorisé
+  async (req, res) => {
+    const { userId, role } = req.body as { userId: number; role?: Role };
+    const actor = req.user!;
+    const membership = await ProjectService.addMember(Number(req.params.projectId), userId, role, actor);
+    res.status(201).json({ membership });
+  },
+);
+
+// GET /api/projects/:projectId/settings — réglages EFFECTIFS (héritage studio appliqué)
+// + `overrides` : les sections que le projet surcharge réellement.
+router.get(
+  '/:projectId/settings',
+  validate({ params: projectIdParam }),
+  requireProjectAccess,
+  async (req, res) => {
+    res.json(await ProjectService.getSettings(Number(req.params.projectId)));
+  },
+);
+
+// PUT /api/projects/:projectId/settings — remplace l'override ENTIER (admin/superviseur).
+// Les sections absentes du corps retournent à l'héritage studio ; pour n'en toucher qu'une,
+// préférer le PATCH (projects-extra.routes).
+router.put(
+  '/:projectId/settings',
+  validate({ params: projectIdParam, body: projectSettingsSchema }),
+  requireProjectManage, // 38.E : superviseur local autorisé
+  async (req, res) => {
+    res.json(
+      await ProjectService.updateSettings(req.user!, Number(req.params.projectId), req.body as object),
+    );
+  },
+);
+
+// GET /api/projects/:projectId/activity — flux d'activité (uploads, versions) + tâches
+router.get(
+  '/:projectId/activity',
+  validate({ params: projectIdParam }),
+  requireProjectAccess,
+  async (req, res) => {
+    res.json(await ProjectService.getActivity(Number(req.params.projectId)));
+  },
+);
+
+// DELETE /api/projects/:projectId/members/:userId (admin/superviseur)
+router.delete(
+  '/:projectId/members/:userId',
+  validate({ params: z.object({ projectId: z.coerce.number().int(), userId: z.coerce.number().int() }) }),
+  requireProjectManage, // 38.E : superviseur local autorisé
+  async (req, res) => {
+    await ProjectService.removeMember(Number(req.params.projectId), Number(req.params.userId), req.user);
+    res.status(204).end();
+  },
+);
+
+export default router;

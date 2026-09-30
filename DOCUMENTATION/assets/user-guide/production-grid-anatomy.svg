@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 372" width="800" height="372" role="img" aria-labelledby="grid-title grid-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="grid-title">The Shots by department grid, line by line</title>
+  <desc id="grid-desc">A filter bar and a legend sit above a table. Rows are shots, grouped under a line per sequence that carries the progress tally of the whole group; columns are the project departments in pipeline order. A filled dot marks a task and, beside it, whoever holds it; a hollow ring marks a department the shot goes through but has not started; a dash marks a department the shot never goes through. Right-clicking a cell offers Status and Assign.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="372" rx="10"/>
+
+  <text class="d" x="24" y="30">SHOTS BY DEPARTMENT — ONE ROW PER SHOT, ONE COLUMN PER DEPARTMENT</text>
+
+  <rect class="panel-o" x="24" y="44" width="384" height="34" rx="9"/>
+  <text class="l" x="40" y="66">Episode · Sequence · Department · Assignee · Status</text>
+  <rect class="panel-o" x="420" y="44" width="192" height="34" rx="9"/>
+  <text class="l" x="436" y="66">Hide empty columns</text>
+  <text class="d" x="624" y="66">local to the screen</text>
+
+  <circle class="head-a" cx="32" cy="102" r="5"/>
+  <circle class="head" cx="49" cy="102" r="7"/>
+  <text class="d" x="64" y="106">a task, and who holds it</text>
+  <circle class="conn" cx="238" cy="102" r="5"/>
+  <text class="d" x="250" y="106">Not started</text>
+  <rect class="head" x="338" y="101" width="14" height="2"/>
+  <text class="d" x="360" y="106">Not scheduled</text>
+
+  <rect class="panel" x="24" y="126" width="546" height="170" rx="9"/>
+  <rect class="band" x="25" y="127" width="544" height="30"/>
+  <rect class="band" x="25" y="157" width="544" height="34"/>
+  <text class="d" x="38" y="147">SHOT</text>
+  <text class="d" x="241" y="147" text-anchor="middle">Layout</text>
+  <text class="d" x="335" y="147" text-anchor="middle">Anim</text>
+  <text class="d" x="429" y="147" text-anchor="middle">FX</text>
+  <text class="d" x="523" y="147" text-anchor="middle">Comp</text>
+
+  <path class="conn" d="M194 127 L194 295"/>
+  <path class="conn" d="M288 127 L288 295"/>
+  <path class="conn" d="M382 127 L382 295"/>
+  <path class="conn" d="M476 127 L476 295"/>
+  <path class="conn" d="M25 157 L569 157"/>
+  <path class="conn" d="M25 191 L569 191"/>
+  <path class="conn" d="M25 225 L569 225"/>
+  <path class="conn" d="M25 259 L569 259"/>
+
+  <path class="head" d="M35 175 L45 175 L40 183 z"/>
+  <text class="t" x="52" y="179">SQ010</text>
+  <text class="d" x="104" y="179">12 shots</text>
+  <rect class="panel" x="300" y="169" width="120" height="10" rx="5"/>
+  <rect class="head-a" x="301" y="170" width="52" height="8" rx="4"/>
+  <text class="d" x="430" y="179">7 of 24 done</text>
+
+  <text class="l" x="38" y="213">SH0010</text>
+  <circle class="head-a" cx="104" cy="208" r="4"/>
+  <text class="d" x="113" y="212">In progress</text>
+  <circle class="head-a" cx="232" cy="208" r="5"/>
+  <circle class="head" cx="249" cy="208" r="7"/>
+  <circle class="head-a" cx="335" cy="208" r="5"/>
+  <circle class="conn" cx="429" cy="208" r="5"/>
+  <rect class="head" x="516" y="207" width="14" height="2"/>
+
+  <text class="l" x="38" y="247">SH0020</text>
+  <circle class="conn" cx="104" cy="242" r="4"/>
+  <text class="d" x="113" y="246">No status</text>
+  <circle class="conn" cx="241" cy="242" r="5"/>
+  <circle class="head-a" cx="335" cy="242" r="5"/>
+  <circle class="head-a" cx="420" cy="242" r="5"/>
+  <circle class="head" cx="437" cy="242" r="7"/>
+  <rect class="head" x="516" y="241" width="14" height="2"/>
+
+  <text class="l" x="38" y="281">SH0030</text>
+  <circle class="head-a" cx="104" cy="276" r="4"/>
+  <text class="d" x="113" y="280">In review</text>
+  <circle class="head-a" cx="241" cy="276" r="5"/>
+  <circle class="head-a" cx="335" cy="276" r="5"/>
+  <circle class="conn" cx="429" cy="276" r="5"/>
+  <rect class="head" x="516" y="275" width="14" height="2"/>
+
+  <rect class="panel-a" x="594" y="127" width="182" height="64" rx="9"/>
+  <text class="t" x="608" y="149">Right-click a cell</text>
+  <text class="d" x="608" y="166">Status · Assign</text>
+  <text class="d" x="608" y="182">left click opens it too</text>
+  <path class="conn-a" d="M594 159 L582 159 L582 208 L572 208" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="594" y="205" width="182" height="64" rx="9"/>
+  <text class="t" x="608" y="227">Collapse a sequence</text>
+  <text class="d" x="608" y="244">the group line keeps</text>
+  <text class="d" x="608" y="260">its progress tally</text>
+
+  <text class="d" x="400" y="326" text-anchor="middle">A filter decides which shots appear as rows — never which cells a row shows.</text>
+  <text class="d" x="400" y="348" text-anchor="middle">Fifty shots per page. Assets have no row here: their tasks live on the kanban.</text>
+</svg>

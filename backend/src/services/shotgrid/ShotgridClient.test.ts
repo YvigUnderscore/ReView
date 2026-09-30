@@ -1,0 +1,454 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+
+/**
+ * Toute requête du client passe par `safeFetch`, qui résout le nom de la cible avant
+ * d'émettre : la résolution est simulée ici, sinon la suite dépendrait d'un DNS joignable.
+ */
+vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
+
+/** Liste de dispense figée : le harnais de développement doit rester joignable. */
+vi.mock('../../config/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../config/env')>();
+  return { ...actual, env: { ...actual.env, SHOTGRID_INSECURE_HOSTS: 'sim.local:8890' } };
+});
+
+/** Le refus d'authentification doit laisser une trace : les journaux sont assertés ici. */
+vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+
+import { lookup } from 'node:dns/promises';
+import { ShotgridClient, ShotgridApiError, clearTokenCache, flattenRecord } from './ShotgridClient';
+import { OutboundBlockedError } from '../../lib/safeFetch';
+import { logger } from '../../lib/logger';
+
+/**
+ * Le client parle à un serveur simulé par un `fetch` remplacé : ces tests décrivent le
+ * contrat de transport (authentification, pagination, reprise) sans dépendre d'un site.
+ * Le scénario complet contre le vrai simulateur vit dans `scripts/test-shotgrid-e2e.mjs`.
+ */
+
+const PUBLIC_ADDRESS = [{ address: '93.184.216.34', family: 4 }];
+
+const creds = {
+  baseUrl: 'https://studio.shotgrid.autodesk.com',
+  authMode: 'script' as const,
+  scriptName: 'review_sync',
+  scriptKey: 'secret',
+};
+
+const authOk = () =>
+  new Response(JSON.stringify({ access_token: 'tok', expires_in: 600, token_type: 'Bearer' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+function record(id: number, attributes: Record<string, unknown> = {}) {
+  return { id, type: 'Shot', attributes, relationships: {} };
+}
+
+describe('flattenRecord', () => {
+  it('aplatit la forme JSONAPI en un enregistrement unique', () => {
+    const flat = flattenRecord({
+      id: 12,
+      type: 'Shot',
+      attributes: { code: 'SH010', sg_cut_in: 1001 },
+      relationships: { project: { data: { type: 'Project', id: 70 } } },
+    });
+    expect(flat).toMatchObject({
+      id: 12,
+      type: 'Shot',
+      code: 'SH010',
+      sg_cut_in: 1001,
+      project: { type: 'Project', id: 70 },
+    });
+  });
+
+  it('accepte un enregistrement déjà plat sans l’abîmer', () => {
+    const flat = flattenRecord({ id: 3, type: 'Status', code: 'ip' });
+    expect(flat.code).toBe('ip');
+  });
+
+  it('tolère une charge vide', () => {
+    expect(flattenRecord(null)).toEqual({ id: 0, type: '' });
+  });
+});
+
+describe('ShotgridClient', () => {
+  let fetchMock: Mock<typeof fetch>;
+
+  beforeEach(() => {
+    clearTokenCache();
+    vi.mocked(lookup).mockResolvedValue(PUBLIC_ADDRESS as never);
+    fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it('s’authentifie une fois puis réutilise le jeton', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    const client = new ShotgridClient(creds);
+    await client.search('Shot', { fields: ['code'] });
+    await client.search('Asset', { fields: ['code'] });
+
+    const authCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('access_token'));
+    expect(authCalls).toHaveLength(1);
+    // Les identifiants de script passent par le flot « client_credentials ».
+    expect(String(authCalls[0]![1]!.body)).toContain('grant_type=client_credentials');
+  });
+
+  it('signale clairement des identifiants refusés', async () => {
+    fetchMock.mockImplementation(async () => json({ errors: [{ detail: "Can't authenticate user" }] }, 401));
+    const client = new ShotgridClient(creds);
+    await expect(client.search('Shot')).rejects.toBeInstanceOf(ShotgridApiError);
+    await expect(client.search('Shot')).rejects.toMatchObject({ status: 401 });
+  });
+
+  /**
+   * Un refus d'authentification arrive sous un code que la documentation ne promet pas :
+   * un site réel répond **400** avec `code: 102`. Le déduire du code HTTP laissait la
+   * connexion en simple « erreur », et le libellé générique effaçait ce que le site
+   * disait — « compte verrouillé » et « mot de passe faux » n'appellent pas le même geste.
+   */
+  it('reconnaît un refus rendu en 400 et porte les mots du site', async () => {
+    const title = "Can't authenticate user 'demo' because the account is locked.";
+    fetchMock.mockImplementation(async () => json({ errors: [{ code: 102, title, detail: null }] }, 400));
+
+    const error = await new ShotgridClient(creds).serverInfo().catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ShotgridApiError);
+    const sgError = error as ShotgridApiError;
+    expect(sgError.isAuth).toBe(true);
+    expect(sgError.message).toContain(title);
+    expect(sgError.code).toBe('SHOTGRID_AUTH_REFUSED');
+    expect(sgError.details).toEqual({ reason: title });
+    // Le code rendu au client de ReView est celui de la passerelle, pas celui du site.
+    expect(sgError.statusCode).toBe(502);
+    expect(sgError.status).toBe(400);
+  });
+
+  /**
+   * Le motif du refus doit être lisible dans les journaux, sans rejouer l'appel à la main.
+   * Il ne l'était pas : seul le rejeu depuis le cache écrivait une ligne, et elle disait
+   * « déjà refusée » sans le motif. Un compte verrouillé côté site était donc indiscernable
+   * d'un mot de passe faux pour qui n'a que `docker logs`.
+   */
+  it('écrit le motif du refus dans les journaux, dès le premier appel', async () => {
+    const title = "Can't authenticate user 'demo' because the account is locked.";
+    fetchMock.mockImplementation(async () => json({ errors: [{ code: 102, title }] }, 400));
+
+    await expect(new ShotgridClient(creds).serverInfo()).rejects.toBeInstanceOf(ShotgridApiError);
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: creds.baseUrl, status: 400, reason: title }),
+      expect.stringContaining('refusée par le site'),
+    );
+  });
+
+  /**
+   * Le site verrouille le compte au bout de quelques échecs : retenter des identifiants
+   * refusés ne les rend pas bons, et transforme une faute de frappe en compte bloqué.
+   */
+  it('n’appelle plus le site après un refus, jusqu’à correction des identifiants', async () => {
+    fetchMock.mockImplementation(async () =>
+      json({ errors: [{ title: "Can't authenticate user 'demo'." }] }, 400),
+    );
+
+    await expect(new ShotgridClient(creds).serverInfo()).rejects.toBeInstanceOf(ShotgridApiError);
+    const emitted = fetchMock.mock.calls.length;
+
+    // Deux écrans de plus, deux clients de plus : aucune requête supplémentaire.
+    await expect(new ShotgridClient(creds).serverInfo()).rejects.toMatchObject({
+      code: 'SHOTGRID_AUTH_REFUSED',
+    });
+    await expect(new ShotgridClient(creds).search('Shot')).rejects.toBeInstanceOf(ShotgridApiError);
+    expect(fetchMock.mock.calls).toHaveLength(emitted);
+
+    // Corriger le site vide le cache de jetons : la porte se rouvre au même instant.
+    clearTokenCache(creds.baseUrl);
+    fetchMock.mockImplementation(async (input) =>
+      String(input).includes('access_token') ? authOk() : json({ data: { shotgun_version: '8.88' } }),
+    );
+    await expect(new ShotgridClient(creds).serverInfo()).resolves.toMatchObject({
+      shotgun_version: '8.88',
+    });
+  });
+
+  it('utilise le flot mot de passe pour un compte utilisateur', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    const client = new ShotgridClient({
+      baseUrl: creds.baseUrl,
+      authMode: 'user',
+      login: 'demo.user',
+      password: 'legacy',
+    });
+    await client.search('Shot');
+    const body = String(fetchMock.mock.calls[0]![1]!.body);
+    expect(body).toContain('grant_type=password');
+    expect(body).toContain('username=demo.user');
+  });
+
+  it('refuse de partir sans identifiants', async () => {
+    const client = new ShotgridClient({ baseUrl: creds.baseUrl, authMode: 'script' });
+    await expect(client.search('Shot')).rejects.toThrow();
+  });
+
+  it('parcourt toutes les pages jusqu’à la dernière incomplète', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    const full = Array.from({ length: 500 }, (_, i) => record(i + 1));
+    fetchMock.mockResolvedValueOnce(json({ data: full }));
+    fetchMock.mockResolvedValueOnce(json({ data: [record(501)] }));
+
+    const client = new ShotgridClient(creds);
+    const out = await client.search('Shot', { fields: ['code'] });
+    expect(out).toHaveLength(501);
+  });
+
+  it('transmet le filtre de projet tel quel', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    const client = new ShotgridClient(creds);
+    await client.search('Shot', { filters: [['project', 'is', { type: 'Project', id: 70 }]] });
+
+    const searchCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
+    const body = JSON.parse(String(searchCall![1]!.body));
+    expect(body.filters).toEqual([['project', 'is', { type: 'Project', id: 70 }]]);
+  });
+
+  it('retente après une erreur transitoire du site', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockResolvedValueOnce(json({ errors: [{ detail: 'busy' }] }, 503));
+    fetchMock.mockResolvedValueOnce(json({ data: [record(1)] }));
+
+    const client = new ShotgridClient(creds);
+    const out = await client.search('Shot');
+    expect(out).toHaveLength(1);
+  });
+
+  it('ne retente pas une requête franchement invalide', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ errors: [{ detail: 'bad field' }] }, 400));
+    const client = new ShotgridClient(creds);
+    await expect(client.search('Shot')).rejects.toMatchObject({ status: 400 });
+    const searchCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('_search'));
+    expect(searchCalls).toHaveLength(1);
+  });
+
+  it('rend null pour une entité absente plutôt que de lever', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ errors: [{ detail: 'not found' }] }, 404));
+    const client = new ShotgridClient(creds);
+    expect(await client.findById('Shot', 999, ['code'])).toBeNull();
+    expect(await client.schemaField('Shot', 'sg_inexistant')).toBeNull();
+  });
+
+  it('n’envoie pas de Content-Type sur une requête sans corps', async () => {
+    // Un site ShotGrid réel répond « Unsupported Content-Type » à un GET portant
+    // cet en-tête ; le défaut n'était pas visible contre un serveur permissif.
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: { shotgun_version: '8.60' } }));
+    const client = new ShotgridClient(creds);
+    await client.serverInfo();
+
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/api/v1.1/'));
+    const headers = call![1]!.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBeUndefined();
+    expect(headers.Accept).toBe('application/json');
+  });
+
+  it('déclare la forme des filtres dans le Content-Type de la recherche', async () => {
+    // ShotGrid refuse `application/json` sur `_search` et exige de savoir si les
+    // filtres arrivent en tableau de conditions ou en objet à opérateur logique.
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    const client = new ShotgridClient(creds);
+
+    await client.search('Shot', { filters: [['project', 'is', { type: 'Project', id: 70 }]] });
+    const arrayCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
+    expect((arrayCall![1]!.headers as Record<string, string>)['Content-Type']).toBe(
+      'application/vnd+shotgun.api3_array+json',
+    );
+    expect(JSON.parse(String(arrayCall![1]!.body)).filters).toEqual([
+      ['project', 'is', { type: 'Project', id: 70 }],
+    ]);
+
+    fetchMock.mockClear();
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    await client.search('Shot', {
+      filters: [['code', 'contains', 'SH']],
+      logicalOperator: 'or',
+    });
+    const hashCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('_search'));
+    expect((hashCall![1]!.headers as Record<string, string>)['Content-Type']).toBe(
+      'application/vnd+shotgun.api3_hash+json',
+    );
+    // En forme objet, les conditions sont imbriquées sous l'opérateur.
+    expect(JSON.parse(String(hashCall![1]!.body)).filters).toEqual({
+      logical_operator: 'or',
+      conditions: [['code', 'contains', 'SH']],
+    });
+  });
+
+  it('cible la version 1.1 de l’API', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: [] }));
+    const client = new ShotgridClient(creds);
+    await client.search('Shot');
+    expect(fetchMock.mock.calls.every((c) => String(c[0]).includes('/api/v1.1/'))).toBe(true);
+  });
+});
+
+describe('uploadFile', () => {
+  let fetchMock: Mock<typeof fetch>;
+
+  beforeEach(() => {
+    clearTokenCache();
+    vi.mocked(lookup).mockResolvedValue(PUBLIC_ADDRESS as never);
+    fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it('lit l’adresse de dépôt sous « links », pas sous « data »', async () => {
+    // ShotGrid décrit l'envoi dans `data` et met l'adresse signée dans `links.upload` :
+    // la chercher dans `data.upload_url` renvoyait toujours vide, d'où un « pas d'URL
+    // de dépôt » alors que le site en fournissait bien une.
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockResolvedValueOnce(
+      json({
+        data: { upload_type: 'Attachment', storage_service: 's3' },
+        links: { upload: 'https://s3.example/signed', complete_upload: '/api/v1.1/complete' },
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    fetchMock.mockResolvedValueOnce(json({ data: {} }));
+
+    const client = new ShotgridClient(creds);
+    await client.unsafeUploadFile('Note', 42, 'attachments', Buffer.from('image'), 'a.png', 'image/png');
+
+    const put = fetchMock.mock.calls.find((c) => c[1]?.method === 'PUT');
+    expect(String(put![0])).toBe('https://s3.example/signed');
+    // La confirmation rend le fichier visible : sans elle il reste orphelin.
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/complete'))).toBe(true);
+  });
+
+  it('signale clairement l’absence d’adresse de dépôt', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockImplementation(async () => json({ data: {}, links: {} }));
+    const client = new ShotgridClient(creds);
+    await expect(
+      client.unsafeUploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png'),
+    ).rejects.toThrow();
+  });
+});
+
+/**
+ * Le site distant dicte deux adresses que ReView va chercher lui-même — celle du média à
+ * télécharger et celle du dépôt de fichier. Un site compromis, mal configuré ou hostile les
+ * pointerait vers le réseau applicatif : elles passent donc par la garde comme les autres.
+ */
+describe('ShotgridClient — requêtes sortantes sous garde', () => {
+  let fetchMock: Mock<typeof fetch>;
+
+  beforeEach(() => {
+    clearTokenCache();
+    vi.mocked(lookup).mockResolvedValue(PUBLIC_ADDRESS as never);
+    fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it('refuse un flux de média pointé vers le service de métadonnées', async () => {
+    const client = new ShotgridClient(creds);
+    await expect(client.openStream('http://169.254.169.254/latest/meta-data/')).rejects.toBeInstanceOf(
+      OutboundBlockedError,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('refuse un flux dont le nom résout vers une adresse interne', async () => {
+    vi.mocked(lookup).mockResolvedValue([{ address: '10.0.0.5', family: 4 }] as never);
+    const client = new ShotgridClient(creds);
+    await expect(client.openStream('https://media.exemple.com/master.mov')).rejects.toBeInstanceOf(
+      OutboundBlockedError,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('refuse une redirection de téléchargement vers l’intérieur du réseau', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(null, { status: 302, headers: { location: 'http://192.168.10.4:9000/review/' } }),
+    );
+    const client = new ShotgridClient(creds);
+    await expect(client.openStream('https://media.exemple.com/master.mov')).rejects.toBeInstanceOf(
+      OutboundBlockedError,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('suit une redirection S3 légitime et rend le flux', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(null, { status: 307, headers: { location: 'https://s3.exemple.com/signed' } }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      new Response('média', { status: 200, headers: { 'content-type': 'video/quicktime' } }),
+    );
+    const client = new ShotgridClient(creds);
+    const out = await client.openStream('https://media.exemple.com/master.mov');
+    expect(out.type).toBe('video/quicktime');
+    expect(String(fetchMock.mock.calls[1]![0])).toBe('https://s3.exemple.com/signed');
+  });
+
+  it('refuse une adresse de dépôt qui vise le réseau applicatif', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockResolvedValueOnce(json({ data: {}, links: { upload: 'http://169.254.169.254/review/x' } }));
+    const client = new ShotgridClient(creds);
+    await expect(
+      client.unsafeUploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png'),
+    ).rejects.toBeInstanceOf(OutboundBlockedError);
+    // Aucun PUT n'a été émis.
+    expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'PUT')).toBe(false);
+  });
+
+  it('refuse un site dont le nom résout vers une adresse interne', async () => {
+    vi.mocked(lookup).mockResolvedValue([{ address: '192.168.1.10', family: 4 }] as never);
+    const client = new ShotgridClient(creds);
+    await expect(client.serverInfo()).rejects.toBeInstanceOf(OutboundBlockedError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // SHOTGRID_INSECURE_HOSTS : sans cette dispense, le simulateur de développement
+  // (host.docker.internal:8890, adresse privée en clair) deviendrait injoignable.
+  it('laisse passer un hôte déclaré dans SHOTGRID_INSECURE_HOSTS', async () => {
+    fetchMock.mockResolvedValueOnce(authOk());
+    fetchMock.mockResolvedValueOnce(json({ data: { shotgun_version: '8.60' } }));
+    const client = new ShotgridClient({ ...creds, baseUrl: 'http://sim.local:8890' });
+    await expect(client.serverInfo()).resolves.toMatchObject({ shotgun_version: '8.60' });
+    expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it('applique la dispense au flux de média du simulateur', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('média', { status: 200 }));
+    const client = new ShotgridClient({ ...creds, baseUrl: 'http://sim.local:8890' });
+    await expect(client.openStream('http://sim.local:8890/_media/Version/1/x')).resolves.toBeTruthy();
+    expect(lookup).not.toHaveBeenCalled();
+  });
+});

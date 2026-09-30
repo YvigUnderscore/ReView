@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440" role="img" aria-labelledby="lang-res-title lang-res-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="lang-res-title">Which language a screen — and an email — ends up in</title>
+  <desc id="lang-res-desc">On screen, a choice made in this browser wins, then the language kept on your account, then the languages your browser announces, then English. Inside the chosen catalogue any key that has not been translated yet falls back to its English entry on its own. Emails have no browser to ask, so they follow the account language, then the studio default.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="440" rx="10"/>
+
+  <text class="d" x="40" y="32">WHICH CATALOGUE, ON SCREEN</text>
+  <text class="d" x="440" y="32">AND THEN, KEY BY KEY</text>
+
+  <!-- Échelle de résolution : le premier « oui » gagne -->
+  <rect class="panel-w" x="40" y="50" width="320" height="46" rx="9"/>
+  <text class="l" x="200" y="72" text-anchor="middle">Chosen in this browser?</text>
+  <text class="d" x="200" y="88" text-anchor="middle">Profile → Display, on this machine</text>
+
+  <path class="conn" d="M200 96 L200 116" marker-end="url(#arrow)"/>
+  <text class="d" x="208" y="112">no</text>
+
+  <rect class="panel-w" x="40" y="120" width="320" height="46" rx="9"/>
+  <text class="l" x="200" y="142" text-anchor="middle">Chosen on your account?</text>
+  <text class="d" x="200" y="158" text-anchor="middle">the one a brand-new machine picks up</text>
+
+  <path class="conn" d="M200 166 L200 186" marker-end="url(#arrow)"/>
+  <text class="d" x="208" y="182">no</text>
+
+  <rect class="panel-w" x="40" y="190" width="320" height="46" rx="9"/>
+  <text class="l" x="200" y="212" text-anchor="middle">A language your browser asks for?</text>
+  <text class="d" x="200" y="228" text-anchor="middle">fr-CA finds French, zh-CN Simplified Chinese</text>
+
+  <path class="conn" d="M200 236 L200 256" marker-end="url(#arrow)"/>
+  <text class="d" x="208" y="252">no</text>
+
+  <rect class="panel" x="40" y="260" width="320" height="46" rx="9"/>
+  <text class="l" x="200" y="282" text-anchor="middle">English</text>
+  <text class="d" x="200" y="298" text-anchor="middle">the base catalogue — it defines every key</text>
+
+  <!-- Le premier « oui » rejoint le bus, qui entre dans le catalogue retenu -->
+  <path class="conn-a" d="M360 73 L400 73"/>
+  <text class="a" x="368" y="66">yes</text>
+  <path class="conn-a" d="M360 143 L400 143"/>
+  <text class="a" x="368" y="136">yes</text>
+  <path class="conn-a" d="M360 213 L400 213"/>
+  <text class="a" x="368" y="206">yes</text>
+  <path class="conn-a" d="M360 283 L400 283"/>
+  <text class="d" x="368" y="276">else</text>
+  <path class="conn-a" d="M400 73 L400 283"/>
+  <path class="conn-a" d="M400 143 L436 143" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="440" y="120" width="320" height="46" rx="9"/>
+  <text class="t" x="600" y="142" text-anchor="middle">The catalogue in use</text>
+  <text class="d" x="600" y="158" text-anchor="middle">fetched on demand; English rides in the bundle</text>
+
+  <path class="conn" d="M600 166 L600 192" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="440" y="196" width="320" height="46" rx="9"/>
+  <text class="l" x="600" y="218" text-anchor="middle">Is this key translated yet?</text>
+  <text class="d" x="600" y="234" text-anchor="middle">if not, that key alone falls back to English</text>
+
+  <path class="conn" d="M600 242 L600 268" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="440" y="272" width="320" height="46" rx="9"/>
+  <text class="t" x="600" y="294" text-anchor="middle">Shown to you</text>
+  <text class="d" x="600" y="310" text-anchor="middle">a half-translated language stays usable</text>
+
+  <!-- Ce que le serveur écrit sans navigateur en face -->
+  <rect class="panel-o" x="40" y="346" width="720" height="52" rx="9"/>
+  <text class="t" x="56" y="370">Emails, and anything the server writes without a browser in front of it</text>
+  <text class="d" x="56" y="388">your account language, else the studio default, else English — which is why the language is kept on the account</text>
+
+  <text class="d" x="40" y="424">Production vocabulary — shot, sequence, dailies, version, review, board, kanban — is never translated, in any language.</text>
+</svg>

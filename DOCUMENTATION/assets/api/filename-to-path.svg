@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 610" width="800" height="610" role="img" aria-labelledby="guess-title guess-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="guess-title">How guess_pipeline_path turns a filename into a pipeline path</title>
+  <desc id="guess-desc">The show comes from the session, never from the filename. The stem is split on the separator and a trailing version token dropped; three or more tokens give a sequence and a shot, two give a loose shot, one plus an explicit task also produces a path — which is why a badly named render can land in a shot called render.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="610" rx="10"/>
+
+  <text class="d" x="31" y="30">HOW A FILENAME BECOMES A PIPELINE PATH</text>
+
+  <rect class="panel-a" x="230" y="52" width="340" height="46" rx="9"/>
+  <text class="l" x="400" y="74" text-anchor="middle">guess_pipeline_path(file, project, task)</text>
+  <text class="d" x="400" y="90" text-anchor="middle">separator defaults to _</text>
+
+  <path class="conn" d="M400 98 L400 122" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="230" y="126" width="340" height="46" rx="9"/>
+  <text class="l" x="400" y="148" text-anchor="middle">show = project or $REVIEW_PROJECT</text>
+  <text class="d" x="400" y="164" text-anchor="middle">the show is a property of the session</text>
+
+  <path class="conn" d="M570 149 L638 149" marker-end="url(#arrow)"/>
+  <rect class="panel-d" x="640" y="126" width="132" height="46" rx="9"/>
+  <text class="l" x="706" y="148" text-anchor="middle">None</text>
+  <text class="d" x="706" y="164" text-anchor="middle">no show, no path</text>
+
+  <path class="conn" d="M400 172 L400 196" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="190" y="200" width="420" height="64" rx="9"/>
+  <text class="l" x="400" y="224" text-anchor="middle">strip the folder and the extension, split on the separator</text>
+  <text class="d" x="400" y="244" text-anchor="middle">drop a trailing v-number token — the server decides the version</text>
+
+  <path class="conn" d="M400 264 L400 288" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="280" y="292" width="240" height="40" rx="9"/>
+  <text class="l" x="400" y="317" text-anchor="middle">how many tokens are left?</text>
+
+  <path class="conn-a" d="M400 332 L400 348 L146 348 L146 380" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M400 332 L400 380" marker-end="url(#arrow-a)"/>
+  <path class="conn-a" d="M400 332 L400 348 L654 348 L654 380" marker-end="url(#arrow-a)"/>
+
+  <text class="a" x="156" y="370">3 or more</text>
+  <text class="a" x="410" y="370">exactly 2</text>
+  <text class="a" x="664" y="370">1, with task=</text>
+
+  <rect class="panel" x="31" y="384" width="230" height="80" rx="9"/>
+  <text class="l" x="146" y="408" text-anchor="middle">SHOW/t1/t2/task</text>
+  <text class="d" x="146" y="430" text-anchor="middle">SQ010_SH0100_anim_v003.mov</text>
+  <text class="d" x="146" y="450" text-anchor="middle">PROJ/SQ010/SH0100/anim</text>
+
+  <rect class="panel" x="285" y="384" width="230" height="80" rx="9"/>
+  <text class="l" x="400" y="408" text-anchor="middle">SHOW/shots/t1/task</text>
+  <text class="d" x="400" y="430" text-anchor="middle">SH0100_comp_v001.mov</text>
+  <text class="d" x="400" y="450" text-anchor="middle">PROJ/shots/SH0100/comp</text>
+
+  <rect class="panel-w" x="539" y="384" width="230" height="80" rx="9"/>
+  <text class="l" x="654" y="408" text-anchor="middle">SHOW/shots/t1/task</text>
+  <text class="d" x="654" y="430" text-anchor="middle">render.mov with task=comp</text>
+  <text class="d" x="654" y="450" text-anchor="middle">PROJ/shots/render/comp</text>
+
+  <rect class="panel-o" x="31" y="488" width="738" height="98" rx="9"/>
+  <text class="l" x="47" y="510">Everything else returns None — and that is the safe answer</text>
+  <text class="d" x="47" y="532">No show set (neither project= nor $REVIEW_PROJECT), or a single token with no task=: the caller asks the artist.</text>
+  <text class="d" x="47" y="550">Watch the third column: both shipped add-ons pass a task=, so render.mov lands in a shot called render.</text>
+  <text class="d" x="47" y="568">Publishing into the wrong shot is not something a studio can undo.</text>
+</svg>

@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 554" width="800" height="554" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">The life of one webhook delivery</title>
+  <desc id="fig-desc">A state machine. A queued delivery is attempted; a 2xx marks it delivered and clears the failure streak, anything else is a failed attempt retried up to five times before the delivery is exhausted. Five exhausted deliveries in a row disable the webhook. Two recovery edges put it back on the normal path: replaying a lost delivery, and re-enabling the webhook, which resets the streak.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="554" rx="10"/>
+
+  <text class="d" x="24" y="26">THE LIFE OF ONE DELIVERY</text>
+
+  <rect class="panel" x="24" y="124" width="170" height="52" rx="9"/>
+  <text class="t" x="109" y="145" text-anchor="middle">Queued</text>
+  <text class="d" x="109" y="163" text-anchor="middle">a journal row exists</text>
+
+  <path class="conn" d="M194 150 L228 150" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="230" y="124" width="180" height="52" rx="9"/>
+  <text class="t" x="320" y="145" text-anchor="middle">Delivering</text>
+  <text class="d" x="320" y="163" text-anchor="middle">signed POST, 10 s cap</text>
+
+  <path class="conn-a" d="M410 140 L480 140 L480 74 L558 74" marker-end="url(#arrow-a)"/>
+  <text class="a" x="443" y="134" text-anchor="middle">2xx</text>
+
+  <rect class="panel-a" x="560" y="40" width="216" height="68" rx="9"/>
+  <text class="t" x="668" y="62" text-anchor="middle">Delivered</text>
+  <text class="d" x="668" y="80" text-anchor="middle">lastStatus and time recorded</text>
+  <text class="d" x="668" y="98" text-anchor="middle">failureStreak back to 0</text>
+
+  <path class="conn" d="M410 158 L558 158" marker-end="url(#arrow)"/>
+  <text class="a" x="484" y="176" text-anchor="middle">non-2xx · timeout</text>
+
+  <rect class="panel-w" x="560" y="124" width="216" height="68" rx="9"/>
+  <text class="t" x="668" y="146" text-anchor="middle">Attempt failed</text>
+  <text class="d" x="668" y="164" text-anchor="middle">non-2xx, timeout, redirect,</text>
+  <text class="d" x="668" y="182" text-anchor="middle">or a private/loopback target</text>
+
+  <path class="conn" d="M620 192 L620 232 L320 232 L320 178" marker-end="url(#arrow)"/>
+  <text class="a" x="450" y="226" text-anchor="middle">retry — 5 attempts, backoff from 10 s</text>
+
+  <path class="conn" d="M668 192 L668 270" marker-end="url(#arrow)"/>
+  <text class="a" x="676" y="238">after the 5th</text>
+
+  <rect class="panel-w" x="560" y="272" width="216" height="68" rx="9"/>
+  <text class="t" x="668" y="294" text-anchor="middle">Exhausted</text>
+  <text class="d" x="668" y="312" text-anchor="middle">the 5th attempt lost it,</text>
+  <text class="d" x="668" y="330" text-anchor="middle">failureStreak + 1</text>
+
+  <path class="conn" d="M668 340 L668 378" marker-end="url(#arrow)"/>
+  <text class="a" x="676" y="364">streak reaches 5</text>
+
+  <rect class="panel-d" x="560" y="380" width="216" height="68" rx="9"/>
+  <text class="t" x="668" y="402" text-anchor="middle">Webhook disabled</text>
+  <text class="d" x="668" y="420" text-anchor="middle">active = false — nothing is</text>
+  <text class="d" x="668" y="438" text-anchor="middle">sent until you re-enable it</text>
+
+  <path class="conn-a" d="M558 306 L110 306 L110 178" marker-end="url(#arrow-a)"/>
+  <text class="a" x="334" y="300" text-anchor="middle">replay → 202, a new row pointing at the old</text>
+
+  <path class="conn-a" d="M558 414 L60 414 L60 178" marker-end="url(#arrow-a)"/>
+  <text class="a" x="300" y="408" text-anchor="middle">PATCH { active: true } — failureStreak back to 0</text>
+
+  <rect class="panel" x="24" y="470" width="376" height="64" rx="9"/>
+  <text class="l" x="38" y="492">Verify every delivery</text>
+  <text class="d" x="38" y="510">HMAC_SHA256(secret, timestamp + "." + rawBody), compared</text>
+  <text class="d" x="38" y="528">in constant time, against the raw body.</text>
+
+  <rect class="panel" x="416" y="470" width="360" height="64" rx="9"/>
+  <text class="l" x="430" y="492">Behind a firewall?</text>
+  <text class="d" x="430" y="510">Do not rely on push at all — poll the journal:</text>
+  <text class="d" x="430" y="528">GET /api/v1/events, by cursor.</text>
+</svg>

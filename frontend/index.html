@@ -2,9 +2,14 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/logo_banner.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!--
+      Zoom must stay possible: `maximum-scale=1.0, user-scalable=no` fails
+      WCAG 2.1 AA 1.4.4 (Resize Text). Pinch gestures in the 3D/splat viewers are handled
+      with `touch-action` on the canvas, never by locking the document viewport.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>ReView</title>

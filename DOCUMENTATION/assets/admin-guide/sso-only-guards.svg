@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" width="800" height="540" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Turning off password sign-in without locking the studio out</title>
+  <desc id="fig-desc">Three gates stand between password login and SSO-only mode: the save is refused while the SSO configuration is incomplete, any other save clears the flag, and the block is re-evaluated at every login attempt. Password login comes back on its own if the configuration breaks. Only an unreachable provider with a still-valid configuration locks everybody out, and there are two ways back.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="540" rx="10"/>
+
+  <rect class="panel" x="330" y="40" width="220" height="46" rx="9"/>
+  <text class="t" x="440" y="64" text-anchor="middle">Password login ON</text>
+  <text class="d" x="440" y="80" text-anchor="middle">the default</text>
+
+  <path class="conn" d="M440 86 L440 100" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="230" y="104" width="420" height="44" rx="9"/>
+  <text class="l" x="248" y="122">Gate 1 — the save is refused</text>
+  <text class="d" x="248" y="138">400 SSO_NOT_READY while the SSO configuration is incomplete</text>
+
+  <path class="conn" d="M440 148 L440 162" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="230" y="166" width="420" height="44" rx="9"/>
+  <text class="l" x="248" y="184">Gate 2 — the flag will not stick</text>
+  <text class="d" x="248" y="200">any other save made while the configuration is incomplete clears it</text>
+
+  <path class="conn" d="M440 210 L440 224" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="230" y="228" width="420" height="44" rx="9"/>
+  <text class="l" x="248" y="246">Gate 3 — re-checked at every login attempt</text>
+  <text class="d" x="248" y="262">not only when the configuration is written</text>
+
+  <path class="conn" d="M440 272 L440 286" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="330" y="290" width="220" height="46" rx="9"/>
+  <text class="t" x="440" y="314" text-anchor="middle">SSO only</text>
+  <text class="m" x="440" y="330" text-anchor="middle">403 PASSWORD_LOGIN_DISABLED</text>
+
+  <path class="conn" d="M330 313 L180 313 L180 63 L326 63" marker-end="url(#arrow)"/>
+  <text class="d" x="168" y="188" text-anchor="middle" transform="rotate(-90 168 188)">returns on its own if the config breaks</text>
+
+  <path class="conn" d="M440 336 L440 380 L556 380" marker-end="url(#arrow)"/>
+  <text class="d" x="428" y="358" text-anchor="end">the provider itself becomes unreachable</text>
+  <text class="d" x="428" y="372" text-anchor="end">while the configuration stays valid</text>
+
+  <rect class="panel-d" x="560" y="356" width="216" height="48" rx="9"/>
+  <text class="t no" x="668" y="378" text-anchor="middle">Locked out</text>
+  <text class="d" x="668" y="394" text-anchor="middle">nobody can sign in at all</text>
+
+  <path class="conn" d="M668 404 L668 420 L204 420"/>
+  <path class="conn" d="M204 420 L204 440" marker-end="url(#arrow)"/>
+  <path class="conn" d="M600 420 L600 440" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="444" width="360" height="76" rx="9"/>
+  <text class="l" x="204" y="468" text-anchor="middle">An admin-owned API token</text>
+  <text class="d" x="204" y="486" text-anchor="middle">kept outside the app, it calls PUT /api/admin/oidc</text>
+  <text class="d" x="204" y="502" text-anchor="middle">and clears the flag. Issue it BEFORE you flip the</text>
+  <text class="d" x="204" y="518" text-anchor="middle">switch: creating one now asks for your password.</text>
+
+  <text class="d" x="402" y="486" text-anchor="middle">or</text>
+
+  <rect class="panel" x="420" y="444" width="356" height="76" rx="9"/>
+  <text class="l" x="598" y="468" text-anchor="middle">Edit the database by hand</text>
+  <text class="d" x="598" y="486" text-anchor="middle">The oidc_config row of the Setting table, with</text>
+  <text class="d" x="598" y="502" text-anchor="middle">passwordLoginDisabled put back to false. Last</text>
+  <text class="d" x="598" y="518" text-anchor="middle">resort, and it needs a shell on the server.</text>
+</svg>

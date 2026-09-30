@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 424" width="800" height="424" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Four ways a pass starts, one pass at a time</title>
+  <desc id="fig-desc">Webhooks, periodic polling, the catch-up window and the manual buttons all converge on a single gate that runs one pass at a time per connection. A request arriving during a pass is merged into a pending one and replayed, and the merge never narrows the scope.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="424" rx="10"/>
+
+  <text class="d" x="24" y="30">WHAT STARTS A PASS</text>
+  <text class="d" x="556" y="30">WHAT COMES BACK</text>
+
+  <!-- Quatre entrées -->
+  <rect class="panel" x="24" y="60" width="252" height="46" rx="9"/>
+  <text class="l" x="40" y="82">Webhook</text>
+  <text class="d" x="40" y="98">near-instant; ReView replies in ms</text>
+
+  <rect class="panel" x="24" y="124" width="252" height="46" rx="9"/>
+  <text class="l" x="40" y="146">Periodic polling</text>
+  <text class="d" x="40" y="162">reads the event log; no inbound port</text>
+
+  <rect class="panel" x="24" y="188" width="252" height="46" rx="9"/>
+  <text class="l" x="40" y="210">Catch-up</text>
+  <text class="d" x="40" y="226">nightly and at boot; 72 h look-back</text>
+
+  <rect class="panel" x="24" y="252" width="252" height="46" rx="9"/>
+  <text class="l" x="40" y="274">Manual</text>
+  <text class="d" x="40" y="290">Synchronise, Catch up, re-read dot</text>
+
+  <!-- Convergence -->
+  <path class="conn" d="M276 83 L306 83"/>
+  <path class="conn" d="M276 147 L306 147"/>
+  <path class="conn" d="M276 211 L306 211"/>
+  <path class="conn" d="M276 275 L306 275"/>
+  <path class="conn" d="M306 83 L306 275"/>
+  <path class="conn-a" d="M306 166 L336 166" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="336" y="134" width="180" height="64" rx="9"/>
+  <text class="t" x="426" y="162" text-anchor="middle">One pass at a time</text>
+  <text class="d" x="426" y="180" text-anchor="middle">per connection</text>
+
+  <!-- Deux issues -->
+  <path class="conn" d="M516 166 L536 166 L536 123 L556 123" marker-end="url(#arrow)"/>
+  <path class="conn" d="M516 166 L536 166 L536 209 L556 209" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="556" y="100" width="220" height="46" rx="9"/>
+  <text class="l" x="572" y="122">Free</text>
+  <text class="d" x="572" y="138">the pass runs now</text>
+
+  <rect class="panel-w" x="556" y="186" width="220" height="46" rx="9"/>
+  <text class="l" x="572" y="208">Busy</text>
+  <text class="d" x="572" y="224">merged, replayed at the end</text>
+
+  <!-- Règles de fusion -->
+  <rect class="band" x="336" y="262" width="440" height="112" rx="9"/>
+  <text class="t" x="352" y="284">The merge never narrows the scope</text>
+  <text class="d" x="352" y="306">kind: full if either side is full</text>
+  <text class="d" x="352" y="324">since: the earlier date, or everything if one has no window</text>
+  <text class="d" x="352" y="342">onlySgIds and passes: the union, or all of them if one is untargeted</text>
+  <text class="d" x="352" y="360">withMedia: true if either side wants media</text>
+
+  <text class="a" x="24" y="330">A deferred request is never dropped.</text>
+  <text class="d" x="24" y="350">The API answers deferred, not</text>
+  <text class="d" x="24" y="366">success, so no screen claims</text>
+  <text class="d" x="24" y="382">work that has not happened.</text>
+</svg>

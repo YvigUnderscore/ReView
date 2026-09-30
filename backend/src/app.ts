@@ -1,0 +1,347 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import './lib/bigintJson';
+import express, { type Express } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { env } from './config/env';
+import { secretEquals } from './lib/crypto';
+import { enableRedisTransport } from './lib/redis';
+import { rateLimit, identityRateKey, identityMax, __rateLimitTesting } from './middleware/rateLimit';
+import { errorHandler } from './middleware/error';
+import { httpLogger } from './middleware/httpLogger';
+import { apiTokenSurface } from './middleware/scope';
+
+import setupRoutes from './routes/setup.routes';
+import authRoutes from './routes/auth.routes';
+import authSecurityRoutes from './routes/auth-security.routes';
+import webhooksRoutes from './routes/webhooks.routes';
+import auth2faRoutes from './routes/auth-2fa.routes';
+import jobsRoutes from './routes/jobs.routes';
+import { httpMetrics, registry, startQueueMetrics } from './lib/metrics';
+import authOidcRoutes from './routes/auth-oidc.routes';
+import usersRoutes from './routes/users.routes';
+import usersProfileRoutes from './routes/users-profile.routes';
+import pushRoutes from './routes/push.routes';
+import chatRoutes from './routes/chat.routes';
+import studioRoutes from './routes/studio.routes';
+import studioAppearanceRoutes from './routes/studio-appearance.routes';
+import overviewLayoutRoutes from './routes/overview-layout.routes';
+import studioSmtpRoutes from './routes/studio-smtp.routes';
+import projectsRoutes from './routes/projects.routes';
+import projectsExtraRoutes from './routes/projects-extra.routes';
+import mediaRoutes from './routes/media.routes';
+import mediaUploadRoutes from './routes/media-upload.routes';
+import mediaSplatRoutes from './routes/media-splat.routes';
+import mediaReferenceRoutes from './routes/media-reference.routes';
+import mediaMarkersRoutes from './routes/media-markers.routes';
+import mediaUsdRoutes from './routes/media-usd.routes';
+import episodesRoutes from './routes/episodes.routes';
+import sequencesRoutes from './routes/sequences.routes';
+import shotsRoutes from './routes/shots.routes';
+import assetsRoutes from './routes/assets.routes';
+import tasksRoutes from './routes/tasks.routes';
+import versionsRoutes from './routes/versions.routes';
+import reviewStatusesRoutes from './routes/review-statuses.routes';
+import pipelineStatusesRoutes from './routes/pipeline-statuses.routes';
+import departmentsRoutes from './routes/departments.routes';
+import entityThumbnailsRoutes from './routes/entity-thumbnails.routes';
+import assignmentsRoutes from './routes/assignments.routes';
+import entityExtrasRoutes from './routes/entity-extras.routes';
+import noteImagesRoutes from './routes/note-images.routes';
+import visibilityRoutes from './routes/visibility.routes';
+import unsubscribeRoutes from './routes/unsubscribe.routes';
+import commentsRoutes from './routes/comments.routes';
+import boardsRoutes from './routes/boards.routes';
+import shareRoutes from './routes/share.routes';
+import clientRoutes from './routes/client.routes';
+import adminRoutes from './routes/admin.routes';
+import adminExplorerRoutes from './routes/admin-explorer.routes';
+import notificationsRoutes from './routes/notifications.routes';
+import favoritesRoutes from './routes/favorites.routes';
+import contextRoutes from './routes/context.routes';
+import searchRoutes from './routes/search.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import bulkRoutes from './routes/bulk.routes';
+import hdriRoutes from './routes/hdri.routes';
+import ocioRoutes from './routes/ocio.routes';
+import announcementsRoutes from './routes/announcements.routes';
+import docsRoutes from './routes/docs.routes';
+import healthRoutes, { versionRouter } from './routes/health.routes';
+import watchRoutes from './routes/watch.routes';
+import visitsRoutes from './routes/visits.routes';
+import playlistsRoutes from './routes/playlists.routes';
+import timelinesRoutes from './routes/timelines.routes';
+import liveRoutes from './routes/live.routes';
+import productionRoutes from './routes/production.routes';
+import serviceTokensRoutes from './routes/service-tokens.routes';
+import adminOpsRoutes from './routes/admin-ops.routes';
+import adminOpsRunsRoutes from './routes/admin-ops-runs.routes';
+import v1Routes from './routes/v1';
+import shotgridConfigRoutes from './routes/shotgrid-config.routes';
+import shotgridSyncRoutes from './routes/shotgrid-sync.routes';
+import shotgridWebhookRoutes from './routes/shotgrid-webhook.routes';
+import shotgridEntityRoutes from './routes/shotgrid-entity.routes';
+import shotgridCrewRoutes from './routes/shotgrid-crew.routes';
+
+/**
+ * Plafonds du limiteur global, par fenêtre de quinze minutes.
+ *
+ * L'ancien plafond unique (5 000 par IP) était partagé par tout un studio derrière une
+ * seule sortie NAT : cinquante personnes, environ 5,5 requêtes par seconde à se répartir,
+ * alors que la seule ouverture d'un projet en coûte une douzaine. C'était un mode de panne
+ * déjà observé — un simple parcours de tests saturait le compteur.
+ *
+ * Le compte identifié a donc son propre compteur. Le plafond anonyme, lui, reste à sa
+ * valeur d'origine : le baisser aurait resserré, sans le dire, les surfaces publiques
+ * (partage client, connexion, documentation) que ce limiteur protège vraiment.
+ */
+const GLOBAL_MAX_PER_USER = 6_000;
+const GLOBAL_MAX_PER_IP = 5_000;
+
+export interface CreateAppOptions {
+  /**
+   * Limiteurs de débit. `false` les neutralise — **réservé aux tests d'intégration**.
+   *
+   * Une suite d'intégration tape plusieurs centaines de fois sur la même app depuis la même
+   * adresse, en quelques secondes : elle sature ses propres compteurs et se met à recevoir
+   * des 429 qui n'ont rien à voir avec ce qu'elle vérifie. C'était le mode d'échec du test
+   * d'upload résumable, rouge depuis des semaines.
+   *
+   * La désactivation porte sur deux familles de limiteurs :
+   *  - ceux montés ici (global, /api/setup, partage client, /api/v1), remplacés par un
+   *    passe-plat ;
+   *  - ceux construits à l'import d'un routeur (`auth.routes`, `comments`, `search`,
+   *    `client`, `unsubscribe`, webhook ShotGrid), hors d'atteinte d'une option d'app : ils
+   *    sont neutralisés par leur compteur, via le crochet de test du middleware.
+   *
+   * Verrou : refusé hors `NODE_ENV=test`. Une option capable d'éteindre en silence tout le
+   * limiteur de débit d'une instance en production serait une faille, pas une commodité.
+   */
+  rateLimit?: boolean;
+}
+
+/** Compteur qui ne compte pas : chaque coup vaut le premier, donc jamais de dépassement. */
+const unlimitedCounter = () => ({ hit: () => Promise.resolve(1) });
+
+export const createApp = (options: CreateAppOptions = {}): Express => {
+  const limitersOff = options.rateLimit === false;
+  if (limitersOff && env.NODE_ENV !== 'test') {
+    throw new Error('createApp({ rateLimit: false }) is reserved for NODE_ENV=test');
+  }
+  // Passe-plat pour les limiteurs montés ici ; les autres passent par leur compteur.
+  const limiter: typeof rateLimit = limitersOff
+    ? () => (_req, _res, next) => {
+        next();
+      }
+    : rateLimit;
+  if (limitersOff) __rateLimitTesting.setCounterFactory(unlimitedCounter);
+
+  const app = express();
+
+  // Le limiteur, la présence et les salles live parlent à Redis : on arme le transport
+  // ici, et pas à l'import, pour qu'un test unitaire n'ouvre jamais de connexion.
+  enableRedisTransport();
+
+  // Confiance accordée à `X-Forwarded-For` — explicite, et nulle par défaut : cet en-tête
+  // est fourni par l'appelant dès que le port du backend est joignable sans proxy devant,
+  // et il sert de clé à TOUS les limiteurs (middleware/rateLimit) comme d'adresse aux
+  // lignes d'audit. Cf. le commentaire de TRUST_PROXY dans config/env.ts.
+  app.set('trust proxy', env.TRUST_PROXY);
+  // Journalisation HTTP structurée le plus tôt possible (request-id sur toutes les réponses).
+  app.use(httpLogger);
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+  app.use(cors({ origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(',') }));
+
+  // ShotGrid (48) — monté avant le parseur JSON : la signature HMAC porte sur les
+  // octets reçus, et un corps déjà reparsé puis re-sérialisé ne redonne pas les mêmes.
+  app.use('/api/shotgrid/webhook', shotgridWebhookRoutes);
+
+  /*
+   * Éditions splat : le seul corps volumineux de l'API.
+   *
+   * Le masque de suppression est un bitset base64 — un splat sur deux effacé sur un scan de
+   * quinze millions de points fait plusieurs mégaoctets — et les transformations de
+   * sous-ensembles envoient de même leurs indices en binaire. Les deux routes déclarent
+   * `z.string().max(5_400_000)` avec le commentaire « ≈ 4 Mo binaire max », mais le plafond
+   * global de 2 Mo rejetait la requête en 413 **avant** que Zod ne la voie : le plafond
+   * annoncé était inatteignable, et l'éditeur perdait le travail de l'artiste sans le dire.
+   *
+   * Posé avant le parseur global : `express.json` ne parse qu'une fois, le premier gagne.
+   */
+  const splatBodyJson = express.json({ limit: '8mb' });
+  app.use((req, res, next) =>
+    /^\/api\/media\/\d+\/splat-(mask|subset)$/.test(req.path) ? splatBodyJson(req, res, next) : next(),
+  );
+
+  // Partout ailleurs, les fichiers transitent par MinIO via URLs présignées : pas de gros body.
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+  // Métriques Prometheus (37.G) : histogramme HTTP + gauges BullMQ.
+  app.use(httpMetrics);
+  startQueueMetrics();
+  app.get('/metrics', async (req, res) => {
+    // Jeton optionnel : sans METRICS_TOKEN, l'endpoint est à réserver au réseau interne
+    // (le nginx frontal ne l'expose pas). Avec, exiger ?token= ou Bearer.
+    if (env.METRICS_TOKEN) {
+      const provided =
+        (typeof req.query.token === 'string' ? req.query.token : undefined) ??
+        req.headers.authorization?.split(' ')[1];
+      if (!secretEquals(provided, env.METRICS_TOKEN)) {
+        res.status(401).end();
+        return;
+      }
+    }
+    res.setHeader('Content-Type', registry.contentType);
+    res.end(await registry.metrics());
+  });
+
+  // Rate limit global — clé par compte authentifié, repli IP pour l'anonyme.
+  app.use(
+    '/api',
+    limiter({
+      name: 'global',
+      windowMs: 15 * 60 * 1000,
+      keyGenerator: identityRateKey,
+      max: identityMax(GLOBAL_MAX_PER_USER, GLOBAL_MAX_PER_IP),
+    }),
+  );
+
+  // Surface des jetons d'API : un `rvk_…` n'ouvre que l'API d'intégration `/api/v1`.
+  //
+  // Posé ici, avant tout routeur métier, et non route par route : c'est le seul endroit qui
+  // ne s'oublie pas quand on ajoute un domaine. Sans lui, `middleware/auth` acceptait un
+  // jeton d'API sur n'importe quelle route de l'API interne, et le cantonnement par projet
+  // vendu par l'écran des jetons ne valait que pour `/api/v1`.
+  app.use('/api', apiTokenSurface);
+
+  // Sondes de santé et version (vivacité `/health`, disponibilité `/health/ready`).
+  //
+  // Montées DEUX FOIS à dessein : le nginx frontal de production ne proxifie vers le
+  // backend que `/api/`, `/socket.io/` et `/review/` — `GET /health` y était donc servi par
+  // la SPA (200 HTML, « tout va bien » quel que soit l'état de l'API) et `/api/health`
+  // n'existait pas. La sonde du conteneur, elle, interroge `/health` en direct.
+  app.use('/health', healthRoutes);
+  app.use('/api/health', healthRoutes);
+  app.use('/api/version', versionRouter);
+
+  // Routes par domaine
+  // Assistant de première installation : public par nature (il n'existe encore aucun
+  // compte), et il crée le premier ADMIN. Le plafond global de 5000/15 min ne le protège
+  // pas — on le borne étroitement, par IP. Le verrou de fond reste `studio.count() > 0`.
+  // `GET /status` est interrogé au démarrage de l'application, donc à chaque chargement de
+  // page : le compter dans le plafond de l'installation faisait tomber un 429 dès le 11e
+  // rechargement en un quart d'heure. Le front l'attrapait (repli « rien à installer »),
+  // mais sur une instance neuve cela rendait l'assistant injoignable pendant quinze minutes.
+  // Il ne lit rien de sensible — un plafond large lui suffit, et le plafond étroit reste
+  // posé sur tout le reste, c'est-à-dire sur la création du premier ADMIN.
+  const setupWriteLimiter = limiter({ name: 'setup', windowMs: 15 * 60 * 1000, max: 10 });
+  app.use(
+    '/api/setup',
+    limiter({ name: 'setup-status', windowMs: 60 * 1000, max: 120 }),
+    (req, res, next) => (req.path === '/status' ? next() : setupWriteLimiter(req, res, next)),
+    setupRoutes,
+  );
+  app.use('/api/auth', authRoutes);
+  app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
+  app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
+  app.use('/api/auth', authSecurityRoutes); // sessions + tokens API (36.B/36.C)
+  app.use('/api/users', usersProfileRoutes); // fiche d'un membre + avatar — avant /:id
+  app.use('/api/users', usersRoutes);
+  app.use('/api/push', pushRoutes); // Web Push (42.B №66)
+  app.use('/api/chat', chatRoutes); // messagerie interne (MP & groupes)
+  app.use('/api/studio', studioRoutes);
+  app.use('/api/studio', studioAppearanceRoutes);
+  app.use('/api/studio', overviewLayoutRoutes); // dispositions par défaut de la vue d'ensemble (50.10)
+  app.use('/api/studio', studioSmtpRoutes);
+  app.use('/api/studio/hdris', hdriRoutes);
+  app.use('/api/studio/ocio', ocioRoutes);
+  app.use('/api/projects', projectsExtraRoutes); // usage/quotas + duplicate (38) — avant /:id
+  app.use('/api/projects', productionRoutes); // stats & planning (Phase 43) — sous-routes /:projectId
+  app.use('/api/projects', projectsRoutes);
+  app.use('/api/media', mediaUploadRoutes); // multipart résumable (37.A) — avant /:id
+  app.use('/api/media', mediaRoutes);
+  app.use('/api/media', mediaSplatRoutes); // éditions splat (10.G)
+  app.use('/api/media', mediaReferenceRoutes); // image de référence review 2D (Phase 24)
+  app.use('/api/media', mediaMarkersRoutes); // marqueurs de timeline partagés (Phase 34.C)
+  app.use('/api/media', mediaUsdRoutes); // recomposition d'une scène USD (Phase 45.E)
+  // Niveau Épisode (facultatif par projet, éteint par défaut) — le routeur porte lui-même
+  // le refus quand le réglage est éteint.
+  app.use('/api/episodes', episodesRoutes);
+  app.use('/api/sequences', sequencesRoutes);
+  app.use('/api/shots', shotsRoutes);
+  app.use('/api/assets', assetsRoutes);
+  app.use('/api/tasks', tasksRoutes);
+  app.use('/api/versions', versionsRoutes);
+  app.use('/api/review-statuses', reviewStatusesRoutes); // statuts de review custom (Phase 31)
+  app.use('/api/pipeline-statuses', pipelineStatusesRoutes); // statuts de tâche/plan (Phase 48)
+  // Départements (B1) : le routeur porte plusieurs préfixes (projets, entités, comptes),
+  // il est donc monté à la racine de /api plutôt que sous un segment unique.
+  app.use('/api', departmentsRoutes);
+  // Vignettes d'entité (C3) : même raison, le routeur sert séquences, plans et assets.
+  app.use('/api', entityThumbnailsRoutes);
+  // Assignation (assets et plans) : même montage à la racine, deux préfixes.
+  app.use('/api', assignmentsRoutes);
+  // Personnes responsables et fiche markdown d'une entité : quatre préfixes, racine aussi.
+  app.use('/api', entityExtrasRoutes);
+  // Images déposées dans une fiche : dépôt par entité, relecture par lot de clés.
+  app.use('/api', noteImagesRoutes);
+  // Masquage d'éléments (admin).
+  app.use('/api', visibilityRoutes);
+  // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
+  app.use('/api/shotgrid', shotgridConfigRoutes);
+  app.use('/api/shotgrid', shotgridSyncRoutes);
+  app.use('/api/shotgrid', shotgridEntityRoutes);
+  app.use('/api/shotgrid', shotgridCrewRoutes);
+  app.use('/api/comments', commentsRoutes);
+  app.use('/api/boards', boardsRoutes);
+  // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).
+  const shareLimiter = limiter({
+    name: 'share',
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: { error: 'Trop de requêtes sur le partage, réessayez plus tard.' },
+  });
+  app.use('/api/share', shareLimiter, shareRoutes);
+  app.use('/api/client', shareLimiter, clientRoutes);
+  // Désabonnement des envois récurrents : public par nature — le bouton natif des
+  // messageries l'appelle sans session, souvent depuis les serveurs du fournisseur.
+  app.use('/api/unsubscribe', unsubscribeRoutes);
+  app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
+  app.use('/api/admin/service-tokens', serviceTokensRoutes); // identités machine (API v1)
+  app.use('/api/admin/jobs', jobsRoutes); // dashboard BullMQ (37.C)
+  app.use('/api/admin/ops', adminOpsRunsRoutes); // commande et suivi d'une opération (49)
+  app.use('/api/admin/ops', adminOpsRoutes); // version en service, releases, sauvegardes (49)
+  app.use('/api/admin', adminExplorerRoutes); // fiches détaillées par entité (refonte admin)
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/notifications', notificationsRoutes);
+  app.use('/api/favorites', favoritesRoutes);
+  app.use('/api/context', contextRoutes);
+  app.use('/api/search', searchRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/announcements', announcementsRoutes);
+  app.use('/api/bulk', bulkRoutes);
+  app.use('/api/watch', watchRoutes);
+  app.use('/api/visits', visitsRoutes); // acquittement « non consulté » (Phase 50, lot 9)
+  app.use('/api/playlists', playlistsRoutes); // dailies (Phase 33)
+  app.use('/api/timelines', timelinesRoutes); // montages automatiques (Phase 45)
+  app.use('/api/live', liveRoutes); // sessions live en cours (badges LIVE)
+  // API d'intégration v1 (DCC, Prism, bots) — contrat stable, distinct de l'API interne.
+  // Plafond propre : un daemon qui interroge le journal d'événements en boucle ne doit pas
+  // consommer le quota des utilisateurs de l'interface.
+  app.use('/api/v1', limiter({ name: 'v1', windowMs: 15 * 60 * 1000, max: 10_000 }), v1Routes);
+
+  // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
+  app.use('/api', docsRoutes);
+
+  // Gestionnaire d'erreurs global (toujours en dernier)
+  app.use(errorHandler);
+
+  return app;
+};

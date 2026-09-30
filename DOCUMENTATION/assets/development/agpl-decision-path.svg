@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" width="800" height="540" role="img" aria-labelledby="adp-title adp-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="adp-title">What the AGPL asks of you when you run ReView</title>
+  <desc id="adp-desc">Running ReView unmodified asks nothing: eight public surfaces already carry the licence notice and a link to the source. Running a modified build asks three things — publish the fork, set the source URL in Admin Settings, and let the branding endpoint carry it — after which section 13 is satisfied.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="540" rx="10"/>
+
+  <text class="d" x="20" y="30">WHAT THE AGPL ASKS OF YOU</text>
+
+  <rect class="panel" x="280" y="44" width="240" height="46" rx="9"/>
+  <text class="l" x="400" y="66" text-anchor="middle">You run ReView</text>
+  <text class="d" x="400" y="82" text-anchor="middle">for other people</text>
+
+  <path class="conn" d="M400 90 L400 110" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="280" y="110" width="240" height="46" rx="9"/>
+  <text class="l" x="400" y="138" text-anchor="middle">Did you modify the code?</text>
+
+  <path class="conn" d="M400 156 L400 176 L205 176 L205 196" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M400 156 L400 176 L595 176 L595 196" marker-end="url(#arrow-a)"/>
+  <text class="d" x="290" y="170" text-anchor="middle">No</text>
+  <text class="a" x="510" y="170" text-anchor="middle">Yes</text>
+
+  <!-- Branche « non modifié » -->
+  <rect class="panel-a" x="20" y="196" width="370" height="46" rx="9"/>
+  <text class="t" x="205" y="218" text-anchor="middle">Nothing to do</text>
+  <text class="d" x="205" y="234" text-anchor="middle">every public surface already carries the notice</text>
+
+  <rect class="band" x="20" y="252" width="370" height="184" rx="10"/>
+  <text class="a" x="34" y="274">WHERE THE NOTICE ALREADY IS</text>
+  <text class="d" x="34" y="298">the login and setup screens</text>
+  <text class="d" x="34" y="316">the client share pages</text>
+  <text class="d" x="34" y="334">GET /api/docs — the public API explorer</text>
+  <text class="d" x="34" y="352">GET /api/version — version, commit, source URL</text>
+  <text class="d" x="34" y="370">Admin → System → Licence &amp; source code</text>
+  <text class="d" x="34" y="388">/LICENSE and /THIRD-PARTY-NOTICES.md, as text</text>
+  <text class="d" x="34" y="406">the unsubscribe page</text>
+  <text class="d" x="34" y="424">X-Source-Code on the ShotGrid webhook</text>
+
+  <!-- Branche « modifié » -->
+  <rect class="panel" x="410" y="196" width="370" height="46" rx="9"/>
+  <text class="l" x="595" y="218" text-anchor="middle">1. Publish your fork</text>
+  <text class="d" x="595" y="234" text-anchor="middle">a public Git repository is the customary way</text>
+
+  <path class="conn-a" d="M595 242 L595 262" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="410" y="262" width="370" height="46" rx="9"/>
+  <text class="l" x="595" y="284" text-anchor="middle">2. Point the instance at it</text>
+  <text class="d" x="595" y="300" text-anchor="middle">Admin → Settings → Source code (AGPL §13)</text>
+
+  <path class="conn-a" d="M595 308 L595 328" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="410" y="328" width="370" height="46" rx="9"/>
+  <text class="l" x="595" y="350" text-anchor="middle">3. Nothing else to wire</text>
+  <text class="d" x="595" y="366" text-anchor="middle">GET /api/studio/branding feeds every Source code link</text>
+
+  <path class="conn-a" d="M595 374 L595 394" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="410" y="394" width="370" height="46" rx="9"/>
+  <text class="t" x="595" y="416" text-anchor="middle">Section 13 satisfied</text>
+  <text class="d" x="595" y="432" text-anchor="middle">your users can obtain your sources</text>
+
+  <rect class="panel-w" x="20" y="456" width="760" height="50" rx="9"/>
+  <text class="l" x="32" y="478">Only http and https URLs are accepted — anything else silently falls back upstream.</text>
+  <text class="d" x="32" y="494">Leaving the field empty while running modified code does not satisfy section 13.</text>
+
+  <text class="d" x="400" y="526" text-anchor="middle">Selling ReView, or a service built on it, is allowed. Keeping modifications private while serving them is not.</text>
+</svg>

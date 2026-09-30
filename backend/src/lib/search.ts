@@ -1,0 +1,421 @@
+// SPDX-FileCopyrightText: 2026 Yvig Bidon
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { Role, MediaKind, MediaStatus, Prisma } from '@prisma/client';
+import { prisma } from './prisma';
+import { bestScore, rankBy } from './searchRank';
+import { searchComments, type CommentHit } from './searchComments';
+import { EXTRA_LIMITS, searchExtras, type Contains, type ExtraResults } from './searchExtras';
+
+/**
+ * Recherche globale multi-entités (palette Ctrl+K).
+ *
+ * Quinze types, pas cinq : ce qu'un superviseur tape le plus souvent est un nom de version
+ * ou de média (`SH0120_comp_v012`), et ce qu'il cherche vraiment est parfois une phrase dite
+ * en review (« enlever le reflet ») — cf. `searchComments`, plein texte Postgres. Les cinq
+ * familles que la recherche ignorait — épisodes, départements, montages, boards, fiches —
+ * vivent dans `searchExtras` : elles ne se filtrent pas comme des lignes de pipe.
+ *
+ * **Cloisonnement.** Chaque type porte son propre filtre d'accès, écrit dans la clause
+ * `where` et jamais après coup :
+ *  - ADMIN / SUPERVISOR globaux voient tout le studio ;
+ *  - les autres ne voient que les projets dont ils sont membres ;
+ *  - un média non publié n'appartient qu'à son déposant ;
+ *  - un CLIENT ne voit ni les brouillons des autres, ni les notes internes, ni l'annuaire
+ *    du studio hors des projets qu'il partage.
+ * La corbeille (`deletedAt`) est exclue partout.
+ */
+
+/**
+ * Nombre de résultats par type. Les types dont le volume suit la production (shots,
+ * versions, médias, notes) en méritent plus que les référentiels courts (projets, playlists,
+ * personnes) — la palette reste néanmoins bornée, à la frappe comme au rendu.
+ */
+export const SEARCH_LIMITS = {
+  projects: 5,
+  sequences: 5,
+  shots: 8,
+  assets: 5,
+  tasks: 5,
+  versions: 8,
+  media: 8,
+  playlists: 5,
+  comments: 8,
+  people: 5,
+  ...EXTRA_LIMITS,
+} as const;
+
+export interface SearchResults extends ExtraResults {
+  projects: { id: number; name: string }[];
+  sequences: { id: number; code: string; name: string; projectId: number }[];
+  shots: { id: number; code: string; name: string; projectId: number }[];
+  assets: { id: number; name: string; type: string; projectId: number }[];
+  tasks: {
+    id: number;
+    name: string;
+    type: string;
+    /** Département de l'étape — c'est par lui qu'on retrouve « toutes mes tâches de Modeling ». */
+    departmentName: string | null;
+    shotId: number | null;
+    assetId: number | null;
+  }[];
+  versions: {
+    id: number;
+    name: string;
+    /** Média visible le plus récent — cible de navigation quand il existe. */
+    mediaId: number | null;
+    taskId: number | null;
+    assetId: number | null;
+    context: string;
+  }[];
+  media: { id: number; name: string; kind: MediaKind; context: string }[];
+  playlists: { id: number; name: string; projectName: string }[];
+  comments: CommentHit[];
+  /** `name` vaut `null` quand le compte n'a ni pseudo ni nom — l'écran s'en charge. */
+  people: { id: number; name: string | null; jobTitle: string | null }[];
+}
+
+/** Rôles qui voient le studio entier, membership ignoré (cf. `lib/projectRoles`). */
+const isGlobalRole = (role: Role): boolean => role === Role.ADMIN || role === Role.SUPERVISOR;
+
+/** Projets lisibles par le demandeur — la brique que tous les autres filtres réutilisent. */
+export function projectScope(userId: number, role: Role): Prisma.ProjectWhereInput {
+  return isGlobalRole(role) ? { deletedAt: null } : { deletedAt: null, memberships: { some: { userId } } };
+}
+
+/** Versions lisibles : celles dont le plan ou l'asset porteur est dans un projet accessible. */
+function versionScope(project: Prisma.ProjectWhereInput): Prisma.VersionWhereInput {
+  return {
+    deletedAt: null,
+    OR: [
+      { task: { shot: { deletedAt: null, hiddenAt: null, project } } },
+      { task: { asset: { deletedAt: null, hiddenAt: null, project } } },
+      { asset: { deletedAt: null, hiddenAt: null, project } },
+    ],
+  };
+}
+
+/**
+ * Médias montrables : prêts et publiés — un brouillon n'est visible que de son déposant, et
+ * jamais d'un CLIENT (qui n'en dépose aucun). Ce filtre-ci ne dit rien du projet : il sert
+ * aussi bien à la recherche de médias qu'à la sélection du média d'une version déjà filtrée.
+ */
+function mediaVisibility(userId: number, role: Role): Prisma.MediaObjectWhereInput {
+  return {
+    deletedAt: null,
+    status: MediaStatus.READY,
+    ...(role === Role.CLIENT
+      ? { published: true }
+      : { OR: [{ published: true }, { published: false, uploaderId: userId }] }),
+  };
+}
+
+/** Médias lisibles : montrables ET rattachés à une version d'un projet accessible. */
+function mediaScope(
+  project: Prisma.ProjectWhereInput,
+  userId: number,
+  role: Role,
+): Prisma.MediaObjectWhereInput {
+  return { ...mediaVisibility(userId, role), version: versionScope(project) };
+}
+
+/** Sélection commune « d'où vient cette version » : code du plan, nom de l'asset, tâche. */
+const parentSelect = {
+  task: {
+    select: { name: true, shot: { select: { code: true } }, asset: { select: { name: true } } },
+  },
+  asset: { select: { name: true } },
+} as const;
+
+interface ParentRow {
+  task: { name: string; shot: { code: string } | null; asset: { name: string } | null } | null;
+  asset: { name: string } | null;
+}
+
+/** Chemin lisible d'une version : « SH0120 · comp » ou « robot · lookdev ». */
+function contextOf(row: ParentRow): string {
+  const holder = row.task?.shot?.code ?? row.task?.asset?.name ?? row.asset?.name ?? null;
+  return [holder, row.task?.name].filter(Boolean).join(' · ');
+}
+
+/** Identifiants des projets dont le demandeur est membre (requête plein texte brute). */
+async function memberProjectIds(userId: number): Promise<number[]> {
+  const rows = await prisma.projectMembership.findMany({
+    where: { userId, project: { deletedAt: null } },
+    select: { projectId: true },
+  });
+  return rows.map((r) => r.projectId);
+}
+
+/**
+ * Départements dont le libellé correspond, résolus en identifiants AVANT la recherche de
+ * tâches.
+ *
+ * Une tâche se cherche par son nom, par la clé dénormalisée de son étape (`lookdev`) et par
+ * le LIBELLÉ de celle-ci (« Look Dev »), qui vit dans `Department`. Écrire les trois dans un
+ * même `OR` faisait traverser la jointure à la troisième branche — et un `BitmapOr` ne
+ * franchit pas une table : le plan retombait sur un balayage complet de `Task`, indexée ou
+ * non (mesuré à 60 000 tâches : 775 blocs lus, 25,6 ms, pour un terme qui ne correspond à
+ * rien). Résoudre les départements d'abord ramène le `OR` sur les seules colonnes de `Task`,
+ * que les trigrammes couvrent (21 blocs, 1,2 ms).
+ *
+ * Le jeu de résultats est le même, terme à terme : `departmentRef: { deletedAt: null, name }`
+ * ne sélectionnait rien d'autre que les tâches dont `departmentId` désigne un département
+ * vivant au libellé correspondant. Le référentiel n'est volontairement pas filtré par projet
+ * — il ne l'était pas non plus — et ne fuit rien : il ne sert qu'à filtrer des tâches que le
+ * demandeur voit déjà. Aucune borne de nombre : un studio compte des dizaines d'étapes, pas
+ * des milliers, et en retenir une partie changerait les résultats.
+ */
+async function matchingDepartmentIds(contains: Contains): Promise<number[]> {
+  const rows = await prisma.department.findMany({
+    where: { deletedAt: null, name: contains },
+    select: { id: true },
+  });
+  return rows.map((d) => d.id);
+}
+
+export async function searchEntities(q: string, userId: number, role: Role): Promise<SearchResults> {
+  const project = projectScope(userId, role);
+  const version = versionScope(project);
+  const media = mediaScope(project, userId, role);
+  const contains: Contains = { contains: q, mode: 'insensitive' };
+  // Seule la recherche de tâches attend ce référentiel : elle se branche dessus, les quatre
+  // autres partent en même temps (même montage que `commentsPromise` plus bas).
+  const departmentIdsPromise = matchingDepartmentIds(contains);
+
+  const [projects, sequences, shots, assets, tasks] = await Promise.all([
+    prisma.project.findMany({
+      where: { ...project, name: contains },
+      select: { id: true, name: true },
+      orderBy: { updatedAt: 'desc' },
+      take: SEARCH_LIMITS.projects,
+    }),
+    prisma.sequence.findMany({
+      // La description entre dans le champ de recherche : c'est là que vit ce qu'un plan
+      // raconte, et le chercher par son code suppose de déjà le connaître.
+      where: {
+        deletedAt: null,
+        hiddenAt: null,
+        project,
+        OR: [{ name: contains }, { code: contains }, { description: contains }],
+      },
+      select: { id: true, code: true, name: true, description: true, projectId: true },
+      orderBy: { id: 'desc' },
+      take: SEARCH_LIMITS.sequences,
+    }),
+    prisma.shot.findMany({
+      where: {
+        deletedAt: null,
+        hiddenAt: null,
+        project,
+        OR: [{ name: contains }, { code: contains }, { description: contains }],
+      },
+      select: { id: true, code: true, name: true, description: true, projectId: true },
+      orderBy: { id: 'desc' },
+      take: SEARCH_LIMITS.shots,
+    }),
+    prisma.asset.findMany({
+      where: {
+        deletedAt: null,
+        hiddenAt: null,
+        project,
+        OR: [{ name: contains }, { description: contains }],
+      },
+      select: { id: true, name: true, description: true, type: true, projectId: true },
+      orderBy: { id: 'desc' },
+      take: SEARCH_LIMITS.assets,
+    }),
+    departmentIdsPromise.then((departmentIds) =>
+      prisma.task.findMany({
+        // Une tâche se cherche aussi par son **département** : taper « Modeling » ne rendait
+        // rien, alors que c'est le mot qu'un artiste emploie pour désigner son travail. Le
+        // filtre d'accès reste dans `OR` (Prisma joint les champs de tête par ET), la
+        // correspondance textuelle passe par `AND` — les deux ne se mélangent pas.
+        where: {
+          OR: [
+            { shot: { deletedAt: null, hiddenAt: null, project } },
+            { asset: { deletedAt: null, hiddenAt: null, project } },
+          ],
+          AND: [
+            {
+              OR: [
+                { name: contains },
+                // `department` est la clé dénormalisée : un studio nomme son étape
+                // « Look Dev » et la clé reste `lookdev`, les deux se tapent.
+                { department: contains },
+                // Le libellé, lui, a été résolu en identifiants par
+                // `matchingDepartmentIds` : le `OR` ne porte ainsi que sur des colonnes de
+                // `Task`, seule forme que ses index savent servir. Aucun département
+                // correspondant ⇒ pas de branche du tout, plutôt qu'un `IN ()` inutile.
+                ...(departmentIds.length > 0 ? [{ departmentId: { in: departmentIds } }] : []),
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          shotId: true,
+          assetId: true,
+          department: true,
+          departmentRef: { select: { name: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: SEARCH_LIMITS.tasks,
+      }),
+    ),
+  ]);
+
+  // Les identifiants de projets ne servent qu'à la requête plein texte (SQL brut) : la
+  // chaîne est montée d'avance pour que toutes les recherches partent en parallèle.
+  const commentsPromise = (isGlobalRole(role) ? Promise.resolve(null) : memberProjectIds(userId)).then(
+    (projectIds) => searchComments(q, { userId, role, projectIds, limit: SEARCH_LIMITS.comments }),
+  );
+
+  const [versions, mediaRows, playlists, comments, people, extras] = await Promise.all([
+    prisma.version.findMany({
+      where: { AND: [version, { name: contains }] },
+      select: {
+        id: true,
+        name: true,
+        taskId: true,
+        assetId: true,
+        ...parentSelect,
+        // Le projet est déjà filtré par `version` : inutile de le revérifier sur le média.
+        media: {
+          where: mediaVisibility(userId, role),
+          select: { id: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: SEARCH_LIMITS.versions,
+    }),
+    prisma.mediaObject.findMany({
+      where: { AND: [media, { originalName: contains }] },
+      select: {
+        id: true,
+        originalName: true,
+        kind: true,
+        version: { select: { name: true, ...parentSelect } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: SEARCH_LIMITS.media,
+    }),
+    prisma.playlist.findMany({
+      where: { project, name: contains },
+      select: { id: true, name: true, project: { select: { name: true } } },
+      orderBy: { updatedAt: 'desc' },
+      take: SEARCH_LIMITS.playlists,
+    }),
+    commentsPromise,
+    searchPeople(userId, role, contains),
+    searchExtras(contains, { project, role }),
+  ]);
+
+  // Classement : chaque liste sortait dans l'ordre de la base — le plus récent d'abord —
+  // si bien que taper « SH0120 » plaçait le plan SH0120 après trois médias dont le nom de
+  // fichier le contient. Le score répond à « à quel point est-ce ce qui a été tapé ? ».
+  return {
+    projects: rankBy(projects, (p) => bestScore(q, [{ value: p.name, field: 'name' }])),
+    sequences: rankBy(sequences, (row) =>
+      bestScore(q, [
+        { value: row.code, field: 'code' },
+        { value: row.name, field: 'name' },
+        { value: row.description, field: 'description' },
+      ]),
+    ),
+    shots: rankBy(shots, (row) =>
+      bestScore(q, [
+        { value: row.code, field: 'code' },
+        { value: row.name, field: 'name' },
+        { value: row.description, field: 'description' },
+      ]),
+    ),
+    assets: rankBy(assets, (row) =>
+      bestScore(q, [
+        { value: row.name, field: 'name' },
+        { value: row.description, field: 'description' },
+      ]),
+    ),
+    // Le nom de la tâche prime sur son département : « comp » tapé doit rendre la tâche
+    // nommée comp avant les douze tâches de l'étape Compositing (le poids de champ
+    // départage, la qualité de correspondance passe devant — cf. `searchRank`).
+    tasks: rankBy(tasks, (row) =>
+      bestScore(q, [
+        { value: row.name, field: 'name' },
+        { value: row.departmentRef?.name ?? row.department, field: 'description' },
+      ]),
+    ).map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      departmentName: row.departmentRef?.name ?? row.department,
+      shotId: row.shotId,
+      assetId: row.assetId,
+    })),
+    versions: rankBy(versions, (v) => bestScore(q, [{ value: v.name, field: 'code' }])).map((v) => ({
+      id: v.id,
+      name: v.name,
+      mediaId: v.media[0]?.id ?? null,
+      taskId: v.taskId,
+      assetId: v.assetId,
+      context: contextOf(v),
+    })),
+    media: rankBy(mediaRows, (m) => bestScore(q, [{ value: m.originalName, field: 'name' }])).map((m) => ({
+      id: m.id,
+      name: m.originalName,
+      kind: m.kind,
+      context: [contextOf(m.version), m.version.name].filter(Boolean).join(' · '),
+    })),
+    playlists: playlists.map((p) => ({ id: p.id, name: p.name, projectName: p.project.name })),
+    comments,
+    people,
+    ...extras,
+  };
+}
+
+/**
+ * Personnes trouvables. Un CLIENT est un intervenant extérieur : il ne voit que les
+ * personnes des projets qu'il partage (même règle que `UserService.listPresence`) et ne peut
+ * pas chercher par adresse — l'annuaire du studio n'est pas à lui. Les comptes de service et
+ * les comptes désactivés ne sont personne à qui parler.
+ */
+async function searchPeople(
+  userId: number,
+  role: Role,
+  contains: { contains: string; mode: 'insensitive' },
+): Promise<SearchResults['people']> {
+  const isClient = role === Role.CLIENT;
+  const rows = await prisma.user.findMany({
+    where: {
+      isService: false,
+      disabledAt: null,
+      ...(isClient
+        ? { memberships: { some: { project: { deletedAt: null, memberships: { some: { userId } } } } } }
+        : {}),
+      OR: [
+        { username: contains },
+        { name: contains },
+        { firstName: contains },
+        { lastName: contains },
+        ...(isClient ? [] : [{ email: contains }]),
+      ],
+    },
+    select: { id: true, username: true, name: true, firstName: true, lastName: true, jobTitle: true },
+    orderBy: { id: 'asc' },
+    take: SEARCH_LIMITS.people,
+  });
+  return rows.map((u) => {
+    const full = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+    return {
+      id: u.id,
+      // Repli volontairement sans email (cf. `searchComments.authorNameOf`) : un nom absent
+      // se rattrape à l'écran, une adresse divulguée ne se rattrape pas.
+      name: u.username ?? u.name ?? (full || null),
+      jobTitle: u.jobTitle,
+    };
+  });
+}

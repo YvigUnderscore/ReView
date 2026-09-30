@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 466" width="800" height="466" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Every outbound request passes the same gate</title>
+  <desc id="fig-desc">A URL typed by an admin, a browser push endpoint and a redirect target all enter safeFetch, which checks the resolved address, re-checks every redirect hop, times out on headers and caps the number of bytes read. It either returns a response or raises an AppError, and a bare fetch is not allowed in backend source.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="466" rx="10"/>
+
+  <text class="d" x="28" y="28">WHERE THE URL COMES FROM</text>
+  <text class="d" x="596" y="28">WHAT COMES BACK</text>
+
+  <rect class="panel" x="28" y="60" width="200" height="46" rx="9"/>
+  <text class="l" x="128" y="82" text-anchor="middle">An admin types a URL</text>
+  <text class="d" x="128" y="98" text-anchor="middle">webhook, ShotGrid, OIDC</text>
+
+  <rect class="panel" x="28" y="124" width="200" height="46" rx="9"/>
+  <text class="l" x="128" y="146" text-anchor="middle">A browser push endpoint</text>
+  <text class="d" x="128" y="162" text-anchor="middle">from a subscription</text>
+
+  <rect class="panel" x="28" y="188" width="200" height="46" rx="9"/>
+  <text class="l" x="128" y="210" text-anchor="middle">A redirect target</text>
+  <text class="d" x="128" y="226" text-anchor="middle">chosen by the remote server</text>
+
+  <path class="conn" d="M228 83 L248 83 L248 180"/>
+  <path class="conn" d="M228 147 L248 147"/>
+  <path class="conn" d="M228 211 L248 211 L248 180"/>
+  <path class="conn-a" d="M248 180 L268 180" marker-end="url(#arrow-a)"/>
+
+  <text class="a" x="128" y="252" text-anchor="middle">every URL that is not ours</text>
+
+  <rect class="panel-a" x="268" y="44" width="280" height="272" rx="10"/>
+  <text class="t" x="408" y="68" text-anchor="middle">safeFetch()</text>
+  <text class="d" x="408" y="86" text-anchor="middle">backend/src/lib/safeFetch.ts</text>
+
+  <rect class="panel" x="284" y="100" width="248" height="46" rx="9"/>
+  <text class="l" x="408" y="120" text-anchor="middle">1 · Public address only</text>
+  <text class="d" x="408" y="136" text-anchor="middle">assertPublicHttpTarget()</text>
+
+  <rect class="panel" x="284" y="154" width="248" height="46" rx="9"/>
+  <text class="l" x="408" y="174" text-anchor="middle">2 · Redirects never blind</text>
+  <text class="d" x="408" y="190" text-anchor="middle">manual; every hop re-checked</text>
+
+  <rect class="panel" x="284" y="208" width="248" height="46" rx="9"/>
+  <text class="l" x="408" y="228" text-anchor="middle">3 · Header timeout, 15 s</text>
+  <text class="d" x="408" y="244" text-anchor="middle">lifted once the body streams</text>
+
+  <rect class="panel" x="284" y="262" width="248" height="46" rx="9"/>
+  <text class="l" x="408" y="282" text-anchor="middle">4 · Byte cap, announced and read</text>
+  <text class="d" x="408" y="298" text-anchor="middle">maxBytes, for a worker's memory</text>
+
+  <text class="a" x="570" y="115" text-anchor="middle">pass</text>
+  <path class="conn-a" d="M548 123 L592 123" marker-end="url(#arrow-a)"/>
+  <text class="a" x="570" y="229" text-anchor="middle">fail</text>
+  <path class="conn" d="M548 237 L592 237" marker-end="url(#arrow)"/>
+
+  <rect class="panel-a" x="596" y="100" width="176" height="46" rx="9"/>
+  <text class="t ok" x="684" y="122" text-anchor="middle">Response</text>
+  <text class="d" x="684" y="138" text-anchor="middle">the only way out</text>
+
+  <rect class="panel-d" x="596" y="214" width="176" height="46" rx="9"/>
+  <text class="t no" x="684" y="236" text-anchor="middle">AppError</text>
+  <text class="d" x="684" y="252" text-anchor="middle">nothing leaves at all</text>
+
+  <rect class="panel-d" x="28" y="340" width="430" height="46" rx="9"/>
+  <text class="t" x="243" y="362" text-anchor="middle">fetch(url) — not in backend/src</text>
+  <text class="d" x="243" y="378" text-anchor="middle">MinIO, Redis, Postgres, 169.254.169.254 answer unauthenticated</text>
+
+  <rect class="panel-o" x="478" y="340" width="294" height="46" rx="9"/>
+  <text class="l" x="625" y="362" text-anchor="middle">allowHosts — the escape hatch</text>
+  <text class="d" x="625" y="378" text-anchor="middle">SHOTGRID_INSECURE_HOSTS, development only</text>
+
+  <rect class="panel-w" x="28" y="400" width="744" height="46" rx="9"/>
+  <text class="t" x="400" y="422" text-anchor="middle">Two exceptions remain, both pinned to a fixed hostname</text>
+  <text class="d" x="400" y="438" text-anchor="middle">ChatNotifyService and NotificationService post to discord.com and hooks.slack.com</text>
+</svg>

@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 384" width="800" height="384" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">PUT replaces the whole project override, PATCH edits one section</title>
+  <desc id="fig-desc">Starting from a project that overrides resolution and naming, a PUT carrying only naming drops the resolution override back to the studio default. A PATCH carrying only naming leaves the resolution override untouched, and a PATCH carrying a null resolution hands that one section back to studio inheritance.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="384" rx="10"/>
+
+  <!-- Point de départ commun -->
+  <rect class="panel-a" x="24" y="140" width="176" height="64" rx="9"/>
+  <text class="l" x="112" y="166" text-anchor="middle">Stored override today</text>
+  <text class="m" x="112" y="186" text-anchor="middle">{ resolution, naming }</text>
+
+  <!-- Voie PUT -->
+  <text class="a" x="216" y="34">PUT — REPLACES THE WHOLE OVERRIDE</text>
+  <path class="conn" d="M200 172 L208 172 L208 76 L216 76" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="216" y="44" width="250" height="64" rx="9"/>
+  <text class="m" x="232" y="70">PUT { naming: … }</text>
+  <text class="d" x="232" y="90">the body becomes the whole override</text>
+
+  <path class="conn" d="M466 76 L498 76" marker-end="url(#arrow)"/>
+
+  <rect class="panel-w" x="498" y="44" width="278" height="64" rx="9"/>
+  <text class="m" x="514" y="70">{ naming }</text>
+  <text class="d" x="514" y="90">resolution silently returns to the studio</text>
+
+  <!-- Voie PATCH -->
+  <text class="a" x="216" y="130">PATCH — SECTION BY SECTION (WHAT THE SETTINGS SCREEN SENDS)</text>
+  <path class="conn-a" d="M200 172 L216 172" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="216" y="140" width="250" height="64" rx="9"/>
+  <text class="m" x="232" y="166">PATCH { naming: … }</text>
+  <text class="d" x="232" y="186">an absent section stays as it was</text>
+
+  <path class="conn-a" d="M466 172 L498 172" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="498" y="140" width="278" height="64" rx="9"/>
+  <text class="m" x="514" y="166">{ resolution, naming' }</text>
+  <text class="d" x="514" y="186">resolution is still overridden here</text>
+
+  <path class="conn-a" d="M200 172 L208 172 L208 268 L216 268" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="216" y="236" width="250" height="64" rx="9"/>
+  <text class="m" x="232" y="262">PATCH { resolution: null }</text>
+  <text class="d" x="232" y="282">a null section is handed back</text>
+
+  <path class="conn-a" d="M466 268 L498 268" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel-a" x="498" y="236" width="278" height="64" rx="9"/>
+  <text class="m" x="514" y="262">{ naming }</text>
+  <text class="d" x="514" y="282">resolution follows the studio again</text>
+
+  <rect class="band" x="24" y="320" width="752" height="48" rx="9"/>
+  <text class="d" x="40" y="342">GET /settings returns the effective values plus the list of overridden sections.</text>
+  <text class="d" x="40" y="360">GET /settings/override returns the raw override beside the studio value it replaces.</text>
+</svg>

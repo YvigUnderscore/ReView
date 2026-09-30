@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 490" width="800" height="490" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Four defences against a leak, and what each one survives</title>
+  <desc id="fig-desc">Burn-ins live in the pixels and survive a re-encode, but only on media transcoded after the setting was turned on. The slate names the copy. The watermark overlay is drawn by the browser and survives a screenshot only. The media access log carries no picture at all and is evidence after the fact.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="490" rx="10"/>
+
+  <text class="d" x="36" y="32">THE DEFENCE</text>
+  <text class="d" x="552" y="32">WHAT IT SURVIVES</text>
+
+  <!-- 1. Burn-ins -->
+  <rect class="panel-a" x="24" y="44" width="496" height="88" rx="9"/>
+  <text class="t" x="42" y="70">1 · Burn-ins, in the pixels</text>
+  <text class="d" x="42" y="90">Shot code, version name, timecode, free text and the studio logo</text>
+  <text class="d" x="42" y="106">Drawn by the worker onto the review proxy and every HLS rendition</text>
+  <text class="d" x="42" y="122">Font size = rendition height / 32, minimum 10 px, white on a 35 % black box</text>
+  <rect class="panel" x="540" y="44" width="236" height="88" rx="9"/>
+  <text class="l ok" x="556" y="70">Survives everything</text>
+  <text class="d" x="556" y="90">a re-encode, a screenshot, a crop.</text>
+  <text class="d" x="556" y="106">Only on media transcoded after</text>
+  <text class="m" x="556" y="122">enabled</text>
+  <text class="d" x="608" y="122">was switched on.</text>
+
+  <!-- 2. Slate -->
+  <rect class="panel" x="24" y="146" width="496" height="88" rx="9"/>
+  <text class="t" x="42" y="172">2 · Slate, three seconds at the head</text>
+  <text class="d" x="42" y="192">An identification card: studio, project, shot, version, artist, file, date</text>
+  <text class="d" x="42" y="208">Concatenated in front of the client derivative only</text>
+  <text class="m" x="332" y="208">derived/{id}/client.mp4</text>
+  <text class="d" x="42" y="224">The internal proxy is never touched, so annotations stay frame-accurate</text>
+  <rect class="panel" x="540" y="146" width="236" height="88" rx="9"/>
+  <text class="l ok" x="556" y="172">Survives, and names the copy</text>
+  <text class="d" x="556" y="192">not the person who leaked it.</text>
+  <text class="d" x="556" y="208">Comment timestamps are offset</text>
+  <text class="d" x="556" y="224">both ways, so they stay exact.</text>
+
+  <!-- 3. Watermark overlay -->
+  <rect class="panel" x="24" y="248" width="496" height="88" rx="9"/>
+  <text class="t" x="42" y="274">3 · Watermark overlay, drawn by the browser</text>
+  <text class="d" x="42" y="294">The viewer identity, tiled, blend mode difference, 2 to 40 % (8 % by default)</text>
+  <text class="d" x="42" y="310">Client page: link label, studio, date. Internal review: the account name</text>
+  <text class="d" x="42" y="326">One studio-wide switch, with no per-project and no per-link override</text>
+  <rect class="panel" x="540" y="248" width="236" height="88" rx="9"/>
+  <text class="l" x="556" y="274">Survives a screenshot</text>
+  <text class="d" x="556" y="294">and nothing more: it is CSS, never</text>
+  <text class="d" x="556" y="310">in the file. It costs no transcode,</text>
+  <text class="d" x="556" y="326">and covers old media at once.</text>
+
+  <!-- 4. Media access log -->
+  <rect class="panel-o" x="24" y="350" width="496" height="88" rx="9"/>
+  <text class="t" x="42" y="376">4 · Media access log</text>
+  <text class="d" x="42" y="396">One line per consultation: the account or the link label, the IP, the date</text>
+  <text class="d" x="42" y="412">Deduplicated per viewer, per media, over a 30-minute window</text>
+  <text class="d" x="42" y="428">Admin → Maintenance → Media access</text>
+  <rect class="panel" x="540" y="350" width="236" height="88" rx="9"/>
+  <text class="l no" x="556" y="376">Nothing in the picture</text>
+  <text class="d" x="556" y="396">Evidence after the fact, and</text>
+  <text class="d" x="556" y="412">fire-and-forget: a lost write is</text>
+  <text class="d" x="556" y="428">logged, never retried.</text>
+
+  <text class="d" x="400" y="464" text-anchor="middle">The first three are set once, for the whole studio or for one project. None of them is a per-link choice.</text>
+</svg>

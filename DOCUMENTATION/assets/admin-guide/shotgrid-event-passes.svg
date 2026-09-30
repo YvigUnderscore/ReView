@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 512" width="800" height="512" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Which site event re-reads what</title>
+  <desc id="fig-desc">A matrix of the ten ShotGrid entity types against the passes each of them re-reads. Status and HumanUser are global events, drawn dashed, and are never narrowed to a single entity.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="512" rx="10"/>
+
+  <text class="d" x="24" y="28">SITE EVENT</text>
+  <text class="a" x="182" y="28">PASSES IT RE-READS — AND NOTHING ELSE</text>
+
+  <!-- En-têtes de colonnes -->
+  <text class="d" x="211" y="64" text-anchor="middle">statuses</text>
+  <text class="d" x="269" y="64" text-anchor="middle">users</text>
+  <text class="d" x="327" y="64" text-anchor="middle">episodes</text>
+  <text class="d" x="385" y="64" text-anchor="middle">sequences</text>
+  <text class="d" x="443" y="64" text-anchor="middle">shots</text>
+  <text class="d" x="501" y="64" text-anchor="middle">assets</text>
+  <text class="d" x="559" y="64" text-anchor="middle">tasks</text>
+  <text class="d" x="617" y="64" text-anchor="middle">versions</text>
+  <text class="d" x="675" y="64" text-anchor="middle">notes</text>
+  <text class="d" x="733" y="64" text-anchor="middle">playlists</text>
+
+  <!-- Corps de la matrice -->
+  <rect class="panel" x="24" y="74" width="738" height="340" rx="9"/>
+  <path class="conn" d="M178 74 L178 414"/>
+  <path class="conn" d="M24 108 L762 108"/>
+  <path class="conn" d="M24 142 L762 142"/>
+  <path class="conn" d="M24 176 L762 176"/>
+  <path class="conn" d="M24 210 L762 210"/>
+  <path class="conn" d="M24 244 L762 244"/>
+  <path class="conn" d="M24 278 L762 278"/>
+  <path class="conn" d="M24 312 L762 312"/>
+
+  <!-- Deux dernières lignes : événements globaux -->
+  <rect class="panel-o" x="24" y="346" width="738" height="68" rx="9"/>
+  <path class="conn" d="M178 346 L178 414"/>
+  <path class="conn" d="M24 380 L762 380"/>
+
+  <text class="l" x="40" y="96">Sequence</text>
+  <text class="l" x="40" y="130">Episode</text>
+  <text class="l" x="40" y="164">Shot</text>
+  <text class="l" x="40" y="198">Asset</text>
+  <text class="l" x="40" y="232">Task</text>
+  <text class="l" x="40" y="266">Version</text>
+  <text class="l" x="40" y="300">Note</text>
+  <text class="l" x="40" y="334">Playlist</text>
+  <text class="l" x="40" y="368">Status</text>
+  <text class="l" x="40" y="402">HumanUser</text>
+
+  <!-- Sequence : statuses, episodes, sequences -->
+  <circle class="ok" cx="211" cy="91" r="4.5"/>
+  <circle class="ok" cx="327" cy="91" r="4.5"/>
+  <circle class="ok" cx="385" cy="91" r="4.5"/>
+  <!-- Episode : statuses, episodes -->
+  <circle class="ok" cx="211" cy="125" r="4.5"/>
+  <circle class="ok" cx="327" cy="125" r="4.5"/>
+  <!-- Shot : statuses, shots -->
+  <circle class="ok" cx="211" cy="159" r="4.5"/>
+  <circle class="ok" cx="443" cy="159" r="4.5"/>
+  <!-- Asset : assets -->
+  <circle class="ok" cx="501" cy="193" r="4.5"/>
+  <!-- Task : statuses, users, tasks -->
+  <circle class="ok" cx="211" cy="227" r="4.5"/>
+  <circle class="ok" cx="269" cy="227" r="4.5"/>
+  <circle class="ok" cx="559" cy="227" r="4.5"/>
+  <!-- Version : versions -->
+  <circle class="ok" cx="617" cy="261" r="4.5"/>
+  <!-- Note : notes -->
+  <circle class="ok" cx="675" cy="295" r="4.5"/>
+  <!-- Playlist : playlists -->
+  <circle class="ok" cx="733" cy="329" r="4.5"/>
+  <!-- Status : toute la hiérarchie, sans les médias -->
+  <circle class="ok" cx="211" cy="363" r="4.5"/>
+  <circle class="ok" cx="327" cy="363" r="4.5"/>
+  <circle class="ok" cx="385" cy="363" r="4.5"/>
+  <circle class="ok" cx="443" cy="363" r="4.5"/>
+  <circle class="ok" cx="501" cy="363" r="4.5"/>
+  <circle class="ok" cx="559" cy="363" r="4.5"/>
+  <!-- HumanUser : statuses, users, tasks -->
+  <circle class="ok" cx="211" cy="397" r="4.5"/>
+  <circle class="ok" cx="269" cy="397" r="4.5"/>
+  <circle class="ok" cx="559" cy="397" r="4.5"/>
+
+  <text class="d" x="24" y="440">Dashed rows are global events: a renamed status or a modified account qualifies thousands of entities, so the pass is not narrowed.</text>
+  <text class="a" x="24" y="462">Filter your ShotGrid webhook on every row that matters to you.</text>
+  <text class="d" x="24" y="480">Omitting Status produces the unknown-status-code warnings; omitting HumanUser freezes assignments; omitting Episode strands the level.</text>
+  <text class="d" x="24" y="498">Events on the same entity coalesce over 5 s: one re-read per entity, however many events arrive.</text>
+</svg>

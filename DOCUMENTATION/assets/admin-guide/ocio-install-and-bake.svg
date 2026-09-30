@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">From a GitHub release to a usable display LUT</title>
+  <desc id="fig-desc">Installing an ACES config goes through four steps, each one fenced by a guard: the repository is hardcoded, the download host is allow-listed and capped at 25 mebibytes, the config file is stored verbatim and only line-scanned, and the bake is queued at most sixty-four display and view couples at a time. Two bakers can produce the LUT: PyOpenColorIO when its wheel is installed, and the built-in colorimetric baker which is always available.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="560" rx="10"/>
+
+  <text class="d" x="28" y="30">WHAT YOU DO</text>
+  <text class="d" x="404" y="30">WHAT FENCES IT</text>
+
+  <rect class="panel-a" x="24" y="44" width="356" height="56" rx="9"/>
+  <text class="t" x="38" y="67">Browse ACES releases</text>
+  <text class="d" x="38" y="85">GitHub releases API · per_page=15 · cached 10 min</text>
+  <path class="conn-o" d="M380 72 L404 72"/>
+  <rect class="panel-d" x="404" y="44" width="372" height="56" rx="9"/>
+  <text class="d" x="418" y="66">Repository is hardcoded:</text>
+  <text class="m" x="418" y="84">AcademySoftwareFoundation/OpenColorIO-Config-ACES</text>
+
+  <path class="conn" d="M202 100 L202 120" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="120" width="356" height="56" rx="9"/>
+  <text class="l" x="38" y="143">Install the chosen asset</text>
+  <text class="d" x="38" y="161">downloaded by the API, never by the browser</text>
+  <path class="conn-o" d="M380 148 L404 148"/>
+  <rect class="panel-d" x="404" y="120" width="372" height="56" rx="9"/>
+  <text class="d" x="418" y="142">Host allow-list — else 400 OCIO_BAD_HOST</text>
+  <text class="d" x="418" y="160">≤ 25 MiB on both counts — else 400 OCIO_TOO_LARGE</text>
+
+  <path class="conn" d="M202 176 L202 196" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="196" width="356" height="56" rx="9"/>
+  <text class="l" x="38" y="219">Stored in studio storage</text>
+  <text class="m" x="38" y="237">studio/ocio/{uuid}.ocio</text>
+  <path class="conn-o" d="M380 224 L404 224"/>
+  <rect class="panel-d" x="404" y="196" width="372" height="56" rx="9"/>
+  <text class="d" x="418" y="218">Stored verbatim, never executed</text>
+  <text class="d" x="418" y="236">line-scanned only · ≤ 64 displays × 64 views</text>
+
+  <path class="conn" d="M202 252 L202 272" marker-end="url(#arrow)"/>
+
+  <rect class="panel" x="24" y="272" width="356" height="56" rx="9"/>
+  <text class="l" x="38" y="295">Queue the bake</text>
+  <text class="m" x="38" y="313">ocio-bake — one job per config</text>
+  <path class="conn-o" d="M380 300 L404 300"/>
+  <rect class="panel-d" x="404" y="272" width="372" height="56" rx="9"/>
+  <text class="d" x="418" y="294">At most 64 display/view couples per job</text>
+  <text class="d" x="418" y="312">not listed on Admin → Maintenance → Jobs</text>
+
+  <path class="conn" d="M202 328 L202 344"/>
+  <path class="conn" d="M202 344 L202 368" marker-end="url(#arrow)"/>
+  <path class="conn" d="M202 344 L598 344 L598 368" marker-end="url(#arrow)"/>
+
+  <rect class="panel-o" x="24" y="368" width="356" height="68" rx="9"/>
+  <text class="l" x="38" y="390">PyOpenColorIO (bake_lut.py)</text>
+  <text class="d" x="38" y="408">every display and view, tone-mapped ACES included</text>
+  <text class="d" x="38" y="426">only if the wheel is installed on the worker</text>
+
+  <rect class="panel-a" x="420" y="368" width="356" height="68" rx="9"/>
+  <text class="t" x="434" y="390">Built-in colorimetric baker</text>
+  <text class="d" x="434" y="408">Raw, Un-tone-mapped and Log on SDR — exact</text>
+  <text class="d" x="434" y="426">always available</text>
+
+  <path class="conn" d="M202 436 L202 460" marker-end="url(#arrow)"/>
+  <path class="conn-a" d="M598 436 L598 460" marker-end="url(#arrow-a)"/>
+
+  <rect class="panel" x="24" y="460" width="752" height="56" rx="9"/>
+  <text class="t" x="40" y="484">Baked LUT</text>
+  <text class="m" x="40" y="502">studio/ocio/luts/{configId}/{display}__{view}__{hash}.cube — 33³</text>
+
+  <text class="d no" x="400" y="540" text-anchor="middle">A tone-mapped view with no PyOpenColorIO produces no LUT — the viewer says so rather than approximating.</text>
+</svg>

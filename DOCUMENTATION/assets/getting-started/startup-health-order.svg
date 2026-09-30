@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 482" width="800" height="482" role="img" aria-labelledby="fig-title fig-desc">
+  <!-- SPDX-FileCopyrightText: 2026 Yvig Bidon -->
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <title id="fig-title">Start-up order and what gates each step</title>
+  <desc id="fig-desc">PostgreSQL, MinIO and Redis start together and must report healthy before the backend runs its migrations and listens. The worker and the frontend only start once the backend is healthy.</desc>
+  <style>
+    .bg { fill: #f7f9fc; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .panel-a { fill: #e6f7fa; stroke: #0e7490; stroke-width: 1.5; }
+    .panel-w { fill: #fef6e7; stroke: #b45309; stroke-width: 1.5; }
+    .panel-d { fill: #fdeceb; stroke: #b91c1c; stroke-width: 1.5; }
+    .panel-o { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .band { fill: #eef2f7; stroke: none; }
+    .t { fill: #0f172a; font: 600 13px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .l { fill: #1e293b; font: 500 12px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .d { fill: #5a6779; font: 400 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .m { fill: #5a6779; font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .a { fill: #0e7490; font: 600 11px ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ok { fill: #15803d; }
+    .no { fill: #b91c1c; }
+    .conn { stroke: #94a3b8; stroke-width: 1.5; fill: none; }
+    .conn-a { stroke: #0e7490; stroke-width: 1.5; fill: none; }
+    .conn-o { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #94a3b8; }
+    .head-a { fill: #0e7490; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d121b; }
+      .panel { fill: #151b27; stroke: #2a3348; }
+      .panel-a { fill: #06262c; stroke: #22d3ee; }
+      .panel-w { fill: #2a2109; stroke: #f5b301; }
+      .panel-d { fill: #2b1113; stroke: #f87171; }
+      .panel-o { fill: #151b27; stroke: #4a5872; }
+      .band { fill: #111725; }
+      .t { fill: #e6ebef; }
+      .l { fill: #cfd7e2; }
+      .d { fill: #93a0b4; }
+      .m { fill: #93a0b4; }
+      .a { fill: #22d3ee; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+      .conn { stroke: #4a5872; }
+      .conn-a { stroke: #22d3ee; }
+      .conn-o { stroke: #4a5872; }
+      .head { fill: #4a5872; }
+      .head-a { fill: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path class="head-a" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="800" height="482" rx="10"/>
+
+  <text class="d" x="44" y="42">t0 — THEY START TOGETHER</text>
+  <rect class="band" x="30" y="48" width="740" height="76" rx="10"/>
+
+  <rect class="panel" x="48" y="62" width="228" height="46" rx="9"/>
+  <text class="t" x="162" y="84" text-anchor="middle">postgres</text>
+  <text class="d" x="162" y="100" text-anchor="middle">pg_isready · 5 s / 5 s / 10</text>
+
+  <rect class="panel" x="290" y="62" width="228" height="46" rx="9"/>
+  <text class="t" x="404" y="84" text-anchor="middle">minio</text>
+  <text class="d" x="404" y="100" text-anchor="middle">mc ready local · 5 s / 5 s / 10</text>
+
+  <rect class="panel" x="532" y="62" width="228" height="46" rx="9"/>
+  <text class="t" x="646" y="84" text-anchor="middle">redis</text>
+  <text class="d" x="646" y="100" text-anchor="middle">redis-cli ping · 5 s / 5 s / 10</text>
+
+  <path class="conn-a" d="M400 124 L400 138" marker-end="url(#arrow-a)"/>
+  <rect class="panel-a" x="180" y="138" width="440" height="34" rx="9"/>
+  <text class="a" x="400" y="159" text-anchor="middle">depends_on: condition: service_healthy</text>
+  <path class="conn-a" d="M400 172 L400 190" marker-end="url(#arrow-a)"/>
+
+  <text class="d" x="44" y="184">THEN THE API</text>
+  <rect class="band" x="30" y="190" width="740" height="120" rx="10"/>
+
+  <rect class="panel-a" x="48" y="204" width="396" height="46" rx="9"/>
+  <text class="t" x="246" y="226" text-anchor="middle">backend</text>
+  <text class="d" x="246" y="242" text-anchor="middle">prisma migrate deploy → ensureBucket → listen 3000</text>
+
+  <rect class="panel-o" x="464" y="204" width="292" height="46" rx="9"/>
+  <text class="l" x="610" y="226" text-anchor="middle">container probe</text>
+  <text class="m" x="610" y="242" text-anchor="middle">/health · 10 s / 5 s / 10 · start 40 s</text>
+
+  <text class="d" x="48" y="286">a failed migration fails the boot — no destructive fallback</text>
+  <text class="d" x="464" y="286">HEALTH_PATH=/health/ready switches it to readiness</text>
+
+  <path class="conn-a" d="M400 310 L400 322" marker-end="url(#arrow-a)"/>
+  <rect class="panel-a" x="180" y="322" width="440" height="34" rx="9"/>
+  <text class="a" x="400" y="343" text-anchor="middle">backend healthy</text>
+  <path class="conn-a" d="M400 356 L400 372" marker-end="url(#arrow-a)"/>
+
+  <text class="d" x="44" y="368">ONLY THEN</text>
+  <rect class="band" x="30" y="372" width="740" height="76" rx="10"/>
+
+  <rect class="panel" x="48" y="386" width="350" height="46" rx="9"/>
+  <text class="t" x="223" y="408" text-anchor="middle">worker</text>
+  <text class="d" x="223" y="424" text-anchor="middle">six queue consumers · never sees an un-migrated schema</text>
+
+  <rect class="panel" x="412" y="386" width="344" height="46" rx="9"/>
+  <text class="t" x="584" y="408" text-anchor="middle">frontend</text>
+  <text class="d" x="584" y="424" text-anchor="middle">wget /index.html · 30 s / 5 s / 5</text>
+
+  <text class="d" x="400" y="468" text-anchor="middle">Every service declares restart: always; the 40 s start_period is what covers the migration step.</text>
+</svg>
