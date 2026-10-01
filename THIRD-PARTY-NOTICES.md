@@ -9221,7 +9221,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### adm-zip@0.6.0
+### adm-zip@0.6.1
 
 - License: `MIT`
 - Source: https://github.com/cthackers/adm-zip
@@ -11007,7 +11007,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### engine.io@6.6.9
+### engine.io@6.6.11
 
 - License: `MIT`
 - Source: https://github.com/socketio/socket.io
@@ -11852,7 +11852,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### ip-address@10.5.0
+### ip-address@10.7.2
 
 - License: `MIT`
 - Source: https://github.com/beaugunderson/ip-address
@@ -12974,7 +12974,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### nodemailer@9.1.1
+### nodemailer@10.0.13
 
 - License: `MIT-0`
 - Source: https://github.com/nodemailer/nodemailer
@@ -22790,7 +22790,7 @@ THE SOFTWARE.
 ```
 ````
 
-### dompurify@3.4.13
+### dompurify@3.4.16
 
 - License: `(MPL-2.0 OR Apache-2.0)`
 - Source: https://github.com/cure53/DOMPurify
