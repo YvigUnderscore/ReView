@@ -81,6 +81,13 @@ describe('uploadImageSequence', () => {
     expect(res).toMatchObject({ mediaObjectId: 7, status: 'PROCESSING' });
   });
 
+  it('porte la consigne d’upload à la finalisation, comme un fichier unique', async () => {
+    routeApi();
+    await uploadImageSequence(sequenceOf(1001, 1003), 4, { note: 'Comp v3, regarder le bord gauche' });
+    const complete = post.mock.calls.find(([p]) => p === '/api/media/sequence/7/complete');
+    expect(complete?.[1]).toEqual({ note: 'Comp v3, regarder le bord gauche' });
+  });
+
   it('envoie toutes les frames, par lots d’URLs successifs', async () => {
     const urlRequests = routeApi();
     await uploadImageSequence(sequenceOf(1001, 1100), 4);

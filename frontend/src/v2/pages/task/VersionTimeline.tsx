@@ -3,8 +3,7 @@
 
 import { useRef, useState } from 'react';
 import { Layers } from 'lucide-react';
-import { useUploadStore } from '../../../stores/useUploadStore';
-import { withUploadNote } from '../../../stores/useUploadNoteStore';
+import { deliverFiles } from '../../../stores/deliverFiles';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -52,7 +51,6 @@ export default function VersionTimeline({
   removeMedia: (versionId: number, mediaId: number) => void;
 }) {
   const t = useT();
-  const enqueue = useUploadStore((s) => s.enqueue);
   const view = useViewMode(`versions:${contextKey}`);
   const fileRef = useRef<HTMLInputElement>(null);
   const [target, setTarget] = useState<number | null>(null);
@@ -64,12 +62,12 @@ export default function VersionTimeline({
     fileRef.current?.click();
   };
   /**
-   * Verse les fichiers dans une version — en passant par la consigne quand le projet
-   * l'exige (Phase 50). `withUploadNote` retient le geste entier : sans message, rien ne
-   * part.
+   * Verse les fichiers dans une version — séquences d'images regroupées, consigne demandée
+   * quand le projet l'exige (Phase 50). `deliverFiles` retient le geste entier : sans
+   * décision ni message, rien ne part.
    */
   const fill = (versionId: number, files: File[]) =>
-    void withUploadNote(projectId, (note) => files.forEach((f) => enqueue(f, versionId, { note })));
+    void deliverFiles(projectId, files, (send) => send(versionId));
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length > 0 && target != null) fill(target, files);

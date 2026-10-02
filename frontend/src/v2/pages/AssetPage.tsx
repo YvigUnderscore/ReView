@@ -7,8 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ListPlus, Plus, Users } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { useUploadStore } from '../../stores/useUploadStore';
-import { withUploadNote } from '../../stores/useUploadNoteStore';
+import { deliverFiles } from '../../stores/deliverFiles';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import { useAssignMenu, useDepartmentMenu } from '../lib/useAssignMenu';
 import { entriesOf } from '../lib/menuSpec';
@@ -42,7 +41,6 @@ export default function AssetPage() {
   const assetId = Number(id);
   // Ouvrir, c'est consulter : la lueur « non consulté » s'éteint ici (lot 9).
   useMarkVisited('ASSET', assetId);
-  const enqueue = useUploadStore((s) => s.enqueue);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [assigning, setAssigning] = useState(false);
@@ -104,10 +102,10 @@ export default function AssetPage() {
    * demande d'abord laquelle : ranger un rendu de texturing « sur l'asset » perd l'étape
    * qui l'a produit, et prive la version poussée vers ShotGrid de son `sg_task`.
    */
-  const fill = async (files: File[], taskId: number | null, note: string | null) => {
+  const fill = async (taskId: number | null, send?: (versionId: number) => void) => {
     const created = await createVersion(taskId ? { taskId } : undefined);
     if (!created) return;
-    files.forEach((f) => enqueue(f, created.id, { note }));
+    send?.(created.id);
     // La timeline de cette page ne montre que les versions rattachées à l'asset : une
     // version rangée sous une tâche y serait invisible, et l'on n'aurait nulle part où
     // déposer son média.
@@ -115,11 +113,11 @@ export default function AssetPage() {
   };
 
   const withTask = (files: File[] | 'empty', taskId: number | null) => {
-    // La consigne se demande AVANT de créer la version : un dépôt abandonné ne doit pas
-    // laisser derrière lui une version vide (Phase 50). Créer une version à vide, elle,
+    // Regroupement et consigne se décident AVANT de créer la version : un dépôt abandonné
+    // ne doit pas laisser derrière lui une version vide (Phase 50). Créer une version à vide, elle,
     // n'est pas un dépôt et n'a rien à justifier.
-    if (files === 'empty') return fill([], taskId, null);
-    return withUploadNote(projectId, (note) => fill(files, taskId, note));
+    if (files === 'empty') return fill(taskId);
+    return deliverFiles(projectId, files, (send) => fill(taskId, send));
   };
 
   const menuExtras: MenuEntry[] = [

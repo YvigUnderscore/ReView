@@ -8,8 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
-import { useUploadStore } from '../../stores/useUploadStore';
-import { withUploadNote } from '../../stores/useUploadNoteStore';
+import { deliverFiles } from '../../stores/deliverFiles';
 import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import FullPageDropzone from '../components/FullPageDropzone';
@@ -38,7 +37,6 @@ export default function TaskPage() {
   const userId = useAuth((s) => s.user?.id);
   const canCreate = role !== 'CLIENT';
   const canPublish = role === 'ADMIN' || role === 'SUPERVISOR';
-  const enqueue = useUploadStore((s) => s.enqueue);
   const taskQ = useQuery({
     queryKey: qk.task(taskId),
     queryFn: () => api.get<{ task: TaskDetail }>(`/api/tasks/${taskId}`).then((d) => d.task),
@@ -68,13 +66,14 @@ export default function TaskPage() {
    * Déposer crée la version suivante et l'emplit (Phase 46) : la zone dédiée vit désormais
    * en tête de la liste des versions, et chaque version existante est sa propre cible.
    *
-   * La consigne exigée par le projet se demande AVANT la création de la version (Phase 50) :
-   * un dépôt abandonné ne doit pas laisser derrière lui une version vide.
+   * Le regroupement en séquences et la consigne exigée par le projet se décident AVANT la
+   * création de la version (Phase 50) : un dépôt abandonné ne doit pas laisser derrière lui
+   * une version vide.
    */
   const onDropFiles = (files: File[]) =>
-    withUploadNote(project?.id, async (note) => {
+    deliverFiles(project?.id, files, async (send) => {
       const created = await createVersion();
-      if (created) files.forEach((f) => enqueue(f, created.id, { note }));
+      if (created) send(created.id);
     });
 
   const { entry: statusEntry } = useStatusMenu(project?.id ?? 0, 'task');

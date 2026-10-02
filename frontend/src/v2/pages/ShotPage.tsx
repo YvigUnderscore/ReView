@@ -8,8 +8,7 @@ import { ListPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { useUploadStore } from '../../stores/useUploadStore';
-import { withUploadNote } from '../../stores/useUploadNoteStore';
+import { deliverFiles } from '../../stores/deliverFiles';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { SkeletonRows } from '../components/ui/skeleton';
@@ -62,7 +61,6 @@ export default function ShotPage() {
   useMarkVisited('SHOT', shotId);
   const t = useT();
   const navigate = useNavigate();
-  const enqueue = useUploadStore((s) => s.enqueue);
   const qc = useQueryClient();
   const [pending, setPending] = useState<File[] | 'empty' | null>(null);
   const [newTask, setNewTask] = useState(false);
@@ -101,12 +99,12 @@ export default function ShotPage() {
     [overview],
   );
 
-  const fill = async (files: File[], taskId: number, note: string | null) => {
+  const fill = async (taskId: number, send?: (versionId: number) => void) => {
     try {
       const { version } = await api.post<{ version: { id: number; name: string } }>('/api/versions', {
         taskId,
       });
-      files.forEach((f) => enqueue(f, version.id, { note }));
+      send?.(version.id);
       toast.success(t('version.created', { name: version.name }));
       // La version vit sous sa tâche : c'est là qu'on dépose son média et qu'on publie.
       void navigate(`/tasks/${taskId}?version=${version.id}`);
@@ -117,10 +115,10 @@ export default function ShotPage() {
 
   const withTask = (files: File[] | 'empty', taskId: number | null) => {
     if (!taskId) return;
-    // La consigne se demande AVANT de créer la version : un dépôt abandonné ne doit pas
-    // laisser derrière lui une version vide (Phase 50).
-    if (files === 'empty') return fill([], taskId, null);
-    return withUploadNote(projectId, (note) => fill(files, taskId, note));
+    // Regroupement et consigne se décident AVANT de créer la version : un dépôt abandonné
+    // ne doit pas laisser derrière lui une version vide (Phase 50).
+    if (files === 'empty') return fill(taskId);
+    return deliverFiles(projectId, files, (send) => fill(taskId, send));
   };
 
   // « Ajouter à la playlist » sur la dernière version publiée : c'est elle qu'on pousse

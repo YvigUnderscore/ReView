@@ -2,7 +2,7 @@
 
 *Turning a thousand EXR frames into one media you review exactly like a video.*
 
-> Updated: 2026-08-23
+> Updated: 2026-10-02
 
 A shot is not delivered as a file. It is delivered as a thousand: `SH0100_comp_v003.1001.exr`
 through `SH0100_comp_v003.1200.exr`. ReView ingests such a delivery as **one media**, not a
@@ -43,15 +43,24 @@ and is what the review header and the technical sheet display.
 
 ## Delivering a sequence
 
-> [!IMPORTANT]
-> **The grouping dialog is not reachable from the drop zones today.** The recognition, the
-> confirmation dialog and the frame-by-frame transfer all exist in the browser client, but no
-> drop zone calls them: dropping 1 200 EXR frames on a task, a shot, an asset or a version
-> queues 1 200 ordinary uploads and creates 1 200 media. Until the drop zones are wired, a
-> sequence is delivered through the API below — which is what a studio publish script does
-> anyway.
+**From the interface**, drop the frames — or the folder that holds them — anywhere a file can
+be dropped: the full page of a task, a shot or an asset, the *new version* zone, or an
+existing version card. Picking the frames in the file browser of the *new version* zone works
+the same way. Every one of those gestures goes through the same three steps, in this order:
 
-The transport is the mirror image of a resumable upload: instead of cutting one file into
+1. **Grouping.** If the names hold at least one sequence, a dialog lists each one — pattern,
+   first and last frame, file count, total size, missing frames. Every sequence starts ticked;
+   unticking one sends its frames as separate files, *Send separately* unticks them all.
+2. **Upload note**, when the project requires one (see
+   [Upload & publishing](upload-and-publishing.md)). It is attached to the sequence exactly as
+   to a single file.
+3. **Only then the version.** A drop on a page creates the next version at this point, never
+   before: cancelling either dialog creates nothing, not even an empty version.
+
+The sequence then appears in the upload widget as one line with its own counter
+(`342 / 1200 frames`), next to any loose files of the same drop.
+
+**From a script**, the transport is the mirror image of a resumable upload: instead of cutting one file into
 parts, it gathers many whole files into one media. Three calls, plus the frames themselves.
 
 | Step | Call | What it does |
@@ -183,10 +192,9 @@ Two more things worth planning for:
 
 ## Troubleshooting
 
-**My 1 200 frames became 1 200 media.** They were dropped on a page rather than delivered
-through the sequence endpoints — see the callout in
-[Delivering a sequence](#delivering-a-sequence). Delete the batch and deliver it again with
-the API.
+**My 1 200 frames became 1 200 media.** The grouping dialog was answered with *Send
+separately*, or the frames do not form a pattern — check that they share the same base name,
+field width and extension. Delete the batch and drop it again.
 
 **Two patterns are proposed for one shot.** The numeric field changes width somewhere in the
 delivery (`plan.999.exr` next to `plan.1000.exr`). Pad the numbering at render time; ReView

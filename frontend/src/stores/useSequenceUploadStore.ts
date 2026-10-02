@@ -12,11 +12,15 @@ import { useUploadStore } from './useUploadStore';
 /**
  * Dépôt d'un lot de fichiers : proposer le regroupement, puis l'envoyer.
  *
- * Ce store est le point d'entrée de **tout** dépôt destiné à une version. Il reconnaît les
- * séquences d'images, ouvre la proposition, et n'envoie rien tant que l'utilisateur n'a pas
- * tranché — un regroupement imposé en silence produirait un média dont personne n'a voulu.
- * Quand aucun motif n'est reconnu, il s'efface : les fichiers repartent dans la file
- * ordinaire (`useUploadStore`), sans détour ni dialogue.
+ * Deux temps distincts. `planDrop` reconnaît les séquences d'images et ouvre la
+ * proposition ; rien n'est créé tant que l'utilisateur n'a pas tranché — un regroupement
+ * imposé en silence produirait un média dont personne n'a voulu. Quand aucun motif n'est
+ * reconnu, il s'efface et rend le dépôt tel quel, sans dialogue. `sendPlan` envoie ensuite
+ * le plan retenu dans une version : les séquences dans leur propre file, le reste dans la
+ * file ordinaire (`useUploadStore`).
+ *
+ * La séparation existe pour la version : elle ne se crée qu'APRÈS la décision (et la
+ * consigne, cf. `deliverFiles`), sans quoi renoncer au dialogue laisserait une version vide.
  *
  * Les séquences ont leur propre file parce qu'elles n'ont ni la même granularité
  * (« 342 / 1200 frames ») ni le même coût : une seule à la fois, chacune parallélisant déjà
@@ -38,11 +42,16 @@ export interface SequenceUploadItem {
   error?: string;
 }
 
-/** Dépôt en attente de décision : ce que la lecture des noms a reconnu. */
-export interface SequenceProposal {
-  versionId: number;
+/** Ce qu'un dépôt deviendra : des séquences (un média chacune) et des fichiers isolés. */
+export interface DropPlan {
   sequences: FileSequence[];
   singles: File[];
+}
+
+/** Dépôt en attente de décision : ce que la lecture des noms a reconnu. */
+export interface SequenceProposal extends DropPlan {
+  /** Rend la main au dépôt : le plan retenu, ou `null` s'il est abandonné. */
+  resolve: (plan: DropPlan | null) => void;
 }
 
 const POLL_MS = 3000;
@@ -53,39 +62,27 @@ const POLL_MAX_MS = 60 * 60_000;
 const MAX_CONCURRENT_SEQUENCES = 1;
 
 /** Les fichiers restent hors du store : un `File` n'a rien à faire dans l'état rendu. */
-const queued = new Map<string, { sequence: FileSequence; versionId: number }>();
+interface QueuedSequence {
+  sequence: FileSequence;
+  versionId: number;
+  note: string | null;
+}
+const queued = new Map<string, QueuedSequence>();
 const controllers = new Map<string, AbortController>();
 
 interface SequenceUploadState {
   proposal: SequenceProposal | null;
   uploads: SequenceUploadItem[];
-  /** Point d'entrée d'un dépôt : reconnaît, propose, ou délègue à la file ordinaire. */
-  proposeDrop: (files: File[], versionId: number) => void;
-  /** Envoie en séquences celles qui sont retenues, en fichiers tout le reste. */
+  /** Retient en séquences celles qui sont cochées, en fichiers tout le reste. */
   acceptProposal: (grouped: FileSequence[]) => void;
   cancelProposal: () => void;
   removeUpload: (id: string) => void;
   clearCompleted: () => void;
 }
 
-const enqueueFiles = (files: File[], versionId: number): void => {
-  const { enqueue } = useUploadStore.getState();
-  for (const file of files) enqueue(file, versionId);
-};
-
 export const useSequenceUploadStore = create<SequenceUploadState>((set, get) => ({
   proposal: null,
   uploads: [],
-
-  proposeDrop: (files, versionId) => {
-    if (files.length === 0) return;
-    const { sequences, singles } = detectSequences(files);
-    if (sequences.length === 0) {
-      enqueueFiles(files, versionId);
-      return;
-    }
-    set({ proposal: { versionId, sequences, singles } });
-  },
 
   acceptProposal: (grouped) => {
     const proposal = get().proposal;
@@ -93,29 +90,14 @@ export const useSequenceUploadStore = create<SequenceUploadState>((set, get) => 
     if (!proposal) return;
     const kept = new Set(grouped.map((s) => s.pattern));
     const loose = proposal.sequences.filter((s) => !kept.has(s.pattern)).flatMap((s) => s.files);
-    enqueueFiles([...proposal.singles, ...loose], proposal.versionId);
-    for (const sequence of grouped) {
-      const id = crypto.randomUUID();
-      queued.set(id, { sequence, versionId: proposal.versionId });
-      set((s) => ({
-        uploads: [
-          ...s.uploads,
-          {
-            id,
-            pattern: sequence.pattern,
-            versionId: proposal.versionId,
-            totalFrames: sequence.frameCount,
-            framesDone: 0,
-            progress: 0,
-            status: 'pending' as const,
-          },
-        ],
-      }));
-    }
-    pump(set, get);
+    proposal.resolve({ sequences: grouped, singles: [...proposal.singles, ...loose] });
   },
 
-  cancelProposal: () => set({ proposal: null }),
+  cancelProposal: () => {
+    const proposal = get().proposal;
+    set({ proposal: null });
+    proposal?.resolve(null);
+  },
 
   removeUpload: (id) => {
     controllers.get(id)?.abort();
@@ -127,6 +109,49 @@ export const useSequenceUploadStore = create<SequenceUploadState>((set, get) => 
 
   clearCompleted: () => set((s) => ({ uploads: s.uploads.filter((u) => u.status !== 'done') })),
 }));
+
+/**
+ * Lit un dépôt et, s'il contient des séquences, demande le regroupement.
+ *
+ * Rend le plan retenu, ou `null` si l'utilisateur renonce. Sans motif reconnu, le dépôt
+ * repart aussitôt tel quel — le chemin ordinaire ne gagne aucun écran.
+ */
+export function planDrop(files: File[]): Promise<DropPlan | null> {
+  const { sequences, singles } = detectSequences(files);
+  if (sequences.length === 0) return Promise.resolve({ sequences: [], singles: files });
+  // Un dépôt arrivé pendant qu'un autre attend sa décision le remplace : l'ancien est
+  // abandonné explicitement plutôt que laissé suspendu à jamais.
+  useSequenceUploadStore.getState().cancelProposal();
+  return new Promise((resolve) => {
+    useSequenceUploadStore.setState({ proposal: { sequences, singles, resolve } });
+  });
+}
+
+/** Envoie un plan dans une version, la consigne d'upload accompagnant chaque média. */
+export function sendPlan(plan: DropPlan, versionId: number, note: string | null): void {
+  const { enqueue } = useUploadStore.getState();
+  for (const file of plan.singles) enqueue(file, versionId, { note });
+  const set = useSequenceUploadStore.setState;
+  for (const sequence of plan.sequences) {
+    const id = crypto.randomUUID();
+    queued.set(id, { sequence, versionId, note });
+    set((s) => ({
+      uploads: [
+        ...s.uploads,
+        {
+          id,
+          pattern: sequence.pattern,
+          versionId,
+          totalFrames: sequence.frameCount,
+          framesDone: 0,
+          progress: 0,
+          status: 'pending' as const,
+        },
+      ],
+    }));
+  }
+  pump(set, useSequenceUploadStore.getState);
+}
 
 type Setter = (fn: (state: SequenceUploadState) => Partial<SequenceUploadState>) => void;
 
@@ -150,7 +175,7 @@ function pump(set: Setter, get: () => SequenceUploadState): void {
 
 async function startSequence(
   id: string,
-  job: { sequence: FileSequence; versionId: number },
+  job: QueuedSequence,
   set: Setter,
   get: () => SequenceUploadState,
 ): Promise<void> {
@@ -160,6 +185,7 @@ async function startSequence(
   try {
     const res = await uploadImageSequence(job.sequence, job.versionId, {
       signal: controller.signal,
+      note: job.note,
       onProgress: (p) => patch(set, id, { progress: p.percent, framesDone: p.files }),
     });
     // Une livraison à trous n'est pas une erreur, mais elle se dit : c'est le genre

@@ -2,7 +2,7 @@
 
 *From dropping a file to publishing it: where it lands, what is checked on the way, and what publication locks forever.*
 
-> Updated: 2026-09-20
+> Updated: 2026-10-02
 
 Delivering into ReView is a drag and a drop. Everything that follows — hashing, resuming,
 deduplicating, checking, transcoding, publishing — happens without holding you on the page:
@@ -58,8 +58,9 @@ If the drop contains **two or more numbered frames** sharing a base name, a fiel
 an extension, a grouping dialog opens first: each detected sequence is listed with its
 pattern, first and last frame, file count, total size and the number of missing frames.
 Accepting a group makes it **one** media; unticking it sends the frames as separate files.
-Nothing is grouped without that confirmation, and closing the dialog uploads nothing. See
-[Image sequences](image-sequences.md).
+Nothing is grouped without that confirmation. The dialog comes **before** the upload note and
+before the version is created, so closing it uploads nothing and leaves no empty version
+behind. See [Image sequences](image-sequences.md).
 
 Uploads stream straight to MinIO through presigned URLs and are tracked by a **global,
 non-blocking upload widget** at the bottom right: you can keep navigating while transfers and
