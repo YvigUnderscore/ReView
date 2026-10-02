@@ -26,6 +26,8 @@ import SplatReview from './splat/SplatReview';
 import VideoWipeOverlay from './VideoWipeOverlay';
 import VideoPane from './VideoPane';
 import VideoReviewSection from './VideoReviewSection';
+import VideoProcessingState from './VideoProcessingState';
+import { videoPlayback } from './videoPlayback';
 import MediaChrome from './MediaChrome';
 import ImageReviewSection from './ImageReviewSection';
 import { intlLocale } from '../../i18n';
@@ -127,6 +129,7 @@ export default function ReviewViewer({
   // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent
   // **et** que le média n'est pas coupé — le master ignore le trim (cf. videoSource.ts).
   const hlsUrl = data ? hlsMasterUrl(data.media.id, data) : null;
+  const playback = data ? videoPlayback(data.media, data.proxyUrl) : 'play';
   const startFrame = data?.startFrame ?? 1001;
   // Cadence de diffusion : la base ne range qu'un arrondi au centième (23.98 pour
   // 24000/1001), dont tous les numéros de frame dérivent. On la corrige ici, à l'entrée du
@@ -216,7 +219,17 @@ export default function ReviewViewer({
       {/* Skeleton du viewer pendant le chargement (10.B5) */}
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
 
-      {kind === 'VIDEO' && src && data && (
+      {kind === 'VIDEO' && data && playback !== 'play' && (
+        <VideoProcessingState
+          state={playback}
+          processingError={data.processingError}
+          canReprocess={role !== 'CLIENT'}
+          reprocessing={reprocessing}
+          onReprocess={onReprocess}
+        />
+      )}
+
+      {kind === 'VIDEO' && src && data && playback === 'play' && (
         <MediaChrome
           kind="VIDEO"
           data={data}

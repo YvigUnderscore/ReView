@@ -3735,5 +3735,8 @@
   "poi.listLabel": "Punts d’interès",
   "poi.clickToPlaceNext": "Clicatz una surfàcia per pausar lo punt {n}",
   "poi.card.open": "Legir la nòta del punt {n}",
-  "poi.card.close": "Plegar la nòta del punt {n}"
+  "poi.card.close": "Plegar la nòta del punt {n}",
+  "videoState.assembling": "Assemblatge de la sequence d'imatges… Lo lector se dobrirà sol tre que serà prèsta.",
+  "videoState.failed": "Aquesta vidèo a pas pogut èsser tractada : i a pas encara res de legir.",
+  "videoState.retry": "Tornar lançar lo tractament"
 }

@@ -3736,5 +3736,8 @@
   "poi.listLabel": "Points d’intérêt",
   "poi.clickToPlaceNext": "Cliquez une surface pour poser le point {n}",
   "poi.card.open": "Lire la remarque du point {n}",
-  "poi.card.close": "Replier la remarque du point {n}"
+  "poi.card.close": "Replier la remarque du point {n}",
+  "videoState.assembling": "Assemblage de la sequence d'images… Le lecteur s'ouvrira de lui-même dès qu'elle sera prête.",
+  "videoState.failed": "Cette vidéo n'a pas pu être traitée : il n'y a encore rien à lire.",
+  "videoState.retry": "Relancer le traitement"
 }

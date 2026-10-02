@@ -3728,5 +3728,8 @@
   "poi.listLabel": "Punkte von Interesse",
   "poi.clickToPlaceNext": "Auf eine Fläche klicken, um Punkt {n} zu setzen",
   "poi.card.open": "Anmerkung zu Punkt {n} lesen",
-  "poi.card.close": "Anmerkung zu Punkt {n} einklappen"
+  "poi.card.close": "Anmerkung zu Punkt {n} einklappen",
+  "videoState.assembling": "Image sequence wird zusammengesetzt… Der Player öffnet sich von selbst, sobald sie fertig ist.",
+  "videoState.failed": "Dieses Video konnte nicht verarbeitet werden: Es gibt noch nichts abzuspielen.",
+  "videoState.retry": "Verarbeitung neu starten"
 }

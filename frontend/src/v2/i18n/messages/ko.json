@@ -3583,5 +3583,8 @@
   "poi.listLabel": "관심 지점",
   "poi.clickToPlaceNext": "표면을 클릭하면 지점 {n}이 놓입니다",
   "poi.card.open": "지점 {n}의 메모 읽기",
-  "poi.card.close": "지점 {n}의 메모 접기"
+  "poi.card.close": "지점 {n}의 메모 접기",
+  "videoState.assembling": "Image sequence 합성 중… 준비되면 플레이어가 자동으로 열립니다.",
+  "videoState.failed": "이 비디오를 처리하지 못했습니다. 아직 재생할 내용이 없습니다.",
+  "videoState.retry": "처리 다시 실행"
 }

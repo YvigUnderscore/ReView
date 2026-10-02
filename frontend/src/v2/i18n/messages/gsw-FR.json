@@ -3725,5 +3725,8 @@
   "poi.listLabel": "Interessanti Punkt",
   "poi.clickToPlaceNext": "Uf e Flächi klicke, zum Punkt {n} setze",
   "poi.card.open": "D Bemerkung vum Punkt {n} läse",
-  "poi.card.close": "D Bemerkung vum Punkt {n} züeklappe"
+  "poi.card.close": "D Bemerkung vum Punkt {n} züeklappe",
+  "videoState.assembling": "D'Image sequence wird zammegsetzt… De Player gieht vun selwer uf, sobald si fertig isch.",
+  "videoState.failed": "Des Video het nit chönne verarbeitet wäre: s'git noch nix zum Abspiele.",
+  "videoState.retry": "D'Verarbeitung nej starte"
 }
