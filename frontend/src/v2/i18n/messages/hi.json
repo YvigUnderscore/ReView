@@ -3719,5 +3719,8 @@
   "poi.listLabel": "रुचि बिंदु",
   "poi.clickToPlaceNext": "बिंदु {n} रखने के लिए किसी सतह पर क्लिक करें",
   "poi.card.open": "बिंदु {n} की टिप्पणी पढ़ें",
-  "poi.card.close": "बिंदु {n} की टिप्पणी समेटें"
+  "poi.card.close": "बिंदु {n} की टिप्पणी समेटें",
+  "videoState.assembling": "Image sequence जोड़ी जा रही है… तैयार होते ही प्लेयर अपने आप खुल जाएगा।",
+  "videoState.failed": "यह वीडियो प्रोसेस नहीं हो सका: अभी चलाने के लिए कुछ नहीं है।",
+  "videoState.retry": "प्रोसेसिंग फिर चलाएँ"
 }

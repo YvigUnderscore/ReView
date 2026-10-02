@@ -3753,5 +3753,8 @@
   "poi.listLabel": "Poentoù a zedenn",
   "poi.clickToPlaceNext": "Klikit war ur gorre evit lakaat ar poent {n}",
   "poi.card.open": "Lenn notenn ar poent {n}",
-  "poi.card.close": "Plegañ notenn ar poent {n}"
+  "poi.card.close": "Plegañ notenn ar poent {n}",
+  "videoState.assembling": "O vodañ ar sequence skeudennoù… Digeriñ a raio al lenner e-unan kerkent ha ma vo prest.",
+  "videoState.failed": "N'eus ket bet gallet plediñ gant ar video-mañ : n'eus netra da lenn c'hoazh.",
+  "videoState.retry": "Adloc’hañ an treterezh"
 }

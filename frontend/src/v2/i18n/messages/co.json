@@ -3728,5 +3728,8 @@
   "poi.listLabel": "Punti d’interessu",
   "poi.clickToPlaceNext": "Cliccate una superficia per pone u puntu {n}",
   "poi.card.open": "Leghje a nota di u puntu {n}",
-  "poi.card.close": "Pieghjà a nota di u puntu {n}"
+  "poi.card.close": "Pieghjà a nota di u puntu {n}",
+  "videoState.assembling": "Assemblaghju di a sequence d'imagine… U lettore s'aprerà da per ellu appena ch'ella serà pronta.",
+  "videoState.failed": "Stu video ùn hà micca pussutu esse trattatu : ùn ci hè ancu nunda à leghje.",
+  "videoState.retry": "Rilancià u trattamentu"
 }

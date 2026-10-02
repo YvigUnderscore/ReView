@@ -15,7 +15,7 @@ import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import type { ReviewComment } from '../types/api';
 import { type Shape } from '../components/AnnotationCanvas';
 import type { ImageViewApi } from '../components/ImageReviewViewer';
-import { resolveGlbSrc, splitAnnotationParts, type MediaResp } from './review/reviewTypes';
+import { resolveGlbSrc, splitAnnotationParts } from './review/reviewTypes';
 import { readPoiPoints, type PoiPoint } from './review/poi/poiPoints';
 import { usePublishSceneOverride } from './review/usePublishSceneOverride';
 import { useAnnotations } from './review/useAnnotations';
@@ -42,6 +42,7 @@ import { resolveSplatEditProposal } from './review/splat/splatEditPart';
 import { useReviewHeaderSlots } from './review/header/useReviewHeaderSlots';
 import ReviewPageHeader from './review/header/ReviewPageHeader';
 import TheaterExitButton from './review/TheaterExitButton';
+import { useReviewMedia } from './review/useReviewMedia';
 
 /** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
 export default function ReviewPage() {
@@ -77,14 +78,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const { reviewRootRef, isFullscreen, toggleFullscreen, theater, setTheater, togglePictureInPicture } =
     useReviewViewport(videoRef);
 
-  // staleTime Infinity : le GET régénère des URLs présignées à chaque appel — un
-  // refetch en arrière-plan rechargerait le viewer en pleine lecture. Les mutations
-  // (publication, reprocess) invalident explicitement.
-  const mediaQ = useQuery({
-    queryKey: qk.media(id),
-    queryFn: () => api.get<MediaResp>(`/api/media/${id}`),
-    staleTime: Infinity,
-  });
+  const mediaQ = useReviewMedia(id);
   const data = mediaQ.data ?? null;
   // URL parlante : `/review/219` → `/review/perso-principal-v01-219` dès le nom connu.
   useCanonicalSlug(rawParam, data ? mediaSlug(data.media.originalName, id) : null);

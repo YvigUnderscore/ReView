@@ -3719,5 +3719,8 @@
   "poi.listLabel": "Points of interest",
   "poi.clickToPlaceNext": "Click a surface to drop point {n}",
   "poi.card.open": "Read the note on point {n}",
-  "poi.card.close": "Collapse the note on point {n}"
+  "poi.card.close": "Collapse the note on point {n}",
+  "videoState.assembling": "Assembling the image sequence… The player opens on its own once it is ready.",
+  "videoState.failed": "This video could not be processed: there is nothing to play yet.",
+  "videoState.retry": "Restart processing"
 }

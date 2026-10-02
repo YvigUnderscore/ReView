@@ -196,6 +196,18 @@ Two more things worth planning for:
 separately*, or the frames do not form a pattern — check that they share the same base name,
 field width and extension. Delete the batch and drop it again.
 
+**The player says the sequence is being assembled.** Until the worker has built the proxy,
+there is nothing to play — the media's original file is the `sequence.json` manifest, not a
+video. The review page checks again every five seconds and opens the player by itself once
+the media is `READY`.
+
+**The player says the video could not be processed.** The worker's reason is shown under the
+message — an interrupted job, an unreadable frame, a quota. Anyone but a client can press
+*Restart processing*; a published media gets **one** such restart (see
+[Upload & publishing](upload-and-publishing.md)). An interruption — the worker restarted, the
+host ran out of disk — is exactly what that restart is for: the frames are still in storage,
+nothing has to be uploaded again.
+
 **Two patterns are proposed for one shot.** The numeric field changes width somewhere in the
 delivery (`plan.999.exr` next to `plan.1000.exr`). Pad the numbering at render time; ReView
 will not merge them, because the merged pattern is one FFmpeg could not read back.

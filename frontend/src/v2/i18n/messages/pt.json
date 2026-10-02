@@ -3738,5 +3738,8 @@
   "poi.listLabel": "Pontos de interesse",
   "poi.clickToPlaceNext": "Clique numa superfície para colocar o ponto {n}",
   "poi.card.open": "Ler a nota do ponto {n}",
-  "poi.card.close": "Recolher a nota do ponto {n}"
+  "poi.card.close": "Recolher a nota do ponto {n}",
+  "videoState.assembling": "A montar a sequence de imagens… O leitor abre sozinho assim que estiver pronta.",
+  "videoState.failed": "Este vídeo não pôde ser processado: ainda não há nada para reproduzir.",
+  "videoState.retry": "Relançar o processamento"
 }

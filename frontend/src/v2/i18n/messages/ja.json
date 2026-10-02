@@ -3585,5 +3585,8 @@
   "poi.listLabel": "注目点",
   "poi.clickToPlaceNext": "面をクリックして点 {n} を置きます",
   "poi.card.open": "点 {n} のメモを読む",
-  "poi.card.close": "点 {n} のメモを折りたたむ"
+  "poi.card.close": "点 {n} のメモを折りたたむ",
+  "videoState.assembling": "Image sequence を合成しています… 準備ができ次第、プレーヤーが自動で開きます。",
+  "videoState.failed": "この動画は処理できませんでした。まだ再生できるものがありません。",
+  "videoState.retry": "処理をやり直す"
 }

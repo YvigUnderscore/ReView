@@ -3728,5 +3728,8 @@
   "poi.listLabel": "Intereseko puntuak",
   "poi.clickToPlaceNext": "Egin klik gainazal batean {n}. puntua jartzeko",
   "poi.card.open": "Irakurri {n}. puntuaren oharra",
-  "poi.card.close": "Tolestu {n}. puntuaren oharra"
+  "poi.card.close": "Tolestu {n}. puntuaren oharra",
+  "videoState.assembling": "Irudi sequence muntatzen… Erreproduzigailua bere kabuz irekiko da prest dagoenean.",
+  "videoState.failed": "Ezin izan da bideo hau prozesatu: oraindik ez dago ezer erreproduzitzeko.",
+  "videoState.retry": "Berrabiarazi prozesamendua"
 }

@@ -3583,5 +3583,8 @@
   "poi.listLabel": "关注点",
   "poi.clickToPlaceNext": "点击表面以放置点 {n}",
   "poi.card.open": "阅读点 {n} 的备注",
-  "poi.card.close": "收起点 {n} 的备注"
+  "poi.card.close": "收起点 {n} 的备注",
+  "videoState.assembling": "正在合成 image sequence… 完成后播放器会自动打开。",
+  "videoState.failed": "此视频处理失败：目前还没有可播放的内容。",
+  "videoState.retry": "重新处理"
 }
