@@ -38,6 +38,11 @@ export interface SequenceUploadOptions {
   signal?: AbortSignal;
   /** Cadence imposée ; sinon héritée du pipeline du plan côté serveur. */
   framerate?: number;
+  /**
+   * Consigne d'upload (Phase 50). Portée par la finalisation, comme pour un fichier
+   * unique : un projet qui l'exige refuse la séquence qui arrive sans elle.
+   */
+  note?: string | null;
 }
 
 export interface SequenceUploadResult {
@@ -81,7 +86,9 @@ export async function uploadImageSequence(
   try {
     await sendFrames(sequence, init, opts);
     throwIfAborted(signal);
-    const done = await api.post<CompleteResponse>(`/api/media/sequence/${init.mediaObjectId}/complete`);
+    const done = await api.post<CompleteResponse>(`/api/media/sequence/${init.mediaObjectId}/complete`, {
+      note: opts.note ?? null,
+    });
     return {
       mediaObjectId: init.mediaObjectId,
       status: done.media.status,

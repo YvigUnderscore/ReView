@@ -28,7 +28,7 @@ const plan = (from: number, to: number): File[] =>
 const openWith = (files: File[]): void => {
   const { sequences, singles } = detectSequences(files);
   useSequenceUploadStore.setState({
-    proposal: { versionId: 4, sequences, singles },
+    proposal: { sequences, singles, resolve: vi.fn() },
     uploads: [],
     acceptProposal: accept,
     cancelProposal: cancel,

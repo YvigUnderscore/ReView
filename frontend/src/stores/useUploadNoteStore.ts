@@ -13,9 +13,10 @@ import type { ReviewRequestRule } from '../v2/types/api';
  * donc avant l'envoi, et un projet qui l'exige (`reviewRequest.requireNote`) fait qu'un
  * dépôt sans message ne part pas du tout.
  *
- * **Un seul point de passage.** Les cinq endroits d'où l'on dépose (fiche d'asset, fiche de
- * plan, fiche de tâche, timeline de versions, zone de dépôt) traversent `withUploadNote` et
- * rien d'autre : c'est ce qui évite qu'un sixième bouton oublie la règle. Le dépôt retenu
+ * **Un seul point de passage.** Les endroits d'où l'on dépose (fiche d'asset, fiche de plan,
+ * fiche de tâche, timeline de versions, zone de dépôt) traversent `deliverFiles`, qui appelle
+ * `withUploadNote` après le regroupement des séquences : c'est ce qui évite qu'un nouveau
+ * bouton oublie la règle. Le dépôt retenu
  * garde son geste entier en attente — rien n'est créé, pas même la version, tant que la
  * consigne ne convient pas.
  */

@@ -4,12 +4,14 @@
 import { useEffect, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { useT } from '../i18n';
+import { filesFromDataTransfer } from '../../lib/dropEntries';
 
 /**
  * Drop-zone plein-écran (10.C7) : un overlay apparaît dès qu'on glisse des fichiers
  * n'importe où sur la page ; relâcher lance l'upload. Écoute les événements de drag
  * au niveau `window` (dépôt possible partout). Une drop-zone locale qui a déjà traité
- * le dépôt (`e.preventDefault()`) est respectée : on ne double pas l'upload.
+ * le dépôt (`e.preventDefault()`) est respectée : on ne double pas l'upload. Un dossier
+ * déposé est déplié (séquence d'images livrée en un répertoire).
  */
 export default function FullPageDropzone({
   onDrop,
@@ -51,8 +53,9 @@ export default function FullPageDropzone({
       setActive(false);
       if (e.defaultPrevented) return; // déjà géré par une drop-zone locale
       e.preventDefault();
-      const files = Array.from(e.dataTransfer?.files ?? []);
-      if (files.length) onDrop(files);
+      void filesFromDataTransfer(e.dataTransfer).then((files) => {
+        if (files.length) onDrop(files);
+      });
     };
     window.addEventListener('dragenter', onEnter);
     window.addEventListener('dragover', onOver);
