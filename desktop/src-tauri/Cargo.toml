@@ -3,10 +3,11 @@
 
 [package]
 name = "review-desktop"
-version = "0.1.0"
-description = "ReView desktop — spike de validation du webview"
+version = "0.2.0"
+description = "ReView desktop — application de review pour studios VFX (alpha)"
 authors = ["Yvig Bidon"]
 license = "AGPL-3.0-or-later"
+repository = "https://github.com/YvigUnderscore/ReView"
 edition = "2021"
 rust-version = "1.82"
 
@@ -20,11 +21,22 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2.12", features = [] }
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+url = "2"
+# TLS du système (SChannel, Security.framework, OpenSSL 3) plutôt que rustls : un studio
+# fait souvent signer son serveur par une autorité interne déployée dans le magasin de
+# certificats de l'OS — la fenêtre du serveur la reconnaît, la vérification doit aussi.
+# Le proxy système est suivi pour la même raison.
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "json", "system-proxy"] }
+# Nommé pour reconnaître ses erreurs dans la chaîne de reqwest (`probe::is_tls`).
+native-tls = "0.2"
 
-# Release : binaire compact, pas de table de symboles. Le spike se distribue à la main
-# sur trois OS — autant que l'artefact soit déjà représentatif de ce qu'on signera.
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# Release : binaire compact, pas de table de symboles.
 [profile.release]
 codegen-units = 1
 lto = true

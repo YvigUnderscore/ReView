@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Même largeur que le Prettier du dépôt (.prettierrc.json).
+max_width = 110

@@ -13921,7 +13921,7 @@ Apache License
    limitations under the License.
 ```
 
-### proxy-addr@2.0.7
+### proxy-addr@2.0.8
 
 - License: `MIT`
 - Source: jshttp/proxy-addr
@@ -21382,7 +21382,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### commander@7.2.0
+### commander@15.0.0
 
 - License: `MIT`
 - Source: https://github.com/tj/commander.js
@@ -21412,7 +21412,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### commander@8.3.0
+### commander@7.2.0
 
 - License: `MIT`
 - Source: https://github.com/tj/commander.js
@@ -24429,7 +24429,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### katex@0.16.47
+### katex@0.18.10
 
 - License: `MIT`
 - Source: https://github.com/KaTeX/KaTeX
@@ -28063,7 +28063,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### source-map-js@1.2.1
+### source-map-js@1.2.2
 
 - License: `BSD-3-Clause`
 - Source: 7rulnik/source-map-js

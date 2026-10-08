@@ -10,6 +10,7 @@
 #   bash scripts/validate.sh --with-integration   # ajoute les tests d'intégration (nécessite Postgres+Redis+MinIO)
 #   bash scripts/validate.sh --with-e2e            # intégration + smoke Playwright (navigateur requis ; E2E_CHANNEL=msedge en local)
 #   bash scripts/validate.sh --with-shotgrid       # + harnais ShotGrid bout-en-bout (backend ReView démarré requis)
+#   bash scripts/validate.sh --with-desktop        # + Rust de l'app desktop : fmt, clippy, tests, notices (cargo requis)
 #
 # Les options se cumulent : `--with-integration --with-shotgrid` est valide.
 #
@@ -21,11 +22,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WITH_INTEGRATION=0
 WITH_E2E=0
 WITH_SHOTGRID=0
+WITH_DESKTOP=0
 for arg in "$@"; do
   case "$arg" in
     --with-integration) WITH_INTEGRATION=1 ;;
     --with-e2e) WITH_INTEGRATION=1; WITH_E2E=1 ;;
     --with-shotgrid) WITH_SHOTGRID=1 ;;
+    --with-desktop) WITH_DESKTOP=1 ;;
     *) printf '\033[0;31m✗ Option inconnue : %s\033[0m\n' "$arg"; exit 1 ;;
   esac
 done
@@ -233,6 +236,24 @@ step "Frontend — build (vite build)"
 # Garde-fou anti-régression sur ce que le navigateur télécharge avant le premier écran.
 step "Frontend — budget du bundle d'entrée"
 node "$ROOT/scripts/check-bundle-budget.mjs"
+
+# ---------- Application desktop ----------
+# Le lanceur (desktop/launcher) est du JavaScript de navigateur sans build : son format et
+# ses tests ne demandent que Node. Le Rust et les notices des crates demandent cargo et, sous
+# Linux, WebKitGTK : ils passent par --with-desktop, et toujours par le workflow Desktop.
+step "Desktop — format du lanceur (prettier --check)"
+( cd "$ROOT/desktop" && npm run format:check )
+
+step "Desktop — tests du lanceur (vitest + happy-dom)"
+( cd "$ROOT/desktop" && npm test )
+
+if [[ "$WITH_DESKTOP" == "1" ]]; then
+  step "Desktop — Rust : format, clippy (zéro warning), tests"
+  ( cd "$ROOT/desktop/src-tauri" && cargo fmt --check && cargo clippy --all-targets --locked -- -D warnings && cargo test --locked )
+
+  step "Desktop — notices tierces du binaire à jour"
+  node "$ROOT/scripts/generate-desktop-notices.mjs" --check
+fi
 
 if [[ "$WITH_E2E" == "1" ]]; then
   step "E2E — smoke Playwright (parcours critique, lance backend+frontend)"

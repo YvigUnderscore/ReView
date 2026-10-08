@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "launcher",
+  "description": "Le lanceur : liste des serveurs, connexion, liens. Aucune fenêtre de serveur n'est couverte — un contenu distant n'appelle aucune commande.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "allow-app-info",
+    "allow-list-servers",
+    "allow-connect",
+    "allow-remove-server",
+    "allow-launcher-ready",
+    "allow-open-diagnostic",
+    "allow-open-notices",
+    "allow-open-link"
+  ]
+}

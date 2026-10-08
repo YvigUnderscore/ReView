@@ -1,34 +1,72 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ReView",
-  "version": "0.1.0",
-  "identifier": "io.github.yvigunderscore.review.spike",
+  "version": "0.2.0",
+  "identifier": "io.github.yvigunderscore.review",
   "build": {
-    "frontendDist": "../probe"
+    "frontendDist": "../launcher"
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
-        "title": "ReView — diagnostic du webview",
-        "width": 1280,
-        "height": 860,
-        "minWidth": 900,
-        "minHeight": 600,
-        "resizable": true,
-        "fullscreen": false
+        "title": "ReView",
+        "width": 1120,
+        "height": 760,
+        "minWidth": 880,
+        "minHeight": 620,
+        "center": true,
+        "visible": false,
+        "generalAutofillEnabled": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self'; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png", "icons/icon.ico"],
-    "shortDescription": "Spike de validation du webview ReView",
-    "longDescription": "Mesure les capacités du webview de l'OS (WebGL, codecs, WASM) pour décider si le viewer ReView peut tourner dans une application Tauri."
+    "publisher": "Yvig Bidon",
+    "copyright": "Copyright © 2026 Yvig Bidon. AGPL-3.0-or-later.",
+    "license": "AGPL-3.0-or-later",
+    "homepage": "https://github.com/YvigUnderscore/ReView",
+    "category": "Productivity",
+    "shortDescription": "Collaborative media review for VFX studios",
+    "longDescription": "ReView Desktop opens ReView review servers in a native window — video, image, 3D and Gaussian splat review with timestamped annotations.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../../LICENSE": "LICENSE.txt",
+      "../launcher/legal/THIRD-PARTY-NOTICES.txt": "THIRD-PARTY-NOTICES.txt"
+    },
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/nsis-header.bmp",
+        "sidebarImage": "installer/nsis-sidebar.bmp",
+        "languages": [
+          "English",
+          "French"
+        ],
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "bannerPath": "installer/wix-banner.bmp",
+        "dialogImagePath": "installer/wix-dialog.bmp"
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "12.0"
+    }
   }
 }

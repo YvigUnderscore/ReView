@@ -195,9 +195,8 @@
     <main>
       <h1>Diagnostic du webview</h1>
       <p class="sub">
-        Ce que le viewer ReView exige du moteur de rendu de cet OS. À lancer dans
-        l'application Tauri <em>et</em> dans le navigateur de la même machine, puis à
-        comparer.
+        Ce que le viewer ReView exige du moteur de rendu de cet OS. À lancer dans l'application Tauri
+        <em>et</em> dans le navigateur de la même machine, puis à comparer.
       </p>
 
       <div id="verdict" class="info">
@@ -296,7 +295,7 @@
             ? { level: 'info', value: `Tauri ${host.tauri} · ${host.os}/${host.arch}` }
             : { level: 'info', value: 'navigateur (référence)' },
         );
-        probe('host', 'Moteur du webview', "chaîne annoncée par le moteur lui-même", () => {
+        probe('host', 'Moteur du webview', 'chaîne annoncée par le moteur lui-même', () => {
           const ua = navigator.userAgent;
           // WebKitGTK ne se nomme pas : il se trahit en annonçant Safari sans être macOS.
           const gtk = /Linux/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium/.test(ua);
@@ -354,7 +353,11 @@
         probe('gl', 'Carte utilisée', 'doit être la RTX, pas un rasteriseur logiciel', () => {
           const soft = /llvmpipe|swiftshader|softpipe|software|mesa offscreen/i.test(String(renderer));
           return soft
-            ? { level: 'fail', value: String(renderer), note: 'rendu logiciel : le GPU n’est pas utilisé, le viewer sera inutilisable' }
+            ? {
+                level: 'fail',
+                value: String(renderer),
+                note: 'rendu logiciel : le GPU n’est pas utilisé, le viewer sera inutilisable',
+              }
             : { level: 'ok', value: String(renderer) };
         });
 
@@ -369,8 +372,14 @@
               ? { level: 'ok', value: 'disponible' }
               : { level: 'warn', value: 'absent', note: 'pipeline HDR dégradé : tone mapping en 8 bits' },
           );
-          probe('gl', 'Filtrage flottant linéaire', 'OES_texture_float_linear — interpolation des volumes', () =>
-            gl2.getExtension('OES_texture_float_linear') ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent' },
+          probe(
+            'gl',
+            'Filtrage flottant linéaire',
+            'OES_texture_float_linear — interpolation des volumes',
+            () =>
+              gl2.getExtension('OES_texture_float_linear')
+                ? { level: 'ok', value: 'disponible' }
+                : { level: 'warn', value: 'absent' },
           );
           probe('gl', 'Antialiasing multi-échantillons', 'lisibilité des wireframes et du scenegraph', () => {
             const n = gl2.getParameter(gl2.MAX_SAMPLES);
@@ -385,10 +394,14 @@
             return { level: n >= 256 ? 'ok' : 'warn', value: n + ' px' };
           });
           probe('gl', 'Compression de texture', 'S3TC/BPTC — mémoire des textures de scène', () => {
-            const have = ['WEBGL_compressed_texture_s3tc', 'EXT_texture_compression_bptc', 'WEBGL_compressed_texture_astc'].filter(
-              (e) => gl2.getExtension(e),
-            );
-            return have.length ? { level: 'ok', value: have.length + ' format(s)' } : { level: 'warn', value: 'aucun' };
+            const have = [
+              'WEBGL_compressed_texture_s3tc',
+              'EXT_texture_compression_bptc',
+              'WEBGL_compressed_texture_astc',
+            ].filter((e) => gl2.getExtension(e));
+            return have.length
+              ? { level: 'ok', value: have.length + ' format(s)' }
+              : { level: 'warn', value: 'aucun' };
           });
         }
 
@@ -403,7 +416,11 @@
         probe('video', 'MediaSource', 'hls.js en dépend entièrement', () =>
           MS
             ? { level: 'ok', value: window.ManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource' }
-            : { level: 'fail', value: 'absent', note: 'pas de streaming HLS : la lecture retombe sur le fichier entier' },
+            : {
+                level: 'fail',
+                value: 'absent',
+                note: 'pas de streaming HLS : la lecture retombe sur le fichier entier',
+              },
         );
 
         const codecs = {
@@ -418,12 +435,15 @@
             const viaMs = MS && MS.isTypeSupported ? MS.isTypeSupported(mime) : false;
             const viaEl = document.createElement('video').canPlayType(mime);
             if (viaMs) return { level: 'ok', value: 'MSE' };
-            if (viaEl === 'probably' || viaEl === 'maybe') return { level: 'warn', value: 'élément seul (' + viaEl + ')' };
+            if (viaEl === 'probably' || viaEl === 'maybe')
+              return { level: 'warn', value: 'élément seul (' + viaEl + ')' };
             const critical = name === 'H.264 High' || name === 'AAC-LC';
             return {
               level: critical ? 'fail' : 'info',
               value: 'non',
-              ...(critical ? { note: 'codec de base des proxies ReView — à régler avant toute distribution' } : {}),
+              ...(critical
+                ? { note: 'codec de base des proxies ReView — à régler avant toute distribution' }
+                : {}),
             };
           });
         }
@@ -431,38 +451,55 @@
         probe('video', 'requestVideoFrameCallback', 'annotation calée à la frame exacte', () =>
           'requestVideoFrameCallback' in HTMLVideoElement.prototype
             ? { level: 'ok', value: 'disponible' }
-            : { level: 'warn', value: 'absent', note: 'le calage des annotations retombe sur currentTime : dérive d’une frame possible' },
+            : {
+                level: 'warn',
+                value: 'absent',
+                note: 'le calage des annotations retombe sur currentTime : dérive d’une frame possible',
+              },
         );
         probe('video', 'WebCodecs', 'décodage image par image, scrub rapide', () =>
-          'VideoDecoder' in window ? { level: 'ok', value: 'disponible' } : { level: 'info', value: 'absent' },
+          'VideoDecoder' in window
+            ? { level: 'ok', value: 'disponible' }
+            : { level: 'info', value: 'absent' },
         );
       }
 
       // --- Plateforme ------------------------------------------------------------
       function platformProbes() {
         probe('platform', 'Contexte sécurisé', 'crypto.subtle, service worker, web push', () =>
-          window.isSecureContext ? { level: 'ok', value: 'oui' } : { level: 'fail', value: 'non', note: 'origine non sécurisée : push et crypto indisponibles' },
+          window.isSecureContext
+            ? { level: 'ok', value: 'oui' }
+            : { level: 'fail', value: 'non', note: 'origine non sécurisée : push et crypto indisponibles' },
         );
         probe('platform', 'WebAssembly SIMD', 'hash-wasm — checksums à l’upload', () => {
           // Module minimal contenant une instruction v128 : refusé si SIMD manque.
           const simd = new Uint8Array([
-            0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11,
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15,
+            253, 98, 11,
           ]);
-          return WebAssembly.validate(simd) ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent', note: 'checksums plus lents' };
+          return WebAssembly.validate(simd)
+            ? { level: 'ok', value: 'disponible' }
+            : { level: 'warn', value: 'absent', note: 'checksums plus lents' };
         });
         probe('platform', 'SharedArrayBuffer', 'threads WASM — hash parallèle', () =>
           typeof SharedArrayBuffer !== 'undefined'
-            ? { level: 'ok', value: (self.crossOriginIsolated ? 'isolé' : 'non isolé') }
+            ? { level: 'ok', value: self.crossOriginIsolated ? 'isolé' : 'non isolé' }
             : { level: 'warn', value: 'absent' },
         );
         probe('platform', 'OffscreenCanvas', 'vignettes et décodage hors du thread UI', () =>
-          typeof OffscreenCanvas !== 'undefined' ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent' },
+          typeof OffscreenCanvas !== 'undefined'
+            ? { level: 'ok', value: 'disponible' }
+            : { level: 'warn', value: 'absent' },
         );
         probe('platform', 'createImageBitmap', 'chargement des planches de référence', () =>
-          typeof createImageBitmap === 'function' ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent' },
+          typeof createImageBitmap === 'function'
+            ? { level: 'ok', value: 'disponible' }
+            : { level: 'warn', value: 'absent' },
         );
         probe('platform', 'File System Access', 'dépôt de dossiers de séquences', () =>
-          'showOpenFilePicker' in window ? { level: 'ok', value: 'disponible' } : { level: 'info', value: 'absent (passera par Tauri)' },
+          'showOpenFilePicker' in window
+            ? { level: 'ok', value: 'disponible' }
+            : { level: 'info', value: 'absent (passera par Tauri)' },
         );
         probe('platform', 'Canvas Display P3', 'justesse colorimétrique hors sRGB', () => {
           const ctx = document.createElement('canvas').getContext('2d', { colorSpace: 'display-p3' });
@@ -515,7 +552,8 @@
             const s = gl.createShader(type);
             gl.shaderSource(s, src);
             gl.compileShader(s);
-            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || 'compile');
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+              throw new Error(gl.getShaderInfoLog(s) || 'compile');
             return s;
           };
           let prog;
@@ -524,7 +562,8 @@
             gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
             gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
             gl.linkProgram(prog);
-            if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
+            if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+              throw new Error(gl.getProgramInfoLog(prog) || 'link');
           } catch (e) {
             document.getElementById('perf').innerHTML =
               '<div class="row fail"><span class="badge">✕</span><span class="what">Shader GLSL ES 3.0 refusé<span class="why">' +
@@ -588,7 +627,9 @@
             'Bloquant : ' +
             (fails.map((f) => f.what).join(', ') || 'débit de rendu insuffisant') +
             '. Comparer avec le navigateur de cette machine : si lui passe, le problème est le webview, et ' +
-            (/Linux/.test(navigator.userAgent) ? 'Linux a besoin d’un repli (Electron, ou navigateur sur localhost).' : 'le repli navigateur reste la sortie.');
+            (/Linux/.test(navigator.userAgent)
+              ? 'Linux a besoin d’un repli (Electron, ou navigateur sur localhost).'
+              : 'le repli navigateur reste la sortie.');
         } else if (warns.length > 2) {
           cls = 'warn';
           title = 'Viable, avec des fonctions dégradées';
@@ -619,7 +660,8 @@
           const ta = document.getElementById('json');
           ta.hidden = false;
           ta.select();
-          document.getElementById('copied').textContent = 'presse-papier refusé — sélectionner et copier à la main';
+          document.getElementById('copied').textContent =
+            'presse-papier refusé — sélectionner et copier à la main';
         }
         setTimeout(() => (document.getElementById('copied').textContent = ''), 4000);
       });
