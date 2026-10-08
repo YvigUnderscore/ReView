@@ -82,16 +82,23 @@ annotations d'une frame, H.264/AAC manquants cassent la lecture des proxies.
 | OS | Machine | Webview | Référence (même machine) | Verdict |
 | --- | --- | --- | --- | --- |
 | Windows 11 | RTX 5080, D3D11, 144 Hz | WebView2 154 — 144 i/s | Chrome 154 — 143 i/s | viable |
-| macOS | — | à mesurer | — | — |
-| Linux | — | à mesurer | — | — |
+| macOS | — | à mesurer (build CI vert) | — | — |
+| Linux | — | à mesurer (build CI vert) | — | — |
+
+Le binaire compile et s'empaquette sur les trois OS (workflow `Desktop`, 2026-10-08) :
+`.msi`/`-setup.exe`, `.dmg` (Apple Silicon), `.AppImage`/`.deb` (WebKitGTK 4.1). Reste à
+lancer le diagnostic sur un vrai Mac et un vrai Linux équipé d'un GPU — c'est cette mesure
+qui dira si l'application vise trois plateformes ou deux.
 
 Windows (2026-10-08) : sur 31 sondes, 28 rendent la même valeur des deux côtés ; les trois
 autres sont le contexte, le nom du moteur et le débit (144 contre 143 i/s, tous deux au
 plafond de l'écran). Seule réserve, `SharedArrayBuffer`, absent partout faute d'en-têtes
-COOP/COEP. Le vrai frontend
-(`http://localhost:3429`, pile Docker) se charge dans la fenêtre : page de connexion
-rendue, aucune erreur console, aucune requête en échec. Le viewer n'y a pas encore été
-exercé — il faut une session.
+COOP/COEP.
+
+Le vrai frontend (`http://localhost:3429`, pile Docker) tourne dans la fenêtre. Sans
+session, par le portail client public (`/client/:token`) : vidéo lue, calée image par
+image (`requestVideoFrameCallback`) et positionnée ; scène USD et gaussian splat rendus ;
+annotation à main levée tracée. Aucune erreur console, aucune requête en échec.
 
 ## Si Linux échoue
 
