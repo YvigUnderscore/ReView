@@ -126,7 +126,7 @@ describe('la grille tasse', () => {
     // sont prises par le premier bloc suivant qui y tient. Sans `dense`, elles resteraient
     // vides — c'est le défaut que l'accueil portait avec `items-start`.
     expect(WIDGET_ROW_GRID_CLASS).toContain('grid-flow-row-dense');
-    expect(WIDGET_ROW_GRID_CLASS).toContain('auto-rows-[5rem]');
+    expect(WIDGET_ROW_GRID_CLASS).toContain('auto-rows-20');
     expect(WIDGET_ROW_GRID_CLASS).not.toContain('items-start');
   });
 

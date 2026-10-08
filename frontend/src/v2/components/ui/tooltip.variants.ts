@@ -44,11 +44,11 @@ export function shouldRenderTooltip(label: unknown): boolean {
  *
  * Deux points que les tests verrouillent :
  *
- *  1. **`z-[60]`, pas `z-50`.** Tous les calques flottants du dossier (dialog, sheet,
+ *  1. **`z-60`, pas `z-50`.** Tous les calques flottants du dossier (dialog, sheet,
  *     popover, context-menu, lightbox) sont à `z-50`. Une infobulle déclenchée depuis un
  *     bouton d'en-tête de modale est portalisée sur `body` comme la modale elle-même : à
  *     égalité de `z-index`, seul l'ordre du DOM tranche, et il dépend de l'ordre de montage.
- *     Un cran au-dessus rend le résultat indépendant de cet ordre. `z-[60]` est déjà le
+ *     Un cran au-dessus rend le résultat indépendant de cet ordre. `z-60` est déjà le
  *     cran « au-dessus de tout » du dépôt (cf. `FullPageDropzone`).
  *  2. **`data-[state=delayed-open]` / `data-[state=instant-open]`, jamais `data-[state=open]`.**
  *     Radix Tooltip n'écrit pas `open` dans son `data-state`, contrairement au popover et au
@@ -58,7 +58,7 @@ export function shouldRenderTooltip(label: unknown): boolean {
  */
 export function tooltipContentClass(className?: string): string {
   return cn(
-    'z-[60] max-w-xs rounded-md border border-border bg-card px-2 py-1 text-xs text-card-foreground shadow-xl',
+    'z-60 max-w-xs rounded-md border border-border bg-card px-2 py-1 text-xs text-card-foreground shadow-xl',
     'data-[state=delayed-open]:animate-in data-[state=instant-open]:animate-in data-[state=closed]:animate-out',
     'data-[state=delayed-open]:fade-in-0 data-[state=instant-open]:fade-in-0 data-[state=closed]:fade-out-0',
     'data-[state=delayed-open]:zoom-in-95 data-[state=instant-open]:zoom-in-95 data-[state=closed]:zoom-out-95',

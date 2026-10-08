@@ -137,7 +137,7 @@ describe('la grille tasse', () => {
     // sont prises par le premier bloc suivant qui y tient. Sans `dense`, elles resteraient
     // vides — c'est le défaut entouré en rouge.
     expect(OVERVIEW_GRID_CLASS).toContain('grid-flow-row-dense');
-    expect(OVERVIEW_GRID_CLASS).toContain('auto-rows-[5rem]');
+    expect(OVERVIEW_GRID_CLASS).toContain('auto-rows-20');
   });
 
   it('écrit une classe d’emprise par hauteur offerte', () => {

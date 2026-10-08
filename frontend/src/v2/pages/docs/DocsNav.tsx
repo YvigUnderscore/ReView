@@ -135,7 +135,7 @@ export default function DocsNav({
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={t('docs.filter')}
           aria-label={t('docs.filter')}
-          className="w-full rounded-lg border border-input bg-secondary/60 py-1.5 pl-8 pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:bg-secondary focus:ring-1 focus:ring-ring"
+          className="w-full rounded-lg border border-input bg-secondary/60 py-1.5 pl-8 pr-8 text-sm outline-hidden transition-colors placeholder:text-muted-foreground focus:border-ring focus:bg-secondary focus:ring-1 focus:ring-ring"
         />
         {query !== '' && (
           <button
@@ -187,7 +187,7 @@ export default function DocsNav({
                         {active && (
                           <span
                             aria-hidden="true"
-                            className="absolute -left-[7px] bottom-1 top-1 w-0.5 rounded-full bg-primary"
+                            className="absolute left-[-7px] bottom-1 top-1 w-0.5 rounded-full bg-primary"
                           />
                         )}
                         <button

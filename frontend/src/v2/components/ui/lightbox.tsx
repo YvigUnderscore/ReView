@@ -100,7 +100,7 @@ export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: L
         <DialogPrimitive.Content
           aria-describedby={undefined}
           onKeyDown={onKeyDown}
-          className="fixed inset-0 z-50 flex items-center justify-center outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0"
+          className="fixed inset-0 z-50 flex items-center justify-center outline-hidden data-[state=open]:animate-in data-[state=open]:fade-in-0"
         >
           <DialogPrimitive.Title className="sr-only">{t('comments.imagePreview')}</DialogPrimitive.Title>
 

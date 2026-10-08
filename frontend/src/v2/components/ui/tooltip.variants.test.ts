@@ -21,7 +21,7 @@ describe('tooltipContentClass — empilement', () => {
    */
   it('se place au-dessus des calques à z-50 (dialog, sheet, popover, menu contextuel)', () => {
     const classes = set(tooltipContentClass());
-    expect(classes.has('z-[60]')).toBe(true);
+    expect(classes.has('z-60')).toBe(true);
     expect(classes.has('z-50')).toBe(false);
   });
 });

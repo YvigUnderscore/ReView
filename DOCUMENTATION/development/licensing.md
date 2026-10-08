@@ -222,7 +222,7 @@ knowing before you add a file outside the scan.
 | `scripts/` | `.mjs`, `.sh` | Yes |
 | `desktop/src-tauri` | `.rs`, `.toml` | Yes |
 | `desktop/launcher`, `desktop/scripts`, `desktop/vitest.config.mjs` | `.js`, `.css`, `.py`, `.mjs` | Yes |
-| Nine root configs (vitest, eslint, playwright, postcss, tailwind, vite) | `.ts`, `.js` | Yes |
+| Eight root configs (vitest, eslint, playwright, postcss, vite) | `.ts`, `.js` | Yes |
 | `clients/python`, `clients/dcc` | `.py` — headers present, written by hand | **No** |
 | `.github/workflows` | `.yml` — headers present, written by hand | **No** |
 | `desktop/launcher` HTML pages | `.html` — headers present, written by hand | **No** |

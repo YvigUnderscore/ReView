@@ -43,7 +43,6 @@ export const EXTRA_FILES = [
   'frontend/eslint.config.js',
   'frontend/playwright.config.ts',
   'frontend/postcss.config.js',
-  'frontend/tailwind.config.js',
   'frontend/vite.config.js',
   'frontend/vitest.config.ts',
   'frontend/vitest.setup.ts',

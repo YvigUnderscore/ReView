@@ -60,7 +60,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(item.value)}
             className={cn(
               'flex items-center justify-center gap-1.5 whitespace-nowrap rounded border-0 bg-transparent font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
               'disabled:cursor-not-allowed disabled:opacity-40',
               size === 'lg' ? 'min-h-8 px-3 text-sm' : 'min-h-7 px-2 text-xs',
               iconOnly && (size === 'lg' ? 'w-8 px-0' : 'w-7 px-0'),

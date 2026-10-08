@@ -75,7 +75,7 @@ describe('buttonVariants — non-régression de forme', () => {
     expect(set(buttonVariants())).toEqual(
       set(
         'ui-pressable inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium' +
-          ' transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none' +
+          ' transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-hidden' +
           ' focus-visible:ring-2 focus-visible:ring-ring bg-primary text-primary-foreground' +
           ' hover:bg-primary/90 active:bg-primary/80 px-4 py-2',
       ),

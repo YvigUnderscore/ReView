@@ -34,7 +34,7 @@ const NOTE_ROWS = 3;
  * Largeur de la bande de vignettes : deux d'affilée (`h-14` + l'écart), le reste passe à la
  * ligne. Sans plafond, six images écraseraient le champ de texte — elles sont `shrink-0`.
  */
-const THUMBS_WIDTH = 'w-[7.5rem]';
+const THUMBS_WIDTH = 'w-30';
 
 export default function PoiDraftRows({ poi }: { poi: PoiDraftState }) {
   const t = useT();
@@ -86,7 +86,7 @@ function PoiDraftRow({ point, index, poi }: { point: PoiDraft; index: number; po
           onFocus={() => poi.setActiveKey(point.key)}
           placeholder={t('poi.noteFor', { n: index + 1 })}
           aria-label={t('poi.noteFor', { n: index + 1 })}
-          className="min-w-0 flex-1 break-words px-2 py-1 text-xs"
+          className="min-w-0 flex-1 wrap-break-word px-2 py-1 text-xs"
         />
         <input
           ref={fileRef}

@@ -210,7 +210,7 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
           }
           drawer={
             state.drawer === 'strip' ? (
-              <div className="flex-shrink-0 border-t border-border bg-card px-2.5 py-2">
+              <div className="shrink-0 border-t border-border bg-card px-2.5 py-2">
                 <TimelineTrack
                   items={items}
                   total={timeline.totalDuration}

@@ -31,8 +31,8 @@ const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'relative h-[1.0625rem] w-[1.875rem] shrink-0 cursor-pointer rounded-full border-0 p-0',
-        'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'relative h-4.25 w-7.5 shrink-0 cursor-pointer rounded-full border-0 p-0',
+        'transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
         'disabled:cursor-not-allowed disabled:opacity-50',
         checked ? 'bg-primary/30' : 'bg-secondary',
         className,
@@ -42,8 +42,8 @@ const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
       <span
         aria-hidden
         className={cn(
-          'absolute left-[2px] top-[2px] h-[0.8125rem] w-[0.8125rem] rounded-full transition-[transform,background-color] duration-150',
-          checked ? 'translate-x-[0.8125rem] bg-primary' : 'bg-muted-foreground',
+          'absolute left-[2px] top-[2px] h-3.25 w-3.25 rounded-full transition-[translate,background-color] duration-150',
+          checked ? 'translate-x-3.25 bg-primary' : 'bg-muted-foreground',
         )}
       />
     </button>

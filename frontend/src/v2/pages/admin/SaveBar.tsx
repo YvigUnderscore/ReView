@@ -28,7 +28,7 @@ export default function SaveBar({
 }) {
   const t = useT();
   return (
-    <div className="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center gap-2 border-t border-border bg-background/95 py-3 backdrop-blur">
+    <div className="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center gap-2 border-t border-border bg-background/95 py-3 backdrop-blur-sm">
       <Button size="sm" disabled={!dirty || busy} onClick={onSave}>
         <Save size={14} /> {busy ? t('common.saving') : t('common.save')}
       </Button>

@@ -219,7 +219,7 @@ function EntityCard({
   // Vue cartes — léger « hover lift » (désactivé si prefers-reduced-motion)
   return wrap(
     <div
-      className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-colors`}
+      className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-[translate,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-colors`}
     >
       <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-secondary/40">
         {/* Sans miniature, la carte porte le nom : c'est ce qu'on cherche du regard, et

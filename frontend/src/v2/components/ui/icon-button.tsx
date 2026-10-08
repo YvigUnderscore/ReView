@@ -43,7 +43,7 @@ const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         aria-pressed={active}
         className={cn(
           'ui-pressable flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
           'disabled:pointer-events-none disabled:opacity-40',
           // `bordered` sert à poser le bouton sur une surface claire : c'est une limite de
           // contrôle, pas un séparateur — d'où `--border-strong` (3:1) et non `--border`.

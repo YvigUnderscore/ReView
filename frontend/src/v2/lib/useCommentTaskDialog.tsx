@@ -152,7 +152,7 @@ export function useCommentTaskDialog(): {
               maxLength={160}
               placeholder={t('task.fromComment.namePlaceholder')}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
             />
           </label>
           <label className="block space-y-1">

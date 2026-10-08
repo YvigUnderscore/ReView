@@ -60,7 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.props.fallback) return this.props.fallback(this.reset);
 
     return (
-      <div className="flex min-h-[16rem] flex-col items-center justify-center gap-3 p-8 text-center">
+      <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center">
         <TriangleAlert size={28} className="text-destructive" aria-hidden />
         <h2 className="text-base font-medium text-foreground">{t('error.boundary.title')}</h2>
         <p className="max-w-md text-sm text-muted-foreground">{t('error.boundary.description')}</p>

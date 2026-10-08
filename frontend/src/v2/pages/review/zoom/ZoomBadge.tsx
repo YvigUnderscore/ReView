@@ -18,7 +18,7 @@ export default function ZoomBadge({ zoom }: { zoom: ViewportZoom }) {
       onClick={zoom.reset}
       title={t('video.zoom.reset')}
       aria-label={t('video.zoom.reset')}
-      className="absolute left-3 top-3 z-40 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur hover:bg-black/80"
+      className="absolute left-3 top-3 z-40 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur-sm hover:bg-black/80"
     >
       {Math.round(zoom.state.scale * 100)}%
       <Minimize2 size={12} />

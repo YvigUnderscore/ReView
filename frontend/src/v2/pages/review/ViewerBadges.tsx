@@ -28,12 +28,12 @@ export default function ViewerBadges({
     <>
       <ZoomBadge zoom={zoom} />
       {playbackSpeed.visible && (
-        <div className="pointer-events-none absolute right-3 top-3 z-30 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur">
+        <div className="pointer-events-none absolute right-3 top-3 z-30 rounded-md bg-black/60 px-2 py-1 font-mono text-xs text-white backdrop-blur-sm">
           {playbackSpeed.speed < 0 ? '◀' : '▶'} ×{Math.abs(playbackSpeed.speed)}
         </div>
       )}
       {(buffering || switchingQuality) && (
-        <div className="pointer-events-none absolute bottom-3 left-3 z-30 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur">
+        <div className="pointer-events-none absolute bottom-3 left-3 z-30 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm">
           <Loader2 size={13} className="animate-spin" />
           {switchingQuality ? t('video.qualitySwitch') : t('common.loading')}
         </div>

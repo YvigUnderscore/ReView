@@ -146,8 +146,8 @@ export default function ReviewChrome({
       {/* En-tête unique : identité à gauche, bascule de mode au centre, A/B du viewer puis
           actions de la page à droite. Il passe à la ligne plutôt que de déborder — la barre
           fusionnée est bien plus chargée que la seule bascule qu'elle portait. */}
-      <header className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
-        {left && <div className="flex min-w-0 flex-shrink items-center gap-2">{left}</div>}
+      <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
+        {left && <div className="flex min-w-0 shrink items-center gap-2">{left}</div>}
         {switchable && (
           <div className="mx-auto flex items-center gap-2">
             <SegmentedControl
@@ -167,7 +167,7 @@ export default function ReviewChrome({
           </div>
         )}
         {hasRight && (
-          <div className={`flex flex-shrink-0 items-center gap-2 text-sm${switchable ? '' : ' ml-auto'}`}>
+          <div className={`flex shrink-0 items-center gap-2 text-sm${switchable ? '' : ' ml-auto'}`}>
             {headerRight}
             {slots?.actions}
           </div>
@@ -214,7 +214,7 @@ export default function ReviewChrome({
           permanence pour ne rien lui apprendre. Le mode reste expliqué dans l'infobulle de
           son bouton, où l'on va le chercher quand on se pose la question. */}
       {dirty !== undefined && (
-        <footer className="flex flex-shrink-0 items-center justify-end border-t border-border bg-card/60 px-2.5 py-[0.3125rem]">
+        <footer className="flex shrink-0 items-center justify-end border-t border-border bg-card/60 px-2.5 py-1.25">
           <Badge variant={dirty ? 'warning' : 'success'}>
             {dirty ? t('common.notSaved') : t('common.saved')}
           </Badge>

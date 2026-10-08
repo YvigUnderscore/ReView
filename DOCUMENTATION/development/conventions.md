@@ -2,7 +2,7 @@
 
 *The house rules a change must satisfy: languages, licensing, data fetching, layout, right-click, and the backend's safety rules.*
 
-> Updated: 2026-09-20
+> Updated: 2026-10-08
 
 These are the rules that are not obvious from reading the code, and that cost a bug each time
 they were rediscovered. [Code structure](code-structure.md) says *where* a thing goes; this
@@ -57,7 +57,7 @@ node scripts/add-license-headers.mjs
 | Comment style `#` | `.sh`, `.py` |
 | Block comment | `.css` |
 | Scanned roots | `backend/src`, `backend/scripts`, `backend/prisma`, `frontend/src`, `frontend/scripts`, `frontend/e2e`, `scripts` |
-| Named extras | The nine package-root config files (`vitest.config.ts`, `eslint.config.js`, `playwright.config.ts`, `tailwind.config.js`…) |
+| Named extras | The nine package-root config files (`vitest.config.ts`, `eslint.config.js`, `playwright.config.ts`, `vite.config.js`…) |
 | Never scanned | `node_modules`, `dist`, `build`, `coverage`, `generated`, `migrations` |
 
 > [!IMPORTANT]
@@ -76,6 +76,12 @@ checks run first in `validate.sh`, before anything is compiled. Details:
 - **Theme tokens only** for colours (`bg-primary`, `text-muted-foreground`…) — never raw
   Tailwind palette classes. `scripts/check-color-tokens.mjs` rejects `bg-blue-500` and
   arbitrary values like `bg-[#1e293b]`.
+- **Tailwind 4, configured in CSS** — there is no `tailwind.config.js`. `src/index.css` maps
+  utility names to the HSL tokens of its `:root` and `.dark` blocks, in a
+  `@theme inline reference` block: a new colour is its HSL value in both blocks, then one
+  `--color-name: hsl(var(--name))` line under `@theme`. The sections headed *Parité v3* keep
+  the v3 rendering where v4 changed a default (preflight, `space-*`); drop one only together
+  with the markup that relies on it.
 - Reusable primitives live in `src/v2/components/ui/`; no hand-rolled overlays.
 - Never define a component inside another component's render.
 - **Simple UI rule**: a new action goes to the right-click context menu, the Ctrl+K palette, a

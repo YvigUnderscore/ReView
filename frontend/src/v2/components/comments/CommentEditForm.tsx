@@ -111,7 +111,7 @@ export default function CommentEditForm({
           ref={textRef}
           rows={2}
           autoFocus
-          className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-hidden focus:ring-1 focus:ring-ring"
         />
       </div>
       {drafts.length > 0 && <AttachmentDraftList drafts={drafts} onRemove={drop} />}

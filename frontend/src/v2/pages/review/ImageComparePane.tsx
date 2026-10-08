@@ -66,10 +66,10 @@ export default function ImageComparePane({
           />
         </div>
       )}
-      <span className="absolute left-2 top-2 z-30 max-w-48 truncate rounded-md border border-border bg-card/90 px-2 py-1 text-xs text-muted-foreground backdrop-blur">
+      <span className="absolute left-2 top-2 z-30 max-w-48 truncate rounded-md border border-border bg-card/90 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm">
         {t('review.compare.label')} <span className="text-foreground">{data?.media.originalName ?? '…'}</span>
       </span>
-      <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 text-xs backdrop-blur">
+      <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 text-xs backdrop-blur-sm">
         <button
           onClick={onWipe}
           title={t('review.compare.toWipe')}

@@ -23,7 +23,7 @@ import type { ToolId } from './tools';
  *     précisément ce que fait la règle 3.
  *  2. **Sortir du mode éteint le bouton** (front descendant de « mode Annoter ») : il ne reste
  *     pas allumé sur une annotation qu'on vient de quitter.
- *  3. **Un outil de la scène reprend le pointeur.** Le calque 2D couvre tout le cadre (`z-[6]`)
+ *  3. **Un outil de la scène reprend le pointeur.** Le calque 2D couvre tout le cadre (`z-6`)
  *     et, armé, capte le pointeur : il avalait les clics destinés à la surface — c'est ce qui
  *     rendait le placement d'un point d'intérêt inerte dès qu'on avait cliqué « Annoter ». Armer
  *     la brosse, la gomme ou l'épingle range donc le crayon 2D, qui reste ce que l'outil de

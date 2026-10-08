@@ -182,7 +182,7 @@ export function useKanbanCardMenu(
                 value={draft}
                 maxLength={160}
                 onChange={(e) => setDraft(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
             </label>
             <DialogFooter>

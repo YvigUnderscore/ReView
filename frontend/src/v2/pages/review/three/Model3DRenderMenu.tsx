@@ -34,7 +34,7 @@ export default function Model3DRenderMenu({
       <PopoverTrigger
         title={t('viewer.render.title')}
         aria-label={t('viewer.render.title')}
-        className="flex items-center gap-1.5 rounded-md border border-border bg-card/85 px-2 py-1.5 text-xs font-medium text-muted-foreground shadow-lg backdrop-blur transition-colors hover:bg-card hover:text-foreground data-[state=open]:bg-card data-[state=open]:text-foreground"
+        className="flex items-center gap-1.5 rounded-md border border-border bg-card/85 px-2 py-1.5 text-xs font-medium text-muted-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-card hover:text-foreground data-[state=open]:bg-card data-[state=open]:text-foreground"
       >
         <SlidersHorizontal size={13} />
         {t('viewer.render.title')}

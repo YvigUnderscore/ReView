@@ -294,6 +294,6 @@ describe('OverviewTab — redimensionnement', () => {
     // laisse libres restent vides — le défaut entouré en rouge sur la capture.
     const grid = widget('activity')?.parentElement?.className ?? '';
     expect(grid).toContain('grid-flow-row-dense');
-    expect(grid).toContain('auto-rows-[5rem]');
+    expect(grid).toContain('auto-rows-20');
   });
 });

@@ -32,7 +32,7 @@ function ShotStatusChip({ row, actions }: { row: GridRow; actions: GridActions }
       <button
         type="button"
         aria-label={`${t('production.grid.shotStatus')} · ${name}`}
-        className="flex min-w-0 max-w-[7.5rem] items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring"
+        className="flex min-w-0 max-w-30 items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-secondary focus:outline-hidden focus:ring-1 focus:ring-ring"
         onClick={(event) =>
           event.currentTarget.dispatchEvent(
             new MouseEvent('contextmenu', {

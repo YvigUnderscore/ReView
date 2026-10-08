@@ -71,7 +71,7 @@ export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) 
   return (
     <div
       className={`fixed bottom-4 z-40 flex h-96 w-80 flex-col rounded-lg border border-border bg-card shadow-xl ${
-        sidebarHidden ? 'left-4' : 'left-[15.5rem]'
+        sidebarHidden ? 'left-4' : 'left-62'
       }`}
     >
       <header className="flex items-center gap-2 border-b border-border px-3 py-2">
@@ -133,7 +133,7 @@ export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) 
           maxLength={4000}
           placeholder={t('chat.placeholder')}
           aria-label={t('chat.placeholder')}
-          className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+          className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-hidden focus:ring-1 focus:ring-ring"
         />
       </div>
 

@@ -296,7 +296,7 @@ export default function VideoPane({
       <div
         className={
           videoOnlyFs
-            ? `absolute inset-x-0 bottom-0 z-40 flex flex-col gap-2 bg-black/60 p-3 backdrop-blur-sm transition-opacity duration-300 ${
+            ? `absolute inset-x-0 bottom-0 z-40 flex flex-col gap-2 bg-black/60 p-3 backdrop-blur-xs transition-opacity duration-300 ${
                 controlsVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`
             : 'contents'

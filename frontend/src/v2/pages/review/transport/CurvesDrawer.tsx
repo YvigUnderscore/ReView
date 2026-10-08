@@ -102,7 +102,7 @@ export default function CurvesDrawer({
   const primaryKey = primary ? anim.anim.channels[primary.channel]?.keys[primary.index] : undefined;
 
   return (
-    <div className="relative flex flex-shrink-0 flex-col border-t border-border bg-card" style={{ height }}>
+    <div className="relative flex shrink-0 flex-col border-t border-border bg-card" style={{ height }}>
       {onHeight && (
         <div
           className="absolute inset-x-0 -top-1 z-10 h-2 touch-none"

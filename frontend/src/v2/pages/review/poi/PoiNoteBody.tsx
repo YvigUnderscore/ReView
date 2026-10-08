@@ -12,7 +12,7 @@ import { useT } from '../../../i18n';
  *
  * Trois règles, demandées à l'usage :
  *
- *  - **rien ne défile en largeur** : le texte revient à la ligne, et `break-words` coupe même
+ *  - **rien ne défile en largeur** : le texte revient à la ligne, et `wrap-break-word` coupe même
  *    ce qui n'a pas d'espace — un chemin de plan, une URL de rendu — au lieu de pousser la
  *    rangée hors de la colonne ;
  *  - **trois lignes, pas plus** tant qu'on n'a pas déroulé : le repliage du lot 5
@@ -56,7 +56,7 @@ export default function PoiNoteBody({
       {/* `min-w-0` : sans lui, un enfant de flex refuse de rétrécir sous la largeur de son
           contenu — c'est exactement ce qui faisait défiler la rangée en largeur. */}
       <div className={`min-w-0 flex-1 ${className ?? ''}`}>
-        <CollapsibleText text={text} lines={NOTE_LINES} className="whitespace-pre-wrap break-words">
+        <CollapsibleText text={text} lines={NOTE_LINES} className="whitespace-pre-wrap wrap-break-word">
           {text}
         </CollapsibleText>
       </div>

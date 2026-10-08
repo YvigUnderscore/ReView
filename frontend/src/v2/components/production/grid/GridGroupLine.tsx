@@ -49,7 +49,7 @@ export default function GridGroupLine({
           type="button"
           onClick={onToggle}
           aria-expanded={!collapsed}
-          className="flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-xs font-semibold transition-colors hover:bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+          className="flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-xs font-semibold transition-colors hover:bg-background focus:outline-hidden focus:ring-1 focus:ring-ring"
         >
           <ChevronRight size={13} aria-hidden className={collapsed ? 'shrink-0' : 'shrink-0 rotate-90'} />
           {group.episodeCode && (

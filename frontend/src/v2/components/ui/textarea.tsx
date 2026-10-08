@@ -57,7 +57,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         }}
         rows={autoGrow ? minRows : props.rows}
         className={cn(
-          'w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+          'w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
           autoGrow && 'resize-none',
           className,
         )}

@@ -18,7 +18,7 @@ const Checkbox = forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background/80 text-primary-foreground shadow-sm outline-none transition-colors',
+      'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-input bg-background/80 text-primary-foreground shadow-xs outline-hidden transition-colors',
       'focus-visible:ring-2 focus-visible:ring-ring',
       'data-[state=checked]:border-primary data-[state=checked]:bg-primary',
       /* Zone de saisie de 24 px (WCAG 2.5.8) autour d'une case qui garde son dessin de

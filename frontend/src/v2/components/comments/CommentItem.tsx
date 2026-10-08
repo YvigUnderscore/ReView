@@ -115,7 +115,7 @@ export default function CommentItem({
               isClosed(state) ? 'opacity-70' : ''
             } ${
               selected
-                ? 'border-primary/60 bg-primary/[0.06] shadow-sm'
+                ? 'border-primary/60 bg-primary/6 shadow-xs'
                 : `${STATE_CARD_CLASS[state]} ${selectable ? 'cursor-pointer hover:border-border hover:bg-secondary/60' : ''}`
             }`
       }

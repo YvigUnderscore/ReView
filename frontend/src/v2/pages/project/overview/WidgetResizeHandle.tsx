@@ -112,7 +112,7 @@ export default function WidgetResizeHandle({
       onKeyDown={onKeyDown}
       aria-label={t('overview.widget.resize', { name, width: size.span, height: size.rows })}
       title={t('overview.widget.resizeHint')}
-      className="absolute bottom-1 right-1 cursor-nwse-resize rounded-sm bg-card/80 p-1 text-muted-foreground transition-colors hover:text-primary focus-visible:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="absolute bottom-1 right-1 cursor-nwse-resize rounded-sm bg-card/80 p-1 text-muted-foreground transition-colors hover:text-primary focus-visible:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
     >
       <MoveDiagonal2 size={13} />
     </button>

@@ -110,7 +110,7 @@ export default function MontageTimeline({
                 }`}
                 className={`absolute inset-y-0 ${
                   starts.has(index) ? 'border-l border-primary/70' : 'border-l border-border/60'
-                } ${clip.placeholder ? 'bg-warning/20' : index % 2 === 0 ? 'bg-foreground/[0.04]' : ''} ${
+                } ${clip.placeholder ? 'bg-warning/20' : index % 2 === 0 ? 'bg-foreground/4' : ''} ${
                   index === currentIndex ? 'bg-primary/10' : ''
                 }`}
               />

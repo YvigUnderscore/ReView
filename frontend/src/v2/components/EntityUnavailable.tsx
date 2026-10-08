@@ -52,7 +52,7 @@ export default function EntityUnavailable({ kind, error, onRetry }: Props) {
 
   return (
     <PageShell title={title}>
-      <div className="flex min-h-[14rem] flex-col items-center justify-center gap-3 text-center">
+      <div className="flex min-h-56 flex-col items-center justify-center gap-3 text-center">
         <Icon size={28} className="text-muted-foreground" aria-hidden />
         <h2 className="text-base font-medium text-foreground">{title}</h2>
         <p className="max-w-md text-sm text-muted-foreground">{hint}</p>

@@ -48,7 +48,7 @@ export function MarkerTicks({
           // confortables. stopPropagation sur contextmenu : sans lui le menu de la barre
           // (« Ajouter un marqueur ici… ») s'ouvrait aussi et rendait celui-ci inopérant.
           <button
-            className="group absolute bottom-0 top-1/2 z-[15] flex w-2.5 -translate-x-1/2 justify-center"
+            className="group absolute bottom-0 top-1/2 z-15 flex w-2.5 -translate-x-1/2 justify-center"
             style={{ left: `calc(${(t / duration) * 100}% * (100% - 8px) / 100% + 4px)` }}
             onPointerDown={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.stopPropagation()}

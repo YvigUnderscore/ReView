@@ -1,9 +1,184 @@
 /* SPDX-FileCopyrightText: 2026 Yvig Bidon */
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Tailwind 4, configuration « CSS-first » : ce fichier tient lieu de tailwind.config.js.
+ * Les noms de classes sont ceux de la v3 ; les changements de comportement de la v4 qui
+ * déplaçaient un pixel à l'écran sont neutralisés un par un, chacun sous un titre
+ * « Parité v3 » qui dit ce qu'il rétablit et pourquoi.
+ */
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+/* `dark:` suit la classe `.dark` que stores/useTheme.ts pose sur <html> (`darkMode: 'class'`). */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Parité v3 : `hover:` s'applique au survol, sans condition. La v4 l'enferme dans
+ * `@media (hover: hover)`, ce qui change le rendu sur écran tactile.
+ */
+@custom-variant hover (&:hover);
+
+/*
+ * Noms d'utilitaires → tokens du thème.
+ *
+ * `inline` : l'utilitaire porte la valeur elle-même (`bg-primary` → `hsl(var(--primary))`),
+ * évaluée sur l'élément qui la reçoit, comme en v3. Une variable `--color-primary` résolue
+ * une fois sur `:root` ne suivrait plus un sous-arbre qui redéfinit `--primary`.
+ * `reference` : rien n'est émis dans `:root`. Les valeurs vivent dans les blocs `:root` et
+ * `.dark` ci-dessous, seule source de vérité — chrome.css et theme.a11y.test.ts y lisent aussi.
+ */
+@theme inline reference {
+  --font-sans: var(--font-sans);
+
+  /*
+   * Plus petit cran de la grille typographique (A1/A2). Exprimé en rem via le token, donc
+   * sensible au réglage de densité — contrairement aux `text-[10px]` en dur, qui restaient
+   * figés et aplatissaient la hiérarchie en mode compact.
+   */
+  --text-2xs: var(--text-2xs);
+  --text-2xs--line-height: 1rem;
+
+  /*
+   * Parité v3 : interlignes en rem. La v4 les écrit en ratio sans unité (`calc(1 / 0.75)`),
+   * que chaque descendant recalcule sur sa propre taille ; la v3 transmettait une longueur.
+   * Une initiale d'avatar à 8,8 px sous un `text-xs` passait ainsi de 16 px à 11,7 px.
+   */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --color-border: hsl(var(--border));
+  /*
+   * Limite d'un contrôle actionnable (bouton `outline`, bouton à icône bordé) : tient 3:1 avec
+   * sa surface, là où `border` n'est qu'un séparateur décoratif.
+   */
+  --color-border-strong: hsl(var(--border-strong));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  /* Magenta (Phase 12) : notifications/badges, avatars, data-viz, actions secondaires. */
+  --color-accent2: hsl(var(--accent-2));
+  --color-accent2-foreground: hsl(var(--accent-2-foreground));
+  /* Tokens sémantiques de statut (badges, jauges, pastilles). */
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-info: hsl(var(--info));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/*
+ * Parité v3 — preflight. La v4 a revu quelques remises à zéro du navigateur ; celles qui
+ * changeaient l'écran de ReView sont rétablies ici, avant les règles de base du projet comme
+ * l'était le preflight v3. Valeurs de la v3 recopiées telles quelles, couleurs comprises :
+ * ce sont celles du preflight, pas des choix de thème — un champ qui veut la sienne pose
+ * `placeholder:text-muted-foreground`, comme les primitives `ui/`.
+ */
+@layer base {
+  /* v4 : couleur du texte à 50 %. Une dizaine de champs n'ont pas de `placeholder:` à eux. */
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  /* v4 : curseur flèche sur les boutons. */
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+  :disabled {
+    cursor: default;
+  }
+
+  /*
+   * v4 remet à zéro marges et paddings de *tous* les éléments ; la v3 laissait au navigateur
+   * ceux des options de liste et des cellules de tableau. Pour ces dernières, `revert` ne
+   * suffit pas : leur pixel vient du `cellpadding` implicite du tableau, pas de la feuille du
+   * navigateur.
+   */
+  option {
+    padding: revert;
+  }
+  td,
+  th {
+    padding: 1px;
+  }
+
+  /* v4 : fond transparent. Les champs sans `bg-*` gardaient celui du navigateur. */
+  input:where(:not([type='button'], [type='reset'], [type='submit'])),
+  select,
+  textarea {
+    background-color: revert;
+  }
+
+  /* v4 : bouton de `<input type="file">` remis à plat ; la v3 lui laissait son dessin natif. */
+  ::file-selector-button {
+    border: revert;
+    border-radius: revert;
+    padding: revert;
+    color: revert;
+    background-color: revert;
+  }
+
+  /* v4 : apparence native du champ de recherche. */
+  :where([type='search']) {
+    -webkit-appearance: textfield;
+    outline-offset: -2px;
+  }
+
+  /*
+   * v4 : champs date et heure retouchés (hauteur d'une ligne, segments sans padding), soit
+   * 2 px de moins sur un `<input type="date">`. Retour au dessin du navigateur.
+   */
+  ::-webkit-date-and-time-value {
+    min-height: revert;
+    text-align: revert;
+  }
+  ::-webkit-datetime-edit {
+    display: revert;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: revert;
+  }
+  ::-webkit-datetime-edit,
+  ::-webkit-datetime-edit-year-field,
+  ::-webkit-datetime-edit-month-field,
+  ::-webkit-datetime-edit-day-field,
+  ::-webkit-datetime-edit-hour-field,
+  ::-webkit-datetime-edit-minute-field,
+  ::-webkit-datetime-edit-second-field,
+  ::-webkit-datetime-edit-millisecond-field,
+  ::-webkit-datetime-edit-meridiem-field {
+    padding-block: revert;
+  }
+  ::-webkit-calendar-picker-indicator {
+    line-height: revert;
+  }
+}
 
 @layer base {
   /*
@@ -184,7 +359,7 @@
 
     --tracking-wide: 0.025em;
 
-    /* Échelle de rayons : un seul scalaire `--radius` et ses dérivés (cf. tailwind.config.js). */
+    /* Échelle de rayons : un seul scalaire `--radius` et ses dérivés (cf. `@theme` en tête). */
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-xs: 0.25rem;
@@ -265,7 +440,7 @@
    * Anneau de focus clavier (A2). Six fichiers seulement le déclaraient, pour près de
    * trois cents boutons : au clavier, on ne savait pas où l'on était. Posé globalement à
    * partir des tokens, il couvre tout élément focusable sans déclaration par composant.
-   * Les primitives qui gèrent déjà leur focus posent `focus-visible:outline-none` et
+   * Les primitives qui gèrent déjà leur focus posent `focus-visible:outline-hidden` et
    * neutralisent donc cette règle — pas de double anneau.
    */
   :focus-visible {
@@ -632,8 +807,12 @@
   .doc-article .doc-callout > :last-child {
     @apply mb-0;
   }
+  /*
+   * `leading-4` écrit en toutes lettres : le libellé est un `<p>`, et en v4 le `leading-7` de
+   * `.doc-article p` primerait sur l'interligne que porte `text-2xs`, plus spécifique pourtant.
+   */
   .doc-article .doc-callout-label {
-    @apply mb-1 mt-0 text-2xs font-semibold uppercase tracking-wide;
+    @apply mb-1 mt-0 text-2xs leading-4 font-semibold uppercase tracking-wide;
   }
   /*
    * Cinq encarts, cinq teintes. Le fond est la teinte du filet à très faible opacité : les
@@ -685,5 +864,59 @@
   }
   .doc-hit[data-doc-hit='first'] {
     @apply bg-primary/40 ring-1 ring-primary/50;
+  }
+}
+
+/*
+ * Parité v3 — `space-x-*` / `space-y-*`.
+ *
+ * La v4 pose l'espacement en *bas* des enfants 1..n-1, sous un `:where()` de spécificité
+ * nulle ; la v3 le posait en *haut* des enfants 2..n, avec une spécificité qui écrasait leurs
+ * propres marges. L'écart se voit dès qu'un enfant est inline : dans
+ * `<div class="space-y-1.5"><Label/><Input/></div>`, le motif de formulaire de l'application,
+ * la marge tombait sur le `<label>`, où une marge verticale n'a aucun effet, et le champ
+ * remontait contre son libellé.
+ *
+ * L'utilitaire natif ne se désactive pas. On redéclare donc la règle v3, qui l'emporte par sa
+ * spécificité sur les enfants 2..n, et on retire au premier enfant la marge que la v4 lui
+ * donne (bloc `@layer utilities` qui suit : il doit passer après la règle native, de même
+ * spécificité nulle, et céder comme elle à une marge posée sur l'enfant lui-même).
+ * Pour s'en passer un jour : remplacer `space-*` par `flex`/`gap` conteneur par conteneur.
+ */
+@utility space-y-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(--spacing(--value(number)) * calc(1 - var(--tw-space-y-reverse)));
+    margin-bottom: calc(--spacing(--value(number)) * var(--tw-space-y-reverse));
+  }
+}
+@utility space-y-px {
+  & > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(1px * calc(1 - var(--tw-space-y-reverse)));
+    margin-bottom: calc(1px * var(--tw-space-y-reverse));
+  }
+}
+@utility space-x-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-x-reverse: 0;
+    margin-right: calc(--spacing(--value(number)) * var(--tw-space-x-reverse));
+    margin-left: calc(--spacing(--value(number)) * calc(1 - var(--tw-space-x-reverse)));
+  }
+}
+@utility -space-x-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-x-reverse: 0;
+    margin-right: calc(--spacing(--value(number) * -1) * var(--tw-space-x-reverse));
+    margin-left: calc(--spacing(--value(number) * -1) * calc(1 - var(--tw-space-x-reverse)));
+  }
+}
+
+@layer utilities {
+  :where([class*='space-y-'] > :first-child) {
+    margin-block-end: 0;
+  }
+  :where([class*='space-x-'] > :first-child) {
+    margin-inline-end: 0;
   }
 }

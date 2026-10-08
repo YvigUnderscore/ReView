@@ -90,7 +90,7 @@ describe('HomeGrid — l’emprise des blocs', () => {
     mount(undefined);
     const grid = sectionOf('stats')?.parentElement;
     expect(grid?.className).toContain('grid-flow-row-dense');
-    expect(grid?.className).toContain('auto-rows-[5rem]');
+    expect(grid?.className).toContain('auto-rows-20');
     expect(grid?.className).not.toContain('items-start');
   });
 

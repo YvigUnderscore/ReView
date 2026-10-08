@@ -140,7 +140,7 @@ export default function GridCellView({
           // Le bouton occupe toute la case : les pastilles s'alignent alors d'une ligne à
           // l'autre — c'est ce qui rend la colonne scannable — et la cible du clic droit
           // fait la taille de ce qu'on voit.
-          className="flex min-w-0 items-center gap-1 rounded px-1.5 py-1 transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring"
+          className="flex min-w-0 items-center gap-1 rounded px-1.5 py-1 transition-colors hover:bg-secondary focus:outline-hidden focus:ring-1 focus:ring-ring"
         >
           <StatusDot status={cell.status} />
           {/* `truncate` plutôt qu'un nom raccourci à la main : la largeur de colonne est

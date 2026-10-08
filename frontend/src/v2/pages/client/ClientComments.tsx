@@ -125,7 +125,7 @@ export default function ClientComments({
               {/* Contenu déjà assaini côté serveur (sanitizeHtml) — affiché en texte brut,
                   replié d'office s'il est trop grand (D6). */}
               <CollapsibleText text={c.content}>
-                <p className="whitespace-pre-wrap break-words">{c.content.replace(/<[^>]+>/g, '')}</p>
+                <p className="whitespace-pre-wrap wrap-break-word">{c.content.replace(/<[^>]+>/g, '')}</p>
               </CollapsibleText>
               {/* Images jointes par le studio : invisibles du client jusqu'ici, faute d'être
                   servies ET rendues. Mêmes vignettes et même carrousel que côté studio. */}

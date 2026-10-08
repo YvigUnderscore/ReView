@@ -58,7 +58,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.57.0",
-    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query-devtools": "^5.101.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
@@ -69,7 +69,6 @@
     "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/eslint-plugin": "^1.6.27",
-    "autoprefixer": "^10.4.22",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -79,7 +78,7 @@
     "happy-dom": "^20.10.6",
     "postcss": "^8.5.6",
     "prettier": "^3.9.4",
-    "tailwindcss": "^3.4.1",
+    "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.62.1",
@@ -91,6 +90,6 @@
     "nanoid@<3.3.18": "3.3.18",
     "nanoid@4": "5.1.16",
     "katex": "^0.18.2",
-    "postcss-selector-parser": "^7.1.6"
+    "sass": "^1.105.1"
   }
 }

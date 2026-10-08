@@ -70,7 +70,7 @@ export default function MontagePanels({
                 value={timeline.department ?? ''}
                 onChange={(e) => onDepartment(e.target.value || null)}
                 disabled={!canManage}
-                className="w-full rounded border border-input bg-background px-1.5 py-[0.3125rem] text-xs disabled:opacity-60"
+                className="w-full rounded border border-input bg-background px-1.5 py-1.25 text-xs disabled:opacity-60"
               >
                 <option value="">{t('timeline.departmentAuto')}</option>
                 {timeline.departments.map((d: DepartmentSummary) => (

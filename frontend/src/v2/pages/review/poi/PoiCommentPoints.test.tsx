@@ -76,7 +76,7 @@ describe('PoiCommentPoints — cliquer un numéro ramène la caméra sur son poi
       />,
     );
     expect(container.querySelector('.line-clamp-3')).not.toBeNull();
-    expect(container.querySelector('.break-words')).not.toBeNull();
+    expect(container.querySelector('.wrap-break-word')).not.toBeNull();
     fireEvent.click(
       screen.getByRole('button', { name: t('comments.expandComment', { count: long.length }) }),
     );

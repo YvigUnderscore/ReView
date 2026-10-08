@@ -94,7 +94,7 @@ function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
         </div>
         {/* Corps rendu en texte : `whitespace-pre-wrap` garde les retours à la ligne sans
             ouvrir la porte au HTML — un message est écrit par un utilisateur. */}
-        <p className="whitespace-pre-wrap break-words text-sm text-foreground/90">{message.body}</p>
+        <p className="whitespace-pre-wrap wrap-break-word text-sm text-foreground/90">{message.body}</p>
       </div>
     </div>
   );

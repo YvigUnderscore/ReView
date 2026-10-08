@@ -80,7 +80,7 @@ function PoiCard({
         onClick={onToggle}
         title={t('poi.card.open', { n })}
         aria-label={t('poi.card.open', { n })}
-        className="pointer-events-auto flex max-w-[9rem] items-center gap-1 rounded-full border border-border bg-card/90 px-2 py-0.5 text-2xs text-foreground shadow backdrop-blur hover:bg-secondary"
+        className="pointer-events-auto flex max-w-36 items-center gap-1 rounded-full border border-border bg-card/90 px-2 py-0.5 text-2xs text-foreground shadow-sm backdrop-blur-sm hover:bg-secondary"
       >
         {/* `min-w-0` : sans lui, un enfant de flex refuse de rétrécir et l'étiquette ne se
             coupe jamais — elle pousserait le compteur d'images hors de la pastille. */}
@@ -98,7 +98,7 @@ function PoiCard({
   return (
     <div
       {...CARD_MARK}
-      className="pointer-events-auto w-60 max-w-[15rem] space-y-1 rounded-md border border-border bg-card/95 p-2 text-left shadow-lg backdrop-blur"
+      className="pointer-events-auto w-60 max-w-60 space-y-1 rounded-md border border-border bg-card/95 p-2 text-left shadow-lg backdrop-blur-sm"
     >
       <div className="flex items-center gap-1">
         <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-2xs font-semibold text-primary-foreground">

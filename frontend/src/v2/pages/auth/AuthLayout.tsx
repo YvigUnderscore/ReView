@@ -76,7 +76,7 @@ export function AuthLayout({
         <Backdrop login={login} />
         {!login.bgUrl && (
           <>
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-background" />
+            <div className="absolute inset-0 bg-linear-to-br/srgb from-primary/20 via-background to-background" />
             <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
           </>
         )}

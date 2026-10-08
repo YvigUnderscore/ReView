@@ -58,7 +58,7 @@ export default function EntityHeaderPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group mb-4 flex w-full flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5 text-left shadow-sm transition-colors hover:border-primary hover:bg-secondary/30"
+        className="group mb-4 flex w-full flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5 text-left shadow-xs transition-colors hover:border-primary hover:bg-secondary/30"
       >
         <span className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Users size={15} className="text-primary" />

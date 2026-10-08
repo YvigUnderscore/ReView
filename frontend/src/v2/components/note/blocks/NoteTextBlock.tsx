@@ -135,7 +135,7 @@ export default function NoteTextBlock({
         aria-label={t('note.text.placeholder')}
         spellCheck
         rows={2}
-        className="w-full resize-none rounded-md border border-input bg-background p-2 text-sm leading-relaxed outline-none focus:border-ring"
+        className="w-full resize-none rounded-md border border-input bg-background p-2 text-sm leading-relaxed outline-hidden focus:border-ring"
       />
     </div>
   );

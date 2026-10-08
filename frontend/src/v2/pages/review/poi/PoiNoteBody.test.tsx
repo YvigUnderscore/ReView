@@ -54,7 +54,7 @@ describe('PoiNoteBody — la remarque se lit sans déborder', () => {
     expect(body?.textContent).toBe(longPath);
     // La coupe doit porter l'élément QUI CONTIENT le texte : posée sur un ancêtre, elle laisse
     // l'enfant pousser la rangée hors de la colonne.
-    expect(container.querySelector('.break-words')).toBe(body);
+    expect(container.querySelector('.wrap-break-word')).toBe(body);
     // Et rien, au-dessus, ne rouvre un axe horizontal. Ces classes existent bel et bien dans
     // le dépôt — l'étiquette repliée d'une carte de scène se sert de `truncate` — les employer
     // ici ramènerait le défilement dont l'utilisateur ne veut pas.

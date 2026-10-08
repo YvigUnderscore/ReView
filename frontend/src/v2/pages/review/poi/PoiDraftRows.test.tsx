@@ -75,7 +75,7 @@ describe('PoiDraftRows — on écrit la remarque comme elle se lira', () => {
     const field = noteField(1);
     // Un `input` ne revient jamais à la ligne : le champ doit être une zone de texte.
     expect(field.tagName).toBe('TEXTAREA');
-    expect(field).toHaveClass('break-words');
+    expect(field).toHaveClass('wrap-break-word');
   });
 
   it('grandit jusqu’à trois lignes, puis défile verticalement', () => {

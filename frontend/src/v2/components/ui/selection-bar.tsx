@@ -66,12 +66,12 @@ export default function SelectionBar({
   // 24 px de course et 0,18 s : les valeurs mêmes de l'animation d'origine.
   const move =
     phase === 'out'
-      ? 'animate-out fade-out slide-out-to-bottom-6 fill-mode-forwards duration-[180ms] motion-reduce:animate-none'
-      : 'animate-in fade-in slide-in-from-bottom-6 duration-[180ms] motion-reduce:animate-none';
+      ? 'animate-out fade-out slide-out-to-bottom-6 fill-mode-forwards duration-180 motion-reduce:animate-none'
+      : 'animate-in fade-in slide-in-from-bottom-6 duration-180 motion-reduce:animate-none';
 
   return (
     <div className={`pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4 ${move}`}>
-      <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-card/95 py-2 pl-4 pr-2 shadow-2xl backdrop-blur">
+      <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-card/95 py-2 pl-4 pr-2 shadow-2xl backdrop-blur-sm">
         <span className="text-sm font-medium">
           <span className="text-primary">{shownCount}</span> {shownLabel ?? t('common.selected')}
         </span>

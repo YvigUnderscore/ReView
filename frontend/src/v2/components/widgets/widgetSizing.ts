@@ -40,7 +40,7 @@ export const WIDGET_ROWS = [2, 3, 4, 5, 6] as const;
 
 export type WidgetRows = (typeof WIDGET_ROWS)[number];
 
-/** Hauteur d'une rangée, en pixels (`auto-rows-[5rem]`). */
+/** Hauteur d'une rangée, en pixels (`auto-rows-20`). */
 export const ROW_HEIGHT = 80;
 
 /** Écart entre deux blocs, en pixels (`gap-6`). */
@@ -57,7 +57,7 @@ export const ROW_PITCH = ROW_HEIGHT + GRID_GAP;
  * portait : celle-là alignait les blocs par le haut, si bien qu'un bloc court ouvrait sous
  * lui un trou que son voisin ne pouvait pas combler.
  */
-export const WIDGET_ROW_GRID_CLASS = 'grid grid-cols-12 grid-flow-row-dense auto-rows-[5rem] gap-6';
+export const WIDGET_ROW_GRID_CLASS = 'grid grid-cols-12 grid-flow-row-dense auto-rows-20 gap-6';
 
 const ROW_SPAN_CLASS: Record<WidgetRows, string> = {
   2: 'row-span-2',

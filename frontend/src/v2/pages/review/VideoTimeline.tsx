@@ -193,13 +193,13 @@ export default function VideoTimeline({
         <>
           {trimRange.start > 0 && (
             <div
-              className="pointer-events-none absolute inset-y-0 left-1 z-[5] rounded-l bg-background/70"
+              className="pointer-events-none absolute inset-y-0 left-1 z-5 rounded-l bg-background/70"
               style={{ width: `${Math.min(trimRange.start / duration, 1) * 100}%` }}
             />
           )}
           {trimRange.end < duration && (
             <div
-              className="pointer-events-none absolute inset-y-0 right-1 z-[5] rounded-r bg-background/70"
+              className="pointer-events-none absolute inset-y-0 right-1 z-5 rounded-r bg-background/70"
               style={{ width: `${Math.min(1 - trimRange.end / duration, 1) * 100}%` }}
             />
           )}
@@ -211,7 +211,7 @@ export default function VideoTimeline({
         <>
           {loop.in != null && loop.out != null && (
             <div
-              className="pointer-events-none absolute inset-y-0 z-[6] rounded bg-primary/20"
+              className="pointer-events-none absolute inset-y-0 z-6 rounded bg-primary/20"
               style={{
                 left: `calc(${(loop.in / duration) * 100}% * (100% - 8px) / 100% + 4px)`,
                 width: `${(Math.max(loop.out - loop.in, 0) / duration) * 100}%`,
@@ -222,7 +222,7 @@ export default function VideoTimeline({
             loop[k] != null ? (
               <div
                 key={k}
-                className="pointer-events-none absolute inset-y-1 z-[7] w-0.5 rounded-full bg-primary"
+                className="pointer-events-none absolute inset-y-1 z-7 w-0.5 rounded-full bg-primary"
                 style={{ left: `calc(${(loop[k] / duration) * 100}% * (100% - 8px) / 100% + 4px)` }}
                 title={k === 'in' ? t('video.loopIn') : t('video.loopOut')}
               />

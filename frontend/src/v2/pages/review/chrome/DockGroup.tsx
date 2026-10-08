@@ -10,7 +10,7 @@ import { useT } from '../../../i18n';
  * panneaux sont deux crans plus denses. Passé en `className` pour que `twMerge` remplace le
  * padding et la taille de texte par défaut.
  */
-export const DOCK_SELECT = 'w-full px-1.5 py-[0.3125rem] text-xs';
+export const DOCK_SELECT = 'w-full px-1.5 py-1.25 text-xs';
 
 /**
  * Primitives de contenu du dock inspecteur. Un panneau n'est qu'une suite de `Group`, et un

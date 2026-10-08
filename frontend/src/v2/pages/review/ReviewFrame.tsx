@@ -54,7 +54,7 @@ export default function ReviewFrame({
 
       {/* Guide letterbox : hors-cadre assombri + liseré du cadre de livraison */}
       {showGuide && guide && size && (
-        <div className="pointer-events-none absolute inset-0 z-[5]">
+        <div className="pointer-events-none absolute inset-0 z-5">
           <div className="absolute left-0 top-0 w-full" style={{ ...scrim, height: guide.top }} />
           <div
             className="absolute bottom-0 left-0 w-full"
@@ -89,7 +89,7 @@ export default function ReviewFrame({
       {/* Contenu ancré au cadre de livraison (annotations) */}
       {frame && (
         <div
-          className="absolute z-[6]"
+          className="absolute z-6"
           style={
             guide
               ? { left: guide.left, top: guide.top, width: guide.width, height: guide.height }

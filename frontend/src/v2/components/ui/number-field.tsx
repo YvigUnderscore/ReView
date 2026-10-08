@@ -140,7 +140,7 @@ export function NumberField({
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-md border border-input bg-background px-1.5 text-xs',
-        'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring',
+        'focus-within:outline-hidden focus-within:ring-2 focus-within:ring-ring',
         disabled && 'pointer-events-none opacity-50',
         className,
       )}
@@ -155,7 +155,7 @@ export function NumberField({
       <span
         id={textLabel ? labelId : undefined}
         title={hint ? t('numberField.dragHint', { hint }) : undefined}
-        className="flex touch-none select-none items-center text-muted-foreground [cursor:ew-resize]"
+        className="flex touch-none select-none items-center text-muted-foreground cursor-ew-resize"
         onPointerDown={(e) => {
           if (e.button !== 0) return;
           // Pas de seuil ici : le libellé n'a rien d'autre à faire qu'être glissé.
@@ -217,10 +217,10 @@ export function NumberField({
         }}
         onPointerCancel={endGesture}
         className={cn(
-          'h-[1.625rem] w-10 touch-none border-0 bg-transparent p-0 text-right font-mono text-xs',
-          'text-foreground outline-none',
+          'h-6.5 w-10 touch-none border-0 bg-transparent p-0 text-right font-mono text-xs',
+          'text-foreground outline-hidden',
           // Le curseur dit ce que le champ fait : scrubable au survol, textuel en saisie.
-          '[cursor:ew-resize] focus:[cursor:text]',
+          'cursor-ew-resize focus:cursor-text',
         )}
       />
       {unit && <span className="font-mono text-[0.625rem] text-muted-foreground">{unit}</span>}

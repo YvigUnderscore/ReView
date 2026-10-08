@@ -123,7 +123,7 @@ export default function MediaChrome({
       }
       drawer={
         hasAssets && state.drawer === 'strip' ? (
-          <div className="flex-shrink-0 border-t border-border bg-card px-2.5 py-2">
+          <div className="shrink-0 border-t border-border bg-card px-2.5 py-2">
             <VersionAssets versionId={versionId} mediaId={mediaId} />
           </div>
         ) : undefined

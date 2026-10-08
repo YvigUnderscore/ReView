@@ -31,7 +31,7 @@ export default function ImageViewerHud({
   return (
     <>
       {showInfo && (
-        <div className="absolute right-3 top-3 min-w-[10rem] rounded-md border border-border bg-card/95 p-2 text-xs backdrop-blur">
+        <div className="absolute right-3 top-3 min-w-40 rounded-md border border-border bg-card/95 p-2 text-xs backdrop-blur-sm">
           <div className="mb-1 font-medium text-foreground">{t('imageViewer.info')}</div>
           <dl className="space-y-0.5 text-muted-foreground">
             {natural && (
@@ -58,7 +58,7 @@ export default function ImageViewerHud({
         </div>
       )}
 
-      <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-border bg-card/90 p-1 backdrop-blur">
+      <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-border bg-card/90 p-1 backdrop-blur-sm">
         <button
           onClick={() => onZoom(1 / 1.25)}
           title={t('imageViewer.zoomOut')}

@@ -50,7 +50,7 @@ export default function AttachmentDraftList({
                 />
               </button>
             ) : (
-              <span className="flex h-14 max-w-[9rem] items-center gap-1 rounded border border-border bg-secondary/50 px-2 text-2xs text-muted-foreground">
+              <span className="flex h-14 max-w-36 items-center gap-1 rounded border border-border bg-secondary/50 px-2 text-2xs text-muted-foreground">
                 <Paperclip size={12} className="shrink-0" />
                 <span className="truncate">{d.name}</span>
               </span>

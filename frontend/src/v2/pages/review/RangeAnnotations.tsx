@@ -83,7 +83,7 @@ export function RangeSegments({
         return (
           <button
             key={c.id}
-            className={`absolute top-0.5 z-[12] h-1.5 rounded-full transition-opacity ${
+            className={`absolute top-0.5 z-12 h-1.5 rounded-full transition-opacity ${
               c.id === selectedId ? 'opacity-100' : 'opacity-70 hover:opacity-100'
             }`}
             style={{

@@ -100,7 +100,7 @@ export interface ObjectMarker {
 }
 
 const MARKER_CLASS =
-  'absolute left-0 top-0 z-[5] flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs font-semibold shadow';
+  'absolute left-0 top-0 z-5 flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs font-semibold shadow-sm';
 /** Pastille au repos : elle ne doit pas voler le pointeur à l'orbite. */
 const IDLE_CLASS = 'pointer-events-none border-background bg-primary text-primary-foreground';
 /** Pastille manipulable — le curseur annonce qu'elle se tire. */

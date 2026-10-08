@@ -34,7 +34,7 @@ const ContextMenuContent = forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        'z-50 min-w-[11rem] overflow-hidden rounded-md border border-border bg-card p-1 text-card-foreground shadow-xl outline-none',
+        'z-50 min-w-44 overflow-hidden rounded-md border border-border bg-card p-1 text-card-foreground shadow-xl outline-hidden',
         'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
         className,
       )}
@@ -57,8 +57,8 @@ const ContextMenuItem = forwardRef<
       if (onClick) setTimeout(() => onClick(e as unknown as React.MouseEvent<HTMLDivElement>), 0);
     }}
     className={cn(
-      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none transition-colors',
-      'focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-hidden transition-colors',
+      'focus:bg-secondary data-disabled:pointer-events-none data-disabled:opacity-50',
       danger ? 'text-destructive focus:bg-destructive/10' : 'text-foreground',
       className,
     )}
@@ -81,8 +81,8 @@ const ContextMenuRadioItem = forwardRef<
   <ContextMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-none transition-colors',
-      'focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-hidden transition-colors',
+      'focus:bg-secondary data-disabled:pointer-events-none data-disabled:opacity-50',
       className,
     )}
     {...props}
@@ -110,8 +110,8 @@ const ContextMenuCheckboxItem = forwardRef<
   <ContextMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-none transition-colors',
-      'focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-hidden transition-colors',
+      'focus:bg-secondary data-disabled:pointer-events-none data-disabled:opacity-50',
       className,
     )}
     {...props}
@@ -137,7 +137,7 @@ const ContextMenuSubTrigger = forwardRef<
   <ContextMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-none transition-colors',
+      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-hidden transition-colors',
       'focus:bg-secondary data-[state=open]:bg-secondary',
       className,
     )}
@@ -157,7 +157,7 @@ const ContextMenuSubContent = forwardRef<
     <ContextMenuPrimitive.SubContent
       ref={ref}
       className={cn(
-        'z-50 min-w-[11rem] overflow-hidden rounded-md border border-border bg-card p-1 text-card-foreground shadow-xl outline-none',
+        'z-50 min-w-44 overflow-hidden rounded-md border border-border bg-card p-1 text-card-foreground shadow-xl outline-hidden',
         'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
         className,
       )}

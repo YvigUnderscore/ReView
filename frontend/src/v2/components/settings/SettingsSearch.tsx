@@ -63,7 +63,7 @@ export function SettingsSearchBar({
         onChange={(e) => setQuery(e.target.value)}
         placeholder={t('admin.search.placeholder')}
         aria-label={t('admin.search.placeholder')}
-        className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-sm outline-hidden placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
       />
     </div>
   );

@@ -223,7 +223,7 @@ export default function AccountSections() {
             maxLength={500}
             rows={3}
             placeholder={t('profile.bio.placeholder')}
-            className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+            className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-hidden focus:ring-1 focus:ring-ring"
           />
         </div>
         <Button onClick={saveProfile} disabled={busy}>

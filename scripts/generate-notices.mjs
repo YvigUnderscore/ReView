@@ -291,7 +291,25 @@ export async function collectWorkspace(repoRoot, workspace, lock, tree) {
  * heuristiques ci-dessous ne tranche. Même contrat que `LICENSE_OVERRIDES` : on n'y inscrit
  * que ce qu'on a réellement lu dans le dépôt du projet concerné.
  */
-export const VENDORED_LICENSES = {};
+export const VENDORED_LICENSES = {
+  // Copies internes de @prisma/fetch-engine et @prisma/get-platform (backend). Leur licence se
+  // déduisait de Tailwind 3, qui installait ces mêmes paquets côté frontend ; Tailwind 4 ne les
+  // tire plus. Fichier LICENSE de chaque archive npm lu le 2026-10-08.
+  '@nodelib/fs.scandir@2.1.5': 'MIT',
+  '@nodelib/fs.stat@2.0.5': 'MIT',
+  '@nodelib/fs.walk@1.2.8': 'MIT',
+  'braces@3.0.2': 'MIT',
+  'fast-glob@3.3.2': 'MIT',
+  'fastq@1.15.0': 'ISC',
+  'fill-range@7.1.1': 'MIT',
+  'is-number@7.0.0': 'MIT',
+  'merge2@1.4.1': 'MIT',
+  'micromatch@4.0.5': 'MIT',
+  'queue-microtask@1.2.3': 'MIT',
+  'reusify@1.0.4': 'MIT',
+  'run-parallel@1.2.0': 'MIT',
+  'to-regex-range@5.0.1': 'MIT',
+};
 
 /** Fichiers susceptibles de contenir du code empaqueté (pas les `.map`, jamais livrées). */
 const SHIPPED_CODE = /\.(m|c)?js$/;

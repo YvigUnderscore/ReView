@@ -71,7 +71,7 @@ export default function FullPageDropzone({
 
   if (!active) return null;
   return (
-    <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div className="pointer-events-none fixed inset-0 z-60 flex items-center justify-center bg-background/80 backdrop-blur-xs">
       <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary bg-card/70 px-14 py-12 text-center">
         <UploadCloud size={42} className="text-primary" />
         <p className="text-lg font-semibold text-foreground">{text}</p>

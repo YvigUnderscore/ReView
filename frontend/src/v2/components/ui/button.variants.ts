@@ -20,7 +20,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
  *     ne dépend pas de la variante et n'est donc écrit qu'une fois, dans la base.
  */
 export const buttonVariants = cva(
-  'ui-pressable inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+  'ui-pressable inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
   {
     variants: {
       variant: {

@@ -111,7 +111,7 @@ export default function ReviewersDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="custom-scrollbar max-h-[22rem] space-y-3 overflow-y-auto">
+        <div className="custom-scrollbar max-h-88 space-y-3 overflow-y-auto">
           {drafts.length === 0 && !picking && (
             <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
               {t('reviewers.none')}

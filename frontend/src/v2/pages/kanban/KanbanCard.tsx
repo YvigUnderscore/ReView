@@ -21,7 +21,7 @@ export const KanbanCardBody = memo(function KanbanCardBody({
 }) {
   return (
     <div
-      className={`rounded-md border bg-card p-2.5 text-xs shadow-sm ${
+      className={`rounded-md border bg-card p-2.5 text-xs shadow-xs ${
         dragging ? 'border-primary shadow-lg' : 'border-border'
       }`}
     >

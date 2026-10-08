@@ -49,13 +49,13 @@ export default function EntityThumb({ url, name, variant = 'card', className = '
     // répéter ferait dire deux fois la même chose au lecteur d'écran.
     <span
       aria-hidden="true"
-      className={`flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-primary/15 to-secondary/60 text-center font-semibold leading-tight text-foreground/70 ${
+      className={`flex h-full w-full items-center justify-center overflow-hidden bg-linear-to-br/srgb from-primary/15 to-secondary/60 text-center font-semibold leading-tight text-foreground/70 ${
         // Sous 40 px, ni marge ni retour à la ligne : « 020 » se coupait en « 02 » puis
         // « 0 », deux lignes illisibles là où l'abrégé tient d'un trait.
         mini ? 'text-2xs tracking-tight' : `px-1.5 ${thumbScale(label)}`
       } ${className}`}
     >
-      <span className={mini ? 'truncate' : 'line-clamp-3 break-words'}>{label}</span>
+      <span className={mini ? 'truncate' : 'line-clamp-3 wrap-break-word'}>{label}</span>
     </span>
   );
 }

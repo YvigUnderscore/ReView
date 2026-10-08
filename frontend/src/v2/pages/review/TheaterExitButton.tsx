@@ -14,7 +14,7 @@ export default function TheaterExitButton({ onExit }: { onExit: () => void }) {
     <button
       onClick={onExit}
       title={t('review.exitTheatre')}
-      className="absolute right-4 top-4 z-50 rounded-md border border-border bg-card/80 p-1.5 text-muted-foreground backdrop-blur hover:bg-secondary hover:text-foreground"
+      className="absolute right-4 top-4 z-50 rounded-md border border-border bg-card/80 p-1.5 text-muted-foreground backdrop-blur-sm hover:bg-secondary hover:text-foreground"
     >
       <Minimize2 size={16} />
     </button>

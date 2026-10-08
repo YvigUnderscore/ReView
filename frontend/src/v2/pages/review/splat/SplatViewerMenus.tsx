@@ -37,7 +37,7 @@ import { useT } from '../../../i18n';
  * viewer en veut une, cette chaîne monte dans `chrome.css` et les deux menus l'y lisent.
  */
 const TRIGGER =
-  'flex items-center gap-1.5 rounded-md border border-border bg-card/85 px-2 py-1.5 text-xs font-medium text-muted-foreground shadow-lg backdrop-blur transition-colors hover:bg-card hover:text-foreground data-[state=open]:bg-card data-[state=open]:text-foreground';
+  'flex items-center gap-1.5 rounded-md border border-border bg-card/85 px-2 py-1.5 text-xs font-medium text-muted-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-card hover:text-foreground data-[state=open]:bg-card data-[state=open]:text-foreground';
 
 export default function SplatViewerMenus({
   editor,

@@ -63,7 +63,7 @@ export default function VideoWipeOverlay({
       )}
       <WipeControl wipe={wipe} />
       {/* Contrôles flottants */}
-      <div className="absolute right-2 top-2 z-40 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 backdrop-blur">
+      <div className="absolute right-2 top-2 z-40 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 backdrop-blur-sm">
         <button
           onClick={onSide}
           title={t('review.compare.sideBySide')}

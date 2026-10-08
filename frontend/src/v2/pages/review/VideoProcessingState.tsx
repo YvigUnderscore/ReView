@@ -36,7 +36,7 @@ export default function VideoProcessingState({
           <p>{t('videoState.failed')}</p>
           {/* Raison remontée par le worker : sans elle, on ne sait pas quoi corriger. */}
           {processingError && (
-            <p className="rounded border border-border bg-card/60 px-2 py-1.5 text-left font-mono text-xs break-words text-foreground">
+            <p className="rounded border border-border bg-card/60 px-2 py-1.5 text-left font-mono text-xs wrap-break-word text-foreground">
               {processingError}
             </p>
           )}

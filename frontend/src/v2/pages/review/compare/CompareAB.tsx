@@ -46,7 +46,7 @@ export default function CompareAB({
       <Select
         aria-label={t('compare.slotB')}
         title={t('compare.slotB')}
-        className="max-w-56 px-1.5 py-[0.1875rem] text-xs"
+        className="max-w-56 px-1.5 py-0.75 text-xs"
         value={bId == null ? '' : String(bId)}
         onChange={(e) => (e.target.value ? onSetB(Number(e.target.value)) : onClear())}
       >
