@@ -39,6 +39,10 @@ S3_USER="$(docker exec "$MINIO" printenv MINIO_ROOT_USER 2>/dev/null || echo min
 S3_PASS="$(docker exec "$MINIO" printenv MINIO_ROOT_PASSWORD 2>/dev/null || echo minioadmin)"
 BUCKET="$(docker exec "$(container_of backend)" printenv S3_BUCKET 2>/dev/null || echo review)"
 
+# `mc` comes from the MinIO image itself, by ID: no separate client image to pull
+# (minio/mc is no longer published), and the client matches the server — see backup.sh.
+mc_image() { docker inspect -f '{{.Image}}' "$MINIO"; }
+
 # Absolute host path of the backups DIRECTORY, and the source's name inside it: the
 # containers see that directory mounted on /backup.
 resolve_paths() {
@@ -90,9 +94,9 @@ restore_minio() {
   echo "▶ Restoring objects from $target/minio to \"$BUCKET\"…"
   # `--remove`: the bucket must end up identical to the snapshot, including objects added
   # since (a partial restore would leave ghost media in the database).
-  MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" \
+  MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" --entrypoint mc \
     -e "MC_HOST_review=http://$S3_USER:$S3_PASS@127.0.0.1:9000" \
-    -v "$HOST_DIR:/backup" minio/mc \
+    -v "$HOST_DIR:/backup" "$(mc_image)" \
     mirror --overwrite --remove --quiet "/backup/$SNAP_NAME/minio" "review/$BUCKET"
   echo "✅ Objects restored."
 }
@@ -131,8 +135,8 @@ case "$MODE" in
       SNAP_COUNT="$(MSYS_NO_PATHCONV=1 docker run --rm -v "$HOST_DIR:/backup" alpine \
         sh -c "find /backup/$SNAP_NAME/minio -type f | wc -l" | tr -d ' ')"
       LIVE_COUNT="$(MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" \
-        -e "MC_HOST_review=http://$S3_USER:$S3_PASS@127.0.0.1:9000" minio/mc \
-        --quiet ls --recursive "review/$BUCKET" | wc -l | tr -d ' ')"
+        --entrypoint mc -e "MC_HOST_review=http://$S3_USER:$S3_PASS@127.0.0.1:9000" \
+        "$(mc_image)" --quiet ls --recursive "review/$BUCKET" | wc -l | tr -d ' ')"
       echo "  objects : $SNAP_COUNT in the snapshot, $LIVE_COUNT in the live bucket"
       [ "$SNAP_COUNT" -gt 0 ] || { echo "✗ empty snapshot: the object backup captured nothing." >&2; exit 1; }
     else

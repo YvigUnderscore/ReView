@@ -149,12 +149,15 @@ jobs:
             backend/package-lock.json
             frontend/package-lock.json
 
+      # Même image et même version que docker-compose.yml (scripts/ci-workflow.test.mjs y
+      # veille) : `minio/minio` n'est plus publié, `latest` a fait tomber ce job le jour où
+      # le dépôt a disparu du Docker Hub.
       - name: Démarrer MinIO
         run: |
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:latest server /data
+            pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
           for _ in $(seq 1 30); do
             if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then
               echo "MinIO prêt."
@@ -168,12 +171,12 @@ jobs:
 
       # Le bucket n'est créé qu'au démarrage du serveur (`server.ts` → `ensureBucket`) ; les
       # tests d'intégration montent l'app sans passer par là, donc on le crée ici.
-      # `MC_HOST_<alias>` évite d'avoir à persister une configuration `mc` entre deux runs.
+      # `MC_HOST_<alias>` évite d'avoir à persister une configuration `mc` entre deux runs ;
+      # le `mc` est celui de l'image serveur, comme pour la sonde du compose et backup.sh.
       - name: Créer le bucket de stockage
         run: |
-          docker run --rm --network host \
-            -e MC_HOST_ci=http://minioadmin:minioadmin@localhost:9000 \
-            minio/mc mb --ignore-existing ci/review
+          docker exec -e MC_HOST_ci=http://minioadmin:minioadmin@localhost:9000 \
+            minio mc mb --ignore-existing ci/review
 
       - name: Dépendances backend (npm ci)
         run: npm ci

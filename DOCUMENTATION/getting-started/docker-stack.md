@@ -2,7 +2,7 @@
 
 *The containers behind a ReView instance: what each one does, how they gate each other at start-up, and where the data actually lives.*
 
-> Updated: 2026-09-25
+> Updated: 2026-10-08
 
 `docker-compose.yml` defines **six services started by default**, three more behind opt-in
 profiles, and six named volumes. Two overlays layer on top: `docker-compose.override.yml`
@@ -18,7 +18,7 @@ the browser cannot reach MinIO.
 | Service | Image / build | Role |
 |---------|---------------|------|
 | `postgres` | `postgres:16-alpine` | Primary database (Prisma schema). No host port in the base file |
-| `minio` | `minio/minio:RELEASE.2025-04-22T22-12-26Z` (pinned, override with `MINIO_VERSION`) | S3-compatible object storage for every binary — originals, HLS renditions, thumbnails, attachments, HDRIs |
+| `minio` | `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` (community fork of MinIO, pinned, override with `MINIO_VERSION`) | S3-compatible object storage for every binary — originals, HLS renditions, thumbnails, attachments, HDRIs |
 | `redis` | `redis:7-alpine` | BullMQ queue backend. No host port in the base file, and **no password** |
 | `backend` | built from `backend/` | Express 5 API + Socket.io realtime server. Host port `BPORT` → container `3000` |
 | `worker` | built from `backend/`, `command: node dist/workers/ffmpeg.worker.js` | One process, six BullMQ consumers (below). No HTTP port; metrics on `9101`, internal only |

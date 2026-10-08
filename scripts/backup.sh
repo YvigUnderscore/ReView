@@ -99,9 +99,13 @@ case "$MODE" in
     # without guessing the compose network name.
     # Stdout discarded: `mc` lists every object transferred, which would flood the
     # operator's mailbox on every nightly run. Errors still go to stderr.
-    MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" \
+    # `mc` is the one shipped in the running MinIO image (the compose healthcheck uses it
+    # too): no separate client image to pin or pull — minio/mc is no longer published —
+    # and the client always matches the server. The image ID never sends docker to a registry.
+    MC_IMAGE="$(docker inspect -f '{{.Image}}' "$MINIO")"
+    MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" --entrypoint mc \
       -e "MC_HOST_review=http://$S3_USER:$S3_PASS@127.0.0.1:9000" \
-      -v "$HOST_DIR:/backup" minio/mc \
+      -v "$HOST_DIR:/backup" "$MC_IMAGE" \
       mirror --overwrite --remove --quiet "review/$BUCKET" /backup/minio-current >/dev/null
 
     echo "▶ Hard-link snapshot…"

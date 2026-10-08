@@ -42,10 +42,13 @@ services:
 
   minio:
     # Pinned version, never `latest`: two installs made on different dates must run the same
-    # MinIO. This is the last release that ships the full web console, which
-    # DOCUMENTATION/infrastructure/storage-minio.md and port 9001 below rely on.
-    # Override with MINIO_VERSION in .env.
-    image: minio/minio:${MINIO_VERSION:-RELEASE.2025-04-22T22-12-26Z}
+    # MinIO. MinIO Inc. no longer publishes its community images (Docker Hub denies the pull,
+    # quay.io requires a login), so this is pgsty/minio: the community-maintained AGPL-3.0
+    # fork, built from the same code, reading the same volumes, and keeping the full web
+    # console that DOCUMENTATION/infrastructure/storage-minio.md and port 9001 below rely on.
+    # The image also ships `mc`, used by the healthcheck and by scripts/backup.sh.
+    # Override with MINIO_VERSION in .env (a pgsty/minio tag).
+    image: pgsty/minio:${MINIO_VERSION:-RELEASE.2026-08-04T00-00-00Z}
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}

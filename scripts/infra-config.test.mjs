@@ -191,6 +191,32 @@ describe('docker-compose.yml', () => {
     }
   });
 
+  it('ne tire MinIO d’aucun dépôt retiré par son éditeur', () => {
+    // `minio/minio` et `minio/mc` ne se tirent plus du Docker Hub (2026-10) : une image en
+    // cache masque la panne sur un poste, une installation neuve ou un `docker compose pull`
+    // (scripts/update.sh) échoue. Le client `mc` vient de l'image serveur.
+    const RETIRED = /(?:^|[\s"'=])(?:docker\.io\/)?minio\/(?:minio|mc)(?=[:\s"']|$)/m;
+    const files = [
+      'docker-compose.yml',
+      ...readdirSync(ROOT)
+        .filter((f) => /^docker-compose\..+\.ya?ml$/.test(f))
+        .filter((f) => f !== 'docker-compose.yml'),
+      ...readdirSync(join(ROOT, '.github', 'workflows')).map((f) => `.github/workflows/${f}`),
+      ...readdirSync(join(ROOT, 'scripts'))
+        .filter((f) => f.endsWith('.sh'))
+        .map((f) => `scripts/${f}`),
+      'ops/agent.sh',
+      'ops/Dockerfile',
+    ];
+    for (const file of files) {
+      const code = read(file)
+        .split(/\r?\n/)
+        .filter((line) => !line.trim().startsWith('#'))
+        .join('\n');
+      expect(code, file).not.toMatch(RETIRED);
+    }
+  });
+
   it("n'épingle aucune image sur un tag mouvant", () => {
     const images = [...compose.matchAll(/^ {4}image: (\S+)$/gm)].map((m) => m[1]);
     expect(images.length).toBeGreaterThan(0);

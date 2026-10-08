@@ -2,7 +2,7 @@
 
 *One bucket, every binary: key layout, the three ways in, presigned lifetimes, quotas, and the ways storage fails.*
 
-> Updated: 2026-09-20
+> Updated: 2026-10-08
 
 Every binary an instance holds — originals, HLS segments, thumbnails, converted models, splat
 masks, HDRIs, avatars, attachments — lives in **one** S3-compatible bucket, referenced from
@@ -31,10 +31,24 @@ deployment mistake: uploads and playback break in the browser while every server
 passes. It must also match the scheme users reach the app with — an `http://` public endpoint
 behind an HTTPS front end produces mixed-content failures, not a helpful error.
 
-The image is **pinned** to `minio/minio:RELEASE.2025-04-22T22-12-26Z`, the last release that
-ships the full web console the operations chapter below relies on. Override with
-`MINIO_VERSION` in `.env`, and treat any upgrade as a data operation: back up first, and read
-the release notes between your version and the target.
+The image is **pinned** to `pgsty/minio:RELEASE.2026-08-04T00-00-00Z`. MinIO Inc. no longer
+publishes its community images: since October 2026 Docker Hub refuses to pull `minio/minio` and
+`minio/mc`, and `quay.io/minio` requires a login. `pgsty/minio` is the community-maintained fork
+of the same AGPL-3.0 code base, published for `amd64` and `arm64`. It keeps the full web console
+the operations chapter below relies on (users, policies, server information — features upstream
+removed from its own console in 2025), and it ships `mc`, which the healthcheck and the backup
+scripts use. Override with `MINIO_VERSION` in `.env` — the value is a `pgsty/minio` tag — and
+treat any upgrade as a data operation: back up first, and read the release notes between your
+version and the target.
+
+> [!IMPORTANT]
+> Instances installed before this change run `minio/minio:RELEASE.2025-04-22T22-12-26Z` from
+> the local image cache, and every `docker compose pull` — which `scripts/update.sh` runs — now
+> fails on it. Taking the current `docker-compose.yml` moves storage to `pgsty/minio` on the
+> next `docker compose up -d`. The volume is read as it is: objects written by the 2025-04-22
+> release come back byte-identical, and that release still reads the volume afterwards if you
+> have to roll back. Run `bash scripts/backup.sh` first all the same, and remove any
+> `MINIO_VERSION=RELEASE.2025-…` line from `.env`: that tag does not exist under `pgsty/minio`.
 
 At boot the backend creates the bucket if missing and applies a CORS policy derived from
 `CORS_ORIGIN`:

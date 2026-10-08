@@ -219,6 +219,23 @@ describe('scripts/backup.sh', () => {
     expect(commands).toMatch(/cp -al/);
   });
 
+  it("prend `mc` dans l'image du conteneur MinIO en marche, sans registre", () => {
+    // Par ID d'image : la sauvegarde nocturne ne dépend d'aucun dépôt joignable, et le
+    // client est celui du serveur. Une image client à part (`minio/mc`) a cessé d'exister.
+    for (const [name, script] of [
+      ['backup.sh', commands],
+      ['restore.sh', commandsOf(RESTORE)],
+    ]) {
+      expect(script, name).toMatch(/docker inspect -f '\{\{\.Image\}\}' "\$MINIO"/);
+      const runs = script
+        .replace(/\\\n\s*/g, ' ') // une commande continuée par `\` se lit d'un tenant
+        .split('\n')
+        .filter((l) => /--network "container:\$MINIO"/.test(l));
+      expect(runs.length, name).toBeGreaterThan(0);
+      for (const run of runs) expect(run, name).toMatch(/--entrypoint mc/);
+    }
+  });
+
   it('ne fabrique un tar du volume entier que sur demande explicite', () => {
     const tarLine = commands.split('\n').find((l) => l.includes('tar czf'));
     expect(tarLine).toBeTruthy();

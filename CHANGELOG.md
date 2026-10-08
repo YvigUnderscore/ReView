@@ -38,6 +38,16 @@ in behind it](DOCUMENTATION/CHANGELOG.md).
 
 ### Operator actions
 
+- **MinIO now comes from `pgsty/minio`.** MinIO Inc. stopped publishing `minio/minio` and
+  `minio/mc`: Docker Hub refuses the pull, so a fresh install fails and so does every
+  `docker compose pull`, including the one `scripts/update.sh` runs. The stack now pins
+  `pgsty/minio:RELEASE.2026-08-04T00-00-00Z`, the community-maintained AGPL-3.0 fork, which
+  keeps the full web console. On an existing instance the next `docker compose up -d` moves
+  storage from `RELEASE.2025-04-22T22-12-26Z` to it: the volume is read as it is (objects come
+  back byte-identical, and the old release still reads it if you roll back). Back up first, and
+  delete any `MINIO_VERSION=RELEASE.2025-…` line from `.env` — that tag does not exist under
+  `pgsty/minio`. `backup.sh` and `restore.sh` now run the `mc` shipped in the MinIO image
+  instead of pulling a client image.
 - **ShotGrid deletions catch up once, by hand.** Retirements are now applied on the event,
   but the ones made *before* this release were never recorded anywhere. Run a full
   **Synchronise** once per linked project to bin what the site has already dropped; the

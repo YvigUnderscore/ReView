@@ -2,7 +2,7 @@
 
 *How the API, the worker, Redis, PostgreSQL and MinIO fit together — and which one takes the instance down.*
 
-> Updated: 2026-09-20
+> Updated: 2026-10-08
 
 One instance is one studio. It is six containers in the default stack, seven in production,
 and it holds exactly three kinds of state: rows in PostgreSQL, objects in MinIO, and
@@ -24,7 +24,7 @@ the wrong thing.
 | `worker` | same build, `INSTALL_USD_TOOLS=1` adds Blender + usd-core | BullMQ consumers, `node dist/workers/ffmpeg.worker.js` | none |
 | `postgres` | `postgres:16-alpine` | All metadata, through Prisma | `5432` (dev overlay only) |
 | `redis` | `redis:7-alpine` | Queues, rate-limit counters, Socket.io adapter, presence, live rooms | `6379` (dev overlay only) |
-| `minio` | `minio/minio` (pinned) | One bucket, every binary | `9000` / `9001`, bound to `127.0.0.1` |
+| `minio` | `pgsty/minio` (pinned) | One bucket, every binary | `9000` / `9001`, bound to `127.0.0.1` |
 | `nginx` (production only) | `nginx:1.27-alpine` | TLS termination; the only exposed service | `80` / `443` |
 
 `prometheus`, `grafana` and `clamav` sit behind compose profiles and are off unless you ask
