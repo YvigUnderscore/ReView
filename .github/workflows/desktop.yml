@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Construction de l'application desktop (Tauri 2) sur les trois OS.
+#
+# Ce workflow ne mesure pas le webview : un runner n'a pas de GPU, le diagnostic y
+# relèverait un rendu logiciel quel que soit le moteur. Il prouve que le binaire compile
+# sur chaque plateforme — WebKitGTK sous Linux, WKWebView sous macOS, WebView2 sous
+# Windows — et fournit les installeurs à lancer à la main sur de vraies machines
+# (mode d'emploi : desktop/README.md).
+#
+# Déclenché seulement quand `desktop/` change : la suite serveur a son propre workflow.
+name: Desktop
+
+on:
+  push:
+    branches: [dev, main]
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+  pull_request:
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: tauri build (${{ matrix.os }})
+    strategy:
+      # Chaque OS répond pour lui-même : un échec Linux ne doit pas masquer le verdict macOS.
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: desktop
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+
+      # Liste des prérequis Tauri 2 pour Debian/Ubuntu ; WebKitGTK 4.1 est le moteur visé.
+      - name: Dépendances système (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Installer Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      # rustup est préinstallé sur les trois images ; on fixe seulement le canal.
+      - name: Toolchain Rust stable
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            desktop/src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Dépendances npm
+        run: npm ci
+
+      - name: cargo check
+        working-directory: desktop/src-tauri
+        run: cargo check --locked
+
+      - name: tauri build
+        run: npm run probe:build
+
+      - name: Publier les installeurs
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-desktop-${{ runner.os }}
+          path: |
+            desktop/src-tauri/target/release/bundle/**/*.msi
+            desktop/src-tauri/target/release/bundle/**/*-setup.exe
+            desktop/src-tauri/target/release/bundle/**/*.dmg
+            desktop/src-tauri/target/release/bundle/**/*.AppImage
+            desktop/src-tauri/target/release/bundle/**/*.deb
+            desktop/src-tauri/target/release/review-desktop.exe
+          if-no-files-found: error
+          retention-days: 30
