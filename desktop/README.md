@@ -49,6 +49,17 @@ webview ; un résultat également mauvais des deux côtés accuse la machine.
 À faire sur les trois OS, en collant le rapport JSON (bouton « Copier ») dans l'issue de
 suivi.
 
+### Construire l'exécutable
+
+```bash
+npm run probe:build  # src-tauri/target/release/review-desktop.exe + bundle/ (installeurs)
+```
+
+Sans Rust sous la main : le workflow `Desktop` (`.github/workflows/desktop.yml`) construit
+les trois OS à chaque changement de `desktop/` et publie les installeurs en artefacts
+(Windows `.msi`/`-setup.exe`, macOS `.dmg`, Linux `.AppImage`/`.deb`). Les runners n'ont
+pas de GPU : la mesure, elle, se fait sur une vraie machine.
+
 ## Lire le résultat
 
 Le verdict en tête de page tranche, mais trois sondes commandent tout :
@@ -58,9 +69,29 @@ Le verdict en tête de page tranche, mais trois sondes commandent tout :
   webview. Sur Linux, cause la plus fréquente d'un échec WebKitGTK.
 - **Débit < 25 i/s** → le viewer tourne sur le papier et pas en pratique.
 
+Le débit est cadencé par `requestAnimationFrame` : il plafonne à la fréquence de l'écran
+(144 i/s sur un écran 144 Hz). Il sépare un rendu logiciel d'un vrai GPU, pas deux bons
+moteurs entre eux — deux valeurs collées au plafond valent égalité.
+
 Le reste nuance : `EXT_color_buffer_float` manquant dégrade le pipeline HDR (tone mapping
 ACES en 8 bits), `requestVideoFrameCallback` manquant fait dériver le calage des
 annotations d'une frame, H.264/AAC manquants cassent la lecture des proxies.
+
+## Résultats
+
+| OS | Machine | Webview | Référence (même machine) | Verdict |
+| --- | --- | --- | --- | --- |
+| Windows 11 | RTX 5080, D3D11, 144 Hz | WebView2 154 — 144 i/s | Chrome 154 — 143 i/s | viable |
+| macOS | — | à mesurer | — | — |
+| Linux | — | à mesurer | — | — |
+
+Windows (2026-10-08) : sur 31 sondes, 28 rendent la même valeur des deux côtés ; les trois
+autres sont le contexte, le nom du moteur et le débit (144 contre 143 i/s, tous deux au
+plafond de l'écran). Seule réserve, `SharedArrayBuffer`, absent partout faute d'en-têtes
+COOP/COEP. Le vrai frontend
+(`http://localhost:3429`, pile Docker) se charge dans la fenêtre : page de connexion
+rendue, aucune erreur console, aucune requête en échec. Le viewer n'y a pas encore été
+exercé — il faut une session.
 
 ## Si Linux échoue
 

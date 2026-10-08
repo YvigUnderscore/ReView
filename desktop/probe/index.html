@@ -283,7 +283,9 @@
       async function hostProbes() {
         let host = null;
         try {
-          const invoke = window.__TAURI__?.core?.invoke ?? window.__TAURI_INVOKE__;
+          // `window.__TAURI__` n'existe que si `app.withGlobalTauri` est vrai (tauri.conf.json) :
+          // sans lui, la page se croyait dans le navigateur de référence.
+          const invoke = window.__TAURI__?.core?.invoke;
           if (invoke) host = await invoke('host_info');
         } catch {
           /* pont absent ou commande refusée : traité comme « navigateur » */
@@ -298,8 +300,9 @@
           const ua = navigator.userAgent;
           // WebKitGTK ne se nomme pas : il se trahit en annonçant Safari sans être macOS.
           const gtk = /Linux/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium/.test(ua);
-          const edge = /Edg\//.exec(ua);
-          if (edge) return { level: 'ok', value: 'WebView2 ' + edge[0].slice(4) };
+          // Edge et WebView2 annoncent tous deux `Edg/` : seul le pont Tauri les distingue.
+          const edge = /Edg\/([\d.]+)/.exec(ua);
+          if (edge) return { level: 'ok', value: (host ? 'WebView2 ' : 'Edge ') + edge[1] };
           if (gtk) {
             const v = /Version\/([\d.]+)/.exec(ua);
             return {
@@ -314,9 +317,15 @@
           return { level: 'info', value: cr ? cr[1] + ' ' + cr[2] : 'inconnu' };
         });
         probe('host', 'Mémoire JS annoncée', 'budget pour une séquence chargée', () => {
-          const d = navigator.deviceMemory ?? performance?.memory?.jsHeapSizeLimit;
-          if (!d) return { level: 'info', value: 'non exposée' };
-          return { level: 'info', value: performance?.memory ? (d / 1073741824).toFixed(1) + ' Gio (heap)' : d + ' Gio' };
+          // Deux grandeurs distinctes : `deviceMemory` est déjà en Gio (arrondi et plafonné par le navigateur),
+          // `jsHeapSizeLimit` en octets. Les confondre affichait « 0.0 Gio » sous Chromium.
+          const device = navigator.deviceMemory;
+          const heap = performance?.memory?.jsHeapSizeLimit;
+          if (!device && !heap) return { level: 'info', value: 'non exposée' };
+          const parts = [];
+          if (device) parts.push(device + ' Gio (appareil)');
+          if (heap) parts.push((heap / 1073741824).toFixed(1) + ' Gio (heap)');
+          return { level: 'info', value: parts.join(' · ') };
         });
       }
 

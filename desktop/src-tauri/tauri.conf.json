@@ -7,6 +7,7 @@
     "frontendDist": "../probe"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
@@ -26,7 +27,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png", "icons/icon.ico"],
     "shortDescription": "Spike de validation du webview ReView",
     "longDescription": "Mesure les capacités du webview de l'OS (WebGL, codecs, WASM) pour décider si le viewer ReView peut tourner dans une application Tauri."
   }
