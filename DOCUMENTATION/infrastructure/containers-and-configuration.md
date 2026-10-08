@@ -2,7 +2,7 @@
 
 *Where every setting comes from, what bounds each container, and how the stack is probed, pinned and upgraded.*
 
-> Updated: 2026-09-25
+> Updated: 2026-10-08
 
 This page is about the envelope, not the contents: which file wins when two of them set the
 same variable, what stops a container before it can do damage, how much memory each service is
@@ -201,7 +201,7 @@ Nothing runs on `latest`. Two installations made on two dates must run the same 
 
 | Image | Default | Override |
 |-------|---------|----------|
-| `minio/minio` | `RELEASE.2025-04-22T22-12-26Z` (last release shipping the full web console) | `MINIO_VERSION` |
+| `pgsty/minio` | `RELEASE.2026-08-04T00-00-00Z` (community fork of MinIO: `minio/minio` is no longer published; keeps the full web console) | `MINIO_VERSION` |
 | `prom/prometheus` | `v3.5.0` (3.5 LTS line) | `PROMETHEUS_VERSION` |
 | `grafana/grafana-oss` | `11.6.1` (the provisioned dashboard is schemaVersion 39) | `GRAFANA_VERSION` |
 | `nginx` | `1.27-alpine`, both in `frontend/Dockerfile` and in the production proxy | — |
