@@ -1,17 +1,23 @@
 {
   "name": "review-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "ReView desktop — spike de validation du webview",
+  "description": "ReView Desktop — application de review pour studios VFX (alpha)",
   "license": "AGPL-3.0-or-later",
   "author": "Yvig Bidon",
+  "type": "module",
   "scripts": {
-    "probe": "tauri dev",
-    "probe:build": "tauri build",
-    "app": "tauri dev --config src-tauri/tauri.app.conf.json",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "test": "vitest run",
+    "format": "prettier --write launcher",
+    "format:check": "prettier --check launcher",
     "tauri": "tauri"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.12.0"
+    "@tauri-apps/cli": "^2.12.0",
+    "happy-dom": "^20.10.6",
+    "prettier": "^3.9.4",
+    "vitest": "^4.1.11"
   }
 }

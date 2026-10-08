@@ -77,6 +77,9 @@ export const ALLOWED_LICENSES = new Set([
   'MPL-2.0',
   'OFL-1.1',
   'Python-2.0',
+  // Licence des données Unicode (crates `icu_*` du binaire desktop) : permissive,
+  // approuvée OSI, compatible GPL selon la FSF.
+  'Unicode-3.0',
   'Unlicense',
   'WTFPL',
   'Zlib',

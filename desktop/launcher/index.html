@@ -1,0 +1,27 @@
+<!doctype html>
+<!--
+  SPDX-FileCopyrightText: 2026 Yvig Bidon
+  SPDX-License-Identifier: AGPL-3.0-or-later
+
+  Lanceur de ReView Desktop. La fenêtre naît cachée et ne s'affiche qu'une fois ce
+  document peint (commande `launcher_ready`) : pas d'écran blanc au démarrage.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ReView</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="main.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="chrome">
+        <img class="chrome-mark" src="brand/logo-mark.svg" alt="" />
+        <span class="chrome-name">ReView</span>
+      </header>
+      <main id="app" class="screen" aria-live="polite"></main>
+      <footer id="footer" class="footer"></footer>
+    </div>
+  </body>
+</html>

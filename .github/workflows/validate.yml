@@ -65,6 +65,7 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
+            desktop/package-lock.json
 
       # `npm ci` (et non `npm install`) : l'installation suit le lockfile à la lettre, ce
       # dont dépend le contrôle de fraîcheur de THIRD-PARTY-NOTICES.md.
@@ -75,6 +76,10 @@ jobs:
       - name: Dépendances frontend (npm ci)
         run: npm ci
         working-directory: frontend
+
+      - name: Dépendances desktop (npm ci)
+        run: npm ci
+        working-directory: desktop
 
       - name: Suite de validation
         run: bash scripts/validate.sh
@@ -148,6 +153,7 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
+            desktop/package-lock.json
 
       # Même image et même version que docker-compose.yml (scripts/ci-workflow.test.mjs y
       # veille) : `minio/minio` n'est plus publié, `latest` a fait tomber ce job le jour où
@@ -185,6 +191,10 @@ jobs:
       - name: Dépendances frontend (npm ci)
         run: npm ci
         working-directory: frontend
+
+      - name: Dépendances desktop (npm ci)
+        run: npm ci
+        working-directory: desktop
 
       # Base éphémère du job : le schéma vient des migrations versionnées, jamais d'un
       # `db push`. Les tests d'intégration sont écrits pour une base vierge comme pour une
