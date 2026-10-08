@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+[package]
+name = "review-desktop"
+version = "0.1.0"
+description = "ReView desktop — spike de validation du webview"
+authors = ["Yvig Bidon"]
+license = "AGPL-3.0-or-later"
+edition = "2021"
+rust-version = "1.82"
+
+# Le binaire porte le nom du produit ; `main.rs` ne fait que démarrer la fenêtre.
+[[bin]]
+name = "review-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Release : binaire compact, pas de table de symboles. Le spike se distribue à la main
+# sur trois OS — autant que l'artefact soit déjà représentatif de ce qu'on signera.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

@@ -31,6 +31,7 @@ export const ROOTS = [
   'frontend/scripts',
   'frontend/e2e',
   'scripts',
+  'desktop/src-tauri',
 ];
 
 /** Fichiers de configuration à la racine des paquets (hors des racines ci-dessus). */
@@ -47,10 +48,19 @@ export const EXTRA_FILES = [
 ];
 
 /** Dossiers jamais balayés (dépendances, artefacts, code généré). */
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', 'generated', 'migrations']);
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  'generated',
+  'migrations',
+  'target',
+  'gen',
+]);
 
-const SLASH_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.prisma']);
-const HASH_EXT = new Set(['.sh', '.py']);
+const SLASH_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.prisma', '.rs']);
+const HASH_EXT = new Set(['.sh', '.py', '.toml']);
 /** Types sans commentaire de ligne : l'en-tête s'écrit en commentaires de bloc d'une ligne. */
 const BLOCK_EXT = new Set(['.css']);
 
@@ -90,7 +100,8 @@ export function withHeader(content, ext) {
   const header = `${prefix} ${COPYRIGHT}${suffix}${eol}${prefix} ${LICENSE_ID}${suffix}${eol}`;
   const lines = content.split(eol);
 
-  if (lines[0]?.startsWith('#!')) {
+  // `#![…]` ouvre un attribut interne Rust, pas un shebang : l'en-tête passe au-dessus.
+  if (lines[0]?.startsWith('#!') && !lines[0].startsWith('#![')) {
     const rest = lines.slice(1).join(eol);
     const spacer = rest.startsWith(eol) || rest === '' ? '' : eol;
     return `${lines[0]}${eol}${header}${spacer}${rest}`;

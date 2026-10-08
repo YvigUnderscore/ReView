@@ -1,0 +1,17 @@
+{
+  "name": "review-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ReView desktop — spike de validation du webview",
+  "license": "AGPL-3.0-or-later",
+  "author": "Yvig Bidon",
+  "scripts": {
+    "probe": "tauri dev",
+    "probe:build": "tauri build",
+    "app": "tauri dev --config src-tauri/tauri.app.conf.json",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.0"
+  }
+}

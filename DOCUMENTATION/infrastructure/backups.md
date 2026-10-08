@@ -2,7 +2,7 @@
 
 *Take, verify and restore an incremental backup of the only two things that hold state — PostgreSQL and MinIO.*
 
-> Updated: 2026-08-28
+> Updated: 2026-10-08
 
 Two services hold all persistent state: **PostgreSQL** (metadata) and **MinIO** (media objects).
 They must be backed up **together** — the database stores MinIO object keys, and a restore that
@@ -88,6 +88,11 @@ which creates **hard links, not copies**. A snapshot therefore costs only its ow
 seven retentions of a 300 GB bucket where 2 GB change per day take about 312 GB, not 2.1 TB.
 That model fits ReView particularly well because a media is never rewritten: a correction is a
 new version, so yesterday's objects are still byte-identical today.
+
+The `mc` client is not a separate image. Both scripts run the one shipped inside the MinIO image,
+taken from the running `minio` container by image ID: the nightly backup never needs a registry,
+and the client always matches the server. A separate `minio/mc` image would no longer pull anyway
+(see [MinIO storage](storage-minio.md#configuration)).
 
 Keep `archive` when the bucket is small and you want a single file to copy off-site.
 

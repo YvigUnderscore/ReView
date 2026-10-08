@@ -2,7 +2,7 @@
 
 *What the AGPL asks when you run, modify or redistribute ReView — and what the tooling actually enforces.*
 
-> Updated: 2026-09-20
+> Updated: 2026-10-08
 
 ReView is free software distributed under the **GNU Affero General Public License, version 3
 or later** (`AGPL-3.0-or-later`). The full text is in [LICENSE](../../LICENSE) at the
@@ -193,8 +193,10 @@ still carries its licence:
 ```
 
 The comment syntax follows the extension: `//` for `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`,
-`.cjs` and `.prisma`; `#` for `.sh` and `.py`; a one-line block comment for `.css`. Adding a
-file type means teaching the script the extension, never writing the header by hand.
+`.cjs`, `.prisma` and `.rs`; `#` for `.sh`, `.py` and `.toml`; a one-line block comment for
+`.css`. Adding a file type means teaching the script the extension, never writing the header
+by hand. A first line starting with `#!` is a shebang and keeps its place — except `#![`,
+which opens a Rust inner attribute and gets the header above it.
 
 ```bash
 node scripts/add-license-headers.mjs          # add missing headers, idempotent
@@ -203,7 +205,7 @@ node scripts/add-license-headers.mjs --check  # verify (run by validate.sh)
 
 ### What the check actually scans
 
-The script walks seven roots plus nine named configuration files. Everything else in the
+The script walks eight roots plus nine named configuration files. Everything else in the
 repository carries its headers by convention, and nothing would notice a missing one — worth
 knowing before you add a file outside the scan.
 
@@ -212,11 +214,13 @@ knowing before you add a file outside the scan.
 | `backend/src`, `backend/scripts`, `backend/prisma` | `.ts`, `.prisma` | Yes |
 | `frontend/src`, `frontend/scripts`, `frontend/e2e` | `.ts`, `.tsx`, `.js`, `.css` | Yes |
 | `scripts/` | `.mjs`, `.sh` | Yes |
+| `desktop/src-tauri` | `.rs`, `.toml` | Yes |
 | Nine root configs (vitest, eslint, playwright, postcss, tailwind, vite) | `.ts`, `.js` | Yes |
 | `clients/python`, `clients/dcc` | `.py` — headers present, written by hand | **No** |
 | `.github/workflows` | `.yml` — headers present, written by hand | **No** |
+| `desktop/probe` | `.html` — header present, written by hand | **No** |
 | `monitoring/` | `.yml` — no headers | **No** |
-| `node_modules`, `dist`, `build`, `coverage`, `generated`, `prisma/migrations` | — | Never scanned, by design |
+| `node_modules`, `dist`, `build`, `coverage`, `generated`, `prisma/migrations`, `target`, `gen` | — | Never scanned, by design |
 
 ## The clients you hand to workstations
 

@@ -96,8 +96,18 @@ describe('workflow de validation', () => {
     const block = jobBlock(WORKFLOW, 'integration');
     expect(block).toMatch(/image: postgres:/);
     expect(block).toMatch(/image: redis:/);
-    expect(block).toMatch(/minio\/minio:\w+ server \/data/);
     expect(block).toMatch(/npx prisma migrate deploy/);
+  });
+
+  it('teste la MinIO que les studios exécutent, épinglée comme dans docker-compose.yml', () => {
+    // Le job tirait `minio/minio:latest` : le jour où ce dépôt a quitté le Docker Hub, il est
+    // tombé seul, alors que le compose désignait une autre version que celle testée.
+    const pinned = /^ {4}image: (\S+):\$\{MINIO_VERSION:-([^}]+)\}$/m.exec(read('docker-compose.yml'));
+    expect(pinned).not.toBeNull();
+    const block = jobBlock(WORKFLOW, 'integration');
+    expect(block).toContain(`${pinned[1]}:${pinned[2]} server /data`);
+    // Le bucket se crée avec le `mc` de l'image serveur, pas avec une seconde image.
+    expect(block).toMatch(/docker exec [^\n]*\\\n +minio mc mb /);
   });
 
   it('suit la version de Node des images d’exécution', () => {

@@ -33,6 +33,11 @@ describe('commentPrefix', () => {
     expect(commentPrefix('.prisma')).toBe('//');
   });
 
+  it('rend // pour Rust et # pour TOML (application desktop)', () => {
+    expect(commentPrefix('.rs')).toBe('//');
+    expect(commentPrefix('.toml')).toBe('#');
+  });
+
   it('rend /* pour les feuilles de style', () => {
     expect(commentPrefix('.css')).toBe('/*');
   });
@@ -106,6 +111,12 @@ describe('withHeader', () => {
     const out = withHeader(`#!/usr/bin/env python3${LF}import sys${LF}`, '.py');
     expect(out).toBe(
       `#!/usr/bin/env python3${LF}# ${COPYRIGHT}${LF}# ${LICENSE_ID}${LF}${LF}import sys${LF}`,
+    );
+  });
+
+  it('place l’en-tête au-dessus d’un attribut interne Rust, qui n’est pas un shebang', () => {
+    expect(withHeader(`#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]${LF}`, '.rs')).toBe(
+      `${HEADER_LF}${LF}#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]${LF}`,
     );
   });
 

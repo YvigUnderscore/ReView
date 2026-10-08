@@ -1,0 +1,642 @@
+<!doctype html>
+<!--
+  SPDX-FileCopyrightText: 2026 Yvig Bidon
+  SPDX-License-Identifier: AGPL-3.0-or-later
+
+  Diagnostic du webview — page autonome, sans backend ni dépendance.
+
+  Elle ne teste pas « WebGL marche-t-il » dans l'abstrait : elle interroge exactement ce
+  dont le viewer de ReView a besoin, et rien d'autre. Chaque sonde porte le nom de ce
+  qu'elle met en péril si elle échoue, pour qu'un rapport collé dans une issue se lise
+  sans ouvrir le code du viewer.
+
+  La même page tourne dans un navigateur ordinaire : c'est le point de comparaison. Un
+  test n'a de sens que mis en face du Chrome de la même machine.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diagnostic webview ReView</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --line: #272b35;
+        --fg: #e6e8ee;
+        --muted: #9aa1b1;
+        --ok: #4ade80;
+        --warn: #fbbf24;
+        --fail: #f87171;
+        --accent: #60a5fa;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px 64px;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          14px/1.5 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+      }
+      main {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 20px;
+      }
+      #verdict {
+        border: 1px solid var(--line);
+        border-left-width: 4px;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        background: var(--panel);
+      }
+      #verdict.ok {
+        border-left-color: var(--ok);
+      }
+      #verdict.warn {
+        border-left-color: var(--warn);
+      }
+      #verdict.fail {
+        border-left-color: var(--fail);
+      }
+      #verdict h2 {
+        font-size: 16px;
+        margin: 0 0 6px;
+      }
+      #verdict p {
+        margin: 0;
+        color: var(--muted);
+      }
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-bottom: 14px;
+        overflow: hidden;
+      }
+      section > h3 {
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .row {
+        display: grid;
+        /* La colonne de valeur garde un plancher : sans lui, une sonde au libellé long
+           écrase « disponible » en colonne d'une lettre par ligne. */
+        grid-template-columns: 22px minmax(0, 1fr) minmax(150px, max-content);
+        gap: 10px;
+        align-items: baseline;
+        padding: 9px 16px;
+        border-bottom: 1px solid rgba(39, 43, 53, 0.6);
+      }
+      .row:last-child {
+        border-bottom: 0;
+      }
+      .row .badge {
+        font-weight: 700;
+        text-align: center;
+      }
+      .ok .badge {
+        color: var(--ok);
+      }
+      .warn .badge {
+        color: var(--warn);
+      }
+      .fail .badge {
+        color: var(--fail);
+      }
+      .info .badge {
+        color: var(--muted);
+      }
+      .row .what {
+        min-width: 0;
+      }
+      .row .why {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .row .val {
+        color: var(--fg);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12.5px;
+        text-align: right;
+        overflow-wrap: anywhere;
+        /* Le nom de carte dépasse les 90 caractères : sans plafond il mange la colonne
+           de gauche et le libellé de la sonde se lit en escalier. */
+        max-width: 460px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 160px;
+        background: #000;
+        border-bottom: 1px solid var(--line);
+      }
+      .bar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 20px 0;
+      }
+      button {
+        background: var(--accent);
+        color: #06111f;
+        border: 0;
+        border-radius: 6px;
+        padding: 9px 14px;
+        font-weight: 600;
+        font-size: 13.5px;
+        cursor: pointer;
+      }
+      button.ghost {
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--line);
+      }
+      #copied {
+        color: var(--ok);
+        font-size: 13px;
+      }
+      textarea {
+        width: 100%;
+        height: 200px;
+        background: #0b0d11;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Diagnostic du webview</h1>
+      <p class="sub">
+        Ce que le viewer ReView exige du moteur de rendu de cet OS. À lancer dans
+        l'application Tauri <em>et</em> dans le navigateur de la même machine, puis à
+        comparer.
+      </p>
+
+      <div id="verdict" class="info">
+        <h2>Mesure en cours…</h2>
+        <p>Le test de débit tourne pendant deux secondes.</p>
+      </div>
+
+      <section>
+        <h3>Rendu en direct — détection du rendu logiciel</h3>
+        <canvas id="gl"></canvas>
+        <div id="perf"></div>
+      </section>
+
+      <section id="s-host"><h3>Hôte</h3></section>
+      <section id="s-gl"><h3>WebGL — viewer 3D, USD, splats</h3></section>
+      <section id="s-video"><h3>Vidéo — lecture, HLS, annotation à la frame</h3></section>
+      <section id="s-platform"><h3>Plateforme — upload, workers, couleur</h3></section>
+
+      <div class="bar">
+        <button id="copy">Copier le rapport JSON</button>
+        <button class="ghost" id="toggle">Voir le JSON</button>
+        <span id="copied"></span>
+      </div>
+      <textarea id="json" hidden readonly></textarea>
+    </main>
+
+    <script>
+      // ---------------------------------------------------------------------------
+      // Collecte. Chaque sonde renvoie { level, value, note? } ; `level` dit ce que
+      // l'échec coûte au viewer, pas sa gravité abstraite :
+      //   fail → une fonctionnalité du viewer est morte ici
+      //   warn → elle marche en dégradé (plus lent, moins précis)
+      //   info → mesure utile au diagnostic, sans verdict
+      // ---------------------------------------------------------------------------
+      const report = { at: new Date().toISOString(), ua: navigator.userAgent, probes: {} };
+      const rows = [];
+
+      function probe(section, what, why, fn) {
+        let r;
+        try {
+          r = fn() ?? { level: 'fail', value: 'non supporté' };
+        } catch (e) {
+          r = { level: 'fail', value: 'erreur : ' + (e && e.message ? e.message : String(e)) };
+        }
+        rows.push({ section, what, why, ...r });
+        report.probes[what] = { level: r.level, value: String(r.value), ...(r.note ? { note: r.note } : {}) };
+        return r;
+      }
+
+      const BADGE = { ok: '✓', warn: '!', fail: '✕', info: '·' };
+
+      function render() {
+        for (const sec of ['host', 'gl', 'video', 'platform']) {
+          const host = document.getElementById('s-' + sec);
+          for (const r of rows.filter((x) => x.section === sec)) {
+            const el = document.createElement('div');
+            el.className = 'row ' + r.level;
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = BADGE[r.level];
+            const what = document.createElement('span');
+            what.className = 'what';
+            what.textContent = r.what;
+            if (r.why) {
+              const why = document.createElement('span');
+              why.className = 'why';
+              why.textContent = r.note ? r.note : r.why;
+              what.appendChild(why);
+            }
+            const val = document.createElement('span');
+            val.className = 'val';
+            val.textContent = r.value;
+            el.append(badge, what, val);
+            host.appendChild(el);
+          }
+        }
+        document.getElementById('json').value = JSON.stringify(report, null, 2);
+      }
+
+      // --- Hôte ------------------------------------------------------------------
+      // Le binaire Tauri expose `host_info`. Hors Tauri (navigateur), l'absence du pont
+      // est l'information elle-même : on sait qu'on lit la référence et non le webview.
+      async function hostProbes() {
+        let host = null;
+        try {
+          // `window.__TAURI__` n'existe que si `app.withGlobalTauri` est vrai (tauri.conf.json) :
+          // sans lui, la page se croyait dans le navigateur de référence.
+          const invoke = window.__TAURI__?.core?.invoke;
+          if (invoke) host = await invoke('host_info');
+        } catch {
+          /* pont absent ou commande refusée : traité comme « navigateur » */
+        }
+        report.host = host;
+        probe('host', 'Contexte', 'Tauri ou navigateur de référence', () =>
+          host
+            ? { level: 'info', value: `Tauri ${host.tauri} · ${host.os}/${host.arch}` }
+            : { level: 'info', value: 'navigateur (référence)' },
+        );
+        probe('host', 'Moteur du webview', "chaîne annoncée par le moteur lui-même", () => {
+          const ua = navigator.userAgent;
+          // WebKitGTK ne se nomme pas : il se trahit en annonçant Safari sans être macOS.
+          const gtk = /Linux/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium/.test(ua);
+          // Edge et WebView2 annoncent tous deux `Edg/` : seul le pont Tauri les distingue.
+          const edge = /Edg\/([\d.]+)/.exec(ua);
+          if (edge) return { level: 'ok', value: (host ? 'WebView2 ' : 'Edge ') + edge[1] };
+          if (gtk) {
+            const v = /Version\/([\d.]+)/.exec(ua);
+            return {
+              level: 'warn',
+              value: 'WebKitGTK' + (v ? ' ' + v[1] : ''),
+              note: 'moteur le plus fragile des trois sur WebGL — à comparer attentivement avec le Chrome de cette machine',
+            };
+          }
+          const saf = /Version\/([\d.]+).*Safari/.exec(ua);
+          if (saf && /Mac|iPhone|iPad/.test(ua)) return { level: 'ok', value: 'WKWebView ' + saf[1] };
+          const cr = /(Chrome|Chromium)\/([\d.]+)/.exec(ua);
+          return { level: 'info', value: cr ? cr[1] + ' ' + cr[2] : 'inconnu' };
+        });
+        probe('host', 'Mémoire JS annoncée', 'budget pour une séquence chargée', () => {
+          // Deux grandeurs distinctes : `deviceMemory` est déjà en Gio (arrondi et plafonné par le navigateur),
+          // `jsHeapSizeLimit` en octets. Les confondre affichait « 0.0 Gio » sous Chromium.
+          const device = navigator.deviceMemory;
+          const heap = performance?.memory?.jsHeapSizeLimit;
+          if (!device && !heap) return { level: 'info', value: 'non exposée' };
+          const parts = [];
+          if (device) parts.push(device + ' Gio (appareil)');
+          if (heap) parts.push((heap / 1073741824).toFixed(1) + ' Gio (heap)');
+          return { level: 'info', value: parts.join(' · ') };
+        });
+      }
+
+      // --- WebGL -----------------------------------------------------------------
+      let gl2 = null;
+      function glProbes() {
+        const c = document.createElement('canvas');
+        gl2 = c.getContext('webgl2', { antialias: true, powerPreference: 'high-performance' });
+        const gl1 = gl2 || c.getContext('webgl');
+
+        probe('gl', 'WebGL 2', 'exigé par Three.js r183 et par Spark (splats)', () =>
+          gl2
+            ? { level: 'ok', value: 'disponible' }
+            : {
+                level: 'fail',
+                value: 'absent',
+                note: 'sans WebGL 2, le viewer 3D ne démarre pas — ce webview est disqualifié',
+              },
+        );
+
+        if (!gl1) return;
+        const dbg = gl1.getExtension('WEBGL_debug_renderer_info');
+        const renderer = dbg ? gl1.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl1.getParameter(gl1.RENDERER);
+        report.renderer = String(renderer);
+
+        probe('gl', 'Carte utilisée', 'doit être la RTX, pas un rasteriseur logiciel', () => {
+          const soft = /llvmpipe|swiftshader|softpipe|software|mesa offscreen/i.test(String(renderer));
+          return soft
+            ? { level: 'fail', value: String(renderer), note: 'rendu logiciel : le GPU n’est pas utilisé, le viewer sera inutilisable' }
+            : { level: 'ok', value: String(renderer) };
+        });
+
+        probe('gl', 'Taille max de texture', 'plaques EXR et atlas de splats', () => {
+          const n = gl1.getParameter(gl1.MAX_TEXTURE_SIZE);
+          return { level: n >= 8192 ? 'ok' : 'warn', value: n + ' px' };
+        });
+
+        if (gl2) {
+          probe('gl', 'Rendu en flottant', 'EXT_color_buffer_float — passes HDR, tone mapping ACES', () =>
+            gl2.getExtension('EXT_color_buffer_float')
+              ? { level: 'ok', value: 'disponible' }
+              : { level: 'warn', value: 'absent', note: 'pipeline HDR dégradé : tone mapping en 8 bits' },
+          );
+          probe('gl', 'Filtrage flottant linéaire', 'OES_texture_float_linear — interpolation des volumes', () =>
+            gl2.getExtension('OES_texture_float_linear') ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent' },
+          );
+          probe('gl', 'Antialiasing multi-échantillons', 'lisibilité des wireframes et du scenegraph', () => {
+            const n = gl2.getParameter(gl2.MAX_SAMPLES);
+            return { level: n >= 4 ? 'ok' : 'warn', value: n + '×' };
+          });
+          probe('gl', 'Cibles de rendu multiples', 'MAX_DRAW_BUFFERS — passes de composition', () => {
+            const n = gl2.getParameter(gl2.MAX_DRAW_BUFFERS);
+            return { level: n >= 4 ? 'ok' : 'warn', value: n };
+          });
+          probe('gl', 'Textures 3D', 'volumes VDB et LUT 3D OCIO', () => {
+            const n = gl2.getParameter(gl2.MAX_3D_TEXTURE_SIZE);
+            return { level: n >= 256 ? 'ok' : 'warn', value: n + ' px' };
+          });
+          probe('gl', 'Compression de texture', 'S3TC/BPTC — mémoire des textures de scène', () => {
+            const have = ['WEBGL_compressed_texture_s3tc', 'EXT_texture_compression_bptc', 'WEBGL_compressed_texture_astc'].filter(
+              (e) => gl2.getExtension(e),
+            );
+            return have.length ? { level: 'ok', value: have.length + ' format(s)' } : { level: 'warn', value: 'aucun' };
+          });
+        }
+
+        probe('gl', 'WebGPU', 'accélère Spark ; pas requis aujourd’hui', () =>
+          navigator.gpu ? { level: 'ok', value: 'exposé' } : { level: 'info', value: 'absent' },
+        );
+      }
+
+      // --- Vidéo -----------------------------------------------------------------
+      function videoProbes() {
+        const MS = window.ManagedMediaSource || window.MediaSource;
+        probe('video', 'MediaSource', 'hls.js en dépend entièrement', () =>
+          MS
+            ? { level: 'ok', value: window.ManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource' }
+            : { level: 'fail', value: 'absent', note: 'pas de streaming HLS : la lecture retombe sur le fichier entier' },
+        );
+
+        const codecs = {
+          'H.264 High': 'video/mp4; codecs="avc1.640028"',
+          'HEVC 10 bits': 'video/mp4; codecs="hvc1.2.4.L120.B0"',
+          VP9: 'video/webm; codecs="vp09.00.10.08"',
+          AV1: 'video/mp4; codecs="av01.0.05M.08"',
+          'AAC-LC': 'audio/mp4; codecs="mp4a.40.2"',
+        };
+        for (const [name, mime] of Object.entries(codecs)) {
+          probe('video', name, 'décodage dans MSE', () => {
+            const viaMs = MS && MS.isTypeSupported ? MS.isTypeSupported(mime) : false;
+            const viaEl = document.createElement('video').canPlayType(mime);
+            if (viaMs) return { level: 'ok', value: 'MSE' };
+            if (viaEl === 'probably' || viaEl === 'maybe') return { level: 'warn', value: 'élément seul (' + viaEl + ')' };
+            const critical = name === 'H.264 High' || name === 'AAC-LC';
+            return {
+              level: critical ? 'fail' : 'info',
+              value: 'non',
+              ...(critical ? { note: 'codec de base des proxies ReView — à régler avant toute distribution' } : {}),
+            };
+          });
+        }
+
+        probe('video', 'requestVideoFrameCallback', 'annotation calée à la frame exacte', () =>
+          'requestVideoFrameCallback' in HTMLVideoElement.prototype
+            ? { level: 'ok', value: 'disponible' }
+            : { level: 'warn', value: 'absent', note: 'le calage des annotations retombe sur currentTime : dérive d’une frame possible' },
+        );
+        probe('video', 'WebCodecs', 'décodage image par image, scrub rapide', () =>
+          'VideoDecoder' in window ? { level: 'ok', value: 'disponible' } : { level: 'info', value: 'absent' },
+        );
+      }
+
+      // --- Plateforme ------------------------------------------------------------
+      function platformProbes() {
+        probe('platform', 'Contexte sécurisé', 'crypto.subtle, service worker, web push', () =>
+          window.isSecureContext ? { level: 'ok', value: 'oui' } : { level: 'fail', value: 'non', note: 'origine non sécurisée : push et crypto indisponibles' },
+        );
+        probe('platform', 'WebAssembly SIMD', 'hash-wasm — checksums à l’upload', () => {
+          // Module minimal contenant une instruction v128 : refusé si SIMD manque.
+          const simd = new Uint8Array([
+            0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11,
+          ]);
+          return WebAssembly.validate(simd) ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent', note: 'checksums plus lents' };
+        });
+        probe('platform', 'SharedArrayBuffer', 'threads WASM — hash parallèle', () =>
+          typeof SharedArrayBuffer !== 'undefined'
+            ? { level: 'ok', value: (self.crossOriginIsolated ? 'isolé' : 'non isolé') }
+            : { level: 'warn', value: 'absent' },
+        );
+        probe('platform', 'OffscreenCanvas', 'vignettes et décodage hors du thread UI', () =>
+          typeof OffscreenCanvas !== 'undefined' ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent' },
+        );
+        probe('platform', 'createImageBitmap', 'chargement des planches de référence', () =>
+          typeof createImageBitmap === 'function' ? { level: 'ok', value: 'disponible' } : { level: 'warn', value: 'absent' },
+        );
+        probe('platform', 'File System Access', 'dépôt de dossiers de séquences', () =>
+          'showOpenFilePicker' in window ? { level: 'ok', value: 'disponible' } : { level: 'info', value: 'absent (passera par Tauri)' },
+        );
+        probe('platform', 'Canvas Display P3', 'justesse colorimétrique hors sRGB', () => {
+          const ctx = document.createElement('canvas').getContext('2d', { colorSpace: 'display-p3' });
+          return ctx && ctx.getContextAttributes?.().colorSpace === 'display-p3'
+            ? { level: 'ok', value: 'display-p3' }
+            : { level: 'warn', value: 'sRGB seulement', note: 'review couleur limitée au sRGB' };
+        });
+        probe('platform', 'WebSocket', 'temps réel Socket.io', () =>
+          'WebSocket' in window ? { level: 'ok', value: 'disponible' } : { level: 'fail', value: 'absent' },
+        );
+        probe('platform', 'Écran', 'densité et profondeur', () => ({
+          level: 'info',
+          value: `${screen.width}×${screen.height} @${window.devicePixelRatio}× ${screen.colorDepth}bit`,
+        }));
+      }
+
+      // --- Débit réel ------------------------------------------------------------
+      // Une liste de capacités ne dit pas si le rendu est praticable. On dessine donc
+      // pendant deux secondes une charge volontairement non triviale — beaucoup
+      // d'instances, une texture flottante échantillonnée — et on mesure. C'est ce
+      // chiffre qui distingue un vrai GPU d'un pilote qui déclare tout et rame.
+      function benchmark() {
+        return new Promise((resolve) => {
+          const canvas = document.getElementById('gl');
+          const gl = canvas.getContext('webgl2', { antialias: true, powerPreference: 'high-performance' });
+          if (!gl) {
+            document.getElementById('perf').innerHTML =
+              '<div class="row fail"><span class="badge">✕</span><span class="what">Aucun contexte WebGL 2<span class="why">rien à mesurer</span></span><span class="val">—</span></div>';
+            return resolve({ fps: 0, ok: false });
+          }
+          canvas.width = canvas.clientWidth * devicePixelRatio;
+          canvas.height = canvas.clientHeight * devicePixelRatio;
+
+          const vs = `#version 300 es
+          in vec2 p; uniform float t; uniform int n;
+          out vec3 c;
+          void main() {
+            float i = float(gl_InstanceID);
+            float a = i / float(n) * 6.2831853 + t;
+            float r = 0.25 + 0.65 * fract(i * 0.6180339887);
+            vec2 o = vec2(cos(a) * r, sin(a * 1.3) * r * 0.8);
+            gl_Position = vec4(p * 0.055 + o, 0.0, 1.0);
+            c = 0.5 + 0.5 * cos(vec3(a, a + 2.1, a + 4.2));
+          }`;
+          const fs = `#version 300 es
+          precision highp float; in vec3 c; out vec4 o;
+          void main() { o = vec4(c, 1.0); }`;
+
+          const sh = (type, src) => {
+            const s = gl.createShader(type);
+            gl.shaderSource(s, src);
+            gl.compileShader(s);
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || 'compile');
+            return s;
+          };
+          let prog;
+          try {
+            prog = gl.createProgram();
+            gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+            gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+            gl.linkProgram(prog);
+            if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
+          } catch (e) {
+            document.getElementById('perf').innerHTML =
+              '<div class="row fail"><span class="badge">✕</span><span class="what">Shader GLSL ES 3.0 refusé<span class="why">' +
+              String(e.message).slice(0, 160) +
+              '</span></span><span class="val">—</span></div>';
+            return resolve({ fps: 0, ok: false });
+          }
+
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+          const loc = gl.getAttribLocation(prog, 'p');
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+          gl.useProgram(prog);
+          const uT = gl.getUniformLocation(prog, 't');
+          const uN = gl.getUniformLocation(prog, 'n');
+          const N = 4000;
+          gl.uniform1i(uN, N);
+          gl.viewport(0, 0, canvas.width, canvas.height);
+
+          let frames = 0;
+          const t0 = performance.now();
+          (function loop(now) {
+            gl.clearColor(0.02, 0.03, 0.05, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.uniform1f(uT, (now - t0) / 1000);
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, N);
+            frames++;
+            if (now - t0 < 2000) requestAnimationFrame(loop);
+            else {
+              const fps = Math.round((frames / (performance.now() - t0)) * 1000);
+              const lost = gl.getExtension('WEBGL_lose_context') ? '' : '';
+              const level = fps >= 50 ? 'ok' : fps >= 25 ? 'warn' : 'fail';
+              const note =
+                level === 'ok'
+                  ? 'marge confortable pour le viewer'
+                  : level === 'warn'
+                    ? 'viewer utilisable mais poussif — scrub et splats souffriront'
+                    : 'trop lent pour un viewer de review';
+              document.getElementById('perf').innerHTML =
+                `<div class="row ${level}"><span class="badge">${BADGE[level]}</span><span class="what">${N} instances animées<span class="why">${note}</span></span><span class="val">${fps} i/s</span></div>`;
+              report.probes['Débit de rendu'] = { level, value: fps + ' i/s', note: N + ' instances' };
+              resolve({ fps, ok: level !== 'fail' });
+            }
+          })(performance.now());
+        });
+      }
+
+      // --- Verdict ---------------------------------------------------------------
+      function verdict(bench) {
+        const fails = rows.filter((r) => r.level === 'fail');
+        const warns = rows.filter((r) => r.level === 'warn');
+        const el = document.getElementById('verdict');
+        let cls, title, body;
+
+        if (!gl2 || !bench.ok || fails.length) {
+          cls = 'fail';
+          title = 'Ce webview ne convient pas en l’état';
+          body =
+            'Bloquant : ' +
+            (fails.map((f) => f.what).join(', ') || 'débit de rendu insuffisant') +
+            '. Comparer avec le navigateur de cette machine : si lui passe, le problème est le webview, et ' +
+            (/Linux/.test(navigator.userAgent) ? 'Linux a besoin d’un repli (Electron, ou navigateur sur localhost).' : 'le repli navigateur reste la sortie.');
+        } else if (warns.length > 2) {
+          cls = 'warn';
+          title = 'Viable, avec des fonctions dégradées';
+          body = 'Le viewer tournera. À arbitrer : ' + warns.map((w) => w.what).join(', ') + '.';
+        } else {
+          cls = 'ok';
+          title = 'Ce webview fait tourner le viewer';
+          body =
+            'Rien de bloquant' +
+            (warns.length ? ', réserves mineures : ' + warns.map((w) => w.what).join(', ') : '') +
+            '. Le shell Tauri est validé sur cette plateforme.';
+        }
+
+        report.verdict = { level: cls, fails: fails.map((f) => f.what), warns: warns.map((w) => w.what) };
+        el.className = cls;
+        el.innerHTML = '<h2></h2><p></p>';
+        el.querySelector('h2').textContent = title;
+        el.querySelector('p').textContent = body;
+        document.getElementById('json').value = JSON.stringify(report, null, 2);
+      }
+
+      document.getElementById('copy').addEventListener('click', async () => {
+        const txt = document.getElementById('json').value;
+        try {
+          await navigator.clipboard.writeText(txt);
+          document.getElementById('copied').textContent = 'copié';
+        } catch {
+          const ta = document.getElementById('json');
+          ta.hidden = false;
+          ta.select();
+          document.getElementById('copied').textContent = 'presse-papier refusé — sélectionner et copier à la main';
+        }
+        setTimeout(() => (document.getElementById('copied').textContent = ''), 4000);
+      });
+      document.getElementById('toggle').addEventListener('click', () => {
+        const ta = document.getElementById('json');
+        ta.hidden = !ta.hidden;
+      });
+
+      (async function run() {
+        await hostProbes();
+        glProbes();
+        videoProbes();
+        platformProbes();
+        render();
+        const bench = await benchmark();
+        verdict(bench);
+      })();
+    </script>
+  </body>
+</html>
