@@ -22,11 +22,38 @@ import { t } from '../../i18n';
 const PROJECT = 12;
 const COUNTS = { sequences: 3, shots: 40, assets: 7 };
 
+/**
+ * Statistiques d'un projet sans plan, à la forme exacte du serveur (`StatsService`).
+ *
+ * Vide ne veut pas dire tronqué : le panneau des retakes, ouvert au superviseur, lit
+ * `totals` et `slowestShots`. Une réponse amputée le faisait lever, React démontait alors
+ * la page entière, et le test du superviseur ne s'en apercevait que si `/stats` répondait
+ * avant son assertion — un échec intermittent (« expected undefined to be 'attention' »).
+ */
+const EMPTY_STATS = {
+  totals: {
+    shots: 0,
+    versions: 0,
+    decisions: 0,
+    approvalRate: 0,
+    openNotes: 0,
+    avgReviewDays: null,
+    avgRetakesPerShot: 0,
+    avgReviewRoundsPerShot: 0,
+    avgNotesPerVersion: 0,
+    firstTimeRightRate: 0,
+  },
+  sequences: [],
+  slowestShots: [],
+  mostRetakenShots: [],
+  retakeBuckets: [],
+};
+
 /** Tout ce que les blocs demandent — vide : ce qu'on observe, c'est leur présence. */
 const BASE_API: Record<string, MockResolver> = {
   'GET /api/projects/12/activity': { recent: [], tasks: [] },
   'GET /api/projects/12/production': { attention: { overdue: [], unassigned: [], waitingReview: [] } },
-  'GET /api/projects/12/stats': { totals: {}, shots: [], sequences: [] },
+  'GET /api/projects/12/stats': EMPTY_STATS,
   'GET /api/media': { items: [] },
   'GET /api/dashboard/tasks': page([]),
 };
@@ -99,6 +126,10 @@ describe('OverviewTab — disposition par rôle', () => {
   it('ouvre au superviseur ce qui bloque', async () => {
     mount({ role: 'SUPERVISOR' });
     await waitFor(() => expect(widget('attention')).not.toBeNull());
+    // On juge la page une fois ses blocs servis, pas sur leurs squelettes : le panneau des
+    // retakes lit `/stats`, la dernière requête que la page lance, et un bloc qui lève en
+    // lisant sa réponse démonte la page. Attendu ici, il échoue à chaque passage, pas au hasard.
+    expect(await screen.findByText(t('production.retakes.avgRetakes'))).not.toBeNull();
     expect(widgets()[0]).toBe('attention');
   });
 });
