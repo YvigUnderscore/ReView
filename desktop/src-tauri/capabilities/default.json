@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions du spike : la fenêtre principale, et rien de plus. Aucun accès disque, shell ou réseau n'est accordé au webview — le spike ne mesure que le moteur de rendu.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
