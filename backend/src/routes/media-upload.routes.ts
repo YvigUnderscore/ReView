@@ -161,7 +161,7 @@ router.post(
 // et enfile l'assemblage (proxy + échelle HLS + miniature + sprite). `note` est la consigne
 // d'upload, refusée absente quand le projet l'exige : cette route finalise l'envoi d'une
 // séquence, elle porte donc la même règle que /api/media/:id/finalize (Phase 50).
-const sequenceCompleteBody = z.object({ note: reviewNoteSchema }).default({});
+const sequenceCompleteBody = z.object({ note: reviewNoteSchema }).prefault({});
 router.post(
   '/sequence/:id/complete',
   validate({ params: idParam, body: sequenceCompleteBody }),

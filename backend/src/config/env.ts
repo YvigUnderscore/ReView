@@ -62,7 +62,7 @@ const baseEnvSchema = z.object({
   // falsifiable. Poser 1 quand — et seulement quand — le nginx de `nginx/nginx.conf`
   // (ou un proxy équivalent qui réécrit `X-Forwarded-For`) est le seul chemin d'entrée.
   TRUST_PROXY: z.coerce
-    .number({ invalid_type_error: 'TRUST_PROXY doit être un nombre de sauts (0 = aucun proxy)' })
+    .number({ error: 'TRUST_PROXY doit être un nombre de sauts (0 = aucun proxy)' })
     .int()
     .min(0)
     .max(4)

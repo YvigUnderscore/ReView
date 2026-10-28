@@ -32,12 +32,12 @@ export const latestQuery = z.object({
   published: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
-    .default('true'),
+    .prefault('true'),
   /** `true` joint une URL présignée à chaque média : un appel au lieu de deux par fichier. */
   urls: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
-    .default('false'),
+    .prefault('false'),
   expiresIn: z.coerce.number().int().min(60).max(86_400).default(DEFAULT_URL_TTL),
   /** Restreint l'élection à une étape du pipe (`comp`, `anim`…), par clé de département. */
   department: z.string().trim().max(80).optional(),

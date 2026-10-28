@@ -25,7 +25,7 @@ export const USD_SELECTION_MAX_PRIMS = 64;
 
 export const usdVariantsSchema = z
   .record(primPath, z.record(variantName, variantName))
-  .default({})
+  .prefault({})
   .refine((v) => Object.keys(v).length <= USD_SELECTION_MAX_PRIMS, {
     message: `Trop de prims dans la sélection (maximum ${USD_SELECTION_MAX_PRIMS})`,
   })

@@ -22,7 +22,7 @@ const idParam = z.object({ id: z.coerce.number().int() });
  * POST /api/media/:id/finalize — appelé après le PUT : lit l'en-tête depuis MinIO, valide les
  * magic bytes, met la taille à jour, déclenche le traitement. `note` = consigne d'upload (P50).
  */
-const finalizeBody = z.object({ note: reviewNoteSchema }).default({});
+const finalizeBody = z.object({ note: reviewNoteSchema }).prefault({});
 router.post('/:id/finalize', validate({ params: idParam, body: finalizeBody }), async (req, res) => {
   res.json(await MediaService.finalize(req.user!, Number(req.params.id), req.body.note));
 });
@@ -92,8 +92,8 @@ router.post(
   '/:id/publish',
   // Le geste de l'upload : publier EN DISANT qui doit regarder quoi — une consigne manquante
   // refuse alors la publication. Rend `{ media, reviewers }`. Corps absent = publier sans
-  // rien confier, comme avant : sans `.default({})`, un POST sans corps se verrait refusé.
-  validate({ params: idParam, body: z.object({ reviewers: reviewersSchema.optional() }).default({}) }),
+  // rien confier, comme avant : sans `.prefault({})`, un POST sans corps se verrait refusé.
+  validate({ params: idParam, body: z.object({ reviewers: reviewersSchema.optional() }).prefault({}) }),
   async (req, res) => {
     res.json(await MediaService.publish(req.user!, Number(req.params.id), req.body.reviewers));
   },

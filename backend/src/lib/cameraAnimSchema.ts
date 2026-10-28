@@ -80,12 +80,12 @@ const cameraAnimBase = z.object({
 });
 
 /** Animation complète (hors discriminant `type` du payload de commentaire). */
-export function cameraAnimShape(channels: z.ZodTypeAny) {
+export function cameraAnimShape<C extends z.ZodType>(channels: C) {
   return {
     version: z.literal(2),
     loop: z.boolean(),
     durationMs: z.number().int().min(0).max(3_600_000).optional(),
-    channels: z.record(z.enum(CHANNEL_ID_VALUES), channels),
+    channels: z.partialRecord(z.enum(CHANNEL_ID_VALUES), channels),
     base: cameraAnimBase.optional(),
   };
 }

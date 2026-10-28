@@ -92,7 +92,7 @@ const boardElementSchema = z
 export const boardDocumentSchema = z
   .object({
     elements: z.array(boardElementSchema).max(MAX_ELEMENTS).default([]),
-    files: z.record(fileIdSchema, boardFileSchema).default({}),
+    files: z.record(fileIdSchema, boardFileSchema).prefault({}),
   })
   .strict()
   .superRefine((doc, ctx) => {

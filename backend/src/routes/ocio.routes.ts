@@ -55,7 +55,7 @@ router.post(
   requireRole(Role.ADMIN),
   validate({
     params: z.object({ id: z.string().uuid() }),
-    body: z.object({ force: z.boolean().optional() }).default({}),
+    body: z.object({ force: z.boolean().optional() }).prefault({}),
   }),
   async (req, res) => {
     const id = req.params.id as string;

@@ -14,7 +14,7 @@ dependencies are listed: build-time tooling is never redistributed.
 
 | License | Packages |
 | --- | --- |
-| MIT | 483 |
+| MIT | 484 |
 | Apache-2.0 | 62 |
 | ISC | 60 |
 | BSD-3-Clause | 10 |
@@ -27,7 +27,7 @@ dependencies are listed: build-time tooling is never redistributed.
 | MPL-2.0 | 1 |
 | OFL-1.1 | 1 |
 | Unlicense | 1 |
-| **Total** | **625** |
+| **Total** | **626** |
 
 Runtime services that ReView talks to over the network (PostgreSQL, Redis, MinIO,
 ClamAV, Prometheus, Grafana, nginx) run as separate programs in their own containers.
@@ -38,9 +38,9 @@ must pass on the corresponding source offer for those programs.
 
 ## Backend (Node.js runtime)
 
-257 packages.
+258 packages.
 
-### @asteasolutions/zod-to-openapi@7.3.4
+### @asteasolutions/zod-to-openapi@8.5.0
 
 - License: `MIT`
 - Source: https://github.com/asteasolutions/zod-to-openapi
@@ -9547,7 +9547,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### body-parser@2.3.0
+### body-parser@2.4.0
 
 - License: `MIT`
 - Source: expressjs/body-parser
@@ -9941,6 +9941,36 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 ### content-type@2.0.0
+
+- License: `MIT`
+- Source: jshttp/content-type
+
+```text
+(The MIT License)
+
+Copyright (c) 2015 Douglas Christopher Wilson
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+### content-type@2.1.0
 
 - License: `MIT`
 - Source: jshttp/content-type
@@ -11852,7 +11882,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### ip-address@10.7.2
+### ip-address@10.7.5
 
 - License: `MIT`
 - Source: https://github.com/beaugunderson/ip-address
@@ -12974,7 +13004,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### nodemailer@10.0.13
+### nodemailer@10.2.1
 
 - License: `MIT-0`
 - Source: https://github.com/nodemailer/nodemailer
@@ -13951,7 +13981,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### qs@6.16.0
+### qs@6.17.0
 
 - License: `BSD-3-Clause`
 - Source: https://github.com/ljharb/qs
@@ -15344,7 +15374,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### zod@3.25.76
+### zod@4.6.7
 
 - License: `MIT`
 - Source: https://github.com/colinhacks/zod
@@ -22790,7 +22820,7 @@ THE SOFTWARE.
 ```
 ````
 
-### dompurify@3.4.16
+### dompurify@3.4.17
 
 - License: `(MPL-2.0 OR Apache-2.0)`
 - Source: https://github.com/cure53/DOMPurify

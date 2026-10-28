@@ -34,7 +34,7 @@ router.post(
         kind: z.enum(['full', 'reconcile']).default('full'),
         withMedia: z.boolean().optional(),
       })
-      .default({ kind: 'full' }),
+      .prefault({ kind: 'full' }),
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);

@@ -54,7 +54,7 @@ export const sceneOverrideSchema = z.object({
   purpose: z.enum(USD_PURPOSES).optional(),
   prims: z
     .record(z.string().min(1).max(1024).startsWith('/'), primEditSchema)
-    .default({})
+    .prefault({})
     .refine((p) => Object.keys(p).length <= MAX_PRIMS, {
       message: `Override trop volumineux (maximum ${MAX_PRIMS} prims)`,
     }),

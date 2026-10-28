@@ -27,19 +27,19 @@ export type SgDomain = (typeof SG_DOMAINS)[number];
 const access = z.object({ read: z.boolean(), write: z.boolean() });
 
 const domainsSchema = z.object({
-  hierarchy: access.default({ read: true, write: true }),
-  tasks: access.default({ read: true, write: true }),
+  hierarchy: access.prefault({ read: true, write: true }),
+  tasks: access.prefault({ read: true, write: true }),
   // Les statuts sont un référentiel : ReView les reçoit, ne les redéfinit pas côté SG.
-  statuses: access.default({ read: true, write: false }),
-  versions: access.default({ read: true, write: true }),
-  notes: access.default({ read: true, write: true }),
-  playlists: access.default({ read: true, write: true }),
+  statuses: access.prefault({ read: true, write: false }),
+  versions: access.prefault({ read: true, write: true }),
+  notes: access.prefault({ read: true, write: true }),
+  playlists: access.prefault({ read: true, write: true }),
   // Les comptes ne se créent jamais depuis la synchronisation (correspondance par email).
-  users: access.default({ read: true, write: false }),
+  users: access.prefault({ read: true, write: false }),
 });
 
 export const shotgridSettingsSchema = z.object({
-  domains: domainsSchema.default({}),
+  domains: domainsSchema.prefault({}),
   /** Création locale de sequences/shots/assets interdite tant que ShotGrid mène. */
   lockLocalCreation: z.boolean().default(true),
   /**
@@ -55,7 +55,7 @@ export const shotgridSettingsSchema = z.object({
       asset: z.array(z.number().int().positive()).max(200).default([]),
       shot: z.array(z.number().int().positive()).max(200).default([]),
     })
-    .default({}),
+    .prefault({}),
   /**
    * Statuts retenus pour ce projet, par périmètre et par code ShotGrid.
    *
@@ -74,7 +74,7 @@ export const shotgridSettingsSchema = z.object({
       sequence: z.array(z.string()).max(200).default([]),
       asset: z.array(z.string()).max(200).default([]),
     })
-    .default({}),
+    .prefault({}),
   eventMode: z.enum(['webhook', 'polling', 'manual']).default('webhook'),
   pollingIntervalSec: z.number().int().min(15).max(3600).default(60),
   /** Réconciliation périodique : rattrape ce qu'un webhook perdu ou une coupure a manqué. */
@@ -93,7 +93,7 @@ export const shotgridSettingsSchema = z.object({
       /** Rattrapage immédiat au démarrage de l'instance (retour de coupure). */
       onBoot: z.boolean().default(true),
     })
-    .default({}),
+    .prefault({}),
   media: z
     .object({
       source: z.enum(['transcoded', 'original']).default('transcoded'),
@@ -121,7 +121,7 @@ export const shotgridSettingsSchema = z.object({
        */
       thumbnails: z.boolean().default(true),
     })
-    .default({}),
+    .prefault({}),
   push: z
     .object({
       /** Ce qu'une publication ReView crée côté ShotGrid. */
@@ -131,7 +131,7 @@ export const shotgridSettingsSchema = z.object({
       /** Joindre l'image annotée aux Notes poussées. */
       attachAnnotations: z.boolean().default(true),
     })
-    .default({}),
+    .prefault({}),
   /**
    * Qui écrit la description d'une séquence, d'un plan ou d'un asset.
    *
@@ -151,9 +151,9 @@ export const shotgridSettingsSchema = z.object({
       /** Renvoyer vers le site la description modifiée dans ReView. */
       writeBack: z.boolean().default(false),
     })
-    .default({}),
+    .prefault({}),
   /** Correspondance code de statut SG (Version) → id de ReviewStatus ReView. */
-  versionStatusMap: z.record(z.string(), z.number().int()).default({}),
+  versionStatusMap: z.record(z.string(), z.number().int()).prefault({}),
   /**
    * Qui gagne quand les deux côtés ont bougé depuis la dernière synchronisation.
    * ShotGrid par défaut : c'est le registre de production de référence.
