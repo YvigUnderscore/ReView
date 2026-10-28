@@ -162,6 +162,9 @@ export function mockApi(routes: Record<string, MockResolver> = {}): ApiMock {
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(raw, 'http://localhost');
+    // Une ressource locale (`file:`, `data:`, `blob:`) n'est pas un appel d'API : le `.wasm`
+    // que Spark charge à l'import recevait sinon une erreur JSON, rejetée hors de tout test.
+    if (!url.protocol.startsWith('http')) return original(input, init);
     const method = (init?.method ?? 'GET').toUpperCase();
     const actual = url.pathname.split('/');
     const candidates = table

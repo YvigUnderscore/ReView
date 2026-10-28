@@ -53,6 +53,15 @@ describe('mockApi', () => {
     expect(mock.unhandled).toEqual(['GET /api/inconnu?x=1']);
   });
 
+  it('laisse passer une ressource locale, qui n’est pas un appel d’API', async () => {
+    const mock = install({});
+
+    const res = await fetch('data:application/wasm;base64,AGFzbQ==');
+
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(new Uint8Array([0, 0x61, 0x73, 0x6d]));
+    expect(mock.calls).toEqual([]);
+  });
+
   it('extrait les segments nommés du motif', async () => {
     install({ 'GET /api/media/:id/comments': ({ params }) => ({ id: params.id }) });
 
