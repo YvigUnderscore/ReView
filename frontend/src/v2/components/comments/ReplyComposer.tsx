@@ -17,6 +17,7 @@ import AttachmentDraftList from './AttachmentDraftList';
 import { removeDraft, toDrafts } from './attachmentDrafts';
 import { useObjectUrls } from './useObjectUrls';
 import { useT } from '../../i18n';
+import { notifyError } from '@/v2/lib/notifyError';
 
 /** Reply area for a comment (text, attached images, CTRL+V paste, 8 max). */
 export default function ReplyComposer({
@@ -58,7 +59,9 @@ export default function ReplyComposer({
       setText('');
       setFiles([]);
       onSent();
-    } catch {
+    } catch (err) {
+      // The draft stays in the field: the reply can be sent again as is.
+      notifyError(err);
       setBusy(false);
     }
   };

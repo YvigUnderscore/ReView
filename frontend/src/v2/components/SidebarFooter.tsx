@@ -13,6 +13,7 @@ import SocialPanel from './shell/SocialPanel';
 import WhatsNew from './WhatsNew';
 import { STATUS_COLOR, STATUS_LABEL_KEY } from '../lib/userStatus';
 import { useT } from '../i18n';
+import { notifyError } from '@/v2/lib/notifyError';
 
 const STATUSES: UserStatus[] = ['AVAILABLE', 'AWAY', 'DND'];
 
@@ -35,8 +36,8 @@ export default function SidebarFooter() {
     try {
       const { user: updated } = await api.patch<{ user: typeof user }>('/api/users/me/status', { status });
       setUser(updated);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      notifyError(err);
     }
   };
 

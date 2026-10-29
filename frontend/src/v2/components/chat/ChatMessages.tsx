@@ -11,6 +11,7 @@ import { timeAgo } from '../../lib/time';
 import { chatSystemText } from '../../lib/chatSystemText';
 import type { ChatMessage } from '../../types/chat';
 import { useT } from '../../i18n';
+import { notifyError } from '@/v2/lib/notifyError';
 
 /**
  * Message thread: oldest at the top, newest at the bottom, pinned to the bottom when a
@@ -84,7 +85,11 @@ function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
           <span className="shrink-0 text-2xs text-muted-foreground">{timeAgo(message.createdAt)}</span>
           {mine && (
             <button
-              onClick={() => void api.del(`/api/chat/messages/${message.id}`).catch(() => undefined)}
+              onClick={() =>
+                void api
+                  .del(`/api/chat/messages/${message.id}`)
+                  .catch((err) => notifyError(err, t('common.error.delete')))
+              }
               title={t('chat.delete')}
               className="ml-auto shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
             >

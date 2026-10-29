@@ -11,6 +11,7 @@ import { useProjectMembers } from '@/v2/lib/useProjectRole';
 import type { TaskStatus } from '@/v2/types/api';
 import { useProjectActivity, type ActivityTask, type ProjectActivity } from './useProjectActivity';
 import { useT } from '@/v2/i18n';
+import { notifyError } from '@/v2/lib/notifyError';
 
 /**
  * The tasks to handle, most urgent first: status and assignment on click, for whoever manages the
@@ -56,7 +57,8 @@ export default function TasksWidget({
         status: next.legacyStatus,
         ...(next.statusId ? { pipelineStatusId: next.statusId } : {}),
       });
-    } catch {
+    } catch (err) {
+      notifyError(err);
       void rollback();
     }
   };
@@ -67,7 +69,8 @@ export default function TasksWidget({
     patchTask(taskId, { assignee: id ? { id, name: member?.name ?? null } : null });
     try {
       await api.patch(`/api/tasks/${taskId}`, { assigneeId: id });
-    } catch {
+    } catch (err) {
+      notifyError(err);
       void rollback();
     }
   };
