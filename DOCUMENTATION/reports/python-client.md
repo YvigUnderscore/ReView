@@ -1,6 +1,8 @@
 # Client Python ReView : écart aux conventions
 
-*Audit de `clients/python` (paquet `review`, CLI `review`) et de `clients/dcc` (add-on Blender, intégration Nuke). Date : 2026-10-29. Branche `dev`.*
+*Audit de `clients/python` (paquet `review`, CLI `review`) et de `clients/dcc` (add-on Blender, intégration Nuke). Branche `dev`.*
+
+> Updated: 2026-10-29
 
 ## Résumé
 
