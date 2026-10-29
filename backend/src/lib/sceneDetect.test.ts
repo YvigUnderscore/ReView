@@ -4,8 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseSceneTimes, sceneFrames } from './sceneDetect';
 
-describe('sceneDetect — marqueurs auto « Plan n » (34.H)', () => {
-  it('parse les pts_time de la sortie showinfo', () => {
+describe('sceneDetect — automatic "Shot n" markers (34.H)', () => {
+  it('parses the pts_time values of the showinfo output', () => {
     const stderr = [
       '[Parsed_showinfo_1 @ 0x1] n:   0 pts:  12800 pts_time:0.533333 duration:...',
       'bruit sans rapport',
@@ -14,11 +14,11 @@ describe('sceneDetect — marqueurs auto « Plan n » (34.H)', () => {
     expect(parseSceneTimes(stderr)).toEqual([0.533333, 7.168]);
   });
 
-  it('convertit en frames uniques croissantes, sans la frame 0', () => {
+  it('converts to unique increasing frames, without frame 0', () => {
     expect(sceneFrames([0, 0.5, 0.51, 2], 24)).toEqual([12, 48]);
   });
 
-  it('borne au garde-fou et replie le fps invalide sur 24', () => {
+  it('bounds to the safeguard and falls back on 24 for an invalid fps', () => {
     const times = Array.from({ length: 10 }, (_, i) => i + 1);
     expect(sceneFrames(times, NaN, 3)).toEqual([24, 48, 72]);
   });

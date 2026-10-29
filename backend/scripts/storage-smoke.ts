@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Smoke test du StorageService (vérification 8.1) :
+ * Smoke test for StorageService (check 8.1):
  *  1. ensureBucket
- *  2. upload via URL présignée PUT (HTTP direct, comme le navigateur)
- *  3. lecture via URL présignée GET
- *  4. nettoyage
+ *  2. upload via presigned PUT URL (direct HTTP, like the browser)
+ *  3. read via presigned GET URL
+ *  4. cleanup
  *
- * Lancer : `tsx scripts/storage-smoke.ts` (avec MinIO démarré + .env configuré).
+ * Run: `tsx scripts/storage-smoke.ts` (with MinIO started + .env configured).
  */
 import { storage } from '../src/services/StorageService';
 

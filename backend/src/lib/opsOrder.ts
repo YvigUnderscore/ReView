@@ -5,35 +5,33 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 
 /**
- * Le protocole entre l'application et l'agent d'exploitation : la forme d'un ordre, celle
- * d'un statut, et les filtres que ni l'un ni l'autre ne franchit.
+ * The protocol between the application and the operations agent: the shape of an order, that of a status, and the
+ * filters that neither of them crosses.
  *
- * Module **pur** : aucun accès disque, aucune dépendance à l'environnement. Ce qu'il
- * contient se teste sans monter quoi que ce soit, et c'est voulu — c'est ici que se joue
- * la différence entre « une étiquette de version » et « une ligne de commande ».
+ * **Pure** module: no disk access, no dependency on the environment. What it contains is tested without mounting anything,
+ * and that is deliberate — this is where the difference between "a version tag" and "a command line" is decided.
  *
- * ── Règle d'évolution ────────────────────────────────────────────────────────
- * Le protocole n'évolue qu'**additivement** : un champ nouveau, jamais un champ renommé ni
- * retiré. Un agent et un backend ne sont pas mis à jour au même instant — pendant une
- * bascule, c'est même précisément l'inverse — et le backend de la version N+1 doit relire
- * le statut d'un run lancé par l'agent de la version N.
+ * ── Evolution rule ──
+ * The protocol evolves only **additively**: a new field, never a renamed or removed one. An agent and a backend are not
+ * updated at the same instant — during a switchover, it is even precisely the reverse — and the backend of version N+1
+ * must reread the status of a run launched by the agent of version N.
  */
 
-/** Version du protocole comprise par ce backend. */
+/** Protocol version understood by this backend. */
 export const OPS_PROTOCOL = 1;
 
-/** Étiquette de version publiable, la même forme que celle qui déclenche `release.yml`. */
+/** Publishable version tag, the same form as the one that triggers `release.yml`. */
 export const VERSION_TAG = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?$/;
-/** Nom d'un dossier de sauvegarde, tel que `backup.sh` le compose. */
+/** Name of a backup folder, as `backup.sh` composes it. */
 export const BACKUP_STAMP = /^\d{8}-\d{6}$/;
-/** Identifiant d'exécution : horodatage + six hexadécimaux. C'est un NOM DE DOSSIER. */
+/** Run identifier: timestamp + six hexadecimal digits. It is a FOLDER NAME. */
 export const RUN_ID = /^\d{8}-\d{6}-[0-9a-f]{6}$/;
 
-/** Les trois opérations commandables. Il n'y en a pas de quatrième, et surtout pas libre. */
+/** The three commandable operations. There is no fourth one, and certainly no free one. */
 export const OPS_KINDS = ['update', 'backup', 'verify'] as const;
 export type OpsKind = (typeof OPS_KINDS)[number];
 
-/** États possibles d'une exécution, du dépôt de l'ordre au verdict. */
+/** Possible states of a run, from the deposit of the order to the verdict. */
 export const RUN_STATES = [
   'queued',
   'running',
@@ -47,16 +45,16 @@ export const RUN_STATES = [
 ] as const;
 export type RunState = (typeof RUN_STATES)[number];
 
-/** Jalons émis par `scripts/update.sh` (`OPS_PHASE=`). */
+/** Milestones emitted by `scripts/update.sh` (`OPS_PHASE=`). */
 export const RUN_PHASES = ['queued', 'precheck', 'backup', 'switch', 'health', 'rollback', 'done'] as const;
 
 /**
- * Au-delà de ce jalon, la bascule est engagée : annuler ne défait rien et laisserait la
- * pile dans un état que personne ne sait décrire. L'agent refuse aussi de son côté.
+ * Beyond this milestone, the switchover is committed: cancelling undoes nothing and would leave the stack in a state
+ * nobody can describe. The agent also refuses on its side.
  */
 export const CANCELLABLE_PHASES = new Set<string>(['queued', 'precheck', 'backup']);
 
-/** Un ordre, tel qu'il est écrit dans `ops/queue/<id>.json`. */
+/** An order, as written in `ops/queue/<id>.json`. */
 export interface OpsOrder {
   protocol: number;
   id: string;
@@ -73,7 +71,7 @@ export interface OpsOrder {
   };
 }
 
-/** Identifiant d'exécution — l'horodatage le rend triable, les six hexa non devinable. */
+/** Run identifier — the timestamp makes it sortable, the six hex digits make it non-guessable. */
 export function newRunId(now: Date, entropy: () => string = () => randomBytes(3).toString('hex')): string {
   const p = (n: number, width = 2) => String(n).padStart(width, '0');
   const stamp =
@@ -83,17 +81,17 @@ export function newRunId(now: Date, entropy: () => string = () => randomBytes(3)
 }
 
 /**
- * Ramène une durée dans des bornes tenables. Ce n'est pas une politesse : la valeur finit
- * dans `$(( SECONDS + READY_TIMEOUT ))` côté script, où bash **ré-évalue le contenu** de
- * la variable — « x[$(commande)] » s'y exécuterait. Elle est donc bornée ici, refiltrée
- * par `update.sh`, et refiltrée encore par l'agent. Trois passes, aucune confiance.
+ * Brings a duration back within tenable bounds. This is not a courtesy: the value ends up in
+ * `$(( SECONDS + READY_TIMEOUT ))` on the script side, where bash **re-evaluates the content** of the variable — "x[$(command)]"
+ * would execute there. It is therefore bounded here, re-filtered by `update.sh`, and re-filtered again by the agent.
+ * Three passes, no trust.
  */
 export function clampSeconds(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.trunc(value)));
 }
 
-/** Construit l'ordre à déposer. Toutes les valeurs sont déjà validées à ce point. */
+/** Builds the order to deposit. All values are already validated at this point. */
 export function buildOrder(input: {
   id: string;
   kind: OpsKind;
@@ -124,9 +122,9 @@ export function buildOrder(input: {
 }
 
 /**
- * Le statut écrit par l'agent. Il est relu par un backend qui n'est pas forcément celui qui
- * a déposé l'ordre — d'où le schéma : tout est facultatif sauf ce sans quoi il n'y a rien à
- * montrer, et un champ inconnu est ignoré plutôt que de faire échouer la lecture.
+ * The status written by the agent. It is reread by a backend that is not necessarily the one that deposited the order —
+ * hence the schema: everything is optional except what without which there is nothing to show, and an unknown field is
+ * ignored rather than failing the read.
  */
 export const statusSchema = z.object({
   protocol: z.number().int().optional(),
@@ -146,11 +144,9 @@ export const statusSchema = z.object({
 });
 
 /**
- * Un ordre relu depuis la file. Le backend l'y a écrit lui-même, mais il le relit pour dire
- * de QUOI il s'agit tant que l'agent ne l'a pas ramassé — sans quoi l'écran annoncerait une
- * opération « inconnue » pendant les secondes qui suivent le clic, ce qui est faux et
- * inquiétant. Schéma tolérant, comme le statut : un ordre déposé par une version antérieure
- * doit rester lisible.
+ * An order reread from the queue. The backend wrote it itself, but rereads it to say WHAT it is about while the agent has
+ * not picked it up — otherwise the screen would announce an "unknown" operation during the seconds following the click,
+ * which is false and alarming. Tolerant schema, like the status: an order deposited by an earlier version must remain readable.
  */
 export const queuedOrderSchema = z.object({
   id: z.string(),
@@ -161,7 +157,7 @@ export const queuedOrderSchema = z.object({
   params: z.object({ version: z.string().nullish(), backupId: z.string().nullish() }).partial().nullish(),
 });
 
-/** L'état de l'agent (`ops/state/agent.json`), écrit à chaque battement. */
+/** The agent's state (`ops/state/agent.json`), written at each heartbeat. */
 export const agentSchema = z.object({
   protocol: z.number().int(),
   version: z.string().nullish(),

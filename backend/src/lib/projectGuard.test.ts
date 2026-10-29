@@ -15,13 +15,13 @@ const findFirst = vi.mocked(prisma.project.findFirst);
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('projectGuard.assertProjectWritable — verrou d’archivage (38.B)', () => {
-  it('laisse passer un projet ACTIVE', async () => {
+describe('projectGuard.assertProjectWritable — archive lock (38.B)', () => {
+  it('lets an ACTIVE project through', async () => {
     findFirst.mockResolvedValue({ status: 'ACTIVE' } as never);
     await expect(assertProjectWritable(1)).resolves.toBeUndefined();
   });
 
-  it('refuse un projet ARCHIVED avec un 403 PROJECT_ARCHIVED', async () => {
+  it('refuses an ARCHIVED project with a 403 PROJECT_ARCHIVED', async () => {
     findFirst.mockResolvedValue({ status: 'ARCHIVED' } as never);
     try {
       await assertProjectWritable(1);
@@ -33,7 +33,7 @@ describe('projectGuard.assertProjectWritable — verrou d’archivage (38.B)', (
     }
   });
 
-  it('404 si le projet est introuvable (ou supprimé)', async () => {
+  it('404 if the project is not found (or deleted)', async () => {
     findFirst.mockResolvedValue(null);
     await expect(assertProjectWritable(999)).rejects.toMatchObject({ statusCode: 404 });
   });

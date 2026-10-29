@@ -22,16 +22,16 @@ import {
 } from './imageSequence';
 
 /**
- * Reconnaissance des séquences d'images.
+/**
+ * Image sequence recognition.
  *
- * Le piège du domaine tient en un nom : `SH0100_comp_v003.1001.exr` porte DEUX nombres.
- * Prendre le premier regroupe tout le plan sous « version 3 » ; prendre le dernier avant
- * l'extension est la seule lecture juste. Le reste des cas — trous, padding, plusieurs
- * séquences dans un même dépôt — décide de ce qui sera proposé à l'utilisateur.
+ * The domain trap fits in one name: `SH0100_comp_v003.1001.exr` carries TWO numbers. Taking the first groups the whole
+ * shot under "version 3"; taking the last one before the extension is the only correct reading. The remaining cases —
+ * gaps, padding, several sequences in one upload — decide what is proposed to the user.
  */
 
-describe('parseFrameName — le numéro de frame est le dernier avant l’extension', () => {
-  it('ne confond pas le numéro de version avec le numéro de frame', () => {
+describe('parseFrameName — the frame number is the last one before the extension', () => {
+  it('does not confuse the version number with the frame number', () => {
     expect(parseFrameName('SH0100_comp_v003.1001.exr')).toEqual({
       base: 'SH0100_comp_v003.',
       number: 1001,
@@ -40,46 +40,46 @@ describe('parseFrameName — le numéro de frame est le dernier avant l’extens
     });
   });
 
-  it('accepte les trois séparateurs vus en production (point, souligné, collé)', () => {
+  it('accepts the three separators seen in production (dot, underscore, none)', () => {
     expect(parseFrameName('plan_1001.dpx')?.base).toBe('plan_');
     expect(parseFrameName('plan-1001.dpx')?.base).toBe('plan-');
     expect(parseFrameName('plan1001.dpx')?.base).toBe('plan');
   });
 
-  it('conserve la largeur du champ, zéros de tête compris', () => {
+  it('keeps the field width, leading zeros included', () => {
     expect(parseFrameName('plan.0042.exr')).toMatchObject({ number: 42, digits: 4 });
     expect(parseFrameName('plan.42.exr')).toMatchObject({ number: 42, digits: 2 });
   });
 
-  it('normalise l’extension et refuse ce qui n’est pas numéroté', () => {
+  it('normalises the extension and refuses what is not numbered', () => {
     expect(parseFrameName('plan.1001.EXR')?.extension).toBe('.exr');
     expect(parseFrameName('planche.exr')).toBeNull();
     expect(parseFrameName('sans-extension-1001')).toBeNull();
   });
 
-  it('refuse un nombre trop long pour être une frame (horodatage, identifiant)', () => {
+  it('refuses a number too long to be a frame (timestamp, identifier)', () => {
     expect(parseFrameName('render_1723458123456.exr')).toBeNull();
   });
 });
 
-describe('isSafeFrameName — le nom devient une clé de stockage', () => {
-  it('accepte les noms de livraison réels', () => {
+describe('isSafeFrameName — the name becomes a storage key', () => {
+  it('accepts real delivery names', () => {
     expect(isSafeFrameName('SH0100_comp_v003.1001.exr')).toBe(true);
   });
 
-  it('refuse tout ce qui se déguise en chemin', () => {
+  it('refuses anything disguised as a path', () => {
     for (const name of ['../secret.exr', 'a/b.exr', '/etc/passwd', '.hidden.exr', 'plan 1001.exr', '']) {
       expect(isSafeFrameName(name)).toBe(false);
     }
   });
 
-  it('refuse un nom démesuré', () => {
+  it('refuses an oversized name', () => {
     expect(isSafeFrameName(`${'a'.repeat(240)}.exr`)).toBe(false);
   });
 });
 
 describe('framePattern / parseFramePattern', () => {
-  it('fait l’aller-retour', () => {
+  it('round-trips', () => {
     const pattern = framePattern('SH0100_comp_v003.', 4, '.exr');
     expect(pattern).toBe('SH0100_comp_v003.%04d.exr');
     expect(parseFramePattern(pattern)).toEqual({
@@ -89,28 +89,28 @@ describe('framePattern / parseFramePattern', () => {
     });
   });
 
-  it('refuse ce qui n’est pas un motif', () => {
+  it('refuses what is not a pattern', () => {
     expect(parseFramePattern('plan.1001.exr')).toBeNull();
     expect(parseFramePattern('plan.%d.exr')).toBeNull();
   });
 
-  it('reconstruit le nom d’une frame donnée', () => {
+  it('rebuilds the name of a given frame', () => {
     expect(frameNameOf('plan.', 4, '.exr', 1001)).toBe('plan.1001.exr');
     expect(frameNameOf('plan.', 4, '.exr', 7)).toBe('plan.0007.exr');
   });
 
-  it('reconnaît un motif là où on attend un fichier (API v1)', () => {
+  it('recognises a pattern where a file is expected (API v1)', () => {
     expect(looksLikeSequencePattern('plan.%04d.exr')).toBe(true);
     expect(looksLikeSequencePattern('plan.####.exr')).toBe(true);
     expect(looksLikeSequencePattern('SH0100_comp_v003.1001.exr')).toBe(false);
   });
 });
 
-describe('groupFrameNames — proposer, jamais imposer', () => {
+describe('groupFrameNames — propose, never impose', () => {
   const seq = (base: string, from: number, to: number, ext = '.exr'): string[] =>
     Array.from({ length: to - from + 1 }, (_, i) => `${base}${String(from + i).padStart(4, '0')}${ext}`);
 
-  it('regroupe un plan complet en une seule proposition', () => {
+  it('groups a complete shot into a single proposal', () => {
     const { sequences, singles } = groupFrameNames(seq('SH0100_comp_v003.', 1001, 1100));
     expect(singles).toEqual([]);
     expect(sequences).toHaveLength(1);
@@ -118,7 +118,7 @@ describe('groupFrameNames — proposer, jamais imposer', () => {
     expect(sequences[0]!.frames).toHaveLength(100);
   });
 
-  it('sépare deux séquences déposées ensemble, et laisse les fichiers isolés de côté', () => {
+  it('separates two sequences uploaded together, and leaves isolated files aside', () => {
     const { sequences, singles } = groupFrameNames([
       ...seq('SH0100_comp_v003.', 1001, 1010),
       ...seq('SH0200_comp_v001.', 1001, 1010),
@@ -132,7 +132,7 @@ describe('groupFrameNames — proposer, jamais imposer', () => {
     expect([...singles].sort()).toEqual(['SH0100_comp_v003.mov', 'notes.txt']);
   });
 
-  it('garde une numérotation à trous : c’est un fait de production, pas une erreur', () => {
+  it('keeps a numbering with gaps: it is a production fact, not a reading error', () => {
     const names = ['plan.1001.exr', 'plan.1002.exr', 'plan.1005.exr'];
     const { sequences } = groupFrameNames(names);
     expect(sequences[0]!.frames).toEqual([1001, 1002, 1005]);
@@ -144,20 +144,20 @@ describe('groupFrameNames — proposer, jamais imposer', () => {
     });
   });
 
-  it('trie par numéro, quel que soit l’ordre du dépôt', () => {
+  it('sorts by number, whatever the order of the upload', () => {
     const { sequences } = groupFrameNames(['plan.0010.exr', 'plan.0002.exr', 'plan.0100.exr']);
     expect(sequences[0]!.frames).toEqual([2, 10, 100]);
     expect(sequences[0]!.names[0]).toBe('plan.0002.exr');
   });
 
-  it('ne propose pas une séquence d’un seul fichier', () => {
+  it('does not propose a sequence of a single file', () => {
     const { sequences, singles } = groupFrameNames(['plan.1001.exr']);
     expect(MIN_SEQUENCE_FRAMES).toBe(2);
     expect(sequences).toEqual([]);
     expect(singles).toEqual(['plan.1001.exr']);
   });
 
-  it('ne mélange pas deux paddings ni deux extensions sous un même motif', () => {
+  it('does not mix two paddings or two extensions under one pattern', () => {
     const { sequences } = groupFrameNames([
       'plan.001.exr',
       'plan.002.exr',
@@ -174,29 +174,29 @@ describe('groupFrameNames — proposer, jamais imposer', () => {
   });
 });
 
-describe('conventions de clés MinIO', () => {
+describe('MinIO key conventions', () => {
   const storageKey = 'projects/demo/shots/sq010/sh0100/v01/42/sequence.json';
 
-  it('range les frames sous un préfixe voisin du manifeste', () => {
+  it('stores the frames under a prefix next to the manifest', () => {
     expect(sequenceFramePrefix(storageKey)).toBe('projects/demo/shots/sq010/sh0100/v01/42/frames/');
     expect(sequenceManifestKey('projects/demo/shots/sq010/sh0100/v01/42/plan.exr')).toBe(storageKey);
   });
 
-  it('compose la clé d’une frame à partir du nom livré', () => {
+  it('composes the key of a frame from the delivered name', () => {
     expect(sequenceFrameKey(sequenceFramePrefix(storageKey), 'plan.1001.exr')).toBe(
       'projects/demo/shots/sq010/sh0100/v01/42/frames/plan.1001.exr',
     );
   });
 });
 
-describe('assemblage FFmpeg', () => {
-  it('renumérote localement pour que le démultiplexeur ne s’arrête pas au premier trou', () => {
+describe('FFmpeg assembly', () => {
+  it('renumbers locally so that the demuxer does not stop at the first gap', () => {
     expect(localFrameName(0, '.exr')).toBe('f_000000.exr');
     expect(localFrameName(1234, '.exr')).toBe('f_001234.exr');
     expect(localFramePattern('.exr')).toBe('f_%06d.exr');
   });
 
-  it('écrit les cadences NTSC en fraction exacte, jamais en 23.98', () => {
+  it('writes NTSC rates as an exact fraction, never as 23.98', () => {
     expect(ffmpegFrameRate(23.976)).toBe('24000/1001');
     expect(ffmpegFrameRate(23.98)).toBe('24000/1001');
     expect(ffmpegFrameRate(29.97)).toBe('30000/1001');
@@ -204,7 +204,7 @@ describe('assemblage FFmpeg', () => {
     expect(ffmpegFrameRate(25)).toBe('25');
   });
 
-  it('applique la courbe sRGB à l’EXR — sans elle, un rendu correct sort quasi noir', () => {
+  it('applies the sRGB curve to the EXR — without it, a correct render comes out almost black', () => {
     expect(sequenceInputOptions(24, '.exr')).toEqual([
       '-framerate',
       '24',
@@ -215,7 +215,7 @@ describe('assemblage FFmpeg', () => {
     ]);
   });
 
-  it('ne pose aucune courbe sur un format qui n’en connaît pas l’option', () => {
+  it('sets no curve on a format whose option it does not know', () => {
     expect(sequenceInputOptions(25, '.dpx')).toEqual(['-framerate', '25', '-start_number', '0']);
   });
 });

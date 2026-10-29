@@ -6,7 +6,7 @@ import { detectDelimiter, parseShotsCsv, toCsvLine, toShotsCsv } from './project
 import { parseProjectCsv } from './projectCsvParse';
 
 describe('projectCsv.detectDelimiter', () => {
-  it('élit le séparateur le plus fréquent de l’en-tête', () => {
+  it('picks the most frequent separator of the header', () => {
     expect(detectDelimiter('sequence,shot,name')).toBe(',');
     expect(detectDelimiter('sequence;shot;"nom, complet"')).toBe(';');
     expect(detectDelimiter('sequence\tshot')).toBe('\t');
@@ -15,13 +15,13 @@ describe('projectCsv.detectDelimiter', () => {
 });
 
 describe('projectCsv.toCsvLine', () => {
-  it('échappe et neutralise l’injection de formule', () => {
+  it('escapes and neutralises formula injection', () => {
     expect(toCsvLine(['a,b', '=SUM(1)'])).toBe('"a,b",\'=SUM(1)');
   });
 });
 
 describe('projectCsv.parseShotsCsv (38.F)', () => {
-  it('parse en-tête + lignes, tâches séparées par |', () => {
+  it('parses header + rows, tasks separated by |', () => {
     const csv = 'sequence,shot,name,tasks\nSQ01,SH010,Intro,Anim|Comp\n,SH020,,\n';
     const { rows, errors } = parseShotsCsv(csv);
     expect(errors).toEqual([]);
@@ -31,54 +31,54 @@ describe('projectCsv.parseShotsCsv (38.F)', () => {
     ]);
   });
 
-  it('erreur si colonne shot absente', () => {
+  it('error if the shot column is absent', () => {
     expect(parseShotsCsv('sequence,name\nSQ01,x').errors[0]).toMatch(/shot/);
   });
 
-  it('signale un shot manquant et les doublons (même séquence)', () => {
+  it('reports a missing shot and duplicates (same sequence)', () => {
     const { rows, errors } = parseShotsCsv('shot,name\nSH01,a\n,b\nSH01,c\n');
-    expect(rows).toHaveLength(1); // seul le premier SH01 est retenu
-    expect(errors.some((e) => /manquant/.test(e))).toBe(true); // ligne « ,b »
+    expect(rows).toHaveLength(1); // only the first SH01 is kept
+    expect(errors.some((e) => /manquant/.test(e))).toBe(true); // the ",b" line
     expect(errors.some((e) => /double/.test(e))).toBe(true); // second SH01
   });
 
-  it('supporte le délimiteur `;` et les champs entre guillemets', () => {
+  it('supports the `;` delimiter and quoted fields', () => {
     const { rows } = parseShotsCsv('sequence;shot;name;tasks\nSQ01;SH01;"Plan, large";Anim');
     expect(rows[0]).toEqual({ sequence: 'SQ01', shot: 'SH01', name: 'Plan, large', tasks: ['Anim'] });
   });
 
-  it('fichier vide → erreur', () => {
+  it('empty file → error', () => {
     expect(parseShotsCsv('   ').errors).toEqual(['Fichier vide']);
   });
 });
 
 describe('projectCsv.toShotsCsv (38.G)', () => {
-  it('sérialise avec en-tête et échappe les champs, ré-importable', () => {
+  it('serialises with a header and escapes fields, re-importable', () => {
     const csv = toShotsCsv([
       { sequence: 'SQ01', shot: 'SH01', name: 'Plan, large', tasks: ['Anim', 'Comp'] },
       { sequence: null, shot: 'SH02', name: 'SH02', tasks: [] },
     ]);
     expect(csv.split('\n')[0]).toBe('sequence,shot,name,tasks');
     expect(csv).toContain('"Plan, large"');
-    // Aller-retour : l'export se ré-importe à l'identique.
+    // Round trip: the export re-imports identically.
     const back = parseShotsCsv(csv).rows;
     expect(back[0]).toEqual({ sequence: 'SQ01', shot: 'SH01', name: 'Plan, large', tasks: ['Anim', 'Comp'] });
     expect(back[1]).toEqual({ sequence: null, shot: 'SH02', name: 'SH02', tasks: [] });
   });
 
-  it('n’écrit une colonne facultative que si une ligne la renseigne', () => {
+  it('writes an optional column only if a row fills it in', () => {
     const plain = toShotsCsv([{ sequence: null, shot: 'SH01', name: 'SH01', tasks: [] }]);
     expect(plain.split('\n')[0]).toBe('sequence,shot,name,tasks');
     const rich = toShotsCsv([
       { sequence: 'SQ01', shot: 'SH01', name: 'Intro', tasks: ['Anim'], episode: 'EP01', startFrame: 1001 },
     ]);
     expect(rich.split('\n')[0]).toBe('sequence,shot,name,tasks,episode,start_frame');
-    // Les en-têtes enrichis se relisent par l'import : l'aller-retour reste possible.
+    // The enriched headers are read back by the import: the round trip remains possible.
     const back = parseProjectCsv(rich).entries[0];
     expect(back).toMatchObject({ episode: 'EP01', sequence: 'SQ01', shot: 'SH01', startFrame: 1001 });
   });
 
-  it('neutralise l’injection de formule (CP-SEC) : préfixe apostrophe', () => {
+  it('neutralises formula injection (CP-SEC): apostrophe prefix', () => {
     const csv = toShotsCsv([{ sequence: null, shot: '=cmd()', name: '@x', tasks: ['+y'] }]);
     const line = csv.split('\n')[1];
     expect(line).toContain("'=cmd()");

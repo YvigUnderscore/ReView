@@ -28,7 +28,7 @@ describe('runShutdownTasks', () => {
     __resetShutdownState();
   });
 
-  it('exécute toutes les tâches et rend un compte rendu', async () => {
+  it('runs all the tasks and returns a report', async () => {
     const seen: string[] = [];
     const out = await runShutdownTasks(
       [
@@ -44,7 +44,7 @@ describe('runShutdownTasks', () => {
     ]);
   });
 
-  it('respecte l’ordre des phases : la phase 20 attend la fin de la phase 10', async () => {
+  it('respects the order of the phases: phase 20 waits for the end of phase 10', async () => {
     vi.useFakeTimers();
     const seen: string[] = [];
     const slow = task({
@@ -67,7 +67,7 @@ describe('runShutdownTasks', () => {
     vi.useRealTimers();
   });
 
-  it('les tâches d’une même phase partent en parallèle', async () => {
+  it('the tasks of the same phase start in parallel', async () => {
     vi.useFakeTimers();
     const done: string[] = [];
     const mk = (name: string, ms: number) =>
@@ -88,7 +88,7 @@ describe('runShutdownTasks', () => {
     vi.useRealTimers();
   });
 
-  it('borne une tâche qui ne rend jamais la main, et la force', async () => {
+  it('bounds a task that never returns control, and forces it', async () => {
     vi.useFakeTimers();
     const force = vi.fn();
     const p = runShutdownTasks(
@@ -102,7 +102,7 @@ describe('runShutdownTasks', () => {
     vi.useRealTimers();
   });
 
-  it('le budget est global : une phase lente n’offre plus rien à la suivante', async () => {
+  it('the budget is global: a slow phase leaves nothing for the next one', async () => {
     vi.useFakeTimers();
     const force = vi.fn();
     const p = runShutdownTasks(
@@ -119,7 +119,7 @@ describe('runShutdownTasks', () => {
     vi.useRealTimers();
   });
 
-  it('une tâche en échec n’empêche pas les autres', async () => {
+  it('a failing task does not prevent the others', async () => {
     const out = await runShutdownTasks(
       [task({ name: 'boom', run: () => Promise.reject(new Error('nope')) }), task({ name: 'ok', phase: 20 })],
       1000,
@@ -128,7 +128,7 @@ describe('runShutdownTasks', () => {
     expect(out[1]).toMatchObject({ name: 'ok', ok: true });
   });
 
-  it('l’échec du forçage n’interrompt pas l’extinction', async () => {
+  it('the failure of forcing does not interrupt the shutdown', async () => {
     vi.useFakeTimers();
     const p = runShutdownTasks(
       [
@@ -147,7 +147,7 @@ describe('runShutdownTasks', () => {
     vi.useRealTimers();
   });
 
-  it('sans tâche enregistrée : rien à faire', async () => {
+  it('nothing to do without a registered task', async () => {
     await expect(runShutdownTasks([], 1000)).resolves.toEqual([]);
   });
 });
@@ -162,7 +162,7 @@ describe('shutdown', () => {
     __resetShutdownState();
   });
 
-  it('déroule les tâches enregistrées une seule fois', async () => {
+  it('runs the registered tasks only once', async () => {
     const run = vi.fn(() => Promise.resolve());
     registerShutdownTask({ name: 'x', phase: 10, run });
     expect(shutdownTaskCount()).toBe(1);
@@ -171,7 +171,7 @@ describe('shutdown', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
-  it('rend un code non nul si une tâche a échoué', async () => {
+  it('returns a non-zero code if a task failed', async () => {
     registerShutdownTask({ name: 'x', phase: 10, run: () => Promise.reject(new Error('nope')) });
     expect(await shutdown('SIGINT', 1000)).toBe(1);
   });

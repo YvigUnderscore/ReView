@@ -2,50 +2,46 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Parts binaires d'une **proposition d'édition de nuage** (Phase 50, lot 14) : le masque de
- * suppression (bitset par indice de splat) et les ops de sous-ensemble ne tiennent pas dans
- * une annotation — ce sont des blobs de plusieurs centaines de kilo-octets.
+ * Binary parts of a **cloud-edit proposal** (Phase 50, batch 14): the deletion mask (bitset per splat
+ * index) and the subset ops do not fit in an annotation — they are blobs of several hundred kilobytes.
  *
- * Ils voyagent donc exactement comme une **pièce jointe de commentaire** : même dossier
- * MinIO (`comments/attachments/<auteur>/`), même présignature, même purge à l'édition et à
- * la suppression. La part `splat-edit` n'en garde que la RÉFÉRENCE (la clé), et la lecture
- * ne résout cette clé que dans les pièces jointes DU MÊME commentaire — lesquelles sont
- * déjà filtrées par préfixe. Une clé étrangère glissée dans la part ne donne donc aucune
- * URL : c'est la même garantie que pour les images d'un point d'intérêt.
+ * They therefore travel exactly like a **comment attachment**: same MinIO folder (`comments/attachments/<author>/`),
+ * same presigned URL, same purge on edit and deletion. The `splat-edit` part keeps only their REFERENCE (the
+ * key), and reading resolves that key only among the attachments OF THE SAME comment — which are already
+ * prefix-filtered. A foreign key slipped into the part therefore yields no URL: same guarantee as for the
+ * images of a point of interest.
  *
- * Ce que ce module ajoute, et qui n'existe pour aucune autre pièce jointe : un **plafond de
- * taille vérifié par le serveur**. Une pièce jointe ordinaire part en PUT présigné, sans
- * que rien ne relise sa taille ; un blob d'édition, lui, est relu (`statObject`) au moment
- * où le commentaire le déclare, et refusé au-delà du plafond du masque de média. Sans cela,
- * la proposition serait le seul chemin du dépôt par lequel un nuage de suppression sans
- * limite entrerait dans une review.
+ * What this module adds, and which exists for no other attachment: a **size ceiling checked by the server**.
+ * An ordinary attachment goes out as a presigned PUT with nothing re-reading its size; an edit blob, on the
+ * other hand, is re-read (`statObject`) when the comment declares it, and refused above the media mask's
+ * ceiling. Without this, the proposal would be the only path through which an unlimited deletion cloud could
+ * enter a review.
  */
 
 import { z } from 'zod';
 import { badRequest } from './errors';
 
 /**
- * Plafond d'un blob de proposition : celui du masque du média (`SplatEditService`,
- * MAX_MASK_BYTES). La proposition ne doit pas pouvoir porter plus que ce qu'un
- * gestionnaire enregistrerait pour tout le monde.
+ * Ceiling of a proposal blob: that of the media mask (`SplatEditService`, MAX_MASK_BYTES). A proposal must
+ * not be able to carry more than what a manager would save for everyone.
  */
 export const MAX_SPLAT_EDIT_BLOB_BYTES = 4_000_000;
 
-/** Référence d'un blob : la clé de l'objet et son compte (splats masqués / ops rejouées). */
+/** Reference to a blob: the object's key and its count (masked splats / replayed ops). */
 export interface SplatEditBlobRef {
   key: string;
   count: number;
 }
 
 /**
- * Forme acceptée en entrée. `count` est de l'affichage (« N splats retirés ») : il est borné
- * mais jamais cru sur parole — c'est le blob qui fait foi au rejeu.
+ * Accepted input shape. `count` is for display ("N splats removed"): it is bounded but never taken on trust
+ * — the blob is what counts on replay.
  */
 export const splatEditBlobRef = z
   .object({ key: z.string().min(1).max(512), count: z.number().int().positive().max(100_000_000) })
   .strict();
 
-/** Les deux références d'une part `splat-edit`, quand la part en porte. */
+/** The two references of a `splat-edit` part, when the part carries them. */
 function refsOf(part: unknown): SplatEditBlobRef[] {
   if (!part || typeof part !== 'object') return [];
   const { mask, subset } = part as { mask?: unknown; subset?: unknown };
@@ -56,10 +52,10 @@ function refsOf(part: unknown): SplatEditBlobRef[] {
 }
 
 /**
- * Clés des blobs référencés par les parts `splat-edit` d'une annotation.
+ * Keys of the blobs referenced by the `splat-edit` parts of an annotation.
  *
- * La colonne est du JSON libre et peut avoir été écrite par une version antérieure : la
- * lecture ne suppose rien de sa forme.
+ * The column is free JSON and may have been written by an earlier version: the read assumes nothing about
+ * its shape.
  */
 export function splatEditBlobKeys(annotation: unknown): string[] {
   if (!Array.isArray(annotation)) return [];
@@ -71,18 +67,16 @@ export function splatEditBlobKeys(annotation: unknown): string[] {
 }
 
 /**
- * Refuse une proposition dont un blob n'est pas une pièce jointe du commentaire, manque du
- * stockage, ou dépasse le plafond.
+ * Refuses a proposal whose blob is not an attachment of the comment, is missing from storage, or exceeds
+ * the ceiling.
  *
- * Les trois refus comptent, et le premier est le plus important : **le blob doit figurer
- * dans la liste de pièces jointes du commentaire**. C'est elle qui décide de la vie de
- * l'objet — elle est filtrée par préfixe (donc pas d'objet d'autrui), et c'est elle que la
- * purge relit à l'édition comme à la suppression. Une référence hors liste donnerait un
- * objet que rien ne ramasse : exactement la fuite déjà trouvée et fermée ici pour les
- * images de commentaire.
+ * All three refusals matter, and the first is the most important: **the blob must appear in the comment's
+ * attachment list**. That list decides the object's life — it is prefix-filtered (so no one else's object),
+ * and it is what the purge re-reads on edit as on deletion. A reference outside the list would yield an
+ * object nothing collects: exactly the leak already found and closed here for comment images.
  *
- * `stat` est injecté (le `StorageService` de l'appelant) : la vérification reste testable
- * sans MinIO, et c'est elle qui rend le plafond réel plutôt que déclaratif.
+ * `stat` is injected (the caller's `StorageService`): the check stays testable without MinIO, and it is what
+ * makes the ceiling real rather than declarative.
  */
 export async function assertSplatEditBlobs(
   annotation: unknown,

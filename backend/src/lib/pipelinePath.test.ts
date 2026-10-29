@@ -5,11 +5,11 @@ import { describe, it, expect } from 'vitest';
 import { parsePipelinePath, formatPipelinePath } from './pipelinePath';
 
 describe('parsePipelinePath', () => {
-  it('résout un projet seul', () => {
+  it('resolves a project alone', () => {
     expect(parsePipelinePath('PROJ')).toEqual({ project: 'PROJ', kind: 'project' });
   });
 
-  it('résout la chaîne séquence → shot → tâche → version', () => {
+  it('resolves the chain sequence → shot → task → version', () => {
     expect(parsePipelinePath('PROJ/SQ010')).toMatchObject({ sequence: 'SQ010', kind: 'sequence' });
     expect(parsePipelinePath('PROJ/SQ010/SH0100')).toMatchObject({ shot: 'SH0100', kind: 'shot' });
     expect(parsePipelinePath('PROJ/SQ010/SH0100/anim')).toMatchObject({ task: 'anim', kind: 'task' });
@@ -23,7 +23,7 @@ describe('parsePipelinePath', () => {
     });
   });
 
-  it('distingue un shot sans séquence via le mot-clé shots', () => {
+  it('distinguishes a shot without a sequence via the shots keyword', () => {
     expect(parsePipelinePath('PROJ/shots/SH0100')).toEqual({
       project: 'PROJ',
       shot: 'SH0100',
@@ -33,7 +33,7 @@ describe('parsePipelinePath', () => {
     });
   });
 
-  it('résout la branche asset', () => {
+  it('resolves the asset branch', () => {
     expect(parsePipelinePath('PROJ/assets/hero/model/v002')).toEqual({
       project: 'PROJ',
       asset: 'hero',
@@ -43,19 +43,19 @@ describe('parsePipelinePath', () => {
     });
   });
 
-  it('accepte les mots-clés quelle que soit la casse', () => {
+  it('accepts the keywords whatever the case', () => {
     expect(parsePipelinePath('PROJ/Assets/hero').kind).toBe('asset');
     expect(parsePipelinePath('PROJ/SHOTS/SH010').kind).toBe('shot');
   });
 
-  it('tolère les séparateurs superflus', () => {
+  it('tolerates superfluous separators', () => {
     expect(parsePipelinePath('/PROJ//SQ010/ SH0100 /')).toMatchObject({
       sequence: 'SQ010',
       shot: 'SH0100',
     });
   });
 
-  it('refuse un chemin vide, trop profond, ou une branche incomplète', () => {
+  it('refuses an empty path, a path too deep, or an incomplete branch', () => {
     expect(() => parsePipelinePath('')).toThrow(/empty path/i);
     expect(() => parsePipelinePath('///')).toThrow(/empty path/i);
     expect(() => parsePipelinePath('a/b/c/d/e/f/g')).toThrow(/too deep/i);
@@ -65,8 +65,8 @@ describe('parsePipelinePath', () => {
   });
 });
 
-describe('département dans le segment de tâche', () => {
-  it('sépare « département:tâche » sur les trois branches', () => {
+describe('department in the task segment', () => {
+  it('splits "department:task" on the three branches', () => {
     expect(parsePipelinePath('PROJ/SQ010/SH0100/layout:main/v001')).toMatchObject({
       task: 'main',
       department: 'layout',
@@ -85,11 +85,11 @@ describe('département dans le segment de tâche', () => {
     });
   });
 
-  it('laisse les chemins historiques sans département', () => {
+  it('leaves the historical paths without a department', () => {
     expect(parsePipelinePath('PROJ/SQ010/SH0100/anim/v003').department).toBeUndefined();
   });
 
-  it('refuse un segment de tâche amputé de l’un de ses deux côtés', () => {
+  it('refuses a task segment cut on one of its two sides', () => {
     expect(() => parsePipelinePath('PROJ/SQ010/SH0100/:main')).toThrow(/malformé/i);
     expect(() => parsePipelinePath('PROJ/SQ010/SH0100/layout:')).toThrow(/malformé/i);
     expect(() => parsePipelinePath('PROJ/assets/hero/ : ')).toThrow(/malformé/i);
@@ -97,7 +97,7 @@ describe('département dans le segment de tâche', () => {
 });
 
 describe('formatPipelinePath', () => {
-  it("reconstruit le chemin d'origine (aller-retour)", () => {
+  it('rebuilds the original path (round trip)', () => {
     for (const path of [
       'PROJ',
       'PROJ/SQ010',

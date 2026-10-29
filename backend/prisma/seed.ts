@@ -15,8 +15,8 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 /**
- * Seed de développement : 1 studio, 1 admin, 1 artiste, 1 projet avec séquence/shot/task/version,
- * 1 asset réutilisable. Idempotent via upserts sur les clés uniques.
+ * Development seed: 1 studio, 1 admin, 1 artist, 1 project with sequence/shot/task/version,
+ * 1 reusable asset. Idempotent via upserts on unique keys.
  */
 async function main(): Promise<void> {
   const studio = await prisma.studio.upsert({
@@ -72,7 +72,7 @@ async function main(): Promise<void> {
     },
   });
 
-  // Task sur le shot + version + média (placeholder, sans fichier réel dans MinIO)
+  // Task on the shot + version + media (placeholder, no real file in MinIO)
   const existingTask = await prisma.task.findFirst({
     where: { shotId: shot.id, name: 'Animation plan large' },
   });
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
     });
   }
 
-  // Asset réutilisable
+  // Reusable asset
   await prisma.asset.upsert({
     where: { projectId_name: { projectId: project.id, name: 'Héros' } },
     update: {},
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
     },
   });
 
-  // Statuts de review classiques (Phase 31) — idempotent (aussi bootstrapés au 1er GET)
+  // Standard review statuses (Phase 31), idempotent (also bootstrapped on first GET)
   const reviewStatuses = [
     { name: 'Pending', color: '#F5A623', order: 0, isDefault: true },
     { name: 'Approved', color: '#2ECC71', order: 1, isApproval: true },

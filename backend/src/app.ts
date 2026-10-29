@@ -86,43 +86,41 @@ import shotgridEntityRoutes from './routes/shotgrid-entity.routes';
 import shotgridCrewRoutes from './routes/shotgrid-crew.routes';
 
 /**
- * Plafonds du limiteur global, par fenêtre de quinze minutes.
+ * Global rate limiter ceilings, per fifteen-minute window.
  *
- * L'ancien plafond unique (5 000 par IP) était partagé par tout un studio derrière une
- * seule sortie NAT : cinquante personnes, environ 5,5 requêtes par seconde à se répartir,
- * alors que la seule ouverture d'un projet en coûte une douzaine. C'était un mode de panne
- * déjà observé — un simple parcours de tests saturait le compteur.
+ * The former single ceiling (5,000 per IP) was shared by a whole studio behind one NAT exit:
+ * fifty people, about 5.5 requests per second to share, whereas merely opening a project costs
+ * a dozen. This failure mode had already been observed: a simple test run saturated the counter.
  *
- * Le compte identifié a donc son propre compteur. Le plafond anonyme, lui, reste à sa
- * valeur d'origine : le baisser aurait resserré, sans le dire, les surfaces publiques
- * (partage client, connexion, documentation) que ce limiteur protège vraiment.
+ * The authenticated account therefore has its own counter. The anonymous ceiling keeps its
+ * original value: lowering it would silently tighten the public surfaces (client sharing,
+ * login, documentation) this limiter really protects.
  */
 const GLOBAL_MAX_PER_USER = 6_000;
 const GLOBAL_MAX_PER_IP = 5_000;
 
 export interface CreateAppOptions {
   /**
-   * Limiteurs de débit. `false` les neutralise — **réservé aux tests d'intégration**.
+   * Rate limiters. `false` disables them — **reserved for integration tests**.
    *
-   * Une suite d'intégration tape plusieurs centaines de fois sur la même app depuis la même
-   * adresse, en quelques secondes : elle sature ses propres compteurs et se met à recevoir
-   * des 429 qui n'ont rien à voir avec ce qu'elle vérifie. C'était le mode d'échec du test
-   * d'upload résumable, rouge depuis des semaines.
+   * An integration suite hits the same app hundreds of times from the same address within a few
+   * seconds: it saturates its own counters and starts receiving 429s unrelated to what it checks.
+   * This was the failure mode of the resumable upload test, red for weeks.
    *
-   * La désactivation porte sur deux familles de limiteurs :
-   *  - ceux montés ici (global, /api/setup, partage client, /api/v1), remplacés par un
-   *    passe-plat ;
-   *  - ceux construits à l'import d'un routeur (`auth.routes`, `comments`, `search`,
-   *    `client`, `unsubscribe`, webhook ShotGrid), hors d'atteinte d'une option d'app : ils
-   *    sont neutralisés par leur compteur, via le crochet de test du middleware.
+   * The disabling covers two families of limiters:
+   *  - those mounted here (global, /api/setup, client sharing, /api/v1), replaced by a
+   *    pass-through;
+   *  - those built at router import time (`auth.routes`, `comments`, `search`, `client`,
+   *    `unsubscribe`, ShotGrid webhook), out of reach of an app option: they are neutralised
+   *    through their counter, via the middleware's test hook.
    *
-   * Verrou : refusé hors `NODE_ENV=test`. Une option capable d'éteindre en silence tout le
-   * limiteur de débit d'une instance en production serait une faille, pas une commodité.
+   * Guard: refused outside `NODE_ENV=test`. An option able to silently switch off the whole rate
+   * limiter of a production instance would be a vulnerability, not a convenience.
    */
   rateLimit?: boolean;
 }
 
-/** Compteur qui ne compte pas : chaque coup vaut le premier, donc jamais de dépassement. */
+/** A counter that does not count: every hit returns the first value, so the limit is never exceeded. */
 const unlimitedCounter = () => ({ hit: () => Promise.resolve(1) });
 
 export const createApp = (options: CreateAppOptions = {}): Express => {
@@ -130,7 +128,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   if (limitersOff && env.NODE_ENV !== 'test') {
     throw new Error('createApp({ rateLimit: false }) is reserved for NODE_ENV=test');
   }
-  // Passe-plat pour les limiteurs montés ici ; les autres passent par leur compteur.
+  // Pass-through for the limiters mounted here; the others go through their own counter.
   const limiter: typeof rateLimit = limitersOff
     ? () => (_req, _res, next) => {
         next();
@@ -140,16 +138,16 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
 
   const app = express();
 
-  // Le limiteur, la présence et les salles live parlent à Redis : on arme le transport
-  // ici, et pas à l'import, pour qu'un test unitaire n'ouvre jamais de connexion.
+  // The limiter, presence and live rooms talk to Redis: the transport is armed here rather than
+  // at import time, so that a unit test never opens a connection.
   enableRedisTransport();
 
-  // Confiance accordée à `X-Forwarded-For` — explicite, et nulle par défaut : cet en-tête
-  // est fourni par l'appelant dès que le port du backend est joignable sans proxy devant,
-  // et il sert de clé à TOUS les limiteurs (middleware/rateLimit) comme d'adresse aux
-  // lignes d'audit. Cf. le commentaire de TRUST_PROXY dans config/env.ts.
+  // Trust granted to `X-Forwarded-For`: explicit, and none by default. This header is supplied by
+  // the caller as soon as the backend port is reachable without a proxy in front, and it serves as
+  // the key of ALL limiters (middleware/rateLimit) as well as the address in audit lines.
+  // See the TRUST_PROXY comment in config/env.ts.
   app.set('trust proxy', env.TRUST_PROXY);
-  // Journalisation HTTP structurée le plus tôt possible (request-id sur toutes les réponses).
+  // Structured HTTP logging as early as possible (request-id on every response).
   app.use(httpLogger);
   app.use(
     helmet({
@@ -158,37 +156,36 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   );
   app.use(cors({ origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(',') }));
 
-  // ShotGrid (48) — monté avant le parseur JSON : la signature HMAC porte sur les
-  // octets reçus, et un corps déjà reparsé puis re-sérialisé ne redonne pas les mêmes.
+  // ShotGrid (48): mounted before the JSON parser. The HMAC signature covers the bytes received,
+  // and a body already parsed then re-serialised does not reproduce them.
   app.use('/api/shotgrid/webhook', shotgridWebhookRoutes);
 
   /*
-   * Éditions splat : le seul corps volumineux de l'API.
+   * Splat edits: the only large body in the API.
    *
-   * Le masque de suppression est un bitset base64 — un splat sur deux effacé sur un scan de
-   * quinze millions de points fait plusieurs mégaoctets — et les transformations de
-   * sous-ensembles envoient de même leurs indices en binaire. Les deux routes déclarent
-   * `z.string().max(5_400_000)` avec le commentaire « ≈ 4 Mo binaire max », mais le plafond
-   * global de 2 Mo rejetait la requête en 413 **avant** que Zod ne la voie : le plafond
-   * annoncé était inatteignable, et l'éditeur perdait le travail de l'artiste sans le dire.
+   * The deletion mask is a base64 bitset (deleting one splat in two out of a scan of fifteen
+   * million points makes several megabytes), and subset transforms likewise send their indices
+   * in binary. Both routes declare `z.string().max(5_400_000)` with the comment "about 4 MB binary
+   * max", but the global 2 MB ceiling rejected the request with a 413 **before** Zod saw it: the
+   * announced ceiling was unreachable, and the editor silently lost the artist's work.
    *
-   * Posé avant le parseur global : `express.json` ne parse qu'une fois, le premier gagne.
+   * Placed before the global parser: `express.json` parses only once, the first one wins.
    */
   const splatBodyJson = express.json({ limit: '8mb' });
   app.use((req, res, next) =>
     /^\/api\/media\/\d+\/splat-(mask|subset)$/.test(req.path) ? splatBodyJson(req, res, next) : next(),
   );
 
-  // Partout ailleurs, les fichiers transitent par MinIO via URLs présignées : pas de gros body.
+  // Everywhere else, files transit through MinIO via presigned URLs: no large body.
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-  // Métriques Prometheus (37.G) : histogramme HTTP + gauges BullMQ.
+  // Prometheus metrics (37.G): HTTP histogram + BullMQ gauges.
   app.use(httpMetrics);
   startQueueMetrics();
   app.get('/metrics', async (req, res) => {
-    // Jeton optionnel : sans METRICS_TOKEN, l'endpoint est à réserver au réseau interne
-    // (le nginx frontal ne l'expose pas). Avec, exiger ?token= ou Bearer.
+    // Optional token: without METRICS_TOKEN the endpoint must be reserved for the internal network
+    // (the front nginx does not expose it). With one, require ?token= or a Bearer header.
     if (env.METRICS_TOKEN) {
       const provided =
         (typeof req.query.token === 'string' ? req.query.token : undefined) ??
@@ -202,7 +199,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     res.end(await registry.metrics());
   });
 
-  // Rate limit global — clé par compte authentifié, repli IP pour l'anonyme.
+  // Global rate limit: keyed by authenticated account, falling back to IP for anonymous requests.
   app.use(
     '/api',
     limiter({
@@ -213,34 +210,34 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     }),
   );
 
-  // Surface des jetons d'API : un `rvk_…` n'ouvre que l'API d'intégration `/api/v1`.
+  // API token surface: a `rvk_…` token only opens the integration API `/api/v1`.
   //
-  // Posé ici, avant tout routeur métier, et non route par route : c'est le seul endroit qui
-  // ne s'oublie pas quand on ajoute un domaine. Sans lui, `middleware/auth` acceptait un
-  // jeton d'API sur n'importe quelle route de l'API interne, et le cantonnement par projet
-  // vendu par l'écran des jetons ne valait que pour `/api/v1`.
+  // Set here, before any business router, rather than route by route: this is the only place that
+  // is not forgotten when adding a domain. Without it, `middleware/auth` accepted an API token on
+  // any internal API route, and the per-project scoping sold by the tokens screen only applied to
+  // `/api/v1`.
   app.use('/api', apiTokenSurface);
 
-  // Sondes de santé et version (vivacité `/health`, disponibilité `/health/ready`).
+  // Health probes and version (liveness `/health`, readiness `/health/ready`).
   //
-  // Montées DEUX FOIS à dessein : le nginx frontal de production ne proxifie vers le
-  // backend que `/api/`, `/socket.io/` et `/review/` — `GET /health` y était donc servi par
-  // la SPA (200 HTML, « tout va bien » quel que soit l'état de l'API) et `/api/health`
-  // n'existait pas. La sonde du conteneur, elle, interroge `/health` en direct.
+  // Mounted TWICE on purpose: the production front nginx only proxies to the backend `/api/`,
+  // `/socket.io/` and `/review/`. So `GET /health` was served by the SPA (200 HTML, "all good"
+  // whatever the API state) and `/api/health` did not exist. The container probe queries `/health`
+  // directly.
   app.use('/health', healthRoutes);
   app.use('/api/health', healthRoutes);
   app.use('/api/version', versionRouter);
 
-  // Routes par domaine
-  // Assistant de première installation : public par nature (il n'existe encore aucun
-  // compte), et il crée le premier ADMIN. Le plafond global de 5000/15 min ne le protège
-  // pas — on le borne étroitement, par IP. Le verrou de fond reste `studio.count() > 0`.
-  // `GET /status` est interrogé au démarrage de l'application, donc à chaque chargement de
-  // page : le compter dans le plafond de l'installation faisait tomber un 429 dès le 11e
-  // rechargement en un quart d'heure. Le front l'attrapait (repli « rien à installer »),
-  // mais sur une instance neuve cela rendait l'assistant injoignable pendant quinze minutes.
-  // Il ne lit rien de sensible — un plafond large lui suffit, et le plafond étroit reste
-  // posé sur tout le reste, c'est-à-dire sur la création du premier ADMIN.
+  // Domain routes
+  // First-installation assistant: public by nature (no account exists yet), and it creates the first
+  // ADMIN. The global 5000/15 min ceiling does not protect it: it is tightly bounded per IP instead.
+  // The background lock remains `studio.count() > 0`.
+  // `GET /status` is queried at application start, hence on every page load: counting it in the
+  // installation ceiling triggered a 429 from the 11th reload within a quarter of an hour. The
+  // front end caught it (fallback "nothing to install"), but on a new instance it made the assistant
+  // unreachable for fifteen minutes.
+  // It reads nothing sensitive: a generous ceiling is enough, and the tight ceiling stays on
+  // everything else, that is, on the creation of the first ADMIN.
   const setupWriteLimiter = limiter({ name: 'setup', windowMs: 15 * 60 * 1000, max: 10 });
   app.use(
     '/api/setup',
@@ -252,56 +249,56 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)
   app.use('/api/auth', authSecurityRoutes); // sessions + tokens API (36.B/36.C)
-  app.use('/api/users', usersProfileRoutes); // fiche d'un membre + avatar — avant /:id
+  app.use('/api/users', usersProfileRoutes); // member profile + avatar — before /:id
   app.use('/api/users', usersRoutes);
   app.use('/api/push', pushRoutes); // Web Push (42.B №66)
-  app.use('/api/chat', chatRoutes); // messagerie interne (MP & groupes)
+  app.use('/api/chat', chatRoutes); // internal messaging (DMs & groups)
   app.use('/api/studio', studioRoutes);
   app.use('/api/studio', studioAppearanceRoutes);
-  app.use('/api/studio', overviewLayoutRoutes); // dispositions par défaut de la vue d'ensemble (50.10)
+  app.use('/api/studio', overviewLayoutRoutes); // default layouts of the overview (50.10)
   app.use('/api/studio', studioSmtpRoutes);
   app.use('/api/studio/hdris', hdriRoutes);
   app.use('/api/studio/ocio', ocioRoutes);
-  app.use('/api/projects', projectsExtraRoutes); // usage/quotas + duplicate (38) — avant /:id
-  app.use('/api/projects', productionRoutes); // stats & planning (Phase 43) — sous-routes /:projectId
+  app.use('/api/projects', projectsExtraRoutes); // usage/quotas + duplicate (38) — before /:id
+  app.use('/api/projects', productionRoutes); // stats & planning (Phase 43) — sub-routes /:projectId
   app.use('/api/projects', projectsRoutes);
-  app.use('/api/media', mediaUploadRoutes); // multipart résumable (37.A) — avant /:id
+  app.use('/api/media', mediaUploadRoutes); // resumable multipart (37.A) — before /:id
   app.use('/api/media', mediaRoutes);
-  app.use('/api/media', mediaSplatRoutes); // éditions splat (10.G)
-  app.use('/api/media', mediaReferenceRoutes); // image de référence review 2D (Phase 24)
-  app.use('/api/media', mediaMarkersRoutes); // marqueurs de timeline partagés (Phase 34.C)
-  app.use('/api/media', mediaUsdRoutes); // recomposition d'une scène USD (Phase 45.E)
-  // Niveau Épisode (facultatif par projet, éteint par défaut) — le routeur porte lui-même
-  // le refus quand le réglage est éteint.
+  app.use('/api/media', mediaSplatRoutes); // splat edits (10.G)
+  app.use('/api/media', mediaReferenceRoutes); // 2D review reference image (Phase 24)
+  app.use('/api/media', mediaMarkersRoutes); // shared timeline markers (Phase 34.C)
+  app.use('/api/media', mediaUsdRoutes); // USD scene recomposition (Phase 45.E)
+  // Episode level (optional per project, off by default): the router itself refuses when the
+  // setting is off.
   app.use('/api/episodes', episodesRoutes);
   app.use('/api/sequences', sequencesRoutes);
   app.use('/api/shots', shotsRoutes);
   app.use('/api/assets', assetsRoutes);
   app.use('/api/tasks', tasksRoutes);
   app.use('/api/versions', versionsRoutes);
-  app.use('/api/review-statuses', reviewStatusesRoutes); // statuts de review custom (Phase 31)
-  app.use('/api/pipeline-statuses', pipelineStatusesRoutes); // statuts de tâche/plan (Phase 48)
-  // Départements (B1) : le routeur porte plusieurs préfixes (projets, entités, comptes),
-  // il est donc monté à la racine de /api plutôt que sous un segment unique.
+  app.use('/api/review-statuses', reviewStatusesRoutes); // custom review statuses (Phase 31)
+  app.use('/api/pipeline-statuses', pipelineStatusesRoutes); // task/plan statuses (Phase 48)
+  // Departments (B1): the router serves several prefixes (projects, entities, accounts), so it is
+  // mounted at the root of /api rather than under a single segment.
   app.use('/api', departmentsRoutes);
-  // Vignettes d'entité (C3) : même raison, le routeur sert séquences, plans et assets.
+  // Entity thumbnails (C3): same reason, the router serves sequences, plans and assets.
   app.use('/api', entityThumbnailsRoutes);
-  // Assignation (assets et plans) : même montage à la racine, deux préfixes.
+  // Assignment (assets and plans): same root mounting, two prefixes.
   app.use('/api', assignmentsRoutes);
-  // Personnes responsables et fiche markdown d'une entité : quatre préfixes, racine aussi.
+  // Responsible persons and markdown sheet of an entity: four prefixes, also at the root.
   app.use('/api', entityExtrasRoutes);
-  // Images déposées dans une fiche : dépôt par entité, relecture par lot de clés.
+  // Images attached to a sheet: per-entity upload, batch key lookup.
   app.use('/api', noteImagesRoutes);
-  // Masquage d'éléments (admin).
+  // Element hiding (admin).
   app.use('/api', visibilityRoutes);
-  // ShotGrid (48) — la réception des webhooks est montée plus haut (corps brut).
+  // ShotGrid (48): webhook reception is mounted earlier (raw body).
   app.use('/api/shotgrid', shotgridConfigRoutes);
   app.use('/api/shotgrid', shotgridSyncRoutes);
   app.use('/api/shotgrid', shotgridEntityRoutes);
   app.use('/api/shotgrid', shotgridCrewRoutes);
   app.use('/api/comments', commentsRoutes);
   app.use('/api/boards', boardsRoutes);
-  // Partage client (accès public par lien/token) : rate limit renforcé par IP (10.D5).
+  // Client sharing (public access by link/token): rate limit tightened per IP (10.D5).
   const shareLimiter = limiter({
     name: 'share',
     windowMs: 15 * 60 * 1000,
@@ -310,15 +307,15 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   });
   app.use('/api/share', shareLimiter, shareRoutes);
   app.use('/api/client', shareLimiter, clientRoutes);
-  // Désabonnement des envois récurrents : public par nature — le bouton natif des
-  // messageries l'appelle sans session, souvent depuis les serveurs du fournisseur.
+  // Unsubscribe from recurring mailings: public by nature. The native button of mail clients calls
+  // it without a session, often from the provider's servers.
   app.use('/api/unsubscribe', unsubscribeRoutes);
-  app.use('/api/admin/webhooks', webhooksRoutes); // webhooks sortants (36.D)
-  app.use('/api/admin/service-tokens', serviceTokensRoutes); // identités machine (API v1)
+  app.use('/api/admin/webhooks', webhooksRoutes); // outgoing webhooks (36.D)
+  app.use('/api/admin/service-tokens', serviceTokensRoutes); // machine identities (API v1)
   app.use('/api/admin/jobs', jobsRoutes); // dashboard BullMQ (37.C)
-  app.use('/api/admin/ops', adminOpsRunsRoutes); // commande et suivi d'une opération (49)
-  app.use('/api/admin/ops', adminOpsRoutes); // version en service, releases, sauvegardes (49)
-  app.use('/api/admin', adminExplorerRoutes); // fiches détaillées par entité (refonte admin)
+  app.use('/api/admin/ops', adminOpsRunsRoutes); // command and tracking of an operation (49)
+  app.use('/api/admin/ops', adminOpsRoutes); // running version, releases, backups (49)
+  app.use('/api/admin', adminExplorerRoutes); // detailed entity records (admin rework)
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/favorites', favoritesRoutes);
@@ -328,19 +325,19 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
   app.use('/api/announcements', announcementsRoutes);
   app.use('/api/bulk', bulkRoutes);
   app.use('/api/watch', watchRoutes);
-  app.use('/api/visits', visitsRoutes); // acquittement « non consulté » (Phase 50, lot 9)
+  app.use('/api/visits', visitsRoutes); // "not viewed" acknowledgement (Phase 50, batch 9)
   app.use('/api/playlists', playlistsRoutes); // dailies (Phase 33)
-  app.use('/api/timelines', timelinesRoutes); // montages automatiques (Phase 45)
-  app.use('/api/live', liveRoutes); // sessions live en cours (badges LIVE)
-  // API d'intégration v1 (DCC, Prism, bots) — contrat stable, distinct de l'API interne.
-  // Plafond propre : un daemon qui interroge le journal d'événements en boucle ne doit pas
-  // consommer le quota des utilisateurs de l'interface.
+  app.use('/api/timelines', timelinesRoutes); // automatic edits (Phase 45)
+  app.use('/api/live', liveRoutes); // ongoing live sessions (LIVE badges)
+  // Integration API v1 (DCC, Prism, bots): stable contract, distinct from the internal API.
+  // Its own ceiling: a daemon polling the event log in a loop must not consume the interface
+  // users' quota.
   app.use('/api/v1', limiter({ name: 'v1', windowMs: 15 * 60 * 1000, max: 10_000 }), v1Routes);
 
-  // Documentation OpenAPI (publique) : /api/openapi.json + /api/docs (Scalar)
+  // OpenAPI documentation (public): /api/openapi.json + /api/docs (Scalar)
   app.use('/api', docsRoutes);
 
-  // Gestionnaire d'erreurs global (toujours en dernier)
+  // Global error handler (always last)
   app.use(errorHandler);
 
   return app;

@@ -8,24 +8,19 @@ import { logger } from './logger';
 import { registerShutdownTask, SHUTDOWN_PHASE } from './gracefulShutdown';
 
 /**
- * Accès Redis partagé du process API.
+ * Shared Redis access of the API process.
  *
- * Deux usages cohabitent ici :
+ * Two uses coexist here:
  *
- *  1. `redisConnectionOptions` — **options** (et non instance) pour BullMQ, qui instancie
- *     son propre client avec sa version bundlée d'ioredis ; fournir une instance ferait
- *     entrer en conflit deux copies d'ioredis (dual-package hazard).
- *     `maxRetriesPerRequest: null` est requis par les workers BullMQ.
+ *  1. `redisConnectionOptions` — **options** (not an instance) for BullMQ, which creates its own client with its bundled version of ioredis;
+ *     supplying an instance would bring two copies of ioredis into conflict (dual-package hazard).
+ *     `maxRetriesPerRequest: null` is required by the BullMQ workers.
  *
- *  2. Le **support de l'état volatil** (limiteur de débit, présence, salles live, cache
- *     d'identité) : un client de commandes, un client abonné multiplexé, un battement
- *     de cœur partagé. Tout cet état vivait en mémoire de process — deux répliques
- *     doublaient les quotas, et un redémarrage effaçait les salles live.
+ *  2. **Support for volatile state** (rate limiter, presence, live rooms, identity cache): one command client, one multiplexed subscriber client,
+ *     one shared heartbeat. All this state used to live in process memory — two replicas doubled the quotas, and a restart erased the live rooms.
  *
- * Le transport pub/sub est **explicitement armé** (`enableRedisTransport`) par les points
- * d'entrée du serveur (`createApp`, `initSocket`). Avant cela, publier est un no-op et
- * aucune souscription réseau n'est ouverte : un test unitaire qui importe un service ne
- * doit pas se retrouver connecté à Redis, ni retenir la boucle d'événements.
+ * The pub/sub transport is **explicitly armed** (`enableRedisTransport`) by the server entry points (`createApp`, `initSocket`). Before that,
+ * publishing is a no-op and no network subscription is opened: a unit test that imports a service must not end up connected to Redis, nor hold the event loop.
  */
 const url = new URL(env.REDIS_URL);
 
@@ -39,28 +34,27 @@ export const redisConnectionOptions = {
 } as const;
 
 /**
- * Identifiant court de ce process. Il préfixe les entrées volatiles : une réplique
- * disparue laisse des entrées identifiables, que leur expiration finit par retirer.
+ * Short identifier of this process. It prefixes the volatile entries: a vanished replica leaves identifiable entries, which their expiry
+ * eventually removes.
  */
 export const INSTANCE_ID = randomUUID().slice(0, 8);
 
 /**
- * Sous-ensemble d'ioredis réellement utilisé par l'état volatil. Une seule méthode :
- * `call` couvre toutes les commandes (PUBLISH compris), ce qui rend le double de test
- * (`lib/redisFake`) petit et vérifiable.
+ * Subset of ioredis actually used by the volatile state. A single method: `call` covers all commands (PUBLISH included), which keeps the
+ * test double (`lib/redisFake`) small and verifiable.
  */
 export interface RedisClientLike {
   call(command: string, ...args: (string | number)[]): Promise<unknown>;
 }
 
 /**
- * Une commande qui n'a pas répondu en une seconde est perdue. Sans borne, une panne Redis
- * ne rendrait pas la main : chaque requête HTTP attendrait la reconnexion.
+ * A command that has not replied within one second is lost. Without a bound, a Redis outage would never return control: every HTTP request would
+ * wait for the reconnection.
  */
 const COMMAND_TIMEOUT_MS = 1_000;
-/** Une panne Redis émet une erreur par tentative de reconnexion : on n'en journalise qu'une. */
+/** A Redis outage emits one error per reconnection attempt: only one is logged. */
 const ERROR_LOG_THROTTLE_MS = 30_000;
-/** Période du battement de cœur (rafraîchissement des baux, réconciliation des miroirs). */
+/** Period of the heartbeat (lease refresh, mirror reconciliation). */
 export const HEARTBEAT_INTERVAL_MS = 20_000;
 
 function clientOptions(role: string, extra: RedisOptions = {}): RedisOptions {
@@ -100,7 +94,7 @@ function ensureShutdownTask(): void {
   registerShutdownTask({ name: 'redis', phase: SHUTDOWN_PHASE.DISCONNECT, run: closeRedis });
 }
 
-/** Client de commandes partagé (lazy). Le double de test le remplace intégralement. */
+/** Shared command client (lazy). The test double replaces it entirely. */
 export function getRedis(): RedisClientLike {
   if (testDouble) return testDouble;
   if (!commandClient) {
@@ -112,8 +106,7 @@ export function getRedis(): RedisClientLike {
 }
 
 /**
- * Connexion dédiée (adapter Socket.io). Un client en mode `subscribe` est exclusif :
- * l'adapter en réclame deux, qui ne peuvent pas être le client de commandes.
+ * Dedicated connection (Socket.io adapter). A client in `subscribe` mode is exclusive: the adapter claims two, which cannot be the command client.
  */
 export function createRedisClient(role: string): Redis {
   const client = new Redis(clientOptions(role, { maxRetriesPerRequest: null }));
@@ -123,7 +116,7 @@ export function createRedisClient(role: string): Redis {
   return client;
 }
 
-// ── Pub/sub multiplexé ───────────────────────────────────────────────────────
+// ── Multiplexed pub/sub ──
 
 type ChannelHandler = (payload: string) => void;
 const handlers = new Map<string, Set<ChannelHandler>>();
@@ -160,8 +153,7 @@ function openChannel(channel: string): void {
 }
 
 /**
- * Arme le transport pub/sub : ouvre les souscriptions déjà demandées et autorise les
- * publications. Appelé par les points d'entrée serveur, jamais par un module de logique.
+ * Arms the pub/sub transport: opens the subscriptions already requested and allows publications. Called by the server entry points, never by a logic module.
  */
 export function enableRedisTransport(): void {
   if (transportEnabled) return;
@@ -169,7 +161,7 @@ export function enableRedisTransport(): void {
   for (const channel of handlers.keys()) openChannel(channel);
 }
 
-/** Enregistre un gestionnaire de canal. La souscription réseau attend l'armement. */
+/** Registers a channel handler. The network subscription waits for the arming. */
 export function subscribeRedis(channel: string, handler: ChannelHandler): void {
   let set = handlers.get(channel);
   if (!set) {
@@ -181,8 +173,7 @@ export function subscribeRedis(channel: string, handler: ChannelHandler): void {
 }
 
 /**
- * Publication best-effort : un canal de notification perdu se rattrape au battement de
- * cœur suivant (les miroirs se réconcilient), il ne doit jamais faire échouer l'appelant.
+ * Best-effort publication: a lost notification channel is caught up at the next heartbeat (the mirrors reconcile); it must never make the caller fail.
  */
 export function publishRedis(channel: string, payload: string): void {
   if (!transportEnabled) return;
@@ -193,12 +184,12 @@ export function publishRedis(channel: string, payload: string): void {
     });
 }
 
-// ── Battement de cœur partagé ────────────────────────────────────────────────
+// ── Shared heartbeat ──
 
 const heartbeatTasks = new Set<() => Promise<void>>();
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
-/** Exécute un tour de battement (exporté pour les tests : pas d'attente d'horloge). */
+/** Runs one heartbeat turn (exported for tests: no clock wait). */
 export async function runHeartbeat(): Promise<void> {
   for (const task of heartbeatTasks) {
     try {
@@ -210,10 +201,8 @@ export async function runHeartbeat(): Promise<void> {
 }
 
 /**
- * Enregistre un travail périodique local au process : rafraîchir les baux d'expiration
- * des entrées de ce process, et réconcilier les miroirs de lecture. Ce n'est pas un
- * travail planifié (ceux-là sont en file BullMQ) : il n'a de sens que dans le process
- * qui détient les connexions, et ne doit pas s'exécuter deux fois.
+ * Registers a periodic job local to the process: refreshing the expiry leases of this process's entries, and reconciling the read mirrors. It is not a
+ * scheduled job (those are in the BullMQ queue): it only makes sense in the process holding the connections, and must not run twice.
  */
 export function onHeartbeat(task: () => Promise<void>): void {
   heartbeatTasks.add(task);
@@ -223,7 +212,7 @@ export function onHeartbeat(task: () => Promise<void>): void {
   }
 }
 
-// ── Arrêt propre ─────────────────────────────────────────────────────────────
+// ── Graceful shutdown ──
 
 async function quit(client: Redis): Promise<void> {
   try {
@@ -234,7 +223,7 @@ async function quit(client: Redis): Promise<void> {
   }
 }
 
-/** Ferme toutes les connexions Redis du process (tâche d'extinction, phase DISCONNECT). */
+/** Closes all Redis connections of the process (shutdown task, DISCONNECT phase). */
 export async function closeRedis(): Promise<void> {
   if (heartbeatTimer) {
     clearInterval(heartbeatTimer);
@@ -247,17 +236,17 @@ export async function closeRedis(): Promise<void> {
   await Promise.all(clients.map(quit));
 }
 
-// ── Utilitaires de lecture ───────────────────────────────────────────────────
+// ── Read helpers ──
 
-/** Réponse tableau (HGETALL, ZRANGEBYSCORE, SMEMBERS, MGET…) normalisée en chaînes. */
+/** Array reply (HGETALL, ZRANGEBYSCORE, SMEMBERS, MGET…) normalised to strings. */
 export const redisStrings = (reply: unknown): string[] =>
   Array.isArray(reply) ? reply.map((v) => (v === null || v === undefined ? '' : String(v))) : [];
 
-/** Réponse tableau de MGET : conserve les trous (`null`) pour distinguer clé absente. */
+/** MGET array reply: keeps the holes (`null`) to distinguish an absent key. */
 export const redisNullableStrings = (reply: unknown): (string | null)[] =>
   Array.isArray(reply) ? reply.map((v) => (typeof v === 'string' ? v : null)) : [];
 
-/** Analyse défensive d'un enregistrement JSON stocké dans Redis (canal partagé). */
+/** Defensive parsing of a JSON record stored in Redis (shared channel). */
 export function parseJson<T>(raw: string | null | undefined): T | null {
   if (!raw) return null;
   try {
@@ -267,7 +256,7 @@ export function parseJson<T>(raw: string | null | undefined): T | null {
   }
 }
 
-/** Crochets de test : substitution du client et injection de messages pub/sub. */
+/** Test hooks: substitution of the client and injection of pub/sub messages. */
 export const __redisTesting = {
   setClient(client: RedisClientLike | null): void {
     testDouble = client;

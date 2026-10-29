@@ -15,18 +15,18 @@ export default defineConfig([
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       globals: globals.node,
-      // tsconfig dédié au lint : contrairement à tsconfig.json (build), il inclut les
-      // tests, prisma/ et scripts/ pour que les règles type-aware couvrent tout.
+      // Type-aware lint tsconfig: unlike tsconfig.json (build), it includes tests, prisma/ and
+      // scripts/ so the type-aware rules cover everything.
       parserOptions: { project: './tsconfig.eslint.json', tsconfigRootDir: import.meta.dirname },
     },
     rules: {
-      // pino est le seul canal de log du serveur.
+      // pino is the only logging channel of the server.
       'no-console': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { varsIgnorePattern: '^_', argsIgnorePattern: '^_', ignoreRestSiblings: true },
       ],
-      // Sûreté des promesses (type-aware) : une promesse perdue est une erreur avalée.
+      // Promise safety (type-aware): a lost promise is a silently swallowed error.
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
       '@typescript-eslint/await-thenable': 'error',
@@ -42,7 +42,7 @@ export default defineConfig([
       ],
     },
   },
-  // Scripts CLI (seed, smoke) : console est leur canal de sortie légitime.
+  // CLI scripts (seed, smoke): console is their legitimate output channel.
   {
     files: ['prisma/seed.ts', 'scripts/**/*.ts'],
     rules: { 'no-console': 'off' },
@@ -51,16 +51,16 @@ export default defineConfig([
     files: ['src/**/*.test.ts', 'src/**/*.itest.ts'],
     plugins: { vitest },
     rules: {
-      // Un test focalisé ou désactivé qui atteint dev fausse la suite entière.
+      // A focused or skipped test reaching dev would falsify the whole suite.
       'vitest/no-focused-tests': 'error',
       'vitest/no-disabled-tests': 'error',
       'vitest/no-identical-title': 'error',
       'vitest/no-commented-out-tests': 'error',
-      // maxArgs 2 : expect(valeur, message) est un usage vitest supporté (boucles).
+      // maxArgs 2: expect(value, message) is a supported vitest usage (loops).
       'vitest/valid-expect': ['error', { maxArgs: 2 }],
       'vitest/no-standalone-expect': 'error',
     },
   },
-  // Désactive les règles stylistiques en conflit avec Prettier. Toujours en dernier.
+  // Disables stylistic rules that conflict with Prettier. Always keep last.
   prettier,
 ]);

@@ -5,15 +5,15 @@ import { MediaKind } from '@prisma/client';
 import { isSplatPreviewSupported } from './splatPoints';
 
 /**
- * Aiguillage des travaux déclenchés par un média : quel job de la file `media-processing`,
- * et si le média mérite en plus une **vignette spatiale** (file dédiée).
+ * Routing of the jobs triggered by a media: which job of the `media-processing` queue, and whether the media
+ * additionally deserves a **spatial thumbnail** (dedicated queue).
  *
- * Extrait de `services/MediaService` : la décision était une fonction privée du service, donc
- * intestable et impossible à réutiliser depuis le worker. Elle est restée strictement
- * identique pour la file média — seule la vignette spatiale est nouvelle.
+ * Extracted from `services/MediaService`: the decision was a private function of the service, hence untestable and
+ * impossible to reuse from the worker. It stayed strictly identical for the media queue — only the spatial thumbnail
+ * is new.
  */
 
-/** Formats 3D convertibles en GLB (le viewer Three.js ne lit que du GLB) — 9.A1. */
+/** 3D formats convertible to GLB (the Three.js viewer only reads GLB) — 9.A1. */
 export const CONVERT_3D = [
   '.fbx',
   '.obj',
@@ -29,7 +29,7 @@ export const CONVERT_3D = [
 
 export type MediaJobKind = 'transcode' | 'thumbnail' | 'convert3d';
 
-/** Job de traitement à déclencher selon le type de média et l'extension détectée. */
+/** Processing job to trigger, depending on the media type and the detected extension. */
 export function jobKindFor(kind: MediaKind, ext: string): MediaJobKind | null {
   if (kind === MediaKind.VIDEO) return 'transcode';
   if (kind === MediaKind.IMAGE) return 'thumbnail';
@@ -37,19 +37,19 @@ export function jobKindFor(kind: MediaKind, ext: string): MediaJobKind | null {
   return null;
 }
 
-/** Deux façons de fabriquer une vignette d'un média spatial — deux chaînes sans rapport. */
+/** Two ways of making a thumbnail of a spatial media — two unrelated pipelines. */
 export type SpatialThumbSource = 'model' | 'splat';
 
 /**
- * Le média mérite-t-il une vignette rendue côté serveur, et par quelle chaîne ?
+ * Does the media deserve a server-side rendered thumbnail, and through which pipeline?
  *
- * Sans cela, une page de plan pleine d'assets 3D n'affiche que des tuiles vides tant qu'un
- * humain n'a pas ouvert chaque review pour capturer la vue à la main (`setAutoThumbnail`).
- * Le rendu serveur ne remplace pas cette capture : il la devance, et ne l'écrase jamais.
+ * Without it, a shot page full of 3D assets shows only empty tiles until a human has opened each review to capture
+ * the view by hand (`setAutoThumbnail`). Server rendering does not replace that capture: it precedes it, and never
+ * overwrites it.
  *
- * `MODEL_3D` passe par Blender (le GLB dérivé, ou le fichier lui-même s'il est déjà GLB) ;
- * `SPLAT` par le rasteriseur de points maison, qui ne sait lire que certains conteneurs —
- * les autres (`.spz`, `.ksplat`, `.sog`) ne sont **pas** enfilés plutôt que d'échouer.
+ * `MODEL_3D` goes through Blender (the derived GLB, or the file itself if it is already a GLB); `SPLAT` through the
+ * home-made point rasteriser, which can only read some containers — the others (`.spz`, `.ksplat`, `.sog`) are **not**
+ * enqueued rather than failing.
  */
 export function spatialThumbSource(kind: MediaKind, ext: string): SpatialThumbSource | null {
   if (kind === MediaKind.MODEL_3D) return 'model';

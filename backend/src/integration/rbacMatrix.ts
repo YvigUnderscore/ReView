@@ -4,43 +4,42 @@
 import type { Actor, RbacFixture } from './rbacFixture';
 
 /**
- * Matrice d'autorisation — table déclarative `[méthode, chemin, rôle, attendu]`.
+ * Authorization matrix: declarative table of `[method, path, role, expected]` rows.
  *
- * Ce fichier est fait pour grossir. Ajouter un endpoint = ajouter une ligne ; le moteur
- * (`rbac-matrix.itest.ts`) se charge du reste, y compris de rejouer chaque ligne sans jeton
- * pour exiger un 401. Trois règles pour que la table reste lisible :
+ * This file is meant to grow. Adding an endpoint means adding a row; the engine
+ * (`rbac-matrix.itest.ts`) takes care of the rest, including replaying each row without a token
+ * to require a 401. Three rules keep the table readable:
  *
- *  1. **`allow` ne dit pas « 200 »**, il dit « le garde a laissé passer » (< 400). C'est
- *     tout ce qu'un test d'autorisation doit affirmer ; le reste appartient aux tests
- *     fonctionnels.
- *  2. **`deny` dit exactement 403.** Un 404 « poli » à la place d'un 403 serait une autre
- *     décision — défendable, mais elle doit s'écrire ici, pas se découvrir.
- *  3. **Une ligne qui écrit doit être rejouable.** Les cas mutants retenus sont
- *     idempotents (ajout de membre = upsert, écriture de board vide) ; sinon, ne déclarer
- *     que le côté refusé et laisser les acteurs autorisés hors de la ligne.
+ *  1. **`allow` does not mean "200"**, it means "the guard let it through" (< 400). That is all an
+ *     authorization test should assert; the rest belongs to functional tests.
+ *  2. **`deny` means exactly 403.** A "polite" 404 instead of a 403 would be a different decision:
+ *     defensible, but it must be written here, not discovered.
+ *  3. **A row that writes must be replayable.** The mutating cases kept are idempotent (adding a
+ *     member is an upsert, writing an empty board); otherwise, declare only the denied side and
+ *     leave the allowed actors out of the row.
  */
 
-/** Verdict attendu du garde, indépendamment de ce que fait ensuite le handler. */
+/** Expected verdict of the guard, regardless of what the handler does afterwards. */
 export type Outcome = 'allow' | 'deny';
 
 export interface MatrixCase {
   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
-  /** Chemin avec substitutions `{projectA}`, `{shotB}`, `{userArtist}`… (cf. `substitute`). */
+  /** Path with substitutions `{projectA}`, `{shotB}`, `{userArtist}`... (see `substitute`). */
   path: string;
-  /** Corps envoyé tel quel ; les substitutions s'appliquent aussi aux valeurs numériques. */
+  /** Body sent as-is; substitutions also apply to numeric values. */
   body?: Record<string, unknown>;
-  /** Rappel du garde couvert — sert de message d'échec, donc écrit pour être lu. */
+  /** Reminder of the guard covered: serves as the failure message, so it is written to be read. */
   guard: string;
   /**
-   * Verdict attendu par acteur. **Un acteur absent n'est pas joué** : c'est ainsi qu'on
-   * laisse hors d'atteinte les combinaisons destructrices (purge d'un projet par l'admin).
+   * Expected verdict per actor. **An absent actor is not played**: this is how destructive
+   * combinations (purging a project as admin) are kept out of reach.
    */
   expect: Partial<Record<Exclude<Actor, 'anon'>, Outcome>>;
-  /** Endpoint public : ne pas exiger 401 de l'anonyme. */
+  /** Public endpoint: do not require a 401 from the anonymous actor. */
   public?: boolean;
 }
 
-/** Toutes les substitutions reconnues dans un chemin ou un corps. */
+/** All substitutions recognised in a path or a body. */
 export function placeholders(f: RbacFixture): Record<string, number> {
   return {
     projectA: f.projectA,
@@ -63,7 +62,7 @@ export function substitute(path: string, values: Record<string, number>): string
   });
 }
 
-/** Même substitution dans un corps JSON : `{ userId: '{userArtist}' }` → `{ userId: 42 }`. */
+/** Same substitution inside a JSON body: `{ userId: '{userArtist}' }` becomes `{ userId: 42 }`. */
 export function substituteBody(
   body: Record<string, unknown> | undefined,
   values: Record<string, number>,
@@ -80,14 +79,14 @@ export function substituteBody(
 const EMPTY_BOARD = { document: { elements: [], files: {} }, baseUpdatedAt: null };
 
 /**
- * La table.
+ * The table.
  *
- * Elle couvre les quatre familles de gardes du backend : `requireRole` (global),
- * `requireProjectAccess` / `assertProjectAccess` (appartenance), `requireProjectManage`
- * (élévation locale, décision 38.E) et les refus propres au rôle CLIENT.
+ * It covers the four families of guards in the backend: `requireRole` (global),
+ * `requireProjectAccess` / `assertProjectAccess` (membership), `requireProjectManage`
+ * (local elevation, decision 38.E) and the refusals specific to the CLIENT role.
  */
 export const AUTHORIZATION_MATRIX: MatrixCase[] = [
-  // ── requireProjectAccess : appartenance au projet ────────────────────────────
+  // ── requireProjectAccess: project membership ──
   {
     method: 'get',
     path: '/api/projects/{projectA}',
@@ -113,7 +112,7 @@ export const AUTHORIZATION_MATRIX: MatrixCase[] = [
     expect: { admin: 'allow', supervisor: 'allow', artist: 'deny', client: 'deny', outsider: 'allow' },
   },
 
-  // ── assertProjectAccess : le même contrôle, mais dans le handler ─────────────
+  // ── assertProjectAccess: the same check, but inside the handler ──
   {
     method: 'get',
     path: '/api/shots?projectId={projectA}',
@@ -144,8 +143,8 @@ export const AUTHORIZATION_MATRIX: MatrixCase[] = [
     guard: 'assertProjectAccess (liste)',
     expect: { admin: 'allow', supervisor: 'allow', artist: 'deny', client: 'deny', outsider: 'allow' },
   },
-  // Accès par identifiant : le projet n'est pas dans l'URL, il est résolu depuis l'entité.
-  // C'est exactement la forme d'IDOR qu'aucun test à Prisma doublé ne peut voir.
+  // Access by identifier: the project is not in the URL, it is resolved from the entity.
+  // This is exactly the IDOR shape that no test with a mocked Prisma can see.
   {
     method: 'get',
     path: '/api/shots/{shotB}',
@@ -171,7 +170,7 @@ export const AUTHORIZATION_MATRIX: MatrixCase[] = [
     expect: { admin: 'allow', supervisor: 'allow', artist: 'deny', client: 'deny', outsider: 'allow' },
   },
 
-  // ── requireRole : privilèges globaux ─────────────────────────────────────────
+  // ── requireRole: global privileges ──
   {
     method: 'get',
     path: '/api/users',
@@ -208,8 +207,8 @@ export const AUTHORIZATION_MATRIX: MatrixCase[] = [
     guard: 'requireRole(ADMIN)',
     expect: { admin: 'allow', supervisor: 'deny', artist: 'deny', client: 'deny', outsider: 'deny' },
   },
-  // Écritures : seul le côté refusé est joué — créer un projet ou un compte à chaque
-  // exécution polluerait le décor de la matrice elle-même.
+  // Writes: only the denied side is played. Creating a project or an account on every run would
+  // pollute the matrix's own fixture.
   {
     method: 'post',
     path: '/api/projects',
@@ -224,7 +223,7 @@ export const AUTHORIZATION_MATRIX: MatrixCase[] = [
     guard: 'requireRole(ADMIN)',
     expect: { supervisor: 'deny', artist: 'deny', client: 'deny', outsider: 'deny' },
   },
-  // Purge : destructrice. L'admin n'est délibérément pas joué.
+  // Purge: destructive. The admin is deliberately not played.
   {
     method: 'delete',
     path: '/api/projects/{projectB}/purge',
@@ -232,8 +231,8 @@ export const AUTHORIZATION_MATRIX: MatrixCase[] = [
     expect: { supervisor: 'deny', artist: 'deny', client: 'deny', outsider: 'deny' },
   },
 
-  // ── requireProjectManage : gestion du projet (38.E) ──────────────────────────
-  // Idempotent : `addMember` est un upsert, et l'artiste est déjà membre du projet A.
+  // ── requireProjectManage: project management (38.E) ──
+  // Idempotent: `addMember` is an upsert, and the artist is already a member of project A.
   {
     method: 'post',
     path: '/api/projects/{projectA}/members',
@@ -242,7 +241,7 @@ export const AUTHORIZATION_MATRIX: MatrixCase[] = [
     expect: { admin: 'allow', supervisor: 'allow', artist: 'deny', client: 'deny', outsider: 'deny' },
   },
 
-  // ── Rôle CLIENT : membre du projet, mais jamais contributeur ─────────────────
+  // ── CLIENT role: project member, but never a contributor ──
   {
     method: 'get',
     path: '/api/boards/project/{projectA}',

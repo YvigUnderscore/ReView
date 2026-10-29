@@ -7,21 +7,19 @@ import type { Schemas } from '../middleware/validate';
 import type { Scope } from './apiScopes';
 
 /**
- * Introspection des routeurs Express pour la documentation (API v1) — helpers PURS.
+ * Introspection of Express routers for documentation (API v1) — PURE helpers.
  *
- * Décrire trois cents endpoints à la main produit une documentation fausse au bout de
- * quelques semaines : la route change, la doc reste. On lit donc les routeurs eux-mêmes,
- * et les schémas Zod que `middleware/validate` accroche à ses middlewares. La spec ne
- * peut alors pas diverger du code — elle en est extraite.
+ * Describing three hundred endpoints by hand produces wrong documentation within a few weeks: the route changes, the doc
+ * stays. So we read the routers themselves, and the Zod schemas that `middleware/validate` attaches to its middlewares.
+ * The spec cannot then diverge from the code — it is extracted from it.
  *
- * Express 5 ne conserve plus le préfixe d'un sous-routeur (il vit dans une closure de
- * `path-to-regexp`) : le préfixe est fourni par la table de montage, seule source de
- * vérité du plan d'URL.
+ * Express 5 no longer keeps the prefix of a sub-router (it lives in a closure of `path-to-regexp`): the prefix is supplied
+ * by the mount table, the only source of truth for the URL plan.
  */
 
 export interface RouteDescriptor {
   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
-  /** Chemin au format OpenAPI : `/api/v1/shots/{id}`. */
+  /** Path in OpenAPI format: `/api/v1/shots/{id}`. */
   path: string;
   schemas: Schemas;
   scope?: Scope;
@@ -29,11 +27,11 @@ export interface RouteDescriptor {
 
 const DOCUMENTED_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
-/** Convertit un chemin Express (`/shots/:id`) en gabarit OpenAPI (`/shots/{id}`). */
+/** Converts an Express path (`/shots/:id`) into an OpenAPI template (`/shots/{id}`). */
 export const toOpenApiPath = (path: string): string =>
   path.replace(/:([A-Za-z0-9_]+)/g, (_m, name: string) => `{${name}}`);
 
-/** Concatène préfixe et chemin sans produire de double barre ni de barre finale. */
+/** Concatenates prefix and path without producing a double slash or a trailing slash. */
 export function joinPaths(...parts: string[]): string {
   const joined = parts
     .map((p) => p.replace(/^\/+|\/+$/g, ''))
@@ -42,10 +40,10 @@ export function joinPaths(...parts: string[]): string {
   return `/${joined}`;
 }
 
-/** Métadonnées accrochées aux middlewares par `validate` et `requireScope`. */
+/** Metadata attached to the middlewares by `validate` and `requireScope`. */
 type AnnotatedHandler = { schemas?: Schemas; scope?: Scope };
 
-/** Forme minimale du routeur Express dont dépend l'introspection. */
+/** Minimal shape of the Express router the introspection depends on. */
 interface RouterLike {
   stack?: {
     route?: {
@@ -57,8 +55,8 @@ interface RouterLike {
 }
 
 /**
- * Extrait les routes d'un routeur, préfixe compris.
- * Une route déclarée sur plusieurs chemins produit une entrée par chemin.
+ * Extracts the routes of a router, prefix included.
+ * A route declared on several paths produces one entry per path.
  */
 export function describeRouter(router: Router, prefix: string): RouteDescriptor[] {
   const out: RouteDescriptor[] = [];
@@ -85,7 +83,7 @@ export function describeRouter(router: Router, prefix: string): RouteDescriptor[
   return out;
 }
 
-/** Applique `describeRouter` à une table de montage, dans l'ordre déclaré. */
+/** Applies `describeRouter` to a mount table, in the declared order. */
 export function describeMounts(
   base: string,
   mounts: { prefix: string; router: Router }[],
@@ -94,8 +92,8 @@ export function describeMounts(
 }
 
 /**
- * Résumé lisible d'un schéma Zod pour les cas que zod-to-openapi ne sait pas convertir
- * (raffinements, unions exotiques). Mieux vaut un type ouvert qu'un endpoint absent.
+ * Readable summary of a Zod schema for the cases zod-to-openapi cannot convert (refinements, exotic unions).
+ * An open type is better than a missing endpoint.
  */
 export const isConvertible = (schema: z.ZodTypeAny | undefined): schema is z.ZodTypeAny =>
   schema !== undefined;

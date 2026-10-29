@@ -21,12 +21,11 @@ beforeEach(() => {
 });
 
 /**
- * Une session n'est pas le seul identifiant du compte : un token d'API `rvk_` authentifie
- * tout aussi bien, par une table séparée. Ne révoquer que les sessions laissait survivre le
- * jeton qu'un attaquant s'était créé — la reprise en main du compte était illusoire.
+ * A session is not the only identifier of the account: an API token `rvk_` authenticates just as well, through a separate table. Revoking only the sessions
+ * let a token the attacker had created survive — taking the account back in hand was illusory.
  */
 describe('revokeAllCredentials', () => {
-  it('révoque AUSSI les tokens d’API, pas seulement les sessions', async () => {
+  it('revokes API tokens AS WELL AS the sessions', async () => {
     await revokeAllCredentials(42);
     expect(prisma.userSession.updateMany).toHaveBeenCalled();
     expect(prisma.apiToken.updateMany).toHaveBeenCalledWith(
@@ -34,7 +33,7 @@ describe('revokeAllCredentials', () => {
     );
   });
 
-  it('épargne la session courante mais révoque les tokens quand même', async () => {
+  it('spares the current session but revokes the tokens anyway', async () => {
     await revokeAllCredentials(42, 'session-courante');
     const where = vi.mocked(prisma.userSession.updateMany).mock.calls[0]![0].where as Record<string, unknown>;
     expect(where).toMatchObject({ userId: 42, id: { not: 'session-courante' } });

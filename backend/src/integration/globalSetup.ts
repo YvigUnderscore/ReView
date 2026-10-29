@@ -12,31 +12,30 @@ import { adminDatabaseUrl, databaseNameOf, loadItestDatabaseUrl } from './itestE
 const run = promisify(execFile);
 
 /**
- * Préparation de la suite d'intégration : une base neuve, à chaque exécution.
+ * Prepares the integration suite: a fresh database on every run.
  *
- * Deux étapes, dans cet ordre :
- *  1. créer la base si elle n'existe pas (une instance Postgres fraîche, ou un poste neuf,
- *     n'a que `review`) ;
- *  2. `prisma migrate reset --force` : le schéma est reconstruit **par les migrations
- *     versionnées**, jamais par un `db push`. Une migration cassée fait donc échouer la
- *     suite ici, au lieu de se découvrir en production.
+ * Two steps, in this order:
+ *  1. create the database if it does not exist (a fresh Postgres instance, or a new machine,
+ *     only has `review`);
+ *  2. `prisma migrate reset --force`: the schema is rebuilt **by the versioned migrations**,
+ *     never by a `db push`. A broken migration therefore fails the suite here, instead of being
+ *     discovered in production.
  *
- * Conséquence voulue : plus aucun test ne peut dépendre de ce qu'un passage précédent a
- * laissé derrière lui, et la base de développement n'est plus touchée du tout.
+ * Intended consequence: no test can depend on what a previous run left behind, and the
+ * development database is no longer touched at all.
  */
 
-/** Journal du setup — `console` est proscrit dans `src/`, et pino n'est pas chargé ici. */
+/** Setup log. `console` is banned in `src/`, and pino is not loaded here. */
 function say(message: string): void {
   process.stdout.write(`${message}\n`);
 }
 
 /**
- * Le CLI Prisma est lancé par son fichier JavaScript, pas par `npx`.
+ * The Prisma CLI is launched through its JavaScript file, not through `npx`.
  *
- * Sous Windows `npx` est un `.cmd`, que Node refuse de lancer sans `shell: true` depuis la
- * correction de CVE-2024-27980 ; et `shell: true` concatène les arguments sans les échapper,
- * or l'un d'eux est une URL de connexion. Nommer le script contourne les deux problèmes et
- * évite au passage la résolution de `npx`.
+ * On Windows `npx` is a `.cmd` file, which Node refuses to launch without `shell: true` since the
+ * CVE-2024-27980 fix; and `shell: true` concatenates arguments without escaping them, while one of
+ * them is a connection URL. Naming the script avoids both problems and also skips resolving `npx`.
  */
 const prismaCli = join(
   dirname(createRequire(join(process.cwd(), 'package.json')).resolve('prisma/package.json')),
@@ -49,7 +48,7 @@ const prisma = (args: string[], env: NodeJS.ProcessEnv = {}) =>
     maxBuffer: 8 * 1024 * 1024,
   });
 
-/** Crée la base si elle manque. Son existence est le cas courant : l'échec est alors normal. */
+/** Creates the database if missing. Its existence is the common case: failure here is then expected. */
 async function createDatabaseIfMissing(url: string, name: string): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), 'review-itest-'));
   const file = join(dir, 'create-database.sql');
@@ -58,7 +57,7 @@ async function createDatabaseIfMissing(url: string, name: string): Promise<void>
     await prisma(['db', 'execute', '--url', adminDatabaseUrl(url), '--file', file]);
     say(`  base « ${name} » créée`);
   } catch {
-    // Déjà présente — une vraie panne de connexion sera relevée par `migrate reset`.
+    // Already present: a real connection failure will be reported by `migrate reset`.
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

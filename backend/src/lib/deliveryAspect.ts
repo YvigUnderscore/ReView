@@ -5,27 +5,25 @@ import { prisma } from './prisma';
 import { resolveEntitySettings, resolveProjectSettingsById, type Resolution } from './projectSettings';
 
 /**
- * Ratio du cadre de livraison d'un média, hérité des réglages pipeline.
+ * Delivery frame ratio of a media, inherited from the pipeline settings.
  *
- * POURQUOI. Le cadre de review des médias spatiaux (3D, splat) est letterboxé à un aspect
- * fixe, et son infobulle annonçait depuis le début « hérité des réglages pipeline du shot ».
- * Personne ne le lui servait : l'aspect venait de la présentation caméra enregistrée, qui se
- * contentait de recopier l'aspect… de la caméra, lui-même issu du défaut 16/9. Le premier
- * enregistrement de mise en scène gelait donc 16/9 sans que personne ne l'ait choisi, quelle
- * que soit la résolution de livraison du projet.
+ * WHY. The review frame of spatial media (3D, splat) is letterboxed at a fixed aspect, and its tooltip
+ * announced from the start "inherited from the shot's pipeline settings". Nobody served it that: the
+ * aspect came from the saved camera presentation, which merely copied the camera's aspect… itself taken
+ * from the 16/9 default. The first staging save therefore froze 16/9 without anyone choosing it, whatever
+ * the project's delivery resolution.
  *
- * La résolution, elle, est un réglage pipeline hérité studio → projet → séquence → plan
- * (`resolveEntitySettings`) : c'est elle qui donne le ratio. Le patron est exactement celui
- * de `ImageSequenceService.resolveSequenceFramerate` pour la cadence.
+ * The resolution is a pipeline setting inherited studio → project → sequence → shot
+ * (`resolveEntitySettings`): it is what gives the ratio. The pattern is exactly that of
+ * `ImageSequenceService.resolveSequenceFramerate` for the frame rate.
  */
 
-/** Repli : 16:9 — exactement la résolution studio par défaut (1920×1080). */
+/** Fallback: 16:9 — exactly the studio default resolution (1920×1080). */
 export const DEFAULT_DELIVERY_ASPECT = 16 / 9;
 
 /**
- * Ratio largeur/hauteur d'une résolution de livraison. Une résolution absente ou aberrante
- * retombe sur le repli plutôt que de produire un `NaN` : un aspect non fini fait un cadre de
- * hauteur nulle à l'écran, c'est-à-dire un viewer vide.
+ * Width/height ratio of a delivery resolution. A missing or aberrant resolution falls back rather than
+ * producing a `NaN`: a non-finite aspect makes a zero-height frame on screen, i.e. an empty viewer.
  */
 export function aspectOfResolution(resolution: Resolution | null | undefined): number {
   const width = resolution?.width;
@@ -36,8 +34,8 @@ export function aspectOfResolution(resolution: Resolution | null | undefined): n
 }
 
 /**
- * Ratio de livraison effectif d'une version : héritage complet studio → projet → séquence →
- * plan. Une version qui ne pend à aucune tâche (donc à aucun plan) prend le ratio du projet.
+ * Effective delivery ratio of a version: full inheritance studio → project → sequence → shot. A version
+ * hanging from no task (hence no shot) takes the project's ratio.
  */
 export async function resolveDeliveryAspect(versionId: number, projectId: number): Promise<number> {
   const [project, version] = await Promise.all([

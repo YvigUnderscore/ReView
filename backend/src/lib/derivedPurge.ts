@@ -8,15 +8,14 @@ import { storage } from '../services/StorageService';
 import { logger } from './logger';
 
 /**
- * Purge des dérivés obsolètes (37.H) : les versions au-delà des N dernières de chaque
- * tâche/asset perdent leurs renditions HLS et leur sprite de timeline — le proxy MP4 et
- * la miniature restent, la lecture reste donc possible (en qualité proxy). Configurable
- * (Setting `derived_purge`), déclenchable à la main (admin) et passée quotidiennement.
+ * Purge of obsolete derivatives (37.H): versions beyond the N latest of each task/asset lose their HLS
+ * renditions and timeline sprite — the MP4 proxy and the thumbnail stay, so playback remains possible
+ * (at proxy quality). Configurable (Setting `derived_purge`), triggerable by hand (admin) and run daily.
  */
 
 export interface DerivedPurgeConfig {
   enabled: boolean;
-  keepVersions: number; // N dernières versions conservées intactes par tâche/asset
+  keepVersions: number; // N most recent versions kept intact per task/asset
 }
 
 const PURGE_KEY = 'derived_purge';
@@ -57,7 +56,7 @@ export async function setDerivedPurgeConfig(value: unknown): Promise<DerivedPurg
   return clean;
 }
 
-/** Ids de versions à purger : tout sauf les N plus récentes de chaque groupe (pur, testé). */
+/** Version ids to purge: everything except the N most recent of each group (pure, tested). */
 export function selectObsoleteVersionIds(
   versions: { id: number; taskId: number | null; assetId: number | null }[],
   keep: number,
@@ -76,31 +75,28 @@ export function selectObsoleteVersionIds(
 }
 
 /**
- * Nombre de PARENTS (tâches, puis assets) traités par lot.
+ * Number of PARENTS (tasks, then assets) processed per batch.
  *
- * POURQUOI ce découpage-là et pas un autre : le groupe de `selectObsoleteVersionIds` **est**
- * le parent (`t{taskId}` ou `a{assetId}`), et la contrainte `Version_parent_xor` garantit
- * qu'une version en a exactement un. Découper par parents rend donc EXACTEMENT le même
- * ensemble d'ids obsolètes qu'un chargement global — ce qui ne serait pas vrai d'un
- * découpage par id de version, qui couperait un groupe en deux et « conserverait » N
- * versions dans chaque moitié. Mesuré : le chargement global rapatriait toute la table
- * (20 000 versions = 5,4 Mo de tas pour UN projet ; vingt projets = 110 Mo d'un bloc dans
- * le process qui fait aussi tourner FFmpeg).
+ * WHY this split rather than another: the group of `selectObsoleteVersionIds` IS the parent
+ * (`t{taskId}` or `a{assetId}`), and the `Version_parent_xor` constraint guarantees that a version has
+ * exactly one. Splitting by parents therefore yields EXACTLY the same set of obsolete ids as a global
+ * load — which would not hold for a split by version id, which would cut a group in two and "keep" N
+ * versions in each half. Measured: the global load fetched the whole table (20,000 versions = 5.4 MB of
+ * heap for ONE project; twenty projects = 110 MB in one block, in the process that also runs FFmpeg).
  */
 const PURGE_PARENT_BATCH = 200;
 
-/** Ids de versions passés d'un coup dans un `IN (…)` — une liste sans borne est un plan de requête sans borne. */
+/** Version ids passed at once in an `IN (…)` — an unbounded list is an unbounded query plan. */
 const PURGE_VERSION_IN_BATCH = 500;
 
 /**
- * Plafond de médias allégés par passe. Chaque élément coûte deux appels MinIO **et** une
- * écriture : vider d'un coup l'arriéré d'un long-métrage occuperait le worker pendant que
- * le studio travaille. La purge est idempotente et reprend à la passe suivante — même
- * raisonnement que `TRASH_PURGE_MAX_ITEMS` (lib/trash.ts).
+ * Ceiling of slimmed media per pass. Each item costs two MinIO calls **and** a write: emptying a feature
+ * film's backlog in one go would occupy the worker while the studio works. The purge is idempotent and
+ * resumes on the next pass — same reasoning as `TRASH_PURGE_MAX_ITEMS` (lib/trash.ts).
  */
 export const DERIVED_PURGE_MAX_ITEMS = 2000;
 
-/** Découpe une liste en tranches d'au plus `size` éléments (ordre conservé). */
+/** Splits a list into slices of at most `size` items (order kept). */
 function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
@@ -108,9 +104,9 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
 }
 
 /**
- * Une page d'ids de parents ayant au moins une version vivante, par id croissant.
- * Le seul critère est « au moins une version vivante » — exactement ce que voyait le
- * chargement global, qui ne regardait pas non plus si la tâche/l'asset était en corbeille.
+ * A page of parent ids having at least one live version, in ascending id order.
+ * The only criterion is "at least one live version" — exactly what the global load saw, which did not
+ * check either whether the task/asset was in the trash.
  */
 async function parentIdsWithLiveVersions(
   parent: 'task' | 'asset',
@@ -130,13 +126,13 @@ async function parentIdsWithLiveVersions(
   return rows.map((r) => r.id);
 }
 
-/** Allège un média (HLS + sprite) s'il porte encore des dérivés. `false` = rien à faire. */
+/** Slims a media (HLS + sprite) if it still carries derivatives. `false` = nothing to do. */
 async function purgeOneMedia(m: { id: number; metadata: unknown }): Promise<boolean> {
   const meta = { ...((m.metadata ?? {}) as Record<string, unknown>) };
   if (meta.hlsPurged === true || (!meta.hls && !meta.timelineSprite)) return false;
   const sprite = meta.timelineSprite as { key?: string } | undefined;
-  // Les deux suppressions sont indépendantes : les attendre l'une après l'autre doublait
-  // la latence MinIO par média sans rien ordonner.
+  // The two deletions are independent: awaiting one after the other doubled the MinIO latency per media
+  // for no ordering benefit.
   await Promise.all([
     storage.deletePrefix(`derived/${m.id}/hls/`).catch(() => undefined),
     sprite?.key ? storage.deleteObject(sprite.key).catch(() => undefined) : Promise.resolve(),
@@ -151,7 +147,7 @@ async function purgeOneMedia(m: { id: number; metadata: unknown }): Promise<bool
   return true;
 }
 
-/** Allège les vidéos rattachées à ces versions, dans la limite du budget. */
+/** Slims the videos attached to these versions, within the budget. */
 async function purgeDerivedForVersions(versionIds: number[], budget: number): Promise<number> {
   let purged = 0;
   for (const ids of chunk(versionIds, PURGE_VERSION_IN_BATCH)) {
@@ -159,8 +155,8 @@ async function purgeDerivedForVersions(versionIds: number[], budget: number): Pr
     const media = await prisma.mediaObject.findMany({
       where: { versionId: { in: ids }, kind: 'VIDEO', deletedAt: null },
       select: { id: true, metadata: true },
-      // Ordre stable : sans lui, un budget épuisé laisserait un reliquat différent à chaque
-      // passe et la purge pourrait tourner sans jamais finir le même bout de travail.
+      // Stable order: without it, an exhausted budget would leave a different remainder on each pass and
+      // the purge could run forever without finishing the same piece of work.
       orderBy: { id: 'asc' },
     });
     for (const m of media) {
@@ -172,11 +168,11 @@ async function purgeDerivedForVersions(versionIds: number[], budget: number): Pr
 }
 
 /**
- * Exécute la purge (idempotente). Renvoie le nombre de médias allégés.
+ * Runs the purge (idempotent). Returns the number of media slimmed.
  *
- * Le balayage est fait parent par parent et par lots : à configuration égale, l'ensemble
- * des médias allégés est identique à celui de la version « tout en mémoire » (cf. le test
- * d'équivalence), seul le chemin pour y arriver est borné.
+ * The sweep is done parent by parent, in batches: for an equal configuration, the set of slimmed media is
+ * identical to that of the "everything in memory" version (see the equivalence test); only the path to get
+ * there is bounded.
  */
 export async function purgeObsoleteDerived(
   maxItems: number = DERIVED_PURGE_MAX_ITEMS,
@@ -194,8 +190,8 @@ export async function purgeObsoleteDerived(
       if (parents.length === 0) break;
       after = parents[parents.length - 1];
       const versions = await prisma.version.findMany({
-        // `taskId: null` côté asset : une version portant une tâche est groupée par tâche
-        // (priorité de `selectObsoleteVersionIds`) — sans ce filtre elle serait comptée deux fois.
+        // `taskId: null` on the asset side: a version carrying a task is grouped by task
+        // (priority of `selectObsoleteVersionIds`) — without this filter it would be counted twice.
         where:
           parent === 'task'
             ? { deletedAt: null, taskId: { in: parents } }

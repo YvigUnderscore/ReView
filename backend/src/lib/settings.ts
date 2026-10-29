@@ -6,59 +6,52 @@ import { prisma } from './prisma';
 import { BASE_LOCALE, isLocale, localeFromPreferences, type Locale } from '../i18n';
 
 /**
- * Réglages studio configurables (table Setting). Valeurs par défaut si absentes.
- * Les clés sont aussi modifiables via PUT /api/studio/settings (admin).
+ * Configurable studio settings (Setting table). Default values if absent.
+ * The keys can also be modified via PUT /api/studio/settings (admin).
  */
 export const SETTING_KEYS = {
-  MAX_FILE_SIZE: 'max_file_size', // octets
-  STORAGE_LIMIT_USER: 'storage_limit_user', // octets (défaut si user.storageLimit null)
+  MAX_FILE_SIZE: 'max_file_size', // bytes
+  STORAGE_LIMIT_USER: 'storage_limit_user', // bytes (default if user.storageLimit is null)
   MAX_CONCURRENT_UPLOADS: 'max_concurrent_uploads',
-  TRASH_RETENTION_DAYS: 'trash_retention_days', // purge auto après N jours (0 = désactivée)
-  DEFAULT_START_FRAME: 'default_start_frame', // frame de départ par défaut des nouveaux projets
-  // Salle de review live (33.B) : fréquence de diffusion du pilote (Hz) par type de média.
+  TRASH_RETENTION_DAYS: 'trash_retention_days', // automatic purge after N days (0 = disabled)
+  DEFAULT_START_FRAME: 'default_start_frame', // default start frame of new projects
+  // Live review room (33.B): broadcast frequency of the pilot (Hz) per media type.
   LIVE_SYNC_HZ_VIDEO: 'live_sync_hz_video',
   LIVE_SYNC_HZ_IMAGE: 'live_sync_hz_image',
   LIVE_SYNC_HZ_3D: 'live_sync_hz_3d',
   LIVE_SYNC_HZ_SPLAT: 'live_sync_hz_splat',
-  // Logo studio (35.D) : clé MinIO — page client, burn-ins worker.
+  // Studio logo (35.D): MinIO key — client page, worker burn-ins.
   STUDIO_LOGO: 'studio_logo_key',
-  // Licence : URL du code source correspondant, exigée par l'AGPL §13 et affichée aux
-  // utilisateurs distants. Tout studio qui déploie une version modifiée doit y pointer
-  // SES sources, pas le dépôt amont.
+  // Licence: URL of the corresponding source code, required by AGPL §13 and shown to remote users. Any studio deploying a modified version must point
+  // to ITS sources, not to the upstream repository.
   STUDIO_SOURCE_URL: 'studio_source_url',
-  // Langue par défaut du studio : sert aux comptes qui n'ont rien choisi, et à tout ce
-  // que le serveur rend sans navigateur en face (emails, notifications).
+  // Default language of the studio: used for accounts that chose nothing, and for everything the server renders without a browser in front (emails, notifications).
   STUDIO_DEFAULT_LOCALE: 'studio_default_locale',
-  // Qui écrit sur une tâche : « open » (l'assigné, règle historique) ou « department »
-  // (l'assigné et les membres de l'étape). Cf. lib/taskDepartmentPolicy.
+  // Who writes to a task: "open" (the assignee, historical rule) or "department" (the assignee and the members of the step). See lib/taskDepartmentPolicy.
   TASK_DEPARTMENT_POLICY: 'task_department_policy',
-  // Mode brouillon (Phase 50). ACTIF : un média naît brouillon et se publie par un geste
-  // explicite — le fonctionnement historique. INACTIF (défaut) : un média est publié dès
-  // son upload, et « publier » n'est plus un geste.
-  // La clé s'écrit `draftMode` et non en serpent minuscule comme ses voisines : c'est le
-  // contrat arrêté avec l'interface, qui l'écrit telle quelle. Une divergence de casse
-  // aurait fait lire un réglage absent — donc désactivé — sans que rien ne le signale.
+  // Draft mode (Phase 50). ACTIVE: a media is born a draft and is published by an explicit gesture — the historical operation. INACTIVE (default): a media is
+  // published as soon as it is uploaded, and "publish" is no longer a gesture.
+  // The key is written `draftMode` and not in lowercase snake case like its neighbours: it is the contract agreed with the interface, which writes it as-is.
+  // A case mismatch would have read an absent setting — hence disabled — without anything signalling it.
   DRAFT_MODE: 'draftMode',
 } as const;
 
 /**
- * Réglages dont la valeur est un booléen.
+ * Settings whose value is a boolean.
  *
- * La table `Setting` ne stocke que du texte, et « false » y est une chaîne parfaitement
- * vraie : sans schéma, « non » ou « 0 » s'enregistreraient et se reliraient en silence
- * comme *faux*, ou comme *vrai*, selon le lecteur. Deux mots sont acceptés, pas trois.
+ * The `Setting` table stores only text, and "false" there is a perfectly true string: without a schema, "no" or "0" would be saved and read back silently
+ * as *false*, or as *true*, depending on the reader. Two words are accepted, not three.
  */
 export const BOOLEAN_SETTING_KEYS: readonly string[] = [SETTING_KEYS.DRAFT_MODE];
 
-/** Forme imposée à la valeur d'un réglage booléen (Zod : refus en 400 côté route). */
+/** Forced shape of a boolean setting's value (Zod: refused with a 400 on the route side). */
 export const booleanSettingSchema = z.enum(['true', 'false']);
 
-/** Dépôt amont — valeur par défaut du lien « code source » (AGPL §13). */
+/** Upstream repository — default value of the "source code" link (AGPL §13). */
 export const UPSTREAM_SOURCE_URL = 'https://github.com/YvigUnderscore/ReView';
 
 /**
- * Normalise l'URL de source avant affichage : elle finit dans un `href`, et le réglage
- * est un champ texte libre. Seuls http(s) passent ; tout le reste retombe sur l'amont.
+ * Normalises the source URL before display: it ends up in an `href`, and the setting is a free text field. Only http(s) passes; everything else falls back on upstream.
  */
 export function safeSourceUrl(value: string | null | undefined): string {
   if (!value?.trim()) return UPSTREAM_SOURCE_URL;
@@ -70,13 +63,13 @@ export function safeSourceUrl(value: string | null | undefined): string {
   }
 }
 
-/** URL du code source correspondant (AGPL §13), repli sur le dépôt amont. */
+/** URL of the corresponding source code (AGPL §13), falling back on the upstream repository. */
 export async function getSourceUrl(): Promise<string> {
   const row = await prisma.setting.findUnique({ where: { key: SETTING_KEYS.STUDIO_SOURCE_URL } });
   return safeSourceUrl(row?.value);
 }
 
-/** Langue par défaut du studio (repli sur l'anglais, langue de base du produit). */
+/** Default language of the studio (falls back on English, the product's base language). */
 export async function getDefaultLocale(): Promise<Locale> {
   const row = await prisma.setting.findUnique({
     where: { key: SETTING_KEYS.STUDIO_DEFAULT_LOCALE },
@@ -85,16 +78,15 @@ export async function getDefaultLocale(): Promise<Locale> {
 }
 
 /**
- * Langue d'un destinataire : son choix explicite, sinon le défaut du studio. Un email
- * part toujours dans une langue décidée, jamais dans celle du serveur.
+ * Language of a recipient: their explicit choice, otherwise the studio default. An email always goes out in a decided language, never in the server's.
  */
 export async function resolveUserLocale(preferences: unknown): Promise<Locale> {
   return localeFromPreferences(preferences) ?? (await getDefaultLocale());
 }
 
 const DEFAULTS: Record<string, number> = {
-  [SETTING_KEYS.MAX_FILE_SIZE]: 5 * 1024 * 1024 * 1024, // 5 Go
-  [SETTING_KEYS.STORAGE_LIMIT_USER]: 10 * 1024 * 1024 * 1024, // 10 Go
+  [SETTING_KEYS.MAX_FILE_SIZE]: 5 * 1024 * 1024 * 1024, // 5 GB
+  [SETTING_KEYS.STORAGE_LIMIT_USER]: 10 * 1024 * 1024 * 1024, // 10 GB
   [SETTING_KEYS.MAX_CONCURRENT_UPLOADS]: 5,
   [SETTING_KEYS.TRASH_RETENTION_DAYS]: 30,
   [SETTING_KEYS.DEFAULT_START_FRAME]: 1001,
@@ -104,7 +96,7 @@ const DEFAULTS: Record<string, number> = {
   [SETTING_KEYS.LIVE_SYNC_HZ_SPLAT]: 10,
 };
 
-/** Fréquence de sync live (Hz, bornée 1–30) pour un type de média. */
+/** Live sync frequency (Hz, bounded 1–30) for a media type. */
 export async function getLiveSyncHz(kind: string): Promise<number> {
   const key =
     kind === 'VIDEO'
@@ -119,11 +111,10 @@ export async function getLiveSyncHz(kind: string): Promise<number> {
 }
 
 /**
- * Valeur booléenne d'un réglage : un réglage absent ou mal renseigné vaut **false**.
+ * Boolean value of a setting: an absent or badly filled-in setting is **false**.
  *
- * Le repli sur `false` n'est pas un hasard : les réglages booléens du studio ouvrent des
- * comportements supplémentaires. Une base fraîche, ou une valeur qu'un opérateur a écrite
- * de travers, doit donner le comportement par défaut, pas celui qu'on n'a pas demandé.
+ * The fallback to `false` is no accident: the studio's boolean settings unlock additional behaviours. A fresh database, or a value an operator wrote wrongly,
+ * must give the default behaviour, not one nobody asked for.
  */
 export async function getBooleanSetting(key: string): Promise<boolean> {
   const row = await prisma.setting.findUnique({ where: { key } });
@@ -131,11 +122,10 @@ export async function getBooleanSetting(key: string): Promise<boolean> {
 }
 
 /**
- * Le studio travaille-t-il en mode brouillon ? (Phase 50)
+ * Does the studio work in draft mode? (Phase 50)
  *
- * Répond `false` par défaut : un média est publié dès son upload. Le studio qui veut
- * garder l'ancien fonctionnement — déposer, relire, publier — coche le réglage, et
- * retrouve exactement ce qu'il avait.
+ * Answers `false` by default: a media is published as soon as it is uploaded. The studio that wants to keep the former operation — deposit, review, publish — ticks
+ * the setting, and regains exactly what it had.
  */
 export const isDraftModeEnabled = (): Promise<boolean> => getBooleanSetting(SETTING_KEYS.DRAFT_MODE);
 

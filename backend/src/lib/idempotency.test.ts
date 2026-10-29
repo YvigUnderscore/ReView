@@ -5,25 +5,25 @@ import { describe, it, expect } from 'vitest';
 import { fingerprint } from './idempotency';
 
 describe('fingerprint', () => {
-  it('est stable pour une même requête rejouée', () => {
+  it('is stable for the same replayed request', () => {
     expect(fingerprint('k1', 'POST', '/api/v1/publish', 7)).toBe(
       fingerprint('k1', 'POST', '/api/v1/publish', 7),
     );
   });
 
-  it('sépare deux tokens portant la même clé', () => {
+  it('separates two tokens carrying the same key', () => {
     expect(fingerprint('k1', 'POST', '/api/v1/publish', 7)).not.toBe(
       fingerprint('k1', 'POST', '/api/v1/publish', 8),
     );
   });
 
-  it('sépare une session anonyme d’un token', () => {
+  it('separates an anonymous session from a token', () => {
     expect(fingerprint('k1', 'POST', '/api/v1/publish')).not.toBe(
       fingerprint('k1', 'POST', '/api/v1/publish', 7),
     );
   });
 
-  it('sépare deux endpoints et deux méthodes', () => {
+  it('separates two endpoints and two methods', () => {
     expect(fingerprint('k1', 'POST', '/api/v1/publish', 7)).not.toBe(
       fingerprint('k1', 'POST', '/api/v1/projects', 7),
     );
@@ -32,7 +32,7 @@ describe('fingerprint', () => {
     );
   });
 
-  it('produit une empreinte sha256 hexadécimale', () => {
+  it('produces a hexadecimal sha256 fingerprint', () => {
     expect(fingerprint('k', 'POST', '/x')).toMatch(/^[0-9a-f]{64}$/);
   });
 });

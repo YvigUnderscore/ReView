@@ -5,105 +5,102 @@ import { describe, it, expect } from 'vitest';
 import { htmlToText, preheader } from './mailText';
 
 describe('htmlToText', () => {
-  it('rend le texte d’un paragraphe, sans balises', () => {
+  it('renders the text of a paragraph, without tags', () => {
     expect(htmlToText('<p>Bonjour <strong>Ada</strong>.</p>')).toBe('Bonjour Ada.');
   });
 
-  it('garde l’adresse d’un lien à côté de son libellé', () => {
-    // C'est tout l'intérêt : un bouton « Accepter l'invitation » sans son adresse est
-    // inutilisable en texte brut.
+  it('keeps the address of a link next to its label', () => {
+    // That is the whole point: a button "Accept the invitation" without its address is unusable as plain text.
     expect(htmlToText('<a href="https://review.test/invite/abc">Accepter l’invitation</a>')).toBe(
       'Accepter l’invitation (https://review.test/invite/abc)',
     );
   });
 
-  it('ne répète pas l’adresse quand le libellé est déjà l’adresse', () => {
+  it('does not repeat the address when the label already is the address', () => {
     expect(htmlToText('<a href="https://review.test">https://review.test</a>')).toBe('https://review.test');
   });
 
-  it('ne répète pas non plus une adresse à paramètres, dont le gabarit échappe le « & »', () => {
-    // Les gabarits échappent désormais l'adresse (`mailButton`, lien de repli) : l'attribut
-    // porte `&amp;` là où le libellé, lui, est décodé avant comparaison. Sans décodage de
-    // l'attribut, les deux cessaient d'être « égaux » et le repli imprimait l'adresse deux
-    // fois de suite dans l'alternative texte.
+  it('does not repeat either an address with parameters, whose template escapes the "&"', () => {
+    // Templates now escape the address (`mailButton`, fallback link): the attribute holds `&amp;` where the
+    // label is decoded before comparison. Without decoding the attribute, the two stopped being "equal", and the
+    // fallback printed the address twice in a row in the text alternative.
     const html = '<a href="https://review.test/s?t=1&amp;v=2">https://review.test/s?t=1&amp;v=2</a>';
     expect(htmlToText(html)).toBe('https://review.test/s?t=1&v=2');
   });
 
-  it('décode l’adresse échappée d’un bouton, à côté de son libellé', () => {
+  it('decodes the escaped address of a button, next to its label', () => {
     const html = '<a href="https://review.test/s?t=1&amp;v=2">Open the review</a>';
     expect(htmlToText(html)).toBe('Open the review (https://review.test/s?t=1&v=2)');
   });
 
-  it('rend une adresse seule quand le lien n’a pas de libellé', () => {
+  it('renders a lone address when the link has no label', () => {
     expect(htmlToText('<a href="https://review.test"><img src="x"></a>')).toBe('https://review.test');
   });
 
-  it('sépare les lignes des blocs et des sauts explicites', () => {
+  it('separates lines of blocks and explicit breaks', () => {
     expect(htmlToText('<p>Un</p><p>Deux</p>')).toBe('Un\nDeux');
     expect(htmlToText('Un<br>Deux')).toBe('Un\nDeux');
   });
 
-  it('marque les listes d’un tiret', () => {
+  it('marks list items with a dash', () => {
     expect(htmlToText('<ul><li>Un</li><li>Deux</li></ul>')).toBe('- Un\n- Deux');
   });
 
-  it('sépare les cellules d’un tableau plutôt que de les coller', () => {
-    // Sans séparateur, « SH010 » et « comp » deviendraient « SH010comp ».
+  it('separates the cells of a table rather than gluing them', () => {
+    // Without a separator, "SH010" and "comp" would become "SH010comp".
     expect(htmlToText('<tr><td>SH010</td><td>comp</td></tr>')).toContain('SH010');
     expect(htmlToText('<tr><td>SH010</td><td>comp</td></tr>')).not.toContain('SH010comp');
   });
 
-  it('décode les entités que nos gabarits produisent', () => {
+  it('decodes the entities our templates produce', () => {
     expect(htmlToText('<p>Version &laquo; v003 &raquo; &mdash; 30&nbsp;%</p>')).toBe(
       'Version « v003 » — 30 %',
     );
     expect(htmlToText('<p>Rock &amp; Roll &lt;3</p>')).toBe('Rock & Roll <3');
   });
 
-  it('jette ce qui n’a pas de texte lisible, contenu compris', () => {
+  it('drops what has no readable text, content included', () => {
     expect(htmlToText('<style>p{color:red}</style><p>Visible</p>')).toBe('Visible');
     expect(htmlToText('<script>alert(1)</script><p>Visible</p>')).toBe('Visible');
   });
 
-  it('n’empile pas les lignes vides', () => {
+  it('does not stack empty lines', () => {
     expect(htmlToText('<p>Un</p><div></div><div></div><p>Deux</p>')).toBe('Un\nDeux');
   });
 
-  it('rend une chaîne vide pour un HTML sans texte', () => {
+  it('renders an empty string for HTML without text', () => {
     expect(htmlToText('<div><img src="x" /></div>')).toBe('');
   });
 });
 
 describe('preheader', () => {
-  it('reste invisible : hauteur nulle, opacité nulle, masqué pour Outlook', () => {
+  it('stays invisible: zero height, zero opacity, hidden from Outlook', () => {
     const html = preheader('Trois plans attendent votre review');
     expect(html).toContain('max-height:0');
     expect(html).toContain('opacity:0');
     expect(html).toContain('mso-hide:all');
   });
 
-  it('porte le texte d’aperçu', () => {
+  it('carries the preview text', () => {
     expect(preheader('Trois plans')).toContain('Trois plans');
   });
 
-  it('échappe le HTML : un nom de projet n’ouvre pas de balise', () => {
+  it('escapes the HTML: a project name does not open a tag', () => {
     expect(preheader('<script>alert(1)</script>')).not.toContain('<script>');
     expect(preheader('Rock & Roll')).toContain('Rock &amp; Roll');
   });
 
-  it('échappe AUSSI les guillemets — l’échappement complet, pas la copie amputée', () => {
-    // Le texte d'aperçu est un nœud de texte : les guillemets n'y sont pas exploitables
-    // aujourd'hui. C'est justement pourquoi une copie à trois caractères avait pu survivre
-    // ici — et c'est cette copie-là qu'on recopie le jour où la donnée passe en attribut.
-    // La garde porte donc sur le contrat de `lib/html` : les six caractères, toujours.
+  it('ALSO escapes the quotes — full escaping, not the truncated copy', () => {
+    // The preview text is a text node: quotes are not exploitable there today. That is exactly why a three-character
+    // copy could survive here — and it is that copy which gets duplicated the day the data goes into an attribute.
+    // The guard therefore checks the contract of `lib/html`: the six characters, always.
     expect(preheader('Projet "Dune" — l’épisode')).toContain('&quot;Dune&quot;');
     expect(preheader("L'épisode")).toContain('&#39;');
   });
 
-  it('pousse hors du champ le texte qui suivrait', () => {
-    // Sans ce rembourrage, le client complète l'aperçu avec le début du corps —
-    // chez nous le nom du studio, identique d'un message à l'autre.
+  it('pushes the text that would follow out of the field', () => {
+    // Without this padding, the client fills the preview with the start of the body — here the studio name,
+    // identical from one message to the next.
     expect(preheader('Court').length).toBeGreaterThan(500);
   });
 });

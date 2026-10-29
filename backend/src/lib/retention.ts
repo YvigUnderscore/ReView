@@ -7,35 +7,29 @@ import { logger } from './logger';
 import { AUDIT_RETENTION_MIN_DAYS, logAudit, purgeableAuditWhere } from '../services/AuditService';
 
 /**
- * Rétention des journaux — cycle de vie des tables qui ne cessent de croître.
+ * Log retention — lifecycle of the tables that never stop growing.
  *
- * Neuf tables enregistrent l'activité sans jamais rien rendre : audit, accès aux médias,
- * notifications, sessions, resets de mot de passe, invitations, liens de partage, passes
- * de synchronisation ShotGrid et journal d'événements de l'API v1. À la volumétrie d'un
- * long-métrage (2000 shots, 50 personnes, ~20 000 versions) elles finissent par peser plus
- * lourd que les données de production elles-mêmes — et elles contiennent des données
- * personnelles (adresses IP, identités, horodatages) qu'aucun studio ne peut conserver
- * indéfiniment sans le justifier.
+ * Nine tables record activity without ever returning anything: audit, media access, notifications, sessions, password resets, invitations, sharing
+ * links, ShotGrid sync passes and the API v1 event log. At the volume of a feature film (2,000 shots, 50 people, ~20,000 versions) they end up
+ * weighing more than the production data itself — and they contain personal data (IP addresses, identities, timestamps) that no studio can keep
+ * indefinitely without justification.
  *
- * Deux garanties tenues ici :
- *  1. **une durée par famille**, réglable par l'administration, `0` = conservation illimitée
- *     (même convention que `trash_retention_days`) ;
- *  2. **une suppression par tranches plafonnées** — jamais un `DELETE` de plusieurs millions
- *     de lignes qui verrouillerait la table pendant que le studio travaille. Chaque passe a
- *     un budget ; ce qui dépasse attend la passe suivante.
+ * Two guarantees are kept here:
+ *  1. **one duration per family**, adjustable by administration, `0` = unlimited retention (same convention as `trash_retention_days`);
+ *  2. **deletion by capped batches** — never a `DELETE` of several million rows that would lock the table while the studio works. Each pass has
+ *     a budget; what exceeds it waits for the next pass.
  *
- * Ce qui n'est JAMAIS supprimé, quelle que soit la durée :
- *  - une session encore valide (seules les révoquées/expirées depuis N jours partent) ;
- *  - un lien de partage actif (seuls les révoqués/expirés depuis N jours partent) ;
- *  - une passe ShotGrid qui porte encore un conflit non arbitré ;
- *  - une entrée d'audit qui décrit un effacement (`AUDIT_UNPURGEABLE_ACTIONS`), et plus
- *    généralement le journal d'audit en deçà de `AUDIT_RETENTION_MIN_DAYS` (A5-04) : c'est
- *    ce qui empêche un administrateur d'effacer ses propres traces via la politique.
+ * What is NEVER deleted, whatever the duration:
+ *  - a session still valid (only those revoked/expired for N days leave);
+ *  - an active sharing link (only those revoked/expired for N days leave);
+ *  - a ShotGrid pass still carrying an unarbitrated conflict;
+ *  - an audit entry describing an erasure (`AUDIT_UNPURGEABLE_ACTIONS`), and more generally the audit log within `AUDIT_RETENTION_MIN_DAYS` (A5-04):
+ *    this is what prevents an administrator from erasing their own traces through the policy.
  *
- * Politique et valeurs par défaut : `DOCUMENTATION/admin-guide/data-retention.md`.
+ * Policy and default values: `DOCUMENTATION/admin-guide/data-retention.md`.
  */
 
-/** Familles de journaux soumises à rétention, dans l'ordre d'affichage de l'administration. */
+/** Log families subject to retention, in the display order of the administration. */
 export const RETENTION_FAMILIES = [
   'auditLog',
   'mediaAccessLog',
@@ -50,19 +44,17 @@ export const RETENTION_FAMILIES = [
 
 export type RetentionFamily = (typeof RETENTION_FAMILIES)[number];
 
-/** Durées en jours (`0` = conservation illimitée) + taille des tranches de suppression. */
+/** Durations in days (`0` = unlimited retention) + size of the deletion batches. */
 export type RetentionPolicy = Record<RetentionFamily, number> & { batchSize: number };
 
 /**
- * Valeurs par défaut. Elles répondent à une question simple : « combien de temps le studio
- * a-t-il besoin de cette trace ? »
- *  - audit et accès média : **1 an**, la durée que réclame un audit de sécurité ou un
- *    ayant droit qui demande qui a vu quoi ;
- *  - notifications : **90 jours**, la cloche ne montre que le récent ;
- *  - sessions / invitations / partages : la trace ne sert plus une fois l'objet mort ;
- *  - resets de mot de passe : **7 jours**, un jeton consommé n'a plus aucune valeur ;
- *  - synchro ShotGrid : **90 jours**, de quoi expliquer une divergence de la saison ;
- *  - événements API v1 : **30 jours**, la valeur historique du curseur `GET /api/v1/events`.
+ * Default values. They answer a simple question: "how long does the studio need this trace?"
+ *  - audit and media access: **1 year**, the duration a security audit or a rights holder asking who saw what requires;
+ *  - notifications: **90 days**, the bell only shows the recent;
+ *  - sessions / invitations / shares: the trace no longer serves once the object is dead;
+ *  - password resets: **7 days**, a consumed token has no value left;
+ *  - ShotGrid sync: **90 days**, enough to explain a divergence from the season;
+ *  - API v1 events: **30 days**, the historical value of the `GET /api/v1/events` cursor.
  */
 export const RETENTION_DEFAULTS: RetentionPolicy = {
   auditLog: 365,
@@ -79,31 +71,30 @@ export const RETENTION_DEFAULTS: RetentionPolicy = {
 
 const RETENTION_KEY = 'retention_policy';
 
-/** Dix ans : au-delà, la durée ne veut plus rien dire — autant écrire `0`. */
+/** Ten years: beyond that, the duration no longer means anything — might as well write `0`. */
 const MAX_DAYS = 3650;
 const MIN_BATCH = 100;
 const MAX_BATCH = 20_000;
 
-/** Budget d'une passe automatique : 200 tranches × 2000 lignes = 400 000 lignes par famille. */
+/** Budget of an automatic pass: 200 batches × 2,000 rows = 400,000 rows per family. */
 export const MAX_BATCHES_PER_FAMILY = 200;
 
-/** Budget d'un déclenchement manuel : borné pour que la requête HTTP réponde. */
+/** Budget of a manual trigger: bounded so that the HTTP request answers. */
 export const MANUAL_MAX_BATCHES = 10;
 
-/** Respiration entre deux tranches : la base sert aussi les 50 personnes qui travaillent. */
+/** Breather between two batches: the database also serves the 50 people working. */
 export const BATCH_PAUSE_MS = 25;
 
 const clampDays = (value: unknown, fallback: number): number =>
   Number.isFinite(value) ? Math.min(Math.max(Math.round(Number(value)), 0), MAX_DAYS) : fallback;
 
 /**
- * Durée d'audit assainie (A5-04) : `0` reste la conservation illimitée, toute durée finie
- * est relevée au plancher. Ce n'est pas la première défense — le schéma refuse déjà la
- * valeur — c'en est la seconde : une politique écrite avant ce plancher, ou une ligne
- * `Setting` éditée directement en base, ne doit pas raccourcir la purge pour autant.
+ * Sanitised audit duration (A5-04): `0` remains unlimited retention, any finite duration is raised to the floor. This is not the first defence —
+ * the schema already refuses the value — it is the second: a policy written before this floor, or a `Setting` row edited directly in the database,
+ * must not shorten the purge for all that.
  *
- * Le plancher ne s'applique **qu'à une valeur proposée**, jamais au repli : le repli est
- * une politique déjà assainie, et l'écraser ferait mentir « valeur absente = valeur en place ».
+ * The floor applies **only to a proposed value**, never to the fallback: the fallback is an already sanitised policy, and overwriting it would make
+ * "absent value = value in place" a lie.
  */
 const clampAuditDays = (value: unknown, fallback: number): number => {
   if (!Number.isFinite(value)) return fallback;
@@ -125,9 +116,8 @@ function sanitize(raw: unknown, base: RetentionPolicy): RetentionPolicy {
 const daysField = z.number().int().min(0).max(MAX_DAYS).optional();
 
 /**
- * Durée d'audit : `0` (illimité) ou au moins `AUDIT_RETENTION_MIN_DAYS`. Le refus est
- * préférable à l'ajustement silencieux — l'administrateur qui demande « un jour » doit
- * apprendre que non, plutôt que de repartir en croyant ses traces effaçables demain.
+ * Audit duration: `0` (unlimited) or at least `AUDIT_RETENTION_MIN_DAYS`. Refusal is preferable to silent adjustment — an administrator who asks for
+ * "one day" must learn that the answer is no, rather than leave believing their traces will be erasable tomorrow.
  */
 const auditDaysField = z
   .union([z.literal(0), z.number().int().min(AUDIT_RETENTION_MIN_DAYS).max(MAX_DAYS)])
@@ -167,13 +157,13 @@ export async function setRetentionPolicy(value: unknown): Promise<RetentionPolic
   return clean;
 }
 
-// ── Suppression par tranches ─────────────────────────────────────────────────────
+// ── Batched deletion ──
 
-/** Identifiant de ligne : entier partout, sauf `UserSession` dont le `sid` est une chaîne. */
+/** Row identifier: an integer everywhere, except `UserSession` whose `sid` is a string. */
 type RowId = number | string;
 
 export interface BatchDeleter {
-  /** Au plus `take` identifiants de lignes expirées, les plus anciennes d'abord. */
+  /** At most `take` identifiers of expired rows, the oldest first. */
   findExpiredIds(cutoff: Date, take: number): Promise<RowId[]>;
   deleteByIds(ids: RowId[]): Promise<number>;
 }
@@ -182,16 +172,15 @@ export interface BatchBudget {
   batchSize: number;
   maxBatches: number;
   pauseMs?: number;
-  /** Injectable pour les tests — sinon `setTimeout`. */
+  /** Injectable for tests — otherwise `setTimeout`. */
   sleep?: (ms: number) => Promise<void>;
 }
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Supprime les lignes expirées par tranches. S'arrête net au plafond de tranches en
- * signalant `truncated` : le reste part à la passe suivante, la base n'est jamais bloquée
- * par une suppression massive.
+ * Deletes expired rows by batches. Stops dead at the batch ceiling, signalling `truncated`: the rest goes to the next pass, the database is never
+ * blocked by a massive deletion.
  */
 export async function deleteInBatches(
   deleter: BatchDeleter,
@@ -206,20 +195,19 @@ export async function deleteInBatches(
     const ids = await deleter.findExpiredIds(cutoff, budget.batchSize);
     if (ids.length === 0) return { deleted, truncated: false };
     deleted += await deleter.deleteByIds(ids);
-    // Tranche incomplète = plus rien à prendre : inutile d'interroger la base une fois de plus.
+    // An incomplete batch = nothing left to take: no need to query the database once more.
     if (ids.length < budget.batchSize) return { deleted, truncated: false };
-    // Respiration entre deux tranches — pas après la dernière, on rend la main aussitôt.
+    // A breather between two batches — not after the last one; we hand control back straight away.
     if (pauseMs > 0 && batch + 1 < budget.maxBatches) await sleep(pauseMs);
   }
   return { deleted, truncated: true };
 }
 
-// ── Une famille = un couple (sélection des expirés, suppression) ─────────────────
+// ── One family = one pair (selection of the expired, deletion) ──
 
 interface FamilySpec extends BatchDeleter {
   /**
-   * Diviseur de tranche : une suppression qui cascade emporte bien plus de lignes qu'elle
-   * n'en cible (une passe ShotGrid porte jusqu'à 2000 lignes de journal).
+   * Batch divider: a cascading deletion carries far more rows than it targets (a ShotGrid pass carries up to 2,000 log lines).
    */
   batchDivisor: number;
 }
@@ -227,16 +215,14 @@ interface FamilySpec extends BatchDeleter {
 const pickIds = (rows: { id: RowId }[]): RowId[] => rows.map((r) => r.id);
 
 /**
- * Tri par identifiant croissant : la clé primaire est un compteur, les plus petits
- * identifiants sont donc les plus vieilles lignes — celles que la purge cherche. Postgres
- * lit l'index primaire par le début et s'arrête dès la tranche remplie.
+ * Ascending sort by identifier: the primary key is a counter, so the smallest identifiers are the oldest rows — those the purge is looking for.
+ * Postgres reads the primary index from the start and stops as soon as the batch is full.
  */
 const OLDEST_FIRST = { id: 'asc' } as const;
 
 const SPECS: Record<RetentionFamily, FamilySpec> = {
-  // A5-04 : le filtre vient d'`AuditService`, qui en exempte les actions décrivant un
-  // effacement — purger le `RETENTION_CONFIG` de la veille, c'est effacer la preuve de
-  // l'effacement, et c'est exactement le geste que l'attaquant cherche.
+  // A5-04: the filter comes from `AuditService`, which exempts the actions describing an erasure — purging yesterday's `RETENTION_CONFIG` is erasing
+  // the proof of the erasure, and that is exactly the gesture the attacker is looking for.
   auditLog: {
     batchDivisor: 1,
     findExpiredIds: (cutoff, take) =>
@@ -264,7 +250,7 @@ const SPECS: Record<RetentionFamily, FamilySpec> = {
     deleteByIds: (ids) =>
       prisma.notification.deleteMany({ where: { id: { in: ids as number[] } } }).then((r) => r.count),
   },
-  // Jamais une session vivante : `expiresAt`/`revokedAt` sont dans le passé de la coupure.
+  // Never a live session: `expiresAt`/`revokedAt` are in the past of the cut-off.
   userSession: {
     batchDivisor: 1,
     findExpiredIds: (cutoff, take) =>
@@ -279,7 +265,7 @@ const SPECS: Record<RetentionFamily, FamilySpec> = {
     deleteByIds: (ids) =>
       prisma.userSession.deleteMany({ where: { id: { in: ids as string[] } } }).then((r) => r.count),
   },
-  // Jeton consommé ou périmé depuis plus longtemps que la durée : il n'ouvre plus rien.
+  // Token consumed or stale for longer than the duration: it no longer opens anything.
   passwordReset: {
     batchDivisor: 1,
     findExpiredIds: (cutoff, take) =>
@@ -294,7 +280,7 @@ const SPECS: Record<RetentionFamily, FamilySpec> = {
     deleteByIds: (ids) =>
       prisma.passwordReset.deleteMany({ where: { id: { in: ids as number[] } } }).then((r) => r.count),
   },
-  // Une invitation acceptée ou périmée ne sert plus : le compte existe, ou il faut réinviter.
+  // An accepted or stale invitation no longer serves: the account exists, or a new invitation is needed.
   invitation: {
     batchDivisor: 1,
     findExpiredIds: (cutoff, take) =>
@@ -309,7 +295,7 @@ const SPECS: Record<RetentionFamily, FamilySpec> = {
     deleteByIds: (ids) =>
       prisma.invitation.deleteMany({ where: { id: { in: ids as number[] } } }).then((r) => r.count),
   },
-  // Un lien sans expiration et non révoqué reste actif : il n'est jamais concerné.
+  // A link without expiry and not revoked remains active: it is never concerned.
   shareLink: {
     batchDivisor: 1,
     findExpiredIds: (cutoff, take) =>
@@ -324,7 +310,7 @@ const SPECS: Record<RetentionFamily, FamilySpec> = {
     deleteByIds: (ids) =>
       prisma.shareLink.deleteMany({ where: { id: { in: ids as number[] } } }).then((r) => r.count),
   },
-  // La passe emporte ses lignes de journal (cascade) — sauf si un conflit attend son arbitrage.
+  // The pass carries its log lines (cascade) — unless a conflict awaits its arbitration.
   shotgridSync: {
     batchDivisor: 10,
     findExpiredIds: (cutoff, take) =>
@@ -354,10 +340,10 @@ const SPECS: Record<RetentionFamily, FamilySpec> = {
 };
 
 export interface SweepResult {
-  /** Lignes supprimées par famille (0 pour une famille en conservation illimitée). */
+  /** Rows deleted per family (0 for a family under unlimited retention). */
   families: Record<RetentionFamily, number>;
   total: number;
-  /** Vrai si au moins une famille a atteint son plafond : la passe suivante continuera. */
+  /** True if at least one family reached its ceiling: the next pass will continue. */
   truncated: boolean;
 }
 
@@ -370,9 +356,8 @@ export interface SweepOptions {
 }
 
 /**
- * Balaye toutes les familles. Une famille en échec (table verrouillée, migration en cours)
- * est journalisée et n'empêche pas les autres de passer — un incident local ne doit pas
- * geler tout le cycle de vie des données.
+ * Sweeps all the families. A family in failure (locked table, migration in progress) is logged and does not prevent the others from running — a local
+ * incident must not freeze the whole data lifecycle.
  */
 export async function sweepRetention(options: SweepOptions = {}): Promise<SweepResult> {
   const policy = options.policy ?? (await getRetentionPolicy());
@@ -387,7 +372,7 @@ export async function sweepRetention(options: SweepOptions = {}): Promise<SweepR
 
   for (const family of RETENTION_FAMILIES) {
     const days = policy[family];
-    if (days <= 0) continue; // 0 = conservation illimitée, décidée par l'administration
+    if (days <= 0) continue; // 0 = unlimited retention, decided by the administration
     const spec = SPECS[family];
     const cutoff = new Date(now.getTime() - days * 86_400_000);
     const batchSize = Math.max(MIN_BATCH, Math.floor(policy.batchSize / spec.batchDivisor));
@@ -408,7 +393,7 @@ export async function sweepRetention(options: SweepOptions = {}): Promise<SweepR
 
   if (total > 0) {
     logger.info({ families, truncated }, '[retention] balayage terminé');
-    // Trace consultable dans l'écran d'audit : un studio doit pouvoir montrer QUAND il purge.
+    // Trace viewable in the audit screen: a studio must be able to show WHEN it purges.
     logAudit({ action: 'RETENTION_SWEEP', entityType: 'Setting', metadata: { families, truncated } });
   }
   return { families, total, truncated };

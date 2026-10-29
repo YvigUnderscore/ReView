@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Aucune base réelle : chaque délégué Prisma touché par la rétention est simulé.
+// No real database: each Prisma delegate touched by retention is simulated.
 vi.mock('./prisma', () => {
   const delegate = () => ({
     findMany: vi.fn().mockResolvedValue([]),
@@ -25,9 +25,8 @@ vi.mock('./prisma', () => {
   };
 });
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-// Seule l'écriture d'audit est simulée : les garde-fous que la rétention lui emprunte
-// (plancher, actions inpurgeables) doivent être les vrais, sinon le test se contente de
-// vérifier sa propre copie.
+// Only the audit write is simulated: the guards that retention borrows from it (floor, non-purgeable actions) must be the real ones,
+// otherwise the test merely verifies its own copy.
 vi.mock('../services/AuditService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../services/AuditService')>()),
   logAudit: vi.fn(),
@@ -49,7 +48,7 @@ import { logAudit, AUDIT_RETENTION_MIN_DAYS, AUDIT_UNPURGEABLE_ACTIONS } from '.
 
 const DAY = 86_400_000;
 
-/** Politique où seule la famille passée en argument est active. */
+/** Policy where only the family passed as argument is active. */
 function onlyFamily(family: keyof RetentionPolicy, days: number): RetentionPolicy {
   const policy = { ...RETENTION_DEFAULTS };
   for (const f of RETENTION_FAMILIES) policy[f] = 0;
@@ -59,7 +58,7 @@ function onlyFamily(family: keyof RetentionPolicy, days: number): RetentionPolic
 
 beforeEach(() => vi.clearAllMocks());
 
-/** Arguments du premier appel simulé : les types génériques de Prisma ne servent à rien ici. */
+/** Arguments of the first simulated call: Prisma's generic types are of no use here. */
 function firstCall<T>(fn: unknown): T {
   return (fn as { mock: { calls: unknown[][] } }).mock.calls[0]![0] as T;
 }
@@ -67,37 +66,37 @@ function firstCall<T>(fn: unknown): T {
 describe('retention.sanitize', () => {
   const { sanitize } = __testing;
 
-  it('borne chaque durée à [0, 3650] jours et arrondit', () => {
+  it('bounds each duration to [0, 3650] days and rounds', () => {
     const out = sanitize({ auditLog: -5, mediaAccessLog: 99_999, notification: 12.6 }, RETENTION_DEFAULTS);
     expect(out.auditLog).toBe(0);
     expect(out.mediaAccessLog).toBe(3650);
     expect(out.notification).toBe(13);
   });
 
-  it('borne la taille de tranche à [100, 20000]', () => {
+  it('bounds the batch size to [100, 20000]', () => {
     expect(sanitize({ batchSize: 1 }, RETENTION_DEFAULTS).batchSize).toBe(100);
     expect(sanitize({ batchSize: 1e9 }, RETENTION_DEFAULTS).batchSize).toBe(20_000);
   });
 
-  it('une valeur absente ou illisible garde la valeur en place, pas 0', () => {
+  it('an absent or unreadable value keeps the value in place, not 0', () => {
     const base = { ...RETENTION_DEFAULTS, auditLog: 42 };
     expect(sanitize({}, base)).toEqual(base);
     expect(sanitize({ auditLog: 'beaucoup' }, base).auditLog).toBe(42);
   });
 });
 
-describe('lecture / écriture de la politique', () => {
-  it('sans réglage enregistré, renvoie les valeurs par défaut', async () => {
+describe('reading / writing the policy', () => {
+  it('without a saved setting, returns the default values', async () => {
     vi.mocked(prisma.setting.findUnique).mockResolvedValue(null);
     await expect(getRetentionPolicy()).resolves.toEqual(RETENTION_DEFAULTS);
   });
 
-  it('un réglage illisible ne fait pas tomber la purge : repli sur les défauts', async () => {
+  it('an unreadable setting does not bring the purge down: falls back on the defaults', async () => {
     vi.mocked(prisma.setting.findUnique).mockResolvedValue({ value: '{oops' } as never);
     await expect(getRetentionPolicy()).resolves.toEqual(RETENTION_DEFAULTS);
   });
 
-  it('écrit une politique assainie (les valeurs hors bornes ne sont jamais persistées)', async () => {
+  it('writes a sanitised policy (out-of-bound values are never persisted)', async () => {
     vi.mocked(prisma.setting.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.setting.upsert).mockResolvedValue({} as never);
 
@@ -106,7 +105,7 @@ describe('lecture / écriture de la politique', () => {
     expect(saved.auditLog).toBe(3650);
     expect(saved.notification).toBe(30);
     const call = firstCall<{ where: { key: string }; create: { value: string } }>(prisma.setting.upsert);
-    // La clé persistée est un contrat : la renommer perdrait la politique du studio.
+    // The persisted key is a contract: renaming it would lose the studio's policy.
     expect(call.where.key).toBe(__testing.RETENTION_KEY);
     expect(__testing.RETENTION_KEY).toBe('retention_policy');
     expect(JSON.parse(call.create.value)).toEqual(saved);
@@ -114,36 +113,35 @@ describe('lecture / écriture de la politique', () => {
 });
 
 /**
- * A5-04 : sans plancher, `PUT /api/admin/retention {"auditLog":1}` puis
- * `POST /api/admin/retention/run` effaçaient en deux gestes les traces de celui qui les
- * faisait. Le plancher refuse la durée au lieu de l'ajuster en silence — un administrateur
- * qui demande « un jour » doit apprendre que non, pas croire que c'est fait.
+ * A5-04: without a floor, `PUT /api/admin/retention {"auditLog":1}` followed by `POST /api/admin/retention/run` erased, in two gestures, the traces
+ * of the person doing it. The floor refuses the duration instead of silently adjusting it — an administrator who asks for "one day" must learn that
+ * the answer is no, not believe it is done.
  */
-describe('plancher de conservation du journal d’audit (A5-04)', () => {
-  it('refuse une durée d’audit sous le plancher, accepte 0 et le plancher lui-même', () => {
+describe('minimum retention of the audit log (A5-04)', () => {
+  it('refuses an audit duration below the floor, accepts 0 and the floor itself', () => {
     expect(retentionPolicySchema.safeParse({ auditLog: 1 }).success).toBe(false);
     expect(retentionPolicySchema.safeParse({ auditLog: AUDIT_RETENTION_MIN_DAYS - 1 }).success).toBe(false);
-    // 0 = conservation illimitée : c'est le sens le plus protecteur, il reste permis.
+    // 0 = unlimited retention: that is the most protective meaning, it remains allowed.
     expect(retentionPolicySchema.safeParse({ auditLog: 0 }).success).toBe(true);
     expect(retentionPolicySchema.safeParse({ auditLog: AUDIT_RETENTION_MIN_DAYS }).success).toBe(true);
-    // Le plancher ne vaut que pour l'audit : les autres familles gardent leur liberté.
+    // The floor applies only to the audit: the other families keep their freedom.
     expect(retentionPolicySchema.safeParse({ notification: 1 }).success).toBe(true);
   });
 
-  it('relève une durée d’audit déjà persistée sous le plancher (réglage antérieur, ou base éditée)', async () => {
+  it('raises an audit duration already persisted below the floor (earlier setting, or edited database)', async () => {
     vi.mocked(prisma.setting.findUnique).mockResolvedValue({ value: '{"auditLog":1}' } as never);
     await expect(getRetentionPolicy()).resolves.toMatchObject({ auditLog: AUDIT_RETENTION_MIN_DAYS });
   });
 
-  it('laisse passer 0 et n’écrase pas la valeur en place quand rien n’est proposé', () => {
+  it('lets 0 through and does not overwrite the value in place when nothing is proposed', () => {
     const base = { ...RETENTION_DEFAULTS, auditLog: 120 };
     expect(__testing.sanitize({ auditLog: 0 }, base).auditLog).toBe(0);
     expect(__testing.sanitize({}, base).auditLog).toBe(120);
   });
 });
 
-describe('deleteInBatches — suppression par tranches plafonnées', () => {
-  it('s’arrête dès qu’une tranche est incomplète et ne réinterroge pas la base', async () => {
+describe('deleteInBatches — deletion by capped batches', () => {
+  it('stops as soon as a batch is incomplete and does not re-query the database', async () => {
     const findExpiredIds = vi.fn().mockResolvedValueOnce([1, 2]);
     const deleteByIds = vi.fn().mockResolvedValue(2);
 
@@ -156,7 +154,7 @@ describe('deleteInBatches — suppression par tranches plafonnées', () => {
     expect(findExpiredIds).toHaveBeenCalledTimes(1);
   });
 
-  it('enchaîne les tranches pleines et signale la troncature au plafond', async () => {
+  it('chains the full batches and reports the truncation at the ceiling', async () => {
     const full = [1, 2];
     const findExpiredIds = vi.fn().mockResolvedValue(full);
     const deleteByIds = vi.fn().mockResolvedValue(2);
@@ -171,12 +169,12 @@ describe('deleteInBatches — suppression par tranches plafonnées', () => {
 
     expect(out).toEqual({ deleted: 6, truncated: true });
     expect(findExpiredIds).toHaveBeenCalledTimes(3);
-    // Une respiration entre deux tranches — pas après la dernière.
+    // A breather between two batches — not after the last one.
     expect(sleep).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledWith(25);
   });
 
-  it('table déjà vide : aucune suppression', async () => {
+  it('table already empty: no deletion', async () => {
     const deleteByIds = vi.fn();
     const out = await deleteInBatches(
       { findExpiredIds: vi.fn().mockResolvedValue([]), deleteByIds },
@@ -191,7 +189,7 @@ describe('deleteInBatches — suppression par tranches plafonnées', () => {
 describe('sweepRetention', () => {
   const now = new Date('2026-08-22T03:00:00.000Z');
 
-  it('ne touche pas une famille réglée à 0 (conservation illimitée)', async () => {
+  it('does not touch a family set to 0 (unlimited retention)', async () => {
     await sweepRetention({ policy: onlyFamily('auditLog', 10), now, pauseMs: 0 });
 
     expect(prisma.notification.findMany).not.toHaveBeenCalled();
@@ -199,7 +197,7 @@ describe('sweepRetention', () => {
     expect(prisma.auditLog.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('calcule la coupure à N jours et remonte le total supprimé', async () => {
+  it('computes the cut-off at N days and reports the total deleted', async () => {
     vi.mocked(prisma.auditLog.findMany).mockResolvedValueOnce([{ id: 1 }, { id: 2 }] as never);
     vi.mocked(prisma.auditLog.deleteMany).mockResolvedValueOnce({ count: 2 });
 
@@ -214,10 +212,10 @@ describe('sweepRetention', () => {
   });
 
   /**
-   * A5-04 : la purge de l'audit ne doit jamais emporter la preuve de l'effacement. Sans
-   * cette exclusion, le `RETENTION_CONFIG` qui trahit la manœuvre part avec le reste.
+   * A5-04: the audit purge must never carry away the proof of erasure. Without this exclusion, the `RETENTION_CONFIG` that betrays the manoeuvre
+   * would leave with the rest.
    */
-  it('épargne inconditionnellement les actions qui décrivent un effacement', async () => {
+  it('unconditionally spares the actions that describe an erasure', async () => {
     await sweepRetention({ policy: onlyFamily('auditLog', 100), now, pauseMs: 0 });
 
     const args = firstCall<{ where: { action?: { notIn: string[] } } }>(prisma.auditLog.findMany);
@@ -225,7 +223,7 @@ describe('sweepRetention', () => {
     expect(AUDIT_UNPURGEABLE_ACTIONS).toContain('RETENTION_CONFIG');
   });
 
-  it('consigne une trace d’audit quand elle a supprimé, et rien quand la base est propre', async () => {
+  it('records an audit trace when it has deleted, and nothing when the database is clean', async () => {
     await sweepRetention({ policy: onlyFamily('auditLog', 10), now, pauseMs: 0 });
     expect(logAudit).not.toHaveBeenCalled();
 
@@ -238,7 +236,7 @@ describe('sweepRetention', () => {
     );
   });
 
-  it('une famille en échec n’empêche pas les suivantes de passer', async () => {
+  it('a family in failure does not prevent the following ones from running', async () => {
     const policy = { ...RETENTION_DEFAULTS };
     for (const f of RETENTION_FAMILIES) policy[f] = 0;
     policy.auditLog = 10;
@@ -254,7 +252,7 @@ describe('sweepRetention', () => {
     expect(out.total).toBe(1);
   });
 
-  it('sessions : ne cible que celles mortes avant la coupure, jamais une session vivante', async () => {
+  it('sessions: targets only those dead before the cut-off, never a live session', async () => {
     await sweepRetention({ policy: onlyFamily('userSession', 30), now, pauseMs: 0 });
 
     const args = firstCall<{ where: { OR: Record<string, { lt: Date }>[] } }>(prisma.userSession.findMany);
@@ -264,7 +262,7 @@ describe('sweepRetention', () => {
     expect(args.where.OR[1]!.expiresAt!.lt.getTime()).toBe(cutoff);
   });
 
-  it('liens de partage : un lien actif sans expiration n’est jamais ciblé', async () => {
+  it('sharing links: an active link without expiry is never targeted', async () => {
     await sweepRetention({ policy: onlyFamily('shareLink', 180), now, pauseMs: 0 });
 
     const args = firstCall<{ where: { OR: Record<string, unknown>[] } }>(prisma.shareLink.findMany);
@@ -272,14 +270,14 @@ describe('sweepRetention', () => {
     expect(args.where.OR[1]).toHaveProperty('expiresAt');
   });
 
-  it('ShotGrid : une passe portant un conflit non arbitré est épargnée', async () => {
+  it('ShotGrid: a pass carrying an unarbitrated conflict is spared', async () => {
     await sweepRetention({ policy: onlyFamily('shotgridSync', 90), now, pauseMs: 0 });
 
     const args = firstCall<{ where: { logs: { none: unknown } }; take: number }>(
       prisma.shotgridSyncRun.findMany,
     );
     expect(args.where.logs.none).toEqual({ level: 'conflict', resolvedAt: null });
-    // Lot réduit : supprimer une passe emporte ses lignes de journal par cascade.
+    // Reduced batch: deleting a pass takes its log lines with it by cascade.
     expect(args.take).toBe(RETENTION_DEFAULTS.batchSize / 10);
   });
 });

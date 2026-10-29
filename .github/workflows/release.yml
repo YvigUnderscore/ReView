@@ -1,23 +1,23 @@
 # SPDX-FileCopyrightText: 2026 Yvig Bidon
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# Publication d'une version : contrôle du CHANGELOG, suite de validation, construction et
-# poussée des trois images, puis création de la release GitHub.
+# Publish a release: check the CHANGELOG, run the validation suite, build and push
+# the three images, then create the GitHub release.
 #
-# Déclenchement : une étiquette `vX.Y.Z` poussée sur le dépôt.
+# Trigger: a `vX.Y.Z` tag pushed to the repository.
 #
 #   git tag -a v2.3.0 -m "ReView 2.3.0" && git push origin v2.3.0
 #
-# Rien n'est publié sans que `scripts/validate.sh` soit vert : le principe protégé du dépôt
-# vaut a fortiori pour ce qui sort vers des studios tiers. Le job `guard` refuse en outre
-# une étiquette absente de CHANGELOG.md — une version sans notes n'est pas installable par
-# quelqu'un qui ne nous connaît pas.
+# Nothing is published unless `scripts/validate.sh` passes: the repository's core rule
+# applies even more to what leaves for third-party studios. The `guard` job also refuses
+# a tag missing from CHANGELOG.md, since a version without release notes cannot be
+# installed by someone who does not know us.
 name: Release
 
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*']
-  # Essai à blanc : construit tout, ne pousse rien.
+  # Dry run: builds everything, pushes nothing.
   workflow_dispatch:
     inputs:
       ref:
@@ -37,9 +37,7 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # L'étiquette est-elle publiable ? (version SemVer, notes de version présentes)
-  # ---------------------------------------------------------------------------
+  # Check that the tag is publishable: SemVer version and release notes present.
   guard:
     name: Étiquette et CHANGELOG
     runs-on: ubuntu-latest
@@ -60,12 +58,11 @@ jobs:
             version="${{ inputs.ref || 'v0.0.0-dry-run' }}"
             publish=false
           fi
-          # Le propriétaire, en MINUSCULES. Une référence d'image OCI n'accepte pas de
-          # majuscule dans son chemin : « ghcr.io/YvigUnderscore/review-backend » est
-          # invalide, et c'est exactement ce que produisait `github.repository_owner`. Le
-          # mode registre — le seul depuis lequel une instance se met à jour sans compiler,
-          # et le seul où l'administration propose un bouton — n'avait donc jamais pu
-          # publier une seule image.
+          # Owner name in lowercase: OCI image references reject uppercase letters in the
+          # path. `ghcr.io/YvigUnderscore/review-backend` is invalid, which is exactly what
+          # `github.repository_owner` produced. The registry mode, the only one from which an
+          # instance updates without compiling and where the admin UI offers a button, had
+          # therefore never been able to publish a single image.
           echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
@@ -80,9 +77,7 @@ jobs:
             exit 1
           fi
 
-  # ---------------------------------------------------------------------------
-  # La suite de validation du dépôt, telle quelle. Aucune image n'est poussée avant.
-  # ---------------------------------------------------------------------------
+  # Run the repository validation suite as-is. No image is pushed before it passes.
   validate:
     name: validate.sh
     runs-on: ubuntu-latest
@@ -118,13 +113,11 @@ jobs:
       - name: Suite de validation
         run: bash scripts/validate.sh
 
-  # ---------------------------------------------------------------------------
-  # Trois images : API, worker (Blender + USD), frontend (embarque DOCUMENTATION/).
+  # Three images: API, worker (Blender + USD), frontend (bundles DOCUMENTATION/).
   #
-  # linux/amd64 seulement : la cible réelle est un serveur ou un NAS x86, et l'image worker
-  # embarque Blender — une construction arm64 émulée prendrait des heures pour un usage que
-  # personne n'a demandé. À rouvrir le jour où un studio tourne sur ARM.
-  # ---------------------------------------------------------------------------
+  # linux/amd64 only: the real target is an x86 server or NAS, and the worker image embeds
+  # Blender. An emulated arm64 build would take hours for a use nobody asked for. Reopen
+  # this the day a studio runs on ARM.
   images:
     name: Image ${{ matrix.image }}
     runs-on: ubuntu-latest
@@ -149,9 +142,9 @@ jobs:
             context: .
             dockerfile: ./frontend/Dockerfile
             usd: '0'
-          # Agent d'exploitation : ~40 Mo, aucune dépendance du produit. C'est lui qui
-          # détient le socket docker chez le studio — il est donc construit à part, et
-          # reste auditable d'un coup d'œil (ops/Dockerfile, ops/agent.sh).
+          # Operations agent: ~40 MB, no product dependency. It holds the docker socket at
+          # the studio, so it is built separately and stays auditable at a glance
+          # (ops/Dockerfile, ops/agent.sh).
           - image: review-ops
             context: ./ops
             dockerfile: ./ops/Dockerfile
@@ -176,8 +169,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           push: ${{ needs.guard.outputs.publish == 'true' }}
-          # `INSTALL_USD_TOOLS` distingue l'image worker de l'image API ; les trois autres
-          # arguments servent à l'instance à se nommer (/api/version, écran « À propos »).
+          # `INSTALL_USD_TOOLS` distinguishes the worker image from the API image; the other
+          # three arguments let the instance identify itself (/api/version, "About" screen).
           build-args: |
             INSTALL_USD_TOOLS=${{ matrix.usd }}
             APP_VERSION=${{ needs.guard.outputs.version }}
@@ -195,11 +188,9 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-  # ---------------------------------------------------------------------------
-  # Release GitHub, corps = la section de CHANGELOG.md de cette version.
-  # `gh` plutôt qu'une action tierce : une chaîne de publication n'a pas à dépendre d'un
-  # dépôt d'action qu'on ne relit jamais.
-  # ---------------------------------------------------------------------------
+  # GitHub release; body = the CHANGELOG.md section for this version.
+  # `gh` rather than a third-party action: a publishing chain should not depend on an action
+  # repository nobody reviews.
   publish:
     name: Release GitHub
     runs-on: ubuntu-latest

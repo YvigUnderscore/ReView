@@ -12,11 +12,11 @@ import {
 } from './maintenanceSchedule';
 
 describe('normalizeHour', () => {
-  it('laisse passer une heure valide', () => {
+  it('accepts a valid hour', () => {
     for (const h of [0, 7, 23]) expect(normalizeHour(h)).toBe(h);
   });
 
-  it('borne les valeurs aberrantes plutôt que de produire un cron invalide', () => {
+  it('bounds aberrant values rather than producing an invalid cron', () => {
     expect(normalizeHour(-3)).toBe(0);
     expect(normalizeHour(99)).toBe(23);
     expect(normalizeHour(7.9)).toBe(7);
@@ -25,34 +25,34 @@ describe('normalizeHour', () => {
 });
 
 describe('motifs cron', () => {
-  it('digest quotidien : tous les jours à l’heure demandée', () => {
+  it('daily digest — every day at the requested hour', () => {
     expect(dailyDigestPattern(7)).toBe('0 7 * * *');
     expect(dailyDigestPattern(0)).toBe('0 0 * * *');
   });
 
-  it('rapport hebdomadaire : le lundi, même heure que le digest', () => {
+  it('weekly report — on Monday, at the same hour as the digest', () => {
     expect(weeklyReportPattern(7)).toBe('0 7 * * 1');
     expect(weeklyReportPattern(18)).toBe('0 18 * * 1');
   });
 
-  it('les deux motifs comptent cinq champs', () => {
+  it('both patterns have five fields', () => {
     expect(dailyDigestPattern(9).split(' ')).toHaveLength(5);
     expect(weeklyReportPattern(9).split(' ')).toHaveLength(5);
   });
 
-  it('une heure aberrante reste un motif valide', () => {
+  it('an aberrant hour remains a valid pattern', () => {
     expect(dailyDigestPattern(42)).toBe('0 23 * * *');
     expect(weeklyReportPattern(-1)).toBe('0 0 * * 1');
   });
 });
 
 describe('cadence de purge', () => {
-  it('reprend exactement l’ancien rythme du setInterval', () => {
+  it('keeps exactly the former setInterval rhythm', () => {
     expect(PURGE_EVERY_MS).toBe(24 * 60 * 60 * 1000);
     expect(PURGE_BOOT_DELAY_MS).toBe(60_000);
   });
 
-  it('les identifiants de travaux sont distincts et stables', () => {
+  it('the job identifiers are distinct and stable', () => {
     const ids = Object.values(MAINTENANCE_JOB_IDS);
     expect(new Set(ids).size).toBe(ids.length);
     expect(MAINTENANCE_JOB_IDS.dailyDigest).toBe('maintenance-daily-digest');

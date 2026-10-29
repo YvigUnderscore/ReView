@@ -2,49 +2,47 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Délais maximaux d'une invocation ffmpeg / ffprobe.
+ * Maximum delays of an ffmpeg / ffprobe invocation.
  *
- * Une commande ffmpeg qui boucle (conteneur exotique, flux corrompu, filtre qui ne
- * progresse plus) immobilise **définitivement** l'un des deux emplacements de la file
- * `media-processing` : deux fichiers de ce genre arrêtent tout le transcodage du studio,
- * et rien ne le signale. Chaque invocation reçoit donc un délai borné, proportionné à la
- * durée sondée du média quand elle est connue ; passé le délai, le processus est tué et
- * le job échoue avec un message qui nomme l'étape et la limite dépassée.
+ * An ffmpeg command that loops (exotic container, corrupted stream, filter that no longer progresses)
+ * blocks **permanently** one of the two slots of the `media-processing` queue: two such files halt all of
+ * the studio's transcoding, and nothing signals it. Each invocation therefore gets a bounded delay,
+ * proportional to the probed duration of the media when known; past the delay, the process is killed and
+ * the job fails with a message naming the step and the limit exceeded.
  *
- * Les bornes sont volontairement larges : il s'agit d'attraper un blocage, pas de couper
- * un encodage lent. Un 4K de dix minutes en libx264 tourne autour de 10× le temps réel ;
- * le facteur retenu laisse le double de cette marge.
+ * The bounds are deliberately wide: the goal is to catch a hang, not to cut a slow encode. A ten-minute 4K
+ * in libx264 runs at about 10× real time; the chosen factor leaves twice that margin.
  */
 
-/** Sonde ffprobe : lecture d'en-têtes, jamais un travail long. */
+/** ffprobe probe: reads headers, never a long job. */
 export const FFPROBE_TIMEOUT_MS = 60_000;
 
-/** Plancher : couvre les fichiers minuscules dont le coût est dominé par les E/S. */
+/** Floor: covers tiny files whose cost is dominated by I/O. */
 export const FFMPEG_MIN_TIMEOUT_MS = 5 * 60_000;
 
-/** Plafond absolu : au-delà, c'est un blocage, pas un encodage. */
+/** Absolute ceiling: beyond it, it is a hang, not an encode. */
 export const FFMPEG_MAX_TIMEOUT_MS = 6 * 60 * 60_000;
 
-/** Multiple du temps réel accordé à une passe d'encodage. */
+/** Multiple of real time granted to an encoding pass. */
 export const FFMPEG_REALTIME_FACTOR = 20;
 
-/** Durée inconnue (ffprobe muet, entrée synthétique) : forfait d'une heure. */
+/** Unknown duration (silent ffprobe, synthetic input): a one-hour flat rate. */
 export const FFMPEG_UNKNOWN_TIMEOUT_MS = 60 * 60_000;
 
 export interface FfmpegTimeoutOptions {
-  /** Multiple du temps réel accordé (défaut : {@link FFMPEG_REALTIME_FACTOR}). */
+  /** Multiple of real time granted (default: {@link FFMPEG_REALTIME_FACTOR}). */
   factor?: number;
-  /** Plancher en millisecondes (défaut : {@link FFMPEG_MIN_TIMEOUT_MS}). */
+  /** Floor in milliseconds (default: {@link FFMPEG_MIN_TIMEOUT_MS}). */
   minMs?: number;
-  /** Plafond en millisecondes (défaut : {@link FFMPEG_MAX_TIMEOUT_MS}). */
+  /** Ceiling in milliseconds (default: {@link FFMPEG_MAX_TIMEOUT_MS}). */
   maxMs?: number;
-  /** Forfait quand la durée est inconnue (défaut : {@link FFMPEG_UNKNOWN_TIMEOUT_MS}). */
+  /** Flat rate when the duration is unknown (default: {@link FFMPEG_UNKNOWN_TIMEOUT_MS}). */
   unknownMs?: number;
 }
 
 /**
- * Délai maximal accordé à une invocation ffmpeg pour un média de `durationSec` secondes.
- * Une durée absente, nulle, négative ou non finie retombe sur le forfait.
+ * Maximum delay granted to an ffmpeg invocation for a media of `durationSec` seconds.
+ * An absent, zero, negative or non-finite duration falls back to the flat rate.
  */
 export function ffmpegTimeoutMs(durationSec?: number | null, opts: FfmpegTimeoutOptions = {}): number {
   const factor = opts.factor ?? FFMPEG_REALTIME_FACTOR;
@@ -53,21 +51,20 @@ export function ffmpegTimeoutMs(durationSec?: number | null, opts: FfmpegTimeout
   const unknownMs = opts.unknownMs ?? FFMPEG_UNKNOWN_TIMEOUT_MS;
 
   const known = typeof durationSec === 'number' && Number.isFinite(durationSec) && durationSec > 0;
-  // Le forfait ne passe pas par les bornes : c'est déjà une valeur décidée, pas une
-  // extrapolation à corriger.
+  // The flat rate does not go through the bounds: it is already a decided value, not an extrapolation to correct.
   if (!known) return Math.round(unknownMs);
   return Math.round(Math.min(maxMs, Math.max(minMs, durationSec * 1000 * factor)));
 }
 
-/** Message d'échec d'une commande dépassée — en anglais, comme toutes les erreurs backend. */
+/** Failure message of an exceeded command — in English, like all backend errors. */
 export function ffmpegTimeoutMessage(label: string, timeoutMs: number): string {
   return `ffmpeg step "${label}" exceeded its ${Math.round(timeoutMs / 1000)}s time limit and was killed`;
 }
 
 /**
- * Erreur distincte d'un échec d'encodage ordinaire : le repli NVENC → libx264 ne doit
- * PAS rejouer une commande qui a expiré (ce n'est pas un encodeur absent, et le repli
- * consommerait une seconde fois le délai avant d'échouer pareillement).
+ * Error distinct from an ordinary encoding failure: the NVENC → libx264 fallback must NOT replay a command
+ * that timed out (it is not a missing encoder, and the fallback would consume the delay a second time before
+ * failing the same way).
  */
 export class FfmpegTimeoutError extends Error {
   readonly label: string;
@@ -81,5 +78,5 @@ export class FfmpegTimeoutError extends Error {
   }
 }
 
-/** Vrai si l'erreur vient d'un dépassement de délai (et non d'un encodeur indisponible). */
+/** True if the error comes from a timeout (and not from an unavailable encoder). */
 export const isFfmpegTimeout = (err: unknown): err is FfmpegTimeoutError => err instanceof FfmpegTimeoutError;

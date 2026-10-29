@@ -16,16 +16,16 @@ const PIPE: Department[] = [
 const at = (iso: string) => new Date(iso);
 
 describe('departmentRank', () => {
-  it('rend la position dans le pipe', () => {
+  it('returns the position in the pipeline', () => {
     expect(departmentRank(PIPE, 'LAYOUT')).toBe(0);
     expect(departmentRank(PIPE, 'COMPOSITING')).toBe(4);
   });
 
-  it('ignore la casse — un DCC écrit « anim » là où la production a saisi « ANIM »', () => {
+  it('ignores case — a DCC writes "anim" where production entered "ANIM"', () => {
     expect(departmentRank(PIPE, 'animation')).toBe(1);
   });
 
-  it('rend -1 pour un département absent ou nul', () => {
+  it('returns -1 for an absent or null department', () => {
     expect(departmentRank(PIPE, 'GRADING')).toBe(-1);
     expect(departmentRank(PIPE, null)).toBe(-1);
     expect(departmentRank(PIPE, undefined)).toBe(-1);
@@ -34,7 +34,7 @@ describe('departmentRank', () => {
 });
 
 describe('pickMostAdvanced', () => {
-  it('préfère l’étape la plus en aval, même publiée avant', () => {
+  it('prefers the most downstream step, even if published earlier', () => {
     const winner = pickMostAdvanced(
       [
         { id: 1, department: 'COMPOSITING', at: at('2026-01-01') },
@@ -45,7 +45,7 @@ describe('pickMostAdvanced', () => {
     expect(winner?.id).toBe(1);
   });
 
-  it('départage deux versions de la même étape par la plus récente', () => {
+  it('breaks a tie between two versions of the same step by the most recent', () => {
     const winner = pickMostAdvanced(
       [
         { id: 1, department: 'FX', at: at('2026-01-01') },
@@ -56,7 +56,7 @@ describe('pickMostAdvanced', () => {
     expect(winner?.id).toBe(2);
   });
 
-  it('départage par identifiant à date strictement égale', () => {
+  it('breaks a tie by identifier at strictly equal date', () => {
     const winner = pickMostAdvanced(
       [
         { id: 7, department: 'FX', at: at('2026-01-01') },
@@ -67,7 +67,7 @@ describe('pickMostAdvanced', () => {
     expect(winner?.id).toBe(9);
   });
 
-  it('ne laisse jamais un département hors pipe devancer une étape connue', () => {
+  it('never lets a department off the pipeline overtake a known step', () => {
     const winner = pickMostAdvanced(
       [
         { id: 1, department: 'LAYOUT', at: at('2026-01-01') },
@@ -79,7 +79,7 @@ describe('pickMostAdvanced', () => {
     expect(winner?.id).toBe(1);
   });
 
-  it('retombe sur le plus récent quand aucun candidat n’est dans le pipe', () => {
+  it('falls back on the most recent when no candidate is in the pipeline', () => {
     const winner = pickMostAdvanced(
       [
         { id: 1, department: null, at: at('2026-01-01') },
@@ -90,11 +90,11 @@ describe('pickMostAdvanced', () => {
     expect(winner?.id).toBe(2);
   });
 
-  it('rend null sans candidat', () => {
+  it('returns null without a candidate', () => {
     expect(pickMostAdvanced([], PIPE)).toBeNull();
   });
 
-  it('reste utilisable quand le projet n’a aucun département configuré', () => {
+  it('stays usable when the project has no department configured', () => {
     const winner = pickMostAdvanced(
       [
         { id: 1, department: 'FX', at: at('2026-01-01') },
@@ -107,7 +107,7 @@ describe('pickMostAdvanced', () => {
 });
 
 describe('groupByDepartment', () => {
-  it('ordonne les groupes selon le pipe et rejette les inconnus à la fin', () => {
+  it('orders the groups according to the pipeline and rejects the unknown ones at the end', () => {
     const groups = groupByDepartment(
       [
         { department: 'COMPOSITING', n: 1 },
@@ -121,7 +121,7 @@ describe('groupByDepartment', () => {
     expect(groups[2]!.items.map((i) => i.n)).toEqual([2, 4]);
   });
 
-  it('conserve le libellé du département et l’ordre d’arrivée dans un groupe', () => {
+  it('keeps the department label and the arrival order within a group', () => {
     const groups = groupByDepartment(
       [
         { department: 'fx', n: 1 },
@@ -134,7 +134,7 @@ describe('groupByDepartment', () => {
     expect(groups[0]!.items.map((i) => i.n)).toEqual([1, 2]);
   });
 
-  it('n’invente pas de groupe pour un département déclaré mais vide', () => {
+  it('does not invent a group for a declared but empty department', () => {
     const groups = groupByDepartment([{ department: 'FX', n: 1 }], PIPE);
     expect(groups).toHaveLength(1);
   });

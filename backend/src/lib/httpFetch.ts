@@ -9,43 +9,40 @@ import {
 } from './safeFetch';
 
 /**
- * Sortie durcie **avec allow-list d'hôtes ré-évaluée à chaque saut**.
+ * Hardened egress **with a host allow-list re-evaluated at every hop**.
  *
- * `safeFetch` est la porte de sortie ordinaire du backend : elle contrôle l'ADRESSE
- * résolue à chaque saut (anti-SSRF), borne le délai et la taille. Elle ne connaît en
- * revanche pas les allow-lists applicatives — celle des assets OCIO, par exemple, qui
- * n'accepte que `github.com` et les hôtes de contenu de GitHub. Or GitHub sert justement
- * ses assets par une redirection 302, et une allow-list contrôlée une seule fois sur
- * l'URL de départ ne dit rien de la cible réellement atteinte : c'est le contournement
- * classique. Il faut donc suivre la redirection *et* la re-soumettre à l'allow-list.
+ * `safeFetch` is the backend's ordinary egress door: it checks the ADDRESS resolved at each hop (anti-SSRF), and
+ * bounds the delay and the size. It does not know the application-level allow-lists though — the OCIO assets one,
+ * for example, which only accepts `github.com` and GitHub's content hosts. Yet GitHub serves its assets precisely
+ * through a 302 redirect, and an allow-list checked once on the starting URL says nothing about the target actually
+ * reached: that is the classic bypass. The redirect must therefore be followed *and* re-submitted to the allow-list.
  *
- * D'où ce module, deuxième — et dernier — endroit du backend qui appelle `fetch`
- * directement. Chaque saut y passe par les deux gardes, dans cet ordre :
+ * Hence this module, the second — and last — place of the backend that calls `fetch` directly. Each hop goes through
+ * both guards, in this order:
  *
- * 1. `assertOutboundTarget` : schéma http(s) et refus de toute adresse interne (boucle
- *    locale, RFC 1918, lien-local 169.254.169.254 des métadonnées cloud) ;
- * 2. `isAllowedHost` : l'allow-list de l'appelant, sur l'hôte de CE saut.
+ * 1. `assertOutboundTarget`: http(s) scheme and refusal of any internal address (loopback, RFC 1918, link-local
+ *    169.254.169.254 cloud metadata);
+ * 2. `isAllowedHost`: the caller's allow-list, on the host of THIS hop.
  *
- * S'y ajoutent le délai d'attente sur l'arrivée des en-têtes (désarmé ensuite, comme dans
- * `safeFetch` : un téléchargement peut durer) et le refus de rejouer une méthode non sûre
- * vers une cible choisie par le serveur distant.
+ * Added to this: the timeout on the arrival of headers (disarmed afterwards, as in `safeFetch`: a download may last)
+ * and the refusal to replay an unsafe method towards a target chosen by the remote server.
  *
- * `readCappedBody` complète le tableau côté lecture : un `Content-Length` annoncé n'engage
- * que celui qui le croit, on compte donc aussi les octets réellement reçus.
+ * `readCappedBody` completes the picture on the read side: an announced `Content-Length` only binds whoever believes
+ * it, so the bytes actually received are counted as well.
  */
 
-/** Délai d'attente par défaut des en-têtes de réponse. */
+/** Default timeout for response headers. */
 const DEFAULT_TIMEOUT_MS = 15_000;
 
-/** Codes de redirection ; `fetch` ne les suit pas en mode `manual`. */
+/** Redirect status codes; `fetch` does not follow them in `manual` mode. */
 const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308]);
 
 export interface AllowlistedFetchOptions {
-  /** Allow-list applicative, ré-évaluée à chaque saut. Rendre `false` refuse la cible. */
+  /** Application-level allow-list, re-evaluated at every hop. Returning `false` refuses the target. */
   isAllowedHost: (url: URL) => boolean;
-  /** Délai d'attente des en-têtes, en millisecondes (défaut : 15 s). */
+  /** Header timeout in milliseconds (default: 15 s). */
   timeoutMs?: number;
-  /** Redirections suivies, chacune re-soumise aux deux gardes (défaut : 3). */
+  /** Redirects followed, each re-submitted to both guards (default: 3). */
   maxRedirects?: number;
 }
 
@@ -58,9 +55,8 @@ function toUrl(input: string | URL): URL {
 }
 
 /**
- * Une requête, un délai d'attente sur les en-têtes. Le minuteur est désarmé dès que la
- * réponse s'ouvre : le corps se lit ensuite aussi longtemps qu'il faut (une config ACES
- * de 25 Mo derrière une liaison lente reste légitime).
+ * One request, a timeout on the headers. The timer is disarmed as soon as the response opens: the body is then read
+ * for as long as it takes (a 25 MB ACES config behind a slow link remains legitimate).
  */
 async function fetchOnce(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
@@ -73,8 +69,8 @@ async function fetchOnce(url: string, init: RequestInit, timeoutMs: number): Pro
 }
 
 /**
- * `fetch` durci dont chaque saut — départ compris — doit satisfaire la garde SSRF ET
- * l'allow-list de l'appelant. Voir l'en-tête de fichier pour le pourquoi.
+ * Hardened `fetch` whose every hop — the starting one included — must satisfy the SSRF guard AND the caller's
+ * allow-list. See the file header for the why.
  */
 export async function fetchAllowlisted(
   input: string | URL,
@@ -92,11 +88,10 @@ export async function fetchAllowlisted(
     const res = await fetchOnce(current.href, init, timeoutMs);
     if (!REDIRECT_STATUS.has(res.status)) return res;
 
-    // Le corps d'une redirection ne nous intéresse pas, et le laisser ouvert retiendrait
-    // le socket jusqu'au ramasse-miettes.
+    // A redirect body is of no interest, and leaving it open would hold the socket until garbage collection.
     await res.body?.cancel().catch(() => undefined);
     if (hop >= maxRedirects)
-      // Motifs volontairement sans prose : ils sortent en 502, ils ne s'affichent pas.
+      // Deliberately plain patterns: they surface as a 502, they are not displayed.
       throw new OutboundBlockedError(current.href, 'redirect-limit-exceeded');
     if (method !== 'GET' && method !== 'HEAD')
       throw new OutboundBlockedError(current.href, 'redirect-on-unsafe-method');
@@ -111,9 +106,8 @@ export async function fetchAllowlisted(
 }
 
 /**
- * Lit un corps de réponse en mémoire sous plafond d'octets. Le `Content-Length` annoncé
- * est refusé d'emblée s'il dépasse — puis les octets reçus sont comptés, parce qu'un
- * serveur hostile n'est pas tenu de dire la vérité dans ses en-têtes.
+ * Reads a response body into memory under a byte ceiling. The announced `Content-Length` is refused outright if it
+ * exceeds it — then the bytes received are counted, because a hostile server is not bound to tell the truth in its headers.
  */
 export async function readCappedBody(res: Response, maxBytes: number, target = res.url): Promise<Buffer> {
   const declared = Number(res.headers.get('content-length'));

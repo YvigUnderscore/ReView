@@ -5,12 +5,11 @@ import { prisma } from './prisma';
 import { forbidden } from './errors';
 
 /**
- * Quota de stockage par projet (38.D). L'usage d'un projet = somme des tailles des médias
- * (non supprimés) de ses versions, quel que soit le rattachement (shot·séquence ou asset).
- * `Project.storageQuota` en octets ; `null` = illimité.
+ * Storage quota per project (38.D). The usage of a project = sum of the sizes of the media (not deleted) of its versions, whatever
+ * the attachment (shot·sequence or asset). `Project.storageQuota` in bytes; `null` = unlimited.
  */
 
-/** Sélecteur des médias rattachés à un projet (via la version → task/asset). */
+/** Selector of the media attached to a project (via the version → task/asset). */
 const mediaInProject = (projectId: number) => ({
   deletedAt: null,
   version: {
@@ -18,7 +17,7 @@ const mediaInProject = (projectId: number) => ({
   },
 });
 
-/** Octets consommés par un projet (somme des tailles de ses médias non supprimés). */
+/** Bytes consumed by a project (sum of the sizes of its non-deleted media). */
 export async function getProjectStorageUsage(projectId: number): Promise<bigint> {
   const agg = await prisma.mediaObject.aggregate({
     _sum: { size: true },
@@ -28,8 +27,8 @@ export async function getProjectStorageUsage(projectId: number): Promise<bigint>
 }
 
 /**
- * Refuse l'ajout de `addSize` octets si le projet a un quota et que l'usage le dépasserait
- * (403 PROJECT_QUOTA). Aucun quota (`null`) → toujours autorisé.
+ * Refuses the addition of `addSize` bytes if the project has a quota and usage would exceed it (403 PROJECT_QUOTA).
+ * No quota (`null`) → always allowed.
  */
 export async function assertProjectQuota(projectId: number, addSize: number): Promise<void> {
   const project = await prisma.project.findUnique({

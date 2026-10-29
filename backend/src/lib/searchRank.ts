@@ -2,37 +2,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Ce qui doit remonter en premier.
+ * What must come up first.
  *
- * La recherche rendait dix listes, chacune dans l'ordre de la base — le plus récent
- * d'abord. Taper « SH0120 » plaçait donc le plan SH0120 après trois médias dont le nom de
- * fichier contient « sh0120 », et l'ordre changeait à chaque publication. Ce n'est pas un
- * classement, c'est une chronologie.
+ * Search used to return ten lists, each in database order — most recent first. Typing "SH0120" therefore placed the shot SH0120 after three media whose
+ * file name contains "sh0120", and the order changed with every publication. That is not a ranking, it is a chronology.
  *
- * Le score répond à une question simple : **à quel point ce résultat est-il ce que
- * l'utilisateur a tapé ?** Quatre degrés, du plus net au plus vague — l'égalité, le début,
- * le mot entier, le fragment quelque part. Le champ compte ensuite : trouver « pluie » dans
- * le code d'un plan est plus fort que le trouver au milieu d'un brief de trente lignes.
+ * The score answers a simple question: **how much is this result what the user typed?** Four degrees, from the sharpest to the vaguest — equality, the
+ * start, the whole word, the fragment somewhere. The field then counts: finding "rain" in the code of a shot is stronger than finding it in the middle
+ * of a thirty-line brief.
  *
- * Pur et sans dépendance : le classement se teste sans base, et deux appelants ne peuvent
- * pas en donner deux versions.
+ * Pure and dependency-free: the ranking is tested without a database, and two callers cannot produce two versions of it.
  */
 
-/** Où la correspondance a été trouvée — du plus identifiant au plus bavard. */
+/** Where the match was found — from the most identifying to the most verbose. */
 export type MatchField = 'code' | 'name' | 'description' | 'body';
 
 /**
- * Deux échelles, et leur ordre compte.
+ * Two scales, and their order matters.
  *
- * La **qualité** de la correspondance pèse lourd, le **champ** départage. C'est le bon sens
- * de lecture : « ce que j'ai tapé, trouvé tel quel » prime sur « où ça a été trouvé ». À
- * l'inverse — champ en poids fort — un fragment perdu au milieu d'un code aurait battu un
- * mot trouvé exactement dans une description, ce qui donne des premiers résultats que
- * personne ne reconnaît.
+ * The **quality** of the match weighs heavily, the **field** breaks ties. This is the right reading sense: "what I typed, found as-is" takes precedence
+ * over "where it was found". Conversely — field with a strong weight — a fragment lost in the middle of a code would have beaten a word found exactly
+ * in a description, which yields top results that nobody recognises.
  */
 const QUALITY = { exact: 400, prefix: 300, word: 200, contains: 100 } as const;
 
-/** Départage : un code identifie, un corps de texte évoque. */
+/** Tie-break: a code identifies, a body of text evokes. */
 const FIELD_WEIGHT: Record<MatchField, number> = {
   code: 40,
   name: 30,
@@ -41,19 +35,17 @@ const FIELD_WEIGHT: Record<MatchField, number> = {
 };
 
 /**
- * Normalisation : minuscules et accents retirés.
+ * Normalisation: lowercase and accents removed.
  *
- * « Poursuite » et « poursuite » désignent la même chose, et un artiste tape rarement les
- * accents dans un champ de recherche. Sans cette normalisation, « heros » ne trouvait pas
- * « héros » — ce qui donne l'impression que la recherche ne marche pas.
+ * "Poursuite" and "poursuite" designate the same thing, and an artist rarely types accents in a search field. Without this normalisation, "heros" did not
+ * find "héros" — which gives the impression that the search does not work.
  */
 export function normalise(value: string): string {
   return value.toLocaleLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 /**
- * Score d'une correspondance dans un champ donné. `null` quand la valeur ne correspond
- * pas du tout — l'appelant sait alors qu'il n'a rien à classer.
+ * Score of a match in a given field. `null` when the value does not match at all — the caller then knows it has nothing to rank.
  */
 export function fieldScore(
   value: string | null | undefined,
@@ -72,14 +64,14 @@ export function fieldScore(
       ? QUALITY.exact
       : at === 0
         ? QUALITY.prefix
-        : // Début de mot : « pluie » dans « sous la pluie » vaut mieux que dans « parapluie ».
+        : // Start of a word: "pluie" in "sous la pluie" is worth more than in "parapluie".
           /[\s._\-/]/.test(haystack[at - 1] ?? '')
           ? QUALITY.word
           : QUALITY.contains;
   return quality + FIELD_WEIGHT[field];
 }
 
-/** Le meilleur score parmi plusieurs champs — c'est celui qui classe le résultat. */
+/** The best score among several fields — it is this that ranks the result. */
 export function bestScore(
   query: string,
   fields: { value: string | null | undefined; field: MatchField }[],
@@ -93,11 +85,10 @@ export function bestScore(
 }
 
 /**
- * Trie une liste par score décroissant, **en préservant l'ordre d'origine à égalité**.
+ * Sorts a list by descending score, **preserving the original order on ties**.
  *
- * L'ordre d'origine est celui de la base — le plus récent d'abord. À score égal, c'est le
- * bon départage : entre deux plans qui correspondent aussi bien, celui qui a bougé
- * récemment est celui qu'on cherche.
+ * The original order is that of the database — most recent first. On equal score, it is the right tie-break: between two shots that match equally well,
+ * the one that moved recently is the one being sought.
  */
 export function rankBy<T>(items: T[], score: (item: T) => number): T[] {
   return items

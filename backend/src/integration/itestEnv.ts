@@ -4,30 +4,29 @@
 import { config as loadDotenv } from 'dotenv';
 
 /**
- * Base de données de la suite d'intégration.
+ * Database of the integration suite.
  *
- * La suite tournait sur la base de développement, qu'aucune étape ne réinitialisait : elle
- * y laissait un utilisateur par exécution, dépendait de ce que les exécutions précédentes y
- * avaient déposé, et n'était donc ni rejouable ni portable en CI. Elle a maintenant sa
- * propre base, remise à neuf avant chaque passage (`globalSetup`).
+ * The suite used to run against the development database, which no step reset: it left one user
+ * per run, depended on what earlier runs had left there, and was therefore neither repeatable nor
+ * portable to CI. It now has its own database, reset before each run (`globalSetup`).
  *
- * Le nom est **imposé** : toute URL dont la base ne se termine pas par `_itest` est refusée.
- * C'est le seul garde-fou qui empêche un `DATABASE_URL` mal placé de faire tomber
- * `migrate reset --force` sur une base de travail — l'erreur ne se rattrape pas.
+ * The name is **enforced**: any URL whose database name does not end in `_itest` is refused.
+ * It is the only guard preventing a misplaced `DATABASE_URL` from running
+ * `migrate reset --force` on a working database, an error that cannot be undone.
  */
 
-/** Nom par défaut de la base réservée aux tests d'intégration. */
+/** Default name of the database reserved for integration tests. */
 export const ITEST_DATABASE_NAME = 'review_itest';
 
-/** Suffixe exigé de toute base d'intégration : le contrat qui protège la base de travail. */
+/** Suffix required of every integration database: the contract that protects the working database. */
 export const ITEST_DATABASE_SUFFIX = '_itest';
 
-/** Nom de la base porté par une URL Postgres (premier segment du chemin). */
+/** Database name carried by a Postgres URL (first segment of the path). */
 export function databaseNameOf(url: string): string {
   return new URL(url).pathname.replace(/^\//, '');
 }
 
-/** Même URL, autre base — les paramètres (`?schema=public`) sont conservés. */
+/** Same URL, different database: query parameters (`?schema=public`) are kept. */
 export function withDatabaseName(url: string, name: string): string {
   const parsed = new URL(url);
   parsed.pathname = `/${name}`;
@@ -35,10 +34,10 @@ export function withDatabaseName(url: string, name: string): string {
 }
 
 /**
- * URL de la base d'intégration, dérivée de l'environnement.
+ * URL of the integration database, derived from the environment.
  *
- * - `ITEST_DATABASE_URL` est prioritaire (CI, base distante) ;
- * - sinon `DATABASE_URL` est reprise, sa base remplacée par `review_itest`.
+ * - `ITEST_DATABASE_URL` takes precedence (CI, remote database);
+ * - otherwise `DATABASE_URL` is reused, with its database replaced by `review_itest`.
  */
 export function resolveItestDatabaseUrl(source: NodeJS.ProcessEnv): string {
   const explicit = source.ITEST_DATABASE_URL?.trim();
@@ -61,16 +60,16 @@ export function resolveItestDatabaseUrl(source: NodeJS.ProcessEnv): string {
   return resolved;
 }
 
-/** URL de maintenance (base `postgres`) : la seule d'où l'on peut créer la base d'intégration. */
+/** Maintenance URL (`postgres` database): the only one from which the integration database can be created. */
 export function adminDatabaseUrl(itestUrl: string): string {
   return withDatabaseName(itestUrl, 'postgres');
 }
 
 /**
- * Charge `backend/.env` puis résout l'URL d'intégration.
+ * Loads `backend/.env`, then resolves the integration URL.
  *
- * Appelée depuis `vitest.integration.config.ts` et depuis `globalSetup`, qui s'exécutent
- * tous deux hors du processus de test : ni l'un ni l'autre n'a chargé `config/env.ts`.
+ * Called from `vitest.integration.config.ts` and from `globalSetup`, both of which run outside
+ * the test process: neither has loaded `config/env.ts`.
  */
 export function loadItestDatabaseUrl(): string {
   loadDotenv();

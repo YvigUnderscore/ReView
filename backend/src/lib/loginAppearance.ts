@@ -7,25 +7,24 @@ import { storage } from '../services/StorageService';
 import { imageTypeFromKey } from './uploadContentType';
 
 /**
- * Habillage de la page de connexion — réglé par l'admin, appliqué avant toute
- * authentification. Image de fond (clé S3), voile et flou pour garder le formulaire
- * lisible quelle que soit l'image, disposition (panneau scindé ou formulaire centré),
- * accroche libre et affichage du logo. Stocké dans `Setting.login_appearance`.
+ * Styling of the login page — set by the admin, applied before any authentication. Background image (S3 key),
+ * veil and blur to keep the form readable whatever the image, layout (split panel or centred form), free tagline
+ * and logo display. Stored in `Setting.login_appearance`.
  *
- * Le voile et le flou ne sont pas cosmétiques : une photo claire sous un formulaire clair
- * rend les champs illisibles, et l'admin n'a pas à retoucher son image pour ça.
+ * The veil and the blur are not cosmetic: a light photo under a light form makes the fields unreadable, and the
+ * admin should not have to retouch their image for that.
  */
 
 export interface LoginAppearance {
   layout: 'split' | 'centered';
-  /** Clé de l'objet de stockage ; `null` = pas d'image (dégradé d'accent par défaut). */
+  /** Storage object key; `null` = no image (default accent gradient). */
   bgKey: string | null;
   bgFit: 'cover' | 'contain';
-  /** Opacité du voile posé sur l'image, 0 → 0.95. */
+  /** Opacity of the veil over the image, 0 → 0.95. */
   overlay: number;
-  /** Flou de l'image, en pixels, 0 → 24. */
+  /** Blur of the image, in pixels, 0 → 24. */
   blur: number;
-  /** Accroche personnalisée ; chaîne vide = texte traduit par défaut. */
+  /** Custom tagline; empty string = default translated text. */
   tagline: string;
   showLogo: boolean;
 }
@@ -49,7 +48,7 @@ function sanitize(raw: unknown, base: LoginAppearance): LoginAppearance {
   const bgKey = typeof o.bgKey === 'string' ? o.bgKey.trim() : undefined;
   return {
     layout: o.layout === 'centered' || o.layout === 'split' ? o.layout : base.layout,
-    // Une clé vide vaut « pas d'image » : c'est ce qu'envoie le bouton « retirer ».
+    // An empty key means "no image": this is what the "remove" button sends.
     bgKey: bgKey === undefined ? (o.bgKey === null ? null : base.bgKey) : bgKey || null,
     bgFit: o.bgFit === 'contain' || o.bgFit === 'cover' ? o.bgFit : base.bgFit,
     overlay: Number.isFinite(o.overlay) ? clamp(Number(o.overlay), 0, 0.95) : base.overlay,
@@ -59,7 +58,7 @@ function sanitize(raw: unknown, base: LoginAppearance): LoginAppearance {
   };
 }
 
-/** Config effective (Setting fusionné avec le repli interne). */
+/** Effective config (Setting merged with the internal fallback). */
 export async function getLoginAppearance(): Promise<LoginAppearance> {
   const row = await prisma.setting.findUnique({ where: { key: LOGIN_KEY } });
   if (!row) return FALLBACK;
@@ -70,7 +69,7 @@ export async function getLoginAppearance(): Promise<LoginAppearance> {
   }
 }
 
-/** Enregistre la config (validée/bornée) — patch partiel appliqué sur l'existant. */
+/** Saves the config (validated/bounded) — partial patch applied on top of the existing one. */
 export async function setLoginAppearance(value: unknown): Promise<LoginAppearance> {
   const clean = sanitize(value, await getLoginAppearance());
   await prisma.setting.upsert({
@@ -91,7 +90,7 @@ export const loginAppearanceSchema = z.object({
   showLogo: z.boolean().optional(),
 });
 
-/** URL présignée de l'image de fond de connexion (une heure), `null` si aucune image. */
+/** Presigned URL of the login background image (one hour), `null` if there is no image. */
 export function loginBgUrl(bgKey: string | null): Promise<string | null> | null {
   return bgKey ? storage.getPresignedGetUrl(bgKey, 3600, imageTypeFromKey(bgKey)) : null;
 }

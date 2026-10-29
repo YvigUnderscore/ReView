@@ -8,57 +8,57 @@ import { env } from '../config/env';
 import { logger } from './logger';
 
 /**
- * Client ClamAV INSTREAM (37.E) — sans dépendance : le fichier est envoyé en chunks
- * préfixés de leur taille (uint32 BE), terminés par un chunk vide ; clamd répond
- * `stream: OK` ou `stream: <signature> FOUND`. Opt-in via env CLAMAV_HOST.
+ * ClamAV INSTREAM client (37.E), dependency-free: the file is sent in chunks prefixed by their size
+ * (uint32 BE), terminated by an empty chunk; clamd answers `stream: OK` or `stream: <signature> FOUND`.
+ * Opt-in via the CLAMAV_HOST env variable.
  */
 
 export const isClamavEnabled = (): boolean => Boolean(env.CLAMAV_HOST);
 
 /**
- * Plafonds par défaut de l'image `clamav/clamav:stable` (relevés par `clamconf` sur
- * l'image utilisée par `docker-compose.yml`, qui ne monte aucun `clamd.conf`) :
- * `StreamMaxLength = MaxFileSize = 100 Mio`, `MaxScanSize = 400 Mio`.
+ * Default limits of the `clamav/clamav:stable` image (read by `clamconf` on the image used by
+ * `docker-compose.yml`, which mounts no `clamd.conf`):
+ * `StreamMaxLength = MaxFileSize = 100 MiB`, `MaxScanSize = 400 MiB`.
  *
- * Ces valeurs comptent parce que ce produit ingère des rushes de plusieurs gigaoctets :
- * le dépassement n'est pas le cas limite, c'est le cas courant.
+ * These values matter because this product ingests rushes of several gigabytes: exceeding them is
+ * not the edge case, it is the common case.
  */
 export const CLAMD_DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 /**
- * Refus explicite de clamd — à distinguer d'un verdict.
+ * Explicit refusal from clamd, to be distinguished from a verdict.
  *
- * clamd termine ses refus par ` ERROR` et **coupe la connexion** dans la foulée. Le cas
- * courant est le dépassement de `StreamMaxLength` : mesuré contre un clamd réel, la
- * réponse est exactement `INSTREAM size limit exceeded. ERROR\0` — sans préfixe `stream:`,
- * suivie d'un `ECONNRESET`. Sans cette classe, ce refus remontait en
- * « Unexpected clamd response », message qui n'oriente vers aucune manette.
+ * clamd ends its refusals with ` ERROR` and **cuts the connection** straight after. The common case
+ * is exceeding `StreamMaxLength`: measured against a real clamd, the reply is exactly
+ * `INSTREAM size limit exceeded. ERROR\0`, without a `stream:` prefix, followed by an `ECONNRESET`.
+ * Without this class, that refusal surfaced as "Unexpected clamd response", a message pointing to no
+ * setting.
  */
 export class ClamavRefusedError extends Error {
   readonly reply: string;
 
   constructor(reply: string, fileSize?: number) {
     const size = fileSize == null ? '' : ' (file of ' + (fileSize / 1024 / 1024).toFixed(1) + ' MB)';
-    // Le dépassement de flux est le seul refus dont la manette est connue : on la nomme.
+    // Stream overflow is the only refusal whose setting is known: name it.
     const hint = /size limit/i.test(reply)
       ? ' Raise StreamMaxLength, MaxFileSize and MaxScanSize in clamd.conf above the studio max_file_size setting.'
       : '';
-    // Concaténation plutôt que gabarit : `check-untranslated` compte les fragments de gabarit
-    // du backend, et son plafond ne se relève jamais (cf. scripts/check-untranslated.mjs).
+    // Concatenation rather than a template: `check-untranslated` counts the backend's template
+    // fragments, and its ceiling is never raised (cf. scripts/check-untranslated.mjs).
     super('clamd refused the stream' + size + ': ' + reply.slice(0, 120) + '.' + hint);
     this.name = 'ClamavRefusedError';
     this.reply = reply;
   }
 }
 
-/** Préfixe de taille du protocole INSTREAM (pur, testé). */
+/** Size prefix of the INSTREAM protocol (pure, tested). */
 export function frameChunk(chunk: Buffer): Buffer {
   const len = Buffer.alloc(4);
   len.writeUInt32BE(chunk.length, 0);
   return Buffer.concat([len, chunk]);
 }
 
-/** Parse la réponse clamd (pur, testé). */
+/** Parses the clamd response (pure, tested). */
 export function parseClamResponse(raw: string): { clean: boolean; virus: string | null } {
   const text = raw.replace(/\0/g, '').trim();
   if (/\bOK$/.test(text)) return { clean: true, virus: null };
@@ -70,11 +70,11 @@ export function parseClamResponse(raw: string): { clean: boolean; virus: string 
 
 const SCAN_TIMEOUT_MS = 120_000;
 
-/** Scanne un fichier local via clamd (INSTREAM). Rejette si clamd est injoignable. */
+/** Scans a local file via clamd (INSTREAM). Rejects if clamd is unreachable. */
 export async function scanFile(path: string): Promise<{ clean: boolean; virus: string | null }> {
-  // La taille est lue avant d'ouvrir la conversation : elle sert à qualifier un refus de
-  // clamd (« 412 Mo » à côté de « size limit exceeded » désigne la manette) et à détecter
-  // un `OK` qui ne prouve rien (cf. plus bas).
+  // The size is read before opening the conversation: it qualifies a refusal from clamd ("412 MB"
+  // next to "size limit exceeded" points to the setting) and detects an `OK` that proves nothing
+  // (see below).
   const { size } = await stat(path);
   return new Promise((resolve, reject) => {
     const socket = new Socket();
@@ -84,10 +84,9 @@ export async function scanFile(path: string): Promise<{ clean: boolean; virus: s
     let settled = false;
 
     /**
-     * Une seule sortie, qui coupe la lecture du fichier. Sans cela, le `ReadStream` survivait
-     * au verdict : mis en pause faute de `drain` sur un socket déjà détruit, il n'était
-     * jamais refermé — un descripteur de fichier fuité par média refusé, dans un worker qui
-     * en enchaîne des milliers.
+     * A single exit, which cuts off reading the file. Without it, the `ReadStream` survived the verdict:
+     * paused for lack of `drain` on an already destroyed socket, it was never closed again — a file
+     * descriptor leaked per refused media, in a worker processing thousands.
      */
     const settle = (act: () => void) => {
       if (settled) return;
@@ -101,10 +100,10 @@ export async function scanFile(path: string): Promise<{ clean: boolean; virus: s
       settle(() => {
         try {
           const verdict = parseClamResponse(response);
-          // clamd répond `OK` sans avoir scanné au-delà de `MaxFileSize` — comportement
-          // vérifié : un fichier de 3 Mio contenant EICAR en tête est déclaré `OK` quand
-          // `MaxFileSize` vaut 1 Mio. Ce silence est indiscernable d'un verdict ; il est
-          // au moins rendu audible ici, faute de pouvoir interroger les plafonds de clamd.
+          // clamd answers `OK` without having scanned beyond `MaxFileSize`: verified behaviour, a 3 MiB
+          // file with EICAR at its head is reported `OK` when `MaxFileSize` is 1 MiB. This silence is
+          // indistinguishable from a verdict; it is at least made audible here, since clamd's limits
+          // cannot be queried.
           if (verdict.clean && size > CLAMD_DEFAULT_MAX_FILE_SIZE)
             logger.warn(
               { path, size, maxFileSize: CLAMD_DEFAULT_MAX_FILE_SIZE },
@@ -124,10 +123,10 @@ export async function scanFile(path: string): Promise<{ clean: boolean; virus: s
 
     socket.setTimeout(SCAN_TIMEOUT_MS, () => fail(new Error('clamd: scan timed out')));
     socket.on('error', (err) => {
-      // clamd coupe la conversation dès qu'il refuse : côté écriture, l'EPIPE/ECONNRESET
-      // arrive souvent AVANT que sa réponse n'ait été lue. On cesse d'écrire, on laisse le
-      // socket livrer ce qu'il a encore, et l'erreur réseau ne sert que de repli — sans quoi
-      // le message du refus était perdu au profit d'un « read ECONNRESET » illisible.
+      // clamd cuts the conversation as soon as it refuses: on the write side, EPIPE/ECONNRESET often
+      // arrives BEFORE its reply has been read. We stop writing and let the socket deliver what it
+      // still has; the network error is only a fallback — otherwise the refusal message was lost in
+      // favour of an unreadable "read ECONNRESET".
       netError = err;
       stream?.destroy();
       if (response) finish();

@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Rendu d'une annotation de review en SVG.
+ * Renders a review annotation as SVG.
  *
- * Les annotations sont stockées en coordonnées normalisées (0..1) pour suivre la taille
- * d'affichage du média. Les envoyer telles quelles hors de ReView ne servirait à
- * personne : ce module les rend à une taille donnée, de façon qu'un outil tiers — ou
- * ffmpeg, qui sait lire le SVG — puisse les incruster sur l'image.
+ * Annotations are stored in normalised coordinates (0..1) so they follow the display size of the
+ * media. Sending them as-is outside ReView would serve nobody: this module renders them at a given
+ * size so that a third-party tool (or ffmpeg, which reads SVG) can burn them onto the image.
  *
- * Le rendu reprend volontairement la même géométrie que l'overlay du navigateur : une
- * remarque doit désigner exactement le même endroit des deux côtés.
+ * The rendering deliberately reuses the browser overlay's geometry: a note must point at exactly
+ * the same place on both sides.
  */
 
 export interface AnnotationShape {
@@ -35,7 +34,7 @@ export interface AnnotationShape {
   text?: string;
 }
 
-/** Formes exploitables d'une valeur venue de la base (JSON non typé). */
+/** Usable shapes of a value coming from the database (untyped JSON). */
 export function parseShapes(annotation: unknown): AnnotationShape[] {
   const raw = Array.isArray(annotation) ? annotation : ((annotation as { shapes?: unknown })?.shapes ?? null);
   if (!Array.isArray(raw)) return [];
@@ -53,19 +52,18 @@ const escapeXml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-/** Couleur de repli — celle que le viewer donne à un trait sans couleur propre. */
+/** Fallback colour: the one the viewer gives a stroke with no colour of its own. */
 const DEFAULT_COLOR = '#FF3B30';
 
 /**
- * Une couleur n'est pas du texte libre : c'est une valeur de forme close.
+ * A colour is not free text: it is a closed-set value.
  *
- * L'échappement ne suffirait pas ici. `stroke=""` accepte des fonctions CSS, et la valeur
- * vient d'un JSON de commentaire que n'importe quel membre du projet peut écrire : une
- * couleur qui refermait son attribut pour poser un `<animate onbegin>` a traversé le
- * filtre de la planche de notes. On n'accepte donc QUE la notation hexadécimale que le
- * viewer produit ; tout le reste retombe sur la couleur par défaut. Quitte à changer la
- * teinte d'un repère : un repère mal coloré reste un repère, un attribut refermé est une
- * injection dans un document que la production ouvre dans son navigateur.
+ * Escaping would not be enough here. `stroke=""` accepts CSS functions, and the value comes from a
+ * comment JSON any project member can write: a colour closing its attribute to inject an
+ * `<animate onbegin>` got through the notes-sheet filter. So ONLY the hexadecimal notation the
+ * viewer produces is accepted; anything else falls back to the default colour. A badly coloured
+ * marker is still a marker; a closed attribute is an injection into a document production opens
+ * in its browser.
  */
 const HEX_COLOR = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
@@ -75,12 +73,11 @@ const safeColor = (value: unknown): string => {
 };
 
 /**
- * Nombre fini, ou repli.
+ * Finite number, or fallback.
  *
- * Les coordonnées passaient par une multiplication, qui contraint le résultat à un nombre
- * ou à `NaN` ; `opacity`, elle, était écrite telle quelle — un second point d'injection,
- * au même titre que la couleur. Une valeur attendue numérique se valide donc comme un
- * nombre avant d'atteindre un attribut, jamais comme une chaîne échappée.
+ * Coordinates went through a multiplication, which constrains the result to a number or `NaN`;
+ * `opacity` was written as-is, a second injection point just like the colour. A numeric value is
+ * therefore validated as a number before reaching an attribute, never as an escaped string.
  */
 const num = (value: unknown, fallback: number): number => {
   const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : NaN;
@@ -90,41 +87,39 @@ const num = (value: unknown, fallback: number): number => {
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 
 /**
- * Épaisseur par défaut du pinceau, en pixels — celle du viewer
+ * Default brush width, in pixels, as in the viewer
  * (`frontend/src/v2/pages/review/useAnnotations.ts`).
  */
 const DEFAULT_STROKE_PX = 3;
 
 /**
- * Largeur d'affichage de référence, en pixels.
+ * Reference display width, in pixels.
  *
- * L'épaisseur d'un trait est stockée en pixels ÉCRAN : le viewer dessine dans un viewBox
- * normalisé avec `vector-effect: non-scaling-stroke`, si bien qu'un trait de 3 px reste
- * épais de 3 px quelle que soit la taille à laquelle le média est affiché. Rendre à la
- * taille réelle du média demande donc de rapporter cette épaisseur à la largeur à
- * laquelle on annotait — qu'on ne connaît plus après coup. On retient une largeur
- * d'affichage courante : le trait garde ainsi la finesse relative qu'il avait à l'écran.
+ * A stroke width is stored in SCREEN pixels: the viewer draws in a normalised viewBox with
+ * `vector-effect: non-scaling-stroke`, so a 3 px stroke stays 3 px thick whatever size the media is
+ * displayed at. Rendering at the real media size therefore requires relating that width to the
+ * width at which it was annotated, which is no longer known afterwards. We keep a typical display
+ * width so the stroke keeps the relative fineness it had on screen.
  *
- * Traiter cette valeur comme une fraction de la largeur, ce que faisait ce module,
- * revenait à lire « 3 » comme « trois fois la largeur du média » : un trait de 2217 px
- * sur une image large de 739, soit un aplat de couleur recouvrant toute la frame.
+ * Treating this value as a fraction of the width, which this module used to do, read "3" as "three
+ * times the media width": a 2217 px stroke on a 739 px image, i.e. a flat colour covering the frame.
  */
 const REFERENCE_WIDTH = 1280;
 
-/** Épaisseur de trait à l'échelle de l'image rendue. */
+/** Stroke width at the scale of the rendered image. */
 const strokeWidth = (shape: AnnotationShape, width: number): number =>
   Math.max(1, num(shape.width, DEFAULT_STROKE_PX) * (width / REFERENCE_WIDTH));
 
 /**
- * Hauteur de police, en fraction de la hauteur du média puis en pixels — même formule
- * que `textFontSize` côté viewer, pour que le texte ait la taille qu'on lui a donnée.
+ * Font size, as a fraction of the media height and then in pixels: same formula as `textFontSize`
+ * on the viewer side, so the text has the size it was given.
  */
 const fontSize = (shape: AnnotationShape, height: number): number =>
   Math.max(8, (0.02 + num(shape.width, DEFAULT_STROKE_PX) * 0.005) * height);
 
 function shapeToSvg(shape: AnnotationShape, w: number, h: number): string {
-  // Les trois valeurs ci-dessous sont les seules du rendu à ne pas naître d'un calcul :
-  // elles sont donc contraintes ici, à la source, et non échappées plus loin.
+  // The three values below are the only ones in the rendering not born from a computation:
+  // they are therefore constrained here, at the source, not escaped further on.
   const color = safeColor(shape.color);
   const sw = strokeWidth(shape, w);
   const opacity = clamp(num(shape.alpha, 1), 0, 1);
@@ -133,8 +128,8 @@ function shapeToSvg(shape: AnnotationShape, w: number, h: number): string {
   switch (shape.type) {
     case 'path':
     case 'polygon': {
-      // Un point n'est pas forcément une paire : déstructurer une valeur non itérable
-      // (un nombre, un objet) lèverait une exception au milieu de l'export.
+      // A point is not necessarily a pair: destructuring a non-iterable value (a number, an object)
+      // would throw in the middle of the export.
       const raw: unknown[] = Array.isArray(shape.pts) ? shape.pts : [];
       const pts = raw
         .filter((p): p is unknown[] => Array.isArray(p))
@@ -159,10 +154,9 @@ function shapeToSvg(shape: AnnotationShape, w: number, h: number): string {
       const dy = y2 - y1;
       const len = Math.hypot(dx, dy);
       if (len < 1e-6) return '';
-      // Pointe dessinée à la main : un marqueur SVG hérite mal de la couleur d'un trait
-      // à travers les convertisseurs, et la flèche perdrait sa tête à la conversion.
-      // Mêmes proportions que le viewer (`arrowHead`), bornées par la longueur du trait :
-      // sans cette borne, une flèche courte est avalée par sa propre pointe.
+      // Hand-drawn head: an SVG marker inherits the colour of a stroke badly through converters, and
+      // the arrow would lose its head in conversion. Same proportions as the viewer (`arrowHead`),
+      // capped by the stroke length: without this cap a short arrow is swallowed by its own head.
       const head = Math.min(Math.max(10, sw * 3.5), len * 0.45);
       const headW = head * 0.75;
       const ux = dx / len;
@@ -178,8 +172,8 @@ function shapeToSvg(shape: AnnotationShape, w: number, h: number): string {
     }
     case 'text': {
       const size = fontSize(shape, h);
-      // `text` peut n'être pas une chaîne : appeler `replace` dessus ferait tomber
-      // l'export entier en 500 plutôt que d'ignorer une forme mal formée.
+      // `text` may not be a string: calling `replace` on it would bring the whole export down with a
+      // 500 instead of ignoring a malformed shape.
       const label = typeof shape.text === 'string' ? shape.text : '';
       return `<text x="${num(shape.x, 0) * w}" y="${num(shape.y, 0) * h}" fill="${color}" opacity="${opacity}" font-size="${size}" font-family="sans-serif">${escapeXml(label)}</text>`;
     }
@@ -189,14 +183,14 @@ function shapeToSvg(shape: AnnotationShape, w: number, h: number): string {
 }
 
 /**
- * Document SVG transparent aux dimensions du média, prêt à être incrusté.
- * Renvoie `null` quand il n'y a rien à dessiner — inutile de composer une image vide.
+ * Transparent SVG document at the media dimensions, ready to be embedded.
+ * Returns `null` when there is nothing to draw: no point composing an empty image.
  */
 export function annotationToSvg(annotation: unknown, width: number, height: number): string | null {
   const shapes = parseShapes(annotation);
   if (shapes.length === 0) return null;
-  // Les dimensions viennent de l'appelant, pas du client — on les borne quand même :
-  // un `NaN` dans le viewBox produit un document que ni ffmpeg ni le navigateur ne lit.
+  // Dimensions come from the caller, not from the client, but are still bounded: a `NaN` in the
+  // viewBox produces a document that neither ffmpeg nor the browser can read.
   const w = Math.max(1, Math.round(num(width, 0)));
   const h = Math.max(1, Math.round(num(height, 0)));
   const body = shapes.map((s) => shapeToSvg(s, w, h)).join('');

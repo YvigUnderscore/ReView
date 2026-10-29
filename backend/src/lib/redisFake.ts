@@ -4,18 +4,14 @@
 import type { RedisClientLike } from './redis';
 
 /**
- * Double de test du client Redis (`lib/redis`), en mémoire.
+ * In-memory test double of the Redis client (`lib/redis`).
  *
- * L'état volatil (limiteur, présence, salles live, cache d'identité) parle à Redis par
- * une seule méthode — `call(commande, …arguments)` — ce qui rend ce double petit et
- * lisible : il implémente exactement les commandes utilisées, avec leurs valeurs de
- * retour réelles, et une expiration paresseuse. Il est lui-même testé
- * (`redisFake.test.ts`) : un double faux invaliderait tout ce qu'il sert à vérifier.
+ * The volatile state (rate limiter, presence, live rooms, identity cache) talks to Redis through a single method — `call(command, …arguments)` —
+ * which keeps this double small and readable: it implements exactly the commands used, with their real return values, and a lazy expiry. It is
+ * itself tested (`redisFake.test.ts`): a false double would invalidate everything it serves to verify.
  *
- * Ce qu'il ne simule PAS, et qui reste donc à vérifier contre un vrai serveur : les
- * scripts Lua (`SCRIPT LOAD`/`EVALSHA`, utilisés par `rate-limit-redis`), le clustering,
- * et l'expiration active côté serveur (ici, une clé expirée n'est retirée qu'à sa
- * prochaine lecture).
+ * What it does NOT simulate, and which therefore remains to be verified against a real server: the Lua scripts (`SCRIPT LOAD`/`EVALSHA`, used by
+ * `rate-limit-redis`), clustering, and active expiry on the server side (here, an expired key is only removed at its next read).
  */
 
 type Value = string | Map<string, string> | Map<string, number> | Set<string>;
@@ -26,15 +22,15 @@ interface Entry {
 }
 
 export interface FakeRedis extends RedisClientLike {
-  /** Horloge injectable : les tests d'expiration ne doivent pas attendre. */
+  /** Injectable clock: expiry tests must not wait. */
   now: () => number;
-  /** Canaux publiés, dans l'ordre — pour vérifier les notifications inter-répliques. */
+  /** Published channels, in order — to verify the inter-replica notifications. */
   published: { channel: string; payload: string }[];
-  /** Nombre de commandes reçues, par verbe (mesure du coût d'un scénario). */
+  /** Number of commands received, by verb (measure of the cost of a scenario). */
   commandCounts: Map<string, number>;
-  /** Force l'échec de toute commande (panne Redis simulée). */
+  /** Forces the failure of every command (simulated Redis outage). */
   failing: boolean;
-  /** Vue brute d'une clé, pour les assertions de structure. */
+  /** Raw view of a key, for structure assertions. */
   peek(key: string): Value | undefined;
   flush(): void;
 }
@@ -75,7 +71,7 @@ export function createFakeRedis(): FakeRedis {
     },
   };
 
-  /** Entrée non expirée, ou `undefined` (l'expiration est appliquée à la lecture). */
+  /** Non-expired entry, or `undefined` (expiry is applied on read). */
   function live(key: string): Entry | undefined {
     const entry = store.get(key);
     if (!entry) return undefined;

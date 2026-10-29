@@ -10,11 +10,11 @@ import { storage } from '../services/StorageService';
 import { MAX_PAGE_SIZE } from '../lib/pagination';
 
 /**
- * Tests d'intégration API (nécessitent Postgres/Redis/MinIO).
+ * API integration tests (require Postgres/Redis/MinIO).
  *
- * La base est jetable et remise à neuf avant chaque exécution (`globalSetup`) : ce fichier
- * y exécute l'installation initiale du studio. Il reste néanmoins écrit pour une base déjà
- * peuplée — c'est ce qui permet de le rejouer sans reset pendant une mise au point.
+ * The database is throwaway and reset before each run (`globalSetup`): this file runs the
+ * studio's initial setup in it. It is still written so that it works on an already populated
+ * database, which is what allows replaying it without a reset while debugging.
  */
 const app = createApp({ rateLimit: false });
 let token = '';
@@ -41,7 +41,7 @@ beforeAll(async () => {
     }
   }
 
-  // Crée un artiste dédié au run (email unique) pour les tests RBAC
+  // Creates an artist dedicated to the run (unique email) for the RBAC tests
   const email = `it-artist-${Date.now()}@review.local`;
   const created = await request(app)
     .post('/api/users')
@@ -52,20 +52,20 @@ beforeAll(async () => {
   artistToken = login.body.token;
 });
 
-// La base est jetée entre deux exécutions, mais un fichier de test reste responsable de ce
-// qu'il crée : sans cela, rejouer la suite deux fois sans reset (mise au point) accumulerait
-// un ARTIST orphelin par passage — le défaut d'origine.
+// The database is discarded between runs, but a test file remains responsible for what it creates:
+// without this, replaying the suite twice without a reset (debugging) would accumulate one orphan
+// ARTIST per run, the original defect.
 afterAll(async () => {
   if (artistId) await prisma.user.deleteMany({ where: { id: artistId } });
 });
 
-describe('API — santé & setup', () => {
+describe('API — health & setup', () => {
   it('GET /health → 200', async () => {
     const r = await request(app).get('/health');
     expect(r.status).toBe(200);
     expect(r.body.status).toBe('ok');
   });
-  it('GET /api/setup/status → booléen', async () => {
+  it('GET /api/setup/status → boolean', async () => {
     const r = await request(app).get('/api/setup/status');
     expect(r.status).toBe(200);
     expect(typeof r.body.needsSetup).toBe('boolean');
@@ -73,21 +73,21 @@ describe('API — santé & setup', () => {
 });
 
 describe('API — auth & RBAC', () => {
-  it('un token admin est disponible', () => {
+  it('an admin token is available', () => {
     expect(token).toBeTruthy();
   });
-  it('GET /api/projects sans token → 401', async () => {
+  it('GET /api/projects without token → 401', async () => {
     const r = await request(app).get('/api/projects');
     expect(r.status).toBe(401);
   });
-  it('GET /api/projects avec token → 200 + tableau', async () => {
+  it('GET /api/projects with token → 200 + array', async () => {
     const r = await request(app).get('/api/projects').set('Authorization', `Bearer ${token}`);
     expect(r.status).toBe(200);
     expect(Array.isArray(r.body.items)).toBe(true);
     expect(typeof r.body.total).toBe('number');
   });
-  it('GET /api/projects paginé → enveloppe { items, total, page, pageSize } bornée', async () => {
-    // Deux projets au moins pour vérifier le bornage.
+  it('GET /api/projects paginated → bounded envelope { items, total, page, pageSize }', async () => {
+    // At least two projects, to check the bounding.
     await request(app)
       .post('/api/projects')
       .set('Authorization', `Bearer ${token}`)
@@ -104,8 +104,8 @@ describe('API — auth & RBAC', () => {
     expect(r.body.pageSize).toBe(1);
     expect(r.body.items.length).toBeLessThanOrEqual(1);
     expect(r.body.total).toBeGreaterThanOrEqual(2);
-    // Le plafond dur est MAX_PAGE_SIZE (500) : il est servable, au-delà Zod refuse (400).
-    // Défaut et plafond ne sont plus confondus depuis que la pagination existe vraiment.
+    // The hard ceiling is MAX_PAGE_SIZE (500): it is servable, beyond it Zod refuses (400).
+    // Default and ceiling have not been conflated since pagination really exists.
     const ceiling = await request(app)
       .get(`/api/projects?pageSize=${MAX_PAGE_SIZE}`)
       .set('Authorization', `Bearer ${token}`);
@@ -116,14 +116,14 @@ describe('API — auth & RBAC', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(bad.status).toBe(400);
   });
-  it('GET /api/auth/me → utilisateur courant', async () => {
+  it('GET /api/auth/me → current user', async () => {
     const r = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
     expect(r.status).toBe(200);
     expect(r.body.user.role).toBe('ADMIN');
   });
 
-  it('sessions révocables (36.B) : login → liste → logout → token mort', async () => {
-    // Nouveau login dédié (mêmes comptes candidats que le beforeAll) → session propre.
+  it('revocable sessions (36.B): login → list → logout → dead token', async () => {
+    // New dedicated login (same candidate accounts as the beforeAll) → clean session.
     let t = '';
     for (const email of ['admin@review.local', 'ci-admin@review.local']) {
       const r = await request(app).post('/api/auth/login').send({ email, password: 'admin1234' });
@@ -139,14 +139,14 @@ describe('API — auth & RBAC', () => {
 
     const out = await request(app).post('/api/auth/logout').set('Authorization', `Bearer ${t}`);
     expect(out.status).toBe(204);
-    // La révocation invalide aussi l'access token (cache court-circuité par revokeSession).
+    // Revocation also invalidates the access token (cache short-circuited by revokeSession).
     const after = await request(app).get('/api/auth/sessions').set('Authorization', `Bearer ${t}`);
     expect(after.status).toBe(401);
   });
 
-  it("tokens d'API (36.C) : scope read → GET ok, écriture 403 ; révocation immédiate", async () => {
-    // Fabriquer un `rvk_` exige de re-saisir le mot de passe : un jeton d'accès volé ne
-    // suffit pas à se donner un accès de 3650 jours que « se déconnecter partout » ignore.
+  it("API tokens (36.C): read scope → GET ok, write 403; immediate revocation", async () => {
+    // Creating a `rvk_` requires re-entering the password: a stolen access token is not enough
+    // to grant itself a 3650-day access that "log out everywhere" ignores.
     const noPassword = await request(app)
       .post('/api/auth/tokens')
       .set('Authorization', `Bearer ${token}`)
@@ -162,10 +162,10 @@ describe('API — auth & RBAC', () => {
     const apiTok = created.body.token as string;
     expect(apiTok).toMatch(/^rvk_/);
 
-    // Ce scénario datait de la phase 36, où un `rvk_` ouvrait tout `/api`. Depuis,
-    // `apiTokenSurface` le restreint à `/api/v1` (plus `/api/docs` et `/api/openapi.json`) :
-    // un jeton volé n'atteint plus la surface de l'application. Le test vérifie donc
-    // maintenant la règle en vigueur, des deux côtés de la frontière.
+    // This scenario dates from phase 36, when a `rvk_` opened all of `/api`. Since then,
+    // `apiTokenSurface` restricts it to `/api/v1` (no more `/api/docs` and `/api/openapi.json`):
+    // a stolen token no longer reaches the application surface. The test therefore checks the
+    // rule now in force, on both sides of the boundary.
     const offSurface = await request(app).get('/api/projects').set('Authorization', `Bearer ${apiTok}`);
     expect(offSurface.status).toBe(403);
     expect(offSurface.body.code).toBe('API_TOKEN_V1_ONLY');
@@ -177,7 +177,7 @@ describe('API — auth & RBAC', () => {
       .set('Authorization', `Bearer ${apiTok}`)
       .send({ code: 'refusé' });
     expect(write.status).toBe(403);
-    // Un token d'API ne peut pas créer de token (pas d'escalade).
+    // An API token cannot create a token (no escalation).
     const escal = await request(app)
       .post('/api/auth/tokens')
       .set('Authorization', `Bearer ${apiTok}`)
@@ -187,7 +187,7 @@ describe('API — auth & RBAC', () => {
     await request(app)
       .delete(`/api/auth/tokens/${created.body.apiToken.id}`)
       .set('Authorization', `Bearer ${token}`);
-    // Sur `/api/v1`, sinon le 403 de surface masquerait la révocation qu'on veut prouver.
+    // On `/api/v1`, otherwise the surface 403 would mask the revocation we want to prove.
     const dead = await request(app).get('/api/v1/me').set('Authorization', `Bearer ${apiTok}`);
     expect(dead.status).toBe(403);
     expect(dead.body.code).toBe('API_TOKEN_INVALID');
@@ -195,24 +195,24 @@ describe('API — auth & RBAC', () => {
 });
 
 describe('API — studio & admin', () => {
-  it('GET /api/studio → studio configuré', async () => {
+  it('GET /api/studio → studio configured', async () => {
     const r = await request(app).get('/api/studio').set('Authorization', `Bearer ${token}`);
     expect(r.status).toBe(200);
     expect(r.body.studio).toBeTruthy();
   });
-  it('GET /api/admin/dashboard → métriques', async () => {
+  it('GET /api/admin/dashboard → metrics', async () => {
     const r = await request(app).get('/api/admin/dashboard').set('Authorization', `Bearer ${token}`);
     expect(r.status).toBe(200);
     expect(r.body.users).toBeTruthy();
   });
 });
 
-describe('API — pipeline complet + RBAC + média + commentaire', () => {
-  it('flux projet → shot → task → version → média (upload présigné) → commentaire', async () => {
+describe('API — full pipeline + RBAC + media + comment', () => {
+  it('project → shot → task → version → media (presigned upload) → comment flow', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
 
-    // Projet (admin) + membership de l'artiste pour qu'il y ait accès
+    // Project (admin) + the artist's membership so that they have access
     const proj = await request(app)
       .post('/api/projects')
       .set(auth)
@@ -223,7 +223,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       await request(app).post(`/api/projects/${projectId}/members`).set(auth).send({ userId: artistId });
     }
 
-    // RBAC : l'artiste ne peut pas créer de séquence
+    // RBAC: the artist cannot create a sequence
     const seqByArtist = await request(app)
       .post('/api/sequences')
       .set('Authorization', `Bearer ${artistToken}`)
@@ -242,7 +242,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ shotId: shot.body.shot.id, name: 'IT Task', type: 'COMPOSITING' });
     expect(task.status).toBe(201);
 
-    // Version par l'artiste
+    // Version by the artist
     const ver = await request(app)
       .post('/api/versions')
       .set('Authorization', `Bearer ${artistToken}`)
@@ -250,7 +250,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(ver.status).toBe(201);
     const versionId = ver.body.version.id;
 
-    // Upload présigné d'une image
+    // Presigned upload of an image
     const jpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(60)]);
     const up = await request(app)
       .post('/api/media/upload-url')
@@ -259,7 +259,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(up.status).toBe(201);
     const { mediaObjectId, uploadUrl } = up.body;
 
-    // PUT direct vers MinIO via l'URL présignée
+    // Direct PUT to MinIO via the presigned URL
     const putRes = await fetch(uploadUrl, {
       method: 'PUT',
       headers: { 'content-type': 'image/jpeg' },
@@ -267,19 +267,18 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     });
     expect(putRes.ok).toBe(true);
 
-    // Finalize (validation magic bytes → PROCESSING/READY)
+    // Finalize (magic bytes validation → PROCESSING/READY)
     const fin = await request(app)
       .post(`/api/media/${mediaObjectId}/finalize`)
       .set('Authorization', `Bearer ${artistToken}`);
     expect(fin.status).toBe(200);
     expect(fin.body.detectedExtension).toBe('.jpg');
 
-    // Liste des versions : `_count.media` reflète la visibilité réelle (10.C2). Ce scénario
-    // vérifiait que le brouillon comptait pour son uploader SEUL — il ne le peut plus :
-    // depuis la Phase 50 un média naît publié (mode brouillon éteint par défaut), donc les
-    // deux comptes valent 1. Le filtre de visibilité, lui, n'a pas changé et reste gardé par
-    // `VersionService.test.ts` (« un brouillon ne compte que pour son uploader »), qui pose
-    // un média non publié sans dépendre du parcours d'upload.
+    // Version list: `_count.media` reflects the real visibility (10.C2). This scenario checked that
+    // the draft counted only for its uploader: it no longer can. Since phase 50 a media is born
+    // published (draft mode off by default), so both accounts count 1. The visibility filter itself
+    // has not changed and remains covered by `VersionService.test.ts` ("a draft only counts for its
+    // uploader"), which sets up an unpublished media without depending on the upload flow.
     const versionsArtist = await request(app)
       .get(`/api/versions?taskId=${task.body.task.id}`)
       .set('Authorization', `Bearer ${artistToken}`);
@@ -288,7 +287,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const versionsAdmin = await request(app).get(`/api/versions?taskId=${task.body.task.id}`).set(auth);
     expect(versionsAdmin.body.versions.find((v: { id: number }) => v.id === versionId)._count.media).toBe(1);
 
-    // Commentaire sur le média
+    // Comment on the media
     const cmt = await request(app)
       .post('/api/comments')
       .set('Authorization', `Bearer ${artistToken}`)
@@ -302,7 +301,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(list.body.items.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('partage client : lien COMMENT → accès public + commentaire invité', async () => {
+  it('client sharing: COMMENT link → public access + guest comment', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
@@ -321,7 +320,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
     const versionId = ver.body.version.id;
 
-    // Média 3D (glTF) : finalize → READY immédiat (pas de worker requis pour être visible côté client)
+    // 3D media (glTF): finalize → READY immediately (no worker needed to be visible client-side)
     const glb = Buffer.concat([Buffer.from('glTF', 'ascii'), Buffer.alloc(60)]);
     const up = await request(app).post('/api/media/upload-url').set(auth).send({
       versionId,
@@ -338,9 +337,9 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const fin = await request(app).post(`/api/media/${up.body.mediaObjectId}/finalize`).set(auth);
     expect(fin.body.media.status).toBe('READY');
     await request(app).patch(`/api/versions/${versionId}`).set(auth).send({ status: 'PUBLISHED' });
-    // Le média est publié d'office depuis la Phase 50 (`draftMode` désactivé par défaut) :
-    // il est déjà visible côté client. L'appel est conservé tel quel — il vérifie au passage
-    // que publier un média DÉJÀ publié reste un 200 sans effet, ce dont dépend l'API v1.
+    // The media is published by default since phase 50 (`draftMode` disabled by default): it is
+    // already visible client-side. The call is kept as-is: it also checks that publishing an
+    // ALREADY published media remains a 200 with no effect, which the v1 API depends on.
     const mediaPub = await request(app).post(`/api/media/${up.body.mediaObjectId}/publish`).set(auth);
     expect(mediaPub.status).toBe(200);
 
@@ -353,7 +352,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(pub.body.media.length).toBeGreaterThanOrEqual(1);
     expect(pub.body.shareAuth).toBeTruthy();
 
-    // 35.C : les sous-routes exigent la session de partage émise par le GET initial.
+    // 35.C: the sub-routes require the sharing session issued by the initial GET.
     const noAuth = await request(app)
       .post(`/api/client/${tk}/media/${up.body.mediaObjectId}/comments`)
       .send({ guestName: 'Client IT', content: 'Sans session' });
@@ -365,7 +364,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ guestName: 'Client IT', content: 'Commentaire invité' });
     expect(guest.status).toBe(201);
 
-    // Lien durci (35.C) : mot de passe + limite de vues.
+    // Hardened link (35.C): password + view limit.
     const hard = await request(app)
       .post('/api/share')
       .set(auth)
@@ -388,12 +387,12 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(opened.status).toBe(200);
     expect(opened.body.locked).toBe(false);
 
-    // maxViews=1 : une nouvelle session (nouveau unlock) est refusée, l'existante survit.
+    // maxViews=1: a new session (new unlock) is refused, the existing one survives.
     const again = await request(app).post(`/api/client/${htk}/unlock`).send({ password: 'secret-it' });
     expect(again.status).toBe(410);
   });
 
-  it('upload multipart résumable + dédup par hash (37.A/37.B)', async () => {
+  it('resumable multipart upload + dedup by hash (37.A/37.B)', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
@@ -410,11 +409,11 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
-    // GLB de 17 Mo (> seuil multipart 16 Mo) : 2 parts, pas de worker (READY au finalize).
-    // Le contenu porte un marqueur propre au run : à octets identiques, la dédup (37.B)
-    // reconnaîtrait dès le premier `init` le média laissé par le passage précédent et
-    // renverrait une copie serveur — le chemin multipart ne serait alors jamais exercé et
-    // la demande de parts échouerait (média sans `multipartUploadId`).
+    // 17 MB GLB (> 16 MB multipart threshold): 2 parts, no worker (READY at finalize).
+    // The content carries a marker unique to the run: with identical bytes, dedup (37.B) would
+    // recognise from the first `init` the media left by the previous run and return a server copy.
+    // The multipart path would then never be exercised, and the request for parts would fail
+    // (media without `multipartUploadId`).
     const { createHash, randomUUID } = await import('node:crypto');
     const glb = Buffer.concat([Buffer.from('glTF', 'ascii'), Buffer.alloc(17 * 1024 * 1024 - 4)]);
     glb.write(randomUUID(), 4, 'ascii');
@@ -445,7 +444,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       return (r.headers.get('etag') ?? '').replaceAll('"', '');
     };
 
-    // Part 1 envoyée, puis « coupure » : un nouvel init retrouve l'upload et la part reçue.
+    // Part 1 sent, then "cut off": a new init finds the upload and the part received.
     const etag1 = await putPart(1);
     const resume = await request(app).post('/api/media/multipart/init').set(auth).send(base);
     expect(resume.body.resumed).toBe(true);
@@ -466,7 +465,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const fin = await request(app).post(`/api/media/${mediaObjectId}/finalize`).set(auth);
     expect(fin.body.media.status).toBe('READY');
 
-    // Dédup : même contenu sur une autre version → aucun octet à transférer.
+    // Dedup: same content on another version → no bytes to transfer.
     const ver2 = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
     const dedup = await request(app)
       .post('/api/media/multipart/init')
@@ -477,15 +476,15 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const fin2 = await request(app).post(`/api/media/${dedup.body.mediaObjectId}/finalize`).set(auth);
     expect(fin2.body.media.status).toBe('READY');
 
-    // Les deux médias pèsent 17 Mo chacun dans le stockage : la purge (DB + objet) évite
-    // qu'un passage sur la base de développement en laisse autant derrière lui.
+    // Both media weigh 17 MB each in storage: the purge (DB + object) prevents a run on the
+    // development database from leaving that much behind.
     for (const id of [mediaObjectId, dedup.body.mediaObjectId as number]) {
       const purged = await request(app).delete(`/api/media/${id}/purge`).set(auth);
       expect(purged.status).toBe(204);
     }
   });
 
-  it('miniature média (10.G) : POST /thumbnail stocke une image et alimente thumbnailUrl', async () => {
+  it('media thumbnail (10.G): POST /thumbnail stores an image and feeds thumbnailUrl', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
@@ -503,7 +502,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
-    // Média splat (PLY) : finalize → READY immédiat (aucun worker).
+    // Splat media (PLY): finalize → READY immediately (no worker).
     const ply = Buffer.concat([Buffer.from('ply\n', 'ascii'), Buffer.alloc(60)]);
     const up = await request(app).post('/api/media/upload-url').set(auth).send({
       versionId: ver.body.version.id,
@@ -521,26 +520,26 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const fin = await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
     expect(fin.body.media.status).toBe('READY');
 
-    // data URL non-image → 400.
+    // non-image data URL → 400.
     const bad = await request(app)
       .post(`/api/media/${mediaId}/thumbnail`)
       .set(auth)
       .send({ dataUrl: 'data:text/plain;base64,aGVsbG8=' });
     expect(bad.status).toBe(400);
 
-    // JPEG minimal (magic FF D8 FF) → 200 + thumbnailUrl présignée.
+    // Minimal JPEG (magic FF D8 FF) → 200 + presigned thumbnailUrl.
     const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(20)]);
     const dataUrl = `data:image/jpeg;base64,${jpeg.toString('base64')}`;
     const thumb = await request(app).post(`/api/media/${mediaId}/thumbnail`).set(auth).send({ dataUrl });
     expect(thumb.status).toBe(200);
     expect(thumb.body.thumbnailUrl).toBeTruthy();
 
-    // Le détail média expose désormais la miniature.
+    // The media detail now exposes the thumbnail.
     const detail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(detail.body.thumbnailUrl).toBeTruthy();
 
-    // Images de référence liées à un commentaire : ajout par l'auteur, exposées avec
-    // leur commentId dans le détail, commentaire invalide refusé, suppression OK.
+    // Reference images linked to a comment: added by the author, exposed with their commentId in
+    // the detail, invalid comment refused, deletion OK.
     const badRef = await request(app)
       .post(`/api/media/${mediaId}/references`)
       .set(auth)
@@ -570,7 +569,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .set(auth);
     expect(delRef.status).toBe(204);
 
-    // Miniature = présentation : reste modifiable après publication (exception au verrou).
+    // Thumbnail = presentation: stays editable after publication (exception to the lock).
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
     const thumbAfterPublish = await request(app)
       .post(`/api/media/${mediaId}/thumbnail`)
@@ -579,7 +578,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(thumbAfterPublish.status).toBe(200);
   });
 
-  it('éditions splat (10.G) : PATCH /splat-edits + masque, verrouillés à la publication', async () => {
+  it('splat edits (10.G): PATCH /splat-edits + mask, locked on publication', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
@@ -597,15 +596,15 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
-    // Studio en mode BROUILLON le temps de ce test : l'écriture des éditions « pour tout le
-    // monde » ne vit qu'avant publication (verrou Phase 11, refermé au lot 14). `draftMode` est
-    // éteint par défaut depuis la Phase 50 — un média naît publié —, et le réglage est rendu juste
-    // avant la publication explicite, pour que la suite retrouve le comportement par défaut.
+    // Studio in DRAFT mode for the duration of this test: writing edits "for everyone" only lives
+    // before publication (Phase 11 lock, closed in batch 14). `draftMode` is off by default since
+    // phase 50 — a media is born published — and the setting is applied just before the explicit
+    // publication, so that the suite gets back the default behaviour.
     const setDraftMode = (value: string) =>
       request(app).put('/api/studio/settings').set(auth).send({ key: 'draftMode', value });
     expect((await setDraftMode('true')).status).toBe(200);
 
-    // Média splat (PLY) → READY.
+    // Splat media (PLY) → READY.
     const ply = Buffer.concat([Buffer.from('ply\n', 'ascii'), Buffer.alloc(60)]);
     const up = await request(app).post('/api/media/upload-url').set(auth).send({
       versionId: ver.body.version.id,
@@ -621,13 +620,13 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     });
     const mediaId = up.body.mediaObjectId;
     await request(app).post(`/api/media/${mediaId}/finalize`).set(auth);
-    // Le média est bien un BROUILLON : c'est l'état de départ de tout ce bloc. Sans le réglage
-    // posé plus haut, il naîtrait publié et la première écriture répondrait 403 — ce qui n'aurait
-    // rien dit du verrou, seulement du mode d'un studio.
+    // The media is indeed a DRAFT: that is the starting state of this whole block. Without the
+    // setting applied above, it would be born published and the first write would answer 403 —
+    // which would say nothing about the lock, only about a studio's mode.
     const draftDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(draftDetail.body.media.published).toBe(false);
 
-    // Éditions invalides (échelle négative) → 400.
+    // Invalid edits (negative scale) → 400.
     const bad = await request(app)
       .patch(`/api/media/${mediaId}/splat-edits`)
       .set(auth)
@@ -639,7 +638,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       });
     expect(bad.status).toBe(400);
 
-    // Éditions valides (transform TRS + volume de crop) → 200 + détail média les expose.
+    // Valid edits (TRS transform + crop volume) → 200 + media detail exposes them.
     const edits = {
       transform: {
         position: [1, 0, -2],
@@ -662,8 +661,8 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(detail.body.splatEdits).toEqual(edits);
     expect(detail.body.splatMaskUrl).toBeNull();
 
-    // Masque de suppression (bitset base64) → URL présignée exposée + compte.
-    const mask = Buffer.from([0b00000101, 0b00000010]); // splats 0, 2 et 9 masqués
+    // Deletion mask (base64 bitset) → presigned URL exposed + count.
+    const mask = Buffer.from([0b00000101, 0b00000010]); // splats 0, 2 and 9 masked
     const putMask = await request(app)
       .put(`/api/media/${mediaId}/splat-mask`)
       .set(auth)
@@ -674,13 +673,13 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(withMask.body.splatMaskUrl).toBeTruthy();
     expect(withMask.body.splatMaskCount).toBe(3);
 
-    // Effacement du masque → détail sans URL.
+    // Clearing the mask → detail without URL.
     await request(app).delete(`/api/media/${mediaId}/splat-mask`).set(auth);
     const noMask = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(noMask.body.splatMaskUrl).toBeNull();
 
-    // Transformations de sous-ensembles (Phase 28) : ops binaires → URL présignée + compte.
-    const subsetOps = Buffer.alloc(148); // en-tête (8) + 1 op : 16×float64 (128) + n (4) + 2 indices (8)
+    // Subset transforms (Phase 28): binary ops → presigned URL + count.
+    const subsetOps = Buffer.alloc(148); // header (8) + 1 op: 16×float64 (128) + n (4) + 2 indices (8)
     subsetOps.writeUInt32LE(1, 0); // version
     subsetOps.writeUInt32LE(1, 4); // 1 op
     const putSubset = await request(app)
@@ -696,9 +695,9 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const noSubset = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(noSubset.body.splatSubsetUrl).toBeNull();
 
-    // Présentation persistée (10.G-V5) : caméra + DoF + animation keyframe → détail l'expose.
+    // Persisted presentation (10.G-V5): camera + DoF + keyframe animation → detail exposes it.
     const presentation = {
-      // aspect + roll persistés (Phase 17) : le cadre fixe et le tilt sont rejoués pour tous.
+      // aspect + roll persisted (Phase 17): the fixed frame and the tilt are replayed for everyone.
       camera: {
         position: { x: 0, y: 1, z: 5 },
         target: { x: 0, y: 0, z: 0 },
@@ -707,7 +706,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
         roll: 0.15,
       },
       dof: { focalDistance: 4.2, apertureAngle: 0.02 },
-      // Animation caméra F-curves v2 (Phase 17) : canaux position X + focale.
+      // Camera animation F-curves v2 (Phase 17): position X + focal length channels.
       cameraAnim: {
         version: 2 as const,
         loop: true,
@@ -729,7 +728,7 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(putPres.status).toBe(200);
     const withPres = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(withPres.body.splatPresentation).toEqual(presentation);
-    // Présentation invalide (mode de tangente inconnu) → 400.
+    // Invalid presentation (unknown tangent mode) → 400.
     const badPres = await request(app)
       .patch(`/api/media/${mediaId}/splat-presentation`)
       .set(auth)
@@ -740,14 +739,14 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       });
     expect(badPres.status).toBe(400);
 
-    // Publication → les éditions splat « pour tout le monde » sont REFUSÉES (Phase 50, lot 14).
-    // Ce bloc attendait des 200 : les éditions avaient été ouvertes après publication, ce qui
-    // laissait paraître un bouton « Enregistrer » permanent dans un studio sans brouillons et
-    // réécrivait le nuage sous les yeux de ceux qui le commentaient. Il est réécrit sciemment :
-    // après publication, une édition de nuage ne part plus que dans un commentaire.
+    // Publication → "for everyone" splat edits are REFUSED (Phase 50, batch 14).
+    // This block used to expect 200s: the edits had been opened after publication, which exposed a
+    // permanent "Save" button in a studio without drafts and rewrote the cloud under the eyes of
+    // those commenting on it. It is deliberately rewritten: after publication, a cloud edit only
+    // travels inside a comment.
     //
-    // État de départ : éditions et masque écrits AVANT publication (bloc précédent) — c'est
-    // précisément ce que le verrou doit laisser intact.
+    // Starting state: edits and mask written BEFORE publication (previous block) — precisely what
+    // the lock must leave intact.
     expect((await setDraftMode('false')).status).toBe(200);
     await request(app).post(`/api/media/${mediaId}/publish`).set(auth);
     const postPublish = await request(app)
@@ -763,11 +762,11 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     expect(maskAfterPublish.status).toBe(403);
     const clearAfterPublish = await request(app).delete(`/api/media/${mediaId}/splat-mask`).set(auth);
     expect(clearAfterPublish.status).toBe(403);
-    // Le refus n'a rien effacé : les éditions écrites avant publication sont toujours là.
+    // The refusal erased nothing: the edits written before publication are still there.
     const editedDetail = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(editedDetail.body.splatEdits).toEqual(edits);
 
-    // La présentation (mise en scène, V5) reste modifiable elle aussi.
+    // The presentation (staging, V5) remains editable as well.
     const presAfterPublish = await request(app)
       .patch(`/api/media/${mediaId}/splat-presentation`)
       .set(auth)
@@ -776,13 +775,12 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
     const cleared = await request(app).get(`/api/media/${mediaId}`).set(auth);
     expect(cleared.body.splatPresentation).toBeNull();
 
-    // ---- Ce que devient l'édition après publication : une PROPOSITION dans un commentaire.
+    // ---- What the edit becomes after publication: a PROPOSAL inside a comment.
     //
-    // Le geste voyage entier — transformation et volumes dans la part, suppressions et ops de
-    // sous-ensemble en pièces jointes citées par leur clé. Trois choses se vérifient ici, et
-    // aucune ne se voit dans un test unitaire : le dépôt présigné accepte le binaire, la
-    // référence est refusée si elle n'est pas une pièce jointe du commentaire, et l'objet
-    // QUITTE le stockage avec le commentaire.
+    // The whole gesture travels — transform and volumes in the part, deletions and subset ops as
+    // attachments referenced by their key. Three things are checked here, and none can be seen in a
+    // unit test: the presigned upload accepts the binary, the reference is refused if it is not an
+    // attachment of the comment, and the object LEAVES storage with the comment.
     const presign = await request(app)
       .post('/api/comments/attachments/presign')
       .set(auth)
@@ -802,8 +800,8 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       volumes: edits.volumes,
       mask: { key: blobKey, count: 3 },
     };
-    // Référence non jointe : refusée. C'est ce refus qui garantit qu'aucun objet ne peut être
-    // cité sans être ramassé — la fuite déjà fermée pour les images de commentaire.
+    // Unattached reference: refused. This refusal is what guarantees that no object can be cited
+    // without being collected — the leak already closed for comment images.
     const unattached = await request(app)
       .post('/api/comments')
       .set(auth)
@@ -822,8 +820,8 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       });
     expect(withProposal.status).toBe(201);
     const proposalId = withProposal.body.comment.id as number;
-    // La pièce revient présignée : c'est par elle, et par elle seule, que le viewer du lecteur
-    // télécharge le masque proposé.
+    // The attachment comes back presigned: it is through it, and through it alone, that the player's
+    // viewer downloads the proposed mask.
     expect(withProposal.body.comment.attachments[0].url).toBeTruthy();
     expect((await storage.statObject(blobKey)).size).toBe(mask.length);
 
@@ -833,11 +831,11 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
   });
 
   /**
-   * La découpe vidéo a été retirée (Phase 50, lot 4). Ce test tenait l'ancien comportement —
-   * poser, effacer, se heurter au verrou de publication. Il est réécrit sur ce qui reste :
-   * la route n'existe plus, et une coupe **historique** continue d'être lue et servie.
+   * Video cut was removed (Phase 50, batch 4). This test used to hold the former behaviour:
+   * setting, erasing, hitting the publication lock. It is rewritten around what remains: the route
+   * no longer exists, and a **historical** cut keeps being read and served.
    */
-  it('découpe retirée : plus de route, mais une coupe historique reste servie', async () => {
+  it('cut removed: no route anymore, but a historical cut is still served', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const proj = await request(app)
@@ -854,8 +852,8 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       .send({ shotId: shot.body.shot.id, name: 'T', type: 'OTHER' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
-    // Vidéo MP4 minimale (magic bytes 'ftyp') → PROCESSING (transcode), puis READY forcé :
-    // le worker FFmpeg est un process séparé, absent des tests d'intégration.
+    // Minimal MP4 video (magic bytes 'ftyp') → PROCESSING (transcode), then READY forced:
+    // the FFmpeg worker is a separate process, absent from the integration tests.
     const mp4 = Buffer.concat([
       Buffer.from([0, 0, 0, 0x18]),
       Buffer.from('ftypisom', 'ascii'),
@@ -874,22 +872,22 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
       body: mp4,
     });
     const mediaId = up.body.mediaObjectId;
-    // Pas de finalize ici : il enqueuerait un job transcode que le worker de la stack docker
-    // traiterait pendant le test (réécriture du metadata → perte de la coupe simulée).
+    // No finalize here: it would enqueue a transcode job that the docker stack's worker would
+    // process during the test (rewriting the metadata → loss of the simulated cut).
     await prisma.mediaObject.update({
       where: { id: mediaId },
       data: { status: MediaStatus.READY, metadata: { fps: 24 } },
     });
 
-    // La route de découpe n'est plus montée : plus rien ne peut poser de coupe.
+    // The cut route is no longer mounted: nothing can set a cut anymore.
     const gone = await request(app)
       .patch(`/api/media/${mediaId}/trim`)
       .set(auth)
       .send({ trim: { inFrame: 10, outFrame: 50 } });
     expect(gone.status).toBe(404);
 
-    // Coupe historique, telle qu'un média coupé avant le retrait la porte en base : elle
-    // reste exposée et le proxy coupé reste celui que la review joue.
+    // Historical cut, as a media cut before the removal stores it in the database: it stays exposed,
+    // and the cut proxy remains the one the review plays.
     await prisma.mediaObject.update({
       where: { id: mediaId },
       data: {
@@ -908,8 +906,8 @@ describe('API — pipeline complet + RBAC + média + commentaire', () => {
   });
 });
 
-describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
-  it('compte les shots hors séquence et les filtre via sequenceId=none', async () => {
+describe('API — sidebar tree (sequences + shots outside any sequence)', () => {
+  it('counts shots outside a sequence and filters them via sequenceId=none', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
 
@@ -933,7 +931,7 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
     expect(inSeq.status).toBe(201);
     expect(orphan.status).toBe(201);
 
-    // GET /api/sequences → compteur de shots hors séquence
+    // GET /api/sequences → count of shots outside a sequence
     const seqs = await request(app).get(`/api/sequences?projectId=${projectId}`).set(auth);
     expect(seqs.status).toBe(200);
     expect(seqs.body.unsequencedShots).toBe(1);
@@ -941,12 +939,12 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
       1,
     );
 
-    // GET /api/shots?sequenceId=none → uniquement le shot orphelin
+    // GET /api/shots?sequenceId=none → only the orphan shot
     const orphans = await request(app).get(`/api/shots?projectId=${projectId}&sequenceId=none`).set(auth);
     expect(orphans.status).toBe(200);
     expect(orphans.body.items.map((s: { id: number }) => s.id)).toEqual([orphan.body.shot.id]);
 
-    // GET /api/shots?sequenceId=<id> → uniquement le shot de la séquence
+    // GET /api/shots?sequenceId=<id> → only the shot of the sequence
     const bySeq = await request(app)
       .get(`/api/shots?projectId=${projectId}&sequenceId=${seq.body.sequence.id}`)
       .set(auth);
@@ -955,13 +953,13 @@ describe('API — arbre sidebar (séquences + shots hors séquence)', () => {
   });
 });
 
-describe('API — recherche globale (/api/search)', () => {
-  it('trouve les entités par nom/code et applique le RBAC par membership', async () => {
+describe('API — global search (/api/search)', () => {
+  it('finds entities by name/code and applies RBAC by membership', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
-    const needle = `Zx${suffix}`; // motif improbable, unique au run
+    const needle = `Zx${suffix}`; // improbable pattern, unique to the run
 
-    // Pipeline dans un projet SANS membership artiste
+    // Pipeline in a project WITHOUT the artist's membership
     const proj = await request(app)
       .post('/api/projects')
       .set(auth)
@@ -980,7 +978,7 @@ describe('API — recherche globale (/api/search)', () => {
       .set(auth)
       .send({ shotId: shot.body.shot.id, name: `Task ${needle}`, type: 'COMPOSITING' });
 
-    // Admin : toutes les entités remontent (insensible à la casse)
+    // Admin: all entities come up (case-insensitive)
     const r = await request(app).get(`/api/search?q=${needle.toLowerCase()}`).set(auth);
     expect(r.status).toBe(200);
     expect(r.body.projects.map((p: { id: number }) => p.id)).toContain(projectId);
@@ -988,7 +986,7 @@ describe('API — recherche globale (/api/search)', () => {
     expect(r.body.shots.length).toBe(1);
     expect(r.body.tasks.length).toBe(1);
 
-    // Artiste non membre : aucune entité de ce projet ne fuit
+    // Non-member artist: no entity of this project leaks
     const rArtist = await request(app)
       .get(`/api/search?q=${needle}`)
       .set('Authorization', `Bearer ${artistToken}`);
@@ -998,18 +996,18 @@ describe('API — recherche globale (/api/search)', () => {
     expect(rArtist.body.shots).toEqual([]);
     expect(rArtist.body.tasks).toEqual([]);
 
-    // q vide → 400 (Zod)
+    // empty q → 400 (Zod)
     const empty = await request(app).get('/api/search?q=').set(auth);
     expect(empty.status).toBe(400);
   });
 });
 
-describe('API — contexte breadcrumb (/api/context)', () => {
-  it('résout la chaîne projet → séquence → shot → tâche → version, applique le RBAC et 404 sinon', async () => {
+describe('API — breadcrumb context (/api/context)', () => {
+  it('resolves the chain project → sequence → shot → task → version, applies RBAC and 404 otherwise', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
 
-    // Pipeline minimal : projet (SANS membership artiste) + séquence + shot + tâche + version
+    // Minimal pipeline: project (WITHOUT artist membership) + sequence + shot + task + version
     const proj = await request(app)
       .post('/api/projects')
       .set(auth)
@@ -1029,7 +1027,7 @@ describe('API — contexte breadcrumb (/api/context)', () => {
       .send({ shotId: shot.body.shot.id, name: 'Task ctx', type: 'COMPOSITING' });
     const ver = await request(app).post('/api/versions').set(auth).send({ taskId: task.body.task.id });
 
-    // Chaîne complète depuis la version
+    // Full chain from the version
     const ctx = await request(app).get(`/api/context/version/${ver.body.version.id}`).set(auth);
     expect(ctx.status).toBe(200);
     expect(ctx.body.context.project.id).toBe(projectId);
@@ -1038,18 +1036,18 @@ describe('API — contexte breadcrumb (/api/context)', () => {
     expect(ctx.body.context.task.id).toBe(task.body.task.id);
     expect(ctx.body.context.version.id).toBe(ver.body.version.id);
 
-    // Depuis le shot : pas de task/version dans la chaîne
+    // From the shot: no task/version in the chain
     const ctxShot = await request(app).get(`/api/context/shot/${shot.body.shot.id}`).set(auth);
     expect(ctxShot.status).toBe(200);
     expect(ctxShot.body.context.task).toBeUndefined();
 
-    // RBAC : l'artiste n'est pas membre du projet → 403
+    // RBAC: the artist is not a member of the project → 403
     const forbidden = await request(app)
       .get(`/api/context/task/${task.body.task.id}`)
       .set('Authorization', `Bearer ${artistToken}`);
     expect(forbidden.status).toBe(403);
 
-    // Entité inconnue → 404 ; entité invalide → 400 (Zod)
+    // Unknown entity → 404; invalid entity → 400 (Zod)
     const missing = await request(app).get('/api/context/shot/999999').set(auth);
     expect(missing.status).toBe(404);
     const invalid = await request(app).get('/api/context/nimporte/1').set(auth);
@@ -1057,13 +1055,13 @@ describe('API — contexte breadcrumb (/api/context)', () => {
   });
 });
 
-describe('API — notifications (assignation de tâche)', () => {
-  it("notifie l'assigné, expose le compteur non-lus, marque lu / tout lu, scope par utilisateur", async () => {
+describe('API — notifications (task assignment)', () => {
+  it("notifies the assignee, exposes the unread counter, marks read / all read, scoped per user", async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const artistAuth = { Authorization: `Bearer ${artistToken}` };
 
-    // Projet + membership de l'artiste
+    // Project + artist membership
     const proj = await request(app)
       .post('/api/projects')
       .set(auth)
@@ -1071,7 +1069,7 @@ describe('API — notifications (assignation de tâche)', () => {
     const projectId = proj.body.project.id;
     await request(app).post(`/api/projects/${projectId}/members`).set(auth).send({ userId: artistId });
 
-    // Tâche assignée à l'artiste (par l'admin) → notification pour l'artiste
+    // Task assigned to the artist (by the admin) → notification for the artist
     const shot = await request(app)
       .post('/api/shots')
       .set(auth)
@@ -1083,7 +1081,7 @@ describe('API — notifications (assignation de tâche)', () => {
     expect(task.status).toBe(201);
     const taskId = task.body.task.id;
 
-    // L'artiste voit la notification : type navigable + référence = tâche + compteur non-lus
+    // The artist sees the notification: navigable type + reference = task + unread counter
     const listArtist = await request(app).get('/api/notifications').set(artistAuth);
     expect(listArtist.status).toBe(200);
     const notif = listArtist.body.notifications.find(
@@ -1094,7 +1092,7 @@ describe('API — notifications (assignation de tâche)', () => {
     expect(notif.isRead).toBe(false);
     expect(listArtist.body.unread).toBeGreaterThanOrEqual(1);
 
-    // Scope par utilisateur : l'admin (auteur de l'assignation) n'est pas notifié
+    // Per-user scope: the admin (author of the assignment) is not notified
     const listAdmin = await request(app).get('/api/notifications').set(auth);
     expect(
       listAdmin.body.notifications.some(
@@ -1102,14 +1100,14 @@ describe('API — notifications (assignation de tâche)', () => {
       ),
     ).toBe(false);
 
-    // RBAC : l'admin ne peut pas marquer la notification de l'artiste (404) ; l'artiste oui
+    // RBAC: the admin cannot mark the artist's notification (404); the artist can
     const foreign = await request(app).patch(`/api/notifications/${notif.id}/read`).set(auth);
     expect(foreign.status).toBe(404);
     const read = await request(app).patch(`/api/notifications/${notif.id}/read`).set(artistAuth);
     expect(read.status).toBe(200);
     expect(read.body.notification.isRead).toBe(true);
 
-    // POST read-all → plus aucune non-lue pour l'artiste
+    // POST read-all → no unread left for the artist
     const readAll = await request(app).post('/api/notifications/read-all').set(artistAuth);
     expect(readAll.status).toBe(200);
     const after = await request(app).get('/api/notifications').set(artistAuth);

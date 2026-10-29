@@ -4,13 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Recherche plein texte sur les notes de review.
+ * Full-text search over review notes.
  *
- * Deux invariants s'y jouent : la requête ne doit **jamais** concaténer la saisie dans le
- * texte SQL (toute valeur passe en paramètre lié), et le cloisonnement doit être porté par
- * la clause `WHERE` elle-même. Le `$queryRaw` simulé est rejoué avec la vraie balise
- * `Prisma.sql` : le test lit donc le SQL final et les paramètres exactement tels que Prisma
- * les enverrait.
+ * Two invariants play out here: the query must **never** concatenate the input into the SQL text (every value goes through a bound parameter), and the
+ * partitioning must be carried by the `WHERE` clause itself. The simulated `$queryRaw` is replayed with the real `Prisma.sql` tag: the test thus reads the
+ * final SQL and the parameters exactly as Prisma would send them.
  */
 
 vi.mock('./prisma', () => ({ prisma: { $queryRaw: vi.fn() } }));
@@ -35,7 +33,7 @@ beforeEach(() => {
   }) as never);
 });
 
-/** SQL final, placeholders numérotés (`$1`) — ce que Prisma envoie à Postgres. */
+/** Final SQL, numbered placeholders (`$1`) — what Prisma sends to Postgres. */
 const sql = (): string => {
   if (!captured) throw new Error('no query captured');
   return captured.text;
@@ -43,41 +41,41 @@ const sql = (): string => {
 const values = (): unknown[] => (captured ? captured.values : []);
 
 describe('searchTokens / toTsQuery', () => {
-  it('réduit la saisie à des tokens de lettres et de chiffres, en préfixe', () => {
+  it('reduces the input to tokens of letters and digits, as prefixes', () => {
     expect(searchTokens('Enlever le REFLET')).toEqual(['enlever', 'le', 'reflet']);
     expect(toTsQuery('enlever le reflet')).toBe('enlever:* & le:* & reflet:*');
   });
 
-  it('neutralise tout opérateur de tsquery donné en saisie', () => {
+  it('neutralises any tsquery operator given as input', () => {
     expect(toTsQuery("reflet & !fumée | (a <-> b) :* ' ")).toBe('reflet:* & fumée:* & a:* & b:*');
   });
 
-  it('rend null quand rien n’est cherchable', () => {
+  it('returns null when nothing is searchable', () => {
     expect(toTsQuery('  ??? ')).toBeNull();
     expect(toTsQuery('')).toBeNull();
   });
 
-  it('borne le nombre de tokens : une phrase collée n’est pas une requête', () => {
+  it('bounds the number of tokens: a pasted sentence is not a query', () => {
     expect(searchTokens('a b c d e f g h i j k')).toHaveLength(8);
   });
 });
 
 describe('htmlToPlainText / excerptAround', () => {
-  it('rend le texte de l’éditeur riche, balises et entités défaites', () => {
+  it('returns the rich editor text, tags and entities undone', () => {
     expect(htmlToPlainText('<p>Enlever&nbsp;le <strong>reflet</strong> &amp; la fumée</p>')).toBe(
       'Enlever le reflet & la fumée',
     );
   });
 
-  it('ne laisse passer ni script ni style', () => {
+  it('lets neither script nor style through', () => {
     expect(htmlToPlainText('<p>ok</p><script>alert(1)</script>')).toBe('ok');
   });
 
-  it('rend un contenu court tel quel', () => {
+  it('returns a short content as-is', () => {
     expect(excerptAround('<p>Enlever le reflet</p>', ['reflet'])).toBe('Enlever le reflet');
   });
 
-  it('centre l’extrait sur le terme trouvé et signale la troncature', () => {
+  it('centres the excerpt on the term found and flags the truncation', () => {
     const long = `<p>${'bla '.repeat(60)}reflet ${'bla '.repeat(60)}</p>`;
     const out = excerptAround(long, ['reflet']);
     expect(out).toContain('reflet');
@@ -86,49 +84,49 @@ describe('htmlToPlainText / excerptAround', () => {
     expect(out.length).toBeLessThanOrEqual(162);
   });
 
-  it('retombe sur le début du texte quand le terme n’y figure pas littéralement', () => {
+  it('falls back on the beginning of the text when the term does not appear literally in it', () => {
     const long = `<p>${'mot '.repeat(80)}</p>`;
     expect(excerptAround(long, ['reflet']).startsWith('mot')).toBe(true);
   });
 });
 
-describe('searchComments — requête paramétrée', () => {
-  it('n’interroge pas la base quand la saisie ne contient aucun token', async () => {
+describe('searchComments — parameterised query', () => {
+  it('does not query the database when the input contains no token', async () => {
     expect(await searchComments('???', { userId: 1, role: Role.ADMIN, projectIds: null, limit: 8 })).toEqual(
       [],
     );
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 
-  it('n’interroge pas la base pour un compte sans aucun projet', async () => {
+  it('does not query the database for an account without any project', async () => {
     expect(
       await searchComments('reflet', { userId: 1, role: Role.ARTIST, projectIds: [], limit: 8 }),
     ).toEqual([]);
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 
-  it('passe la saisie en paramètre lié, jamais dans le texte SQL', async () => {
+  it('passes the input as a bound parameter, never in the SQL text', async () => {
     await searchComments("reflet' OR 1=1 --", { userId: 4, role: Role.ADMIN, projectIds: null, limit: 8 });
     expect(sql()).not.toContain('OR 1=1');
     expect(values()).toContain('reflet:* & or:* & 1:* & 1:*');
   });
 
-  it('réutilise à l’identique l’expression indexée en GIN', async () => {
+  it('reuses the GIN-indexed expression identically', async () => {
     await searchComments('reflet', { userId: 4, role: Role.ADMIN, projectIds: null, limit: 8 });
     expect(sql()).toContain(`to_tsvector('simple', c."content") @@ to_tsquery('simple', $1)`);
   });
 
-  it('borne le nombre de lignes rendues', async () => {
+  it('bounds the number of rows returned', async () => {
     await searchComments('reflet', { userId: 4, role: Role.ADMIN, projectIds: null, limit: 8 });
     expect(sql()).toContain('LIMIT');
     expect(values()).toContain(8);
   });
 });
 
-describe('searchComments — cloisonnement', () => {
+describe('searchComments — partitioning', () => {
   const scope = { userId: 4, role: Role.ARTIST, projectIds: [3, 9], limit: 8 };
 
-  it('exclut la corbeille à chaque étage du chemin d’accès', async () => {
+  it('excludes the trash at every level of the access path', async () => {
     await searchComments('reflet', scope);
     for (const clause of [
       'm."deletedAt" IS NULL',
@@ -141,42 +139,42 @@ describe('searchComments — cloisonnement', () => {
     }
   });
 
-  it('borne un rôle non global à ses projets, identifiants passés en paramètres', async () => {
+  it('bounds a non-global role to their projects, identifiers passed as parameters', async () => {
     await searchComments('reflet', scope);
     expect(sql()).toMatch(/p\."id" IN \(\$\d+,\$\d+\)/);
     expect(values()).toEqual(expect.arrayContaining([3, 9]));
   });
 
-  it('n’ajoute aucun filtre de projet pour un rôle global', async () => {
+  it('adds no project filter for a global role', async () => {
     await searchComments('reflet', { ...scope, role: Role.ADMIN, projectIds: null });
     expect(sql()).not.toContain('p."id" IN');
   });
 
-  it('ne montre les brouillons qu’à leur déposant', async () => {
+  it('shows drafts only to their uploader', async () => {
     await searchComments('reflet', scope);
     expect(sql()).toMatch(/m\."published" = true OR m\."uploaderId" = \$\d+/);
     expect(values()).toContain(4);
   });
 
-  it('refuse à un CLIENT les brouillons et les notes internes', async () => {
+  it('refuses a CLIENT the drafts and the internal notes', async () => {
     await searchComments('reflet', { ...scope, role: Role.CLIENT });
     expect(sql()).toContain('c."isVisibleToClient" = true');
     expect(sql()).not.toContain('m."uploaderId"');
     expect(sql()).toContain('m."published" = true');
   });
 
-  it('n’ajoute la clause CLIENT à personne d’autre', async () => {
+  it('adds the CLIENT clause to nobody else', async () => {
     await searchComments('reflet', scope);
     expect(sql()).not.toContain('isVisibleToClient');
   });
 
-  it('ne sélectionne jamais l’adresse de l’auteur', async () => {
+  it('never selects the address of the author', async () => {
     await searchComments('reflet', scope);
     expect(sql()).not.toContain('"email"');
   });
 });
 
-describe('searchComments — mise en forme', () => {
+describe('searchComments — formatting', () => {
   const scope = { userId: 4, role: Role.ADMIN, projectIds: null, limit: 8 };
   const base = {
     id: 51,
@@ -193,7 +191,7 @@ describe('searchComments — mise en forme', () => {
     originalName: 'SH0120_comp_v012.mov',
   };
 
-  it('rend l’extrait, l’auteur et le chemin lisible', async () => {
+  it('returns the excerpt, the author and the readable path', async () => {
     rows = [{ ...base, username: 'ana' }];
     const [hit] = await searchComments('reflet', scope);
     expect(hit).toEqual({
@@ -206,7 +204,7 @@ describe('searchComments — mise en forme', () => {
     });
   });
 
-  it('retombe sur le nom d’invité, puis sur rien du tout — jamais sur l’adresse', async () => {
+  it('falls back on the guest name, then on nothing at all — never on the address', async () => {
     rows = [
       { ...base, guestName: 'Client X' },
       { ...base, id: 52 },
@@ -215,7 +213,7 @@ describe('searchComments — mise en forme', () => {
     expect(hits.map((h) => h.authorName)).toEqual(['Client X', null]);
   });
 
-  it('nomme le porteur par son asset quand la note ne vient pas d’un plan', async () => {
+  it('names the carrier by its asset when the note does not come from a shot', async () => {
     rows = [{ ...base, shotCode: null, assetName: 'robot' }];
     const [hit] = await searchComments('reflet', scope);
     expect(hit!.context).toBe('robot · SH0120_comp_v012.mov');

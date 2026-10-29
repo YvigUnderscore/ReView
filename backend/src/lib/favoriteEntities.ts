@@ -5,30 +5,29 @@ import { EntityType, Role } from '@prisma/client';
 import { prisma } from './prisma';
 
 /**
- * Résolution des favoris de la barre latérale.
+ * Resolution of the sidebar favorites.
  *
- * Deux défauts se corrigeaient ensemble ici.
+ * Two defects were fixed together here.
  *
- * 1. **L'accès n'était jamais revérifié.** Un favori porte un projet, une séquence, un
- *    plan ou un asset ; la route les enrichissait sans jamais redemander si la personne
- *    a encore accès au projet. Retirer quelqu'un d'un film ne lui retirait donc pas les
- *    noms de ses plans : la barre latérale continuait d'afficher `AAA_010 · Chute`, et le
- *    lien profond menait à un 403 — après avoir divulgué le nom.
- * 2. **Une requête par favori.** `resolveEntity` faisait un `findUnique` par ligne, dans
- *    un `Promise.all`. Vingt favoris, vingt allers-retours. La lecture se fait désormais
- *    en une requête par famille (quatre au plus), plus une pour les appartenances.
+ * 1. **Access was never re-checked.** A favorite points to a project, a sequence, a shot or an asset; the
+ *    route enriched them without ever asking whether the person still had access to the project. Removing
+ *    someone from a film therefore did not remove the names of its shots: the sidebar kept showing
+ *    `AAA_010 · Chute`, and the deep link led to a 403 — after having disclosed the name.
+ * 2. **One query per favorite.** `resolveEntity` ran one `findUnique` per row, inside a `Promise.all`.
+ *    Twenty favorites, twenty round trips. Reading is now one query per family (four at most), plus one
+ *    for the memberships.
  *
- * Le lien et le libellé, eux, sont **purs** : ils se testent sans base.
+ * The link and the label are **pure**: they are tested without a database.
  */
 
-/** Ligne de favori telle qu'elle est stockée. */
+/** A favorite row as stored. */
 export interface FavoriteRow {
   id: number;
   type: EntityType;
   entityId: number;
 }
 
-/** Ce que la barre latérale affiche pour un favori. */
+/** What the sidebar displays for a favorite. */
 export interface FavoriteView extends FavoriteRow {
   label: string;
   projectId: number;
@@ -41,8 +40,8 @@ interface ResolvedEntity {
 }
 
 /**
- * Lien profond d'un favori. Une séquence n'a pas de page à elle : on ouvre l'onglet
- * Séquences du projet et on déplie la bonne.
+ * Deep link of a favorite. A sequence has no page of its own: we open the project's Sequences tab and
+ * expand the right one.
  */
 export function favoritePath(type: EntityType, entityId: number, projectId: number): string {
   switch (type) {
@@ -57,7 +56,7 @@ export function favoritePath(type: EntityType, entityId: number, projectId: numb
   }
 }
 
-/** Libellé d'un favori : le code précède le nom là où le pipeline en donne un. */
+/** Label of a favorite: the code precedes the name wherever the pipeline gives one. */
 export function favoriteLabel(type: EntityType, entity: { code?: string | null; name: string }): string {
   const coded = type === EntityType.SEQUENCE || type === EntityType.SHOT;
   return coded && entity.code ? `${entity.code} · ${entity.name}` : entity.name;
@@ -69,13 +68,12 @@ const idsOf = (rows: readonly FavoriteRow[], type: EntityType): number[] =>
   rows.filter((r) => r.type === type).map((r) => r.entityId);
 
 /**
- * Charge les entités citées par les favoris — une requête par famille non vide.
- * Une entité supprimée (corbeille) n'entre pas dans la table : le favori disparaît.
+ * Loads the entities referenced by the favorites — one query per non-empty family.
+ * A deleted entity (trash) does not enter the table: the favorite disappears.
  *
- * Le projet à la corbeille compte comme supprimé pour tout ce qu'il porte : la mise à la
- * corbeille d'un projet ne descend pas sur ses plans (`lib/trash`), et sans ce filtre la
- * barre latérale continuait d'afficher — donc de divulguer — le nom d'un plan d'un projet
- * retiré, dont le lien profond mène désormais à un 404 (`middleware/rbac`).
+ * A project in the trash counts as deleted for everything it carries: putting a project in the trash does not
+ * cascade to its shots (`lib/trash`), and without this filter the sidebar kept displaying — hence disclosing —
+ * the name of a shot of a removed project, whose deep link now leads to a 404 (`middleware/rbac`).
  */
 async function loadEntities(rows: readonly FavoriteRow[]): Promise<Map<string, ResolvedEntity>> {
   const [projects, sequences, shots, assets] = await Promise.all([
@@ -137,9 +135,8 @@ async function loadEntities(rows: readonly FavoriteRow[]): Promise<Map<string, R
 }
 
 /**
- * Projets, parmi ceux cités, auxquels la personne a encore accès. Même règle que
- * `checkProjectAccess`, mais en une requête : ADMIN et SUPERVISOR voient tout, les autres
- * passent par leur appartenance.
+ * Projects, among those referenced, that the person still has access to. Same rule as `checkProjectAccess`,
+ * but in one query: ADMIN and SUPERVISOR see everything, the others go through their membership.
  */
 export async function accessibleProjectIds(
   userId: number,
@@ -155,7 +152,7 @@ export async function accessibleProjectIds(
   return new Set(memberships.map((m) => m.projectId));
 }
 
-/** Favoris enrichis, dans l'ordre reçu, privés de ceux dont le projet n'est plus ouvert. */
+/** Enriched favorites, in the order received, without those whose project is no longer open. */
 export async function resolveFavorites(
   userId: number,
   role: Role,

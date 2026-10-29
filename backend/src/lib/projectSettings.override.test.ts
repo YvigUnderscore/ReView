@@ -12,7 +12,7 @@ import {
   type ProjectSettings,
 } from './projectSettings';
 
-/** Défauts studio de référence — c'est d'eux que le projet hérite. */
+/** Studio reference defaults — the project inherits from them. */
 const STUDIO: ProjectSettings = {
   departments: [{ key: 'ANIM', name: 'Animation' }],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
@@ -24,13 +24,13 @@ const STUDIO: ProjectSettings = {
   color: { configId: 'aces-1.3' },
 };
 
-describe('sanitizeOverride — ne rend QUE ce que le projet surcharge', () => {
-  it('rend un override vide pour un JSON vide (tout est hérité)', () => {
+describe('sanitizeOverride — returns ONLY what the project overrides', () => {
+  it('returns an empty override for an empty JSON (everything is inherited)', () => {
     expect(sanitizeOverride({}, STUDIO)).toEqual({});
     expect(overriddenSections(sanitizeOverride({}, STUDIO))).toEqual([]);
   });
 
-  it('ne complète JAMAIS les sections absentes avec les défauts studio', () => {
+  it('NEVER completes absent sections with the studio defaults', () => {
     const override = sanitizeOverride({ framerate: 25 }, STUDIO);
     expect(override).toEqual({ framerate: 25 });
     expect(override.resolution).toBeUndefined();
@@ -38,17 +38,17 @@ describe('sanitizeOverride — ne rend QUE ce que le projet surcharge', () => {
     expect(override.color).toBeUndefined();
   });
 
-  it('borne les valeurs surchargées comme la lecture effective', () => {
+  it('bounds the overridden values like the effective reading does', () => {
     const override = sanitizeOverride({ framerate: 9999, resolution: { width: -3, height: 720 } }, STUDIO);
     expect(override.framerate).toBe(240);
     expect(override.resolution).toEqual({ width: 1, height: 720 });
   });
 
-  it('ignore une section nulle ou vide plutôt que de la figer', () => {
+  it('ignores a null or empty section rather than freezing it', () => {
     expect(sanitizeOverride({ color: null, burnin: {}, defaultLighting: null }, STUDIO)).toEqual({});
   });
 
-  it('ignore les clés inconnues et les entrées de département incomplètes', () => {
+  it('ignores unknown keys and incomplete department entries', () => {
     const override = sanitizeOverride(
       { isTemplate: true, departments: [{ key: 'FX', name: 'FX' }, { key: 'CASSE' }] },
       STUDIO,
@@ -56,49 +56,49 @@ describe('sanitizeOverride — ne rend QUE ce que le projet surcharge', () => {
     expect(override).toEqual({ departments: [{ key: 'FX', name: 'FX' }] });
   });
 
-  it('refuse un motif de nomenclature explosif, même en override', () => {
+  it('refuses an explosive naming pattern, even as an override', () => {
     expect(() => sanitizeOverride({ naming: { pattern: '(a+)+$', mode: 'reject' } }, STUDIO)).toThrow();
   });
 });
 
-describe('patchStoredSettings — écriture section par section', () => {
-  it('n’ajoute que la section envoyée : le reste continue d’hériter', () => {
+describe('patchStoredSettings — section-by-section write', () => {
+  it('adds only the section sent: the rest keeps inheriting', () => {
     const next = patchStoredSettings({}, { resolution: { width: 4096, height: 2160 } }, STUDIO);
     expect(Object.keys(next)).toEqual(['resolution']);
   });
 
-  it('laisse intactes les sections absentes du PATCH', () => {
+  it('leaves the sections absent from the PATCH intact', () => {
     const stored = { framerate: 25 };
     const next = patchStoredSettings(stored, { nomenclature: STUDIO.nomenclature }, STUDIO);
     expect(next.framerate).toBe(25);
     expect(next.nomenclature).toEqual(STUDIO.nomenclature);
   });
 
-  it('rend une section à l’héritage quand elle vaut null', () => {
+  it('returns a section to inheritance when it is null', () => {
     const stored = { framerate: 25, resolution: { width: 4096, height: 2160 } };
     const next = patchStoredSettings(stored, { framerate: null }, STUDIO);
     expect(next.framerate).toBeUndefined();
     expect(next.resolution).toEqual({ width: 4096, height: 2160 });
   });
 
-  it('préserve les clés hors réglages (isTemplate) que l’ancien PUT effaçait', () => {
+  it('preserves the keys outside the settings (isTemplate) that the former PUT erased', () => {
     const next = patchStoredSettings({ isTemplate: true, framerate: 25 }, { framerate: 30 }, STUDIO);
     expect(next.isTemplate).toBe(true);
     expect(next.framerate).toBe(30);
   });
 
-  it('ne fige rien quand le PATCH est vide', () => {
+  it('freezes nothing when the PATCH is empty', () => {
     expect(patchStoredSettings({ framerate: 25 }, {}, STUDIO)).toEqual({ framerate: 25 });
   });
 
-  it('purge du stockage les clés qui ne sont ni une section ni une valeur exploitable', () => {
+  it('purges from storage the keys that are neither a section nor a usable value', () => {
     const next = patchStoredSettings({ framerate: 'vingt-cinq' }, {}, STUDIO);
     expect(next.framerate).toBeUndefined();
   });
 });
 
-describe('replaceStoredSettings — remplacement total de l’override (PUT)', () => {
-  it('ne retient que les sections présentes dans le corps', () => {
+describe('replaceStoredSettings — full replacement of the override (PUT)', () => {
+  it('keeps only the sections present in the body', () => {
     const next = replaceStoredSettings(
       { framerate: 25, color: { configId: 'x' } },
       { framerate: 30 },
@@ -107,27 +107,27 @@ describe('replaceStoredSettings — remplacement total de l’override (PUT)', (
     expect(next).toEqual({ framerate: 30 });
   });
 
-  it('conserve tout de même les clés hors réglages', () => {
+  it('still keeps the keys outside the settings', () => {
     const next = replaceStoredSettings({ isTemplate: true, framerate: 25 }, {}, STUDIO);
     expect(next).toEqual({ isTemplate: true });
   });
 });
 
 describe('projectSettingsPatchSchema', () => {
-  it('accepte une section seule, et null pour revenir à l’héritage', () => {
+  it('accepts a single section, and null to return to inheritance', () => {
     expect(projectSettingsPatchSchema.parse({ framerate: 25 })).toEqual({ framerate: 25 });
     expect(projectSettingsPatchSchema.parse({ resolution: null })).toEqual({ resolution: null });
   });
 
-  it('refuse une clé inconnue plutôt que de la perdre en silence', () => {
+  it('refuses an unknown key rather than losing it silently', () => {
     expect(() => projectSettingsPatchSchema.parse({ inconnue: 1 })).toThrow();
   });
 
-  it('refuse une valeur de section hors bornes', () => {
+  it('refuses a section value out of bounds', () => {
     expect(() => projectSettingsPatchSchema.parse({ framerate: 1000 })).toThrow();
   });
 
-  it('couvre exactement les sections déclarées', () => {
+  it('covers exactly the declared sections', () => {
     expect(Object.keys(projectSettingsPatchSchema.shape).sort()).toEqual([...SETTINGS_SECTIONS].sort());
   });
 });

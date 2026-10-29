@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 
 describe('transport pub/sub', () => {
-  it('ne publie rien tant que le transport n’est pas armé', () => {
+  it('publishes nothing as long as the transport is not armed', () => {
     const fake = createFakeRedis();
     __redisTesting.setClient(fake);
     publishRedis('canal', 'a');
@@ -32,7 +32,7 @@ describe('transport pub/sub', () => {
     expect(fake.published).toEqual([{ channel: 'canal', payload: 'b' }]);
   });
 
-  it('distribue un message reçu à tous les gestionnaires du canal, et à eux seuls', () => {
+  it('delivers a received message to all the handlers of the channel, and to them only', () => {
     const a = vi.fn();
     const b = vi.fn();
     const autre = vi.fn();
@@ -45,7 +45,7 @@ describe('transport pub/sub', () => {
     expect(autre).not.toHaveBeenCalled();
   });
 
-  it('un gestionnaire qui jette n’empêche pas les suivants d’être servis', () => {
+  it('a handler that throws does not prevent the following ones from being served', () => {
     const suivant = vi.fn();
     subscribeRedis('c', () => {
       throw new Error('boum');
@@ -55,7 +55,7 @@ describe('transport pub/sub', () => {
     expect(suivant).toHaveBeenCalledOnce();
   });
 
-  it('le double de test remplace intégralement le client de commandes', async () => {
+  it('the test double fully replaces the command client', async () => {
     const fake = createFakeRedis();
     __redisTesting.setClient(fake);
     await getRedis().call('SET', 'k', 'v');
@@ -63,8 +63,8 @@ describe('transport pub/sub', () => {
   });
 });
 
-describe('battement de cœur', () => {
-  it('exécute chaque travail enregistré', async () => {
+describe('shared heartbeat', () => {
+  it('runs each registered job', async () => {
     const a = vi.fn().mockResolvedValue(undefined);
     const b = vi.fn().mockResolvedValue(undefined);
     onHeartbeat(a);
@@ -74,7 +74,7 @@ describe('battement de cœur', () => {
     expect(b).toHaveBeenCalledOnce();
   });
 
-  it('un travail en échec n’interrompt pas le tour', async () => {
+  it('a failing job does not interrupt the turn', async () => {
     const suivant = vi.fn().mockResolvedValue(undefined);
     onHeartbeat(() => Promise.reject(new Error('redis absent')));
     onHeartbeat(suivant);
@@ -84,24 +84,24 @@ describe('battement de cœur', () => {
 });
 
 describe('utilitaires de lecture', () => {
-  it('redisStrings normalise une réponse tableau et absorbe le reste', () => {
+  it('redisStrings normalises an array reply and absorbs the rest', () => {
     expect(redisStrings(['a', 1, null])).toEqual(['a', '1', '']);
     expect(redisStrings(null)).toEqual([]);
   });
 
-  it('redisNullableStrings conserve les trous de MGET', () => {
+  it('redisNullableStrings keeps the holes of MGET', () => {
     expect(redisNullableStrings(['a', null, 2])).toEqual(['a', null, null]);
   });
 
-  it('parseJson rend null sur une charge corrompue plutôt que de jeter', () => {
+  it('parseJson returns null on a corrupt payload rather than throwing', () => {
     expect(parseJson<{ a: number }>('{"a":1}')).toEqual({ a: 1 });
     expect(parseJson('pas du json')).toBeNull();
     expect(parseJson(null)).toBeNull();
   });
 });
 
-describe('identité de process', () => {
-  it('INSTANCE_ID est court et stable pour la durée du process', () => {
+describe('process identity', () => {
+  it('INSTANCE_ID is short and stable for the lifetime of the process', () => {
     expect(INSTANCE_ID).toMatch(/^[0-9a-f]{8}$/);
   });
 });

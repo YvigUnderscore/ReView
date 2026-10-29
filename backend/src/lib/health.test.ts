@@ -4,7 +4,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createReadinessCache, failureReason, runChecks, timedCheck, type ReadinessReport } from './health';
 describe('timedCheck', () => {
-  it('rapporte un succès avec sa durée', async () => {
+  it('reports a success with its duration', async () => {
     let clock = 1_000;
     const result = await timedCheck(
       () => Promise.resolve('ok'),
@@ -15,20 +15,20 @@ describe('timedCheck', () => {
     expect(result.ms).toBe(5);
   });
 
-  it('échoue proprement au lieu de pendre quand la dépendance ne répond jamais', async () => {
+  it('fails cleanly instead of hanging when the dependency never answers', async () => {
     const result = await timedCheck(() => new Promise(() => undefined), 10);
     expect(result.ok).toBe(false);
     expect(result.error).toContain('timeout');
   });
 
-  it('borne le motif d’échec (un message brut peut porter une URL de connexion)', () => {
+  it('bounds the failure reason (a raw message may carry a connection URL)', () => {
     expect(failureReason(new Error('x'.repeat(500)))).toHaveLength(120);
     expect(failureReason('pas une erreur')).toBe('unavailable');
   });
 });
 
 describe('runChecks', () => {
-  it('déclare l’ensemble indisponible dès qu’un contrôle échoue', async () => {
+  it('declares the whole unavailable as soon as one check fails', async () => {
     const report = await runChecks(
       {
         up: () => Promise.resolve(1),
@@ -45,14 +45,14 @@ describe('runChecks', () => {
 describe('createReadinessCache', () => {
   const ok: ReadinessReport = { ok: true, checks: {} };
 
-  it('regroupe les appels concurrents en une seule exécution', async () => {
+  it('groups concurrent calls into a single execution', async () => {
     const run = vi.fn().mockResolvedValue(ok);
     const cached = createReadinessCache(run, 1_000);
     await Promise.all([cached(), cached(), cached()]);
     expect(run).toHaveBeenCalledTimes(1);
   });
 
-  it('réinterroge une fois le délai de validité écoulé', async () => {
+  it('queries again once the validity period has elapsed', async () => {
     let clock = 0;
     const run = vi.fn().mockResolvedValue(ok);
     const cached = createReadinessCache(run, 100, () => clock);

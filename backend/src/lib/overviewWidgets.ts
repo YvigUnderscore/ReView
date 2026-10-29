@@ -5,19 +5,16 @@ import { Role } from '@prisma/client';
 import { z } from 'zod';
 
 /**
- * Registre des **blocs de la vue d'ensemble d'un projet** — la liste que l'écran propose
- * d'afficher, de masquer et de réordonner, et la seule que le serveur accepte d'écrire,
- * qu'il s'agisse de la disposition d'une personne ou du défaut d'un rôle.
+ * Registry of the **blocks of a project's overview** — the list the screen offers to show, hide and reorder, and the only
+ * one the server agrees to write, whether it is a person's layout or a role's default.
  *
- * Il existe pour la même raison que `notificationKinds` : `User.preferences` est un sac
- * JSON sans schéma, et une disposition écrite avec des identifiants inventés se serait
- * enregistrée sans broncher pour ne rien afficher du tout. Le registre est **recopié à
- * l'identique côté front** (`frontend/src/v2/pages/project/overview/overviewWidgets.ts`),
- * et `overviewWidgets.test.ts` refuse que les deux copies divergent — même contrat que
- * `notificationKinds` et `i18n/locales.json`.
+ * It exists for the same reason as `notificationKinds`: `User.preferences` is a schema-less JSON bag, and a layout written
+ * with invented identifiers would have been saved without a murmur to display nothing at all. The registry is **copied
+ * verbatim on the front end** (`frontend/src/v2/pages/project/overview/overviewWidgets.ts`), and `overviewWidgets.test.ts`
+ * refuses the two copies diverging — the same contract as `notificationKinds` and `i18n/locales.json`.
  *
- * L'ordre de la liste est l'ordre de déclaration : c'est lui qui place un bloc livré après
- * la dernière sauvegarde, et celui que retrouve une disposition remise à zéro.
+ * The order of the list is the declaration order: it is what places a block shipped after the last save, and what a layout
+ * reset to zero recovers.
  */
 export const OVERVIEW_WIDGETS = [
   'counts',
@@ -32,25 +29,24 @@ export const OVERVIEW_WIDGETS = [
 
 export type OverviewWidgetId = (typeof OVERVIEW_WIDGETS)[number];
 
-/** Clé de premier niveau du sac de préférences où vit la disposition d'une personne. */
+/** Top-level key of the preference bag where a person's layout lives. */
 export const OVERVIEW_PREFERENCE_KEY = 'projectOverview';
 
-/** Clé du réglage studio où vivent les dispositions par défaut, une par rôle. */
+/** Key of the studio setting where the default layouts live, one per role. */
 export const OVERVIEW_DEFAULTS_SETTING_KEY = 'overview_layout_defaults';
 
 const isWidgetId = (value: string): boolean => (OVERVIEW_WIDGETS as readonly string[]).includes(value);
 
-/** Largeurs admises sur la grille de douze — la même rampe qu'à l'accueil. */
+/** Widths admitted on the twelve-column grid — the same ramp as on the home page. */
 const spanSchema = z.union([z.literal(3), z.literal(4), z.literal(6), z.literal(8), z.literal(12)]);
 
 /**
- * Hauteurs admises, en **rangées** de la grille de la vue d'ensemble.
+ * Admitted heights, in **rows** of the overview grid.
  *
- * Recopie de la rampe `OVERVIEW_ROWS` (`frontend/…/overview/overviewSizing.ts`), gardée par
- * le même test que la liste des blocs : l'écran ne sait rendre que ces emprises, et une
- * hauteur hors rampe s'enregistrerait pour ne jamais être relue. La clé `height` reste
- * admise à côté — c'est celle des dispositions enregistrées avant les rangées, que l'écran
- * traduit à la lecture.
+ * A copy of the `OVERVIEW_ROWS` ramp (`frontend/…/overview/overviewSizing.ts`), guarded by the same test as the list of
+ * blocks: the screen can only render these footprints, and a height off the ramp would be saved only to never be read back.
+ * The `height` key remains admitted alongside — it is the one of layouts saved before the rows, which the screen translates
+ * on read.
  */
 export const OVERVIEW_ROWS = [2, 3, 4, 5, 6] as const;
 
@@ -60,8 +56,7 @@ const rowsSchema = z
   .refine((value) => (OVERVIEW_ROWS as readonly number[]).includes(value));
 
 /**
- * Réglages d'un bloc. `.strict()` : une clé de réglage inventée est un défaut d'écriture,
- * pas une extension — elle ne serait relue par personne.
+ * Settings of a block. `.strict()`: an invented setting key is a writing defect, not an extension — nobody would read it back.
  */
 const widgetSettingsSchema = z
   .object({
@@ -74,7 +69,7 @@ const widgetSettingsSchema = z
   })
   .strict();
 
-/** Liste d'identifiants de blocs, sans doublon et bornée au registre. */
+/** List of block identifiers, without duplicates and bounded to the registry. */
 const widgetIdList = z
   .array(z.string().max(40))
   .max(OVERVIEW_WIDGETS.length)
@@ -82,12 +77,11 @@ const widgetIdList = z
   .refine((ids) => new Set(ids).size === ids.length, { message: 'Duplicate overview widget' });
 
 /**
- * Forme admissible d'une disposition — celle d'une personne comme celle d'un rôle.
+ * Admissible shape of a layout — a person's as well as a role's.
  *
- * Les identifiants sont contrôlés par un `refine` plutôt que par `z.enum`, pour la même
- * raison qu'au registre des notifications : l'inconnu se refuse à **l'écriture**, et la
- * lecture, elle, se contente d'ignorer ce qu'elle ne connaît plus. Un bloc retiré du
- * produit ne doit pas rendre illisible la disposition de tout un studio.
+ * The identifiers are checked by a `refine` rather than by `z.enum`, for the same reason as the notifications registry:
+ * the unknown is refused on **write**, and the read merely ignores what it no longer knows. A block removed from the product
+ * must not make the layout of a whole studio unreadable.
  */
 export const overviewLayoutSchema = z
   .object({
@@ -103,8 +97,8 @@ export const overviewLayoutSchema = z
 export type OverviewLayout = z.infer<typeof overviewLayoutSchema>;
 
 /**
- * Dispositions par défaut, une par rôle. Un rôle absent n'a jamais été réglé : l'écran
- * retombe alors sur la disposition livrée avec le produit, qu'il porte lui-même.
+ * Default layouts, one per role. A role with no entry has never been set: the screen then falls back on the layout shipped
+ * with the product, which it carries itself.
  */
 export const overviewDefaultsSchema = z
   .record(z.string().max(20), overviewLayoutSchema)

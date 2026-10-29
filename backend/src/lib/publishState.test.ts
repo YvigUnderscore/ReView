@@ -13,51 +13,50 @@ import {
 const media = (published: boolean, status: MediaStatus = MediaStatus.READY) => ({ published, status });
 
 describe('shouldPublishVersion', () => {
-  it('publie la version quand tous ses médias le sont', () => {
+  it('publishes the version when all its media are', () => {
     expect(shouldPublishVersion([media(true), media(true)])).toBe(true);
   });
 
-  it('attend qu’il ne reste plus un seul brouillon', () => {
+  it('waits until not a single draft remains', () => {
     expect(shouldPublishVersion([media(true), media(false)])).toBe(false);
   });
 
-  it('ne publie pas une version vide — elle n’a rien à montrer', () => {
+  it('does not publish an empty version — it has nothing to show', () => {
     expect(shouldPublishVersion([])).toBe(false);
   });
 
-  it('ignore un média échoué, qui bloquerait la version à jamais', () => {
+  it('ignores a failed media, which would block the version forever', () => {
     expect(shouldPublishVersion([media(true), media(false, MediaStatus.FAILED)])).toBe(true);
   });
 
-  it('ne retient pas une version dont tous les médias ont échoué', () => {
+  it('does not hold back a version whose media have all failed', () => {
     expect(shouldPublishVersion([media(false, MediaStatus.FAILED)])).toBe(false);
   });
 
-  it('compte un média publié mais encore en traitement', () => {
-    // La publication est une décision de visibilité, pas un état du pipeline de transcodage.
+  it('counts a published media still being processed', () => {
+    // Publication is a visibility decision, not a state of the transcoding pipeline.
     expect(shouldPublishVersion([media(true, MediaStatus.PROCESSING)])).toBe(true);
   });
 });
 
 describe('inheritsPublication', () => {
-  it('fait naître publié un média rejoignant une version publiée', () => {
+  it('a media joining a published version is born published', () => {
     expect(inheritsPublication(true)).toBe(true);
   });
 
-  it('laisse un média en brouillon dans une version en brouillon', () => {
+  it('leaves a draft media in a draft version', () => {
     expect(inheritsPublication(false)).toBe(false);
   });
 });
 
-describe('bornsPublished — publication d’office (Phase 50)', () => {
-  it('publie d’office hors mode brouillon, version publiée ou non', () => {
+describe('bornsPublished — automatic publication (Phase 50)', () => {
+  it('publishes automatically outside draft mode, version published or not', () => {
     expect(bornsPublished({ draftMode: false, versionPublished: false })).toBe(true);
     expect(bornsPublished({ draftMode: false, versionPublished: true })).toBe(true);
   });
 
-  it('retombe exactement sur l’héritage en mode brouillon', () => {
-    // La règle historique, mot pour mot : un studio qui coche le réglage retrouve son
-    // fonctionnement d'avant, sans exception ni nuance nouvelle.
+  it('falls back exactly on inheritance in draft mode', () => {
+    // The historical rule, word for word: a studio that ticks the setting regains its former behaviour, with no exception or new nuance.
     for (const versionPublished of [true, false]) {
       expect(bornsPublished({ draftMode: true, versionPublished })).toBe(
         inheritsPublication(versionPublished),
@@ -65,14 +64,14 @@ describe('bornsPublished — publication d’office (Phase 50)', () => {
     }
   });
 
-  it('reste cohérent avec shouldPublishVersion : le premier média publié emporte la version', () => {
+  it('stays consistent with shouldPublishVersion: the first published media carries the version', () => {
     const born = bornsPublished({ draftMode: false, versionPublished: false });
     expect(shouldPublishVersion([media(born)])).toBe(true);
   });
 });
 
 describe('shouldUnpublishVersion', () => {
-  it('ne dépublie jamais automatiquement', () => {
+  it('never unpublishes automatically', () => {
     expect(shouldUnpublishVersion()).toBe(false);
   });
 });

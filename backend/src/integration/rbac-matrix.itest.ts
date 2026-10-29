@@ -14,11 +14,11 @@ import {
 } from './rbacMatrix';
 
 /**
- * Moteur de la matrice d'autorisation.
+ * Authorization matrix engine.
  *
- * Il ne contient aucune connaissance métier : tout est dans `rbacMatrix.ts`. Ajouter un
- * endpoint à couvrir n'oblige donc jamais à toucher ce fichier — c'était la condition posée
- * par l'audit (« écris-le pour qu'il soit facile à étendre »).
+ * It contains no business knowledge: everything lives in `rbacMatrix.ts`. Adding an endpoint to
+ * cover therefore never requires touching this file, which was the condition set by the audit
+ * ("write it so it is easy to extend").
  */
 const app = createApp({ rateLimit: false });
 
@@ -28,7 +28,7 @@ beforeAll(async () => {
   fixture = await buildRbacFixture(app);
 }, 120_000);
 
-/** Joue un cas avec l'acteur donné et rend le code HTTP. */
+/** Plays a case with the given actor and returns the HTTP status code. */
 async function play(testCase: MatrixCase, actor: Actor): Promise<number> {
   const values = placeholders(fixture);
   const url = substitute(testCase.path, values);
@@ -39,18 +39,18 @@ async function play(testCase: MatrixCase, actor: Actor): Promise<number> {
   return (await req).status;
 }
 
-/** Étiquette d'un cas : ce qu'on lira dans le rapport d'échec. */
+/** Label of a case: what will be read in the failure report. */
 const label = (c: MatrixCase): string => `${c.method.toUpperCase()} ${c.path} — ${c.guard}`;
 
-describe('Matrice d’autorisation — quatre rôles, deux projets disjoints', () => {
-  it('le décor est complet : quatre rôles, deux projets, des entités des deux côtés', () => {
+describe('Authorisation matrix — four roles, two disjoint projects', () => {
+  it('the scenery is complete: four roles, two projects, entities on both sides', () => {
     expect(fixture.projectA).not.toBe(fixture.projectB);
     for (const actor of AUTHENTICATED_ACTORS) expect(fixture.tokens[actor]).toBeTruthy();
     expect(fixture.shotA).toBeGreaterThan(0);
     expect(fixture.versionB).toBeGreaterThan(0);
   });
 
-  it('la table ne contient pas deux fois le même couple méthode + chemin', () => {
+  it('the table does not contain the same method and path pair twice', () => {
     const seen = AUTHORIZATION_MATRIX.map((c) => `${c.method} ${c.path}`);
     expect(new Set(seen).size).toBe(seen.length);
   });
@@ -62,8 +62,8 @@ describe('Matrice d’autorisation — quatre rôles, deux projets disjoints', (
       it(`${actor} → ${expected}`, async () => {
         const status = await play(testCase, actor);
         if (expected === 'deny') {
-          // Exactement 403 : un 401 signalerait une authentification perdue, un 404 une
-          // autre politique (défendable, mais elle s'écrit dans la table).
+          // Exactly 403: a 401 would signal lost authentication, a 404 a different policy
+          // (defensible, but it must be written in the table).
           expect(status, `${label(testCase)} [${actor}]`).toBe(403);
         } else {
           expect(status, `${label(testCase)} [${actor}]`).toBeLessThan(400);
@@ -72,7 +72,7 @@ describe('Matrice d’autorisation — quatre rôles, deux projets disjoints', (
     }
 
     if (!testCase.public) {
-      it('anonyme → 401', async () => {
+      it('anonymous → 401', async () => {
         expect(await play(testCase, 'anon'), `${label(testCase)} [anon]`).toBe(401);
       });
     }

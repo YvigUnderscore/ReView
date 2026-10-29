@@ -4,90 +4,66 @@
 import { logger } from './logger';
 
 /**
- * Limitation de débit de la surface **Socket.io**.
+ * Rate limiting of the **Socket.io** surface.
  *
- * Le seul limiteur global du produit est monté sur `/api` (`app.ts`). Le trafic websocket
- * ne le traverse jamais : le nginx frontal le route par une `location /socket.io/` distincte,
- * et côté serveur `io.use(...)` n'exécute qu'une authentification. Une connexion authentifiée
- * — y compris celle d'un CLIENT, le rôle le plus faible du produit — pouvait donc émettre des
- * événements sans aucun compteur. Or les gestionnaires interrogent la base AVANT de refuser :
- * `join_review` coûte deux requêtes Postgres par identifiant refusé. Quelques milliers
- * d'émissions par seconde sur UNE websocket saturent le pool Prisma, et toute l'instance
- * ralentit. Variante d'amplification : une trame `live:sync` volumineuse recopiée à chaque
- * participant d'une salle de dailies.
+ * The product's only global limiter is mounted on `/api` (`app.ts`). Websocket traffic never goes through it: the front nginx routes it through a separate
+ * `location /socket.io/`, and server-side `io.use(...)` only runs an authentication. An authenticated connection — including that of a CLIENT, the weakest role
+ * in the product — could therefore emit events with no counter at all. Yet the handlers query the database BEFORE refusing: `join_review` costs two Postgres queries
+ * per refused identifier. A few thousand emissions per second on ONE websocket saturate the Prisma pool, and the whole instance slows down. Amplification variant:
+ * a large `live:sync` frame copied to each participant of a dailies room.
  *
- * Le remède est un **seau à jetons par connexion** :
+ * The remedy is a **per-connection token bucket**:
  *
- * - chaque événement coûte des jetons, **plus cher quand il touche la base** (`join_review`,
- *   `live:join`) que quand il ne fait que relayer (`live:sync`, `activity`) ;
- * - la taille de la charge utile est facturée en plus, et une trame franchement démesurée
- *   est refusée d'emblée : c'est le plafond d'amplification ;
- * - au-delà du budget, le paquet est **ignoré en silence** — le gestionnaire n'est pas
- *   appelé, donc aucune requête base n'est émise. Pas d'erreur renvoyée : un client
- *   légitime n'a pas à voir d'exception, et un client abusif n'a pas à recevoir de
- *   signal de retour ;
- * - un dépassement *soutenu* (le compteur de rejets n'est remis à zéro que lorsque le seau
- *   est revenu plein, c'est-à-dire quand la connexion s'est tue) ferme la connexion.
+ * - each event costs tokens, **more when it touches the database** (`join_review`, `live:join`) than when it merely relays (`live:sync`, `activity`);
+ * - the size of the payload is charged on top, and a frankly oversized frame is refused outright: that is the amplification ceiling;
+ * - beyond the budget, the packet is **silently ignored** — the handler is not called, so no database query is issued. No error is returned: a legitimate client
+ *   need not see an exception, and an abusive client need not receive a feedback signal;
+ * - a *sustained* overrun (the rejection counter is only reset when the bucket has refilled — that is, when the connection has gone quiet) closes the connection.
  *
- * Le module est **découplé de `SocketService`** : il ne connaît qu'une forme minimale de
- * socket (`use` / `disconnect`), ce qui le rend testable sans serveur et évite d'enfermer
- * une frontière de sécurité dans une closure inaccessible.
+ * The module is **decoupled from `SocketService`**: it only knows a minimal socket shape (`use` / `disconnect`), which makes it testable without a server and avoids
+ * locking a security boundary inside an inaccessible closure.
  *
- * ## Calibrage (relevé sur le client, pas estimé)
+ * ## Calibration (measured on the client, not estimated)
  *
- * Le seau est **par connexion**, et une salle de dailies à trente participants ce sont
- * trente connexions, donc trente seaux : le nombre de spectateurs ne multiplie pas le débit
- * d'UN client. Le plafond légitime est celui du **pilote**, le seul à émettre en continu :
+ * The bucket is **per connection**, and a dailies room of thirty participants is thirty connections, hence thirty buckets: the number of viewers does not multiply
+ * the throughput of ONE client. The legitimate ceiling is that of the **pilot**, the only one emitting continuously:
  *
- * | Source (front)                                    | Cadence |
+ * | Source (front end)                                | Rate    |
  * |---------------------------------------------------|---------|
- * | `useLiveSession` — diffusion périodique `live:sync` | ≤ 30 Hz (`syncHz` borné à 30) |
- * | `usePointerBroadcast` — curseur, sur `live:sync`   | ~20 Hz (`POINTER_INTERVAL_MS = 50`) |
- * | `usePresence` — `activity` à chaque frappe/clic    | ~10 Hz en frappe soutenue |
+ * | `useLiveSession` — periodic `live:sync` broadcast | ≤ 30 Hz (`syncHz` bounded to 30) |
+ * | `usePointerBroadcast` — cursor, on `live:sync`    | ~20 Hz (`POINTER_INTERVAL_MS = 50`) |
+ * | `usePresence` — `activity` on each keystroke/click | ~10 Hz under sustained typing |
  *
- * Soit **≈ 60 événements par seconde pour un pilote parfaitement honnête**. Le premier
- * réglage (60 jetons/s) était donc calé *pile* sur ce plafond : la moindre gigue de
- * `setInterval`, un `join_review` de navigation ou un co-pilote qui prend la main pendant
- * un drag suffisait à faire tomber des trames — et 200 rejets sans retour au calme
- * FERMENT la connexion. Un limiteur qui déconnecte le pilote d'une projection client est
- * pire que pas de limiteur : il serait désarmé à la première plainte.
+ * That is **≈ 60 events per second for a perfectly honest pilot**. The first setting (60 tokens/s) was therefore calibrated *exactly* on this ceiling: the slightest
+ * `setInterval` jitter, a navigation `join_review` or a co-pilot taking over during a drag was enough to drop frames — and 200 rejections without a return to calm
+ * CLOSE the connection. A limiter that disconnects the pilot from a client projection is worse than no limiter: it would be disarmed at the first complaint.
  *
- * D'où 120 jetons/s, qui laissent un facteur deux au régime relevé. Pour que ce doublement
- * ne relâche pas la borne qui compte — celle des requêtes Postgres — **les coûts des
- * événements qui touchent la base sont doublés en même temps** : à 12 jetons, `join_review`
- * reste limité à dix tentatives par seconde, soit vingt requêtes, exactement comme avant.
- * Et pour que le doublement ne double pas non plus l'amplification (une trame relayée à
- * trente participants), le plafond de charge utile passe de 32 Kio à 8 Kio et la tranche
- * facturée de 4 Kio à 2 Kio : la plus grosse trame acceptable coûte désormais 5 jetons au
- * lieu de 9, soit ~24 trames/s au lieu de 6,6 — mais de 8 Kio au lieu de 32, donc **moins**
- * d'octets relayés qu'avec les réglages d'origine. Aucune trame légitime n'approche 2 Kio
- * (un `LiveSyncPayload` = playhead, pause, caméra, wipe : quelques centaines d'octets).
+ * Hence 120 tokens/s, which leave a factor of two over the measured regime. So that this doubling does not relax the bound that counts — the Postgres query count —
+ * **the costs of events touching the database are doubled at the same time**: at 12 tokens, `join_review` is still limited to ten attempts per second, i.e. twenty queries,
+ * exactly as before. And so that the doubling does not double the amplification either (a frame relayed to thirty participants), the payload ceiling goes from 32 KiB to 8 KiB and
+ * the charged slice from 4 KiB to 2 KiB: the largest acceptable frame now costs 5 tokens instead of 9, i.e. ~24 frames/s instead of 6.6 — but at 8 KiB instead of 32, so **fewer**
+ * bytes relayed than with the original settings. No legitimate frame approaches 2 KiB (a `LiveSyncPayload` = playhead, pause, camera, wipe: a few hundred bytes).
  */
 
-/** Jetons du seau plein : deux secondes de réserve, pour absorber l'ouverture d'un écran. */
+/** Tokens of the full bucket: two seconds of reserve, to absorb the opening of a screen. */
 export const DEFAULT_CAPACITY = 240;
 
-/** Recharge, en jetons par seconde : le régime permanent toléré (2× le pilote relevé). */
+/** Refill, in tokens per second: the tolerated steady state (2× the measured pilot). */
 export const DEFAULT_REFILL_PER_SECOND = 120;
 
 /**
- * Coût d'un événement non listé. Volontairement au-dessus des événements de relais : un
- * nom d'événement inconnu du serveur n'a aucun gestionnaire, mais il traverse quand même
- * le parseur et le journal — et c'est la porte la moins surveillée.
+ * Cost of an unlisted event. Deliberately above the relay events: an event name unknown to the server has no handler, yet it still goes through the parser
+ * and the log — and that is the least watched door.
  */
 export const DEFAULT_COST = 4;
 
 /**
- * Coût par événement. Les points d'entrée qui **résolvent un projet en base avant de
- * refuser** sont les plus chers : `join_review` coûte deux requêtes Postgres par identifiant
- * refusé, `join_project` une revalidation plus un contrôle RBAC. À 12 jetons, une connexion
- * plafonne à dix tentatives par seconde en régime permanent — sans commune mesure avec les
- * 32 000 événements par seconde mesurés en l'absence de compteur.
+ * Cost per event. The entry points that **resolve a project in the database before refusing** are the most expensive: `join_review` costs two Postgres queries
+ * per refused identifier, `join_project` a revalidation plus an RBAC check. At 12 tokens, a connection is capped at ten attempts per second in steady state — incomparable
+ * with the 32,000 events per second measured in the absence of a counter.
  *
- * `join_project` / `leave_project` sont listés parce qu'ils sont ouverts à TOUS les sockets,
- * invité de partage compris (ils vivent hors du bloc `if (socket.user)`) : les laisser au
- * coût par défaut aurait laissé la surface la plus exposée trois fois moins chère que la
- * même opération sur une review.
+ * `join_project` / `leave_project` are listed because they are open to ALL sockets, share guest included (they live outside the `if (socket.user)` block): leaving them at the
+ * default cost would have left the most exposed surface three times cheaper than the same operation on a review.
  */
 export const DEFAULT_COSTS: Readonly<Record<string, number>> = {
   join_review: 12,
@@ -103,20 +79,17 @@ export const DEFAULT_COSTS: Readonly<Record<string, number>> = {
 };
 
 /**
- * Au-delà, la trame est refusée sans être relayée. Aucune trame légitime n'en approche :
- * `live:sync` transporte un playhead, un état de pause, une caméra — quelques centaines
- * d'octets. C'est le plafond d'amplification : ce qui entre ici ressort multiplié par le
- * nombre de participants de la salle.
+ * Beyond this, the frame is refused without being relayed. No legitimate frame approaches it: `live:sync` carries a playhead, a pause state, a camera — a few hundred
+ * bytes. This is the amplification ceiling: what enters here comes out multiplied by the number of participants in the room.
  */
 export const DEFAULT_MAX_PAYLOAD_BYTES = 8 * 1024;
 
 /**
- * Tranche de charge utile facturée un jeton supplémentaire. Assez large pour qu'une trame
- * légitime ne paie rien, assez fine pour que le coût suive la taille sur les trames lourdes.
+ * Slice of payload charged one additional token. Wide enough that a legitimate frame pays nothing, fine enough that the cost follows the size on heavy frames.
  */
 const PAYLOAD_TOKEN_BYTES = 2048;
 
-/** Rejets consécutifs (sans retour au calme) avant fermeture de la connexion. */
+/** Consecutive rejections (without a return to calm) before the connection is closed. */
 export const DEFAULT_DROPS_BEFORE_DISCONNECT = 200;
 
 export interface SocketRateLimitOptions {
@@ -126,7 +99,7 @@ export interface SocketRateLimitOptions {
   defaultCost?: number;
   maxPayloadBytes?: number;
   dropsBeforeDisconnect?: number;
-  /** Horloge injectable : les tests pilotent le temps plutôt que de l'attendre. */
+  /** Injectable clock: the tests drive time rather than wait for it. */
   now?: () => number;
 }
 
@@ -139,11 +112,11 @@ interface ResolvedOptions {
   dropsBeforeDisconnect: number;
 }
 
-/** État du seau d'une connexion. Volontairement nu : une connexion, un objet, rien de global. */
+/** State of a connection's bucket. Deliberately bare: one connection, one object, nothing global. */
 export interface SocketBudget {
   tokens: number;
   lastRefillAt: number;
-  /** Rejets depuis le dernier retour au calme — sert à distinguer la rafale de l'abus. */
+  /** Rejections since the last return to calm — used to tell a burst from abuse. */
   drops: number;
 }
 
@@ -160,15 +133,14 @@ export function resolveOptions(options: SocketRateLimitOptions = {}): ResolvedOp
   };
 }
 
-/** Seau plein à la connexion : la première rafale d'un écran qui s'ouvre est légitime. */
+/** Bucket full at connection time: the first burst of a screen that opens is legitimate. */
 export function createBudget(now: number, options: SocketRateLimitOptions = {}): SocketBudget {
   return { tokens: resolveOptions(options).capacity, lastRefillAt: now, drops: 0 };
 }
 
 /**
- * Poids d'une charge utile, en octets. Les formes simples sont mesurées sans sérialiser ;
- * une structure circulaire (ou autrement insérialisable) est comptée comme démesurée —
- * elle ne peut de toute façon pas venir d'un client Socket.io honnête.
+ * Weight of a payload, in bytes. Simple shapes are measured without serialising; a circular structure (or otherwise non-serialisable) is counted as oversized —
+ * it cannot in any case come from an honest Socket.io client.
  */
 export function estimatePayloadBytes(args: readonly unknown[]): number {
   let total = 0;
@@ -198,7 +170,7 @@ export function estimatePayloadBytes(args: readonly unknown[]): number {
   return total;
 }
 
-/** Coût total d'un paquet : celui de l'événement, plus la taille de sa charge utile. */
+/** Total cost of a packet: that of the event, plus the size of its payload. */
 export function packetCost(event: string, payloadBytes: number, options: ResolvedOptions): number {
   const base = options.costs[event] ?? options.defaultCost;
   if (!Number.isFinite(payloadBytes)) return Number.POSITIVE_INFINITY;
@@ -206,8 +178,7 @@ export function packetCost(event: string, payloadBytes: number, options: Resolve
 }
 
 /**
- * Verdict pour un paquet, et mise à jour du seau. `now` est fourni par l'appelant pour que
- * la fonction reste pure vis-à-vis de l'horloge.
+ * Verdict for a packet, and bucket update. `now` is supplied by the caller so that the function stays pure with respect to the clock.
  */
 export function admitPacket(
   budget: SocketBudget,
@@ -216,12 +187,11 @@ export function admitPacket(
   options: ResolvedOptions,
   now: number,
 ): PacketVerdict {
-  // Recharge proportionnelle au temps écoulé. Une horloge qui recule (ajustement NTP) ne
-  // doit ni créditer ni débiter : on repart simplement de l'instant présent.
+  // Refill proportional to the elapsed time. A clock that goes backwards (NTP adjustment) must neither credit nor debit: we simply restart from the present instant.
   const elapsedMs = Math.max(0, now - budget.lastRefillAt);
   budget.lastRefillAt = now;
   budget.tokens = Math.min(options.capacity, budget.tokens + (elapsedMs * options.refillPerSecond) / 1000);
-  // Seau plein = la connexion s'est tue : la rafale précédente était une rafale, pas un abus.
+  // Full bucket = the connection has gone quiet: the previous burst was a burst, not abuse.
   if (budget.tokens >= options.capacity) budget.drops = 0;
 
   if (payloadBytes > options.maxPayloadBytes) return countDrop(budget, options);
@@ -238,7 +208,7 @@ function countDrop(budget: SocketBudget, options: ResolvedOptions): PacketVerdic
   return budget.drops >= options.dropsBeforeDisconnect ? 'disconnect' : 'drop';
 }
 
-/** Forme minimale d'un socket, pour ne dépendre ni de `socket.io` ni de `SocketService`. */
+/** Minimal shape of a socket, so as not to depend on `socket.io` or `SocketService`. */
 export interface RateLimitedSocket {
   id?: string;
   use(fn: (packet: unknown[], next: (err?: Error) => void) => void): unknown;
@@ -246,10 +216,8 @@ export interface RateLimitedSocket {
 }
 
 /**
- * Branche le limiteur sur une connexion. À poser une fois par socket accepté, **avant**
- * l'enregistrement des gestionnaires d'événements — un middleware `socket.use` ne
- * s'applique qu'aux paquets entrants, il ne dépend pas de l'ordre d'enregistrement des
- * `socket.on`, mais poser la garde d'abord garde la lecture évidente.
+ * Attaches the limiter to a connection. To be set once per accepted socket, **before** the registration of the event handlers — a `socket.use` middleware
+ * applies only to incoming packets and does not depend on the order of the `socket.on` registrations, but setting the guard first keeps the reading obvious.
  */
 export function attachSocketRateLimit(
   socket: RateLimitedSocket,
@@ -270,8 +238,7 @@ export function attachSocketRateLimit(
       logger.warn({ socketId: socket.id, event }, '[socket] débit abusif : connexion fermée');
       socket.disconnect(true);
     }
-    // 'drop' : `next` n'est pas appelé, donc le gestionnaire n'est pas exécuté et aucune
-    // requête base n'est émise. C'est tout l'intérêt de refuser AVANT le gestionnaire.
+    // 'drop': `next` is not called, so the handler is not executed and no database query is issued. That is the whole point of refusing BEFORE the handler.
   });
 
   return budget;

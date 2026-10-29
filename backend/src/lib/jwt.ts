@@ -6,45 +6,41 @@ import { env } from '../config/env';
 import type { Role } from '@prisma/client';
 
 /**
- * Charge utile SIGNÉE dans un jeton de session (accès et rafraîchissement).
+ * Payload SIGNED into a session token (access and refresh).
  *
- * ⚠ `sid` est obligatoire, et c'est un invariant de sécurité, pas une commodité : la
- * session est le SEUL point d'accroche d'une révocation. Un jeton sans `sid` ne peut être
- * invalidé par aucune déconnexion, aucun changement de mot de passe, aucun offboarding
- * admin — il resterait valable jusqu'à son expiration naturelle. Tout émetteur crée donc
- * la session (`lib/sessions.createSession`) AVANT de signer.
+ * ⚠ `sid` is mandatory, and it is a security invariant, not a convenience: the session is the ONLY anchor of a
+ * revocation. A token without `sid` cannot be invalidated by any sign-out, password change or admin offboarding —
+ * it would remain valid until its natural expiry. Every issuer therefore creates the session
+ * (`lib/sessions.createSession`) BEFORE signing.
  */
 export interface JwtPayload {
   id: number;
   email: string;
   role: Role;
-  /** Session de connexion (36.B) : ce qui rend le jeton révocable. */
+  /** Login session (36.B): what makes the token revocable. */
   sid: string;
 }
 
 /**
- * Charge utile telle qu'elle sort d'un jeton PRÉSENTÉ par un client.
+ * Payload as it comes out of a token PRESENTED by a client.
  *
- * Rien ne garantit qu'elle porte un `sid` : les jetons émis avant la phase 36 n'en ont
- * pas, et un client présente ce qu'il veut. Le type le dit au lieu de le taire — c'est
- * `middleware/auth` qui referme le cas (401).
+ * Nothing guarantees it carries a `sid`: tokens issued before phase 36 have none, and a client presents what it
+ * wants. The type says so instead of hiding it — `middleware/auth` closes the case (401).
  */
 export type VerifiedJwtPayload = Omit<JwtPayload, 'sid'> & { sid?: string; kind?: string };
 
 /**
- * ⚠ L'algorithme est fixé des DEUX côtés, et notamment à la vérification.
+ * ⚠ The algorithm is fixed on BOTH sides, and in particular at verification.
  *
- * Sans `algorithms`, `jwt.verify` accepte l'algorithme annoncé par l'en-tête du jeton —
- * c'est-à-dire par celui qui le présente. Le secret partagé deviendrait alors une clé
- * publique HMAC exploitable si une variante asymétrique était introduite un jour, et la
- * liste d'algorithmes acceptés dépendrait de la version de la bibliothèque plutôt que de
- * nous. On la déclare donc explicitement, ici et une seule fois.
+ * Without `algorithms`, `jwt.verify` accepts the algorithm announced by the token's header — that is, by whoever
+ * presents it. The shared secret would then become a usable HMAC public key if an asymmetric variant were ever
+ * introduced, and the accepted algorithm list would depend on the library version rather than on us. It is
+ * therefore declared explicitly, here and only once.
  *
- * Les deux constantes sont EXPORTÉES parce que `JWT_SECRET` signe aussi des jetons
- * auxiliaires hors de ce module : session de partage client (`lib/shareAccess`), état
- * OIDC (`routes/auth-oidc.routes`). Un invariant énoncé ici mais oublié là-bas ne
- * protège rien — c'est le vérificateur le plus permissif qui décide. Tout émetteur du
- * même secret reprend donc ces constantes plutôt que d'en redéclarer.
+ * Both constants are EXPORTED because `JWT_SECRET` also signs auxiliary tokens outside this module: client sharing
+ * session (`lib/shareAccess`), OIDC state (`routes/auth-oidc.routes`). An invariant stated here but forgotten
+ * elsewhere protects nothing — the most permissive verifier decides. Every issuer of the same secret therefore
+ * reuses these constants rather than redeclaring them.
  */
 export const JWT_ALGORITHM = 'HS256' as const;
 export const JWT_VERIFY_OPTIONS: VerifyOptions = { algorithms: [JWT_ALGORITHM] };
@@ -69,7 +65,7 @@ export const verifyToken = (token: string): VerifiedJwtPayload | null => {
   }
 };
 
-/** Jeton intermédiaire 2FA (36.A) : émis après mot de passe correct, avant le code TOTP. */
+/** Intermediate 2FA token (36.A): issued after a correct password, before the TOTP code. */
 export const signTwoFaToken = (userId: number): string =>
   jwt.sign({ id: userId, kind: '2fa' }, env.JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '5m' });
 

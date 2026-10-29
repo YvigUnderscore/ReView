@@ -5,23 +5,23 @@ import { z } from 'zod';
 import { prisma } from './prisma';
 
 /**
- * Burn-ins configurables & slates (35.A) — incrustations FFmpeg posées par le worker sur
- * les proxys/renditions HLS (shot, version, timecode, logo studio, texte libre), et slate
- * d'identification en tête du **dérivé client** (`derived/{id}/client.mp4`) uniquement :
- * un slate en tête du proxy de review décalerait toutes les annotations frame-par-frame.
+ * Configurable burn-ins & slates (35.A): FFmpeg overlays applied by the worker to the HLS
+ * proxies/renditions (shot, version, timecode, studio logo, free text), and an identification slate
+ * at the head of the **client derivative** (`derived/{id}/client.mp4`) only: a slate at the head of
+ * the review proxy would shift every frame-by-frame annotation.
  *
- * Deux niveaux, comme les réglages pipeline : template studio (Setting `burnin_config`)
- * + override partiel par projet (`Project.settings.burnin`), résolu champ par champ.
+ * Two levels, like the pipeline settings: studio template (Setting `burnin_config`) plus a partial
+ * per-project override (`Project.settings.burnin`), resolved field by field.
  */
 
 export interface BurninConfig {
-  enabled: boolean; // incrustations sur proxy + renditions HLS
-  showShot: boolean; // code du shot (haut gauche)
-  showVersion: boolean; // nom de la version (haut droite)
-  showTimecode: boolean; // timecode (bas centre)
-  showLogo: boolean; // logo studio (bas droite, overlay)
-  customText: string; // texte libre (bas gauche), ex « CONFIDENTIEL »
-  slate: boolean; // slate en tête du dérivé client (partages)
+  enabled: boolean; // burn-ins on proxy + HLS renditions
+  showShot: boolean; // shot code (top left)
+  showVersion: boolean; // version name (top right)
+  showTimecode: boolean; // timecode (bottom centre)
+  showLogo: boolean; // studio logo (bottom right, overlay)
+  customText: string; // free text (bottom left), e.g. "CONFIDENTIAL"
+  slate: boolean; // slate at the head of the client derivative (shares)
 }
 
 const BURNIN_KEY = 'burnin_config';
@@ -60,7 +60,7 @@ export const burninConfigSchema = z.object({
   slate: z.boolean().optional(),
 });
 
-/** Template studio (Setting `burnin_config`). */
+/** Studio template (Setting `burnin_config`). */
 export async function getStudioBurninConfig(): Promise<BurninConfig> {
   const row = await prisma.setting.findUnique({ where: { key: BURNIN_KEY } });
   if (!row) return BURNIN_FALLBACK;
@@ -71,7 +71,7 @@ export async function getStudioBurninConfig(): Promise<BurninConfig> {
   }
 }
 
-/** Enregistre le template studio (validé/borné). */
+/** Saves the studio template (validated/bounded). */
 export async function setStudioBurninConfig(value: unknown): Promise<BurninConfig> {
   const clean = sanitize(value, BURNIN_FALLBACK);
   await prisma.setting.upsert({
@@ -82,19 +82,18 @@ export async function setStudioBurninConfig(value: unknown): Promise<BurninConfi
   return clean;
 }
 
-/** Config effective d'un projet : override partiel (`Project.settings.burnin`) sur le studio. */
+/** Effective config of a project: partial override (`Project.settings.burnin`) on top of the studio. */
 export async function resolveBurninConfig(projectSettings: unknown): Promise<BurninConfig> {
   const studio = await getStudioBurninConfig();
   const override = (projectSettings as { burnin?: unknown } | null)?.burnin;
   return sanitize(override, studio);
 }
 
-// ── Construction des filtres FFmpeg (pur, testé) ─────────────────────────────
+// ── Building the FFmpeg filters (pure, tested) ──
 
 /**
- * Échappement d'un texte pour `drawtext=text='…'` : les apostrophes deviennent
- * typographiques (pas d'échappement imbriqué fragile), le reste des caractères
- * spéciaux du parser de filtres est précédé d'un antislash.
+ * Escapes a text for `drawtext=text='...'`: apostrophes become typographic ones (no fragile nested
+ * escaping); other special characters of the filter parser are preceded by a backslash.
  */
 export function escapeDrawtext(s: string): string {
   return s
@@ -104,8 +103,8 @@ export function escapeDrawtext(s: string): string {
 }
 
 export interface BurninContext {
-  shotLabel: string | null; // ex « SQ010 · SH020 »
-  versionLabel: string | null; // ex « v003 »
+  shotLabel: string | null; // e.g. "SQ010 · SH020"
+  versionLabel: string | null; // e.g. "v003"
   fps: number | null;
 }
 
@@ -114,13 +113,13 @@ const text = (t: string, x: string, y: string, size: number) =>
   `box=1:boxcolor=black@0.35:boxborderw=${Math.max(3, Math.round(size / 4))}`;
 
 /**
- * Filtres drawtext des burn-ins pour une hauteur d'image donnée (fontsize proportionnel).
- * Le logo n'est pas ici (overlay à deux entrées, géré par le worker via filter_complex).
+ * drawtext filters of the burn-ins for a given frame height (font size proportional).
+ * The logo is not here (two-input overlay, handled by the worker via filter_complex).
  */
 export function buildBurninFilters(cfg: BurninConfig, ctx: BurninContext, height: number): string[] {
   if (!cfg.enabled) return [];
   const size = Math.max(10, Math.round(height / 32));
-  const m = Math.max(8, Math.round(height / 60)); // marge
+  const m = Math.max(8, Math.round(height / 60)); // margin
   const out: string[] = [];
   if (cfg.showShot && ctx.shotLabel) out.push(text(ctx.shotLabel, `${m}`, `${m}`, size));
   if (cfg.showVersion && ctx.versionLabel) out.push(text(ctx.versionLabel, `w-tw-${m}`, `${m}`, size));
@@ -142,10 +141,10 @@ export interface SlateInfo {
   versionLabel: string | null;
   authorName: string | null;
   fileName: string;
-  date: string; // déjà formatée (ex 2026-07-19)
+  date: string; // already formatted (e.g. 2026-07-19)
 }
 
-/** Lignes du slate (titre puis paires libellé/valeur), sans champ vide. */
+/** Slate lines (title, then label/value pairs), without empty fields. */
 export function buildSlateLines(info: SlateInfo): string[] {
   const lines = [info.studioName];
   if (info.projectName) lines.push(`Projet : ${info.projectName}`);
@@ -157,8 +156,8 @@ export function buildSlateLines(info: SlateInfo): string[] {
 }
 
 /**
- * Filtres drawtext du slate : titre en grand, lignes centrées, espacement régulier.
- * Appliqués sur une source `color` aux dimensions du proxy.
+ * drawtext filters of the slate: large title, centred lines, regular spacing.
+ * Applied on a `color` source at the proxy dimensions.
  */
 export function buildSlateFilters(lines: string[], height: number): string[] {
   const titleSize = Math.max(18, Math.round(height / 14));

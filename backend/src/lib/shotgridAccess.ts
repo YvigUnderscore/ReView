@@ -6,12 +6,10 @@ import { prisma } from './prisma';
 import { forbidden, notFound } from './errors';
 
 /**
- * Droits d'accès aux écrans ShotGrid d'un projet.
+ * Access rights to a project's ShotGrid screens.
  *
- * Configurer une connexion engage tout le projet — et, en écriture, le projet distant.
- * C'est donc réservé aux administrateurs et aux superviseurs membres du projet. La
- * lecture de l'état (« ce projet est relié, dernière synchronisation à telle heure »)
- * s'ouvre à tous les membres : les badges et les liens en dépendent.
+ * Configuring a connection commits the whole project — and, on write, the remote project. It is therefore reserved for administrators and supervisors who are members
+ * of the project. Reading the status ("this project is linked, last synchronised at such a time") is open to all members: the badges and links depend on it.
  */
 
 export interface SessionUser {
@@ -24,10 +22,8 @@ export async function assertProjectManager(
   projectId: number,
   options: { allowMembers?: boolean; adminOnly?: boolean } = {},
 ): Promise<void> {
-  // Même invariant que `middleware/rbac` : un projet mis à la corbeille n'existe plus. Ici
-  // l'enjeu dépasse la lecture — ces écrans déclenchent des synchronisations, donc des
-  // ÉCRITURES sur le site ShotGrid du studio. Pousser des statuts ou des notes pour un
-  // projet que le studio vient de retirer ne se rattrape pas côté distant.
+  // Same invariant as `middleware/rbac`: a project put in the trash no longer exists. Here the stakes go beyond reading — these screens trigger synchronisations, hence
+  // WRITES to the studio's ShotGrid site. Pushing statuses or notes for a project the studio has just removed cannot be recovered on the remote side.
   const project = await prisma.project.findUnique({
     where: { id: projectId, deletedAt: null },
     select: { id: true },
@@ -43,7 +39,7 @@ export async function assertProjectManager(
   });
   if (!membership) throw forbidden('No access to this project');
 
-  // Le rôle porté par l'appartenance prime sur le rôle global (10.D8).
+  // The role carried by the membership takes precedence over the global role (10.D8).
   const effective = membership.role ?? user.role;
   if (options.allowMembers) {
     if (effective === Role.CLIENT) throw forbidden('Access denied');
@@ -52,7 +48,7 @@ export async function assertProjectManager(
   if (effective !== Role.SUPERVISOR) throw forbidden('Supervisors and administrators only');
 }
 
-/** L'utilisateur peut-il piloter la connexion ShotGrid de ce projet ? (sans lever) */
+/** Can the user drive this project's ShotGrid connection? (without throwing) */
 export async function canManageShotgrid(user: SessionUser, projectId: number): Promise<boolean> {
   try {
     await assertProjectManager(user, projectId);
@@ -63,12 +59,10 @@ export async function canManageShotgrid(user: SessionUser, projectId: number): P
 }
 
 /**
- * Le compte peut-il créer des comptes de studio ?
+ * Can the account create studio accounts?
  *
- * Rôle **global** uniquement. Un superviseur de projet — un compte ARTIST dont
- * l'appartenance porte `SUPERVISOR` — gère son projet, mais l'écran d'administration ne
- * lui donne pas le droit de fabriquer des comptes ; l'invitation depuis ShotGrid ne doit
- * pas le lui donner par la bande.
+ * **Global** role only. A project supervisor — an ARTIST account whose membership carries `SUPERVISOR` — manages their project, but the administration screen does not
+ * give them the right to create accounts; the invitation from ShotGrid must not grant it to them through the back door.
  */
 export function canCreateStudioAccounts(user: SessionUser): boolean {
   return user.role === Role.ADMIN || user.role === Role.SUPERVISOR;

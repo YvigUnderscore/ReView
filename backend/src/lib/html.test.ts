@@ -5,40 +5,39 @@ import { describe, expect, it } from 'vitest';
 import { escapeHtml } from './html';
 
 /**
- * L'échappement sert dans trois contextes : un nœud de texte, un attribut entre guillemets
- * doubles, un attribut entre guillemets simples. Deux des copies historiques de cette
- * fonction n'échappaient pas le guillemet — le seul caractère qui compte dans un attribut.
+ * Escaping serves three contexts: a text node, an attribute in double quotes, an attribute in single quotes. Two
+ * of the historical copies of this function did not escape the quote — the only character that matters in an attribute.
  */
 describe('escapeHtml', () => {
-  it('échappe les six caractères qui referment un contexte HTML', () => {
+  it('escapes the six characters that close an HTML context', () => {
     expect(escapeHtml(`&<>"'\``)).toBe('&amp;&lt;&gt;&quot;&#39;&#96;');
   });
 
-  it('n’échappe pas deux fois l’esperluette', () => {
+  it('does not escape the ampersand twice', () => {
     expect(escapeHtml('a & b')).toBe('a &amp; b');
     expect(escapeHtml('<a>')).toBe('&lt;a&gt;');
-    // Le piège des `replace` enchaînés : `&lt;` deviendrait `&amp;lt;` si `&` passait après.
+    // The trap of chained `replace`: `&lt;` would become `&amp;lt;` if `&` came after.
     expect(escapeHtml(escapeHtml('<a>'))).toBe('&amp;lt;a&amp;gt;');
   });
 
-  it('ferme la sortie d’un attribut à guillemets doubles', () => {
+  it('closes the output of an attribute in double quotes', () => {
     const html = `<a href="${escapeHtml('x" onload="alert(1)')}">`;
     expect(html).toBe('<a href="x&quot; onload=&quot;alert(1)">');
     expect(html).not.toContain('onload="');
   });
 
-  it('ferme la sortie d’un attribut à guillemets simples', () => {
+  it('closes the output of an attribute in single quotes', () => {
     const html = `<a title='${escapeHtml("x' onload='alert(1)")}'>`;
     expect(html).toContain('&#39;');
     expect(html).not.toContain("onload='");
   });
 
-  it('laisse passer un texte sans caractère spécial', () => {
+  it('lets through a text without special characters', () => {
     expect(escapeHtml('Séquence SH010 — v003')).toBe('Séquence SH010 — v003');
     expect(escapeHtml('')).toBe('');
   });
 
-  it('garde une URL lisible et exploitable', () => {
+  it('keeps a readable and usable URL', () => {
     expect(escapeHtml('https://git.studio.tld/review?a=1&b=2')).toBe(
       'https://git.studio.tld/review?a=1&amp;b=2',
     );

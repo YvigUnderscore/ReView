@@ -5,9 +5,8 @@ import { MediaStatus } from '@prisma/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Doublures : la file BullMQ et la base. Ce qui est mesuré ici, c'est le **nombre et la
- * portée des lectures Redis** — `getJobs` sans plage rapatrie tout l'arriéré, job complet
- * par job complet, à chaque passe d'entretien.
+ * Test doubles: the BullMQ queue and the database. What is measured here is the **number and scope of the Redis
+ * reads** — `getJobs` without a range fetches the whole backlog, complete job by complete job, at every maintenance pass.
  */
 const mocks = vi.hoisted(() => ({
   getJobs: vi.fn<(types: string[], start?: number, end?: number) => Promise<unknown[]>>(),
@@ -35,7 +34,7 @@ afterEach(() => {
   mocks.updateMany.mockReset();
 });
 
-/** Faux job BullMQ : seule sa charge utile compte pour la réconciliation. */
+/** Fake BullMQ job: only its payload matters for reconciliation. */
 const job = (mediaObjectId: number) => ({ data: { mediaObjectId } });
 
 const candidate = (over: Partial<Parameters<typeof reconcileAction>[0]> = {}) => ({
@@ -46,26 +45,26 @@ const candidate = (over: Partial<Parameters<typeof reconcileAction>[0]> = {}) =>
 });
 
 describe('reconcileAction', () => {
-  it('un job vivant protège le média, même très ancien', () => {
+  it('a live job protects the media, even a very old one', () => {
     expect(reconcileAction(candidate({ hasLiveJob: true, ageMs: 48 * 3600_000 }))).toBe('skip');
   });
 
-  it('un média récent est épargné : le balayage ne court pas plus vite que l’enfilage', () => {
+  it('a recent media is spared: the sweep does not run faster than the enqueueing', () => {
     expect(reconcileAction(candidate({ ageMs: 0 }))).toBe('skip');
     expect(reconcileAction(candidate({ ageMs: MEDIA_STUCK_AFTER_MS - 1 }))).toBe('skip');
   });
 
-  it('ancien et sans job vivant : échec explicite', () => {
+  it('old and without a live job: explicit failure', () => {
     expect(reconcileAction(candidate({ ageMs: MEDIA_STUCK_AFTER_MS }))).toBe('fail');
     expect(reconcileAction(candidate({ ageMs: 3 * MEDIA_STUCK_AFTER_MS }))).toBe('fail');
   });
 
-  it('le seuil est paramétrable', () => {
+  it('the threshold is configurable', () => {
     expect(reconcileAction(candidate({ ageMs: 5000 }), 1000)).toBe('fail');
     expect(reconcileAction(candidate({ ageMs: 500 }), 1000)).toBe('skip');
   });
 
-  it('les deux conditions doivent être réunies', () => {
+  it('both conditions must be met together', () => {
     expect(reconcileAction(candidate({ hasLiveJob: true, ageMs: 0 }))).toBe('skip');
     expect(reconcileAction(candidate({ hasLiveJob: false, ageMs: 0 }))).toBe('skip');
     expect(reconcileAction(candidate({ hasLiveJob: true, ageMs: 1e9 }))).toBe('skip');
@@ -74,29 +73,29 @@ describe('reconcileAction', () => {
 });
 
 describe('reconcileFailureMessage', () => {
-  it('message actionnable, en anglais, avec la durée en minutes', () => {
+  it('actionable message, in English, with the duration in minutes', () => {
     expect(reconcileFailureMessage(90 * 60_000)).toContain('90 min');
     expect(reconcileFailureMessage(90 * 60_000)).toMatch(/^Processing was interrupted/);
   });
 
-  it('jamais « 0 min » : un plancher d’une minute', () => {
+  it('never "0 min": a one-minute floor', () => {
     expect(reconcileFailureMessage(1200)).toContain('1 min');
   });
 
-  it('tient dans les 500 caractères conservés par le worker', () => {
+  it('fits within the 500 characters kept by the worker', () => {
     expect(reconcileFailureMessage(10 ** 9).length).toBeLessThan(500);
   });
 });
 
-// ── Coût du relevé des jobs vivants ──────────────────────────────────────────
+// ── Cost of reading the live jobs ──
 
 describe('liveMediaJobIds', () => {
-  it('borne sa lecture Redis par une plage explicite', async () => {
+  it('bounds its Redis read with an explicit range', async () => {
     mocks.getJobs.mockResolvedValue([job(1), job(2), job(2), { data: {} }, null]);
     const live = await liveMediaJobIds();
     expect(live.ids).toEqual(new Set([1, 2]));
     expect(live.complete).toBe(true);
-    // Une seule lecture, et une plage — pas `getJobs(types)` qui ramène tout l'arriéré.
+    // A single read, and a range — not `getJobs(types)`, which brings back the whole backlog.
     expect(mocks.getJobs).toHaveBeenCalledTimes(1);
     const [types, start, end] = mocks.getJobs.mock.calls[0]!;
     expect(types).toEqual(['waiting', 'active', 'delayed', 'paused', 'prioritized', 'waiting-children']);
@@ -104,7 +103,7 @@ describe('liveMediaJobIds', () => {
     expect(end).toBe(LIVE_JOB_SCAN_MAX - 1);
   });
 
-  it('signale un relevé saturé plutôt que de le croire exhaustif', async () => {
+  it('reports a saturated read rather than believing it exhaustive', async () => {
     mocks.getJobs.mockResolvedValue(Array.from({ length: LIVE_JOB_SCAN_MAX }, (_, i) => job(i + 1)));
     const live = await liveMediaJobIds();
     expect(live.complete).toBe(false);
@@ -115,7 +114,7 @@ describe('reconcileStuckMedia', () => {
   const old = new Date(Date.now() - 3 * MEDIA_STUCK_AFTER_MS);
   const now = new Date();
 
-  it('condamne le média sans job vivant et épargne celui qui en a un', async () => {
+  it('condemns the media without a live job and spares the one that has one', async () => {
     mocks.findMany.mockResolvedValue([
       { id: 10, createdAt: old, metadata: { width: 1920 } },
       { id: 11, createdAt: old, metadata: null },
@@ -130,19 +129,19 @@ describe('reconcileStuckMedia', () => {
     };
     expect(arg.where).toEqual({ id: 10, status: MediaStatus.PROCESSING });
     expect(arg.data.status).toBe(MediaStatus.FAILED);
-    // Les métadonnées existantes sont conservées, le motif est ajouté.
+    // Existing metadata is kept, the reason is added.
     expect(arg.data.metadata.width).toBe(1920);
     expect(String(arg.data.metadata.processingError)).toMatch(/^Processing was interrupted/);
   });
 
-  it('ne condamne personne quand le relevé des jobs est tronqué', async () => {
+  it('condemns no one when the job read is truncated', async () => {
     mocks.findMany.mockResolvedValue([{ id: 10, createdAt: old, metadata: null }]);
     mocks.getJobs.mockResolvedValue(Array.from({ length: LIVE_JOB_SCAN_MAX }, (_, i) => job(i + 1000)));
     expect(await reconcileStuckMedia(now)).toBe(0);
     expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 
-  it('ne lit même pas la file quand aucun média n’est figé', async () => {
+  it('does not even read the queue when no media is stuck', async () => {
     mocks.findMany.mockResolvedValue([]);
     expect(await reconcileStuckMedia(now)).toBe(0);
     expect(mocks.getJobs).not.toHaveBeenCalled();

@@ -8,37 +8,29 @@ import { publishRedis } from './redis';
 import { env } from '../config/env';
 
 /**
- * Sessions de connexion révocables (36.B). Un login = une ligne `UserSession` dont l'id
- * (sid) est embarqué dans les JWT access + refresh : révoquer la session invalide les
- * deux. Le middleware vérifie la validité avec un petit cache in-process (TTL 30 s) —
- * la révocation est effective en ≤ 30 s sans requête DB par appel.
+ * Revocable login sessions (36.B). One login = one `UserSession` row whose id (sid) is embedded in the access and refresh JWTs: revoking the session
+ * invalidates both. The middleware checks validity with a small in-process cache (TTL 30 s) — revocation takes effect within ≤ 30 s without a DB query per call.
  */
 
 /**
- * Canal de révocation immédiate (A3-02, volet immédiat).
+ * Immediate revocation channel (A3-02, immediate part).
  *
- * Deux trous se refermaient mal avec le seul cache local :
+ * Two gaps were poorly closed by the local cache alone:
  *
- *  1. le cache de validité est **par process** — la réplique qui a servi le `DELETE /sessions`
- *     invalide le sien, les autres continuent de répondre « session vivante » pendant trente
- *     secondes ;
- *  2. une websocket vit des jours. `SocketService` rejoue bien les contrôles, mais toutes les
- *     minutes : une minute pendant laquelle l'onglet du partant recevait encore les
- *     commentaires internes du projet et les URL présignées de leurs pièces jointes.
+ *  1. the validity cache is **per process** — the replica that served the `DELETE /sessions` invalidates its own, the others keep answering "session alive" for thirty seconds;
+ *  2. a websocket lives for days. `SocketService` does replay the checks, but only every minute: a minute during which the departing user's tab still received the project's internal comments and the presigned URLs of their attachments.
  *
- * La révocation publie donc les `sid` concernés ; chaque réplique tombe son cache et ferme
- * les sockets correspondants sans attendre son balayage. La publication est best-effort
- * (`publishRedis` avale les pannes) : c'est assumé, le balayage périodique reste le filet.
+ * Revocation therefore publishes the affected `sid`s; each replica drops its cache and closes the matching sockets without waiting for its sweep. Publication is best-effort
+ * (`publishRedis` swallows outages): this is deliberate, the periodic sweep remains the safety net.
  */
 export const SESSION_REVOCATION_CHANNEL = 'review:session-revoked';
 
-/** Charge utile du canal : la liste des `sid` révoqués, rien de plus (aucune donnée de compte). */
+/** Channel payload: the list of revoked `sid`s, nothing more (no account data). */
 export const encodeSessionRevocation = (sids: readonly string[]): string => JSON.stringify({ sids });
 
 /**
- * Décodage défensif : le canal est partagé et rien ne garantit ce qu'on y lit. Un message
- * illisible rend une liste vide plutôt qu'une exception — un abonné pub/sub qui jette tue
- * le gestionnaire, pas seulement le message.
+ * Defensive decoding: the channel is shared and nothing guarantees what is read from it. An unreadable message yields an empty list rather than an exception —
+ * a pub/sub subscriber that throws kills the handler, not just the message.
  */
 export function decodeSessionRevocation(raw: string): string[] {
   try {
@@ -51,16 +43,14 @@ export function decodeSessionRevocation(raw: string): string[] {
 }
 
 /**
- * Applique localement une révocation venue d'une autre réplique : le cache de validité doit
- * tomber TOUT DE SUITE, sinon `isSessionActive` continuerait de répondre « vivante » jusqu'à
- * trente secondes et la déconnexion du socket serait cosmétique (l'API, elle, accepterait
- * encore le jeton).
+ * Locally applies a revocation coming from another replica: the validity cache must drop RIGHT AWAY, otherwise `isSessionActive` would keep answering
+ * "alive" for up to thirty seconds and the socket disconnection would be cosmetic (the API would still accept the token).
  */
 export function markSessionsRevoked(sids: readonly string[]): void {
   for (const sid of sids) cacheSet(sid, false);
 }
 
-/** Publie une révocation. Une liste vide ne réveille personne. */
+/** Publishes a revocation. An empty list wakes no one. */
 function publishRevocation(sids: readonly string[]): void {
   if (sids.length === 0) return;
   publishRedis(SESSION_REVOCATION_CHANNEL, encodeSessionRevocation(sids));
@@ -69,7 +59,7 @@ function publishRevocation(sids: readonly string[]): void {
 const CACHE_TTL_MS = 30_000;
 const CACHE_MAX = 10_000;
 
-/** `30d` / `12h` / `15m` / `45s` → millisecondes (repli si format inconnu). */
+/** `30d` / `12h` / `15m` / `45s` → milliseconds (fallback if the format is unknown). */
 export function parseDurationMs(input: string, fallbackMs: number): number {
   const m = /^(\d+)([smhd])$/.exec(input.trim());
   if (!m) return fallbackMs;
@@ -80,7 +70,7 @@ export function parseDurationMs(input: string, fallbackMs: number): number {
 
 const sessionLifetimeMs = () => parseDurationMs(env.JWT_REFRESH_EXPIRES_IN, 30 * 86_400_000);
 
-/** Crée une session pour un login réussi et renvoie son sid. */
+/** Creates a session for a successful login and returns its sid. */
 export async function createSession(userId: number, req: Request): Promise<string> {
   const sid = randomBytes(16).toString('hex');
   await prisma.userSession.create({
@@ -95,7 +85,7 @@ export async function createSession(userId: number, req: Request): Promise<strin
   return sid;
 }
 
-/** Prolonge l'activité (refresh réussi) : lastSeenAt + expiration glissante. */
+/** Extends activity (successful refresh): lastSeenAt + sliding expiry. */
 export async function touchSession(sid: string): Promise<void> {
   await prisma.userSession
     .update({
@@ -105,7 +95,7 @@ export async function touchSession(sid: string): Promise<void> {
     .catch(() => undefined);
 }
 
-/** Révoque une session (bornée à `userId` si fourni). Renvoie vrai si trouvée. */
+/** Revokes a session (bounded to `userId` if supplied). Returns true if found. */
 export async function revokeSession(sid: string, userId?: number): Promise<boolean> {
   const r = await prisma.userSession.updateMany({
     where: { id: sid, revokedAt: null, ...(userId != null ? { userId } : {}) },
@@ -113,23 +103,19 @@ export async function revokeSession(sid: string, userId?: number): Promise<boole
   });
   if (r.count > 0) {
     cacheSet(sid, false);
-    // Les autres répliques ne savent rien de cette écriture : elles tiennent leur propre
-    // cache, et c'est l'une d'elles qui héberge peut-être la websocket de ce `sid`.
+    // The other replicas know nothing of this write: they keep their own cache, and one of them may be hosting this `sid`'s websocket.
     publishRevocation([sid]);
   }
   return r.count > 0;
 }
 
 /**
- * Révoque toutes les sessions d'un compte (offboarding admin, changement de mot de passe).
- * `keepSessionId` épargne une session — celle de l'auteur de l'action, qui n'a pas à être
- * déconnecté pour avoir sécurisé son propre compte.
+ * Revokes all the sessions of an account (admin offboarding, password change). `keepSessionId` spares one session — that of the author of the action,
+ * who should not be logged out for having secured their own account.
  */
 export async function revokeAllCredentials(userId: number, keepSessionId?: string): Promise<void> {
-  // Une session n'est pas le seul identifiant du compte : un token d'API `rvk_` authentifie
-  // tout aussi bien, par une table entièrement séparée. Ne révoquer que les sessions
-  // laisserait survivre le jeton qu'un attaquant s'est créé — la reprise en main du compte
-  // (changement de mot de passe, réinitialisation par un admin) serait alors illusoire.
+  // A session is not the only identifier of the account: an API token `rvk_` authenticates just as well, through a fully separate table. Revoking only the
+  // sessions would let a token the attacker created survive — taking the account back in hand (password change, reset by an admin) would then be illusory.
   await Promise.all([
     revokeAllSessions(userId, keepSessionId),
     prisma.apiToken.updateMany({
@@ -149,15 +135,13 @@ export async function revokeAllSessions(userId: number, keepSessionId?: string):
   const r = await prisma.userSession.updateMany({ where, data: { revokedAt: new Date() } });
   const sids = sessions.map((s) => s.id);
   markSessionsRevoked(sids);
-  // Publier depuis ici plutôt que depuis `revokeAllCredentials` : tous les chemins de
-  // révocation en masse (offboarding, changement de mot de passe, réinitialisation admin)
-  // passent par cette fonction, et `keepSessionId` est déjà exclu du `where` — la session
-  // de l'auteur de l'action n'est donc jamais dans la liste publiée.
+  // Publishing from here rather than from `revokeAllCredentials`: every mass-revocation path (offboarding, password change, admin reset) goes through this
+  // function, and `keepSessionId` is already excluded from the `where` — the author's session is therefore never in the published list.
   publishRevocation(sids);
   return r.count;
 }
 
-// ── Cache de validité (in-process, mono-instance comme le rate limiter) ───────
+// ── Validity cache (in-process, single instance like the rate limiter) ──
 const cache = new Map<string, { ok: boolean; until: number }>();
 
 function cacheSet(sid: string, ok: boolean): void {
@@ -165,7 +149,7 @@ function cacheSet(sid: string, ok: boolean): void {
   cache.set(sid, { ok, until: Date.now() + CACHE_TTL_MS });
 }
 
-/** Session existante, non révoquée, non expirée ? (résultat mis en cache 30 s) */
+/** Existing session, not revoked, not expired? (result cached for 30 s) */
 export async function isSessionActive(sid: string): Promise<boolean> {
   const hit = cache.get(sid);
   if (hit && hit.until > Date.now()) return hit.ok;

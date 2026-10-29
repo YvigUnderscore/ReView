@@ -7,28 +7,26 @@ import { htmlToText } from './mailText';
 import { getEffectiveConfig, type SmtpEffectiveConfig } from '../services/SmtpService';
 
 /**
- * Envoi d'emails (invitation, digest quotidien, rapport hebdomadaire, test SMTP).
- * Configuration lue via `SmtpService` (base chiffrée + override environnement). Sans
- * host configuré, aucun envoi n'est tenté.
+ * Sending emails (invitation, daily digest, weekly report, SMTP test).
+ * Configuration read via `SmtpService` (encrypted database + environment override). Without a configured host,
+ * no send is attempted.
  */
 
-/** Vrai si un serveur SMTP est configuré (base ou environnement). */
+/** True if an SMTP server is configured (database or environment). */
 export async function isMailerConfigured(): Promise<boolean> {
   return (await getEffectiveConfig()) !== null;
 }
 
 /**
- * Transport nodemailer du relais configuré.
+ * Nodemailer transport of the configured relay.
  *
- * `requireTLS` n'est pas un détail de confort : sans lui, le STARTTLS du mode 587 est
- * OPPORTUNISTE. Un intermédiaire réseau qui retire `250-STARTTLS` de la réponse EHLO fait
- * poursuivre le dialogue en clair — nodemailer envoie alors `AUTH LOGIN` (identifiants du
- * studio) puis le corps du message. Or le message le plus sensible d'ici est l'invitation :
- * son jeton pose le mot de passe d'un compte. Avec `requireTLS`, la connexion est
- * abandonnée au lieu d'être dégradée.
+ * `requireTLS` is not a comfort detail: without it, STARTTLS in mode 587 is OPPORTUNISTIC. A network intermediary
+ * that strips `250-STARTTLS` from the EHLO reply makes the dialogue continue in clear text — nodemailer then sends
+ * `AUTH LOGIN` (the studio's credentials) followed by the message body. The most sensitive message here is the
+ * invitation: its token sets an account's password. With `requireTLS`, the connection is aborted rather than downgraded.
  *
- * `secure: true` (port 465) chiffre déjà d'emblée : `requireTLS` n'y a pas de sens.
- * `allowInsecure` est l'échappatoire assumée du relais interne sans certificat.
+ * `secure: true` (port 465) already encrypts from the start: `requireTLS` makes no sense there.
+ * `allowInsecure` is the accepted escape hatch for an internal relay without a certificate.
  */
 function buildTransport(cfg: SmtpEffectiveConfig): Transporter {
   if (cfg.allowInsecure) warnInsecureOnce(cfg.host);
@@ -37,8 +35,8 @@ function buildTransport(cfg: SmtpEffectiveConfig): Transporter {
     port: cfg.port,
     secure: cfg.secure,
     requireTLS: !cfg.secure && !cfg.allowInsecure,
-    // TLS 1.0/1.1 sont retirés partout ailleurs ; les laisser ici rouvrirait la
-    // dégradation par le bas plutôt que par la suppression de STARTTLS.
+    // TLS 1.0/1.1 are removed everywhere else; allowing them here would reopen downgrading from below rather than
+    // through the removal of STARTTLS.
     tls: { minVersion: 'TLSv1.2' },
     auth: cfg.user ? { user: cfg.user, pass: cfg.pass ?? '' } : undefined,
   });
@@ -46,7 +44,7 @@ function buildTransport(cfg: SmtpEffectiveConfig): Transporter {
 
 let insecureWarned = false;
 
-/** Une seule ligne par process : le réglage est délibéré, mais il ne doit pas s'oublier. */
+/** One line per process: the setting is deliberate, but must not be forgotten. */
 function warnInsecureOnce(host: string): void {
   if (insecureWarned) return;
   insecureWarned = true;
@@ -58,24 +56,21 @@ function warnInsecureOnce(host: string): void {
 
 export interface MailOptions {
   /**
-   * Adresse de désabonnement d'un envoi récurrent (digest, rapport hebdomadaire).
-   * Elle produit l'en-tête `List-Unsubscribe`, que les messageries transforment en
-   * bouton natif « Se désabonner ». Sans lui, le lecteur qui ne veut plus du digest
-   * n'a qu'un geste à sa portée : marquer le message comme indésirable — ce qui abîme
-   * la réputation du serveur pour TOUS les envois du studio, invitations comprises.
+   * Unsubscribe address of a recurring send (digest, weekly report). It produces the `List-Unsubscribe` header, which
+   * mail services turn into a native "Unsubscribe" button. Without it, a reader who no longer wants the digest has
+   * only one gesture within reach: marking the message as spam — which damages the server's reputation for ALL the
+   * studio's sends, invitations included.
    */
   unsubscribeUrl?: string;
-  /** Texte brut, quand le message en a une meilleure version que celle dérivée du HTML. */
+  /** Plain text, when the message has a better version than the one derived from the HTML. */
   text?: string;
 }
 
 /**
- * Envoie un message. Le corps part toujours en deux versions : le HTML et son
- * équivalent texte.
+ * Sends a message. The body always goes out in two versions: the HTML and its plain-text equivalent.
  *
- * Nous n'envoyions que du HTML. Les filtres anti-spam pénalisent un message sans
- * alternative texte ; les aperçus (liste de la boîte, notification de montre, lecteur
- * d'écran) y affichaient du balisage brut ; un client en mode texte ne montrait rien.
+ * We used to send only HTML. Anti-spam filters penalise a message without a text alternative; previews (mailbox list,
+ * watch notification, screen reader) displayed raw markup there; a client in text mode showed nothing.
  */
 export async function sendMail(
   to: string,
@@ -94,20 +89,19 @@ export async function sendMail(
       text: options.text ?? htmlToText(html),
       headers: {
         /**
-         * Message émis par une machine, pas par une personne.
+         * Message generated by a machine, not by a person.
          *
-         * Sans ces deux en-têtes, un répondeur d'absence répond au digest ; l'adresse
-         * d'expédition du studio reçoit la réponse, et selon la configuration du relais
-         * la boucle peut se refermer. Ils ne coûtent rien et coupent le cas net.
+         * Without these two headers, an out-of-office responder replies to the digest; the studio's sender address
+         * receives the reply, and depending on the relay's configuration the loop can close. They cost nothing and cut
+         * the case off cleanly.
          */
         'Auto-Submitted': 'auto-generated',
         'X-Auto-Response-Suppress': 'All',
         ...(options.unsubscribeUrl
           ? {
               'List-Unsubscribe': `<${options.unsubscribeUrl}>`,
-              // Déclare que le désabonnement se fait en un appel, sans page de
-              // confirmation : sans cet en-tête, Gmail et Outlook n'affichent pas le
-              // bouton natif.
+              // Declares that unsubscribing takes one call, with no confirmation page: without this header, Gmail and
+              // Outlook do not show the native button.
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
             }
           : {}),

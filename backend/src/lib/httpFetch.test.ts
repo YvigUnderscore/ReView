@@ -10,9 +10,8 @@ import { fetchAllowlisted, readCappedBody } from './httpFetch';
 import { OutboundBlockedError, OutboundTimeoutError, OutboundTooLargeError } from './safeFetch';
 
 /**
- * `fetchAllowlisted` existe pour une seule raison : une allow-list d'hôtes contrôlée une
- * fois sur l'URL de départ ne dit rien de la cible réellement atteinte. Ces tests décrivent
- * donc surtout ce qui se passe APRÈS une redirection.
+ * `fetchAllowlisted` exists for one reason: a host allow-list checked once on the starting URL says nothing about the
+ * target actually reached. These tests therefore mostly describe what happens AFTER a redirect.
  */
 
 const PUBLIC_ADDRESS = [{ address: '93.184.216.34', family: 4 }];
@@ -36,21 +35,21 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('fetchAllowlisted — allow-list au départ', () => {
-  it('sert un hôte allowlisté', async () => {
+describe('fetchAllowlisted — allow-list at the start', () => {
+  it('serves an allow-listed host', async () => {
     const res = await fetchAllowlisted('https://github.com/a/b', {}, allowList);
     await expect(res.text()).resolves.toBe('ok');
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it('refuse un hôte hors allow-list sans émettre la requête', async () => {
+  it('refuses a host outside the allow-list without sending the request', async () => {
     await expect(fetchAllowlisted('https://evil.test/x', {}, allowList)).rejects.toBeInstanceOf(
       OutboundBlockedError,
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("refuse une adresse interne même si l'allow-list dit oui", async () => {
+  it("refuses an internal address even if the allow-list says yes", async () => {
     await expect(
       fetchAllowlisted('http://169.254.169.254/latest/meta-data/', {}, { isAllowedHost: () => true }),
     ).rejects.toBeInstanceOf(OutboundBlockedError);
@@ -58,8 +57,8 @@ describe('fetchAllowlisted — allow-list au départ', () => {
   });
 });
 
-describe('fetchAllowlisted — allow-list ré-évaluée à CHAQUE saut', () => {
-  it('suit une redirection vers un hôte allowlisté', async () => {
+describe('fetchAllowlisted — allow-list re-evaluated at EVERY hop', () => {
+  it('follows a redirect to an allow-listed host', async () => {
     fetchMock
       .mockResolvedValueOnce(redirect('https://objects.githubusercontent.com/asset'))
       .mockResolvedValueOnce(text('config'));
@@ -68,16 +67,16 @@ describe('fetchAllowlisted — allow-list ré-évaluée à CHAQUE saut', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('refuse une redirection vers un hôte hors allow-list', async () => {
+  it('refuses a redirect to a host outside the allow-list', async () => {
     fetchMock.mockResolvedValueOnce(redirect('https://evil.test/collect'));
     await expect(fetchAllowlisted('https://github.com/a/b', {}, allowList)).rejects.toMatchObject({
       code: 'OUTBOUND_BLOCKED',
     });
-    // Le second saut n'a jamais été émis.
+    // The second hop was never sent.
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it('refuse une redirection vers les métadonnées cloud (le scénario A2-03)', async () => {
+  it('refuses a redirect to cloud metadata (the A2-03 scenario)', async () => {
     fetchMock.mockResolvedValueOnce(redirect('http://169.254.169.254/latest/meta-data/iam/'));
     await expect(
       fetchAllowlisted('https://github.com/a/b', {}, { isAllowedHost: () => true }),
@@ -85,7 +84,7 @@ describe('fetchAllowlisted — allow-list ré-évaluée à CHAQUE saut', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it('refuse une redirection vers un nom public qui résout en interne', async () => {
+  it('refuses a redirect to a public name that resolves internally', async () => {
     fetchMock.mockResolvedValueOnce(redirect('https://github.com/etape-2'));
     vi.mocked(lookup)
       .mockResolvedValueOnce(PUBLIC_ADDRESS as never)
@@ -96,7 +95,7 @@ describe('fetchAllowlisted — allow-list ré-évaluée à CHAQUE saut', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it('borne le nombre de sauts', async () => {
+  it('bounds the number of hops', async () => {
     fetchMock.mockResolvedValue(redirect('https://github.com/encore'));
     await expect(
       fetchAllowlisted('https://github.com/a/b', {}, { ...allowList, maxRedirects: 2 }),
@@ -104,14 +103,14 @@ describe('fetchAllowlisted — allow-list ré-évaluée à CHAQUE saut', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('refuse une redirection sans en-tête Location', async () => {
+  it('refuses a redirect without a Location header', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 302 }));
     await expect(fetchAllowlisted('https://github.com/a/b', {}, allowList)).rejects.toBeInstanceOf(
       OutboundBlockedError,
     );
   });
 
-  it('ne rejoue jamais une méthode non sûre vers une cible choisie par le serveur', async () => {
+  it('never replays an unsafe method towards a target chosen by the server', async () => {
     fetchMock.mockResolvedValueOnce(redirect('https://github.com/ailleurs', 307));
     await expect(
       fetchAllowlisted('https://github.com/a/b', { method: 'POST', body: 'x' }, allowList),
@@ -120,8 +119,8 @@ describe('fetchAllowlisted — allow-list ré-évaluée à CHAQUE saut', () => {
   });
 });
 
-describe('fetchAllowlisted — délai d’attente', () => {
-  it('abandonne si les en-têtes ne viennent pas', async () => {
+describe('fetchAllowlisted — timeout', () => {
+  it('gives up if the headers do not come', async () => {
     fetchMock.mockImplementation((_url, init) => {
       const signal = (init as RequestInit).signal!;
       return new Promise((_resolve, reject) => {
@@ -135,21 +134,21 @@ describe('fetchAllowlisted — délai d’attente', () => {
 });
 
 describe('readCappedBody', () => {
-  it('rend le corps sous le plafond', async () => {
+  it('returns the body under the ceiling', async () => {
     await expect(readCappedBody(text('bonjour'), 1024)).resolves.toEqual(Buffer.from('bonjour'));
   });
 
-  it('refuse sur le Content-Length annoncé, sans rien télécharger', async () => {
+  it('refuses on the announced Content-Length, without downloading anything', async () => {
     const res = text('court', { headers: { 'content-length': '99999' } });
     await expect(readCappedBody(res, 10)).rejects.toBeInstanceOf(OutboundTooLargeError);
   });
 
-  it('refuse aussi un amont qui ment sur sa taille', async () => {
+  it('also refuses an upstream that lies about its size', async () => {
     const res = text('x'.repeat(5000), { headers: { 'content-length': '5' } });
     await expect(readCappedBody(res, 100)).rejects.toBeInstanceOf(OutboundTooLargeError);
   });
 
-  it('tolère une réponse sans corps', async () => {
+  it('tolerates a response without a body', async () => {
     await expect(readCappedBody(new Response(null, { status: 204 }), 10)).resolves.toEqual(Buffer.alloc(0));
   });
 });

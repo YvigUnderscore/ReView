@@ -7,47 +7,43 @@ import { logger } from './logger';
 import { mediaQueue } from '../services/JobService';
 
 /**
- * Réconciliation des médias figés en `PROCESSING`.
+ * Reconciliation of media stuck in `PROCESSING`.
  *
- * Un worker tué en plein transcodage perd son verrou BullMQ. Le premier calage rejoue le
- * job, mais au second (`maxStalledCount: 1`) BullMQ l'échoue **hors du chemin
- * applicatif** : le média reste `PROCESSING`, sans `processingError`, indiscernable d'un
- * travail en cours. Aucune requête ne balayait cet état — un média perdu ainsi l'était
- * définitivement.
+ * A worker killed in the middle of a transcode loses its BullMQ lock. The first stall replays the job, but on the second
+ * (`maxStalledCount: 1`) BullMQ fails it **outside the application path**: the media stays `PROCESSING`, without
+ * `processingError`, indistinguishable from a job still running. No query swept this state — a media lost that way was
+ * lost for good.
  *
- * Politique retenue : **échec explicite, jamais de remise en file automatique.**
- *  - Le type de job d'origine (`transcode`/`thumbnail`/`convert3d`) n'est pas reconstituable
- *   de façon sûre depuis la base ; le réenfiler à l'aveugle risquerait de lancer le mauvais
- *   travail et d'écraser des dérivés valides.
- *  - Un fichier pathologique qui refait échouer le worker se remettrait en file à chaque
- *   redémarrage, indéfiniment.
- *  - `FAILED` + `processingError` est un état **visible** : la review affiche la raison et
- *   l'action « retraiter » existante réenfile le bon job, sur décision humaine.
+ * Adopted policy: **explicit failure, never automatic re-queuing.**
+ *  - The original job type (`transcode`/`thumbnail`/`convert3d`) cannot be reconstituted safely from the database;
+ *    re-queuing it blindly would risk running the wrong job and overwriting valid derivatives.
+ *  - A pathological file that makes the worker fail again would be re-queued at every restart, indefinitely.
+ *  - `FAILED` + `processingError` is a **visible** state: review shows the reason, and the existing "reprocess" action
+ *    re-queues the right job, on a human decision.
  *
- * Deux garde-fous avant de condamner un média : il ne doit exister **aucun job vivant**
- * pour lui dans la file (en attente, actif, différé…), et il doit être ancien — un média
- * tout juste enfilé ne doit pas être rattrapé par un balayage qui court plus vite que lui.
+ * Two safeguards before condemning a media: there must be **no live job** for it in the queue (waiting, active,
+ * delayed...), and it must be old — a media just enqueued must not be caught by a sweep running faster than it.
  */
 
-/** Âge minimal avant qu'un média `PROCESSING` sans job vivant soit tenu pour perdu. */
+/** Minimum age before a `PROCESSING` media without a live job is deemed lost. */
 export const MEDIA_STUCK_AFTER_MS = 15 * 60_000;
 
-/** Délai avant le balayage de démarrage : laisse le worker se connecter à la file. */
+/** Delay before the start-up sweep: lets the worker connect to the queue. */
 export const RECONCILE_BOOT_DELAY_MS = 20_000;
 
 export type ReconcileAction = 'skip' | 'fail';
 
 export interface StuckMediaCandidate {
   id: number;
-  /** Ancienneté du média (ms). */
+  /** Age of the media (ms). */
   ageMs: number;
-  /** Un job le concernant existe encore dans la file (attente, actif, différé, priorisé…). */
+  /** A job concerning it still exists in the queue (waiting, active, delayed, prioritised...). */
   hasLiveJob: boolean;
 }
 
 /**
- * Décide du sort d'un média resté en `PROCESSING`. Fonction pure : c'est elle qui porte la
- * politique, et c'est elle qu'on teste.
+ * Decides the fate of a media left in `PROCESSING`. Pure function: it is this that carries the policy, and it is this
+ * that is tested.
  */
 export function reconcileAction(
   candidate: StuckMediaCandidate,
@@ -58,44 +54,41 @@ export function reconcileAction(
   return 'fail';
 }
 
-/** Message porté par `metadata.processingError` — en anglais, comme toutes les erreurs backend. */
+/** Message carried by `metadata.processingError` — in English, like all backend errors. */
 export function reconcileFailureMessage(ageMs: number): string {
   const minutes = Math.max(1, Math.round(ageMs / 60_000));
   return `Processing was interrupted (worker restarted or job lost): the media stayed in PROCESSING for ${minutes} min with no live job. Relaunch processing from the media menu.`;
 }
 
-/** États BullMQ qui protègent un média : son traitement n'est pas perdu, il attend son tour. */
+/** BullMQ states that protect a media: its processing is not lost, it waits its turn. */
 const LIVE_JOB_TYPES = ['waiting', 'active', 'delayed', 'paused', 'prioritized', 'waiting-children'] as const;
 
 /**
- * Plafond de jobs relevés par état et par passe.
+ * Ceiling of jobs read per state and per pass.
  *
- * `getJobs` sans plage rapatrie **chaque** job vivant depuis Redis, charge utile comprise.
- * Tant que la réconciliation ne tournait qu'au démarrage de l'API, personne ne le voyait ;
- * périodique, elle traverserait tout l'arriéré à chaque passe d'entretien. La plage la
- * borne. Deux mille par état laisse une marge considérable sur un arriéré de studio (la
- * file média porte un job par média enfilé, pas un par segment).
+ * `getJobs` without a range fetches **every** live job from Redis, payload included. As long as reconciliation only ran
+ * at API start-up, nobody saw it; periodic, it would traverse the whole backlog at each maintenance pass. The range
+ * bounds it. Two thousand per state leaves a considerable margin on a studio backlog (the media queue carries one job
+ * per enqueued media, not one per segment).
  */
 export const LIVE_JOB_SCAN_MAX = 2_000;
 
 export interface LiveMediaJobs {
-  /** Médias ayant encore un job vivant. */
+  /** Media still having a live job. */
   ids: Set<number>;
   /**
-   * Faux dès que le relevé atteint le plafond. BullMQ applique la plage état par état : on
-   * ne peut pas distinguer, dans le résultat aplati, un état saturé d'une somme d'états
-   * chargés — alors on ne distingue pas, on s'abstient. Croire « aucun job » sur un relevé
-   * peut-être partiel condamnerait un média dont le traitement attend simplement son tour,
-   * et c'est irrattrapable : le média passe en FAILED sous les yeux de l'artiste.
+   * False as soon as the read reaches the ceiling. BullMQ applies the range state by state: one cannot distinguish, in
+   * the flattened result, a saturated state from a sum of loaded states — so we do not distinguish, we abstain.
+   * Believing "no job" on a possibly partial read would condemn a media whose processing is simply waiting its turn,
+   * and that is irrecoverable: the media goes to FAILED under the artist's eyes.
    */
   complete: boolean;
 }
 
-/** Identifiants de médias ayant encore un job vivant dans la file de traitement. */
+/** Identifiers of media still having a live job in the processing queue. */
 export async function liveMediaJobIds(): Promise<LiveMediaJobs> {
-  // Un seul appel : BullMQ lit les six états dans un même script Lua, donc l'instantané
-  // reste cohérent — un job qui passe de `waiting` à `active` ne peut pas se glisser
-  // entre deux lectures et disparaître du relevé.
+  // A single call: BullMQ reads the six states in one Lua script, so the snapshot stays consistent — a job going from
+  // `waiting` to `active` cannot slip between two reads and vanish from the report.
   const jobs = await mediaQueue.getJobs([...LIVE_JOB_TYPES], 0, LIVE_JOB_SCAN_MAX - 1);
   const ids = new Set<number>();
   for (const job of jobs) {
@@ -106,8 +99,8 @@ export async function liveMediaJobIds(): Promise<LiveMediaJobs> {
 }
 
 /**
- * Balaye les médias `PROCESSING` et condamne ceux qui n'ont plus de job vivant.
- * Renvoie le nombre de médias passés en échec.
+ * Sweeps `PROCESSING` media and condemns those no longer having a live job.
+ * Returns the number of media moved to failure.
  */
 export async function reconcileStuckMedia(now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - MEDIA_STUCK_AFTER_MS);
@@ -131,8 +124,8 @@ export async function reconcileStuckMedia(now: Date = new Date()): Promise<numbe
     if (reconcileAction({ id: media.id, ageMs, hasLiveJob: live.ids.has(media.id) }) !== 'fail') continue;
     const metadata: Record<string, unknown> = { ...((media.metadata ?? {}) as object) };
     metadata.processingError = reconcileFailureMessage(ageMs);
-    // `updateMany` avec le statut en condition : si le worker vient de terminer entre la
-    // lecture et l'écriture, on ne rétrograde pas un média devenu READY.
+    // `updateMany` with the status as a condition: if the worker has just finished between the read and the write,
+    // we do not demote a media that has become READY.
     const res = await prisma.mediaObject.updateMany({
       where: { id: media.id, status: MediaStatus.PROCESSING },
       data: { status: MediaStatus.FAILED, metadata: metadata as Prisma.InputJsonObject },

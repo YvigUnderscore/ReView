@@ -23,67 +23,67 @@ const project: ProjectSettings = {
 
 const base: PipelineSettings = { resolution: { width: 1920, height: 1080 }, framerate: 24 };
 
-describe('projectSettings — pipeline & héritage (Phase 18)', () => {
-  it('pipelineOf extrait résolution + framerate des réglages projet', () => {
+describe('projectSettings — pipeline & inheritance (Phase 18)', () => {
+  it('pipelineOf extracts resolution + framerate from the project settings', () => {
     expect(pipelineOf(project)).toEqual({ resolution: { width: 1920, height: 1080 }, framerate: 24 });
   });
 
-  it('applyPipelineOverride laisse hériter quand le JSON est vide', () => {
+  it('applyPipelineOverride lets inheritance apply when the JSON is empty', () => {
     expect(applyPipelineOverride(base, {})).toEqual(base);
     expect(applyPipelineOverride(base, null)).toEqual(base);
     expect(applyPipelineOverride(base, undefined)).toEqual(base);
   });
 
-  it('applyPipelineOverride surcharge résolution et framerate présents', () => {
+  it('applyPipelineOverride overrides resolution and framerate when present', () => {
     const out = applyPipelineOverride(base, { resolution: { width: 3840, height: 2160 }, framerate: 30 });
     expect(out).toEqual({ resolution: { width: 3840, height: 2160 }, framerate: 30 });
   });
 
-  it('applyPipelineOverride surcharge partiellement (framerate seul)', () => {
+  it('applyPipelineOverride partially overrides (framerate only)', () => {
     const out = applyPipelineOverride(base, { framerate: 25 });
     expect(out).toEqual({ resolution: { width: 1920, height: 1080 }, framerate: 25 });
   });
 
-  it('applyPipelineOverride borne les dimensions et le framerate', () => {
+  it('applyPipelineOverride bounds the dimensions and the framerate', () => {
     const out = applyPipelineOverride(base, { resolution: { width: 0, height: 999999 }, framerate: 9999 });
-    expect(out.resolution.width).toBe(1); // borné min
-    expect(out.resolution.height).toBe(16384); // borné max
-    expect(out.framerate).toBe(240); // borné max
+    expect(out.resolution.width).toBe(1); // clamped to the minimum
+    expect(out.resolution.height).toBe(16384); // clamped to the maximum
+    expect(out.framerate).toBe(240); // clamped to the maximum
   });
 
-  it('applyPipelineOverride ignore les valeurs non numériques', () => {
+  it('applyPipelineOverride ignores non-numeric values', () => {
     const out = applyPipelineOverride(base, { framerate: 'abc', resolution: { width: 'x' } });
-    expect(out.resolution.width).toBe(1920); // hérité (invalide ignoré)
-    expect(out.framerate).toBe(24); // hérité
+    expect(out.resolution.width).toBe(1920); // inherited (invalid value ignored)
+    expect(out.framerate).toBe(24); // inherited
   });
 
-  it('resolveEntitySettings hérite du projet sans override', () => {
+  it('resolveEntitySettings inherits from the project without an override', () => {
     expect(resolveEntitySettings(project)).toEqual(base);
   });
 
-  it("resolveEntitySettings applique l'override séquence puis shot (le plus proche gagne)", () => {
+  it("resolveEntitySettings applies the sequence override then the shot's (the closest wins)", () => {
     const out = resolveEntitySettings(
       project,
-      { resolution: { width: 2048, height: 858 }, framerate: 25 }, // séquence
-      { framerate: 48 }, // shot surcharge le framerate uniquement
+      { resolution: { width: 2048, height: 858 }, framerate: 25 }, // sequence
+      { framerate: 48 }, // shot overrides the framerate only
     );
     expect(out).toEqual({ resolution: { width: 2048, height: 858 }, framerate: 48 });
   });
 
-  it('resolveEntitySettings : shot hérite de la résolution de la séquence', () => {
+  it('resolveEntitySettings: a shot inherits the resolution of the sequence', () => {
     const out = resolveEntitySettings(project, { resolution: { width: 1280, height: 720 } }, {});
     expect(out).toEqual({ resolution: { width: 1280, height: 720 }, framerate: 24 });
   });
 });
 
 describe('projectSettings — checkNaming (38.C)', () => {
-  it('passe toujours si mode off ou motif vide', () => {
+  it('always passes when the mode is off or the pattern is empty', () => {
     expect(checkNaming('x.mov', { pattern: '', mode: 'reject' })).toEqual({ pass: true, mode: 'off' });
     expect(checkNaming('x.mov', { pattern: '^SH\\d+', mode: 'off' })).toEqual({ pass: true, mode: 'off' });
     expect(checkNaming('x.mov', undefined)).toEqual({ pass: true, mode: 'off' });
   });
 
-  it('évalue le motif et renvoie le mode (warn/reject)', () => {
+  it('evaluates the pattern and returns the mode (warn/reject)', () => {
     expect(checkNaming('SH010_v2.mov', { pattern: '^SH\\d{3}_v\\d+', mode: 'reject' })).toEqual({
       pass: true,
       mode: 'reject',
@@ -94,7 +94,7 @@ describe('projectSettings — checkNaming (38.C)', () => {
     });
   });
 
-  it('regex invalide n’entrave jamais l’upload', () => {
+  it('an invalid regex never hinders the upload', () => {
     expect(checkNaming('x.mov', { pattern: '([', mode: 'reject' })).toEqual({ pass: true, mode: 'off' });
   });
 });
@@ -108,34 +108,34 @@ describe('projectSettings — defaultLighting (39.F)', () => {
     groundShadow: true,
   };
 
-  it('accepte un éclairage par défaut complet', () => {
+  it('accepts a complete default lighting', () => {
     const parsed = projectSettingsSchema.parse({ defaultLighting: valid });
     expect(parsed.defaultLighting).toEqual(valid);
   });
 
-  it('accepte sans hdriId (éclairage neutre par défaut)', () => {
+  it('accepts without hdriId (neutral lighting by default)', () => {
     const parsed = projectSettingsSchema.parse({
       defaultLighting: { exposure: 1, rotationDeg: 0, showBackground: false, groundShadow: false },
     });
     expect(parsed.defaultLighting?.hdriId).toBeUndefined();
   });
 
-  it('rejette une exposition hors bornes', () => {
+  it('rejects an exposure out of bounds', () => {
     expect(() => projectSettingsSchema.parse({ defaultLighting: { ...valid, exposure: 99 } })).toThrow();
   });
 
-  it('rejette une rotation hors bornes', () => {
+  it('rejects a rotation out of bounds', () => {
     expect(() => projectSettingsSchema.parse({ defaultLighting: { ...valid, rotationDeg: 400 } })).toThrow();
   });
 });
 
-describe('projectSettings — color OCIO (39.B)', () => {
-  it('accepte une config couleur complète', () => {
+describe('projectSettings — OCIO colour (39.B)', () => {
+  it('accepts a complete colour config', () => {
     const color = { configId: 'abc', display: 'sRGB - Display', view: 'ACES 1.0 - SDR Video' };
     expect(projectSettingsSchema.parse({ color }).color).toEqual(color);
   });
 
-  it('accepte une config couleur partielle', () => {
+  it('accepts a partial colour config', () => {
     expect(projectSettingsSchema.parse({ color: { display: 'sRGB - Display' } }).color?.view).toBeUndefined();
   });
 });

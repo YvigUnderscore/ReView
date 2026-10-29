@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { sha256File } from './checksum';
 
 describe('sha256File', () => {
-  it('hash identique à un hash mémoire', async () => {
+  it('hash identical to an in-memory hash', async () => {
     const p = join(tmpdir(), `checksum-test-${Date.now()}.bin`);
     const data = Buffer.from('contenu de test ReView 37.B');
     await writeFile(p, data);
@@ -20,7 +20,7 @@ describe('sha256File', () => {
     }
   });
 
-  it('rejette si le fichier est absent', async () => {
+  it('rejects if the file is absent', async () => {
     await expect(sha256File(join(tmpdir(), 'inexistant-xyz.bin'))).rejects.toBeTruthy();
   });
 });

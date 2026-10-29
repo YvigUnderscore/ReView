@@ -5,18 +5,14 @@ import { z } from 'zod';
 import { USD_PURPOSES } from './blenderUsd';
 
 /**
- * Schéma du « ReView override » (Phase 46, 46.D) — miroir serveur du type front
- * `v2/pages/review/three/sceneOverride.ts`. Toute évolution doit toucher les deux.
+ * Schema of the "ReView override" (Phase 46, 46.D) — server mirror of the front-end type `v2/pages/review/three/sceneOverride.ts`. Any change must touch both.
  *
- * Ce n'est pas de l'USD : c'est un delta propre à ReView, appliqué à la scène au chargement.
- * Il vit à deux endroits, avec la même forme :
- *  - `metadata.usdOverride` du média : réglé avant publication, **figé** ensuite, rejoué pour
- *    tous les spectateurs ;
- *  - dans l'annotation d'un commentaire (partie `scene-override`) : proposition d'un reviewer,
- *    rejouée uniquement quand ce commentaire est sélectionné.
+ * This is not USD: it is a delta specific to ReView, applied to the scene at load time.
+ * It lives in two places, with the same shape:
+ *  - `metadata.usdOverride` of the media: set before publication, **frozen** afterwards, replayed for all viewers;
+ *  - in the annotation of a comment (`scene-override` part): a reviewer's proposal, replayed only when that comment is selected.
  *
- * Les bornes numériques évitent qu'une valeur aberrante (NaN, échelle nulle, translation
- * astronomique) rende la scène inexploitable pour tout le monde.
+ * The numeric bounds prevent an aberrant value (NaN, zero scale, astronomical translation) from making the scene unusable for everyone.
  */
 
 const MAX_TRANSLATION = 1e6;
@@ -29,13 +25,13 @@ const translation = z.tuple([
   finite.min(-MAX_TRANSLATION).max(MAX_TRANSLATION),
   finite.min(-MAX_TRANSLATION).max(MAX_TRANSLATION),
 ]);
-// Une échelle nulle ou négative ferait disparaître ou retourner la géométrie.
+// A zero or negative scale would make the geometry vanish or flip.
 const positive = finite.min(0.0001).max(10_000);
 const scale3 = z.tuple([positive, positive, positive]);
 
 const transformSchema = z.object({ t: translation, r: vec3, s: scale3 });
 
-/** Clones de mise en scène (C1) : bornés par prim — le set-dressing léger, pas l'instancing. */
+/** Staging clones (C1): bounded per prim — light set-dressing, not instancing. */
 const MAX_CLONES_PER_PRIM = 50;
 const cloneSchema = z.object({
   id: z.string().min(1).max(64),
@@ -62,7 +58,7 @@ export const sceneOverrideSchema = z.object({
 
 export type SceneOverride = z.infer<typeof sceneOverrideSchema>;
 
-/** Vrai si l'override ne dit rien — on le stocke alors comme `null` plutôt qu'objet vide. */
+/** True if the override says nothing — it is then stored as `null` rather than an empty object. */
 export function isEmptySceneOverride(override: SceneOverride): boolean {
   return !override.purpose && Object.keys(override.prims).length === 0;
 }

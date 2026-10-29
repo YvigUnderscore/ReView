@@ -4,31 +4,29 @@
 import { logger } from './logger';
 
 /**
- * Arrêt propre des deux process (API et worker).
+ * Clean shutdown of both processes (API and worker).
  *
- * `docker compose stop|restart|up --build` envoie SIGTERM puis SIGKILL dix secondes plus
- * tard. Sans personne à l'écoute, le transcodage en cours perd son verrou BullMQ, le job
- * est rejoué depuis le début et, au deuxième calage, le média reste `PROCESSING` sans
- * message : indiscernable d'un travail en cours.
+ * `docker compose stop|restart|up --build` sends SIGTERM, then SIGKILL ten seconds later. With nobody
+ * listening, an in-flight transcode loses its BullMQ lock, the job is replayed from the start, and on the
+ * second stall the media stays `PROCESSING` with no message: indistinguishable from a job still running.
  *
- * On enregistre donc des tâches d'extinction ordonnées par **phase** : d'abord cesser
- * d'accepter du travail (serveur HTTP, sockets, consommateurs de files), ensuite couper
- * les connexions (Prisma, Redis). Les tâches d'une même phase s'éteignent en parallèle,
- * et l'ensemble est borné par un délai de grâce : passé ce délai, on force et on sort,
- * parce qu'un process qui refuse de mourir sera tué sans ménagement de toute façon.
+ * Shutdown tasks are therefore registered in ordered **phases**: first stop accepting work (HTTP server,
+ * sockets, queue consumers), then close connections (Prisma, Redis). Tasks of the same phase shut down in
+ * parallel, and the whole is bounded by a grace delay: past it, we force and exit, since a process that
+ * refuses to die will be killed anyway.
  */
 
-/** Phase : les tâches s'exécutent par phase croissante, en parallèle au sein d'une phase. */
+/** Phase: tasks run in increasing phase order, in parallel within a phase. */
 export const SHUTDOWN_PHASE = {
-  /** Cesser d'accepter du travail neuf (HTTP, sockets, workers BullMQ). */
+  /** Stop accepting new work (HTTP, sockets, BullMQ workers). */
   STOP_INTAKE: 10,
-  /** Couper les connexions sortantes (base, Redis). */
+  /** Close outgoing connections (database, Redis). */
   DISCONNECT: 20,
 } as const;
 
 /**
- * Délai de grâce par défaut. Docker laisse dix secondes avant SIGKILL
- * (`stop_grace_period`) : on garde une marge pour journaliser la sortie.
+ * Default grace delay. Docker leaves ten seconds before SIGKILL (`stop_grace_period`): a margin is kept
+ * to log the exit.
  */
 export const SHUTDOWN_GRACE_MS = 8_000;
 
@@ -37,9 +35,8 @@ export interface ShutdownTask {
   phase: number;
   run: () => Promise<void>;
   /**
-   * Appelée si `run` n'a pas rendu la main dans le délai imparti. Sert à forcer ce qui
-   * peut l'être (un worker BullMQ qui attend la fin d'un encodage de vingt minutes).
-   * Best effort, jamais attendue.
+   * Called if `run` has not returned within the allotted delay. Forces whatever can be forced (a BullMQ
+   * worker waiting for a twenty-minute encode to finish). Best effort, never awaited.
    */
   force?: () => void;
 }
@@ -53,20 +50,20 @@ export interface ShutdownOutcome {
 
 const tasks: ShutdownTask[] = [];
 
-/** Enregistre une tâche d'extinction. L'ordre d'enregistrement ne compte pas, la phase si. */
+/** Registers a shutdown task. Registration order does not matter, the phase does. */
 export function registerShutdownTask(task: ShutdownTask): void {
   tasks.push(task);
 }
 
-/** Vide le registre — réservé aux tests. */
+/** Empties the registry — tests only. */
 export function __resetShutdownTasks(): void {
   tasks.length = 0;
 }
 
-/** Nombre de tâches enregistrées (diagnostic et tests). */
+/** Number of registered tasks (diagnostics and tests). */
 export const shutdownTaskCount = (): number => tasks.length;
 
-/** Copie des tâches enregistrées — réservé aux tests. */
+/** Copy of the registered tasks — tests only. */
 export const __shutdownTasks = (): readonly ShutdownTask[] => [...tasks];
 
 function withDeadline(task: ShutdownTask, ms: number): Promise<ShutdownOutcome> {
@@ -78,7 +75,7 @@ function withDeadline(task: ShutdownTask, ms: number): Promise<ShutdownOutcome> 
       try {
         task.force?.();
       } catch {
-        // Le forçage est un dernier recours : son échec ne doit rien empêcher.
+        // Forcing is a last resort: its failure must not block anything.
       }
       resolve({ name: task.name, ok: false, timedOut: true });
     }, ms);
@@ -102,9 +99,9 @@ function withDeadline(task: ShutdownTask, ms: number): Promise<ShutdownOutcome> 
 }
 
 /**
- * Exécute les tâches par phase croissante, l'ensemble borné par `totalMs`.
- * Chaque phase reçoit le budget restant ; une phase qui l'épuise n'empêche pas les
- * suivantes de tenter leur chance (elles auront un budget nul et seront forcées).
+ * Runs the tasks in increasing phase order, the whole bounded by `totalMs`.
+ * Each phase receives the remaining budget; a phase that exhausts it does not stop the next ones from trying
+ * (they will have a zero budget and be forced).
  */
 export async function runShutdownTasks(
   list: readonly ShutdownTask[],
@@ -124,7 +121,7 @@ export async function runShutdownTasks(
 
 let shuttingDown = false;
 
-/** Déroule l'extinction une seule fois, quel que soit le nombre de signaux reçus. */
+/** Runs the shutdown only once, whatever the number of signals received. */
 export async function shutdown(signal: string, graceMs = SHUTDOWN_GRACE_MS): Promise<number> {
   if (shuttingDown) return 0;
   shuttingDown = true;
@@ -139,17 +136,17 @@ export async function shutdown(signal: string, graceMs = SHUTDOWN_GRACE_MS): Pro
   return clean ? 0 : 1;
 }
 
-/** Vrai dès qu'un signal d'arrêt a été reçu (les boucles de fond peuvent s'y référer). */
+/** True as soon as a stop signal has been received (background loops may refer to it). */
 export const isShuttingDown = (): boolean => shuttingDown;
 
-/** Réinitialise l'état d'extinction — réservé aux tests. */
+/** Resets the shutdown state — tests only. */
 export function __resetShutdownState(): void {
   shuttingDown = false;
 }
 
 /**
- * Pose les gestionnaires SIGTERM/SIGINT. Un second signal pendant l'extinction sort
- * immédiatement : l'exploitant qui insiste veut que ça s'arrête, pas qu'on discute.
+ * Installs the SIGTERM/SIGINT handlers. A second signal during shutdown exits immediately: an operator who
+ * insists wants it to stop, not to negotiate.
  */
 export function installShutdownHandlers(
   opts: { graceMs?: number; exit?: (code: number) => void } = {},

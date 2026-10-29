@@ -4,21 +4,19 @@
 import { z } from 'zod';
 
 /**
- * Registre des **types d'événement** notifiables — la liste que le profil personnel offre
- * à régler, et celle que `notify()` consulte avant d'écrire quoi que ce soit.
+ * Registry of the notifiable **event types** — the list the personal profile offers to configure, and the one `notify()`
+ * consults before writing anything.
  *
- * Il existe parce que `User.preferences` est un sac JSON sans schéma : sans registre, un
- * réglage par événement se serait écrit avec une clé inventée à chaque appel, personne
- * n'aurait pu en dresser la liste, et l'écran de profil aurait affiché ce qu'il croyait
- * plutôt que ce que le serveur lit. Le registre est **recopié à l'identique côté front**
- * (`frontend/src/v2/lib/notificationKinds.ts`), et `notificationKinds.test.ts` refuse que
- * les deux copies divergent — même contrat que `i18n/locales.json`.
+ * It exists because `User.preferences` is a schema-less JSON bag: without a registry, a per-event setting would have been
+ * written with a key invented at each call, nobody could list them, and the profile screen would have displayed what it
+ * believed rather than what the server reads. The registry is **copied verbatim on the front end**
+ * (`frontend/src/v2/lib/notificationKinds.ts`), and `notificationKinds.test.ts` refuses the two copies diverging — the same
+ * contract as `i18n/locales.json`.
  *
- * Le `type` de la notification (celui que le navigateur lit pour choisir l'icône et la
- * destination du clic) se **dérive** du genre : c'était auparavant une chaîne libre passée
- * à chaque appel, et c'est ainsi qu'une décision de review avait fini par s'écrire
- * `review_decision` là où tout le reste est en capitales — un type que le front ne
- * reconnaissait pas, donc un clic qui n'ouvrait jamais la review.
+ * The notification `type` (the one the browser reads to choose the icon and the destination of the click) is **derived**
+ * from the kind: it used to be a free string passed at each call, and that is how a review decision had ended up written
+ * `review_decision` where everything else is in capitals — a type the front end did not recognise, hence a click that
+ * never opened the review.
  */
 export const NOTIFICATION_KINDS = [
   'mention',
@@ -33,11 +31,11 @@ export const NOTIFICATION_KINDS = [
 
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
-/** Les deux voies d'arrivée réglables : le panneau in-app et la notification navigateur. */
+/** The two adjustable arrival channels: the in-app panel and the browser notification. */
 export const NOTIFICATION_CHANNELS = ['inApp', 'push'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
-/** Genre → `Notification.type` servi au navigateur. Un genre, un type, sans exception. */
+/** Kind → `Notification.type` served to the browser. One kind, one type, without exception. */
 export const NOTIFICATION_TYPE: Record<NotificationKind, string> = {
   mention: 'MENTION',
   reply: 'REPLY',
@@ -49,18 +47,18 @@ export const NOTIFICATION_TYPE: Record<NotificationKind, string> = {
   live: 'LIVE',
 };
 
-/** Clé de premier niveau du sac de préférences où vivent ces réglages. */
+/** Top-level key of the preferences bag where these settings live. */
 export const NOTIFICATION_SETTINGS_KEY = 'notifications';
 
-/** Un genre réglé : chaque canal absent vaut « activé ». */
+/** An adjusted kind: each absent channel means "enabled". */
 const kindSchema = z.object({ inApp: z.boolean().optional(), push: z.boolean().optional() }).strict();
 
 /**
- * Forme admissible de `preferences.notifications`.
+ * Admissible shape of `preferences.notifications`.
  *
- * La clé est contrôlée par un `refine` et non par `z.record(z.enum(...))` : un genre retiré
- * du registre ne doit pas rendre INVALIDE le sac d'un compte qui l'avait réglé — l'inconnu
- * se refuse à l'écriture, pas à la lecture (`channelEnabled` ignore ce qu'il ne connaît pas).
+ * The key is checked by a `refine` and not by `z.record(z.enum(...))`: a kind removed from the registry must not make the bag
+ * of an account that had set it INVALID — the unknown is refused on write, not on read (`channelEnabled` ignores what it
+ * does not know).
  */
 export const notificationSettingsSchema = z
   .record(z.string().max(32), kindSchema)
@@ -71,12 +69,11 @@ export const notificationSettingsSchema = z
 export type NotificationSettings = Partial<Record<NotificationKind, { inApp?: boolean; push?: boolean }>>;
 
 /**
- * Ce canal est-il ouvert pour ce genre, chez ce destinataire ?
+ * Is this channel open for this kind, for this recipient?
  *
- * **Seul un `false` explicite ferme.** Tout le reste — sac absent, genre jamais réglé,
- * valeur d'une forme inattendue — laisse passer : un réglage illisible ne doit pas faire
- * taire en silence une notification que personne n'a demandé à taire, et un genre ajouté
- * plus tard arrive donc activé pour tout le monde.
+ * **Only an explicit `false` closes.** Everything else — bag absent, kind never set, value of an unexpected shape — lets
+ * through: an unreadable setting must not silently silence a notification nobody asked to silence, and a kind added later
+ * therefore arrives enabled for everyone.
  */
 export function channelEnabled(
   preferences: unknown,

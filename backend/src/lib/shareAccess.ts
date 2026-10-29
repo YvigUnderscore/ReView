@@ -7,10 +7,8 @@ import { env } from '../config/env';
 import { JWT_ALGORITHM, JWT_VERIFY_OPTIONS } from './jwt';
 
 /**
- * Session de partage client (35.C) : après le `GET /api/client/:token` initial (qui compte
- * la vue et applique mot de passe/limite), le serveur émet un JWT court dédié — exigé par
- * toutes les sous-routes publiques. Ainsi la limite de vues et le mot de passe ne peuvent
- * pas être contournés en appelant directement les sous-routes.
+ * Client share session (35.C): after the initial `GET /api/client/:token` (which counts the view and applies password/limit), the server issues a short-lived
+ * dedicated JWT — required by all public sub-routes. This way the view limit and the password cannot be bypassed by calling the sub-routes directly.
  */
 
 const SHARE_SESSION_TTL = '24h';
@@ -22,14 +20,12 @@ export function signShareSession(linkId: number): string {
   });
 }
 
-/** Vrai si `token` est une session valide pour ce lien précis. */
+/** True if `token` is a valid session for this specific link. */
 export function verifyShareSession(token: string | undefined, linkId: number): boolean {
   if (!token) return false;
   try {
-    // L'algorithme est épinglé ici comme dans `lib/jwt` : sans l’option `algorithms`, c'est le
-    // porteur du jeton qui choisit avec quel algorithme on le vérifie. Ce jeton ouvre le
-    // partage client — mot de passe et limite de vues déjà franchis — donc il se vérifie
-    // avec exactement les mêmes garanties qu'un jeton de session.
+    // The algorithm is pinned here as in `lib/jwt`: without the `algorithms` option, it is the token's bearer who chooses the algorithm used to verify it. This token opens the
+    // client share — password and view limit already passed — so it is verified with exactly the same guarantees as a session token.
     const payload = jwt.verify(token, env.JWT_SECRET, JWT_VERIFY_OPTIONS) as {
       kind?: string;
       linkId?: number;
@@ -42,7 +38,7 @@ export function verifyShareSession(token: string | undefined, linkId: number): b
 
 export type ShareState = 'ok' | 'revoked' | 'expired' | 'exhausted';
 
-/** État d'un lien (pur, testable) — `exhausted` = limite de vues atteinte. */
+/** State of a link (pure, testable) — `exhausted` = view limit reached. */
 export function shareState(
   link: Pick<ShareLink, 'revoked' | 'expiresAt' | 'maxViews' | 'viewCount'>,
   now = new Date(),

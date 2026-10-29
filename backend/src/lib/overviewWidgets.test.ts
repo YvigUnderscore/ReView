@@ -12,16 +12,15 @@ import {
 } from './overviewWidgets';
 
 /**
- * Le registre vit en deux copies (un paquet ne peut pas importer les sources de l'autre).
- * Ce test est le seul garde-fou : une copie amendée sans l'autre donnerait un écran qui
- * propose un bloc que le serveur refuse d'enregistrer, ou l'inverse — et le refus tombe
- * sur la personne qui compose sa page, au moment où elle la compose.
+ * The registry lives in two copies (one package cannot import the sources of the other). This test is the only guard:
+ * a copy amended without the other would give a screen offering a block the server refuses to save, or the reverse — and
+ * the refusal lands on the person composing their page, at the moment they compose it.
  */
 const FRONT = path.join(__dirname, '..', '..', '..', 'frontend', 'src', 'v2');
 const FRONT_COPY = path.join(FRONT, 'pages', 'project', 'overview', 'overviewWidgets.ts');
 const FRONT_SIZING = path.join(FRONT, 'pages', 'project', 'overview', 'overviewSizing.ts');
 
-/** Les identifiants du tableau `NOM = [ … ] as const` d'une source TypeScript. */
+/** The identifiers of the `NAME = [ … ] as const` array of a TypeScript source. */
 function listedIn(source: string, name: string): string[] {
   const open = source.indexOf(`export const ${name} = [`);
   if (open < 0) return [];
@@ -30,7 +29,7 @@ function listedIn(source: string, name: string): string[] {
   return [...source.slice(open, close).matchAll(/'([^']+)'/g)].map((m) => m[1]!);
 }
 
-/** Les nombres du tableau `NOM = [ … ] as const` d'une source TypeScript. */
+/** The numbers of the `NAME = [ … ] as const` array of a TypeScript source. */
 function numbersIn(source: string, name: string): number[] {
   const open = source.indexOf(`export const ${name} = [`);
   if (open < 0) return [];
@@ -39,20 +38,20 @@ function numbersIn(source: string, name: string): number[] {
   return [...source.slice(open, close).matchAll(/\d+/g)].map((m) => Number(m[0]));
 }
 
-describe('registre des blocs de la vue d’ensemble', () => {
+describe('registry of the overview blocks', () => {
   const front = readFileSync(FRONT_COPY, 'utf8');
 
-  it('liste les mêmes blocs, dans le même ordre, des deux côtés', () => {
+  it('lists the same blocks, in the same order, on both sides', () => {
     expect(listedIn(front, 'OVERVIEW_WIDGETS')).toEqual([...OVERVIEW_WIDGETS]);
   });
 
-  it('nomme la même clé de préférence des deux côtés', () => {
+  it('names the same preference key on both sides', () => {
     expect(front).toContain(`OVERVIEW_PREFERENCE_KEY = '${OVERVIEW_PREFERENCE_KEY}'`);
   });
 
-  it('offre la même rampe de hauteurs des deux côtés', () => {
-    // Même garde-fou que pour les blocs : une rampe élargie côté écran sans l'être ici, et
-    // le redimensionnement se solderait par un refus, la poignée à la main.
+  it('offers the same height ramp on both sides', () => {
+    // Same guard as for the blocks: a ramp widened on the screen side but not here, and resizing would end in a refusal,
+    // the handle in hand.
     expect(numbersIn(readFileSync(FRONT_SIZING, 'utf8'), 'OVERVIEW_ROWS')).toEqual([...OVERVIEW_ROWS]);
   });
 });
@@ -60,7 +59,7 @@ describe('registre des blocs de la vue d’ensemble', () => {
 describe('overviewLayoutSchema', () => {
   const accepts = (value: unknown) => overviewLayoutSchema.safeParse(value).success;
 
-  it('accepte une disposition réelle', () => {
+  it('accepts a real layout', () => {
     expect(
       accepts({
         hidden: ['counts'],
@@ -70,40 +69,39 @@ describe('overviewLayoutSchema', () => {
     ).toBe(true);
   });
 
-  it('accepte une disposition vide — c’est ce qu’écrit une page jamais composée', () => {
+  it('accepts an empty layout — which is what a never-composed page writes', () => {
     expect(accepts({})).toBe(true);
   });
 
-  it('refuse un bloc inconnu, où qu’il se cache', () => {
-    // C'est le défaut que le schéma existe pour empêcher : un identifiant inventé
-    // s'enregistrait sans broncher et n'affichait rien.
+  it('refuses an unknown block, wherever it hides', () => {
+    // This is the defect the schema exists to prevent: an invented identifier would be saved without a murmur and display nothing.
     expect(accepts({ order: ['fantome'] })).toBe(false);
     expect(accepts({ hidden: ['fantome'] })).toBe(false);
     expect(accepts({ settings: { fantome: { span: 6 } } })).toBe(false);
   });
 
-  it('refuse un même bloc deux fois dans une liste', () => {
+  it('refuses the same block twice in a list', () => {
     expect(accepts({ order: ['counts', 'counts'] })).toBe(false);
   });
 
-  it('refuse une largeur hors rampe et un réglage inventé', () => {
+  it('refuses a width off the ramp and an invented setting', () => {
     expect(accepts({ settings: { counts: { span: 5 } } })).toBe(false);
     expect(accepts({ settings: { counts: { couleur: 'rouge' } } })).toBe(false);
   });
 
-  it('refuse une clé de disposition inventée', () => {
+  it('refuses an invented layout key', () => {
     expect(accepts({ columns: 3 })).toBe(false);
   });
 
-  it('accepte une hauteur en rangées, et refuse une hauteur hors rampe', () => {
+  it('accepts a height in rows, and refuses a height off the ramp', () => {
     expect(accepts({ settings: { counts: { span: 6, rows: 4 } } })).toBe(true);
     expect(accepts({ settings: { counts: { rows: 7 } } })).toBe(false);
     expect(accepts({ settings: { counts: { rows: 1 } } })).toBe(false);
   });
 
-  it('accepte encore l’ancienne échelle de hauteur', () => {
-    // Les dispositions enregistrées avant les rangées la portent, et l'écran la traduit à
-    // la lecture. La refuser rendrait illisible la page de tout un studio.
+  it('still accepts the former height scale', () => {
+    // Layouts saved before the rows carry it, and the screen translates it on read. Refusing it would make the page of
+    // a whole studio unreadable.
     expect(accepts({ settings: { counts: { height: 'tall' } } })).toBe(true);
   });
 });

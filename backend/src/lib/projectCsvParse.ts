@@ -11,19 +11,16 @@ import {
 } from './projectCsvColumns';
 
 /**
- * Lecture enrichie d'un CSV de pipeline : épisode, séquence, plan, fiche, plage de frames,
- * tâches, département, statut, assignation et dates.
+ * Enriched reading of a pipeline CSV: episode, sequence, shot, sheet, frame range, tasks, department, status, assignment and dates.
  *
- * Deux partis pris tirés de la forme réelle des exports de tracker :
+ * Two stances drawn from the real shape of tracker exports:
  *
- * 1. **Une ligne par tâche est la norme.** ShotGrid, ftrack et Kitsu exportent le plan
- *    autant de fois qu'il a de tâches. Les lignes qui désignent le même plan sont donc
- *    FUSIONNÉES, jamais rejetées comme doublons — c'est le rejet qui était le défaut.
- * 2. **Aucun message en clair.** Chaque anomalie est un code (`CsvIssueCode`) accompagné
- *    de la ligne, de la colonne et de la valeur fautive : c'est l'interface qui la rédige,
- *    dans la langue du lecteur, et le rapport téléchargeable en découle.
+ * 1. **One row per task is the norm.** ShotGrid, ftrack and Kitsu export the shot as many times as it has tasks. Rows designating
+ *    the same shot are therefore MERGED, never rejected as duplicates — rejection was the defect.
+ * 2. **No plain-text messages.** Every anomaly is a code (`CsvIssueCode`) accompanied by the row, the column and the faulty value:
+ *    it is the interface that writes it, in the reader's language, and the downloadable report follows from it.
  *
- * Module PUR : aucune dépendance Prisma, entièrement testable.
+ * PURE module: no Prisma dependency, fully testable.
  */
 
 export type CsvIssueCode =
@@ -45,15 +42,15 @@ export type CsvIssueCode =
   | 'UNKNOWN_DEPARTMENT'
   | 'UNKNOWN_ASSIGNEE';
 
-/** Une anomalie localisée. `line` est le numéro de ligne du fichier (1 = en-tête). */
+/** A localised anomaly. `line` is the line number in the file (1 = header). */
 export interface CsvIssue {
   code: CsvIssueCode;
   line: number | null;
-  /** En-tête de la colonne fautive, tel qu'écrit dans le fichier. */
+  /** Header of the faulty column, as written in the file. */
   column?: string;
-  /** Valeur refusée, tronquée à 80 caractères pour ne pas gonfler la réponse. */
+  /** Refused value, truncated to 80 characters so as not to swell the response. */
   value?: string;
-  /** Code du plan concerné, pour retrouver la ligne dans un tableur trié. */
+  /** Code of the shot concerned, to find the row in a sorted spreadsheet. */
   shot?: string;
 }
 
@@ -63,14 +60,14 @@ export interface ParsedTaskRow {
   department: string | null;
   status: string | null;
   assignee: string | null;
-  /** Date au format ISO `YYYY-MM-DD`, déjà validée. */
+  /** Date in ISO `YYYY-MM-DD` format, already validated. */
   startDate: string | null;
   dueDate: string | null;
 }
 
-/** Un plan et tout ce que le fichier en dit, une fois ses lignes fusionnées. */
+/** A shot and everything the file says about it, once its rows are merged. */
 export interface ParsedEntry {
-  /** Première ligne du fichier qui décrit ce plan. */
+  /** First line of the file that describes this shot. */
   line: number;
   lines: number[];
   episode: string | null;
@@ -90,13 +87,13 @@ export interface ParsedEntry {
 export interface ProjectCsvParse {
   columns: DetectedColumn[];
   entries: ParsedEntry[];
-  /** Anomalies de fichier et lignes rejetées (celles qui ne produisent aucun plan). */
+  /** File anomalies and rejected rows (those that produce no shot). */
   issues: CsvIssue[];
-  /** Nombre de lignes de données lues, en-tête exclu. */
+  /** Number of data rows read, header excluded. */
   dataLines: number;
 }
 
-/** Au-delà, on refuse de lire : un fichier de cette taille n'est plus une migration. */
+/** Beyond this, we refuse to read: a file of this size is no longer a migration. */
 const MAX_DATA_LINES = 20_000;
 const MAX_NAME = 200;
 const MAX_DESCRIPTION = 4000;
@@ -104,8 +101,8 @@ const MAX_DESCRIPTION = 4000;
 const clip = (v: string) => (v.length > 80 ? `${v.slice(0, 80)}…` : v);
 
 /**
- * Entier positif ou nul lu dans une cellule. `1 001` et `1,001` viennent des tableurs :
- * les espaces (y compris insécables) et les séparateurs de milliers sont retirés.
+ * Non-negative integer read from a cell. `1 001` and `1,001` come from spreadsheets:
+ * spaces (including non-breaking ones) and thousands separators are removed.
  */
 export function parseCsvInteger(raw: string): number | null {
   const cleaned = raw.replace(/[\s\u00a0\u202f]/g, '').replace(/,(?=\d{3}\b)/g, '');
@@ -114,13 +111,11 @@ export function parseCsvInteger(raw: string): number | null {
 }
 
 /**
- * Date d'une cellule, ramenée en ISO `YYYY-MM-DD`.
+ * Date of a cell, normalised to ISO `YYYY-MM-DD`.
  *
- * Quatre écritures acceptées : `YYYY-MM-DD` (et `YYYY/MM/DD`), puis `DD/MM/YYYY`,
- * `DD-MM-YYYY` et `DD.MM.YYYY`. Le jour d'abord, pas le mois : `03/04/2026` est le
- * 3 avril partout sauf aux États-Unis, et deviner au cas par cas déplacerait
- * silencieusement des échéances. Le format américain se convertit avant l'import — la
- * documentation le dit.
+ * Four accepted notations: `YYYY-MM-DD` (and `YYYY/MM/DD`), then `DD/MM/YYYY`, `DD-MM-YYYY` and `DD.MM.YYYY`. Day first, not month:
+ * `03/04/2026` is 3 April everywhere except in the United States, and guessing case by case would silently shift deadlines. The
+ * American format is converted before import — the documentation says so.
  */
 export function parseCsvDate(raw: string): string | null {
   const value = raw.trim();
@@ -141,7 +136,7 @@ export function parseCsvDate(raw: string): string | null {
   return date.toISOString().slice(0, 10);
 }
 
-/** Valeurs multiples d'une cellule (`Anim|Comp`) — la barre verticale, jamais le délimiteur. */
+/** Multiple values of a cell (`Anim|Comp`) — the vertical bar, never the delimiter. */
 function multi(raw: string): string[] {
   return raw
     .split('|')
@@ -149,13 +144,12 @@ function multi(raw: string): string[] {
     .filter(Boolean);
 }
 
-/** Clé de fusion d'un plan : la séquence et le code, insensibles à la casse. */
+/** Merge key of a shot: the sequence and the code, case-insensitive. */
 const entryKey = (sequence: string | null, shot: string) =>
   `${(sequence ?? '').toLowerCase()}::${shot.toLowerCase()}`;
 
 /**
- * Lit le fichier. `overrides` impose la correspondance de colonnes décidée par
- * l'utilisateur quand l'en-tête ne suffit pas.
+ * Reads the file. `overrides` imposes the column match decided by the user when the header is not enough.
  */
 export function parseProjectCsv(text: string, overrides: ColumnOverride[] = []): ProjectCsvParse {
   const rawLines = text.split(/\r?\n/);
@@ -241,7 +235,7 @@ function newEntry(line: number, sequence: string | null, shot: string, episode: 
 type Reader = (field: CsvField) => string;
 type HeaderOf = (field: CsvField) => string | undefined;
 
-/** Champs de plan. Sur une ligne de fusion, la première valeur non vide fait foi. */
+/** Shot fields. On a merge row, the first non-empty value is authoritative. */
 function readShotFields(
   entry: ParsedEntry,
   line: number,
@@ -297,7 +291,7 @@ function readShotFields(
   entry.frames ??= number('frames');
 }
 
-/** Tâches de la ligne. Les colonnes de tâche s'appliquent à toutes celles de la cellule. */
+/** Tasks of the row. Task columns apply to all those in the cell. */
 function readTasks(entry: ParsedEntry, line: number, read: Reader, headerOf: HeaderOf): void {
   const names = multi(read('task'));
   if (names.length === 0) return;
@@ -339,12 +333,11 @@ function readTasks(entry: ParsedEntry, line: number, read: Reader, headerOf: Hea
 }
 
 /**
- * Plage de frames d'un plan, une fois les trois colonnes confrontées.
+ * Frame range of a shot, once the three columns are compared.
  *
- * `frames` (durée) complète ce qui manque plutôt que de le contredire : avec un début, la
- * fin s'en déduit ; sans début, le premier frame du projet sert d'origine. Si les trois
- * sont là et se contredisent, la plage explicite gagne et l'écart est signalé — c'est la
- * durée qu'un tableur recalcule mal, pas les bornes que l'éditorial a écrites.
+ * `frames` (duration) completes what is missing rather than contradicting it: with a start, the end follows; without a start, the
+ * project's first frame serves as origin. If all three are present and contradict each other, the explicit range wins and the gap is
+ * flagged — it is the duration that a spreadsheet recalculates badly, not the bounds the editorial wrote.
  */
 export function resolveFrameRange(
   entry: ParsedEntry,

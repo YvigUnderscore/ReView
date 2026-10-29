@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Prisma renvoie les colonnes BigInt comme `bigint`, non sérialisable par JSON.stringify.
- * On patche le prototype pour le rendre en Number (suffisant : tailles < 2^53 octets).
+ * Prisma returns BigInt columns as `bigint`, which JSON.stringify cannot serialise.
+ * The prototype is patched to render them as Number (sufficient: sizes are below 2^53 bytes).
  */
 (BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function (this: bigint) {
   return Number(this);

@@ -5,11 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { MAX_SPLAT_EDIT_BLOB_BYTES, assertSplatEditBlobs, splatEditBlobKeys } from './commentSplatEdit';
 
 /**
- * Les deux binaires d'une proposition d'édition de nuage voyagent comme des pièces jointes du
- * commentaire, et la part n'en porte que la clé. Ce fichier tient les trois garanties qui
- * rendent ce choix défendable : on sait quelles clés une annotation référence (donc la purge
- * les voit), une référence hors liste de pièces jointes est refusée (donc rien ne fuit et rien
- * n'appartient à autrui), et le plafond de taille est vérifié plutôt que déclaré.
+ * The two binaries of a cloud-edit proposal travel as attachments of the comment, and the part only
+ * carries their key. This file holds the three guarantees that make that choice defensible: we know which
+ * keys an annotation references (so the purge sees them), a reference outside the attachment list is
+ * refused (so nothing leaks and nothing belongs to someone else), and the size ceiling is checked rather
+ * than declared.
  */
 const MASK = 'comments/attachments/7/splat-mask.bin';
 const SUBSET = 'comments/attachments/7/splat-subset.bin';
@@ -17,33 +17,33 @@ const part = (over: Record<string, unknown> = {}) => [
   { type: 'splat-edit', transform: null, volumes: [], mask: { key: MASK, count: 3 }, ...over },
 ];
 
-describe('splatEditBlobKeys — ce que la purge doit voir', () => {
-  it('relève les deux clés de la part', () => {
+describe('splatEditBlobKeys — what the purge must see', () => {
+  it('extracts the two keys of the part', () => {
     const keys = splatEditBlobKeys(part({ subset: { key: SUBSET, count: 1 } }));
     expect(keys.sort()).toEqual([MASK, SUBSET].sort());
   });
 
-  it('ne rend rien quand il n’y a pas de proposition, ou pas de binaire', () => {
+  it('returns nothing when there is no proposal, or no binary', () => {
     expect(splatEditBlobKeys(null)).toEqual([]);
     expect(splatEditBlobKeys([{ type: 'rect' }])).toEqual([]);
     expect(splatEditBlobKeys(part({ mask: null }))).toEqual([]);
   });
 
-  it('ne suppose rien de la forme : la colonne est du JSON libre', () => {
+  it('assumes nothing about the shape: the column is free JSON', () => {
     expect(splatEditBlobKeys('nope')).toEqual([]);
     expect(splatEditBlobKeys([null, 42, { type: 'splat-edit', mask: 'AAAA' }])).toEqual([]);
     expect(splatEditBlobKeys(part({ mask: { count: 3 } }))).toEqual([]);
   });
 
-  it('dédoublonne : une même clé citée deux fois ne se purge pas deux fois', () => {
+  it('deduplicates: the same key cited twice is not purged twice', () => {
     expect(splatEditBlobKeys(part({ subset: { key: MASK, count: 1 } }))).toEqual([MASK]);
   });
 });
 
-describe('assertSplatEditBlobs — la référence doit être une pièce jointe, et tenir', () => {
+describe('assertSplatEditBlobs — the reference must be an attachment, and fit', () => {
   const stat = (size: number) => vi.fn().mockResolvedValue({ size });
 
-  it('laisse passer une proposition dont le blob est joint et sous le plafond', async () => {
+  it('lets through a proposal whose blob is attached and under the ceiling', async () => {
     const statObject = stat(1_000);
     await expect(
       assertSplatEditBlobs(part(), { attachedKeys: [MASK], stat: statObject }),
@@ -51,18 +51,17 @@ describe('assertSplatEditBlobs — la référence doit être une pièce jointe, 
     expect(statObject).toHaveBeenCalledWith(MASK);
   });
 
-  it('ne touche pas au stockage quand il n’y a rien à vérifier', async () => {
+  it('does not touch storage when there is nothing to check', async () => {
     const statObject = stat(1_000);
     await assertSplatEditBlobs([{ type: 'rect' }], { attachedKeys: [], stat: statObject });
     expect(statObject).not.toHaveBeenCalled();
   });
 
   /**
-   * Le refus qui ferme deux portes d'un coup : une clé qui n'est pas dans les pièces jointes du
-   * commentaire n'appartient à personne de sûr (la liste, elle, est filtrée par préfixe) et rien
-   * ne la ramasserait à la suppression.
+   * The refusal that closes two doors at once: a key that is not among the comment's attachments belongs
+   * to no one safely (the list is prefix-filtered) and nothing would collect it on deletion.
    */
-  it('refuse une référence qui n’est pas une pièce jointe du commentaire', async () => {
+  it('refuses a reference that is not an attachment of the comment', async () => {
     await expect(assertSplatEditBlobs(part(), { attachedKeys: [], stat: stat(10) })).rejects.toMatchObject({
       statusCode: 400,
       code: 'SPLAT_EDIT_UNATTACHED',
@@ -75,14 +74,14 @@ describe('assertSplatEditBlobs — la référence doit être une pièce jointe, 
     ).rejects.toMatchObject({ code: 'SPLAT_EDIT_UNATTACHED' });
   });
 
-  it('refuse un blob absent du stockage', async () => {
+  it('refuses a blob missing from storage', async () => {
     const missing = vi.fn().mockRejectedValue(new Error('404'));
     await expect(assertSplatEditBlobs(part(), { attachedKeys: [MASK], stat: missing })).rejects.toMatchObject(
       { statusCode: 400, code: 'SPLAT_EDIT_MISSING' },
     );
   });
 
-  it('refuse un blob au-dessus du plafond, et accepte le plafond lui-même', async () => {
+  it('refuses a blob above the ceiling, and accepts the ceiling itself', async () => {
     await expect(
       assertSplatEditBlobs(part(), { attachedKeys: [MASK], stat: stat(MAX_SPLAT_EDIT_BLOB_BYTES + 1) }),
     ).rejects.toMatchObject({ statusCode: 400, code: 'SPLAT_EDIT_TOO_LARGE' });

@@ -5,19 +5,17 @@ import { logger } from './logger';
 import { maintenanceQueue } from '../services/JobService';
 
 /**
- * Rythme de l'entretien : digest quotidien, rapport hebdomadaire, purges.
+ * Maintenance rhythm: daily digest, weekly report, purges.
  *
- * Ces trois rendez-vous étaient des `setInterval` du process API. En mémoire de process,
- * ils disparaissaient à chaque redémarrage (un déploiement à 6 h 59 escamotait le digest
- * de 7 h), se dupliqueraient sur une seconde réplique, et ne laissaient aucune trace de
- * leur exécution. Posés en file répétable — le motif de `ShotgridSchedule` — ils
- * survivent au redémarrage, ne partent qu'une fois quel que soit le nombre de répliques,
- * et apparaissent dans le tableau de bord des files comme n'importe quel autre travail.
+ * These three appointments used to be `setInterval` timers in the API process. Held in process memory, they vanished
+ * at each restart (a deployment at 6:59 would skip the 7:00 digest), would duplicate on a second replica, and left no
+ * trace of their execution. Posted as repeatable queue jobs — the pattern of `ShotgridSchedule` — they survive a
+ * restart, fire only once whatever the number of replicas, and show in the queue dashboard like any other job.
  *
- * Le comportement fonctionnel est inchangé : mêmes heures, mêmes actions.
+ * The functional behaviour is unchanged: same hours, same actions.
  */
 
-/** Identifiants stables : reposer le planning remplace, il n'empile pas. */
+/** Stable identifiers: re-posting the schedule replaces, it does not stack. */
 export const MAINTENANCE_JOB_IDS = {
   dailyDigest: 'maintenance-daily-digest',
   weeklyReport: 'maintenance-weekly-report',
@@ -25,35 +23,35 @@ export const MAINTENANCE_JOB_IDS = {
   purgeBoot: 'maintenance-purge-boot',
 } as const;
 
-/** Noms de job répétables gérés par ce planning (les autres sont laissés intacts). */
+/** Repeatable job names managed by this schedule (the others are left untouched). */
 const SCHEDULED_NAMES = new Set(['daily-digest', 'weekly-report', 'purge']);
 
-/** Purge quotidienne — l'ancien `setInterval` de 24 h. */
+/** Daily purge — the former 24 h `setInterval`. */
 export const PURGE_EVERY_MS = 24 * 60 * 60 * 1000;
 
-/** Premier passage de purge différé, comme l'ancien `setTimeout` de démarrage. */
+/** First deferred purge run, like the former start-up `setTimeout`. */
 export const PURGE_BOOT_DELAY_MS = 60_000;
 
-/** Heure valide (0-23) — une valeur aberrante ne doit pas produire un motif cron invalide. */
+/** Valid hour (0-23) — an aberrant value must not produce an invalid cron pattern. */
 export function normalizeHour(hour: number): number {
   if (!Number.isFinite(hour)) return 0;
   return Math.min(23, Math.max(0, Math.trunc(hour)));
 }
 
-/** Digest quotidien : tous les jours à `hour`, comme l'ancien premier `setTimeout` + 24 h. */
+/** Daily digest: every day at `hour`, like the former first `setTimeout` + 24 h. */
 export function dailyDigestPattern(hour: number): string {
   return `0 ${normalizeHour(hour)} * * *`;
 }
 
-/** Rapport hebdomadaire : le lundi à `hour` (`1` = lundi, comme `Date#getDay`). */
+/** Weekly report: on Monday at `hour` (`1` = Monday, as in `Date#getDay`). */
 export function weeklyReportPattern(hour: number): string {
   return `0 ${normalizeHour(hour)} * * 1`;
 }
 
 /**
- * (Re)pose les trois travaux périodiques. Appelée au démarrage du process API : c'est lui
- * qui porte `DIGEST_HOUR`. Idempotente — les anciens répétables gérés ici sont retirés
- * avant, sans quoi un changement d'heure laisserait les deux plannings actifs.
+ * (Re)posts the three periodic jobs. Called at API process start-up: it is the one that carries `DIGEST_HOUR`.
+ * Idempotent — the former repeatables managed here are removed first, otherwise a change of hour would leave both
+ * schedules active.
  */
 export async function scheduleMaintenanceJobs(digestHour: number): Promise<void> {
   const repeatables = await maintenanceQueue.getRepeatableJobs();
@@ -91,10 +89,10 @@ export async function scheduleMaintenanceJobs(digestHour: number): Promise<void>
     },
   );
 
-  // Passage de purge peu après le démarrage, comme le faisait le `setTimeout` de 60 s :
-  // une instance rallumée après une longue coupure ne doit pas attendre demain pour
-  // vider une corbeille expirée. Les purges sont idempotentes.
-  // L'identifiant est stable mais le job s'efface aussitôt terminé : deux redémarrages
+  // A purge run shortly after start-up, as the 60 s `setTimeout` did: an instance restarted after a long outage must
+  // not wait until tomorrow to empty an expired trash. Purges are idempotent.
+  // The identifier is stable but the job is erased as soon as it completes: two close restarts run only one purge, and
+  // the next one can arm it again.
   // rapprochés ne lancent qu'une purge, et le suivant peut de nouveau l'armer.
   await maintenanceQueue.add(
     'purge',

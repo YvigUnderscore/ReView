@@ -5,55 +5,46 @@ import { Prisma, Role } from '@prisma/client';
 import { prisma } from './prisma';
 
 /**
- * Recherche plein texte dans le CONTENU des commentaires de review.
+ * Full-text search in the CONTENT of review comments.
  *
- * « Le plan où le superviseur a demandé d'enlever le reflet » n'était trouvable nulle part :
- * la recherche globale ne connaissait que des noms d'entités. Le texte des retours est
- * pourtant la seule trace de ce qui a été demandé.
+ * "The shot where the supervisor asked to remove the reflection" could not be found anywhere: global search only knew entity names. Review feedback
+ * text, however, is the only trace of what was asked.
  *
- * Postgres suffit — aucun moteur externe. `to_tsvector('simple', content)` est indexé en GIN
- * (migration `20260822120000_recherche_plein_texte_commentaires`), et la requête réutilise
- * EXACTEMENT la même expression, sans quoi l'index ne servirait pas.
+ * Postgres is enough — no external engine. `to_tsvector('simple', content)` is GIN-indexed (migration `20260822120000_recherche_plein_texte_commentaires`),
+ * and the query reuses EXACTLY the same expression, otherwise the index would not serve.
  *
- * Deux choix à retenir :
+ * Two choices to note:
  *
- *  • **configuration `simple`**, pas `french`/`english` : le studio écrit ses retours dans
- *    quatorze langues et la colonne n'en porte aucune. Un dictionnaire de stemming se
- *    tromperait plus souvent qu'il n'aiderait, et l'index deviendrait faux le jour où
- *    quelqu'un commente en japonais.
- *  • **`to_tsquery` avec un préfixe `:*`**, pas `plainto_tsquery` : la palette cherche à
- *    chaque frappe, donc sur des mots inachevés — `plainto_tsquery('simple', 'refl')` ne
- *    rend jamais rien tant que « reflet » n'est pas tapé en entier. La chaîne de requête est
- *    construite ici à partir de tokens réduits aux lettres et aux chiffres, puis passée en
- *    **paramètre lié** : aucune valeur de l'utilisateur n'entre dans le texte SQL, et aucun
- *    opérateur de tsquery (`&`, `|`, `!`, `<->`, parenthèses) ne peut survivre au filtrage.
+ *  • **`simple` configuration**, not `french`/`english`: the studio writes its feedback in fourteen languages and the column carries none. A stemming
+ *    dictionary would err more often than it helps, and the index would become wrong the day someone comments in Japanese.
+ *  • **`to_tsquery` with a `:*` prefix**, not `plainto_tsquery`: the palette searches on each keystroke, hence on unfinished words — `plainto_tsquery('simple', 'refl')`
+ *    never returns anything until "reflet" is typed in full. The query string is built here from tokens reduced to letters and digits, then passed as a
+ *    **bound parameter**: no user value enters the SQL text, and no tsquery operator (`&`, `|`, `!`, `<->`, parentheses) can survive the filtering.
  *
- * Le HTML du contenu ne gêne pas : l'analyseur par défaut de Postgres classe les balises en
- * jetons `tag`, absents de la table de correspondance — elles ne sont donc pas indexées.
+ * The HTML of the content is no hindrance: Postgres's default parser classifies tags as `tag` tokens, absent from the mapping table — so they are not indexed.
  */
 
-/** Un commentaire trouvé, prêt pour la palette : extrait autour du terme, jamais le HTML. */
+/** A comment found, ready for the palette: an excerpt around the term, never the HTML. */
 export interface CommentHit {
   id: number;
   mediaObjectId: number;
   excerpt: string;
-  /** Auteur affichable (compte, invité) ou `null` si le compte a été supprimé. */
+  /** Displayable author (account, guest) or `null` if the account has been deleted. */
   authorName: string | null;
   createdAt: Date;
-  /** Chemin lisible : code du shot ou nom de l'asset, puis nom du média. */
+  /** Readable path: shot code or asset name, then media name. */
   context: string;
 }
 
-/** Longueur maximale de l'extrait rendu (une ligne de palette). */
+/** Maximum length of the excerpt returned (one palette line). */
 const MAX_EXCERPT = 160;
-/** Caractères conservés avant le terme trouvé, pour que la phrase garde son début. */
+/** Characters kept before the term found, so that the sentence keeps its beginning. */
 const LEAD = 40;
-/** Au-delà, la requête n'est plus une recherche mais une phrase : on tronque. */
+/** Beyond it, the query is no longer a search but a sentence: we truncate. */
 const MAX_TOKENS = 8;
 
 /**
- * Découpe la saisie en tokens de recherche : lettres et chiffres uniquement, minuscules.
- * Tout le reste (ponctuation, opérateurs tsquery, espaces) est un séparateur.
+ * Splits the input into search tokens: letters and digits only, lowercase. Everything else (punctuation, tsquery operators, spaces) is a separator.
  */
 export function searchTokens(q: string): string[] {
   return q
@@ -64,8 +55,7 @@ export function searchTokens(q: string): string[] {
 }
 
 /**
- * Chaîne `tsquery` correspondante : tous les tokens exigés, le dernier en préfixe.
- * `null` quand la saisie ne contient aucun caractère cherchable (« ??? »).
+ * Matching `tsquery` string: all the tokens required, the last one as a prefix. `null` when the input contains no searchable character ("???").
  */
 export function toTsQuery(q: string): string | null {
   const tokens = searchTokens(q);
@@ -73,7 +63,7 @@ export function toTsQuery(q: string): string | null {
   return tokens.map((w) => `${w}:*`).join(' & ');
 }
 
-/** Entités HTML que l'éditeur riche produit — les seules à défaire pour lire le texte. */
+/** HTML entities the rich editor produces — the only ones to undo in order to read the text. */
 const ENTITIES: Readonly<Record<string, string>> = {
   '&nbsp;': ' ',
   '&amp;': '&',
@@ -83,7 +73,7 @@ const ENTITIES: Readonly<Record<string, string>> = {
   '&#39;': "'",
 };
 
-/** Texte lisible d'un contenu de commentaire (HTML de l'éditeur riche). */
+/** Readable text of a comment content (rich editor HTML). */
 export function htmlToPlainText(html: string): string {
   return html
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
@@ -93,7 +83,7 @@ export function htmlToPlainText(html: string): string {
     .trim();
 }
 
-/** Extrait centré sur le premier token trouvé, borné à une ligne. */
+/** Excerpt centred on the first token found, bounded to one line. */
 export function excerptAround(html: string, tokens: string[]): string {
   const text = htmlToPlainText(html);
   if (text.length <= MAX_EXCERPT) return text;
@@ -108,7 +98,7 @@ export function excerptAround(html: string, tokens: string[]): string {
   return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`;
 }
 
-/** Ligne brute rendue par la requête plein texte. */
+/** Raw row returned by the full-text query. */
 interface CommentRow {
   id: number;
   mediaObjectId: number;
@@ -125,9 +115,8 @@ interface CommentRow {
 }
 
 /**
- * Nom d'affichage de l'auteur — **sans repli sur l'email**, contrairement à `displayName()`.
- * Un résultat de recherche est lu par tous les membres du projet, comptes CLIENT compris :
- * l'annuaire d'adresses du studio n'a pas à s'y déverser ligne par ligne.
+ * Author's display name — **without a fallback on the email**, unlike `displayName()`. A search result is read by all the members of the project,
+ * CLIENT accounts included: the studio's address directory has no business spilling into it line by line.
  */
 function authorNameOf(row: CommentRow): string | null {
   if (row.username) return row.username;
@@ -140,22 +129,21 @@ function authorNameOf(row: CommentRow): string | null {
 export interface CommentSearchScope {
   userId: number;
   role: Role;
-  /** Projets accessibles, ou `null` pour un rôle global (ADMIN/SUPERVISOR). */
+  /** Accessible projects, or `null` for a global role (ADMIN/SUPERVISOR). */
   projectIds: number[] | null;
   limit: number;
 }
 
 /**
- * Commentaires accessibles au demandeur dont le texte répond à la requête.
+ * Comments accessible to the requester whose text answers the query.
  *
- * Le cloisonnement est porté par la requête elle-même, jamais par un filtrage après coup :
- * projet accessible, média non supprimé et visible (un brouillon n'appartient qu'à son
- * déposant), et pour un CLIENT les seules notes marquées `isVisibleToClient`.
+ * Partitioning is carried by the query itself, never by a filtering afterwards: accessible project, media not deleted and visible (a draft belongs
+ * only to its uploader), and for a CLIENT only the notes marked `isVisibleToClient`.
  */
 export async function searchComments(q: string, scope: CommentSearchScope): Promise<CommentHit[]> {
   const tsq = toTsQuery(q);
   if (!tsq) return [];
-  // Rôle non global sans aucun projet : rien n'est accessible, inutile d'interroger.
+  // Non-global role with no project at all: nothing is accessible, no need to query.
   if (scope.projectIds !== null && scope.projectIds.length === 0) return [];
 
   const projectScope =

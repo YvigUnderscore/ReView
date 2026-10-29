@@ -2,17 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Tokenisation et sérialisation du CSV de pipeline (38.F/38.G).
+ * Tokenisation and serialisation of the pipeline CSV (38.F/38.G).
  *
- * Ce module ne connaît que la grammaire du fichier : découpage des champs, délimiteur,
- * échappement. La reconnaissance des colonnes vit dans `projectCsvColumns`, la lecture
- * enrichie dans `projectCsvParse`, l'écriture en base dans `ProjectImportService`.
- * PUR (testé), aucune dépendance Prisma.
+ * This module only knows the grammar of the file: splitting fields, delimiter, escaping. Column recognition lives in
+ * `projectCsvColumns`, the enriched reading in `projectCsvParse`, the database write in `ProjectImportService`.
+ * PURE (tested), no Prisma dependency.
  */
 
 /**
- * Découpe une ligne CSV en champs (gère les guillemets et le séparateur `,` ou `;`).
- * Les champs sont rendus détourés : un tableur recopie volontiers « SH010 » avec l'espace.
+ * Splits a CSV line into fields (handles quotes and the `,` or `;` separator).
+ * Fields are returned trimmed: a spreadsheet readily copies "SH010" with the space.
  */
 export function splitCsvLine(line: string, delimiter: string): string[] {
   const out: string[] = [];
@@ -38,11 +37,10 @@ export function splitCsvLine(line: string, delimiter: string): string[] {
 }
 
 /**
- * Délimiteur dominant, lu sur l'en-tête.
+ * Dominant delimiter, read from the header.
  *
- * Un export français passé par Excel sépare au point-virgule et met des virgules dans les
- * libellés : compter les occurrences est plus sûr que de chercher la présence de l'un ou
- * de l'autre. La tabulation est acceptée pour le copier-coller depuis un tableur.
+ * A French export passed through Excel separates on semicolons and puts commas in the labels: counting occurrences is
+ * safer than looking for the presence of one or the other. Tab is accepted for copy-paste from a spreadsheet.
  */
 export function detectDelimiter(header: string): string {
   const count = (d: string) => header.split(d).length - 1;
@@ -56,31 +54,28 @@ export function detectDelimiter(header: string): string {
 }
 
 /**
- * Échappe un champ CSV (guillemets si séparateur/quote/retour présent) et neutralise
- * l'injection de formule tableur : un champ commençant par `= + - @` (ou tab/CR) est préfixé
- * d'une apostrophe pour qu'Excel/Sheets ne l'interprète pas comme une formule.
+ * Escapes a CSV field (quotes if separator/quote/return present) and neutralises spreadsheet formula injection: a field
+ * starting with `= + - @` (or tab/CR) is prefixed with an apostrophe so that Excel/Sheets does not read it as a formula.
  */
 export function csvField(v: string): string {
   const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
   return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-/** Une ligne CSV complète, champs échappés et séparés par la virgule. */
+/** A complete CSV line, fields escaped and separated by the comma. */
 export function toCsvLine(fields: string[]): string {
   return fields.map(csvField).join(',');
 }
 
-// ---------------------------------------------------------------------------
-// Export des plans (38.G) — ré-importable tel quel par l'import enrichi.
-// ---------------------------------------------------------------------------
+// Shot export (38.G) — re-importable as-is by the enriched import.
 
 export interface ExportShotRow {
   sequence: string | null;
   shot: string;
   name: string;
   tasks: string[];
-  // Colonnes facultatives : elles n'apparaissent dans l'en-tête que si au moins une ligne
-  // les renseigne — un projet sans épisode n'exporte pas une colonne vide.
+  // Optional columns: they only appear in the header if at least one row fills them in — a project without an episode
+  // does not export an empty column.
   episode?: string | null;
   description?: string | null;
   shotStatus?: string | null;
@@ -90,7 +85,7 @@ export interface ExportShotRow {
 
 type OptionalExport = 'episode' | 'description' | 'shotStatus' | 'startFrame' | 'endFrame';
 
-/** En-tête de chaque colonne facultative, choisi parmi les synonymes reconnus à l'import. */
+/** Header of each optional column, chosen among the synonyms recognised on import. */
 const OPTIONAL_HEADERS: Record<OptionalExport, string> = {
   episode: 'episode',
   description: 'description',
@@ -107,9 +102,8 @@ function cell(row: ExportShotRow, field: OptionalExport): string {
 }
 
 /**
- * Sérialise des shots/tâches au format CSV (en-tête inclus), ré-importable tel quel.
- * Les quatre colonnes historiques sont toujours écrites — un fichier exporté hier reste
- * lisible par un tableur configuré pour lui.
+ * Serialises shots/tasks in CSV format (header included), re-importable as-is.
+ * The four historical columns are always written — a file exported yesterday remains readable by a spreadsheet set up for it.
  */
 export function toShotsCsv(rows: ExportShotRow[]): string {
   const extras = OPTIONAL_ORDER.filter((field) => rows.some((r) => cell(r, field) !== ''));
@@ -128,12 +122,9 @@ export function toShotsCsv(rows: ExportShotRow[]): string {
   return lines.join('\n');
 }
 
-// ---------------------------------------------------------------------------
-// Lecture historique (38.F) — quatre colonnes, messages en clair.
-//
-// Conservée le temps que `ProjectService.importCsv` soit retiré au profit de
-// `ProjectImportService` : elle n'a plus qu'un appelant et aucune évolution à recevoir.
-// ---------------------------------------------------------------------------
+// Historical reading (38.F) — four columns, plain-text messages.
+// Kept until `ProjectService.importCsv` is retired in favour of `ProjectImportService`: it has a single remaining caller and
+// no changes to receive.
 
 export interface ParsedShotRow {
   sequence: string | null;
@@ -147,7 +138,7 @@ export interface ParseResult {
   errors: string[];
 }
 
-/** Parse un CSV de shots/tâches. Renvoie les lignes valides + la liste des erreurs. */
+/** Parses a shots/tasks CSV. Returns the valid rows plus the list of errors. */
 export function parseShotsCsv(text: string): ParseResult {
   const lines = text
     .split(/\r?\n/)

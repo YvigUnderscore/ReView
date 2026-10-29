@@ -4,20 +4,18 @@
 import { getExtension } from './fileSignatures';
 
 /**
- * Nom d'un média importé depuis ShotGrid.
+ * Name of a media imported from ShotGrid.
  *
- * Le média portait le nom du **fichier joint** (`playblast_final_v2_RETAKE.mov`), alors
- * que la version portait le `code` de la Version ShotGrid. L'écran de review affichant le
- * nom du média, ReView et le site nommaient donc la même chose différemment — impossible
- * de retrouver un plan d'une fenêtre à l'autre, et impossible d'en parler à voix haute
- * pendant des dailies.
+ * The media carried the name of the **attached file** (`playblast_final_v2_RETAKE.mov`), whereas the version carried
+ * the `code` of the ShotGrid Version. The review screen displaying the media name, ReView and the site named the same
+ * thing differently — impossible to find a shot from one window to the other, and impossible to mention it aloud
+ * during dailies.
  *
- * On reprend le code du site, en gardant l'**extension réelle** du fichier : elle n'est
- * pas décorative. `finalize` s'en sert pour valider les octets d'en-tête, `reprocess`
- * pour choisir le travail à lancer, et le worker FFmpeg pour nommer ses sorties.
+ * We take the site's code, keeping the file's **real extension**: it is not decorative. `finalize` uses it to validate
+ * the header bytes, `reprocess` to choose the job to run, and the FFmpeg worker to name its outputs.
  */
 
-/** Extensions déduites d'un content-type, quand le fichier joint n'en porte pas. */
+/** Extensions deduced from a content type, when the attached file carries none. */
 const MIME_EXTENSIONS: Record<string, string> = {
   'video/mp4': '.mp4',
   'video/quicktime': '.mov',
@@ -31,7 +29,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'application/pdf': '.pdf',
 };
 
-/** L'extension à conserver : celle du fichier livré, sinon celle du type déclaré. */
+/** The extension to keep: that of the delivered file, otherwise that of the declared type. */
 export function extensionFor(filename: string, mimeType?: string | null): string {
   const fromName = getExtension(filename);
   if (fromName) return fromName;
@@ -40,17 +38,16 @@ export function extensionFor(filename: string, mimeType?: string | null): string
 }
 
 /**
- * Assainit un code venu du site avant d'en faire un nom de fichier.
+ * Sanitises a code coming from the site before making a file name of it.
  *
- * La clé de stockage est un chemin (`projects/{slug}/{parent}/{version}/{id}/{nom}`) :
- * un code contenant `/`, `\` ou `..` y fabriquerait un segment de plus. Les sites laissent
- * passer à peu près n'importe quoi dans un `code`.
+ * The storage key is a path (`projects/{slug}/{parent}/{version}/{id}/{name}`): a code containing `/`, `\` or `..`
+ * would make one segment too many. Sites let just about anything through in a `code`.
  */
 export function safeCode(code: string): string {
   return (
     [...code]
-      // Caractères de contrôle : rares dans un code, mais ils cassent tout en aval.
-      // Filtrés un par un plutôt que par une classe d'échappement, qu'ESLint refuse.
+      // Control characters: rare in a code, but they break everything downstream.
+      // Filtered one by one rather than by an escape class, which ESLint refuses.
       .filter((c) => c >= ' ')
       .join('')
       .replace(/[/\\]+/g, '_')
@@ -60,13 +57,12 @@ export function safeCode(code: string): string {
 }
 
 /**
- * Le nom du média : `<code ShotGrid><extension du fichier>`.
+ * The media name: `<ShotGrid code><file extension>`.
  *
- * Beaucoup de sites nomment déjà la Version d'après le fichier (`SH010_comp_v003.mov`) :
- * concaténer aveuglément donnerait `SH010_comp_v003.mov.mov`.
+ * Many sites already name the Version after the file (`SH010_comp_v003.mov`): blindly concatenating would give
+ * `SH010_comp_v003.mov.mov`.
  *
- * Sans code exploitable, on garde le nom du fichier — mieux vaut le nom d'origine qu'un
- * nom vide.
+ * Without a usable code, the file name is kept — better the original name than an empty one.
  */
 export function sgMediaName(input: {
   code: string | null | undefined;

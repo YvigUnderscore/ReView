@@ -7,25 +7,23 @@ import { prisma } from './prisma';
 import { logger } from './logger';
 
 /**
- * Idempotence des écritures v1 (en-tête `Idempotency-Key`).
+ * Idempotence of v1 writes (`Idempotency-Key` header).
  *
- * Un script de pipeline qui perd sa connexion pendant un POST ne sait pas si le serveur a
- * traité la requête. Sans filet, le réflexe (rejouer) crée une deuxième version. Avec une
- * clé d'idempotence, le rejeu retrouve la réponse d'origine, à l'identique.
+ * A pipeline script that loses its connection during a POST does not know whether the server processed the request. Without a safety net, the
+ * reflex (replay) creates a second version. With an idempotency key, the replay retrieves the original response, identically.
  *
- * La clé est **réservée avant** l'exécution, pas enregistrée après : entre le traitement
- * et l'écriture du résultat, il existe une fenêtre pendant laquelle un rejeu rapide — ou
- * un second worker de la ferme de rendu — passerait au travers et créerait le doublon que
- * l'on cherche précisément à éviter. Pendant cette fenêtre, la réservation répond `409`.
+ * The key is **reserved before** execution, not recorded afterwards: between the processing and the write of the result, there is a window during
+ * which a fast replay — or a second worker on the render farm — would slip through and create the duplicate one is precisely trying to avoid.
+ * During this window, the reservation answers `409`.
  *
- * L'empreinte inclut la route ET le token : deux clients qui choisiraient la même clé —
- * ou le même client sur deux endpoints — ne peuvent pas se renvoyer la réponse de l'autre.
+ * The fingerprint includes the route AND the token: two clients who would choose the same key — or the same client on two endpoints — cannot
+ * return each other's response.
  */
 
-/** Durée de rétention d'une réponse mémorisée. Au-delà, un rejeu est traité normalement. */
+/** Retention period of a memorised response. Beyond it, a replay is processed normally. */
 export const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** `statusCode = 0` marque une requête en cours de traitement (réservation). */
+/** `statusCode = 0` marks a request being processed (reservation). */
 const IN_PROGRESS = 0;
 
 export const fingerprint = (key: string, method: string, path: string, tokenId?: number): string =>
@@ -33,7 +31,7 @@ export const fingerprint = (key: string, method: string, path: string, tokenId?:
     .update(`${tokenId ?? 'session'} ${method} ${path} ${key}`)
     .digest('hex');
 
-/** En-tête normalisé, borné : une clé est un identifiant, pas un canal de données. */
+/** Normalised, bounded header: a key is an identifier, not a data channel. */
 function readKey(req: Request): string | null {
   const raw = req.headers['idempotency-key'];
   const key = Array.isArray(raw) ? raw[0] : raw;
@@ -45,8 +43,7 @@ function readKey(req: Request): string | null {
 const isExpired = (createdAt: Date): boolean => Date.now() - createdAt.getTime() >= IDEMPOTENCY_TTL_MS;
 
 /**
- * Middleware d'idempotence. Sans en-tête, il ne fait rien : l'idempotence est un contrat
- * que le client demande explicitement.
+ * Idempotency middleware. Without the header it does nothing: idempotency is a contract the client explicitly requests.
  */
 export async function idempotency(req: Request, res: Response, next: NextFunction): Promise<void> {
   const key = readKey(req);
@@ -61,7 +58,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
       data: { fingerprint: fp, statusCode: IN_PROGRESS, response: {} },
     });
   } catch {
-    // La clé est déjà prise : soit la réponse est connue, soit elle est en cours.
+    // The key is already taken: either the response is known, or it is in progress.
     const existing = await prisma.idempotencyRecord.findUnique({ where: { fingerprint: fp } });
     if (existing && !isExpired(existing.createdAt)) {
       if (existing.statusCode === IN_PROGRESS) {
@@ -75,7 +72,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
       res.status(existing.statusCode).json(existing.response);
       return;
     }
-    // Réservation expirée : on la reprend pour ce nouvel essai.
+    // Expired reservation: we take it over for this new attempt.
     await prisma.idempotencyRecord
       .update({
         where: { fingerprint: fp },
@@ -84,18 +81,16 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
       .catch(() => undefined);
   }
 
-  // Mémorise la réponse au moment de son envoi. Seuls les succès sont retenus : rejouer
-  // une erreur transitoire (503 d'un service tiers, conflit résolu depuis) doit pouvoir
-  // aboutir, sinon la clé fige un échec pendant 24 h — la réservation est alors levée.
+  // Memorises the response at the moment it is sent. Only successes are kept: replaying a transient error (503 from a third-party service, a conflict
+  // since resolved) must be able to succeed, otherwise the key would freeze a failure for 24 h — the reservation is then lifted.
   const originalJson = res.json.bind(res);
   let recorded = false;
   res.json = (body: unknown): Response => {
     recorded = res.statusCode >= 200 && res.statusCode < 300;
     if (!recorded) return originalJson(body);
 
-    // L'envoi est différé le temps d'écrire la réponse. Quelques millisecondes contre une
-    // garantie ferme : tout rejeu, même immédiat, retrouve ce corps au lieu de retomber
-    // sur « traitement en cours » — ou pire, de repartir pour un second traitement.
+    // Sending is deferred while the response is written. A few milliseconds against a firm guarantee: any replay, even an immediate one, retrieves
+    // this body instead of falling back on "processing in progress" — or worse, starting a second processing.
     const status = res.statusCode;
     void prisma.idempotencyRecord
       .update({ where: { fingerprint: fp }, data: { statusCode: status, response: body as object } })
@@ -104,8 +99,8 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
     return res;
   };
 
-  // Filet : réponse en erreur, ou terminée sans JSON (204). La réservation doit tomber,
-  // sinon un rejeu légitime resterait bloqué en « déjà en cours » jusqu'à expiration.
+  // Safety net: error response, or ended without JSON (204). The reservation must drop, otherwise a legitimate replay would stay stuck on "already in
+  // progress" until expiry.
   res.on('finish', () => {
     if (recorded) return;
     void prisma.idempotencyRecord
@@ -116,7 +111,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
   next();
 }
 
-/** Purge des réponses mémorisées expirées (appelée par le worker de maintenance). */
+/** Purges the expired memorised responses (called by the maintenance worker). */
 export async function purgeIdempotencyRecords(now = new Date()): Promise<number> {
   const { count } = await prisma.idempotencyRecord.deleteMany({
     where: { createdAt: { lt: new Date(now.getTime() - IDEMPOTENCY_TTL_MS) } },

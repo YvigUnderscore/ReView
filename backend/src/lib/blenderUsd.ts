@@ -4,25 +4,25 @@
 import { z } from 'zod';
 
 /**
- * Pilotage de Blender headless pour la conversion USD -> GLB (Phase 45, 45.C).
+ * Drives headless Blender for the USD to GLB conversion (Phase 45, 45.C).
  *
- * Partie **pure et testable** : construction de la ligne de commande et lecture du resume
- * imprime par `workers/usd/usd_to_glb.py`. L'execution elle-meme vit dans
- * `services/ModelConvertService.ts` (execFile + timeout).
+ * Pure, testable part: building the command line and reading the summary printed by
+ * `workers/usd/usd_to_glb.py`. The execution itself lives in `services/ModelConvertService.ts`
+ * (execFile + timeout).
  *
- * Blender ecrit beaucoup de bruit sur stdout (chargement des plugins, statistiques d'export) :
- * le resume est prefixe d'un **marqueur** plutot que devine, sinon la moindre ligne JSON d'un
- * plugin tiers fausserait les metadonnees affichees en fiche technique.
+ * Blender writes a lot of noise on stdout (plugin loading, export statistics): the summary is
+ * prefixed with a **marker** rather than guessed, otherwise any JSON line from a third-party plugin
+ * would corrupt the metadata shown in the technical sheet.
  */
 
-/** Marqueur de la ligne de resume — doit rester identique a `MARKER` dans `usd_to_glb.py`. */
+/** Marker of the summary line: must stay identical to `MARKER` in `usd_to_glb.py`. */
 export const BLENDER_SUMMARY_MARKER = 'REVIEW_USD_JSON';
 
-/** Purposes USD exposables en review (`guide` existe mais n'a pas d'interet visuel). */
+/** USD purposes exposable in review (`guide` exists but has no visual interest). */
 export const USD_PURPOSES = ['render', 'proxy', 'guide'] as const;
 export type UsdPurpose = (typeof USD_PURPOSES)[number];
 
-/** Vrai si la valeur est un purpose USD connu (garde d'entree API). */
+/** True if the value is a known USD purpose (API input guard). */
 export function isUsdPurpose(value: unknown): value is UsdPurpose {
   return typeof value === 'string' && (USD_PURPOSES as readonly string[]).includes(value);
 }
@@ -39,7 +39,7 @@ export const blenderSummarySchema = z.object({
   fps: z.number().positive().default(24),
   animated: z.boolean().default(false),
   blender: z.string().default(''),
-  /** Options de variantes réellement cuites dans le GLB (46.G). */
+  /** Variant options actually baked into the GLB (46.G). */
   variantsBaked: z
     .array(
       z.object({
@@ -50,61 +50,60 @@ export const blenderSummarySchema = z.object({
       }),
     )
     .default([]),
-  /** Options écartées faute de budget — la bascule reste alors une reconversion. */
+  /** Options dropped for lack of budget: switching then remains a reconversion. */
   variantsSkipped: z.array(z.object({ prim: z.string(), set: z.string(), option: z.string() })).default([]),
 });
 
 export type BlenderSummary = z.infer<typeof blenderSummarySchema>;
 
-/** Options de conversion transmises au script Blender. */
+/** Conversion options passed to the Blender script. */
 export interface BlenderUsdOptions {
   input: string;
   output: string;
   purpose?: UsdPurpose;
-  /** Plage de timeCodes issue de l'analyseur — sans elle, l'export retombe sur 1-250. */
+  /** TimeCode range from the analyser: without it, the export falls back to 1-250. */
   frameStart?: number;
   frameEnd?: number;
   fps?: number;
-  /** Force une sortie statique (scene sans animation ou animation non souhaitee). */
+  /** Forces a static output (scene without animation, or animation not wanted). */
   noAnimation?: boolean;
-  /** Manifeste JSON des options de variantes a cuire dans le GLB (46.G). */
+  /** JSON manifest of the variant options to bake into the GLB (46.G). */
   variantLayers?: string;
-  /** Budget de sommets au-dela duquel les options restantes ne sont plus cuites. */
+  /** Vertex budget beyond which remaining options are no longer baked. */
   variantVertexBudget?: number;
-  /** Budget de temps de cuisson (secondes) — la conversion ne doit jamais expirer (46.P). */
+  /** Baking time budget (seconds): the conversion must never time out (46.P). */
   variantTimeBudget?: number;
 }
 
-/** Une option de variante a cuire : la couche a importer et le sous-arbre a en conserver. */
+/** A variant option to bake: the layer to import and the subtree to keep from it. */
 export interface VariantLayerEntry {
-  /** Couche USD (overlay) selectionnant cette option. */
+  /** USD layer (overlay) selecting this option. */
   stage: string;
-  /** Prim porteur du jeu de variantes — seul son sous-arbre est conserve. */
+  /** Carrying prim of the variant set: only its subtree is kept. */
   prim: string;
   set: string;
   option: string;
-  /** Option active dans la scene de base, pour etiqueter le sous-arbre d'origine. */
+  /** Option active in the base scene, used to label the original subtree. */
   default: string;
-  /** Chemins a peupler a l'import (prim porteur + materiaux ranges ailleurs), cf. `buildVariantMask`. */
+  /** Paths to populate at import (carrying prim + materials stored elsewhere), see `buildVariantMask`. */
   mask?: string;
 }
 
 /**
- * Masque d'import d'une option de variante : le prim porteur **et** les matériaux rangés hors
- * de son sous-arbre.
+ * Import mask of a variant option: the carrying prim **and** the materials stored outside its subtree.
  *
- * Blender applique `prim_path_mask` comme un masque de peuplement USD : ce qui est hors masque
- * n'existe plus sur le stage, y compris la cible d'un `material:binding`. Un matériau de
- * bibliothèque (`/World/mtl/…` à côté de l'asset) devient alors introuvable et l'objet cuit
- * ressort sans matériau — donc en métal blanc miroir dans le viewer, la spec glTF imposant le
- * matériau par défaut. Les chemins étrangers au sous-arbre sont donc ajoutés au masque ; ceux
- * qu'il contient déjà sont inutiles, et Blender ignore un chemin absent du stage.
+ * Blender applies `prim_path_mask` as a USD population mask: anything outside the mask no longer
+ * exists on the stage, including the target of a `material:binding`. A library material
+ * (`/World/mtl/...` next to the asset) then becomes unfindable and the baked object comes out
+ * without material, i.e. mirror white metal in the viewer, since the glTF spec imposes the default
+ * material. Paths outside the subtree are therefore added to the mask; those it already contains are
+ * useless, and Blender ignores a path absent from the stage.
  */
 export function buildVariantMask(prim: string, materialPaths: readonly string[] = []): string {
   const outside = materialPaths.filter(
     (path) =>
       path.startsWith('/') &&
-      // Le masque est une liste délimitée par `,`/`;` — un chemin qui en contient la casserait.
+      // The mask is a list delimited by `,`/`;`: a path containing one would break it.
       !/[,;]/.test(path) &&
       path !== prim &&
       !path.startsWith(`${prim}/`),
@@ -113,10 +112,9 @@ export function buildVariantMask(prim: string, materialPaths: readonly string[] 
 }
 
 /**
- * Arguments complets de `blender` : `-b` (headless — il desactive deja le peripherique audio),
- * `--factory-startup` (aucun addon ni preference utilisateur charges) et `--python-exit-code`
- * (sans lui une exception du script sort en code 0 et l'echec passerait inapercu).
- * Les arguments du script viennent apres le separateur `--`.
+ * Full `blender` arguments: `-b` (headless, already disables the audio device), `--factory-startup`
+ * (no add-on or user preference loaded) and `--python-exit-code` (without it a script exception
+ * exits with code 0 and the failure would go unnoticed). Script arguments come after the `--` separator.
  */
 export function buildBlenderArgs(scriptPath: string, opts: BlenderUsdOptions): string[] {
   const args = [
@@ -150,9 +148,9 @@ export function buildBlenderArgs(scriptPath: string, opts: BlenderUsdOptions): s
 }
 
 /**
- * Extrait le resume de conversion du flot de sortie de Blender. Renvoie `null` si le marqueur
- * est absent : la conversion peut avoir reussi (le GLB est verifie separement) sans que le
- * resume soit exploitable, auquel cas la fiche technique s'en passe.
+ * Extracts the conversion summary from Blender's output stream. Returns `null` if the marker is
+ * absent: the conversion may have succeeded (the GLB is checked separately) without a usable
+ * summary, in which case the technical sheet goes without it.
  */
 export function parseBlenderSummary(stdout: string): BlenderSummary | null {
   const line = stdout
@@ -170,8 +168,8 @@ export function parseBlenderSummary(stdout: string): BlenderSummary | null {
 }
 
 /**
- * Message d'erreur court et lisible a partir de la sortie d'erreur de Blender : on ne garde que
- * les dernieres lignes significatives (Blender prefixe ses avertissements de `Warning:`/`Info:`).
+ * Short, readable error message from Blender's stderr: only the last significant lines are kept
+ * (Blender prefixes its warnings with `Warning:`/`Info:`).
  */
 export function summarizeBlenderError(stderr: string, fallback = 'erreur inconnue'): string {
   const lines = stderr

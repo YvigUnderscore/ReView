@@ -14,13 +14,13 @@ import {
 } from './commentPayload';
 
 /**
- * A2-04 : `annotation` et `cameraState` étaient des `z.any()`. Ces cas disent les deux
- * moitiés du contrat : ce que le viewer envoie réellement doit passer intact, et tout ce
- * qui déborde — champ libre, chaîne démesurée, volume — doit être refusé à l'écriture.
+ * A2-04: `annotation` and `cameraState` were `z.any()`. These cases state both halves of the
+ * contract: what the viewer really sends must pass intact, and anything beyond it (free field,
+ * oversized string, volume) must be refused on write.
  */
 
-describe('annotationSchema — ce que le viewer envoie passe', () => {
-  it('accepte les formes 2D de l’overlay', () => {
+describe('annotationSchema — what the viewer sends passes', () => {
+  it('accepts the 2D shapes of the overlay', () => {
     const shapes = [
       {
         id: 'a1',
@@ -40,7 +40,7 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     expect(annotationSchema.safeParse(shapes).success).toBe(true);
   });
 
-  it('accepte le hotspot 3D, un trait du painter, une plage vidéo et une anim caméra', () => {
+  it('accepts the 3D hotspot, a painter stroke, a video range and a camera animation', () => {
     const parts = [
       { type: 'hotspot', position: '1,2,3', normal: '0,1,0', space: 'object' },
       { type: 'splat-paint', points: [0, 0, 0, 1, 1, 1], color: '#ffffff', width: 2 },
@@ -55,9 +55,9 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     expect(annotationSchema.safeParse(parts).success).toBe(true);
   });
 
-  it('accepte une animation caméra à tangentes séparées, pondérées et cyclées', () => {
-    // Le schéma de l'animation jointe est STRICT : un champ de clé oublié ici ne serait pas
-    // silencieusement retiré, il ferait échouer l'envoi du commentaire.
+  it('accepts a camera animation with separate, weighted and cyclic tangents', () => {
+    // The attached animation schema is STRICT: a key field forgotten here would not be silently
+    // stripped, it would make the comment submission fail.
     const parts = [
       {
         type: 'camera-anim',
@@ -78,10 +78,10 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     expect(annotationSchema.safeParse(parts).success).toBe(true);
   });
 
-  it('garde la base de pose de l’animation jointe', () => {
-    // La part est STRICTE : une base omise du schéma partagé ferait échouer l'envoi du
-    // commentaire. Et retirée en silence, elle ferait rejouer les canaux non clés sur la vue de
-    // chaque spectateur — la cible sauterait à l'origine du monde chez le relecteur.
+  it('keeps the pose base of the attached animation', () => {
+    // The part is STRICT: a base missing from the shared schema would make the comment submission
+    // fail. Silently stripped, it would replay the unkeyed channels on every viewer's view — the target
+    // would jump back to the world origin for the reviewer.
     const base = { position: { x: 9, y: 3, z: 4 }, target: { x: 1, y: 0.5, z: -2 }, fov: 50 };
     const part = {
       type: 'camera-anim',
@@ -99,15 +99,15 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     };
     const [parsed] = annotationSchema.parse([part]) as [typeof part];
     expect(parsed.base).toEqual(base);
-    // Et une animation sans base reste acceptée : les commentaires déjà envoyés n'en ont pas.
+    // An animation without a base is still accepted: comments already sent have none.
     const { base: _sansBase, ...nu } = part;
     expect(annotationSchema.safeParse([nu]).success).toBe(true);
   });
 
-  it('garde la durée de lecture de l’animation jointe', () => {
-    // Le rejeu doit être à l'identique : `durationMs` fixe la fin de boucle, et sans elle
-    // l'animation reçue rebouclerait sur son dernier temps de clé. Le front la laissait sur le
-    // quai ; ce cas dit qu'elle traverse l'écriture sans être retirée en silence.
+  it('keeps the playback duration of the attached animation', () => {
+    // Playback must be identical: `durationMs` fixes the loop end, and without it the received
+    // animation would loop on its last keyframe time. The front end left it on the dock; this case
+    // checks that it survives the write without being silently stripped.
     const part = {
       type: 'camera-anim',
       version: 2,
@@ -127,7 +127,7 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
     expect(parsed.channels.px.keys).toHaveLength(2);
   });
 
-  it('accepte une proposition de mise en scène 3D (46.D)', () => {
+  it('accepts a 3D staging proposal (46.D)', () => {
     const parts = [
       {
         type: 'scene-override',
@@ -138,38 +138,38 @@ describe('annotationSchema — ce que le viewer envoie passe', () => {
   });
 });
 
-describe('annotationSchema — ce qui déborde est refusé', () => {
-  it('refuse un objet libre au lieu de la liste de parts', () => {
+describe('annotationSchema — what overflows is refused', () => {
+  it('refuses a free object instead of the list of parts', () => {
     expect(annotationSchema.safeParse({ pad: 'A'.repeat(1_000) }).success).toBe(false);
   });
 
-  it('refuse une part de type inconnu', () => {
+  it('refuses a part of unknown type', () => {
     expect(annotationSchema.safeParse([{ type: 'whatever', pad: 'A' }]).success).toBe(false);
   });
 
-  it('refuse une clé libre glissée dans une forme connue', () => {
+  it('refuses a free key slipped into a known shape', () => {
     expect(
       annotationSchema.safeParse([{ type: 'rect', x: 0, y: 0, w: 1, h: 1, pad: 'A'.repeat(100_000) }])
         .success,
     ).toBe(false);
   });
 
-  it('refuse une couleur qui n’en est pas une (barrière devant le rendu SVG)', () => {
+  it('refuses a colour that is not one (barrier in front of the SVG rendering)', () => {
     expect(annotationSchema.safeParse([{ type: 'rect', color: '#fff" onload="x' }]).success).toBe(false);
     expect(annotationSchema.safeParse([{ type: 'rect', color: 'url(#x)' }]).success).toBe(false);
   });
 
-  it('refuse un texte d’annotation démesuré', () => {
+  it('refuses an oversized annotation text', () => {
     expect(annotationSchema.safeParse([{ type: 'text', text: 'A'.repeat(50_000) }]).success).toBe(false);
   });
 
-  it('refuse un tracé de plus de quatre mille points', () => {
+  it('refuses a stroke of more than four thousand points', () => {
     const pts = Array.from({ length: 5_000 }, () => [0.5, 0.5]);
     expect(annotationSchema.safeParse([{ type: 'path', pts }]).success).toBe(false);
   });
 
-  it('refuse un volume total au-delà du plafond, même en parts valides', () => {
-    // Des traits parfaitement licites, mais assez nombreux pour peser plus que le plafond.
+  it('refuses a total volume beyond the ceiling, even with valid parts', () => {
+    // Perfectly legal strokes, but numerous enough to weigh more than the ceiling.
     const stroke = {
       type: 'splat-paint',
       points: Array.from({ length: 12_000 }, (_, i) => i / 1_000),
@@ -181,13 +181,13 @@ describe('annotationSchema — ce qui déborde est refusé', () => {
     expect(annotationSchema.safeParse(parts).success).toBe(false);
   });
 
-  it('refuse un nombre non fini (NaN/Infinity arrivent en JSON par null ou par chaîne)', () => {
+  it('refuses a non-finite number (NaN/Infinity arrive in JSON as null or as a string)', () => {
     expect(annotationSchema.safeParse([{ type: 'rect', x: 1e12 }]).success).toBe(false);
   });
 });
 
 describe('cameraStateSchema', () => {
-  it('accepte la pose capturée par le viewer 3D, état de vue compris', () => {
+  it('accepts the pose captured by the 3D viewer, view state included', () => {
     const pose = {
       position: { x: 1, y: 2, z: 3 },
       target: { x: 0, y: 0, z: 0 },
@@ -209,7 +209,7 @@ describe('cameraStateSchema', () => {
     expect(cameraStateSchema.safeParse(pose).success).toBe(true);
   });
 
-  it('accepte la profondeur de champ Spark jointe à la pose', () => {
+  it('accepts the Spark depth of field attached to the pose', () => {
     const pose = {
       position: { x: 0, y: 0, z: 5 },
       target: { x: 0, y: 0, z: 0 },
@@ -219,11 +219,11 @@ describe('cameraStateSchema', () => {
     expect(cameraStateSchema.safeParse(pose).success).toBe(true);
   });
 
-  it('refuse un blob sans pose', () => {
+  it('refuses a blob without a pose', () => {
     expect(cameraStateSchema.safeParse({ p: 'A'.repeat(1_000) }).success).toBe(false);
   });
 
-  it('refuse une charge utile cachée dans un champ inconnu', () => {
+  it('refuses a payload hidden in an unknown field', () => {
     expect(
       cameraStateSchema.safeParse({
         position: { x: 0, y: 0, z: 0 },
@@ -233,7 +233,7 @@ describe('cameraStateSchema', () => {
     ).toBe(false);
   });
 
-  it('refuse une focale aberrante', () => {
+  it('refuses an aberrant focal length', () => {
     expect(
       cameraStateSchema.safeParse({
         position: { x: 0, y: 0, z: 0 },
@@ -244,66 +244,65 @@ describe('cameraStateSchema', () => {
   });
 });
 
-describe('parseAnnotation / parseCameraState — relecture à l’écriture', () => {
-  it('laissent passer l’absence de valeur', () => {
+describe('parseAnnotation / parseCameraState — re-read on write', () => {
+  it('let an absent value through', () => {
     expect(parseAnnotation(undefined)).toBeUndefined();
     expect(parseAnnotation(null)).toBeUndefined();
     expect(parseCameraState(undefined)).toBeUndefined();
     expect(parseCameraState(null)).toBeUndefined();
   });
 
-  it('lèvent une erreur 400 plutôt qu’une 500 quand la valeur ne tient pas', () => {
+  it('throw a 400 rather than a 500 when the value does not fit', () => {
     expect(() => parseAnnotation({ pad: 'A' })).toThrowError(expect.objectContaining({ statusCode: 400 }));
     expect(() => parseCameraState({ pad: 'A' })).toThrowError(expect.objectContaining({ statusCode: 400 }));
   });
 
-  it('rendent la valeur relue, débarrassée de ce qui n’est pas au contrat', () => {
+  it('return the value re-read, stripped of what is not in the contract', () => {
     const parts = [{ type: 'rect', x: 0.1, y: 0.2, w: 0.3, h: 0.4 }];
     expect(parseAnnotation(parts)).toEqual(parts);
   });
 });
 
 /**
- * L'annotation d'un INVITÉ est plus étroite que celle d'un membre, et volontairement.
+ * The annotation of a GUEST is narrower than a member's, on purpose.
  *
- * Un client dessine sur l'image et pose un point sur une surface : ce sont des remarques.
- * Les trois parts retirées sont des gestes d'auteur, rejoués pour TOUS les spectateurs du
- * média — une proposition de mise en scène 3D, une animation caméra, les traits du painter.
- * Les accepter donnerait à un anonyme muni d'une URL un moyen d'écrire dans ce que voient
- * les autres.
+ * A client draws on the image and places a point on a surface: these are remarks. The three parts
+ * removed are author gestures, replayed to ALL viewers of the media — a 3D staging proposal, a camera
+ * animation, painter strokes. Accepting them would let an anonymous user holding a URL write into what
+ * other people see.
  */
-describe('guestAnnotationSchema — ce qu’un lien de partage a le droit d’écrire', () => {
+describe('guestAnnotationSchema — what a share link is allowed to write', () => {
   const rect = { type: 'rect', id: 'a', color: '#ef4444', width: 3, x: 0.1, y: 0.1, w: 0.2, h: 0.2 };
 
-  it('accepte un dessin et un point de surface', () => {
+  it('accepts a drawing and a surface point', () => {
     expect(guestAnnotationSchema.safeParse([rect]).success).toBe(true);
     expect(
       guestAnnotationSchema.safeParse([{ type: 'hotspot', position: '1,2,3', normal: '0,1,0' }]).success,
     ).toBe(true);
   });
 
-  it('refuse les parts d’auteur, que le schéma d’un membre accepte', () => {
+  it('refuses the author parts that a member schema accepts', () => {
     const authored = [
       [{ type: 'scene-override', override: null }],
       [{ type: 'splat-paint', points: [0, 0, 0], color: '#ffffff', width: 1 }],
       [{ type: 'camera-anim', version: 2, loop: false, channels: {} }],
     ];
     for (const parts of authored) {
-      // Le membre a le droit : c'est bien l'invité que l'on restreint, pas la forme.
+      // The member is allowed: it is the guest that is restricted, not the shape.
       expect(annotationSchema.safeParse(parts).success).toBe(true);
       expect(guestAnnotationSchema.safeParse(parts).success).toBe(false);
     }
   });
 
-  it('borne le volume plus serré que pour un membre', () => {
+  it('bounds the volume more tightly than for a member', () => {
     expect(guestAnnotationSchema.safeParse(Array.from({ length: 60 }, () => rect)).success).toBe(true);
     expect(guestAnnotationSchema.safeParse(Array.from({ length: 61 }, () => rect)).success).toBe(false);
-    // Un seul champ suffit à faire un gros blob : le plafond d'octets ferme la porte.
+    // A single field is enough to make a large blob: the byte ceiling closes the door.
     const fat = { type: 'text', x: 0, y: 0, text: 'x'.repeat(2_000) };
     expect(guestAnnotationSchema.safeParse(Array.from({ length: 40 }, () => fat)).success).toBe(false);
   });
 
-  it('relit à l’écriture comme son équivalent interne', () => {
+  it('re-reads on write like its internal equivalent', () => {
     expect(parseGuestAnnotation(undefined)).toBeUndefined();
     expect(parseGuestAnnotation(null)).toBeUndefined();
     expect(parseGuestAnnotation([rect])).toEqual([rect]);
@@ -313,10 +312,10 @@ describe('guestAnnotationSchema — ce qu’un lien de partage a le droit d’é
   });
 });
 
-describe('poiPart — un commentaire porteur, des points numerotes', () => {
+describe('poiPart — a carrying comment, numbered points', () => {
   const point = { position: '1 2 3', normal: '0 1 0', space: 'object' as const };
 
-  it('accepte une part unique portant plusieurs points, avec texte et images', () => {
+  it('accepts a single part carrying several points, with text and images', () => {
     const parts = [
       {
         type: 'poi',
@@ -330,14 +329,14 @@ describe('poiPart — un commentaire porteur, des points numerotes', () => {
     expect(parseAnnotation(parts)).toEqual(parts);
   });
 
-  it('exige au moins un point, et n’en accepte pas plus que le plafond', () => {
+  it('requires at least one point, and does not accept more than the ceiling', () => {
     expect(annotationSchema.safeParse([{ type: 'poi', points: [] }]).success).toBe(false);
     const many = (n: number) => [{ type: 'poi', points: Array.from({ length: n }, () => point) }];
     expect(annotationSchema.safeParse(many(MAX_POI_POINTS)).success).toBe(true);
     expect(annotationSchema.safeParse(many(MAX_POI_POINTS + 1)).success).toBe(false);
   });
 
-  it('borne chaque champ et refuse toute cle libre', () => {
+  it('bounds each field and refuses any free key', () => {
     const over = [{ type: 'poi', points: [{ ...point, text: 'x'.repeat(2_001) }] }];
     expect(annotationSchema.safeParse(over).success).toBe(false);
     const extra = [{ type: 'poi', points: [{ ...point, author: 'moi' }] }];
@@ -346,13 +345,13 @@ describe('poiPart — un commentaire porteur, des points numerotes', () => {
     expect(annotationSchema.safeParse(images).success).toBe(false);
   });
 
-  it('reste refusee a un invite : un lien de partage ne pose qu’un hotspot', () => {
+  it('remains refused to a guest: a share link only places a hotspot', () => {
     const parts = [{ type: 'poi', points: [point] }];
     expect(annotationSchema.safeParse(parts).success).toBe(true);
     expect(guestAnnotationSchema.safeParse(parts).success).toBe(false);
   });
 
-  it('cohabite avec les autres parts du meme commentaire', () => {
+  it('coexists with the other parts of the same comment', () => {
     const parts = [
       { type: 'poi', points: [point] },
       { type: 'splat-paint', points: [0, 0, 0], color: '#ffffff', width: 2 },
@@ -362,7 +361,7 @@ describe('poiPart — un commentaire porteur, des points numerotes', () => {
   });
 });
 
-describe('splatEditPart — une édition de nuage proposée dans un commentaire', () => {
+describe('splatEditPart — a cloud edit proposed in a comment', () => {
   const trs = {
     position: [1, 0, -2] as [number, number, number],
     quaternion: [0, 0.7071, 0, 0.7071] as [number, number, number, number],
@@ -373,18 +372,18 @@ describe('splatEditPart — une édition de nuage proposée dans un commentaire'
     { type: 'splat-edit', transform: trs, volumes: [volume], ...over },
   ];
 
-  it('accepte la transformation, les volumes et le flip d’orientation', () => {
+  it('accepts the transform, the volumes and the orientation flip', () => {
     expect(annotationSchema.safeParse(part()).success).toBe(true);
     expect(annotationSchema.safeParse(part({ baseFlip: false })).success).toBe(true);
     expect(annotationSchema.safeParse(part({ transform: null, volumes: [] })).success).toBe(true);
   });
 
   /**
-   * Les suppressions voyagent, et c'est le cœur du lot : le geste le plus courant sur un nuage
-   * est de le nettoyer. Elles voyagent par RÉFÉRENCE — la part porte la clé d'une pièce jointe
-   * du commentaire, jamais le binaire, qui ne tiendrait pas dans une annotation.
+   * Deletions travel, and they are the heart of this batch: the most common gesture on a cloud is to
+   * clean it up. They travel by REFERENCE — the part carries the key of an attachment of the comment,
+   * never the binary, which would not fit in an annotation.
    */
-  it('accepte les références des deux binaires (masque, ops de sous-ensemble)', () => {
+  it('accepts references to both binaries (mask, subset ops)', () => {
     const refs = { mask: { key: 'comments/attachments/1/splat-mask.bin', count: 3 } };
     expect(annotationSchema.safeParse(part(refs)).success).toBe(true);
     const both = {
@@ -392,16 +391,16 @@ describe('splatEditPart — une édition de nuage proposée dans un commentaire'
       subset: { key: 'comments/attachments/1/splat-subset.bin', count: 1 },
     };
     expect(annotationSchema.safeParse(part(both)).success).toBe(true);
-    // Un nettoyage au seul masque : rien ne bouge, et la proposition existe quand même.
+    // A cleanup with only the mask: nothing moves, and the proposal still exists.
     expect(annotationSchema.safeParse(part({ ...both, transform: null, volumes: [] })).success).toBe(true);
   });
 
   /**
-   * La référence reste BORNÉE, et le binaire reste dehors : le blob lui-même, une clé sans
-   * compte, un compte sans clé, ou un champ libre glissé dans la part doivent être refusés par
-   * le schéma — pas seulement omis par le client.
+   * The reference stays BOUNDED and the binary stays out: the blob itself, a key without an account,
+   * an account without a key, or a free field slipped into the part must be refused by the schema —
+   * not merely omitted by the client.
    */
-  it('refuse le binaire lui-même, une référence incomplète, un champ libre', () => {
+  it('refuses the binary itself, an incomplete reference, a free field', () => {
     for (const extra of [
       { mask: 'AAAA' },
       { mask: { key: 'comments/attachments/1/splat-mask.bin' } },
@@ -415,7 +414,7 @@ describe('splatEditPart — une édition de nuage proposée dans un commentaire'
     }
   });
 
-  it('refuse une proposition hors bornes : trop de volumes, échelle nulle, TRS incomplète', () => {
+  it('refuses a proposal out of bounds: too many volumes, zero scale, incomplete TRS', () => {
     const many = part({ volumes: Array.from({ length: 33 }, () => volume) });
     expect(annotationSchema.safeParse(many).success).toBe(false);
     const flat = part({ transform: { ...trs, scale: [0, 1, 1] } });
@@ -426,11 +425,11 @@ describe('splatEditPart — une édition de nuage proposée dans un commentaire'
     expect(annotationSchema.safeParse(far).success).toBe(false);
   });
 
-  it('reste refusée à un invité : c’est un geste d’auteur, pas une remarque', () => {
+  it('remains refused to a guest: it is an author gesture, not a remark', () => {
     expect(guestAnnotationSchema.safeParse(part()).success).toBe(false);
   });
 
-  it('passe par parseAnnotation, comme toute part écrite hors route', () => {
+  it('goes through parseAnnotation, like any part written outside a route', () => {
     expect(parseAnnotation(part())).toEqual(part());
   });
 });

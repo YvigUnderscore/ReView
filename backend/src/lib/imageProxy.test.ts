@@ -15,28 +15,28 @@ import {
 } from './imageProxy';
 
 describe('needsWebProxy', () => {
-  it('réclame un dérivé pour les images que le navigateur ne décode pas', () => {
+  it('claims a derivative for images the browser cannot decode', () => {
     for (const ext of ['.exr', '.dpx', '.tif', '.tiff', '.tga']) {
       expect(needsWebProxy(ext), ext).toBe(true);
     }
   });
 
-  it('laisse tranquilles celles quʼil affiche nativement', () => {
+  it('leaves alone those it displays natively', () => {
     for (const ext of BROWSER_IMAGE_EXTENSIONS) {
       expect(needsWebProxy(ext), ext).toBe(false);
     }
   });
 
-  it('ignore la casse : lʼextension vient du nom de fichier déposé', () => {
+  it('ignores case: the extension comes from the uploaded file name', () => {
     expect(needsWebProxy('.EXR')).toBe(true);
     expect(needsWebProxy('.PNG')).toBe(false);
   });
 
   /**
-   * L'invariant utile : une image acceptée est soit rendue par le navigateur, soit
-   * proxifiée. Rien ne doit pouvoir entrer et rester invisible en review.
+   * The useful invariant: an accepted image is either rendered by the browser or proxied. Nothing must be able to
+   * enter and remain invisible in review.
    */
-  it('couvre toutes les extensions image admises', () => {
+  it('covers all accepted image extensions', () => {
     for (const ext of SUPPORTED_EXTENSIONS[MediaKind.IMAGE]) {
       const covered = needsWebProxy(ext) || (BROWSER_IMAGE_EXTENSIONS as readonly string[]).includes(ext);
       expect(covered, ext).toBe(true);
@@ -45,12 +45,12 @@ describe('needsWebProxy', () => {
 });
 
 describe('imageDecodeInputOptions', () => {
-  it("applique la courbe sRGB à l'EXR, qui est linéaire", () => {
+  it("applies the sRGB curve to the EXR, which is linear", () => {
     expect(imageDecodeInputOptions('.exr')).toEqual(['-apply_trc', 'iec61966_2_1']);
     expect(imageDecodeInputOptions('.EXR')).toEqual(['-apply_trc', 'iec61966_2_1']);
   });
 
-  it("ne pose rien sur les autres décodeurs — l'option y ferait échouer la commande", () => {
+  it("sets nothing on the other decoders — the option would make the command fail", () => {
     for (const ext of ['.dpx', '.tif', '.tga', '.png', '.mov']) {
       expect(imageDecodeInputOptions(ext), ext).toEqual([]);
     }
@@ -58,33 +58,33 @@ describe('imageDecodeInputOptions', () => {
 });
 
 describe('webProxyOutputOptions', () => {
-  it('impose un format de pixel compatible mjpeg et une seule image', () => {
+  it('enforces a mjpeg-compatible pixel format and a single image', () => {
     const opts = webProxyOutputOptions();
     expect(opts).toContain('yuvj420p');
-    // Sans cela un TIFF multi-page produirait une séquence au lieu d'une image.
+    // Without it, a multi-page TIFF would produce a sequence instead of an image.
     expect(opts.join(' ')).toContain('-frames:v 1');
   });
 });
 
 describe('webProxyScaleFilter', () => {
-  it('ne redimensionne pas une plaque de production : la pleine résolution est le propos', () => {
+  it('does not resize a production plate: full resolution is the point', () => {
     expect(webProxyScaleFilter(4096, 2160)).toBeNull();
     expect(webProxyScaleFilter(WEB_PROXY_MAX_SIDE, WEB_PROXY_MAX_SIDE)).toBeNull();
   });
 
-  it('borne les panoramas hors gabarit, en gardant le rapport et une dimension paire', () => {
+  it('bounds out-of-gauge panoramas, keeping the ratio and an even dimension', () => {
     expect(webProxyScaleFilter(40000, 2000)).toBe(`scale=${WEB_PROXY_MAX_SIDE}:-2`);
     expect(webProxyScaleFilter(2000, 40000)).toBe(`scale=-2:${WEB_PROXY_MAX_SIDE}`);
   });
 
-  it('dimensions inconnues (sonde muette) : pas de filtre plutôt quʼun mauvais', () => {
+  it('unknown dimensions (silent probe): no filter rather than a wrong one', () => {
     expect(webProxyScaleFilter(0, 0)).toBeNull();
     expect(webProxyScaleFilter(Number.NaN, Number.NaN)).toBeNull();
   });
 });
 
 describe('webProxyKey', () => {
-  it('range le dérivé avec les autres, sous le préfixe du média', () => {
+  it('stores the derivative with the others, under the media prefix', () => {
     expect(webProxyKey(42)).toBe('derived/42/proxy.jpg');
   });
 });

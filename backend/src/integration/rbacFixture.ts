@@ -5,21 +5,21 @@ import request from 'supertest';
 import type { Express } from 'express';
 
 /**
- * Décor de la matrice d'autorisation : quatre rôles, deux projets disjoints.
+ * Scenery of the authorization matrix: four roles, two disjoint projects.
  *
- * Deux projets — et non un — parce que la faute que ce dispositif doit attraper n'est pas
- * « le rôle X passe une porte réservée » (les tests de service à Prisma doublé la voient),
- * c'est « la requête a oublié son `projectId` » : un membre du projet A qui lit une entité
- * du projet B. Il faut donc un B, et quelqu'un qui n'y est pas.
+ * Two projects rather than one, because the mistake this setup must catch is not "role X gets
+ * through a reserved door" (service tests with a mocked Prisma already see that), but "the query
+ * forgot its `projectId`": a member of project A reading an entity of project B. Hence a B, and
+ * someone who is not in it.
  *
- * Les comptes portent un suffixe d'exécution : la base d'intégration est jetable, mais le
- * décor doit aussi pouvoir se reconstruire sur une base déjà peuplée.
+ * Accounts carry a per-run suffix: the integration database is disposable, but the setup must also
+ * be rebuildable on an already populated database.
  */
 
-/** Les six voix jouées contre chaque endpoint. */
+/** The six voices played against each endpoint. */
 export type Actor = 'anon' | 'admin' | 'supervisor' | 'artist' | 'client' | 'outsider';
 
-/** Les cinq voix authentifiées — `anon` est joué à part, contre toute la table. */
+/** The five authenticated voices; `anon` is played separately, against the whole table. */
 export const AUTHENTICATED_ACTORS: Exclude<Actor, 'anon'>[] = [
   'admin',
   'supervisor',
@@ -29,13 +29,13 @@ export const AUTHENTICATED_ACTORS: Exclude<Actor, 'anon'>[] = [
 ];
 
 export interface RbacFixture {
-  /** Jeton par acteur ; `anon` n'en a pas. */
+  /** Token per actor; `anon` has none. */
   tokens: Record<Exclude<Actor, 'anon'>, string>;
-  /** Identifiants des comptes, pour les corps de requête (ajout de membre…). */
+  /** Account IDs, for request bodies (adding a member, etc.). */
   userIds: Record<Exclude<Actor, 'anon'>, number>;
-  /** Projet A : `artist` et `client` en sont membres, `outsider` non. */
+  /** Project A: `artist` and `client` are members, `outsider` is not. */
   projectA: number;
-  /** Projet B : seul `outsider` en est membre. */
+  /** Project B: only `outsider` is a member. */
   projectB: number;
   shotA: number;
   shotB: number;
@@ -64,7 +64,7 @@ async function loginAdmin(app: Express): Promise<string> {
   throw new Error('No administrator account available for the authorization matrix.');
 }
 
-/** Crée un compte du rôle demandé et rend son id et son jeton. */
+/** Creates an account with the requested role and returns its id and token. */
 async function makeUser(
   app: Express,
   adminToken: string,

@@ -6,14 +6,14 @@ import { prisma } from './prisma';
 import { forbidden } from './errors';
 
 /**
- * Rôles par projet (38.E) — étend le RBAC global d'un niveau local :
- *  - ADMIN global : insensible au membership, ADMIN partout.
- *  - SUPERVISOR global : accès de gestion global (membership ignoré, reste SUPERVISOR).
- *  - autres rôles : accès UNIQUEMENT via membership ; le rôle effectif est
- *    `membership.role ?? rôle global` — d'où l'élévation locale (un ARTIST membre avec
- *    `membership.role = SUPERVISOR` gère CE projet sans droit global).
+ * Per-project roles (38.E) — extends global RBAC by one local level:
+ *  - global ADMIN: insensitive to membership, ADMIN everywhere.
+ *  - global SUPERVISOR: global management access (membership ignored, remains SUPERVISOR).
+ *  - other roles: access ONLY via membership; the effective role is
+ *    `membership.role ?? global role` — hence local elevation (an ARTIST member with
+ *    `membership.role = SUPERVISOR` manages THIS project without a global right).
  *
- * Le rôle effectif ne rétrograde jamais un manager global (pas de piège cross-projet).
+ * The effective role never demotes a global manager (no cross-project trap).
  */
 export async function effectiveProjectRole(
   userId: number,
@@ -25,28 +25,27 @@ export async function effectiveProjectRole(
   const membership = await prisma.projectMembership.findUnique({
     where: { userId_projectId: { userId, projectId } },
   });
-  if (!membership) return null; // pas membre → aucun accès
+  if (!membership) return null; // not a member → no access
   return membership.role ?? globalRole;
 }
 
-/** Le rôle effectif permet-il de gérer le projet (structure, membres, réglages) ? */
+/** Does the effective role allow managing the project (structure, members, settings)? */
 export const canManageProject = (role: Role | null): boolean =>
   role === Role.ADMIN || role === Role.SUPERVISOR;
 
 /**
- * Rôle GLOBAL de gestion — **hors projet uniquement**.
+ * GLOBAL management role — **outside of a project only**.
  *
- * Réservé aux décisions qui ne portent sur aucun projet en particulier : périmètre d'une
- * liste transverse, portée annoncée d'un token. Toute décision qui concerne UN projet passe
- * par `effectiveProjectRole` : ce test-ci ignore l'élévation locale (38.E) — il refusait
- * à un ARTIST promu SUPERVISOR sur son projet de publier ce qu'il supervise, et laissait
- * un ARTIST rétrogradé CLIENT contribuer quand même.
+ * Reserved for decisions that concern no particular project: scope of a cross-project list, announced scope of a token. Any
+ * decision concerning ONE project goes through `effectiveProjectRole`: this test ignores local elevation (38.E) — it refused
+ * an ARTIST promoted to SUPERVISOR on their project from publishing what they supervise, and let a CLIENT-demoted ARTIST
+ * contribute anyway.
  */
 export const isGlobalManager = (role: Role): boolean => role === Role.ADMIN || role === Role.SUPERVISOR;
 
 /**
- * Forme booléenne d'`assertProjectManage`, pour les règles « auteur OU manager » où le
- * refus n'est pas immédiat (modification/suppression d'une version, d'une tâche).
+ * Boolean form of `assertProjectManage`, for the "author OR manager" rules where refusal is not immediate
+ * (modifying/deleting a version or a task).
  */
 export async function isProjectManager(
   userId: number,
@@ -56,10 +55,10 @@ export async function isProjectManager(
   return canManageProject(await effectiveProjectRole(userId, globalRole, projectId));
 }
 
-/** Le rôle effectif permet-il d'uploader / créer des tâches ? (CLIENT = lecture/commentaire seul.) */
+/** Does the effective role allow uploading / creating tasks? (CLIENT = read/comment only.) */
 export const canContribute = (role: Role | null): boolean => role != null && role !== Role.CLIENT;
 
-/** Lève 403 si l'utilisateur ne peut pas gérer le projet (rôle effectif < SUPERVISOR). */
+/** Throws 403 if the user cannot manage the project (effective role < SUPERVISOR). */
 export async function assertProjectManage(
   userId: number,
   globalRole: Role,
@@ -69,7 +68,7 @@ export async function assertProjectManage(
   if (!canManageProject(role)) throw forbidden('Managing the project is reserved to supervisors');
 }
 
-/** Lève 403 si l'utilisateur ne peut pas contribuer (CLIENT ou non-membre). */
+/** Throws 403 if the user cannot contribute (CLIENT or non-member). */
 export async function assertCanContribute(
   userId: number,
   globalRole: Role,

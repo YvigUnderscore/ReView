@@ -20,8 +20,8 @@ displays:
 active_displays: [sRGB - Display]
 `;
 
-describe('ocioDisplays — extraction displays/views (39.B)', () => {
-  it('extrait les displays et leurs views', () => {
+describe('ocioDisplays — extraction of displays/views (39.B)', () => {
+  it('extracts the displays and their views', () => {
     const displays = parseOcioDisplays(SAMPLE);
     expect(displays).toHaveLength(2);
     expect(displays[0]).toEqual({
@@ -32,16 +32,16 @@ describe('ocioDisplays — extraction displays/views (39.B)', () => {
     expect(displays[1]!.views).toEqual(['ACES 1.0 - SDR Video']);
   });
 
-  it('s’arrête à la clé de premier niveau suivante (active_displays ignoré)', () => {
+  it('stops at the next top-level key (active_displays ignored)', () => {
     const displays = parseOcioDisplays(SAMPLE);
     expect(displays.some((d) => d.name.startsWith('active'))).toBe(false);
   });
 
-  it('renvoie vide si pas de section displays', () => {
+  it('returns empty when there is no displays section', () => {
     expect(parseOcioDisplays('roles:\n  scene_linear: ACEScg\n')).toEqual([]);
   });
 
-  it('isValidDisplayView valide le couple', () => {
+  it('isValidDisplayView validates the pair', () => {
     const displays = parseOcioDisplays(SAMPLE);
     expect(isValidDisplayView(displays, 'sRGB - Display', 'Raw')).toBe(true);
     expect(isValidDisplayView(displays, 'sRGB - Display', 'Inexistant')).toBe(false);

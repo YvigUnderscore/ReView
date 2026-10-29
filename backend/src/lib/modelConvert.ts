@@ -4,38 +4,37 @@
 import { extname } from 'node:path';
 
 /**
- * Aiguillage de la conversion 3D → GLB (Phase 39, 39.A). Logique **pure et testable**, extraite
- * du worker : choix du fichier modèle principal d'une archive, choix du convertisseur selon le
- * format source, libellé de format pour la fiche technique. Le worker branche les binaires réels
- * (assimp, convertisseur USD natif type `guc`) sur ces décisions.
+ * 3D → GLB conversion routing (Phase 39, 39.A). **Pure and testable** logic, extracted from the worker: choice of the
+ * main model file of an archive, choice of the converter according to the source format, format label for the technical
+ * sheet. The worker plugs the real binaries (assimp, native USD converter such as `guc`) into these decisions.
  *
- * USD (Phase 45) : la conversion passe par Blender headless, qui embarque OpenUSD complet
- * (composition, matériaux, animation). Le convertisseur natif `guc` reste accepté en second choix
- * et assimp en dernier recours, chaque repli étant automatique — zéro régression.
+ * USD (Phase 45): conversion goes through headless Blender, which embeds full OpenUSD (composition, materials,
+ * animation). The native converter `guc` remains accepted as second choice and assimp as a last resort, each fallback
+ * being automatic — zero regression.
  */
 
-/** Extensions USD non compressées (le conteneur `.usdz` est traité comme une archive). */
+/** Uncompressed USD extensions (the `.usdz` container is treated as an archive). */
 export const USD_EXTENSIONS = ['.usd', '.usdc', '.usda'] as const;
 
 /**
- * Ordre de priorité pour choisir le fichier modèle principal dans une archive (`.zip`/`.usdz`).
- * Attention : ce classement ne suffit pas quand le gagnant est un fichier USD — une archive USD
- * contient plusieurs couches et `.usdc` y devance `.usda`, ce qui désignerait un payload plutôt
- * que la racine. L'appelant enchaîne alors sur `usdArchive.pickUsdRootLayer` (Phase 45, 45.A).
+ * Priority order for picking the main model file in an archive (`.zip`/`.usdz`).
+ * Caution: this ranking is not enough when the winner is a USD file — a USD archive contains several layers and `.usdc`
+ * would precede `.usda`, designating a payload rather than the root. The caller then chains on
+ * `usdArchive.pickUsdRootLayer` (Phase 45, 45.A).
  */
 export const MODEL_PRIORITY = ['.gltf', '.glb', '.fbx', '.obj', '.dae', '.stl', '.usdc', '.usda', '.usd'];
 
-/** Convertisseur retenu pour produire le GLB (tracé en `metadata.model.converter`). */
+/** Converter selected to produce the GLB (recorded in `metadata.model.converter`). */
 export type ModelConverter = 'copy' | 'gltf' | 'blender' | 'usd' | 'assimp';
 
-/** Vrai si l'extension désigne un fichier USD non compressé (usd/usdc/usda). */
+/** True if the extension designates an uncompressed USD file (usd/usdc/usda). */
 export function isUsdModel(ext: string): boolean {
   return (USD_EXTENSIONS as readonly string[]).includes(ext.toLowerCase());
 }
 
 /**
- * Choisit le fichier modèle de plus haute priorité d'une liste (contenu d'archive extrait).
- * Renvoie `null` si aucun format 3D reconnu (textures/annexes ignorées).
+ * Picks the highest-priority model file from a list (extracted archive contents).
+ * Returns `null` if no recognised 3D format (textures/attachments ignored).
  */
 export function pickModelFile(paths: string[]): string | null {
   let chosen: string | null = null;
@@ -51,13 +50,13 @@ export function pickModelFile(paths: string[]): string | null {
 }
 
 /**
- * Décide du convertisseur d'un fichier selon son extension et l'outillage disponible.
- * `.glb` → copie directe ; `.gltf` → packer JS ; autres (fbx/obj/dae/stl…) → assimp.
+ * Decides the converter of a file according to its extension and the available tooling.
+ * `.glb` → direct copy; `.gltf` → JS packer; others (fbx/obj/dae/stl…) → assimp.
  *
- * Pour l'USD, l'ordre de préférence traduit la fidélité obtenue (Phase 45) :
- * **Blender** (OpenUSD complet : composition, matériaux, UsdSkel animé) → convertisseur natif
- * type `guc` (matériaux fidèles mais géométrie statique) → assimp (dernier recours, sans support
- * USD dans les paquets Debian courants : la conversion échouera avec un message explicite).
+ * For USD, the order of preference reflects the fidelity obtained (Phase 45):
+ * **Blender** (full OpenUSD: composition, materials, animated UsdSkel) → native converter such as `guc` (faithful
+ * materials but static geometry) → assimp (last resort, without USD support in the usual Debian packages: the
+ * conversion will fail with an explicit message).
  */
 export function chooseConverter(
   ext: string,
@@ -73,7 +72,7 @@ export function chooseConverter(
   return 'assimp';
 }
 
-/** Libellé de format source (fiche technique 39.C) à partir de l'extension d'origine. */
+/** Source format label (technical sheet 39.C) derived from the original extension. */
 export function sourceFormatLabel(ext: string): string {
   const e = ext.toLowerCase().replace(/^\./, '');
   const map: Record<string, string> = {

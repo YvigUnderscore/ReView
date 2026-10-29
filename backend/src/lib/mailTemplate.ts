@@ -7,19 +7,18 @@ import { escapeHtml } from './html';
 import { preheader } from './mailText';
 
 /**
- * Enveloppe HTML de marque commune à tous les emails ReView (Phase 22) — DA cohérente
- * (thème bleu nuit, accent cyan). Les clients mail ne supportant pas les variables CSS,
- * les couleurs du thème sont figées ici en dur : elles reprennent désormais à l'identique
- * la palette de référence du mode sombre (`frontend/src/index.css`), et non plus des
- * approximations Tailwind qui donnaient à nos mails l'allure d'une autre application.
- * L'ancien bandeau en dégradé cyan→magenta est retiré : un aplat de marque, un logo.
+ * Brand HTML wrapper shared by all ReView emails (Phase 22) — consistent look (midnight blue theme, cyan accent).
+ * Mail clients do not support CSS variables, so the theme colours are hard-coded here: they now reproduce exactly
+ * the reference palette of dark mode (`frontend/src/index.css`), rather than the Tailwind approximations that gave
+ * our mails the look of another application. The former cyan-to-magenta gradient banner is removed: a flat brand
+ * colour, a logo.
  */
 
-/** Accent de marque (cyan `--primary` du mode sombre) — liens et boutons. */
+/** Brand accent (cyan `--primary` of dark mode) — links and buttons. */
 export const MAIL_ACCENT = '#00F0FF';
-/** Filets et séparateurs internes au corps du message (`--border`). */
+/** Rules and internal separators of the message body (`--border`). */
 export const MAIL_BORDER = '#1E2433';
-/** Texte secondaire du corps (`--muted-foreground`) — jamais un gris arbitraire. */
+/** Secondary body text (`--muted-foreground`) — never an arbitrary grey. */
 export const MAIL_MUTED = '#9BA3B2';
 
 const BG = '#0B0E14'; // --background
@@ -30,9 +29,8 @@ const MUTED = MAIL_MUTED;
 const TITLE = '#F4F7F9';
 
 /**
- * En-tête : le logo du site quand l'instance a une URL publique (les images distantes ne
- * peuvent pas être servies depuis un chemin relatif dans un email), sinon le nom en toutes
- * lettres. `alt` porte la marque de toute façon — beaucoup de clients bloquent les images.
+ * Header: the site logo when the instance has a public URL (remote images cannot be served from a relative path in an
+ * email), otherwise the name spelled out. `alt` carries the brand anyway — many clients block images.
  */
 function brandHeader(): string {
   const logo = env.APP_URL ? `${env.APP_URL}/logo_banner.png` : null;
@@ -42,12 +40,11 @@ function brandHeader(): string {
 }
 
 /**
- * Bouton d'action principal. Les clients mail ignorent `<button>` et la plupart des
- * feuilles de style : c'est un lien à fond plein, tout en styles inline.
+ * Main action button. Mail clients ignore `<button>` and most stylesheets: it is a full-background link, entirely
+ * inline-styled.
  *
- * `url` et `label` sont des DONNÉES, pas du balisage : l'adresse porte des jetons, le
- * libellé vient d'un catalogue de traduction. Les échapper coûte l'esperluette d'une
- * URL rendue en `&amp;` — ce qui est précisément la forme correcte dans un attribut.
+ * `url` and `label` are DATA, not markup: the address carries tokens, the label comes from a translation catalogue.
+ * Escaping them costs the ampersand of a URL rendered as `&amp;` — which is precisely the correct form in an attribute.
  */
 export function mailButton(url: string, label: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:20px auto"><tr><td align="center" bgcolor="${MAIL_ACCENT}" style="background:${MAIL_ACCENT};border-radius:8px">
@@ -56,21 +53,19 @@ export function mailButton(url: string, label: string): string {
 }
 
 /**
- * Emballe un contenu HTML dans l'enveloppe de marque (en-tête logo + pied).
+ * Wraps HTML content in the brand wrapper (logo header + footer).
  *
- * Le pied est traduit dans la langue du destinataire — un email qui s'ouvre dans une
- * langue et se signe dans une autre sonne faux.
+ * The footer is translated into the recipient's language — an email that opens in one language and signs off in
+ * another sounds wrong.
  *
- * La mise en page est en `<table>`, pas en `<div>` : Outlook pour Windows rend le HTML
- * avec le moteur de Word, qui ignore `border-radius`, gère mal `padding` sur un bloc et
- * ne connaît pas `max-width`. Nos messages y arrivaient étalés sur toute la largeur,
- * sans cadre. Le `preheader` s'insère en tête du corps : c'est le texte que la liste des
- * messages affiche avant l'ouverture, et sans lui elle répète le nom du studio.
+ * The layout is a `<table>`, not a `<div>`: Outlook for Windows renders HTML with Word's engine, which ignores
+ * `border-radius`, handles `padding` badly on a block and does not know `max-width`. Our messages arrived there
+ * spread across the full width, without a frame. The `preheader` is inserted at the head of the body: it is the text
+ * the message list shows before opening, and without it the list repeats the studio name.
  *
- * Seul `contentHtml` est du HTML — son nom le dit. `title` est une DONNÉE : un appelant y
- * met le nom d'un projet, que le premier superviseur venu peut renommer en un lien vers
- * un domaine tiers, sous l'habillage du studio et depuis son relais SMTP. Il est donc
- * échappé ici, au seul endroit qui voit passer tous les titres.
+ * Only `contentHtml` is HTML — its name says so. `title` is DATA: a caller puts a project name in it, which the first
+ * supervisor who comes along can rename to a link pointing to a third-party domain, under the studio's styling and
+ * from its SMTP relay. It is therefore escaped here, the only place that sees all titles go by.
  */
 export function mailLayout(locale: Locale, title: string, contentHtml: string, preview?: string): string {
   return `<div lang="${locale}" style="font-family:ui-sans-serif,system-ui,sans-serif;background:${BG};padding:24px">

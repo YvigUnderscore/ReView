@@ -12,7 +12,7 @@ import {
 } from './blenderThumb';
 
 describe('buildThumbArgs', () => {
-  it('lance Blender sans préférences ni addon, et fait échouer le script en code non nul', () => {
+  it('launches Blender without preferences or add-on, and makes the script fail with a non-zero exit code', () => {
     const args = buildThumbArgs('/scripts/render_thumb.py', { input: '/tmp/m.glb', output: '/tmp/t.png' });
     expect(args.slice(0, 6)).toEqual([
       '-b',
@@ -35,7 +35,7 @@ describe('buildThumbArgs', () => {
     ]);
   });
 
-  it('assainit taille et échantillons plutôt que de transmettre une valeur absurde', () => {
+  it('sanitises size and samples rather than passing on an absurd value', () => {
     const args = buildThumbArgs('/s.py', { input: 'a', output: 'b', size: 4, samples: 0 });
     expect(args[args.indexOf('--size') + 1]).toBe('32');
     expect(args[args.indexOf('--samples') + 1]).toBe('1');
@@ -43,7 +43,7 @@ describe('buildThumbArgs', () => {
 });
 
 describe('parseThumbSummary', () => {
-  it('lit la dernière ligne marquée dans le bavardage de Blender', () => {
+  it('reads the last marked line in the Blender chatter', () => {
     const stdout = [
       'Read prefs: /root/.config/blender',
       `${BLENDER_THUMB_MARKER} {"rendered":false,"reason":"stale"}`,
@@ -59,14 +59,14 @@ describe('parseThumbSummary', () => {
     });
   });
 
-  it('ne devine rien : sans marqueur ou avec un JSON cassé, le résumé est absent', () => {
+  it('guesses nothing: without a marker or with broken JSON, the summary is absent', () => {
     expect(parseThumbSummary('{"rendered":true}')).toBeNull();
     expect(parseThumbSummary(`${BLENDER_THUMB_MARKER} {oops`)).toBeNull();
   });
 });
 
 describe('blenderThumbTimeoutReason', () => {
-  it('nomme la limite dépassée en secondes', () => {
+  it('names the limit exceeded, in seconds', () => {
     expect(blenderThumbTimeoutReason(BLENDER_THUMB_TIMEOUT_MS)).toBe('timeout:600s');
   });
 });

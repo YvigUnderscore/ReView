@@ -7,40 +7,40 @@ import { describe, expect, it } from 'vitest';
 import { jobKindFor, spatialThumbSource } from './mediaJobKind';
 
 describe('jobKindFor', () => {
-  it('aiguille chaque famille de média vers son job de la file média', () => {
+  it('routes each media family to its job on the media queue', () => {
     expect(jobKindFor(MediaKind.VIDEO, '.mp4')).toBe('transcode');
     expect(jobKindFor(MediaKind.IMAGE, '.png')).toBe('thumbnail');
     expect(jobKindFor(MediaKind.MODEL_3D, '.usdz')).toBe('convert3d');
   });
 
-  it('ne déclenche aucun job média pour ce qui est servi tel quel', () => {
-    // Le GLB natif et les splats n'ont rien à convertir : ils passent READY immédiatement.
+  it('triggers no media job for what is served as-is', () => {
+    // The native GLB and the splats have nothing to convert: they become READY immediately.
     expect(jobKindFor(MediaKind.MODEL_3D, '.glb')).toBeNull();
     expect(jobKindFor(MediaKind.SPLAT, '.ply')).toBeNull();
   });
 });
 
 describe('spatialThumbSource', () => {
-  it('réclame un rendu Blender pour tout média 3D, converti ou natif', () => {
+  it('claims a Blender render for any 3D media, converted or native', () => {
     expect(spatialThumbSource(MediaKind.MODEL_3D, '.glb')).toBe('model');
     expect(spatialThumbSource(MediaKind.MODEL_3D, '.fbx')).toBe('model');
     expect(spatialThumbSource(MediaKind.MODEL_3D, '.usdz')).toBe('model');
   });
 
-  it('réclame le rasteriseur pour les conteneurs de splat qu’on sait lire', () => {
+  it('claims the rasteriser for the splat containers we know how to read', () => {
     expect(spatialThumbSource(MediaKind.SPLAT, '.ply')).toBe('splat');
     expect(spatialThumbSource(MediaKind.SPLAT, '.SPLAT')).toBe('splat');
   });
 
-  it('n’enfile rien pour un conteneur compressé qu’on ne sait pas lire', () => {
-    // Mieux vaut pas de vignette qu'un job qui échoue en boucle : .spz/.ksplat/.sog sont
-    // couverts par la capture client au premier affichage.
+  it('enqueues nothing for a compressed container we cannot read', () => {
+    // Better no thumbnail than a job that fails in a loop: .spz/.ksplat/.sog are covered by the client capture on
+    // first display.
     expect(spatialThumbSource(MediaKind.SPLAT, '.spz')).toBeNull();
     expect(spatialThumbSource(MediaKind.SPLAT, '.ksplat')).toBeNull();
     expect(spatialThumbSource(MediaKind.SPLAT, '.sog')).toBeNull();
   });
 
-  it('ignore la vidéo et l’image, qui ont déjà leur miniature', () => {
+  it('ignores video and image, which already have their thumbnail', () => {
     expect(spatialThumbSource(MediaKind.VIDEO, '.mp4')).toBeNull();
     expect(spatialThumbSource(MediaKind.IMAGE, '.jpg')).toBeNull();
   });

@@ -5,34 +5,34 @@ import 'dotenv/config';
 import { z } from 'zod';
 
 /**
- * Chargement + validation des variables d'environnement au démarrage.
- * Échoue tôt (fail-fast) si une variable critique manque.
+ * Loads and validates environment variables at startup.
+ * Fails fast if a critical variable is missing.
  */
 const baseEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
 
-  // Journalisation (pino) : niveau explicite ou dérivé de NODE_ENV si absent.
+  // Logging (pino): explicit level, or derived from NODE_ENV when absent.
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
 
-  // Base de données
+  // Database
   DATABASE_URL: z.string().min(1, 'DATABASE_URL est requis'),
 
   // Auth
   JWT_SECRET: z.string().min(16, 'JWT_SECRET doit faire au moins 16 caractères'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
-  // Inscription libre via POST /api/auth/register. Fermée par défaut : une instance
-  // atteignable depuis Internet donnerait sinon un compte authentifié à n'importe qui, et
-  // permettrait de créer par avance un compte à l'email d'un collaborateur — que le SSO
-  // rapprocherait ensuite de cet email (prise de contrôle à la première connexion OIDC).
-  // Les comptes se créent alors depuis l'administration, ou par provisionnement SSO.
+  // Open sign-up via POST /api/auth/register. Closed by default: an instance reachable from
+  // the Internet would otherwise give an authenticated account to anyone, and would let
+  // someone pre-create an account for a colleague's email, which SSO would later match to that
+  // email (account takeover at first OIDC login). Accounts are then created from the admin
+  // screen or via SSO provisioning.
   ALLOW_SELF_REGISTRATION: z
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
 
-  // Stockage MinIO / S3
+  // MinIO / S3 storage
   S3_ENDPOINT: z.string().min(1, 'S3_ENDPOINT est requis'),
   S3_REGION: z.string().default('us-east-1'),
   S3_ACCESS_KEY: z.string().min(1, 'S3_ACCESS_KEY est requis'),
@@ -42,7 +42,7 @@ const baseEnvSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
-  // URL publique pour les liens présignés vus par le navigateur (souvent ≠ endpoint interne)
+  // Public URL for presigned links seen by the browser (often different from the internal endpoint)
   S3_PUBLIC_ENDPOINT: z.string().optional(),
 
   // Redis (BullMQ)
@@ -51,16 +51,16 @@ const baseEnvSchema = z.object({
   // CORS
   CORS_ORIGIN: z.string().default('*'),
 
-  // Nombre de proxys de confiance devant l'API (`app.set('trust proxy', …)`).
+  // Number of trusted proxies in front of the API (`app.set('trust proxy', ...)`).
   //
-  // Zéro par défaut, et c'est le point : à toute autre valeur, Express lit `req.ip` dans
-  // `X-Forwarded-For`, un en-tête que l'APPELANT fournit. Le port du backend étant
-  // joignable en direct dès qu'on le publie, une valeur codée en dur rendait chaque
-  // limiteur par IP contournable d'un en-tête (un quota neuf par adresse inventée) et
-  // laissait l'attaquant choisir l'adresse écrite dans le journal d'audit.
-  // À 0, `req.ip` redevient l'adresse de la socket : faux derrière un proxy, jamais
-  // falsifiable. Poser 1 quand — et seulement quand — le nginx de `nginx/nginx.conf`
-  // (ou un proxy équivalent qui réécrit `X-Forwarded-For`) est le seul chemin d'entrée.
+  // Zero by default, and that is the point: with any other value, Express reads `req.ip` from
+  // `X-Forwarded-For`, a header the CALLER supplies. As the backend port is reachable directly
+  // once published, a hard-coded value would make every per-IP limiter bypassable with a header
+  // (a fresh quota per made-up address) and let an attacker choose the address written to the
+  // audit log.
+  // At 0, `req.ip` is the socket address again: wrong behind a proxy, but never forgeable. Set 1
+  // when, and only when, the nginx of `nginx/nginx.conf` (or an equivalent proxy rewriting
+  // `X-Forwarded-For`) is the only entry path.
   TRUST_PROXY: z.coerce
     .number({ error: 'TRUST_PROXY doit être un nombre de sauts (0 = aucun proxy)' })
     .int()
@@ -68,7 +68,7 @@ const baseEnvSchema = z.object({
     .max(4)
     .default(0),
 
-  // Email sortant (digest quotidien) — optionnel : sans SMTP_HOST, aucun envoi.
+  // Outgoing email (daily digest): optional. Without SMTP_HOST, nothing is sent.
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_SECURE: z
@@ -78,35 +78,35 @@ const baseEnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('ReView <no-reply@review.local>'),
-  // Clé de chiffrement des secrets stockés (SMTP…). Optionnelle : à défaut, dérivée de
-  // JWT_SECRET (SHA-256). En prod, JWT_SECRET est déjà durci (guard ci-dessous).
+  // Encryption key for stored secrets (SMTP...). Optional: otherwise derived from
+  // JWT_SECRET (SHA-256). In production, JWT_SECRET is already hardened (guard below).
   APP_ENCRYPTION_KEY: z.string().optional(),
-  // 37.G : jeton d'accès à GET /metrics (vide = endpoint réservé au réseau interne).
+  // 37.G: access token for GET /metrics (empty = endpoint reserved for the internal network).
   METRICS_TOKEN: z.string().optional(),
-  // 42.B №66 : Web Push (VAPID). Optionnel — à défaut, une paire est générée et persistée
-  // en base (dev). `VAPID_SUBJECT` = mailto: ou URL de contact.
+  // 42.B #66: Web Push (VAPID). Optional: otherwise a pair is generated and persisted in the
+  // database (dev). `VAPID_SUBJECT` = mailto: or a contact URL.
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
-  // 37.D : encodeur vidéo du worker (h264_nvenc si GPU NVIDIA exposé au conteneur).
+  // 37.D: worker video encoder (h264_nvenc if an NVIDIA GPU is exposed to the container).
   VIDEO_ENCODER: z.enum(['libx264', 'h264_nvenc']).default('libx264'),
-  // 39.A : convertisseur USD→glTF natif (ex. `guc`) préservant matériaux & variantes.
-  // Vide = repli sur assimp (support USD expérimental). Voir backend/Dockerfile (ARG GUC_URL).
+  // 39.A: native USD-to-glTF converter (e.g. `guc`) preserving materials and variants.
+  // Empty = fall back to assimp (experimental USD support). See backend/Dockerfile (ARG GUC_URL).
   USD_GLTF_CONVERTER: z.string().optional(),
-  // 45.D : outillage USD de l'image worker (installé par `--build-arg INSTALL_USD_TOOLS=1`).
-  // Blender = conversion USD→GLB (OpenUSD complet) ; Python = analyseur `pxr` (usd-core).
-  // Binaires absents → repli automatique guc/assimp, cf. services/ModelConvertService.
+  // 45.D: USD tooling of the worker image (installed by `--build-arg INSTALL_USD_TOOLS=1`).
+  // Blender = USD-to-GLB conversion (full OpenUSD); Python = `pxr` parser (usd-core).
+  // Missing binaries fall back automatically to guc/assimp, see services/ModelConvertService.
   USD_BLENDER_BIN: z.string().default('/opt/blender/blender'),
   USD_PYTHON_BIN: z.string().default('/opt/usdenv/bin/python3'),
-  // 46.G : cuisson des variantes USD dans le GLB (bascule instantanée en review). Bornes
-  // pour ne pas produire un GLB démesuré sur une scène à nombreuses variantes.
-  // 46.P : l'import masqué au prim porteur rend la cuisson d'une option quasi gratuite — le
-  // vrai garde-fou est le budget temps (moitié du timeout de conversion), pas ce plafond.
+  // 46.G: baking USD variants into the GLB (instant switching in review). Bounds so that a
+  // GLB is not produced at unreasonable size for a scene with many variants.
+  // 46.P: importing hidden under the carrying prim makes baking an option almost free; the real
+  // safeguard is the time budget (half the conversion timeout), not this cap.
   USD_MAX_BAKED_VARIANTS: z.coerce.number().int().nonnegative().default(512),
   USD_VARIANT_VERTEX_BUDGET: z.coerce.number().int().positive().default(8_000_000),
-  // Garde-fou : un convertisseur bloqué immobiliserait un slot de worker indéfiniment.
+  // Safeguard: a blocked converter would hold a worker slot indefinitely.
   MODEL_CONVERT_TIMEOUT_MS: z.coerce.number().int().positive().default(900_000),
-  // 45.A : bornes d'extraction des archives 3D (traversée, bombes de décompression).
+  // 45.A: extraction limits for 3D archives (path traversal, decompression bombs).
   ARCHIVE_MAX_ENTRIES: z.coerce.number().int().positive().default(20_000),
   ARCHIVE_MAX_UNCOMPRESSED_BYTES: z.coerce
     .number()
@@ -114,56 +114,56 @@ const baseEnvSchema = z.object({
     .positive()
     .default(8 * 1024 * 1024 * 1024),
   ARCHIVE_MAX_COMPRESSION_RATIO: z.coerce.number().int().positive().default(200),
-  // 37.E : scan antivirus opt-in (clamd INSTREAM) — vide = désactivé.
+  // 37.E: opt-in antivirus scan (clamd INSTREAM). Empty = disabled.
   CLAMAV_HOST: z.string().optional(),
   CLAMAV_PORT: z.coerce.number().int().default(3310),
-  // Heure locale (0-23) d'envoi du digest quotidien.
+  // Local hour (0-23) at which the daily digest is sent.
   DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
-  // URL publique de l'app (liens dans les emails) ; sans elle, liens omis.
+  // Public app URL (links in emails); without it, links are omitted.
   APP_URL: z.string().optional(),
-  // Phase 48 : hôtes ShotGrid joignables hors HTTPS public (liste séparée par des
-  // virgules, ex. « localhost:8890 »). Destiné au simulateur de développement : il
-  // lève, pour ces hôtes précis, le refus des adresses non publiques. Vide par défaut,
-  // et signalé bruyamment au démarrage — un site ShotGrid réel n'en a jamais besoin.
+  // Phase 48: ShotGrid hosts reachable without public HTTPS (comma-separated list,
+  // e.g. "localhost:8890"). Meant for the development simulator: for these exact hosts it
+  // lifts the refusal of non-public addresses. Empty by default, and reported loudly at
+  // startup: a real ShotGrid site never needs it.
   SHOTGRID_INSECURE_HOSTS: z.string().optional(),
-  // Phase 49 — écran « Mises à jour & sauvegardes ». Dépôt dont les releases publiées
-  // sont proposées : un studio qui exploite son propre fork suit son propre dépôt.
+  // Phase 49: "Updates & backups" screen. Repository whose published releases are offered:
+  // a studio running its own fork follows its own repository.
   RELEASE_REPO: z.string().default('YvigUnderscore/ReView'),
-  // Interrupteur pour une instance sans accès sortant. L'écran reste utile — il cesse
-  // seulement de demander à GitHub, et le dit, au lieu d'échouer sans expliquer pourquoi.
+  // Switch for an instance without outbound access. The screen stays useful: it simply stops
+  // asking GitHub, and says so instead of failing without explanation.
   RELEASE_CHECK_ENABLED: z
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
-  // Jeton GitHub facultatif : quota d'API relevé (60 appels/h par IP sans jeton), et
-  // lecture d'un dépôt privé pour un studio qui n'a pas publié son fork.
+  // Optional GitHub token: raises the API quota (60 calls/h per IP without a token), and
+  // allows reading a private repository for a studio that has not published its fork.
   RELEASE_GITHUB_TOKEN: z.string().optional(),
-  // Chemin, DANS le conteneur, du dossier que `scripts/backup.sh` remplit sur l'hôte.
-  // Absent : l'écran dit qu'il ne voit aucune sauvegarde, au lieu d'en inventer.
+  // Path, INSIDE the container, of the folder that `scripts/backup.sh` fills on the host.
+  // Absent: the screen says it sees no backup, rather than inventing one.
   BACKUPS_DIR: z.string().optional(),
-  // File d'ordres de l'agent d'exploitation. Deux chemins DISTINCTS et non un seul : le
-  // backend écrit dans la file et ne lit l'état qu'en lecture seule (le montage l'impose).
-  // Sans cette asymétrie, un backend compromis — il tourne en root et traite des fichiers
-  // d'utilisateurs — pourrait pré-poser un lien dans l'état et faire écrire le démon
-  // docker n'importe où sur l'hôte. Absents : l'exécution est éteinte, l'écran le dit.
+  // Order queue of the operations agent. Two DISTINCT paths rather than one: the backend writes
+  // to the queue and reads state only read-only (the mount enforces it). Without this
+  // asymmetry, a compromised backend (it runs as root and handles user files) could pre-place a
+  // link in the state and make the docker daemon write anywhere on the host. Absent: execution
+  // is switched off, and the screen says so.
   OPS_QUEUE_DIR: z.string().optional(),
   OPS_STATE_DIR: z.string().optional(),
-  // Au-delà de ce silence, l'agent est réputé mort — et une opération « en cours » depuis
-  // plus longtemps devient « issue inconnue » plutôt que de tourner à l'écran pour toujours.
+  // Beyond this silence, the agent is considered dead, and an operation "in progress" for
+  // longer becomes "unknown outcome" rather than spinning on screen forever.
   OPS_AGENT_STALE_SEC: z.coerce.number().int().positive().default(90),
-  // Péremption d'un ordre non ramassé : une mise à jour qui se déclenche une heure après
-  // le clic est une surprise, pas un service.
+  // Expiry of an order not picked up: an update triggered an hour after the click is a
+  // surprise, not a service.
   OPS_ORDER_TTL_SEC: z.coerce.number().int().positive().default(900),
 });
 
-/** Un secret est « faible » s'il est trop court ou ressemble à un placeholder. */
+/** A secret is "weak" if it is too short or looks like a placeholder. */
 const isWeakSecret = (s: string): boolean =>
   s.length < 32 || /change[_-]?me|^changeme$|secret_change/i.test(s);
 
 /**
- * Durcissement production (10.D5) : en `NODE_ENV=production`, refuse de démarrer
- * avec des secrets par défaut/faibles ou une configuration CORS permissive.
- * (En dev/test, ces contrôles sont inactifs pour ne pas gêner le travail local.)
+ * Production hardening (10.D5): with `NODE_ENV=production`, refuses to start with default or
+ * weak secrets, or with a permissive CORS configuration.
+ * (In dev/test these checks are inactive so as not to hinder local work.)
  */
 export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
   if (val.NODE_ENV !== 'production') return;
@@ -185,10 +185,10 @@ export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
       path: ['S3_SECRET_KEY'],
       message: 'Identifiants S3/MinIO par défaut (minioadmin) interdits en production',
     });
-  // Si elle est fournie, cette clé protège tous les secrets stockés en base (mot de passe
-  // SMTP, secrets de webhooks, secret TOTP de chaque compte). Une valeur faible se
-  // retrouverait par force brute : on lui applique la même exigence qu'à JWT_SECRET.
-  // Absente, la clé dérive de JWT_SECRET — déjà durci par le contrôle ci-dessus.
+  // If provided, this key protects all secrets stored in the database (SMTP password, webhook
+  // secrets, each account's TOTP secret). A weak value could be brute-forced, so it is held to
+  // the same requirement as JWT_SECRET.
+  // If absent, the key is derived from JWT_SECRET, already hardened by the check above.
   if (val.APP_ENCRYPTION_KEY !== undefined && isWeakSecret(val.APP_ENCRYPTION_KEY))
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -200,8 +200,8 @@ export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  // Exception au « pas de console » : ce fail-fast s'exécute AVANT que le logger
-  // (qui dépend de `env`) puisse exister. On écrit donc directement sur stderr.
+  // Exception to "no console": this fail-fast runs BEFORE the logger (which depends on `env`)
+  // can exist. So we write directly to stderr.
   // eslint-disable-next-line no-console
   console.error("❌ Variables d'environnement invalides :");
   // eslint-disable-next-line no-console

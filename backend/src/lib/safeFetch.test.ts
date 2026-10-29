@@ -9,9 +9,8 @@ import { lookup } from 'node:dns/promises';
 import { safeFetch, OutboundBlockedError, OutboundTimeoutError, OutboundTooLargeError } from './safeFetch';
 
 /**
- * `safeFetch` est le seul point de sortie du backend : ces tests décrivent ce qu'il refuse
- * (adresse interne, lien-local, nom qui résout en privé, redirection vers l'intérieur,
- * attente sans fin, réponse démesurée) et ce qu'il laisse passer.
+ * `safeFetch` is the backend's only egress point: these tests describe what it refuses (internal address, link-local, name resolving to a private
+ * address, redirection inward, endless wait, oversized response) and what it lets through.
  */
 
 const PUBLIC_ADDRESS = [{ address: '93.184.216.34', family: 4 }];
@@ -33,13 +32,13 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('safeFetch — cibles refusées', () => {
-  it('refuse une adresse privée littérale sans émettre la requête', async () => {
+describe('safeFetch — refused targets', () => {
+  it('refuses a literal private address without sending the request', async () => {
     await expect(safeFetch('http://10.0.0.5/admin')).rejects.toBeInstanceOf(OutboundBlockedError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('refuse la boucle locale et le lien-local des métadonnées cloud', async () => {
+  it('refuses the loopback and the cloud metadata link-local', async () => {
     for (const url of [
       'http://127.0.0.1:9000/review/',
       'http://169.254.169.254/latest/meta-data/',
@@ -49,7 +48,7 @@ describe('safeFetch — cibles refusées', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('refuse un nom public qui résout vers une adresse interne', async () => {
+  it('refuses a public name that resolves to an internal address', async () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '127.0.0.1', family: 4 }] as never);
     await expect(safeFetch('https://interne.exemple.com/hook')).rejects.toMatchObject({
       code: 'OUTBOUND_BLOCKED',
@@ -57,37 +56,36 @@ describe('safeFetch — cibles refusées', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('refuse les schémas autres que http(s)', async () => {
+  it('refuses schemes other than http(s)', async () => {
     for (const url of ['file:///etc/passwd', 'redis://cache:6379', 'gopher://x/'])
       await expect(safeFetch(url), url).rejects.toBeInstanceOf(OutboundBlockedError);
   });
 
-  it('refuse une URL inexploitable', async () => {
+  it('refuses an unusable URL', async () => {
     await expect(safeFetch('pas une url')).rejects.toBeInstanceOf(OutboundBlockedError);
   });
 });
 
-describe('safeFetch — redirections', () => {
-  it('ne suit aucune redirection par défaut', async () => {
+describe('safeFetch — redirects', () => {
+  it('follows no redirect by default', async () => {
     fetchMock.mockResolvedValueOnce(redirect('https://ailleurs.exemple.com/'));
     await expect(safeFetch('https://site.exemple.com/x')).rejects.toBeInstanceOf(OutboundBlockedError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    // Le mode manuel est le seul qui laisse la décision au code appelant.
+    // Manual mode is the only one leaving the decision to the calling code.
     expect((fetchMock.mock.calls[0]![1] as RequestInit).redirect).toBe('manual');
   });
 
-  // Le cœur du correctif : une garde posée AVANT la requête ne vaut rien si la cible peut
-  // ensuite renvoyer une redirection vers l'intérieur du réseau.
-  it('revérifie chaque saut et refuse une redirection vers une adresse interne', async () => {
+  // The heart of the fix: a guard placed BEFORE the request is worth nothing if the target can then return a redirect inward into the network.
+  it('rechecks each hop and refuses a redirect to an internal address', async () => {
     fetchMock.mockResolvedValueOnce(redirect('http://169.254.169.254/latest/meta-data/'));
     await expect(safeFetch('https://site.exemple.com/x', {}, { maxRedirects: 3 })).rejects.toBeInstanceOf(
       OutboundBlockedError,
     );
-    // La deuxième requête n'a jamais été émise.
+    // The second request was never sent.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('suit une redirection vers une cible publique quand on l’y autorise', async () => {
+  it('follows a redirect to a public target when allowed to', async () => {
     fetchMock.mockResolvedValueOnce(redirect('https://cdn.exemple.com/fichier'));
     fetchMock.mockResolvedValueOnce(text('contenu'));
     const res = await safeFetch('https://site.exemple.com/x', {}, { maxRedirects: 3 });
@@ -95,14 +93,14 @@ describe('safeFetch — redirections', () => {
     expect(String(fetchMock.mock.calls[1]![0])).toBe('https://cdn.exemple.com/fichier');
   });
 
-  it('résout une redirection relative sur l’URL courante', async () => {
+  it('resolves a relative redirect against the current URL', async () => {
     fetchMock.mockResolvedValueOnce(redirect('/ailleurs'));
     fetchMock.mockResolvedValueOnce(text('contenu'));
     await safeFetch('https://site.exemple.com/dossier/x', {}, { maxRedirects: 1 });
     expect(String(fetchMock.mock.calls[1]![0])).toBe('https://site.exemple.com/ailleurs');
   });
 
-  it('s’arrête au nombre de sauts autorisé', async () => {
+  it('stops at the permitted number of hops', async () => {
     fetchMock.mockResolvedValue(redirect('https://boucle.exemple.com/'));
     await expect(safeFetch('https://site.exemple.com/x', {}, { maxRedirects: 2 })).rejects.toBeInstanceOf(
       OutboundBlockedError,
@@ -110,7 +108,7 @@ describe('safeFetch — redirections', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('ne rejoue jamais un POST vers une cible choisie par le serveur', async () => {
+  it('never replays a POST towards a target chosen by the server', async () => {
     fetchMock.mockResolvedValueOnce(redirect('https://ailleurs.exemple.com/'));
     await expect(
       safeFetch('https://site.exemple.com/x', { method: 'POST', body: 'secret' }, { maxRedirects: 3 }),
@@ -119,8 +117,8 @@ describe('safeFetch — redirections', () => {
   });
 });
 
-describe('safeFetch — délai d’attente', () => {
-  it('abandonne si les en-têtes n’arrivent pas', async () => {
+describe('safeFetch — timeout', () => {
+  it('gives up if the headers do not arrive', async () => {
     fetchMock.mockImplementation(
       (_url, init) =>
         new Promise<Response>((_resolve, reject) => {
@@ -133,8 +131,8 @@ describe('safeFetch — délai d’attente', () => {
     );
   });
 
-  it('laisse le corps se lire une fois la réponse ouverte', async () => {
-    // Le minuteur ne porte que sur les en-têtes : un master de dailies met plus longtemps
+  it('lets the body be read once the response is open', async () => {
+    // The timer only applies to the headers: a dailies master takes longer to come down than any reasonable delay.
     // à descendre que n'importe quel délai raisonnable.
     fetchMock.mockResolvedValueOnce(text('charge utile'));
     const res = await safeFetch('https://site.exemple.com/', {}, { timeoutMs: 20 });
@@ -143,8 +141,8 @@ describe('safeFetch — délai d’attente', () => {
   });
 });
 
-describe('safeFetch — taille de réponse', () => {
-  it('refuse d’emblée une taille annoncée hors plafond', async () => {
+describe('safeFetch — response size', () => {
+  it('refuses at once an announced size beyond the ceiling', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response('x', { status: 200, headers: { 'content-length': '10000' } }),
     );
@@ -153,13 +151,13 @@ describe('safeFetch — taille de réponse', () => {
     );
   });
 
-  it('coupe un corps qui dépasse le plafond malgré une annonce honnête', async () => {
+  it('cuts off a body exceeding the ceiling despite an honest announcement', async () => {
     fetchMock.mockResolvedValueOnce(text('x'.repeat(500)));
     const res = await safeFetch('https://site.exemple.com/', {}, { maxBytes: 100 });
     await expect(res.text()).rejects.toBeInstanceOf(OutboundTooLargeError);
   });
 
-  it('laisse passer une réponse sous le plafond', async () => {
+  it('lets through a response under the ceiling', async () => {
     fetchMock.mockResolvedValueOnce(text('court'));
     const res = await safeFetch('https://site.exemple.com/', {}, { maxBytes: 1000 });
     expect(res.status).toBe(200);
@@ -167,8 +165,8 @@ describe('safeFetch — taille de réponse', () => {
   });
 });
 
-describe('safeFetch — cas passants', () => {
-  it('émet vers une cible publique et rend la réponse telle quelle', async () => {
+describe('safeFetch — passing cases', () => {
+  it('sends to a public target and returns the response as-is', async () => {
     fetchMock.mockResolvedValueOnce(text('{"ok":true}', { headers: { 'content-type': 'application/json' } }));
     const res = await safeFetch('https://hooks.slack.com/services/x', { method: 'POST', body: '{}' });
     expect(res.ok).toBe(true);
@@ -178,8 +176,8 @@ describe('safeFetch — cas passants', () => {
     expect(init.body).toBe('{}');
   });
 
-  // Unique échappatoire : le simulateur de développement vit sur une adresse privée.
-  it('dispense les hôtes explicitement autorisés, sans résoudre le nom', async () => {
+  // The only escape hatch: the development simulator lives on a private address.
+  it('exempts the explicitly allowed hosts, without resolving the name', async () => {
     const res = await safeFetch(
       'http://host.docker.internal:8890/api/v1.1/',
       {},
@@ -189,14 +187,14 @@ describe('safeFetch — cas passants', () => {
     expect(lookup).not.toHaveBeenCalled();
   });
 
-  it('n’étend pas la dispense à un autre port du même hôte', async () => {
+  it('does not extend the exemption to another port of the same host', async () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '192.168.65.2', family: 4 }] as never);
     await expect(
       safeFetch('http://host.docker.internal:9000/', {}, { allowHosts: ['host.docker.internal:8890'] }),
     ).rejects.toBeInstanceOf(OutboundBlockedError);
   });
 
-  it('refuse un schéma interdit même pour un hôte dispensé', async () => {
+  it('refuses a forbidden scheme even for an exempted host', async () => {
     await expect(safeFetch('file:///etc/passwd', {}, { allowHosts: [''] })).rejects.toBeInstanceOf(
       OutboundBlockedError,
     );

@@ -23,7 +23,7 @@ const CONFIG = {
   allowInsecure: false,
 };
 
-/** Options passées à nodemailer pour le dernier envoi. */
+/** Options passed to nodemailer for the last send. */
 const lastTransportOptions = () =>
   createTransport.mock.calls[createTransport.mock.calls.length - 1]![0] as {
     requireTLS?: boolean;
@@ -37,23 +37,23 @@ beforeEach(() => {
   transport.sendMail.mockResolvedValue({});
 });
 
-describe('transport — chiffrement exigé (A3-04)', () => {
-  it('exige STARTTLS sur un relais en clair', async () => {
-    // Sans requireTLS, le STARTTLS du port 587 est opportuniste : un intermédiaire qui
-    // retire 250-STARTTLS de l'EHLO fait poursuivre en clair, et le transport livre
-    // AUTH LOGIN puis le lien d'invitation — qui pose le mot de passe d'un compte.
+describe('transport — encryption required (A3-04)', () => {
+  it('requires STARTTLS on a cleartext relay', async () => {
+    // Without requireTLS, STARTTLS on port 587 is opportunistic: an intermediary that strips 250-STARTTLS from the
+    // EHLO makes the dialogue continue in clear text, and the transport then sends AUTH LOGIN followed by the
+    // invitation link — which sets the password of an account.
     await sendMail('a@b.c', 'Sujet', '<p>x</p>');
     expect(lastTransportOptions().requireTLS).toBe(true);
     expect(lastTransportOptions().tls?.minVersion).toBe('TLSv1.2');
   });
 
-  it('n’exige pas STARTTLS sur un port déjà chiffré de bout en bout', async () => {
+  it('does not require STARTTLS on a port already encrypted end to end', async () => {
     smtp.getEffectiveConfig.mockResolvedValue({ ...CONFIG, port: 465, secure: true });
     await sendMail('a@b.c', 'Sujet', '<p>x</p>');
     expect(lastTransportOptions().requireTLS).toBe(false);
   });
 
-  it('laisse l’échappatoire explicite d’un relais interne sans TLS', async () => {
+  it('keeps the explicit escape hatch of an internal relay without TLS', async () => {
     smtp.getEffectiveConfig.mockResolvedValue({ ...CONFIG, allowInsecure: true });
     await sendMail('a@b.c', 'Sujet', '<p>x</p>');
     expect(lastTransportOptions().requireTLS).toBe(false);
@@ -61,35 +61,35 @@ describe('transport — chiffrement exigé (A3-04)', () => {
 });
 
 describe('sendMail', () => {
-  it("n'envoie rien sans relais configuré", async () => {
+  it("sends nothing without a configured relay", async () => {
     smtp.getEffectiveConfig.mockResolvedValue(null);
     expect(await sendMail('a@b.c', 'Sujet', '<p>Bonjour</p>')).toBe(false);
     expect(transport.sendMail).not.toHaveBeenCalled();
   });
 
-  it('envoie toujours le HTML ET son équivalent texte', async () => {
-    // Un message sans version texte est pénalisé par les filtres, et ses aperçus
-    // (liste de boîte, montre, lecteur d'écran) affichent du balisage brut.
+  it('always sends the HTML AND its text equivalent', async () => {
+    // A message without a text version is penalised by filters, and its previews (mailbox list, watch, screen
+    // reader) show raw markup.
     await sendMail('a@b.c', 'Sujet', '<p>Bonjour <b>Alice</b></p>');
     const sent = transport.sendMail.mock.calls[0]![0] as { html: string; text: string };
     expect(sent.html).toContain('<b>Alice</b>');
     expect(sent.text).toBe('Bonjour Alice');
   });
 
-  it('respecte un texte fourni par l’appelant', async () => {
+  it('respects a text supplied by the caller', async () => {
     await sendMail('a@b.c', 'Sujet', '<p>x</p>', { text: 'version soignée' });
     expect((transport.sendMail.mock.calls[0]![0] as { text: string }).text).toBe('version soignée');
   });
 
-  it('marque tout envoi comme automatique', async () => {
-    // Sans cela, un répondeur d'absence répond au digest — et la boucle peut se refermer.
+  it('marks every send as automatic', async () => {
+    // Otherwise an out-of-office responder replies to the digest — and the loop can close.
     await sendMail('a@b.c', 'Sujet', '<p>x</p>');
     const headers = (transport.sendMail.mock.calls[0]![0] as { headers: Record<string, string> }).headers;
     expect(headers['Auto-Submitted']).toBe('auto-generated');
     expect(headers['X-Auto-Response-Suppress']).toBe('All');
   });
 
-  it('pose le désabonnement en un clic sur les seuls envois récurrents', async () => {
+  it('sets one-click unsubscribe on recurring sends only', async () => {
     await sendMail('a@b.c', 'Digest', '<p>x</p>', { unsubscribeUrl: 'https://x/api/unsubscribe/t' });
     const withList = (transport.sendMail.mock.calls[0]![0] as { headers: Record<string, string> }).headers;
     expect(withList['List-Unsubscribe']).toBe('<https://x/api/unsubscribe/t>');
@@ -100,15 +100,15 @@ describe('sendMail', () => {
     expect(withoutList['List-Unsubscribe']).toBeUndefined();
   });
 
-  it('rend faux plutôt que de lever quand le relais refuse', async () => {
-    // Un envoi manqué ne doit pas faire échouer l'action qui l'a déclenché.
+  it('returns false rather than throwing when the relay refuses', async () => {
+    // A missed send must not make the action that triggered it fail.
     transport.sendMail.mockRejectedValue(new Error('relais injoignable'));
     expect(await sendMail('a@b.c', 'Sujet', '<p>x</p>')).toBe(false);
   });
 });
 
 describe('isMailerConfigured', () => {
-  it('suit la configuration effective', async () => {
+  it('follows the effective configuration', async () => {
     expect(await isMailerConfigured()).toBe(true);
     smtp.getEffectiveConfig.mockResolvedValue(null);
     expect(await isMailerConfigured()).toBe(false);
