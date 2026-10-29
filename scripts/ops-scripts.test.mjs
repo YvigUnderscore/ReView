@@ -252,7 +252,20 @@ describe('scripts/backup.sh', () => {
   });
 
   it('ne purge jamais le miroir vivant', () => {
-    expect(commands).toMatch(/grep -Ev '\/minio-current\/\$'/);
+    // Only <YYYYMMDD-HHMMSS> directories are rotation candidates: `minio-current` never matches.
+    expect(commands).toMatch(/grep -E '\/\[0-9\]\{8\}-\[0-9\]\{6\}\$'/);
+    expect(commands).not.toMatch(/rm -rf "\$dir"/);
+  });
+
+  it('refuse un BACKUP_KEEP invalide (0 purgerait toutes les sauvegardes)', () => {
+    expect(BACKUP).toMatch(/BACKUP_KEEP must be a positive integer >= 1/);
+    expect(commands).toMatch(/\*\[!0-9\]\*\|0\|0\[0-9\]\*/);
+  });
+
+  it('ne passe aucun identifiant MinIO en ligne de commande ni par repli minioadmin', () => {
+    expect(commands).not.toMatch(/minioadmin/);
+    expect(commands).not.toMatch(/-e "MC_HOST_/);
+    expect(commands).toMatch(/--env-file "\$MC_ENVFILE"/);
   });
 
   it('écrit un manifeste qui date la sauvegarde et nomme la version', () => {

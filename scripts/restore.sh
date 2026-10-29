@@ -35,8 +35,18 @@ container_of() {
 
 PG="$(container_of postgres)"
 MINIO="$(container_of minio)"
-S3_USER="$(docker exec "$MINIO" printenv MINIO_ROOT_USER 2>/dev/null || echo minioadmin)"
-S3_PASS="$(docker exec "$MINIO" printenv MINIO_ROOT_PASSWORD 2>/dev/null || echo minioadmin)"
+S3_USER="$(docker exec "$MINIO" printenv MINIO_ROOT_USER 2>/dev/null || true)"
+S3_PASS="$(docker exec "$MINIO" printenv MINIO_ROOT_PASSWORD 2>/dev/null || true)"
+if [ -z "$S3_USER" ] || [ -z "$S3_PASS" ]; then
+  echo "✗ cannot read MINIO_ROOT_USER / MINIO_ROOT_PASSWORD from the MinIO container ($MINIO): is it running?" >&2
+  exit 1
+fi
+# The credentials reach `mc` through a mode-600 env-file, never `docker run -e KEY=secret`:
+# a value on the command line is visible in `ps`, shell history and `docker inspect`.
+MC_ENVFILE="$(mktemp)"
+trap 'rm -f "$MC_ENVFILE"' EXIT
+chmod 600 "$MC_ENVFILE"
+printf 'MC_HOST_review=http://%s:%s@127.0.0.1:9000\n' "$S3_USER" "$S3_PASS" > "$MC_ENVFILE"
 BUCKET="$(docker exec "$(container_of backend)" printenv S3_BUCKET 2>/dev/null || echo review)"
 
 # `mc` comes from the MinIO image itself, by ID: no separate client image to pull
@@ -95,7 +105,7 @@ restore_minio() {
   # `--remove`: the bucket must end up identical to the snapshot, including objects added
   # since (a partial restore would leave ghost media in the database).
   MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" --entrypoint mc \
-    -e "MC_HOST_review=http://$S3_USER:$S3_PASS@127.0.0.1:9000" \
+    --env-file "$MC_ENVFILE" \
     -v "$HOST_DIR:/backup" "$(mc_image)" \
     mirror --overwrite --remove --quiet "/backup/$SNAP_NAME/minio" "review/$BUCKET"
   echo "✅ Objects restored."
@@ -135,7 +145,7 @@ case "$MODE" in
       SNAP_COUNT="$(MSYS_NO_PATHCONV=1 docker run --rm -v "$HOST_DIR:/backup" alpine \
         sh -c "find /backup/$SNAP_NAME/minio -type f | wc -l" | tr -d ' ')"
       LIVE_COUNT="$(MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" \
-        --entrypoint mc -e "MC_HOST_review=http://$S3_USER:$S3_PASS@127.0.0.1:9000" \
+        --entrypoint mc --env-file "$MC_ENVFILE" \
         "$(mc_image)" --quiet ls --recursive "review/$BUCKET" | wc -l | tr -d ' ')"
       echo "  objects : $SNAP_COUNT in the snapshot, $LIVE_COUNT in the live bucket"
       [ "$SNAP_COUNT" -gt 0 ] || { echo "✗ empty snapshot: the object backup captured nothing." >&2; exit 1; }
