@@ -10,31 +10,30 @@ import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
 
 /**
- * Ce qu'une carte dit d'une entité en plus de son nom.
+ * What a card says about an entity beyond its name.
  *
- * Une carte n'annonçait que « douze tâches ». Or en balayant une grille de deux cents
- * plans, on cherche à répondre à quatre questions et toujours les mêmes : de quoi s'agit-il
- * (la description), qui s'en occupe (les visages), y a-t-il quelque chose à regarder (la
- * pastille d'attente), et depuis quand ça n'a pas bougé (la date).
+ * A card used to announce only "twelve tasks". Yet when scanning a grid of two hundred shots, one wants to
+ * answer four questions, always the same: what it is (the description), who works on it (the faces), whether
+ * there is something to look at (the waiting dot), and since when it has not moved (the date).
  *
- * L'ordre de lecture est délibéré et le même dans les deux vues : le texte d'abord, les
- * gens ensuite, l'urgence et le temps en fin de ligne, là où l'œil revient. Deux niveaux
- * seulement — le nom, puis cette bande — pour que la carte reste lisible d'un coup d'œil.
+ * The reading order is deliberate and the same in both views: the text first, the people next, urgency and
+ * time at the end of the line, where the eye returns. Only two levels, the name and then this strip, so the
+ * card stays readable at a glance.
  */
 
 export interface EntityMeta {
   description?: string | null;
   assignees?: AssigneeRef[];
-  /** Étapes que traverse l'entité — déclarées nulle part visible jusqu'ici. */
+  /** Steps the entity goes through, until now declared nowhere visible. */
   departments?: DepartmentRef[];
-  /** Livraisons publiées qu'aucune décision de review n'a tranchées. */
+  /** Published deliveries that no review decision has settled. */
   awaitingReview?: number;
   updatedAt?: string;
-  /** A bougé depuis ma dernière visite (lot 9) : la carte s'allume, la date se souligne. */
+  /** Changed since my last visit (batch 9): the card lights up and the date is underlined. */
   unseen?: boolean;
 }
 
-/** La pastille « ça attend une review » — la seule information colorée de la bande. */
+/** The "waiting for review" dot: the only coloured information on the strip. */
 function AwaitingBadge({ count }: { count: number }) {
   const t = useT();
   return (
@@ -49,12 +48,11 @@ function AwaitingBadge({ count }: { count: number }) {
 }
 
 /**
- * « Du nouveau ici » — le point qui accompagne la lueur de la carte.
+ * "New here": the dot that goes with the card's glow.
  *
- * La lueur seule ne dit pas ce qu'elle veut dire, et une bordure colorée ne se voit pas
- * quand on regarde une carte de près. Le point porte l'infobulle qui l'explique, et donne
- * à la couleur un point d'ancrage nommé. Il vit à gauche de la date, parce que c'est la
- * date qui répond à « depuis quand ».
+ * The glow alone does not say what it means, and a coloured border is not visible when looking closely at a
+ * card. The dot carries the tooltip that explains it and gives the colour a named anchor point. It sits to the
+ * left of the date, because the date answers "since when".
  */
 function UnseenDot() {
   const t = useT();
@@ -62,38 +60,38 @@ function UnseenDot() {
     <span
       title={t('cards.unseen')}
       aria-label={t('cards.unseen')}
-      // L'anneau fait la lueur : un point de six pixels ne se voit pas seul dans une bande
-      // qui porte déjà des visages et une pastille.
+      // The ring makes the glow: a six-pixel dot is not visible on its own in a strip that
+      // already carries faces and a dot.
       className="h-1.5 w-1.5 shrink-0 rounded-full bg-info ring-2 ring-info/30"
     />
   );
 }
 
-/** La description, sur deux lignes au plus — au-delà, ce n'est plus un aperçu. */
+/** The description, on two lines at most: beyond that, it is no longer a preview. */
 export function MetaDescription({ text }: { text: string }) {
   return <p className="line-clamp-2 text-2xs leading-snug text-muted-foreground">{text}</p>;
 }
 
 /**
- * La bande du bas d'une carte : visages à gauche, attente et date à droite.
+ * The bottom strip of a card: faces on the left, waiting and date on the right.
  *
- * Elle ne s'affiche que si elle a quelque chose à dire — une bande vide sur une carte
- * neuve ajouterait une hauteur pour rien, et la grille perdrait sa densité.
+ * It is only shown when it has something to say: an empty strip on a new card would add height for nothing,
+ * and the grid would lose its density.
  */
 export default function EntityCardMeta({ meta, compact }: { meta: EntityMeta; compact?: boolean }) {
   const t = useT();
   const people = meta.assignees ?? [];
   const awaiting = meta.awaitingReview ?? 0;
   const departments = meta.departments ?? [];
-  // Le point « non consulté » suffit à justifier la bande : une carte neuve dont rien
-  // d'autre n'est renseigné doit tout de même pouvoir dire qu'elle est neuve.
+  // The "unseen" dot alone justifies the strip: a new card where nothing else is filled in must still be
+  // able to say that it is new.
   if (people.length === 0 && awaiting === 0 && !meta.updatedAt && departments.length === 0 && !meta.unseen)
     return null;
 
   return (
     <div className={`flex items-center gap-2 ${compact ? '' : 'mt-2'}`}>
       <AssigneeStack people={people} size={compact ? 20 : 22} max={compact ? 3 : 4} />
-      {/* Les étapes en compact tiendraient rarement : la ligne EST la carte. */}
+      {/* Steps in compact mode rarely fit: the row IS the card. */}
       {!compact && <DepartmentChips departments={departments} />}
       <span className="ml-auto flex shrink-0 items-center gap-1.5">
         {awaiting > 0 && <AwaitingBadge count={awaiting} />}
@@ -101,8 +99,8 @@ export default function EntityCardMeta({ meta, compact }: { meta: EntityMeta; co
         {meta.updatedAt && (
           <span
             title={t('cards.updatedAt', { value: new Date(meta.updatedAt).toLocaleString(intlLocale()) })}
-            // La date passe en pleine couleur quand c'est du nouveau : c'est elle qu'on lit
-            // pour savoir de quand date ce nouveau, autant qu'elle se voie.
+            // The date turns full colour when it is new: it is the figure one reads to know how old
+            // the news is, so it should be as visible as possible.
             className={`text-2xs tabular-nums ${
               meta.unseen ? 'font-medium text-info' : 'text-muted-foreground'
             }`}

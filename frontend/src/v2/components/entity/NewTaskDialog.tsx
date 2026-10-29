@@ -13,22 +13,20 @@ import { useSgProjectMembers } from '../../lib/shotgridTasksApi';
 import { useCreateStepTask, useTaskSteps } from '../../lib/taskSteps';
 import { useT } from '../../i18n';
 
-/** Valeur du select quand aucune étape n'est visée — hors projet relié seulement. */
+/** Value of the select when no step is targeted: only outside a linked project. */
 const NO_STEP = 'none';
 
 /**
- * Créer une tâche sur un plan ou un asset.
+ * Create a task on a shot or an asset.
  *
- * ReView savait créer des tâches depuis toujours, mais aucun écran ne le proposait : on y
- * arrivait par la bande, en demandant une nouvelle version ou en assignant quelqu'un. Un
- * studio qui ne relie pas ses projets à ShotGrid n'avait donc pas de pipe du tout, alors
- * que rien dans le modèle ne l'exige.
+ * ReView has always been able to create tasks, but no screen offered it: one reached it sideways, by requesting a new
+ * version or by assigning someone. A studio that does not link its projects to ShotGrid therefore had no pipe at all,
+ * although nothing in the model requires one.
  *
- * Le dialogue ignore la provenance des étapes (`useTaskSteps`) : le site quand le projet
- * y est relié — la tâche y naît alors, sinon la synchronisation suivante en verrait deux —
- * les départements du projet autrement. Aucune étape déclarée n'est pas un cul-de-sac :
- * une tâche sans étape reste une tâche, et se range en fourre-tout jusqu'à ce que le pipe
- * existe.
+ * The dialog ignores where the steps come from (`useTaskSteps`): the site when the project is linked to it, in which
+ * case the task is born there (otherwise the next sync would see two), and otherwise the project's departments. No
+ * declared step is not a dead end: a task without a step remains a task, and is filed in a catch-all until the pipe
+ * exists.
  */
 export default function NewTaskDialog({
   open,
@@ -41,14 +39,14 @@ export default function NewTaskDialog({
   onOpenChange: (open: boolean) => void;
   projectId: number;
   parent: { kind: 'asset' | 'shot'; id: number };
-  /** Appelé après création — la page décide si elle recharge ou si elle ouvre la tâche. */
+  /** Called after creation: the page decides whether to reload or to open the task. */
   onCreated?: (taskId: number) => void;
 }) {
   const t = useT();
   const { linked, steps } = useTaskSteps(projectId, parent.kind, open);
   const createTask = useCreateStepTask(projectId);
-  // Les personnes viennent d'où viennent les tâches : le site tient ses propres comptes,
-  // et une tâche créée là-bas s'assigne avec un identifiant du site.
+  // People come from where the tasks come from: the site keeps its own accounts, and a task created there
+  // is assigned with a site identifier.
   const members = useProjectMembers(projectId);
   const { data: sgMembers = [] } = useSgProjectMembers(projectId, open && linked);
   const people = linked
@@ -60,8 +58,8 @@ export default function NewTaskDialog({
   const [assignee, setAssignee] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Le premier choix par défaut, sans écraser celui qu'on vient de faire : sur un projet
-  // relié, « sans étape » n'existe pas — la tâche doit porter une étape du site.
+  // The first default choice, without overriding the one just made: on a linked project, "no step" does not
+  // exist, since the task must carry a site step.
   const selected = stepKey || (steps[0]?.key ?? (linked ? '' : NO_STEP));
   const step = steps.find((s) => s.key === selected) ?? null;
 
@@ -117,11 +115,11 @@ export default function NewTaskDialog({
                   {s.code}
                 </option>
               ))}
-              {/* Sans étape : possible seulement quand le pipe est celui de ReView. */}
+              {/* No step: only possible when the pipe is ReView's. */}
               {!linked && <option value={NO_STEP}>{t('pipeline.dept.none')}</option>}
             </Select>
-            {/* Un site injoignable rendait un select vide et un bouton inerte, sans un mot
-                pour dire pourquoi. Hors projet relié, « sans étape » sauve toujours la mise. */}
+            {/* An unreachable site rendered an empty select and an inert button, without a word to say why.
+                Outside a linked project, "no step" always saves the day. */}
             {linked && steps.length === 0 && (
               <p className="text-xs text-muted-foreground">{t('task.new.noSteps')}</p>
             )}
@@ -133,8 +131,8 @@ export default function NewTaskDialog({
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              // Le nom part du code de l'étape — c'est la convention — mais un studio
-              // nomme parfois « model_hi » là où l'étape s'appelle « modeling ».
+              // The name comes from the step code, which is the convention, but a studio sometimes names
+              // "model_hi" where the step is called "modeling".
               placeholder={step ? step.code : t('upload.pickTask.namePlaceholder')}
               aria-label={t('common.name')}
               required={step === null}
@@ -150,8 +148,8 @@ export default function NewTaskDialog({
               onChange={(e) => setAssignee(e.target.value)}
               disabled={people.length === 0}
             >
-              {/* « Personne » nommerait à la fois le champ et son absence de valeur en
-                  français : le libellé de l'option dit donc l'état, pas le rôle. */}
+              {/* "Nobody" would name both the field and its absence of value: the option's label therefore
+                  states the state, not the role. */}
               <option value="">{t('upload.pickTask.noAssignee')}</option>
               {people.map((p) => (
                 <option key={p.id} value={p.id}>

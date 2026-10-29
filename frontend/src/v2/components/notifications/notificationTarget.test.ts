@@ -5,43 +5,42 @@ import { describe, it, expect } from 'vitest';
 import { linkFor } from './notificationTarget';
 
 /**
- * La destination d'une notification. Deux défauts vivaient ici :
+ * The destination of a notification. Two defects lived here:
  *
- * - le type `REVIEW_DECISION` manquait à la table, si bien que le verdict d'une review —
- *   la notification la plus attendue du lot — retombait sur la page du projet ;
- * - le même événement écrivait deux `referenceId` de natures différentes (un id de version
- *   pour l'auteur, un id de média pour les suiveurs). Le serveur n'en écrit plus qu'un, et
- *   le front refuse donc les lignes à l'ancienne graphie, dont la référence n'est pas fiable.
+ * - the `REVIEW_DECISION` type was missing from the table, so a review's verdict (the most awaited notification of the batch)
+ *   fell back on the project page;
+ * - the same event wrote two `referenceId`s of different natures (a version id for the author, a media id for followers).
+ *   The server now writes only one, so the front end refuses rows in the old spelling, whose reference is unreliable.
  */
 const base = { projectId: 12 };
 
 describe('linkFor', () => {
-  it('ouvre la tâche assignée', () => {
+  it('opens the assigned task', () => {
     expect(linkFor({ ...base, type: 'TASK_ASSIGNED', referenceId: 5 })).toBe('/tasks/5');
   });
 
-  it('ouvre la review pour tous les types portés par un média', () => {
+  it('opens the review for all the types carried by a media', () => {
     for (const type of ['REPLY', 'COMMENT_ASSIGNED', 'REVIEW_ASSIGNED', 'MENTION', 'WATCH']) {
       expect(linkFor({ ...base, type, referenceId: 9 })).toBe('/review/9');
     }
   });
 
-  it('ouvre la review sur une décision de review', () => {
+  it('opens the review on a review decision', () => {
     expect(linkFor({ ...base, type: 'REVIEW_DECISION', referenceId: 9 })).toBe('/review/9');
   });
 
-  it('laisse les anciennes lignes `review_decision` sur la page projet', () => {
-    // Leur `referenceId` est un id de VERSION chez l'auteur : les router vers /review
-    // ouvrirait un média pris au hasard. Le repli projet est le comportement d'avant.
+  it('leaves the old `review_decision` rows on the project page', () => {
+    // Their `referenceId` is a VERSION id on the author's side: routing them to /review would open a randomly chosen
+    // media. The project fallback is the earlier behaviour.
     expect(linkFor({ ...base, type: 'review_decision', referenceId: 9 })).toBe('/projects/12');
   });
 
-  it('retombe sur le projet quand la référence manque', () => {
+  it('falls back on the project when the reference is missing', () => {
     expect(linkFor({ ...base, type: 'MENTION', referenceId: null })).toBe('/projects/12');
     expect(linkFor({ ...base, type: 'SYSTEM', referenceId: null })).toBe('/projects/12');
   });
 
-  it('ne mène nulle part sans projet ni référence', () => {
+  it('leads nowhere without a project or a reference', () => {
     expect(linkFor({ type: 'SYSTEM', referenceId: null, projectId: null })).toBeNull();
   });
 });

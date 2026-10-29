@@ -8,22 +8,22 @@ import { imageDrafts, type AttachmentDraft } from './attachmentDrafts';
 import { useT } from '../../i18n';
 
 /**
- * Pièces jointes d'un composeur, AVANT envoi : une vignette par image — ouvrable en grand
- * dans le carrousel commun — et sa croix de retrait. Le nom de fichier seul ne disait rien
- * de ce qu'on envoyait ; « image (3).png » encore moins.
+ * Attachments of a composer, BEFORE sending: one thumbnail per image, openable full size
+ * in the shared carousel, with its remove button. The file name alone said nothing about
+ * what was being sent, and "image (3).png" said even less.
  */
 export default function AttachmentDraftList({
   drafts,
   onRemove,
 }: {
   drafts: AttachmentDraft[];
-  /** Retire la pièce désignée par son identifiant (clé stockée ou fichier en attente). */
+  /** Removes the item identified by its id (stored key or pending file). */
   onRemove: (id: string) => void;
 }) {
   const t = useT();
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const images = imageDrafts(drafts);
-  // Un clic interne ne doit ni envoyer le formulaire ni sélectionner la carte du commentaire.
+    // An internal click must neither submit the form nor select the comment card.
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (

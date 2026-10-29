@@ -9,12 +9,11 @@ import { SettingsSearchBar, SettingsSearchEmpty, SettingsSearchProvider } from '
 import { t } from '../../i18n';
 
 /**
- * La carte de réglages et sa recherche.
+ * The settings card and its search.
  *
- * Trois propriétés qu'aucun module pur ne peut affirmer : une carte posée hors fournisseur
- * s'affiche quand même (elle doit pouvoir servir dans un dialogue), la recherche masque ce
- * qui ne répond pas, et le message « aucun réglage » ne sort que quand il ne reste
- * réellement rien — sinon la page paraîtrait vide à tort.
+ * Three properties no pure module can assert: a card placed outside a provider still displays (it must be usable in a
+ * dialog), the search hides what does not match, and the "no settings" message only appears when really nothing remains,
+ * otherwise the page would wrongly look empty.
  */
 function Page() {
   return (
@@ -38,14 +37,14 @@ const chercher = async (texte: string) => {
 };
 
 describe('SettingsCard', () => {
-  it('rend son titre, son aide et sa note de bas de panneau', () => {
+  it('renders its title, its help and its footer note', () => {
     render(<Page />);
     expect(screen.getByText('Burn-ins')).toBeTruthy();
     expect(screen.getByText('Template studio')).toBeTruthy();
     expect(screen.getByText('note de bas de panneau')).toBeTruthy();
   });
 
-  it('s’affiche hors fournisseur — la recherche est une option, pas une dépendance', () => {
+  it('displays outside a provider: search is an option, not a dependency', () => {
     render(
       <SettingsCard title="Isolée">
         <p>corps isolé</p>
@@ -54,14 +53,14 @@ describe('SettingsCard', () => {
     expect(screen.getByText('corps isolé')).toBeTruthy();
   });
 
-  it('se trouve par un mot-clé que le titre ne porte pas', async () => {
+  it('is found by a keyword that the title does not carry', () => {
     render(<Page />);
     await chercher('filigrane');
     expect(screen.getByText('Burn-ins')).toBeTruthy();
     expect(screen.queryByText('Stockage')).toBeNull();
   });
 
-  it('se trouve aussi par son aide et par sa note', async () => {
+  it('is also found through its help and its note', () => {
     render(<Page />);
     await chercher('template');
     expect(screen.getByText('Burn-ins')).toBeTruthy();
@@ -70,7 +69,7 @@ describe('SettingsCard', () => {
     expect(screen.queryByText('Burn-ins')).toBeNull();
   });
 
-  it('ne dit « aucun réglage » que lorsqu’il ne reste vraiment rien', async () => {
+  it('says "no settings" only when really nothing remains', () => {
     render(<Page />);
     expect(screen.queryByText(t('admin.search.empty'))).toBeNull();
     await chercher('quota');
@@ -79,7 +78,7 @@ describe('SettingsCard', () => {
     expect(screen.getByText(t('admin.search.empty'))).toBeTruthy();
   });
 
-  it('rend tout à nouveau quand la recherche se vide', async () => {
+  it('renders everything again when the search is cleared', () => {
     render(<Page />);
     await chercher('quota');
     expect(screen.queryByText('Burn-ins')).toBeNull();

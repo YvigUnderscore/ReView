@@ -14,18 +14,16 @@ import { useEntityNote, type NoteKind } from '../../lib/notesApi';
 import { useT } from '../../i18n';
 
 /**
- * L'en-tête d'une page de séquence, de plan ou d'asset : qui travaille là-dessus, et le
- * brief.
+ * The header of a sequence, shot or asset page: who works on it, and the brief.
  *
- * Deux choses que ces pages ne disaient pas. **L'équipe** d'abord, et à l'échelle du
- * périmètre : sur une séquence, les gens sont sur ses plans et sur les tâches de ses plans,
- * pas sur la séquence elle-même — s'arrêter à l'entité aurait montré une liste vide dans le
- * cas courant. **Le brief** ensuite, qui n'avait nulle part où vivre : `description` vient
- * de ShotGrid et y retourne, souvent en lecture seule ici.
+ * Two things these pages did not show. **The team** first, at the scope's level: on a sequence, people are on
+ * its shots and on those shots' tasks, not on the sequence itself, so stopping at the entity would have shown
+ * an empty list in the common case. **The brief** next, which had nowhere to live: `description` comes from
+ * ShotGrid and goes back there, often read-only here.
  *
- * Ici, une ligne et rien de plus : les visages, et le fait qu'un brief existe. Le reste
- * s'ouvre en fenêtre — un dépliant qui pousse le travail vers le bas de l'écran se referme
- * aussitôt ouvert, et une planche de références n'y tenait pas.
+ * Here, one line and nothing more: the faces, and the fact that a brief exists. The rest opens in a window: a
+ * dropdown that pushes the work down the screen closes as soon as it is opened, and a board of references would
+ * not fit in it.
  */
 export default function EntityHeaderPanel({
   kind,
@@ -50,7 +48,7 @@ export default function EntityHeaderPanel({
   const { data: note } = useEntityNote(kind, id);
   const hasNote = Boolean(note?.body.trim());
 
-  // Rien à montrer et rien à écrire : le panneau ne coûte pas une ligne pour rien.
+  // Nothing to show and nothing to write: the panel costs no line for nothing.
   if (people.length === 0 && !hasNote && !canManage) return null;
 
   return (
@@ -85,8 +83,8 @@ export default function EntityHeaderPanel({
           </span>
         )}
 
-        {/* L'état du brief se lit à la pastille : écrit, il porte l'accent ; absent, il est
-            annoncé en creux, pour que personne ne cherche une fiche qui n'existe pas. */}
+        {/* The brief's state is read from the dot: written, it carries the accent; absent, it is
+            announced as empty, so that nobody searches for a sheet that does not exist. */}
         <span
           className={`ml-auto flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs ${
             hasNote ? 'bg-primary/10 text-primary' : 'text-muted-foreground'

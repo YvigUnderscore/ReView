@@ -5,15 +5,14 @@ import type { ReviewStatus } from '../types/api';
 import { statusSwatch } from '../lib/contrast';
 
 /**
- * Helpers purs de la décision de review (Phase 31) — testés isolément.
- * Les couleurs de statut sont des données studio (hex), pas des tokens de thème.
+ * Pure helpers for the review decision (Phase 31), tested in isolation.
+ * The status colours are studio data (hex), not theme tokens.
  */
 
 /**
- * Style inline d'un badge/bouton de statut : la teinte studio porte le fond et la bordure,
- * le texte est ramené au seuil de lisibilité du thème courant (A2). Auparavant la couleur
- * brute servait aussi de couleur de texte — un statut sombre disparaissait sur le thème
- * bleu nuit, un statut pâle sur le thème clair.
+ * Inline style of a status badge or button: the studio tint carries the background and border, and the text is brought up
+ * to the readability threshold of the current theme (A2). Previously the raw colour also served as the text colour: a dark
+ * status vanished on the midnight theme, and a pale one on the light theme.
  */
 export function reviewStatusStyle(color: string, isDark: boolean, selected = false) {
   const swatch = statusSwatch(color, isDark);
@@ -21,14 +20,14 @@ export function reviewStatusStyle(color: string, isDark: boolean, selected = fal
   return {
     color: swatch.color,
     borderColor: swatch.borderColor,
-    // Sélection : même teinte, un peu plus dense, pour rester distinguable au clavier.
+    // Selection: same tint, a little denser, to remain distinguishable by keyboard.
     backgroundColor: selected
       ? swatch.backgroundColor.replace(/ \/ [\d.]+\)$/, ' / 0.28)')
       : swatch.backgroundColor,
   };
 }
 
-/** Statut présélectionné dans le dialog : décision courante, sinon défaut studio, sinon null. */
+/** Status preselected in the dialog: the current decision, otherwise the studio default, otherwise null. */
 export function pickPreselectedStatus(
   current: Pick<ReviewStatus, 'id'> | null,
   statuses: Pick<ReviewStatus, 'id' | 'isDefault'>[],

@@ -6,15 +6,13 @@ import { FAMILY_BAR } from '../productionWire';
 import { useT } from '../../../i18n';
 
 /**
- * Légende des familles de statut.
+ * Legend of the status families.
  *
- * Elle ne sert plus à décoder les cases, qui écrivent désormais le nom de leur statut :
- * elle nomme les couleurs de la **barre d'avancement** d'une sequence repliée, seule
- * surface où une famille reste une couleur et rien d'autre.
+ * It no longer serves to decode the cells, which now write the name of their status: it names the colours of the **progress
+ * bar** of a collapsed sequence, the only surface where a family remains a colour and nothing else.
  *
- * Les deux marques sans famille y figurent aussi, et c'est même leur seul écrit : une case
- * « à faire, pas commencé » et une case hors programme n'ont pas de statut à nommer, et se
- * ressemblent assez pour qu'on les confonde sans un repère.
+ * The two marks without a family are listed too, and in fact they have no other label: a "to do, not started" cell and an
+ * off-schedule cell have no status to name, and look alike enough to be confused without a landmark.
  */
 export default function GridLegend() {
   const t = useT();

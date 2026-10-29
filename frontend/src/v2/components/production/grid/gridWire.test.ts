@@ -26,12 +26,11 @@ import { t } from '../../../i18n';
 import type { StatusFamily } from '../productionWire';
 
 /**
- * Ce que la grille décide sans pixels.
+ * What the grid decides without pixels.
  *
- * Trois décisions valent d'être verrouillées ici plutôt qu'à l'écran : la distinction
- * entre « à faire » et « pas au programme » (l'écran d'avant les confondait), l'agrégat
- * d'un groupe replié (qui remplace la matrice d'avancement) et la clé de cache, dont une
- * erreur ferait servir la page d'un filtre sous celle d'un autre.
+ * Three decisions are worth locking down here rather than on screen: the distinction between "to do" and "not on the
+ * schedule" (the earlier screen confused them), the aggregate of a collapsed group (which replaces the progress matrix), and
+ * the cache key, an error in which would serve one filter's page under another's.
  */
 
 const department = (key: string, order: number): GridDepartment => ({
@@ -44,7 +43,7 @@ const department = (key: string, order: number): GridDepartment => ({
 
 const DEPARTMENTS = [department('anim', 1), department('comp', 2), department('light', 3)];
 
-/** Une case avec tâche, dans la famille demandée. */
+/** A cell with a task, in the requested family. */
 const task = (key: string, family: StatusFamily): GridCell => ({
   departmentKey: key,
   taskId: 100 + key.length,
@@ -56,7 +55,7 @@ const task = (key: string, family: StatusFamily): GridCell => ({
   scheduled: true,
 });
 
-/** Une case au programme, sans tâche : du travail à faire. */
+/** A cell on the schedule, with no task: work to be done. */
 const idle = (key: string): GridCell => ({
   departmentKey: key,
   taskId: null,
@@ -68,13 +67,13 @@ const idle = (key: string): GridCell => ({
   scheduled: true,
 });
 
-/** Une case dont le département n'est pas au programme du plan. */
+/** A cell whose department is not on the shot's schedule. */
 const offPlan = (key: string): GridCell => ({ ...idle(key), scheduled: false });
 
-/** Une case à tâche portant exactement ce statut. */
+/** A cell with a task carrying exactly this status. */
 const withStatus = (key: string, status: GridCellStatus): GridCell => ({ ...task(key, 'progress'), status });
 
-/** Le statut d'un studio SANS référentiel : le serveur laisse `name` vide et met l'enum dans `code`. */
+/** The status of a studio WITHOUT reference data: the server leaves `name` empty and puts the enum in `code`. */
 const legacy = (code: string, family: StatusFamily): GridCellStatus => ({
   id: null,
   code,
@@ -96,24 +95,24 @@ const row = (shotId: number, sequenceId: number | null, cells: GridCell[]): Grid
 });
 
 describe('cellKind / cellFamily', () => {
-  it('distingue une tâche, une case à faire et une case hors programme', () => {
+  it('distinguishes a task, a to-do cell and an off-schedule cell', () => {
     expect(cellKind(task('comp', 'progress'))).toBe('task');
     expect(cellKind(idle('comp'))).toBe('idle');
     expect(cellKind(offPlan('comp'))).toBe('unscheduled');
   });
 
-  it('compte une case à faire comme « todo » et ne compte pas le hors-programme', () => {
+  it('counts a to-do cell as "todo" and does not count the off-schedule one', () => {
     expect(cellFamily(idle('comp'))).toBe('todo');
     expect(cellFamily(offPlan('comp'))).toBeNull();
   });
 
-  it('retient la famille du serveur quand la tâche existe', () => {
+  it("keeps the server's family when the task exists", () => {
     expect(cellFamily(task('comp', 'blocked'))).toBe('blocked');
   });
 });
 
 describe('statusName', () => {
-  it('écrit le NOM du référentiel, pas son code — « pending_review » n’est pas un mot', () => {
+  it('writes the NAME from the reference data, not its code: "pending_review" is not a word', () => {
     const status: GridCellStatus = {
       id: 4,
       code: 'pending_review',
@@ -124,29 +123,29 @@ describe('statusName', () => {
     expect(statusName(status, t)).toBe('To Review');
   });
 
-  it('traduit l’enum figé quand le studio n’a aucun référentiel', () => {
+  it('translates the frozen enum when the studio has no reference data', () => {
     expect(statusName(legacy('PENDING_REVIEW', 'review'), t)).toBe(t('task.status.toReview'));
     expect(statusName(legacy('IN_PROGRESS', 'progress'), t)).toBe(t('task.status.inProgress'));
   });
 
-  it('retombe sur la famille pour un code que le catalogue ne connaît pas', () => {
+  it('falls back on the family for a code the catalogue does not know', () => {
     expect(statusName(legacy('ON_HOLD', 'blocked'), t)).toBe(t('kanban.family.blocked'));
   });
 
-  it('ne rend jamais un identifiant à l’écran', () => {
+  it('never renders an identifier on screen', () => {
     for (const status of [legacy('PENDING_REVIEW', 'review'), legacy('ON_HOLD', 'blocked')]) {
       expect(statusName(status, t)).not.toContain('_');
       expect(statusName(status, t)).not.toContain('.');
     }
   });
 
-  it('nomme la case sans statut au lieu de la laisser muette', () => {
+  it('names the cell without a status instead of leaving it silent', () => {
     expect(statusName(null, t)).toBe(t('production.grid.idle'));
   });
 });
 
 describe('widestStatus', () => {
-  it('mesure le nom le plus long des cases à tâche', () => {
+  it('measures the longest name among the cells with a task', () => {
     const rows = [
       row(1, 10, [
         withStatus('anim', { id: 1, code: 'fin', name: 'Final', color: null, family: 'done' }),
@@ -156,12 +155,12 @@ describe('widestStatus', () => {
     expect(widestStatus(rows, DEPARTMENTS, t)).toBe('Pending Review'.length);
   });
 
-  it('ignore les cases sans tâche : elles n’écrivent rien', () => {
+  it('ignores cells without a task: they write nothing', () => {
     const rows = [row(1, 10, [idle('anim'), offPlan('comp')])];
     expect(widestStatus(rows, DEPARTMENTS, t)).toBe(0);
   });
 
-  it('ne compte que les colonnes visibles — une colonne masquée n’élargit plus la grille', () => {
+  it('counts only visible columns: a hidden column no longer widens the grid', () => {
     const rows = [
       row(1, 10, [
         withStatus('anim', { id: 1, code: 'fin', name: 'Final', color: null, family: 'done' }),
@@ -180,27 +179,27 @@ describe('widestStatus', () => {
 });
 
 describe('FAMILY_LABEL', () => {
-  it('nomme les six familles — la légende ne peut pas en laisser une sans mot', () => {
+  it('names the six families: the legend cannot leave one without a word', () => {
     for (const family of FAMILIES) expect(FAMILY_LABEL[family]).toMatch(/^kanban\.family\./);
     expect(new Set(FAMILIES).size).toBe(6);
   });
 });
 
 describe('gridSearch', () => {
-  it('ne porte que la limite quand aucun filtre n’est posé', () => {
+  it('carries only the limit when no filter is set', () => {
     expect(gridSearch(NO_FILTERS, null)).toBe('?limit=50');
     expect(hasFilters(NO_FILTERS)).toBe(false);
   });
 
-  it('cumule les filtres et met le curseur en dernier', () => {
+  it('combines the filters and puts the cursor last', () => {
     const filters = { ...NO_FILTERS, sequenceId: 4, department: 'comp', status: 'IN_PROGRESS' };
     expect(hasFilters(filters)).toBe(true);
     expect(gridSearch(filters, null)).toBe('?limit=50&sequenceId=4&department=comp&status=IN_PROGRESS');
-    // La clé de cache est exactement la même chaîne, curseur retiré.
+    // The cache key is exactly the same string, with the cursor removed.
     expect(gridSearch(filters, 'abc')).toBe(`${gridSearch(filters, null)}&cursor=abc`);
   });
 
-  it('sépare deux filtres différents — sans quoi une page serait servie sous la clé de l’autre', () => {
+  it("keeps two different filters apart, otherwise a page would be served under the other's key", () => {
     expect(gridSearch({ ...NO_FILTERS, assigneeId: 1 }, null)).not.toBe(
       gridSearch({ ...NO_FILTERS, assigneeId: 2 }, null),
     );
@@ -208,14 +207,14 @@ describe('gridSearch', () => {
 });
 
 describe('groupBySequence', () => {
-  it('rassemble les plans d’une même sequence même s’ils ne se suivent pas', () => {
+  it('gathers the shots of the same sequence even when they are not consecutive', () => {
     const rows = [row(1, 10, []), row(2, 11, []), row(3, 10, [])];
     const groups = groupBySequence(rows);
     expect(groups.map((g) => g.key)).toEqual(['10', '11']);
     expect(groups[0].rows.map((r) => r.shotId)).toEqual([1, 3]);
   });
 
-  it('range les plans sans sequence dans un groupe à part', () => {
+  it('puts the shots without a sequence in a separate group', () => {
     const groups = groupBySequence([row(1, null, [])]);
     expect(groups[0].key).toBe(NO_SEQUENCE);
     expect(groups[0].sequenceCode).toBeNull();
@@ -223,7 +222,7 @@ describe('groupBySequence', () => {
 });
 
 describe('familyTally', () => {
-  it('agrège les familles et écarte le hors-programme du dénominateur', () => {
+  it('aggregates the families and excludes off-schedule cells from the denominator', () => {
     const rows = [
       row(1, 10, [task('anim', 'done'), task('comp', 'progress'), offPlan('light')]),
       row(2, 10, [task('anim', 'done'), idle('comp'), offPlan('light')]),
@@ -235,7 +234,7 @@ describe('familyTally', () => {
     expect(tally.counts.todo).toBe(1);
   });
 
-  it('rend un total nul quand tout est hors programme', () => {
+  it('renders a zero total when everything is off-schedule', () => {
     expect(familyTally([row(1, 10, [offPlan('anim')])]).total).toBe(0);
   });
 });
@@ -243,11 +242,11 @@ describe('familyTally', () => {
 describe('visibleDepartments', () => {
   const rows = [row(1, 10, [task('anim', 'done'), idle('comp'), offPlan('light')])];
 
-  it('garde toutes les colonnes par défaut', () => {
+  it('keeps all the columns by default', () => {
     expect(visibleDepartments(DEPARTMENTS, rows, false)).toHaveLength(3);
   });
 
-  it('retire la colonne qu’aucun plan n’a au programme', () => {
+  it('removes the column that no shot has on its schedule', () => {
     expect(visibleDepartments(DEPARTMENTS, rows, true).map((d) => d.key)).toEqual(['anim', 'comp']);
   });
 });
@@ -255,7 +254,7 @@ describe('visibleDepartments', () => {
 describe('flattenGrid', () => {
   const groups = groupBySequence([row(1, 10, []), row(2, 10, []), row(3, 11, [])]);
 
-  it('monte l’en-tête de groupe puis ses plans', () => {
+  it('mounts the group header, then its shots', () => {
     expect(flattenGrid(groups, new Set()).map((l) => l.key)).toEqual([
       'group:10',
       'shot:1',
@@ -265,7 +264,7 @@ describe('flattenGrid', () => {
     ]);
   });
 
-  it('garde l’en-tête d’un groupe replié et laisse tomber ses plans', () => {
+  it('keeps the header of a collapsed group and drops its shots', () => {
     expect(flattenGrid(groups, new Set(['10'])).map((l) => l.key)).toEqual([
       'group:10',
       'group:11',

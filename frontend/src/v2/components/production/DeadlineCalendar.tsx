@@ -13,7 +13,7 @@ import type { ScheduleTask } from '../../types/api';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
 
-/** Abréviations de jours issues d'ICU — la semaine commence lundi (2026-01-05). */
+/** Day abbreviations from ICU: the week starts on Monday (2026-01-05). */
 function weekdays(locale: string): string[] {
   const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
   return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(Date.UTC(2026, 0, 5 + i))));
@@ -22,8 +22,8 @@ const dayKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 /**
- * Midi UTC du jour visé, en ISO. À minuit, un lecteur situé à l'ouest de Greenwich verrait
- * l'échéance reculer d'un jour — c'est le genre de décalage qu'on ne remarque qu'en prod.
+ * Noon UTC of the targeted day, in ISO. At midnight, a reader west of Greenwich would see the deadline slip back a day:
+ * the kind of offset one only notices in production.
  */
 function noonOf(key: string): string {
   const [y, m, d] = key.split('-').map(Number);
@@ -31,11 +31,10 @@ function noonOf(key: string): string {
 }
 
 /**
- * Calendrier mensuel des échéances (43.C — №125), éditable depuis C6.
+ * Monthly calendar of deadlines (43.C — №125), editable from C6.
  *
- * Il était en lecture seule : on y voyait qu'une échéance tombait le mauvais jour sans
- * pouvoir la déplacer, il fallait ouvrir la tâche. Une échéance se glisse maintenant d'un
- * jour à l'autre — le geste qu'on attend d'un calendrier.
+ * It was read-only: one could see that a deadline fell on the wrong day without being able to move it; one had to open the
+ * task. A deadline can now be dragged from one day to another: the gesture one expects from a calendar.
  */
 export default function DeadlineCalendar({
   tasks,
@@ -44,7 +43,7 @@ export default function DeadlineCalendar({
 }: {
   tasks: ScheduleTask[];
   projectId: number;
-  /** Déplacer une échéance écrit en base : réservé à qui gère le projet. */
+  /** Moving a deadline writes to the database: reserved for whoever manages the project. */
   canEdit?: boolean;
 }) {
   const tr = useT();
@@ -63,7 +62,7 @@ export default function DeadlineCalendar({
     onError: (e) => toast.error(e instanceof Error ? e.message : tr('common.error.generic')),
   });
 
-  // Regroupe les tâches ayant une échéance par jour (clé locale YYYY-MM-DD).
+  // Groups the tasks that have a deadline by day (local key YYYY-MM-DD).
   const byDay = useMemo(() => {
     const map = new Map<string, ScheduleTask[]>();
     for (const t of tasks) {
@@ -78,7 +77,7 @@ export default function DeadlineCalendar({
 
   const weeks = useMemo(() => {
     const first = startOfMonth(month);
-    const offset = (first.getDay() + 6) % 7; // lundi = 0
+    const offset = (first.getDay() + 6) % 7; // Monday = 0
     const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
     const weeksCount = Math.ceil((offset + daysInMonth) / 7);
     const gridStart = new Date(first);
@@ -141,8 +140,8 @@ export default function DeadlineCalendar({
           return (
             <div
               key={key}
-              // Zone de dépôt : le calendrier reste lisible au clavier, où l'échéance
-              // s'édite depuis la page de la tâche.
+              // Drop zone: the calendar stays readable by keyboard, where the deadline is edited from the
+              // task page.
               onDragOver={canEdit ? (e) => e.preventDefault() : undefined}
               onDrop={
                 canEdit

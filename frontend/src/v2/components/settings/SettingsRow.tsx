@@ -5,18 +5,15 @@ import type { ReactNode } from 'react';
 import { Hint } from '../ui/hint';
 
 /**
- * Une ligne de réglage : son nom, son aide, son contrôle — la convention de libellé des
- * trois familles d'écrans.
+ * A settings row: its name, its help, its control. The label convention of the three families of screens.
  *
- * Il en existait trois : une étiquette de 256 px en colonne fixe dans l'administration, un
- * `Label` empilé au-dessus du champ dans le profil, une capitale grise sous le champ dans
- * les projets. La mesure de la colonne changeait donc d'un écran à l'autre, et l'aide
- * tantôt précédait le contrôle, tantôt le suivait.
+ * There used to be three: a 256 px label in a fixed column in administration, a `Label` stacked above the field in the
+ * profile, and a grey capital below the field in the projects. The measure of the column therefore changed from one screen
+ * to the next, and the help sometimes preceded the control, sometimes followed it.
  *
- * Le libellé n'est **pas** un `<label>` : cette ligne accueille aussi des groupes (contrôle
- * segmenté, paire de champs) qu'un `<label>` ne peut pas nommer sans mentir au lecteur
- * d'écran. Le contrôle porte son propre nom accessible — `Field` pour un champ unique,
- * `label` pour un `SegmentedControl`.
+ * The label is **not** a `<label>`: this row also hosts groups (segmented control, pair of fields) that a `<label>` cannot
+ * name without misleading the screen reader. The control carries its own accessible name: `Field` for a single field, `label`
+ * for a `SegmentedControl`.
  */
 export default function SettingsRow({
   label,
@@ -25,11 +22,11 @@ export default function SettingsRow({
   children,
 }: {
   label: string;
-  /** Ce que le réglage change, quand le libellé ne suffit pas. */
+  /** What the setting changes, when the label is not enough. */
   hint?: string;
   /**
-   * `id` du contrôle quand la ligne n'en porte qu'un : le libellé devient alors un vrai
-   * `<label>`, et le champ un champ nommé. Absent pour un groupe, qui se nomme lui-même.
+   * `id` of the control when the row carries only one: the label then becomes a real `<label>`, and the field a named
+   * field. Absent for a group, which names itself.
    */
   htmlFor?: string;
   children: ReactNode;

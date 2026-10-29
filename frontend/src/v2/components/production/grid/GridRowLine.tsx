@@ -10,18 +10,17 @@ import type { GridActions } from './useGridActions';
 import { useT } from '../../../i18n';
 
 /**
- * Une ligne de grille : un plan, et ce que chaque département en a fait.
+ * A grid row: a shot, and what each department has done with it.
  *
- * La colonne de tête porte le **statut propre du plan** — il existe en base depuis le
- * circuit d'approbation et n'était affiché nulle part : on pouvait le poser par clic droit
- * dans l'arbre sans jamais le relire ensuite.
+ * The head column carries the shot's **own status**. It has existed in the database since the approval workflow and was
+ * displayed nowhere: one could set it by right-click in the tree without ever reading it back.
  */
 
 /**
- * Le statut du plan, et le geste pour le changer.
+ * The shot's status, and the gesture to change it.
  *
- * Un bouton, pas un simple texte : le menu contextuel doit être atteignable au clavier, et
- * le clic gauche ouvre le même menu — sur un pavé tactile, le clic droit n'existe pas.
+ * A button, not plain text: the context menu must be reachable by keyboard, and a left click opens the same menu, since on a
+ * touch pad there is no right click.
  */
 function ShotStatusChip({ row, actions }: { row: GridRow; actions: GridActions }) {
   const t = useT();
@@ -66,12 +65,12 @@ export default function GridRowLine({
 }: {
   row: GridRow;
   columns: GridDepartment[];
-  /** Largeur d'une colonne de département — la même pour toutes, réglée par la table. */
+  /** Width of a department column: the same for all, set by the table. */
   colWidth: number;
   actions: GridActions;
 }) {
-  // Les cases arrivent dans l'ordre de TOUT le référentiel ; les colonnes visibles n'en
-  // sont qu'un sous-ensemble quand on masque les vides — d'où l'index par clé.
+  // The cells arrive in the order of the WHOLE reference data; the visible columns are only a subset of it when empty
+  // ones are hidden, hence the index by key.
   const byKey = new Map(row.cells.map((cell) => [cell.departmentKey, cell]));
   return (
     <div

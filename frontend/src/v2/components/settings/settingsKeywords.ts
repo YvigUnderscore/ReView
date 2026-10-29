@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Les mots par lesquels on vient chercher un réglage de projet ou de profil.
+ * The words one searches a project or profile setting by.
  *
- * Le titre d'une carte ne suffit jamais : personne ne cherche « Burn-ins », on cherche
- * « filigrane » ; personne ne cherche « Affichage », on cherche « sombre ». Ces listes ne
- * s'affichent pas — elles n'ont donc pas à passer par `t()` — et sont volontairement
- * bilingues, comme l'index des sections d'administration : un studio francophone cherche
- * « cadence » autant que « fps », et le vocabulaire de production reste en anglais.
+ * A card's title is never enough: nobody searches for "Burn-ins", one searches for "watermark"; nobody searches for
+ * "Display", one searches for "dark". These lists are not displayed, so they need not go through `t()`, and they are
+ * deliberately bilingual, like the index of administration sections: a French-speaking studio searches for "cadence" as
+ * much as for "fps", and the production vocabulary stays in English.
  */
 export const SETTINGS_KEYWORDS = {
-  // Réglages d'un projet
+  // Project settings
   inheritance: ['heritage', 'inheritance', 'studio', 'defaut', 'default', 'override', 'surcharge'],
   startFrame: ['frame', 'start', 'depart', 'timecode', 'premiere image', 'first frame'],
   format: ['resolution', 'format', 'fps', 'cadence', 'framerate', 'largeur', 'hauteur', 'width', 'height'],
@@ -26,7 +25,7 @@ export const SETTINGS_KEYWORDS = {
   burnin: ['burn-in', 'burnin', 'watermark', 'filigrane', 'slate', 'incrustation', 'timecode'],
   shotgrid: ['shotgrid', 'sg', 'flow', 'autodesk', 'synchronisation', 'sync', 'lien', 'link'],
 
-  // Réglages d'un profil
+  // Profile settings
   avatar: ['avatar', 'photo', 'portrait', 'image', 'initiales', 'initials'],
   identity: ['nom', 'name', 'prenom', 'email', 'courriel', 'telephone', 'phone', 'poste', 'job', 'bio'],
   password: ['mot de passe', 'password', 'motdepasse', 'securite', 'security', 'changer', 'change'],

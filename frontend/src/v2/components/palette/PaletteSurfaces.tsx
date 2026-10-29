@@ -7,12 +7,11 @@ import { useT } from '../../i18n';
 import type { SurfaceHits } from './useSurfaceSearch';
 
 /**
- * Les résultats qui ne sont pas des enregistrements mais des **écrans** : une page de
- * documentation, un panneau de réglages. Rendus à part de `PaletteResults`, dont toutes les
- * familles viennent de `GET /api/search` — celles-ci se calculent en mémoire
- * (`surfaceSearch`), et le cloisonnement des réglages est déjà fait à ce stade.
+ * The results that are not records but **screens**: a documentation page, a settings panel. Rendered apart from
+ * `PaletteResults`, whose families all come from `GET /api/search`. These are computed in memory (`surfaceSearch`), and the
+ * segregation of settings is already done at that stage.
  *
- * Ce composant ne fait que rendre : il ne connaît ni la saisie, ni le rôle du lecteur.
+ * This component only renders: it knows neither the input nor the reader's role.
  */
 
 const ICON = 'text-muted-foreground';

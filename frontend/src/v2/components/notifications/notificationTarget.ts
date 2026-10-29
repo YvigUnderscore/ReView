@@ -6,34 +6,31 @@ import { itemPath } from '../../pages/review/playlistNav';
 import type { Notification, PlaylistDetail } from '../../types/api';
 
 /**
- * Où mène une notification. Extrait de la cloche pour être testable seul : c'est la partie
- * qui se trompait, et elle se trompait en silence — un clic qui atterrit sur la page projet
- * ressemble à un clic qui a marché.
+ * Where a notification leads. Extracted from the bell so it can be tested on its own: this is the part that was going
+ * wrong, and it went wrong silently: a click landing on the project page looks like a click that worked.
  *
- * `referenceId` n'a de sens qu'avec le type : id de tâche, de média, ou de playlist. Le type
- * `REVIEW_DECISION` manquait purement et simplement à cette table, si bien que la
- * notification la plus attendue d'une review — le verdict — retombait sur la page du projet.
+ * `referenceId` only makes sense together with the type: a task, media or playlist id. The `REVIEW_DECISION` type was simply
+ * missing from this table, so a review's most awaited notification, the verdict, fell back on the project page.
  */
 
-/** Les types dont la référence est un média : le clic ouvre sa review. */
+/** Types whose reference is a media: the click opens its review. */
 const MEDIA_TYPES = new Set([
   'REPLY',
   'COMMENT_ASSIGNED',
-  // Review confiée (Phase 49) : la référence est le premier média de la version, donc
-  // le clic ouvre l'écran où le travail demandé se fait.
+  // Review entrusted (Phase 49): the reference is the first media of the version, so the click
+  // opens the screen where the requested work takes place.
   'REVIEW_ASSIGNED',
-  // Décision de review : même référence (premier média de la version) depuis le lot 9.
+  // Review decision: same reference (first media of the version) since batch 9.
   //
-  // La comparaison est SENSIBLE À LA CASSE, et c'est délibéré : les lignes écrites avant ce
-  // lot portent `review_decision` en minuscules et, pour l'auteur de la version, un id de
-  // VERSION dans `referenceId`. Les inclure ici ouvrirait un média pris au hasard. Elles
-  // gardent donc le repli « page du projet » — ce qu'elles faisaient déjà.
+  // The comparison is CASE-SENSITIVE, and deliberately so: rows written before this batch carry `review_decision` in lowercase
+  // and, for the version's author, a VERSION id in `referenceId`. Including them here would open a randomly chosen media.
+  // They therefore keep the "project page" fallback, which is what they already did.
   'REVIEW_DECISION',
   'MENTION',
   'WATCH',
 ]);
 
-/** Cible navigable immédiate, ou `null` s'il n'y a rien à ouvrir. */
+/** Immediate navigable target, or `null` if there is nothing to open. */
 export function linkFor(n: Pick<Notification, 'type' | 'referenceId' | 'projectId'>): string | null {
   if (n.type === 'TASK_ASSIGNED' && n.referenceId) return `/tasks/${n.referenceId}`;
   if (MEDIA_TYPES.has(n.type) && n.referenceId) return `/review/${n.referenceId}`;
@@ -42,8 +39,8 @@ export function linkFor(n: Pick<Notification, 'type' | 'referenceId' | 'projectI
 }
 
 /**
- * Notification LIVE (review live sur une playlist, retours 33) : mène directement à la
- * session — premier média lisible de la playlist avec `?playlist=&live=1`. Repli : projet.
+ * LIVE notification (live review on a playlist, feedback round 33): leads directly to the session, i.e. the first readable
+ * media of the playlist with `?playlist=&live=1`. Fallback: the project.
  */
 export async function liveLinkFor(
   n: Pick<Notification, 'referenceId' | 'projectId'>,
@@ -55,12 +52,12 @@ export async function liveLinkFor(
     const path = first ? itemPath(first, playlist.id) : null;
     if (path) return `${path}&live=1`;
   } catch {
-    // Playlist supprimée ou inaccessible : repli sur la page projet.
+    // Playlist deleted or inaccessible: fall back on the project page.
   }
   return n.projectId ? `/projects/${n.projectId}` : null;
 }
 
-/** Cible d'une notification, LIVE comprise — un seul point d'entrée pour l'appelant. */
+/** Target of a notification, LIVE included: a single entry point for the caller. */
 export function targetFor(
   n: Pick<Notification, 'type' | 'referenceId' | 'projectId'>,
 ): Promise<string | null> {

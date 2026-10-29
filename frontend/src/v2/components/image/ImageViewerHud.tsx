@@ -6,7 +6,7 @@ import { ZoomIn, ZoomOut, Maximize, Expand, Info } from 'lucide-react';
 import { formatBytes } from '../../../lib/formatBytes';
 import { useT } from '../../i18n';
 
-/** Contrôles de zoom de la visionneuse d'image et panneau d'infos repliable. */
+/** Zoom controls of the image viewer, and a collapsible info panel. */
 export default function ImageViewerHud({
   scale,
   natural,

@@ -21,16 +21,15 @@ import { useT } from '../../i18n';
 import { matchDestinations } from './paletteMatch';
 
 /**
- * Les destinations de la palette.
+ * The palette's destinations.
  *
- * Elles étaient au nombre de quatre — Projets, Kanban, Board, Documentation — et
- * disparaissaient **dès la première lettre tapée**, ce qui interdisait le geste même d'une
- * palette : taper « kanb » pour aller au kanban. Ni Accueil, ni Reviews, ni Profil, ni
- * Réglages, ni aucun onglet du projet courant n'y figuraient, alors que la règle du dépôt
- * veut que toute action passe par le clic droit ou par ici.
+ * There were four of them (Projects, Kanban, Board, Documentation), and they vanished **as soon as the first letter was typed**,
+ * which forbade the very gesture of a palette: typing "kanb" to go to the kanban. Neither Home, Reviews, Profile, Settings, nor
+ * any tab of the current project appeared, whereas the repository's rule is that every action goes through right-click or
+ * through here.
  *
- * Le filtrage est fait ici : `Command` est monté avec `shouldFilter={false}` (les résultats
- * d'entités viennent du serveur, déjà classés), donc cmdk ne trie rien de lui-même.
+ * The filtering is done here: `Command` is mounted with `shouldFilter={false}` (the entity results come from the server,
+ * already ranked), so cmdk sorts nothing by itself.
  */
 
 interface Destination {
@@ -51,14 +50,13 @@ export default function PaletteGoto({
 }) {
   const t = useT();
   const role = useAuth((s) => s.user?.role);
-  // L'entrée « Réglages » n'apparaît qu'à qui peut l'ouvrir : la proposer à tous mènerait
-  // à un écran refusé.
+  // The "Settings" entry only appears to those who can open it: offering it to everyone would lead to a refused screen.
   const isAdmin = role === 'ADMIN' || role === 'SUPERVISOR';
 
   const destinations: Destination[] = [
     { key: 'home', label: t('nav.home'), to: '/', icon: Home },
-    // `/projects`, pas `/` : l'entrée porte le libellé « Projets » et menait à l'accueil —
-    // le seul endroit où l'on ne trouve pas la liste des projets.
+    // `/projects`, not `/`: the entry carries the label "Projects" and led to the home page, the one place where the
+    // list of projects cannot be found.
     { key: 'projects', label: t('nav.projects'), to: '/projects', icon: FolderKanban },
     { key: 'reviews', label: t('nav.reviews'), to: '/reviews', icon: Clapperboard },
     ...(projectId !== null

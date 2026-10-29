@@ -17,16 +17,13 @@ import { chatSystemText } from '../../lib/chatSystemText';
 import { useT } from '../../i18n';
 
 /**
- * Bloc social unifié (C1).
+ * Unified social block (C1).
  *
- * La présence et la messagerie occupaient deux sections empilées, chacune avec son
- * chevron, sa hauteur limitée et sa source de données — alors qu'elles montrent les mêmes
- * personnes : « qui est là » servait déjà à démarrer une conversation. Elles sont
- * réunies derrière un seul bouton, avec la recherche qui manquait : au-delà d'une
- * quinzaine de personnes, la liste ne se parcourait plus.
+ * Presence and messaging used to occupy two stacked sections, each with its own chevron, its limited height and its data source,
+ * whereas they display the same people: "who is here" already served to start a conversation. They are now grouped behind a
+ * single button, with the search that was missing: beyond about fifteen people, the list could no longer be scanned.
  *
- * Les conversations viennent en premier — c'est ce qu'on rouvre — puis les personnes,
- * en ligne d'abord.
+ * Conversations come first, since they are what one reopens, then people, online first.
  */
 export default function SocialPanel() {
   const t = useT();

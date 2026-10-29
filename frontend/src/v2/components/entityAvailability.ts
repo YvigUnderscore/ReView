@@ -4,19 +4,19 @@
 import { ApiError } from '../../lib/apiClient';
 
 /**
- * Les deux questions que se pose une page d'entité avant de se rendre : « mon sujet
- * existe-t-il ? » et « l'identifiant de l'URL veut-il seulement dire quelque chose ? ».
+ * The two questions a page for an entity asks itself before rendering: "does my subject exist?" and
+ * "does the identifier in the URL even mean anything?".
  *
- * Dans leur propre fichier plutôt qu'à côté du composant : un module qui exporte à la fois
- * un composant et des fonctions casse le rafraîchissement à chaud de Vite.
+ * They live in their own file rather than beside the component: a module exporting both a component and functions
+ * breaks Vite's hot reload.
  */
 
-/** L'erreur dit-elle que l'entité est absente (404) ou fermée (403) ? */
+/** Does the error say the entity is absent (404) or locked (403)? */
 export function isMissingOrForbidden(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 404 || error.status === 403);
 }
 
-/** Un identifiant d'URL inexploitable (`/tasks/abc`) vaut une entité absente. */
+/** An unusable URL identifier (`/tasks/abc`) counts as an absent entity. */
 export function isBadId(id: number): boolean {
   return !Number.isFinite(id) || id <= 0;
 }

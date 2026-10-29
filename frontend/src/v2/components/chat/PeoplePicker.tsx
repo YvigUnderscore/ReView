@@ -13,9 +13,9 @@ import { Input } from '../ui/input';
 import { useT } from '../../i18n';
 
 /**
- * Choix de destinataires dans l'annuaire du studio — sert aussi bien à ouvrir un groupe
- * qu'à inviter du monde dans un fil existant. Le champ `title` (nom du groupe) n'apparaît
- * que sur demande : un tête-à-tête n'a pas de nom.
+ * Recipient picker over the studio directory. Used both to open a group and to invite
+ * people into an existing thread. The `title` field (group name) only appears on demand:
+ * a one-to-one conversation has no name.
  */
 export default function PeoplePicker({
   open,
@@ -45,8 +45,8 @@ export default function PeoplePicker({
     return users
       .filter((u) => u.id !== self?.id && !excludeIds.includes(u.id))
       .filter((u) => !q || u.displayName.toLowerCase().includes(q));
-    // `excludeIds` est un littéral recréé à chaque rendu : le comparer par contenu
-    // éviterait un recalcul, mais la liste tient en quelques dizaines de personnes.
+    // `excludeIds` is a literal recreated on every render: comparing it by content would
+    // avoid a recomputation, but the list holds only a few dozen people.
   }, [users, self?.id, excludeIds, query]);
 
   const submit = async () => {

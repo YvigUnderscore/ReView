@@ -5,12 +5,11 @@ import { AtSign, Bell, ClipboardCheck, ListTodo, MessageSquare, Radio, Reply, St
 import type { Notification } from '../../types/api';
 
 /**
- * Pictogramme d'une notification, d'après son type.
+ * Icon of a notification, by its type.
  *
- * La comparaison se fait en capitales : une décision de review s'écrivait
- * `review_decision`, et tombait donc sur la cloche générique au même titre qu'un type
- * inconnu. Ici, contrairement à la destination du clic, tolérer l'ancienne graphie ne
- * coûte rien — une icône ne peut pas ouvrir le mauvais média.
+ * The comparison is done in capitals: a review decision used to be written `review_decision`, and therefore fell back on the
+ * generic bell, like an unknown type. Here, unlike the click destination, tolerating the old spelling costs nothing: an icon
+ * cannot open the wrong media.
  */
 export default function NotificationIcon({ type }: { type: Notification['type'] }) {
   const cls = 'mt-0.5 shrink-0 text-muted-foreground';

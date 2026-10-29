@@ -7,15 +7,14 @@ import { statusSwatch } from '../../lib/contrast';
 import { useTheme } from '../../stores/useTheme';
 
 /**
- * Pastille d'un statut de pipeline.
+ * Pipeline status badge.
  *
- * La couleur vient du référentiel (celle du site ShotGrid quand il en fournit une),
- * pas d'une table figée : c'est tout l'intérêt d'avoir rendu les statuts éditables.
- * Sans statut posé, le composant ne rend rien plutôt qu'un espace vide décoratif.
+ * The colour comes from the reference data (that of the ShotGrid site when it provides one), not from a frozen table: that is
+ * the whole point of having made the statuses editable. With no status set, the component renders nothing rather than a
+ * decorative empty space.
  *
- * La teinte du site est reprise telle quelle pour le fond, mais le texte passe par
- * `statusSwatch` (A2) : un `bg_color` sombre venu de ShotGrid était illisible sur le
- * thème bleu nuit, un jaune pâle l'était sur le thème clair.
+ * The site's tint is taken as is for the background, but the text goes through `statusSwatch` (A2): a dark `bg_color` coming
+ * from ShotGrid was unreadable on the midnight theme, and a pale yellow was unreadable on the light theme.
  */
 export default function PipelineStatusBadge({
   statusId,

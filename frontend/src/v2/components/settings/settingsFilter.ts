@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Le moteur commun à toutes les recherches de réglage.
+ * The engine shared by all settings searches.
  *
- * Il vivait dans `pages/admin/settingsSearch`, donc dans l'administration seule : les
- * réglages d'un projet et ceux d'un profil n'avaient aucun moyen de se chercher, alors
- * qu'ils posent exactement la même question — « où règle-t-on ça ». Trois familles
- * d'écrans, une seule façon de chercher.
+ * It used to live in `pages/admin/settingsSearch`, so in administration alone: the settings of a project and those of a
+ * profile had no way of being searched, although they ask exactly the same question: "where does one set this". Three
+ * families of screens, a single way of searching.
  */
 
-/** Casse et accents ignorés — « reglages » doit trouver « Réglages ». */
+/** Case and accents ignored: "reglages" must find "Réglages". */
 export function fold(value: string): string {
   return value
     .toLocaleLowerCase()
@@ -19,19 +18,17 @@ export function fold(value: string): string {
 }
 
 /**
- * Le texte dans lequel une entrée se cherche : son titre, son aide, et les mots qu'on
- * emploie réellement pour la désigner. Les vides sont écartés — une carte sans aide ne
- * doit pas répondre à une recherche vide de plus que les autres.
+ * The text in which an entry is searched: its title, its help, and the words one actually uses to designate it. Empty parts
+ * are discarded: a card without help must not answer an empty search any more than the others.
  */
 export function haystack(parts: readonly (string | undefined)[]): string {
   return fold(parts.filter((part): part is string => Boolean(part)).join(' '));
 }
 
 /**
- * L'entrée répond-elle à la recherche ? Une recherche vide laisse tout passer.
+ * Does the entry answer the search? An empty search lets everything through.
  *
- * Tous les mots doivent être présents : « quota stockage » ne doit pas rendre la moitié de
- * l'écran.
+ * All the words must be present: "storage quota" must not return half the screen.
  */
 export function matchesQuery(hay: string, query: string): boolean {
   const needle = fold(query.trim());

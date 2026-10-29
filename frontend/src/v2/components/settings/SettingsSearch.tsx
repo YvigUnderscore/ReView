@@ -7,25 +7,23 @@ import { useT } from '../../i18n';
 import { SettingsSearchContext, useSettingsSearch } from './settingsSearchContext';
 
 /**
- * La barre de recherche des pages de réglages, et le fournisseur qui la relie aux cartes.
+ * The search bar of the settings pages, and the provider that connects it to the cards.
  *
- * L'administration savait chercher parmi ses sections ; les réglages d'un projet et ceux
- * d'un profil, non — on y descendait une colonne de quinze cartes en lisant les titres.
- * Une seule mécanique sert désormais les trois familles : la barre pose la question, chaque
- * `SettingsCard` y répond pour elle-même, et le compte des réponses permet de dire
- * « aucun réglage » plutôt que de laisser une page vide.
+ * Administration could search among its sections; a project's and a profile's settings could not: one went down a column of
+ * fifteen cards reading the titles. A single mechanism now serves the three families: the bar asks the question, each
+ * `SettingsCard` answers it for itself, and the count of answers makes it possible to say "no settings" rather than leave
+ * an empty page.
  *
- * Le libellé est celui de l'administration (`admin.search.*`) : c'est le même message, déjà
- * relu dans les quatorze langues — le dupliquer sous un autre nom n'aurait ajouté que
- * quatorze traductions à maintenir.
+ * The label is that of administration (`admin.search.*`): it is the same message, already reviewed in the fourteen languages.
+ * Duplicating it under another name would only have added fourteen translations to maintain.
  */
 export function SettingsSearchProvider({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState('');
   const shown = useRef(new Set<string>());
   const [visible, setVisible] = useState(0);
 
-  // Stable : la carte l'appelle depuis un effet, une identité changeante le relancerait
-  // à chaque rendu. `Set.size` ne change pas quand rien ne change, et React s'arrête là.
+  // Stable: the card calls it from an effect, and a changing identity would re-run it on every render. `Set.size` does not
+  // change when nothing changes, and React stops there.
   const report = useCallback((id: string, isVisible: boolean) => {
     if (isVisible) shown.current.add(id);
     else shown.current.delete(id);
@@ -36,13 +34,13 @@ export function SettingsSearchProvider({ children }: { children: ReactNode }) {
   return <SettingsSearchContext.Provider value={value}>{children}</SettingsSearchContext.Provider>;
 }
 
-/** Le champ de recherche. Même dessin dans l'administration, un projet et un profil. */
+/** The search field. Same drawing in administration, a project and a profile. */
 export function SettingsSearchBar({
   value,
   onChange,
   className,
 }: {
-  /** Fournis pour une barre pilotée de l'extérieur (barre latérale d'administration). */
+  /** Provided for a bar driven from outside (administration sidebar). */
   value?: string;
   onChange?: (value: string) => void;
   className?: string;
@@ -69,7 +67,7 @@ export function SettingsSearchBar({
   );
 }
 
-/** « Aucun réglage » — affiché quand la recherche ne laisse plus rien à l'écran. */
+/** "No settings": shown when the search leaves nothing on screen. */
 export function SettingsSearchEmpty() {
   const t = useT();
   const { query, visible } = useSettingsSearch();

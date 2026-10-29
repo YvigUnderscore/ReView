@@ -18,7 +18,7 @@ import { removeDraft, toDrafts } from './attachmentDrafts';
 import { useObjectUrls } from './useObjectUrls';
 import { useT } from '../../i18n';
 
-/** Zone de réponse à un commentaire (texte + images jointes, paste CTRL+V, 8 max). */
+/** Reply area for a comment (text, attached images, CTRL+V paste, 8 max). */
 export default function ReplyComposer({
   mediaObjectId,
   parentId,
@@ -36,7 +36,7 @@ export default function ReplyComposer({
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
-  // Autocomplete des mentions @membre (32.B).
+  // Mention autocomplete for @member (32.B).
   const mentions = useMentions(text, setText, textRef);
 
   const addFiles = (add: File[]) => {
@@ -45,7 +45,7 @@ export default function ReplyComposer({
     setFiles((fs) => [...fs, ...add].slice(0, MAX_COMMENT_ATTACHMENTS));
   };
   const onPasteImage = useImagePaste(addFiles);
-  // Mêmes vignettes que dans le composeur principal : on voit ce qu'on joint avant d'envoyer.
+  // Same thumbnails as in the main composer: you see what you attach before sending.
   const drafts = toDrafts([], files, useObjectUrls(files));
   const dropDraft = (id: string) => setFiles((fs) => removeDraft(id, fs, []).files);
 

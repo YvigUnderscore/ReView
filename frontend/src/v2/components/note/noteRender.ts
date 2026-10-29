@@ -6,21 +6,19 @@ import { isUnsafeHref, isUnsafeSrc } from '../../pages/docs/docsRender';
 import { isNoteImageKey, parseImageOptions } from './noteMarkdown';
 
 /**
- * Rendu du markdown d'une fiche d'entité.
+ * Rendering the markdown of an entity's note.
  *
- * Distinct de `renderDocHtml` : la documentation réécrit les liens internes du dépôt,
- * retire un préambule et traduit des encarts — rien de tout cela n'a de sens pour un brief
- * de plan. Ce qui est commun, en revanche, ce sont les deux garde-fous, et ils sont repris
- * tels quels : le **HTML brut est échappé** (le serveur stocke du texte, il n'assainit rien)
- * et les protocoles exécutables sont retirés des liens comme des images.
+ * Distinct from `renderDocHtml`: the documentation rewrites the repository's internal links, strips a preamble and
+ * translates call-out boxes, none of which makes sense for a shot brief. What is common, however, are the two guards, and
+ * they are taken over as they are: **raw HTML is escaped** (the server stores text, it sanitises nothing) and executable
+ * protocols are removed from links as well as images.
  *
- * Une fiche est écrite par un superviseur, pas par un inconnu — mais « écrite par quelqu'un
- * de confiance » n'a jamais empêché un copier-coller depuis un site quelconque.
+ * A note is written by a supervisor, not by a stranger, but "written by someone trusted" has never prevented a copy-paste
+ * from some arbitrary website.
  *
- * Deux choses s'ajoutent ici, que le markdown ne sait pas dire seul : la **disposition**
- * d'une image (portée par son titre, cf. `noteMarkdown`) et la **résolution des clés** —
- * une fiche enregistre `note-images/shot/12/…`, jamais une URL présignée, qui aurait expiré
- * bien avant qu'on relise le brief.
+ * Two things are added here, which markdown cannot express alone: the **layout** of an image (carried by its title, see
+ * `noteMarkdown`) and the **resolution of keys**: a note stores `note-images/shot/12/…`, never a presigned URL, which would
+ * have expired long before the brief is reread.
  */
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -35,14 +33,14 @@ const md = new Marked({
   },
 });
 
-/** Transforme une clé de stockage en URL affichable ; rend `undefined` si elle est inconnue. */
+/** Turns a storage key into a displayable URL; returns `undefined` if it is unknown. */
 export type ImageResolver = (src: string) => string | undefined;
 
 /**
- * Markdown → HTML assaini.
+ * Markdown → sanitised HTML.
  *
- * L'assainissement passe par le DOM plutôt que par des expressions sur la chaîne : c'est le
- * navigateur qui décide ce qu'est un attribut `href`, et lui seul sait le faire fidèlement.
+ * Sanitisation goes through the DOM rather than through expressions on the string: it is the browser that decides what an
+ * `href` attribute is, and only it can do so faithfully.
  */
 export function renderNoteHtml(markdown: string, resolve?: ImageResolver): string {
   const tpl = document.createElement('template');
@@ -51,8 +49,8 @@ export function renderNoteHtml(markdown: string, resolve?: ImageResolver): strin
   for (const a of tpl.content.querySelectorAll('a[href]')) {
     if (isUnsafeHref(a.getAttribute('href') ?? '')) a.removeAttribute('href');
     else {
-      // Une fiche renvoie vers l'extérieur (une planche, un document de production) : le
-      // lien s'ouvre à côté, et `noreferrer` évite de livrer l'adresse de l'instance.
+      // A note links outwards (a board, a production document): the link opens alongside, and `noreferrer` prevents
+      // delivering the address of the instance.
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noreferrer');
     }
@@ -63,7 +61,7 @@ export function renderNoteHtml(markdown: string, resolve?: ImageResolver): strin
       img.remove();
       continue;
     }
-    // Le titre porte la disposition ; il ne doit pas finir en infobulle sous le curseur.
+    // The title carries the layout; it must not end up as a tooltip under the cursor.
     const options = parseImageOptions(img.getAttribute('title') ?? undefined);
     img.removeAttribute('title');
     img.setAttribute('data-align', options.align);
@@ -72,9 +70,8 @@ export function renderNoteHtml(markdown: string, resolve?: ImageResolver): strin
     const resolved = resolve?.(src);
     if (resolved) img.setAttribute('src', resolved);
     else if (isNoteImageKey(src)) {
-      // La clé n'a pas encore son URL (résolution en cours, ou projet fermé au lecteur) :
-      // laisser le `src` tel quel afficherait une icône d'image cassée, ce qui se lit comme
-      // « la planche a été perdue ». Un cadre vide dit mieux ce qui se passe.
+      // The key does not have its URL yet (resolution in progress, or project closed to the reader): leaving the `src`
+      // as is would show a broken image icon, which reads as "the board was lost". An empty frame says better what is happening.
       const placeholder = tpl.ownerDocument.createElement('span');
       placeholder.setAttribute('data-note-image-pending', '');
       placeholder.setAttribute('style', img.getAttribute('style') ?? '');

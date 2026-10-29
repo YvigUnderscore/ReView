@@ -10,15 +10,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { useT } from '../../i18n';
 
 /**
- * Sélecteur de projet en tête de barre latérale (C1).
+ * Project selector at the head of the sidebar (C1).
  *
- * La barre listait les huit projets les plus récemment modifiés, chacun dépliable en un
- * arbre de séquences, de plans et d'assets. Deux conséquences : un projet plus ancien
- * n'apparaissait nulle part — pas même celui qu'on était en train de regarder — et
- * déplier une séquence chargeait tout son contenu pour n'afficher que des codes.
+ * The bar used to list the eight most recently modified projects, each expandable into a tree of sequences, shots and
+ * assets. Two consequences: an older project appeared nowhere, not even the one one was looking at, and expanding a
+ * sequence loaded all its content just to display codes.
  *
- * La barre devient donc la navigation D'UN projet : celui-ci en tête, changeable d'un
- * clic, et en dessous ses sections. La liste complète reste à un clic, sans arbre.
+ * The bar therefore becomes the navigation OF ONE project: this one at the head, changeable with one click, and its
+ * sections beneath it. The full list remains one click away, without a tree.
  */
 export default function ProjectSwitcher({
   projects,

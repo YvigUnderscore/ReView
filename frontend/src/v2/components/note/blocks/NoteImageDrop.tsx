@@ -7,16 +7,14 @@ import { NOTE_IMAGE_ACCEPT, isAcceptedNoteImage } from '../noteImages';
 import { useT } from '../../../i18n';
 
 /**
- * Faire entrer une image dans une fiche.
+ * Bringing an image into a note.
  *
- * Trois gestes, parce qu'on ne se souvient jamais de celui qui marche : **déposer** un
- * fichier, **coller** depuis le presse-papier (le geste des artistes, capture au clavier
- * puis Ctrl+V) et **choisir** au sélecteur de fichiers. Le troisième ne sert qu'à ceux qui
- * n'ont pas essayé les deux premiers, mais il doit exister — c'est le seul qui s'atteint
- * au clavier.
+ * Three gestures, because one never remembers which one works: **dropping** a file, **pasting** from the clipboard (the
+ * artists' gesture: capture on the keyboard, then Ctrl+V) and **choosing** through the file picker. The third only serves
+ * those who have not tried the first two, but it must exist: it is the only one reachable from the keyboard.
  *
- * Les fichiers d'un autre type sont écartés en silence : lâcher un dossier de rendus sur
- * une planche est courant, et une erreur par fichier refusé n'apprendrait rien.
+ * Files of another type are discarded silently: dropping a folder of renders onto a board is common, and an error per
+ * refused file would teach nothing.
  */
 export default function NoteImageDrop({
   onFiles,
@@ -27,7 +25,7 @@ export default function NoteImageDrop({
   onFiles: (files: File[]) => void;
   busy?: boolean;
   multiple?: boolean;
-  /** Version réduite, pour un bloc qui porte déjà une image. */
+  /** Reduced version, for a block that already carries an image. */
   compact?: boolean;
 }) {
   const t = useT();
@@ -48,8 +46,7 @@ export default function NoteImageDrop({
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
         e.preventDefault();
-        // Ce dépôt-ci est traité : le garde-fou de l'éditeur ne doit pas l'ajouter une
-        // seconde fois à la fin de la fiche.
+        // This drop is handled: the editor's guard must not add it a second time at the end of the note.
         e.stopPropagation();
         setOver(false);
         take(e.dataTransfer.files);
@@ -67,7 +64,7 @@ export default function NoteImageDrop({
         className="hidden"
         onChange={(e) => {
           take(e.target.files);
-          // Sans cette remise à zéro, redéposer le même fichier ne déclencherait rien.
+          // Without this reset, dropping the same file again would trigger nothing.
           e.target.value = '';
         }}
       />

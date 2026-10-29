@@ -12,12 +12,11 @@ import NoteImageDrop from './NoteImageDrop';
 import { useT } from '../../../i18n';
 
 /**
- * Une image posée seule dans le fil.
+ * An image placed on its own in the thread.
  *
- * Elle se règle comme on la lira : pleine largeur pour un plan de référence, centrée et
- * réduite pour une vignette, à gauche ou à droite quand le texte doit couler autour. La
- * largeur est en pourcentage de la colonne, jamais en pixels — un brief se lit aussi sur
- * un écran deux fois plus étroit que celui où il a été écrit.
+ * It is sized the way it will be read: full width for a reference plate, centred and reduced for a thumbnail, left or
+ * right when the text must flow around it. The width is a percentage of the column, never pixels: a brief is also read on
+ * a screen half as wide as the one it was written on.
  */
 export default function NoteImageBlock({
   block,

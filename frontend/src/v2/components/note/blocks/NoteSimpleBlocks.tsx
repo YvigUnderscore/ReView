@@ -8,12 +8,11 @@ import type { HeadingBlock, ProgressEditBlock, SmallEditBlock, TitleBlock } from
 import { useT } from '../../../i18n';
 
 /**
- * Les blocs qui tiennent sur une ligne : un titre de section, une jauge, un sous-texte.
+ * Blocks that fit on one line: a section title, a gauge, a sub-text.
  *
- * Chacun montre à l'édition exactement ce qu'il vaudra à la lecture — une jauge se règle
- * au chiffre et se voit à la barre, un titre replié porte le chevron qu'il aura dans la
- * fiche. C'est ce qui remplace `::progress Animation 60` : la directive existe toujours à
- * l'enregistrement, mais plus personne n'a à l'écrire ni même à la connaître.
+ * Each one shows, while editing, exactly what it will be when read: a gauge is set by its figure and seen on its bar, and a
+ * collapsed title carries the chevron it will have in the note. This replaces `::progress Animation 60`: the directive still
+ * exists when saving, but nobody has to write it or even know it.
  */
 
 export function HeadingEditor({
@@ -51,10 +50,10 @@ export function HeadingEditor({
 }
 
 /**
- * Un intertitre : il découpe la lecture, il ne la replie pas.
+ * A subheading: it divides the reading, it does not collapse it.
  *
- * Distinct de la section pour une raison de lecture, pas de syntaxe : un dépliant demande
- * un geste avant de livrer son contenu, et sur un brief court ce geste ne rapporte rien.
+ * Distinct from the section for a reading reason, not a syntactic one: a dropdown asks for a gesture before revealing its
+ * content, and on a short brief that gesture brings nothing.
  */
 export function TitleEditor({
   block,

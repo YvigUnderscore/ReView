@@ -11,20 +11,19 @@ import type { ProjectStats } from '../../types/api';
 import { intlLocale, useT, type MessageKey, type Tr } from '../../i18n';
 
 /**
- * Ce qui tourne en rond : retakes par plan, délai d'approbation, plans qui repassent.
+ * What goes round in circles: retakes per shot, approval delay, shots that come back.
  *
- * Un studio ne perd pas son temps sur les plans difficiles, il le perd sur les plans qui
- * reviennent — et rien dans l'onglet ne le montrait : les retakes n'existaient que comme
- * moyenne noyée au milieu d'autres moyennes. Le panneau les sort et les classe.
+ * A studio does not lose its time on difficult shots, it loses it on shots that keep coming back, and nothing in the tab
+ * showed it: retakes only existed as an average drowned among other averages. The panel pulls them out and ranks them.
  *
- * La lecture de la réponse est déjà écrite et testée (`readRetakes`/`rankRetakes`) : elle
- * retombe sur l'ancienne forme du serveur quand celui d'en face ne rend pas encore les
- * tours de review ni la distribution, plutôt que d'afficher un tableau vide.
+ * Reading the response is already written and tested (`readRetakes`/`rankRetakes`): it falls back to the server's old
+ * shape when the server on the other end does not yet return the review rounds nor the distribution, rather than
+ * displaying an empty table.
  */
 
 const nf = (value: number): string => value.toLocaleString(intlLocale(), { maximumFractionDigits: 1 });
 
-/** Une valeur absente s'écrit comme telle — un zéro serait une affirmation fausse. */
+/** A missing value is written as such: a zero would be a false assertion. */
 const NONE = '—';
 
 function Tile({ labelKey, value }: { labelKey: MessageKey; value: string }) {
@@ -37,7 +36,7 @@ function Tile({ labelKey, value }: { labelKey: MessageKey; value: string }) {
   );
 }
 
-/** Le libellé d'une tranche : « 3 », « 1–2 », « 5+ ». */
+/** The label of a bucket: "3", "1–2", "5+". */
 function bucketLabel(bucket: RetakeBucket, t: Tr): string {
   if (bucket.max === null) return t('production.retakes.bucketFrom', { min: bucket.min });
   if (bucket.max === bucket.min) return String(bucket.min);

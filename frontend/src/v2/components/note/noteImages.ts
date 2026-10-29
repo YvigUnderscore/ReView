@@ -9,15 +9,14 @@ import { t } from '../../i18n';
 import type { ImageResolver } from './noteRender';
 
 /**
- * Les images qu'une fiche porte : les y déposer, puis les afficher.
+ * The images a note carries: putting them in, then displaying them.
  *
- * Le dépôt suit la voie habituelle — présignature, PUT direct vers MinIO, la fiche
- * n'enregistre que la clé. L'affichage fait le chemin inverse : les clés d'une fiche sont
- * résolues en un seul appel, et le résultat vit dans le cache de requêtes, ce qui évite de
- * redemander la même URL à chaque frappe pendant l'édition.
+ * Dropping follows the usual route: presigning, a direct PUT to MinIO, and the note only saves the key. Display takes the
+ * reverse path: a note's keys are resolved in a single call, and the result lives in the query cache, which avoids asking
+ * for the same URL again on every keystroke while editing.
  */
 
-/** Types acceptés au dépôt (miroir du Zod backend). */
+/** Types accepted on drop (mirror of the backend Zod schema). */
 export const NOTE_IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,image/avif';
 
 const ACCEPTED = /^image\/(png|jpe?g|webp|gif|avif)$/;
@@ -25,19 +24,18 @@ const ACCEPTED = /^image\/(png|jpe?g|webp|gif|avif)$/;
 export const isAcceptedNoteImage = (file: File): boolean => ACCEPTED.test(file.type);
 
 export interface UploadedNoteImage {
-  /** Ce qui s'écrit dans la fiche. */
+  /** What is written into the note. */
   key: string;
-  /** Ce qui s'affiche tout de suite, sans attendre une résolution. */
+  /** What is displayed straight away, without waiting for a resolution. */
   url: string;
   alt: string;
 }
 
 /**
- * Dépose une image et rend de quoi l'écrire dans la fiche.
+ * Drops an image and returns what is needed to write it into the note.
  *
- * Le nom du fichier devient le texte de remplacement : c'est le seul libellé que
- * quelqu'un ait écrit, et une planche de références sans aucun `alt` est illisible au
- * lecteur d'écran comme au moteur de recherche interne.
+ * The file name becomes the replacement text: it is the only label anyone has written, and a reference board without any
+ * `alt` is unreadable to the screen reader as well as to the internal search engine.
  */
 export async function uploadNoteImage(kind: NoteKind, id: number, file: File): Promise<UploadedNoteImage> {
   const { url, key, readUrl } = await api.post<{ url: string; key: string; readUrl: string }>(
@@ -45,17 +43,16 @@ export async function uploadNoteImage(kind: NoteKind, id: number, file: File): P
     { filename: file.name, contentType: file.type },
   );
   const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-  // Le dépôt va droit à MinIO : le message d'échec est le nôtre, personne d'autre n'en écrit.
+  // The upload goes straight to MinIO: the failure message is ours, nobody else writes one.
   if (!put.ok) throw new Error(t('note.images.failed', { name: file.name }));
   return { key, url: readUrl, alt: file.name.replace(/\.[^.]*$/, '') };
 }
 
 /**
- * Les URL de lecture d'un lot de clés.
+ * Read URLs for a batch of keys.
  *
- * Les clés sont triées avant de servir de clé de cache : le même ensemble d'images
- * demandé dans un autre ordre est le même appel, et une fiche réordonnée ne doit pas
- * repartir chercher ce qu'elle a déjà.
+ * The keys are sorted before serving as the cache key: the same set of images requested in another order is the same call,
+ * and a reordered note must not go fetch again what it already has.
  */
 export function useNoteImageUrls(keys: string[]) {
   const sorted = [...new Set(keys)].sort();
@@ -66,17 +63,16 @@ export function useNoteImageUrls(keys: string[]) {
         .post<{ urls: Record<string, string> }>('/api/note-images/resolve', { keys: sorted })
         .then((r) => r.urls),
     enabled: sorted.length > 0,
-    // Les URL présignées vivent une heure ; les redemander avant serait du bruit.
+    // Presigned URLs live for one hour; requesting them again earlier would be noise.
     staleTime: 30 * 60_000,
   });
 }
 
 /**
- * La table de résolution en vigueur pour l'arbre affiché.
+ * The resolution table in force for the displayed tree.
  *
- * Un contexte plutôt qu'une prop : la résolution traverse la fiche, les sections, les
- * planches et jusqu'au HTML du markdown. La faire descendre à la main aurait imposé un
- * paramètre à chaque composant de rendu, y compris ceux qui n'affichent aucune image.
+ * A context rather than a prop: resolution goes through the note, the sections, the boards and down to the markdown's HTML.
+ * Passing it down by hand would have imposed a parameter on every rendering component, including those that display no image.
  */
 const NoteImageContext = createContext<ImageResolver | undefined>(undefined);
 
@@ -84,6 +80,6 @@ export const NoteImageProvider = NoteImageContext.Provider;
 
 export function useNoteImageResolver(): ImageResolver {
   const resolve = useContext(NoteImageContext);
-  // Sans fournisseur, une fiche qui ne porte que des URL externes s'affiche quand même.
+  // Without a provider, a note carrying only external URLs still displays.
   return resolve ?? (() => undefined);
 }

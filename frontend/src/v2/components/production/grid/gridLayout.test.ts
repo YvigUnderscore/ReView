@@ -5,31 +5,30 @@ import { describe, expect, it } from 'vitest';
 import { COL_W_MAX, COL_W_MIN, HEAD_W, columnWidth, lineWidth } from './gridLayout';
 
 /**
- * La largeur des colonnes, depuis que la case écrit le nom de son statut.
+ * Column width, since the cell writes the name of its status.
  *
- * Deux écueils à éviter, et ce sont eux que ces cas verrouillent : une grille qui garde la
- * largeur d'avant coupe « In Progress » au milieu, une grille taillée pour le pire nom
- * imaginable impose à tout le monde une table qu'on ne voit plus d'un écran.
+ * Two pitfalls to avoid, and these are what these cases lock down: a grid that keeps the earlier width cuts "In Progress"
+ * in the middle, and a grid sized for the worst imaginable name forces on everyone a table one can no longer see on a screen.
  */
 describe('columnWidth', () => {
-  it('ne prend pas un pixel de plus qu’avant quand les noms sont courts', () => {
-    // « Final », « Omitted », « ip » : un référentiel ShotGrid tient dans la largeur d'avant.
+  it('takes not one pixel more than before when the names are short', () => {
+    // "Final", "Omitted", "ip": a ShotGrid reference fits within the earlier width.
     expect(columnWidth(0)).toBe(COL_W_MIN);
     expect(columnWidth('Final'.length)).toBe(COL_W_MIN);
   });
 
-  it('élargit pour le vocabulaire local, que toute instance reçoit à la migration', () => {
+  it('widens for the local vocabulary, which every instance receives at migration', () => {
     const width = columnWidth('In Progress'.length);
     expect(width).toBeGreaterThan(COL_W_MIN);
     expect(width).toBeLessThanOrEqual(COL_W_MAX);
   });
 
-  it('plafonne : un nom interminable se coupe, il n’emporte pas la table', () => {
+  it('caps: an endless name is cut, it does not carry the whole table along', () => {
     expect(columnWidth('Pending Supervisor And Client Approval'.length)).toBe(COL_W_MAX);
     expect(columnWidth(500)).toBe(COL_W_MAX);
   });
 
-  it('ne rétrécit jamais quand le nom s’allonge', () => {
+  it('never shrinks when the name gets longer', () => {
     let previous = 0;
     for (let length = 0; length <= 40; length += 1) {
       const width = columnWidth(length);
@@ -40,7 +39,7 @@ describe('columnWidth', () => {
 });
 
 describe('lineWidth', () => {
-  it('additionne la colonne de tête et les colonnes de département', () => {
+  it('adds the head column and the department columns together', () => {
     expect(lineWidth(0, 100)).toBe(HEAD_W);
     expect(lineWidth(12, 100)).toBe(HEAD_W + 1200);
   });

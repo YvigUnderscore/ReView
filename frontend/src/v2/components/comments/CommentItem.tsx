@@ -31,11 +31,11 @@ export interface CommentItemProps {
   selectedId: number | null;
   onSelect: (c: ReviewComment) => void;
   isReply?: boolean;
-  /** Retour caméra sur un point d'intérêt de ce commentaire (numéro cliqué). */
+  /** Camera return to a point of interest of this comment (clicked number). */
   onPoiFocus?: (point: PoiPoint, index: number) => void;
 }
 
-/** Un commentaire de review (badges frame/caméra/annotation, réactions, réponses, édition). */
+/** A review comment (frame/camera/annotation badges, reactions, replies, editing). */
 export default function CommentItem({
   comment: c,
   mediaObjectId,
@@ -53,18 +53,18 @@ export default function CommentItem({
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // Fil long (D6) : seules les dernières réponses sont rendues tant qu'on n'a pas déplié.
+  // Long thread (D6): only the latest replies are rendered until expanded.
   const [allReplies, setAllReplies] = useState(false);
 
   const isAuthor = c.author?.id === currentUserId;
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
   const canEdit = isAuthor;
   const canDelete = isAuthor || isManager;
-  // Résolution (32.A) : auteur ou superviseur/admin, sur les commentaires racine.
+  // Resolution (32.A): author or supervisor/admin, on root comments.
   const canResolve = !isReply && (isAuthor || isManager);
 
-  // Les mutations passaient par un `catch {}` vide : sans droit ou sans réseau, le bouton
-  // ne produisait rien du tout — ni erreur, ni changement (D1).
+  // The mutations used to go through an empty `catch {}`: without rights or network, the button
+  // did nothing at all, neither an error nor a change (D1).
   const setState = useSetCommentState(mediaObjectId);
   const del = useDeleteComment(mediaObjectId);
   const state = stateOf(c);
@@ -77,25 +77,25 @@ export default function CommentItem({
   const replies = allReplies ? (c.replies ?? []) : shown;
 
   const hasAnnotation = Array.isArray(c.annotation) && c.annotation.length > 0;
-  // Points d'intérêt portés par CE commentaire : rendus en rangées numérotées, et retirés du
-  // texte — le bloc numéroté y est recopié pour tout ce qui ne lit que `content` (portail
-  // client, export de notes, ShotGrid), il n'a pas à s'afficher deux fois ici.
+  // Points of interest carried by THIS comment: rendered as numbered rows, and removed from the
+  // text. The numbered block is copied into everything that reads only `content` (client portal,
+  // notes export, ShotGrid), so it need not be shown twice here.
   const poiPoints = readPoiPoints(c.annotation);
   const body = stripPoiBlock(c.content, poiPoints);
-  // Une proposition d'édition de nuage dépose son masque et ses ops en pièces jointes — c'est ce
-  // qui leur donne la purge. Elles n'ont rien à faire dans la liste des fichiers du commentaire :
-  // un bitset ne s'ouvre pas. Écartées par leur clé, jamais par leur type.
+  // A cloud edit proposal stores its mask and ops as attachments, which is what gives them their
+  // purging. They have nothing to do in the comment's file list: a bitset cannot be opened.
+  // Excluded by their key, never by their type.
   const blobKeys = splatEditBlobKeys(c.annotation);
   const attachments = Array.isArray(c.attachments)
     ? c.attachments.filter((a) => !a.key || !blobKeys.includes(a.key))
     : [];
   const selected = selectedId === c.id;
   const selectable = !isReply && (c.timestamp != null || c.cameraState != null || hasAnnotation);
-  // Empêche un clic sur une action interne de déclencher la sélection de la carte. Les
-  // conteneurs qui le portent sont purement présentationnels (`role="presentation"`) : ils
-  // ne sont pas des contrôles, les boutons et champs qu'ils enveloppent restent focusables.
+  // Prevents a click on an internal action from triggering the card's selection. The containers
+  // carrying it are purely presentational (`role="presentation"`): they are not controls, and
+  // the buttons and fields they wrap stay focusable.
   const stop = (e: React.MouseEvent) => e.stopPropagation();
-  // Équivalent clavier du clic sur la carte sélectionnable.
+  // Keyboard equivalent of clicking the selectable card.
   const onCardKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
@@ -120,9 +120,9 @@ export default function CommentItem({
             }`
       }
     >
-      {/* Le bouton de résolution vit dans le coin haut droit de la carte : dans la rangée
-          d'actions, il se perdait entre « répondre » et « modifier ». Les autres états
-          passent par le clic droit — cinq boutons par carte ne se lisent pas. */}
+      {/* The resolve button lives in the top-right corner of the card: in the row of actions it
+          got lost between "reply" and "edit". Other states go through right-click, since five
+          buttons per card are hard to read. */}
       {canResolve && (
         <button
           onClick={(e) => {
@@ -163,8 +163,8 @@ export default function CommentItem({
             />
           </div>
         ) : (
-          /* Un commentaire trop grand s'ouvre replié (D6) — texte entier conservé dans le
-             document, donc toujours trouvable par une recherche. */
+          /* A comment that is too large opens collapsed (D6): the full text is kept in the
+             document, so it can always be found by search. */
           <>
             {body && (
               <CollapsibleText text={body}>
@@ -183,12 +183,12 @@ export default function CommentItem({
           </>
         )}
 
-        {/* Pièces jointes : 2 vignettes max + tuile « +x images » (lightbox), chips PDF/zip/texte */}
+        {/* Attachments: 2 thumbnails max + "+x images" tile (lightbox), PDF/zip/text chips */}
         {!editing && attachments.length > 0 && (
           <CommentAttachmentList attachments={attachments} stop={stop} />
         )}
 
-        {/* Réactions + actions */}
+        {/* Reactions + actions */}
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
           <CommentReactions comment={c} currentUserId={currentUserId} reload={reload} stop={stop} />
           {!isReply && (
@@ -244,7 +244,7 @@ export default function CommentItem({
             ))}
         </div>
 
-        {/* Réponses : les dernières d'abord, le reste sur un clic (D6) */}
+        {/* Replies: the latest first, the rest on click (D6) */}
         {replies.length > 0 && (
           <div className="mt-2 space-y-1 border-l border-border pl-2">
             {hidden.length > 0 && (

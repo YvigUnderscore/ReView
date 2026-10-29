@@ -9,18 +9,16 @@ import { useNoteImageResolver } from './noteImages';
 import { useT } from '../../i18n';
 
 /**
- * Les références d'une fiche : une planche, ou un carrousel.
+ * A note's references: a board, or a carousel.
  *
- * On regarde une planche de deux façons, et il faut les deux : toutes ensemble, quand on
- * cherche la cohérence d'un ensemble — et une par une, en grand, quand on cherche un
- * détail. La disposition écrite dans la fiche décide de la première ; la seconde est
- * toujours à un clic, dans la lightbox commune à toute l'application.
+ * A board is looked at in two ways, and both are needed: all together, when one seeks the coherence of a set; and one
+ * by one, enlarged, when one seeks a detail. The layout written in the note decides the first; the second is always one
+ * click away, in the lightbox shared across the whole application.
  *
- * Le carrousel reste la disposition des fiches écrites avant les planches : leur rendu ne
- * change pas d'une ligne.
+ * The carousel remains the layout of notes written before boards: their rendering does not change by a line.
  */
 
-/** Les colonnes s'écrivent en classes complètes : Tailwind ne lit pas les noms calculés. */
+/** Columns are written as full classes: Tailwind does not read computed names. */
 const COLS: Record<number, string> = {
   1: 'grid-cols-1',
   2: 'grid-cols-2',
@@ -28,7 +26,7 @@ const COLS: Record<number, string> = {
   4: 'grid-cols-2 sm:grid-cols-4',
 };
 
-/** Une vignette, ou son cadre tant que l'URL de lecture n'est pas revenue. */
+/** A thumbnail, or its frame while the read URL has not come back. */
 function Thumb({ image, height, onClick }: { image: NoteImage; height: number; onClick: () => void }) {
   const resolve = useNoteImageResolver();
   const src = resolve(image.src) ?? (isNoteImageKey(image.src) ? null : image.src);
@@ -76,7 +74,7 @@ export default function NoteRefs({
   const current = images[Math.min(index, images.length - 1)];
   const go = (delta: number) => setIndex((i) => (i + delta + images.length) % images.length);
 
-  /** La lightbox ne montre que ce qui est affichable : une clé non résolue n'y a pas sa place. */
+  /** The lightbox only shows what is displayable: an unresolved key has no place there. */
   const zoomable = images
     .map((image) => ({ src: resolve(image.src) ?? image.src, alt: image.alt }))
     .filter((image) => !isNoteImageKey(image.src));

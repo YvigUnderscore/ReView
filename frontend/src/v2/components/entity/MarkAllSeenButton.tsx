@@ -7,15 +7,14 @@ import { useMarkAllSeen, type VisitListTarget } from '../../lib/useVisits';
 import { useT } from '../../i18n';
 
 /**
- * « Tout marquer comme lu » — le bouton qui éteint une liste entière.
+ * "Mark all as read": the button that switches off a whole list.
  *
- * L'interface se veut sobre et fait passer toute action par le clic droit ; celle-ci est
- * l'exception assumée, parce qu'elle ne porte sur aucune carte en particulier : il n'existe
- * pas de carte sur laquelle faire ce clic droit. Elle reste invisible tant qu'il n'y a rien
- * à éteindre, et ne pèse donc que sur les écrans qui ont effectivement du nouveau.
+ * The interface aims to be sober and routes every action through right-click; this one is the deliberate exception,
+ * since it applies to no card in particular: there is no card on which to right-click. It stays invisible as long as
+ * there is nothing to switch off, so it only weighs on screens that actually have news.
  *
- * Le compte affiché est celui de la liste chargée. Le geste, lui, porte sur tout le projet :
- * ce qui reste à descendre s'éteint aussi, sinon « tout » serait un mensonge.
+ * The count shown is that of the loaded list. The gesture, however, covers the whole project: what remains to be
+ * scrolled to is switched off too, otherwise "all" would be a lie.
  */
 export default function MarkAllSeenButton({
   target,
@@ -35,8 +34,8 @@ export default function MarkAllSeenButton({
       size="sm"
       disabled={mark.isPending}
       onClick={() => mark.mutate()}
-      // Le compte vit dans l'infobulle, pas dans le libellé : un bouton dont le texte
-      // change de longueur à chaque rafraîchissement fait sauter la barre d'outils.
+      // The count lives in the tooltip, not in the label: a button whose text changes length on every
+      // refresh would make the toolbar jump.
       title={t('cards.markAllSeenHint', { count: unseenCount })}
     >
       <CheckCheck size={14} />

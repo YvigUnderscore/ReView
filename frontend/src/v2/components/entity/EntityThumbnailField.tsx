@@ -10,15 +10,15 @@ import type { EntityKind } from './entitySettings';
 import { useT } from '../../i18n';
 
 /**
- * Vignette d'une entité (C3) : la choisir, la remplacer, la retirer.
+ * An entity's thumbnail (C3): choose it, replace it, remove it.
  *
- * `thumbnailKey` existait en base et le PATCH l'acceptait, mais rien dans l'application ne
- * savait produire la clé — aucune entité n'a donc jamais pu porter d'image. Sans vignette
- * choisie, l'entité retombe sur la miniature de son premier média publié, comme avant.
+ * `thumbnailKey` existed in the database and the PATCH accepted it, but nothing in the application could produce
+ * the key, so no entity could ever carry an image. Without a chosen thumbnail, the entity falls back to the
+ * thumbnail of its first published media, as before.
  */
 
 const ACCEPTED = 'image/png,image/jpeg,image/webp';
-/** Au-delà, c'est un rendu qu'on dépose par erreur, pas une vignette. */
+/** Beyond this size it is a render dropped by mistake, not a thumbnail. */
 const MAX_BYTES = 8 * 1024 * 1024;
 
 export default function EntityThumbnailField({
@@ -43,8 +43,8 @@ export default function EntityThumbnailField({
       toast.error(t('entity.settings.thumbnailTooLarge'));
       return;
     }
-    // Aperçu immédiat : le dépôt vers MinIO puis l'invalidation prennent une seconde ou
-    // deux, pendant lesquelles l'ancienne image resterait affichée sans rien dire.
+    // Immediate preview: the upload to MinIO and the invalidation take a second or two, during which the old
+    // image would stay displayed without any sign.
     setPreview(URL.createObjectURL(file));
     setThumbnail.mutate(file, {
       onSuccess: () => toast.success(t('entity.settings.thumbnailSaved')),

@@ -8,16 +8,14 @@ import { uploadNoteImage, type UploadedNoteImage } from './noteImages';
 import { useT } from '../../i18n';
 
 /**
- * Le dépôt d'images pendant l'édition d'une fiche.
+ * Image uploads while a note is being edited.
  *
- * Les fichiers partent **ensemble** : déposer une planche de douze références en file
- * indienne ferait attendre une minute là où il en faut cinq secondes. Et chacun est
- * indépendant — un fichier corrompu au milieu du lot ne doit pas emporter les onze autres,
- * il signale son échec et les autres arrivent.
+ * Files leave **together**: dropping a board of twelve references one after the other would make one wait a minute where
+ * five seconds are needed. And each is independent: a corrupt file in the middle of the batch must not take the other eleven
+ * with it; it reports its failure and the others arrive.
  *
- * Les URL de lecture rendues au dépôt sont conservées ici : l'image s'affiche à la seconde
- * où elle est déposée, sans attendre que la fiche soit enregistrée ni que ses clés soient
- * résolues.
+ * The read URLs returned at upload are kept here: the image displays the second it is dropped, without waiting for the note
+ * to be saved or for its keys to be resolved.
  */
 export function useNoteUploads(kind: NoteKind, id: number) {
   const t = useT();
@@ -35,8 +33,8 @@ export function useNoteUploads(kind: NoteKind, id: number) {
             done.push(result.value);
             return;
           }
-          // Le message du serveur quand il y en a un (projet archivé, droit manquant) ;
-          // le nôtre sinon — dire « échec » sans dire lequel des douze fichiers n'aide pas.
+          // The server's message when there is one (archived project, missing right); ours otherwise. Saying "failed"
+          // without saying which of the twelve files is at fault is no help.
           const reason = result.reason;
           toast.error(
             reason instanceof Error ? reason.message : t('note.images.failed', { name: files[i].name }),

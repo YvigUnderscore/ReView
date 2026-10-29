@@ -8,12 +8,11 @@ import { t } from '../../i18n';
 import NoteEditor from './NoteEditor';
 
 /**
- * L'éditeur de fiche, monté comme l'application le monte.
+ * The note editor, mounted the way the application mounts it.
  *
- * Ce qui compte n'est pas la forme de l'écran mais le contrat de bout en bout : ce qu'on
- * ouvre, ce qu'on y fait, ce qui part au serveur. Le markdown reste le format enregistré,
- * et c'est précisément ce que ces tests surveillent — l'éditeur peut changer d'apparence,
- * il ne peut pas se mettre à écrire autre chose.
+ * What matters is not the shape of the screen but the end-to-end contract: what is opened, what is done in it, and
+ * what goes to the server. Markdown remains the saved format, and that is precisely what these tests watch: the editor
+ * may change appearance, but it cannot start writing something else.
  */
 
 const API = { 'GET /api/note-templates': { templates: [] } };
@@ -38,23 +37,23 @@ const mount = (initial: string) => {
 const save = () => screen.getByRole('button', { name: t('common.save') });
 
 describe('NoteEditor', () => {
-  it('ouvre une fiche existante en blocs, et la réenregistre telle quelle', async () => {
+  it('opens an existing note as blocks, and saves it back unchanged', async () => {
     const source = '## Brief\n\nAmbiance de nuit.\n\n::progress Animation 60';
     const { onSave, user } = mount(source);
 
-    // Le titre de section est un champ, pas une ligne de syntaxe.
+    // The section title is a field, not a line of syntax.
     expect(screen.getByDisplayValue('Brief')).toBeInTheDocument();
-    // La jauge se règle au chiffre, et le texte s'affiche rendu.
+    // The gauge is set by its figure, and the text is displayed rendered.
     expect(screen.getByDisplayValue('Animation')).toBeInTheDocument();
     expect(screen.getByText('Ambiance de nuit.')).toBeInTheDocument();
-    // Aucune directive à l'écran : c'est tout l'objet du changement.
+    // No directive on screen: that is the whole point of the change.
     expect(screen.queryByText(/::progress/)).not.toBeInTheDocument();
 
     await user.click(save());
     expect(onSave).toHaveBeenCalledWith(source);
   });
 
-  it('écrit la directive attendue quand on règle un bloc', async () => {
+  it('writes the expected directive when a block is adjusted', async () => {
     const { onSave, user } = mount('::progress Animation 60');
 
     const label = screen.getByDisplayValue('Animation');
@@ -65,10 +64,10 @@ describe('NoteEditor', () => {
     expect(onSave).toHaveBeenCalledWith('::progress Compositing 60');
   });
 
-  it('ajoute un bloc par le menu, à l’endroit demandé', async () => {
+  it('adds a block through the menu, at the requested place', async () => {
     const { onSave, user } = mount('Un mot.');
 
-    // Le dernier « + » est celui de la fin de fiche ; les autres vivent entre les blocs.
+    // The last "+" is the one at the end of the note; the others live between the blocks.
     const adders = screen.getAllByRole('button', { name: t('note.block.add') });
     await user.click(adders[adders.length - 1]);
     await user.click(await screen.findByRole('button', { name: t('note.block.divider') }));
@@ -77,7 +76,7 @@ describe('NoteEditor', () => {
     expect(onSave).toHaveBeenCalledWith('Un mot.\n\n---');
   });
 
-  it('retire un bloc, et la fiche ne le mentionne plus', async () => {
+  it('removes a block, and the note no longer mentions it', async () => {
     const { onSave, user } = mount('Un mot.\n\n::small Précision');
 
     const rows = screen.getAllByRole('button', { name: t('note.block.remove') });
@@ -87,7 +86,7 @@ describe('NoteEditor', () => {
     expect(onSave).toHaveBeenCalledWith('Un mot.');
   });
 
-  it('bascule en aperçu : la fiche s’y lit comme elle sera lue', async () => {
+  it('switches to preview: the note is read there as it will be read', async () => {
     const { user } = mount('## Brief\n\n::progress Animation 60');
 
     await user.click(screen.getByRole('button', { name: t('note.preview') }));
@@ -97,18 +96,17 @@ describe('NoteEditor', () => {
     expect(gauge).toHaveAttribute('aria-valuenow', '60');
   });
 
-  it('ouvre une fiche vide sur un bloc de texte prêt à écrire', () => {
+  it('opens an empty note on a text block ready to be written', () => {
     mount('');
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 
   /**
-   * Un fichier lâché à côté d'une zone de dépôt : le navigateur l'ouvrirait à la place de
-   * la page, emportant la fiche en cours. Le garde-fou écoute en **capture** — en remontée,
-   * il suffisait qu'un gestionnaire intermédiaire arrête la propagation pour qu'il ne voie
-   * jamais rien passer, ce que la page faisait bel et bien.
+   * A file dropped beside a drop zone: the browser would open it in place of the page, taking the note
+   * being written with it. The guard listens in the **capture** phase: in the bubble phase, a middle handler stopping
+   * propagation was enough for it to never see anything pass, which the page indeed did.
    */
-  it('annule le dépôt d’un fichier hors zone, même si la propagation est arrêtée', () => {
+  it('cancels the drop of a file outside a zone, even when propagation is stopped', () => {
     mount('Un mot.');
     document.body.addEventListener('drop', (e) => e.stopPropagation());
 

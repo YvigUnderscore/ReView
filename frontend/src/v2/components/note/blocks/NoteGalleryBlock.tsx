@@ -27,14 +27,13 @@ import NoteImageDrop from './NoteImageDrop';
 import { useT } from '../../../i18n';
 
 /**
- * La planche de références : plusieurs images, disposées comme on veut les voir.
+ * The reference board: several images, laid out the way one wants to see them.
  *
- * Les vignettes se rangent au glisser — l'ordre d'une planche *est* son propos, on met
- * côte à côte ce qui se compare. Les colonnes et la hauteur se règlent ici et s'écrivent
- * dans la fiche : ce que le superviseur compose est ce que tout le monde verra, sans que
- * la disposition dépende de la largeur de l'écran de chacun.
+ * Thumbnails are arranged by dragging: the order of a board *is* its point, one puts side by side what is to be
+ * compared. The columns and height are set here and written into the note: what the supervisor composes is what
+ * everyone will see, without the layout depending on each person's screen width.
  *
- * Le carrousel reste proposé, pour une série qu'on feuillette plutôt qu'on n'embrasse.
+ * The carousel is still offered, for a series one flicks through rather than takes in at once.
  */
 
 const COLS: Record<number, string> = {
@@ -107,7 +106,7 @@ export default function NoteGalleryBlock({
 }) {
   const t = useT();
   const sensors = useSensors(
-    // Quelques pixels de seuil : sans eux, cliquer la croix de suppression amorcerait un glissement.
+    // A few pixels of threshold: without them, clicking the delete cross would start a drag.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );

@@ -24,7 +24,7 @@ import { useFavorites } from '../../stores/useFavorites';
 import ProjectSwitcher from './ProjectSwitcher';
 import { useT } from '../../i18n';
 
-/** Entrée de navigation de la barre latérale. */
+/** Navigation entry of the sidebar. */
 function SideLink({
   to,
   icon: Icon,
@@ -36,7 +36,7 @@ function SideLink({
   icon: LucideIcon;
   label: string;
   active: boolean;
-  /** Entrée de second niveau (section d'un projet) : plus discrète, moins haute. */
+  /** Second-level entry (a section of a project): more discreet, less tall. */
   dense?: boolean;
 }) {
   return (
@@ -56,15 +56,15 @@ function SideLink({
 }
 
 /**
- * Corps de la barre latérale (C1).
+ * Body of the sidebar (C1).
  *
- * Elle empilait l'accueil, huit projets dépliables en arbre, les reviews, les membres, les
- * réglages, les favoris, les récents, les documents et la documentation — l'essentiel étant
- * noyé, et l'arbre coûtant une requête par séquence ouverte pour n'afficher que des codes.
+ * It used to stack the home page, eight expandable projects in a tree, the reviews, the members, the settings, the favourites,
+ * the recents, the documents and the documentation: the essentials were drowned, and the tree cost one request per opened
+ * sequence just to display codes.
  *
- * Elle porte désormais trois choses, dans cet ordre : où l'on va (accueil, projets, reviews),
- * ce qu'on regarde (le projet courant et ses sections, en liens directs — plus de déroulants),
- * et ce qu'on a épinglé. Les récents ont rejoint l'accueil, où ils sont à leur place.
+ * It now carries three things, in this order: where one goes (home, projects, reviews), what one is looking at (the current
+ * project and its sections, as direct links, no more dropdowns), and what has been pinned. The recents have joined the home
+ * page, where they belong.
  */
 export default function SidebarNav({
   projects,
@@ -84,7 +84,7 @@ export default function SidebarNav({
   const onProjectPage = current !== null && pathname.startsWith('/projects/');
   const to = (suffix: string) => (current ? projectPath(current, suffix) : '/projects');
 
-  // Sections d'un projet : des liens directs vers l'onglet, sans arborescence.
+  // Sections of a project: direct links to the tab, with no tree.
   const sections: { key: string; icon: LucideIcon; label: string; href: string }[] = current
     ? [
         { key: 'sequences', icon: Film, label: t('sequences.title'), href: to('?tab=sequences') },
@@ -119,7 +119,7 @@ export default function SidebarNav({
       />
       <SideLink to="/reviews" icon={Film} label={t('nav.reviews')} active={pathname.startsWith('/reviews')} />
 
-      {/* Le projet qu'on regarde, et lui seul. */}
+      {/* The project one is looking at, and it alone. */}
       <div className="pt-3">
         <ProjectSwitcher projects={projects} currentProjectId={currentProjectId} />
       </div>
@@ -138,7 +138,7 @@ export default function SidebarNav({
         </div>
       )}
 
-      {/* Favoris : la liste seule, sans titre ni case vide — invisible tant qu'elle l'est. */}
+      {/* Favourites: the list alone, with no title or empty box, invisible as long as it is empty. */}
       {favorites.length > 0 && (
         <div className="space-y-0.5 border-t border-border pt-3">
           {favorites.map((f) => (

@@ -10,33 +10,30 @@ import type { GridActions } from './useGridActions';
 import { intlLocale, useT, type Tr } from '../../../i18n';
 
 /**
- * Une case de la grille : où en est CE département sur CE plan.
+ * A grid cell: where THIS department stands on THIS shot.
  *
- * La case **écrit le nom du statut** à côté de sa pastille. Elle ne le faisait pas : la
- * couleur seule obligeait à survoler chaque case pour savoir ce qu'elle disait, et une
- * légende ne nommait que les cinq familles — pas les statuts du référentiel du projet.
- * La couleur reste, et c'est bien le partage : elle se lit d'un coup d'œil sur une colonne
- * entière, le nom se lit ligne à ligne.
+ * The cell **writes the status name** beside its dot. It did not before: colour alone forced one to hover over each cell to
+ * know what it said, and a legend named only the five families, not the statuses of the project's reference data. The colour
+ * stays, and that is the sharing: it reads at a glance down a whole column, while the name reads row by row.
  *
- * Le reste (versions livrées, dernière activité, échéance) attend toujours le survol, et
- * les gestes le clic droit : douze cents cases ne se lisent pas si chacune raconte sa vie.
+ * The rest (delivered versions, last activity, deadline) still waits for a hover, and the gestures for right-click: twelve
+ * hundred cells cannot be read if each one tells its whole story.
  *
- * Trois états, trois dessins, et c'est la distinction qui manquait le plus à l'écran
- * d'avant : une pastille pleine **et un nom** pour un travail engagé, un anneau vide pour
- * « au programme, pas commencé », un simple tiret pour « pas au programme de ce plan ».
+ * Three states, three drawings, and that is the distinction most lacking on the earlier screen: a filled dot **and a name**
+ * for committed work, an empty ring for "scheduled, not started", and a simple dash for "not on this shot's schedule".
  */
 
 const CELL = 'flex h-full items-center border-l border-border/40';
 
-/** Date courte, dans la langue du lecteur — jamais un format figé. */
+/** Short date, in the reader's language: never a frozen format. */
 const shortDate = (iso: string): string =>
   new Date(iso).toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short' });
 
 /**
- * Tout ce que la case sait, en une phrase — survol et synthèse vocale.
+ * Everything the cell knows, in one sentence: hover and speech synthesis.
  *
- * Le département est nommé dedans : la colonne le dit en haut de la table, ce qui ne sert
- * à rien quand on est arrivé en bas au clavier.
+ * The department is named in it: the column says so at the top of the table, which is of no use once one has arrived at
+ * the bottom by keyboard.
  */
 function cellLabel(cell: GridCell, department: GridDepartment, t: Tr): string {
   const parts = [department.name, statusName(cell.status, t)];
@@ -48,7 +45,7 @@ function cellLabel(cell: GridCell, department: GridDepartment, t: Tr): string {
   return parts.join(' · ');
 }
 
-/** La pastille : teinte du référentiel si le studio en a posé une, sinon celle de la famille. */
+/** The dot: tinted with the reference data's colour if the studio set one, otherwise with the family's colour. */
 function StatusDot({ status }: { status: GridCellStatus | null }) {
   if (status?.color) {
     return (
@@ -70,18 +67,18 @@ export default function GridCellView({
   colWidth,
   actions,
 }: {
-  /** Absente quand le plan ne porte aucune case pour cette colonne — traité comme hors programme. */
+  /** Absent when the shot carries no cell for this column: treated as off-schedule. */
   cell: GridCell | undefined;
   department: GridDepartment;
-  /** Largeur de colonne du moment — réglée par le nom de statut le plus long de la page. */
+  /** Column width at the moment: set by the longest status name on the page. */
   colWidth: number;
   actions: GridActions;
 }) {
   const t = useT();
   const kind = cell ? cellKind(cell) : 'unscheduled';
 
-  // Les deux cases sans tâche gardent leur marque centrée, et rien d'écrit : elles n'ont
-  // pas de statut à nommer, et c'est ce vide même qui les distingue d'une case engagée.
+  // The two cells without a task keep their centred mark and write nothing: they have no status to name, and it is this
+  // very emptiness that distinguishes them from a committed cell.
   if (!cell || kind === 'unscheduled') {
     const label = `${department.name} · ${t('production.grid.unscheduled')}`;
     return (
@@ -120,8 +117,8 @@ export default function GridCellView({
           type="button"
           title={label}
           aria-label={label}
-          // Le clic gauche ouvre le même menu que le clic droit : sur un pavé tactile, le
-          // clic droit n'existe pas, et la règle du projet met tout geste dans ce menu.
+          // A left click opens the same menu as a right click: on a touch pad there is no right click, and the project's
+          // rule puts every gesture in this menu.
           onClick={(event) =>
             event.currentTarget.dispatchEvent(
               new MouseEvent('contextmenu', {
@@ -131,21 +128,18 @@ export default function GridCellView({
               }),
             )
           }
-          // Largeur en PIXELS, pas un `w-full` : `EntityContextMenu` interpose un `<div>`
-          // sans largeur entre la case et le bouton, et un pourcentage s'y résoudrait en
-          // « largeur du contenu » — le nom déborderait la colonne au lieu d'y être coupé.
-          // C'est le même piège que la carte de l'accueil qui se résolvait en hauteur nulle.
-          // La case mesure `colWidth` bord compris (`border-box`), d'où le filet retiré.
+          // Width in PIXELS, not `w-full`: `EntityContextMenu` interposes a width-less `<div>` between the cell and the
+          // button, and a percentage would resolve there to "content width": the name would overflow the column instead of
+          // being cut. It is the same trap as the home-page card that resolved to zero height.
+          // The cell measures `colWidth` including its border (`border-box`), hence the hairline removed.
           style={{ width: colWidth - 1 }}
-          // Le bouton occupe toute la case : les pastilles s'alignent alors d'une ligne à
-          // l'autre — c'est ce qui rend la colonne scannable — et la cible du clic droit
-          // fait la taille de ce qu'on voit.
+          // The button fills the whole cell: the dots then line up from one row to the next, which is what makes the column
+          // scannable, and the target of the right click is the size of what one sees.
           className="flex min-w-0 items-center gap-1 rounded px-1.5 py-1 transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <StatusDot status={cell.status} />
-          {/* `truncate` plutôt qu'un nom raccourci à la main : la largeur de colonne est
-              déjà taillée pour le nom le plus long de la page, et le rare débordement se
-              relit au survol. Aucune mesure de texte n'a lieu par case. */}
+          {/* `truncate` rather than a name shortened by hand: the column width is already sized for the longest name on the
+              page, and the rare overflow is read on hover. No text measurement takes place per cell. */}
           <span className="min-w-0 flex-1 truncate text-left text-2xs leading-none">
             {statusName(cell.status, t)}
           </span>

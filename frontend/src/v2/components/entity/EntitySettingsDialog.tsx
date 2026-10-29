@@ -29,18 +29,16 @@ import type { PipelineOverride, PipelineSettings } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
 
 /**
- * Réglages d'une séquence, d'un plan ou d'un asset (C3), en un seul panneau.
+ * Settings of a sequence, shot or asset (C3), in a single panel.
  *
- * Chaque entité avait sa boîte d'édition, avec des champs différents sans raison : pas de
- * description ni de vignette sur une séquence, pas de statut sur un plan, pas de libellé
- * de type sur un asset. On ouvre ce panneau au clic droit ou depuis la palette ; il ne
- * montre que les champs que l'entité possède réellement, et n'envoie que ce qui a changé.
+ * Each entity used to have its own edit box, with different fields for no reason: no description or thumbnail on
+ * a sequence, no status on a shot, no type label on an asset. This panel opens from the right-click menu or from
+ * the palette; it only shows the fields the entity actually has, and only sends what changed.
  */
 
 /**
- * Socle de départ du formulaire pipeline, le temps que les réglages du projet arrivent.
- * Il ne sert qu'à préremplir les champs en mode « personnaliser » ; en mode « hériter »,
- * ce sont les valeurs réelles du projet qui s'affichent, et l'override envoyé est vide.
+ * Starting base of the pipeline form, until the project settings arrive. It only pre-fills the fields in
+ * "customize" mode; in "inherit" mode, the project's real values are displayed and the override sent is empty.
  */
 const PLACEHOLDER_INHERITED: PipelineSettings = { resolution: { width: 1920, height: 1080 }, framerate: 24 };
 
@@ -65,7 +63,7 @@ export default function EntitySettingsDialog({
   projectId: number;
   entity: EntitySource & { settings?: PipelineOverride };
   thumbnailUrl?: string | null;
-  /** Réglages de la séquence porteuse, dont un plan hérite. */
+  /** Settings of the owning sequence, which a shot inherits. */
   sequenceOverride?: PipelineOverride;
   onClose: () => void;
   onSaved?: () => void;
@@ -73,8 +71,8 @@ export default function EntitySettingsDialog({
   const t = useT();
   const [initial] = useState(() => formFromEntity(entity));
   const [values, setValues] = useState(initial);
-  // Le socle hérité n'est connu qu'après la requête des réglages du projet ; le formulaire
-  // part donc de l'override lui-même, et `EntityPipelineField` affiche l'hérité réel.
+  // The inherited base is only known once the project settings request returns, so the form starts from the
+  // override itself, and `EntityPipelineField` displays the real inherited value.
   const [pipe, setPipe] = useState<PipelineForm>(() =>
     formFromOverride(entity.settings, PLACEHOLDER_INHERITED),
   );
@@ -95,8 +93,8 @@ export default function EntitySettingsDialog({
     }
     setError(null);
     const payload = payloadFromForm(kind, initial, values);
-    // Les réglages pipeline ne partent que si l'entité en possède : un asset n'a ni
-    // résolution ni cadence propres.
+    // Pipeline settings are only sent if the entity owns some: an asset has neither its own resolution
+    // nor its own frame rate.
     if (fields.has('pipelineStatusId')) {
       payload.settings = overrideFromForm(pipe, PLACEHOLDER_INHERITED);
     }

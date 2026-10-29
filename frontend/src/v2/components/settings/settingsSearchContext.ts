@@ -4,24 +4,23 @@
 import { createContext, useContext } from 'react';
 
 /**
- * Le contexte qui relie la barre de recherche aux cartes de réglages.
+ * The context that connects the search bar to the settings cards.
  *
- * Séparé du fournisseur pour que le module de composants n'exporte que des composants
- * (rafraîchissement à chaud), comme `card.variants.ts` l'est de `card.tsx`.
+ * Kept apart from the provider so that the component module exports only components (hot reload), as `card.variants.ts` is
+ * kept apart from `card.tsx`.
  */
 export interface SettingsSearchValue {
   query: string;
   setQuery: (value: string) => void;
-  /** Une carte se déclare visible ou non ; c'est ce qui permet de compter les réponses. */
+  /** A card declares itself visible or not: this is what makes it possible to count the answers. */
   report: (id: string, visible: boolean) => void;
-  /** Nombre de cartes actuellement affichées. */
+  /** Number of cards currently displayed. */
   visible: number;
 }
 
 /**
- * Hors fournisseur, la recherche n'existe pas : la carte s'affiche toujours et ne compte
- * rien. C'est ce qui permet de poser une `SettingsCard` dans un dialogue ou un panneau
- * isolé sans traîner tout l'appareillage.
+ * Outside a provider, there is no search: the card always displays and counts for nothing. This is what allows a
+ * `SettingsCard` to be placed in a dialog or an isolated panel without dragging all the machinery along.
  */
 export const INERT_SEARCH: SettingsSearchValue = {
   query: '',

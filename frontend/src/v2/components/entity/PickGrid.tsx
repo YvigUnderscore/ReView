@@ -5,14 +5,14 @@ import { Check } from 'lucide-react';
 import EntityThumb from './EntityThumb';
 
 /**
- * Choisir des éléments à l'image plutôt qu'à la case à cocher.
+ * Pick elements by their image rather than by a checkbox.
  *
- * Rattacher un asset à ses plans se faisait dans une liste de cases : deux cents lignes de
- * texte où « SQ010 · SH0120 » ne dit rien de ce qu'on voit à l'écran. Or on sait dans quel
- * plan apparaît un décor **en le reconnaissant**, pas en lisant son code.
+ * Attaching an asset to its shots used to happen in a list of checkboxes: two hundred lines of text where
+ * "SQ010 · SH0120" says nothing about what is on screen. Yet one knows which shot a set appears in **by recognising
+ * it**, not by reading its code.
  *
- * La vignette porte donc le choix, et la sélection se voit à la bordure et à la coche — pas
- * à une case dans la marge, qu'on ne repère plus au-delà de vingt lignes.
+ * The thumbnail therefore carries the choice, and the selection shows in the border and the tick, not in a box in
+ * the margin, which one no longer spots beyond twenty lines.
  */
 
 export interface PickItem {

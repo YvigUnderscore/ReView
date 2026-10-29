@@ -9,14 +9,13 @@ import { useNoteImageResolver } from './noteImages';
 import NoteRefs from './NoteRefs';
 
 /**
- * La fiche telle qu'on la lit.
+ * The note as it is read.
  *
- * Rien n'y est calculé : `parseNote` a déjà décrit les blocs, ce composant les pose. La
- * séparation compte — l'analyse est testable sans DOM, et le rendu ne peut pas inventer une
- * règle de syntaxe que l'analyse ignorerait.
+ * Nothing is computed here: `parseNote` has already described the blocks, this component places them. The separation
+ * matters: parsing is testable without a DOM, and rendering cannot invent a syntax rule that parsing would ignore.
  */
 
-/** Une jauge : le pourcentage se lit à la longueur, pas au chiffre. */
+/** A gauge: the percentage is read from its length, not from the figure. */
 function Progress({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
@@ -38,7 +37,7 @@ function Progress({ label, value }: { label: string; value: number }) {
   );
 }
 
-/** Une section dépliable : son état d'ouverture est local, il ne se persiste pas. */
+/** A collapsible section: its open state is local and is not persisted. */
 function Section({ title, open, children }: { title: string; open: boolean; children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(open);
   return (
@@ -56,14 +55,14 @@ function Section({ title, open, children }: { title: string; open: boolean; chil
   );
 }
 
-/** Le markdown ordinaire — échappé et assaini par `renderNoteHtml`. */
+/** Ordinary markdown: escaped and sanitised by `renderNoteHtml`. */
 function Markdown({ source }: { source: string }) {
   const resolve = useNoteImageResolver();
   const html = useMemo(() => renderNoteHtml(source, resolve), [source, resolve]);
   return (
     <div
       className="prose-note text-sm leading-relaxed"
-      // Le HTML brut est échappé et les protocoles exécutables retirés — cf. noteRender.
+      // Raw HTML is escaped and executable protocols are removed: see noteRender.
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

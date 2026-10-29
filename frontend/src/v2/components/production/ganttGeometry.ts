@@ -2,61 +2,60 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Géométrie du Gantt — fonctions pures, hors React, testées.
+ * Gantt geometry: pure functions, outside React, tested.
  *
- * Le défaut corrigé ici se voyait à l'écran : la barre d'une tâche commencée avant le début
- * de la fenêtre était posée à un pourcentage **négatif** (`((start - min) / span) * 100`
- * sans bornage), donc peinte hors de sa piste, par-dessus la colonne des libellés.
+ * The defect fixed here was visible on screen: the bar of a task started before the beginning of the window was placed at a
+ * **negative** percentage (`((start - min) / span) * 100` without bounding), so it was painted outside its track, over the
+ * label column.
  *
- * La correction tient en une phrase : **on borne la barre à la fenêtre**, et non la fenêtre
- * à la barre. Une tâche qui dépasse commence au bord (`left: 0`) et le dit — `clippedStart`
- * / `clippedEnd`, dont l'écran tire un bord non arrondi — plutôt que de disparaître : une
- * tâche en cours depuis deux mois doit rester visible dans la fenêtre du mois.
+ * The fix fits in one sentence: **bound the bar to the window**, not the window to the bar. An overflowing task starts at
+ * the edge (`left: 0`) and says so (`clippedStart` / `clippedEnd`, from which the screen draws an unrounded edge) rather than
+ * disappearing: a task running for two months must stay visible in the month's window.
  */
 
-/** Un jour en millisecondes. */
+/** One day in milliseconds. */
 export const DAY = 86_400_000;
 
 /**
- * Largeur plancher d'une barre, en % de la fenêtre. Une tâche d'un seul jour sur un
- * trimestre pèse 1,1 % : sans plancher elle ne se voit pas.
+ * Minimum width of a bar, as a % of the window. A single-day task in a quarter weighs 1.1%: without a floor it is
+ * not visible.
  */
 export const MIN_BAR_PCT = 1.5;
 
-/** Ce que la géométrie exige d'une tâche : deux bornes, éventuellement absentes. */
+/** What the geometry requires of a task: two bounds, possibly absent. */
 export interface DatedTask {
   startDate: string | null;
   dueDate: string | null;
 }
 
-/** Intervalle absolu d'une tâche, en millisecondes. */
+/** Absolute interval of a task, in milliseconds. */
 export interface Bar<T> {
   task: T;
   start: number;
   end: number;
 }
 
-/** Fenêtre affichée : origine et durée. `span` est toujours strictement positif. */
+/** Displayed window: origin and duration. `span` is always strictly positive. */
 export interface GanttWindow {
   min: number;
   span: number;
 }
 
-/** Position d'une barre dans la fenêtre, en % — jamais hors de [0, 100]. */
+/** Position of a bar within the window, in %: never outside [0, 100]. */
 export interface BarBox {
   left: number;
   width: number;
-  /** La tâche commence avant la fenêtre : la barre est coupée à gauche. */
+  /** The task starts before the window: the bar is cut on the left. */
   clippedStart: boolean;
-  /** La tâche finit après la fenêtre : la barre est coupée à droite. */
+  /** The task ends after the window: the bar is cut on the right. */
   clippedEnd: boolean;
-  /** Faux si la tâche est entièrement hors fenêtre — rien à peindre. */
+  /** False if the task is entirely outside the window: nothing to paint. */
   visible: boolean;
 }
 
 /**
- * Intervalle [début, fin] d'une tâche : à défaut de l'une des bornes, on retombe sur
- * l'autre ; sans aucune borne, pas de barre. Deux bornes inversées sont remises d'aplomb.
+ * Interval [start, end] of a task: if one of the bounds is missing, falls back on the other; with no bound at all,
+ * no bar. Two inverted bounds are straightened.
  */
 export function spanOf<T extends DatedTask>(task: T): Bar<T> | null {
   const s = task.startDate ? new Date(task.startDate).getTime() : null;
@@ -66,15 +65,14 @@ export function spanOf<T extends DatedTask>(task: T): Bar<T> | null {
   return e < s ? { task, start: e, end: s } : { task, start: s, end: e };
 }
 
-/** Les barres qui touchent la fenêtre — y compris celles qui la débordent. */
+/** The bars touching the window, including those that overflow it. */
 export function visibleBars<T>(bars: readonly Bar<T>[], from: number, to: number): Bar<T>[] {
   return bars.filter((b) => b.end >= from && b.start <= to);
 }
 
 /**
- * Fenêtre retenue : les bornes demandées, resserrées sur les données quand celles-ci
- * n'occupent pas toute la période (un projet qui démarre dans deux semaines ne mérite pas
- * deux semaines de vide à gauche). `null` s'il n'y a rien à montrer.
+ * Window kept: the requested bounds, tightened around the data when the latter does not fill the whole period (a project
+ * starting in two weeks does not deserve two weeks of emptiness on the left). `null` if there is nothing to show.
  */
 export function ganttWindow(
   bars: readonly { start: number; end: number }[],
@@ -88,8 +86,8 @@ export function ganttWindow(
 }
 
 /**
- * Place une barre dans la fenêtre. Tout est borné à [0, 100] : c'est ici, et non dans la
- * feuille de style, que la barre cesse de pouvoir sortir de sa piste.
+ * Places a bar within the window. Everything is bounded to [0, 100]: it is here, and not in the stylesheet, that the
+ * bar stops being able to leave its track.
  */
 export function barBox(start: number, end: number, win: GanttWindow): BarBox {
   const span = Math.max(win.span, 1);
@@ -97,34 +95,33 @@ export function barBox(start: number, end: number, win: GanttWindow): BarBox {
   const clippedStart = start < win.min;
   const clippedEnd = end > max;
 
-  // Entièrement hors fenêtre : on le dit, plutôt que de peindre au bord une barre qui
-  // n'a rien à voir avec la période lue.
+  // Entirely outside the window: we say so, rather than painting at the edge a bar that has nothing to do with the
+  // period being read.
   if (end < win.min || start > max) {
     return { left: clippedStart ? 0 : 100 - MIN_BAR_PCT, width: 0, clippedStart, clippedEnd, visible: false };
   }
 
   const from = Math.max(start, win.min);
   const to = Math.min(Math.max(end, from), max);
-  // Le plancher de largeur ne doit pas pousser la barre hors du cadre : on recule le bord
-  // gauche d'abord, on borne la largeur ensuite.
+  // The minimum width must not push the bar out of the frame: the left edge is moved back first, then the width is bounded.
   const left = Math.min(((from - win.min) / span) * 100, 100 - MIN_BAR_PCT);
   const width = Math.min(Math.max(((to - from) / span) * 100, MIN_BAR_PCT), 100 - left);
   return { left, width, clippedStart, clippedEnd, visible: true };
 }
 
-/** Graduations de l'axe, bornes incluses. */
+/** Axis graduations, inclusive bounds. */
 export function ganttTicks(win: GanttWindow, count = 5): number[] {
   const steps = Math.max(count - 1, 1);
   return Array.from({ length: count }, (_, i) => win.min + (win.span * i) / steps);
 }
 
-/** Position du repère « aujourd'hui », ou `null` s'il est hors fenêtre. */
+/** Position of the "today" marker, or `null` if it is outside the window. */
 export function markerLeft(now: number, win: GanttWindow): number | null {
   if (now < win.min || now > win.min + win.span) return null;
   return ((now - win.min) / win.span) * 100;
 }
 
-/** Une piste du Gantt : une sequence et ses barres. */
+/** A track of the Gantt: a sequence and its bars. */
 export interface Group<T> {
   key: string;
   label: string;
@@ -132,8 +129,8 @@ export interface Group<T> {
 }
 
 /**
- * Regroupe par sequence, tri alphabétique, les tâches sans sequence en dernier. Les barres
- * d'une piste sont ordonnées par date de début : on lit la piste de gauche à droite.
+ * Groups by sequence, alphabetically sorted, with the tasks without a sequence last. The bars of a track are ordered by
+ * start date: one reads the track from left to right.
  */
 export function groupBars<T extends { sequenceCode: string | null }>(
   bars: readonly Bar<T>[],
@@ -141,7 +138,7 @@ export function groupBars<T extends { sequenceCode: string | null }>(
 ): Group<T>[] {
   const byKey = new Map<string, Group<T>>();
   for (const bar of bars) {
-    const key = bar.task.sequenceCode ?? '￿'; // tri : sans sequence en dernier
+    const key = bar.task.sequenceCode ?? '￿'; // sort: no sequence last
     const label = bar.task.sequenceCode ?? noSequenceLabel;
     const group = byKey.get(key);
     if (group) group.bars.push(bar);

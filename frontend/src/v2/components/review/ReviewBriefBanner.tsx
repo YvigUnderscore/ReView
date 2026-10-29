@@ -6,15 +6,13 @@ import type { ReviewAssignee } from '../../types/entities';
 import { useT } from '../../i18n';
 
 /**
- * La consigne écrite POUR VOUS, en haut de la review.
+ * The brief written FOR YOU, at the top of the review.
  *
- * C'est tout l'objet de la fonctionnalité : la notification dit qu'on vous attend, cette
- * bande dit sur quoi — au moment exact où vous regardez le média, et non trois clics plus
- * loin dans un dialogue qu'il faudrait penser à ouvrir.
+ * That is the whole point of the feature: the notification says you are awaited, this banner says on what, at the exact
+ * moment you are looking at the media, and not three clicks further on in a dialog one would have to think of opening.
  *
- * Elle ne s'affiche qu'à la personne confiée, et seulement si une consigne a été écrite :
- * une assignation sans consigne n'a rien à annoncer, et une bande vide ne ferait que voler
- * de la hauteur au viewer.
+ * It is only shown to the person entrusted, and only if a brief has been written: an assignment without a brief has nothing
+ * to announce, and an empty banner would merely take height from the viewer.
  */
 export default function ReviewBriefBanner({
   reviewers,
@@ -32,8 +30,8 @@ export default function ReviewBriefBanner({
       <Eye size={15} className="mt-0.5 shrink-0 text-primary" />
       <p className="min-w-0 text-sm">
         <span className="mr-1.5 text-2xs section-label text-muted-foreground">{t('reviewers.forYou')}</span>
-        {/* `whitespace-pre-wrap` : la consigne est écrite dans un champ multi-ligne, et une
-            liste de trois points revenue sur une seule ligne se relit mal. */}
+        {/* `whitespace-pre-wrap`: the brief is written in a multi-line field, and a three-point list folded back onto
+            a single line reads poorly. */}
         <span className="whitespace-pre-wrap">{mine.note}</span>
       </p>
     </div>

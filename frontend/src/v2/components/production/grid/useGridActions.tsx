@@ -17,32 +17,30 @@ import { useT, type Tr } from '../../../i18n';
 import type { GridCell, GridRow } from './gridWire';
 
 /**
- * Les gestes de la grille, montés UNE fois pour toute la table.
+ * The grid's gestures, mounted ONCE for the whole table.
  *
- * Douze cents cases, et chacune doit pouvoir changer de statut ou d'assigné au clic droit.
- * Un hook par case aurait ouvert douze cents requêtes de référentiel : les menus sont donc
- * construits ici et distribués comme des données, exactement comme le kanban distribue son
- * `menuFor`.
+ * Twelve hundred cells, and each must be able to change its status or assignee on right-click. A hook per cell would have
+ * opened twelve hundred reference-data requests: the menus are therefore built here and distributed as data, exactly as the
+ * kanban distributes its `menuFor`.
  *
- * La règle de statut n'est pas réécrite — choix offerts, valeur cochée, corps du `PATCH` et
- * envoi vers ShotGrid viennent de `lib/statusMenu` via `useStatusMenu`. Ce module n'ajoute
- * que ce que la grille sait de plus : rafraîchir SES pages après coup, puisque la liste
- * paginée par curseur n'est dans aucun des caches que le sous-menu partagé invalide.
+ * The status rule is not rewritten: the offered choices, the ticked value, the body of the `PATCH` and the sending to ShotGrid
+ * come from `lib/statusMenu` via `useStatusMenu`. This module only adds what the grid knows on top: refreshing ITS pages
+ * afterwards, since the cursor-paginated list is in none of the caches that the shared submenu invalidates.
  */
 
-/** Sentinelle « personne » : un groupe radio ne peut pas porter une valeur vide. */
+/** "Nobody" sentinel: a radio group cannot carry an empty value. */
 const NO_ASSIGNEE = 'none';
 
 export interface GridActions {
-  /** Menu d'une case : statut, assignation. Vide si la case ne porte pas de tâche. */
+  /** Menu of a cell: status, assignment. Empty if the cell carries no task. */
   cellMenuFor: (cell: GridCell) => MenuEntry[];
-  /** Menu de la colonne de tête : le statut propre du plan. */
+  /** Menu of the head column: the shot's own status. */
   shotMenuFor: (row: GridRow) => MenuEntry[];
-  /** Photo d'un membre, pour l'avatar d'une case — la grille ne sert que des identifiants. */
+  /** Member photo, for a cell's avatar: the grid only serves identifiers. */
   avatarOf: (userId: number) => string | null;
 }
 
-/** Pastille de la teinte du référentiel — un fragment, pas un composant (ce module est un hook). */
+/** Dot in the reference data's tint: a fragment, not a component (this module is a hook). */
 function statusDot(color: string | null) {
   if (!color) return <span className="size-2.5 shrink-0" />;
   return (
@@ -53,7 +51,7 @@ function statusDot(color: string | null) {
   );
 }
 
-/** L'entité telle que `currentStatusValue` l'attend, lue depuis une case. */
+/** The entity as `currentStatusValue` expects it, read from a cell. */
 function cellTarget(cell: GridCell) {
   const legacy = cell.status && cell.status.id === null ? (cell.status.code as TaskStatus) : null;
   return { id: cell.taskId ?? 0, pipelineStatusId: cell.status?.id ?? null, status: legacy };
@@ -62,12 +60,11 @@ function cellTarget(cell: GridCell) {
 type StatusMenu = ReturnType<typeof useStatusMenu>;
 
 /**
- * Le sous-menu « Statut » d'une entité, suivi du rafraîchissement de la grille.
+ * An entity's "Status" submenu, followed by the grid's refresh.
  *
- * `useStatusMenu.entry()` ne convient pas tel quel : il ne sait pas rafraîchir les pages de la
- * grille, qui ne sont dans aucun cache partagé. On reprend donc ses CHOIX — la règle — et on
- * lui confie l'écriture avec ce qu'elle doit rejouer après coup (`after`) et la valeur d'avant
- * (`undoTo`), qui fait apparaître « Annuler » dans le toast.
+ * `useStatusMenu.entry()` does not suit as it is: it cannot refresh the grid's pages, which sit in no shared cache. We
+ * therefore take over its CHOICES, the rule, and hand it the write, with what it must replay afterwards (`after`) and the
+ * previous value (`undoTo`), which makes "Undo" appear in the toast.
  */
 function statusSubmenu(
   menu: StatusMenu,
@@ -88,8 +85,8 @@ function statusSubmenu(
         kind: 'radiogroup',
         id: 'grid-status-group',
         value,
-        // Radix rappelle le gestionnaire sur l'item déjà coché : sans cette sortie, chaque
-        // ouverture suivie d'un clic repartirait vers le serveur pour rien.
+        // Radix calls the handler again on the already ticked item: without this exit, each opening followed by a click
+        // would go back to the server for nothing.
         onValueChange: (next) => {
           if (next === value) return;
           void menu.apply(entityId, next, { undoTo: value, after: refresh });
@@ -115,12 +112,12 @@ export function useGridActions(projectId: number, canEdit: boolean): GridActions
 
   const avatars = useMemo(() => new Map(members.map((member) => [member.id, member.avatarUrl])), [members]);
 
-  /** Toutes les pages de la grille, quel que soit le filtre courant. */
+  /** All the pages of the grid, whatever the current filter. */
   const refresh = () => qc.invalidateQueries({ queryKey: qk.projectGridAll(projectId) });
 
   /**
-   * L'écriture d'assignation, séparée de la mutation : l'annulation la rejoue à l'envers, et
-   * son échec doit remonter au toast qui l'a proposée plutôt que devenir un second succès.
+   * The assignment write, separated from the mutation: the undo replays it in reverse, and its failure must bubble up to
+   * the toast that offered it rather than become a second success.
    */
   const writeAssignee = async (taskId: number, assigneeId: number | null): Promise<void> => {
     await api.patch(`/api/tasks/${taskId}`, { assigneeId });
@@ -132,8 +129,8 @@ export function useGridActions(projectId: number, canEdit: boolean): GridActions
       writeAssignee(vars.taskId, vars.assigneeId),
     onSuccess: (_data, vars) => {
       const member = members.find((m) => m.id === vars.assigneeId);
-      // Remettre l'assigné d'avant est une écriture de plus, pas un retour en arrière local :
-      // un cran offert dans le toast, et rien qui ressemble à une pile (cf. `useUndoToast`).
+      // Restoring the previous assignee is one more write, not a local rollback: a step offered in the toast, and nothing
+      // that resembles a stack (cf. `useUndoToast`).
       done(member ? t('production.grid.assigned', { name: member.name }) : t('production.grid.cleared'), () =>
         writeAssignee(vars.taskId, vars.previous),
       );
@@ -178,8 +175,8 @@ export function useGridActions(projectId: number, canEdit: boolean): GridActions
 
   const cellMenuFor = (cell: GridCell): MenuEntry[] => {
     const taskId = cell.taskId;
-    // Pas de tâche, pas de menu : changer le statut d'une case vide n'a pas de sens, et
-    // `tidyMenu` ferait de toute façon disparaître un menu sans entrée.
+    // No task, no menu: changing the status of an empty cell makes no sense, and `tidyMenu` would make a menu with no entries
+    // disappear anyway.
     if (!canEdit || taskId === null) return [];
     const entries = [
       statusSubmenu(taskStatus, taskId, cellTarget(cell), t, refresh),
@@ -190,7 +187,7 @@ export function useGridActions(projectId: number, canEdit: boolean): GridActions
 
   const shotMenuFor = (row: GridRow): MenuEntry[] => {
     if (!canEdit) return [];
-    // Un plan n'a pas de repli sur l'enum figé : son `PATCH` n'accepte que le référentiel.
+    // A shot has no fallback on the frozen enum: its `PATCH` accepts only the reference data.
     const target = { pipelineStatusId: row.status?.id ?? null, status: null };
     const entry = statusSubmenu(shotStatus, row.shotId, target, t, refresh);
     return entry ? [entry] : [];

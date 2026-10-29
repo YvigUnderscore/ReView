@@ -7,11 +7,11 @@ import { useTheme } from '../../stores/useTheme';
 import { useT } from '../../i18n';
 
 /**
- * Départements que traverse une entité (B1, écran manquant jusqu'ici — C3).
+ * Departments an entity goes through (B1, a screen missing until now, C3).
  *
- * Le modèle, les routes et le service existaient depuis la vague B ; il n'y avait
- * simplement aucun endroit dans l'interface pour dire « cet asset passe par modélisation,
- * texturing et rig ». Les cases se cochent, la liste envoyée remplace la précédente.
+ * The model, routes and service had existed since wave B; there was simply no place in the interface to say
+ * "this asset goes through modeling, texturing and rig". Checkboxes are ticked, and the list sent replaces the
+ * previous one.
  */
 export default function EntityDepartmentsField({
   projectId,
@@ -39,8 +39,8 @@ export default function EntityDepartmentsField({
     <div className="flex flex-wrap gap-1.5">
       {departments.map((d) => {
         const on = value.includes(d.id);
-        // La couleur du département vient de la base : on la normalise, sinon un jaune
-        // clair posé en fond devient illisible sur le thème sombre.
+        // The department colour comes from the database: normalize it, otherwise a pale yellow used as a
+        // background becomes unreadable in the dark theme.
         const swatch = d.color ? statusSwatch(d.color, isDark) : null;
         return (
           <button

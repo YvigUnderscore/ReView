@@ -22,7 +22,7 @@ import { FAMILY_BAR, familyOfTask, type GanttTask, type StatusFamily } from './p
 const fmt = (ms: number) =>
   new Date(ms).toLocaleDateString(intlLocale(), { day: '2-digit', month: '2-digit' });
 
-/** Fenêtres proposées, en jours à partir d'aujourd'hui. `null` = tout le projet. */
+/** Offered windows, in days from today. `null` = the whole project. */
 const SCALES = [
   { key: 'month', days: 30 },
   { key: 'quarter', days: 90 },
@@ -46,17 +46,14 @@ const FAMILY_LABEL: Record<StatusFamily, MessageKey> = {
 };
 
 /**
- * Gantt léger par séquence (43.C — №128), lecture seule.
+ * Lightweight Gantt per sequence (43.C — №128), read-only.
  *
- * Trois corrections dans ce lot. **Les barres ne sortent plus de leur piste** : une tâche
- * commencée avant le début de la fenêtre était posée à un pourcentage négatif et se peignait
- * par-dessus la colonne des libellés. La géométrie borne désormais la barre à la fenêtre
- * (`ganttGeometry`), la piste porte `overflow-hidden` en seconde barrière, et le côté coupé
- * perd son arrondi — la tâche reste visible, et se dit tronquée plutôt que de disparaître.
- * **Les couleurs viennent du référentiel du studio** (`pipelineStatus`) et non de l'enum figé
- * à six valeurs, qui ne connaît ni « fin » ni « awaiting client ». **Un planning tronqué le
- * dit** : le serveur plafonne sa lecture, et un planning faux sans avertissement est pire
- * qu'un planning absent.
+ * Three fixes in this batch. **Bars no longer leave their track**: a task started before the start of the window was placed
+ * at a negative percentage and painted over the label column. The geometry now bounds the bar to the window
+ * (`ganttGeometry`), the track carries `overflow-hidden` as a second barrier, and the cut side loses its rounding: the task
+ * stays visible and says it is truncated rather than disappearing. **Colours come from the studio's reference data**
+ * (`pipelineStatus`), not from the frozen six-value enum, which knows neither "end" nor "awaiting client". **A truncated
+ * schedule says so**: the server caps its reading, and a wrong schedule without a warning is worse than no schedule at all.
  */
 export default function SequenceGantt({
   tasks,
@@ -64,20 +61,20 @@ export default function SequenceGantt({
   limit,
 }: {
   tasks: GanttTask[];
-  /** Le serveur a atteint son plafond : des tâches manquent. */
+  /** The server reached its cap: some tasks are missing. */
   truncated?: boolean;
-  /** Plafond annoncé par le serveur ; à défaut, ce qui est effectivement affiché. */
+  /** Cap announced by the server; otherwise, what is actually displayed. */
   limit?: number;
 }) {
   const t = useT();
-  // « Maintenant » capturé une fois (rendu pur) pour le repère du jour.
+  // "Now" captured once (pure render) for the day marker.
   const [now] = useState(() => Date.now());
   const [scale, setScale] = useState<ScaleKey>('quarter');
   const windowDays = SCALES.find((s) => s.key === scale)?.days ?? null;
 
   const view = useMemo(() => {
     const all = tasks.map((task) => spanOf(task)).filter((b): b is Bar<GanttTask> => b !== null);
-    // La fenêtre part d'une semaine en arrière : ce qui vient de finir reste visible.
+    // The window starts one week back: what has just finished stays visible.
     const from = windowDays === null ? -Infinity : now - 7 * DAY;
     const to = windowDays === null ? Infinity : now + windowDays * DAY;
     const bars = visibleBars(all, from, to);
@@ -127,7 +124,7 @@ export default function SequenceGantt({
       <div className="mb-2 flex justify-end">{scaleSwitch}</div>
       {warning}
 
-      {/* Axe temporel */}
+      {/* Time axis */}
       <div className="grid grid-cols-[140px_1fr] gap-x-3">
         <div />
         <div className="relative mb-2 h-4 text-2xs text-muted-foreground">
@@ -143,8 +140,8 @@ export default function SequenceGantt({
         </div>
       </div>
 
-      {/* Repère du jour : un seul trait, posé sur toute la hauteur — il était redessiné
-          dans chaque ligne, soit autant de traits légèrement décalés. */}
+      {/* Day marker: a single line spanning the whole height. It used to be redrawn in each row, that is as
+          many slightly offset lines. */}
       <div className="relative">
         {todayLeft !== null && (
           <div
@@ -171,7 +168,7 @@ export default function SequenceGantt({
   );
 }
 
-/** Une tâche : son libellé à gauche, sa barre dans la piste — jamais en dehors. */
+/** A task: its label on the left, its bar in the track, never outside it. */
 function GanttRow({ bar, win, t }: { bar: Bar<GanttTask>; win: GanttWindow; t: Tr }) {
   const box = barBox(bar.start, bar.end, win);
   const status = bar.task.pipelineStatus;
@@ -195,7 +192,7 @@ function GanttRow({ bar, win, t }: { bar: Bar<GanttTask>; win: GanttWindow; t: T
         {bar.task.location && <span className="text-muted-foreground">{bar.task.location} </span>}
         {bar.task.name}
       </Link>
-      {/* `overflow-hidden` : seconde barrière derrière le bornage de `barBox`. */}
+      {/* `overflow-hidden`: second barrier behind the bounding in `barBox`. */}
       <div className="relative h-5 overflow-hidden rounded bg-secondary/30">
         {box.visible && (
           <Link

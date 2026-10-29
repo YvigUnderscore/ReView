@@ -14,9 +14,8 @@ import {
 } from './productionWire';
 
 /**
- * Ce que ces tests verrouillent, ce sont les trois nombres que l'utilisateur a lus de
- * travers à l'écran : un « 50 » qui était un plafond, un badge qui comptait deux fois la
- * même tâche, et une projection née d'une division entre deux unités différentes.
+ * What these tests lock down are the three numbers the user misread on screen: a "50" that was a ceiling, a badge counting
+ * the same task twice, and a projection born from dividing two quantities of different units.
  */
 
 const task = (id: number, over: Partial<ProductionTask> = {}): ProductionTask => ({
@@ -45,7 +44,7 @@ const overview = (over: Record<string, unknown>): ProductionOverview => ({
 });
 
 describe('readAttention', () => {
-  it('rend les totaux du serveur, pas la longueur des listes plafonnées', () => {
+  it('renders the server totals, not the length of the capped lists', () => {
     const reading = readAttention(
       overview({
         attention: {
@@ -63,18 +62,18 @@ describe('readAttention', () => {
     expect(reading.capped).toBe(true);
   });
 
-  it('ne compte qu’une fois une tâche à la fois en retard et non assignée', () => {
+  it('counts a task that is both overdue and unassigned only once', () => {
     const shared = task(7);
     expect(distinctBlocking({ overdue: [shared], unassigned: [shared], waitingReview: [] })).toBe(1);
   });
 
-  it('retombe sur l’union dédoublonnée quand le serveur ne rend pas de totaux', () => {
+  it('falls back on the de-duplicated union when the server returns no totals', () => {
     const shared = task(7);
     const reading = readAttention(
       overview({ attention: { overdue: [shared, task(8)], unassigned: [shared], waitingReview: [task(9)] } }),
     );
     expect(reading.overdue).toBe(2);
-    // 5 + 9 + 6 était la somme ; ici 2 + 1 + 1 = 4 alors que seules trois tâches existent.
+    // 5 + 9 + 6 used to be the sum; here 2 + 1 + 1 = 4 although only three tasks exist.
     expect(reading.blocking).toBe(3);
     expect(reading.capped).toBe(false);
     expect(reading.limit).toBeNull();
@@ -87,7 +86,7 @@ describe('readPace', () => {
     delivery: [{ weekStart: '2026-09-07', count: 11 }],
   };
 
-  it('trace le débit de sortie et nomme son unité quand le serveur la sépare', () => {
+  it('plots the output rate and names its unit when the server separates it', () => {
     const reading = readPace(
       overview({
         ...base,
@@ -109,7 +108,7 @@ describe('readPace', () => {
     expect(reading.unavailable).toBeNull();
   });
 
-  it('reprend la raison d’indisponibilité du serveur et refuse alors toute date', () => {
+  it("takes over the server's reason for unavailability, and then refuses any date", () => {
     const reading = readPace(
       overview({
         ...base,
@@ -127,7 +126,7 @@ describe('readPace', () => {
     expect(reading.projectedEnd).toBeNull();
   });
 
-  it('déduit la raison quand le serveur est encore l’ancien, sans nommer d’unité', () => {
+  it('infers the reason when the server is still the old one, without naming a unit', () => {
     const done = readPace(
       overview({
         pace: [{ weekStart: '2026-09-07', delivered: 3 }],
@@ -149,11 +148,11 @@ describe('readPace', () => {
 });
 
 describe('familyOfTask', () => {
-  it('suit la famille du serveur quand elle est là', () => {
+  it("follows the server's family when it is there", () => {
     expect(familyOfTask({ status: 'TODO', family: 'done' } as never)).toBe('done');
   });
 
-  it('retombe sur l’enum, avec les mêmes familles que le serveur', () => {
+  it('falls back on the enum, with the same families as the server', () => {
     expect(familyOfTask({ status: 'RETAKE' } as never)).toBe('blocked');
     expect(familyOfTask({ status: 'APPROVED' } as never)).toBe('done');
     expect(familyOfTask({ status: 'PENDING_REVIEW' } as never)).toBe('review');
@@ -192,7 +191,7 @@ describe('readRetakes', () => {
     ...over,
   });
 
-  it('classe les plans les plus repris, pire d’abord, et écarte ceux sans retake', () => {
+  it('ranks the most retaken shots, worst first, and sets aside those without a retake', () => {
     const rows = rankRetakes([
       shot({ shotId: 1, code: 'SH010', retakes: 1 }),
       shot({ shotId: 2, code: 'SH020', retakes: 5, reviewRounds: 7 }),
@@ -204,12 +203,12 @@ describe('readRetakes', () => {
     expect(rows[0].reviewRounds).toBeNull();
   });
 
-  it('borne la liste', () => {
+  it('caps the list', () => {
     const many = Array.from({ length: 20 }, (_, i) => shot({ shotId: i, code: `SH${i}`, retakes: 2 }));
     expect(rankRetakes(many, 3)).toHaveLength(3);
   });
 
-  it('lit le classement dédié du serveur quand il existe', () => {
+  it("reads the server's dedicated ranking when it exists", () => {
     const reading = readRetakes(
       stats({
         mostRetakenShots: [shot({ shotId: 9, code: 'SH090', retakes: 4, reviewRounds: 6 })],
@@ -234,7 +233,7 @@ describe('readRetakes', () => {
     expect(reading.buckets).toHaveLength(1);
   });
 
-  it('retombe sur les plans les plus lents quand le serveur est encore l’ancien', () => {
+  it('falls back on the slowest shots when the server is still the old one', () => {
     const reading = readRetakes(stats({ slowestShots: [shot({ shotId: 5, code: 'SH050', retakes: 2 })] }));
     expect(reading.worst.map((r) => r.code)).toEqual(['SH050']);
     expect(reading.avgReviewRounds).toBeNull();

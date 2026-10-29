@@ -22,19 +22,18 @@ import { CommandGroup, CommandItem } from '../ui/command';
 import { useT } from '../../i18n';
 
 /**
- * Résultats de la recherche globale, regroupés par type.
+ * Results of the global search, grouped by type.
  *
- * Sorti de `CommandPalette` : dix familles ne tiennent pas dans le même fichier que le
- * raccourci, le debounce et les actions rapides. Ce composant ne fait que rendre — il ne
- * connaît ni la requête ni son état de chargement.
+ * Taken out of `CommandPalette`: ten families do not fit in the same file as the shortcut, the debounce and the quick actions.
+ * This component only renders: it knows neither the query nor its loading state.
  *
- * Les libellés de groupe passent par `t()`, sauf ceux qui SONT du vocabulaire de production
- * (Assets, Versions, Playlists) : `scripts/i18n-glossary.json` interdit de les traduire.
+ * Group labels go through `t()`, except those that ARE production vocabulary (Assets, Versions, Playlists):
+ * `scripts/i18n-glossary.json` forbids translating them.
  */
 
 const ICON = 'text-muted-foreground';
 
-/** Icône par nature de média — la même que celle des cartes de review. */
+/** Icon per media kind: the same as the one on review cards. */
 const MEDIA_ICONS: Record<MediaKind, typeof Video> = {
   VIDEO: Video,
   IMAGE: ImageIcon,
@@ -42,7 +41,7 @@ const MEDIA_ICONS: Record<MediaKind, typeof Video> = {
   SPLAT: Sparkles,
 };
 
-/** Où mène une version : son média le plus récent, sinon la tâche ou l'asset porteur. */
+/** Where a version leads: its most recent media, otherwise the task or asset carrying it. */
 function versionTarget(v: SearchResults['versions'][number]): string | null {
   if (v.mediaId !== null) return `/review/${v.mediaId}`;
   if (v.taskId !== null) return `/tasks/${v.taskId}`;

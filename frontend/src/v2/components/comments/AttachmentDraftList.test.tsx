@@ -16,9 +16,9 @@ const image = (id: string, name: string): AttachmentDraft => ({
 });
 
 /**
- * Avant envoi, une pièce jointe n'était identifiée que par son nom de fichier : impossible
- * de vérifier ce qu'on envoie quand la capture s'appelle « image (3).png ». On vérifie donc
- * la vignette, le carrousel qu'un clic ouvre, et la croix de retrait.
+ * Before sending, an attachment was only identified by its file name, so there was no way to
+ * check what was sent when the capture was named "image (3).png". So we check the thumbnail,
+ * the carousel that a click opens, and the remove button.
  */
 describe('AttachmentDraftList', () => {
   it('rend une vignette par image, avec son URL de prévisualisation', () => {
@@ -37,7 +37,7 @@ describe('AttachmentDraftList', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: t('comments.openAttachment') })[1]);
     const dialog = await screen.findByRole('dialog');
-    // L'image agrandie est bien la seconde, et le carrousel annonce ses deux vues.
+    // The enlarged image is the second one, and the carousel announces its two views.
     expect(dialog.querySelector('img')).toHaveAttribute('src', 'blob:preview/file:1');
     expect(dialog).toHaveTextContent('2 / 2');
   });
@@ -55,7 +55,7 @@ describe('AttachmentDraftList', () => {
     expect(onRemove).toHaveBeenCalledExactlyOnceWith('file:0');
   });
 
-  /** Un PDF n'a pas de vignette : il reste une pastille nommée, retirable comme les autres. */
+  /** A PDF has no thumbnail: it stays a named chip, removable like the others. */
   it("n'ouvre pas de carrousel pour une pièce qui n'est pas une image", () => {
     render(
       <AttachmentDraftList

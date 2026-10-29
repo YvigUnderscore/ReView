@@ -40,8 +40,8 @@ const mount = (comment: ReviewComment) =>
   );
 
 /**
- * D6 — un fil à cent réponses était rendu en entier. On ne garde que les dernières, et
- * l'indicateur dit combien il en cache : sans ce chiffre, le bouton ne se comprend pas.
+ * D6: a thread with a hundred replies was rendered in full. Only the latest are kept, and the
+ * indicator says how many are hidden: without this count, the button makes no sense.
  */
 describe('CommentItem — fil long', () => {
   const withReplies = (n: number) =>
@@ -60,7 +60,7 @@ describe('CommentItem — fil long', () => {
   it('borne les réponses rendues et annonce celles qu’il cache', () => {
     mount(withReplies(VISIBLE_REPLIES + 5));
     expect(screen.getAllByText(/^reponse-/)).toHaveLength(VISIBLE_REPLIES);
-    // Les plus anciennes sont celles qui manquent ; les dernières restent visibles.
+    // The oldest are the ones missing; the latest stay visible.
     expect(screen.queryByText('reponse-0')).not.toBeInTheDocument();
     expect(screen.getByText(`reponse-${VISIBLE_REPLIES + 4}`)).toBeInTheDocument();
     expect(
@@ -78,8 +78,8 @@ describe('CommentItem — fil long', () => {
 });
 
 /**
- * Le repliage d'un commentaire se décide sur ce que la colonne masque VRAIMENT : happy-dom ne
- * met rien en page, on lui prête donc la largeur d'un panneau de review.
+ * A comment's collapse is decided by what the column ACTUALLY hides: happy-dom does no layout,
+ * so it is given the width of a review panel.
  */
 describe('CommentItem — commentaire trop grand', () => {
   const wall = 'z'.repeat(640);
@@ -110,11 +110,10 @@ describe('CommentItem — commentaire trop grand', () => {
 });
 
 /**
- * Lot 14 — une proposition d'édition de nuage dépose son masque et ses ops de sous-ensemble en
- * pièces jointes du commentaire : c'est ce qui leur donne le stockage, la présignature et la
- * purge. Ce ne sont pas pour autant des fichiers offerts au lecteur — un bitset ne s'ouvre pas.
- * La liste des pièces jointes les écarte par leur CLÉ, jamais par leur type : un `.bin` que
- * quelqu'un joint vraiment reste proposé.
+ * Batch 14: a cloud edit proposal stores its mask and subset ops as comment attachments: that is
+ * what gives them storage, presigning and purging. They are not files offered to the reader,
+ * though, since a bitset cannot be opened. The attachment list excludes them by their KEY,
+ * never by their type: a `.bin` that someone really attaches stays listed.
  */
 describe('CommentItem — binaires d’une proposition de nuage', () => {
   const withProposal = () =>

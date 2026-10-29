@@ -9,7 +9,7 @@ import { useT } from '../../i18n';
 
 const EMOJIS = ['👍', '❤️', '😂', '🎉', '👀', '🔥', '✅', '❓'];
 
-/** Chips de réactions groupées par emoji + sélecteur d'emoji (toggle par utilisateur). */
+/** Reaction chips grouped by emoji, plus an emoji picker (per-user toggle). */
 export default function CommentReactions({
   comment: c,
   currentUserId,

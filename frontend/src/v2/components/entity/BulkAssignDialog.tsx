@@ -15,14 +15,14 @@ import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 
 /**
- * Assignation d'une sélection d'assets ou de plans.
+ * Assigns a selection of assets or shots.
  *
- * Le menu contextuel suffit pour une entité ; répartir une séquence entière au début d'un
- * lot, non — ce serait trente clics droits. La sélection existait déjà pour la mise à la
- * corbeille, elle porte maintenant aussi ce geste.
+ * The context menu is enough for a single entity; spreading a whole sequence across a batch is not:
+ * that would be thirty right-clicks. The selection already existed for moving to the trash, and it
+ * now carries this gesture too.
  *
- * Une entité que le serveur refuse (droits, projet archivé, aucune tâche) est comptée à
- * part plutôt que de faire échouer tout le lot, et le nombre est annoncé.
+ * An entity the server refuses (rights, archived project, no task) is counted separately rather
+ * than failing the whole batch, and the count is announced.
  */
 export default function BulkAssignDialog({
   projectId,
@@ -82,14 +82,14 @@ export default function BulkAssignDialog({
         <div className="space-y-4">
           <fieldset className="space-y-1.5">
             <legend className="text-xs font-medium text-muted-foreground">{t('assign.person')}</legend>
-            {/* Même annuaire que partout ailleurs : sur une équipe de cinquante, une liste
-              déroulante de noms ne dit pas lequel des deux homonymes on désigne. */}
+            {/* Same directory as everywhere else: on a team of fifty, a dropdown of names does not say
+              which of two namesakes is meant. */}
             <PeopleList
               people={members}
               selectedIds={userId === UNASSIGNED ? [] : [Number(userId)]}
               onPick={(person) => setUserId(String(person.id))}
             />
-            {/* « Personne » n'est pas quelqu'un : le choix reste hors de la liste. */}
+            {/* "Nobody" is not someone: the choice stays out of the list. */}
             <button
               type="button"
               onClick={() => setUserId(UNASSIGNED)}
@@ -106,8 +106,8 @@ export default function BulkAssignDialog({
 
           <fieldset className="space-y-1.5">
             <legend className="text-xs font-medium text-muted-foreground">{t('assign.departments')}</legend>
-            {/* Aucune étape cochée : on vise les tâches déjà présentes. C'est le cas
-              courant — « donne-moi ce lot » veut dire « tout ce qu'il reste à y faire ». */}
+            {/* No step checked: we target the tasks already present. This is the common case, since
+              "give me this batch" means "everything still left to do on it". */}
             <p className="text-xs text-muted-foreground">{t('assign.departmentsHint')}</p>
             <div className="flex flex-wrap gap-1.5">
               {departments.map((department) => (

@@ -7,9 +7,9 @@ import type { ReviewComment } from '../../types/api';
 import { intlLocale, useT } from '../../i18n';
 
 /**
- * Ligne d'en-tête d'un commentaire : auteur, date, état, et les repères de ce que la carte
- * sait restaurer (frame, point de vue, annotation). Extraite de `CommentItem` en D1, quand
- * l'état l'a fait déborder du budget de lignes.
+ * Header line of a comment: author, date, status, and the markers of what the card can
+ * restore (frame, point of view, annotation). Extracted from `CommentItem` in D1, when the
+ * state overflowed the line budget.
  */
 export default function CommentMeta({
   comment: c,
@@ -50,7 +50,7 @@ export default function CommentMeta({
           {t(STATE_LABEL_KEY[state])}
         </span>
       )}
-      {/* Badges indicateurs : la carte entière est cliquable pour tout restaurer. */}
+      {/* Indicator badges: the whole card is clickable to restore everything. */}
       {c.timestamp != null && (
         <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 font-mono text-xs text-primary">
           <Film size={10} /> F{startFrame + Math.round(c.timestamp * fps)}

@@ -12,15 +12,14 @@ import { useEntityNote, useSaveNote, type NoteKind, type NoteScope } from '../..
 import { useT } from '../../i18n';
 
 /**
- * L'équipe et le brief d'une entité, en grand.
+ * An entity's team and brief, in a large view.
  *
- * Ils vivaient dans un dépliant de l'en-tête : une fiche de trente lignes y repoussait le
- * travail hors de l'écran, et une planche de références n'avait aucune chance d'y tenir.
- * La fenêtre donne la place — on lit le brief comme un document, on l'écrit dans le même
- * cadre, et la page en dessous garde sa hauteur.
+ * They used to live in a header dropdown: a thirty-line note pushed the work off screen, and a board of
+ * references had no chance of fitting. The window provides room: the brief is read like a document, written
+ * in the same frame, and the page below keeps its height.
  *
- * L'édition **remplace** la lecture au lieu de s'ouvrir à côté : deux colonnes de trente
- * caractères ne servent ni à écrire ni à lire, et l'aperçu est à un bouton dans l'éditeur.
+ * Editing **replaces** reading instead of opening beside it: two columns thirty characters wide serve neither
+ * to write nor to read, and the preview is one button away in the editor.
  */
 export default function EntityNoteDialog({
   kind,
@@ -47,11 +46,11 @@ export default function EntityNoteDialog({
   const hasNote = Boolean(note?.body.trim());
 
   /**
-   * Une fiche à moitié écrite ne se referme pas d'un clic à côté.
+   * A half-written note does not close on a click outside.
    *
-   * Échap, le clic à l'extérieur et la croix passent tous par ici : une seule porte à
-   * garder. Sans elle, annuler le sélecteur de fichiers avec Échap suffisait à emporter
-   * l'édition en cours — le geste est le même, l'intention pas du tout.
+   * Escape, a click outside and the close button all go through here: a single gate to keep. Without it,
+   * cancelling the file picker with Escape was enough to discard the edit in progress. The gesture is the
+   * same, the intent is not.
    */
   const leave = (): boolean => {
     if (editing && dirty && !window.confirm(t('note.discardConfirm'))) return false;
@@ -64,7 +63,7 @@ export default function EntityNoteDialog({
     save.mutate(body, {
       onSuccess: () => {
         toast.success(t('note.saved'));
-        // Enregistré : plus rien à perdre, la porte se rouvre librement.
+        // Saved: nothing left to lose, the gate reopens freely.
         setDirty(false);
         setEditing(false);
       },

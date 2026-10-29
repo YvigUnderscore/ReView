@@ -4,18 +4,18 @@
 import type { Membership } from '../../types/api';
 
 /**
- * Helpers purs des mentions @user (32.B) : détection de la mention en cours de
- * saisie, filtrage des membres, insertion du jeton et surlignage au rendu.
+ * Pure helpers for @user mentions (32.B): detecting the mention being typed, filtering members,
+ * inserting the token, and highlighting at render time.
  */
 
-/** Candidat proposé par l'autocomplete : handle inséré dans le texte + libellé affiché. */
+/** Candidate offered by the autocomplete: handle inserted in the text, plus its displayed label. */
 export interface MentionCandidate {
   id: number;
   handle: string;
   label: string;
 }
 
-/** Handle d'un membre : pseudo, sinon partie locale de l'email (matché côté backend). */
+/** Member handle: username, otherwise the local part of the email (matched on the backend). */
 export function mentionHandle(user: { username?: string | null; email: string }): string {
   return user.username ?? user.email.split('@')[0];
 }
@@ -29,8 +29,8 @@ export function toCandidates(members: Membership[]): MentionCandidate[] {
 }
 
 /**
- * Mention en cours de saisie : dernier `@` avant le caret, précédé d'un début de
- * ligne ou d'un séparateur, sans espace ni autre `@` entre lui et le caret.
+ * Mention being typed: the last `@` before the caret, preceded by the start of a line or a
+ * separator, with no space or other `@` between it and the caret.
  */
 export function activeMentionQuery(text: string, caret: number): { start: number; query: string } | null {
   const upto = text.slice(0, caret);
@@ -49,7 +49,7 @@ export function filterCandidates(candidates: MentionCandidate[], query: string):
     .slice(0, 6);
 }
 
-/** Remplace la mention en cours par `@handle ` et renvoie le nouveau texte + caret. */
+/** Replaces the current mention with `@handle ` and returns the new text and caret. */
 export function insertMention(
   text: string,
   caret: number,
@@ -61,8 +61,8 @@ export function insertMention(
 }
 
 /**
- * Surligne les jetons `@xxx` d'un contenu HTML sanitisé sans toucher aux balises
- * (le texte est découpé sur les tags ; seuls les segments texte sont réécrits).
+ * Highlights the `@xxx` tokens of sanitized HTML without touching the tags (the text is split on
+ * tags; only the text segments are rewritten).
  */
 export function highlightMentions(html: string): string {
   return html

@@ -8,11 +8,10 @@ import type { ProductionOverview } from '../../types/production';
 import { useT } from '../../i18n';
 
 /**
- * Qui fait quoi (C6).
+ * Who does what (C6).
  *
- * L'assigné d'une tâche est transporté par l'API depuis toujours et n'était affiché nulle
- * part : impossible de voir qui portait quoi, ni qui croulait. La barre montre la
- * répartition de ce qui reste — le travail terminé ne pèse plus sur personne.
+ * A task's assignee has always been carried by the API and was displayed nowhere: impossible to see who carried what, or
+ * who was overloaded. The bar shows the distribution of what remains: finished work no longer weighs on anyone.
  */
 export default function WorkloadPanel({ data }: { data: ProductionOverview }) {
   const t = useT();

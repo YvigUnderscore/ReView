@@ -49,19 +49,19 @@ const mount = (kind: 'asset' | 'shot' = 'shot') =>
 const create = () => screen.getByRole('button', { name: t('common.create') });
 
 /**
- * Une task ne naissait que par ricochet : en demandant une version, ou en assignant
- * quelqu'un. Sur un projet qui n'est relié à aucun site, le pipe restait donc vide — alors
- * que les départements du projet décrivent déjà les étapes qu'il traverse.
+ * A task was only ever created indirectly: by requesting a version, or by assigning someone. On a project not
+ * linked to any site, the pipe therefore stayed empty, whereas the project's departments already describe the
+ * steps it goes through.
  */
-describe('NewTaskDialog — projet autonome', () => {
-  it('propose les étapes du projet, sans rien promettre à ShotGrid', () => {
+describe('NewTaskDialog — standalone project', () => {
+  it("proposes the project's steps, promising nothing to ShotGrid", () => {
     mount();
     expect(screen.getByText(t('task.new.hint'))).toBeTruthy();
     expect(screen.getByRole('option', { name: 'ANIM' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'COMP' })).toBeTruthy();
   });
 
-  it('laisse créer une task sans étape — un pipe vide n’est pas un cul-de-sac', async () => {
+  it('lets a task be created without a step: an empty pipe is not a dead end', async () => {
     const user = userEvent.setup();
     mount();
     await user.selectOptions(screen.getByRole('combobox', { name: t('task.new.step') }), 'none');
@@ -72,7 +72,7 @@ describe('NewTaskDialog — projet autonome', () => {
     );
   });
 
-  it('écrit l’étape choisie et la personne, sur le parent ouvert', async () => {
+  it('writes the chosen step and person onto the open parent', async () => {
     const user = userEvent.setup();
     mount('asset');
     await user.selectOptions(screen.getByRole('combobox', { name: t('task.new.assignee') }), '8');
@@ -84,12 +84,12 @@ describe('NewTaskDialog — projet autonome', () => {
         assigneeId: 8,
       }),
     );
-    // Le chemin ShotGrid ne doit pas s'inviter : la tâche naît dans ReView.
+    // The ShotGrid path must not impose itself: the task is born in ReView.
     expect(createTask.mock.calls[0][0]).not.toHaveProperty('assigneeSgId');
   });
 });
 
-describe('NewTaskDialog — projet relié à ShotGrid', () => {
+describe('NewTaskDialog — project linked to ShotGrid', () => {
   beforeEach(() => {
     steps.mockReturnValue({
       linked: true,
@@ -99,13 +99,13 @@ describe('NewTaskDialog — projet relié à ShotGrid', () => {
     sgMembers.mockReturnValue({ data: [{ sgId: 91, name: 'Bob', email: null, userId: null }] });
   });
 
-  it('n’offre pas « sans étape » : la task doit porter une étape du site', () => {
+  it('does not offer "no step": the task must carry a step of the site', () => {
     mount();
     expect(screen.getByText(t('task.new.hintShotgrid'))).toBeTruthy();
     expect(screen.queryByRole('option', { name: t('pipeline.dept.none') })).toBeNull();
   });
 
-  it('assigne avec l’identifiant du site, pas celui de ReView', async () => {
+  it('assigns with the site identifier, not the ReView one', async () => {
     const user = userEvent.setup();
     mount();
     await user.selectOptions(screen.getByRole('combobox', { name: t('task.new.assignee') }), '91');
@@ -114,7 +114,7 @@ describe('NewTaskDialog — projet relié à ShotGrid', () => {
     expect(createTask.mock.calls[0][0]).not.toHaveProperty('assigneeId');
   });
 
-  it('dit pourquoi rien n’est proposé quand le site ne rend aucune étape', () => {
+  it('says why nothing is offered when the site returns no step', () => {
     steps.mockReturnValue({ linked: true, steps: [], isLoading: false });
     mount();
     expect(screen.getByText(t('task.new.noSteps'))).toBeTruthy();

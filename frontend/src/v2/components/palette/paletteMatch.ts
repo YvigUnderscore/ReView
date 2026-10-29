@@ -2,18 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Filtrage des entrées fixes de la palette (destinations et actions).
+ * Filtering of the palette's fixed entries (destinations and actions).
  *
- * `Command` est monté avec `shouldFilter={false}` — les résultats d'entités viennent du
- * serveur, déjà classés — donc cmdk ne trie rien de lui-même. Sans ce filtre, les entrées
- * fixes restaient toutes affichées pendant la frappe ; avec l'ancien `!hasQuery`, elles
- * disparaissaient toutes. Ni l'un ni l'autre ne laisse taper « kanb » pour aller au kanban.
+ * `Command` is mounted with `shouldFilter={false}`: the entity results come from the server, already ranked, so cmdk sorts
+ * nothing by itself. Without this filter, the fixed entries all stayed displayed while typing; with the old `!hasQuery`, they
+ * all disappeared. Neither of the two lets one type "kanb" to go to the kanban.
  *
- * Dans son propre module : un fichier qui exporte à la fois un composant et des fonctions
- * casse le rafraîchissement à chaud de Vite.
+ * In its own module: a file exporting both a component and functions breaks Vite's hot reload.
  */
 
-/** Comparaison tolérante : casse et accents ignorés — « reglages » doit trouver « Réglages ». */
+/** Tolerant comparison: case and accents ignored, so "reglages" must find "Réglages". */
 export function foldForSearch(value: string): string {
   return value
     .toLocaleLowerCase()
@@ -21,7 +19,7 @@ export function foldForSearch(value: string): string {
     .replace(/\p{Diacritic}/gu, '');
 }
 
-/** Entrées dont le libellé — ou la clé technique, stable d'une langue à l'autre — contient la saisie. */
+/** Entries whose label, or technical key (stable from one language to another), contains the input. */
 export function matchDestinations<T extends { label: string; key: string }>(
   items: readonly T[],
   query: string,
