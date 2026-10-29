@@ -10,13 +10,13 @@ import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import { t } from '../../../i18n';
 
 /**
- * Réglages de la brosse de surface — les MÊMES dans les deux barres d'options spatiales. Ce qui
- * est vérifié ici est la demande de l'utilisateur, mot pour mot : « je ne peux pas changer la
- * scale ». L'épaisseur doit donc être réglable **dès que la brosse est armée**, dans l'unité
- * qu'on voit (des pixels d'écran), et la gomme — qui n'a rien à régler — dit son geste.
+ * Settings of the surface brush: the SAME in both spatial options bars. What is checked here is the
+ * user's request, word for word: "I cannot change the scale". Thickness must therefore be adjustable
+ * **as soon as the brush is armed**, in the unit one sees (screen pixels), and the eraser, which has
+ * nothing to set, states its gesture.
  */
 
-/** L'outil tel que le rail le déclare : on ne réinvente pas un descripteur pour le test. */
+/** The tool as the rail declares it: we do not reinvent a descriptor for the test. */
 const toolById = (id: 'paint' | 'paint-erase'): ReviewTool =>
   toolsFor('annotate', 'MODEL_3D').find((tool) => tool.id === id)!;
 
@@ -35,8 +35,8 @@ function paintState(over: Partial<SplatPaintState> = {}) {
   } as unknown as SplatPaintState;
 }
 
-describe('PaintOptions — brosse armée', () => {
-  it('offre l’épaisseur en pixels d’écran, bornée comme le trait lui-même', () => {
+describe('PaintOptions — brush armed', () => {
+  it('offers thickness in screen pixels, clamped like the stroke itself', () => {
     const setWidth = vi.fn();
     render(<PaintOptions tool={toolById('paint')} paint={paintState({ setWidth })} />);
     const field = screen.getByRole('textbox', { name: t('review.thickness') });
@@ -44,7 +44,7 @@ describe('PaintOptions — brosse armée', () => {
     fireEvent.change(field, { target: { value: '12' } });
     fireEvent.blur(field);
     expect(setWidth).toHaveBeenCalledWith(12);
-    // Au-delà des bornes, le champ ramène dans la plage du trait — la même des deux côtés.
+    // Beyond the bounds, the field brings the value back into the stroke's range: the same on both sides.
     fireEvent.change(field, { target: { value: '999' } });
     fireEvent.blur(field);
     expect(setWidth).toHaveBeenCalledWith(MAX_STROKE_PX);
@@ -53,7 +53,7 @@ describe('PaintOptions — brosse armée', () => {
     expect(setWidth).toHaveBeenCalledWith(MIN_STROKE_PX);
   });
 
-  it('offre les quatre encres, et montre celle qui est choisie', () => {
+  it('offers the four inks, and shows the one that is chosen', () => {
     const setColor = vi.fn();
     render(<PaintOptions tool={toolById('paint')} paint={paintState({ setColor })} />);
     const inks = screen.getAllByRole('button', { name: /#/ });
@@ -63,7 +63,7 @@ describe('PaintOptions — brosse armée', () => {
     expect(setColor).toHaveBeenCalledTimes(1);
   });
 
-  it('grise annuler, rétablir et tout effacer quand il n’y a aucun trait en préparation', () => {
+  it('greys out undo, redo and clear-all when no stroke is pending', () => {
     render(<PaintOptions tool={toolById('paint')} paint={paintState()} />);
     expect(screen.getByRole('button', { name: t('review.undoStroke') })).toBeDisabled();
     expect(screen.getByRole('button', { name: t('review.redoStroke') })).toBeDisabled();
@@ -71,7 +71,7 @@ describe('PaintOptions — brosse armée', () => {
     expect(screen.getByText(t('draw.strokesGoWithComment'))).toBeInTheDocument();
   });
 
-  it('les rend quand un trait attend, et annonce ce qui partira avec le commentaire', () => {
+  it('enables them when a stroke is waiting, and announces what will leave with the comment', () => {
     render(<PaintOptions tool={toolById('paint')} paint={paintState({ pendingCount: 2, redoCount: 1 })} />);
     expect(screen.getByRole('button', { name: t('review.undoStroke') })).toBeEnabled();
     expect(screen.getByRole('button', { name: t('review.redoStroke') })).toBeEnabled();
@@ -79,14 +79,14 @@ describe('PaintOptions — brosse armée', () => {
   });
 });
 
-describe('PaintOptions — gomme armée', () => {
-  it('n’offre ni encre ni épaisseur, et dit son geste', () => {
+describe('PaintOptions — eraser armed', () => {
+  it('offers neither ink nor thickness, and states its gesture', () => {
     const tool = toolById('paint-erase');
     render(<PaintOptions tool={tool} paint={paintState({ pendingCount: 1 })} />);
     expect(screen.queryByRole('textbox', { name: t('review.thickness') })).not.toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: /#/ })).toHaveLength(0);
     expect(screen.getByText(t(tool.hintKey))).toBeInTheDocument();
-    // La pile de traits est partagée avec la brosse : les trois boutons restent.
+    // The stroke stack is shared with the brush: the three buttons remain.
     expect(screen.getByRole('button', { name: t('review.undoStroke') })).toBeEnabled();
   });
 });

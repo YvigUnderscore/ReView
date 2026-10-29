@@ -4,37 +4,36 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * Curseurs partagés de la salle de review live (reliquat noté par le studio).
+ * Shared cursors of the live review room (a leftover noted by the studio).
  *
- * La session diffusait le playhead, la caméra et le wipe, mais aucun pointeur : « là, ce
- * truc » n'avait aucun support visuel. Le canal existant (`live:sync`) transporte
- * désormais une trame de curseur ; elle est **découplée** de la diffusion périodique,
- * réglée à 2 Hz par défaut — un curseur à deux images par seconde ne désigne rien.
+ * The session broadcast the playhead, the camera and the wipe, but no pointer: "there, that thing"
+ * had no visual support. The existing channel (`live:sync`) now carries a cursor frame; it is
+ * **decoupled** from the periodic broadcast, set to 2 Hz by default: a cursor at two images per
+ * second points at nothing.
  *
- * Un bus de module plutôt qu'un contexte : le lecteur (qui capte le geste et affiche les
- * curseurs) et la session live (qui parle au socket) sont à deux extrémités de l'arbre,
- * et rien d'autre n'a besoin de savoir. Même parti pris que `liveSync.ts` pour les
- * départs différés.
+ * A module bus rather than a context: the player (which captures the gesture and displays the cursors)
+ * and the live session (which talks to the socket) are at two ends of the tree, and nothing else needs
+ * to know. Same approach as `liveSync.ts` for deferred departures.
  */
 
-/** Position normalisée dans le cadre du média : 0..1 quel que soit l'écran du spectateur. */
+/** Normalized position within the media frame: 0..1 whatever the viewer's screen. */
 export interface PointerFrame {
   userId: number;
   x: number;
   y: number;
-  /** Le pointeur a quitté le cadre : à retirer sans attendre l'expiration. */
+  /** The pointer has left the frame: remove it without waiting for expiry. */
   gone?: true;
 }
 
-/** Curseur affiché — position, propriétaire, et instant de la dernière nouvelle. */
+/** Displayed cursor: position, owner, and the instant of the last news. */
 export interface LivePointer extends PointerFrame {
   label: string;
   at: number;
 }
 
-/** Un curseur immobile disparaît : sans cela, l'écran se couvre de reliquats. */
+/** A motionless cursor disappears: otherwise the screen fills up with leftovers. */
 export const POINTER_TTL_MS = 2500;
-/** Cadence d'émission maximale (~20 Hz) : assez fluide, sans inonder le relais. */
+/** Maximum emission rate (~20 Hz): smooth enough, without flooding the relay. */
 export const POINTER_INTERVAL_MS = 50;
 const SWEEP_MS = 400;
 
@@ -66,7 +65,7 @@ const sweep = (): void => {
   }, SWEEP_MS);
 };
 
-/** Trame de curseur d'un payload `live:sync` — validée, le relais ne garantit rien. */
+/** Cursor frame of a `live:sync` payload: validated, the relay guarantees nothing. */
 export function readPointerFrame(payload: unknown): PointerFrame | null {
   const p = (payload as { pointer?: unknown } | null)?.pointer as Partial<PointerFrame> | undefined;
   if (!p || typeof p.userId !== 'number') return null;
@@ -76,7 +75,7 @@ export function readPointerFrame(payload: unknown): PointerFrame | null {
   return { userId: p.userId, x: p.x, y: p.y };
 }
 
-/** Applique une trame reçue : le curseur de cet utilisateur remplace le précédent. */
+/** Applies a received frame: this user's cursor replaces the previous one. */
 export function receivePointer(frame: PointerFrame, label: string): void {
   const others = pointers.filter((p) => p.userId !== frame.userId);
   if (frame.gone) {
@@ -88,9 +87,9 @@ export function receivePointer(frame: PointerFrame, label: string): void {
 }
 
 /**
- * Applique la trame de curseur d'un payload `live:sync`, en lui collant le nom de son
- * auteur : le bus ne connaît que des identifiants, la liste des participants vit dans la
- * session. Payload sans curseur (diffusion périodique ordinaire) : sans effet.
+ * Applies the cursor frame of a `live:sync` payload, attaching the name of its author. The bus only
+ * knows identifiers; the list of participants lives in the session. A payload without a cursor
+ * (ordinary periodic broadcast) has no effect.
  */
 export function applyPointer(payload: unknown, participants: { id: number; displayName: string }[]): void {
   const frame = readPointerFrame(payload);
@@ -98,7 +97,7 @@ export function applyPointer(payload: unknown, participants: { id: number; displ
   receivePointer(frame, participants.find((p) => p.id === frame.userId)?.displayName ?? '');
 }
 
-/** Vide l'écran — fin de session, changement de driver, départ du média. */
+/** Clears the screen: end of session, change of driver, departure from the media. */
 export function clearPointers(): void {
   if (pointers.length > 0) commit([]);
   if (sweepTimer !== null) {
@@ -108,9 +107,9 @@ export function clearPointers(): void {
 }
 
 /**
- * Branche (ou débranche) la sortie socket — posée par la session live du driver.
- * Brancher rouvre la fenêtre d'émission : la première position d'une prise de main part
- * tout de suite, sans hériter de la cadence d'une session précédente.
+ * Plugs in (or unplugs) the socket output, set by the driver's live session. Plugging in reopens the
+ * emission window: the first position of a takeover goes out at once, without inheriting the rate of a
+ * previous session.
  */
 export function setPointerEmitter(fn: Emitter | null): void {
   emitter = fn;
@@ -122,13 +121,13 @@ export function setPointerEmitter(fn: Emitter | null): void {
   }
 }
 
-/** Y a-t-il quelqu'un pour diffuser ? (le lecteur évite de calculer pour rien). */
+/** Is there anyone to broadcast? (the player avoids computing for nothing). */
 export const canSendPointer = (): boolean => emitter !== null;
 
 /**
- * Émet la position locale, au plus une fois par `POINTER_INTERVAL_MS`. La dernière
- * position d'un geste est toujours transmise (émission de queue) : sans elle, le curseur
- * des spectateurs s'arrêterait quelques pixels avant ce que le driver désigne.
+ * Emits the local position, at most once per `POINTER_INTERVAL_MS`. The last position of a gesture is
+ * always transmitted (trailing emission): without it, the spectators' cursor would stop a few pixels
+ * before what the driver points at.
  */
 export function sendPointer(frame: { x: number; y: number } | null): void {
   if (!emitter) return;
@@ -164,8 +163,8 @@ const subscribe = (fn: () => void): (() => void) => {
   return () => listeners.delete(fn);
 };
 
-/** Curseurs vivants — instantané stable tant que rien n'arrive (`useSyncExternalStore`). */
+/** Live cursors: a stable snapshot as long as nothing arrives (`useSyncExternalStore`). */
 export const getPointers = (): LivePointer[] => pointers;
 
-/** Curseurs à afficher, réévalués à chaque trame reçue et à chaque expiration. */
+/** Cursors to display, re-evaluated at each received frame and at each expiry. */
 export const useLivePointers = (): LivePointer[] => useSyncExternalStore(subscribe, getPointers, getPointers);

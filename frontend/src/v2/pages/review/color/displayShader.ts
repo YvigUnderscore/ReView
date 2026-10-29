@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Sources GLSL de la transformée d'affichage. Module **pur** (des chaînes) : le contexte
- * WebGL vit dans `renderTransform.ts`, ce qui rend la chaîne de traitement relisible et
- * testable sans GPU.
+ * GLSL sources for the display transform. Pure module (strings only): the WebGL
+ * context lives in `renderTransform.ts`, which keeps the processing chain readable and
+ * testable without a GPU.
  *
- * La chaîne est désormais celle du studio, et elle seule : le code source de l'image sert
- * directement de domaine à la **LUT 3D** display/view de la config du projet — exactement ce
- * que cuit `ociobakelut --inputspace … --displayview …`.
+ * The chain is now the studio's own, and the only one: the image source code is used
+ * directly as the domain of the project's display/view **3D LUT**, exactly what
+ * `ociobakelut --inputspace … --displayview …` bakes.
  *
- * L'exposition et le gamma d'affichage ont disparu avec le panneau Color (Phase 50) : plus
- * personne ne pouvait les régler, et un aller-retour sRGB ↔ linéaire à exposition nulle ne
- * faisait que recopier les pixels.
+ * Display exposure and gamma were removed along with the Color panel (Phase 50): nobody
+ * could adjust them anymore, and a sRGB <-> linear round trip at zero exposure only copied
+ * the pixels.
  */
 
 export const VERTEX_300 = /* glsl */ `#version 300 es
@@ -34,8 +34,8 @@ uniform sampler3D uLut;
 uniform float uLutSize;
 void main() {
   vec4 src = texture(uSrc, vUv);
-  // Échantillonnage au centre des texels : sans ce recadrage, les extrémités de la LUT
-  // sont lues à moitié hors grille et les noirs/blancs dérivent.
+  // Sample at texel centers: without this offset, the LUT edges are read half outside
+  // the grid and blacks/whites drift.
   vec3 uvw = clamp(src.rgb, 0.0, 1.0) * ((uLutSize - 1.0) / uLutSize) + (0.5 / uLutSize);
   fragColor = vec4(texture(uLut, uvw).rgb, src.a);
 }
@@ -50,7 +50,7 @@ void main() {
 }
 `;
 
-/** Repli WebGL1 : la LUT est un atlas 2D, l'interpolation sur le bleu est faite à la main. */
+/** WebGL1 fallback: the LUT is a 2D atlas, so interpolation on blue is done by hand. */
 export const FRAGMENT_100 = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -79,7 +79,7 @@ void main() {
 }
 `;
 
-/** Programmes disponibles selon la génération de contexte obtenue. */
+/** Available programs, depending on the context generation obtained. */
 export const SHADERS = {
   webgl2: { vertex: VERTEX_300, fragment: FRAGMENT_300 },
   webgl1: { vertex: VERTEX_100, fragment: FRAGMENT_100 },

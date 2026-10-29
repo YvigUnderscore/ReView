@@ -2,27 +2,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Règles de chargement du HLS (vague 2 — les segments ne passent plus par l'API).
+ * HLS loading rules (wave 2: segments no longer go through the API).
  *
- * Depuis que la sous-playlist pointe des URL MinIO présignées, les requêtes d'un même
- * lecteur ne vont plus toutes au même endroit : les manifestes à l'API (`/api/…`), les
- * segments au stockage. Deux conséquences, isolées ici pour être testées sans navigateur.
+ * Since the sub-playlist points to presigned MinIO URLs, the requests of a single player no longer
+ * all go to the same place: the manifests to the API (`/api/…`), the segments to the storage. Two
+ * consequences, isolated here so that they can be tested without a browser.
  */
 
-/** Fragment d'erreur hls.js utile ici — évite de dépendre des types du lecteur. */
+/** hls.js error fragment, as far as needed here: avoids depending on the player's types. */
 export interface HlsErrorLike {
   details?: string;
   response?: { code?: number };
 }
 
 /**
- * Une URL de l'API : même origine que l'application, et chemin sous `/api/`.
+ * An API URL: same origin as the application, and a path under `/api/`.
  *
- * ⚠ Comparer le début de la chaîne ne suffit pas : `loadSource('/api/…')` est normalisé par
- * hls.js contre `location.href` avant tout appel réseau, et `xhrSetup` reçoit donc des URL
- * ABSOLUES. Un test sur `startsWith('/api/')` laisserait le manifeste partir sans jeton
- * (401 immédiat). En production, le stockage est servi sur la même origine que
- * l'application (`https://domaine/<bucket>/…`) : c'est le CHEMIN qui les distingue.
+ * ⚠ Comparing the start of the string is not enough: `loadSource('/api/…')` is normalized by hls.js
+ * against `location.href` before any network call, so `xhrSetup` receives ABSOLUTE URLs. A test on
+ * `startsWith('/api/')` would let the manifest go out without a token (immediate 401). In production,
+ * storage is served from the same origin as the application (`https://domain/<bucket>/…`): it is the
+ * PATH that tells them apart.
  */
 export function isApiUrl(url: string, base: string = window.location.href): boolean {
   try {
@@ -34,11 +34,11 @@ export function isApiUrl(url: string, base: string = window.location.href): bool
 }
 
 /**
- * Pose le jeton de session — et **seulement** sur l'API.
+ * Sets the session token, and **only** on the API.
  *
- * L'envoyer à l'URL présignée d'un segment le livrerait au stockage (ses journaux, et une
- * autre origine en développement) sans rien y autoriser : la signature S3 suffit, et S3
- * refuse d'ailleurs deux mécanismes d'authentification concurrents.
+ * Sending it to a segment's presigned URL would deliver it to the storage (its logs, and another origin
+ * in development) without authorizing anything: the S3 signature is enough, and S3 moreover refuses two
+ * competing authentication mechanisms.
  */
 export function applyHlsAuth(xhr: XMLHttpRequest, url: string, token: string | null, base?: string): void {
   if (token && isApiUrl(url, base ?? window.location.href))
@@ -46,9 +46,9 @@ export function applyHlsAuth(xhr: XMLHttpRequest, url: string, token: string | n
 }
 
 /**
- * Une URL présignée a une fin de validité. Passé ce délai (séance de dailies plus longue
- * que la durée du jeton), le segment répond 401/403 : la playlist en main est périmée, il
- * faut la redemander — le manifeste, lui, est toujours accessible.
+ * A presigned URL has an end of validity. Past this delay (a dailies session longer than the token's
+ * lifetime), the segment answers 401/403: the playlist in hand is stale and must be requested again.
+ * The manifest, for its part, is always accessible.
  */
 export function isExpiredMediaUrlError(data: HlsErrorLike): boolean {
   const code = data.response?.code;
@@ -56,7 +56,7 @@ export function isExpiredMediaUrlError(data: HlsErrorLike): boolean {
 }
 
 /**
- * Garde-fou : si le rechargement ne règle rien (droit réellement retiré pendant la lecture),
- * on cesse d'insister plutôt que de boucler sur le manifeste.
+ * Safeguard: if the reload fixes nothing (access really revoked during playback), we stop insisting
+ * rather than looping on the manifest.
  */
 export const MAX_HLS_REFRESHES = 3;

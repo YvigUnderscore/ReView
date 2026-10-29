@@ -17,8 +17,8 @@ const point = (key: string, text: string, files: File[]): PoiDraft => ({
   files,
 });
 
-describe('poiUploadPlan — un seul téléversement, les points d’abord', () => {
-  it('met les images des points devant celles du composeur', () => {
+describe('poiUploadPlan — a single upload, points first', () => {
+  it('puts the point images ahead of those of the composer', () => {
     const plan = poiUploadPlan(
       [point('a', 'un', [img('a1.png')]), point('b', 'deux', [img('b1.png')])],
       [img('libre.png')],
@@ -28,14 +28,14 @@ describe('poiUploadPlan — un seul téléversement, les points d’abord', () =
     expect(plan.dropped).toBe(0);
   });
 
-  it('écarte un type refusé, et le compte — le point garde ses autres images', () => {
+  it('sets aside a refused type and counts it: the point keeps its other images', () => {
     const plan = poiUploadPlan([point('a', 'un', [junk('vir.exe'), img('a2.png')])], []);
     expect(plan.files.map((f) => f.name)).toEqual(['a2.png']);
     expect(plan.counts).toEqual([1]);
     expect(plan.dropped).toBe(1);
   });
 
-  it('s’arrête au plafond : ce sont les pièces du composeur qui tombent en dernier', () => {
+  it("stops at the ceiling: it is the composer's attachments that fall last", () => {
     const plan = poiUploadPlan([point('a', 'un', [img('p1.png'), img('p2.png')])], [img('c1.png')], 2);
     expect(plan.files.map((f) => f.name)).toEqual(['p1.png', 'p2.png']);
     expect(plan.counts).toEqual([2]);
@@ -43,8 +43,8 @@ describe('poiUploadPlan — un seul téléversement, les points d’abord', () =
   });
 });
 
-describe('poiStoredPoints — chaque point reconnaît ses images par leur clé', () => {
-  it('découpe les clés téléversées dans l’ordre du plan', () => {
+describe('poiStoredPoints — each point recognises its images by their key', () => {
+  it('splits the uploaded keys in the order of the plan', () => {
     const points = [point('a', ' un ', [img('a1.png'), img('a2.png')]), point('b', 'deux', [img('b1.png')])];
     const plan = poiUploadPlan(points, [img('libre.png')]);
     const uploaded = plan.files.map((f, i) => ({ key: `k${i}`, name: f.name, contentType: f.type }));
@@ -56,11 +56,11 @@ describe('poiStoredPoints — chaque point reconnaît ses images par leur clé',
       text: 'un',
       images: ['k0', 'k1'],
     });
-    // La pièce du composeur (`k3`) n'appartient à aucun point : elle reste au commentaire.
+    // The composer's attachment (`k3`) belongs to no point: it stays with the comment.
     expect(stored[1].images).toEqual(['k2']);
   });
 
-  it('n’écrit ni texte vide ni liste d’images vide', () => {
+  it('writes neither empty text nor an empty list of images', () => {
     const points = [point('a', '   ', [])];
     const plan = poiUploadPlan(points, []);
     expect(poiStoredPoints(points, plan, [])).toEqual([

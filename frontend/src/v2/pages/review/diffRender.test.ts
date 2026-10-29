@@ -4,20 +4,20 @@
 import { describe, expect, it } from 'vitest';
 import { DIFF_GAINS, HEATMAP_CSS_FILTER, diffFilter, nextGain } from './diffRender';
 
-describe('diffRender — mode différence A/B (34.E)', () => {
-  it('diffFilter : amplification ctx.filter ; la LUT heatmap passe par un filtre CSS', () => {
+describe('diffRender — A/B difference mode (34.E)', () => {
+  it('diffFilter: ctx.filter amplification; the heatmap LUT goes through a CSS filter', () => {
     expect(diffFilter(4)).toBe('brightness(4)');
-    // Chrome ignore url(#…) dans ctx.filter : la LUT est un filtre CSS sur l'élément canvas.
+    // Chrome ignores url(#…) in ctx.filter: the LUT is a CSS filter on the canvas element.
     expect(HEATMAP_CSS_FILTER).toBe('url(#diff-heatmap-lut)');
   });
 
-  it('nextGain cycle sur les gains proposés et retombe sur ×1', () => {
+  it('nextGain cycles through the proposed gains and falls back to ×1', () => {
     expect(nextGain(1)).toBe(2);
     expect(nextGain(2)).toBe(4);
     expect(nextGain(16)).toBe(1);
   });
 
-  it('nextGain depuis une valeur inconnue repart au début du cycle', () => {
+  it('nextGain from an unknown value restarts at the beginning of the cycle', () => {
     expect(DIFF_GAINS).toContain(nextGain(7));
     expect(nextGain(7)).toBe(1);
   });

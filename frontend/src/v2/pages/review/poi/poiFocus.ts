@@ -8,36 +8,36 @@ import { toMarkerPoint } from '../three/objectHotspot';
 import { frameCameraToSphere } from '../viewer/frameCamera';
 
 /**
- * Retour caméra sur un point d'intérêt : cliquer son numéro dans le fil ramène la vue dessus,
- * dans les deux viewers spatiaux (le même code, appelé avec l'objet porteur du média).
+ * Camera return to a point of interest: clicking its number in the thread brings the view back onto it,
+ * in both spatial viewers (the same code, called with the object carrying the media).
  *
- * Le point est en espace OBJET : il est projeté par la matrice monde de l'objet, donc la vue
- * atterrit au même endroit pour tout spectateur, quelle que soit la transformation appliquée au
- * média — même règle que la présentation caméra.
+ * The point is in OBJECT space: it is projected through the object's world matrix, so the view lands in
+ * the same place for every viewer, whatever transformation is applied to the media. Same rule as the
+ * camera presentation.
  */
 
 /**
- * Part de la scène que le cadrage d'un point occupe. Un point n'a pas de taille : sans cette
- * fraction, `frameCameraToSphere` n'aurait aucun rayon à respecter et la caméra viendrait se
- * coller dessus. Douze pour cent laissent voir le défaut **et** ce qui l'entoure.
+ * Share of the scene that the framing of a point occupies. A point has no size: without this fraction,
+ * `frameCameraToSphere` would have no radius to respect and the camera would stick to it. Twelve percent
+ * leaves room to see the defect **and** what surrounds it.
  */
 export const POI_FOCUS_RATIO = 0.12;
 
-/** Rayon de cadrage d'un point, jamais nul — sinon le cadrage serait refusé. */
+/** Framing radius of a point, never null: otherwise the framing would be refused. */
 export function poiFocusRadius(sceneRadius: number): number {
   const radius = Number.isFinite(sceneRadius) ? Math.abs(sceneRadius) : 0;
   return Math.max(radius * POI_FOCUS_RATIO, 1e-3);
 }
 
-/** Cadre la caméra sur un point. `false` si la position est illisible (rien n'a bougé). */
+/** Frames the camera on a point. `false` if the position is unreadable (nothing has moved). */
 export function focusObjectPoint(params: {
   three: typeof import('three');
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
-  /** Objet porteur : le groupe du modèle 3D, le `SplatMesh` du nuage. */
+  /** Carrying object: the group of the 3D model, or the `SplatMesh` of the cloud. */
   object: THREE.Object3D;
   point: Hotspot3D;
-  /** Rayon de la scène — l'échelle du cadrage en dépend (un nuage n'est pas un boulon). */
+  /** Radius of the scene: the framing scale depends on it (a cloud is not a bolt). */
   sceneRadius: number;
 }): boolean {
   const { three, camera, controls, object, point, sceneRadius } = params;

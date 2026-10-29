@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Brouillon de commentaire persisté localement par média (32.C) : texte du composer
- * et formes d'annotation 2D en cours. Restauré au montage de la review, purgé à
- * l'envoi. Stockage localStorage (par navigateur), silencieux en cas d'échec
- * (quota, mode privé).
+ * Comment draft persisted locally per media (32.C): composer text and in-progress 2D
+ * annotation shapes. Restored when the review mounts, purged on send. Stored in
+ * localStorage (per browser), failing silently (quota, private mode).
  */
 
 export interface CommentDraft {
@@ -28,14 +27,14 @@ export function loadDraft(mediaId: number): CommentDraft | null {
   }
 }
 
-/** Fusionne `patch` dans le brouillon du média ; supprime l'entrée devenue vide. */
+/** Merges `patch` into the media's draft; removes the entry once it is empty. */
 export function saveDraft(mediaId: number, patch: CommentDraft): void {
   try {
     const next = { ...(loadDraft(mediaId) ?? {}), ...patch };
     if (isEmpty(next)) localStorage.removeItem(key(mediaId));
     else localStorage.setItem(key(mediaId), JSON.stringify(next));
   } catch {
-    /* stockage indisponible : le brouillon est simplement perdu */
+    /* storage unavailable: the draft is simply lost */
   }
 }
 

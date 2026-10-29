@@ -9,16 +9,16 @@ import { Switch } from '../../../components/ui/switch';
 import { Group, Row } from '../chrome/DockGroup';
 import { useT } from '../../../i18n';
 
-/** Vue enregistrée : pose de caméra nommée, partagée avec l'équipe (3D). */
+/** Saved view: a named camera pose, shared with the team (3D). */
 export interface CameraBookmark {
   id: string;
   label: string;
 }
 
 /**
- * Panneau Caméra du dock spatial — l'objectif et le cadrage, hérités de `CameraBar` et de
- * `BookmarksBar` qui flottaient au-dessus de la scène. Réglages locaux au spectateur, sauf
- * les vues enregistrées (partagées) et ce que le gestionnaire persiste en mise en scène.
+ * Camera panel of the spatial dock: the lens and framing, inherited from `CameraBar` and
+ * `BookmarksBar`, which floated above the scene. Settings are local to the viewer, except the saved
+ * views (shared) and what the manager persists in staging.
  */
 export default function CameraPanel({
   focalMm,
@@ -36,7 +36,7 @@ export default function CameraPanel({
   onFocalMm: (mm: number) => void;
   tiltDeg: number;
   onTiltDeg: (deg: number) => void;
-  /** Profondeur de champ — splat uniquement. */
+  /** Depth of field: splat only. */
   dof?: {
     aperture: number;
     onAperture: (v: number) => void;
@@ -44,26 +44,26 @@ export default function CameraPanel({
     onToggleFocusPick: () => void;
   };
   /**
-   * Atelier caméra (« Mise en scène ») : on sort de la caméra du plan pour la régler de
-   * l'extérieur, sa vue restant dans la fenêtre PiP. L'interrupteur **pilote le mode du chrome**
-   * dans les deux viewers — c'est la seule entrée du mode, et donc la seule source de vérité du
-   * « dans / hors caméra » (modèle : `viewer/useLayoutMode`).
+   * Camera workshop ("Staging"): one steps out of the shot's camera to adjust it from outside, its
+   * view remaining in the PiP window. The switch **drives the chrome's mode** in both viewers: it is
+   * the only entry to the mode, and hence the only source of truth for "in / out of camera" (model:
+   * `viewer/useLayoutMode`).
    */
   layout?: {
     active: boolean;
     onToggle: () => void;
-    /** Libellé et infobulle : le nom du mode armé, pas celui de la fenêtre qu'il ouvre. */
+    /** Label and tooltip: the name of the armed mode, not that of the window it opens. */
     label: string;
     hint: string;
-    /** Preset orbite : un tour complet autour de la cible courante (gestionnaire). */
+    /** Orbit preset: one full turn around the current target (manager). */
     onOrbit?: () => void;
-    /** Efface la présentation persistée (confirmation en amont — gestionnaire). */
+    /** Clears the persisted presentation (confirmation upstream: manager). */
     onClear?: () => void;
   };
   /**
-   * Cadre de review, en lecture seule : le ratio écrit et sa provenance. `frozen` = il vient
-   * d'une présentation enregistrée, et les réglages pipeline ne s'y appliquent plus —
-   * l'infobulle doit le dire, elle promettait un héritage qui n'avait pas lieu.
+   * Review frame, read-only: the written ratio and its origin. `frozen` = it comes from a saved
+   * presentation, and the pipeline settings no longer apply to it. The tooltip must say so: it
+   * promised an inheritance that did not take place.
    */
   aspect: { label: string; frozen: boolean };
   onFrame: () => void;
@@ -72,13 +72,13 @@ export default function CameraPanel({
     items: CameraBookmark[];
     activeId: string | null;
     onGo: (id: string) => void;
-    /** Enregistre la vue courante — absent hors gestionnaire. */
+    /** Records the current view: absent outside the manager. */
     onSave?: () => void;
-    /** Retire une vue enregistrée — absent hors gestionnaire. */
+    /** Removes a saved view: absent outside the manager. */
     onRemove?: (id: string) => void;
-    /** Écriture de la présentation en cours : l'ajout attend. */
+    /** Writing of the current presentation: adding waits. */
     busy?: boolean;
-    /** Liste au maximum : plus un slot libre tant qu'une vue n'est pas retirée. */
+    /** At most this many: a free slot again as long as no view is removed. */
     full?: boolean;
   };
 }) {
@@ -174,8 +174,8 @@ export default function CameraPanel({
             {bookmarks.items.map((v, i) => {
               const onRemove = bookmarks.onRemove;
               return (
-                // Deux gestes distincts sur la même pastille : un bouton chacun — le rappel ne
-                // peut pas contenir la suppression (bouton dans bouton).
+                // Two distinct gestures on the same chip: one button each. The recall cannot
+                // contain the deletion (button inside button).
                 <span
                   key={v.id}
                   className={`flex min-h-[26px] items-center rounded border text-[0.625rem] transition-colors ${

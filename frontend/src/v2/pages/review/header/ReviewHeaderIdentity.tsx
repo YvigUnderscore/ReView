@@ -8,12 +8,11 @@ import TimelineNavigator from '../TimelineNavigator';
 import { useT } from '../../../i18n';
 
 /**
- * Coin gauche de l'en-tête fusionné : ce qu'on regarde. Nom du média, badge brouillon,
- * sélecteur de version, et la navigation précédent/suivant — entre médias d'une playlist
- * comme entre plans d'un montage.
+ * Left corner of the merged header: what is being looked at. Media name, draft badge, version
+ * selector, and previous/next navigation, between media of a playlist as well as between shots of an edit.
  *
- * Rendu par la page de review et posé dans l'en-tête du chrome (`headerLeft`), pour que les
- * quatre types de média partagent une seule barre du haut.
+ * Rendered by the review page and placed in the chrome's header (`headerLeft`), so that the four
+ * media types share a single top bar.
  */
 export default function ReviewHeaderIdentity({ data }: { data: MediaResp }) {
   const t = useT();

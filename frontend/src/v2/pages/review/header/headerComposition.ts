@@ -5,15 +5,15 @@ import type { MediaKind } from '../../../types/api';
 import type { CompareMode } from '../useCompareState';
 
 /**
- * Composition de l'en-tête de review, décidée hors rendu.
+ * Composition of the review header, decided outside rendering.
  *
- * Un seul en-tête depuis la fusion : le chrome du viewer porte identité à gauche, actions à
- * droite. Ce qui varie d'un média à l'autre — le sélecteur A/B n'existe que pour les médias
- * plats, le lecteur détachable que pour la vidéo — est décrit ici plutôt que dispersé en
- * conditions dans le JSX, pour être vérifiable pour les quatre types.
+ * A single header since the merge: the viewer chrome carries identity on the left, actions on the
+ * right. What varies from one media to another (the A/B selector exists only for flat media, the
+ * detachable player only for video) is described here rather than scattered as conditions across
+ * the JSX, so that it can be verified for all four types.
  */
 
-/** Actions du coin droit, dans leur ordre d'affichage. */
+/** Actions of the right corner, in display order. */
 export type HeaderActionId =
   | 'compare'
   | 'shotgrid'
@@ -28,24 +28,24 @@ export type HeaderActionId =
 
 export interface HeaderActionContext {
   kind: MediaKind;
-  /** Média publié : plus de bouton de publication (le verrou de publication est définitif). */
+  /** Published media: no publish button any more (the publication lock is final). */
   published: boolean;
-  /** Le projet est relié à ShotGrid **et** cette version y a son équivalent. */
+  /** The project is linked to ShotGrid **and** this version has its counterpart there. */
   hasSgLink: boolean;
-  /** Au moins un autre spectateur sur le média. */
+  /** At least one other viewer on the media. */
   hasViewers: boolean;
-  /** Le lecteur détachable est proposé par la page (vidéo seulement). */
+  /** The detachable player is offered by the page (video only). */
   canPictureInPicture: boolean;
 }
 
 /**
- * Actions offertes à droite de l'en-tête fusionné.
+ * Actions offered on the right of the merged header.
  *
- * Le sélecteur A/B n'y figure plus que pour la vidéo, seule à cocher deux ou trois versions
- * d'un coup (grille 2×2). L'image choisit A et B dans la barre d'options du mode
- * « Compare » : un seul endroit visible, au lieu d'un menu d'en-tête et d'un onglet de dock
- * qui se contredisaient. La 3D et le splat montent le leur (`SpatialCompareHeader`), qui
- * arrive par la prop `headerRight` du chrome, juste avant cette liste.
+ * The A/B selector appears here only for video, the only one that ticks two or three versions at
+ * once (2×2 grid). The image chooses A and B in the options bar of the "Compare" mode: a single
+ * visible place, instead of a header menu and a dock tab that contradicted each other. 3D and
+ * splat mount their own (`SpatialCompareHeader`), which arrives through the chrome's `headerRight`
+ * prop, just before this list.
  */
 export function headerActions(ctx: HeaderActionContext): HeaderActionId[] {
   return [
@@ -63,10 +63,10 @@ export function headerActions(ctx: HeaderActionContext): HeaderActionId[] {
 }
 
 /**
- * Surcouche de comparaison image : laquelle des deux vues remplace la visionneuse **dans** le
- * viewport. Le wipe et la différence démontaient auparavant tout le chrome — la bascule de
- * mode et les réglages A/B partaient avec, au moment précis où l'on en avait besoin. Ils sont
- * désormais des surcouches du viewport, comme en vidéo.
+ * Image comparison overlay: which of the two views replaces the viewer **within** the viewport.
+ * Wipe and difference used to unmount the whole chrome: the mode toggle and the A/B settings went
+ * with them, at the precise moment they were needed. They are now overlays of the viewport, as for
+ * video.
  */
 export function imageCompareOverlay(compareId: number | null, mode: CompareMode): 'wipe' | 'diff' | null {
   if (compareId == null || mode === 'side') return null;
@@ -74,15 +74,15 @@ export function imageCompareOverlay(compareId: number | null, mode: CompareMode)
 }
 
 export interface ChromeHostInput {
-  /** Le média est chargé : sans lui, aucune branche ne monte de chrome. */
+  /** The media is loaded: without it, no branch mounts any chrome. */
   hasData: boolean;
   kind?: MediaKind;
 }
 
 /**
- * Le chrome du viewer héberge-t-il l'en-tête ? Vrai dès qu'une branche en monte un — donc
- * pour les quatre types de média. Seul le chargement n'en monte aucun, et la page rend alors
- * l'en-tête elle-même plutôt que de le laisser disparaître.
+ * Does the viewer chrome host the header? True as soon as a branch mounts one, hence for the four
+ * media types. Only loading mounts none, and the page then renders the header itself rather than
+ * letting it disappear.
  */
 export function chromeHostsHeader({ hasData, kind }: ChromeHostInput): boolean {
   return hasData && !!kind;

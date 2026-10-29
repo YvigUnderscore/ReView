@@ -4,9 +4,9 @@
 import { useT } from '../../../i18n';
 
 /**
- * Bandeau « le viewer attend un clic » des deux viewers spatiaux. Le modèle 3D en avait un, le
- * splat n'en avait aucun : c'est une des raisons pour lesquelles on ne « n'arrivait pas » à
- * poser un point sur un nuage — rien ne disait que le placement était armé.
+ * The "the viewer awaits a click" banner of the two spatial viewers. The 3D model had one, the splat had
+ * none: this is one of the reasons why one "could not" place a point on a cloud, since nothing said that
+ * placement was armed.
  */
 export default function PoiNotice({ count }: { count: number }) {
   const t = useT();

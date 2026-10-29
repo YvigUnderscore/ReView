@@ -2,33 +2,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Chargement **à la demande** du lecteur adaptatif, et décision « HLS ou MP4 ? » prise
- * sans lui (F2).
+ * **On-demand** loading of the adaptive player, and the "HLS or MP4?" decision taken without it (F2).
  *
- * POURQUOI. `hls.js` pèse 510 ko minifiés. Tant qu'il était importé statiquement par
- * `useHlsPlayer`, il appartenait à la fermeture statique de la page de review : ouvrir une
- * review d'IMAGE, de 3D ou de SPLAT le téléchargeait et le parsait pour rien — il n'est
- * instancié que par `VideoPane`, qui n'est pas monté pour ces médias. Il part donc
- * derrière un `import()`.
+ * WHY. `hls.js` weighs 510 kB minified. As long as it was statically imported by `useHlsPlayer`, it
+ * belonged to the static closure of the review page: opening an IMAGE, 3D or SPLAT review downloaded
+ * and parsed it for nothing. It is only instantiated by `VideoPane`, which is not mounted for these
+ * media. It therefore goes behind an `import()`.
  *
- * POURQUOI un test de support RECOPIÉ ici. La bascule ne doit rien changer à l'écran, or
- * le lecteur décide dès le PREMIER rendu s'il pose `src` (repli MP4) ou s'il laisse
- * l'élément vide pour que MSE l'alimente. Demander la réponse à `Hls.isSupported()`
- * obligerait à attendre la bibliothèque — donc à afficher un état intermédiaire, ou à
- * charger une seconde source puis à l'abandonner. Le test est donc rejoué ici, à
- * l'identique de hls.js 1.6.x, de façon synchrone et sans un octet de dépendance ;
- * `hlsRuntime.test.ts` confronte les deux implémentations pour qu'elles ne divergent pas.
+ * WHY a support test COPIED here. The switch must change nothing on screen, yet the player decides on
+ * the FIRST render whether to set `src` (MP4 fallback) or to leave the element empty for MSE to feed.
+ * Asking `Hls.isSupported()` for the answer would force waiting for the library, hence displaying an
+ * intermediate state, or loading a second source then abandoning it. The test is therefore replayed
+ * here, identical to hls.js 1.6.x, synchronously and without a byte of dependency;
+ * `hlsRuntime.test.ts` confronts the two implementations so that they do not diverge.
  *
- * Effet de bord heureux : un navigateur sans MSE (Safari iOS, qui lit le HLS nativement)
- * ne télécharge plus la bibliothèque du tout — elle ne lui a jamais servi.
+ * A happy side effect: a browser without MSE (iOS Safari, which reads HLS natively) no longer downloads
+ * the library at all. It never needed it.
  */
 
-/** La classe `Hls` elle-même (constructeur + membres statiques), en type seul. */
+/** The `Hls` class itself (constructor + static members), as a type only. */
 export type HlsClass = typeof import('hls.js').default;
-/** Une instance de lecteur. */
+/** A player instance. */
 export type HlsInstance = import('hls.js').default;
 
-/** Portée globale interrogée par le test de support — paramétrable pour les tests. */
+/** Global scope queried by the support test: configurable for tests. */
 export interface HlsSupportScope {
   MediaSource?: unknown;
   ManagedMediaSource?: unknown;
@@ -44,25 +41,25 @@ interface SourceBufferLike {
   prototype?: { appendBuffer?: unknown; remove?: unknown };
 }
 
-/** Codecs testés par `Hls.isSupported()` — mêmes chaînes, même ordre (hls.js 1.6.16). */
+/** Codecs tested by `Hls.isSupported()`: same strings, same order (hls.js 1.6.16). */
 const VIDEO_CODECS = ['avc1.42E01E,mp4a.40.2', 'av01.0.01M.08', 'vp09.00.50.08'];
 const AUDIO_CODECS = ['mp4a.40.2', 'fLaC'];
 
-/** `getMediaSource()` de hls.js : la variante « managée » (iOS 17) prime. */
+/** `getMediaSource()` of hls.js: the "managed" variant (iOS 17) takes precedence. */
 function mediaSourceOf(scope: HlsSupportScope): MediaSourceLike | undefined {
   return (scope.ManagedMediaSource ?? scope.MediaSource ?? scope.WebKitMediaSource) as
     MediaSourceLike | undefined;
 }
 
 /**
- * Transcription fidèle de `isSupported()` (hls.js 1.6.16) : MSE présent, `SourceBuffer`
- * utilisable s'il est exposé, et au moins un codec d'usage courant accepté.
+ * Faithful transcription of `isSupported()` (hls.js 1.6.16): MSE present, `SourceBuffer` usable if
+ * it is exposed, and at least one commonly used codec accepted.
  */
 export function hlsMseSupport(scope: HlsSupportScope): boolean {
   const mediaSource = mediaSourceOf(scope);
   if (!mediaSource) return false;
-  // `SourceBuffer` n'est pas exposé globalement sur les navigateurs anciens : son absence
-  // n'est pas un refus, seule une API tronquée l'est.
+  // `SourceBuffer` is not exposed globally on old browsers: its absence is not a refusal, only a
+  // truncated API is.
   const sourceBuffer = (scope.SourceBuffer ?? scope.WebKitSourceBuffer) as SourceBufferLike | undefined;
   const bufferOk =
     !sourceBuffer ||
@@ -82,8 +79,8 @@ export function hlsMseSupport(scope: HlsSupportScope): boolean {
 let supportCache: boolean | undefined;
 
 /**
- * Le navigateur courant sait-il lire du HLS via MSE ? Mémoïsé : le lecteur vidéo se
- * redessine à chaque frame affichée, et la réponse ne change pas d'un rendu à l'autre.
+ * Does the current browser play HLS via MSE? Memoized: the video player re-renders on every displayed
+ * frame, and the answer does not change from one render to the next.
  */
 export function isMseHlsSupported(): boolean {
   supportCache ??= hlsMseSupport(globalThis);
@@ -91,9 +88,9 @@ export function isMseHlsSupported(): boolean {
 }
 
 /**
- * La source est-elle une playlist HLS ? Le repli MP4 passe par le même paramètre côté
- * appelant ; sans ce garde-fou, un jour où l'URL changerait de nature, on téléchargerait
- * un lecteur de manifestes pour un fichier qui n'en est pas un.
+ * Is the source an HLS playlist? The MP4 fallback goes through the same parameter on the caller's
+ * side. Without this guard, on a day when the URL changed nature, we would download a manifest reader
+ * for a file that is not one.
  */
 export function isHlsPlaylistUrl(url: string | null | undefined): boolean {
   if (!url) return false;
@@ -101,7 +98,7 @@ export function isHlsPlaylistUrl(url: string | null | undefined): boolean {
   return /\.m3u8$/i.test(path);
 }
 
-/** Le lecteur adaptatif doit-il servir pour cette source ? Réponse synchrone. */
+/** Must the adaptive player serve this source? Synchronous answer. */
 export function canUseHlsJs(url: string | null | undefined): boolean {
   return isHlsPlaylistUrl(url) && isMseHlsSupported();
 }
@@ -109,9 +106,9 @@ export function canUseHlsJs(url: string | null | undefined): boolean {
 let loading: Promise<HlsClass> | null = null;
 
 /**
- * Charge la bibliothèque, une seule fois par session (deux panes vidéo en comparaison A/B
- * ne provoquent qu'un téléchargement). Un échec réseau remet le verrou à zéro, sinon la
- * promesse rejetée serait resservie à toutes les tentatives suivantes.
+ * Loads the library, only once per session (two video panes in an A/B comparison trigger only one
+ * download). A network failure resets the lock, otherwise the rejected promise would be served again
+ * to all later attempts.
  */
 export function loadHls(): Promise<HlsClass> {
   loading ??= import('hls.js').then(

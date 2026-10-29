@@ -9,12 +9,12 @@ import { clearPointers, receivePointer } from './pointerBus';
 afterEach(() => clearPointers());
 
 describe('LivePointers', () => {
-  it('personne ne montre rien : aucun calque au-dessus de l’image', () => {
+  it('nobody shows anything: no layer above the image', () => {
     const { container } = render(<LivePointers />);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('place chaque curseur en fraction du cadre, avec le nom de son auteur', () => {
+  it('places each cursor as a fraction of the frame, with its author\'s name', () => {
     const { container } = render(<LivePointers />);
     act(() => receivePointer({ userId: 3, x: 0.25, y: 0.5 }, 'Ada Lovelace'));
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
@@ -23,7 +23,7 @@ describe('LivePointers', () => {
     expect(cursor.style.top).toBe('50%');
   });
 
-  it('suit les déplacements et le départ d’un participant', () => {
+  it('follows the movements and the departure of a participant', () => {
     render(<LivePointers />);
     act(() => receivePointer({ userId: 3, x: 0.1, y: 0.1 }, 'Ada'));
     act(() => receivePointer({ userId: 3, x: 0.8, y: 0.2 }, 'Ada'));

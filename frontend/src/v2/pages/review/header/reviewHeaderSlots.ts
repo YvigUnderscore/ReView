@@ -4,28 +4,28 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
 /**
- * Emplacements que la page de review confie au chrome du viewer monté.
+ * Slots that the review page hands over to the chrome of the mounted viewer.
  *
- * La review empilait deux en-têtes : celui de la page (média, version, présence, actions) et
- * celui du chrome (bascule de mode, A/B du viewer). Les faire fusionner par prop aurait
- * imposé de traverser `ReviewViewer` puis chacune des quatre branches — vidéo, image, 3D,
- * splat — avec trois nœuds de plus, alors que la page les rend déjà. Le contexte les pose
- * une fois ; `ReviewChrome` les récupère, quel que soit le viewer qui l'a monté.
+ * The review used to stack two headers: the page's own (media, version, presence, actions) and
+ * the chrome's (mode toggle, viewer A/B). Merging them by prop would have meant passing through
+ * `ReviewViewer` and then each of the four branches (video, image, 3D, splat) with three extra
+ * nodes, although the page already renders them. The context sets them once; `ReviewChrome`
+ * picks them up, whichever viewer mounted it.
  *
- * Hors review (lecteur de montage), le contexte est absent : le chrome retombe sur ses props.
+ * Outside the review (the editing player), the context is absent: the chrome falls back on its props.
  */
 export interface ReviewHeaderSlots {
-  /** Nom du média, brouillon, version, playlist, montage — à gauche. */
+  /** Media name, draft, version, playlist, edit: left side. */
   identity: ReactNode;
-  /** A/B des médias plats, ShotGrid, live, présence, publication, actions — à droite. */
+  /** A/B of flat media, ShotGrid, live, presence, publication, actions: right side. */
   actions: ReactNode;
-  /** Panneau de commentaires, dernière colonne du chrome. `null` quand il est replié. */
+  /** Comments panel, the chrome's last column. `null` when collapsed. */
   comments: ReactNode;
 }
 
 export const ReviewHeaderSlotsContext = createContext<ReviewHeaderSlots | null>(null);
 
-/** Emplacements fournis par la page, ou `null` hors review. */
+/** Slots provided by the page, or `null` outside the review. */
 export function useReviewHeaderSlots(): ReviewHeaderSlots | null {
   return useContext(ReviewHeaderSlotsContext);
 }

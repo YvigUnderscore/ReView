@@ -11,7 +11,7 @@ import type { RenderMode } from '../splat/scene/renderModes';
 import type { DisplayMode } from '../three/displayModes';
 import { useT, type MessageKey } from '../../../i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type T = (key: MessageKey) => string;
 
 const splatRender = (t: T) => [
@@ -21,9 +21,9 @@ const splatRender = (t: T) => [
 ];
 
 /**
- * Les cinq modes d'inspection du maillage. Réduits à leurs icônes : cinq libellés ne tiennent
- * pas dans les 17,5 rem du dock, et l'infobulle dit ce que l'icône ne peut pas — pourquoi on
- * bascule en matcap ou en damier UV plutôt que le nom du mode.
+ * The five mesh inspection modes. Reduced to their icons: five labels do not fit in the 17.5 rem of
+ * the dock, and the tooltip says what the icon cannot: why one switches to matcap or UV checker
+ * rather than the mode's name.
  */
 const modelRender = (t: T): SegmentedItem<DisplayMode>[] => [
   { value: 'shaded', label: t('viewer.mode.shaded'), icon: Circle },
@@ -40,9 +40,9 @@ const debugColors = (t: T): { value: DebugColorMode; label: string }[] => [
 ];
 
 /**
- * Panneau Affichage du dock spatial : comment la scène est rendue, et les bascules propres au
- * fichier. Hérite d'`InspectBar`, de `Model3DVariantsBar` et de la partie « debug » des
- * réglages du viewer splat. La colorisation d'inspection reste locale à la session.
+ * Display panel of the spatial dock: how the scene is rendered, and the toggles specific to the file.
+ * Inherits from `InspectBar`, `Model3DVariantsBar` and the "debug" part of the splat viewer settings.
+ * Inspection colouring stays local to the session.
  */
 export default function DisplayPanel({
   splat,
@@ -51,16 +51,16 @@ export default function DisplayPanel({
   debugMode,
   onDebugMode,
 }: {
-  /** Rendu du nuage et bascules du splat — présent seulement quand l'éditeur est monté. */
+  /** Splat cloud rendering and toggles: present only when the editor is mounted. */
   splat?: {
     mode: RenderMode;
     onMode: (mode: RenderMode) => void;
     baseFlip: boolean;
     onBaseFlip: (v: boolean) => void;
   };
-  /** Échelle brute des splats comparés — disponible dès que la version en porte plusieurs. */
+  /** Raw scale of the compared splats: available as soon as the version carries several. */
   realSize?: { value: boolean; onChange: (v: boolean) => void };
-  /** Rendu du maillage et variantes du fichier glTF. */
+  /** Mesh rendering and variants of the glTF file. */
   model?: {
     mode: DisplayMode;
     onMode: (mode: DisplayMode) => void;
@@ -132,7 +132,7 @@ export default function DisplayPanel({
         </Group>
       )}
 
-      {/* Beaucoup de fichiers n'ont ni variante ni caméra : pas de section vide dans le dock. */}
+      {/* Many files have neither variant nor camera: no empty section in the dock. */}
       {model && (model.variants?.names.length || model.cameras?.names.length || model.skeleton?.has) && (
         <Group title={t('viewer.variants.title')}>
           {model.variants && model.variants.names.length > 0 && (

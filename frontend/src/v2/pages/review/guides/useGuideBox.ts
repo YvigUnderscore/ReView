@@ -3,37 +3,37 @@
 
 import { useLayoutEffect, useState, type RefObject } from 'react';
 
-/** Boîte de dessin des repères : taille de mise en page (px CSS) et échelle à l'écran. */
+/** Drawing box of the guides: layout size (CSS px) and on-screen scale. */
 export interface GuideBox {
   w: number;
   h: number;
-  /** Facteur d'échelle cumulé des ancêtres transformés (zoom du lecteur) — 1 = ajusté. */
+  /** Cumulative scale factor of the transformed ancestors (player zoom): 1 = fitted. */
   scale: number;
 }
 
 /**
- * Boîte de repli quand rien n'est mesurable (rendu hors navigateur, conteneur de taille
- * nulle) : l'aspect importe peu puisque rien n'est visible, mais le SVG reste cohérent.
+ * Fallback box when nothing is measurable (rendering outside a browser, zero-size container).
+ * The aspect hardly matters since nothing is visible, but the SVG stays consistent.
  */
 export const FALLBACK_GUIDE_BOX: GuideBox = { w: 1920, h: 1080, scale: 1 };
 
-/** Sous ce seuil, une variation d'échelle ne change pas un trait d'un pixel : on l'ignore. */
+/** Below this threshold, a scale change does not alter a stroke by one pixel: it is ignored. */
 const SCALE_STEP = 1000;
 
 /**
- * Mesure la boîte de l'overlay **et l'échelle du calque zoomé qui le porte**.
+ * Measures the box of the overlay **and the scale of the zoomed layer that carries it**.
  *
- * L'overlay des repères vit dans le calque transformé du lecteur (`translate(...) scale(...)`
- * du zoom vidéo, comme du viewer image) : tout ce qu'il dessine y est multiplié par l'échelle,
- * traits compris — les repères s'épaississaient donc en zoomant. `vector-effect:
- * non-scaling-stroke` n'y peut rien : il neutralise la transformation **interne** du SVG
- * (viewBox → viewport), pas une transformation CSS posée sur un ancêtre HTML.
+ * The guide overlay lives in the player's transformed layer (`translate(...) scale(...)` of the
+ * video zoom, as in the image viewer): everything it draws is multiplied by the scale, strokes
+ * included, so the guides thickened when zooming. `vector-effect: non-scaling-stroke` cannot help
+ * there: it neutralises the **internal** transform of the SVG (viewBox → viewport), not a CSS
+ * transform set on an HTML ancestor.
  *
- * L'échelle est relevée en comparant le rectangle écran (`getBoundingClientRect`, qui inclut
- * les transformations) à la taille de mise en page (`offsetWidth`, qui les ignore). Aucun
- * événement ne signale un changement de transformation, et dans le viewer image le zoom ne
- * provoque même pas de rendu de l'overlay (élément épinglé, identité stable) : on relève donc
- * à chaque trame — uniquement tant qu'un repère est affiché, ce qui n'est pas le cas par défaut.
+ * The scale is read by comparing the screen rectangle (`getBoundingClientRect`, which includes the
+ * transforms) with the layout size (`offsetWidth`, which ignores them). No event signals a change
+ * of transform, and in the image viewer the zoom does not even cause the overlay to render (pinned
+ * element, stable identity). So we read on every frame, only while a guide is displayed, which is
+ * not the case by default.
  */
 export function useGuideBox(ref: RefObject<HTMLElement | null>, enabled: boolean): GuideBox {
   const [box, setBox] = useState<GuideBox>(FALLBACK_GUIDE_BOX);
@@ -53,7 +53,7 @@ export function useGuideBox(ref: RefObject<HTMLElement | null>, enabled: boolean
       }
       raf = requestAnimationFrame(tick);
     };
-    // Premier relevé synchrone, avant peinture : les repères naissent déjà à la bonne taille.
+    // First synchronous reading, before paint: the guides are born already at the right size.
     tick();
     return () => cancelAnimationFrame(raf);
   }, [ref, enabled]);

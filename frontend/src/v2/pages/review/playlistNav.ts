@@ -4,11 +4,11 @@
 import type { PlaylistItemEntry } from '../../types/api';
 import { reviewPath } from '../../lib/slug';
 
-/** Chemin review d'un item + contexte playlist (lecture enchaînée 33.A). */
+/** Review path of an item + playlist context (chained playback, 33.A). */
 export const itemPath = (item: PlaylistItemEntry, playlistId: number): string | null =>
   item.media ? `${reviewPath(item.media)}?playlist=${playlistId}` : null;
 
-/** Paramètres d'URL à propager entre les médias d'une même session de lecture (33.A/33.B). */
+/** URL parameters to propagate between the media of one playback session (33.A/33.B). */
 export const carryParams = (searchParams: URLSearchParams): string => {
   const out = new URLSearchParams();
   for (const k of ['playlist', 'live']) {
@@ -19,8 +19,8 @@ export const carryParams = (searchParams: URLSearchParams): string => {
 };
 
 /**
- * Voisin lisible le plus proche dans la direction donnée à partir de `idx`
- * (les versions sans média visible sont sautées). Null en bord de playlist.
+ * Closest readable neighbour in the given direction from `idx`
+ * (versions with no visible media are skipped). Null at the edges of the playlist.
  */
 export const findPlayableNeighbor = (
   items: PlaylistItemEntry[],

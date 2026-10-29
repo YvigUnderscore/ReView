@@ -6,28 +6,28 @@ import { mediaReviewAspect, reviewAspect, reviewAspectLabel } from './reviewAspe
 import { DEFAULT_REVIEW_ASPECT } from './frameRect';
 
 /**
- * Le ratio du cadre de review : réglages pipeline par défaut, présentation enregistrée d'abord.
+ * The review frame's ratio: default pipeline settings, recorded presentation first.
  *
- * Les deux moitiés de la règle comptent autant l'une que l'autre. Sans la première, un projet
- * qui livre en scope reviewait en 16/9 ; sans la seconde, appliquer le ratio du projet à un
- * média déjà annoté déplacerait à l'écran des annotations posées sur des reviews validées.
+ * Both halves of the rule matter equally. Without the first, a project delivering in scope would be
+ * reviewed in 16/9; without the second, applying the project's ratio to an already annotated media would
+ * move on-screen annotations placed on validated reviews.
  */
 describe('reviewAspect', () => {
-  it('prend le ratio de livraison hérité quand rien n’est enregistré', () => {
+  it('takes the inherited delivery ratio when nothing is recorded', () => {
     expect(reviewAspect({ delivery: 2.39 })).toEqual({ value: 2.39, frozen: false });
   });
 
-  it('laisse l’aspect DÉJÀ enregistré primer sur le ratio du projet', () => {
+  it("lets the aspect ALREADY recorded take precedence over the project's ratio", () => {
     expect(reviewAspect({ presentation: 2.39, delivery: 16 / 9 })).toEqual({ value: 2.39, frozen: true });
   });
 
-  it('retombe sur 16:9 quand ni la présentation ni le détail ne donnent de ratio', () => {
+  it('falls back on 16:9 when neither the presentation nor the detail gives a ratio', () => {
     expect(reviewAspect({})).toEqual({ value: DEFAULT_REVIEW_ASPECT, frozen: false });
   });
 
-  // Un aspect aberrant (présentation ancienne, réglage corrompu) ferait un cadre de hauteur
-  // nulle : on le traite comme absent plutôt que de vider le viewer.
-  it('ignore un ratio dégénéré, des deux côtés', () => {
+  // An aberrant aspect (old presentation, corrupted setting) would make a zero-height frame:
+  // it is treated as absent rather than emptying the viewer.
+  it('ignores a degenerate ratio, on both sides', () => {
     expect(reviewAspect({ presentation: 0, delivery: 2.39 })).toEqual({ value: 2.39, frozen: false });
     expect(reviewAspect({ presentation: Number.NaN, delivery: 2.39 })).toEqual({
       value: 2.39,
@@ -40,45 +40,45 @@ describe('reviewAspect', () => {
   });
 });
 
-describe('mediaReviewAspect — la règle prise sur un détail de média', () => {
-  it('sert le ratio hérité d’un média sans mise en scène', () => {
+describe('mediaReviewAspect — the rule taken from a media detail', () => {
+  it('serves the inherited ratio of a media without staging', () => {
     expect(mediaReviewAspect({ splatPresentation: null, deliveryAspect: 1.85 })).toEqual({
       value: 1.85,
       frozen: false,
     });
   });
 
-  it('respecte le cadre gelé d’un média déjà mis en scène', () => {
+  it('respects the frozen frame of an already staged media', () => {
     const data = { splatPresentation: { camera: { aspect: 4 / 3 } }, deliveryAspect: 1.85 };
     expect(mediaReviewAspect(data)).toEqual({ value: 4 / 3, frozen: true });
   });
 
-  // Le détail n'est pas encore chargé : le viewer se monte quand même, sur un cadre neutre.
-  it('tient devant un détail absent', () => {
+  // The detail is not loaded yet: the viewer still mounts, on a neutral frame.
+  it('holds before an absent detail', () => {
     expect(mediaReviewAspect(undefined)).toEqual({ value: DEFAULT_REVIEW_ASPECT, frozen: false });
   });
 });
 
 describe('reviewAspectLabel', () => {
-  it('nomme les formats connus', () => {
+  it('names the known formats', () => {
     expect(reviewAspectLabel(16 / 9)).toBe('16:9');
     expect(reviewAspectLabel(4 / 3)).toBe('4:3');
     expect(reviewAspectLabel(1)).toBe('1:1');
   });
 
-  // Une résolution réelle de pipeline n'est jamais exactement le format qu'elle annonce.
-  it('reconnaît un format à la résolution près (2048×858 = scope)', () => {
+  // A real pipeline resolution is never exactly the format it announces.
+  it('recognises a format to the resolution (2048×858 = scope)', () => {
     expect(reviewAspectLabel(2048 / 858)).toBe('2.39:1');
     expect(reviewAspectLabel(1998 / 1080)).toBe('1.85:1');
     expect(reviewAspectLabel(3840 / 2160)).toBe('16:9');
   });
 
-  it('chiffre un ratio inhabituel plutôt que de le rapprocher de force', () => {
+  it('gives the figure of an unusual ratio rather than forcing it onto a known one', () => {
     expect(reviewAspectLabel(2)).toBe('2.00:1');
     expect(reviewAspectLabel(1.43)).toBe('1.43:1');
   });
 
-  it('retombe sur 16:9 devant un ratio dégénéré', () => {
+  it('falls back on 16:9 in front of a degenerate ratio', () => {
     expect(reviewAspectLabel(0)).toBe('16:9');
     expect(reviewAspectLabel(Number.NaN)).toBe('16:9');
   });

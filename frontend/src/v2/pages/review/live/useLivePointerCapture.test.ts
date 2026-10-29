@@ -18,22 +18,22 @@ afterEach(() => {
 });
 
 describe('normalizeInBox', () => {
-  it('rend une fraction du cadre', () => {
+  it('returns a fraction of the frame', () => {
     expect(normalizeInBox(rect, 200, 100)).toEqual({ x: 0.5, y: 0.5 });
     expect(normalizeInBox(rect, 100, 50)).toEqual({ x: 0, y: 0 });
     expect(normalizeInBox(rect, 300, 150)).toEqual({ x: 1, y: 1 });
   });
 
-  it('hors cadre : rien à montrer', () => {
+  it('outside the frame: nothing to show', () => {
     expect(normalizeInBox(rect, 99, 100)).toBeNull();
     expect(normalizeInBox(rect, 200, 151)).toBeNull();
   });
 
-  it('cadre non mesuré : rien à montrer', () => {
+  it('unmeasured frame: nothing to show', () => {
     expect(normalizeInBox({ left: 0, top: 0, width: 0, height: 0 }, 0, 0)).toBeNull();
   });
 
-  it('arrondit à la 4e décimale — inutile de transporter plus de précision', () => {
+  it('rounds to the 4th decimal: no need to carry more precision', () => {
     expect(normalizeInBox(rect, 100 + 200 / 3, 100)?.x).toBe(0.3333);
   });
 });
@@ -41,13 +41,13 @@ describe('normalizeInBox', () => {
 describe('useLivePointerCapture', () => {
   const boxRef = { current: { getBoundingClientRect: () => rect } as unknown as HTMLElement };
 
-  it('hors session, aucun geste ne part', () => {
+  it('outside a session, no gesture is sent', () => {
     const { result } = renderHook(() => useLivePointerCapture(boxRef));
     result.current.onPointerMove({ clientX: 200, clientY: 100 });
     result.current.onPointerLeave();
   });
 
-  it('en diffusion, le geste part normalisé ; sortir du cadre efface le curseur', () => {
+  it('while broadcasting, the gesture is sent normalized; leaving the frame clears the cursor', () => {
     const emit = vi.fn();
     setPointerEmitter(emit);
     const { result } = renderHook(() => useLivePointerCapture(boxRef));
@@ -59,7 +59,7 @@ describe('useLivePointerCapture', () => {
     expect(emit).toHaveBeenLastCalledWith(null);
   });
 
-  it('le démontage (changement de média) efface les curseurs affichés', () => {
+  it('unmounting (change of media) clears the displayed cursors', () => {
     const { unmount } = renderHook(() => useLivePointerCapture(boxRef));
     receivePointer({ userId: 4, x: 0.5, y: 0.5 }, 'Ada');
     expect(getPointers()).toHaveLength(1);

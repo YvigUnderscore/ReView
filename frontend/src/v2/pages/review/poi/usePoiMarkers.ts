@@ -16,39 +16,38 @@ import { toNdc } from '../three/usdPicking';
 import { focusObjectPoint } from './poiFocus';
 
 /**
- * Points d'intérêt d'un viewer spatial — **une seule implémentation**, partagée par le modèle
- * 3D et le splat.
+ * Points of interest of a spatial viewer: **a single implementation**, shared by the 3D model and the splat.
  *
- * C'était la demande : « je veux toute la même implémentation qu'en 3D ». Les deux viewers ne
- * diffèrent que par trois choses — l'objet qui porte les points, le rayon de la scène et la
- * façon de lancer un rayon sur la surface (un mesh Three d'un côté, un `SplatMesh` de l'autre).
- * Elles arrivent par `access`, lu au moment de l'appel ; tout le reste (pastilles numérotées,
- * pose au clic, déplacement, mise en avant, retour caméra) est ce fichier, et lui seul.
+ * That was the request: "I want exactly the same implementation as in 3D". The two viewers differ only in
+ * three things: the object carrying the points, the radius of the scene, and the way a ray is cast onto the
+ * surface (a Three mesh on one side, a `SplatMesh` on the other). They arrive through `access`, read at call
+ * time. Everything else (numbered hotspots, placement on click, moving, putting forward, camera return) is
+ * this file, and this file alone.
  *
- * Les pastilles vivent dans une ref, jamais dans un état : elles se reprojettent à chaque image
- * sans provoquer de rendu React.
+ * The hotspots live in a ref, never in a state: they are reprojected at each frame without triggering a
+ * React render.
  */
 export interface PoiSceneAccess {
   three: typeof import('three');
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
-  /** Objet porteur des points : le groupe du modèle, le `SplatMesh` du nuage. */
+  /** Carrying object of the points: the model group, or the cloud's `SplatMesh`. */
   object: THREE.Object3D;
-  /** Canvas de rendu — le raycast a besoin de son rectangle pour passer en NDC. */
+  /** Render canvas: the raycast needs its rectangle to convert to NDC. */
   dom: HTMLElement;
-  /** Rayon de la scène : l'échelle du cadrage d'un point en dépend. */
+  /** Radius of the scene: the framing scale of a point depends on it. */
   radius: number;
-  /** Rayon de surface propre au média — la seule chose que les deux viewers ne partagent pas. */
+  /** Surface radius specific to the media: the one thing the two viewers do not share. */
   pick: (ndc: { x: number; y: number }) => Hotspot3D | null;
 }
 
 export interface PoiMarkers {
   /**
-   * Monte les pastilles dans le conteneur du viewer et rend leur démontage. Le marqueur ne sort
-   * jamais d'ici : le viewer ne fait que le monter et projeter, il n'a rien à en savoir de plus.
+   * Mounts the hotspots in the viewer's container and returns their unmounting. The marker never leaves
+   * here: the viewer merely mounts and projects it, and needs to know nothing more.
    */
   mountMarker: (three: typeof import('three'), container: HTMLElement) => () => void;
-  /** Projette les points à l'écran — appelé par la boucle de rendu, à chaque image dessinée. */
+  /** Projects the points on screen: called by the render loop, at each drawn frame. */
   project: (camera: THREE.PerspectiveCamera, object: THREE.Object3D, width: number, height: number) => void;
   hotspotAtPointer: (clientX: number, clientY: number) => Hotspot3D | null;
   showPoiPoints: (points: readonly Hotspot3D[]) => void;
@@ -63,7 +62,7 @@ export function usePoiMarkers(access: () => PoiSceneAccess | null): PoiMarkers {
   const handlersRef = useRef<MarkerHandlers | null>(null);
   const activeRef = useRef<number | null>(null);
 
-  /** Point posé sous le pointeur (coordonnées client) — placement au clic dans le viewer. */
+  /** Point placed under the pointer (client coordinates): placement on click in the viewer. */
   const hotspotAtPointer = useCallback(
     (clientX: number, clientY: number): Hotspot3D | null => {
       const scene = access();
@@ -73,7 +72,7 @@ export function usePoiMarkers(access: () => PoiSceneAccess | null): PoiMarkers {
     [access],
   );
 
-  /** Affiche les pastilles des points reçus, numérotées dans l'ordre (liste vide = aucune). */
+  /** Displays the hotspots of the received points, numbered in order (empty list = none). */
   const showPoiPoints = useCallback(
     (points: readonly Hotspot3D[]) => {
       const three = access()?.three;
@@ -97,9 +96,8 @@ export function usePoiMarkers(access: () => PoiSceneAccess | null): PoiMarkers {
     markerRef.current?.setActive(index);
   }, []);
 
-  // Les gestionnaires peuvent avoir été posés avant que la scène ne soit montée (un point
-  // survivant d'un média précédent, un rendu en avance) : on les rejoue sur le marqueur neuf
-  // plutôt que de le laisser naître inerte.
+  // Handlers may have been set before the scene was mounted (a point surviving from a previous media, an
+  // early render): they are replayed on the new marker rather than leaving it inert.
   const mountMarker = useCallback((three: typeof import('three'), container: HTMLElement) => {
     const marker: ObjectMarker = createObjectMarker(three, container);
     marker.setInteractive(handlersRef.current);
@@ -119,7 +117,7 @@ export function usePoiMarkers(access: () => PoiSceneAccess | null): PoiMarkers {
     [],
   );
 
-  /** Ramène la caméra sur un point (numéro cliqué dans le fil) — espace objet, donc pour tous. */
+  /** Brings the camera back to a point (number clicked in the thread): object space, hence for everyone. */
   const focusPoi = useCallback(
     (point: Hotspot3D): boolean => {
       const scene = access();

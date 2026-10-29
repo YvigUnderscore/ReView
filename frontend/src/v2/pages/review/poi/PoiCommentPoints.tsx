@@ -10,18 +10,17 @@ import type { PoiPoint } from './poiPoints';
 import { useT } from '../../../i18n';
 
 /**
- * Points d'intérêt d'un commentaire, à la relecture : une rangée numérotée par point, sa
- * remarque, et ses images.
+ * Points of interest of a comment, on review: a numbered row per point, its remark, and its images.
  *
- * **Cliquer le numéro ramène la caméra sur le point** (`onFocus`). Le rejeu vaut pour tout
- * spectateur : le point est stocké en espace OBJET, comme la présentation caméra, donc le
- * cadrage retombe au même endroit quelle que soit la transformation du média.
+ * **Clicking the number brings the camera back to the point** (`onFocus`). Replay is valid for every
+ * viewer: the point is stored in OBJECT space, like the camera presentation, so the framing lands in the
+ * same place whatever the transformation of the media.
  *
- * Sans `onFocus` — l'écran n'a pas de viewer spatial sous la main — les numéros restent du
- * texte : on lit la remarque, on ne vole pas vers elle.
+ * Without `onFocus` (no spatial viewer at hand), the numbers remain plain text: one reads the remark, one
+ * does not fly off towards it.
  *
- * La remarque elle-même est rendue par `PoiNoteBody`, partagé avec les cartes de la scène :
- * retours à la ligne, trois lignes au plus, miniature à côté.
+ * The remark itself is rendered by `PoiNoteBody`, shared with the scene cards: line breaks, three lines
+ * at most, thumbnail beside it.
  */
 export default function PoiCommentPoints({
   points,
@@ -32,11 +31,11 @@ export default function PoiCommentPoints({
   points: readonly PoiPoint[];
   attachments?: readonly CommentAttachment[];
   onFocus?: (point: PoiPoint, index: number) => void;
-  /** Empêche un clic interne de rejouer la sélection de la carte du commentaire. */
+  /** Prevents an internal click from replaying the selection of the comment card. */
   stop: (e: React.MouseEvent) => void;
 }) {
   const t = useT();
-  // Carrousel commun : l'index porte sur les images de CE point (le lot ouvert), pas du fil.
+  // Shared carousel: the index refers to the images of THIS point (the open batch), not to the thread.
   const [lightbox, setLightbox] = useState<{ images: PoiCardImage[]; at: number } | null>(null);
   if (points.length === 0) return null;
 

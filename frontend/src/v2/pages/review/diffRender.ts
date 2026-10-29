@@ -4,30 +4,30 @@
 import { useEffect, type RefObject } from 'react';
 
 /**
- * Moteur du mode différence A/B (34.E) : |A − B| calculé par le compositing canvas natif
- * (`globalCompositeOperation: 'difference'`, GPU), amplifié par un filtre brightness et
- * optionnellement passé en fausses couleurs (LUT « jet » via filtre SVG inline).
+ * A/B difference mode engine (34.E): |A − B| computed by native canvas compositing
+ * (`globalCompositeOperation: 'difference'`, GPU), amplified by a brightness filter and
+ * optionally shown in false colours (a "jet" LUT via an inline SVG filter).
  */
 
-/** Gains d'amplification proposés (×1 = différence brute, souvent invisible). */
+/** Proposed amplification gains (×1 = raw difference, often invisible). */
 export const DIFF_GAINS = [1, 2, 4, 8, 16] as const;
 
-/** Gain suivant du cycle (clic sur le chip ×n). */
+/** Next gain in the cycle (click on the ×n chip). */
 export function nextGain(gain: number): number {
   const i = DIFF_GAINS.indexOf(gain as (typeof DIFF_GAINS)[number]);
   return DIFF_GAINS[(i + 1) % DIFF_GAINS.length];
 }
 
 /**
- * Amplification appliquée dans le contexte 2D. La LUT heatmap ne peut PAS passer par
- * `ctx.filter` : Chrome ignore les filtres SVG référencés (`url(#…)`) dans le canvas 2D —
- * elle s'applique en filtre **CSS sur l'élément canvas** (HEATMAP_CSS_FILTER), supporté.
+ * Amplification applied in the 2D context. The heatmap LUT cannot go through `ctx.filter`:
+ * Chrome ignores SVG filters referenced via `url(#…)` in the 2D canvas. It is applied as a
+ * **CSS filter on the canvas element** (HEATMAP_CSS_FILTER), which is supported.
  */
 export function diffFilter(gain: number): string {
   return `brightness(${gain})`;
 }
 
-/** Filtre CSS à poser sur l'élément <canvas> quand la heatmap est active. */
+/** CSS filter to set on the <canvas> element when the heatmap is active. */
 export const HEATMAP_CSS_FILTER = 'url(#diff-heatmap-lut)';
 
 type DiffSource = HTMLVideoElement | HTMLImageElement | null;
@@ -35,9 +35,9 @@ const sizeOf = (s: Exclude<DiffSource, null>) =>
   'videoWidth' in s ? { w: s.videoWidth, h: s.videoHeight } : { w: s.naturalWidth, h: s.naturalHeight };
 
 /**
- * Boucle rAF de rendu du diff : A puis B en `difference` dans un offscreen, blitté dans
- * le canvas visible avec le filtre d'amplification. Tourne tant que le canvas est monté
- * (drawImage GPU — négligeable pour un pane) : suit lecture, seek et chargement tardif.
+ * rAF render loop of the diff: A then B in `difference` in an offscreen canvas, blitted into
+ * the visible canvas with the amplification filter. Runs as long as the canvas is mounted
+ * (GPU drawImage, negligible for one pane): follows playback, seek and late loading.
  */
 export function useDiffDraw(
   canvasRef: RefObject<HTMLCanvasElement | null>,

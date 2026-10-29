@@ -5,9 +5,8 @@ import { useCallback, useEffect, type RefObject } from 'react';
 import { canSendPointer, clearPointers, sendPointer } from './pointerBus';
 
 /**
- * Position dans le cadre, en fraction 0..1 — `null` hors du cadre (bandes latérales,
- * barres de l'interface) : montrer le vide n'a pas de sens, et un curseur hors bornes
- * s'afficherait de travers chez les spectateurs.
+ * Position within the frame, as a 0..1 fraction: `null` outside the frame (side bands, interface bars).
+ * Showing empty space is meaningless, and an out-of-bounds cursor would be displayed askew for the viewers.
  */
 export function normalizeInBox(
   rect: { left: number; top: number; width: number; height: number },
@@ -22,8 +21,8 @@ export function normalizeInBox(
 }
 
 /**
- * Capte le geste du driver sur le cadre du média et le diffuse comme curseur partagé.
- * Ne coûte rien hors session : sans émetteur branché, le calcul n'a même pas lieu.
+ * Captures the driver's gesture on the media frame and broadcasts it as a shared cursor.
+ * Costs nothing outside a session: without a plugged-in emitter, the computation does not even take place.
  */
 export function useLivePointerCapture(boxRef: RefObject<HTMLElement | null>): {
   onPointerMove: (e: { clientX: number; clientY: number }) => void;
@@ -43,8 +42,7 @@ export function useLivePointerCapture(boxRef: RefObject<HTMLElement | null>): {
     if (canSendPointer()) sendPointer(null);
   }, []);
 
-  // Changement de média (le lecteur est remonté) : les curseurs du plan précédent
-  // n'ont plus de sens sur le suivant.
+  // Media change (the player was remounted): the cursors of the previous shot have no meaning on the next.
   useEffect(() => clearPointers, []);
 
   return { onPointerMove, onPointerLeave };

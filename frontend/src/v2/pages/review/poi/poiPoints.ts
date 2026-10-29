@@ -4,36 +4,35 @@
 import type { Hotspot3D } from '../reviewTypes';
 
 /**
- * Points d'intérêt d'un commentaire — modèle **pur**, donc lisible et testable sans viewer.
+ * Points of interest of a comment: a **pure** model, hence readable and testable without a viewer.
  *
- * FORME ARRÊTÉE : **un commentaire porteur, des points numérotés**. Un seul commentaire part ;
- * il porte la géométrie de chaque point (en espace OBJET, comme les hotspots et les traits de
- * la brosse, donc rejouée à l'identique pour tout spectateur), la remarque propre à chaque
- * point, et les images — jointes au commentaire une seule fois, chaque point notant lesquelles
- * sont les siennes par leur clé MinIO.
+ * SETTLED FORM: **one carrying comment, numbered points**. A single comment is sent. It carries the
+ * geometry of each point (in OBJECT space, like the hotspots and the brush strokes, hence replayed
+ * identically for every viewer), the remark specific to each point, and the images. The images are
+ * attached to the comment only once, each point noting which are its own by their MinIO key.
  *
- * C'est ce choix qui laisse le reste du produit inchangé : le portail client, l'export de notes
- * et le pont ShotGrid lisent `content`, où les remarques sont recopiées numérotées.
+ * This choice leaves the rest of the product unchanged: the client portal, the notes export and the
+ * ShotGrid bridge read `content`, where the remarks are copied numbered.
  */
 
-/** Plafond de points par commentaire — miroir de `MAX_POI_POINTS` (Zod backend). */
+/** Ceiling of points per comment: mirror of `MAX_POI_POINTS` (backend Zod). */
 export const MAX_POI_POINTS = 20;
 
-/** Point d'intérêt tel qu'il est STOCKÉ dans la part `poi` de `Comment.annotation`. */
+/** Point of interest as it is STORED in the `poi` part of `Comment.annotation`. */
 export interface PoiPoint extends Hotspot3D {
-  /** Remarque propre à ce point — recopiée numérotée dans le texte du commentaire. */
+  /** Remark specific to this point, copied numbered into the comment's text. */
   text?: string;
-  /** Clés des pièces jointes du commentaire qui appartiennent à ce point. */
+  /** Keys of the comment's attachments that belong to this point. */
   images?: string[];
 }
 
-/** Part d'annotation portée par le commentaire (une seule, tous les points dedans). */
+/** Annotation part carried by the comment (a single one, with all the points inside). */
 export interface PoiPart {
   type: 'poi';
   points: PoiPoint[];
 }
 
-/** Une position lisible suffit à faire un point ; le texte et les images sont facultatifs. */
+/** A readable position is enough to make a point; the text and the images are optional. */
 function readPoint(value: unknown): PoiPoint | null {
   if (!value || typeof value !== 'object') return null;
   const p = value as Partial<PoiPoint>;
@@ -49,11 +48,11 @@ function readPoint(value: unknown): PoiPoint | null {
 }
 
 /**
- * Points d'un commentaire, dans leur ordre de pose (leur numéro est leur rang + 1).
+ * Points of a comment, in their placement order (their number is their rank + 1).
  *
- * Lecture **tolérante**, comme le reste de `splitAnnotationParts` : un commentaire écrit avant
- * cette forme ne porte qu'une part `hotspot`, et vaut donc exactement un point numéroté « 1 ».
- * Rien n'est réécrit en base ; c'est la lecture qui unifie les deux générations.
+ * **Tolerant** reading, like the rest of `splitAnnotationParts`: a comment written before this form
+ * carries only a `hotspot` part, and is therefore worth exactly one numbered point, "1". Nothing is
+ * rewritten in the database: it is the reading that unifies the two generations.
  */
 export function readPoiPoints(annotation: unknown): PoiPoint[] {
   if (!Array.isArray(annotation)) return [];
@@ -67,30 +66,30 @@ export function readPoiPoints(annotation: unknown): PoiPoint[] {
   return legacy ? [legacy] : [];
 }
 
-/** Part à joindre au commentaire, ou `null` si aucun point n'a été posé. */
+/** Part to attach to the comment, or `null` if no point has been placed. */
 export function buildPoiPart(points: readonly PoiPoint[]): PoiPart | null {
   const kept = points.slice(0, MAX_POI_POINTS);
   return kept.length ? { type: 'poi', points: kept.map((p) => ({ ...p })) } : null;
 }
 
-/** Ligne numérotée d'un point : « 3. la soudure se voit » (numéro seul si rien n'est écrit). */
+/** Numbered line of a point: "3. the weld is visible" (number alone if nothing is written). */
 export function poiLine(index: number, text?: string): string {
   const note = (text ?? '').trim();
   return note ? `${index + 1}. ${note}` : `${index + 1}.`;
 }
 
-/** Bloc numéroté complet, tel qu'il est recopié en queue du texte du commentaire. */
+/** Complete numbered block, as it is copied at the tail of the comment's text. */
 export function poiBlock(points: readonly { text?: string }[]): string {
   return points.map((p, i) => poiLine(i, p.text)).join('\n');
 }
 
 /**
- * Texte du commentaire porteur : ce que l'auteur a écrit, puis le bloc numéroté. Le bloc y est
- * recopié pour que tout ce qui ne lit que `content` — portail client, export de notes, note
- * ShotGrid — voie les remarques point par point sans rien connaître de l'annotation.
+ * Text of the carrying comment: what the author wrote, then the numbered block. The block is copied there
+ * so that everything that reads only `content` (client portal, notes export, ShotGrid note) sees the
+ * remarks point by point without knowing anything about the annotation.
  *
- * `fallback` sert au cas où il n'y a ni texte ni point : c'est le placeholder minimal que la
- * contrainte de contenu du backend exige.
+ * `fallback` is used in case there is neither text nor point: it is the minimal placeholder that the
+ * backend's content constraint requires.
  */
 export function poiContent(text: string, points: readonly { text?: string }[], fallback: string): string {
   const head = text.trim();
@@ -100,10 +99,9 @@ export function poiContent(text: string, points: readonly { text?: string }[], f
 }
 
 /**
- * L'inverse exact de `poiContent` : rend le texte de l'auteur, sans le bloc numéroté que la
- * colonne des commentaires rend elle-même en rangées cliquables. Si la queue ne correspond pas
- * (commentaire édité à la main, note importée), rien n'est retiré — on préfère un doublon
- * visible à une phrase tronquée.
+ * The exact inverse of `poiContent`: returns the author's text, without the numbered block that the
+ * comments column renders itself as clickable rows. If the tail does not match (comment edited by hand,
+ * imported note), nothing is removed: a visible duplicate is preferred over a truncated sentence.
  */
 export function stripPoiBlock(content: string, points: readonly { text?: string }[]): string {
   const block = poiBlock(points);

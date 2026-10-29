@@ -21,32 +21,30 @@ import type { SplatViewer } from './useSplat';
 import { useT } from '../../../i18n';
 
 /**
- * Menu clic droit du viewer splat (Phase 50, lot 8).
+ * Right-click menu of the splat viewer (Phase 50, batch 8).
  *
- * Le splat était le seul écran de ReView sans menu contextuel : son clic droit appartenait
- * entièrement au vol, et la documentation en faisait une règle (« nothing splat-related hides in
- * a context menu »). Depuis que le clic droit **bref** se distingue du clic droit **maintenu**
- * (`viewer/useSpatialContextMenu`), la place est libre — et le clic droit est l'endroit où l'on
- * cherche une action partout ailleurs dans l'application.
+ * The splat was the only screen of ReView without a context menu: its right-click belonged entirely to
+ * flying around, and the documentation made it a rule ("nothing splat-related hides in a context menu").
+ * Now that a **short** right-click is told apart from a **held** one (`viewer/useSpatialContextMenu`), the
+ * place is free, and the right-click is where one looks for an action everywhere else in the application.
  *
- * Contenu retenu — ce qu'on fait souvent **ici**, et qui coûtait un détour :
+ * Retained content, i.e. what one often does **here** and which used to cost a detour:
  *
- *  1. **Cadrer** et **Vue d'origine** : les deux gestes de recadrage du viewer. Ils existent en
- *     `F`/`H` et au bas du rail, mais c'est la main sur la souris qu'on les veut, au moment où
- *     l'on s'est perdu dans le nuage.
- *  2. **Poser un point d'intérêt ici** : l'action **au point visé**, en un geste, sans armer
- *     l'outil du rail (`I`). Le point rejoint la même liste numérotée que ceux posés au clic —
- *     un seul chemin de données, deux façons de désigner.
- *  3. **Copier la vue** : la capture du cadre courant dans le presse-papiers. Le panneau *Export*
- *     ne produit que des fichiers ; « montrer ce que je vois » dans un message n'existait pas.
- *  4. Sous-menu **Scène** : grille de sol et culling de bord — les deux interrupteurs qu'on
- *     manipule en inspectant, et dont le second est devenu actif par défaut (lot 8). Qui voit des
- *     splats s'évanouir en zoom fort doit pouvoir le couper là où il constate le problème, sans
- *     aller ouvrir le dock. Le sous-menu reprend le titre du panneau du dock : même vocabulaire,
- *     même contenu, deux chemins.
+ *  1. **Frame** and **Original view**: the two reframing gestures of the viewer. They exist as `F`/`H` and
+ *     at the bottom of the rail, but it is with the mouse in hand that one wants them, at the moment one has
+ *     got lost in the cloud.
+ *  2. **Place a point of interest here**: the action **at the targeted point**, in one gesture, without
+ *     arming the rail's tool (`I`). The point joins the same numbered list as those placed by clicking: one
+ *     data path, two ways of designating.
+ *  3. **Copy the view**: the capture of the current frame to the clipboard. The *Export* panel only produces
+ *     files; "show what I see" in a message did not exist.
+ *  4. **Scene** submenu: ground grid and edge culling, the two switches one handles while inspecting, the
+ *     second of which became active by default (batch 8). Whoever sees splats fade out at strong zoom must be
+ *     able to cut them where they notice the problem, without going to open the dock. The submenu takes the
+ *     title of the dock panel: same vocabulary, same content, two paths.
  *
- * Rien qui écrive dans le média : l'édition du nuage a son mode, ses outils et son verrou de
- * publication — un menu contextuel n'est pas l'endroit pour les contourner.
+ * Nothing writes into the media: the cloud's editing has its mode, its tools and its publication lock, and a
+ * context menu is not the place to get around them.
  */
 export default function SplatContextMenu({
   splat,
@@ -60,19 +58,19 @@ export default function SplatContextMenu({
   splat: SplatViewer;
   frameView: () => void;
   homeView: () => void;
-  /** Point d'intérêt posé au point visé — rejoint le commentaire en cours de rédaction. */
+  /** Point of interest placed at the targeted point: joins the comment being drafted. */
   onPlacePoint: (hotspot: Hotspot3D) => void;
   grid: { visible: boolean; toggle: () => void };
   culling: { off: boolean; onOff: (off: boolean) => void };
   children: ReactNode;
 }) {
   const t = useT();
-  // Point du clic droit : les entrées qui visent une surface (le point d'intérêt) en ont besoin,
-  // et il n'est connu qu'au relâchement du bouton.
+  // Right-click point: the entries that target a surface (the point of interest) need it,
+  // and it is only known when the button is released.
   const [tap, setTap] = useState<{ x: number; y: number } | null>(null);
   useSpatialContextMenu(splat.getDom, splat.ready, (at) => {
     setTap({ x: at.clientX, y: at.clientY });
-    return true; // le splat n'a rien à viser : ses entrées portent sur la vue
+    return true; // the splat has nothing to target: its entries concern the view
   });
 
   const placePoint = () => {
@@ -88,7 +86,7 @@ export default function SplatContextMenu({
     void splat
       .captureThumbnail()
       .then((dataUrl) => {
-        // Capture impossible : le message doit parler de la CAPTURE, pas d'une surface absente.
+        // Capture impossible: the message must speak of the CAPTURE, not of an absent surface.
         if (!dataUrl) throw new Error(t('ctx.actionFailed', { action: t('ctx.copyImage') }));
         return copyImageToClipboard(dataUrl);
       })
@@ -126,8 +124,8 @@ export default function SplatContextMenu({
               <Check size={14} className={grid.visible ? 'opacity-100' : 'opacity-0'} />
               {t('viewer.guides.grid')}
             </ContextMenuItem>
-            {/* L'interrupteur du dock coche « culling actif » : on garde le même sens ici, donc
-                la coche suit `!off` — deux chemins pour un réglage, jamais deux lectures. */}
+            {/* The dock's switch ticks "culling active": we keep the same meaning here, so the tick follows
+                `!off`. Two paths for one setting, never two readings. */}
             <ContextMenuItem onClick={() => culling.onOff(!culling.off)}>
               <Check size={14} className={culling.off ? 'opacity-0' : 'opacity-100'} />
               {t('viewer.culling.short')}

@@ -23,18 +23,18 @@ import { useT } from '../../../i18n';
 import { isEditable } from '../../../lib/shortcuts';
 
 /**
- * Scenegraph USD du dock (Phase 46, 46.C/46.E ; B1/B2) : l'arbre réel de la scène, sélection
- * synchronisée avec le viewer — **multi-sélection** (Ctrl+clic bascule, Maj+clic plage),
- * recherche, visibilité par prim (Alt+clic sur l'œil = isoler), verrouillage (exclu du picking
- * viewer) et clic droit pour changer une variante.
+ * USD scenegraph of the dock (Phase 46, 46.C/46.E; B1/B2): the real tree of the scene, selection
+ * synchronised with the viewer. **Multi-selection** (Ctrl+click toggles, Shift+click takes a range),
+ * search, per-prim visibility (Alt+click on the eye = isolate), locking (excluded from viewer picking),
+ * and right-click to change a variant.
  *
- * L'arbre vient de l'analyseur, pas des nœuds glTF : il montre donc aussi les prims **non
- * rendus** (variante inactive, purpose filtré), affichés en grisé.
+ * The tree comes from the parser, not from the glTF nodes: it therefore also shows **non-rendered** prims
+ * (inactive variant, filtered purpose), displayed greyed out.
  *
- * **Échelle (F10)** : une scène de production compte des milliers de prims, et chercher les
- * déplie tous d'un coup. L'arbre est donc aplati en rangées (`scenegraphRows`) puis virtualisé —
- * seule la vingtaine de rangées visibles est montée — et le menu contextuel est **unique** : il
- * retrouve la rangée visée au clic droit, au lieu qu'une instance Radix soit montée par prim.
+ * **Scale (F10)**: a production scene counts thousands of prims, and searching expands them all at once.
+ * The tree is therefore flattened into rows (`scenegraphRows`) and then virtualised: only the twenty or
+ * so visible rows are mounted. The context menu is **single**: it finds the targeted row on right-click,
+ * instead of a Radix instance being mounted per prim.
  */
 export default function ScenegraphPanel({
   scene,
@@ -46,23 +46,23 @@ export default function ScenegraphPanel({
 }: {
   scene: UsdSceneState;
   usd: UsdModelInfo | null;
-  /** Options de variantes cuites dans le GLB — le menu grise les autres (46.P). */
+  /** Variant options baked into the GLB: the menu greys out the others (46.P). */
   baked?: readonly UsdBakedVariant[] | null;
   onRevert?: () => void;
-  /** Enregistre la mise en scène pour tous — prépublish et gestionnaire uniquement. */
+  /** Records the staging for everyone: pre-publish and manager only. */
   onSave?: () => void;
   saving?: boolean;
 }) {
   const t = useT();
-  // Méthodes extraites de l'état de scène : les listes de dépendances portent alors sur les
-  // fonctions elles-mêmes — stables — et non sur l'objet, reconstruit à chaque rendu du viewer.
+  // Methods extracted from the scene state: the dependency lists then hold the functions themselves,
+  // which are stable, and not the object, rebuilt on each render of the viewer.
   const { primary, select, selectMany, isolate, setPrim } = scene;
-  // Recherche et dépliage vivent dans l'état de scène : le dock démonte ce panneau dès qu'on
-  // passe sur un autre onglet, et tout repartait replié, requête effacée.
+  // Search and expansion live in the scene state: the dock unmounts this panel as soon as one switches to
+  // another tab, and everything restarted collapsed, query cleared.
   const { query, setQuery, expanded, toggle, expand } = scene.view;
 
-  // Recherche : l'arbre filtré garde les ancêtres des résultats, et `search.expand` ne déplie
-  // que le chemin qui y mène — le reste de l'arbre garde le pli que l'utilisateur lui a donné.
+  // Search: the filtered tree keeps the ancestors of the results, and `search.expand` only expands the
+  // path leading to them. The rest of the tree keeps the fold the user gave it.
   const search = useMemo(() => searchPrimTree(scene.tree, query), [scene.tree, query]);
   const displayTree = search.tree;
   const searching = query.trim().length > 0;
@@ -73,13 +73,13 @@ export default function ScenegraphPanel({
   const variants = useMemo(() => variantTitleIndex(usd), [usd]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Racine du panneau : cible des écouteurs de survol, hors du flux React (voir `reveal`).
+  // Root of the panel: target of the hover listeners, outside the React flow (see `reveal`).
   const rootRef = useRef<HTMLDivElement>(null);
   const hovered = useRef(false);
-  // Le compilateur React renonce à mémoïser un composant qui appelle `useVirtualizer` : le
-  // virtualiseur rend des fonctions liées à un état mutable, qu'on figerait à tort. Sans
-  // conséquence ici — les rangées sont mémoïsées à la main et ne reçoivent que des valeurs.
-  // eslint-disable-next-line react-hooks/incompatible-library -- mémoïsation explicite, cf. ci-dessus
+  // The React compiler gives up memoising a component that calls `useVirtualizer`: the virtualizer returns
+  // functions bound to mutable state, which would be wrongly frozen. No consequence here: the rows are
+  // memoised by hand and only receive values.
+  // eslint-disable-next-line react-hooks/incompatible-library -- explicit memoization, see above
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
@@ -89,17 +89,17 @@ export default function ScenegraphPanel({
   });
 
   /**
-   * Sélection venue du viewer : sa rangée peut être hors fenêtre — sur une liste virtualisée
-   * elle n'existe même pas dans le DOM, aucun `scrollIntoView` ne la trouverait. On défile donc
-   * par index. `align: 'auto'` ne bouge pas quand la rangée est déjà visible : cliquer une
-   * rangée ne déplace jamais la liste sous le doigt.
+   * Selection coming from the viewer: its row may be outside the window. On a virtualised list it does
+   * not even exist in the DOM, so no `scrollIntoView` could find it. We therefore scroll by index.
+   * `align: 'auto'` does not move when the row is already visible: clicking a row never moves the list
+   * under the finger.
    */
   useEffect(() => {
     const index = rowIndexOf(rows, primary);
     if (index >= 0) virtualizer.scrollToIndex(index, { align: 'auto' });
   }, [primary, rows, virtualizer]);
 
-  /** Flèches haut/bas : la rangée visée peut n'être montée qu'au rendu suivant le défilement. */
+  /** Up/down arrows: the targeted row may only be mounted on the render following the scroll. */
   const onMove = useCallback(
     (from: number, delta: number) => {
       const next = Math.max(0, Math.min(rows.length - 1, from + delta));
@@ -112,7 +112,7 @@ export default function ScenegraphPanel({
     [rows.length, virtualizer],
   );
 
-  /** Clic sur une rangée : simple = remplace, Ctrl = bascule, Maj = plage depuis le primaire. */
+  /** Click on a row: plain = replace, Ctrl = toggle, Shift = range from the primary. */
   const onRowClick = useCallback(
     (path: string, e: React.MouseEvent | React.KeyboardEvent) => {
       if (e.shiftKey && primary && primary !== path) {
@@ -131,16 +131,16 @@ export default function ScenegraphPanel({
 
   const onEye = useCallback(
     (path: string, alt: boolean, hiddenNow: boolean) => {
-      // Alt+clic = solo : isole ce prim (tout le reste est masqué) — façon DCC.
+      // Alt+click = solo: isolates this prim (everything else is hidden), DCC-style.
       if (alt) isolate(path);
       else setPrim(path, { visible: hiddenNow ? undefined : false });
     },
     [isolate, setPrim],
   );
 
-  // Menu contextuel unique : la rangée visée est retrouvée au clic droit. Le prim visé est
-  // aussi tenu dans une ref, lue par `onOpenChange` dans le même événement — un clic droit
-  // hors d'une rangée de prim (zone vide, rangée de clone) n'ouvre rien, comme avant.
+  // Single context menu: the targeted row is found on right-click. The targeted prim is also held in a
+  // ref, read by `onOpenChange` within the same event: a right-click outside a prim row (empty area, clone
+  // row) opens nothing, as before.
   const aimed = useRef<string | null>(null);
   const [target, setTarget] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -148,7 +148,7 @@ export default function ScenegraphPanel({
     aimed.current = aimedPrimPath(e.target);
     setTarget(aimed.current);
   }, []);
-  /** Appui long tactile : Radix ouvre le même menu sans passer par `contextmenu`. */
+  /** Long-press on touch: Radix opens the same menu without going through `contextmenu`. */
   const onTouchAim = useCallback(
     (e: React.PointerEvent) => {
       if (e.pointerType !== 'mouse') onAim(e);
@@ -157,9 +157,9 @@ export default function ScenegraphPanel({
   );
 
   /**
-   * `F` au survol du panneau : **révéler** le prim sélectionné dans l'arbre, au lieu de cadrer
-   * la caméra. On déplie ses ancêtres ; s'il est hors du filtre courant, la recherche est levée,
-   * sans quoi il n'y aurait rien à montrer. Le défilement par index ci-dessus fait le reste.
+   * `F` while hovering the panel: **reveal** the selected prim in the tree, instead of framing the
+   * camera. Its ancestors are expanded; if it is outside the current filter, the search is lifted,
+   * otherwise there would be nothing to show. Scrolling by index above does the rest.
    */
   const reveal = useCallback(() => {
     if (!primary) return;
@@ -168,14 +168,13 @@ export default function ScenegraphPanel({
   }, [primary, displayTree, setQuery, expand]);
 
   /**
-   * Survol + `F`. Deux points délicats :
-   *  - le survol se relève avec des écouteurs **natifs** (`pointerenter`/`pointerleave`) : le
-   *    clavier n'a pas de focus dans l'arbre, la frappe ne traverse donc jamais ce sous-arbre
-   *    et aucun gestionnaire React ne la verrait ;
-   *  - l'écoute est en **capture sur `window`**, alors que le cadrage caméra global
-   *    (`useFrameShortcuts`) écoute en bulle sur le même `window` : la capture passe d'abord, et
-   *    `stopPropagation` l'empêche de cadrer en plus. Sans prim sélectionné, on laisse filer —
-   *    le viewer cadre comme avant.
+   * Hover + `F`. Two delicate points:
+   *  - hover is tracked with **native** listeners (`pointerenter`/`pointerleave`): the keyboard has no
+   *    focus in the tree, so the keystroke never passes through this subtree, and no React handler
+   *    would see it;
+   *  - listening is in **capture on `window`**, whereas the global camera framing (`useFrameShortcuts`)
+   *    listens in bubble on the same `window`: the capture runs first, and `stopPropagation` prevents it
+   *    from also framing. With no prim selected, the keystroke is let through: the viewer frames as before.
    */
   const empty = scene.tree.length === 0;
   useEffect(() => {
@@ -190,7 +189,7 @@ export default function ScenegraphPanel({
     const onKey = (e: KeyboardEvent) => {
       if (!hovered.current || e.key.toLowerCase() !== 'f' || !primary) return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isEditable(e.target)) return;
-      // Même garde que le cadrage caméra : un dialogue ouvert prend la main sur les raccourcis.
+      // Same guard as the camera framing: an open dialog takes over the shortcuts.
       if (document.querySelector('[role="dialog"]')) return;
       e.preventDefault();
       e.stopPropagation();
@@ -228,7 +227,7 @@ export default function ScenegraphPanel({
             onPointerDown={onTouchAim}
             className="min-h-0 flex-1 overflow-y-auto"
           >
-            {/* Cale à la hauteur de l'arbre déplié : l'ascenseur dit la vérité sur le volume. */}
+            {/* Spacer at the height of the expanded tree: the scrollbar tells the truth about the volume. */}
             <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((item) => {
                 const row = rows[item.index];
@@ -300,8 +299,7 @@ export default function ScenegraphPanel({
               {saving ? t('common.saving') : t('scenegraph.saveForAll')}
             </button>
           ) : (
-            // Après publication, la mise en scène commune est figée : les modifications ne
-            // partent plus que dans un commentaire.
+            // After publication, the shared staging is frozen: changes only go out in a comment.
             <span className="text-xs text-muted-foreground">{t('review.attachedToComment')}</span>
           )}
         </div>

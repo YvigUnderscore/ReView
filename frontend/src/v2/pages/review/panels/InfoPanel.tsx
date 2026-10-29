@@ -12,14 +12,14 @@ export interface InfoRow {
 }
 
 /**
- * Panneau Infos du dock : ce qui se mesure pendant le rendu, puis ce que le fichier déclare.
- * Réunit `StatsPanel` (splat), `ModelInfoPanel`/`ModelUsdSection` (3D) et la fiche technique
- * des médias plats — même mise en page pour les quatre types.
+ * Info panel of the dock: what is measured during rendering, then what the file declares.
+ * Brings together `StatsPanel` (splat), `ModelInfoPanel`/`ModelUsdSection` (3D) and the technical
+ * sheet of flat media, with the same layout for the four types.
  *
- * Les deux groupes sont **repliables**, et arrivent repliés au-delà du seuil du dock
- * (`isLongDockGroup`) : une fiche technique de scène USD dépasse la hauteur du panneau et
- * poussait hors champ les mesures de la frame courante, qui tiennent en quatre lignes. Chacun
- * porte son décompte, pour qu'un groupe fermé dise quand même ce qu'il contient.
+ * Both groups are **collapsible**, and start collapsed beyond the dock's threshold
+ * (`isLongDockGroup`): a USD scene's technical sheet exceeds the panel's height and pushed the
+ * measurements of the current frame, which fit in four lines, out of view. Each carries its count,
+ * so that a closed group still says what it contains.
  */
 export default function InfoPanel({
   live,
@@ -27,12 +27,12 @@ export default function InfoPanel({
   extra,
   action,
 }: {
-  /** Mesures de la frame courante — absentes pour les médias plats. */
+  /** Measurements of the current frame: absent for flat media. */
   live?: InfoRow[];
   sheet: InfoRow[];
-  /** Groupes qui ne tiennent pas en couples libellé/valeur : scène USD, inspecteur de textures. */
+  /** Groups that do not fit as label/value pairs: USD scene, texture inspector. */
   extra?: ReactNode;
-  /** Action de bas de panneau (« Recomposer depuis l'USD »…). */
+  /** Bottom-of-panel action ("Recompose from the USD"...). */
   action?: ReactNode;
 }) {
   const t = useT();

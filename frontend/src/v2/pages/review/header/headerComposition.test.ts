@@ -10,7 +10,7 @@ import {
   type HeaderActionContext,
 } from './headerComposition';
 
-/** Média publié, sans ShotGrid, sans spectateur, sans lecteur détachable. */
+/** Published media, without ShotGrid, without viewers, without a detachable player. */
 const base = (over: Partial<HeaderActionContext> = {}): HeaderActionContext => ({
   kind: 'VIDEO',
   published: true,
@@ -23,38 +23,38 @@ const base = (over: Partial<HeaderActionContext> = {}): HeaderActionContext => (
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 
 describe('headerActions', () => {
-  it('garde les actions communes aux quatre types de média', () => {
-    // La fusion ne devait rien perdre : live, décision, théâtre, raccourcis et repli des
-    // commentaires étaient sur toutes les reviews avant, ils y sont toujours.
+  it('keeps the actions common to the four media types', () => {
+    // The merge was not to lose anything: live, decision, theatre, shortcuts and comment
+    // collapsing were on every review before, and they still are.
     for (const kind of KINDS)
       expect(headerActions(base({ kind }))).toEqual(
         expect.arrayContaining(['live', 'decision', 'theater', 'shortcuts', 'comments']),
       );
   });
 
-  it("ne garde le sélecteur A/B de l'en-tête que pour la vidéo", () => {
-    // Elle seule coche deux ou trois versions d'un coup (grille 2×2). L'image choisit A et B
-    // dans la barre d'options du mode « Compare » : un seul endroit, au lieu d'un menu
-    // d'en-tête et d'un onglet de dock qui se contredisaient sur où choisir B.
+  it("keeps the header A/B selector only for video", () => {
+    // It alone ticks two or three versions at once (2×2 grid). The image chooses A and B in the
+    // options bar of the "Compare" mode: a single visible place, instead of a header menu and a
+    // dock tab that contradicted each other about where to choose B.
     expect(headerActions(base({ kind: 'VIDEO' }))).toContain('compare');
     expect(headerActions(base({ kind: 'IMAGE' }))).not.toContain('compare');
     expect(headerActions(base({ kind: 'MODEL_3D' }))).not.toContain('compare');
     expect(headerActions(base({ kind: 'SPLAT' }))).not.toContain('compare');
   });
 
-  it("réserve le lecteur détachable à la vidéo, et seulement si la page l'expose", () => {
+  it("reserves the detachable player for video, and only if the page exposes it", () => {
     expect(headerActions(base({ kind: 'VIDEO', canPictureInPicture: true }))).toContain('pip');
     expect(headerActions(base({ kind: 'VIDEO', canPictureInPicture: false }))).not.toContain('pip');
     expect(headerActions(base({ kind: 'IMAGE', canPictureInPicture: true }))).not.toContain('pip');
     expect(headerActions(base({ kind: 'SPLAT', canPictureInPicture: true }))).not.toContain('pip');
   });
 
-  it('ne propose la publication que sur un brouillon (le verrou de publication est définitif)', () => {
+  it('offers publication only on a draft (the publication lock is final)', () => {
     expect(headerActions(base({ published: false }))).toContain('publish');
     expect(headerActions(base({ published: true }))).not.toContain('publish');
   });
 
-  it('masque ShotGrid et la présence quand il n’y a rien à montrer', () => {
+  it('hides ShotGrid and presence when there is nothing to show', () => {
     const bare = headerActions(base());
     expect(bare).not.toContain('shotgrid');
     expect(bare).not.toContain('presence');
@@ -63,12 +63,12 @@ describe('headerActions', () => {
     expect(full).toContain('presence');
   });
 
-  it('ordonne l’A/B en premier, pour rejoindre celui des viewers spatiaux', () => {
-    // 3D et splat posent leur sélecteur en `headerRight` du chrome, juste devant cette liste.
+  it('orders A/B first, to join that of the spatial viewers', () => {
+    // 3D and splat place their selector in `headerRight` of the chrome, just before this list.
     expect(headerActions(base({ kind: 'VIDEO' }))[0]).toBe('compare');
   });
 
-  it('ne répète jamais une action', () => {
+  it('never repeats an action', () => {
     const all = headerActions(
       base({ published: false, hasSgLink: true, hasViewers: true, canPictureInPicture: true }),
     );
@@ -77,7 +77,7 @@ describe('headerActions', () => {
 });
 
 describe('imageCompareOverlay', () => {
-  it('ne remplace la visionneuse que sur wipe ou différence, et avec un média B', () => {
+  it('replaces the viewer only on wipe or difference, and with a B media', () => {
     expect(imageCompareOverlay(42, 'wipe')).toBe('wipe');
     expect(imageCompareOverlay(42, 'diff')).toBe('diff');
     expect(imageCompareOverlay(42, 'side')).toBeNull();
@@ -89,19 +89,19 @@ describe('chromeHostsHeader', () => {
   const host = (over: Partial<Parameters<typeof chromeHostsHeader>[0]> = {}) =>
     chromeHostsHeader({ hasData: true, kind: 'VIDEO', ...over });
 
-  it('confie l’en-tête au chrome pour les quatre types de média', () => {
+  it('entrusts the header to the chrome for the four media types', () => {
     for (const kind of KINDS) expect(host({ kind })).toBe(true);
   });
 
-  it('le reprend à la page tant que le média n’est pas chargé', () => {
+  it('takes it back from the page as long as the media is not loaded', () => {
     expect(host({ hasData: false })).toBe(false);
     expect(host({ hasData: true, kind: undefined })).toBe(false);
   });
 
-  it('garde le chrome pendant la comparaison image, désormais une surcouche du viewport', () => {
-    // Le wipe et la différence démontaient tout le chrome : la bascule de mode et les réglages
-    // A/B partaient avec, à l'instant précis où l'on en avait besoin. Ce test verrouillait
-    // l'ancien comportement — il est réécrit sciemment.
+  it('keeps the chrome during image comparison, now an overlay of the viewport', () => {
+    // Wipe and difference used to unmount the whole chrome: the mode toggle and the A/B settings
+    // went with them, at the very moment they were needed. This test locked in the old behaviour;
+    // it is deliberately rewritten.
     for (const kind of KINDS) expect(host({ kind })).toBe(true);
   });
 });

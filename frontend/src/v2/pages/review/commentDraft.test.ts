@@ -11,20 +11,20 @@ describe('commentDraft (32.C)', () => {
     expect(loadDraft(1)).toBeNull();
   });
 
-  it('sauvegarde et recharge un brouillon par média', () => {
+  it('saves and reloads a draft per media', () => {
     saveDraft(1, { content: 'à reprendre' });
     saveDraft(2, { content: 'autre média' });
     expect(loadDraft(1)).toEqual({ content: 'à reprendre' });
     expect(loadDraft(2)).toEqual({ content: 'autre média' });
   });
 
-  it('fusionne texte et formes sans écraser l’autre champ', () => {
+  it('merges text and shapes without overwriting the other field', () => {
     saveDraft(1, { content: 'texte' });
     saveDraft(1, { shapes: [{ id: 'a' }] });
     expect(loadDraft(1)).toEqual({ content: 'texte', shapes: [{ id: 'a' }] });
   });
 
-  it('supprime l’entrée quand le brouillon devient vide', () => {
+  it('removes the entry when the draft becomes empty', () => {
     saveDraft(1, { content: 'texte', shapes: [{ id: 'a' }] });
     saveDraft(1, { content: '', shapes: [] });
     expect(localStorage.getItem('review-draft-1')).toBeNull();

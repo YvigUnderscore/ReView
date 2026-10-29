@@ -6,12 +6,11 @@ import { userColor } from '../../../lib/userColor';
 import { useLivePointers } from './pointerBus';
 
 /**
- * Curseurs des autres participants, posés sur le cadre du média.
+ * Cursors of the other participants, placed on the media frame.
  *
- * Les coordonnées sont normalisées : le curseur désigne le même pixel d'image chez tout
- * le monde, quelle que soit la taille de la fenêtre — et il suit le zoom, puisqu'il vit
- * dans le calque transformé. La teinte est celle de l'auteur partout ailleurs (avatar,
- * annotation), pour qu'on reconnaisse qui montre sans lire le nom.
+ * The coordinates are normalized: the cursor designates the same image pixel for everyone, whatever
+ * the window size, and it follows the zoom since it lives in the transformed layer. The tint is the
+ * author's everywhere else (avatar, annotation), so that one recognizes who is pointing without reading the name.
  */
 export default function LivePointers() {
   const pointers = useLivePointers();

@@ -7,26 +7,25 @@ import { useDisplayLut, useOcioDisplays, useSourceImage } from './colorQueries';
 import { canvasToObjectUrl, renderTransform } from './renderTransform';
 
 /**
- * Transformée d'affichage d'une image de review : récupère la LUT du couple display/view **du
- * projet**, l'applique au GPU et rend une **image transformée superposée** à l'originale dans
- * le plan zoomé du viewer.
+ * Display transform of a review image: fetches the LUT of the **project's** display/view
+ * pair, applies it on the GPU and renders a **transformed image overlaid** on the original
+ * in the viewer's zoomed plane.
  *
- * Il n'y a plus de réglage au moment de la review (Phase 50) : la gestion couleur est celle du
- * studio, définie dans les paramètres du projet. Le hook n'a donc plus d'état à lire — la
- * config du projet suffit à décider ce qui s'affiche.
+ * There is no longer any adjustment at review time (Phase 50): colour management is the
+ * studio's, defined in the project settings. The hook therefore has no state left to read:
+ * the project config is enough to decide what is displayed.
  *
- * Pourquoi une superposition plutôt qu'un remplacement de la source : la visionneuse refait
- * son cadrage à chaque changement de `src` (elle remet `base` à zéro). Remplacer la source
- * remettrait le zoom et le pan à plat. La superposition laisse la visionneuse, ses
- * annotations, ses références épinglées et la synchro de session intactes.
+ * Why an overlay rather than replacing the source: the viewer re-frames on every change of
+ * `src` (it resets `base`). Replacing the source would flatten the zoom and pan. The overlay
+ * leaves the viewer, its annotations, pinned references and session sync intact.
  */
 
 export interface DisplayTransform {
-  /** URL de l'image transformée à superposer, ou `null` (rien à superposer). */
+  /** URL of the transformed image to overlay, or `null` (nothing to overlay). */
   url: string | null;
 }
 
-/** Délai avant re-rendu : un changement de média ne doit pas lancer deux encodages. */
+/** Delay before re-rendering: a media change must not trigger two encodings. */
 const RENDER_DEBOUNCE_MS = 140;
 
 export function useDisplayTransform(src: string, projectColor: ProjectColor | null): DisplayTransform {
@@ -34,7 +33,7 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
   const target = resolveDisplayView(projectColor, displaysQuery.data ?? []);
 
   const lutQuery = useDisplayLut(target);
-  // Sans LUT cuite, il n'y a rien à appliquer : l'image d'origine est déjà la bonne réponse.
+  // Without a baked LUT there is nothing to apply: the original image is already the right answer.
   const lut = lutQuery.data?.lut ?? null;
 
   const imageQuery = useSourceImage(src, !!lut);
@@ -45,8 +44,8 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
     const prev = held.current;
     held.current = next;
     setUrl(next);
-    // Le navigateur garde vivante l'image déjà décodée : révoquer l'ancienne URL
-    // immédiatement ne fait pas clignoter l'affichage, et libère le blob.
+    // The browser keeps the already-decoded image alive: revoking the old URL immediately
+    // does not flicker the display, and frees the blob.
     if (prev) URL.revokeObjectURL(prev);
   };
 
@@ -54,15 +53,15 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
 
   useEffect(() => {
     let cancelled = false;
-    // Tout passe par le délai, y compris l'effacement : poser l'état pendant le corps de
-    // l'effet enchaînerait un rendu de plus à chaque changement de média.
+    // Everything goes through the delay, including clearing: setting state in the effect
+    // body would add one extra render on every media change.
     const timer = setTimeout(() => {
       if (!lut || !image) {
         publish(null);
         return;
       }
       const result = renderTransform(image, image.naturalWidth, image.naturalHeight, lut);
-      // Navigateur sans WebGL : on rend l'image d'origine plutôt qu'une superposition périmée.
+      // WebGL-less browser: render the original image rather than a stale overlay.
       if (!result) {
         publish(null);
         return;
@@ -79,11 +78,11 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
       cancelled = true;
       clearTimeout(timer);
     };
-    // `publish` est stable (refs + setState) ; la liste porte tout ce qui change l'image.
+    // `publish` is stable (refs + setState); the list carries everything that changes the image.
   }, [image, lut]);
 
-  // Dernière URL libérée au démontage : sans cela un aller-retour dans la review fuit un blob
-  // par média visité.
+  // Last URL released on unmount: otherwise a round trip into the review leaks one blob
+  // per visited media.
   useEffect(
     () => () => {
       if (held.current) URL.revokeObjectURL(held.current);
@@ -92,7 +91,7 @@ export function useDisplayTransform(src: string, projectColor: ProjectColor | nu
     [],
   );
 
-  // L'image superposée est **dérivée** : dès que la transformée n'a plus lieu d'être, elle
-  // disparaît au rendu courant, sans attendre que l'effet ait libéré le blob.
+  // The overlaid image is **derived**: as soon as the transform is no longer needed, it
+  // disappears in the current render, without waiting for the effect to release the blob.
   return { url: lut ? url : null };
 }

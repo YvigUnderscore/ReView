@@ -4,31 +4,31 @@
 import { invalidateVisibleBounds } from '../../scene/visibleBounds';
 import type { SplatSceneHandle } from '../../useSplat';
 
-/** Splats masqués par une opération de suppression (opacités d'origine pour l'annulation). */
+/** Splats masked by a delete operation (original opacities kept for undo). */
 export interface HiddenSplats {
   indices: number[];
   opacities: number[];
 }
 
 /**
- * Reflet immédiat d'une mutation du packedSplats (11.C) : `needsUpdate` ne fait que ré-uploader
- * la texture de données — l'accumulateur trié de Spark n'est reconstruit que si le générateur
- * du mesh est invalidé (`updateGenerator`). Sans lui, le masquage n'apparaît qu'au prochain
- * mouvement caméra (ou par effet de bord du détachement de la surbrillance).
+ * Immediate reflection of a mutation of the packedSplats (11.C): `needsUpdate` only re-uploads the data
+ * texture. Spark's sorted accumulator is rebuilt only if the mesh's generator is invalidated
+ * (`updateGenerator`). Without it, the masking only appears at the next camera movement (or as a side
+ * effect of detaching the highlight).
  */
 export function commitPackedChange(handle: SplatSceneHandle): void {
   const packed = handle.mesh.packedSplats;
   if (packed) packed.needsUpdate = true;
   handle.mesh.updateGenerator();
-  // La bbox « visible » (cadrage F/H, 11.D) dépend des opacités : cache à invalider.
+  // The "visible" bbox (F/H framing, 11.D) depends on the opacities: cache to invalidate.
   invalidateVisibleBounds(handle.mesh);
 }
 
 /**
- * Suppression non-destructive de splats (10.G) : met l'opacité à 0 dans les données paquées
- * en mémoire (`PackedSplats.setSplat`) — le fichier original n'est jamais modifié ; le masque
- * est persisté à part (H5) et ré-appliqué au chargement. Renvoie les opacités d'origine pour
- * l'undo, ou null si rien à masquer (déjà masqués / données indisponibles).
+ * Non-destructive deletion of splats (10.G): sets the opacity to 0 in the packed data held in memory
+ * (`PackedSplats.setSplat`). The original file is never modified; the mask is persisted separately (H5)
+ * and re-applied on load. Returns the original opacities for the undo, or null if there is nothing to mask
+ * (already masked / data unavailable).
  */
 export function hideSplats(handle: SplatSceneHandle, indices: Iterable<number>): HiddenSplats | null {
   const packed = handle.mesh.packedSplats;
@@ -36,7 +36,7 @@ export function hideSplats(handle: SplatSceneHandle, indices: Iterable<number>):
   const hidden: HiddenSplats = { indices: [], opacities: [] };
   for (const i of indices) {
     const { center, scales, quaternion, opacity, color } = packed.getSplat(i);
-    if (opacity <= 0) continue; // déjà masqué
+    if (opacity <= 0) continue; // already masked
     hidden.indices.push(i);
     hidden.opacities.push(opacity);
     packed.setSplat(i, center, scales, quaternion, 0, color);
@@ -46,7 +46,7 @@ export function hideSplats(handle: SplatSceneHandle, indices: Iterable<number>):
   return hidden;
 }
 
-/** Annulation : restaure les opacités d'origine des splats masqués. */
+/** Undo: restores the original opacities of the masked splats. */
 export function restoreSplats(handle: SplatSceneHandle, hidden: HiddenSplats): void {
   const packed = handle.mesh.packedSplats;
   if (!packed) return;
@@ -57,7 +57,7 @@ export function restoreSplats(handle: SplatSceneHandle, hidden: HiddenSplats): v
   commitPackedChange(handle);
 }
 
-/** Rétablissement (redo) : re-masque les splats de l'opération. */
+/** Redo: re-masks the splats of the operation. */
 export function rehideSplats(handle: SplatSceneHandle, hidden: HiddenSplats): void {
   const packed = handle.mesh.packedSplats;
   if (!packed) return;

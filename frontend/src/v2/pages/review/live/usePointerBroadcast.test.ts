@@ -19,7 +19,7 @@ beforeEach(() => {
 afterEach(() => clearPointers());
 
 describe('usePointerBroadcast', () => {
-  it('le driver diffuse son curseur sur le canal de la session', () => {
+  it('the driver broadcasts its cursor on the session channel', () => {
     renderHook(() => usePointerBroadcast(opts));
     expect(canSendPointer()).toBe(true);
     sendPointer({ x: 0.25, y: 0.75 });
@@ -29,7 +29,7 @@ describe('usePointerBroadcast', () => {
     });
   });
 
-  it('la sortie du cadre est diffusée comme un départ', () => {
+  it('leaving the frame is broadcast as a departure', () => {
     renderHook(() => usePointerBroadcast(opts));
     sendPointer(null);
     expect(emit).toHaveBeenLastCalledWith('live:sync', 'media:12', {
@@ -38,20 +38,20 @@ describe('usePointerBroadcast', () => {
     });
   });
 
-  it('prendre la main efface les curseurs reçus — c’est nous qui montrons', () => {
+  it('taking over clears the received cursors: we are the ones pointing', () => {
     receivePointer({ userId: 9, x: 0.5, y: 0.5 }, 'Ada');
     renderHook(() => usePointerBroadcast(opts));
     expect(getPointers()).toHaveLength(0);
   });
 
-  it('spectateur ou co-pilote non driver : rien ne part', () => {
+  it('a viewer or non-driver co-pilot: nothing is sent', () => {
     renderHook(() => usePointerBroadcast({ ...opts, isDriver: false }));
     expect(canSendPointer()).toBe(false);
     sendPointer({ x: 0.5, y: 0.5 });
     expect(emit).not.toHaveBeenCalled();
   });
 
-  it('quitter la session débranche la diffusion', () => {
+  it('leaving the session unplugs the broadcast', () => {
     const { unmount } = renderHook(() => usePointerBroadcast(opts));
     unmount();
     expect(canSendPointer()).toBe(false);

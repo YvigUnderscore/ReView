@@ -16,8 +16,8 @@ const points: PoiPoint[] = [
   { position: '1 0 0', normal: '0 0 1', space: 'object', text: 'le boulon dépasse' },
 ];
 
-describe('buildPoiSceneCards — le commentaire relu, réparti sur ses points', () => {
-  it('donne à chaque point sa remarque et SES images, reconnues par leur clé', () => {
+describe('buildPoiSceneCards — the reviewed comment, spread over its points', () => {
+  it('gives each point its remark and ITS images, recognised by their key', () => {
     const cards = buildPoiSceneCards({ points, attachments });
     expect(cards.map((c) => c.index)).toEqual([0, 1]);
     expect(cards[0].text).toBe('la soudure se voit');
@@ -26,7 +26,7 @@ describe('buildPoiSceneCards — le commentaire relu, réparti sur ses points', 
     expect(cards[1].images).toEqual([]);
   });
 
-  it('pose sur la PREMIÈRE carte le mot de l’auteur et les images qu’aucun point ne réclame', () => {
+  it("places on the FIRST card the author's word and the images no point claims", () => {
     const cards = buildPoiSceneCards({
       points,
       attachments,
@@ -35,13 +35,13 @@ describe('buildPoiSceneCards — le commentaire relu, réparti sur ses points', 
     });
     expect(cards[0].intro).toBe('revoir la passe de rendu');
     expect(cards[0].author).toBe('Lou');
-    // `k2` n'appartient à aucun point : elle rejoint la première carte. `k3` est un PDF.
+    // `k2` belongs to no point: it joins the first card. `k3` is a PDF.
     expect(cards[0].images.map((i) => i.src)).toEqual(['blob:soudure', 'blob:boulon']);
     expect(cards[1].intro).toBeUndefined();
     expect(cards[1].author).toBeUndefined();
   });
 
-  it('ne pose pas de carte sur un point qui n’a rien à lire', () => {
+  it('does not place a card on a point that has nothing to read', () => {
     const bare: PoiPoint[] = [
       { position: '0 0 0', normal: '0 0 1' },
       { position: '1 0 0', normal: '0 0 1', text: 'ici' },
@@ -50,8 +50,8 @@ describe('buildPoiSceneCards — le commentaire relu, réparti sur ses points', 
     expect(cards.map((c) => c.index)).toEqual([1]);
   });
 
-  it('rend lisible un commentaire d’avant les points : son unique point porte tout', () => {
-    // `readPoiPoints` rend le `hotspot` d'un ancien commentaire comme point n° 1, sans texte.
+  it('makes a comment predating the points readable: its single point carries everything', () => {
+    // `readPoiPoints` renders the `hotspot` of an old comment as point no. 1, without text.
     const legacy: PoiPoint[] = [{ position: '0 0 0', normal: '0 0 1' }];
     const cards = buildPoiSceneCards({
       points: legacy,
@@ -64,44 +64,44 @@ describe('buildPoiSceneCards — le commentaire relu, réparti sur ses points', 
     expect(cards[0].images).toHaveLength(2);
   });
 
-  it('ne garde des pièces jointes que les images affichables', () => {
+  it('keeps only the displayable images as attachments', () => {
     const [card] = buildPoiSceneCards({
       points: [{ position: '0 0 0', normal: '0 0 1', text: 'un défaut', images: ['k3'] }],
       attachments: [attachments[2]],
     });
-    // Le PDF du commentaire se lit dans le fil, pas en vignette au-dessus de la scène.
+    // The comment's PDF is read in the thread, not as a thumbnail above the scene.
     expect(card.images).toEqual([]);
     expect(card.text).toBe('un défaut');
   });
 });
 
-describe('poiCardSide — la carte ouverte tient dans le viewer, qui écrête ce qui dépasse', () => {
-  it('se centre sous sa pastille quand la place ne manque d’aucun côté', () => {
+describe('poiCardSide — the open card fits in the viewer, which clips what overflows', () => {
+  it('centres under its hotspot when there is room on every side', () => {
     expect(poiCardSide(400, 800)).toBe('center');
   });
 
-  it('se pousse à droite près du bord gauche, à gauche près du bord droit', () => {
+  it('is pushed right near the left edge, and left near the right edge', () => {
     expect(poiCardSide(10, 800)).toBe('right');
     expect(poiCardSide(790, 800)).toBe('left');
   });
 
-  it('bascule exactement à la demi-largeur de la carte', () => {
+  it('flips exactly at half the width of the card', () => {
     expect(poiCardSide(POI_CARD_HALF_PX - 1, 800)).toBe('right');
     expect(poiCardSide(POI_CARD_HALF_PX, 800)).toBe('center');
   });
 });
 
-describe('poiCardAbove — un point au ras du bord bas se commente au-dessus', () => {
-  it('reste sous sa pastille tant que la carte tient dessous', () => {
+describe('poiCardAbove — a point at the bottom edge is commented above', () => {
+  it('stays under its hotspot as long as the card fits beneath', () => {
     expect(poiCardAbove(100, 900)).toBe(false);
   });
 
-  it('passe au-dessus quand la place manque dessous et qu’il y en a plus dessus', () => {
+  it('goes above when there is not enough room beneath and more room above', () => {
     expect(poiCardAbove(860, 900)).toBe(true);
   });
 
-  it('ne passe pas au-dessus dans un viewer trop court pour elle : deux bords écrêtent pareil', () => {
-    // 120 px sous la pastille, 30 px dessus : monter la carte n'y gagnerait rien.
+  it('does not go above in a viewer too short for it: both edges clip the same way', () => {
+    // 120 px under the hotspot, 30 px above: raising the card would gain nothing.
     expect(poiCardAbove(30, 150)).toBe(false);
   });
 });

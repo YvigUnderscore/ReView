@@ -22,14 +22,14 @@ import {
   guideStrokeWidth,
 } from './guideStyle';
 
-/** Longueur d'un segment — le `viewBox` étant en pixels, c'est la longueur à l'écran. */
+/** Length of a segment. The `viewBox` being in pixels, this is the length on screen. */
 const length = (s: { x1: number; y1: number; x2: number; y2: number }) =>
   Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
 
-describe('centerCrossSegments — croix centrale carrée', () => {
-  // L'ancien overlay dessinait en pourcentages avec `preserveAspectRatio="none"` : « 8 unités »
-  // valaient 8 % de la largeur en X et 8 % de la hauteur en Y, deux longueurs différentes dès
-  // que le média n'était pas carré. La croix était donc un « t » écrasé en 16:9 et en scope.
+describe('centerCrossSegments — square centre cross', () => {
+  // The old overlay drew in percentages with `preserveAspectRatio="none"`: "8 units" were worth
+  // 8% of the width in X and 8% of the height in Y, two different lengths as soon as the media
+  // was not square. The cross was therefore a "t" squashed in 16:9 and in scope.
   const boxes: Array<[string, number, number]> = [
     ['1:1', 1000, 1000],
     ['16:9', 1600, 900],
@@ -49,12 +49,12 @@ describe('centerCrossSegments — croix centrale carrée', () => {
     expect(vertical.x1).toBeCloseTo(w / 2, 10);
   });
 
-  it('cale les branches sur le plus petit côté (jamais de débordement)', () => {
+  it('wedges the arms on the smaller side (never overflows)', () => {
     const [horizontal] = centerCrossSegments(2390, 1000);
     expect(length(horizontal)).toBeCloseTo(2 * 1000 * CENTER_CROSS_RATIO, 10);
   });
 
-  it('reste défini sur une boîte non mesurée', () => {
+  it('stays defined on an unmeasured box', () => {
     expect(centerCrossSegments(0, 0)).toEqual([
       { x1: 0, y1: 0, x2: 0, y2: 0 },
       { x1: 0, y1: 0, x2: 0, y2: 0 },
@@ -63,7 +63,7 @@ describe('centerCrossSegments — croix centrale carrée', () => {
 });
 
 describe('thirdsLines / safeAreaRect', () => {
-  it('pose les tiers aux tiers du cadre', () => {
+  it('places the thirds at the thirds of the frame', () => {
     const [v1, v2, h1, h2] = thirdsLines(900, 600);
     expect([v1.x1, v1.x2, v1.y1, v1.y2]).toEqual([300, 300, 0, 600]);
     expect([v2.x1, v2.x2]).toEqual([600, 600]);
@@ -71,38 +71,38 @@ describe('thirdsLines / safeAreaRect', () => {
     expect([h2.y1, h2.y2]).toEqual([400, 400]);
   });
 
-  it('centre la safe area et lui donne la fraction demandée', () => {
+  it('centres the safe area and gives it the requested fraction', () => {
     expect(safeAreaRect(1000, 500, 0.9)).toEqual({ x: 50, y: 25, width: 900, height: 450 });
     expect(actionSafeRect(1000, 500)).toEqual({ x: 50, y: 25, width: 900, height: 450 });
     expect(titleSafeRect(1000, 500)).toEqual({ x: 100, y: 50, width: 800, height: 400 });
   });
 });
 
-describe('outlineRect — liseré du cadre de livraison', () => {
-  it('rentre le tracé d’un demi-trait, sinon le viewport SVG en rogne la moitié', () => {
+describe('outlineRect — border of the delivery frame', () => {
+  it('insets the stroke path by half a stroke, otherwise the SVG viewport clips half of it', () => {
     expect(outlineRect(800, 450, 1)).toEqual({ x: 0.5, y: 0.5, width: 799, height: 449 });
   });
 
-  it('ne produit jamais de dimension négative', () => {
+  it('never produces a negative dimension', () => {
     expect(outlineRect(0, 0, 1)).toEqual({ x: 0.5, y: 0.5, width: 0, height: 0 });
   });
 });
 
-describe('guideStyle — compensation du zoom', () => {
-  it('divise toutes les longueurs par l’échelle du calque', () => {
+describe('guideStyle — zoom compensation', () => {
+  it('divides all lengths by the scale of the layer', () => {
     expect(guideStrokeWidth(1)).toBe(GUIDE_STROKE_PX);
     expect(guideStrokeWidth(4)).toBe(GUIDE_STROKE_PX / 4);
     expect(guideShadowBlur(4)).toBe(GUIDE_SHADOW_BLUR_PX / 4);
     expect(guideDashArray(2)).toBe(`${GUIDE_DASH_PX[0] / 2} ${GUIDE_DASH_PX[1] / 2}`);
   });
 
-  it('ignore une échelle absurde plutôt que de faire disparaître les traits', () => {
+  it('ignores an absurd scale rather than making the strokes disappear', () => {
     expect(guideScale(0)).toBe(1);
     expect(guideScale(Number.NaN)).toBe(1);
     expect(guideStrokeWidth(-3)).toBe(GUIDE_STROKE_PX);
   });
 
-  it('livre un jeu d’attributs de trait complet, sans remplissage', () => {
+  it('returns a complete set of stroke attributes, with no fill', () => {
     const props = guideStrokeProps(1);
     expect(props.fill).toBe('none');
     expect(props.strokeWidth).toBe(GUIDE_STROKE_PX);

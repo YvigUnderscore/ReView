@@ -10,31 +10,29 @@ import type { PresentationState } from './presentation/usePresentation';
 import { useT } from '../../../i18n';
 
 /**
- * Menu du viewer splat, **dans le viewer** — coin haut-gauche, en popover, exactement comme les
- * réglages de rendu du modèle 3D (`three/Model3DRenderMenu`, lot 6).
+ * Menu of the splat viewer, **inside the viewer**: top-left corner, as a popover, exactly like the render
+ * settings of the 3D model (`three/Model3DRenderMenu`, batch 6).
  *
- * Il n'en reste qu'un, **Rendu** : le **même** `DisplayPanel` que servait l'onglet « Affichage »
- * du dock, entier (mode de rendu du nuage, orientation, échelle brute de la comparaison, teinte
- * d'inspection). L'onglet a disparu ; un réglage ajouté demain arrive donc aux deux viewers
- * spatiaux ou à aucun.
+ * Only one remains, **Render**: the **same** `DisplayPanel` that the "Display" tab of the dock served, whole
+ * (cloud render mode, orientation, raw scale of the comparison, inspection tint). The tab has disappeared; a
+ * setting added tomorrow therefore reaches both spatial viewers, or neither.
  *
- * Le popover « Édition » du lot 12 a été RETIRÉ au lot 13. Il portait les outils du mode
- * « Nettoyer » et l'interrupteur qui y entrait — or ranger des outils derrière un clic n'était
- * pas la demande : c'était retirer le SEGMENT de l'en-tête. Les outils sont donc revenus au rail,
- * dans un second groupe permanent (`splatChrome.splatEditRail`), où ils sont directement
- * cliquables ; cliquer l'un d'eux arme le mode, et le premier groupe du rail — celui du mode par
- * défaut — en est la sortie. Le popover ne gardait aucun réglage propre : tout ce qui en était un
- * (rendu du nuage, orientation) est ici, tout ce qui était un outil est au rail.
+ * The "Edit" popover of batch 12 was REMOVED in batch 13. It carried the tools of the "Clean up" mode and the
+ * switch that entered it, whereas filing tools behind a click was not the request: it was removing the SEGMENT
+ * from the header. The tools therefore came back to the rail, in a second permanent group
+ * (`splatChrome.splatEditRail`), where they are directly clickable; clicking one of them arms the mode, and the
+ * first group of the rail (that of the default mode) is the way out. The popover kept no setting of its own:
+ * everything that was one (cloud rendering, orientation) is here, and everything that was a tool is on the rail.
  *
- * Le composant est monté par le **slot `settings` du pane**, hors de `ReviewFrame` : le guide
- * letterbox et les coordonnées normalisées des annotations ne bougent pas, et le popover descend
- * le long du bord gauche plutôt que de recouvrir le centre du cadre, qui est ce qu'on regarde.
+ * The component is mounted by the pane's **`settings` slot**, outside `ReviewFrame`: the letterbox guide and the
+ * normalised annotation coordinates do not move, and the popover descends along the left edge rather than
+ * covering the centre of the frame, which is what one is looking at.
  */
 
 /**
- * Habillage du déclencheur — identique à celui posé au lot 6 par `Model3DRenderMenu` : c'est
- * la même commande, au même coin, dans les deux viewers spatiaux. Le jour où un troisième
- * viewer en veut une, cette chaîne monte dans `chrome.css` et les deux menus l'y lisent.
+ * Trigger styling: identical to that set in batch 6 by `Model3DRenderMenu`. It is the same command, in the
+ * same corner, in both spatial viewers. The day a third viewer wants one, this string moves into `chrome.css`
+ * and both menus read it there.
  */
 const TRIGGER =
   'flex items-center gap-1.5 rounded-md border border-border bg-card/85 px-2 py-1.5 text-xs font-medium text-muted-foreground shadow-lg backdrop-blur transition-colors hover:bg-card hover:text-foreground data-[state=open]:bg-card data-[state=open]:text-foreground';
@@ -46,11 +44,11 @@ export default function SplatViewerMenus({
   compare,
 }: {
   editor: SplatEditorState;
-  /** Éditeur monté (média éditable + gestionnaire) : mode de rendu et orientation en dépendent. */
+  /** Editor mounted (editable media + manager): render mode and orientation depend on it. */
   showEdit: boolean;
-  /** Teinte d'inspection — réglage de session, offert à tout le monde. */
+  /** Inspection tint: session setting, offered to everyone. */
   pres: Pick<PresentationState, 'debugMode' | 'setDebugMode'>;
-  /** Comparaison A/B : porte l'échelle brute des nuages comparés. */
+  /** A/B comparison: carries the raw scale of the compared clouds. */
   compare?: SplatCompareState;
 }) {
   const t = useT();
@@ -68,7 +66,7 @@ export default function SplatViewerMenus({
         </PopoverTrigger>
         <PopoverContent align="start" className="flex w-60 flex-col gap-4 p-3">
           <DisplayPanel
-            // Le mode de rendu et l'orientation sont des éditions : réservés à l'éditeur monté.
+            // Render mode and orientation are edits: reserved to the mounted editor.
             splat={
               showEdit
                 ? {

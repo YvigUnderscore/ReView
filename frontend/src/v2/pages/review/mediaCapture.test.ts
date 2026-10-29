@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { drawAnnotations } from './mediaCapture';
 import type { Shape } from '../../components/AnnotationCanvas';
 
-/** Contexte 2D minimal qui enregistre les appels de dessin. */
+/** Minimal 2D context that records the drawing calls. */
 function mockCtx() {
   const calls: string[] = [];
   const rec =
@@ -41,7 +41,7 @@ function mockCtx() {
 const base = { id: 'x', color: '#fff', width: 3, alpha: 1 };
 
 describe('drawAnnotations (42.B №93)', () => {
-  it('polygone ≥3 sommets : ferme le chemin et trace', () => {
+  it('polygon with at least 3 vertices: closes the path and strokes it', () => {
     const { ctx, calls } = mockCtx();
     const poly: Shape = {
       ...base,
@@ -57,7 +57,7 @@ describe('drawAnnotations (42.B №93)', () => {
     expect(calls.filter((c) => c === 'stroke()').length).toBe(1);
   });
 
-  it('flèche : trace le fût et remplit la tête', () => {
+  it('arrow: strokes the shaft and fills the head', () => {
     const { ctx, calls } = mockCtx();
     const arrow: Shape = { ...base, type: 'arrow', x1: 0.1, y1: 0.1, x2: 0.8, y2: 0.8 };
     drawAnnotations(ctx, [arrow], 200, 200);
@@ -65,7 +65,7 @@ describe('drawAnnotations (42.B №93)', () => {
     expect(calls.some((c) => c === 'fill()')).toBe(true);
   });
 
-  it('rectangle : strokeRect ; texte : fillText', () => {
+  it('rectangle: strokeRect; text: fillText', () => {
     const { ctx, calls } = mockCtx();
     const shapes: Shape[] = [
       { ...base, type: 'rect', x: 0.1, y: 0.1, w: 0.2, h: 0.2 },

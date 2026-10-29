@@ -6,12 +6,12 @@ import { acquireContext, canvasToObjectUrl, renderTransform } from './renderTran
 import { FRAGMENT_100, FRAGMENT_300, SHADERS } from './displayShader';
 import type { CubeLut } from './cubeLut';
 
-/** LUT identité minimale — seule sa taille compte pour ces tests. */
+/** Minimal identity LUT: only its size matters for these tests. */
 const lut: CubeLut = { size: 2, volume: new Uint8Array(2 * 2 * 2 * 4), source: 'builtin' };
 
-describe('renderTransform — dégradation', () => {
-  it('rend null sans contexte WebGL plutôt que de lever', () => {
-    // happy-dom n'implémente pas WebGL : c'est exactement le cas « navigateur sans GPU ».
+describe('renderTransform — degradation', () => {
+  it('returns null without a WebGL context rather than throwing', () => {
+    // happy-dom does not implement WebGL: this is exactly the "browser without GPU" case.
     const canvas = document.createElement('canvas');
     expect(acquireContext(canvas)).toBeNull();
     const img = document.createElement('img');
@@ -23,46 +23,46 @@ describe('renderTransform — dégradation', () => {
     expect(renderTransform(img, 0, 10, lut)).toBeNull();
   });
 
-  it('canvasToObjectUrl rend null quand l’encodage n’existe pas', async () => {
+  it('canvasToObjectUrl returns null when the encoder does not exist', async () => {
     const canvas = document.createElement('canvas');
-    // @ts-expect-error — on retire volontairement l'encodeur pour éprouver le repli.
+    // @ts-expect-error — the encoder is deliberately removed to exercise the fallback.
     canvas.toBlob = undefined;
     await expect(canvasToObjectUrl(canvas)).resolves.toBeNull();
   });
 });
 
 /**
- * Ce test affirmait l'ordre « exposition → LUT → gamma ». L'exposition et le gamma étaient les
- * deux curseurs du panneau Color, retiré en Phase 50 : il est réécrit sur la chaîne qui reste,
- * celle du studio — le code source de l'image sert de domaine à la LUT du projet, et rien ne
- * s'applique avant ni après.
+ * Used to assert the order "exposure -> LUT -> gamma". Exposure and gamma were the two
+ * sliders of the Color panel, removed in Phase 50: the test is rewritten for the chain that
+ * remains, the studio's own. The image source code serves as the domain of the project LUT,
+ * and nothing is applied before or after it.
  */
-describe('displayShader — chaîne de traitement', () => {
-  it('les deux générations n’appliquent plus que la LUT', () => {
+describe('displayShader — processing chain', () => {
+  it('both generations now apply only the LUT', () => {
     for (const flavor of ['webgl2', 'webgl1'] as const) {
       const { fragment } = SHADERS[flavor];
       expect(fragment).toContain('uLut');
-      // Plus aucun curseur de review : ni exposition, ni gamma, ni bascule avant/après.
+      // No review slider remains: neither exposure, gamma, nor a before/after toggle.
       expect(fragment).not.toContain('uExposure');
       expect(fragment).not.toContain('uGamma');
       expect(fragment).not.toContain('uUseLut');
-      // Et plus d'aller-retour sRGB ↔ linéaire, qui ne servait qu'à l'exposition.
+      // Nor any sRGB <-> linear round trip, which only served exposure.
       expect(fragment).not.toContain('rvSrgbToLinear');
     }
   });
 
-  it('WebGL2 échantillonne une texture 3D, WebGL1 un atlas 2D', () => {
+  it('WebGL2 samples a 3D texture, WebGL1 a 2D atlas', () => {
     expect(FRAGMENT_300).toContain('sampler3D');
     expect(FRAGMENT_100).not.toContain('sampler3D');
     expect(FRAGMENT_100).toContain('rvSampleTiled');
   });
 
-  it('l’échantillonnage de la LUT est recadré au centre des texels', () => {
+  it('the LUT sampling is shifted to the centre of the texels', () => {
     expect(FRAGMENT_300).toContain('(uLutSize - 1.0) / uLutSize');
     expect(FRAGMENT_300).toContain('0.5 / uLutSize');
   });
 
-  it('l’alpha de la source traverse la transformée', () => {
+  it('the source alpha passes through the transform', () => {
     expect(FRAGMENT_300).toContain('src.a');
     expect(FRAGMENT_100).toContain('src.a');
   });

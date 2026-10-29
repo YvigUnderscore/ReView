@@ -19,12 +19,12 @@ import { useT } from '../../../i18n';
 import { intlLocale } from '../../../i18n';
 
 /**
- * Barre d'options du viewer splat : les paramètres du seul outil armé. Remplace
- * `SplatEditorToolbar`, `VolumesBar`, `PaintBar` et `TransformFields`, qui s'empilaient tous
- * ensemble dans le coin haut-gauche par-dessus le nuage.
+ * Options bar of the splat viewer: the settings of the single armed tool. Replaces
+ * `SplatEditorToolbar`, `VolumesBar`, `PaintBar` and `TransformFields`, which all stacked together
+ * in the top-left corner above the cloud.
  *
- * Le groupe de validation n'apparaît que dans les modes qui écrivent — « Nettoyer » enregistre
- * les éditions, « Mise en scène » publie la présentation rejouée pour tous.
+ * The validation group only appears in the modes that write: "Clean up" saves the edits, "Staging"
+ * publishes the presentation replayed for everyone.
  */
 export default function SplatOptions({
   tool,
@@ -39,15 +39,15 @@ export default function SplatOptions({
   mode: ModeId;
   editor: SplatEditorState;
   /**
-   * L'édition du nuage peut-elle encore être écrite POUR TOUT LE MONDE ? Faux dès la
-   * publication (verrou serveur) : le bouton disparaît alors, et l'édition part dans le
-   * prochain commentaire — la mécanique du scenegraph USD, au même endroit de l'écran.
+   * Can the cloud edit still be written FOR EVERYONE? False as soon as the item is published (server
+   * lock): the button then disappears, and the edit goes into the next comment, the USD scenegraph
+   * mechanism, in the same place on screen.
    */
   saveForAll: boolean;
   paint: SplatPaintState;
-  /** Mise en scène : enregistrement de la présentation par le gestionnaire. */
+  /** Staging: saving of the presentation by the manager. */
   presentation?: { dirty: boolean; busy: boolean; onSave: () => void };
-  /** Points d'intérêt en préparation — mêmes options que sur le modèle 3D. */
+  /** Points of interest in preparation: same options as on the 3D model. */
   poi: PoiDraftState;
 }) {
   const t = useT();
@@ -72,8 +72,8 @@ export default function SplatOptions({
         canRedo={history.canRedo}
       />
     ) : mode === 'clean' ? (
-      // Annuler/rétablir restent — ce sont les gestes de l'édition elle-même ; seule
-      // l'écriture pour tous s'en va, remplacée par ce qu'elle devient.
+      // Undo/redo remain: they are the gestures of editing itself. Only the write for everyone
+      // goes away, replaced by what it becomes.
       <div className="rv-optbar__commit">
         <IconButton
           icon={Undo2}
@@ -107,7 +107,7 @@ export default function SplatOptions({
 
       {id === 'pin' && <PoiOptions poi={poi} />}
 
-      {/* Brosse de surface et gomme de trait : les MÊMES réglages que sur le modèle 3D. */}
+      {/* Surface brush and stroke eraser: the SAME settings as on the 3D model. */}
       {painting && <PaintOptions tool={tool} paint={paint} />}
 
       {(id === 'cam-move' || id === 'cam-aim') && (

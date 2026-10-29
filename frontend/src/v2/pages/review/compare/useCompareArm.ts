@@ -6,16 +6,16 @@ import { DEFAULT_MODE, type ModeId } from '../chrome/modes';
 import type { CompareMode } from '../useCompareState';
 
 /**
- * Relie le mode « Compare » de la bascule à l'état de comparaison.
+ * Links the "Compare" mode of the toggle to the comparison state.
  *
- * Les deux vivaient côte à côte sans se parler : armer le segment ne choisissait aucun média
- * B, et la barre de wipe ne s'affichait donc jamais. Tout passe par `useCompareState` pour
- * que le spectateur d'une session live voie la même chose que le pilote.
+ * The two used to live side by side without talking to each other: arming the segment chose
+ * no B media, so the wipe bar never appeared. Everything goes through `useCompareState`, so
+ * that a viewer of a live session sees the same thing as the driver.
  *
- * Trois règles, et leurs réciproques :
- *   1. entrer en comparaison arme le wipe et prend le premier média comparable ;
- *   2. en sortir ferme la comparaison ;
- *   3. un B choisi ailleurs (en-tête vidéo, session live) arme le mode ; le fermer en sort.
+ * Three rules, and their converses:
+ *   1. entering the comparison arms the wipe and takes the first comparable media;
+ *   2. leaving it closes the comparison;
+ *   3. a B chosen elsewhere (video header, live session) arms the mode; closing it leaves it.
  */
 export function useCompareArm({
   mode,
@@ -29,7 +29,7 @@ export function useCompareArm({
   mode: ModeId;
   onMode: (mode: ModeId) => void;
   hasB: boolean;
-  /** Premier média comparable connu, null tant qu'il n'est pas chargé. */
+  /** First known comparable media; null until it is loaded. */
   firstB: number | null;
   onSetB: (mediaId: number) => void;
   onClear: () => void;
@@ -38,8 +38,8 @@ export function useCompareArm({
   const prevMode = useRef(mode);
   const hadB = useRef(hasB);
   const picked = useRef(false);
-  // Le mode vient d'être armé par la règle 3, non par l'utilisateur : la vidéo qui coche deux
-  // versions d'un coup veut sa grille 2×2, pas un wipe qu'on lui imposerait au passage.
+  // The mode has just been armed by rule 3, not by the user: the video that ticks two versions
+  // at once wants its 2×2 grid, not a wipe forced on it on the way.
   const fromB = useRef(false);
 
   useEffect(() => {
@@ -61,8 +61,8 @@ export function useCompareArm({
     } else if (!hasB && had && mode === 'compare') onMode(DEFAULT_MODE);
   }, [hasB, mode, onMode]);
 
-  // Armé sans B : le premier média comparable est pris d'office, une fois — sans lui la barre
-  // de wipe n'aurait rien à découvrir. `picked` évite de le reprendre après une fermeture.
+  // Armed without B: the first comparable media is taken by default, once. Without it the wipe
+  // bar would have nothing to reveal. `picked` prevents taking it again after a close.
   useEffect(() => {
     if (mode !== 'compare') {
       picked.current = false;

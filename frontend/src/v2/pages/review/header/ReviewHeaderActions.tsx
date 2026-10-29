@@ -30,18 +30,17 @@ import type { LiveSession } from '../useLiveSession';
 import { headerActions, type HeaderActionId } from './headerComposition';
 import { useT } from '../../../i18n';
 
-/** Bouton d'action de l'en-tête — même cadre pour tous, seule l'icône change. */
+/** Header action button: same frame for all, only the icon changes. */
 const ACTION_BTN =
   'rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground';
 
 /**
- * Coin droit de l'en-tête fusionné : ce qu'on fait du média. Sélecteur A/B (vidéo et image
- * seulement — la 3D et le splat montent le leur), fiche ShotGrid, salle live, présence,
- * publication, décision de review, lecteur détachable, théâtre, raccourcis, repli des
- * commentaires.
+ * Right corner of the merged header: what is done with the media. A/B selector (video and image
+ * only: 3D and splat mount their own), ShotGrid sheet, live room, presence, publication, review
+ * decision, detachable player, theatre mode, shortcuts, collapsing of the comments.
  *
- * La composition vient de `headerActions` : une seule liste décide de ce qui existe selon le
- * type de média et l'état du média, et elle est vérifiable hors rendu.
+ * The composition comes from `headerActions`: a single list decides what exists depending on the
+ * media type and the state of the media, and it can be verified outside rendering.
  */
 export default function ReviewHeaderActions({
   data,
@@ -60,34 +59,34 @@ export default function ReviewHeaderActions({
   onPublish: (reviewers?: { userId: number; note: string | null }[]) => void | Promise<void>;
   commentsOpen: boolean;
   onToggleComments: () => void;
-  /** Mode théâtre immersif in-window (42.A — №76). */
+  /** Immersive theatre mode within the window (42.A — №76). */
   onToggleTheater: () => void;
-  /** Lecteur détachable Picture-in-Picture (42.A — №75), vidéo uniquement. */
+  /** Detachable Picture-in-Picture player (42.A — №75), video only. */
   onPictureInPicture?: () => void;
-  /** Médias B cochés (34.D) : 1 = A/B ; 2-3 = grille 2×2 (vidéo). */
+  /** Ticked B media (34.D): 1 = A/B; 2-3 = 2×2 grid (video). */
   compareIds: number[];
   onAddCompare: (mediaId: number) => void;
   onRemoveCompare: (mediaId: number) => void;
-  /** Remplacement exclusif (image / live). */
+  /** Exclusive replacement (image / live). */
   onCompareChange: (mediaId: number | null) => void;
   live: LiveSession;
 }) {
   const t = useT();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [decisionOpen, setDecisionOpen] = useState(false);
-  // Publier passe par le dialogue : c'est le moment où l'on dit à qui l'on livre, et quoi
-  // regarder. Le serveur écrit la liste avant de basculer le média, ce qui permet au
-  // réglage « consigne obligatoire » de refuser la publication plutôt que de râler après.
+  // Publishing goes through the dialog: it is the moment you say to whom you deliver, and what to
+  // watch. The server writes the list before switching the media, which lets the "mandatory note"
+  // setting refuse the publication rather than complain afterwards.
   const [publishOpen, setPublishOpen] = useState(false);
   const viewers = useReviewPresence(data.media.id);
   const role = useAuth((s) => s.user?.role);
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
   const versionId = data.media.versionId;
   const kind = data.media.kind;
-  // Correspondances ShotGrid du projet : sans connexion, rien n'est demandé ni affiché.
+  // The project's ShotGrid mappings: without a connection, nothing is requested or displayed.
   const sgLinks = useSgLinks(data.projectId);
   const sgUrl = sgLinks.linkFor('version', versionId);
-  // Décision courante de la version (badge en-tête) — même clé que la timeline des versions.
+  // Current decision of the version (header badge): same key as the version timeline.
   const versionQ = useQuery({
     queryKey: qk.version(versionId),
     queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`).then((d) => d.version),

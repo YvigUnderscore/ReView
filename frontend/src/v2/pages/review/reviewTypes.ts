@@ -7,7 +7,7 @@ import { normalizeAnim } from './camera/channels/model';
 import { readSplatEditPart, type SplatEditPartData } from './splat/splatEditPart';
 import type { CameraAnimV2 } from './camera/channels/model';
 
-/** Types et utilitaires partagés de la review (découpage 10.C2). */
+/** Shared review types and utilities (split 10.C2). */
 
 export interface Transform {
   yaw: number;
@@ -18,9 +18,9 @@ export interface Transform {
 export const DEFAULT_TRANSFORM: Transform = { yaw: 0, pitch: 0, roll: 0, scale: 1 };
 
 /**
- * Transformation TRS d'un splat (10.G) — position/quaternion/échelle, exactement ce que les
- * gizmos 3D (TransformControls) produisent, sans conversion euler. Persistée dans
- * `metadata.splatEdits.transform`, appliquée au SplatMesh (dérive de THREE.Object3D).
+ * TRS transform of a splat (10.G): position, quaternion and scale, exactly what the 3D gizmos
+ * (TransformControls) produce, without euler conversion. Persisted in `metadata.splatEdits.transform`,
+ * applied to the SplatMesh (which derives from THREE.Object3D).
  */
 export interface SplatTransform {
   position: [number, number, number];
@@ -33,7 +33,7 @@ export const IDENTITY_SPLAT_TRANSFORM: SplatTransform = {
   scale: [1, 1, 1],
 };
 
-/** Volume de crop SDF sérialisé (boîte/sphère, creuser/isoler) — miroir du Zod backend. */
+/** Serialised SDF crop volume (box/sphere, carve/isolate): mirror of the backend Zod. */
 export interface SdfVolumeData {
   shape: 'box' | 'sphere';
   mode: 'delete' | 'isolate';
@@ -42,17 +42,17 @@ export interface SdfVolumeData {
   scale: [number, number, number];
 }
 
-/** Éditions non-destructives d'un splat (10.G) : `metadata.splatEdits` (le masque de
- * suppression, binaire, vit à part dans MinIO — cf. `splatMaskUrl`). */
+/** Non-destructive edits of a splat (10.G): `metadata.splatEdits` (the deletion mask, binary, lives apart
+ * in MinIO — see `splatMaskUrl`). */
 export interface SplatEdits {
   transform: SplatTransform | null;
   volumes: SdfVolumeData[];
-  /** Flip d'orientation à l'import (11.E) : true/absent = convention Y-down redressée ;
-   *  false = fichier laissé tel quel (bouton « Retourner » de l'éditeur). */
+  /** Import orientation flip (11.E): true/absent = Y-down convention straightened;
+   *  false = file left as is (the editor's "Flip" button). */
   baseFlip?: boolean;
 }
 
-/** Mise à jour du cache média après enregistrement des éditions splat (composition 10.E2). */
+/** Media cache update after saving splat edits (composition 10.E2). */
 export type SplatEditsPatch = Partial<
   Pick<
     MediaResp,
@@ -68,58 +68,56 @@ export type SplatEditsPatch = Partial<
 >;
 
 /**
- * Trait du painter 3D (10.G-V9) : polyligne peinte sur la surface du splat, stockée en
- * **espace-objet** du SplatMesh dans le tableau `Comment.annotation` (comme les hotspots) —
- * elle suit la transformation du média et reste visible pour tous.
+ * 3D painter stroke (10.G-V9): a polyline painted on the surface of the splat, stored in the **object
+ * space** of the SplatMesh in the `Comment.annotation` array (like the hotspots): it follows the media's
+ * transform and stays visible for everyone.
  */
 export interface SplatPaintStroke {
   type: 'splat-paint';
-  /** Coordonnées xyz aplaties (espace objet). */
+  /** Flattened xyz coordinates (object space). */
   points: number[];
   color: string;
   /**
-   * Épaisseur **en pixels d'écran** — constante quel que soit le zoom (Phase 50, lot 8). Elle
-   * était relative à la taille de la scène, donc en unités monde : le trait grossissait en
-   * approchant et disparaissait en reculant, alors que la barre d'options annonçait des « px ».
+   * Thickness **in screen pixels**: constant whatever the zoom (Phase 50, batch 8). It used to be relative
+   * to the scene size, hence in world units: the stroke grew as one approached and vanished when one backed
+   * off, whereas the options bar announced "px".
    */
   width: number;
   /**
-   * Normale approchée du trait en espace objet (direction depuis laquelle il a été peint) —
-   * sert à l'estomper quand on passe derrière la surface. Absente sur les traits antérieurs :
-   * ils restent pleinement visibles.
+   * Approximate normal of the stroke in object space (the direction from which it was painted): used to
+   * fade it when passing behind the surface. Absent on earlier strokes: they remain fully visible.
    */
   normal?: [number, number, number];
 }
 
 /**
- * Animation caméra jointe à un commentaire (mode layout) : au lieu de dessiner, l'utilisateur
- * crée/joint une animation caméra (F-curves v2), rejouée quand le commentaire est sélectionné.
- * Stockée comme part `{ type:'camera-anim', version:2, loop, channels }` dans `Comment.annotation`.
+ * Camera animation attached to a comment (layout mode): instead of drawing, the user creates or attaches a
+ * camera animation (F-curves v2), replayed when the comment is selected. Stored as a part
+ * `{ type:'camera-anim', version:2, loop, channels }` in `Comment.annotation`.
  */
 export type SplatLayoutAnim = CameraAnimV2;
 
 /**
- * Sépare les parties d'une annotation de commentaire : animation caméra (mode layout) et formes
- * 2D — les traits du painter (`splat-paint`, V9), l'anim caméra et les points d'intérêt (`poi`,
- * comme le `hotspot` hérité) sont exclus des formes : chacun a son rendu. L'animation est
- * **normalisée en v2** (les anciennes annotations v1 sont migrées à la lecture).
+ * Splits the parts of a comment annotation: camera animation (layout mode) and 2D shapes. The painter's
+ * strokes (`splat-paint`, V9), the camera animation and the points of interest (`poi`, like the inherited
+ * `hotspot`) are excluded from the shapes: each has its own rendering. The animation is **normalised to v2**
+ * (old v1 annotations are migrated on reading).
  *
- * Les points d'intérêt se lisent par `poi/poiPoints.readPoiPoints`, qui unifie la part `poi` et
- * le `hotspot` unique d'avant la Phase 50 — ils ne passent plus par ici.
+ * The points of interest are read through `poi/poiPoints.readPoiPoints`, which unifies the `poi` part and
+ * the single `hotspot` from before Phase 50: they no longer go through here.
  */
 export function splitAnnotationParts(annotation: unknown): {
   shapes: unknown[];
   cameraAnim: SplatLayoutAnim | null;
-  /** Proposition de scène 3D jointe au commentaire (46.D) — rejouée à sa sélection. */
+  /** 3D scene proposal attached to the comment (46.D): replayed on its selection. */
   sceneOverride: unknown;
   /**
-   * Proposition d'édition de nuage jointe au commentaire (Phase 50, lot 14) — jumelle de
-   * `sceneOverride` pour le splat, rejouée à la sélection et jamais écrite dans le média. Les
-   * deux binaires (masque, ops) y figurent par leur clé : `resolveSplatEditProposal` les
-   * résout dans les pièces jointes du commentaire porteur.
+   * Cloud edit proposal attached to the comment (Phase 50, batch 14): twin of `sceneOverride` for the
+   * splat, replayed on selection and never written into the media. Both binaries (mask, ops) are listed
+   * by their key: `resolveSplatEditProposal` resolves them among the attachments of the carrying comment.
    */
   splatEdit: SplatEditPartData | null;
-  /** Plage vidéo in→out (34.A) : l'annotation reste visible pendant toute la plage. */
+  /** Video range in→out (34.A): the annotation remains visible throughout the range. */
   range: { inFrame: number; outFrame: number } | null;
 } {
   if (!Array.isArray(annotation))
@@ -155,10 +153,10 @@ export function splitAnnotationParts(annotation: unknown): {
   };
 }
 
-/** Easing d'un segment d'animation caméra v1 (conservé pour la migration + import/export glTF). */
+/** Easing of a v1 camera animation segment (kept for migration and glTF import/export). */
 export type CameraEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
-/** Pose keyframe d'animation caméra v1 (temps en ms) — format hérité, migré en v2 à la lecture. */
+/** v1 camera animation keyframe pose (time in ms): legacy format, migrated to v2 on reading. */
 export interface SplatCameraKeyframe {
   t: number;
   pose: SplatCamera;
@@ -166,10 +164,10 @@ export interface SplatCameraKeyframe {
 }
 
 /**
- * Présentation persistée d'un splat (10.G-V5) : `metadata.splatPresentation` — écrite par le
- * gestionnaire, **rejouée pour tous** à l'ouverture ; les spectateurs modifient en live sans
- * persister. Miroir du Zod backend (media-splat.routes). L'animation caméra est au format v2
- * (F-curves) — les présentations v1 sont migrées à la lecture (`normalizeAnim`).
+ * Persisted presentation of a splat (10.G-V5): `metadata.splatPresentation`, written by the manager and
+ * **replayed for everyone** on opening; viewers modify live without persisting. Mirror of the backend Zod
+ * (media-splat.routes). The camera animation is in v2 format (F-curves): v1 presentations are migrated on
+ * reading (`normalizeAnim`).
  */
 export interface SplatPresentation {
   camera?: SplatCamera;
@@ -177,28 +175,28 @@ export interface SplatPresentation {
   reveal?: { type: 'fade' | 'sweep' | 'dissolve'; durationMs: number };
   lodDefault?: 'auto' | 'on' | 'off' | 'streaming';
   cameraAnim?: CameraAnimV2;
-  /** Éclairage/HDRI par défaut du viewer 3D (Phase 29) — rejoué pour tous, tweak spectateur temporaire. */
+  /** Default lighting / HDRI of the 3D viewer (Phase 29): replayed for everyone, temporary viewer tweak. */
   lighting?: LightingConfig;
-  /** Bookmarks caméra partagés (39.D) : vues nommées rappelables (raccourcis 1-9), rejouées pour tous. */
+  /** Shared camera bookmarks (39.D): recallable named views (shortcuts 1-9), replayed for everyone. */
   bookmarks?: CameraBookmark[];
 }
 
-/** Vue caméra nommée et partagée du viewer 3D/splat (39.D) — persistée dans la présentation. */
+/** Named and shared camera view of the 3D/splat viewer (39.D): persisted in the presentation. */
 export interface CameraBookmark {
   label?: string;
   camera: SplatCamera;
 }
 
-/** Réglages d'éclairage HDRI du viewer 3D (Phase 29). `hdriId` référence la bibliothèque instance. */
+/** HDRI lighting settings of the 3D viewer (Phase 29). `hdriId` references the instance library. */
 export interface LightingConfig {
   hdriId?: string;
-  /** Exposition du tone mapping (0–10, 1 = neutre). */
+  /** Tone-mapping exposure (0–10, 1 = neutral). */
   exposure: number;
-  /** Rotation de l'environnement autour de Y, en degrés. */
+  /** Rotation of the environment around Y, in degrees. */
   rotationDeg: number;
-  /** Afficher l'HDRI en fond (sinon fond transparent, éclairage seul). */
+  /** Show the HDRI as background (otherwise transparent background, lighting only). */
   showBackground: boolean;
-  /** Sol invisible récepteur d'ombres portées de la key light (39.F) — non destructif. */
+  /** Invisible ground receiving the key light's cast shadows (39.F): non-destructive. */
   groundShadow: boolean;
 }
 
@@ -209,59 +207,59 @@ export const DEFAULT_LIGHTING: LightingConfig = {
   groundShadow: false,
 };
 
-/** Réponse de GET /api/media/:id (viewer review). */
+/** Response of GET /api/media/:id (review viewer). */
 export interface MediaResp {
-  /** Nom du fichier livré par ShotGrid, quand `media.originalName` porte le code du site. */
+  /** Name of the file delivered by ShotGrid, when `media.originalName` carries the site code. */
   sourceFilename: string | null;
   media: Media;
-  /** Projet porteur (mentions, liens profonds). */
+  /** Carrying project (mentions, deep links). */
   projectId: number;
   url: string;
   thumbnailUrl: string | null;
   proxyUrl: string | null;
   glbUrl: string | null;
   startFrame: number;
-  /** Provenance de conversion 3D (39.A, bloc `usd` depuis 45.C) — affichée en fiche technique. */
+  /** 3D conversion provenance (39.A, `usd` block since 45.C): displayed in the technical sheet. */
   modelSource: ModelSource | null;
-  /** Raison d'un échec de traitement (45.C) : asset USD manquant, outillage absent… */
+  /** Reason for a processing failure (45.C): missing USD asset, tooling absent… */
   processingError: string | null;
-  /** « ReView override » de la scène (46.D) : mise en scène rejouée à l'ouverture pour tous. */
+  /** Scene "ReView override" (46.D): staging replayed on opening, for everyone. */
   usdOverride: unknown;
   fps: number | null;
-  /** Fréquence de diffusion de la salle live (Hz), réglable admin par type de média (33.B). */
+  /** Broadcast frequency of the live room (Hz), admin-adjustable per media type (33.B). */
   liveSyncHz: number;
-  /** Éditions non-destructives enregistrées pour un splat (transform + volumes) — 10.G. */
+  /** Non-destructive edits recorded for a splat (transform + volumes): 10.G. */
   splatEdits: SplatEdits | null;
-  /** URL présignée du masque de suppression binaire (bitset), ou null. */
+  /** Presigned URL of the binary deletion mask (bitset), or null. */
   splatMaskUrl: string | null;
-  /** Nombre de splats masqués par le masque de suppression. */
+  /** Number of splats masked by the deletion mask. */
   splatMaskCount: number;
-  /** URL présignée des transformations de sous-ensembles (ops binaires), ou null — Phase 28. */
+  /** Presigned URL of the subset transform ops (binary ops), or null: Phase 28. */
   splatSubsetUrl: string | null;
-  /** Nombre d'ops de transformation de sous-ensembles enregistrées. */
+  /** Number of recorded subset transform ops. */
   splatSubsetCount: number;
-  /** Présentation persistée (caméra/DoF/reveal/LOD/animation) — 10.G-V5, rejouée pour tous. */
+  /** Persisted presentation (camera/DoF/reveal/LOD/animation): 10.G-V5, replayed for everyone. */
   splatPresentation: SplatPresentation | null;
-  /** Éclairage HDRI par défaut du projet (39.F) : repli quand le média n'a pas le sien. */
+  /** Default HDRI lighting of the project (39.F): fallback when the media has none of its own. */
   projectDefaultLighting: LightingConfig | null;
-  /** Gestion de couleur OCIO du projet (39.B) : intention display/view, affichée en badge. */
+  /** OCIO colour management of the project (39.B): display/view intent, shown as a badge. */
   projectColor: { configId?: string; display?: string; view?: string } | null;
   /**
-   * Ratio du cadre de review, hérité de la résolution de livraison (studio → projet →
-   * séquence → plan). C'est un DÉFAUT : un aspect déjà gelé dans `splatPresentation` prime —
-   * la règle complète et son pourquoi sont dans `reviewAspect.ts`.
+   * Ratio of the review frame, inherited from the delivery resolution (studio → project → sequence → shot).
+   * It is a DEFAULT: an aspect already frozen in `splatPresentation` takes precedence. The full rule and its
+   * why are in `reviewAspect.ts`.
    */
   deliveryAspect: number;
   /**
-   * Coupe HISTORIQUE (10.G-V10, découpe retirée en Phase 50) : bornes en frames d'un média
-   * coupé avant le retrait. Plus rien n'en pose ; la review s'en sert pour dire ce qu'elle
-   * joue (fiche technique, panneau Export) et pour écarter l'échelle HLS, qui ignore la coupe.
+   * HISTORICAL cut (10.G-V10, cutting removed in Phase 50): frame bounds of a media cut before its removal.
+   * Nothing sets them any more; the review uses them to say what it plays (technical sheet, Export panel)
+   * and to rule out the HLS ladder, which ignores the cut.
    */
   trim: { inFrame: number; outFrame: number } | null;
   trimProxyReady: boolean;
-  /** HLS adaptatif (Phase 23) : renditions disponibles → lecture via le proxy `/hls/master.m3u8`. */
+  /** Adaptive HLS (Phase 23): available renditions, played via the `/hls/master.m3u8` proxy. */
   hls: { renditions: { height: number; width: number; videoBitrateK: number }[] } | null;
-  /** Sprite de miniatures de la timeline (~1 vignette / 3 s, un seul JPEG tuilé). */
+  /** Timeline thumbnail sprite (~1 thumbnail every 3 s, a single tiled JPEG). */
   timelineSprite: {
     intervalSec: number;
     count: number;
@@ -271,81 +269,81 @@ export interface MediaResp {
     tileH: number;
   } | null;
   timelineSpriteUrl: string | null;
-  /** Images de référence review 2D (Phase 24, multi-items) : persistées & partagées,
-   *  épinglées au canvas (coordonnées en fractions de l'image de base). */
+  /** 2D review reference images (Phase 24, multi-item): persisted and shared,
+   *  pinned to the canvas (coordinates as fractions of the base image). */
   references: ReviewReferenceItem[];
-  /** À qui la review de cette VERSION est confiée, et ce que chacun doit y regarder. */
+  /** Who this VERSION's review is entrusted to, and what each one must look at there. */
   reviewers: ReviewAssignee[];
-  /** Ce que le projet exige d'une consigne — l'écran refuse avant l'aller-retour. */
+  /** What the project requires of an instruction: the screen refuses before the round trip. */
   reviewRequest: ReviewRequestRule;
   /**
-   * Ce que CET appelant a le droit d'écrire, calculé par le serveur (`lib/versionPermissions`).
-   * L'écran ne recopie plus la règle : il la lit. C'est ce qui retire à la fois le bouton
-   * « Enregistrer » mort et le 403 silencieux qui le suivait.
+   * What THIS caller is allowed to write, computed by the server (`lib/versionPermissions`). The screen no
+   * longer copies the rule: it reads it. That removes both the dead "Save" button and the silent 403 that
+   * followed it.
    */
   permissions: MediaPermissions;
 }
 
-/** Droits d'écriture de l'appelant sur ce média, tels que le serveur les tranche. */
+/** Write rights of the caller on this media, as the server decides them. */
 export interface MediaPermissions {
   /**
-   * Transformation TRS de la version : auteur de la version ou gestionnaire du projet, et
-   * version non publiée. C'est le seul outil d'édition du mode « Nettoyer » d'un modèle 3D —
-   * faux, le mode entier disparaît plutôt que d'offrir un enregistrement refusé.
+   * TRS transform of the version: author of the version or project manager, and version not published. It
+   * is the only editing tool of the "Clean up" mode of a 3D model. Otherwise the whole mode disappears,
+   * rather than offering a refused save.
    */
   editTransform: boolean;
 }
 
-/** Image de référence épinglée au canvas de la review image (figée, liée à un commentaire). */
+/** Reference image pinned to the canvas of the image review (frozen, linked to a comment). */
 export interface ReviewReferenceItem {
   id: number;
   url: string;
   x: number;
   y: number;
   width: number;
-  /** Commentaire porteur — affichée seulement quand il est sélectionné (null = historique). */
+  /** Carrying comment: displayed only when selected (null = historical). */
   commentId: number | null;
 }
 
 export interface Hotspot3D {
   position: string;
   normal: string;
-  /** 'object' : coordonnées en espace-objet du SplatMesh (suit la transformation, 10.G-V10).
-   *  Absent : hotspot historique en espace monde (model-viewer gère son propre espace). */
+  /** 'object': coordinates in the SplatMesh's object space (follows the transform, 10.G-V10).
+   *  Absent: historical hotspot in world space (model-viewer manages its own space). */
   space?: 'object';
 }
 
-/** Vue caméra d'un Gaussian Splat (viewer Spark) — position/cible libres, cf. cameraState. */
+/** Camera view of a Gaussian Splat (Spark viewer): free position and target, cf. cameraState. */
 export interface SplatCamera {
   position: { x: number; y: number; z: number };
   target: { x: number; y: number; z: number };
   fov?: number;
   aspect?: number;
-  /** Tilt (roll) autour de l'axe de vue, en radians (mode layout) — 0/absent = horizon droit. */
+  /** Tilt (roll) around the view axis, in radians (layout mode): 0 or absent = level horizon. */
   roll?: number;
-  /** Profondeur de champ Spark (sync live + commentaires) — absents = laissés tels quels. */
+  /** Spark depth of field (live sync + comments): absent = left as is. */
   apertureAngle?: number;
   focalDistance?: number;
 }
 
-/** Classe de la zone média (cadre commun aux viewers vidéo/image/3D). */
+/** Class of the media zone (frame common to the video, image and 3D viewers). */
 export const VIEWER_ZONE =
   'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/40';
 
 /**
- * Même zone, en plein écran vidéo : elle couvre tout le pane (lui-même `position: relative`)
- * au lieu de rester dans le flux. Classes réécrites en entier plutôt qu'ajoutées à
- * `VIEWER_ZONE` : `absolute` et `relative` s'y retrouvaient ensemble, et la feuille Tailwind
- * pose `.relative` après `.absolute` — la zone restait donc dans le flux, d'une hauteur
- * dictée par la boîte mesurée avant le plein écran, et la vidéo gardait sa taille.
+ * Same zone, in video full screen: it covers the whole pane (itself `position: relative`) instead of
+ * staying in the flow. Classes are rewritten entirely rather than added to `VIEWER_ZONE`: `absolute` and
+ * `relative` ended up together there, and the Tailwind sheet places `.relative` after `.absolute`. The
+ * zone therefore stayed in the flow, at a height dictated by the box measured before full screen, and the
+ * video kept its size.
  */
 export const VIEWER_ZONE_FULLSCREEN =
   'absolute inset-0 flex items-center justify-center overflow-hidden bg-black';
 
-/** Zone média d'un lecteur vidéo, selon que le plein écran immersif est actif. */
+/** Media zone of a video player, depending on whether immersive full screen is active. */
 export const viewerZone = (fullscreen: boolean) => (fullscreen ? VIEWER_ZONE_FULLSCREEN : VIEWER_ZONE);
 
-/** Timecode HH:MM:SS:FF à partir d'un index de frame et du fps. */
+/** HH:MM:SS:FF timecode from a frame index and the fps. */
 export function tcFromFrame(frame: number, fps: number): string {
   const f = Math.max(0, Math.round(frame));
   const totalSec = Math.floor(f / fps);
@@ -357,20 +355,20 @@ export function tcFromFrame(frame: number, fps: number): string {
   return `${p(hh)}:${p(mm)}:${p(ss)}:${p(ff)}`;
 }
 
-/** Durée mm:ss (timeline). */
+/** Duration mm:ss (timeline). */
 export function formatTime(s: number): string {
   const m = Math.floor(s / 60),
     sec = Math.floor(s % 60);
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
-/** GLB exploitable : conversion réussie, ou original déjà au format glTF. */
+/** Usable GLB: successful conversion, or original already in glTF format. */
 export function resolveGlbSrc(data: MediaResp | null): string | null {
   if (!data) return null;
   return data.glbUrl ?? (/\.(glb|gltf)(\?|$)/i.test(data.url) ? data.url : null);
 }
 
-/** Premier média comparable (même type) d'une version — comparaison A/B vidéo & image. */
+/** First comparable media (same type) of a version: A/B comparison, video and image. */
 export function findCompareMedia(
   media: Array<{ id: number; kind: string }>,
   excludeId: number,
@@ -379,7 +377,7 @@ export function findCompareMedia(
   return media.find((m) => m.kind === kind && m.id !== excludeId)?.id ?? null;
 }
 
-/** Décale la vidéo de `delta` frames (met en pause pour un pas précis). */
+/** Shifts the video by `delta` frames (pauses for a precise step). */
 export function stepVideoFrame(video: HTMLVideoElement | null, fps: number, delta: number): void {
   if (!video) return;
   video.pause();
@@ -387,10 +385,10 @@ export function stepVideoFrame(video: HTMLVideoElement | null, fps: number, delt
 }
 
 /**
- * Coalesceur de seeks pour le scrub : n'écrit `currentTime` que lorsque le seek précédent
- * est terminé (`seeked`), en ne retenant que la **dernière** position demandée. Sans lui,
- * le scrub inonde le lecteur de seeks (chacun avorte le précédent) et hls.js finit dans un
- * état incohérent après le lâcher — un clic simple (seek unique) ne bugue pas, lui.
+ * Seek coalescer for scrubbing: writes `currentTime` only when the previous seek has finished (`seeked`),
+ * retaining only the **last** requested position. Without it, scrubbing floods the player with seeks (each
+ * aborts the previous one) and hls.js ends up in an inconsistent state after release. A simple click
+ * (single seek) does not bug, that one.
  */
 export function createSeekCoalescer(video: HTMLVideoElement, beforeSeek?: () => void) {
   let pending: number | null = null;
@@ -418,22 +416,21 @@ export function createSeekCoalescer(video: HTMLVideoElement, beforeSeek?: () => 
   };
 }
 
-// Lancement de lecture en attente de données (un seul à la fois par élément vidéo).
+// Playback start pending data (only one at a time per video element).
 const pendingPlay = new WeakMap<HTMLVideoElement, () => void>();
 
-/** Annule un lancement de lecture en attente (l'utilisateur a mis en pause entre-temps). */
+/** Cancels a pending playback start (the user paused in the meantime). */
 export function cancelPendingPlay(video: HTMLVideoElement): void {
   pendingPlay.get(video)?.();
   pendingPlay.delete(video);
 }
 
 /**
- * Lance la lecture seulement quand l'**image** est décodable à la position courante.
- * Après un changement de rendition HLS en pause, le buffer vidéo peut avoir un trou à la
- * position courante alors que l'audio, lui, est chargé : un `play()` direct donne du son
- * sur image figée. On force d'abord un micro-seek sur place (hls.js recharge le segment /
- * saute le trou — l'équivalent du « frame suivante puis relire » manuel), puis on attend
- * `canplay` avant de démarrer.
+ * Starts playback only when the **frame** is decodable at the current position. After an HLS rendition
+ * change while paused, the video buffer may have a hole at the current position while the audio is loaded:
+ * a direct `play()` would give sound over a frozen frame. We first force an in-place micro-seek (hls.js
+ * reloads the segment or skips the hole, the equivalent of the manual "next frame then read back"), then
+ * wait for `canplay` before starting.
  */
 export function safePlay(video: HTMLVideoElement): void {
   cancelPendingPlay(video);

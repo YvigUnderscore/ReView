@@ -13,9 +13,9 @@ import type { Model3DLightingState } from '../three/useModel3DLighting';
 import { useT } from '../../../i18n';
 
 /**
- * Panneau Éclairage du dock — modèle 3D seulement : un splat porte sa lumière cuite. Reprend
- * `LightingBar`. Le gestionnaire enregistre l'éclairage par défaut du projet (rejoué pour
- * tous à l'ouverture) ; un spectateur ne fait que régler sa session.
+ * Lighting panel of the dock: 3D model only, since a splat carries its light baked in. Takes over
+ * `LightingBar`. The manager records the project's default lighting (replayed for everyone on
+ * opening); a viewer only adjusts their own session.
  */
 export default function LightingPanel({
   lighting,
@@ -23,7 +23,7 @@ export default function LightingPanel({
   colorView,
 }: {
   lighting: Model3DLightingState;
-  /** Intention couleur OCIO du projet — lecture seule, héritée du projet. */
+  /** OCIO colour intent of the project: read-only, inherited from the project. */
   colorDisplay?: string;
   colorView?: string;
 }) {

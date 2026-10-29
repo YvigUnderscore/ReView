@@ -6,26 +6,25 @@ import type { PoiCardImage } from './poiCards';
 import { useT } from '../../../i18n';
 
 /**
- * La remarque d'un point d'intérêt, telle qu'elle se LIT — au fil des commentaires comme sur
- * la carte ancrée dans la scène. Une seule écriture pour les deux surfaces : la remarque se
- * lisait différemment selon l'endroit, et débordait des deux façons possibles.
+ * A point's remark, as it is READ: in the comment thread as well as on the card anchored in the scene.
+ * A single writing serves both surfaces: the remark used to read differently depending on the place, and
+ * overflowed in both possible ways.
  *
- * Trois règles, demandées à l'usage :
+ * Three rules, requested by use:
  *
- *  - **rien ne défile en largeur** : le texte revient à la ligne, et `break-words` coupe même
- *    ce qui n'a pas d'espace — un chemin de plan, une URL de rendu — au lieu de pousser la
- *    rangée hors de la colonne ;
- *  - **trois lignes, pas plus** tant qu'on n'a pas déroulé : le repliage du lot 5
- *    (`CollapsibleText`) est réemployé tel quel, serré à trois lignes ;
- *  - **la miniature à côté du texte**, jamais dessous : c'est ce qui permet de balayer un fil
- *    de points en voyant du premier coup d'œil de quoi chacun parle.
+ *  - **nothing scrolls sideways**: the text wraps, and `break-words` even cuts what has no space (a scene
+ *    path, a render URL) instead of pushing the row out of the column;
+ *  - **three lines, no more** until one has scrolled: the folding of batch 5 (`CollapsibleText`) is reused
+ *    as it is, tightened to three lines;
+ *  - **the thumbnail beside the text**, never below: that is what allows scanning a thread of points while
+ *    seeing at a glance what each one is about.
  *
- * Au-delà d'une image, la suite passe par une tuile « +n » — la même convention que les pièces
- * jointes d'un commentaire (`CommentAttachmentList`) — et tout s'ouvre dans la Lightbox
- * partagée, celle du fil et de la review image.
+ * Beyond one image, the rest goes through a "+n" tile, the same convention as a comment's attachments
+ * (`CommentAttachmentList`), and everything opens in the shared Lightbox, the one of the thread and of the
+ * image review.
  */
 
-/** Trois lignes : ce qu'une remarque montre sans qu'on ait à la dérouler. */
+/** Three lines: what a remark shows without having to unfold it. */
 const NOTE_LINES = 3;
 
 export default function PoiNoteBody({
@@ -37,11 +36,11 @@ export default function PoiNoteBody({
 }: {
   text: string;
   images: readonly PoiCardImage[];
-  /** Ouvre la Lightbox partagée sur l'image de ce rang. */
+  /** Opens the shared Lightbox on the image of this rank. */
   onImage: (at: number) => void;
-  /** Empêche un clic interne de rejouer la sélection de la carte du commentaire. */
+  /** Prevents an internal click from replaying the selection of the comment card. */
   stop?: (e: React.MouseEvent) => void;
-  /** Typographie de la surface d'accueil : `text-sm` au fil, `text-xs` dans la scène. */
+  /** Typography of the host surface: `text-sm` in the thread, `text-xs` in the scene. */
   className?: string;
 }) {
   const t = useT();
@@ -53,8 +52,8 @@ export default function PoiNoteBody({
 
   return (
     <div className="flex items-start gap-1.5">
-      {/* `min-w-0` : sans lui, un enfant de flex refuse de rétrécir sous la largeur de son
-          contenu — c'est exactement ce qui faisait défiler la rangée en largeur. */}
+      {/* `min-w-0`: without it, a flex child refuses to shrink below the width of its
+          content: that is exactly what made the row scroll sideways. */}
       <div className={`min-w-0 flex-1 ${className ?? ''}`}>
         <CollapsibleText text={text} lines={NOTE_LINES} className="whitespace-pre-wrap break-words">
           {text}

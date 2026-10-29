@@ -4,47 +4,47 @@
 import { DEFAULT_REVIEW_ASPECT } from './frameRect';
 
 /**
- * Ratio du cadre de review d'un média spatial (3D, splat) — UNE règle, tenue ici.
+ * Ratio of the review frame of a spatial media (3D, splat): ONE rule, kept here.
  *
- * POURQUOI. Le cadre letterboxé tirait son aspect de la présentation caméra enregistrée, et
- * la présentation le recopiait de la caméra, qui le tenait… du défaut 16/9 : le ratio se
- * recopiait lui-même, et le premier enregistrement de mise en scène gelait 16/9 sans que
- * personne ne l'ait choisi. Le ratio vient désormais des réglages pipeline (résolution héritée
- * studio → projet → séquence → plan), servis par le détail du média (`deliveryAspect`).
+ * WHY. The letterboxed frame drew its aspect from the recorded camera presentation, and the presentation
+ * copied it from the camera, which held it from the 16/9 default: the ratio copied itself, and the first
+ * staging recording froze 16/9 without anyone having chosen it. The ratio now comes from the pipeline
+ * settings (inherited resolution: studio → project → sequence → shot), served by the media's detail
+ * (`deliveryAspect`).
  *
- * Un aspect DÉJÀ enregistré dans une présentation garde la priorité : le guide letterbox
- * ancre les annotations 2D normalisées, et changer le cadre d'un média déjà annoté déplacerait
- * à l'écran des annotations posées sur des reviews validées (`shapesOutsideFrame` avertit
- * l'auteur, il ne migre rien). Le ratio du projet est donc un DÉFAUT, pas une reprise en main.
+ * An aspect ALREADY recorded in a presentation keeps precedence: the letterbox guide anchors the normalised
+ * 2D annotations, and changing the frame of an already annotated media would move on-screen annotations
+ * placed on validated reviews (`shapesOutsideFrame` warns the author, it migrates nothing). The project's
+ * ratio is therefore a DEFAULT, not a takeover.
  */
 export interface ReviewAspectSources {
-  /** Aspect gelé dans la présentation caméra enregistrée, s'il y en a une. */
+  /** Aspect frozen in the recorded camera presentation, if there is one. */
   presentation?: number | null;
-  /** Ratio de livraison hérité des réglages pipeline, servi par le détail du média. */
+  /** Delivery ratio inherited from the pipeline settings, served by the media's detail. */
   delivery?: number | null;
 }
 
 export interface ReviewAspect {
-  /** Ratio largeur/hauteur à appliquer au cadre. */
+  /** Width/height ratio to apply to the frame. */
   value: number;
-  /** Vrai quand il vient d'une présentation enregistrée — les réglages pipeline ne s'y appliquent plus. */
+  /** True when it comes from a recorded presentation: the pipeline settings no longer apply to it. */
   frozen: boolean;
 }
 
-/** Un ratio n'est utilisable que fini et strictement positif (sinon : cadre de hauteur nulle). */
+/** A ratio is only usable if finite and strictly positive (otherwise: zero-height frame). */
 const usable = (v: number | null | undefined): v is number =>
   typeof v === 'number' && Number.isFinite(v) && v > 0;
 
-/** Ratio effectif du cadre de review et sa provenance. Pur. */
+/** Effective ratio of the review frame and its origin. Pure. */
 export function reviewAspect(sources: ReviewAspectSources): ReviewAspect {
   if (usable(sources.presentation)) return { value: sources.presentation, frozen: true };
   return { value: usable(sources.delivery) ? sources.delivery : DEFAULT_REVIEW_ASPECT, frozen: false };
 }
 
 /**
- * La même règle, prise sur un détail de média : c'est la forme qu'appellent les viewers
- * (pane, PiP, dock, scène). Passer par elle évite de recopier la cascade à chaque point de
- * consommation — c'est exactement cette recopie qui avait laissé le ratio se figer en 16/9.
+ * The same rule, taken from a media detail: this is the form the viewers call (pane, PiP, dock, scene).
+ * Going through it avoids copying the cascade at each point of consumption, which is exactly that copy
+ * that had let the ratio freeze at 16/9.
  */
 export function mediaReviewAspect(
   data:
@@ -58,7 +58,7 @@ export function mediaReviewAspect(
   });
 }
 
-/** Formats nommés — un ratio se lit mieux « 2.39:1 » que « 2.39 ». */
+/** Named formats: a ratio reads better as "2.39:1" than "2.39". */
 const NAMED: [number, string][] = [
   [16 / 9, '16:9'],
   [2.39, '2.39:1'],
@@ -68,8 +68,8 @@ const NAMED: [number, string][] = [
 ];
 
 /**
- * Ratio en texte pour l'écran. La tolérance couvre les résolutions réelles d'un pipeline :
- * 2048×858 n'est pas exactement 2.39 et se lit quand même « 2.39:1 ».
+ * Ratio as text for the screen. The tolerance covers the real resolutions of a pipeline: 2048×858 is not
+ * exactly 2.39 and still reads "2.39:1".
  */
 export function reviewAspectLabel(aspect: number): string {
   const a = usable(aspect) ? aspect : DEFAULT_REVIEW_ASPECT;

@@ -5,25 +5,25 @@ import { formatTime } from './reviewTypes';
 import type { TimelineSpriteMeta } from './timelineSprite';
 
 /**
- * Planche contact exportable (34.H) : compose un PNG à partir du sprite de timeline
- * (grille de vignettes déjà produite par le worker) — bandeau titre + timecode sous
- * chaque vignette. 100 % client (canvas), déclenché par le menu clic droit.
+ * Exportable contact sheet (34.H): composes a PNG from the timeline sprite (a grid of
+ * thumbnails already produced by the worker), with a title banner and a timecode under each
+ * thumbnail. 100% client-side (canvas), triggered by the right-click menu.
  */
 
 export interface ContactSheetLayout {
   width: number;
   height: number;
-  /** Hauteur du bandeau titre. */
+  /** Height of the title banner. */
   header: number;
-  /** Hauteur de la zone timecode sous chaque vignette. */
+  /** Height of the timecode area under each thumbnail. */
   labelH: number;
-  /** Marge intérieure autour de la grille et entre cellules. */
+  /** Inner margin around the grid and between cells. */
   gap: number;
-  /** Position du coin haut-gauche de la vignette `i` (hors label). */
+  /** Position of the top-left corner of thumbnail `i` (excluding label). */
   cell: (i: number) => { x: number; y: number };
 }
 
-/** Géométrie de la planche (pure, testée) : grille du sprite + bandeau + labels. */
+/** Sheet geometry (pure, tested): sprite grid + banner + labels. */
 export function contactSheetLayout(meta: TimelineSpriteMeta): ContactSheetLayout {
   const header = 44;
   const labelH = 18;
@@ -43,7 +43,7 @@ export function contactSheetLayout(meta: TimelineSpriteMeta): ContactSheetLayout
   };
 }
 
-/** Compose la planche et renvoie un data URL PNG (le sprite doit être CORS-lisible). */
+/** Composes the sheet and returns a PNG data URL (the sprite must be CORS-readable). */
 export async function buildContactSheet(
   spriteUrl: string,
   meta: TimelineSpriteMeta,

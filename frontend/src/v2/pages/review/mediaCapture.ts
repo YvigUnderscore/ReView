@@ -5,16 +5,16 @@ import { arrowHead, textFontSize, type Shape } from '../../components/annotation
 import { t } from '../../i18n';
 
 /**
- * Capture & export côté client (menu clic droit de la review, miniatures) :
- * frame vidéo → data URL, copie presse-papiers, téléchargement, réduction miniature.
- * Toutes les fonctions lèvent une Error à message lisible (affichée en toast).
+ * Client-side capture and export (review right-click menu, thumbnails): video frame to data URL,
+ * clipboard copy, download, thumbnail reduction. All functions throw an Error with a readable
+ * message (shown as a toast).
  */
 
-// Épaisseur : les traits sont en px écran (non-scaling) ; à l'export en pleine résolution on
-// les remet à l'échelle par rapport à une hauteur d'écran de référence (42.B — №93).
+// Thickness: strokes are in screen px (non-scaling). At full-resolution export they are rescaled
+// against a reference screen height (42.B — №93).
 const STROKE_REF_H = 900;
 
-/** Dessine des annotations (coordonnées normalisées 0..1) sur un contexte 2D de `w`×`h` px. */
+/** Draws annotations (normalized coordinates 0..1) on a 2D context of `w`×`h` px. */
 export function drawAnnotations(ctx: CanvasRenderingContext2D, shapes: Shape[], w: number, h: number): void {
   const scale = h / STROKE_REF_H;
   const X = (x: number) => x * w;
@@ -74,7 +74,7 @@ export function drawAnnotations(ctx: CanvasRenderingContext2D, shapes: Shape[], 
   }
 }
 
-/** Compose une image (data URL) + ses annotations → nouvelle data URL JPEG (42.B — №93). */
+/** Composes an image (data URL) and its annotations into a new JPEG data URL (42.B — №93). */
 export async function withAnnotations(src: string, shapes: Shape[]): Promise<string> {
   if (!shapes.length) return src;
   const img = await loadImage(src);
@@ -87,7 +87,7 @@ export async function withAnnotations(src: string, shapes: Shape[]): Promise<str
   return canvas.toDataURL('image/jpeg', 0.9);
 }
 
-/** Frame courante d'une vidéo → data URL JPEG. Lève si le canvas est « tainted » (CORS). */
+/** Current frame of a video as a JPEG data URL. Throws if the canvas is "tainted" (CORS). */
 export function captureVideoFrame(video: HTMLVideoElement, quality = 0.88): string {
   const canvas = document.createElement('canvas');
   canvas.width = video.videoWidth;
@@ -101,7 +101,7 @@ export function captureVideoFrame(video: HTMLVideoElement, quality = 0.88): stri
   }
 }
 
-/** Réduit une image (data URL ou URL) au gabarit miniature (JPEG ≤ maxWidth px de large). */
+/** Reduces an image (data URL or URL) to the thumbnail template (JPEG, at most maxWidth px wide). */
 export async function toThumbnailDataUrl(src: string, maxWidth = 640): Promise<string> {
   const img = await loadImage(src);
   const scale = Math.min(1, maxWidth / img.width);
@@ -112,7 +112,7 @@ export async function toThumbnailDataUrl(src: string, maxWidth = 640): Promise<s
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
-/** Fichier image local → data URL miniature (réduit, JPEG). */
+/** Local image file to a thumbnail data URL (reduced, JPEG). */
 export async function fileToThumbnailDataUrl(file: File, maxWidth = 640): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
@@ -122,7 +122,7 @@ export async function fileToThumbnailDataUrl(file: File, maxWidth = 640): Promis
   }
 }
 
-/** Copie une image (data URL ou URL distante) dans le presse-papiers (PNG). */
+/** Copies an image (data URL or remote URL) to the clipboard (PNG). */
 export async function copyImageToClipboard(src: string): Promise<void> {
   const img = await loadImage(src);
   const canvas = document.createElement('canvas');
@@ -134,7 +134,7 @@ export async function copyImageToClipboard(src: string): Promise<void> {
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 }
 
-/** Télécharge une ressource (data URL ou URL distante, via blob pour forcer le download). */
+/** Downloads a resource (data URL or remote URL, via a blob to force the download). */
 export async function downloadImage(src: string, filename: string): Promise<void> {
   const blob = src.startsWith('data:')
     ? await (await fetch(src)).blob()

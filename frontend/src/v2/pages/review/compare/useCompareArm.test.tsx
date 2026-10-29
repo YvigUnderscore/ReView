@@ -6,11 +6,11 @@ import { renderHook } from '@testing-library/react';
 import { useCompareArm } from './useCompareArm';
 
 /**
- * Le lien entre le segment « Compare » de la bascule et l'état de comparaison.
+ * The link between the "Compare" segment of the toggle and the comparison state.
  *
- * Les deux vivaient côte à côte sans se parler : cliquer « Compare » n'ouvrait aucune
- * comparaison et la barre de wipe ne s'affichait jamais. Ce qui est vérifié ici : les trois
- * règles et leurs réciproques.
+ * The two lived side by side without talking to each other: clicking "Compare" opened no
+ * comparison, and the wipe bar never appeared. What is checked here: the three rules and
+ * their converses.
  */
 type Props = Parameters<typeof useCompareArm>[0];
 
@@ -28,7 +28,7 @@ const arm = (props: Partial<Props> & ReturnType<typeof spies>) => {
 };
 
 describe('useCompareArm', () => {
-  it('armer Compare met le mode de comparaison sur le wipe', () => {
+  it('arming Compare sets the comparison mode to wipe', () => {
     const s = spies();
     const { rerender, initial } = arm(s);
     expect(s.onCompareMode).not.toHaveBeenCalled();
@@ -36,10 +36,10 @@ describe('useCompareArm', () => {
     expect(s.onCompareMode).toHaveBeenCalledWith('wipe');
   });
 
-  it('armer Compare sans B prend le premier média comparable, une seule fois', () => {
+  it('arming Compare without B takes the first comparable media, once only', () => {
     const s = spies();
     const { rerender, initial } = arm(s);
-    // Les détails des versions voisines arrivent après : le choix attend `firstB`.
+    // The neighbouring versions' details arrive later: the choice waits for `firstB`.
     rerender({ ...initial, mode: 'compare' });
     expect(s.onSetB).not.toHaveBeenCalled();
     rerender({ ...initial, mode: 'compare', firstB: 42 });
@@ -48,53 +48,53 @@ describe('useCompareArm', () => {
     expect(s.onSetB).toHaveBeenCalledTimes(1);
   });
 
-  it('sortir du mode ferme la comparaison ouverte', () => {
+  it('leaving the mode closes the open comparison', () => {
     const s = spies();
     const { rerender, initial } = arm({ ...s, mode: 'compare', hasB: true });
     rerender({ ...initial, mode: 'explore', hasB: true });
     expect(s.onClear).toHaveBeenCalledTimes(1);
   });
 
-  it('sortir du mode sans comparaison ne ferme rien', () => {
+  it('leaving the mode without a comparison closes nothing', () => {
     const s = spies();
     const { rerender, initial } = arm({ ...s, mode: 'compare' });
     rerender({ ...initial, mode: 'annotate' });
     expect(s.onClear).not.toHaveBeenCalled();
   });
 
-  it('fermer la comparaison sort du mode', () => {
+  it('closing the comparison leaves the mode', () => {
     const s = spies();
     const { rerender, initial } = arm({ ...s, mode: 'compare', hasB: true });
     rerender({ ...initial, mode: 'compare', hasB: false });
     expect(s.onMode).toHaveBeenCalledWith('explore');
   });
 
-  it('un B choisi ailleurs (en-tête vidéo, session live) arme le mode', () => {
+  it('a B chosen elsewhere (video header, live session) arms the mode', () => {
     const s = spies();
     const { rerender, initial } = arm(s);
     rerender({ ...initial, hasB: true });
     expect(s.onMode).toHaveBeenCalledWith('compare');
   });
 
-  it('n’impose pas le wipe quand c’est le B qui a armé le mode', () => {
-    // La vidéo qui coche deux versions d'un coup veut sa grille 2×2 : basculer en wipe au
-    // passage lui volerait son affichage.
+  it('does not force the wipe when it is B that armed the mode', () => {
+    // The video that ticks two versions at once wants its 2×2 grid: switching to wipe on the
+    // way would steal its display.
     const s = spies();
     const { rerender, initial } = arm(s);
     rerender({ ...initial, hasB: true });
-    // Ce que fait le parent en réponse à `onMode('compare')`.
+    // What the parent does in response to `onMode('compare')`.
     rerender({ ...initial, hasB: true, mode: 'compare' });
     expect(s.onCompareMode).not.toHaveBeenCalled();
   });
 
-  it('impose le wipe quand c’est l’utilisateur qui arme le segment', () => {
+  it('forces the wipe when the user arms the segment', () => {
     const s = spies();
     const { rerender, initial } = arm({ ...s, hasB: true });
     rerender({ ...initial, hasB: true, mode: 'compare' });
     expect(s.onCompareMode).toHaveBeenCalledWith('wipe');
   });
 
-  it('reprend le premier média après une fermeture puis un nouvel armement', () => {
+  it('resumes from the first media after a close and a new arming', () => {
     const s = spies();
     const { rerender, initial } = arm({ ...s, firstB: 42 });
     rerender({ ...initial, mode: 'compare', firstB: 42 });

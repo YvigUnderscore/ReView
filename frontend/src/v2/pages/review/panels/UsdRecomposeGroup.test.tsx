@@ -14,18 +14,18 @@ import type { UsdModelInfo } from '../../../types/api';
 import { t } from '../../../i18n';
 
 /**
- * La recomposition USD n'est plus une modale (lot 13).
+ * USD recomposition is no longer a modal (batch 13).
  *
- * Le défaut signalé : le `Dialog` était centré sans hauteur maximale ni défilement, et une
- * scène de production expose des dizaines de jeux de variantes — la fiche dépassait des deux
- * côtés de la fenêtre, le bouton d'envoi compris, et l'overlay interdisait de tourner autour
- * de la scène pendant qu'on choisissait. Ce qui est vérifié ici : plus aucun dialogue, la
- * liste défile, et l'envoi porte bien la sélection composée à l'écran.
+ * The reported defect: the `Dialog` was centred with no maximum height and no scrolling, and a
+ * production scene exposes dozens of variant sets. The sheet overflowed on both sides of the window,
+ * the submit button included, and the overlay prevented orbiting the scene while choosing. What is
+ * checked here: no dialog remains, the list scrolls, and the submission carries the selection as
+ * composed on screen.
  */
 
 const MEDIA = 42;
 
-/** Fiche USD minimale : seuls les jeux de variantes et le purpose comptent pour ce groupe. */
+/** Minimal USD sheet: only the variant sets and the purpose matter to this group. */
 const usdWith = (variantSets: UsdModelInfo['variantSets']): UsdModelInfo => ({
   rootLayer: 'scene.usda',
   defaultPrim: '/World',
@@ -47,7 +47,7 @@ const usdWith = (variantSets: UsdModelInfo['variantSets']): UsdModelInfo => ({
   primsTruncated: false,
 });
 
-/** Une scène riche : trente jeux de variantes, c'est là que l'ancienne modale débordait. */
+/** A rich scene: thirty variant sets, which is where the former modal overflowed. */
 const MANY = usdWith(
   Array.from({ length: 30 }, (_, i) => ({
     prim: `/World/Asset${i}`,
@@ -78,28 +78,28 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('UsdRecomposeGroup', () => {
-  it('n’est plus une modale : rien ne recouvre le viewer', () => {
+  it('is no longer a modal: nothing covers the viewer', () => {
     mount(MANY);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('défile quand la scène expose plus de variantes que la hauteur du dock', () => {
+  it('scrolls when the scene exposes more variants than the dock height', () => {
     mount(MANY);
     const list = screen.getByTestId('usd-variant-scroll');
-    // Tous les jeux sont là — aucun n'est tronqué — et c'est la liste qui porte l'ascenseur.
+    // All the sets are there, none is truncated, and it is the list that carries the scrollbar.
     expect(list.querySelectorAll('select')).toHaveLength(MANY.variantSets.length);
     expect(list.className).toContain('overflow-y-auto');
     expect(list.className).toMatch(/max-h-/);
   });
 
-  it('pose chaque jeu dans une rangée de dock, au sein d’une colonne bornée-défilante', () => {
+  it('places each set in a dock row, within a bounded scrolling column', () => {
     mount(MANY);
     const list = screen.getByTestId('usd-variant-scroll');
-    // Ce test ne prouve PAS le correctif du lot 15 — il passe aussi avec le défaut en place, et
-    // son titre le disait autrefois à tort. Le refus de compression est une propriété de
-    // `.rv-row`, et il se vérifie dans `DockGroup.test.tsx`. Ce qui se vérifie ICI, c'est
-    // l'autre moitié du contrat : que la colonne est bien bornée-défilante et que ses enfants
-    // sont précisément les rangées que cette règle couvre.
+    // This test does NOT prove the batch 15 fix: it also passes with the defect in place, and its
+    // title once said so wrongly. The refusal to compress is a property of `.rv-row`, and it is
+    // verified in `DockGroup.test.tsx`. What is verified HERE is the other half of the contract: that
+    // the column is indeed bounded and scrolling, and that its children are precisely the rows this
+    // rule covers.
     expect(list.className).toMatch(/max-h-/);
     expect(list.className).toContain('overflow-y-auto');
     const rows = Array.from(list.children);
@@ -110,20 +110,20 @@ describe('UsdRecomposeGroup', () => {
     }
   });
 
-  it('coupe le nom d’un jeu de variantes plutôt que de le laisser déborder du dock', () => {
+  it('cuts the name of a variant set rather than letting it overflow the dock', () => {
     mount(ONE);
-    // Un identifiant USD n'a pas de raison de tenir dans 280 px ; le chemin du prim, lui,
-    // reste en infobulle de la rangée.
+    // A USD identifier has no reason to fit in 280 px; the prim path, for its part, remains in the
+    // row's tooltip.
     expect(screen.getByText('lookVariant').className.split(' ')).toContain('truncate');
     expect(screen.getByText('lookVariant').closest('.rv-row')).toHaveAttribute('title', '/World/Chair');
   });
 
-  it('garde le bouton d’envoi hors de la liste défilante — il reste atteignable', () => {
+  it('keeps the submit button out of the scrolling list: it stays reachable', () => {
     mount(MANY);
     expect(screen.getByTestId('usd-variant-scroll').contains(submit())).toBe(false);
   });
 
-  it('envoie le purpose et la variante choisis à l’écran', () => {
+  it('sends the purpose and variant chosen on screen', () => {
     mount(ONE);
     const [purpose, variant] = screen.getAllByRole('combobox');
     fireEvent.change(purpose, { target: { value: 'proxy' } });
@@ -135,7 +135,7 @@ describe('UsdRecomposeGroup', () => {
     });
   });
 
-  it('envoie la sélection en place quand rien n’est touché', () => {
+  it('sends the selection in place when nothing is touched', () => {
     mount(ONE);
     fireEvent.click(submit());
     expect(api.post).toHaveBeenCalledWith(`/api/media/${MEDIA}/usd/recompose`, {
@@ -144,7 +144,7 @@ describe('UsdRecomposeGroup', () => {
     });
   });
 
-  it('le dit quand la scène n’expose aucune variante, et garde le purpose', () => {
+  it('says so when the scene exposes no variant, and keeps the purpose', () => {
     mount(usdWith([]));
     expect(screen.getByText(t('review.usd.noVariants'))).toBeInTheDocument();
     expect(screen.queryByTestId('usd-variant-scroll')).not.toBeInTheDocument();

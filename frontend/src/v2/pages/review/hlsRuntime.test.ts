@@ -7,11 +7,11 @@ import { canUseHlsJs, hlsMseSupport, isHlsPlaylistUrl, type HlsSupportScope } fr
 import { hlsMasterUrl } from './videoSource';
 
 /**
- * Le test de support MSE est recopié dans `hlsRuntime` pour répondre **sans** charger les
- * 510 ko de hls.js. Une copie qui dérive de l'original est une régression silencieuse :
- * elle enverrait un navigateur capable vers le repli MP4 (ou l'inverse). Ces tests
- * confrontent donc les deux implémentations sur la même portée globale — et si hls.js
- * change de critère à la prochaine montée de version, ils tombent.
+ * The MSE support test is copied into `hlsRuntime` so that it can answer **without** loading the
+ * 510 kB of hls.js. A copy that drifts from the original is a silent regression: it would send a
+ * capable browser to the MP4 fallback (or the reverse). These tests therefore confront the two
+ * implementations on the same global scope, and if hls.js changes its criterion at the next version
+ * bump, they fail.
  */
 
 const g = globalThis as Record<string, unknown>;
@@ -28,19 +28,19 @@ function install(entries: Record<string, unknown>): void {
   Object.entries(entries).forEach(([k, v]) => (g[k] = v));
 }
 
-/** Faux `MediaSource` : n'accepte que les types listés. */
+/** Fake `MediaSource`: accepts only the listed types. */
 const mediaSourceAccepting = (accepted: string[]) => ({
   isTypeSupported: (type: string) => accepted.some((a) => type.includes(a)),
 });
 
-/** `SourceBuffer` complet — celui qu'expose un navigateur moderne. */
+/** Full `SourceBuffer`, as exposed by a modern browser. */
 const fullSourceBuffer = { prototype: { appendBuffer: () => {}, remove: () => {} } };
 
 afterEach(() => {
   GLOBALS.forEach((k) => delete g[k]);
 });
 
-describe('hlsMseSupport — même verdict que Hls.isSupported()', () => {
+describe('hlsMseSupport — same verdict as Hls.isSupported()', () => {
   const cases: [string, Record<string, unknown>][] = [
     ['aucune API MSE (Safari iOS : HLS natif, la bibliothèque n’a jamais servi)', {}],
     [
@@ -83,18 +83,18 @@ describe('hlsMseSupport — même verdict que Hls.isSupported()', () => {
   });
 });
 
-describe('isHlsPlaylistUrl — ne charger un lecteur de manifestes que pour un manifeste', () => {
-  it('reconnaît le master servi par l’API de review', () => {
-    // Contrat avec le producteur d’URL : si `hlsMasterUrl` changeait de forme, le lecteur
-    // adaptatif cesserait silencieusement de servir. Le test le verrouille.
+describe('isHlsPlaylistUrl — load a manifest reader only for a manifest', () => {
+  it('recognizes the master served by the review API', () => {
+    // Contract with the URL producer: if `hlsMasterUrl` changed shape, the adaptive player would
+    // silently stop serving. The test locks it in.
     expect(isHlsPlaylistUrl(hlsMasterUrl(42, { hls: {}, trim: null, trimProxyReady: false }))).toBe(true);
   });
 
-  it('accepte une playlist signée (la signature vit dans la query)', () => {
+  it('accepts a signed playlist (the signature lives in the query)', () => {
     expect(isHlsPlaylistUrl('https://cdn.example/a/master.m3u8?X-Amz-Signature=abc')).toBe(true);
   });
 
-  it('refuse le repli MP4, l’absence de source et un chemin qui contient « m3u8 » sans l’être', () => {
+  it('rejects the MP4 fallback, a missing source, and a path containing "m3u8" without being one', () => {
     expect(isHlsPlaylistUrl('/api/media/42/proxy.mp4')).toBe(false);
     expect(isHlsPlaylistUrl(null)).toBe(false);
     expect(isHlsPlaylistUrl(undefined)).toBe(false);
@@ -102,8 +102,8 @@ describe('isHlsPlaylistUrl — ne charger un lecteur de manifestes que pour un m
   });
 });
 
-describe('canUseHlsJs — décision synchrone, sans la bibliothèque', () => {
-  it('reste faux sans MSE, même sur une playlist', () => {
+describe('canUseHlsJs — synchronous decision, without the library', () => {
+  it('stays false without MSE, even for a playlist', () => {
     install({});
     expect(canUseHlsJs('/api/media/1/hls/master.m3u8')).toBe(false);
   });

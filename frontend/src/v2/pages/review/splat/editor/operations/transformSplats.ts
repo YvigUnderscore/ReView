@@ -6,14 +6,13 @@ import type { SplatSceneHandle } from '../../useSplat';
 import { commitPackedChange } from './deleteSplats';
 
 /**
- * Transform d'un **sous-ensemble** de splats (Phase 28) : déplacer/tourner/redimensionner
- * uniquement les splats sélectionnés, autour de leur **barycentre**, en réécrivant les centres,
- * quaternions et échelles dans les données paquées en mémoire (`PackedSplats.setSplat`) — le
- * fichier original n'est jamais modifié, l'opération est annulable (snapshot des valeurs d'origine).
- * La logique de gizmo (proxy au barycentre) vit dans `useSubsetTransform`.
+ * Transform of a **subset** of splats (Phase 28): moves, rotates or resizes only the selected splats, around
+ * their **barycentre**, by rewriting the centres, quaternions and scales in the packed data held in memory
+ * (`PackedSplats.setSplat`). The original file is never modified; the operation is undoable (snapshot of the
+ * original values). The gizmo logic (proxy at the barycentre) lives in `useSubsetTransform`.
  */
 
-/** État d'origine des splats sélectionnés + barycentre local (pivot du gizmo). */
+/** Original state of the selected splats, plus the local barycentre (the gizmo's pivot). */
 export interface SubsetSnapshot {
   indices: number[];
   center: THREE.Vector3[];
@@ -24,7 +23,7 @@ export interface SubsetSnapshot {
   pivot: THREE.Vector3;
 }
 
-/** Barycentre (moyenne) d'un lot de centres, pur/testable. Renvoie [0,0,0] si vide. */
+/** Barycentre (mean) of a batch of centres, pure and testable. Returns [0,0,0] if empty. */
 export function centroidOfCenters(
   centers: Float32Array,
   indices: readonly number[],
@@ -42,7 +41,7 @@ export function centroidOfCenters(
   return [x / n, y / n, z / n];
 }
 
-/** Capture l'état d'origine des splats (centre/échelle/quaternion/opacité/couleur) + barycentre. */
+/** Captures the original state of the splats (centre, scale, quaternion, opacity, colour) plus barycentre. */
 export function snapshotSubset(handle: SplatSceneHandle, selected: Iterable<number>): SubsetSnapshot | null {
   const packed = handle.mesh.packedSplats;
   if (!packed) return null;
@@ -72,9 +71,9 @@ export function snapshotSubset(handle: SplatSceneHandle, selected: Iterable<numb
 }
 
 /**
- * Applique une transformation `delta` (matrice locale au mesh, exprimée autour du pivot par le
- * gizmo) aux splats du snapshot : centre passé par la matrice, quaternion pré-multiplié par la
- * rotation, échelle multipliée par le facteur d'échelle. Réécrit les données paquées.
+ * Applies a transform `delta` (a local matrix of the mesh, expressed around the pivot by the gizmo) to the
+ * splats of the snapshot: centre passed through the matrix, quaternion pre-multiplied by the rotation, scale
+ * multiplied by the scale factor. Rewrites the packed data.
  */
 export function applySubsetDelta(handle: SplatSceneHandle, snap: SubsetSnapshot, delta: THREE.Matrix4): void {
   const packed = handle.mesh.packedSplats;
@@ -96,7 +95,7 @@ export function applySubsetDelta(handle: SplatSceneHandle, snap: SubsetSnapshot,
   commitPackedChange(handle);
 }
 
-/** Restaure l'état d'origine des splats du snapshot (undo). */
+/** Restores the original state of the snapshot's splats (undo). */
 export function restoreSubset(handle: SplatSceneHandle, snap: SubsetSnapshot): void {
   const packed = handle.mesh.packedSplats;
   if (!packed) return;

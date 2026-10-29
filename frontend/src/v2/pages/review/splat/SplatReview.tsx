@@ -40,18 +40,17 @@ import { useCommentSceneEscape } from '../three/useCommentSceneEscape';
 import { useT } from '../../../i18n';
 
 /**
- * Bloc splat de la review, monté dans le chrome unifié : rail d'outils à gauche, options de
- * l'outil armé sous l'en-tête, dock inspecteur à droite, transport de l'animation caméra en
- * bas. Plus rien ne flotte au-dessus du nuage — seuls restent les overlays ancrés à la vue
- * (traits de la brosse 3D, tracé de sélection, PiP de la caméra layout).
+ * Splat block of the review, mounted in the unified chrome: tool rail on the left, options of the armed
+ * tool under the header, inspector dock on the right, camera-animation transport at the bottom. Nothing
+ * floats above the cloud any more: only the overlays anchored to the view remain (3D brush strokes,
+ * selection trace, camera layout PiP).
  *
- * L'état métier n'a pas bougé : `useSplatEditor` porte l'édition, `usePresentation` la mise
- * en scène, `useSplatCompare` l'A/B. Le rail se contente d'armer l'outil ; `useSplatChrome`
- * fait suivre les hooks.
+ * The business state has not moved: `useSplatEditor` carries the editing, `usePresentation` the staging,
+ * `useSplatCompare` the A/B. The rail merely arms the tool; `useSplatChrome` makes the hooks follow.
  *
- * Ce composant ne calcule plus rien : `useSplatView` tient l'état de vue (chrome, culling,
- * outil de tracé, présentation « non enregistrée ») et `scene/useSplatInput` le câblage
- * pointeur/clavier. Ici, il ne reste que la composition du chrome et des overlays.
+ * This component no longer computes anything: `useSplatView` holds the view state (chrome, culling, selection
+ * trace tool, unsaved presentation) and `scene/useSplatInput` the pointer/keyboard wiring. Here only the
+ * composition of the chrome and of the overlays remains.
  */
 export default function SplatReview({
   data,
@@ -67,32 +66,31 @@ export default function SplatReview({
 }: {
   data: MediaResp;
   splat: SplatViewer;
-  /** Éditeur monté (gestionnaire + viewer prêt) — publié ou non : l'édition reste offerte. */
+  /** Editor mounted (manager + viewer ready): published or not, editing remains on offer. */
   showEdit: boolean;
-  /** Gestionnaire : peut persister la présentation (autorisé même publié — mise en scène). */
+  /** Manager: can persist the presentation (allowed even when published: staging). */
   canPresent: boolean;
-  /** Brosse de surface 3D — instanciée par la page (les traits partent avec le commentaire). */
+  /** 3D surface brush: instantiated by the page (the strokes leave with the comment). */
   paint: SplatPaintState;
   onSaved: (patch: SplatEditsPatch) => void;
-  /** Rôle du spectateur — le client ne voit pas la bascule de mode. */
+  /** Role of the viewer: the client does not see the mode switch. */
   role?: Role;
   overlay: ReactNode;
-  /** Sortie de la lecture d'un commentaire annoté — descendue dans le viewer, comme l'overlay. */
+  /** Exit of the playback of an annotated comment: moved down into the viewer, like the overlay. */
   exit: ReactNode;
-  /** Annotations (mode layout : joindre/rejouer une animation caméra dans les commentaires). */
+  /** Annotations (layout mode: attach / replay a camera animation in the comments). */
   ann: Annotations;
 }) {
   const t = useT();
   const saved = data.splatEdits;
   /**
-   * Écrire les éditions du nuage POUR TOUT LE MONDE s'arrête à la publication — la même ligne
-   * que le modèle 3D, et la même que le serveur applique désormais (`lib/publishLock`). Dans un
-   * studio qui n'utilise pas les brouillons, le média naît publié : aucun bouton « Enregistrer »
-   * ne paraît donc jamais au-dessus du viewer, sans qu'il ait fallu inventer une seconde règle.
-   * Éditer, en revanche, reste offert : l'édition part dans un commentaire.
+   * Writing the cloud's edits FOR EVERYONE stops at publication: the same line as for the 3D model, and
+   * the one the server now applies (`lib/publishLock`). In a studio that does not use drafts, the media is
+   * born published: no "Save" button therefore ever appears above the viewer, without having had to invent
+   * a second rule. Editing, on the other hand, remains on offer: the edit goes into a comment.
    */
   const canSaveForAll = showEdit && !data.media.published;
-  /** Proposition d'édition portée par le commentaire sélectionné — rejouée, jamais écrite. */
+  /** Edit proposal carried by the selected comment: replayed, never written. */
   const viewedEdit = ann.viewedSplatEdit;
   const editor = useSplatEditor(
     splat,
@@ -102,19 +100,19 @@ export default function SplatReview({
     data.splatSubsetUrl,
     onSaved,
     showEdit,
-    // Lire la proposition d'un commentaire suspend l'éditeur : un seul nuage, et c'est le
-    // commentaire qui parle. L'édition locale revient intacte à la sortie.
+    // Reading a comment's proposal suspends the editor: a single cloud, and it is the comment that speaks.
+    // The local edit comes back intact on exit.
     viewedEdit != null,
   );
   const { ready, getSceneHandle } = splat;
-  // Cadre de livraison : ratio des réglages pipeline, sauf aspect déjà gelé (`reviewAspect`).
+  // Delivery frame: ratio from the pipeline settings, unless the aspect is already frozen (`reviewAspect`).
   const frameAspect = mediaReviewAspect(data).value;
 
   const grid = useSceneGrid(splat);
   const pres = usePresentation(splat, data, onSaved);
   const compare = useSplatCompare(splat, data.media);
-  // État de vue : chrome (mode/outil/panneau), culling, tracé de sélection armé, écart entre
-  // l'animation courante et la présentation persistée.
+  // View state: chrome (mode / tool / panel), culling, selection trace armed, gap between the current
+  // animation and the persisted presentation.
   const { state, update, modes, culling, activeTool, railExtra, selectTool, animDirty } = useSplatView({
     splat,
     data,
@@ -122,11 +120,11 @@ export default function SplatReview({
     editorTool: editor.tool,
     showEdit,
   });
-  // Bouton « Annoter » du composer ↔ mode « Annoter » du rail : sans ce pont, cliquer « Annoter »
-  // sur un nuage n'armait que le crayon 2D et les outils de la scène restaient invisibles.
+  // The composer's "Annotate" button ↔ the rail's "Annotate" mode: without this bridge, clicking "Annotate"
+  // on a cloud only armed the 2D pencil and the scene's tools remained invisible.
   useSpatialAnnotate({ state, update, ann });
 
-  // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo des clés.
+  // Camera-object in the scene (layout mode): mesh + trajectory + key gizmo.
   const cameraRig = useCameraSceneRig({
     getSceneHandle: splat.getSceneHandle,
     subscribeFrame: splat.subscribeFrame,
@@ -145,12 +143,12 @@ export default function SplatReview({
     cameraRig,
   });
 
-  // Rejeu des éditions en lecture (transformation, flip, volumes, masque, sous-ensembles) : celles
-  // du média hors éditeur, celles d'un commentaire dès qu'il en propose — gestionnaire compris.
+  // Replay of the edits in reading mode (transform, flip, volumes, mask, subsets): those of the media outside
+  // the editor, and those of a comment as soon as it proposes some, manager included.
   useSavedSplatEdits(splat, data, showEdit, viewedEdit);
 
-  // Câblage pointeur/clavier : transport caméra, cadrage F/H, palette Ctrl+K, et les deux
-  // actions d'animation caméra (joindre au commentaire, importer un fichier).
+  // Pointer/keyboard wiring: camera transport, F/H framing, Ctrl+K palette, and the two camera animation
+  // actions (attach to the comment, import a file).
   const { frameView, homeView, attachLayout, importLayout } = useSplatInput({
     splat,
     data,
@@ -162,9 +160,9 @@ export default function SplatReview({
     stageMode: state.mode === 'stage',
   });
 
-  // Points d'intérêt : ARMER L'OUTIL, C'EST ÊTRE EN PLACEMENT — le clic suivant dans le nuage
-  // pose un point. Même hook, même geste, mêmes options que le viewer 3D : c'est la parité
-  // demandée, obtenue en supprimant le chemin propre au splat plutôt qu'en le doublant.
+  // Points of interest: ARMING THE TOOL IS BEING IN PLACEMENT: the next click in the cloud places a point.
+  // Same hook, same gesture, same options as the 3D viewer: this is the requested parity, obtained by
+  // removing the splat's own path rather than duplicating it.
   const placingPoi = activeTool.id === 'pin';
   usePoiPlacement({
     viewer: splat,
@@ -174,15 +172,13 @@ export default function SplatReview({
   });
 
   /**
-   * L'édition en cours se joint au **prochain commentaire**, exactement comme la proposition de
-   * mise en scène 3D : c'est la seule voie une fois la version publiée, et elle reste ouverte
-   * avant. Ce qui part est le geste entier — transformation, volumes de crop, flip, suppressions
-   * et transformations de sous-ensembles.
+   * The edit in progress joins the **next comment**, exactly like the 3D staging proposal: it is the only
+   * route once the version is published, and it remains open before. What leaves is the whole gesture:
+   * transform, crop volumes, flip, deletions and subset transforms.
    *
-   * L'éditeur est FOURNISSEUR, et non producteur d'un état : la proposition n'est assemblée
-   * qu'à l'envoi (le masque pèse jusqu'à quelques centaines de kilo-octets — l'encoder à chaque
-   * rendu pour le comparer serait absurde), et `sent` la retire de l'éditeur quand elle est
-   * partie, sans quoi elle se rejoindrait d'elle-même au commentaire suivant (46.T).
+   * The editor is a PROVIDER, not a producer of state: the proposal is assembled only at sending time (the
+   * mask weighs up to a few hundred kilobytes: encoding it at each render to compare would be absurd), and
+   * `sent` removes it from the editor once it has left, otherwise it would join itself to the next comment (46.T).
    */
   const { provideSplatEdit } = ann;
   const { dirty: editDirty, buildProposal, revertEdits } = editor;
@@ -190,8 +186,8 @@ export default function SplatReview({
     provideSplatEdit({
       build: () => {
         if (!showEdit || !editDirty) return null;
-        // « Modifié » ne veut pas dire « proposé » : un volume ajouté puis retiré laisse
-        // l'éditeur sale sans rien laisser à dire. Rien ne part alors, pas même un objet vide.
+        // "Modified" does not mean "proposed": a volume added then removed leaves the editor dirty without
+        // leaving anything to say. Nothing leaves then, not even an empty object.
         const proposal = buildProposal();
         return hasSplatEditProposal(proposal) ? proposal : null;
       },
@@ -202,7 +198,7 @@ export default function SplatReview({
     return () => provideSplatEdit(null);
   }, [provideSplatEdit, showEdit, editDirty, buildProposal, revertEdits]);
 
-  // Échap relâche la proposition du commentaire lu — même touche et même sens que côté 3D.
+  // Escape releases the proposal of the comment being read: same key and same meaning as on the 3D side.
   const { setViewedSplatEdit } = ann;
   const releaseCommentEdit = useCallback(() => setViewedSplatEdit(null), [setViewedSplatEdit]);
   useCommentSceneEscape(viewedEdit != null, releaseCommentEdit);
@@ -213,12 +209,12 @@ export default function SplatReview({
       state={state}
       onState={update}
       role={role ?? 'ARTIST'}
-      // La bascule du splat : « Mise en scène » et « Nettoyer » l'ont quittée (`splatChrome`),
-      // il n'y reste qu'« Explorer » — elle s'efface donc. Même liste que celle des touches
-      // numériques, pour qu'un segment absent de l'en-tête ne s'arme pas au clavier.
+      // The splat's toggle: "Staging" and "Clean up" have left it (`splatChrome`), only "Explore" remains, so
+      // it is erased. Same list as that of the numeric keys, so that a segment absent from the header is not
+      // armed by the keyboard.
       modes={modes}
-      // Second groupe du rail : les outils d'édition du nuage. Le segment « Nettoyer » reste hors
-      // de l'en-tête, mais ses outils sont de nouveau à un clic (lot 13).
+      // Second group of the rail: the cloud's editing tools. The "Clean up" segment remains out of the header,
+      // but its tools are one click away again (batch 13).
       railExtra={railExtra}
       headerRight={
         <SpatialCompareHeader
@@ -255,8 +251,8 @@ export default function SplatReview({
           grid={grid}
           culling={culling}
           exportEdits={
-            // Éditions effectives à cuire dans l'export : celles de l'éditeur en cours
-            // d'édition, sinon celles persistées (rejouées pour tous) en lecture seule.
+            // Effective edits to bake into the export: those of the editor being edited, otherwise the
+            // persisted ones (replayed for everyone), read-only.
             showEdit
               ? { transform: editor.transform, volumes: editor.volumes.serialize() }
               : { transform: saved?.transform ?? null, volumes: saved?.volumes ?? [] }
@@ -294,9 +290,9 @@ export default function SplatReview({
         ) : undefined
       }
     >
-      {/* Clic droit BREF → menu du viewer (cadrage, point d'intérêt au point visé, copie de la
-          vue, réglages de scène) ; maintenu, le même bouton vole. Le seuil qui départage les deux
-          vit dans `viewer/contextGesture`. */}
+      {/* Short right-click → viewer menu (framing, point of interest at the targeted point, copy of the view,
+          scene settings); held, the same button steals it. The threshold that tells the two apart lives in
+          `viewer/contextGesture`. */}
       <SplatContextMenu
         splat={splat}
         frameView={frameView}

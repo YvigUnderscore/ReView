@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { focusObjectPoint, poiFocusRadius, POI_FOCUS_RATIO } from './poiFocus';
 
-/** OrbitControls réduit à ce que le cadrage lit et écrit : sa cible et son `update`. */
+/** OrbitControls reduced to what the framing reads and writes: its target and its `update`. */
 function controlsStub() {
   let updates = 0;
   const controls = {
@@ -25,16 +25,16 @@ function rig() {
   return { camera, object, ...controlsStub() };
 }
 
-describe('poiFocusRadius — un point n’a pas de taille, le cadrage lui en donne une', () => {
-  it('prend une fraction de la scène, jamais zéro', () => {
+describe('poiFocusRadius — a point has no size, the framing gives it one', () => {
+  it('takes a fraction of the scene, never zero', () => {
     expect(poiFocusRadius(10)).toBeCloseTo(10 * POI_FOCUS_RATIO);
     expect(poiFocusRadius(0)).toBeGreaterThan(0);
     expect(poiFocusRadius(Number.NaN)).toBeGreaterThan(0);
   });
 });
 
-describe('focusObjectPoint — le numéro cliqué ramène la caméra sur son point', () => {
-  it('cadre sur le point, en conservant la direction de vue', () => {
+describe('focusObjectPoint — the clicked number brings the camera back to its point', () => {
+  it('frames the point, keeping the view direction', () => {
     const { camera, object, controls, target } = rig();
     const ok = focusObjectPoint({
       three: THREE,
@@ -46,12 +46,12 @@ describe('focusObjectPoint — le numéro cliqué ramène la caméra sur son poi
     });
     expect(ok).toBe(true);
     expect(target.toArray()).toEqual([2, 1, 0]);
-    // La caméra reste du même côté (elle regardait depuis +Z) et s'approche du point.
+    // The camera stays on the same side (it was looking from +Z) and comes closer to the point.
     expect(camera.position.z).toBeGreaterThan(0);
     expect(camera.position.x).toBeCloseTo(2);
   });
 
-  it('applique la matrice monde de l’objet : le rejeu vaut pour tout spectateur', () => {
+  it("applies the object's world matrix: replay is valid for every viewer", () => {
     const { camera, object, controls, target } = rig();
     object.position.set(5, 0, 0);
     object.updateMatrixWorld(true);
@@ -63,11 +63,11 @@ describe('focusObjectPoint — le numéro cliqué ramène la caméra sur son poi
       point: { position: '2 0 0', normal: '0 0 1', space: 'object' },
       sceneRadius: 4,
     });
-    // Point local 2 + objet décalé de 5 → le cadrage vise 7 en monde.
+    // Local point 2 + object shifted by 5 → the framing aims at 7 in world space.
     expect(target.x).toBeCloseTo(7);
   });
 
-  it('laisse un point en espace MONDE là où il est (annotation d’avant l’espace objet)', () => {
+  it('leaves a point in WORLD space where it is (annotation predating object space)', () => {
     const { camera, object, controls, target } = rig();
     object.position.set(5, 0, 0);
     object.updateMatrixWorld(true);
@@ -82,7 +82,7 @@ describe('focusObjectPoint — le numéro cliqué ramène la caméra sur son poi
     expect(target.x).toBeCloseTo(2);
   });
 
-  it('ne bouge rien si la position est illisible', () => {
+  it('moves nothing if the position is unreadable', () => {
     const { camera, object, controls, target, calls } = rig();
     const ok = focusObjectPoint({
       three: THREE,

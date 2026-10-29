@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { Skeleton } from '../../../components/ui/skeleton';
 
 interface Props {
-  /** Vrai quand le chrome du viewer héberge déjà l'en-tête : la page n'en rend alors aucun. */
+  /** True when the viewer chrome already hosts the header: the page then renders none. */
   hosted: boolean;
   theater: boolean;
   hasData: boolean;
@@ -15,12 +15,11 @@ interface Props {
 }
 
 /**
- * En-tête rendu par la PAGE, pour les deux états où le chrome du viewer n'en héberge pas :
- * le chargement, et la superposition de comparaison image qui remplace la visionneuse.
+ * Header rendered by the PAGE, for the two states where the viewer chrome does not host one:
+ * loading, and the image comparison overlay that replaces the viewer.
  *
- * Il rend les mêmes emplacements que le chrome — c'est le même en-tête, posé ailleurs, et
- * non une seconde barre : la review en a longtemps empilé deux, c'est précisément ce que
- * cette composition supprime.
+ * It renders the same slots as the chrome: it is the same header, placed elsewhere, not a second
+ * bar. The review used to stack two for a long time, which is precisely what this composition removes.
  */
 export default function ReviewPageHeader({ hosted, theater, hasData, hasError, identity, actions }: Props) {
   if (hosted || theater || (!hasData && hasError)) return null;

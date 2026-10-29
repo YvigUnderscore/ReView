@@ -5,13 +5,13 @@ import { toTiles, type CubeLut } from './cubeLut';
 import { SHADERS, type ShaderFlavor } from './displayShader';
 
 /**
- * Application GPU de la LUT display/view du projet à une image fixe. Un canvas hors écran, un
- * triangle plein cadre, le shader de `displayShader.ts`, et on rend le résultat sous forme
- * d'image : le viewer de review garde son zoom, son pan, ses annotations et sa capture de
- * vue, qui continuent de travailler sur une simple balise `img`.
+ * GPU application of the project's display/view LUT to a still image. An off-screen canvas, a
+ * full-frame triangle, the shader from `displayShader.ts`, and the result is rendered as an image:
+ * the review viewer keeps its zoom, pan, annotations and view capture, which keep working on a plain
+ * `img` element.
  *
- * WebGL2 quand il existe (texture 3D en matériel), WebGL1 sinon (atlas 2D). Si aucun contexte
- * n'est disponible, on rend `null` : l'appelant affiche l'image d'origine.
+ * WebGL2 when available (3D texture in hardware), WebGL1 otherwise (2D atlas). If no context is
+ * available, returns `null`: the caller shows the original image.
  */
 
 export interface TransformResult {
@@ -111,7 +111,7 @@ function lutTexture(gl: AnyGl, lut: CubeLut): { tex: WebGLTexture; tiles: [numbe
   return { tex, tiles: [atlas.cols, atlas.rows] };
 }
 
-/** Contexte WebGL sur un canvas neuf, WebGL2 d'abord. `null` si le navigateur n'en a aucun. */
+/** WebGL context on a fresh canvas, WebGL2 first. `null` if the browser has none. */
 export function acquireContext(canvas: HTMLCanvasElement): { gl: AnyGl; flavor: ShaderFlavor } | null {
   const attrs: WebGLContextAttributes = {
     alpha: true,
@@ -126,8 +126,8 @@ export function acquireContext(canvas: HTMLCanvasElement): { gl: AnyGl; flavor: 
 }
 
 /**
- * Rend l'image transformée dans un canvas de la taille de la source. Le contexte est jetable :
- * une image de review se transforme quelques fois par session, pas soixante fois par seconde.
+ * Renders the transformed image into a canvas the size of the source. The context is disposable: a
+ * review image is transformed a few times per session, not sixty times per second.
  */
 export function renderTransform(
   image: TexImageSource,
@@ -178,7 +178,7 @@ export function renderTransform(
   return { canvas, flavor };
 }
 
-/** Encode le canvas en PNG (sans perte : on juge une couleur) et rend une URL d'objet. */
+/** Encodes the canvas as PNG (lossless, since we judge a colour) and returns an object URL. */
 export function canvasToObjectUrl(canvas: HTMLCanvasElement): Promise<string | null> {
   return new Promise((resolve) => {
     if (typeof canvas.toBlob !== 'function') {

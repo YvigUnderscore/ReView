@@ -10,32 +10,31 @@ import type { Annotations } from '../useAnnotations';
 import { useT } from '../../../i18n';
 
 /**
- * Contrat minimal d'un viewer spatial capable de porter des points d'intérêt — le modèle 3D
- * comme le splat le remplissent, et c'est ce qui rend l'implémentation **unique**.
+ * Minimal contract of a spatial viewer capable of carrying points of interest. The 3D model and the splat
+ * both fulfil it, and that is what makes the implementation **unique**.
  */
 export interface PoiViewer {
   ready: boolean;
   getSceneHandle: () => { dom: HTMLElement } | null;
   hotspotAtPointer: (clientX: number, clientY: number) => Hotspot3D | null;
-  /** Arme (ou désarme) le déplacement et la désignation des pastilles de la scène. */
+  /** Arms (or disarms) the moving and designation of the scene's hotspots. */
   setPoiHandlers: (handlers: MarkerHandlers | null) => void;
-  /** Rang de la pastille mise en avant, ou `null`. */
+  /** Rank of the hotspot put forward, or `null`. */
   setPoiActive: (index: number | null) => void;
 }
 
 /**
- * Pose des points d'intérêt **au clic**, dans les deux viewers spatiaux.
+ * Places points of interest **on click**, in both spatial viewers.
  *
- * Ce qui change en Phase 50 (lot 12) : `armed` n'est plus un état local basculé par un bouton
- * de la barre d'options, c'est l'OUTIL DU RAIL. Armer l'outil, c'est être en placement — le
- * clic suivant dans la vue pose un point, sans bouton intermédiaire. C'était la première
- * demande de l'utilisateur, et c'est aussi ce qui a débloqué le splat, où le bouton était le
- * seul chemin et où rien ne disait que le viewer attendait un clic.
+ * What changes in Phase 50 (batch 12): `armed` is no longer a local state toggled by a button of the
+ * options bar; it is the RAIL'S TOOL. Arming the tool means being in placement mode: the next click in
+ * the view places a point, without an intermediate button. That was the user's first request, and it is
+ * also what unlocked the splat, where the button was the only route and nothing said that the viewer was
+ * awaiting a click.
  *
- * Un clic dans le vide ne pose rien (et le dit) ; un glissement reste une orbite ; Échap sort
- * du placement (`onExit`, qui rend l'outil de repos au rail). Tant qu'un point est en
- * préparation, les pastilles sont manipulables : les tirer les déplace, les cliquer désigne la
- * rangée qu'on édite.
+ * A click in the void places nothing (and says so); a drag remains an orbit; Escape leaves placement
+ * (`onExit`, which returns the tool to rest on the rail). While a point is in preparation, the hotspots
+ * are manipulable: pulling them moves them, clicking them designates the row being edited.
  */
 export function usePoiPlacement({
   viewer,
@@ -44,33 +43,31 @@ export function usePoiPlacement({
   onExit,
 }: {
   viewer: PoiViewer;
-  /** L'outil « Point d'intérêt » est armé dans le rail : le viewer est EN PLACEMENT. */
+  /** The "Point of interest" tool is armed in the rail: the viewer is IN PLACEMENT. */
   armed: boolean;
   /**
-   * Le composer ET la lecture : le hook y prend son brouillon (`ann.poi`) et ce qu'un commentaire
-   * relu affiche (`ann.viewedPoi`). Les deux viewers passaient les mêmes dérivations, mot pour
-   * mot — la règle vit ici une seule fois.
+   * The composer AND the reading: the hook takes its draft there (`ann.poi`) and what a reviewed comment
+   * displays (`ann.viewedPoi`). The two viewers passed the same derivations, word for word: the rule lives here once.
    */
   ann: Annotations;
-  /** Échap : le rail reprend son outil de repos. */
+  /** Escape: the rail takes back its resting tool. */
   onExit: () => void;
 }): void {
   const t = useT();
   const { ready, getSceneHandle, hotspotAtPointer, setPoiHandlers, setPoiActive } = viewer;
   const { poi, setViewedPoi } = ann;
   /*
-   * Ce qui est à l'écran : les points du commentaire relu s'il y en a un, sinon le brouillon
-   * (`usePoiDisplay` leur donne la priorité — cliquer un commentaire doit le montrer, même au
-   * milieu d'une rédaction).
+   * What is on screen: the points of the reviewed comment if there is one, otherwise the draft
+   * (`usePoiDisplay` gives them priority: clicking a comment must show it, even in the middle of a drafting).
    *
-   * Deux conséquences, et c'est tout le rôle de ce drapeau : les pastilles d'un commentaire relu
-   * restent INERTES (tirer la pastille n° 1 déplacerait un point du brouillon que l'on ne voit
-   * pas), et armer l'outil les RELÂCHE — armer, c'est vouloir poser ses propres points, et depuis
-   * qu'un mouvement de vue ne les efface plus, rien d'autre ne leur cède la place.
+   * Two consequences, and that is the whole role of this flag: the hotspots of a reviewed comment remain
+   * INERT (pulling hotspot no. 1 would move a draft point that is not visible), and arming the tool RELEASES
+   * them. Arming means wanting to place one's own points, and since a view movement no longer erases them,
+   * nothing else gives way to them.
    */
   const showingDraft = ann.viewedPoi.length === 0;
-  // Les rappels changent à chaque rendu (la liste de points bouge) : les rejouer par une ref
-  // évite de réinstaller les écouteurs au milieu d'un geste.
+  // The callbacks change at each render (the list of points moves): replaying them through a ref avoids
+  // reinstalling the listeners in the middle of a gesture.
   const live = useRef({ poi, onExit, t });
   useEffect(() => {
     live.current = { poi, onExit, t };
@@ -80,7 +77,7 @@ export function usePoiPlacement({
     if (armed && !showingDraft) setViewedPoi([]);
   }, [armed, showingDraft, setViewedPoi]);
 
-  // Pastilles manipulables tant qu'un point du brouillon est à l'écran ; inertes sinon (relecture).
+  // Hotspots manipulable as long as a draft point is on screen; inert otherwise (reading).
   const editable = showingDraft && poi.points.length > 0;
   useEffect(() => {
     if (!ready) return;
@@ -104,7 +101,7 @@ export function usePoiPlacement({
     return () => setPoiHandlers(null);
   }, [ready, editable, hotspotAtPointer, setPoiHandlers]);
 
-  // Rang mis en avant : la scène et la rangée du composeur signalent le même point.
+  // Put-forward rank: the scene and the composer row signal the same point.
   const activeIndex = poi.points.findIndex((p) => p.key === poi.activeKey);
   useEffect(() => {
     setPoiActive(activeIndex >= 0 ? activeIndex : null);
@@ -124,7 +121,7 @@ export function usePoiPlacement({
     const onUp = (e: PointerEvent) => {
       const start = down;
       down = null;
-      // Clic gauche immobile seulement : un glissement reste une orbite.
+      // Still left click only: a drag remains an orbit.
       if (e.button !== 0 || !start || !isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
       const hotspot = hotspotAtPointer(e.clientX, e.clientY);
       if (!hotspot) {

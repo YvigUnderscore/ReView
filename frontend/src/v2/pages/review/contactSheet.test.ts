@@ -7,14 +7,14 @@ import type { TimelineSpriteMeta } from './timelineSprite';
 
 const meta: TimelineSpriteMeta = { intervalSec: 3, count: 5, cols: 3, rows: 2, tileW: 100, tileH: 56 };
 
-describe('contactSheetLayout — planche contact (34.H)', () => {
-  it('dimensionne bandeau + grille + labels (2 rangées pour 5 vignettes sur 3 colonnes)', () => {
+describe('contactSheetLayout — contact sheet (34.H)', () => {
+  it('sizes banner + grid + labels (2 rows for 5 thumbnails over 3 columns)', () => {
     const l = contactSheetLayout(meta);
     expect(l.width).toBe(8 + 3 * 108); // gap + cols·(tileW+gap)
     expect(l.height).toBe(44 + 8 + 2 * (56 + 18 + 8)); // header + gap + rows·(tileH+labelH+gap)
   });
 
-  it('place les vignettes en grille ligne par ligne', () => {
+  it('places the thumbnails in a grid, row by row', () => {
     const l = contactSheetLayout(meta);
     expect(l.cell(0)).toEqual({ x: 8, y: 44 + 8 });
     expect(l.cell(2)).toEqual({ x: 8 + 2 * 108, y: 44 + 8 });

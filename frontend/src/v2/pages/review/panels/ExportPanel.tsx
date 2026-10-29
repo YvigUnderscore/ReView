@@ -12,10 +12,9 @@ import { exportFileName } from '../useMediaExport';
 import { useT } from '../../../i18n';
 
 /**
- * Panneau Export du dock : le média d'abord (avec ou sans les éditions cuites), la mise en
- * scène ensuite, les notes de review pour finir. Hérite de `SplatExportPanel`. Les exports
- * reprennent les éditions **enregistrées**, jamais la sélection en cours — c'est dit en
- * toutes lettres au lecteur.
+ * Export panel of the dock: the media first (with or without the baked edits), then the staging, and
+ * the review notes last. Inherits from `SplatExportPanel`. Exports always take the **saved** edits,
+ * never the current selection: this is stated in plain words to the reader.
  */
 export default function ExportPanel({
   cleaned,
@@ -24,13 +23,13 @@ export default function ExportPanel({
   staging,
   notesMediaId,
 }: {
-  /** Export du média avec les éditions appliquées (.spz nettoyé, .glb transformé). */
+  /** Export of the media with the edits applied (cleaned .spz, transformed .glb). */
   cleaned?: { label: string; hint: string; busy: boolean; onExport: () => void };
   originalUrl: string;
   originalName: string;
-  /** Exports de mise en scène (animation caméra, capture de vue). */
+  /** Staging exports (camera animation, view capture). */
   staging?: ReactNode;
-  /** Média dont on peut sortir les notes (absent = viewer qui ne l'a pas encore branché). */
+  /** Media from which notes can be exported (absent = viewer that has not yet plugged it in). */
   notesMediaId?: number;
 }) {
   const t = useT();
@@ -70,15 +69,15 @@ export default function ExportPanel({
 }
 
 /**
- * Bouton de capture de la vue courante — partagé par les panneaux Export spatiaux (3D, splat).
- * Le téléchargement et les retours vivent ici : les deux panneaux les recopiaient, et le viewer
- * n'a qu'une chose à fournir, le PNG (cf. `viewer/viewCapture`).
+ * View-capture button for the current view, shared by the spatial Export panels (3D, splat).
+ * Download and feedback live here: both panels used to copy them, and the viewer only has one thing
+ * to provide, the PNG (see `viewer/viewCapture`).
  */
 export function CaptureViewButton({
   capture,
   originalName,
 }: {
-  /** Capture synchrone : PNG en data URL, ou `null` si le rendu n'a rien donné. */
+  /** Synchronous capture: PNG as a data URL, or `null` if the render produced nothing. */
   capture: () => string | null;
   originalName: string;
 }) {

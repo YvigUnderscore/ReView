@@ -30,13 +30,13 @@ const RAD = Math.PI / 180;
 const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
 
 /**
- * Contenu du dock inspecteur pour le viewer splat : un panneau à la fois. Rassemble ce qui
- * flottait dans `TopRightControls`, `ViewerSettingsPanel`, `StatsPanel`, `SplatExportPanel`,
- * `CameraBar` et `SectionBar` — mêmes réglages, même effet, à un endroit fixe.
+ * Inspector dock content for the splat viewer: one panel at a time. It gathers what used to float in
+ * `TopRightControls`, `ViewerSettingsPanel`, `StatsPanel`, `SplatExportPanel`, `CameraBar` and `SectionBar`:
+ * same settings, same effect, in a fixed place.
  *
- * L'onglet **Affichage** n'est plus ici (Phase 50, lot 12) : les réglages de rendu se prennent
- * en regardant le nuage, pas à l'autre bout de l'écran. Le **même** `DisplayPanel` est monté
- * dans le popover « Rendu » du viewer (`SplatViewerMenus`), comme en 3D depuis le lot 6.
+ * The **Display** tab is no longer here (Phase 50, batch 12): rendering settings are taken while looking at
+ * the cloud, not at the other end of the screen. The **same** `DisplayPanel` is mounted in the "Rendering"
+ * popover of the viewer (`SplatViewerMenus`), as in 3D since batch 6.
  */
 export default function SplatPanels({
   panel,
@@ -61,25 +61,25 @@ export default function SplatPanels({
   grid: { visible: boolean; toggle: () => void };
   culling: { off: boolean; onOff: (off: boolean) => void };
   exportEdits: ExportEdits;
-  /** Atelier caméra : l'interrupteur du panneau pilote le **mode** du chrome, seule entrée. */
+  /** Camera workshop: the panel's switch drives the **mode** of the chrome, the only entry. */
   staging: { active: boolean; toggle: () => void };
   onFrame: () => void;
   onHome: () => void;
   onImportAnim: (file: File) => void;
-  /** Gestionnaire : preset orbite et effacement de la présentation persistée. */
+  /** Manager: orbit preset and clearing of the persisted presentation. */
   canPresent?: boolean;
 }) {
   const t = useT();
   const [stats, setStats] = useState<SplatStats | null>(null);
   const [exporting, setExporting] = useState(false);
   const { subscribeStats } = splat;
-  // Les stats ne sont mesurées que lorsque le panneau Infos est ouvert.
+  // Stats are only measured when the Info panel is open.
   useEffect(() => (panel === 'info' ? subscribeStats(setStats) : undefined), [panel, subscribeStats]);
 
   if (panel === 'camera') {
-    // Focale/tilt reflètent la valeur **échantillonnée** au temps courant quand le canal est
-    // animé — le panneau et l'animation ne dérivent plus en silence ; avec l'auto-key armé,
-    // les modifier pose une clé `fov`/`roll` au playhead.
+    // Focal length / tilt reflect the value **sampled** at the current time when the channel is animated.
+    // The panel and the animation no longer drift silently; with auto-key armed, modifying them sets a
+    // `fov` / `roll` key at the playhead.
     const anim = pres.anim;
     const fovNow = anim.anim.channels.fov
       ? evalChannel(anim.anim.channels.fov, anim.timeMs, pres.rig.fov)
@@ -87,8 +87,8 @@ export default function SplatPanels({
     const rollNow = anim.anim.channels.roll
       ? evalChannel(anim.anim.channels.roll, anim.timeMs, pres.rig.roll)
       : pres.rig.roll;
-    // Cadre de review : ce panneau ne fait que le DIRE — son ratio vient des réglages pipeline,
-    // sauf pour un média dont une présentation a déjà gelé l'aspect (`reviewAspect`).
+    // Review frame: this panel only SAYS it. Its ratio comes from the pipeline settings, except for a media
+    // whose presentation has already frozen the aspect (`reviewAspect`).
     const frame = mediaReviewAspect(data);
     return (
       <CameraPanel

@@ -1,27 +1,26 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** Boîte d'une image de référence épinglée au canvas, en fractions de l'image de base. */
+/** Box of a reference image pinned to the canvas, as fractions of the base image. */
 export interface RefBox {
   x: number;
   y: number;
   width: number;
 }
 
-/** Image de référence en préparation dans le composer (locale, envoyée avec le commentaire). */
+/** Reference image being prepared in the composer (local, sent with the comment). */
 export interface StagedReference extends RefBox {
   key: string;
   dataUrl: string;
 }
 
 /**
- * Bandes libres autour du média quand il est ajusté au viewer (letterbox), en fractions de la
- * largeur/hauteur du média. Mesurées sur les aspects, donc indépendantes du zoom courant.
+ * Free bands around the media when it is fitted to the viewer (letterbox), as fractions of the media's
+ * width/height. Measured from the aspects, hence independent of the current zoom.
  *
- * Elles ne bornent **plus** le geste : une référence se pose exactement là où on la lâche
- * (`placeRefBox`). Elles décrivent la zone que tout viewer montre à l'ajustement, et servent à
- * deux choses seulement — choisir où tombe un collage, et rattraper à l'affichage une position
- * héritée qu'aucun viewer ne montrerait (`rescueRefBox`).
+ * They no longer bound the gesture: a reference is placed exactly where it is dropped (`placeRefBox`).
+ * They describe the zone every viewer shows at fit, and serve two things only: choosing where a paste
+ * lands, and rescuing at display time an inherited position that no viewer would show (`rescueRefBox`).
  */
 export interface ViewerBands {
   left: number;
@@ -30,45 +29,45 @@ export interface ViewerBands {
   bottom: number;
 }
 
-/** Aucune bande connue (conteneur pas encore mesuré) : on s'en tient au cadre du média. */
+/** No known band (container not yet measured): one sticks to the media frame. */
 export const NO_BANDS: ViewerBands = { left: 0, right: 0, top: 0, bottom: 0 };
 
 export const REF_MIN_WIDTH = 0.02;
 const REF_MAX_WIDTH = 1;
-/** Largeur d'une référence au collage (fraction de la largeur du média). */
+/** Width of a reference when pasted (fraction of the media width). */
 export const REF_PASTE_WIDTH = 0.3;
 /**
- * Débordement maximal autorisé autour du média, en largeurs/hauteurs d'image — **miroir du
- * bornage Zod** (`media-reference.routes.ts`). Seule limite du geste : au-delà, le serveur
- * refuserait la référence à l'envoi et le commentaire la perdrait.
+ * Maximum overflow allowed around the media, in image widths/heights: **mirror of the Zod bounding**
+ * (`media-reference.routes.ts`). It is the only limit of the gesture: beyond it, the server would refuse
+ * the reference at submission and the comment would lose it.
  */
 export const REF_POS_LIMIT = 3;
-/** Bande haute de la référence tenue pour visible : sa hauteur, elle, est inconnue ici. */
+/** Top band of the reference, taken as visible: its height, for its part, is unknown here. */
 const REF_MIN_VISIBLE = 0.05;
-/** Part de la largeur qui doit rester dans la zone pour qu'on reconnaisse la référence. */
+/** Part of the width that must remain in the zone for the reference to be recognised. */
 const REF_MIN_SHOWN = 1 / 3;
-/** Respiration entre le média et une référence posée dans une bande. */
+/** Breathing space between the media and a reference placed in a band. */
 const REF_GAP = 0.02;
-/** Décalage des références suivantes, le long de la bande ou en diagonale sur le média. */
+/** Offset of the following references, along the band or diagonally on the media. */
 const CASCADE = 0.05;
 const CORNER = 0.04;
 
 const clamp = (v: number, lo: number, hi: number) =>
   Number.isFinite(v) ? Math.min(Math.max(v, lo), hi) : lo;
 
-/** Coordonnée exploitable : un conteneur non mesuré produit un `NaN` à chaque `pointermove`. */
+/** Usable coordinate: an unmeasured container yields a `NaN` at each `pointermove`. */
 const finite = (v: number) => (Number.isFinite(v) ? v : 0);
 
-/** Bande exploitable : jamais négative, jamais au-delà du plafond atteignable. */
+/** Usable band: never negative, never beyond the reachable ceiling. */
 const band = (v: number) => clamp(v, 0, REF_POS_LIMIT);
 
-/** Bord opposé d'une bande. Sans bande, `0` franc : un `-0` survit aux comparaisons. */
+/** Opposite edge of a band. Without a band, a plain `0`: a `-0` survives comparisons. */
 const edge = (v: number) => (v === 0 ? 0 : -v);
 
 /**
- * Bandes du letterbox à partir des deux aspects (média, zone qui le rogne). Un média plus
- * « large » que le viewer laisse des bandes haut/bas, un média plus « haut » des bandes
- * latérales. Aspect non mesurable (conteneur de hauteur nulle) ⇒ aucune bande.
+ * Letterbox bands from the two aspects (media, zone that crops it). A media "wider" than the viewer
+ * leaves top/bottom bands, a "taller" media leaves side bands. An unmeasurable aspect (zero-height
+ * container) gives no band.
  */
 export function fitBands(mediaAspect: number, viewportAspect: number): ViewerBands {
   const ok = (v: number) => Number.isFinite(v) && v > 0;
@@ -82,15 +81,15 @@ export function fitBands(mediaAspect: number, viewportAspect: number): ViewerBan
 }
 
 /**
- * Pose une référence **là où on la lâche**, dedans comme dehors du cadre du média : rien ne la
- * ramène vers l'image. Seuls sont corrigés les accidents — un `NaN` venu d'un conteneur non
- * mesuré, une largeur absurde, et le débordement au-delà du plafond partagé avec le serveur
- * (au-delà, l'envoi du commentaire serait refusé : c'est là qu'on perdrait la référence).
+ * Places a reference **where it is dropped**, inside as well as outside the media frame: nothing pulls it
+ * back towards the image. Only accidents are corrected: a `NaN` coming from an unmeasured container, an
+ * absurd width, and overflow beyond the ceiling shared with the server (beyond it, the submission of the
+ * comment would be refused: that is where the reference would be lost).
  *
- * Trois bornages « intelligents » ont échoué à laisser le geste libre : hors cadre sans limite
- * (invisible), puis 0..1 (collée d'office sur l'image), puis les bandes du letterbox — qui
- * interdisent encore les côtés dès que le letterbox est horizontal, soit le cas courant d'un
- * plan large. Le geste n'est donc plus borné du tout ; le filet est à l'affichage.
+ * Three "smart" bounds failed to leave the gesture free: outside the frame without limit (invisible), then
+ * 0..1 (snapped automatically onto the image), then the letterbox bands, which still forbid the sides as
+ * soon as the letterbox is horizontal, i.e. the common case of a wide shot. The gesture is therefore no
+ * longer bounded at all; the safety net is at display time.
  */
 export function placeRefBox(box: RefBox): RefBox {
   return {
@@ -100,12 +99,12 @@ export function placeRefBox(box: RefBox): RefBox {
   };
 }
 
-/** Intervalle jamais vide : une zone dégénérée ne doit pas renvoyer un `NaN`. */
+/** Never-empty interval: a degenerate zone must not return a `NaN`. */
 const within = (v: number, lo: number, hi: number) => clamp(v, lo, Math.max(lo, hi));
 
 /**
- * Zone que le viewer montre réellement, en fractions du média — mesurée en pixels, donc juste
- * au zoom et au pan courants. C'est « le canevas » du point de vue de qui déplace une référence.
+ * Zone that the viewer really shows, as fractions of the media: measured in pixels, hence exact at the
+ * current zoom and pan. It is "the canvas" from the point of view of whoever moves a reference.
  */
 export interface RefCanvas {
   left: number;
@@ -114,18 +113,18 @@ export interface RefCanvas {
   bottom: number;
 }
 
-/** Faute de mesure, le cadre du média pour seul canvas : c'est le comportement prudent. */
+/** Without a measurement, the media frame alone serves as the canvas: this is the cautious behaviour. */
 export const MEDIA_CANVAS: RefCanvas = { left: 0, top: 0, right: 1, bottom: 1 };
 
 /**
- * Borne un geste au **canvas visible** : la référence se pose où on veut dessus, dedans comme
- * dehors du cadre du média, mais pas au-delà du viewer. Poussée dehors elle deviendrait
- * insaisissable — le viewer rogne ce qui dépasse, survol compris : plus moyen ni de la reprendre
- * ni de la supprimer avant l'envoi du commentaire. C'est là le seul « on ne doit pas pouvoir la
- * perdre », et il ne contrarie aucun geste : on ne lâche jamais le pointeur hors de ce qu'on voit.
+ * Bounds a gesture to the **visible canvas**: the reference can be placed wherever one wants on it, inside
+ * as well as outside the media frame, but not beyond the viewer. Pushed outside, it would become
+ * ungraspable: the viewer crops what overflows, hovering included, so it could be neither taken back nor
+ * deleted before the comment is sent. That is the only "must not be able to lose it", and it contradicts no
+ * gesture: one never releases the pointer outside what one sees.
  *
- * `height` est la hauteur rendue de la référence en fractions de la hauteur du média (l'image
- * est décodée, on la mesure) ; inconnue, on s'en tient à la part attrapable.
+ * `height` is the rendered height of the reference as fractions of the media height (the image is decoded,
+ * so we measure it); unknown, one sticks to the graspable part.
  */
 export function onCanvasRefBox(box: RefBox, height: number, canvas: RefCanvas): RefBox {
   const placed = placeRefBox(box);
@@ -139,7 +138,7 @@ export function onCanvasRefBox(box: RefBox, height: number, canvas: RefCanvas): 
   };
 }
 
-/** Fenêtre d'un axe : ce qu'on garde tel quel, et où l'on ramène ce qui est hors champ. */
+/** Window of an axis: what is kept as is, and where what is out of field is brought back. */
 interface Axis {
   keepLo: number;
   keepHi: number;
@@ -151,13 +150,13 @@ const rescueAxis = (v: number, a: Axis) =>
   v >= a.keepLo && v <= a.keepHi ? v : within(v, a.safeLo, a.safeHi);
 
 /**
- * Filet d'affichage : une référence dont on voit assez reste **exactement** où elle a été
- * posée ; une autre est ramenée dans la zone que ce viewer montre à l'ajustement (le média plus
- * ses bandes). Le collage posait autrefois à x = 1.05 sans bornage : de telles positions, hors
- * de toute bande, existent en base et resteraient invisibles.
+ * Display safety net: a reference of which enough is seen remains **exactly** where it was placed; another
+ * is brought back into the zone that this viewer shows at fit (the media plus its bands). Pasting once
+ * placed at x = 1.05 without bounds: such positions, outside any band, exist in the database and would
+ * remain invisible.
  *
- * Réservé aux références **persistées**, qu'on ne peut plus déplacer. Celles en préparation
- * viennent d'être lâchées sous les yeux de leur auteur : rien ne les recadre.
+ * Reserved for **persisted** references, which can no longer be moved. Those in preparation have just been
+ * released under their author's eyes: nothing reframes them.
  */
 export function rescueRefBox(box: RefBox, bands: ViewerBands = NO_BANDS): RefBox {
   const { x, y, width } = placeRefBox(box);
@@ -165,8 +164,8 @@ export function rescueRefBox(box: RefBox, bands: ViewerBands = NO_BANDS): RefBox
   const maxX = 1 + band(bands.right);
   const minY = edge(band(bands.top));
   const maxY = 1 + band(bands.bottom);
-  // Largeur connue : on exige d'en voir une part reconnaissable. Hauteur inconnue : seule la
-  // bande haute de la référence est sûre d'exister, c'est elle qui doit rester dans la zone.
+  // Known width: one requires seeing a recognisable part of it. Unknown height: only the top band of the
+  // reference is certain to exist, and it is that band which must remain in the zone.
   const shown = Math.min(width, Math.max(REF_MIN_VISIBLE, width * REF_MIN_SHOWN));
   return {
     x: rescueAxis(x, {
@@ -186,15 +185,13 @@ export function rescueRefBox(box: RefBox, bands: ViewerBands = NO_BANDS): RefBox
 }
 
 /**
- * Position d'une référence qu'on vient de coller : **à côté** du média dès qu'une bande du
- * letterbox peut l'accueillir — comparer suppose de voir les deux images — sinon sur un coin du
- * média, seul endroit visible quand le média remplit le viewer. Le geste n'étant plus borné,
- * cette position n'est qu'un point de départ.
+ * Position of a reference just pasted: **beside** the media as soon as a letterbox band can host it
+ * (comparing presupposes seeing both images), otherwise on a corner of the media, the only visible place
+ * when the media fills the viewer. The gesture no longer being bounded, this position is only a starting point.
  *
- * Une bande latérale se juge sur la largeur, connue. Faute de connaître la hauteur de la
- * référence (l'image n'est pas décodée au collage), une bande haut/bas se juge sur cette même
- * largeur : exact pour un média carré, un peu optimiste pour un plan large. Les collages
- * suivants cascadent le long de la bande retenue.
+ * A side band is judged on its width, which is known. Lacking the height of the reference (the image is not
+ * decoded at paste time), a top/bottom band is judged on that same width: exact for a square media, a little
+ * optimistic for a wide shot. Subsequent pastes cascade along the retained band.
  */
 export function pastedRefBox(index: number, bands: ViewerBands = NO_BANDS): RefBox {
   const width = REF_PASTE_WIDTH;

@@ -3,20 +3,20 @@
 
 import { createContext, useContext } from 'react';
 
-/** Taille en pixels — zone disponible d'un pane, ou boîte d'affichage d'un média. */
+/** Size in pixels: available area of a pane, or display box of a media. */
 export interface Size {
   w: number;
   h: number;
 }
 
-/** Une zone n'entre dans le calcul que mesurée : un pane pas encore mis en page vaut 0. */
+/** An area only takes part in the computation once measured: a pane not yet laid out counts as 0. */
 const measured = (z: Size): boolean => z.w > 0 && z.h > 0;
 
 /**
- * Boîte « contain » d'un média dans une zone : il remplit la zone sans la dépasser, **quelle
- * que soit sa résolution source**. C'est tout le remède au reproche de départ — la vidéo B
- * s'affichait à sa taille naturelle, minuscule au centre de sa moitié dès que le pane était
- * plus large qu'elle, et l'œil comparait deux tailles avant de comparer deux images.
+ * "Contain" box of a media within an area: it fills the area without exceeding it, **whatever
+ * its source resolution**. This is the whole remedy for the initial complaint. Video B was
+ * displayed at its natural size, tiny in the middle of its half as soon as the pane was wider,
+ * and the eye compared two sizes before comparing two images.
  */
 export function containBox(zone: Size, aspect: number): Size {
   if (!measured(zone) || !(aspect > 0)) return { w: 0, h: 0 };
@@ -25,14 +25,14 @@ export function containBox(zone: Size, aspect: number): Size {
 }
 
 /**
- * Zone commune à plusieurs panes : la plus petite largeur et la plus petite hauteur, donc le
- * rectangle qui tient dans **tous** les panes. En comparaison, chaque média s'ajuste dans
- * celle-là et non dans la sienne : le pane maître porte la timeline et le transport, les panes
- * B un en-tête ou un HUD — leurs zones n'ont jamais la même hauteur, et deux ajustements
- * « contain » chacun chez soi donnaient deux tailles d'affichage différentes.
+ * Common area of several panes: the smallest width and the smallest height, hence the
+ * rectangle that fits in **all** panes. In a comparison, each media fits into that one rather
+ * than its own. The master pane carries the timeline and transport, the B panes a header or
+ * a HUD, so their areas never have the same height. Two "contain" fits, each on its own,
+ * gave two different display sizes.
  *
- * Les zones non mesurées sont ignorées : un pane qui vient de monter annonce 0 × 0, et le
- * minimum aurait écrasé l'affichage de tous les autres.
+ * Unmeasured areas are ignored: a pane that has just mounted reports 0 × 0, and the minimum
+ * would have crushed the display of all the others.
  */
 export function commonZone(zones: Size[]): Size | null {
   const known = zones.filter(measured);
@@ -43,27 +43,27 @@ export function commonZone(zones: Size[]): Size | null {
   };
 }
 
-/** Inscription de la zone mesurée d'un pane, ou retrait (`null`) quand le pane disparaît. */
+/** Registers the measured area of a pane, or removes it (`null`) when the pane disappears. */
 export type PublishZone = (id: string, size: Size | null) => void;
 
 /**
- * Deux contextes plutôt qu'un objet : l'inscription doit être **stable**. Portée par le même
- * objet que la zone commune, elle changeait d'identité à chaque mesure — l'effet qui inscrit
- * se rejouait, se désinscrivait, se réinscrivait, et la boucle ne s'arrêtait jamais.
+ * Two contexts rather than one object: the registration must be **stable**. Carried by the
+ * same object as the common area, it changed identity at each measurement. The effect that
+ * registers re-ran, unregistered and re-registered, and the loop never stopped.
  *
- * Exportés pour le seul `CompareFitProvider`, qui les alimente : les panes, eux, passent par
- * les deux hooks ci-dessous. Le provider vit dans son propre fichier — un module qui exporte
- * un composant n'a pas le droit d'exporter aussi des fonctions (Fast Refresh).
+ * Exported only for `CompareFitProvider`, which feeds them. The panes go through the two hooks
+ * below. The provider lives in its own file: a module that exports a component may not also
+ * export functions (Fast Refresh).
  */
 export const PublishContext = createContext<PublishZone | null>(null);
 export const ZoneContext = createContext<Size | null>(null);
 
-/** Inscription du pane courant, `null` hors d'un `CompareFitProvider`. */
+/** Registration of the current pane; `null` outside a `CompareFitProvider`. */
 export function useCompareFitPublish(): PublishZone | null {
   return useContext(PublishContext);
 }
 
-/** Zone commune au groupe de panes, `null` hors provider ou tant qu'aucun n'est mesuré. */
+/** Common area of the pane group; `null` outside a provider or until at least one pane is measured. */
 export function useCompareFitZone(): Size | null {
   return useContext(ZoneContext);
 }

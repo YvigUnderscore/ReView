@@ -6,7 +6,7 @@ import type { MediaSummary } from '../../../../types/api';
 import { sideBySideOffsets, splatSiblings } from './useSplatCompare';
 
 describe('sideBySideOffsets', () => {
-  it('centre les positions et espace régulièrement', () => {
+  it('centres the positions and spaces them evenly', () => {
     expect(sideBySideOffsets(1, 4)).toEqual([0]);
     expect(sideBySideOffsets(2, 4)).toEqual([-2, 2]);
     expect(sideBySideOffsets(3, 4)).toEqual([-4, 0, 4]);
@@ -21,9 +21,9 @@ describe('splatSiblings', () => {
     { id: 4, kind: 'SPLAT', status: 'READY', originalName: 'd.spz', published: false },
   ] as MediaSummary[];
 
-  it('ne garde que les splats prêts (mono-média → comparaison inactive)', () => {
+  it('keeps only the ready splats (single media → comparison inactive)', () => {
     expect(splatSiblings(media).map((m) => m.id)).toEqual([1, 4]);
-    // Garde mono-média : un seul splat prêt → pas de comparaison (enabled = length > 1).
+    // Single-media guard: only one splat ready → no comparison (enabled = length > 1).
     expect(splatSiblings([media[0], media[1]])).toHaveLength(1);
   });
 });

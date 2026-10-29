@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Cadre de review à aspect fixe (Phase 15/16, V6). Le viewport 3D/splat rend dans un cadre
- * **letterboxé** d'aspect constant (issu de la caméra de présentation), et non plus étiré à la
- * taille de l'écran : la mise en scène (framing, focale, DoF) et les annotations 2D normalisées
- * restent alignées quelle que soit la taille de la fenêtre.
+ * Fixed-aspect review frame (Phase 15/16, V6). The 3D/splat viewport renders into a
+ * **letterboxed** frame of constant aspect (taken from the presentation camera), rather than
+ * being stretched to the screen size: the staging (framing, focal length, DoF) and the
+ * normalized 2D annotations stay aligned whatever the window size.
  *
- * Helper pur (testable) : plus grand rectangle d'aspect `aspect` (largeur/hauteur) tenant dans
- * `containerW × containerH`, centré. Renvoie le rect en pixels (left/top/width/height).
+ * Pure helper (testable): the largest rectangle of aspect `aspect` (width/height) that fits in
+ * `containerW × containerH`, centered. Returns the rect in pixels (left/top/width/height).
  */
 export interface FrameRect {
   left: number;
@@ -17,14 +17,14 @@ export interface FrameRect {
   height: number;
 }
 
-/** Aspect par défaut du cadre de review quand aucune caméra de présentation ne le fixe (16:9). */
+/** Default aspect of the review frame when no presentation camera sets it (16:9). */
 export const DEFAULT_REVIEW_ASPECT = 16 / 9;
 
 /**
- * Paramètres `camera.setViewOffset` étendant la vue du cadre fixe à tout le conteneur
- * (Phase 25 — viewer plein espace) : la caméra garde l'aspect/fov du cadre de livraison
- * (`fullWidth × fullHeight` = guide), et rend le conteneur entier comme une sous-vue élargie
- * centrée (offsets négatifs). Le contenu du guide reste identique pour tous les écrans.
+ * `camera.setViewOffset` parameters extending the view of the fixed frame to the whole container
+ * (Phase 25, full-space viewer): the camera keeps the aspect/fov of the delivery frame
+ * (`fullWidth × fullHeight` = guide), and renders the whole container as an enlarged, centered
+ * sub-view (negative offsets). The guide's content stays identical for all screens.
  */
 export function frameViewOffset(
   aspect: number,
@@ -35,7 +35,7 @@ export function frameViewOffset(
   return {
     fullWidth: guide.width,
     fullHeight: guide.height,
-    // `|| 0` : normalise le -0 produit par la négation d'un bord collé (lisibilité des tests).
+    // `|| 0`: normalizes the -0 produced by negating a flush edge (readability of the tests).
     x: -guide.left || 0,
     y: -guide.top || 0,
     width: containerW,
@@ -43,13 +43,12 @@ export function frameViewOffset(
   };
 }
 
-/** Coordonnée d'annotation hors du cadre de livraison (espace normalisé 0..1). */
+/** Annotation coordinate outside the delivery frame (normalized space 0..1). */
 const out = (v: number | undefined) => v != null && (v < 0 || v > 1);
 
 /**
- * `true` si une annotation déborde du cadre de livraison — le dessin hors-cadre est autorisé
- * (Phase 25) mais signalé à l'auteur (les spectateurs sur un écran plus étroit peuvent ne pas
- * tout voir).
+ * `true` if an annotation overflows the delivery frame. Drawing outside the frame is allowed
+ * (Phase 25) but flagged to the author, since viewers on a narrower screen may not see all of it.
  */
 export function shapesOutsideFrame(
   shapes: Array<{
@@ -81,12 +80,12 @@ export function shapesOutsideFrame(
         out((s.cy ?? 0) + (s.ry ?? 0))
       );
     if (s.type === 'arrow') return out(s.x1) || out(s.y1) || out(s.x2) || out(s.y2);
-    return out(s.x) || out(s.y); // texte : ancre
+    return out(s.x) || out(s.y); // text: anchor
   });
 }
 
 export function reviewFrame(aspect: number, containerW: number, containerH: number): FrameRect {
-  // Repli défensif : dimensions/aspect invalides → on remplit le conteneur (comportement neutre).
+  // Defensive fallback: invalid dimensions/aspect → fill the container (neutral behaviour).
   if (!Number.isFinite(aspect) || aspect <= 0 || containerW <= 0 || containerH <= 0) {
     return { left: 0, top: 0, width: Math.max(0, containerW), height: Math.max(0, containerH) };
   }
@@ -94,11 +93,11 @@ export function reviewFrame(aspect: number, containerW: number, containerH: numb
   let width: number;
   let height: number;
   if (containerAspect > aspect) {
-    // Conteneur plus large que le cadre → bandes verticales, hauteur pleine.
+    // Container wider than the frame → vertical bands, full height.
     height = containerH;
     width = height * aspect;
   } else {
-    // Conteneur plus étroit/haut → bandes horizontales, largeur pleine.
+    // Container narrower/taller → horizontal bands, full width.
     width = containerW;
     height = width / aspect;
   }
