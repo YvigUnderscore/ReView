@@ -125,14 +125,14 @@ let shuttingDown = false;
 export async function shutdown(signal: string, graceMs = SHUTDOWN_GRACE_MS): Promise<number> {
   if (shuttingDown) return 0;
   shuttingDown = true;
-  logger.info({ signal, tasks: tasks.length }, '[shutdown] arrêt demandé');
+  logger.info({ signal, tasks: tasks.length }, '[shutdown] shutdown requested');
   const outcomes = await runShutdownTasks(tasks, graceMs);
   for (const o of outcomes) {
-    if (o.timedOut) logger.warn({ task: o.name }, '[shutdown] délai dépassé — forcé');
-    else if (!o.ok) logger.warn({ task: o.name, err: o.error }, '[shutdown] tâche en échec');
+    if (o.timedOut) logger.warn({ task: o.name }, '[shutdown] timeout exceeded — forced');
+    else if (!o.ok) logger.warn({ task: o.name, err: o.error }, '[shutdown] task failed');
   }
   const clean = outcomes.every((o) => o.ok);
-  logger.info({ clean }, '[shutdown] terminé');
+  logger.info({ clean }, '[shutdown] done');
   return clean ? 0 : 1;
 }
 
@@ -156,7 +156,7 @@ export function installShutdownHandlers(
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, () => {
       if (shuttingDown) {
-        logger.warn({ signal }, '[shutdown] second signal — sortie immédiate');
+        logger.warn({ signal }, '[shutdown] second signal — exiting immediately');
         exit(1);
         return;
       }

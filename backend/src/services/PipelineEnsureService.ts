@@ -183,7 +183,7 @@ export async function ensureAsset(actor: Actor, projectId: number, input: Ensure
     });
   } catch (err) {
     return recoverUniqueViolation(err, find, () =>
-      conflict(`L'asset « ${input.name} » is in the trash`, 'ASSET_IN_TRASH'),
+      conflict(`Asset « ${input.name} » is in the trash`, 'ASSET_IN_TRASH'),
     );
   }
   emitToProject(projectId, 'asset:update', { projectId, id: entity.id });

@@ -107,7 +107,7 @@ export async function scanFile(path: string): Promise<{ clean: boolean; virus: s
           if (verdict.clean && size > CLAMD_DEFAULT_MAX_FILE_SIZE)
             logger.warn(
               { path, size, maxFileSize: CLAMD_DEFAULT_MAX_FILE_SIZE },
-              "[clamav] fichier plus gros que le MaxFileSize par défaut de clamd : un « OK » n'y prouve rien tant que MaxFileSize/MaxScanSize n'ont pas été relevés",
+              '[clamav] file larger than the default clamd MaxFileSize: an "OK" proves nothing until MaxFileSize/MaxScanSize are raised',
             );
           resolve(verdict);
         } catch (err) {

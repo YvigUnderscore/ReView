@@ -27,7 +27,7 @@ export const usdVariantsSchema = z
   .record(primPath, z.record(variantName, variantName))
   .prefault({})
   .refine((v) => Object.keys(v).length <= USD_SELECTION_MAX_PRIMS, {
-    message: `Trop de prims dans la sélection (maximum ${USD_SELECTION_MAX_PRIMS})`,
+    message: `Too many prims in the selection (maximum ${USD_SELECTION_MAX_PRIMS})`,
   })
   .describe('Variante retenue par variantSet, indexée par chemin de prim USD');
 

@@ -264,7 +264,7 @@ async function assertDeleteAccess(
     if (!(await hasAccess(projectId))) throw forbidden(`Access denied (${domain} ${id})`);
     if (domain === 'versions') {
       if (!manager && entity?.ownerId !== user.id)
-        throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+        throw forbidden('Deletion is reserved to the author or a supervisor');
     } else if (!manager) {
       throw forbidden('Supervisors and administrators only');
     }
@@ -314,7 +314,7 @@ async function assertMediaBulkManage(user: SessionUser, ids: number[]): Promise<
       continue;
     }
     if (!canManageProject(cleared.get(projectId) ?? null) && media.uploaderId !== user.id)
-      throw forbidden("Suppression réservée à l'uploader ou un superviseur");
+      throw forbidden('Deletion is reserved to the uploader or a supervisor');
   }
 }
 

@@ -54,7 +54,7 @@ describe('extractArchive', () => {
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-liar');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Archive extraction failed/);
   });
 
   // The most insidious variant: announcing ZERO. The real/declared size comparison happens AFTER getData(),
@@ -69,7 +69,7 @@ describe('extractArchive', () => {
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-zero');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Archive extraction failed/);
     await expect(readdir(dest)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
@@ -108,7 +108,7 @@ describe('extractArchive', () => {
     const src = join(dir, 'method.zip');
     await writeFile(src, forged.toBuffer());
 
-    await expect(extractArchive(src, join(dir, 'out-method'))).rejects.toThrow(/compression non supportée/);
+    await expect(extractArchive(src, join(dir, 'out-method'))).rejects.toThrow(/unsupported compression/);
   });
 
   it('leaves no partial extraction behind a refusal', async () => {

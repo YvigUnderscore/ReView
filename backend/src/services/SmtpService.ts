@@ -118,7 +118,7 @@ export async function getEffectiveConfig(): Promise<SmtpEffectiveConfig | null> 
   if (unreadable) {
     logger.error(
       { host },
-      '[smtp] mot de passe du relais illisible — configuration refusée. Le ressaisir dans Administration ▸ Studio ▸ SMTP.',
+      '[smtp] relay password unreadable — configuration refused. Re-enter it in Administration ▸ Studio ▸ SMTP.',
     );
     return null;
   }

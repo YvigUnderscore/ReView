@@ -103,7 +103,7 @@ export async function purgeStaleUploads(hours = STALE_UPLOAD_HOURS): Promise<{ p
   }
   logger.info(
     { purged: stale.length, hours },
-    '[Uploads] envois abandonnés nettoyés — les comptes concernés peuvent de nouveau déposer',
+    '[Uploads] abandoned uploads cleaned up — the affected accounts can upload again',
   );
   return { purged: stale.length };
 }

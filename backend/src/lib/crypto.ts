@@ -39,13 +39,13 @@ const KEY_ID_HEX_LENGTH = 8;
 /** Log anti-repeat window: a key failure hits every secret read. */
 const LOG_THROTTLE_MS = 60_000;
 
-const LOG_UNREADABLE = '[crypto] secret stocké illisible';
+const LOG_UNREADABLE = '[crypto] stored secret unreadable';
 const REMEDY_DERIVED =
-  'APP_ENCRYPTION_KEY absente : la clé dérive de JWT_SECRET, qu’une rotation suffit à casser. La poser explicitement découple les deux, puis ressaisir les secrets.';
+  'APP_ENCRYPTION_KEY missing: the key derives from JWT_SECRET, which a rotation is enough to break. Setting it explicitly decouples the two; then re-enter the secrets.';
 const REMEDY_EXPLICIT =
-  'Restaurer APP_ENCRYPTION_KEY à sa valeur précédente, ou ressaisir les secrets concernés (SMTP, OIDC, webhooks, ShotGrid, 2FA).';
+  'Restore APP_ENCRYPTION_KEY to its previous value, or re-enter the affected secrets (SMTP, OIDC, webhooks, ShotGrid, 2FA).';
 const LOG_DERIVED_KEY =
-  '[crypto] APP_ENCRYPTION_KEY absente : les secrets stockés sont chiffrés avec une clé dérivée de JWT_SECRET. Faire tourner JWT_SECRET les rendra tous illisibles.';
+  '[crypto] APP_ENCRYPTION_KEY missing: stored secrets are encrypted with a key derived from JWT_SECRET. Rotating JWT_SECRET will make them all unreadable.';
 
 const keyMaterial = (): string => env.APP_ENCRYPTION_KEY ?? env.JWT_SECRET;
 

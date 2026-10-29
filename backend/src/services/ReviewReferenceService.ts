@@ -108,7 +108,7 @@ export async function add(
   if (!comment || comment.mediaObjectId !== mediaId)
     throw badRequest('This comment does not belong to this media');
   if (comment.userId !== user.id)
-    throw forbidden("Seul l'auteur du commentaire peut y joindre une référence");
+    throw forbidden('Only the author of the comment can attach a reference to it');
   const count = await prisma.reviewReference.count({ where: { mediaObjectId: mediaId } });
   if (count >= MAX_REFS)
     throw badRequest(`At most ${MAX_REFS} reference images per media`, 'TOO_MANY_REFERENCES');

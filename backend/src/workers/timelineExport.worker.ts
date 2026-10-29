@@ -137,7 +137,7 @@ async function encodePlaceholder(
   try {
     await encodePlaceholderWith(output, profile, shotCode, duration, true);
   } catch (err) {
-    logger.warn({ err }, `[timelineExport.worker] carton sans texte pour ${shotCode}`);
+    logger.warn({ err }, `[timelineExport.worker] card without text for ${shotCode}`);
     await encodePlaceholderWith(output, profile, shotCode, duration, false);
   }
 }
@@ -296,5 +296,5 @@ export function startTimelineExportWorker(): void {
   // The worker loop lives as long as the process: nothing to wait for here.
   void timelineExportWorker.run();
   registerWorkerShutdown('timelineExport.worker', timelineExportWorker);
-  logger.info('[timelineExport.worker] démarré.');
+  logger.info('[timelineExport.worker] started.');
 }

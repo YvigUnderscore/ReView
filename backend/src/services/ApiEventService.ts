@@ -84,12 +84,12 @@ export function publish(event: WebhookEvent, input: EventInput): void {
       .then(
         (row) => emitWebhookEvent(event, payload, { projectId, apiEventId: row.id }),
         (err) => {
-          logger.warn({ err, event }, '[events] journalisation impossible');
+          logger.warn({ err, event }, '[events] logging failed');
           emitWebhookEvent(event, payload, { projectId, apiEventId: null });
         },
       );
   } catch (err) {
-    logger.warn({ err, event }, '[events] publication impossible');
+    logger.warn({ err, event }, '[events] publish failed');
   }
 }
 

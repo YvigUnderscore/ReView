@@ -55,7 +55,7 @@ export async function scheduleShotgridJobs(): Promise<void> {
       );
     }
   }
-  logger.info({ connections: connections.length }, '[shotgrid.worker] travaux périodiques posés');
+  logger.info({ connections: connections.length }, '[shotgrid.worker] periodic jobs scheduled');
 }
 
 /**

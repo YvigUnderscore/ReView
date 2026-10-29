@@ -68,7 +68,7 @@ const serializeMedia = <T extends { size: bigint }>(m: T): Omit<T, 'size'> & { s
 async function requestSpatialThumb(mediaId: number, kind: MediaKind, ext: string): Promise<void> {
   if (!spatialThumbSource(kind, ext)) return;
   await enqueueSpatialThumb({ mediaObjectId: mediaId }).catch((err: unknown) =>
-    logger.warn({ err }, `[Media] vignette spatiale non enfilée media=${mediaId}`),
+    logger.warn({ err }, `[Media] spatial thumbnail not queued media=${mediaId}`),
   );
 }
 
@@ -107,7 +107,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   const active = await prisma.mediaObject.count({
     where: { uploaderId: user.id, status: MediaStatus.UPLOADING },
   });
-  if (active >= maxConcurrent) throw new AppError("Trop d'uploads simultanés", 429, 'TOO_MANY_UPLOADS');
+  if (active >= maxConcurrent) throw new AppError('Too many simultaneous uploads', 429, 'TOO_MANY_UPLOADS');
 
   if (user.role !== Role.ADMIN) {
     const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { storageLimit: true } });
@@ -247,7 +247,7 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
   // becomes readable.
   await storage
     .setObjectContentType(media.storageKey, stat.contentType ?? '')
-    .catch((err) => logger.warn({ err, key: media.storageKey }, '[Media] type de contenu non normalisé'));
+    .catch((err) => logger.warn({ err, key: media.storageKey }, '[Media] content type not normalized'));
 
   const jobKind = jobKindFor(media.kind, detected);
   const updated = await prisma.mediaObject.update({
@@ -1284,7 +1284,7 @@ export async function assertMediaManage(
   await assertCanContribute(user.id, user.role, projectId);
   const manager = await isProjectManager(user.id, user.role, projectId);
   if (!manager && media.uploaderId !== user.id)
-    throw forbidden("Suppression réservée à l'uploader ou un superviseur");
+    throw forbidden('Deletion is reserved to the uploader or a supervisor');
   return { projectId, versionId: media.versionId };
 }
 

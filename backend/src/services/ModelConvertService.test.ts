@@ -58,7 +58,7 @@ describe('convertToGlb', () => {
     const zipPath = join(dir, 'traversal.zip');
     await writeFile(zipPath, zipWithEntryName('../evil.sh', 'xx/evil.sh', 'rm -rf /'));
 
-    await expect(convertToGlb(zipPath, join(dir, 'a.glb'), '.zip')).rejects.toThrow(/sortant de l'archive/);
+    await expect(convertToGlb(zipPath, join(dir, 'a.glb'), '.zip')).rejects.toThrow(/escaping the archive/);
   });
 
   it('refuses an archive lacking any recognised 3D file', async () => {
@@ -68,8 +68,6 @@ describe('convertToGlb', () => {
     zip.addFile('README.md', Buffer.from('rien de 3D ici'));
     zip.writeZip(zipPath);
 
-    await expect(convertToGlb(zipPath, join(dir, 'b.glb'), '.zip')).rejects.toThrow(
-      /Aucun fichier 3D reconnu/,
-    );
+    await expect(convertToGlb(zipPath, join(dir, 'b.glb'), '.zip')).rejects.toThrow(/No recognized 3D file/);
   });
 });

@@ -184,7 +184,7 @@ export function logAudit(params: {
         metadata,
       },
     })
-    .catch((err) => logger.warn({ err }, '[Audit] échec'));
+    .catch((err) => logger.warn({ err }, '[Audit] failed'));
 }
 
 /**

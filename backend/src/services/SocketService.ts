@@ -105,7 +105,7 @@ export async function sweepSockets(server: SocketServer): Promise<void> {
   for (const socket of server.sockets.sockets.values()) {
     const authed = socket as AuthedSocket;
     const keep = await revalidateSocket(authed).catch((err: unknown) => {
-      logger.warn({ err }, '[socket] revalidation impossible : connexion conservée');
+      logger.warn({ err }, '[socket] revalidation failed: connection kept');
       return true;
     });
     if (!keep) authed.disconnect(true);
@@ -233,7 +233,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
     markSessionsRevoked(sids);
     if (!io) return;
     const closed = disconnectRevokedSockets(io, sids);
-    if (closed > 0) logger.info({ closed }, '[socket] session révoquée : connexions fermées');
+    if (closed > 0) logger.info({ closed }, '[socket] session revoked: connections closed');
   });
 
   io.on('connection', (socket: AuthedSocket) => {

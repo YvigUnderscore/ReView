@@ -184,7 +184,7 @@ export async function syncVersionStatuses(
   if (unmapped.length > 0) {
     logger.info(
       { codes: unmapped },
-      '[ShotGrid] statuts de Version sans décision de review correspondante — à rattacher dans Admin › Statuts',
+      '[ShotGrid] Version statuses with no matching review decision — map them in Admin › Statuses',
     );
   }
   return map;

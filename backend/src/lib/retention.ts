@@ -387,12 +387,12 @@ export async function sweepRetention(options: SweepOptions = {}): Promise<SweepR
       total += result.deleted;
       truncated = truncated || result.truncated;
     } catch (err) {
-      logger.error({ err, family }, '[retention] balayage interrompu pour cette famille');
+      logger.error({ err, family }, '[retention] sweep interrupted for this family');
     }
   }
 
   if (total > 0) {
-    logger.info({ families, truncated }, '[retention] balayage terminé');
+    logger.info({ families, truncated }, '[retention] sweep done');
     // Trace viewable in the audit screen: a studio must be able to show WHEN it purges.
     logAudit({ action: 'RETENTION_SWEEP', entityType: 'Setting', metadata: { families, truncated } });
   }

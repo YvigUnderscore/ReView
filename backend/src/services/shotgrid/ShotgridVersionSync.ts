@@ -511,14 +511,14 @@ export async function importVersionMedia(
   } else {
     logger.debug(
       { mediaId: uploaded.id, sgVersionId: record.id, field: picked.field },
-      'Attachment ShotGrid sans identifiant — média importé sans correspondance',
+      'ShotGrid attachment without an id — media imported without a mapping',
     );
   }
 
   const jobKind = uploaded.kind === MediaKind.VIDEO ? 'transcode' : 'thumbnail';
   await enqueueMediaJob({ mediaObjectId: uploaded.id, kind: jobKind });
   ctx.journal.count('media', 'created');
-  logger.info({ mediaId: uploaded.id, sgVersionId: record.id, storageKey }, 'Média ShotGrid importé');
+  logger.info({ mediaId: uploaded.id, sgVersionId: record.id, storageKey }, 'ShotGrid media imported');
   return true;
 }
 

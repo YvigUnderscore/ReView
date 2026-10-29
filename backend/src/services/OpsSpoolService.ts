@@ -194,7 +194,7 @@ export async function enqueue(order: OpsOrder): Promise<void> {
   const tmp = join(paths.queue, `.${order.id}.json.tmp`);
   await writeFile(tmp, JSON.stringify(order), { mode: 0o600 });
   await rename(tmp, target);
-  logger.info({ runId: order.id, kind: order.kind }, '[Ops] ordre déposé');
+  logger.info({ runId: order.id, kind: order.kind }, '[Ops] order filed');
 }
 
 /**

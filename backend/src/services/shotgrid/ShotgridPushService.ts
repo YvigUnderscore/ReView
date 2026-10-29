@@ -63,7 +63,7 @@ export async function enqueuePush(projectId: number, job: PushJob): Promise<void
       { removeOnComplete: 200 },
     );
   } catch (err) {
-    logger.warn({ err, projectId, job }, "Écriture ShotGrid non mise en file — l'action locale reste valide");
+    logger.warn({ err, projectId, job }, 'ShotGrid write not queued — the local action stays valid');
   }
 }
 
@@ -138,7 +138,7 @@ async function noteBlockedPush(connectionId: number, job: PushJob, domain: strin
     where: { id: connectionId },
     data: { pushBlocked: current as Prisma.InputJsonValue },
   });
-  logger.info({ connectionId, domain, jobType: job.type }, 'Écriture ShotGrid refusée par les réglages');
+  logger.info({ connectionId, domain, jobType: job.type }, 'ShotGrid write refused by the settings');
 }
 
 export async function runPush(connectionId: number, job: PushJob): Promise<void> {
@@ -213,7 +213,7 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
         break;
     }
   } catch (err) {
-    logger.error({ err, job }, 'Écriture ShotGrid en échec');
+    logger.error({ err, job }, 'ShotGrid write failed');
     throw err;
   }
 }
@@ -251,7 +251,7 @@ async function pushTaskStatus(ctx: PushContext, job: Extract<PushJob, { type: 't
       asUserLogin: await actorLogin(ctx, job.actorId),
     },
   );
-  logger.info({ taskId: task.id, sgId, code }, 'Statut de tâche poussé vers ShotGrid');
+  logger.info({ taskId: task.id, sgId, code }, 'Task status pushed to ShotGrid');
 }
 
 /**
@@ -286,7 +286,7 @@ async function pushTaskAssignee(ctx: PushContext, job: Extract<PushJob, { type: 
   if (!task.assigneeId) return;
   const link = await findByLocal(ctx.connectionId, 'user', task.assigneeId);
   if (!link) {
-    logger.info({ taskId: task.id }, 'Assignation non poussée : pas de compte ShotGrid correspondant');
+    logger.info({ taskId: task.id }, 'Assignment not pushed: no matching ShotGrid account');
     return;
   }
   await ctx.writer.update(
@@ -343,7 +343,7 @@ async function pushSequenceStatus(ctx: PushContext, job: Extract<PushJob, { type
     { sg_status_list: code },
     { asUserLogin: await actorLogin(ctx, job.actorId) },
   );
-  logger.info({ sequenceId: sequence.id, sgId, code }, 'Statut de séquence poussé vers ShotGrid');
+  logger.info({ sequenceId: sequence.id, sgId, code }, 'Sequence status pushed to ShotGrid');
 }
 
 /**
@@ -395,7 +395,7 @@ async function pushDescription(ctx: PushContext, job: Extract<PushJob, { type: '
     { description: description ?? '' },
     { asUserLogin: await actorLogin(ctx, job.actorId) },
   );
-  logger.info({ kind: job.kind, id: job.id, sgId }, 'Description poussée vers ShotGrid');
+  logger.info({ kind: job.kind, id: job.id, sgId }, 'Description pushed to ShotGrid');
 }
 
 /** The local description, or `undefined` when the entity no longer exists. */
@@ -429,7 +429,7 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
   if (!code) {
     logger.info(
       { versionId: version.id, reviewStatusId: version.reviewStatusId },
-      'Décision non poussée : statut ReView sans correspondance ShotGrid',
+      'Decision not pushed: ReView status with no ShotGrid mapping',
     );
     return;
   }
@@ -441,7 +441,7 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
       asUserLogin: await actorLogin(ctx, job.actorId),
     },
   );
-  logger.info({ versionId: version.id, sgId, code }, 'Décision de review poussée vers ShotGrid');
+  logger.info({ versionId: version.id, sgId, code }, 'Review decision pushed to ShotGrid');
 }
 
 /**
@@ -475,7 +475,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
       }
       logger.info(
         { versionId: version.id, sgId: already.sgId },
-        'Média ajouté à la version ShotGrid existante',
+        'Media added to the existing ShotGrid version',
       );
     }
     return;
@@ -504,7 +504,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
       await uploadThumbnail(ctx, twin, media);
       if (ctx.settings.push.publishMode === 'upload') await uploadMasterMedia(ctx, twin, media);
     }
-    logger.info({ versionId: version.id, sgId: twin }, 'Version ShotGrid homonyme réutilisée');
+    logger.info({ versionId: version.id, sgId: twin }, 'Same-named ShotGrid version reused');
     return;
   }
 
@@ -552,7 +552,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
   });
   logger.info(
     { versionId: version.id, sgId: created.id, mode: ctx.settings.push.publishMode },
-    'Version créée dans ShotGrid depuis une publication ReView',
+    'Version created in ShotGrid from a ReView publication',
   );
 
   // Thumbnail first: light, it is enough to make the version recognizable in ShotGrid lists even when the file itself stays with us.
@@ -637,7 +637,7 @@ async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'a
   );
   logger.info(
     { assetId: asset.id, sgId, shots: shotRefs.length, sequences: sequenceRefs.length },
-    'Rattachements d’asset poussés vers ShotGrid',
+    'Asset links pushed to ShotGrid',
   );
 }
 
@@ -652,7 +652,7 @@ async function uploadThumbnail(
     const buffer = await storage.getObjectBuffer(media.thumbnailKey);
     await ctx.writer.upload('Version', sgVersionId, 'image', buffer, `thumb-${media.id}.webp`, 'image/webp');
   } catch (err) {
-    logger.warn({ err, mediaId: media.id }, 'Vignette non transmise à ShotGrid');
+    logger.warn({ err, mediaId: media.id }, 'Thumbnail not sent to ShotGrid');
   }
 }
 
@@ -676,7 +676,7 @@ async function uploadMasterMedia(
   if (Number(media.size) > MAX_UPLOAD_BYTES) {
     logger.warn(
       { mediaId: media.id, size: Number(media.size) },
-      'Média trop volumineux pour un envoi vers ShotGrid — la version reste liée sans fichier',
+      'Media too large to upload to ShotGrid — the version stays linked without a file',
     );
     return;
   }
@@ -691,8 +691,8 @@ async function uploadMasterMedia(
       media.originalName,
       media.mimeType,
     );
-    logger.info({ mediaId: media.id, sgVersionId }, 'Média envoyé vers ShotGrid');
+    logger.info({ mediaId: media.id, sgVersionId }, 'Media uploaded to ShotGrid');
   } catch (err) {
-    logger.error({ err, mediaId: media.id }, 'Envoi du média vers ShotGrid en échec');
+    logger.error({ err, mediaId: media.id }, 'Media upload to ShotGrid failed');
   }
 }

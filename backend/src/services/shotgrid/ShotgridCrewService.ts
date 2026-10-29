@@ -310,7 +310,7 @@ export async function inviteCrew(
     try {
       await setMemberDepartments(actor, projectId, userId, { add: [person.department.id] });
     } catch (err) {
-      logger.warn({ err, sgId: person.sgId }, 'Département ShotGrid non appliqué');
+      logger.warn({ err, sgId: person.sgId }, 'ShotGrid department not applied');
     }
   };
 
@@ -341,7 +341,7 @@ export async function inviteCrew(
       await attachDepartment(person, user.id);
       results.push({ sgId: person.sgId, outcome: 'created' });
     } catch (err) {
-      logger.warn({ err, sgId: person.sgId }, 'Invitation ShotGrid en échec');
+      logger.warn({ err, sgId: person.sgId }, 'ShotGrid invitation failed');
       results.push({
         sgId: person.sgId,
         outcome: 'skipped',

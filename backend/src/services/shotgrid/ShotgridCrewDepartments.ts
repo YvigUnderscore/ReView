@@ -38,7 +38,7 @@ export async function departmentFields(client: ShotgridClient): Promise<string[]
     const declared = await client.schemaFields('HumanUser');
     return DEPARTMENT_FIELDS.filter((field) => declared.has(field));
   } catch (err) {
-    logger.warn({ err }, 'Schéma HumanUser illisible : département ShotGrid ignoré');
+    logger.warn({ err }, 'Unreadable HumanUser schema: ShotGrid department ignored');
     return [];
   }
 }

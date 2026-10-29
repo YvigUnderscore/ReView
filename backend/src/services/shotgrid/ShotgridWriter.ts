@@ -49,19 +49,19 @@ export class ShotgridWriter {
   private async targetWritable(sgType: string, sgId: number): Promise<boolean> {
     const remote = await this.scope.client.findById(sgType, sgId, GUARD_FIELDS);
     if (!remote) {
-      logger.warn({ sgType, sgId }, 'Écriture ShotGrid abandonnée : cible introuvable sur le site');
+      logger.warn({ sgType, sgId }, 'ShotGrid write abandoned: target not found on the site');
       return false;
     }
     const verdict = belongsToProject(remote, this.projectScope);
     if (!verdict.ok) {
       logger.error(
         { sgType, sgId, expected: this.scope.sgProjectId, found: verdict.foundProjectId },
-        'Écriture ShotGrid annulée : la cible appartient à un autre projet',
+        'ShotGrid write cancelled: the target belongs to another project',
       );
       return false;
     }
     if (!writeAllowedOn(remote)) {
-      logger.error({ sgType, sgId }, 'Écriture ShotGrid annulée : cible dans un projet modèle');
+      logger.error({ sgType, sgId }, 'ShotGrid write cancelled: target in a template project');
       return false;
     }
     return true;
@@ -97,7 +97,7 @@ export class ShotgridWriter {
     if (asked && asked.id !== this.scope.sgProjectId) {
       logger.error(
         { sgType, asked: asked.id, expected: this.scope.sgProjectId },
-        'Création ShotGrid refusée : la charge utile vise un autre projet',
+        'ShotGrid creation refused: the payload targets another project',
       );
       throw badRequest('ShotGrid payload targets another project');
     }
@@ -112,7 +112,7 @@ export class ShotgridWriter {
     if (check && !belongsToProject(check, this.projectScope).ok) {
       logger.error(
         { sgType, sgId: created.id, expected: this.scope.sgProjectId },
-        'Entité créée hors du projet lié — à retirer du site',
+        'Entity created outside the linked project — remove it from the site',
       );
       throw badRequest('ShotGrid filed the entity outside the target project');
     }

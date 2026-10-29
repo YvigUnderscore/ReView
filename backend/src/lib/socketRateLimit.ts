@@ -235,7 +235,7 @@ export function attachSocketRateLimit(
       return;
     }
     if (verdict === 'disconnect') {
-      logger.warn({ socketId: socket.id, event }, '[socket] débit abusif : connexion fermée');
+      logger.warn({ socketId: socket.id, event }, '[socket] abusive rate: connection closed');
       socket.disconnect(true);
     }
     // 'drop': `next` is not called, so the handler is not executed and no database query is issued. That is the whole point of refusing BEFORE the handler.

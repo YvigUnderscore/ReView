@@ -85,7 +85,7 @@ export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbO
       await storage.downloadToFile(glbKey, glb);
       const result = await renderModelThumbnail(glb, png);
       if (!result.rendered) {
-        logger.warn(`[spatialThumb.worker] média ${mediaId} non rendu (${result.reason})`);
+        logger.warn(`[spatialThumb.worker] media ${mediaId} not rendered (${result.reason})`);
         return 'no-render';
       }
     } else {
@@ -99,7 +99,7 @@ export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbO
       }
       const buf = renderPointCloudPng(read.cloud);
       if (!buf) {
-        logger.warn(`[spatialThumb.worker] splat ${mediaId} : nuage dégénéré, aucune vignette`);
+        logger.warn(`[spatialThumb.worker] splat ${mediaId}: degenerate cloud, no thumbnail`);
         return 'no-render';
       }
       await writeFile(png, buf);
@@ -146,5 +146,5 @@ export function startSpatialThumbWorker(): void {
   // The worker loop lives as long as the process: nothing to wait for here.
   void spatialThumbWorker.run();
   registerWorkerShutdown('spatialThumb.worker', spatialThumbWorker);
-  logger.info('[spatialThumb.worker] démarré.');
+  logger.info('[spatialThumb.worker] started.');
 }

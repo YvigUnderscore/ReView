@@ -256,7 +256,7 @@ function progressReporter(job: Job<MediaJobData>): ProgressReporter {
     last = progress.percent;
     // Best effort: a lost progress write must never make the transcoding it describes fail.
     void job.updateProgress(progress).catch((err: unknown) => {
-      logger.debug({ err }, '[ffmpeg.worker] progression non publiée');
+      logger.debug({ err }, '[ffmpeg.worker] progress not published');
     });
   };
 }
@@ -770,7 +770,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       const actual = await sha256File(src);
       if (actual !== metadata.contentHash) {
         throw new Error(
-          `Checksum invalide media=${mediaId} (attendu ${String(metadata.contentHash).slice(0, 12)}…, reçu ${actual.slice(0, 12)}…)`,
+          `Invalid checksum media=${mediaId} (expected ${String(metadata.contentHash).slice(0, 12)}…, got ${actual.slice(0, 12)}…)`,
         );
       }
     }
@@ -807,7 +807,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           entityId: mediaId,
           metadata: { virus: scan.virus, uploaderId: media.uploaderId },
         });
-        logger.warn(`[ffmpeg.worker] média ${mediaId} en quarantaine (${scan.virus})`);
+        logger.warn(`[ffmpeg.worker] media ${mediaId} quarantined (${scan.virus})`);
         return;
       }
     }
@@ -885,7 +885,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       // Configurable burn-ins (35.A): the project's effective configuration + shot/version context.
       // Best effort — a resolution failure does not condemn the transcoding.
       const burnin = await loadBurninSetup(mediaId, media.versionId, media.originalName, dir).catch((err) => {
-        logger.warn({ err }, `[ffmpeg.worker] burn-ins non résolus media=${mediaId}`);
+        logger.warn({ err }, `[ffmpeg.worker] burn-ins not resolved media=${mediaId}`);
         return null;
       });
       if (burnin) burnin.ctx.fps = typeof metadata.fps === 'number' ? metadata.fps : null;
@@ -1010,7 +1010,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
             metadata.slateSec = SLATE_SEC;
           }
         } catch (err) {
-          logger.warn({ err }, `[ffmpeg.worker] slate/dérivé client échoué media=${mediaId}`);
+          logger.warn({ err }, `[ffmpeg.worker] slate/client derivative failed media=${mediaId}`);
         }
       }
 
@@ -1028,7 +1028,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           });
           await writeSceneMarkers(mediaId, sceneFrames(scenes, fps));
         } catch (err) {
-          logger.warn({ err }, `[ffmpeg.worker] scene detection échouée media=${mediaId}`);
+          logger.warn({ err }, `[ffmpeg.worker] scene detection failed media=${mediaId}`);
         }
       }
 
@@ -1053,7 +1053,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           await storage.uploadFile(spriteKey, spritePath, 'image/jpeg');
           metadata.timelineSprite = { ...plan, key: spriteKey };
         } catch (err) {
-          logger.warn({ err }, `[ffmpeg.worker] sprite timeline échoué media=${mediaId}`);
+          logger.warn({ err }, `[ffmpeg.worker] timeline sprite failed media=${mediaId}`);
         }
       }
 
@@ -1069,7 +1069,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           // PCM weighs two bytes per sample: released to disk without waiting for the temporary directory's purge (an hour of sound = 57 MB).
           await rm(pcmPath, { force: true });
         } catch (err) {
-          logger.warn({ err }, `[ffmpeg.worker] forme d'onde audio échouée media=${mediaId}`);
+          logger.warn({ err }, `[ffmpeg.worker] audio waveform failed media=${mediaId}`);
         }
       }
 
@@ -1091,9 +1091,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       if (!sourceGone && !sequence)
         await storage
           .deleteObject(media.storageKey)
-          .catch((err) =>
-            logger.warn({ err }, `[ffmpeg.worker] suppression source échouée media=${mediaId}`),
-          );
+          .catch((err) => logger.warn({ err }, `[ffmpeg.worker] source deletion failed media=${mediaId}`));
     } else if (kind === 'thumbnail') {
       // Image: probes dimensions + thumbnail (+ web proxy if the browser cannot read it).
       report('probe');
@@ -1186,7 +1184,7 @@ async function recordScanOutcome(
     });
   } catch (err) {
     // Marking must never mask the original error, which the caller re-throws.
-    logger.warn({ err, mediaId }, '[ffmpeg.worker] verdict de scan non consigné');
+    logger.warn({ err, mediaId }, '[ffmpeg.worker] scan verdict not recorded');
   }
 }
 
@@ -1251,7 +1249,7 @@ if (require.main === module) {
   // The worker loop lives as long as the process: nothing to await here.
   void ffmpegWorker.run();
   registerWorkerShutdown('ffmpeg.worker', ffmpegWorker);
-  logger.info('[ffmpeg.worker] démarré.');
+  logger.info('[ffmpeg.worker] started.');
   // Same worker process: also processes the storage cleanup queue (retry of orphans) and the delivery of webhooks (36.D — outgoing POSTs do not leave from the web server).
   startStorageCleanupWorker();
   startWebhookWorker();

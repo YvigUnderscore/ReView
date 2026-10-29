@@ -215,7 +215,7 @@ export async function purgeObsoleteDerived(
     }
   }
 
-  if (purged > 0) logger.info(`[derivedPurge] ${purged} média(s) allégé(s) (HLS + sprite retirés)`);
+  if (purged > 0) logger.info(`[derivedPurge] ${purged} media slimmed down (HLS + sprite removed)`);
   return { purged };
 }
 

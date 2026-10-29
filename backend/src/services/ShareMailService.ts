@@ -155,7 +155,7 @@ export async function sendShareMail(
     metadata: { shareLinkId: link.id, recipients: recipients.length, sent },
   });
   if (sent === 0) {
-    logger.error({ linkId }, '[Share] envoi impossible');
+    logger.error({ linkId }, '[Share] send failed');
     throw badRequest('Could not send (SMTP error)', 'SMTP_SEND_FAILED');
   }
   return { sent };

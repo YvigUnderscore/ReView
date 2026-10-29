@@ -337,7 +337,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     if (deferredProject) {
       pendingProjects.delete(projectId);
       void runSync(projectId, deferredProject).catch((err: unknown) => {
-        logger.warn({ projectId, err }, 'Synchronisation différée en échec');
+        logger.warn({ projectId, err }, 'Deferred sync failed');
       });
     }
     // Replays what arrived during the pass. Without `await`: the current caller has finished its work, and the catch-up must neither lengthen its response
@@ -346,7 +346,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     if (deferred) {
       pending.delete(ctx.connection.id);
       void runSync(projectId, deferred).catch((err: unknown) => {
-        logger.warn({ projectId, err }, 'Synchronisation différée en échec');
+        logger.warn({ projectId, err }, 'Deferred sync failed');
       });
     }
   }

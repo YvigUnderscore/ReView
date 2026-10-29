@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Backend error messages: English, and nothing else (D2).
+ * Backend error and log messages: English, and nothing else (D2).
  *
  * They were written in French — a hundred and seventy-four occurrences across seventy
  * files — and reached the screen as they were, including on the public page of a client
@@ -11,7 +11,11 @@
  *
  * Detection relies on French function words, not on accents: "Media introuvable" carries none
  * and is still French. Conversely, "déjà" in a comment concerns nobody — only the thrown
- * messages are read.
+ * messages and the log messages are read.
+ *
+ * Out of scope: the user-facing texts that are localized on purpose (emails, notifications, the
+ * ShotGrid journal). They do not live in the source but in the `src/i18n/messages/*.json` catalogs,
+ * reached through `t(key)`: a catalog key is an identifier, not a sentence, and passes this check.
  *
  * Usage: node scripts/check-backend-english.mjs [--list]
  */
@@ -20,10 +24,115 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = 'backend/src';
+/** Resolved from the script, so the check runs from any working directory. */
+const ROOT = resolve(fileURLToPath(import.meta.url), '../../backend/src');
 
-/** The functions whose first argument ends up in an HTTP response. */
-const THROWING = /\b(badRequest|notFound|forbidden|conflict|unauthorized|tooManyRequests|new Error)\s*\(/;
+/**
+ * Calls whose string arguments a human reads: the error factories and the JSON bodies written by hand
+ * (`res.status(403).json({ error: … })`) end up in an HTTP response, the logger in front of whoever
+ * operates the server. The logger form covers `logger.warn(…)`, `req.log.error(…)` and the child
+ * loggers named `log`.
+ */
+const CALLS =
+  /(?:\b(?:badRequest|notFound|forbidden|conflict|unauthorized|tooManyRequests|new \w*Error|(?:logger|log)\.(?:fatal|error|warn|info|debug|trace))|\.json)\s*\(/g;
+
+/** An error code (`'BAD_NAME'`), not a sentence: never French, never read as one. */
+const ERROR_CODE = /^[A-Z][A-Z0-9_.]*$/;
+
+/**
+ * The string literals passed to a call that starts at `open` (the index of its `(`), up to the matching
+ * `)`. Reads across lines — a message wrapped by Prettier onto the next line is still the message — and
+ * through template literals, whose `${…}` parts are replaced by a space. Quotes inside a literal (the
+ * apostrophe of "l'objet") do not end it: the scanner knows the delimiter it opened.
+ */
+function literalsOfCall(source, open) {
+  const out = [];
+  let depth = 0;
+  let i = open;
+  while (i < source.length) {
+    const c = source[i];
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') {
+      depth--;
+      if (depth === 0) break;
+    } else if (c === '/' && source[i + 1] === '/') {
+      i = source.indexOf('\n', i);
+      if (i < 0) break;
+      continue;
+    } else if (c === '/' && source[i + 1] === '*') {
+      i = source.indexOf('*/', i + 2);
+      if (i < 0) break;
+      i += 2;
+      continue;
+    } else if (c === "'" || c === '"' || c === '`') {
+      const begin = i;
+      const { text, end } = readLiteral(source, i);
+      out.push({ index: begin, text });
+      i = end + 1;
+      continue;
+    }
+    i++;
+  }
+  return out;
+}
+
+/** Reads the literal opened at `start`; returns its text (interpolations blanked) and closing index. */
+function readLiteral(source, start) {
+  const quote = source[start];
+  let text = '';
+  let i = start + 1;
+  while (i < source.length) {
+    const c = source[i];
+    if (c === '\\') {
+      text += source[i + 1] ?? '';
+      i += 2;
+      continue;
+    }
+    if (c === quote) return { text, end: i };
+    if (quote === '`' && c === '$' && source[i + 1] === '{') {
+      // Skip the interpolation, nested braces and strings included.
+      let depth = 1;
+      i += 2;
+      while (i < source.length && depth > 0) {
+        const d = source[i];
+        if (d === "'" || d === '"' || d === '`') {
+          i = readLiteral(source, i).end + 1;
+          continue;
+        }
+        if (d === '{') depth++;
+        else if (d === '}') depth--;
+        i++;
+      }
+      text += ' ';
+      continue;
+    }
+    if (quote !== '`' && c === '\n') return { text, end: i };
+    text += c;
+    i++;
+  }
+  return { text, end: i };
+}
+
+/** Line (1-based) of an index in the source. */
+function lineAt(source, index) {
+  let line = 1;
+  for (let i = 0; i < index; i++) if (source.charCodeAt(i) === 10) line++;
+  return line;
+}
+
+/** The human-read literals of a source: arguments of the error factories and of the logger. */
+export function messagesOf(source) {
+  const out = [];
+  for (const match of source.matchAll(CALLS)) {
+    const open = match.index + match[0].length - 1;
+    for (const literal of literalsOfCall(source, open)) {
+      const text = literal.text.trim();
+      if (text.length < 4 || ERROR_CODE.test(text)) continue;
+      out.push({ line: lineAt(source, literal.index), text });
+    }
+  }
+  return out;
+}
 
 /**
  * Words that leave no doubt: they do not exist in technical English. One alone is enough to
@@ -42,18 +151,6 @@ const FRENCH_WEAK =
 
 /** What the message contains regardless: accents typical of French. */
 const FRENCH_LETTERS = /[àâäçéèêëîïôöùûüœ]/i;
-
-/** The literals passed to a throwing function, line by line. */
-export function messagesOf(source) {
-  const out = [];
-  for (const [index, line] of source.split(/\r?\n/).entries()) {
-    if (!THROWING.test(line)) continue;
-    // The first literal on the line is the message, the second is the error code.
-    const literal = /['`]([^'`]{4,})['`]/.exec(line);
-    if (literal) out.push({ line: index + 1, text: literal[1] });
-  }
-  return out;
-}
 
 /** Is this message written in French? */
 export function looksFrench(text) {

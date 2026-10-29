@@ -117,7 +117,7 @@ export class SyncJournal {
         stats: stats as unknown as Prisma.InputJsonValue,
       },
     });
-    logger.info({ runId: this.runId, status: finalStatus, stats }, 'Synchronisation ShotGrid terminée');
+    logger.info({ runId: this.runId, status: finalStatus, stats }, 'ShotGrid sync finished');
   }
 
   async fail(err: unknown): Promise<void> {
@@ -131,7 +131,7 @@ export class SyncJournal {
         stats: Object.fromEntries(this.counters) as unknown as Prisma.InputJsonValue,
       },
     });
-    logger.error({ runId: this.runId, err: message }, 'Synchronisation ShotGrid en échec');
+    logger.error({ runId: this.runId, err: message }, 'ShotGrid sync failed');
   }
 
   get totals(): SyncCounters {

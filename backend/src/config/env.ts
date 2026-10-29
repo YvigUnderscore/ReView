@@ -19,7 +19,7 @@ const baseEnvSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL est requis'),
 
   // Auth
-  JWT_SECRET: z.string().min(16, 'JWT_SECRET doit faire au moins 16 caractères'),
+  JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters long'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   // Open sign-up via POST /api/auth/register. Closed by default: an instance reachable from
@@ -62,7 +62,7 @@ const baseEnvSchema = z.object({
   // when, and only when, the nginx of `nginx/nginx.conf` (or an equivalent proxy rewriting
   // `X-Forwarded-For`) is the only entry path.
   TRUST_PROXY: z.coerce
-    .number({ error: 'TRUST_PROXY doit être un nombre de sauts (0 = aucun proxy)' })
+    .number({ error: 'TRUST_PROXY must be a number of hops (0 = no proxy)' })
     .int()
     .min(0)
     .max(4)
@@ -171,19 +171,19 @@ export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['JWT_SECRET'],
-      message: 'JWT_SECRET faible/par défaut interdit en production (≥ 32 caractères aléatoires)',
+      message: 'Weak/default JWT_SECRET forbidden in production (≥ 32 random characters)',
     });
   if (val.CORS_ORIGIN === '*')
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['CORS_ORIGIN'],
-      message: "CORS_ORIGIN='*' interdit en production (spécifier la ou les origines exactes)",
+      message: "CORS_ORIGIN='*' forbidden in production (specify the exact origin(s))",
     });
   if (val.S3_ACCESS_KEY === 'minioadmin' || val.S3_SECRET_KEY === 'minioadmin')
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['S3_SECRET_KEY'],
-      message: 'Identifiants S3/MinIO par défaut (minioadmin) interdits en production',
+      message: 'Default S3/MinIO credentials (minioadmin) forbidden in production',
     });
   // If provided, this key protects all secrets stored in the database (SMTP password, webhook
   // secrets, each account's TOTP secret). A weak value could be brute-forced, so it is held to
@@ -193,7 +193,7 @@ export const envSchema = baseEnvSchema.superRefine((val, ctx) => {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['APP_ENCRYPTION_KEY'],
-      message: 'APP_ENCRYPTION_KEY faible/par défaut interdit en production (≥ 32 caractères aléatoires)',
+      message: 'Weak/default APP_ENCRYPTION_KEY forbidden in production (≥ 32 random characters)',
     });
 });
 

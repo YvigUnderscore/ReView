@@ -36,15 +36,15 @@ import { registerWorkerShutdown } from './shutdown';
 async function runPurge(): Promise<void> {
   const days = await getNumericSetting(SETTING_KEYS.TRASH_RETENTION_DAYS);
   const purged = await purgeExpiredTrash(days);
-  if (purged > 0) logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
+  if (purged > 0) logger.info(`[Trash] automatic purge: ${purged} item(s) permanently deleted.`);
   // Purge of obsolete derivatives (37.H) — no-op if disabled in the admin.
   await purgeObsoleteDerived();
   // Abandoned uploads: without this pass, five accidents were enough to block an account.
   const uploads = await purgeStaleUploads();
   if (uploads.purged > 0)
-    logger.info(`[Uploads] purge automatique : ${uploads.purged} envoi(s) abandonné(s) nettoyé(s).`);
+    logger.info(`[Uploads] automatic purge: ${uploads.purged} abandoned upload(s) cleaned up.`);
   const keys = await purgeIdempotencyRecords();
-  if (keys > 0) logger.info(`[API v1] purge : ${keys} clé(s) d'idempotence.`);
+  if (keys > 0) logger.info(`[API v1] purge: ${keys} idempotency key(s).`);
   // Logs its own result (and records it in the audit when it has deleted).
   await sweepRetention();
   // Media frozen in PROCESSING by a killed worker: the sweep lived in the startup of the API process, whereas the process that dies is the worker — `restart: always`
@@ -53,7 +53,7 @@ async function runPurge(): Promise<void> {
   const reconciled = await reconcileStuckMedia();
   if (reconciled > 0)
     // The count goes into a context field rather than into a template: a log is filtered on a field, and `check-untranslated` counts the template fragments.
-    logger.info({ reconciled }, '[reconcile] médias figés en PROCESSING passés en échec');
+    logger.info({ reconciled }, '[reconcile] media stuck in PROCESSING marked as failed');
 }
 
 export const maintenanceWorker = new Worker<MaintenanceJobData, void, string>(
@@ -62,19 +62,19 @@ export const maintenanceWorker = new Worker<MaintenanceJobData, void, string>(
     switch (job.data.kind) {
       case 'daily-digest': {
         const sent = await sendDailyDigests();
-        logger.info({ sent }, '[maintenance] digest quotidien envoyé');
+        logger.info({ sent }, '[maintenance] daily digest sent');
         return;
       }
       case 'weekly-report': {
         const sent = await sendWeeklyReports();
-        logger.info({ sent }, '[maintenance] rapport hebdomadaire envoyé');
+        logger.info({ sent }, '[maintenance] weekly report sent');
         return;
       }
       case 'purge':
         await runPurge();
         return;
       default:
-        logger.warn({ data: job.data }, '[maintenance.worker] type de travail inconnu');
+        logger.warn({ data: job.data }, '[maintenance.worker] unknown job type');
     }
   },
   // A single appointment at a time: these jobs sweep the database, parallelizing them would gain nothing and would compete with the transcodes.
@@ -88,5 +88,5 @@ maintenanceWorker.on('failed', (job, err) =>
 export function startMaintenanceWorker(): void {
   void maintenanceWorker.run();
   registerWorkerShutdown('maintenance.worker', maintenanceWorker);
-  logger.info('[maintenance.worker] démarré.');
+  logger.info('[maintenance.worker] started.');
 }

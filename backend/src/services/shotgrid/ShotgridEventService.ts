@@ -122,7 +122,7 @@ export async function handleEvent(connectionId: number, event: ShotgridEventPayl
         eventType: event.event_type,
         project: asString((event.project as { name?: string })?.name),
       },
-      'Événement ShotGrid hors du projet lié — ignoré',
+      'ShotGrid event outside the linked project — ignored',
     );
     return;
   }

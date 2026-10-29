@@ -116,8 +116,8 @@ describe('planExtraction', () => {
 
 describe('describeRejection', () => {
   it('produces a readable message for each reason', () => {
-    expect(describeRejection({ code: 'SYMLINK', entry: 'link' })).toContain('lien symbolique');
-    expect(describeRejection({ code: 'TOO_LARGE', limit: 2 * 1024 * 1024, actual: 3 })).toContain('2 Mo');
+    expect(describeRejection({ code: 'SYMLINK', entry: 'link' })).toContain('symbolic link');
+    expect(describeRejection({ code: 'TOO_LARGE', limit: 2 * 1024 * 1024, actual: 3 })).toContain('2 MB');
     expect(describeRejection({ code: 'RATIO', limit: 200, actual: 5000 })).toContain('×5000');
   });
 });

@@ -29,5 +29,5 @@ webhookWorker.on('failed', (job, err) =>
 export function startWebhookWorker(): void {
   void webhookWorker.run();
   registerWorkerShutdown('webhook.worker', webhookWorker);
-  logger.info('[webhook.worker] démarré.');
+  logger.info('[webhook.worker] started.');
 }

@@ -114,7 +114,7 @@ export async function reconcileStuckMedia(now: Date = new Date()): Promise<numbe
   if (!live.complete) {
     logger.warn(
       { scanned: candidates.length, max: LIVE_JOB_SCAN_MAX },
-      '[reconcile] relevé des jobs vivants tronqué : passe abandonnée sans condamner de média',
+      '[reconcile] live job listing truncated: pass abandoned without failing any media',
     );
     return 0;
   }
@@ -135,7 +135,7 @@ export async function reconcileStuckMedia(now: Date = new Date()): Promise<numbe
   if (failed > 0)
     logger.warn(
       { failed, scanned: candidates.length },
-      '[reconcile] médias figés en PROCESSING passés en échec',
+      '[reconcile] media stuck in PROCESSING marked as failed',
     );
   return failed;
 }

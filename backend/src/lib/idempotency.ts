@@ -64,7 +64,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
     if (existing && !isExpired(existing.createdAt)) {
       if (existing.statusCode === IN_PROGRESS) {
         res.status(409).json({
-          error: 'Requête identique déjà en cours de traitement',
+          error: 'Identical request already being processed',
           code: 'IDEMPOTENCY_IN_PROGRESS',
         });
         return;
@@ -95,7 +95,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
     const status = res.statusCode;
     void prisma.idempotencyRecord
       .update({ where: { fingerprint: fp }, data: { statusCode: status, response: body as object } })
-      .catch((err) => logger.warn({ err }, '[idempotency] mémorisation impossible'))
+      .catch((err) => logger.warn({ err }, '[idempotency] could not store the response'))
       .finally(() => originalJson(body));
     return res;
   };

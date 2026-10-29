@@ -49,7 +49,7 @@ export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): 
   const parent = await findByLocal(ctx.connectionId, parentKind, parentId);
   if (!parent) {
     // The carrying shot or asset does not exist on the site: there is nothing to hang the task on. This is the case of a project half on ShotGrid, half local, and it is not an outage.
-    logger.info({ taskId, parentKind, parentId }, 'Task non poussée : parent absent du site');
+    logger.info({ taskId, parentKind, parentId }, 'Task not pushed: parent missing on the site');
     return;
   }
 
@@ -81,7 +81,7 @@ export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): 
       durationMinutes: null,
     },
   });
-  logger.info({ taskId, sgId: created.id, step: step?.id ?? null }, 'Task créée sur le site depuis ReView');
+  logger.info({ taskId, sgId: created.id, step: step?.id ?? null }, 'Task created on the site from ReView');
 }
 
 /**

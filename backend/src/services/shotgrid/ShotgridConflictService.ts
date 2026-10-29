@@ -90,7 +90,7 @@ export async function resolveConflict(
       withMedia: false,
       triggeredById: actorId,
     });
-    logger.info({ projectId, sgType: log.sgType, sgId: log.sgId }, 'Conflit arbitré en faveur de ShotGrid');
+    logger.info({ projectId, sgType: log.sgType, sgId: log.sgId }, 'Conflict resolved in favor of ShotGrid');
     return { direction: 'sg', action: 'pulled' };
   }
 
@@ -143,7 +143,7 @@ async function pushLocalValue(
     default:
       logger.info(
         { localType: log.localType },
-        'Conflit classé sans écriture : type sans équivalent poussable',
+        'Conflict closed without a write: type with no pushable equivalent',
       );
       return 'nothing';
   }

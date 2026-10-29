@@ -147,17 +147,17 @@ export function startWorkerMetricsServer(port: number = WORKER_METRICS_PORT): Se
         res.writeHead(200, { 'Content-Type': workerRegistry.contentType }).end(body);
       })
       .catch((err: unknown) => {
-        logger.warn({ err }, '[worker.metrics] sérialisation impossible');
+        logger.warn({ err }, '[worker.metrics] serialization failed');
         res.writeHead(500).end();
       });
   });
 
   // A metric must not bring the worker down: port already taken, we say so and carry on.
-  server.on('error', (err) => logger.warn({ err, port }, '[worker.metrics] écoute impossible'));
+  server.on('error', (err) => logger.warn({ err, port }, '[worker.metrics] listen failed'));
   server.listen(port, () => {
     const bound = server.address();
     const actual = typeof bound === 'object' && bound ? bound.port : port;
-    logger.info(`[worker.metrics] /metrics sur le port ${actual}`);
+    logger.info(`[worker.metrics] /metrics on port ${actual}`);
   });
 
   registerShutdownTask({

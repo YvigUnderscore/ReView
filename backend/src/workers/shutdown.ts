@@ -26,7 +26,7 @@ export function registerWorkerShutdown(name: string, worker: ClosableWorker): vo
     run: () => worker.close(),
     force: () => {
       void worker.close(true).catch((err: unknown) => {
-        logger.warn({ err }, `[shutdown] fermeture forcée impossible : ${name}`);
+        logger.warn({ err }, `[shutdown] forced close failed: ${name}`);
       });
     },
   });

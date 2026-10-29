@@ -240,7 +240,7 @@ export async function pushPlaylist(ctx: PlaylistPushContext, playlistId: number)
     sgId: created.id,
     data: { createdFromReview: true },
   });
-  logger.info({ playlistId, sgId: created.id }, 'Playlist créée dans ShotGrid');
+  logger.info({ playlistId, sgId: created.id }, 'Playlist created in ShotGrid');
   return created.id;
 }
 
@@ -261,7 +261,7 @@ async function updateRemotePlaylist(
   const remote = await ctx.client.findById('Playlist', sgId, PLAYLIST_PUSH_FIELDS);
   if (!remote) {
     // The link survives the playlist it designates. Recreating it would put back into the studio a session someone deleted: we stop and say so.
-    logger.warn({ playlistId: playlist.id, sgId }, 'Playlist ShotGrid introuvable — écriture abandonnée');
+    logger.warn({ playlistId: playlist.id, sgId }, 'ShotGrid playlist not found — write abandoned');
     return null;
   }
 
@@ -273,7 +273,7 @@ async function updateRemotePlaylist(
 
   // Nothing new to say: not writing avoids a round trip of events with the site, and a modification trace in the studio's history for an empty pass.
   if (asString(remote.code) === playlist.name && sameRefs(remoteRefs, merged)) {
-    logger.info({ playlistId: playlist.id, sgId }, 'Playlist ShotGrid déjà à jour — aucune écriture');
+    logger.info({ playlistId: playlist.id, sgId }, 'ShotGrid playlist already up to date — no write');
     return sgId;
   }
 
@@ -285,7 +285,7 @@ async function updateRemotePlaylist(
   );
   logger.info(
     { playlistId: playlist.id, sgId, versions: merged.length, preserved },
-    'Playlist mise à jour dans ShotGrid',
+    'Playlist updated in ShotGrid',
   );
   return sgId;
 }

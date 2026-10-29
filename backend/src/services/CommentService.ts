@@ -486,9 +486,9 @@ export async function share(user: SessionUser, projectId: number, id: number) {
     select: { userId: true, timelineId: true, mediaObjectId: true, sharedToShot: true },
   });
   if (!existing) return null; // reported as "not found" by the route
-  if (existing.timelineId === null) throw badRequest("Ce commentaire n'appartient pas à un montage");
+  if (existing.timelineId === null) throw badRequest('This comment does not belong to an edit');
   if (!isManager(user.role) && existing.userId !== user.id)
-    throw forbidden("Seul l'auteur ou un superviseur peut renvoyer un retour");
+    throw forbidden('Only the author or a supervisor can send feedback back');
 
   const comment = await prisma.comment.update({
     where: { id },
@@ -552,9 +552,9 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   const manager = isManager(user.role);
   const isAuthor = existing.userId === user.id;
 
-  if (body.content !== undefined && !isAuthor) throw forbidden("Seul l'auteur peut éditer le contenu");
+  if (body.content !== undefined && !isAuthor) throw forbidden('Only the author can edit the content');
   if (body.attachments !== undefined && !isAuthor)
-    throw forbidden("Seul l'auteur peut éditer les pièces jointes");
+    throw forbidden('Only the author can edit the attachments');
   if (body.annotation !== undefined && !isAuthor) throw forbidden('Only the author can edit the annotation');
   // Re-read by the schema here too, as at creation: the route is not the only caller.
   const annotation = body.annotation === undefined ? undefined : (parseAnnotation(body.annotation) ?? []);
@@ -644,7 +644,7 @@ export async function remove(user: SessionUser, projectId: number, id: number): 
   });
   if (!existing) return false;
   if (!isManager(user.role) && existing.userId !== user.id)
-    throw forbidden("Suppression réservée à l'auteur ou un superviseur");
+    throw forbidden('Deletion is reserved to the author or a supervisor');
   // MinIO purge of the attached reference images (the DB rows go in cascade).
   await ReviewReferenceService.purgeForComment(id);
   // The comment's ShotGrid match (`ShotgridLink`) leaves with it, within this transaction: an `AFTER DELETE`

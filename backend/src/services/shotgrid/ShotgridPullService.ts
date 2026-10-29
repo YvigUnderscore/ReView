@@ -227,7 +227,7 @@ async function keepInProject(records: SgRecord[], ctx: PullContext): Promise<SgR
         expected: ctx.scope.sgProjectId,
         found: verdict.foundProjectId,
       },
-      'Entité ShotGrid hors du projet lié — écartée',
+      'ShotGrid entity outside the linked project — discarded',
     );
   }
   return kept;

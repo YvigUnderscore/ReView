@@ -53,7 +53,7 @@ router.put('/smtp', validate({ body: smtpSchema }), async (req, res) => {
   if (smtp.allowInsecure)
     logger.warn(
       { host: smtp.host, userId: requireUser(req).id },
-      '[smtp] dialogue en clair autorisé pour ce relais : identifiants et liens d’invitation circuleront sans chiffrement.',
+      '[smtp] plaintext dialogue allowed for this relay: credentials and invitation links will travel unencrypted.',
     );
   // The outgoing SMTP relay is a pivot: whoever changes it can divert all the instance's mail.
   // Never the password in the log, only the fact of the change.

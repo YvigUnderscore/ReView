@@ -76,10 +76,7 @@ ${mailButton(url, t(locale, 'invite.cta'))}
  */
 export async function assertCanInvite(): Promise<void> {
   if (!env.APP_URL) {
-    throw badRequest(
-      "APP_URL n'est pas configuré : le lien d'invitation serait inutilisable",
-      'APP_URL_MISSING',
-    );
+    throw badRequest('APP_URL is not configured: the invitation link would be unusable', 'APP_URL_MISSING');
   }
   if (!(await isMailerConfigured())) {
     throw badRequest('SMTP is not configured — an invitation cannot be sent', 'SMTP_NOT_CONFIGURED');
@@ -138,10 +135,10 @@ export async function sendInvitation(userId: number, invitedById: number | null)
   if (!sent) {
     // The invitation remains in the database: the administrator can resend once the relay is repaired,
     // without having to delete then recreate the account.
-    logger.error({ userId }, '[Invitation] envoi impossible');
+    logger.error({ userId }, '[Invitation] send failed');
     throw badRequest('Could not send (SMTP error)', 'SMTP_SEND_FAILED');
   }
-  logger.info({ userId }, '[Invitation] envoyée');
+  logger.info({ userId }, '[Invitation] sent');
 }
 
 export interface InvitationView {

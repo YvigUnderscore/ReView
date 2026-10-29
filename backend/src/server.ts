@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   // Periodic maintenance: same hours as before, but queued (survives restarts, runs only once, visible
   // in the queue dashboard).
   await scheduleMaintenanceJobs(env.DIGEST_HOUR).catch((err: unknown) => {
-    logger.error({ err }, '[maintenance] pose des travaux périodiques impossible');
+    logger.error({ err }, '[maintenance] could not schedule the periodic jobs');
   });
 
   // Startup reconciliation: media left in PROCESSING by a killed worker no longer have a live job.
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   // this code.
   setTimeout(() => {
     void reconcileStuckMedia().catch((err: unknown) => {
-      logger.error({ err }, '[reconcile] balayage des médias figés impossible');
+      logger.error({ err }, '[reconcile] stuck media sweep failed');
     });
   }, RECONCILE_BOOT_DELAY_MS).unref();
 
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   if (env.SHOTGRID_INSECURE_HOSTS)
     logger.warn(
       { hosts: env.SHOTGRID_INSECURE_HOSTS },
-      '⚠️  SHOTGRID_INSECURE_HOSTS actif : ces hôtes ShotGrid échappent au contrôle HTTPS/réseau privé. À réserver au simulateur de développement.',
+      '⚠️  SHOTGRID_INSECURE_HOSTS active: these ShotGrid hosts bypass the HTTPS/private network check. Reserve it for the development simulator.',
     );
 
   // Presigned URLs are built for the BROWSER, not for the server: left on a loopback address, each one
@@ -63,7 +63,7 @@ async function main(): Promise<void> {
   if (isLoopbackEndpoint(env.S3_PUBLIC_ENDPOINT ?? env.S3_ENDPOINT))
     logger.warn(
       { S3_PUBLIC_ENDPOINT: env.S3_PUBLIC_ENDPOINT ?? env.S3_ENDPOINT },
-      "⚠️  S3_PUBLIC_ENDPOINT désigne une adresse de bouclage : les envois de médias ne marcheront que depuis cette machine. Pour un accès réseau, y mettre l'adresse de l'hôte (et exposer MinIO avec MINIO_BIND=0.0.0.0), comme le fait scripts/install.sh.",
+      '⚠️  S3_PUBLIC_ENDPOINT points to a loopback address: media uploads will only work from this machine. For network access, set it to the host address (and expose MinIO with MINIO_BIND=0.0.0.0), as scripts/install.sh does.',
     );
 
   // Clean shutdown: socket.io closes the HTTP server it wraps (clients notified), then the queues and
@@ -98,11 +98,11 @@ async function main(): Promise<void> {
   installShutdownHandlers();
 
   server.listen(env.PORT, () => {
-    logger.info(`✅ ReView 2.0 backend démarré sur le port ${env.PORT} (${env.NODE_ENV})`);
+    logger.info(`✅ ReView 2.0 backend listening on port ${env.PORT} (${env.NODE_ENV})`);
   });
 }
 
 main().catch((err) => {
-  logger.error({ err }, '❌ Échec du démarrage du serveur');
+  logger.error({ err }, '❌ Server startup failed');
   process.exit(1);
 });

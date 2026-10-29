@@ -47,7 +47,7 @@ router.patch(
     params: markerParams,
     body: z
       .object({ frame: frame.optional(), name: name.optional(), color: color.optional() })
-      .refine((b) => Object.keys(b).length > 0, { message: 'Aucun champ à modifier' }),
+      .refine((b) => Object.keys(b).length > 0, { message: 'No field to update' }),
   }),
   async (req, res) => {
     const body = req.body as { frame?: number; name?: string; color?: string };

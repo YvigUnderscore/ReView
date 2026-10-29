@@ -51,11 +51,11 @@ export const requireRole =
   (...roles: Role[]) =>
   (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      res.status(401).json({ error: 'Non authentifié' });
+      res.status(401).json({ error: 'Not authenticated' });
       return;
     }
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'Access denied : privilèges insuffisants' });
+      res.status(403).json({ error: 'Access denied: insufficient privileges' });
       return;
     }
     next();
@@ -140,12 +140,12 @@ export const requireProjectAccess = async (
   next: NextFunction,
 ): Promise<void> => {
   if (!req.user) {
-    res.status(401).json({ error: 'Non authentifié' });
+    res.status(401).json({ error: 'Not authenticated' });
     return;
   }
   const projectId = Number(req.params.projectId);
   if (!Number.isInteger(projectId)) {
-    res.status(400).json({ error: 'projectId invalide' });
+    res.status(400).json({ error: 'Invalid projectId' });
     return;
   }
   const outcome = await resolveProjectAccess(req.user.id, req.user.role, projectId);
@@ -185,12 +185,12 @@ export const requireProjectManage = async (
   next: NextFunction,
 ): Promise<void> => {
   if (!req.user) {
-    res.status(401).json({ error: 'Non authentifié' });
+    res.status(401).json({ error: 'Not authenticated' });
     return;
   }
   const projectId = Number(req.params.projectId);
   if (!Number.isInteger(projectId)) {
-    res.status(400).json({ error: 'projectId invalide' });
+    res.status(400).json({ error: 'Invalid projectId' });
     return;
   }
   // Same guard as everywhere else, with the intent on top: a single implementation of the pair

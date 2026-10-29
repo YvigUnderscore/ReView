@@ -55,7 +55,7 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
    * right to know it.
    */
   if (!connection) {
-    logger.warn({ tokenLength: token.length }, 'Webhook ShotGrid : jeton inconnu (adresse périmée ?)');
+    logger.warn({ tokenLength: token.length }, 'ShotGrid webhook: unknown token (stale address?)');
     return res.status(404).json({ error: 'not_found' });
   }
 
@@ -72,7 +72,7 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
   if (secret && !signatureMatches(secret, body, req.header('x-sg-signature') ?? undefined)) {
     logger.warn(
       { connectionId: connection.id, signed: Boolean(req.header('x-sg-signature')) },
-      'Webhook ShotGrid : signature invalide — le secret du site diffère de celui de la connexion',
+      'ShotGrid webhook: invalid signature — the site secret differs from the connection one',
     );
     return res.status(404).json({ error: 'not_found' });
   }
@@ -93,7 +93,7 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
    * they have just pasted the address and the secret.
    */
   if ((payload as { data?: { event_type?: string } })?.data?.event_type === 'Test_Connection') {
-    logger.info({ connectionId: connection.id }, 'Webhook ShotGrid : test de connexion accepté');
+    logger.info({ connectionId: connection.id }, 'ShotGrid webhook: connection test accepted');
   }
 
   try {
@@ -102,7 +102,7 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
       batchId: req.header('x-sg-event-batch-id') ?? null,
     });
   } catch (err) {
-    logger.error({ err, connectionId: connection.id }, 'Webhook ShotGrid : mise en file impossible');
+    logger.error({ err, connectionId: connection.id }, 'ShotGrid webhook: could not enqueue');
   }
 });
 

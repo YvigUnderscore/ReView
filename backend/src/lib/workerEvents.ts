@@ -84,7 +84,7 @@ export async function publishWorkerEvent(e: WorkerEvent): Promise<void> {
     pub ??= new Redis(redisConnectionOptions);
     await pub.publish(WORKER_EVENTS_CHANNEL, encodeWorkerEvent(e));
   } catch (err) {
-    logger.warn({ err }, '[workerEvents] publication échouée');
+    logger.warn({ err }, '[workerEvents] publish failed');
   }
 }
 
@@ -92,7 +92,7 @@ export async function publishWorkerEvent(e: WorkerEvent): Promise<void> {
 export function subscribeWorkerEvents(onEvent: (e: WorkerEvent) => void): void {
   sub = new Redis(redisConnectionOptions);
   void sub.subscribe(WORKER_EVENTS_CHANNEL).catch((err: unknown) => {
-    logger.warn({ err }, '[workerEvents] souscription échouée');
+    logger.warn({ err }, '[workerEvents] subscription failed');
   });
   sub.on('message', (_channel: string, raw: string) => {
     const e = decodeWorkerEvent(raw);

@@ -197,13 +197,13 @@ export async function createConnection(projectId: number, input: ConnectionInput
 
   const client = await clientForSite(input.siteId);
   const remote = await client.findById('Project', input.sgProjectId, ['name', 'sg_status', 'archived']);
-  if (!remote) throw badRequest("Ce projet n'existe pas sur le site ShotGrid");
+  if (!remote) throw badRequest('This project does not exist on the ShotGrid site');
   const remoteName = asString(remote.name);
   // A template is not linked: damaging it would damage every future project.
   assertNotTemplateProject(remoteName, input.sgProjectId);
   if (!projectNameMatches(remoteName, input.sgProjectName))
     throw badRequest(
-      `Le projet ShotGrid #${input.sgProjectId} s'appelle « ${remoteName ?? '?'} », pas « ${input.sgProjectName} » — connexion refusée`,
+      `ShotGrid project #${input.sgProjectId} is named "${remoteName ?? '?'}", not "${input.sgProjectName}" — connection refused`,
     );
 
   const duplicate = await prisma.shotgridConnection.findUnique({
@@ -228,7 +228,7 @@ export async function createConnection(projectId: number, input: ConnectionInput
   });
   logger.info(
     { projectId, sgProjectId: input.sgProjectId, sgProjectName: connection.sgProjectName },
-    'Connexion ShotGrid créée',
+    'ShotGrid connection created',
   );
   return connection;
 }
@@ -317,7 +317,7 @@ export async function updateConnection(
 export async function deleteConnection(projectId: number) {
   const conn = await getConnectionOrThrow(projectId);
   await prisma.shotgridConnection.delete({ where: { id: conn.id } });
-  logger.info({ projectId, sgProjectId: conn.sgProjectId }, 'Connexion ShotGrid retirée');
+  logger.info({ projectId, sgProjectId: conn.sgProjectId }, 'ShotGrid connection removed');
 }
 
 /** Regenerates the webhook's URL token (rotation after a URL leak). */
@@ -363,7 +363,7 @@ export async function rotateWebhookSecret(projectId: number): Promise<string> {
     where: { id: conn.id },
     data: { webhookSecret: encryptSecret(secret) },
   });
-  logger.info({ projectId }, 'Secret de webhook ShotGrid régénéré');
+  logger.info({ projectId }, 'ShotGrid webhook secret regenerated');
   return secret;
 }
 
@@ -409,10 +409,10 @@ export async function openConnection(
         await markStatus(
           connection.id,
           'project_mismatch',
-          `Le projet #${connection.sgProjectId} s'appelle désormais « ${remoteName ?? '?'} » (attendu « ${connection.sgProjectName} »)`,
+          `Project #${connection.sgProjectId} is now named "${remoteName ?? '?'}" (expected "${connection.sgProjectName}")`,
         );
         throw badRequest(
-          `Nom du projet ShotGrid modifié (« ${remoteName ?? '?'} » au lieu de « ${connection.sgProjectName} ») — synchronisation interrompue par sécurité`,
+          `ShotGrid project name changed ("${remoteName ?? '?'}" instead of "${connection.sgProjectName}") — sync stopped for safety`,
         );
       }
       if (connection.status === 'auth_error' || connection.status === 'project_mismatch')

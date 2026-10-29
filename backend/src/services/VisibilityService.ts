@@ -324,7 +324,7 @@ function safeCompile(rule: VisibilityRule): (candidate: string) => boolean {
       ignoreCase: rule.ignoreCase,
     });
   } catch {
-    logger.warn({ ruleId: rule.id, pattern: rule.pattern }, 'Règle de masquage illisible, ignorée');
+    logger.warn({ ruleId: rule.id, pattern: rule.pattern }, 'Unreadable hiding rule, ignored');
     return () => false;
   }
 }

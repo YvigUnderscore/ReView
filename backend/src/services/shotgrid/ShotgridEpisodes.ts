@@ -137,7 +137,7 @@ async function keepInProject(records: SgRecord[], ctx: EpisodePullContext): Prom
     );
     logger.error(
       { sgType: record.type, sgId: record.id, expected: ctx.scope.sgProjectId },
-      'Entité ShotGrid hors du projet lié — écartée',
+      'ShotGrid entity outside the linked project — discarded',
     );
   }
   return kept;

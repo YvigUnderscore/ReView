@@ -136,10 +136,7 @@ export async function start(actor: Actor, input: StartPublishInput) {
     throw badRequest('The path must point to at least one shot or asset', 'PATH_TOO_SHALLOW');
   }
   if (parsed.version) {
-    throw badRequest(
-      'Le chemin ne doit pas inclure la version — utiliser « versionName »',
-      'PATH_INCLUDES_VERSION',
-    );
+    throw badRequest('The path must not include the version — use "versionName"', 'PATH_INCLUDES_VERSION');
   }
 
   assertNotSequencePattern(input.filename);
@@ -152,7 +149,7 @@ export async function start(actor: Actor, input: StartPublishInput) {
   if (input.usd && kind !== MediaKind.MODEL_3D) {
     // Explicit refusal rather than silent omission: a client who believes it is driving the conversion of a
     // .mov must learn it right away, not by re-reading the metadata.
-    throw badRequest("« usd » ne s'applique qu'aux médias 3D", 'USD_NOT_3D');
+    throw badRequest('"usd" only applies to 3D media', 'USD_NOT_3D');
   }
 
   // Target: the task if the path names one, otherwise the asset itself.

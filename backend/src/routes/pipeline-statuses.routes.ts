@@ -23,7 +23,7 @@ const idParam = z.object({ id: z.coerce.number().int().positive() });
 // keeps the reference list.
 const scopeSchema = z.enum(['task', 'shot', 'sequence', 'asset']);
 const editableScope = z.enum(['task', 'shot']);
-const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale attendue (#RRGGBB)');
+const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Hexadecimal color expected (#RRGGBB)');
 
 const statusBody = z.object({
   scope: editableScope,

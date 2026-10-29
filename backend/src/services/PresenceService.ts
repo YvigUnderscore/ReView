@@ -50,7 +50,7 @@ function warnRedis(err: unknown): void {
   const now = Date.now();
   if (now - lastFailureLog < 30_000) return;
   lastFailureLog = now;
-  logger.warn({ err }, '[presence] Redis indisponible : présence dégradée');
+  logger.warn({ err }, '[presence] Redis unavailable: presence degraded');
 }
 
 type Broadcast = (onlineUserIds: number[]) => void;

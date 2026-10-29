@@ -50,7 +50,7 @@ function warnInsecureOnce(host: string): void {
   insecureWarned = true;
   logger.warn(
     { host },
-    '[mailer] dialogue SMTP en clair autorisé (allowInsecure) : identifiants et liens d’invitation circulent sans chiffrement.',
+    '[mailer] plaintext SMTP allowed (allowInsecure): credentials and invitation links travel unencrypted.',
   );
 }
 
@@ -109,7 +109,7 @@ export async function sendMail(
     });
     return true;
   } catch (err) {
-    logger.error({ err, to, subject }, '[Mailer] échec d’envoi');
+    logger.error({ err, to, subject }, '[Mailer] send failed');
     return false;
   }
 }

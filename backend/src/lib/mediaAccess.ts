@@ -38,5 +38,5 @@ export function logMediaAccess(params: {
         ip: params.ip ?? null,
       },
     });
-  })().catch((err) => logger.warn({ err }, '[mediaAccess] échec de journalisation'));
+  })().catch((err) => logger.warn({ err }, '[mediaAccess] logging failed'));
 }

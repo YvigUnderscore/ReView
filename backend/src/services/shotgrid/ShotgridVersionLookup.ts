@@ -30,7 +30,7 @@ export async function findVersionByCode(
   const mine = records.filter((r) => belongsToProject(r, ctx.scope).ok);
   if (mine.length !== 1) {
     if (mine.length > 1) {
-      logger.warn({ code: trimmed, count: mine.length }, 'Plusieurs Versions ShotGrid du même code');
+      logger.warn({ code: trimmed, count: mine.length }, 'Several ShotGrid Versions with the same code');
     }
     return null;
   }

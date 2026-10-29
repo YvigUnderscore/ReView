@@ -122,7 +122,7 @@ async function deletePrefixes(prefixes: string[]): Promise<string[]> {
         await storage.deletePrefix(prefix);
       } catch (err) {
         failed[index] = prefix;
-        logger.warn({ err, prefix }, '[Trash] suppression préfixe storage échouée (retry enfilé)');
+        logger.warn({ err, prefix }, '[Trash] storage prefix deletion failed (retry queued)');
       }
     }
   };
@@ -148,10 +148,10 @@ async function deleteStorageAfterCommit(keys: string[], prefixes: string[] = [])
     try {
       failedKeys = await storage.deleteObjects(keys);
       if (failedKeys.length > 0)
-        logger.warn({ keys: failedKeys }, '[Trash] suppression objet storage refusée (retry enfilé)');
+        logger.warn({ keys: failedKeys }, '[Trash] storage object deletion refused (retry queued)');
     } catch (err) {
       failedKeys = [...keys];
-      logger.warn({ err, count: keys.length }, '[Trash] suppression objets storage échouée (retry enfilé)');
+      logger.warn({ err, count: keys.length }, '[Trash] storage objects deletion failed (retry queued)');
     }
   }
   const failedPrefixes = await deletePrefixes(prefixes);
@@ -159,7 +159,7 @@ async function deleteStorageAfterCommit(keys: string[], prefixes: string[] = [])
     await enqueueStorageCleanup({ keys: failedKeys, prefixes: failedPrefixes }).catch((err) =>
       logger.error(
         { err, keys: failedKeys, prefixes: failedPrefixes },
-        "[Trash] impossible d'enfiler le nettoyage storage — orphelins non retentés",
+        '[Trash] could not queue the storage cleanup — orphans will not be retried',
       ),
     );
   }

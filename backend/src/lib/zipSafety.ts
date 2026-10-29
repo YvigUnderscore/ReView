@@ -132,21 +132,21 @@ export function planExtraction(entries: ZipEntryInfo[], limits: ZipLimits): Extr
   return { files, totalBytes, rejection: null };
 }
 
-/** Short, readable message (French, UI text) for an archive refusal. */
+/** Short, readable message for an archive refusal. */
 export function describeRejection(rejection: ZipRejection): string {
   switch (rejection.code) {
     case 'ABSOLUTE_PATH':
-      return `Archive refusée : chemin absolu interdit (${rejection.entry})`;
+      return `Archive refused: absolute path forbidden (${rejection.entry})`;
     case 'PATH_TRAVERSAL':
-      return `Archive refusée : chemin sortant de l'archive (${rejection.entry})`;
+      return `Archive refused: path escaping the archive (${rejection.entry})`;
     case 'SYMLINK':
-      return `Archive refusée : lien symbolique interdit (${rejection.entry})`;
+      return `Archive refused: symbolic link forbidden (${rejection.entry})`;
     case 'TOO_MANY_ENTRIES':
-      return `Archive refusée : ${rejection.actual} entrées (maximum ${rejection.limit})`;
+      return `Archive refused: ${rejection.actual} entries (maximum ${rejection.limit})`;
     case 'TOO_LARGE':
-      return `Archive refusée : contenu décompressé supérieur à ${Math.round(rejection.limit / 1024 / 1024)} Mo`;
+      return `Archive refused: uncompressed content larger than ${Math.round(rejection.limit / 1024 / 1024)} MB`;
     case 'RATIO':
-      return `Archive refusée : taux de compression anormal (×${rejection.actual}, maximum ×${rejection.limit})`;
+      return `Archive refused: abnormal compression ratio (×${rejection.actual}, maximum ×${rejection.limit})`;
   }
 }
 

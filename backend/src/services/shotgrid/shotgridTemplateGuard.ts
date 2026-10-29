@@ -35,9 +35,9 @@ export function looksLikeTemplate(name: string | null | undefined): boolean {
  */
 export function assertNotTemplateProject(name: string | null | undefined, sgProjectId: number): void {
   if (!looksLikeTemplate(name)) return;
-  logger.warn({ sgProjectId, name }, 'Tentative de liaison à un projet modèle ShotGrid — refusée');
+  logger.warn({ sgProjectId, name }, 'Attempt to link a ShotGrid template project — refused');
   throw badRequest(
-    `« ${name} » est un projet modèle ShotGrid : le relier exposerait tous les projets qui en seront tirés. Choisir un projet de production.`,
+    `"${name}" is a ShotGrid template project: linking it would expose every project created from it. Choose a production project.`,
   );
 }
 

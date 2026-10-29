@@ -133,7 +133,7 @@ export async function updateOidcConfig(patch: Record<string, unknown>): Promise<
   if (next.passwordLoginDisabled && !isOidcReady(next)) {
     if (patch.passwordLoginDisabled === true) {
       throw badRequest(
-        'Le SSO doit être activé et complet (issuer, client ID, secret, URL publique) avant de couper la connexion par mot de passe',
+        'SSO must be enabled and complete (issuer, client ID, secret, public URL) before turning off password login',
         'SSO_NOT_READY',
       );
     }

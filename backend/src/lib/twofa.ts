@@ -113,7 +113,7 @@ export async function consumeTotpOnceShared(userId: number, code: string): Promi
     const reply = await getRedis().call('SET', totpRedisKey(userId, code), '1', 'PX', REPLAY_TTL_MS, 'NX');
     return reply === 'OK';
   } catch (err) {
-    logger.error({ err, userId }, '[2fa] anti-rejeu partagé injoignable — code refusé (échec fermé)');
+    logger.error({ err, userId }, '[2fa] shared anti-replay store unreachable — code refused (fail closed)');
     return false;
   }
 }

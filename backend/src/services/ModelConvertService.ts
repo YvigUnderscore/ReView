@@ -88,13 +88,13 @@ function readEntryBounded(entry: {
   if (entry.header.method === METHOD_STORED) {
     if (raw.length !== declared)
       throw new Error(
-        `Archive refusée : l'entrée « ${entry.entryName} » annonce ${declared} octets et en contient ${raw.length}`,
+        `Archive refused: entry "${entry.entryName}" declares ${declared} bytes and contains ${raw.length}`,
       );
     return raw;
   }
   if (entry.header.method !== METHOD_DEFLATE)
     throw new Error(
-      `Archive refusée : l'entrée « ${entry.entryName} » utilise une compression non supportée (${entry.header.method})`,
+      `Archive refused: entry "${entry.entryName}" uses an unsupported compression (${entry.header.method})`,
     );
   if (declared === 0) {
     // `maxOutputLength: 0` is not a usable bound; we bound to one byte and refuse any non-empty output
@@ -204,7 +204,7 @@ const usdConverterBin = (): string | undefined => env.USD_GLTF_CONVERTER?.trim()
 /** Usable error message from an `execFile` failure (timeout included). */
 function describeExecError(err: unknown, who: string): string {
   const e = err as { killed?: boolean; stderr?: string; stdout?: string; message?: string };
-  if (e.killed) return `${who} : délai dépassé (${Math.round(env.MODEL_CONVERT_TIMEOUT_MS / 1000)} s)`;
+  if (e.killed) return `${who}: timed out (${Math.round(env.MODEL_CONVERT_TIMEOUT_MS / 1000)} s)`;
   const detail = (e.stderr || e.stdout || e.message || '').toString().trim();
   return `${who} : ${summarizeBlenderError(detail) || 'erreur inconnue'}`;
 }
@@ -285,7 +285,7 @@ async function prepareVariantLayers(
   try {
     await writeVariantOverlays(source, overlays, usdToolConfig(), join(workDir, 'variant-overlays.json'));
   } catch (err) {
-    logger.warn({ err }, '[ModelConvert] couches de variantes non écrites — cuisson sautée');
+    logger.warn({ err }, '[ModelConvert] variant layers not written — bake skipped');
     return [];
   }
   return entries;
@@ -393,7 +393,7 @@ async function convertUsd(
       await writeFile(variantsFile, JSON.stringify(selection), 'utf8');
       const recomposed = await inspectUsdStage(input, usdToolConfig(), { variantsFile, overlayOut }).catch(
         (err) => {
-          logger.warn({ err }, '[ModelConvert] overlay de variantes non appliqué');
+          logger.warn({ err }, '[ModelConvert] variant overlay not applied');
           return null;
         },
       );
@@ -434,7 +434,9 @@ async function convertUsd(
       await assertGlbProduced(output, `USD natif (${bin})`);
       return { converter: 'usd', usd: buildUsdInfo(info, rootLayer, request, false) };
     } catch (err) {
-      logger.warn(`[ModelConvert] convertisseur USD natif (${bin}) échoué, repli assimp: ${String(err)}`);
+      logger.warn(
+        `[ModelConvert] native USD converter (${bin}) failed, falling back to assimp: ${String(err)}`,
+      );
     }
   }
   await convertWithAssimp(stagePath, output);
@@ -545,7 +547,7 @@ export async function extractArchive(input: string, extractDir: string): Promise
       if (entry.isDirectory) continue;
       // Second pass through `resolveInside`: this is the destination actually written.
       const target = resolveInside(extractDir, entry.entryName);
-      if (!target) throw new Error(`Chemin d'entrée refusé : ${entry.entryName}`);
+      if (!target) throw new Error(`Entry path refused: ${entry.entryName}`);
 
       const declared = Math.max(0, entry.header.size);
       const compressed = Math.max(0, entry.header.compressedSize);
@@ -556,7 +558,7 @@ export async function extractArchive(input: string, extractDir: string): Promise
       // memory on that same declaration (`readEntryBounded`), which becomes a ceiling instead of a promise.
       if (declared === 0 && compressed > EMPTY_ENTRY_MAX_COMPRESSED)
         throw new Error(
-          `Archive refusée : l'entrée « ${entry.entryName} » se déclare vide mais pèse ${compressed} octets compressés`,
+          `Archive refused: entry "${entry.entryName}" declares itself empty but weighs ${compressed} compressed bytes`,
         );
       if (written + declared > maxTotalBytes)
         throw new Error(
@@ -567,7 +569,7 @@ export async function extractArchive(input: string, extractDir: string): Promise
       // The declaration is a commitment: deviating from it is the signature of a bomb.
       if (data.length !== declared)
         throw new Error(
-          `Archive refusée : l'entrée « ${entry.entryName} » annonce ${declared} octets et en contient ${data.length}`,
+          `Archive refused: entry "${entry.entryName}" declares ${declared} bytes and contains ${data.length}`,
         );
       written += data.length;
       if (written > maxTotalBytes)
@@ -582,7 +584,7 @@ export async function extractArchive(input: string, extractDir: string): Promise
       ignoreFailure('model extraction dir cleanup failed', { dir: extractDir }),
     );
     const e = err as { message?: string };
-    throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
+    throw new Error(`Archive extraction failed: ${(e.message || 'unknown error').slice(0, 300)}`, {
       cause: err,
     });
   }
@@ -620,7 +622,7 @@ async function convertArchive(
 
   const files = await walk(extractDir);
   const chosen = pickModelFile(files);
-  if (!chosen) throw new Error("Aucun fichier 3D reconnu dans l'archive (gltf/glb/fbx/obj/dae/stl/usd)");
+  if (!chosen) throw new Error('No recognized 3D file in the archive (gltf/glb/fbx/obj/dae/stl/usd)');
 
   const ext = extname(chosen).toLowerCase();
   if (ext === '.glb') {

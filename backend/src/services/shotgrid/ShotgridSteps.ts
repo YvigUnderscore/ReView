@@ -226,7 +226,10 @@ export async function createTaskFromStep(
     sgProjectName: ctx.connection.sgProjectName,
   };
   if (check && !belongsToProject(check, scope).ok) {
-    logger.error({ projectId, sgId: created.id }, 'Task créée hors du projet lié — à retirer du site');
+    logger.error(
+      { projectId, sgId: created.id },
+      'Task created outside the linked project — remove it from the site',
+    );
     throw badRequest('ShotGrid filed the task outside the target project');
   }
   if (check && !writeAllowedOn(check)) throw forbidden('ShotGrid template project — writing is refused');
@@ -261,6 +264,6 @@ export async function createTaskFromStep(
     },
   });
 
-  logger.info({ projectId, taskId: task.id, sgId: created.id, actorEmail }, 'Task créée depuis une étape');
+  logger.info({ projectId, taskId: task.id, sgId: created.id, actorEmail }, 'Task created from a step');
   return { taskId: task.id, sgId: created.id, name };
 }

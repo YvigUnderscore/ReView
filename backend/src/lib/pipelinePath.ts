@@ -73,7 +73,7 @@ function splitTaskSegment(segment?: string): { task?: string; department?: strin
   const task = segment.slice(at + 1).trim();
   if (!department || !task)
     throw badRequest(
-      'Segment de tâche malformé : « département:tâche » attendu de part et d’autre du deux-points',
+      'Malformed task segment: "department:task" expected on both sides of the colon',
       'PATH_TASK_MALFORMED',
     );
   return { task, department };
@@ -82,7 +82,7 @@ function splitTaskSegment(segment?: string): { task?: string; department?: strin
 /** Branch `PROJ/assets/<asset>[/<task>[/<version>]]`. */
 function parseAssetBranch(project: string, rest: string[]): PipelinePath {
   const [asset, taskSegment, version] = rest;
-  if (!asset) throw badRequest("Chemin d'asset incomplet : nom d'asset attendu", 'PATH_INCOMPLETE');
+  if (!asset) throw badRequest('Incomplete asset path: asset name expected', 'PATH_INCOMPLETE');
   const { task, department } = splitTaskSegment(taskSegment);
   return {
     project,

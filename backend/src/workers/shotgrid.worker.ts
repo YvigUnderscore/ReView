@@ -43,14 +43,14 @@ export const shotgridWorker = new Worker<ShotgridJobData, void, string>(
         await runPush(data.connectionId, data.push as PushJob);
         return;
       default:
-        logger.warn({ data }, '[shotgrid.worker] type de travail inconnu');
+        logger.warn({ data }, '[shotgrid.worker] unknown job type');
     }
   },
   { connection: redisConnectionOptions, autorun: false, concurrency: 2 },
 );
 
 shotgridWorker.on('failed', (job, err) =>
-  logger.warn({ err, kind: job?.data.kind }, '[shotgrid.worker] échec'),
+  logger.warn({ err, kind: job?.data.kind }, '[shotgrid.worker] failed'),
 );
 
 // Re-export: the scheduler now lives in a module with no side effects, so that
@@ -62,10 +62,8 @@ export function startShotgridWorker(): void {
   void shotgridWorker.run();
   registerWorkerShutdown('shotgrid.worker', shotgridWorker);
   void scheduleShotgridJobs().catch((err) =>
-    logger.error({ err }, '[shotgrid.worker] pose des travaux périodiques impossible'),
+    logger.error({ err }, '[shotgrid.worker] could not schedule the periodic jobs'),
   );
-  void catchUpOnBoot().catch((err) =>
-    logger.error({ err }, '[shotgrid.worker] rattrapage au démarrage impossible'),
-  );
-  logger.info('[shotgrid.worker] démarré.');
+  void catchUpOnBoot().catch((err) => logger.error({ err }, '[shotgrid.worker] startup catch-up failed'));
+  logger.info('[shotgrid.worker] started.');
 }

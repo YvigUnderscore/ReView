@@ -52,7 +52,7 @@ async function unsubscribe(token: string): Promise<boolean> {
     where: { id: parsed.userId },
     data: { preferences: preferences as Prisma.InputJsonValue },
   });
-  logger.info({ userId: parsed.userId, kind: parsed.kind }, 'Désabonnement en un clic');
+  logger.info({ userId: parsed.userId, kind: parsed.kind }, 'One-click unsubscribe');
   return true;
 }
 

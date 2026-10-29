@@ -77,7 +77,7 @@ function attachErrorLogging(client: Redis, role: string): void {
     const now = Date.now();
     if (now - (lastErrorLog.get(role) ?? 0) < ERROR_LOG_THROTTLE_MS) return;
     lastErrorLog.set(role, now);
-    logger.warn({ err, role }, '[redis] connexion en défaut');
+    logger.warn({ err, role }, '[redis] connection error');
   });
 }
 
@@ -138,7 +138,7 @@ function dispatchRedisMessage(channel: string, payload: string): void {
     try {
       handler(payload);
     } catch (err) {
-      logger.warn({ err, channel }, '[redis] gestionnaire de message en échec');
+      logger.warn({ err, channel }, '[redis] message handler failed');
     }
   }
 }
@@ -148,7 +148,7 @@ function openChannel(channel: string): void {
   void ensureSubscriber()
     .subscribe(channel)
     .catch((err: unknown) => {
-      logger.warn({ err, channel }, '[redis] souscription échouée');
+      logger.warn({ err, channel }, '[redis] subscription failed');
     });
 }
 
@@ -180,7 +180,7 @@ export function publishRedis(channel: string, payload: string): void {
   void getRedis()
     .call('PUBLISH', channel, payload)
     .catch((err: unknown) => {
-      logger.warn({ err, channel }, '[redis] publication échouée');
+      logger.warn({ err, channel }, '[redis] publish failed');
     });
 }
 
@@ -195,7 +195,7 @@ export async function runHeartbeat(): Promise<void> {
     try {
       await task();
     } catch (err) {
-      logger.warn({ err }, '[redis] battement de cœur en échec');
+      logger.warn({ err }, '[redis] heartbeat failed');
     }
   }
 }

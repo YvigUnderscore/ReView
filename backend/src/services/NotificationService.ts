@@ -134,8 +134,8 @@ export async function sendDiscord(key: MessageKey, params?: TParams): Promise<vo
     );
     // A 4xx (webhook deleted, malformed payload) remained completely silent: nothing distinguished a
     // delivered notification from a lost one.
-    if (!res.ok) logger.warn({ status: res.status }, '[Discord] webhook refusé');
+    if (!res.ok) logger.warn({ status: res.status }, '[Discord] webhook refused');
   } catch (err) {
-    logger.warn({ err }, '[Discord] envoi échoué');
+    logger.warn({ err }, '[Discord] send failed');
   }
 }

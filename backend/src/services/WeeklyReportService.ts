@@ -131,7 +131,7 @@ ${projects.length ? table : `<p>${t(locale, 'weekly.empty')}</p>`}
 /** Sends the weekly report to subscribed supervisors/admins (`preferences.weeklyReport`). */
 export async function sendWeeklyReports(now = new Date()): Promise<number> {
   if (!(await isMailerConfigured())) {
-    logger.info('[WeeklyReport] SMTP non configuré : envoi hebdo sauté');
+    logger.info('[WeeklyReport] SMTP not configured: weekly send skipped');
     return 0;
   }
   const recipients = await prisma.user.findMany({
@@ -155,7 +155,7 @@ export async function sendWeeklyReports(now = new Date()): Promise<number> {
   const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const projects = await buildWeeklyReport(since); // studio-wide, built only once
   if (projects.length === 0) {
-    logger.info('[WeeklyReport] aucune activité cette semaine : envoi sauté');
+    logger.info('[WeeklyReport] no activity this week: send skipped');
     return 0;
   }
   let sent = 0;
@@ -167,6 +167,6 @@ export async function sendWeeklyReports(now = new Date()): Promise<number> {
     });
     if (sentOk) sent += 1;
   }
-  logger.info(`[WeeklyReport] ${sent} rapport(s) envoyé(s)`);
+  logger.info(`[WeeklyReport] ${sent} report(s) sent`);
   return sent;
 }

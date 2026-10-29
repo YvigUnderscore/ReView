@@ -24,11 +24,11 @@ export const ocioBakeWorker = new Worker<BakeRequest, void, string>(
 );
 
 ocioBakeWorker.on('completed', (job) => logger.info(`[ocio.bake.worker] ✓ config ${job.data.configId}`));
-ocioBakeWorker.on('failed', (_job, err) => logger.warn({ err }, '[ocio.bake.worker] ✗ (sera retenté)'));
+ocioBakeWorker.on('failed', (_job, err) => logger.warn({ err }, '[ocio.bake.worker] ✗ (will be retried)'));
 
 /** Starts the worker (called from the main worker process). */
 export function startOcioBakeWorker(): void {
   void ocioBakeWorker.run();
   registerWorkerShutdown('ocio.bake.worker', ocioBakeWorker);
-  logger.info('[ocio.bake.worker] démarré.');
+  logger.info('[ocio.bake.worker] started.');
 }

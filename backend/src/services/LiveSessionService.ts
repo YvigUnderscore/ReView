@@ -105,7 +105,7 @@ function warnRedis(err: unknown): void {
   const now = Date.now();
   if (now - lastFailureLog < 30_000) return;
   lastFailureLog = now;
-  logger.warn({ err }, '[live] Redis indisponible : salles live dégradées');
+  logger.warn({ err }, '[live] Redis unavailable: live rooms degraded');
 }
 
 /** Valid key: `media:<id>` or `playlist:<id>`. Returns its target, or null. */

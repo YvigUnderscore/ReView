@@ -54,7 +54,7 @@ export async function recomposeUsd(user: SessionUser, id: number, input: Recompo
   const usd = readUsdInfo(media.metadata);
   if (!usd)
     throw badRequest(
-      "Ce média n'est pas une scène USD analysée (outillage USD absent à la conversion ?)",
+      'This media is not an analyzed USD scene (USD tooling missing at conversion?)',
       'NOT_USD',
     );
 

@@ -303,7 +303,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     name: 'share',
     windowMs: 15 * 60 * 1000,
     max: 300,
-    message: { error: 'Trop de requêtes sur le partage, réessayez plus tard.' },
+    message: { error: 'Too many requests on this share, try again later.' },
   });
   app.use('/api/share', shareLimiter, shareRoutes);
   app.use('/api/client', shareLimiter, clientRoutes);

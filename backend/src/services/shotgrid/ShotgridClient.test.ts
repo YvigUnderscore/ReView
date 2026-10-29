@@ -148,7 +148,7 @@ describe('ShotgridClient', () => {
 
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: creds.baseUrl, status: 400, reason: title }),
-      expect.stringContaining('refusée par le site'),
+      expect.stringContaining('refused by the site'),
     );
   });
 

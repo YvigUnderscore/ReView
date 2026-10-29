@@ -73,7 +73,7 @@ export function notifyChat(key: MessageKey, params?: TParams): Promise<void> {
     if (targets.length === 0) return;
     const results = await Promise.allSettled(targets);
     for (const r of results) {
-      if (r.status === 'rejected') logger.warn({ err: r.reason }, '[chat] envoi webhook échoué');
+      if (r.status === 'rejected') logger.warn({ err: r.reason }, '[chat] webhook send failed');
     }
-  })().catch((err) => logger.warn({ err }, '[chat] notification échouée'));
+  })().catch((err) => logger.warn({ err }, '[chat] notification failed'));
 }

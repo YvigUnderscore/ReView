@@ -95,7 +95,7 @@ export function emitWebhookEvent(
     for (const h of hooks) {
       await queueDelivery(h.id, event, payload, { apiEventId: opts.apiEventId ?? null });
     }
-  })().catch((err) => logger.warn({ err }, `[webhooks] émission ${event} échouée`));
+  })().catch((err) => logger.warn({ err }, `[webhooks] emitting ${event} failed`));
 }
 
 /**
@@ -158,7 +158,7 @@ export async function deliver(
    * stays active: the failure is one of configuration, not of the endpoint; repairing it must not require reactivating it by hand.
    */
   if (secret === null) {
-    logger.error({ webhookId, deliveryId }, '[webhooks] secret illisible — livraison refusée');
+    logger.error({ webhookId, deliveryId }, '[webhooks] unreadable secret — delivery refused');
     await recordFailure(webhookId, deliveryId, null, null, SECRET_UNREADABLE_ERROR);
     return;
   }
@@ -203,7 +203,7 @@ export async function deliver(
   }
 }
 
-const errorText = (err: unknown) => (err as Error)?.message?.slice(0, 300) ?? 'erreur réseau';
+const errorText = (err: unknown) => (err as Error)?.message?.slice(0, 300) ?? 'network error';
 
 /** Reads at most `RESPONSE_BODY_MAX` characters: an unreadable response does not make the delivery fail. */
 async function readBodyExcerpt(res: Response): Promise<string | null> {
@@ -286,7 +286,7 @@ async function recordFailure(
     await prisma.webhook
       .update({ where: { id: webhookId }, data: { active: false } })
       .catch(ignoreFailure('[webhooks] webhook deactivation failed', { webhookId }));
-    logger.warn(`[webhooks] webhook ${webhookId} désactivé après ${FAILURE_STREAK_LIMIT} livraisons perdues`);
+    logger.warn(`[webhooks] webhook ${webhookId} disabled after ${FAILURE_STREAK_LIMIT} lost deliveries`);
   }
 }
 

@@ -42,7 +42,7 @@ async function configure(): Promise<boolean> {
       pub = keys.publicKey;
       priv = keys.privateKey;
       await prisma.setting.create({ data: { key: 'vapid_keys', value: JSON.stringify(keys) } });
-      logger.info('[push] paire VAPID générée et persistée (dev)');
+      logger.info('[push] VAPID key pair generated and persisted (dev)');
     }
   }
   webpush.setVapidDetails(env.VAPID_SUBJECT ?? 'mailto:admin@review.local', pub, priv);
@@ -54,7 +54,7 @@ async function configure(): Promise<boolean> {
 function ensureConfigured(): Promise<boolean> {
   if (!ready)
     ready = configure().catch((err) => {
-      logger.warn({ err }, '[push] configuration VAPID impossible');
+      logger.warn({ err }, '[push] VAPID configuration failed');
       ready = null;
       return false;
     });
@@ -80,7 +80,7 @@ async function refuseReason(endpoint: string): Promise<string | null> {
 export async function saveSubscription(userId: number, sub: PushJson): Promise<void> {
   const reason = await refuseReason(sub.endpoint);
   if (reason) {
-    logger.warn({ userId, reason }, '[push] endpoint refusé');
+    logger.warn({ userId, reason }, '[push] endpoint refused');
     throw badRequest(`Push endpoint refused: ${reason}`, 'PUSH_ENDPOINT_REFUSED');
   }
   await prisma.pushSubscription.upsert({
@@ -107,7 +107,7 @@ export function sendToUser(userId: number, payload: { title: string; body: strin
         // resolved differently since the subscription was made.
         const reason = await refuseReason(s.endpoint);
         if (reason) {
-          logger.warn({ subscriptionId: s.id, reason }, '[push] envoi refusé (cible non publique)');
+          logger.warn({ subscriptionId: s.id, reason }, '[push] send refused (non-public target)');
           return;
         }
         try {
@@ -122,10 +122,10 @@ export function sendToUser(userId: number, payload: { title: string; body: strin
               .delete({ where: { id: s.id } })
               .catch(ignoreFailure('[push] expired subscription delete failed', { subscriptionId: s.id }));
           } else {
-            logger.warn({ err }, '[push] envoi échoué');
+            logger.warn({ err }, '[push] send failed');
           }
         }
       }),
     );
-  })().catch((err) => logger.warn({ err }, '[push] notification échouée'));
+  })().catch((err) => logger.warn({ err }, '[push] notification failed'));
 }

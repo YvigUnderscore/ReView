@@ -65,7 +65,7 @@ export async function authenticateApiToken(
     },
   });
   if (!row || row.revokedAt || (row.expiresAt && row.expiresAt < new Date())) {
-    res.status(403).json({ error: "Token d'API invalide ou révoqué", code: 'API_TOKEN_INVALID' });
+    res.status(403).json({ error: 'Invalid or revoked API token', code: 'API_TOKEN_INVALID' });
     return;
   }
   // Offboarding (A1-01): disabling revokes existing tokens, but a token issued (or re-enabled)
@@ -76,7 +76,7 @@ export async function authenticateApiToken(
     return;
   }
   if (isWriteMethod(req.method) && !grantsAnyWrite(row.scopes)) {
-    res.status(403).json({ error: 'Scope write requis', code: 'SCOPE_WRITE_REQUIRED' });
+    res.status(403).json({ error: 'Write scope required', code: 'SCOPE_WRITE_REQUIRED' });
     return;
   }
   const last = lastTouched.get(row.id) ?? 0;

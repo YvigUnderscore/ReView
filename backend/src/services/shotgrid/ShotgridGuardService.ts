@@ -64,7 +64,7 @@ export async function assertLocalCreationAllowed(projectId: number, kind: Creata
   const state = await creationLockState(projectId, kind);
   if (!state.locked) return;
   throw new ShotgridLockedError(
-    `Ce projet est piloté depuis ShotGrid (« ${state.sgProjectName} ») — créer l'élément dans ShotGrid, il reviendra à la synchronisation suivante`,
+    `This project is driven from ShotGrid ("${state.sgProjectName}") — create the item in ShotGrid, it will come back with the next sync`,
     state.sgCreateUrl!,
     state.sgProjectName!,
   );
@@ -102,7 +102,7 @@ export async function assertDescriptionWritable(projectId: number): Promise<void
   const policy = await descriptionPolicy(projectId);
   if (policy.editable) return;
   throw new AppError(
-    `La description est tenue par ShotGrid (« ${policy.sgProjectName} ») — la modifier là-bas, ou ouvrir l'édition dans les réglages du projet`,
+    `The description is owned by ShotGrid ("${policy.sgProjectName}") — edit it there, or unlock editing in the project settings`,
     409,
     'SHOTGRID_DESCRIPTION_LOCKED',
     { sgProjectName: policy.sgProjectName },

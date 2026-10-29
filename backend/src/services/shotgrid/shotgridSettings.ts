@@ -163,7 +163,7 @@ export function parseSettings(raw: unknown): ShotgridSettings {
   if (parsed.success) return parsed.data;
   logger.warn(
     { error: parsed.error.issues[0]?.message },
-    'Réglages ShotGrid illisibles : repli en lecture seule',
+    'Unreadable ShotGrid settings: falling back to read-only',
   );
   const safe = readOnlySettings();
   if (raw && typeof raw === 'object') {

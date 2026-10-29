@@ -143,7 +143,7 @@ router.patch(
     // once at startup. Without this re-scheduling, switching a connection to polling recorded nothing
     // until the next restart: the setting seemed taken into account and was not.
     void scheduleShotgridJobs().catch((err: unknown) => {
-      logger.error({ err, projectId }, 'Repose des travaux périodiques ShotGrid impossible');
+      logger.error({ err, projectId }, 'Could not reschedule the ShotGrid periodic jobs');
     });
     res.json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },

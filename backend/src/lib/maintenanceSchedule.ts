@@ -107,6 +107,6 @@ export async function scheduleMaintenanceJobs(digestHour: number): Promise<void>
 
   logger.info(
     { digestHour: normalizeHour(digestHour) },
-    '[maintenance] travaux périodiques posés (digest, rapport hebdomadaire, purge)',
+    '[maintenance] periodic jobs scheduled (digest, weekly report, purge)',
   );
 }

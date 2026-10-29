@@ -188,7 +188,7 @@ ${blocks}
 /** Sends the daily digest to all subscribers (`emailDigest` preference). */
 export async function sendDailyDigests(now = new Date()): Promise<number> {
   if (!(await isMailerConfigured())) {
-    logger.info('[Digest] SMTP non configuré : envoi quotidien sauté');
+    logger.info('[Digest] SMTP not configured: daily send skipped');
     return 0;
   }
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -221,6 +221,6 @@ export async function sendDailyDigests(now = new Date()): Promise<number> {
     });
     if (sentOk) sent += 1;
   }
-  logger.info(`[Digest] ${sent} email(s) envoyé(s)`);
+  logger.info(`[Digest] ${sent} email(s) sent`);
   return sent;
 }

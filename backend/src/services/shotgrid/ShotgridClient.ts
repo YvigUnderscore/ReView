@@ -172,7 +172,7 @@ export class ShotgridClient {
       if (blocked.until > Date.now()) {
         logger.warn(
           { baseUrl: this.baseUrl, retryInMs: blocked.until - Date.now() },
-          'Authentification ShotGrid déjà refusée pour ce site — requête non émise',
+          'ShotGrid authentication already refused for this site — request not sent',
         );
         // A new instance rather than the same: the stack points at the call that failed here,
         // not at the one from three minutes ago.
@@ -238,7 +238,7 @@ export class ShotgridClient {
        */
       logger.warn(
         { baseUrl: this.baseUrl, status: res.status, authMode: this.creds.authMode, reason },
-        'Authentification ShotGrid refusée par le site',
+        'ShotGrid authentication refused by the site',
       );
       authBlocks.set(this.baseUrl, { error, until: Date.now() + AUTH_BLOCK_MS });
       throw error;
@@ -305,7 +305,7 @@ export class ShotgridClient {
         const wait = Math.min(2 ** attempt * 500, 8_000);
         logger.warn(
           { status: res.status, attempt, wait, path },
-          'ShotGrid a répondu une erreur transitoire, nouvelle tentative',
+          'ShotGrid returned a transient error, retrying',
         );
         await sleep(wait);
         continue;
@@ -488,8 +488,7 @@ export class ShotgridClient {
       {},
       { timeoutMs: this.timeoutMs, maxRedirects: 3, allowHosts: insecureHosts() },
     );
-    if (!res.ok || !res.body)
-      throw new ShotgridApiError('Téléchargement du média ShotGrid impossible', res.status);
+    if (!res.ok || !res.body) throw new ShotgridApiError('ShotGrid media download failed', res.status);
     const len = res.headers.get('content-length');
     return {
       stream: Readable.fromWeb(res.body),
@@ -520,7 +519,7 @@ export class ShotgridClient {
       `${SG_API_PATH}/entity/${encodeURIComponent(entity)}/${id}/${encodeURIComponent(field)}/_upload?filename=${encodeURIComponent(filename)}`,
     );
     const uploadUrl = init.links?.upload;
-    if (!uploadUrl) throw new ShotgridApiError("ShotGrid n'a pas fourni d'URL de dépôt", 502, init);
+    if (!uploadUrl) throw new ShotgridApiError('ShotGrid did not provide an upload URL', 502, init);
 
     // The upload address is chosen by the site: under guard too, and without following any redirect: replaying a PUT elsewhere
     // would amount to entrusting the file to that target.
@@ -540,7 +539,7 @@ export class ShotgridClient {
         allowHosts: insecureHosts(),
       },
     );
-    if (!put.ok) throw new ShotgridApiError('Dépôt du fichier vers ShotGrid refusé', put.status);
+    if (!put.ok) throw new ShotgridApiError('File upload to ShotGrid refused', put.status);
 
     // The confirmation makes the file visible in the interface: without it, the object stays on storage without
     // being attached to the entity.

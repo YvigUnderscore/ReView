@@ -191,7 +191,7 @@ class StorageService {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch {
       await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
-      logger.info(`[Storage] bucket « ${this.bucket} » créé.`);
+      logger.info(`[Storage] bucket "${this.bucket}" created.`);
     }
     await this.ensureCors();
   }
@@ -226,9 +226,9 @@ class StorageService {
           },
         }),
       );
-      logger.info(`[Storage] CORS configuré pour ${origins.join(', ')}.`);
+      logger.info(`[Storage] CORS configured for ${origins.join(', ')}.`);
     } catch (err) {
-      logger.warn(`[Storage] Configuration CORS ignorée : ${(err as Error).message}`);
+      logger.warn(`[Storage] CORS configuration skipped: ${(err as Error).message}`);
     }
   }
 

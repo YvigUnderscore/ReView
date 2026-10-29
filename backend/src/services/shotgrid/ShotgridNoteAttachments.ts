@@ -107,7 +107,7 @@ export async function importNoteAttachments(
     where: { id: commentId },
     data: { attachments: [...already, ...imported] as Prisma.InputJsonArray },
   });
-  logger.info({ commentId, count: imported.length }, 'Pièces jointes de note importées');
+  logger.info({ commentId, count: imported.length }, 'Note attachments imported');
   return imported.length;
 }
 

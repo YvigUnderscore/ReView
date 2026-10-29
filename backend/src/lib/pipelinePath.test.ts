@@ -90,9 +90,9 @@ describe('department in the task segment', () => {
   });
 
   it('refuses a task segment cut on one of its two sides', () => {
-    expect(() => parsePipelinePath('PROJ/SQ010/SH0100/:main')).toThrow(/malformé/i);
-    expect(() => parsePipelinePath('PROJ/SQ010/SH0100/layout:')).toThrow(/malformé/i);
-    expect(() => parsePipelinePath('PROJ/assets/hero/ : ')).toThrow(/malformé/i);
+    expect(() => parsePipelinePath('PROJ/SQ010/SH0100/:main')).toThrow(/malformed/i);
+    expect(() => parsePipelinePath('PROJ/SQ010/SH0100/layout:')).toThrow(/malformed/i);
+    expect(() => parsePipelinePath('PROJ/assets/hero/ : ')).toThrow(/malformed/i);
   });
 });
 

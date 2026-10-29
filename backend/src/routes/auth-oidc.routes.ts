@@ -137,7 +137,7 @@ router.get('/callback', async (req, res) => {
     const cfg = await readyConfig();
     const raw = readCookie(req.headers.cookie, COOKIE);
     res.clearCookie(COOKIE, { path: '/api/auth/oidc' });
-    if (!raw) return fail('Session SSO expirée, réessayez');
+    if (!raw) return fail('SSO session expired, try again');
     let checks: { state: string; nonce: string };
     try {
       // Without `JWT_VERIFY_OPTIONS`, it is the party PRESENTING the cookie that chooses with which
@@ -146,7 +146,7 @@ router.get('/callback', async (req, res) => {
       if (p.kind !== 'oidc' || !p.state || !p.nonce) return fail('Session SSO invalide');
       checks = { state: p.state, nonce: p.nonce };
     } catch {
-      return fail('Session SSO expirée, réessayez');
+      return fail('SSO session expired, try again');
     }
 
     const config = await discovery(cfg);
@@ -157,7 +157,7 @@ router.get('/callback', async (req, res) => {
     });
     const claims = tokens.claims();
     const email = typeof claims?.email === 'string' ? claims.email.toLowerCase() : null;
-    if (!email || claims?.email_verified !== true) return fail('Email non vérifié chez le fournisseur');
+    if (!email || claims?.email_verified !== true) return fail('Email not verified by the provider');
 
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -189,8 +189,8 @@ router.get('/callback', async (req, res) => {
       `/login#sso=${encodeURIComponent(signAccessToken(payload))}&refresh=${encodeURIComponent(signRefreshToken(payload))}`,
     );
   } catch (err) {
-    logger.warn({ err }, '[oidc] callback en échec');
-    fail('Connexion SSO échouée');
+    logger.warn({ err }, '[oidc] callback failed');
+    fail('SSO login failed');
   }
 });
 

@@ -31,11 +31,11 @@ export const storageCleanupWorker = new Worker<StorageCleanupJobData, void, stri
 
 storageCleanupWorker.on('completed', (job) =>
   logger.info(
-    `[storageCleanup.worker] ✓ ${job.data.keys?.length ?? 0} clé(s) / ${job.data.prefixes?.length ?? 0} préfixe(s)`,
+    `[storageCleanup.worker] ✓ ${job.data.keys?.length ?? 0} key(s) / ${job.data.prefixes?.length ?? 0} prefix(es)`,
   ),
 );
 storageCleanupWorker.on('failed', (_job, err) =>
-  logger.warn({ err }, '[storageCleanup.worker] ✗ (sera retenté)'),
+  logger.warn({ err }, '[storageCleanup.worker] ✗ (will be retried)'),
 );
 
 /** Starts the worker (called from the main worker process). */
@@ -43,5 +43,5 @@ export function startStorageCleanupWorker(): void {
   // The worker loop lives as long as the process: nothing to wait for here.
   void storageCleanupWorker.run();
   registerWorkerShutdown('storageCleanup.worker', storageCleanupWorker);
-  logger.info('[storageCleanup.worker] démarré.');
+  logger.info('[storageCleanup.worker] started.');
 }

@@ -261,7 +261,7 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   // otherwise pass through here twice.
   const existing = await findByLocal(ctx.connectionId, 'comment', comment.id);
   if (existing) {
-    logger.debug({ commentId, sgNoteId: existing.sgId }, 'Commentaire déjà présent en note ShotGrid');
+    logger.debug({ commentId, sgNoteId: existing.sgId }, 'Comment already present as a ShotGrid note');
     return existing.sgId;
   }
 
@@ -311,7 +311,7 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   } catch (err) {
     logger.info(
       { commentId, sgVersionId: versionLink.sgId, err: err instanceof Error ? err.message : err },
-      'Rattachement de note refusé par le site — note créée sans lien',
+      'Note link refused by the site — note created without a link',
     );
     created = await ctx.writer.create(
       'Note',
@@ -330,7 +330,7 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   });
 
   if (ctx.attachAnnotations) await attachAnnotationImage(ctx, created.id, comment);
-  logger.info({ commentId, sgNoteId: created.id }, 'Commentaire poussé en note ShotGrid');
+  logger.info({ commentId, sgNoteId: created.id }, 'Comment pushed as a ShotGrid note');
   return created.id;
 }
 
@@ -365,9 +365,9 @@ async function attachAnnotationImage(
       `review-annotation-${comment.id}.png`,
       'image/png',
     );
-    logger.info({ commentId: comment.id, sgNoteId }, 'Frame annotée jointe à la note ShotGrid');
+    logger.info({ commentId: comment.id, sgNoteId }, 'Annotated frame attached to the ShotGrid note');
   } catch (err) {
-    logger.warn({ err, commentId: comment.id }, 'Annotation non jointe à la note ShotGrid');
+    logger.warn({ err, commentId: comment.id }, 'Annotation not attached to the ShotGrid note');
   }
 }
 
