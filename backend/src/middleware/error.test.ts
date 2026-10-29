@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { NextFunction, Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { AppError } from '../lib/errors';
-import { errorHandler } from './error';
+import { errorHandler, prismaErrorResponse } from './error';
 
 /** Express response double: we only keep what the client would see. */
 function responseSpy() {
@@ -25,7 +26,16 @@ function responseSpy() {
 
 /** Request carrying a silent logger: the handler logs unhandled errors. */
 const request = () =>
-  ({ log: { error: vi.fn() } }) as unknown as Request & { log: { error: ReturnType<typeof vi.fn> } };
+  ({ log: { error: vi.fn(), warn: vi.fn() } }) as unknown as Request & {
+    log: { error: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn> };
+  };
+
+const prismaError = (code: string, meta?: Record<string, unknown>) =>
+  new Prisma.PrismaClientKnownRequestError(`prisma ${code} on model Secret`, {
+    code,
+    clientVersion: 'test',
+    meta,
+  });
 
 const next = (() => undefined) as NextFunction;
 
@@ -73,5 +83,46 @@ describe('errorHandler', () => {
       errorHandler(err, request(), res, next);
       expect(sent.body?.code).toBeTruthy();
     }
+  });
+
+  it('P2002 uniqueness violation: 409 conflict with the constrained fields, no schema leak', () => {
+    const { res, sent } = responseSpy();
+    const req = request();
+    errorHandler(prismaError('P2002', { target: ['projectId', 'name'] }), req, res, next);
+    expect(sent.status).toBe(409);
+    expect(sent.body).toEqual({
+      error: 'Resource already exists',
+      code: 'CONFLICT',
+      fields: ['projectId', 'name'],
+    });
+    expect(JSON.stringify(sent.body)).not.toContain('Secret');
+    expect(req.log.warn).toHaveBeenCalledTimes(1);
+    expect(req.log.error).not.toHaveBeenCalled();
+  });
+
+  it('P2002 with a string target or no target', () => {
+    expect(prismaErrorResponse(prismaError('P2002', { target: 'User_email_key' }))?.body.fields).toEqual([
+      'User_email_key',
+    ]);
+    expect(prismaErrorResponse(prismaError('P2002'))?.body).toEqual({
+      error: 'Resource already exists',
+      code: 'CONFLICT',
+    });
+  });
+
+  it('P2025 record not found: 404', () => {
+    const { res, sent } = responseSpy();
+    errorHandler(prismaError('P2025', { cause: 'Record to update not found.' }), request(), res, next);
+    expect(sent.status).toBe(404);
+    expect(sent.body).toEqual({ error: 'Resource not found', code: 'NOT_FOUND' });
+  });
+
+  it('other Prisma errors stay unhandled 500s', () => {
+    const { res, sent } = responseSpy();
+    const req = request();
+    errorHandler(prismaError('P1001'), req, res, next);
+    expect(sent.status).toBe(500);
+    expect(req.log.error).toHaveBeenCalledTimes(1);
+    expect(prismaErrorResponse(new Error('x'))).toBeNull();
   });
 });
