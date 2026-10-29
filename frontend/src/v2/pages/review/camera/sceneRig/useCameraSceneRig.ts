@@ -15,15 +15,15 @@ import { sampleTrajectory, trajSignature } from './trajectory';
 
 const BASE_POSE = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } };
 
-/** Mode du gizmo de la caméra-objet : déplacer la pose ou réorienter le regard. */
+/** Camera-object gizmo mode: move the pose or reorient the look. */
 export type RigGizmoMode = 'translate' | 'rotate';
 
 /**
- * Temps (ms) auquel un geste de gizmo écrit ses clés : celui de la clé « primaire » (dernière de la
- * multi-sélection) si le geste en reprend une, sinon la tête de lecture (règle : `gizmoKeyTime`).
+ * Time (ms) at which a gizmo gesture writes its keys: that of the "primary" key (last of the
+ * multi-selection) if the gesture takes one over, otherwise the playhead (rule: `gizmoKeyTime`).
  *
- * Quand il s'écarte de la tête de lecture, le geste l'y amène (cf. `onDragging`) : la scène et le
- * PiP montrent le temps de lecture, donc une clé éditée à un autre instant ne se voyait pas bouger.
+ * When it departs from the playhead, the gesture brings it there (see `onDragging`): the scene and
+ * the PiP show the playback time, so a key edited at another instant did not visibly move.
  */
 export function strokeTime(a: Pick<CameraAnimState, 'selection' | 'anim' | 'timeMs'>): number {
   const primary = a.selection[a.selection.length - 1];
@@ -32,15 +32,16 @@ export function strokeTime(a: Pick<CameraAnimState, 'selection' | 'anim' | 'time
 }
 
 /**
- * Caméra-objet dans la scène (Phase 17, mode layout) : monte le mesh caméra + sa trajectoire dans
- * la scène du viewer (splat ou 3D), le **synchronise à l'animation** chaque frame, et — en édition
- * — attache un gizmo `TransformControls` que l'on greffe au corps de la caméra ou au marqueur de
- * cible (raycast au clic). Déplacer la caméra pose/écrase une clé **position**, déplacer la cible
- * pose une clé **cible**, au temps de la clé sélectionnée (sinon au playhead — auto-key).
+ * Camera-object in the scene (Phase 17, layout mode): mounts the camera mesh + its trajectory into
+ * the viewer's scene (splat or 3D), **syncs it to the animation** every frame, and — when editing —
+ * attaches a `TransformControls` gizmo grafted onto the camera body or the target marker (raycast on
+ * click). Moving the camera sets/overwrites a **position** key, moving the target sets a **target**
+ * key, at the time of the selected key (otherwise at the playhead — auto-key).
  *
- * C'est aussi **l'échantillonneur de la pose du plan hors lecture** : monté exactement quand on est
- * hors caméra, il rend chaque frame la pose que l'animation décrit et la remet à `layout.applyShot`,
- * d'où le PiP. Le mesh de la caméra-objet et la fenêtre PiP montrent donc la même chose, toujours.
+ * It is also **the sampler of the plan's pose outside playback**: mounted exactly when we are
+ * outside the camera, it renders each frame the pose the animation describes and hands it back to
+ * `layout.applyShot`, hence the PiP. The camera-object mesh and the PiP window therefore always
+ * show the same thing.
  */
 export function useCameraSceneRig(opts: {
   getSceneHandle: () => ViewerSceneHandle | null;
@@ -49,29 +50,29 @@ export function useCameraSceneRig(opts: {
   editable: boolean;
   anim: CameraAnimState;
   /**
-   * État du « dans / hors caméra » (modèle en tête de `viewer/useLayoutMode`). Une seule
-   * dépendance, et non trois rappels épars : le rig n'existe **qu'**hors caméra, il part de la vue
-   * d'activation, et il est l'échantillonneur de la pose du plan hors lecture — sans quoi le PiP
-   * restait figé jusqu'au prochain scrub, alors que le gizmo, une courbe, une tangente ou une
-   * annulation venaient de changer le plan. Pendant la lecture, c'est le lecteur qui pilote.
+   * The "in / out of camera" state (model at the top of `viewer/useLayoutMode`). A single
+   * dependency, not three scattered callbacks: the rig exists **only** outside the camera, it starts
+   * from the activation view, and it is the sampler of the plan's pose outside playback — otherwise
+   * the PiP stayed frozen until the next scrub, although the gizmo, a curve, a tangent or an undo had
+   * just changed the plan. During playback, it is the player that drives.
    */
   layout: Pick<LayoutModeState, 'layoutMode' | 'getActivationView' | 'applyShot'>;
 }) {
   const { getSceneHandle, subscribeFrame, ready, editable, anim, layout } = opts;
-  // Membres stables (`useCallback`) : l'objet `layout`, lui, est neuf à chaque rendu — le prendre
-  // en dépendance d'effet remonterait la caméra-objet et son gizmo à chaque rendu.
+  // Stable members (`useCallback`): the `layout` object, however, is new on every render — taking it
+  // as an effect dependency would remount the camera-object and its gizmo on every render.
   const { layoutMode: active, getActivationView, applyShot } = layout;
   const objRef = useRef<CameraObjectRuntime | null>(null);
   const controlRef = useRef<TransformControls | null>(null);
   const [mode, setMode] = useState<RigGizmoMode>('translate');
   const modeRef = useRef(mode);
   modeRef.current = mode;
-  // Copies « dernière valeur » lues par les listeners/boucles (évite de recréer les effets).
+  // "Latest value" copies read by the listeners/loops (avoids recreating the effects).
   const animRef = useRef(anim);
   animRef.current = anim;
   const trajKeyRef = useRef('');
 
-  // Montage de l'objet caméra + gizmo dans la scène (mode layout actif).
+  // Mounting the camera object + gizmo into the scene (layout mode active).
   useEffect(() => {
     if (!active || !ready) return;
     const handle = getSceneHandle();
@@ -92,29 +93,29 @@ export function useCameraSceneRig(opts: {
       control.enabled = editable;
       const helper = control.getHelper();
       scene.add(helper);
-      // Objet d'aide : le gizmo est posé sur la caméra du plan, donc pile devant l'objectif —
-      // laissé dans la passe PiP, il barrait la vue du plan (cf. `viewer/sceneHelpers`).
+      // Helper object: the gizmo sits on the plan's camera, hence right in front of the lens —
+      // left in the PiP pass, it would block the plan's view (see `viewer/sceneHelpers`).
       const unregisterHelper = registerSceneHelpers(helper);
       controlRef.current = control;
 
-      // Cible courante du gizmo : corps (position/orientation) ou marqueur (cible du regard).
+      // Current gizmo target: body (position/orientation) or marker (look target).
       let editing: 'body' | 'target' | null = null;
-      // Distance de regard figée au début d'une rotation (conservée en réorientant la cible).
+      // Look distance frozen at the start of a rotation (kept while reorienting the target).
       let rotateDist = 0;
       const fwd = new THREE.Vector3();
       const onDragging = (e: { value: unknown }) => {
-        controls.enabled = !e.value; // gèle l'orbite pendant la manipulation
+        controls.enabled = !e.value; // freezes the orbit during manipulation
         if (!e.value) return;
         const a = animRef.current;
         a.beginStroke();
-        // La tête de lecture rejoint le temps où le geste va écrire. La scène et le PiP montrent
-        // **le temps de lecture** : reprendre au gizmo une clé posée à un autre instant ne se
-        // voyait donc pas — la caméra-objet revenait chaque frame sur la pose du playhead, et
-        // l'artiste concluait que le gizmo ne bougeait rien.
+        // The playhead moves to the time the gesture will write. The scene and the PiP show
+        // **the playback time**: taking over with the gizmo a key set at another instant did not
+        // show — the camera-object snapped back every frame to the playhead's pose, and
+        // the artist concluded the gizmo did nothing.
         const t = strokeTime(a);
         if (t !== Math.round(a.timeMs)) a.scrub(t);
-        // Distance de regard lue de la pose **échantillonnée à ce temps**, et non du maillage :
-        // celui-ci ne rattrapera le nouveau temps qu'à la frame suivante.
+        // Look distance read from the pose **sampled at that time**, not from the mesh:
+        // the mesh only catches up with the new time on the next frame.
         const pose = sampleAnimV2(a.anim, t, getActivationView() ?? BASE_POSE);
         rotateDist =
           Math.hypot(
@@ -127,7 +128,7 @@ export function useCameraSceneRig(opts: {
         const a = animRef.current;
         const t = strokeTime(a);
         if (editing === 'body' && modeRef.current === 'rotate') {
-          // Rotation du corps → réoriente la cible (+Z du corps), distance de regard conservée.
+          // Body rotation → reorients the target (body +Z), look distance kept.
           const p = obj.body.position;
           fwd.set(0, 0, 1).applyQuaternion(obj.body.quaternion);
           a.strokeUpsertAt(t, {
@@ -146,8 +147,8 @@ export function useCameraSceneRig(opts: {
       control.addEventListener('dragging-changed', onDragging);
       control.addEventListener('objectChange', onObjectChange);
 
-      // Sélection de la cible du gizmo au clic (raycast sur corps / marqueur). Le corps prend le
-      // mode courant (translate/rotate) ; le marqueur de cible reste en translation.
+      // Gizmo target selection on click (raycast on body / marker). The body takes the
+      // current mode (translate/rotate); the target marker stays in translation.
       const raycaster = new THREE.Raycaster();
       const ndc = new THREE.Vector2();
       const onPointerDown = (ev: PointerEvent) => {
@@ -183,18 +184,18 @@ export function useCameraSceneRig(opts: {
       };
     })();
 
-    // Synchronisation par frame : la caméra-objet suit la pose animée + trajectoire à jour.
+    // Per-frame sync: the camera-object follows the animated pose + up-to-date trajectory.
     const offFrame = subscribeFrame(() => {
       const a = animRef.current;
-      // Sans clé, la caméra-objet se pose sur la vue d'activation du layout (manipulable dès le
-      // premier contact en édition) — les canaux non clés y retombent aussi.
+      // Without a key, the camera-object sits on the layout's activation view (manipulable from the
+      // first contact in edit) — unkeyed channels fall back there too.
       const base = getActivationView() ?? BASE_POSE;
       const pose = sampleAnimV2(a.anim, a.timeMs, base);
       obj.update(pose);
       obj.setVisible(a.hasAnimation || editable);
-      // Le PiP montre exactement la pose que porte la caméra-objet — une seule source.
+      // The PiP shows exactly the pose the camera-object carries — a single source.
       if (!a.playing) applyShot(pose);
-      // Recalcule la trajectoire seulement quand l'animation change (tous canaux, cf. `trajectory`).
+      // Recomputes the trajectory only when the animation changes (all channels, see `trajectory`).
       const sig = trajSignature(a.anim);
       if (sig !== trajKeyRef.current) {
         trajKeyRef.current = sig;
@@ -212,7 +213,7 @@ export function useCameraSceneRig(opts: {
     };
   }, [active, ready, editable, getSceneHandle, subscribeFrame, getActivationView, applyShot]);
 
-  // Applique le mode courant au gizmo quand il est attaché au corps (sans réinstaller le gizmo).
+  // Applies the current mode to the gizmo when it is attached to the body (without reinstalling it).
   useEffect(() => {
     const c = controlRef.current;
     if (c && c.object === objRef.current?.body) c.setMode(mode);

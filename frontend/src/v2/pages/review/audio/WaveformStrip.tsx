@@ -6,18 +6,18 @@ import type { WaveformTrack } from './useWaveform';
 import { waveformBars } from './waveformData';
 import { useT } from '../../../i18n';
 
-/** Une barre tous les ~3 px : assez fin pour voir une syllabe, assez gros pour rester net. */
+/** One bar every ~3 px: thin enough to show a syllable, thick enough to stay crisp. */
 const PX_PER_BAR = 3;
 const MIN_BARS = 32;
 const NO_PEAKS = new Uint8Array(0);
 
 /**
- * Forme d'onde audio sous la timeline.
+ * Audio waveform under the timeline.
  *
- * Elle rend visible ce qu'aucun compteur ne dit : où le dialogue commence, où il coupe,
- * si le son colle à l'image. Le tracé est dessiné une fois (les crêtes ne changent pas) ;
- * seule la partie déjà lue est repeinte, par découpe — sinon un millier de rectangles
- * seraient reconstruits à chaque frame.
+ * It shows what no counter says: where the dialogue starts, where it cuts, whether the sound
+ * sticks to the picture. The trace is drawn once (the peaks never change); only the part
+ * already played is repainted, by clipping — otherwise about a thousand rectangles would be
+ * rebuilt on every frame.
  */
 export default function WaveformStrip({
   track,
@@ -25,10 +25,10 @@ export default function WaveformStrip({
   time,
   onSeek,
 }: {
-  /** Piste du média — rien n'est rendu tant qu'elle est absente ou masquée. */
+  /** Media track — nothing is rendered while it is absent or hidden. */
   track: WaveformTrack;
   duration: number;
-  /** Instant courant (secondes) : borne de la partie déjà lue. */
+  /** Current time (seconds): boundary of the part already played. */
   time: number;
   onSeek: (t: number) => void;
 }) {
@@ -52,19 +52,19 @@ export default function WaveformStrip({
   const shapes = useMemo(
     () =>
       bars.map((v, i) => {
-        // Hauteur plancher : une barre visible même dans le silence, sinon la piste
-        // paraît absente là où elle est simplement calme.
+        // Minimum height: a visible bar even in silence, otherwise the track
+        // looks absent where it is simply quiet.
         const h = Math.max(2, v * 96);
         return <rect key={i} x={i + 0.15} width={0.7} y={50 - h / 2} height={h} />;
       }),
     [bars],
   );
 
-  // `useId` contient des caractères interdits dans une référence CSS (`url(#…)`).
+  // `useId` contains characters not allowed in a CSS reference (`url(#…)`).
   const clipId = `wf-${useId().replace(/[^a-zA-Z0-9-]/g, '')}`;
   const progress = duration > 0 ? Math.min(Math.max(time / duration, 0), 1) : 0;
 
-  // Après les hooks, jamais avant : média muet, forme d'onde masquée, durée inconnue.
+  // After the hooks, never before: silent media, hidden waveform, unknown duration.
   if (track.peaks === null || duration <= 0) return null;
 
   const seekFromEvent = (e: { clientX: number }) => {

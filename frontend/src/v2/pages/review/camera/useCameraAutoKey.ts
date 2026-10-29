@@ -5,13 +5,13 @@ import { useEffect } from 'react';
 import { isAutoKeySuspended } from './autoKeyGate';
 
 /**
- * Auto-key (Phase 27) : activé, tout geste caméra sur le canvas (drag orbite/pan au-delà de
- * 3 px, molette débouncée) pose une clé de la vue courante au temps de lecture — façon DCC.
+ * Auto-key (Phase 27): when enabled, any camera gesture on the canvas (orbit/pan drag beyond
+ * 3 px, debounced wheel) sets a key from the current view at the playback time — DCC-style.
  *
- * Hors caméra (mode layout), le portier `autoKeyGate` le suspend : les gestes du canvas y bougent
- * la caméra **libre**, pas celle du plan, et le `pointerup` d'un drag de gizmo écrasait la clé que
- * le gizmo venait d'écrire. Le portier est consulté au moment de poser la clé, jamais à
- * l'abonnement : le mode change sans démonter l'écoute.
+ * Outside camera (layout mode), the `autoKeyGate` gate suspends it: canvas gestures there move
+ * the **free** camera, not the plan's, and the `pointerup` of a gizmo drag overwrote the key the
+ * gizmo had just written. The gate is consulted at the moment the key is set, never at
+ * subscription time: the mode changes without unmounting the listener.
  */
 export function useCameraAutoKey(
   autoKey: boolean,

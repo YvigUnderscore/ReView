@@ -2,35 +2,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Lecture d'une LUT 3D `.cube` cuite par le backend (`lib/ocioBake.ts` ou `bake_lut.py`) et
- * mise en forme pour le GPU. Module **pur** — aucun appel WebGL, aucun réseau.
+ * Reads a 3D `.cube` LUT baked by the backend (`lib/ocioBake.ts` or `bake_lut.py`) and shapes it
+ * for the GPU. **Pure** module — no WebGL call, no network.
  *
- * Deux emballages, parce que deux générations de contexte :
- *  - `volume` : RGBA8 dans l'ordre attendu par `texImage3D` (WebGL2), rouge variant le plus vite ;
- *  - `tiles`  : la même grille dépliée en **atlas 2D** (une tranche bleue par tuile), repli
- *    WebGL1 où `sampler3D` n'existe pas.
+ * Two packings, because there are two generations of context:
+ *  - `volume`: RGBA8 in the order expected by `texImage3D` (WebGL2), red varying fastest;
+ *  - `tiles`: the same grid unfolded into a **2D atlas** (one blue slice per tile), the WebGL1
+ *    fallback where `sampler3D` does not exist.
  *
- * Les valeurs d'une LUT d'affichage sont des codes écran dans [0,1] : les stocker en 8 bits
- * n'ajoute pas d'erreur visible devant une source 8 bits et une sortie 8 bits, et évite de
- * dépendre du filtrage des textures flottantes.
+ * The values of a display LUT are screen codes in [0,1]: storing them in 8 bits adds no visible
+ * error for an 8-bit source and an 8-bit output, and avoids depending on floating-point texture
+ * filtering.
  */
 
-/** Provenance de la LUT, lue dans l'en-tête du fichier — affichée telle quelle au superviseur. */
+/** Provenance of the LUT, read from the file header — shown as is to the supervisor. */
 export type LutSource = 'ocio' | 'builtin' | 'unknown';
 
 export interface CubeLut {
   size: number;
-  /** RGBA8, `size³` texels, rouge le plus rapide. */
+  /** RGBA8, `size³` texels, red varying fastest. */
   volume: Uint8Array;
   source: LutSource;
 }
 
-/** Taille maximale acceptée (65³ ≈ 275 000 entrées) — au-delà, le fichier est refusé. */
+/** Maximum accepted size (65³ ≈ 275,000 entries) — beyond it, the file is rejected. */
 export const MAX_LUT_SIZE = 65;
 
 const SOURCE_RE = /^#\s*ReView display transform\s*\|\s*source:\s*(.+)$/i;
 
-/** Déduit la provenance d'après la ligne d'en-tête écrite par le backend. */
+/** Infers the provenance from the header line written by the backend. */
 export function readSource(text: string): LutSource {
   for (const line of text.split(/\r?\n/, 8)) {
     const m = SOURCE_RE.exec(line.trim());
@@ -46,8 +46,8 @@ const toByte = (v: number): number => {
 };
 
 /**
- * Parse un `.cube` 3D. Lève sur un fichier tronqué : mieux vaut afficher « transformée
- * indisponible » que d'échantillonner une grille incomplète.
+ * Parses a 3D `.cube`. Throws on a truncated file: better to show "transform unavailable" than to
+ * sample an incomplete grid.
  */
 export function parseCubeLut(text: string): CubeLut {
   let size = 0;
@@ -90,18 +90,18 @@ export interface LutTiles {
   rows: number;
   width: number;
   height: number;
-  /** RGBA8 de l'atlas (`width × height`). */
+  /** RGBA8 of the atlas (`width × height`). */
   data: Uint8Array;
 }
 
-/** Disposition de l'atlas : le plus carré possible, tranche bleue par tuile. */
+/** Atlas layout: as square as possible, blue slice per tile. */
 export function tileLayout(size: number): { cols: number; rows: number; width: number; height: number } {
   const cols = Math.ceil(Math.sqrt(size));
   const rows = Math.ceil(size / cols);
   return { cols, rows, width: cols * size, height: rows * size };
 }
 
-/** Déplie le volume en atlas 2D (repli WebGL1). */
+/** Unfolds the volume into a 2D atlas (WebGL1 fallback). */
 export function toTiles(lut: CubeLut): LutTiles {
   const { cols, rows, width, height } = tileLayout(lut.size);
   const data = new Uint8Array(width * height * 4);
@@ -123,8 +123,8 @@ export function toTiles(lut: CubeLut): LutTiles {
 }
 
 /**
- * Échantillonnage trilinéaire sur CPU — sert de référence aux tests (le GPU fait le même
- * calcul en matériel) et de vérification d'une LUT fraîchement lue.
+ * CPU trilinear sampling — serves as the reference for the tests (the GPU does the same
+ * computation in hardware) and as a check of a freshly read LUT.
  */
 export function sampleLut(lut: CubeLut, rgb: [number, number, number]): [number, number, number] {
   const n = lut.size;

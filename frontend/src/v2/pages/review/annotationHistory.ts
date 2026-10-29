@@ -5,9 +5,9 @@ import type { Shape } from '../../components/AnnotationCanvas';
 import type { StagedReference } from './referenceBox';
 
 /**
- * Historique de l'annotation en cours. Un seul cran couvre **le dessin et les références
- * collées** : les deux partent avec le même commentaire, les annuler séparément n'aurait
- * pas de sens pour qui vient d'appuyer sur Ctrl+Z.
+ * History of the annotation in progress. A single undo step covers **the drawing and the
+ * pasted references**: both go with the same comment, and undoing them separately would make
+ * no sense to someone who just pressed Ctrl+Z.
  */
 export interface AnnotationSnapshot {
   shapes: Shape[];
@@ -21,7 +21,7 @@ export interface AnnotationHistory {
 
 export const EMPTY_HISTORY: AnnotationHistory = { past: [], future: [] };
 
-/** Ouvre un cran : l'état courant part au passé, le futur devient inatteignable. */
+/** Opens a step: the current state moves to the past, the future becomes unreachable. */
 export const pushStep = (h: AnnotationHistory, current: AnnotationSnapshot): AnnotationHistory => ({
   past: [...h.past, current],
   future: [],

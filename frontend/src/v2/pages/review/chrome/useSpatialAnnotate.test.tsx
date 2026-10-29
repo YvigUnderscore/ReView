@@ -10,9 +10,9 @@ import type { ToolId } from './tools';
 import type { Annotations } from '../useAnnotations';
 
 /**
- * Le pont « Annoter » ↔ rail des viewers spatiaux. Sans lui, cliquer « Annoter » sur une scène
- * n'armait que le calque de dessin 2D : le rail restait en exploration, et les outils
- * d'annotation de la scène n'apparaissaient nulle part. C'est la panne décrite par l'utilisateur.
+ * The "Annotate" ↔ rail bridge for spatial viewers. Without it, clicking "Annotate" on a scene only
+ * armed the 2D drawing layer: the rail stayed in exploration, and the scene's annotation tools
+ * appeared nowhere. This is the failure the user described.
  */
 function mount(initial: { annotating: boolean; mode?: ModeId; tool?: ToolId }) {
   const update = vi.fn();
@@ -44,37 +44,37 @@ function mount(initial: { annotating: boolean; mode?: ModeId; tool?: ToolId }) {
 }
 
 describe('useSpatialAnnotate', () => {
-  it('le bouton « Annoter » arme le mode du rail', () => {
+  it('the "Annotate" button arms the rail mode', () => {
     const { update, rerender } = mount({ annotating: false });
     expect(update).not.toHaveBeenCalled();
     rerender({ annotating: true });
     expect(update).toHaveBeenCalledWith({ mode: 'annotate' });
   });
 
-  it('ne réarme pas le mode à chaque rendu — on pourrait en choisir un autre', () => {
+  it('does not re-arm the mode on every render — one could have chosen another', () => {
     const { update, rerender } = mount({ annotating: true, mode: 'annotate' });
     update.mockClear();
     rerender({ annotating: true, mode: 'explore' });
     expect(update).not.toHaveBeenCalled();
   });
 
-  it('sortir du mode éteint le bouton, qui ne reste pas allumé sur rien', () => {
+  it('leaving the mode turns the button off, so it does not stay lit on nothing', () => {
     const { setAnnotating, rerender } = mount({ annotating: true, mode: 'annotate' });
     setAnnotating.mockClear();
     rerender({ annotating: true, mode: 'explore' });
     expect(setAnnotating).toHaveBeenCalledWith(false);
   });
 
-  it('armer un outil de la scène range le crayon 2D, qui lui volait le pointeur', () => {
-    // Le calque 2D couvre tout le cadre et capte le pointeur : sans cela, le clic destiné à la
-    // surface n'atteignait jamais le canvas — brosse comme point d'intérêt restaient inertes.
+  it('arming a scene tool stows the 2D pencil, which was stealing the pointer', () => {
+    // The 2D layer covers the whole frame and captures the pointer: without this, the click meant for the
+    // surface never reached the canvas — brush and point of interest both stayed inert.
     for (const tool of ['paint', 'paint-erase', 'pin'] as ToolId[]) {
       const { setAnnotating } = mount({ annotating: true, mode: 'annotate', tool });
       expect(setAnnotating).toHaveBeenCalledWith(false);
     }
   });
 
-  it('laisse le crayon 2D à l’outil de repos — il reste ce qu’« Annoter » donne', () => {
+  it('leaves the 2D pencil to the idle tool — it stays what "Annotate" gives', () => {
     const { setAnnotating } = mount({ annotating: true, mode: 'annotate', tool: 'nav' });
     expect(setAnnotating).not.toHaveBeenCalled();
   });

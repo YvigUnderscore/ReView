@@ -11,10 +11,10 @@ import WipeControl from './WipeControl';
 import { useT } from '../../i18n';
 
 /**
- * Comparaison A/B **image** en mode wipe : les deux images sont superposées en
- * `object-contain` (zoom/pan désactivés le temps de la comparaison), B rognée par la barre
- * déplaçable et rotative. Surcouche du viewport, à l'intérieur du chrome : côte-à-côte et
- * différence se choisissent dans la barre d'options, qui reste sous les yeux.
+ * **Image** A/B comparison in wipe mode: both images are stacked with `object-contain`
+ * (zoom/pan disabled for the duration of the comparison), B clipped by the movable and
+ * rotatable bar. Viewport overlay, inside the chrome: side-by-side and difference are
+ * chosen from the options bar, which stays in view.
  */
 export default function ImageWipeOverlay({
   aUrl,
@@ -27,7 +27,7 @@ export default function ImageWipeOverlay({
   aName: string;
   compareId: number;
   onClose: () => void;
-  /** Position/angle hissés (répliqués en session live). */
+  /** Position/angle lifted to the parent (mirrored in the live session). */
   sharedWipe?: WipeShared;
 }) {
   const t = useT();

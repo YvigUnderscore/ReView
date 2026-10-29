@@ -2,27 +2,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Portier de l'auto-key (Phase 50, lot 7). L'auto-key écoute les gestes sur le **canvas**, où
- * l'on trouve aussi bien la caméra libre que le gizmo de la caméra-objet. Hors caméra (mode
- * layout), aucun de ces gestes ne déplace la caméra du plan :
- *  - orbiter/molette bouge la caméra **libre** — poser une clé n'aurait aucun sens ;
- *  - tirer le gizmo écrit déjà ses clés lui-même, et le `pointerup` final posait par-dessus une
- *    clé de 8 canaux qui écrasait ce que le gizmo venait d'écrire.
+ * Auto-key gate (Phase 50, batch 7). Auto-key listens to gestures on the **canvas**, where
+ * both the free camera and the camera-object gizmo are found. Outside camera (layout mode),
+ * none of these gestures moves the plan's camera:
+ *  - orbit/wheel moves the **free** camera — setting a key would make no sense;
+ *  - dragging the gizmo already writes its own keys, and the final `pointerup` would set an
+ *    8-channel key on top, overwriting what the gizmo had just written.
  *
- * `useCameraAnim` monte l'auto-key lui-même (`useCameraAutoKey(autoKey, getDom, insertKeyAtView)`)
- * et ne connaît pas le mode : le portier est le canal par lequel `useLayoutMode`, seule source de
- * vérité du « dans/hors caméra », le suspend. Un seul viewer spatial est monté à la fois, d'où
- * l'état de module — volontairement minimal et réinitialisable.
+ * `useCameraAnim` mounts auto-key itself (`useCameraAutoKey(autoKey, getDom, insertKeyAtView)`)
+ * and does not know the mode: the gate is the channel through which `useLayoutMode`, the only
+ * source of truth for "in/out of camera", suspends it. Only one spatial viewer is mounted at a
+ * time, hence the module state — deliberately minimal and resettable.
  */
 
 let suspended = false;
 
-/** Suspend (ou rétablit) l'auto-key. Appelé par `useLayoutMode` à l'entrée/sortie du mode. */
+/** Suspends (or restores) auto-key. Called by `useLayoutMode` when entering/leaving the mode. */
 export function suspendAutoKey(on: boolean): void {
   suspended = on;
 }
 
-/** Vrai quand un geste sur le canvas ne doit pas poser de clé. */
+/** True when a gesture on the canvas must not set a key. */
 export function isAutoKeySuspended(): boolean {
   return suspended;
 }

@@ -25,13 +25,12 @@ const KIND_ICON: Record<MediaKind, LucideIcon> = {
 };
 
 /**
- * Assets de la version courante — le passage d'un livrable à l'autre à l'intérieur d'une
- * même version. Ce n'est pas une pellicule : les entrées ne sont pas des images d'un film
- * mais des médias distincts (un rendu, un turntable, un modèle, un splat), et chacune se
- * montre par sa vraie vignette, son type et son nom.
+ * Assets of the current version — switching between deliverables within the same version.
+ * This is not a filmstrip: the entries are not frames of a film but distinct media (a render,
+ * a turntable, a model, a splat), and each is shown by its real thumbnail, type and name.
  *
- * Réutilise la query `qk.version` (déjà chargée par VersionNavigator) ; masqué quand la
- * version ne porte qu'un seul asset — il n'y a alors rien entre quoi passer.
+ * Reuses the `qk.version` query (already loaded by VersionNavigator); hidden when the version
+ * carries a single asset — there is then nothing to switch between.
  */
 export default function VersionAssets({ versionId, mediaId }: { versionId: number; mediaId: number }) {
   const t = useT();
@@ -40,8 +39,8 @@ export default function VersionAssets({ versionId, mediaId }: { versionId: numbe
   const index = media.findIndex((m) => m.id === mediaId);
   if (media.length < 2) return null;
 
-  // Le pas circulaire : depuis le dernier asset, « suivant » revient au premier. Une version
-  // en porte rarement plus de trois ou quatre, buter en bout de bande n'apprend rien.
+  // Circular step: from the last asset, "next" wraps back to the first. A version
+  // rarely carries more than three or four, hitting the end of the strip teaches nothing.
   const step = (delta: number) => {
     const from = index < 0 ? 0 : index;
     const next = media[(from + delta + media.length) % media.length];
@@ -105,7 +104,7 @@ export default function VersionAssets({ versionId, mediaId }: { versionId: numbe
                     <Icon size={20} />
                   </div>
                 )}
-                {/* Le type reste lisible même sur une vignette : la pastille est posée dessus. */}
+                {/* The type stays readable even on a thumbnail: the badge is placed on top of it. */}
                 <span className="absolute left-1 top-1 rounded bg-background/80 p-0.5 text-foreground">
                   <Icon size={11} />
                 </span>

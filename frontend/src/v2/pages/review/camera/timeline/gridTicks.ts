@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Graduations « lisibles » d'un axe (Phase 27, grille du graph editor) : un pas rond (1/2/5 × 10ⁿ)
- * couvrant l'intervalle avec ~`target` divisions. Pur/testable, sans DOM.
+ * "Readable" ticks for an axis (Phase 27, graph editor grid): a round step (1/2/5 × 10ⁿ) covering
+ * the interval with about `target` divisions. Pure/testable, no DOM.
  */
 
-/** Pas rond le plus proche de `raw` dans la suite 1/2/5 × 10ⁿ. */
+/** Round step closest to `raw` in the 1/2/5 × 10ⁿ series. */
 export function niceStep(raw: number): number {
   if (!(raw > 0) || !Number.isFinite(raw)) return 1;
   const exp = Math.floor(Math.log10(raw));
@@ -16,13 +16,13 @@ export function niceStep(raw: number): number {
   return nice * pow;
 }
 
-/** Valeurs de graduation régulières couvrant [min, max] avec ~`target` divisions (bornes incluses). */
+/** Regular tick values covering [min, max] with about `target` divisions (bounds included). */
 export function niceTicks(min: number, max: number, target = 6): number[] {
   if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return [];
   const step = niceStep((max - min) / Math.max(1, target));
   const start = Math.ceil(min / step) * step;
   const ticks: number[] = [];
-  // Arrondi anti-bruit binaire selon les décimales du pas.
+  // Rounding against binary noise, according to the step's decimals.
   const decimals = Math.max(0, Math.ceil(-Math.log10(step)));
   for (let t = start; t <= max + step * 1e-6 && ticks.length < 1000; t += step) {
     ticks.push(Number(t.toFixed(Math.min(decimals + 1, 12))));

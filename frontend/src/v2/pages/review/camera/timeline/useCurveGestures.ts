@@ -16,14 +16,14 @@ import {
   type ValueView,
 } from './viewTransform';
 
-/** En deçà, un rubber-band n'a pas bougé : le geste vaut un simple clic (scrub). */
+/** Below this, the rubber-band has not moved: the gesture counts as a simple click (scrub). */
 const BAND_CLICK_PX = 3;
-/** Sous cet écart temporel, la pente d'une tangente n'a plus de sens (division instable). */
+/** Under this time gap, a tangent slope is meaningless (unstable division). */
 const MIN_SLOPE_DT = 1e-3;
-/** Sous cette distance au pivot, un facteur d'échelle n'a plus de sens (une frame en temps). */
+/** Under this distance to the pivot, a scale factor is meaningless (one frame in time). */
 const MIN_SCALE_DT = 1;
 
-/** Origine d'un déplacement groupé : clé (canal+index) et ses valeurs de départ (baseline). */
+/** Origin of a grouped move: key (channel+index) and its starting values (baseline). */
 interface KeyOrigin {
   channel: ChannelId;
   index: number;
@@ -31,10 +31,10 @@ interface KeyOrigin {
   v0: number;
 }
 
-/** Côté de tangente manipulé — le type canonique vit avec leur sémantique (`channels/tangents`). */
+/** Tangent side being manipulated — the canonical type lives with its semantics (`channels/tangents`). */
 export type { TangentSide };
 
-/** Rectangle du rubber-band, en pixels locaux du SVG. */
+/** Rubber-band rectangle, in local SVG pixels. */
 export interface BandRect {
   x0: number;
   y0: number;
@@ -42,7 +42,7 @@ export interface BandRect {
   y1: number;
 }
 
-/** Déplacement groupé demandé au modèle (recalculé depuis la baseline à chaque frame du geste). */
+/** Grouped move requested from the model (recomputed from the baseline on every frame of the gesture). */
 export interface KeyMove {
   channel: ChannelId;
   index: number;
@@ -51,9 +51,9 @@ export interface KeyMove {
 }
 
 /**
- * Geste en cours. Union volontairement ouverte : un geste à venir (boîte de transformation, zoom
- * vertical au drag, poignées de pré/post-infinity) s'ajoute ici et dans `onPointerMove`, sans
- * toucher au rendu du canvas.
+ * Gesture in progress. Deliberately open union: an upcoming gesture (transform box, vertical zoom
+ * on drag, pre/post-infinity handles) is added here and in `onPointerMove`, without touching the
+ * canvas rendering.
  */
 type DragState =
   | { kind: 'keys'; baseline: CameraAnimV2; tDown: number; vDown: number; origins: KeyOrigin[] }
@@ -71,17 +71,17 @@ type DragState =
   | { kind: 'pan'; x: number; y: number }
   | { kind: 'band'; x0: number; y0: number };
 
-/** Une clé (canal + index) appartient-elle à la sélection ? */
+/** Does a key (channel + index) belong to the selection? */
 export const inSel = (sel: readonly KeyRef[], id: ChannelId, i: number) =>
   sel.some((s) => s.channel === id && s.index === i);
 
-/** Sorties du modèle appelées par les gestes — l'état vit dans `useCameraAnim`. */
+/** Model outputs called by the gestures — the state lives in `useCameraAnim`. */
 export interface CurveGestureCallbacks {
   onScrub: (t: number) => void;
   onSelect: (sel: KeyRef[]) => void;
   onBeginStroke: () => void;
   onMoveKeys: (baseline: CameraAnimV2, moves: KeyMove[]) => void;
-  /** Pente (et poids, si la clé est pondérée) d'un côté de tangente — cf. `setTangentSlope`. */
+  /** Slope (and weight, if the key is weighted) of a tangent side — see `setTangentSlope`. */
   onSetTangent: (
     channel: ChannelId,
     index: number,
@@ -89,20 +89,20 @@ export interface CurveGestureCallbacks {
     slope: number,
     weight?: number,
   ) => void;
-  /** Pan de la vue au bouton du milieu (temps en ms, valeur en unités du canal). */
+  /** View pan on the middle button (time in ms, value in channel units). */
   onPanView?: (deltaMs: number, deltaV: number) => void;
 }
 
 /**
- * Gestes du graph editor F-curves (Phase 17/27) : déplacement groupé de clés, sélection au
- * rubber-band et manipulation des poignées de tangente. Le canvas ne garde que le rendu et branche
- * les surfaces renvoyées.
+ * F-curve graph editor gestures (Phase 17/27): grouped key move, rubber-band selection and
+ * tangent handle manipulation. The canvas only keeps the rendering and wires up the returned
+ * surfaces.
  *
- * Deux pièges portés par ce hook :
- * - la **baseline** (animation au pointerdown) est capturée une fois et rejouée à chaque frame : les
- *   index de clés restent cohérents pendant tout le déplacement (Phase 27) ;
- * - le **pointer capture** est posé sur l'élément qui a reçu le pointerdown (clé, poignée ou fond),
- *   sinon un geste relâché hors du cadre reste collé au pointeur.
+ * Two pitfalls this hook handles:
+ * - the **baseline** (animation at pointerdown) is captured once and replayed on every frame: the
+ *   key indices stay consistent throughout the move (Phase 27);
+ * - the **pointer capture** is set on the element that received the pointerdown (key, handle or
+ *   background), otherwise a gesture released outside the frame stays stuck to the pointer.
  */
 export function useCurveGestures(
   opts: {
@@ -111,9 +111,9 @@ export function useCurveGestures(
     valueView: ValueView;
     selection: readonly KeyRef[];
     editable: boolean;
-    /** Canaux dessinés : cible du rubber-band (un canal masqué ne se sélectionne pas). */
+    /** Drawn channels: target of the rubber-band (a hidden channel cannot be selected). */
     bandChannels: readonly ChannelId[];
-    /** Framerate du pipeline : les clés déplacées atterrissent SUR une frame (Alt pour libérer). */
+    /** Pipeline frame rate: moved keys land ON a frame (Alt to release). */
     fps: number;
   } & CurveGestureCallbacks,
 ) {
@@ -128,9 +128,9 @@ export function useCurveGestures(
   const capture = (e: React.PointerEvent) => (e.currentTarget as SVGElement).setPointerCapture(e.pointerId);
 
   /**
-   * Tangente : pente = (v pointeur − v clé) / (t pointeur − t clé), appliquée au côté dragué. Sur
-   * une clé **pondérée**, l'éloignement du pointeur règle aussi la longueur de la poignée (poids) —
-   * c'est tout l'intérêt d'une tangente pondérée.
+   * Tangent: slope = (pointer v − key v) / (pointer t − key t), applied to the dragged side. On a
+   * **weighted** key, the pointer distance also sets the handle length (weight) — that is the whole
+   * point of a weighted tangent.
    */
   const dragTangent = (d: Extract<DragState, { kind: 'tangent' }>, e: React.PointerEvent) => {
     const keys = anim.channels[d.channel]?.keys;
@@ -144,13 +144,13 @@ export function useCurveGestures(
     onSetTangent(d.channel, d.index, d.side, slope, weight ?? undefined);
   };
 
-  /** Temps d'une clé déplacée : sur une frame, sauf Alt (même règle que le scrub). */
+  /** Time of a moved key: on a frame, except with Alt (same rule as scrubbing). */
   const timeOf = (t: number, free: boolean) => (free ? Math.max(0, t) : snapToFrame(t, fps));
 
   /**
-   * Mise à l'échelle en direct : chaque axe saisi prend le rapport des distances au pivot (l'arête
-   * opposée), les autres restent à 1. Passe par `onMoveKeys` — donc par la baseline du drag et
-   * l'undo unique du geste, comme un déplacement ordinaire.
+   * Live scaling: each grabbed axis takes the ratio of the distances to the pivot (the opposite
+   * edge), the others stay at 1. Goes through `onMoveKeys` — hence through the drag baseline and
+   * the gesture's single undo, like an ordinary move.
    */
   const dragScale = (d: Extract<DragState, { kind: 'scale' }>, e: React.PointerEvent) => {
     const onTime = d.grip === 'left' || d.grip === 'right' || d.grip === 'corner';
@@ -172,7 +172,7 @@ export function useCurveGestures(
     );
   };
 
-  /** Clés contenues dans le rectangle ; `additive` ajoute à la sélection courante (Maj). */
+  /** Keys contained in the rectangle; `additive` adds to the current selection (Shift). */
   const commitBand = (rect: BandRect, additive: boolean) => {
     const xMin = Math.min(rect.x0, rect.x1);
     const xMax = Math.max(rect.x0, rect.x1);
@@ -199,7 +199,7 @@ export function useCurveGestures(
       return;
     }
     if (d.kind === 'pan') {
-      // La vue suit le pointeur : la fenêtre se déplace donc à l'inverse en temps.
+      // The view follows the pointer: the window therefore moves in reverse in time.
       const x = localX(e.clientX);
       const y = localY(e.clientY);
       const deltaMs = (-(x - d.x) / (tv.width || 1)) * (tv.t1 - tv.t0);
@@ -216,7 +216,7 @@ export function useCurveGestures(
     if (d.kind === 'keys') {
       const dt = xToTime(localX(e.clientX), tv) - d.tDown;
       const dv = yToValue(localY(e.clientY), vv) - d.vDown;
-      // Snap à la frame comme le scrub et le retime de colonne — Alt libère le placement.
+      // Frame snap like the scrub and the column retime — Alt releases the placement.
       const timeAt = (t0: number) => timeOf(t0 + dt, e.altKey);
       onMoveKeys(
         d.baseline,
@@ -242,8 +242,8 @@ export function useCurveGestures(
   };
 
   /**
-   * Bouton du milieu : pan de la vue, où que soit le pointeur (usage de tous les curve editors).
-   * Bouton gauche sur le **fond** du graphe (`target === currentTarget`) : rubber-band.
+   * Middle button: pans the view, wherever the pointer is (usage of all curve editors).
+   * Left button on the graph **background** (`target === currentTarget`): rubber-band.
    */
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button === 1 && onPanView) {
@@ -257,9 +257,9 @@ export function useCurveGestures(
     capture(e);
   };
 
-  /** Clic sur une clé : met à jour la sélection (Maj = bascule) puis arme le déplacement groupé. */
+  /** Click on a key: updates the selection (Shift = toggle) then arms the grouped move. */
   const startKeyGesture = (e: React.PointerEvent, id: ChannelId, i: number) => {
-    // Le bouton du milieu appartient au pan : il doit remonter jusqu'à la surface.
+    // The middle button belongs to the pan: it must bubble up to the surface.
     if (e.button !== 0) return;
     e.stopPropagation();
     const already = inSel(selection, id, i);
@@ -288,8 +288,8 @@ export function useCurveGestures(
   };
 
   /**
-   * Clic sur une poignée de la boîte de transformation : l'arête opposée devient le pivot, et le
-   * geste met la sélection à l'échelle jusqu'au relâchement.
+   * Click on a handle of the transform box: the opposite edge becomes the pivot, and the gesture
+   * scales the selection until release.
    */
   const startScaleGesture = (e: React.PointerEvent, grip: ScaleGrip, bounds: KeyBounds) => {
     if (e.button !== 0 || !editable) return;
@@ -308,7 +308,7 @@ export function useCurveGestures(
     capture(e);
   };
 
-  /** Clic sur une poignée de tangente : arme le geste côté `in` ou `out` de la clé primaire. */
+  /** Click on a tangent handle: arms the gesture on the `in` or `out` side of the primary key. */
   const startTangentGesture = (e: React.PointerEvent, side: TangentSide, id: ChannelId, i: number) => {
     if (e.button !== 0) return;
     e.stopPropagation();
@@ -319,16 +319,16 @@ export function useCurveGestures(
 
   return {
     svgRef,
-    /** Rubber-band en cours (à dessiner par le canvas), `null` hors geste. */
+    /** Rubber-band in progress (to be drawn by the canvas), `null` outside a gesture. */
     band,
     localX,
     localY,
-    /** À brancher tel quel sur le `<svg>` du graphe. */
+    /** To be wired as is onto the graph's `<svg>`. */
     surface: { onPointerDown, onPointerMove, onPointerUp },
     startKeyGesture,
     startTangentGesture,
     startScaleGesture,
-    /** Étendue de la sélection (boîte de transformation), `null` si elle ne désigne rien. */
+    /** Extent of the selection (transform box), `null` if it designates nothing. */
     selectionBounds: keyBounds(anim, selection),
   };
 }

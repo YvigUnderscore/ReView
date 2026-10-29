@@ -16,25 +16,24 @@ import {
 type TimeRange = { t0: number; t1: number };
 type ValueRange = { v0: number; v1: number };
 
-/** Fenêtre temporelle par défaut : toute l'animation, avec 10 % d'air et un plancher de 3 s. */
+/** Default time window: the whole animation, with 10% room and a 3 s minimum. */
 const autoTimeRange = (playDuration: number): TimeRange => ({
   t0: 0,
   t1: Math.max(playDuration * 1.1, 3000),
 });
 
 /**
- * Fenêtre de vue du curve editor (Phase 50, lot 7) : **deux axes**, chacun automatique jusqu'au
- * premier geste de l'utilisateur, puis figé sur son override.
+ * View window of the curve editor (Phase 50, batch 7): **two axes**, each automatic until the
+ * user's first gesture, then frozen at its override.
  *
- * L'axe des valeurs était jusqu'ici recalé en permanence sur toutes les clés visibles : impossible
- * de regarder de près une courbe, la vue se recadrait à chaque édition. Il se zoome et se déplace
- * maintenant comme l'axe du temps, et le recadrage reste offert à la demande (tout, ou la
- * sélection). Les gestes ne sont pas mémoïsés : ils dépendent de la fenêtre courante, qui change
- * à chaque rendu du tiroir.
+ * The value axis used to be constantly refitted to all visible keys: impossible to look closely
+ * at a curve, the view re-framed on every edit. It now zooms and pans like the time axis, and
+ * refitting stays available on request (everything, or the selection). The gestures are not
+ * memoized: they depend on the current window, which changes on every drawer render.
  */
 export function useCurveView(opts: {
   anim: CameraAnimV2;
-  /** Canaux dessinés — bornes automatiques de l'axe des valeurs. */
+  /** Drawn channels — automatic bounds of the value axis. */
   visible: ReadonlySet<ChannelId>;
   playDuration: number;
   width: number;
@@ -56,23 +55,23 @@ export function useCurveView(opts: {
   return {
     timeView,
     valueView,
-    /** Zoom horizontal au pivot temporel (molette). */
+    /** Horizontal zoom around the time pivot (wheel). */
     zoomAt: (pivotT: number, factor: number) => setTime(zoomTime(timeView, pivotT, factor)),
-    /** Zoom vertical au pivot de valeur (Ctrl+molette). */
+    /** Vertical zoom around the value pivot (Ctrl+wheel). */
     zoomValueAt: (pivotV: number, factor: number) => setValue(zoomValue(valueView, pivotV, factor)),
-    /** Pan des deux axes (bouton du milieu ; Maj+molette ne décale que le temps). */
+    /** Pan on both axes (middle button; Shift+wheel only shifts the time). */
     panBy: (deltaMs: number, deltaV = 0) => {
       if (deltaMs) setTime(panTime(timeView, deltaMs));
       if (deltaV) setValue(panValue(valueView, deltaV));
     },
-    /** Recadre les deux axes sur l'animation entière (bouton « ajuster » — état d'origine). */
+    /** Refits both axes to the whole animation ("fit" button — original state). */
     fitAll: () => {
       setTime(null);
       setValue(null);
     },
     /**
-     * Recadre les deux axes sur un lot de clés (sélection). Une clé seule n'a pas d'étendue : on
-     * lui laisse une seconde de part et d'autre, et l'air vertical de `fitValueRange`.
+     * Refits both axes to a batch of keys (selection). A single key has no extent: it is given one
+     * second on either side, and the vertical room of `fitValueRange`.
      */
     fitKeys: (refs: readonly KeyRef[]) => {
       const keys = refs.map((r) => anim.channels[r.channel]?.keys[r.index]).filter((k) => k != null);
@@ -84,7 +83,7 @@ export function useCurveView(opts: {
       setTime({ t0: Math.max(0, t0 - pad), t1: t1 + pad });
       setValue(fitValueRange(keys.map((k) => k.v)));
     },
-    /** Recadre le seul axe des valeurs sur une série (une courbe, ou les courbes visibles). */
+    /** Refits only the value axis to a series (one curve, or the visible curves). */
     fitValues: (values: number[]) => {
       if (values.length) setValue(fitValueRange(values));
     },

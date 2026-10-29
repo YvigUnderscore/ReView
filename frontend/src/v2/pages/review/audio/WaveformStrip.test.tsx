@@ -8,7 +8,7 @@ import type { WaveformTrack } from './useWaveform';
 
 const peaks = Uint8Array.from(Array.from({ length: 64 }, (_, i) => (i < 32 ? 0 : 255)));
 
-/** Piste telle que `useWaveform` la rend au lecteur. */
+/** Track as `useWaveform` returns it to the player. */
 const track = (visible = true): WaveformTrack => ({
   available: true,
   peaks: visible ? peaks : null,
@@ -16,7 +16,7 @@ const track = (visible = true): WaveformTrack => ({
   toggle: () => {},
 });
 
-/** Ancre la bande à une géométrie connue : happy-dom ne mesure rien. */
+/** Anchors the strip to a known geometry: happy-dom measures nothing. */
 const anchor = (el: HTMLElement) => {
   el.getBoundingClientRect = () => ({ left: 0, width: 200, top: 0, height: 32 }) as DOMRect;
   el.setPointerCapture = () => {};
@@ -24,24 +24,24 @@ const anchor = (el: HTMLElement) => {
 };
 
 describe('WaveformStrip', () => {
-  it('dessine le tracé deux fois : le fond et la partie lue, découpée à la position', () => {
+  it('draws the trace twice: the background and the played part, clipped at the position', () => {
     const { container } = render(<WaveformStrip track={track()} duration={10} time={5} onSeek={() => {}} />);
     const groups = container.querySelectorAll('svg > g');
     expect(groups).toHaveLength(2);
     expect(groups[0].querySelectorAll('rect').length).toBeGreaterThan(0);
-    // Les deux calques portent exactement le même tracé.
+    // Both layers carry exactly the same trace.
     expect(groups[1].querySelectorAll('rect')).toHaveLength(groups[0].querySelectorAll('rect').length);
     const clip = container.querySelector('clipPath rect')!;
     const bars = groups[0].querySelectorAll('rect').length;
     expect(Number(clip.getAttribute('width'))).toBeCloseTo(bars / 2, 6);
   });
 
-  it('à l’arrêt sur la première frame, rien n’est peint comme lu', () => {
+  it('stopped on the first frame, nothing is painted as played', () => {
     const { container } = render(<WaveformStrip track={track()} duration={10} time={0} onSeek={() => {}} />);
     expect(Number(container.querySelector('clipPath rect')!.getAttribute('width'))).toBe(0);
   });
 
-  it('piste masquée ou média muet : rien sous la timeline', () => {
+  it('hidden track or silent media: nothing under the timeline', () => {
     const hidden = render(<WaveformStrip track={track(false)} duration={10} time={0} onSeek={() => {}} />);
     expect(hidden.container).toBeEmptyDOMElement();
     hidden.unmount();
@@ -49,7 +49,7 @@ describe('WaveformStrip', () => {
     expect(noDuration.container).toBeEmptyDOMElement();
   });
 
-  it('un clic dans la bande déplace la lecture à l’instant pointé', () => {
+  it('a click in the strip moves playback to the pointed instant', () => {
     const onSeek = vi.fn();
     const { container } = render(<WaveformStrip track={track()} duration={10} time={0} onSeek={onSeek} />);
     const strip = container.firstElementChild as HTMLElement;
@@ -58,7 +58,7 @@ describe('WaveformStrip', () => {
     expect(onSeek).toHaveBeenCalledWith(2.5);
   });
 
-  it('glisser continue le scrub, relâcher l’arrête', () => {
+  it('dragging continues the scrub, releasing stops it', () => {
     const onSeek = vi.fn();
     const { container } = render(<WaveformStrip track={track()} duration={10} time={0} onSeek={onSeek} />);
     const strip = container.firstElementChild as HTMLElement;

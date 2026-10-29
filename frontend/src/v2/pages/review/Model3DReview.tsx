@@ -51,11 +51,11 @@ import { mediaReviewAspect } from './reviewAspect';
 import { useT } from '../../i18n';
 
 /**
- * Bloc modèle 3D de la review, monté dans le chrome unifié — mêmes cinq emplacements que le
- * splat, avec un panneau Éclairage en plus (un modèle s'éclaire, un nuage porte sa lumière).
- * Les onze barres flottantes de l'ancien HUD sont réparties entre le rail (gizmos, épingle,
- * caméra-objet), la barre d'options, les cinq panneaux du dock, le popover de rendu au coin
- * haut-gauche du viewer et le transport à deux pistes.
+ * 3D model block of the review, mounted in the unified chrome — the same five slots as the
+ * splat, plus a Lighting panel (a model is lit, a cloud carries its own light). The eleven
+ * floating bars of the old HUD are spread across the rail (gizmos, pin, camera-object), the
+ * options bar, the five dock panels, the render popover in the viewer's top-left corner and
+ * the two-track transport.
  */
 export default function Model3DReview({
   data,
@@ -75,76 +75,76 @@ export default function Model3DReview({
   model3d: Model3DThreeState;
   ann: Annotations;
   canManage: boolean;
-  /** Édition de la transformation (pré-publish + droits) — gizmo TRS. */
+  /** Transform editing (pre-publish + rights) — TRS gizmo. */
   showEditTools: boolean;
   role?: Role;
   reprocessing: boolean;
   onReprocess: () => void;
   onSaved: (patch: SplatEditsPatch) => void;
   /**
-   * Brosse de surface — instanciée par la page, comme pour le splat : les traits partent avec le
-   * commentaire, et c'est le même hook des deux côtés (lot 13).
+   * Surface brush — instantiated by the page, as for the splat: the strokes go with the
+   * comment, and it is the same hook on both sides (batch 13).
    */
   paint: SplatPaintState;
   overlay: ReactNode;
-  /** Sortie de la lecture d'un commentaire annoté — descendue dans le viewer, comme l'overlay. */
+  /** Exit of an annotated comment playback — moved down into the viewer, like the overlay. */
   exit: ReactNode;
 }) {
   const t = useT();
-  // Scène Three réellement construite (modèle chargé, runtime posé). À ne pas confondre avec
-  // « le média est affichable » : les hooks qui lisent la scène de façon impérative n'ont rien
-  // à lire tant que le GLB n'est pas chargé, et leur effet ne serait pas rejoué ensuite.
+  // Three scene actually built (model loaded, runtime set up). Not to be confused with
+  // "the media is displayable": hooks that read the scene imperatively have nothing to read
+  // until the GLB is loaded, and their effect would not be replayed afterwards.
   const ready = model3d.ready;
-  // Cadre de livraison : ratio des réglages pipeline, sauf aspect déjà gelé (`reviewAspect`).
+  // Delivery frame: ratio from the pipeline settings, unless the aspect is already frozen (`reviewAspect`).
   const frameAspect = mediaReviewAspect(data).value;
   const cam = useModel3DCamera(model3d, data, canManage, onSaved, ann);
-  // Éclairage HDRI : défaut rejoué pour tous, tweak spectateur temporaire.
+  // HDRI lighting: default replayed for everyone, temporary viewer tweak.
   const lighting = useModel3DLighting(model3d, data, canManage, onSaved);
-  // Inspection : modes d'affichage + fiche technique — local à la session.
+  // Inspection: display modes + spec sheet — local to the session.
   const inspect = useModel3DInspect(model3d);
-  // Variantes de matériaux + caméras embarquées — local à la session.
+  // Material variants + embedded cameras — local to the session.
   const variants = useModel3DVariants(model3d);
-  // Bookmarks caméra partagés : vues nommées rejouées pour tous.
+  // Shared camera bookmarks: named views replayed for everyone.
   const bookmarks = useModel3DBookmarks(model3d, data, canManage, onSaved);
-  // Turntable + plan de coupe : prévisualisations d'inspection session-local.
+  // Turntable + section plane: session-local inspection previews.
   const turntable = useTurntable(model3d);
   const section = useSectionPlane(model3d);
-  // Comparaison A/B des modèles 3D : frères de la version **et** modèles d'autres versions
-  // cochés dans `CompareSelect` — tous chargés dans la même scène (caméra liée).
+  // 3D model A/B comparison: siblings of the version **and** models from other versions
+  // checked in `CompareSelect` — all loaded into the same scene (linked camera).
   const compare = useModel3DCompare(model3d, data.media);
-  // Mesure point-à-point et dimensions réelles (39.G) : l'unité vient de la scène USD.
+  // Point-to-point measurement and real dimensions (39.G): the unit comes from the USD scene.
   const measure = useModelMeasure(model3d, data.modelSource?.usd?.metersPerUnit ?? 1);
-  // Mode d'affichage + plan de coupe + HDRI joints à la vue caméra du commentaire.
+  // Display mode + section plane + HDRI attached to the comment's camera view.
   useModel3DViewState({ model3d, inspect, section, lighting });
 
-  // Scenegraph USD + « ReView override » (46.C) : l'override de base du média est rejoué pour
-  // tous, l'exploration locale du spectateur reste dans sa session.
-  // Mémoïsé : sans cela l'override serait un objet neuf à chaque rendu et la scène serait
-  // réappliquée en boucle.
+  // USD scenegraph + "ReView override" (46.C): the media's base override is replayed for
+  // everyone, the viewer's local exploration stays in their session.
+  // Memoized: without it the override would be a new object on every render and the scene
+  // would be reapplied in a loop.
   const commentOverride = useMemo(
     () => normalizeOverride(ann.viewedSceneOverride),
     [ann.viewedSceneOverride],
   );
   const scene = useUsdScene(data, model3d.getSceneHandle, ready, commentOverride, ann.setSceneOverride);
-  // Pointeur du viewer : clic gauche immobile = sélection, clic droit BREF = menu du prim visé
-  // (46.M) — maintenu, le même bouton vole. `resolvePick` (et non `resolvePrim`) : le clic
-  // désigne le component englobant, Alt+clic la feuille exacte.
+  // Viewer pointer: a still left click = selection, a SHORT right click = menu of the targeted
+  // prim (46.M) — when held, the same button steals. `resolvePick` (not `resolvePrim`): the
+  // click designates the enclosing component, Alt+click the exact leaf.
   const primMenu = usePrimPointer(model3d, ready, scene.select, scene.resolvePick);
-  // `F` cadre le prim sélectionné (46.I) — le viewer garde son cadrage global sans sélection.
+  // `F` frames the selected prim (46.I) — the viewer keeps its global framing with no selection.
   const { setFrameTarget } = model3d;
   useEffect(() => {
     setFrameTarget(scene.selectedObjects);
     return () => setFrameTarget(null);
   }, [setFrameTarget, scene.selectedObjects]);
-  // L'envoi d'un commentaire emporte la proposition (le composer est vidé) : l'exploration
-  // locale repart à zéro — comme les points posés. Sans cela, le pied du scenegraph promettrait
-  // un delta que le prochain commentaire ne porterait plus. Le commentaire fraîchement créé,
-  // une fois sélectionné, rejoue exactement ce qui vient d'être proposé.
+  // Sending a comment carries the proposal (the composer is cleared): the local exploration
+  // restarts from zero — like the placed points. Without this, the scenegraph footer would
+  // promise a delta that the next comment no longer carries. The freshly created comment,
+  // once selected, replays exactly what was just proposed.
   //
-  // C'est la **transition** proposition → vide qui signe l'envoi. Réagir à l'état « pas de
-  // proposition » seul suffisait à annuler le tout premier delta du gizmo : il arrivait un
-  // rendu avant que la proposition n'atteigne le composer, et l'effet voyait « rien de joint
-  // + exploration sale » — l'objet revenait à son origine au lâcher de la souris.
+  // It is the **transition** proposal → empty that signs the send. Reacting to the
+  // "no proposal" state alone was enough to cancel the very first gizmo delta: it arrived one
+  // render before the proposal reached the composer, and the effect saw "nothing attached +
+  // dirty exploration" — the object snapped back to its origin on mouse release.
   const { revert, dirty: sceneDirty } = scene;
   const hadProposal = useRef(ann.sceneOverride != null);
   useEffect(() => {
@@ -152,16 +152,16 @@ export default function Model3DReview({
     if (hadProposal.current && !has && sceneDirty) revert();
     hadProposal.current = has;
   }, [ann.sceneOverride, sceneDirty, revert]);
-  // Échap relâche la scène proposée par le commentaire sélectionné (46.T). Lu deux fois —
-  // ici et par le bandeau du viewer — mais sans nom intermédiaire : le budget de ce fichier
-  // est atteint, et le lot 13 y descend la sortie de lecture du commentaire.
+  // Escape releases the scene proposed by the selected comment (46.T). Read twice —
+  // here and by the viewer banner — but without an intermediate name: this file's budget
+  // is reached, and batch 13 moves the comment playback exit down here.
   const { setViewedSceneOverride } = ann;
   const releaseCommentScene = useCallback(() => setViewedSceneOverride(null), [setViewedSceneOverride]);
   useCommentSceneEscape(ann.viewedSceneOverride != null, releaseCommentScene);
-  // Recomposition et override USD : réservés aux gestionnaires, et autorisés APRÈS
-  // publication (Phase 50) — la couche d'override est rejouée par-dessus le fichier
-  // d'origine, qui n'est jamais réécrit. Le verrou ne garde que le montage et le `transform`.
-  // La recomposition n'est plus une modale (lot 13) : son groupe vit au panneau Scène.
+  // Recomposition and USD override: reserved for managers, and allowed AFTER publication
+  // (Phase 50) — the override layer is replayed on top of the original file, which is never
+  // rewritten. The lock only guards the mount and the `transform`.
+  // Recomposition is no longer a modal (batch 13): its group lives in the Scene panel.
   const saveOverride = useSaveSceneOverride({
     mediaId: data.media.id,
     allowed: canManage,
@@ -173,7 +173,7 @@ export default function Model3DReview({
   const grid = useSceneGrid(model3d);
   const [track, setTrack] = useState<TrackId>('camera');
 
-  // Caméra-objet dans la scène (mode layout) : mesh + trajectoire + gizmo d'édition des clés.
+  // Camera-object in the scene (layout mode): mesh + trajectory + keyframe editing gizmo.
   const rig = useCameraSceneRig({
     getSceneHandle: model3d.getSceneHandle,
     subscribeFrame: model3d.subscribeFrame,
@@ -183,18 +183,18 @@ export default function Model3DReview({
     layout: model3d.layout,
   });
 
-  // Bascule et rail du modèle 3D (Phase 50, lot 6) : « Mise en scène » n'y figure plus —
-  // l'interrupteur du panneau Caméra l'arme — et « Nettoyer » n'apparaît que si le serveur
-  // accorde l'écriture de la transformation.
-  // Une scène USD donne aux gizmos une seconde cible — l'override de scène par prim (46.N), qui
-  // ne passe pas par la transformation de version et n'en a donc pas les droits. `isFlying` est
-  // la garde de vol du chrome : clic droit maintenu, aucune lettre n'arme d'outil.
+  // 3D model toggle and rail (Phase 50, batch 6): "Staging" is no longer listed there — the
+  // switch in the Camera panel arms it — and "Clean up" only appears if the server grants
+  // write access to the transform.
+  // A USD scene gives the gizmos a second target — the per-prim scene override (46.N), which
+  // does not go through the version transform and therefore lacks its rights. `isFlying` is
+  // the chrome's flight guard: right button held, no letter arms a tool.
   const { state, update, modes, tools, activeTool, brushLayer } = useModel3DModes(
     { canEditTransform: showEditTools, hasScenegraph: scene.tree.length > 0 },
     model3d,
     { ann, paint },
   );
-  // Raccourcis du transport caméra (piste caméra seulement — la piste clips a son transport).
+  // Camera transport shortcuts (camera track only — the clips track has its own transport).
   useCameraShortcuts({
     anim: cam.anim,
     active: track === 'camera',
@@ -203,9 +203,9 @@ export default function Model3DReview({
     fps: data.fps ?? 24,
   });
   const { history, dirty } = useModel3DChrome({ state, m: model3d, paint, cameraRig: rig, usdScene: scene });
-  // Réagencement de la scène USD au clavier : Suppr masque la sélection (override non
-  // destructif), Ctrl+Z/Y la rendent — sur l'historique du viewer, pas une pile de plus.
-  // L'éditeur de courbes garde Suppr quand il est ouvert : ce sont ses clés qu'on y supprime.
+  // USD scene rearrangement from the keyboard: Delete hides the selection (non-destructive
+  // override), Ctrl+Z/Y restore it — on the viewer's history, not a separate stack.
+  // The curve editor keeps Delete when open: its keys are what gets deleted there.
   useSceneEditShortcuts({
     scene,
     history,
@@ -213,11 +213,11 @@ export default function Model3DReview({
     isFlying: model3d.isFlying,
   });
 
-  // Palette Ctrl+K (B3) : commandes cadrer/lecture/clé/orbite, extraites dans leur hook.
+  // Ctrl+K palette (B3): frame/play/key/orbit commands, extracted into their hook.
   useModel3DCommands(cam, model3d, canManage, !!data.splatPresentation, measure);
 
-  // Points d'intérêt : ARMER L'OUTIL, C'EST ÊTRE EN PLACEMENT — le clic suivant dans la vue
-  // pose un point, sans bouton intermédiaire. Même hook et même geste que sur le splat.
+  // Points of interest: ARMING THE TOOL IS BEING IN PLACEMENT — the next click in the view
+  // places a point, with no intermediate button. Same hook and same gesture as on the splat.
   const placingPoi = activeTool.id === 'pin';
   usePoiPlacement({
     viewer: model3d,
@@ -315,9 +315,9 @@ export default function Model3DReview({
         ) : undefined
       }
     >
-      {/* Clic droit bref sur un objet → actions du prim visé (46.M). `useSpatialContextMenu`
-          arrête l'événement du canvas (vol, clic dans le vide) : le menu ne s'ouvre jamais à
-          vide, et jamais au milieu d'un vol. */}
+      {/* Short right click on an object → actions for the targeted prim (46.M). `useSpatialContextMenu`
+          stops the canvas event (flight, click in empty space): the menu never opens on empty
+          space, and never in the middle of a flight. */}
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div className="contents">

@@ -7,14 +7,14 @@ import type { useAnnotations } from './useAnnotations';
 import { useT } from '../../i18n';
 
 /**
- * Emplacements de la pilule. Ancrée `viewer`, elle vit **dans la zone média** (en bas,
- * centrée) : c'est le seul bord qu'aucune surface du viewer n'occupe déjà — les bandeaux
- * d'état (placement d'un point, scène proposée par un commentaire) tiennent le haut centré,
- * les menus de rendu le coin haut-gauche, les repères de zoom le bas-droit. Elle y est aussi
- * au plus près du fil de commentaires, d'où l'on vient et où l'on retourne écrire.
+ * Pill placements. Anchored to `viewer`, it lives **inside the media area** (bottom,
+ * centered): it is the only edge no viewer surface already occupies — the status banners
+ * (placing a point, a scene proposed by a comment) hold the top center, the render menus the
+ * top-left corner, the zoom guides the bottom-right. It is also closest to the comment
+ * thread, where you came from and where you go back to write.
  *
- * `page` est l'ancien ancrage, relatif au bloc qui enveloppe le viewer : il reste celui du
- * lecteur vidéo et du partage client, dont la zone média n'accueille pas encore la pilule.
+ * `page` is the old anchor, relative to the block wrapping the viewer: it remains the one
+ * for the video player and the client share, whose media area does not yet host the pill.
  */
 const ANCHOR = {
   viewer: 'bottom-3 left-1/2 -translate-x-1/2',
@@ -22,15 +22,15 @@ const ANCHOR = {
 } as const;
 
 /**
- * Pilule flottante « Masquer l'annotation », affichée quand l'annotation d'un commentaire
- * est visible — accessible sans quitter l'image des yeux, fermable aussi avec Échap. Les
- * outils de dessin vivent sous le champ de commentaire ; depuis la refonte du chrome, ils
- * vivent dans le rail et la barre d'options.
+ * Floating "Hide annotation" pill, shown while a comment's annotation is visible — reachable
+ * without taking your eyes off the image, and dismissable with Escape too. The drawing tools
+ * used to live under the comment field; since the chrome rework they live in the rail and
+ * the options bar.
  *
- * Elle se posait dans la section de review, dont le premier enfant est l'en-tête unifié du
- * chrome : la pilule tombait donc **sur la bascule de mode** (centrée, elle aussi) ou sur la
- * bande de consigne. D'où l'ancrage : dans le viewer, au même endroit pour l'image, le
- * modèle 3D et le nuage de points.
+ * It used to sit in the review section, whose first child is the chrome's unified header:
+ * the pill landed **on the mode toggle** (also centered) or on the instruction strip. Hence
+ * the anchoring: inside the viewer, at the same spot for the image, the 3D model and the
+ * point cloud.
  */
 export default function ReviewAnnotationBar({
   ann,
@@ -39,13 +39,13 @@ export default function ReviewAnnotationBar({
 }: {
   ann: ReturnType<typeof useAnnotations>;
   onClearSelection: () => void;
-  /** Conteneur qui porte la pilule — `viewer` dès que la zone média la reçoit. */
+  /** Container that hosts the pill — `viewer` once the media area receives it. */
   anchor?: keyof typeof ANCHOR;
 }) {
   const t = useT();
-  // Les points d'intérêt comptent autant que le dessin : depuis qu'ils survivent à un mouvement
-  // de vue (ils sont ancrés dans la scène), ils sont même ce qui reste le plus longtemps à
-  // l'écran — sans eux dans cette condition, la lecture d'un commentaire n'aurait plus de sortie.
+  // Points of interest count as much as the drawing: since they survive a view movement
+  // (they are anchored in the scene), they are even what stays on screen the longest —
+  // without them in this condition, playing a comment would have no exit.
   const visible = !!ann.viewed || ann.viewedPoi.length > 0;
   useEffect(() => {
     if (!visible) return;

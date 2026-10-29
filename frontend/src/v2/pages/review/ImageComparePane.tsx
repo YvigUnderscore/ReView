@@ -11,14 +11,13 @@ import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useT } from '../../i18n';
 
 /**
- * Pane B de la comparaison A/B **image** : visionneuse zoom/pan sans annotation, dont la
- * vue est répliquée avec le maître (34.D — `viewApiRef`/`onViewChange` branchés sur le
- * relais useImageCompareSync). Mode côte-à-côte ; `onWipe` bascule vers la superposition.
+ * Pane B of the **image** A/B comparison: zoom/pan viewer without annotation, whose view
+ * is mirrored from the master (34.D — `viewApiRef`/`onViewChange` wired to the
+ * useImageCompareSync relay). Side-by-side mode; `onWipe` switches to the overlay.
  *
- * Le pane n'est QUE sa zone média, comme celui du maître : le nom de B et ses bascules
- * flottent au-dessus de l'image (même langage que les HUD du wipe et de la différence) au
- * lieu de manger une ligne au-dessus d'elle. L'en-tête dans le flux rendait la zone de B
- * plus courte que celle de A, et la même image s'y affichait plus petite.
+ * The pane is ONLY its media area, like the master's: B's name and toggles float above the
+ * image (same language as the wipe and difference HUDs) instead of taking a line above it.
+ * A header in the flow made B's area shorter than A's, so the same image showed smaller.
  */
 export default function ImageComparePane({
   compareId,
@@ -31,13 +30,13 @@ export default function ImageComparePane({
   compareId: number;
   onClose: () => void;
   onWipe: () => void;
-  /** Bascule vers le mode différence amplifiée (34.E). */
+  /** Switches to the amplified difference mode (34.E). */
   onDiff?: () => void;
   viewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onViewChange?: ComponentProps<typeof ImageReviewViewer>['onViewChange'];
 }) {
   const t = useT();
-  // staleTime Infinity : même règle que la review — URLs présignées, pas de refetch.
+  // staleTime Infinity: same rule as the review — presigned URLs, no refetch.
   const mediaQ = useQuery({
     queryKey: qk.media(compareId),
     queryFn: () => api.get<MediaResp>(`/api/media/${compareId}`),
@@ -45,8 +44,8 @@ export default function ImageComparePane({
   });
   const data = mediaQ.data ?? null;
 
-  // `min-w-0` : les deux moitiés se partagent la largeur à égalité, et un message d'erreur dans
-  // le flux ne vient pas élargir celle de B au détriment de celle de A.
+  // `min-w-0`: both halves share the width equally, and an error message in the flow
+  // does not widen B's half at the expense of A's.
   return (
     <div className={`${VIEWER_ZONE} min-w-0`}>
       {mediaQ.error && <p className="text-sm text-destructive">{mediaQ.error.message}</p>}

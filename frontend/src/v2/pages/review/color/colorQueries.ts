@@ -7,14 +7,14 @@ import { qk } from '../../../lib/query';
 import { parseCubeLut, type CubeLut } from './cubeLut';
 
 /**
- * Lecture des données couleur du studio pour le viewer : displays/views de la config du
- * projet, puis la LUT cuite du couple choisi.
+ * Reads the studio color data for the viewer: displays/views of the project's config, then the
+ * baked LUT of the chosen pair.
  *
- * Une LUT cuite est **immuable** (une nouvelle config = un nouvel identifiant) : elle est
- * gardée une heure en cache et n'est jamais rejouée au montage.
+ * A baked LUT is **immutable** (a new config = a new identifier): it is cached for an hour and is
+ * never replayed on mount.
  */
 
-/** Une config OCIO expose des displays, chacun avec ses views. */
+/** An OCIO config exposes displays, each with its views. */
 export interface OcioDisplay {
   name: string;
   views: string[];
@@ -23,13 +23,13 @@ export interface OcioDisplay {
 const LUT_STALE_MS = 60 * 60 * 1000;
 
 /**
- * Clé de la LUT. Elle vivra mieux dans `v2/lib/query.ts` (`qk.ocioLut`) : ce lot n'a pas la
- * main sur ce fichier, la forme hiérarchique `['ocio', …]` y est déjà celle des configs.
+ * LUT key. It would live better in `v2/lib/query.ts` (`qk.ocioLut`): this batch does not own that
+ * file, and the hierarchical `['ocio', …]` shape is already the one used for configs.
  */
 export const ocioLutKey = (configId: string, display: string, view: string) =>
   ['ocio', 'lut', configId, display, view] as const;
 
-/** Displays/views de la config couleur du projet (vide tant qu'aucune config n'est posée). */
+/** Displays/views of the project's color config (empty until a config is set). */
 export function useOcioDisplays(configId: string | null | undefined) {
   return useQuery({
     queryKey: qk.ocioDisplays(configId ?? 'none'),
@@ -40,7 +40,7 @@ export function useOcioDisplays(configId: string | null | undefined) {
   });
 }
 
-/** Réponse du serveur : soit une LUT à télécharger, soit la raison de son absence. */
+/** Server response: either a LUT to download, or the reason it is absent. */
 interface LutInfoResp {
   lut: { url: string | null; size: number; reason: 'OCIO_TOOLING_REQUIRED' | null };
 }
@@ -51,8 +51,8 @@ export interface DisplayLut {
 }
 
 /**
- * LUT 3D d'un couple display/view : demande son URL présignée au backend (qui la cuit si
- * elle manque et qu'il sait le faire), puis télécharge et parse le `.cube`.
+ * 3D LUT of a display/view pair: requests its presigned URL from the backend (which bakes it if it
+ * is missing and it knows how to), then downloads and parses the `.cube`.
  */
 export function useDisplayLut(target: { configId: string; display: string; view: string } | null) {
   return useQuery({
@@ -77,7 +77,7 @@ export function useDisplayLut(target: { configId: string; display: string; view:
   });
 }
 
-/** Image source décodée, prête à devenir une texture (CORS armé : le canvas reste lisible). */
+/** Decoded source image, ready to become a texture (CORS enabled: the canvas stays readable). */
 export function useSourceImage(src: string, enabled: boolean) {
   return useQuery({
     queryKey: ['image-source', src] as const,

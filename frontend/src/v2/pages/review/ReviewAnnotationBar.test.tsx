@@ -12,11 +12,11 @@ import type { Shape } from '../../components/AnnotationCanvas';
 import { t } from '../../i18n';
 
 /**
- * La sortie de la lecture d'un commentaire annoté se posait dans la section de review, dont le
- * premier enfant est l'en-tête du chrome : elle tombait donc sur la bascule de mode, elle aussi
- * centrée. Elle vit désormais DANS la zone média — et au même bord pour les trois viewers qui
- * l'accueillent. Ce fichier vérifie la pilule et son ancrage ; la page, qui la distribue aux
- * trois viewers, est vérifiée dans `test/pages/ReviewPage.test.tsx`.
+ * The exit of an annotated comment playback used to sit in the review section, whose first
+ * child is the chrome header: it therefore landed on the mode toggle, also centered. It now
+ * lives INSIDE the media area — at the same edge for the three viewers that host it. This
+ * file checks the pill and its anchoring; the page, which distributes it to the three
+ * viewers, is checked in `test/pages/ReviewPage.test.tsx`.
  */
 const shape: Shape = {
   id: 's1',
@@ -29,14 +29,14 @@ const shape: Shape = {
   y2: 0.6,
 };
 
-/** Composer réel, avec (ou sans) l'annotation d'un commentaire en lecture. */
+/** Real composer, with (or without) the annotation of a comment being played back. */
 function Host({
   viewed,
   poi,
   children,
 }: {
   viewed: boolean;
-  /** Le commentaire relu ne montre que ses points d'intérêt — pas de dessin 2D. */
+  /** The reviewed comment only shows its points of interest — no 2D drawing. */
   poi?: boolean;
   children: (ann: Annotations) => ReactNode;
 }) {
@@ -52,7 +52,7 @@ function Host({
 const pill = () => screen.getByRole('button', { name: t('ctx.hideAnnotation') });
 const noPill = () => screen.queryByRole('button', { name: t('ctx.hideAnnotation') });
 
-/** Zone média du viewer — la même poignée que pour les panes du partage client. */
+/** Viewer media area — the same handle as for the client share panes. */
 const zone = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-viewer-zone]')!;
 
 const pane3d = (exit: ReactNode) => (
@@ -80,17 +80,17 @@ const paneSplat = (exit: ReactNode) => (
   />
 );
 
-describe('ReviewAnnotationBar — quitter la lecture d’un commentaire annoté', () => {
-  it('ne flotte pas tant qu’aucune annotation n’est lue', () => {
+describe('ReviewAnnotationBar — leaving the playback of an annotated comment', () => {
+  it('does not float while no annotation is being played', () => {
     render(
       <Host viewed={false}>{(ann) => <ReviewAnnotationBar ann={ann} onClearSelection={vi.fn()} />}</Host>,
     );
     expect(noPill()).not.toBeInTheDocument();
   });
 
-  it('reste offerte quand le commentaire ne montre que ses points d’intérêt', () => {
-    // Les points survivent au mouvement de vue (ils sont ancrés dans la scène) : ils sont donc ce
-    // qui reste le plus longtemps à l'écran, et sans eux la lecture n'aurait plus de sortie.
+  it('stays offered when the comment only shows its points of interest', () => {
+    // Points survive view movement (they are anchored in the scene): they are therefore what
+    // stays on screen the longest, and without them playback would have no exit.
     render(
       <Host viewed={false} poi>
         {(ann) => <ReviewAnnotationBar ann={ann} onClearSelection={vi.fn()} anchor="viewer" />}
@@ -99,7 +99,7 @@ describe('ReviewAnnotationBar — quitter la lecture d’un commentaire annoté'
     expect(pill()).toBeInTheDocument();
   });
 
-  it('rend la main à la rédaction : le clic relâche l’annotation et la pilule s’efface', () => {
+  it('hands control back to the composer: the click releases the annotation and the pill fades', () => {
     const onClear = vi.fn();
     render(
       <Host viewed>
@@ -120,7 +120,7 @@ describe('ReviewAnnotationBar — quitter la lecture d’un commentaire annoté'
     expect(noPill()).not.toBeInTheDocument();
   });
 
-  it('Échap relâche l’annotation sans toucher la souris', () => {
+  it('Escape releases the annotation without touching the mouse', () => {
     const onClear = vi.fn();
     render(
       <Host viewed>
@@ -131,7 +131,7 @@ describe('ReviewAnnotationBar — quitter la lecture d’un commentaire annoté'
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it('ancrée au viewer, elle tient le bas du cadre — plus le haut, où passe l’en-tête', () => {
+  it('anchored to the viewer, it holds the bottom of the frame — not the top, where the header runs', () => {
     render(
       <Host viewed>
         {(ann) => <ReviewAnnotationBar ann={ann} onClearSelection={vi.fn()} anchor="viewer" />}
@@ -142,7 +142,7 @@ describe('ReviewAnnotationBar — quitter la lecture d’un commentaire annoté'
     expect(holder.className).not.toContain('top-2');
   });
 
-  it('vit dans la zone média du viewer 3D', () => {
+  it('lives in the media area of the 3D viewer', () => {
     const { container } = render(
       <Host viewed>
         {(ann) => pane3d(<ReviewAnnotationBar ann={ann} onClearSelection={vi.fn()} anchor="viewer" />)}
@@ -153,7 +153,7 @@ describe('ReviewAnnotationBar — quitter la lecture d’un commentaire annoté'
     ).toBeInTheDocument();
   });
 
-  it('vit dans la zone média du viewer splat, au même endroit', () => {
+  it('lives in the media area of the splat viewer, in the same place', () => {
     const { container } = render(
       <Host viewed>
         {(ann) => paneSplat(<ReviewAnnotationBar ann={ann} onClearSelection={vi.fn()} anchor="viewer" />)}

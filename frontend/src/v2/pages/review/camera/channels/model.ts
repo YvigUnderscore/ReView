@@ -4,78 +4,78 @@
 import type { SplatCamera, SplatCameraKeyframe } from '../../reviewTypes';
 
 /**
- * Modèle d'animation caméra « par canaux » (Phase 17, v2) — façon logiciel 3D. Chaque grandeur
- * animable est un canal (F-curve) : une liste de clés `{ t, v, tangentes, mode }`, éditables
- * individuellement (déplacer dans le temps/valeur, tangentes). Remplace le format v1
- * (`keyframes[{ t, pose, easing }]`). Purement données — l'échantillonnage vit dans `hermite.ts`,
- * l'état/édition dans `useCameraAnim`, le rendu dans `timeline/`.
+ * "Per-channel" camera animation model (Phase 17, v2) — 3D-software style. Each animatable
+ * quantity is a channel (F-curve): a list of keys `{ t, v, tangents, mode }`, individually
+ * editable (move in time/value, tangents). Replaces the v1 format (`keyframes[{ t, pose,
+ * easing }]`). Pure data — sampling lives in `hermite.ts`, state/editing in `useCameraAnim`,
+ * rendering in `timeline/`.
  */
 
-/** Canaux animables : position (x/y/z), cible (x/y/z), focale, tilt. */
+/** Animatable channels: position (x/y/z), target (x/y/z), focal length, tilt. */
 export type ChannelId = 'px' | 'py' | 'pz' | 'tx' | 'ty' | 'tz' | 'fov' | 'roll';
 export const CHANNEL_IDS: readonly ChannelId[] = ['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'roll'];
 
 /**
- * Mode de tangente **unifié** d'une clé (forme d'origine de la v2) : lissée auto, linéaire, palier,
- * ou libre (poignées). Reste écrit dans chaque clé même quand les deux côtés divergent — c'est le
- * résumé que lisent les lecteurs antérieurs aux côtés séparés (schémas Zod du serveur, animations
- * jointes aux commentaires déjà en base). Voir `tangents.ts` pour l'invariant.
+ * **Unified** tangent mode of a key (original v2 shape): auto-smooth, linear, step, or free
+ * (handles). It is still written into every key even when both sides diverge — it is the
+ * summary read by readers that predate split sides (server Zod schemas, animations attached
+ * to comments already in the database). See `tangents.ts` for the invariant.
  */
 export type TangentMode = 'auto' | 'linear' | 'step' | 'free';
 
 /**
- * Type de tangente d'**un côté** d'une clé (façon Maya) : `auto` (lissée), `linear`, `flat` (pente
- * nulle), `step` (palier — côté sortant seulement) et `free` (poignée éditée). Absent d'une clé, le
- * côté retombe sur `mode` : les animations enregistrées avant les côtés séparés se relisent à
- * l'identique, sans réécriture des données.
+ * Tangent type of **one side** of a key (Maya-style): `auto` (smooth), `linear`, `flat` (zero
+ * slope), `step` (outgoing side only) and `free` (edited handle). When absent from a key, the
+ * side falls back to `mode`: animations recorded before split sides read back identically,
+ * without rewriting the data.
  */
 export type TangentType = 'auto' | 'linear' | 'flat' | 'step' | 'free';
 
 /**
- * Extrapolation d'un canal **hors** de ses clés (pré/post-infinity, façon Maya). `constant`
- * (défaut, et comportement d'origine) maintient la valeur de la clé extrême ; `cycle` rejoue la
- * courbe, `cycleOffset` en cumulant l'écart, `linear` prolonge la pente, `oscillate` va-et-vient.
+ * Extrapolation of a channel **outside** its keys (pre/post-infinity, Maya-style). `constant`
+ * (default, and original behavior) holds the extreme key's value; `cycle` replays the curve,
+ * `cycleOffset` accumulating the gap; `linear` extends the slope; `oscillate` goes back and forth.
  */
 export type Extrapolation = 'constant' | 'cycle' | 'cycleOffset' | 'linear' | 'oscillate';
 
-/** Clé d'un canal : temps (ms), valeur, tangentes entrante/sortante (pente, unités/ms) si `free`. */
+/** Key of a channel: time (ms), value, incoming/outgoing tangents (slope, units/ms) if `free`. */
 export interface CurveKey {
   t: number;
   v: number;
   tin?: number;
   tout?: number;
   mode: TangentMode;
-  /** Type du côté entrant (absent = `mode`). */
+  /** Incoming side type (absent = `mode`). */
   modeIn?: TangentType;
-  /** Type du côté sortant (absent = `mode`). */
+  /** Outgoing side type (absent = `mode`). */
   modeOut?: TangentType;
-  /** Poignées désolidarisées : tirer un côté ne fait plus tourner l'autre (absent = unifiées). */
+  /** Detached handles: pulling one side no longer rotates the other (absent = unified). */
   broken?: boolean;
-  /** Pondération du côté entrant (longueur de poignée, 1 = Hermite non pondéré ; absent = 1). */
+  /** Incoming side weight (handle length, 1 = unweighted Hermite; absent = 1). */
   wIn?: number;
-  /** Pondération du côté sortant (absent = 1). */
+  /** Outgoing side weight (absent = 1). */
   wOut?: number;
 }
 
 export interface Channel {
   keys: CurveKey[];
-  /** Extrapolation avant la première clé (absent = `constant`). */
+  /** Extrapolation before the first key (absent = `constant`). */
   pre?: Extrapolation;
-  /** Extrapolation après la dernière clé (absent = `constant`). */
+  /** Extrapolation after the last key (absent = `constant`). */
   post?: Extrapolation;
 }
 
 /**
- * Pose de repli **persistée avec l'animation** (Phase 50, lot 13) : exactement les grandeurs qu'un
- * canal **sans clé** lit à l'échantillonnage (`hermite.sampleAnimV2`).
+ * Fallback pose **persisted with the animation** (Phase 50, batch 13): exactly the quantities
+ * that a **keyless** channel reads during sampling (`hermite.sampleAnimV2`).
  *
- * Elle existe parce que ce repli était *dynamique* — la vue de celui qui regarde — et que deux
- * échantillonneurs le prenaient à deux endroits : le lecteur keyframe sur une pose capturée
- * seulement dans certains parcours (`setAnim`, première clé posée à la vue), l'origine du monde
- * sinon ; le rig de scène sur la vue d'activation du mode layout. Une animation construite AU
- * GIZMO, qui ne clé que la position, voyait donc sa cible sauter à l'origine dès le premier scrub.
- * La base voyage désormais avec l'animation : mêmes canaux non clés, même pose, en lecture comme
- * hors lecture, pour tout spectateur, et à l'export glTF.
+ * It exists because that fallback was *dynamic* — the view of whoever is watching — and two
+ * samplers took it from two places: the keyframe player from a pose captured only along certain
+ * paths (`setAnim`, first key set at the view), the world origin otherwise; the scene rig from
+ * the layout mode's activation view. An animation built WITH THE GIZMO, which only keys the
+ * position, therefore saw its target jump to the origin on the first scrub. The base now
+ * travels with the animation: same unkeyed channels, same pose, during and outside playback,
+ * for every viewer, and in the glTF export.
  */
 export interface CameraAnimBase {
   position: { x: number; y: number; z: number };
@@ -84,26 +84,26 @@ export interface CameraAnimBase {
   roll?: number;
 }
 
-/** Animation caméra v2 : canaux indépendants + boucle. La durée = plus grand temps de clé. */
+/** Camera animation v2: independent channels + loop. Duration = largest key time. */
 export interface CameraAnimV2 {
   version: 2;
   loop: boolean;
   channels: Partial<Record<ChannelId, Channel>>;
-  /** Durée de lecture réglable (ms) — override du plus grand temps de clé (Phase 27). Guide dans
-   *  le graph ; la lecture en boucle va de 0 à cette durée. Édition de clés au-delà autorisée. */
+  /** Adjustable playback duration (ms) — override of the largest key time (Phase 27). Guides in
+   *  the graph; loop playback runs from 0 to this duration. Editing keys beyond it is allowed. */
   durationMs?: number;
   /**
-   * Pose de repli des canaux sans clé (Phase 50, lot 13). **Facultative** : une animation
-   * enregistrée avant elle n'en porte pas et garde le repli dynamique d'alors — son rejeu ne
-   * change pas d'un caractère (migration à la lecture, comme `fromV1`). Une animation neuve
-   * l'adopte (`seedAnimBase`) et devient, elle, déterministe.
+   * Fallback pose of the keyless channels (Phase 50, batch 13). **Optional**: an animation
+   * recorded before it carries none and keeps the dynamic fallback of the time — its replay does
+   * not change by a single character (migrated on read, like `fromV1`). A new animation adopts it
+   * (`seedAnimBase`) and becomes deterministic.
    */
   base?: CameraAnimBase;
 }
 
 export const emptyAnim = (loop = true): CameraAnimV2 => ({ version: 2, loop, channels: {} });
 
-/** Décompose une pose caméra en valeurs par canal (les canaux absents retombent sur la pose de base). */
+/** Splits a camera pose into per-channel values (absent channels fall back to the base pose). */
 export function poseToChannelValues(pose: SplatCamera): Record<ChannelId, number | undefined> {
   return {
     px: pose.position.x,
@@ -118,9 +118,9 @@ export function poseToChannelValues(pose: SplatCamera): Record<ChannelId, number
 }
 
 /**
- * Projette une pose caméra sur la forme minimale d'une base : les seules valeurs que
- * l'échantillonnage lit en repli. L'aspect et la profondeur de champ n'en font pas partie — ils
- * ne sont pas animables, et la base n'est pas une deuxième présentation.
+ * Projects a camera pose onto the minimal shape of a base: the only values that sampling reads
+ * as a fallback. Aspect and depth of field are not part of it — they are not animatable, and the
+ * base is not a second presentation.
  */
 export function poseToBase(pose: SplatCamera): CameraAnimBase {
   const base: CameraAnimBase = {
@@ -133,19 +133,19 @@ export function poseToBase(pose: SplatCamera): CameraAnimBase {
 }
 
 /**
- * Base effective d'une animation : la sienne si elle en porte une, sinon `fallback` (le repli
- * dynamique d'avant). **Seul arbitre du dépôt** — les deux échantillonneurs passent par
- * `sampleAnimV2`, qui passe par ici : ils ne peuvent plus lire deux bases différentes.
+ * Effective base of an animation: its own if it carries one, otherwise `fallback` (the earlier
+ * dynamic fallback). **The sole arbiter in the repo** — both samplers go through
+ * `sampleAnimV2`, which goes through here: they can no longer read two different bases.
  */
 export function animBase(anim: CameraAnimV2, fallback: CameraAnimBase): CameraAnimBase {
   return anim.base ?? fallback;
 }
 
 /**
- * Valeurs par canal de la base — ce que `sampleAnimV2` lit quand un canal n'a aucune clé. Poser
- * une clé sur un canal vide doit écrire CETTE valeur : à défaut, la courbe part de zéro, c'est-
- * à-dire une focale de 0° ou un axe collé à l'origine. Les valeurs de repli de `fov`/`roll` sont
- * celles de l'échantillonnage.
+ * Per-channel values of the base — what `sampleAnimV2` reads when a channel has no key. Setting
+ * a key on an empty channel must write THIS value: otherwise the curve starts from zero, i.e. a
+ * 0° focal length or an axis stuck at the origin. The `fov`/`roll` fallback values are those of
+ * sampling.
  */
 export function baseChannelValues(base: CameraAnimBase): Record<ChannelId, number> {
   return {
@@ -161,36 +161,36 @@ export function baseChannelValues(base: CameraAnimBase): Record<ChannelId, numbe
 }
 
 /**
- * Adopte `view` comme base de l'animation — **seulement si elle est neuve** : aucune base, aucune
- * clé. Une animation qui porte déjà des clés sans base est héritée ; lui en donner une changerait
- * son rejeu (présentations persistées, animations jointes à des commentaires déjà en base), ce qui
- * est exclu. Idempotent, donc appelable à chaque écriture de clé. Pur/testable.
+ * Adopts `view` as the animation's base — **only if it is new**: no base, no key. An animation
+ * that already carries keys without a base is legacy; giving it one would change its replay
+ * (persisted presentations, animations attached to comments already in the database), which is
+ * ruled out. Idempotent, so callable on every key write. Pure/testable.
  */
 export function seedAnimBase(anim: CameraAnimV2, view: SplatCamera | undefined): CameraAnimV2 {
   if (!view || anim.base || animKeyTimes(anim).length > 0) return anim;
   return { ...anim, base: poseToBase(view) };
 }
 
-/** Temps (ms) triés et dédupliqués de toutes les clés, tous canaux confondus (colonnes dopesheet). */
+/** Sorted, deduplicated times (ms) of all keys, across all channels (dopesheet columns). */
 export function animKeyTimes(anim: CameraAnimV2): number[] {
   const set = new Set<number>();
   for (const id of CHANNEL_IDS) anim.channels[id]?.keys.forEach((k) => set.add(k.t));
   return [...set].sort((a, b) => a - b);
 }
 
-/** Durée totale (ms) = plus grand temps de clé (0 si aucune). */
+/** Total duration (ms) = largest key time (0 if none). */
 export function animDuration(anim: CameraAnimV2): number {
   let max = 0;
   for (const id of CHANNEL_IDS) for (const k of anim.channels[id]?.keys ?? []) if (k.t > max) max = k.t;
   return max;
 }
 
-/** Durée de lecture effective (ms) : override `durationMs` s'il est > 0, sinon le dernier temps de clé. */
+/** Effective playback duration (ms): the `durationMs` override if > 0, otherwise the last key time. */
 export function animPlayDuration(anim: CameraAnimV2): number {
   return anim.durationMs && anim.durationMs > 0 ? anim.durationMs : animDuration(anim);
 }
 
-/** Fixe la durée de lecture réglable (0/undefined = automatique = dernier temps de clé). */
+/** Sets the adjustable playback duration (0/undefined = automatic = last key time). */
 export function setAnimDuration(anim: CameraAnimV2, durationMs: number | undefined): CameraAnimV2 {
   const next = { ...anim };
   if (durationMs && durationMs > 0) next.durationMs = Math.round(durationMs);
@@ -198,23 +198,23 @@ export function setAnimDuration(anim: CameraAnimV2, durationMs: number | undefin
   return next;
 }
 
-/** Une animation est jouable dès qu'au moins un canal a 2 clés à des temps distincts. */
+/** An animation is playable as soon as at least one channel has 2 keys at distinct times. */
 export function hasAnimation(anim: CameraAnimV2): boolean {
   return animKeyTimes(anim).length >= 2;
 }
 
 const sortKeys = (keys: CurveKey[]): CurveKey[] => [...keys].sort((a, b) => a.t - b.t);
 
-/** Copie profonde légère d'un canal (immutabilité des opérations) — extrapolations comprises. */
+/** Light deep copy of a channel (operations are immutable) — extrapolations included. */
 const cloneChannel = (ch: Channel | undefined): Channel => ({
   ...ch,
   keys: ch ? ch.keys.map((k) => ({ ...k })) : [],
 });
 
 /**
- * Applique une mutation à un canal cloné, re-trie ses clés et rend une animation neuve. Exportée
- * pour les opérations de tangente (`tangents.ts`) : elles ont besoin de la liste complète des clés
- * du canal pour matérialiser une pente, ce qu'une mutation clé par clé ne permet pas.
+ * Applies a mutation to a cloned channel, re-sorts its keys and returns a new animation. Exported
+ * for the tangent operations (`tangents.ts`): they need the channel's full key list to materialize
+ * a slope, which a key-by-key mutation does not allow.
  */
 export function updateChannel(anim: CameraAnimV2, id: ChannelId, mut: (ch: Channel) => void): CameraAnimV2 {
   const ch = cloneChannel(anim.channels[id]);
@@ -226,7 +226,7 @@ export function updateChannel(anim: CameraAnimV2, id: ChannelId, mut: (ch: Chann
   return { ...anim, channels };
 }
 
-/** Insère/écrase une clé dans un canal au temps `t` (mode par défaut `auto`). */
+/** Inserts/overwrites a key in a channel at time `t` (default mode `auto`). */
 export function upsertKey(
   anim: CameraAnimV2,
   id: ChannelId,
@@ -244,7 +244,7 @@ export function upsertKey(
   });
 }
 
-/** Insère/écrase une clé **complète** (mode + tangentes) au temps `key.t` d'un canal (copier/coller 40.E). */
+/** Inserts/overwrites a **complete** key (mode + tangents) at time `key.t` of a channel (copy/paste 40.E). */
 export function upsertFullKey(anim: CameraAnimV2, id: ChannelId, key: CurveKey): CameraAnimV2 {
   return updateChannel(anim, id, (ch) => {
     const idx = ch.keys.findIndex((k) => k.t === key.t);
@@ -253,7 +253,7 @@ export function upsertFullKey(anim: CameraAnimV2, id: ChannelId, key: CurveKey):
   });
 }
 
-/** Pose complète → une clé par canal renseigné, au temps `t` (bouton « poser une clé »). */
+/** Full pose → one key per filled channel, at time `t` ("set a key" button). */
 export function upsertPoseAt(
   anim: CameraAnimV2,
   t: number,
@@ -269,7 +269,7 @@ export function upsertPoseAt(
   return next;
 }
 
-/** Déplace une clé (temps et/ou valeur) — le tri est maintenu. */
+/** Moves a key (time and/or value) — the sort is maintained. */
 export function moveKey(
   anim: CameraAnimV2,
   id: ChannelId,
@@ -288,17 +288,17 @@ export function deleteKey(anim: CameraAnimV2, id: ChannelId, index: number): Cam
   return updateChannel(anim, id, (ch) => ch.keys.splice(index, 1));
 }
 
-/** Une clé désignée par (canal, index) — sélection du graph editor (Phase 27). */
+/** A key designated by (channel, index) — graph editor selection (Phase 27). */
 export interface KeyRef {
   channel: ChannelId;
   index: number;
 }
 
 /**
- * Déplace en **un seul passage** plusieurs clés (multi-sélection) désignées par leur index
- * **dans `anim`** (le baseline capturé au début du drag) vers de nouvelles valeurs t/v. Applique
- * toutes les modifications par canal avant de re-trier — les index restent cohérents pendant tout
- * le geste. Pur/testable.
+ * Moves several keys (multi-selection) in **a single pass**, designated by their index **in
+ * `anim`** (the baseline captured at the start of the drag), to new t/v values. Applies all the
+ * per-channel changes before re-sorting — the indices stay consistent for the whole gesture.
+ * Pure/testable.
  */
 export function moveKeysBatch(
   anim: CameraAnimV2,
@@ -326,7 +326,7 @@ export function moveKeysBatch(
   return { ...anim, channels };
 }
 
-/** Supprime en un passage un lot de clés (multi-sélection). Retire de la fin pour ne pas décaler. */
+/** Removes a batch of keys in one pass (multi-selection). Removes from the end so as not to shift indices. */
 export function deleteKeys(anim: CameraAnimV2, refs: readonly KeyRef[]): CameraAnimV2 {
   const byChannel = new Map<ChannelId, number[]>();
   for (const r of refs) {
@@ -344,8 +344,8 @@ export function deleteKeys(anim: CameraAnimV2, refs: readonly KeyRef[]): CameraA
 }
 
 /**
- * Règle l'extrapolation d'un canal hors de ses clés (pré/post-infinity). `constant` efface le
- * réglage : le canal retrouve la forme d'origine, où rien n'était persisté.
+ * Sets the extrapolation of a channel outside its keys (pre/post-infinity). `constant` clears the
+ * setting: the channel recovers its original shape, where nothing was persisted.
  */
 export function setChannelExtrapolation(
   anim: CameraAnimV2,
@@ -362,7 +362,7 @@ export function setChannelExtrapolation(
   });
 }
 
-/** Supprime toutes les clés au temps `t` (± tolérance) sur tous les canaux (colonne dopesheet). */
+/** Removes all keys at time `t` (± tolerance) on all channels (dopesheet column). */
 export function deleteColumn(anim: CameraAnimV2, t: number, tol = 1): CameraAnimV2 {
   let next = anim;
   for (const id of CHANNEL_IDS) {
@@ -374,7 +374,7 @@ export function deleteColumn(anim: CameraAnimV2, t: number, tol = 1): CameraAnim
   return next;
 }
 
-/** Décale toutes les clés d'un temps `t` de `deltaMs` (retiming d'une colonne dopesheet). */
+/** Shifts all keys at time `t` by `deltaMs` (retiming a dopesheet column). */
 export function moveColumn(anim: CameraAnimV2, t: number, deltaMs: number, tol = 1): CameraAnimV2 {
   let next = anim;
   for (const id of CHANNEL_IDS) {
@@ -386,16 +386,16 @@ export function moveColumn(anim: CameraAnimV2, t: number, deltaMs: number, tol =
   return next;
 }
 
-/** Vecteur 3D exploitable dans une donnée réseau : trois coordonnées finies. */
+/** 3D vector usable in network data: three finite coordinates. */
 const isVec3 = (v: unknown): boolean => {
   const p = v as Record<string, unknown> | null;
   return !!p && typeof p === 'object' && ['x', 'y', 'z'].every((k) => Number.isFinite(p[k]));
 };
 
-// ── Conversion depuis le format v1 (keyframes { t, pose, easing }) ──────────────
+// ── Conversion from the v1 format (keyframes { t, pose, easing }) ──────────────
 const easingToMode = (easing: string): TangentMode => (easing === 'linear' ? 'linear' : 'auto');
 
-/** Convertit une animation v1 (poses + easing par segment) en v2 par canaux. */
+/** Converts a v1 animation (poses + easing per segment) into v2 channels. */
 export function fromV1(keyframes: SplatCameraKeyframe[], loop: boolean): CameraAnimV2 {
   let anim = emptyAnim(loop);
   for (const kf of keyframes) anim = upsertPoseAt(anim, kf.t, kf.pose, easingToMode(kf.easing));
@@ -403,9 +403,9 @@ export function fromV1(keyframes: SplatCameraKeyframe[], loop: boolean): CameraA
 }
 
 /**
- * Normalise une animation persistée/jointe possiblement au format v1 vers v2 (aucune contrainte de
- * continuité de données : on migre à la lecture). Accepte une forme inconnue (données réseau
- * anciennes ou nouvelles). Renvoie `null` si vide/non exploitable.
+ * Normalizes a persisted/attached animation, possibly in v1 format, to v2 (no data-continuity
+ * constraint: we migrate on read). Accepts an unknown shape (old or new network data). Returns
+ * `null` if empty/unusable.
  */
 export function normalizeAnim(input: unknown): CameraAnimV2 | null {
   if (!input || typeof input !== 'object') return null;
@@ -413,8 +413,8 @@ export function normalizeAnim(input: unknown): CameraAnimV2 | null {
   if (a.version === 2) {
     const v2 = input as CameraAnimV2;
     if (!hasAnimation(v2)) return null;
-    // Base illisible (donnée forgée) : on la retire au lieu de faire tomber la boucle de rendu sur
-    // `base.position.x`. Le repli dynamique reprend — soit le comportement d'avant la base.
+    // Unreadable base (tampered data): we drop it instead of letting the render loop crash on
+    // `base.position.x`. The dynamic fallback resumes — i.e. the behavior from before the base.
     if (v2.base != null && !(isVec3(v2.base.position) && isVec3(v2.base.target)))
       return { ...v2, base: undefined };
     return v2;

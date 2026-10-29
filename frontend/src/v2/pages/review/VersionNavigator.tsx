@@ -12,9 +12,9 @@ import type { VersionDetail, VersionListItem } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Navigation de l'en-tête review (10.C2) : dropdown des versions de la tâche/asset
- * parente + précédent/suivant entre les médias de la version courante — sans
- * quitter l'écran. Autonome : résout la version du média puis la liste des versions.
+ * Review header navigation (10.C2): dropdown of the versions of the parent task/asset, plus
+ * previous/next between the media of the current version — without leaving the screen.
+ * Self-contained: resolves the media's version, then the list of versions.
  */
 export default function VersionNavigator({ versionId, mediaId }: { versionId: number; mediaId: number }) {
   const t = useT();
@@ -26,7 +26,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
     queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`).then((d) => d.version),
   });
   const version = versionQ.data ?? null;
-  // Query dépendante : liste des versions de la tâche/asset parente
+  // Dependent query: list of versions of the parent task/asset
   const parent = version
     ? version.taskId
       ? `taskId=${version.taskId}`
@@ -42,7 +42,7 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
   });
   const versions = versionsQ.data ?? [];
 
-  // Bascule vers une autre version : on ouvre son premier média visible.
+  // Switching to another version: open its first visible media.
   const goToVersion = async (vid: number) => {
     if (vid === versionId) return;
     try {
@@ -62,8 +62,8 @@ export default function VersionNavigator({ versionId, mediaId }: { versionId: nu
   };
 
   if (!version) return null;
-  // La version courante peut être absente de la liste (ex. soft-deleted mais média encore
-  // ouvert) : on la préfixe pour que le sélecteur reflète toujours où l'on se trouve.
+  // The current version may be missing from the list (e.g. soft-deleted but media still
+  // open): we prefix it so the selector always reflects where we are.
   const current = { id: version.id, name: version.name, _count: { media: version.media.length } };
   const options = versions.some((v) => v.id === version.id) ? versions : [current, ...versions];
   const idx = version.media.findIndex((m) => m.id === mediaId);

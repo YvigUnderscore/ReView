@@ -6,27 +6,27 @@ import { describe, expect, it } from 'vitest';
 import { emptyAnim, upsertKey, type ChannelId } from '../channels/model';
 import { useCurveView } from './useCurveView';
 
-// Deux clés sur `px` : 0 → 10 en une seconde.
+// Two keys on `px`: 0 → 10 over one second.
 const anim = upsertKey(upsertKey(emptyAnim(), 'px', 0, 0), 'px', 1000, 10);
 const visible: ReadonlySet<ChannelId> = new Set<ChannelId>(['px']);
 
 const setup = () =>
   renderHook(() => useCurveView({ anim, visible, playDuration: 1000, width: 100, height: 100 })).result;
 
-describe('useCurveView — fenêtres automatiques', () => {
-  it('le temps couvre la durée avec de l’air, plancher de 3 s', () => {
+describe('useCurveView — automatic windows', () => {
+  it('time covers the duration with some room, minimum of 3 s', () => {
     const r = setup();
     expect(r.current.timeView).toEqual({ t0: 0, t1: 3000, width: 100 });
   });
 
-  it('les valeurs s’ajustent aux clés visibles', () => {
+  it('values fit the visible keys', () => {
     const r = setup();
     expect(r.current.valueView).toEqual({ v0: -1, v1: 11, height: 100 });
   });
 });
 
-describe('useCurveView — zoom, pan et recadrages', () => {
-  it('le zoom temporel pose un override que la durée ne reprend plus', () => {
+describe('useCurveView — zoom, pan and refits', () => {
+  it('time zoom sets an override that the duration no longer takes back', () => {
     const r = setup();
     act(() => r.current.zoomAt(0, 0.5));
     expect(r.current.timeView.t1).toBe(1500);
@@ -35,7 +35,7 @@ describe('useCurveView — zoom, pan et recadrages', () => {
     expect(r.current.timeView.t1).toBe(1600);
   });
 
-  it('le zoom vertical et le pan vertical figent l’axe des valeurs', () => {
+  it('vertical zoom and vertical pan freeze the value axis', () => {
     const r = setup();
     act(() => r.current.zoomValueAt(5, 0.5));
     expect(r.current.valueView.v0).toBe(2);
@@ -44,7 +44,7 @@ describe('useCurveView — zoom, pan et recadrages', () => {
     expect(r.current.valueView).toEqual({ v0: 3, v1: 9, height: 100 });
   });
 
-  it('« ajuster » rend les deux axes à leur calcul automatique', () => {
+  it('"fit" returns both axes to their automatic computation', () => {
     const r = setup();
     act(() => r.current.zoomAt(0, 0.5));
     act(() => r.current.zoomValueAt(5, 0.5));
@@ -53,23 +53,23 @@ describe('useCurveView — zoom, pan et recadrages', () => {
     expect(r.current.valueView).toEqual({ v0: -1, v1: 11, height: 100 });
   });
 
-  it('le cadrage d’une sélection borne les deux axes sur ses clés', () => {
+  it('framing a selection bounds both axes on its keys', () => {
     const r = setup();
     act(() => r.current.fitKeys([{ channel: 'px', index: 1 }]));
-    // Une clé seule : une seconde de part et d'autre, et de l'air en valeur.
+    // A single key: one second on either side, and some room in value.
     expect(r.current.timeView).toEqual({ t0: 0, t1: 2000, width: 100 });
     expect(r.current.valueView.v0).toBeLessThan(10);
     expect(r.current.valueView.v1).toBeGreaterThan(10);
   });
 
-  it('une sélection vide ou introuvable ne bouge pas la vue', () => {
+  it('an empty or missing selection does not move the view', () => {
     const r = setup();
     act(() => r.current.fitKeys([]));
     act(() => r.current.fitKeys([{ channel: 'py', index: 3 }]));
     expect(r.current.timeView).toEqual({ t0: 0, t1: 3000, width: 100 });
   });
 
-  it('le cadrage d’une seule courbe ne touche que l’axe des valeurs', () => {
+  it('framing a single curve only touches the value axis', () => {
     const r = setup();
     act(() => r.current.fitValues([0, 100]));
     expect(r.current.valueView).toEqual({ v0: -10, v1: 110, height: 100 });

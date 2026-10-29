@@ -6,20 +6,20 @@ import { emptyAnim, setChannelExtrapolation, upsertKey, type CameraAnimV2 } from
 import { evalChannel } from './hermite';
 import { extrapolateValue } from './extrapolate';
 
-/** Deux clés linéaires : 0 → 10 sur une seconde, donc une pente de 0,01 unité/ms. */
+/** Two linear keys: 0 → 10 over one second, so a slope of 0.01 unit/ms. */
 const ramp = (): CameraAnimV2 =>
   upsertKey(upsertKey(emptyAnim(), 'px', 0, 0, 'linear'), 'px', 1000, 10, 'linear');
 
 const at = (a: CameraAnimV2, t: number) => evalChannel(a.channels.px, t, 0);
 
-describe('extrapolate — défaut constant', () => {
-  it('sans réglage, la courbe tient sa valeur extrême (comportement d’origine)', () => {
+describe('extrapolate — constant default', () => {
+  it('without settings, the curve holds its extreme value (original behavior)', () => {
     const a = ramp();
     expect(at(a, -500)).toBe(0);
     expect(at(a, 1500)).toBe(10);
   });
 
-  it('« constant » n’écrit rien : le canal retrouve sa forme d’origine', () => {
+  it('"constant" writes nothing: the channel recovers its original shape', () => {
     let a = setChannelExtrapolation(ramp(), 'px', { pre: 'cycle', post: 'cycle' });
     expect(a.channels.px?.pre).toBe('cycle');
     a = setChannelExtrapolation(a, 'px', { pre: 'constant', post: 'constant' });
@@ -29,34 +29,34 @@ describe('extrapolate — défaut constant', () => {
   });
 });
 
-describe('extrapolate — cycles et prolongations', () => {
-  it('cycle rejoue la courbe des deux côtés', () => {
+describe('extrapolate — cycles and extensions', () => {
+  it('cycle replays the curve on both sides', () => {
     const a = setChannelExtrapolation(ramp(), 'px', { pre: 'cycle', post: 'cycle' });
     expect(at(a, 1500)).toBeCloseTo(5, 6);
     expect(at(a, -500)).toBeCloseTo(5, 6);
   });
 
-  it('cycle avec décalage cumule l’écart de la période', () => {
+  it('cycle with offset accumulates the period gap', () => {
     const a = setChannelExtrapolation(ramp(), 'px', { pre: 'cycleOffset', post: 'cycleOffset' });
     expect(at(a, 1500)).toBeCloseTo(15, 6);
     expect(at(a, 2500)).toBeCloseTo(25, 6);
     expect(at(a, -500)).toBeCloseTo(-5, 6);
   });
 
-  it('linéaire prolonge la pente qui touche la courbe', () => {
+  it('linear extends the slope touching the curve', () => {
     const a = setChannelExtrapolation(ramp(), 'px', { pre: 'linear', post: 'linear' });
     expect(at(a, 1500)).toBeCloseTo(15, 6);
     expect(at(a, -500)).toBeCloseTo(-5, 6);
   });
 
-  it('oscillation va et vient (un aller-retour par période)', () => {
+  it('oscillate goes back and forth (one round trip per period)', () => {
     const a = setChannelExtrapolation(ramp(), 'px', { pre: 'oscillate', post: 'oscillate' });
     expect(at(a, 1200)).toBeCloseTo(8, 6);
     expect(at(a, 2200)).toBeCloseTo(2, 6);
     expect(at(a, -200)).toBeCloseTo(2, 6);
   });
 
-  it('une courbe sans étendue temporelle n’a pas de cycle à rejouer', () => {
+  it('a curve with no time span has no cycle to replay', () => {
     const keys = [
       { t: 500, v: 3, mode: 'auto' as const },
       { t: 500, v: 7, mode: 'auto' as const },

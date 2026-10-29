@@ -16,20 +16,21 @@ import {
 import type { SplatCamera } from '../../reviewTypes';
 
 /**
- * LA BASE DE POSE DE L'ANIMATION (Phase 50, lot 13).
+ * THE ANIMATION'S POSE BASE (Phase 50, batch 13).
  *
- * Un canal sans clé retombe sur une « base ». Ce repli était dynamique — la vue de celui qui
- * regarde — et deux échantillonneurs le prenaient à deux endroits : le lecteur keyframe sur une
- * pose capturée seulement dans certains parcours (l'origine du monde sinon), le rig de scène sur la
- * vue d'activation du mode layout. Une animation construite au gizmo ne clé que la position : sa
- * cible sautait donc à l'origine au premier scrub, alors qu'elle restait en place hors lecture.
+ * A channel without a key falls back to a "base". That fallback was dynamic — the view of
+ * whoever is watching — and two samplers took it from two places: the keyframe player from a
+ * pose captured only along certain paths (the world origin otherwise), and the scene rig from
+ * the layout mode's activation view. An animation built with the gizmo only keys the position:
+ * its target therefore jumped to the origin on the first scrub, although it stayed in place
+ * outside playback.
  *
- * Le correctif fait voyager la base AVEC l'animation. Ce que ces cas verrouillent :
- *  - une animation neuve adopte sa base et échantillonne pareil quel que soit l'appelant ;
- *  - une animation héritée (des clés, pas de base) échantillonne EXACTEMENT comme avant.
+ * The fix makes the base travel WITH the animation. What these cases lock down:
+ *  - a new animation adopts its base and samples the same whatever the caller;
+ *  - a legacy animation (keys, no base) samples EXACTLY as before.
  */
 
-/** La vue depuis laquelle on construit : cible loin de l'origine, c'est tout l'enjeu. */
+/** The view we build from: target far from the origin, that is the whole point. */
 const view: SplatCamera = {
   position: { x: 9, y: 3, z: 4 },
   target: { x: 1, y: 0.5, z: -2 },
@@ -37,7 +38,7 @@ const view: SplatCamera = {
   aspect: 1.85,
 };
 
-/** Le repli qu'un appelant prête — volontairement différent de `view`. */
+/** The fallback a caller lends — deliberately different from `view`. */
 const other: CameraAnimBase = {
   position: { x: -100, y: -100, z: -100 },
   target: { x: -7, y: -8, z: -9 },
@@ -46,55 +47,55 @@ const other: CameraAnimBase = {
 
 const ORIGIN: CameraAnimBase = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } };
 
-/** Animation « au gizmo » : seule la position est clée, la cible ne l'est jamais. */
+/** "Gizmo" animation: only the position is keyed, the target never is. */
 const gizmoAnim = (): CameraAnimV2 =>
   upsertKey(upsertKey(seedAnimBase(emptyAnim(), view), 'px', 0, 0, 'linear'), 'px', 1_000, 10, 'linear');
 
-/** La même, telle qu'elle était enregistrée avant la base (donnée héritée). */
+/** The same, as it was recorded before the base existed (legacy data). */
 const legacyAnim = (): CameraAnimV2 =>
   upsertKey(upsertKey(emptyAnim(), 'px', 0, 0, 'linear'), 'px', 1_000, 10, 'linear');
 
 describe('poseToBase / seedAnimBase', () => {
-  it('ne retient de la vue que les grandeurs échantillonnées', () => {
+  it('keeps from the view only the sampled quantities', () => {
     const base = poseToBase(view);
     expect(base).toEqual({ position: view.position, target: view.target, fov: 50 });
-    // Ni aspect ni tilt absent : la base n'est pas une deuxième présentation.
+    // Neither aspect nor an absent tilt: the base is not a second presentation.
     expect('aspect' in base).toBe(false);
     expect('roll' in base).toBe(false);
   });
 
-  it('garde le tilt quand la vue en porte un', () => {
+  it('keeps the tilt when the view carries one', () => {
     expect(poseToBase({ ...view, roll: 0.25 }).roll).toBe(0.25);
   });
 
-  it('adopte la base d’une animation neuve', () => {
+  it('adopts the base of a new animation', () => {
     expect(seedAnimBase(emptyAnim(), view).base).toEqual(poseToBase(view));
   });
 
-  it('ne touche pas une animation qui porte déjà des clés (donnée héritée)', () => {
+  it('does not touch an animation that already carries keys (legacy data)', () => {
     const legacy = legacyAnim();
-    // Identité : rien n'est réécrit, donc rien ne change de rejeu.
+    // Identity: nothing is rewritten, so nothing changes on replay.
     expect(seedAnimBase(legacy, view)).toBe(legacy);
     expect(seedAnimBase(legacy, view).base).toBeUndefined();
   });
 
-  it('ne réécrit pas une base déjà posée, et ne pose rien sans vue', () => {
+  it('does not rewrite a base already set, and sets nothing without a view', () => {
     const seeded = seedAnimBase(emptyAnim(), view);
     expect(seedAnimBase(seeded, { ...view, target: { x: 99, y: 99, z: 99 } })).toBe(seeded);
     expect(seedAnimBase(emptyAnim(), undefined).base).toBeUndefined();
   });
 
-  it('animBase arbitre : la base de l’animation, sinon le repli prêté', () => {
+  it('animBase arbitrates: the animation\'s base, otherwise the lent fallback', () => {
     expect(animBase(gizmoAnim(), other)).toEqual(poseToBase(view));
     expect(animBase(legacyAnim(), other)).toBe(other);
   });
 });
 
-describe('sampleAnimV2 — une seule base pour les deux échantillonneurs', () => {
-  it('le canal non clé suit la base de l’animation, pas la vue de l’appelant', () => {
+describe('sampleAnimV2 — a single base for both samplers', () => {
+  it('the unkeyed channel follows the animation\'s base, not the caller\'s view', () => {
     const anim = gizmoAnim();
-    // Le lecteur keyframe (dont la pose de repli n'avait jamais été capturée) et le rig de scène
-    // (qui part de la vue d'activation) rendent désormais la même pose.
+    // The keyframe player (whose fallback pose had never been captured) and the scene rig
+    // (which starts from the activation view) now render the same pose.
     const fromPlayer = sampleAnimV2(anim, 500, ORIGIN);
     const fromRig = sampleAnimV2(anim, 500, other);
     expect(fromPlayer).toEqual(fromRig);
@@ -103,13 +104,13 @@ describe('sampleAnimV2 — une seule base pour les deux échantillonneurs', () =
     expect(fromPlayer.fov).toBe(50);
   });
 
-  it('la cible ne retombe plus à l’origine du monde', () => {
-    // Le défaut tel que l'utilisateur le décrivait : « si je me mets à 5 secondes, la caméra
-    // revient à sa position originale ».
+  it('the target no longer falls back to the world origin', () => {
+    // The bug as the user described it: "if I go to 5 seconds, the camera
+    // goes back to its original position".
     expect(sampleAnimV2(gizmoAnim(), 5_000, ORIGIN).target).not.toEqual(ORIGIN.target);
   });
 
-  it('une base sans focale ni tilt ne les invente pas', () => {
+  it('a base without focal length or tilt does not invent them', () => {
     const bare = seedAnimBase(emptyAnim(), { position: view.position, target: view.target });
     const anim = upsertKey(upsertKey(bare, 'px', 0, 0, 'linear'), 'px', 1_000, 10, 'linear');
     const pose = sampleAnimV2(anim, 500, other);
@@ -117,19 +118,19 @@ describe('sampleAnimV2 — une seule base pour les deux échantillonneurs', () =
     expect(pose.roll).toBeUndefined();
   });
 
-  it('l’export glTF cuit la base de l’animation, pas la vue de celui qui exporte', () => {
+  it('the glTF export bakes the animation\'s base, not the exporter\'s view', () => {
     const baked = bakeToKeyframes(gizmoAnim(), ORIGIN, 4);
     for (const kf of baked) expect(kf.pose.target).toEqual(view.target);
   });
 });
 
-describe('sampleAnimV2 — animation héritée inchangée', () => {
+describe('sampleAnimV2 — legacy animation unchanged', () => {
   /**
-   * Valeurs écrites à la main, telles que l'échantillonnage les rendait AVANT la base : canal clé
-   * interpolé (0→10 en linéaire, donc 5 à mi-course), canaux non clés pris sur le repli prêté.
-   * C'est la comparaison avant/après que réclame la migration à la lecture.
+   * Hand-written values, as sampling returned them BEFORE the base existed: a keyed channel
+   * interpolated (0→10 linear, so 5 at mid-course), unkeyed channels taken from the lent fallback.
+   * This is the before/after comparison that the playback migration requires.
    */
-  it('rend exactement les valeurs d’avant : canaux non clés = repli prêté', () => {
+  it('returns exactly the previous values: unkeyed channels = lent fallback', () => {
     const legacy = legacyAnim();
     expect(legacy.base).toBeUndefined();
     expect(sampleAnimV2(legacy, 500, other)).toEqual({
@@ -143,28 +144,28 @@ describe('sampleAnimV2 — animation héritée inchangée', () => {
     });
   });
 
-  it('suit le repli de chaque appelant, divergence comprise — comportement d’alors', () => {
+  it('follows each caller\'s fallback, divergence included — behavior at the time', () => {
     const legacy = legacyAnim();
     expect(sampleAnimV2(legacy, 500, ORIGIN).target).toEqual(ORIGIN.target);
     expect(sampleAnimV2(legacy, 500, other).target).toEqual(other.target);
   });
 });
 
-describe('normalizeAnim — la base traverse la lecture', () => {
-  it('rend l’animation telle quelle, base comprise et sans recopie', () => {
+describe('normalizeAnim — the base goes through playback', () => {
+  it('returns the animation as is, base included and without copying', () => {
     const anim = gizmoAnim();
     const read = normalizeAnim(JSON.parse(JSON.stringify(anim)));
     expect(read?.base).toEqual(poseToBase(view));
-    // Identité préservée pour une animation saine : des effets en dépendent.
+    // Identity preserved for a healthy animation: effects depend on it.
     expect(normalizeAnim(anim)).toBe(anim);
   });
 
-  it('retire une base illisible au lieu de faire tomber l’échantillonnage', () => {
+  it('drops an unreadable base instead of breaking sampling', () => {
     const forged: unknown = { ...legacyAnim(), base: { position: 'nope', target: null } };
     const read = normalizeAnim(forged);
     expect(read).not.toBeNull();
     expect(read?.base).toBeUndefined();
-    // Et l'échantillonnage reprend le repli prêté, sans lever.
+    // And sampling falls back to the lent fallback, without throwing.
     expect(sampleAnimV2(read as CameraAnimV2, 500, other).target).toEqual(other.target);
   });
 });

@@ -9,9 +9,9 @@ import type { PanelId, ReviewPanel } from './panels';
 import { useT } from '../../../i18n';
 
 /**
- * Dock inspecteur — colonne de droite. Un seul panneau ouvert à la fois ; recliquer l'onglet
- * ouvert referme le corps et ne laisse que la bande d'onglets de 44 px. Les commentaires ont
- * leur propre colonne : ils ne se mélangent jamais aux réglages du viewer.
+ * Inspector dock — right column. Only one panel open at a time; clicking the open tab again closes
+ * the body and leaves only the 44 px tab strip. Comments have their own column: they never mix with
+ * the viewer settings.
  */
 export default function InspectorDock({
   panels,

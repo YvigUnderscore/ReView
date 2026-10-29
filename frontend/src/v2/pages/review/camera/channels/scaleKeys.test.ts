@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyAnim, upsertKey, type CameraAnimV2, type KeyRef } from './model';
 import { keyBounds, scaleFactor, scaleKeyMoves } from './scaleKeys';
 
-/** Trois clés sur deux canaux : de quoi éprouver des bornes multi-courbes. */
+/** Three keys over two channels: enough to exercise multi-curve bounds. */
 function anim(): CameraAnimV2 {
   let a = upsertKey(emptyAnim(), 'px', 0, 0);
   a = upsertKey(a, 'px', 1000, 10);
@@ -19,18 +19,18 @@ const all: KeyRef[] = [
 ];
 
 describe('keyBounds', () => {
-  it('englobe les clés sélectionnées, tous canaux confondus', () => {
+  it('encloses the selected keys, across all channels', () => {
     expect(keyBounds(anim(), all)).toEqual({ tMin: 0, tMax: 1000, vMin: -4, vMax: 10 });
   });
 
-  it('rend null quand la sélection ne désigne rien', () => {
+  it('returns null when the selection designates nothing', () => {
     expect(keyBounds(anim(), [])).toBeNull();
     expect(keyBounds(anim(), [{ channel: 'pz', index: 2 }])).toBeNull();
   });
 });
 
 describe('scaleKeyMoves', () => {
-  it('éloigne les clés du pivot du facteur donné, axe par axe', () => {
+  it('moves keys away from the pivot by the given factor, axis by axis', () => {
     const moves = scaleKeyMoves(anim(), all, { pivotT: 0, scaleT: 2, pivotV: 0, scaleV: 1 });
     expect(moves).toEqual([
       { channel: 'px', index: 0, t: 0, v: 0 },
@@ -39,13 +39,13 @@ describe('scaleKeyMoves', () => {
     ]);
   });
 
-  it('un pivot tenu par une clé la laisse en place', () => {
+  it('a pivot held by a key leaves it in place', () => {
     const moves = scaleKeyMoves(anim(), all, { pivotT: 1000, scaleT: 0.5, pivotV: 10, scaleV: 0.5 });
     expect(moves[1]).toEqual({ channel: 'px', index: 1, t: 1000, v: 10 });
     expect(moves[0]).toEqual({ channel: 'px', index: 0, t: 500, v: 5 });
   });
 
-  it('les temps ne passent jamais sous zéro et suivent le snap fourni', () => {
+  it('times never go below zero and follow the provided snap', () => {
     const moves = scaleKeyMoves(anim(), all, {
       pivotT: 1000,
       scaleT: 3,
@@ -53,14 +53,14 @@ describe('scaleKeyMoves', () => {
       scaleV: 1,
       snapTime: (t) => Math.round(t / 100) * 100,
     });
-    // 0 → 1000 + (0 − 1000) × 3 = −2000, borné à 0.
+    // 0 → 1000 + (0 − 1000) × 3 = −2000, clamped to 0.
     expect(moves[0].t).toBe(0);
-    // 500 → 1000 + (500 − 1000) × 3 = −500, borné à 0 ; la clé de px reste au pivot.
+    // 500 → 1000 + (500 − 1000) × 3 = −500, clamped to 0; the px key stays at the pivot.
     expect(moves[2].t).toBe(0);
     expect(moves[1].t).toBe(1000);
   });
 
-  it('ignore une référence disparue', () => {
+  it('ignores a missing reference', () => {
     const moves = scaleKeyMoves(anim(), [{ channel: 'px', index: 9 }], {
       pivotT: 0,
       scaleT: 2,
@@ -72,12 +72,12 @@ describe('scaleKeyMoves', () => {
 });
 
 describe('scaleFactor', () => {
-  it('rapporte les distances au pivot', () => {
+  it('reports the distances to the pivot', () => {
     expect(scaleFactor(500, 600, 0, 1)).toBeCloseTo(1.2, 9);
     expect(scaleFactor(500, 250, 0, 1)).toBeCloseTo(0.5, 9);
   });
 
-  it('reste à 1 quand le geste part du pivot (rapport instable)', () => {
+  it('stays at 1 when the gesture starts at the pivot (unstable ratio)', () => {
     expect(scaleFactor(1000.5, 2000, 1000, 1)).toBe(1);
   });
 });

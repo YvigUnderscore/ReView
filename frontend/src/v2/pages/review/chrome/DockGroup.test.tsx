@@ -10,27 +10,26 @@ import { DOCK_GROUP_COLLAPSE_THRESHOLD, isLongDockGroup } from './dockGroupSize'
 import { t } from '../../../i18n';
 
 /**
- * Repli des groupes du dock (Phase 50, lot 6). Aucun groupe ne l'était : le panneau Infos
- * d'une scène USD riche se parcourait à l'ascenseur, et un groupe court — les quatre mesures
- * de la frame courante — passait hors champ.
+ * Collapsing of dock groups (Phase 50, batch 6). None of them used to collapse: the Info panel of
+ * a rich USD scene had to be scrolled, and a short group — the four measures of the current
+ * frame — fell out of view.
  *
- * Ce qui est vérifié : le seuil, le repli d'office au-delà, le fait qu'un groupe replié cache
- * bien son contenu tout en gardant son décompte, et que l'action d'en-tête (enregistrer une
- * vue, armer la mesure) reste atteignable dans les deux états — elle ne vit pas dans le
- * déclencheur du repli.
+ * What is verified: the threshold, the automatic collapse beyond it, the fact that a collapsed
+ * group hides its content while keeping its count, and that the header action (save a view, arm
+ * the measure) stays reachable in both states — it does not live in the collapse trigger.
  *
- * S'y ajoute (lot 15) le contrat de hauteur de la rangée, qui ne se lit ni dans le DOM ni dans
- * TypeScript : les classes du dock vivent dans une feuille que vitest ne charge pas, et
- * happy-dom ne met rien en page. La feuille est donc lue comme un texte — c'est une preuve de
- * structure, pas de rendu.
+ * Added on top (batch 15) is the row height contract, which can be read neither in the DOM nor in
+ * TypeScript: the dock classes live in a stylesheet that vitest does not load, and happy-dom
+ * lays nothing out. The stylesheet is therefore read as text — it is a proof of structure, not
+ * of rendering.
  */
 
-// Vitest s'exécute depuis `frontend/` (cf. vitest.config.ts), comme pour les tokens du thème.
+// Vitest runs from `frontend/` (see vitest.config.ts), as for the theme tokens.
 const CHROME_CSS = readFileSync(resolve(process.cwd(), 'src/v2/pages/review/chrome/chrome.css'), 'utf8');
 
-/** Corps d'une règle, sélecteur exact : `.rv-row` ne ramène pas `.rv-row--stack`. */
+/** Body of a rule, exact selector: `.rv-row` does not match `.rv-row--stack`. */
 function ruleOf(selector: string): string {
-  // Le sélecteur est cherché en début de ligne : sinon `.rv-row` tomberait sur `.rv-row__label`.
+  // The selector is searched at the start of a line: otherwise `.rv-row` would match `.rv-row__label`.
   const start = CHROME_CSS.indexOf(`\n${selector} {`);
   expect(start, `règle ${selector} introuvable dans chrome.css`).toBeGreaterThan(-1);
   const open = CHROME_CSS.indexOf('{', start);
@@ -38,7 +37,7 @@ function ruleOf(selector: string): string {
 }
 
 describe('isLongDockGroup', () => {
-  it('ne déclare long qu’au-delà du seuil', () => {
+  it('only counts as long beyond the threshold', () => {
     expect(isLongDockGroup(DOCK_GROUP_COLLAPSE_THRESHOLD)).toBe(false);
     expect(isLongDockGroup(DOCK_GROUP_COLLAPSE_THRESHOLD + 1)).toBe(true);
     expect(isLongDockGroup(0)).toBe(false);
@@ -46,13 +45,13 @@ describe('isLongDockGroup', () => {
 });
 
 describe('Group', () => {
-  it('reste un simple titre quand il n’est pas repliable', () => {
+  it('remains a simple title when it is not collapsible', () => {
     render(<Group title="Technical sheet">contenu</Group>);
     expect(screen.getByText('contenu')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('se replie et se déplie au clic sur son titre', () => {
+  it('collapses and expands on a click on its title', () => {
     render(
       <Group title="Textures" collapsible>
         contenu
@@ -72,19 +71,19 @@ describe('Group', () => {
     expect(toggle).toHaveAttribute('title', t('review.dock.group.collapse'));
   });
 
-  it('arrive replié quand on le lui demande, en gardant son décompte visible', () => {
+  it('starts collapsed when asked, keeping its count visible', () => {
     render(
       <Group title="Textures" collapsible defaultCollapsed count={12}>
         contenu
       </Group>,
     );
     expect(screen.queryByText('contenu')).not.toBeInTheDocument();
-    // Le décompte est ce qui permet de savoir si le groupe fermé mérite un clic.
+    // The count is what tells whether the closed group is worth a click.
     expect(screen.getByRole('button', { name: /12/ })).toBeInTheDocument();
   });
 
-  it('ne replie rien sans `collapsible`, même avec `defaultCollapsed`', () => {
-    // Le repli d'office est une conséquence du repli, pas une façon de masquer un groupe.
+  it('collapses nothing without `collapsible`, even with `defaultCollapsed`', () => {
+    // The automatic collapse is a consequence of collapsing, not a way to hide a group.
     render(
       <Group title="Live render" defaultCollapsed>
         contenu
@@ -93,7 +92,7 @@ describe('Group', () => {
     expect(screen.getByText('contenu')).toBeInTheDocument();
   });
 
-  it('laisse l’action d’en-tête cliquable, groupe replié comme déplié', () => {
+  it('keeps the header action clickable, group collapsed or expanded', () => {
     render(
       <Group title="Measurements" collapsible defaultCollapsed action={<button>Ruler</button>}>
         contenu
@@ -107,25 +106,25 @@ describe('Group', () => {
 });
 
 describe('Row', () => {
-  it('porte les classes qui tiennent sa hauteur, et son indice en infobulle', () => {
+  it('carries the classes that hold its height, and its index as a tooltip', () => {
     render(
       <Row label="Purpose" hint="/World/Chair" stack>
         <input aria-label="ctl" />
       </Row>,
     );
     const row = screen.getByText('Purpose').parentElement;
-    // C'est par ces classes que le contrat de la feuille s'applique à ce qui est rendu.
+    // It is through these classes that the stylesheet contract applies to what is rendered.
     expect(row?.className.split(' ')).toContain('rv-row');
     expect(row?.className.split(' ')).toContain('rv-row--stack');
     expect(row).toHaveAttribute('title', '/World/Chair');
   });
 
-  it('refuse d’être comprimée sous sa hauteur naturelle', () => {
+  it('refuses to be compressed below its natural height', () => {
     const rule = ruleOf('.rv-row');
-    // La hauteur minimale EXPLICITE remplace la taille minimale automatique du flex : sans
-    // `flex-shrink: 0`, une rangée posée dans une colonne bornée (`max-h-*` +
-    // `overflow-y-auto`, cf. la recomposition USD) retombe à ce pas, son contenu empilé se
-    // peint sur la rangée voisine, et la colonne n'a plus rien à faire défiler.
+    // The EXPLICIT minimum height replaces the flex's automatic minimum size: without
+    // `flex-shrink: 0`, a row placed in a bounded column (`max-h-*` +
+    // `overflow-y-auto`, see the USD recomposition) falls back to this step, its stacked content
+    // paints over the neighbouring row, and the column has nothing left to scroll.
     expect(rule).toContain('min-height: 1.75rem');
     expect(rule).toContain('flex-shrink: 0');
   });

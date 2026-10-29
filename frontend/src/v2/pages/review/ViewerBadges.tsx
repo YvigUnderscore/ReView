@@ -7,9 +7,9 @@ import type { ViewportZoom } from './zoom/useViewportZoom';
 import { useT } from '../../i18n';
 
 /**
- * Repères flottants du lecteur vidéo : taux de zoom (à gauche), vitesse de lecture (à
- * droite), chargement en cours (en bas). Tous n'apparaissent qu'au moment utile — un
- * lecteur au repos, en lecture normale et ajusté n'affiche rien du tout.
+ * Floating markers of the video player: zoom level (left), playback speed (right), loading in
+ * progress (bottom). Each only appears when useful — an idle player, in normal playback and
+ * fitted, shows nothing at all.
  */
 export default function ViewerBadges({
   zoom,
@@ -18,7 +18,7 @@ export default function ViewerBadges({
   switchingQuality,
 }: {
   zoom: ViewportZoom;
-  /** Vitesse courante (34.C) : négative en lecture arrière, masquée à ×1. */
+  /** Current speed (34.C): negative when playing backwards, hidden at ×1. */
   playbackSpeed: { visible: boolean; speed: number };
   buffering: boolean;
   switchingQuality: boolean;

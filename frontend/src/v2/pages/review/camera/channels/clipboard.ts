@@ -14,20 +14,20 @@ import {
 import { clampWeight, TANGENT_TYPES } from './tangents';
 
 /**
- * Presse-papier de clés du curve editor (Phase 40, 40.E) : copier/coller des clés (valeur, mode et
- * tangentes) entre canaux, dans un même média **ou d'un média à l'autre** via `localStorage`. Les
- * temps sont stockés **relatifs** au plus tôt de la sélection ; le collage les repositionne à partir
- * de la tête de lecture. Logique pure/testable — l'état vit dans `useCameraAnim`.
+ * Key clipboard of the curve editor (Phase 40, 40.E): copy/paste keys (value, mode and
+ * tangents) between channels, within the same media **or from one media to another** via
+ * `localStorage`. Times are stored **relative** to the earliest selected key; pasting places
+ * them starting from the playhead. Pure/testable logic — the state lives in `useCameraAnim`.
  */
 export interface CurveClipboard {
-  /** Clés copiées par canal, temps relatifs (ms) au plus tôt de la sélection. */
+  /** Keys copied per channel, relative times (ms) from the earliest of the selection. */
   channels: Partial<Record<ChannelId, CurveKey[]>>;
 }
 
 const STORE_KEY = 'review.curveClipboard';
 const MODES: readonly TangentMode[] = ['auto', 'linear', 'step', 'free'];
 
-/** Extrait les clés sélectionnées, temps rebasés sur le plus tôt. `null` si rien de copiable. */
+/** Extracts the selected keys, times rebased on the earliest. `null` if nothing is copyable. */
 export function copyKeys(anim: CameraAnimV2, refs: readonly KeyRef[]): CurveClipboard | null {
   const collected: Array<{ channel: ChannelId; key: CurveKey }> = [];
   for (const r of refs) {
@@ -45,8 +45,8 @@ export function copyKeys(anim: CameraAnimV2, refs: readonly KeyRef[]): CurveClip
 }
 
 /**
- * Colle les clés du presse-papier à partir du temps `atT` (ms) sur leurs canaux d'origine.
- * Renvoie l'animation résultante et la sélection des clés collées (pour enchaîner un déplacement).
+ * Pastes the clipboard keys starting at time `atT` (ms) on their original channels.
+ * Returns the resulting animation and the selection of the pasted keys (to chain a move).
  */
 export function pasteKeys(
   anim: CameraAnimV2,
@@ -58,7 +58,7 @@ export function pasteKeys(
   for (const id of CHANNEL_IDS) {
     for (const k of clip.channels[id] ?? []) next = upsertFullKey(next, id, { ...k, t: base + k.t });
   }
-  // Sélection = index des clés collées dans l'animation triée résultante.
+  // Selection = indices of the pasted keys in the resulting sorted animation.
   const selection: KeyRef[] = [];
   for (const id of CHANNEL_IDS) {
     const keys = clip.channels[id];
@@ -72,7 +72,7 @@ export function pasteKeys(
   return { anim: next, selection };
 }
 
-// ── Persistance cross-média (localStorage) ─────────────────────────────────────
+// ── Cross-media persistence (localStorage) ─────────────────────────────────────
 const sideType = (v: unknown): TangentType | undefined =>
   TANGENT_TYPES.includes(v as TangentType) ? (v as TangentType) : undefined;
 
@@ -84,8 +84,8 @@ function parseKey(input: unknown): CurveKey | null {
   const key: CurveKey = { t: k.t, v: k.v, mode };
   if (typeof k.tin === 'number') key.tin = k.tin;
   if (typeof k.tout === 'number') key.tout = k.tout;
-  // Côtés séparés, brisure et poids : sans eux, un collage venu du stockage rendait une clé
-  // appauvrie là où le collage en mémoire, lui, gardait tout.
+  // Separate sides, break and weights: without them, a paste coming from storage returned a key
+  // stripped down where the in-memory paste kept everything.
   const modeIn = sideType(k.modeIn);
   const modeOut = sideType(k.modeOut);
   if (modeIn) key.modeIn = modeIn;
@@ -96,7 +96,7 @@ function parseKey(input: unknown): CurveKey | null {
   return key;
 }
 
-/** Valide une forme inconnue (JSON réseau/stockage) en `CurveClipboard`, sinon `null`. */
+/** Validates an unknown shape (network/storage JSON) as a `CurveClipboard`, otherwise `null`. */
 export function parseClipboard(input: unknown): CurveClipboard | null {
   if (!input || typeof input !== 'object') return null;
   const src = (input as { channels?: unknown }).channels;
@@ -115,7 +115,7 @@ export function persistClipboard(clip: CurveClipboard): void {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(clip));
   } catch {
-    /* stockage indisponible : le presse-papier reste en mémoire */
+    /* storage unavailable: the clipboard stays in memory */
   }
 }
 

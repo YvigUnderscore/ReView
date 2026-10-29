@@ -12,12 +12,12 @@ vi.mock('../../../lib/apiClient', () => ({ api }));
 import VideoComparePane from './VideoComparePane';
 import { t } from '../../i18n';
 
-/** happy-dom ne met rien en page : la zone média du pane mesure 800 × 600. */
+/** happy-dom lays nothing out: the pane's media area measures 800 × 600. */
 const ZONE = { w: 800, h: 600 };
 
 /**
- * Monte le pane B, attend son média, puis annonce la résolution comme le ferait
- * `loadedmetadata`. Rend la taille d'affichage retenue pour la vidéo.
+ * Mounts pane B, waits for its media, then announces the resolution as `loadedmetadata`
+ * would. Returns the display size chosen for the video.
  */
 const displayed = async (resolution: [number, number]) => {
   api.get.mockResolvedValue({
@@ -30,7 +30,7 @@ const displayed = async (resolution: [number, number]) => {
       <VideoComparePane compareId={2} masterRef={createRef<HTMLVideoElement>()} onClose={() => {}} />
     </QueryClientProvider>,
   );
-  // Le média arrive : son nom paraît dans l'en-tête du pane.
+  // The media arrives: its name appears in the pane header.
   await screen.findByText('sintel_trailer.mp4');
   const video = container.querySelector('video')!;
   Object.defineProperty(video, 'videoWidth', { configurable: true, value: resolution[0] });
@@ -46,36 +46,36 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Rendu au prototype : les autres suites mesurent zéro, comme avant.
+  // Rendered on the prototype: the other suites measure zero, as before.
   Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
   Reflect.deleteProperty(HTMLElement.prototype, 'clientHeight');
 });
 
 /**
- * Reproche de départ : en côte-à-côte, le proxy 480p s'affichait beaucoup plus petit que le
- * 1080p d'en face, perdu au centre de sa moitié entre deux larges bandes noires. La vidéo B
- * était rendue à sa **taille source** (`max-h-full max-w-full` ne rapetissant que ce qui
- * dépasse) là où le maître, lui, s'ajuste à sa boîte.
+ * Original complaint: side by side, the 480p proxy showed much smaller than the 1080p
+ * opposite it, lost in the middle of its half between two wide black bands. Video B was
+ * rendered at its **source size** (`max-h-full max-w-full` only shrinks what overflows),
+ * whereas the master fits its box.
  */
-describe('VideoComparePane — le pane B s’ajuste à sa boîte', () => {
-  it('ajuste un proxy plus petit que son pane au lieu de le laisser à sa taille source', async () => {
+describe('VideoComparePane — pane B fits its box', () => {
+  it('fits a proxy smaller than its pane instead of leaving it at its source size', async () => {
     expect(await displayed([640, 360])).toEqual({ width: '800px', height: '450px' });
   });
 
-  it('donne la même taille d’affichage au proxy et au master', async () => {
+  it('gives the proxy and the master the same display size', async () => {
     const proxy = await displayed([640, 360]);
     cleanup();
     const master = await displayed([1920, 1080]);
     expect(proxy).toEqual(master);
   });
 
-  it('respecte l’aspect du média : un portrait ne remplit pas toute la largeur', async () => {
-    // 3:4 dans une zone de 800 × 600 : la hauteur commande, la largeur suit l'aspect —
-    // l'ajustement est un « contain », il ne déforme jamais le média.
+  it('respects the media aspect: a portrait does not fill the whole width', async () => {
+    // 3:4 in an 800 × 600 area: the height drives, the width follows the aspect —
+    // the fit is a "contain", it never distorts the media.
     expect(await displayed([1080, 1440])).toEqual({ width: '450px', height: '600px' });
   });
 
-  it('propose la bascule vers le wipe, qui reste l’affaire de la barre d’options', async () => {
+  it('offers the switch to wipe, which remains the job of the options bar', async () => {
     api.get.mockResolvedValue({
       media: { id: 2, originalName: 'sintel_trailer.mp4' },
       url: 'https://example.invalid/sintel.mp4',

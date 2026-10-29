@@ -9,39 +9,39 @@ const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 const INTERNAL: Role[] = ['ADMIN', 'SUPERVISOR', 'ARTIST'];
 
 describe('canSwitchMode', () => {
-  it('refuse la bascule au client, pour tous les types de média', () => {
-    // Le client reste en exploration, en lecture seule : la bascule n'apparaît pas dans
-    // l'en-tête fusionné, quel que soit le nombre de modes du média.
+  it('refuses the toggle to the client, for all media types', () => {
+    // The client stays in exploration, read-only: the toggle does not appear in
+    // the merged header, whatever the number of modes of the media.
     for (const kind of KINDS) expect(canSwitchMode('CLIENT', switcherModesFor(kind).length)).toBe(false);
   });
 
-  it('l’offre aux rôles internes dès qu’il y a plus d’un mode', () => {
+  it('offers it to internal roles as soon as there is more than one mode', () => {
     for (const role of INTERNAL)
       for (const kind of KINDS) expect(canSwitchMode(role, switcherModesFor(kind).length)).toBe(true);
   });
 
-  it('la masque quand un seul mode reste — un segment unique ne bascule vers rien', () => {
-    // Le lecteur de montage n'a que « regarder ».
+  it('hides it when a single mode remains — a single segment switches to nothing', () => {
+    // The edit mount's player only has "watch".
     expect(canSwitchMode('ADMIN', 1)).toBe(false);
     expect(canSwitchMode('ADMIN', 0)).toBe(false);
   });
 });
 
 describe('switcherModesFor', () => {
-  it('ne liste jamais « Annoter » — l’annotation s’arme depuis l’espace commentaire', () => {
+  it('never lists "Annotate" — annotation is armed from the comment space', () => {
     for (const kind of KINDS) {
       expect(modesFor(kind).map((m) => m.value)).toContain('annotate');
       expect(switcherModesFor(kind).map((m) => m.value)).not.toContain('annotate');
     }
   });
 
-  it('garde le mode par défaut en tête de bascule pour les quatre types', () => {
+  it('keeps the default mode first in the toggle for the four types', () => {
     for (const kind of KINDS) expect(switcherModesFor(kind)[0]?.value).toBe(DEFAULT_MODE);
   });
 
-  it('donne les mêmes modes à la vidéo et à l’image, et la mise en scène aux spatiaux', () => {
-    // La découpe vidéo a été retirée (Phase 50) : les deux médias plats portent désormais la
-    // même bascule. Ce test disait l'inverse — il est réécrit, pas désactivé.
+  it('gives the same modes to video and image, and staging to the spatial ones', () => {
+    // The video cut was removed (Phase 50): both flat media now carry the
+    // same toggle. This test said the opposite — it is rewritten, not disabled.
     expect(switcherModesFor('VIDEO').map((m) => m.value)).toEqual(
       switcherModesFor('IMAGE').map((m) => m.value),
     );
@@ -50,24 +50,24 @@ describe('switcherModesFor', () => {
   });
 });
 
-describe('allowedModesFor — « Compare » exige une version voisine', () => {
-  it('retire le segment quand il n’y a rien à comparer', () => {
+describe('allowedModesFor — "Compare" requires a neighbouring version', () => {
+  it('removes the segment when there is nothing to compare', () => {
     expect(switcherModesFor('IMAGE', false).map((m) => m.value)).toEqual(['explore']);
-    // Depuis le retrait de la découpe, la vidéo est logée à la même enseigne : sans version
-    // voisine, il ne lui reste que « Regarder ».
+    // Since the cut was removed, video is in the same boat: without a neighbouring
+    // version, it only has "Watch" left.
     expect(switcherModesFor('VIDEO', false).map((m) => m.value)).toEqual(['explore']);
   });
 
-  it('laisse la bascule disparaître quand un média plat n’a plus qu’un mode', () => {
-    // Sans version voisine, il ne reste que « Regarder » : un segment unique ne bascule vers
-    // rien, et la bascule s'efface au lieu de se montrer inerte.
+  it('lets the toggle disappear when a flat media only has one mode left', () => {
+    // Without a neighbouring version, only "Watch" remains: a single segment switches to
+    // nothing, and the toggle disappears instead of showing up inert.
     for (const kind of ['IMAGE', 'VIDEO'] as const) {
       expect(canSwitchMode('ARTIST', switcherModesFor(kind, false).length)).toBe(false);
       expect(canSwitchMode('ARTIST', switcherModesFor(kind, true).length)).toBe(true);
     }
   });
 
-  it('ne touche pas aux médias spatiaux, qui n’ont pas ce mode', () => {
+  it('does not touch spatial media, which do not have this mode', () => {
     for (const kind of ['MODEL_3D', 'SPLAT'] as const)
       expect(allowedModesFor(kind, false).map((m) => m.value)).toEqual(modesFor(kind).map((m) => m.value));
   });

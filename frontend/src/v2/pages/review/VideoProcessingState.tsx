@@ -7,8 +7,8 @@ import { useT } from '../../i18n';
 import type { VideoPlayback } from './videoPlayback';
 
 /**
- * Ce que montre le viewer vidéo quand il n'y a rien à lire : l'assemblage en cours, ou
- * l'échec avec sa raison et sa relance. Même langage que le viewer 3D, qui le faisait déjà.
+ * What the video viewer shows when there is nothing to play: the assembly in progress, or the
+ * failure with its reason and retry. Same language as the 3D viewer, which already did this.
  */
 export default function VideoProcessingState({
   state,
@@ -34,7 +34,7 @@ export default function VideoProcessingState({
       ) : (
         <div className="max-w-md space-y-3 text-center text-sm text-muted-foreground">
           <p>{t('videoState.failed')}</p>
-          {/* Raison remontée par le worker : sans elle, on ne sait pas quoi corriger. */}
+          {/* Reason surfaced by the worker: without it, we do not know what to fix. */}
           {processingError && (
             <p className="rounded border border-border bg-card/60 px-2 py-1.5 text-left font-mono text-xs break-words text-foreground">
               {processingError}

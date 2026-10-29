@@ -10,11 +10,11 @@ import { t } from '../../i18n';
 import type { ReviewReferenceItem } from './reviewTypes';
 
 /**
- * Le collage posait les références à x = 1.05 et la position partait telle quelle en base : des
- * références hors de toute bande, donc invisibles, existent déjà. Une référence se pose
- * désormais n'importe où sur le canevas, et l'affichage ne la déplace que s'il n'en montrerait
- * rien — ici aucune bande n'est mesurable (happy-dom ne mesure rien), la zone visible se réduit
- * donc au cadre du média et l'ancienne position doit y être ramenée.
+ * Pasting used to place references at x = 1.05 and the position went into the database as is:
+ * references outside any band, hence invisible, already exist. A reference can now be placed
+ * anywhere on the canvas, and display only moves it when it would show nothing — here no band
+ * is measurable (happy-dom measures nothing), so the visible area shrinks to the media frame
+ * and the old position must be pulled back into it.
  */
 const ref = (over: Partial<ReviewReferenceItem> = {}): ReviewReferenceItem => ({
   id: 1,
@@ -41,29 +41,29 @@ function Host({ references }: { references: ReviewReferenceItem[] }) {
   );
 }
 
-describe('références persistées', () => {
-  it('recadre à l’affichage une position enregistrée hors cadre', () => {
+describe('persisted references', () => {
+  it('reframes at display time a saved position outside the frame', () => {
     render(<Host references={[ref()]} />);
     const box = screen.getByAltText(t('ref.title')).parentElement!;
     expect(box.style.left).toBe('70%');
     expect(box.style.width).toBe('30%');
   });
 
-  it('laisse en place une position déjà dans le cadre', () => {
+  it('leaves in place a position already inside the frame', () => {
     render(<Host references={[ref({ x: 0.25, y: 0.5 })]} />);
     const box = screen.getByAltText(t('ref.title')).parentElement!;
     expect(box.style.left).toBe('25%');
     expect(box.style.top).toBe('50%');
   });
 
-  it('rattrape aussi une position héritée aberrante en hauteur', () => {
+  it('also pulls back an inherited out-of-range vertical position', () => {
     render(<Host references={[ref({ x: 0.2, y: -2.5 })]} />);
     const box = screen.getByAltText(t('ref.title')).parentElement!;
     expect(box.style.left).toBe('20%');
     expect(box.style.top).toBe('0%');
   });
 
-  it('n’affiche pas la référence d’un commentaire qui n’est pas sélectionné', () => {
+  it('does not show the reference of a comment that is not selected', () => {
     render(<Host references={[ref({ commentId: 42 })]} />);
     expect(screen.queryByAltText(t('ref.title'))).toBeNull();
   });

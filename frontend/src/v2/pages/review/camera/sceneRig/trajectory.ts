@@ -5,15 +5,15 @@ import type { SplatCamera } from '../../reviewTypes';
 import { sampleAnimV2 } from '../channels/hermite';
 import { animKeyTimes, animPlayDuration, CHANNEL_IDS, type CameraAnimV2 } from '../channels/model';
 
-/** Points échantillonnés de la polyligne de trajectoire (positions monde). */
+/** Sampled points of the trajectory polyline (world positions). */
 const TRAJECTORY_STEPS = 64;
 
 /**
- * Signature de l'animation : la trajectoire n'est recalculée que si elle change.
+ * Animation signature: the trajectory is only recomputed when it changes.
  *
- * Elle ne regardait que le canal `px` (Phase 27) : déplacer une clé sur `py`, `pz` ou sur la cible
- * laissait la polyligne périmée à l'écran. Elle couvre désormais les huit canaux, la durée de
- * lecture et la boucle — tout ce dont `sampleTrajectory` dépend. Pur/testable.
+ * It used to look only at the `px` channel (Phase 27): moving a key on `py`, `pz` or on the target
+ * left the polyline stale on screen. It now covers all eight channels, the playback duration and
+ * the loop — everything `sampleTrajectory` depends on. Pure/testable.
  */
 export function trajSignature(anim: CameraAnimV2): string {
   const parts: string[] = [`${animPlayDuration(anim)}`, anim.loop ? 'loop' : 'once'];
@@ -25,9 +25,9 @@ export function trajSignature(anim: CameraAnimV2): string {
 }
 
 /**
- * Échantillonne la trajectoire de la caméra (positions) sur la durée de lecture, pour tracer la
- * polyligne dans la scène. `base` sert de repli aux canaux sans clé — la même pose que celle dont
- * part la caméra-objet, sinon la ligne et le mesh ne décrivent pas le même plan. Pur/testable.
+ * Samples the camera trajectory (positions) over the playback duration, to draw the polyline in
+ * the scene. `base` serves as the fallback for keyless channels — the same pose the camera-object
+ * starts from, otherwise the line and the mesh would not describe the same plan. Pure/testable.
  */
 export function sampleTrajectory(
   anim: CameraAnimV2,

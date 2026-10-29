@@ -33,9 +33,9 @@ import ImageReviewSection from './ImageReviewSection';
 import { intlLocale } from '../../i18n';
 
 /**
- * Zone viewer de la review : barre d'annotation + pane adapté au type de média
- * (vidéo / image / 3D / splat). Extrait de ReviewPage (budget 10.F4). L'orchestrateur
- * garde l'état ; ce composant ne fait que rendre le viewer et l'overlay d'annotation.
+ * Review viewer area: annotation bar + pane matching the media type
+ * (video / image / 3D / splat). Extracted from ReviewPage (budget 10.F4). The orchestrator
+ * keeps the state; this component only renders the viewer and the annotation overlay.
  */
 export default function ReviewViewer({
   data,
@@ -89,83 +89,82 @@ export default function ReviewViewer({
   reprocessing: boolean;
   role?: Role;
   canEditTransform: boolean;
-  /** Éditions splat (masque, sous-ensemble) — non destructives, vraies après publication. */
+  /** Splat edits (mask, subset) — non-destructive, still valid after publication. */
   canEditSplat: boolean;
-  /** Gestion du média (présentation/mise en scène) — reste vrai après publication. */
+  /** Media management (presentation/staging) — still valid after publication. */
   canManage: boolean;
-  /** Sortie explicite de la lecture d'un commentaire : tout ce qu'il montrait est relâché. */
+  /** Explicit exit of a comment playback: everything it was showing is released. */
   onClearSelection: () => void;
   onSelectComment: (c: ReviewComment) => void;
   onManualSeek: () => void;
   onMarker: () => void;
   onReprocess: () => void;
   onSplatEditsSaved: (patch: SplatEditsPatch) => void;
-  /** Bascule le mode annotation (menu clic droit). */
+  /** Toggles annotation mode (right-click menu). */
   onToggleAnnotate: () => void;
-  /** Bascule le plein écran de tout le bloc review (viewer + playbar + commentaires). */
+  /** Toggles fullscreen for the whole review block (viewer + playbar + comments). */
   onFullscreen: () => void;
-  /** Médias B (34.D) : 1 = A/B classique (side/wipe) ; 2-3 = grille 2×2 vidéo. */
+  /** B media (34.D): 1 = classic A/B (side/wipe); 2-3 = video 2×2 grid. */
   compareIds: number[];
   onCloseCompare: () => void;
-  /** Retire un seul pane de la grille (croix d'une case). */
+  /** Removes a single pane from the grid (cell's cross). */
   onRemoveCompare: (mediaId: number) => void;
-  /** Choix exclusif du média B : réglage B de la barre d'options, et armement du mode. */
+  /** Exclusive choice of the B media: B setting in the options bar, and mode arming. */
   onSetCompare: (mediaId: number) => void;
-  /** Mode de comparaison hissé (répliqué en session live, retours 33 ; diff 34.E). */
+  /** Comparison mode lifted to the parent (mirrored in the live session, feedback 33; diff 34.E). */
   compareMode: CompareMode;
   onCompareModeChange: (mode: CompareMode) => void;
-  /** Position/angle du wipe hissés (répliqués en session live). */
+  /** Wipe position/angle lifted to the parent (mirrored in the live session). */
   sharedWipe?: ComponentProps<typeof VideoWipeOverlay>['sharedWipe'];
-  /** Vue image partagée en session live (capture/application) + prise de main sur zoom/pan. */
+  /** Image view shared in the live session (capture/apply) + takeover on zoom/pan. */
   imageViewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onImageUserView?: () => void;
-  /** Boucle I/O remontée (34.A) — plage in→out du prochain commentaire. */
+  /** I/O loop lifted to the parent (34.A) — in→out range of the next comment. */
   onLoopChange?: ComponentProps<typeof VideoPane>['onLoopChange'];
 }) {
   const kind = data?.media.kind;
   const src = data?.proxyUrl ?? data?.url;
-  // Zoom/pan répliqué entre panes A/B image (34.D) — relais bidirectionnel.
+  // Zoom/pan mirrored between image A/B panes (34.D) — two-way relay.
   const imageSync = useImageCompareSync(imageViewApiRef);
-  // HLS adaptatif (Phase 23) : master servi par le proxy auth quand des renditions existent
-  // **et** que le média n'est pas coupé — le master ignore le trim (cf. videoSource.ts).
+  // Adaptive HLS (Phase 23): master served by the auth proxy when renditions exist
+  // **and** the media is not trimmed — the master ignores the trim (see videoSource.ts).
   const hlsUrl = data ? hlsMasterUrl(data.media.id, data) : null;
   const playback = data ? videoPlayback(data.media, data.proxyUrl) : 'play';
   const startFrame = data?.startFrame ?? 1001;
-  // Cadence de diffusion : la base ne range qu'un arrondi au centième (23.98 pour
-  // 24000/1001), dont tous les numéros de frame dérivent. On la corrige ici, à l'entrée du
-  // viewer, pour que le compteur, la timeline et les marqueurs comptent les mêmes images
-  // que le DCC de l'artiste (cf. frameRate.ts). La cadence saisie à la main, elle, reste
-  // telle quelle : c'est une valeur que l'utilisateur est en train d'écrire, pas un relevé.
-  // La cadence exacte est calculée une fois par ReviewPage et descend par prop : la
-  // recalculer ici avait fait diverger le compteur du viewer et les numéros de frame
-  // affichés à côté des commentaires.
+  // Broadcast frame rate: the database only stores a value rounded to the hundredth (23.98 for
+  // 24000/1001), from which every frame number drifts. We correct it here, at the viewer's
+  // entry, so that the counter, the timeline and the markers count the same frames as the
+  // artist's DCC (see frameRate.ts). A frame rate typed by hand, however, stays as is: it is
+  // a value the user is writing, not a measurement.
+  // The exact frame rate is computed once by ReviewPage and comes down as a prop: recomputing
+  // it here had made the viewer counter and the frame numbers shown next to the comments diverge.
   const fps = storedFps;
-  // Exports du dock (frame courante en PNG, planche contact) — les deux boutons du panneau
-  // « Export » n'étaient rendus que si on leur passait leurs actions.
+  // Dock exports (current frame as PNG, contact sheet) — the two buttons of the "Export" panel
+  // were only rendered if their actions were passed in.
   const mediaExport = useMediaExport(data, videoRef);
   const splatReady = kind === 'SPLAT' && data?.media.status === 'READY' && splat.ready && !splat.loadError;
-  // Verrou de publication (Phase 11) : les outils d'édition (canEditTransform) disparaissent
-  // dès la publication (backend en 403) ; la présentation reste pilotable (canManage).
-  // Comparaison A/B : côte-à-côte ou wipe (14.C) — mode hissé (répliqué en live).
+  // Publication lock (Phase 11): the editing tools (canEditTransform) disappear
+  // as soon as it is published (backend answers 403); the presentation stays controllable (canManage).
+  // A/B comparison: side-by-side or wipe (14.C) — mode lifted to the parent (mirrored live).
   const closeCompare = () => (onCompareModeChange('side'), onCloseCompare());
 
-  // Points d'intérêt 3D/splat (extrait — budget 300) : ceux du commentaire sélectionné, sinon
-  // ceux en cours de rédaction. Rend aussi les cartes du commentaire ancrées dans la scène.
+  // 3D/splat points of interest (excerpt — budget 300): those of the selected comment, otherwise
+  // those being written. Also renders the comment's cards anchored in the scene.
   const poiCards = usePoiDisplay(kind, ann, splat, model3d, comments, selectedCommentId);
 
-  // Overlay d'annotation 2D (extrait — budget 300 lignes).
+  // 2D annotation overlay (excerpt — budget 300 lines).
   const renderOverlay = useAnnotationOverlay(ann);
 
-  // Sortie de la lecture d'un commentaire annoté : une seule pilule, descendue DANS la zone
-  // média des trois viewers qui savent l'accueillir (image, 3D, splat) — au même bord et dans
-  // le même langage que leurs autres repères flottants. Rendue au niveau de la section, elle
-  // retombait sur l'en-tête du chrome (la bascule de mode est centrée, elle aussi).
+  // Exit of an annotated comment playback: a single pill, moved DOWN into the media area of
+  // the three viewers that can host it (image, 3D, splat) — at the same edge and in the same
+  // language as their other floating markers. Rendered at section level, it used to fall on
+  // the chrome header (the mode toggle is centered too).
   const exitViewedAnnotation = (
     <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} anchor="viewer" />
   );
 
-  // Le compte connecté : le watermark spectateur (35.B) y lit un nom, la bande de consigne
-  // y lit un identifiant — c'est la même lecture, faite une fois.
+  // The signed-in account: the viewer watermark (35.B) reads a name from it, the instruction
+  // strip reads an identifier from it — it is the same read, done once.
   const wmUser = useAuth((s) => s.user);
   const wmQ = useWatermarkConfigQuery();
   const watermarkText =
@@ -174,23 +173,21 @@ export default function ReviewViewer({
       : null;
 
   /**
-   * Un déplacement de la vue 3D/splat (orbite, vol, zoom) ne masque plus que le **dessin 2D** du
-   * commentaire sélectionné : lui seul est tracé dans le plan de l'écran et n'a de sens que depuis
-   * la caméra d'origine.
+   * Moving the 3D/splat view (orbit, flight, zoom) only hides the **2D drawing** of the selected
+   * comment: it alone is traced in the screen plane and only makes sense from the original camera.
    *
-   * Tout le reste est ancré DANS la scène — points d'intérêt et traits de brosse en espace objet,
-   * proposition de scène, animation caméra — et reste donc affiché pendant qu'on navigue : c'était
-   * la demande (« qu'on bouge la caméra, que le staging et les points d'intérêt restent
-   * affichés »). On en sort explicitement : la pilule du viewer, Échap, un autre commentaire, ou
-   * l'entrée en rédaction. Le commentaire reste aussi sélectionné dans le fil — on est encore en
-   * train de le lire.
+   * Everything else is anchored IN the scene — points of interest and brush strokes in object
+   * space, scene proposal, camera animation — and so stays displayed while navigating: that was
+   * the request ("move the camera, and the staging and points of interest stay displayed").
+   * You leave it explicitly: the viewer pill, Escape, another comment, or entering edit mode.
+   * The comment also stays selected in the thread — we are still reading it.
    *
-   * Vidéo : le masquage passe par le seek/la lecture ; image : les annotations sont ancrées au
-   * pixel et survivent au zoom/pan.
+   * Video: hiding goes through seek/playback; image: the annotations are anchored to the pixel
+   * and survive zoom/pan.
    */
   const hideDrawingOnViewMove = (e: { target: unknown }) => {
     if (kind !== 'MODEL_3D' && kind !== 'SPLAT') return;
-    // Déplier une carte ancrée, ou faire défiler son texte, n'est pas naviguer.
+    // Expanding an anchored card, or scrolling its text, is not navigating.
     if (isPoiCardGesture(e.target)) return;
     if (ann.viewed) {
       ann.setViewed(null);
@@ -205,18 +202,18 @@ export default function ReviewViewer({
       onWheelCapture={hideDrawingOnViewMove}
     >
       {watermarkText && <WatermarkOverlay text={watermarkText} opacity={wmQ.data?.opacity} />}
-      {/* Cartes du commentaire relu, ancrées à leurs points dans la scène. Rendues ici pour la
-          seule raison qu'il faut bien les rendre quelque part : elles se posent par portail dans
-          les pastilles du viewer, leur place dans cet arbre n'a aucun effet à l'écran. */}
+      {/* Cards of the reviewed comment, anchored to their points in the scene. Rendered here
+          only because they have to be rendered somewhere: they are portaled into the viewer's
+          pins, so their place in this tree has no effect on screen. */}
       {poiCards}
-      {/* Ce qu'on vous demande de regarder, quand la review vous a été confiée : au-dessus
-          du viewer, à l'ouverture, et non trois clics plus loin dans un dialogue. */}
+      {/* What you are asked to look at, when the review was entrusted to you: above the
+          viewer, on opening, and not three clicks away in a dialog. */}
       {data && <ReviewBriefBanner reviewers={data.reviewers} currentUserId={wmUser?.id} />}
-      {/* Le lecteur vidéo garde la pilule au niveau de la section : sa zone média est celle
-          d'un autre chantier. Les trois autres la reçoivent dans leur viewer (voir plus bas). */}
+      {/* The video player keeps the pill at section level: its media area belongs to another
+          workstream. The other three receive it in their viewer (see below). */}
       {kind === 'VIDEO' && <ReviewAnnotationBar ann={ann} onClearSelection={onClearSelection} />}
 
-      {/* Skeleton du viewer pendant le chargement (10.B5) */}
+      {/* Viewer skeleton while loading (10.B5) */}
       {!data && !error && <Skeleton className="min-h-0 flex-1 rounded-lg" />}
 
       {kind === 'VIDEO' && data && playback !== 'play' && (
@@ -334,8 +331,8 @@ export default function ReviewViewer({
         />
       )}
 
-      {/* Les assets de la version vivent dans le tiroir « pellicule » du chrome (D1) :
-          ils étaient rendus ici *et* là, deux fois sur le même écran. */}
+      {/* The version's assets live in the chrome's "filmstrip" drawer (D1):
+          they used to be rendered here *and* there, twice on the same screen. */}
     </section>
   );
 }

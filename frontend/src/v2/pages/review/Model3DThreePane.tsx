@@ -8,10 +8,10 @@ import ReviewFrame from './ReviewFrame';
 import { useT } from '../../i18n';
 
 /**
- * Pane 3D de la review (viewer **Three.js**) : le hook `useModel3DThree` monte la scène dans
- * `containerRef` (toujours présent). Cadre de review à aspect fixe (V6), overlay d'annotation 2D
- * superposé, états de repli (conversion en cours / échec avec relance). Remplace `Model3DPane`
- * (model-viewer).
+ * 3D pane of the review (**Three.js** viewer): the `useModel3DThree` hook mounts the scene in
+ * `containerRef` (always present). Fixed-aspect review frame (V6), stacked 2D annotation
+ * overlay, fallback states (conversion in progress / failure with retry). Replaces
+ * `Model3DPane` (model-viewer).
  */
 export default function Model3DThreePane({
   status,
@@ -35,33 +35,33 @@ export default function Model3DThreePane({
   containerRef: RefObject<HTMLDivElement | null>;
   overlay: ReactNode;
   /**
-   * Overlay interactif des outils de la scène — la brosse de surface (lot 13). Contrairement à
-   * `overlay`, il CAPTE le pointeur : c'est le même slot, au même endroit, que celui du pane
-   * splat, pour que la brosse se comporte à l'identique dans les deux viewers.
+   * Interactive overlay for the scene tools — the surface brush (batch 13). Unlike `overlay`,
+   * it CAPTURES the pointer: it is the same slot, in the same place, as the splat pane's, so
+   * the brush behaves identically in both viewers.
    */
   editorOverlay?: ReactNode;
-  /** Aspect du cadre de review fixe (issu de la présentation persistée) — défaut 16:9. */
+  /** Aspect of the fixed review frame (from the persisted presentation) — default 16:9. */
   aspect?: number;
-  /** Fenêtre PiP du mode layout (PipFrame — le rendu WebGL est dessiné dessous en scissor). */
+  /** PiP window of layout mode (PipFrame — the WebGL render is drawn underneath, scissored). */
   pip?: ReactNode;
-  /** Bandeau flottant en haut du viewer (46.T : retour à la scène par défaut). */
+  /** Floating banner at the top of the viewer (46.T: back to the default scene). */
   notice?: ReactNode;
   /**
-   * Sortie de la lecture d'un commentaire annoté, en BAS du viewer : le haut centré est déjà
-   * celui des bandeaux d'état (`notice`), et deux pilules au même bord s'y recouvriraient.
+   * Exit of an annotated comment playback, at the BOTTOM of the viewer: the centered top is
+   * already used by the status banners (`notice`), and two pills on the same edge would overlap.
    */
   exit?: ReactNode;
   /**
-   * Réglages de rendu, posés en HAUT À GAUCHE du viewer (Phase 50, lot 6) — l'onglet
-   * « Affichage » du dock a disparu au profit de ce coin-là : on change de mode de rendu en
-   * regardant le modèle, pas en traversant l'écran. Absent du partage client, qui ne règle rien.
+   * Render settings, placed at the TOP LEFT of the viewer (Phase 50, batch 6) — the "Display"
+   * dock tab was removed in favor of this corner: you change the render mode while looking at
+   * the model, not by crossing the screen. Absent from the client share, which adjusts nothing.
    */
   settings?: ReactNode;
-  /** Auto-key armé : liseré d'enregistrement sur le viewport (façon DCC). */
+  /** Auto-key armed: recording border on the viewport (DCC style). */
   recording?: boolean;
   canReprocess: boolean;
   reprocessing: boolean;
-  /** Raison de l'échec de traitement remontée par le worker (45.C), null si inconnue. */
+  /** Processing failure reason surfaced by the worker (45.C), null if unknown. */
   processingError?: string | null;
   onReprocess: () => void;
 }) {
@@ -72,24 +72,24 @@ export default function Model3DThreePane({
       {recording && (
         <div className="pointer-events-none absolute inset-0 z-20 ring-2 ring-destructive/70 ring-inset" />
       )}
-      {/* Viewer plein espace + guide letterbox du cadre de livraison (Phase 25) ; l'overlay
-          d'annotation est ancré au guide (coordonnées normalisées alignées pour tous). */}
+      {/* Full-space viewer + letterbox guide of the delivery frame (Phase 25); the overlay
+          is anchored to the guide (normalized coordinates aligned for everyone). */}
       <ReviewFrame
         aspect={aspect}
         frame={overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
       >
-        {/* Conteneur de la scène Three.js (rempli par useModel3DThree) — toujours monté */}
+        {/* Three.js scene container (filled by useModel3DThree) — always mounted */}
         <div ref={containerRef} className="absolute inset-0" />
 
-        {/* Overlay des outils de la scène (brosse) — au-dessus du canvas, sous les états */}
+        {/* Scene tools overlay (brush) — above the canvas, below the states */}
         {editorOverlay}
 
         {pip}
       </ReviewFrame>
       {notice}
       {exit}
-      {/* Au-dessus du cadre, jamais dedans : le guide letterbox et l'overlay d'annotation
-          gardent leurs coordonnées — ce coin ne touche pas au cadrage. */}
+      {/* Above the frame, never inside it: the letterbox guide and the annotation overlay
+          keep their coordinates — this corner does not touch the framing. */}
       {settings && <div className="absolute top-2 left-2 z-20">{settings}</div>}
 
       {status === 'PROCESSING' ? (
@@ -100,8 +100,8 @@ export default function Model3DThreePane({
         <div className="absolute inset-0 flex items-center justify-center p-6">
           <div className="max-w-sm space-y-3 text-center text-sm text-muted-foreground">
             <p>{t('model3d.unviewable')}</p>
-            {/* Raison remontée par le worker (45.C) : asset USD manquant, outillage absent,
-                archive refusée… — sans elle, l'utilisateur ne sait pas quoi corriger. */}
+            {/* Reason surfaced by the worker (45.C): missing USD asset, missing tooling,
+                archive rejected… — without it, the user does not know what to fix. */}
             {processingError && (
               <p className="rounded border border-border bg-card/60 px-2 py-1.5 text-left font-mono text-xs break-words text-foreground">
                 {processingError}

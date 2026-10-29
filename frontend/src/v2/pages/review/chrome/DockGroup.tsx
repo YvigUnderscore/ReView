@@ -6,20 +6,19 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useT } from '../../../i18n';
 
 /**
- * Gabarit des `<Select>` du dock : la primitive est dimensionnée pour les formulaires, les
- * panneaux sont deux crans plus denses. Passé en `className` pour que `twMerge` remplace le
- * padding et la taille de texte par défaut.
+ * Template for the dock's `<Select>`s: the primitive is sized for forms, while the panels are two
+ * notches denser. Passed as `className` so that `twMerge` replaces the default padding and text size.
  */
 export const DOCK_SELECT = 'w-full px-1.5 py-[0.3125rem] text-xs';
 
 /**
- * Primitives de contenu du dock inspecteur. Un panneau n'est qu'une suite de `Group`, et un
- * `Group` une suite de `Row` : libellé à gauche, contrôle à droite. Cette régularité est ce
- * qui rend les panneaux lisibles sans les parcourir — on ne compose rien d'autre ici.
+ * Content primitives of the inspector dock. A panel is only a series of `Group`s, and a `Group` a
+ * series of `Row`s: label on the left, control on the right. This regularity is what makes panels
+ * readable without scanning them — nothing else is composed here.
  *
- * `collapsible` transforme le titre en bouton : c'est le titre lui-même qui plie le groupe,
- * pas une poignée ajoutée à côté. `action` reste à droite et hors du bouton — l'enregistrement
- * d'une vue ou l'armement de la mesure ne peuvent pas vivre dans le déclencheur du repli.
+ * `collapsible` turns the title into a button: the title itself folds the group, not a handle added
+ * beside it. `action` stays on the right and outside the button — saving a view or arming the
+ * measure cannot live in the collapse trigger.
  */
 export function Group({
   title,
@@ -30,13 +29,13 @@ export function Group({
   children,
 }: {
   title: string;
-  /** Action de l'en-tête du groupe, poussée à droite (ex. « enregistrer la vue courante »). */
+  /** Group header action, pushed to the right (e.g. "save current view"). */
   action?: ReactNode;
-  /** Titre cliquable : le groupe se plie et se déplie. */
+  /** Clickable title: the group folds and unfolds. */
   collapsible?: boolean;
-  /** Arrive replié (groupe long) — l'utilisateur garde la main ensuite. */
+  /** Starts collapsed (long group) — the user stays in control afterwards. */
   defaultCollapsed?: boolean;
-  /** Décompte affiché près du titre : ce que le groupe contient quand il est fermé. */
+  /** Count shown next to the title: what the group contains when closed. */
   count?: number;
   children: ReactNode;
 }) {
@@ -76,7 +75,7 @@ export function Row({
 }: {
   label: ReactNode;
   hint?: string;
-  /** Contrôle large (select, contrôle segmenté) : le libellé passe au-dessus. */
+  /** Wide control (select, segmented control): the label goes above it. */
   stack?: boolean;
   children: ReactNode;
 }) {
@@ -88,7 +87,7 @@ export function Row({
   );
 }
 
-/** Ligne de lecture seule : un libellé, une valeur en chiffres — statistiques, fiche technique. */
+/** Read-only row: a label, a numeric value — statistics, spec sheet. */
 export function ReadRow({ label, value, stack }: { label: string; value: ReactNode; stack?: boolean }) {
   return (
     <div className={stack ? 'rv-row rv-row--stack' : 'rv-row'}>

@@ -15,12 +15,12 @@ import type { MediaKind, Role } from '../../../types/api';
 import type { MessageKey } from '../../../i18n';
 
 /**
- * Bascule de mode — l'emplacement qui décide de ce qui existe à l'écran. Les modes sont pris
- * aux touches numériques dans tous les viewers, dans l'ordre de la bascule — trois en spatial,
- * deux sur un média plat (`switcherModesFor`, qui ne liste pas « Annoter »).
+ * Mode toggle — the place that decides what exists on screen. Modes are picked with the number
+ * keys in every viewer, in toggle order — three in spatial, two on a flat media
+ * (`switcherModesFor`, which does not list "Annotate").
  *
- * Le premier mode (`explore`) est le seul servi aux clients : `role === 'CLIENT'` ne voit pas
- * la bascule et reste en lecture seule.
+ * The first mode (`explore`) is the only one served to clients: `role === 'CLIENT'` does not see
+ * the toggle and stays read-only.
  */
 export type ModeId = 'explore' | 'annotate' | 'compare' | 'stage' | 'clean';
 
@@ -28,11 +28,11 @@ export interface ReviewMode {
   value: ModeId;
   labelKey: MessageKey;
   icon: LucideIcon;
-  /** Phrase affichée en pied de page : ce que le mode autorise, et pour qui. */
+  /** Sentence shown in the footer: what the mode allows, and for whom. */
   hintKey: MessageKey;
 }
 
-/** Les médias plats (vidéo, image) et les médias spatiaux (3D, splat) n'ont pas les mêmes modes. */
+/** Flat media (video, image) and spatial media (3D, splat) do not have the same modes. */
 export function isSpatialKind(kind: MediaKind): boolean {
   return kind === 'MODEL_3D' || kind === 'SPLAT';
 }
@@ -67,10 +67,10 @@ const SPATIAL_MODES: ReviewMode[] = [
 ];
 
 /**
- * Les médias plats ont les mêmes trois modes. L'image avait perdu « Ajuster » en D1 (une
- * pipette et un zoom pour une aide qui promettait exposition, gamma et canaux) ; la vidéo a
- * perdu « Découpe » en Phase 50 — la coupe non destructive n'était utilisable qu'avant
- * publication, et le média naît publié depuis que `draftMode` est éteint par défaut.
+ * Flat media have the same three modes. The image had lost "Fit" in D1 (an eyedropper and a zoom
+ * for a helper that promised exposure, gamma and channels); the video lost "Cut" in Phase 50 — the
+ * non-destructive cut was only usable before publication, and media are born published since
+ * `draftMode` is off by default.
  */
 function mediaModes(kind: MediaKind): ReviewMode[] {
   return [
@@ -95,36 +95,36 @@ function mediaModes(kind: MediaKind): ReviewMode[] {
   ];
 }
 
-/** Tous les modes valides d'un type de média — y compris « Annoter », non listé en bascule. */
+/** All valid modes of a media type — including "Annotate", which is not listed in the toggle. */
 export function modesFor(kind: MediaKind): ReviewMode[] {
   return isSpatialKind(kind) ? SPATIAL_MODES : mediaModes(kind);
 }
 
 /**
- * Modes réellement atteignables. « Compare » exige une version voisine : sans elle, le mode
- * s'armait sur rien — le sélecteur de comparaison disparaissait au même moment, et l'on
- * restait bloqué dans un mode qui ne montrait aucune comparaison. `canCompare` vient du hook
- * qui liste les voisins (`useCompareTargets`), seul juge de la question.
+ * Modes actually reachable. "Compare" requires a neighbouring version: without one, the mode armed
+ * on nothing — the comparison selector disappeared at the same time, and one was stuck in a mode
+ * that showed no comparison. `canCompare` comes from the hook that lists the neighbours
+ * (`useCompareTargets`), the sole judge of the question.
  */
 export function allowedModesFor(kind: MediaKind, canCompare = true): ReviewMode[] {
   return modesFor(kind).filter((m) => canCompare || m.value !== 'compare');
 }
 
 /**
- * Modes proposés par la bascule d'en-tête et les touches numériques. « Annoter » n'y figure
- * plus : l'annotation s'arme depuis l'espace commentaire (bouton du composer, clic droit) ou
- * par le raccourci d'un outil de tracé — le mode reste valide, simplement non listé.
+ * Modes offered by the header toggle and the number keys. "Annotate" is no longer listed there:
+ * annotation is armed from the comment space (composer button, right-click) or through the
+ * shortcut of a drawing tool — the mode stays valid, simply not listed.
  */
 export function switcherModesFor(kind: MediaKind, canCompare = true): ReviewMode[] {
   return allowedModesFor(kind, canCompare).filter((m) => m.value !== 'annotate');
 }
 
-/** Mode par défaut — celui servi aux clients. */
+/** Default mode — the one served to clients. */
 export const DEFAULT_MODE: ModeId = 'explore';
 
 /**
- * La bascule de mode est-elle offerte ? Le client reste en exploration, en lecture seule ;
- * et un segment unique ne bascule vers rien — le montage, qui n'a qu'un mode, s'en passe.
+ * Is the mode toggle offered? The client stays in exploration, read-only; and a single segment
+ * switches to nothing — the edit mount, which only has one mode, does without it.
  */
 export function canSwitchMode(role: Role, modeCount: number): boolean {
   return role !== 'CLIENT' && modeCount > 1;

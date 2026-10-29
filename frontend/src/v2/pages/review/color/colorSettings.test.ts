@@ -12,24 +12,24 @@ const displays = [
 const project = { configId: 'cfg', display: 'sRGB - Display', view: 'ACES 1.0 - SDR Video' };
 
 /**
- * Ce fichier éprouvait aussi les bornes, la neutralité et la persistance des réglages de
- * review (exposition, gamma, display/view choisis au dock). Ces réglages n'existent plus —
- * le panneau Color est retiré en Phase 50 et la gestion couleur est celle du projet. Les tests
- * qui les verrouillaient sont donc réécrits sciemment sur ce qui reste : résoudre le couple
- * display/view **du projet** contre la config réellement chargée.
+ * This file used to also test the bounds, the neutrality and the persistence of the review
+ * settings (exposure, gamma, display/view chosen in the dock). Those settings no longer exist —
+ * the Color panel was removed in Phase 50 and color management is the project's. The tests that
+ * locked them are therefore deliberately rewritten around what remains: resolving the **project's**
+ * display/view pair against the config actually loaded.
  */
-describe('colorSettings — couple display/view du projet', () => {
-  it('sans config de projet, il n’y a rien à appliquer', () => {
+describe('colorSettings — project display/view pair', () => {
+  it('without a project config, there is nothing to apply', () => {
     expect(resolveDisplayView(null, displays)).toBeNull();
     expect(resolveDisplayView({ display: 'x', view: 'y' }, displays)).toBeNull();
   });
 
-  it('un projet sans couple complet n’applique rien', () => {
+  it('a project without a complete pair applies nothing', () => {
     expect(resolveDisplayView({ configId: 'cfg', display: 'sRGB - Display' }, displays)).toBeNull();
     expect(resolveDisplayView({ configId: 'cfg', view: 'Raw' }, displays)).toBeNull();
   });
 
-  it('rend le couple du projet', () => {
+  it('returns the project pair', () => {
     expect(resolveDisplayView(project, displays)).toEqual({
       configId: 'cfg',
       display: 'sRGB - Display',
@@ -37,12 +37,12 @@ describe('colorSettings — couple display/view du projet', () => {
     });
   });
 
-  it('un couple projet absent de la config chargée ne vaut plus rien', () => {
+  it('a project pair missing from the loaded config is no longer valid', () => {
     const stale = { configId: 'cfg', display: 'Gone - Display', view: 'Raw' };
     expect(resolveDisplayView(stale, displays)).toBeNull();
-    // Une view disparue de la config compte autant qu'un display disparu.
+    // A view that disappeared from the config counts as much as a display that disappeared.
     expect(resolveDisplayView({ ...project, view: 'Gone - View' }, displays)).toBeNull();
-    // Tant que la liste n'est pas chargée, on fait confiance au projet.
+    // While the list is not loaded, we trust the project.
     expect(resolveDisplayView(stale, [])).toMatchObject({ display: 'Gone - Display' });
   });
 });

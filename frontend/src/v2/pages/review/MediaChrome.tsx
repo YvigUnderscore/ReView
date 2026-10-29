@@ -23,9 +23,9 @@ import { useMediaChrome } from './useMediaChrome';
 import { useT } from '../../i18n';
 
 /**
- * Chrome des viewers plats (vidéo, image) : bascule de mode, rail d'outils, barre d'options,
- * dock inspecteur et tiroir des assets de la version. Le lecteur garde sa ligne de transport ancrée sous
- * l'image — c'est déjà l'emplacement du temps, elle n'a jamais flotté.
+ * Chrome for flat viewers (video, image): mode toggle, tool rail, options bar, inspector
+ * dock and the version's asset drawer. The player keeps its transport row anchored under
+ * the image — that is already where time lives, it never floated.
  */
 export default function MediaChrome({
   kind,
@@ -48,7 +48,7 @@ export default function MediaChrome({
     onMode: (mode: CompareMode) => void;
     ids: number[];
     onClear: () => void;
-    /** Choix exclusif du média B — réglage B de la barre d'options et armement du mode. */
+    /** Exclusive choice of the B media — B setting in the options bar and mode arming. */
     onSet: (mediaId: number) => void;
   };
   onExportFrame?: () => void;
@@ -57,7 +57,7 @@ export default function MediaChrome({
 }) {
   const t = useT();
   const { id: mediaId, versionId } = data.media;
-  // Versions voisines : seule autorité sur l'existence du mode « Compare ».
+  // Neighbouring versions: the only authority on whether the "Compare" mode exists.
   const neighbours = useCompareTargets(versionId);
   const { state, update } = useChromeState(kind, { canCompare: neighbours.hasTargets });
   useMediaChrome({ state, update, ann });
@@ -77,8 +77,8 @@ export default function MediaChrome({
 
   const tools = toolsFor(state.mode, kind);
   const activeTool = tools.find((tool) => tool.id === state.tool) ?? tools[0];
-  // Le tiroir des assets n'a de sens qu'à partir de deux médias : la bascule ouvrait sinon
-  // une bande vide, et occupait une ligne pour rien.
+  // The asset drawer only makes sense with two media: otherwise the toggle would open
+  // an empty strip and take up a row for nothing.
   const hasAssets = useVersionMedia(versionId).length > 1;
 
   return (
@@ -97,7 +97,7 @@ export default function MediaChrome({
             mode: compare.mode,
             onMode: compare.onMode,
             hasB,
-            // La vidéo garde son sélecteur d'en-tête : lui seul exprime la grille 2×2.
+            // Video keeps its header selector: it alone expresses the 2×2 grid.
             ab:
               kind === 'IMAGE' ? (
                 <CompareAB
@@ -129,7 +129,7 @@ export default function MediaChrome({
         ) : undefined
       }
       transport={
-        // Le lecteur porte déjà sa ligne de temps : cette barre n'ouvre que la pellicule.
+        // The player already carries its timeline row: this bar only opens the filmstrip.
         hasAssets ? (
           <div className="rv-transport justify-end">
             <Button

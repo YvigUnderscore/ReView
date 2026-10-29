@@ -10,15 +10,15 @@ const pose = {
 };
 
 describe('poseObject', () => {
-  it('lookDistance = distance position→cible', () => {
+  it('lookDistance = distance position→target', () => {
     expect(lookDistance(pose)).toBeCloseTo(5);
   });
 
-  it('forwardOfPose = direction unitaire position→cible', () => {
+  it('forwardOfPose = unit direction position→target', () => {
     expect(forwardOfPose(pose)).toEqual({ x: 0, y: 0, z: -1 });
   });
 
-  it('forwardOfPose dégénérée (position=cible) → -Z par défaut', () => {
+  it('degenerate forwardOfPose (position=target) → -Z by default', () => {
     expect(forwardOfPose({ position: { x: 1, y: 1, z: 1 }, target: { x: 1, y: 1, z: 1 } })).toEqual({
       x: 0,
       y: 0,
@@ -26,12 +26,12 @@ describe('poseObject', () => {
     });
   });
 
-  it('targetFromForward reconstruit la cible à la bonne distance', () => {
+  it('targetFromForward rebuilds the target at the right distance', () => {
     const t = targetFromForward({ x: 0, y: 0, z: 5 }, { x: 0, y: 0, z: -2 }, 5);
     expect(t).toEqual({ x: 0, y: 0, z: 0 });
   });
 
-  it('roundtrip forward/target conserve la cible', () => {
+  it('forward/target round trip keeps the target', () => {
     const fwd = forwardOfPose(pose);
     const back = targetFromForward(pose.position, fwd, lookDistance(pose));
     expect(back.x).toBeCloseTo(pose.target.x);

@@ -49,9 +49,9 @@ import { useAuth } from '../../stores/useAuth';
 import { useT } from '../../i18n';
 
 /**
- * Menu clic droit des reviews **image & vidéo** (le clic droit des viewers 3D/splat sert
- * à la navigation) : annotation, copie/téléchargement de l'image ou de la frame courante,
- * transport vidéo, miniature. Le menu natif du navigateur est désactivé sur toute la review.
+ * Right-click menu of the **image & video** reviews (right-click on the 3D/splat viewers is
+ * used for navigation): annotation, copy/download of the image or current frame, video
+ * transport, thumbnail. The browser's native menu is disabled across the whole review.
  */
 export default function ReviewContextMenu({
   children,
@@ -74,14 +74,14 @@ export default function ReviewContextMenu({
   onToggleAnnotate: () => void;
   hasViewed: boolean;
   onClearSelection: () => void;
-  /** Annotations visibles (commentaire sélectionné ou brouillon) — export « annotée » (№93). */
+  /** Visible annotations (selected comment or draft) — "annotated" export (No. 93). */
   annShapes?: Shape[];
 }) {
   const t = useT();
   const qc = useQueryClient();
   const kind = data.media.kind;
   const isVideo = kind === 'VIDEO';
-  // Repères de composition (34.G) — préférence locale, appliquée aux viewers plats.
+  // Composition guides (34.G) — local preference, applied to flat viewers.
   const guides = useGuides((s) => s.guides);
   const toggleGuide = useGuides((s) => s.toggle);
   const guideItems: Array<{ key: GuideKey; label: string }> = [
@@ -91,12 +91,12 @@ export default function ReviewContextMenu({
     { key: 'titleSafe', label: t('review.guides.titleSafe') },
   ];
   const baseName = data.media.originalName.replace(/\.[^.]+$/, '');
-  // « Ajouter à la playlist » depuis la review courante (retours CP-HUMAIN 33).
+  // "Add to playlist" from the current review (CP-HUMAIN feedback 33).
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const role = useAuth((s) => s.user?.role);
   const canPlaylist = role !== 'CLIENT';
 
-  // Appelé depuis les handlers (jamais pendant le render — règle react-hooks/refs).
+  // Called from the handlers (never during render — react-hooks/refs rule).
   const run = (label: string, fn: () => Promise<void>) =>
     void fn()
       .then(() => toast.success(label))
@@ -131,8 +131,8 @@ export default function ReviewContextMenu({
             <EyeOff size={14} /> {t('ctx.hideAnnotation')}
           </ContextMenuItem>
         )}
-        {/* Repères de composition (34.G) : tiers / croix / safe areas — vidéo comme image,
-            l'overlay étant monté dans les deux viewers. */}
+        {/* Composition guides (34.G): thirds / cross / safe areas — video and image alike,
+            the overlay being mounted in both viewers. */}
         <ContextMenuSub>
           <ContextMenuSubTrigger>
             <Grid3x3 size={14} /> {t('review.compositionGuides')}
@@ -194,7 +194,7 @@ export default function ReviewContextMenu({
                 <PencilLine size={14} /> {t('review.downloadAnnotatedFrame')}
               </ContextMenuItem>
             )}
-            {/* Planche contact (34.H) : PNG composé depuis le sprite de timeline. */}
+            {/* Contact sheet (34.H): PNG composed from the timeline sprite. */}
             {data.timelineSprite && data.timelineSpriteUrl && (
               <ContextMenuItem
                 onSelect={() =>
@@ -213,7 +213,7 @@ export default function ReviewContextMenu({
                 <LayoutGrid size={14} /> {t('review.contactSheet')}
               </ContextMenuItem>
             )}
-            {/* Lien profond (32.E) : URL ouvrant la review à la frame courante. */}
+            {/* Deep link (32.E): URL opening the review at the current frame. */}
             <ContextMenuItem
               onSelect={() =>
                 run(t('comments.linkCopied'), async () => {
@@ -274,8 +274,8 @@ export default function ReviewContextMenu({
             </ContextMenuItem>
           </>
         )}
-        {/* Sortie des notes du média courant. Elle n'existait que dans un onglet du dock —
-            on la cherche ici, où l'on cherche déjà « télécharger la frame ». */}
+        {/* Export of the current media's notes. It used to exist only in a dock tab —
+            users look for it here, where they already look for "download the frame". */}
         <ContextMenuSeparator />
         <NotesExportSubmenu scope="media" id={data.media.id} />
       </ContextMenuContent>

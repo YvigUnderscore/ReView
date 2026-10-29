@@ -30,7 +30,7 @@ const TYPE_LABEL: Record<TangentType, MessageKey> = {
   free: 'camera.tangent.free',
 };
 
-/** Côtés proposés, avec leur icône : entrant, les deux, sortant. */
+/** Sides offered, with their icon: incoming, both, outgoing. */
 const TARGETS: ReadonlyArray<{ id: TangentTarget; icon: LucideIcon; label: MessageKey }> = [
   { id: 'in', icon: ArrowLeftToLine, label: 'camera.tangent.sideIn' },
   { id: 'both', icon: MoveHorizontal, label: 'camera.tangent.sideBoth' },
@@ -41,7 +41,7 @@ const BTN = 'px-1.5 py-0.5 transition-colors';
 const ON = 'bg-primary/15 text-primary';
 const OFF = 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground';
 
-/** Type affiché comme actif pour le côté visé — rien si les deux côtés divergent. */
+/** Type shown as active for the targeted side — nothing if both sides diverge. */
 function activeType(k: CurveKey, target: TangentTarget): TangentType | undefined {
   if (target === 'in') return typeIn(k);
   if (target === 'out') return typeOut(k);
@@ -49,12 +49,12 @@ function activeType(k: CurveKey, target: TangentTarget): TangentType | undefined
 }
 
 /**
- * Outils de tangente du graph editor (Phase 50, lot 7) : **côté visé** (entrant, sortant ou les
- * deux), profil (lissée, linéaire, plate, palier, libre), poignées brisées/unifiées et pondérées.
+ * Graph editor tangent tools (Phase 50, batch 7): **targeted side** (incoming, outgoing or both),
+ * profile (smooth, linear, flat, step, free), broken/unified and weighted handles.
  *
- * Tout s'applique à la **sélection entière**, qui peut couvrir plusieurs courbes : c'est le geste
- * « changer le profil d'un ensemble de courbes ». Le clic droit sur une ligne de canal fait le même
- * travail sur une courbe entière sans passer par la sélection.
+ * Everything applies to the **whole selection**, which may span several curves: that is the
+ * "change the profile of a set of curves" gesture. Right-clicking a channel row does the same
+ * job on a whole curve without going through the selection.
  */
 export default function CurveTools({
   primary,
@@ -62,7 +62,7 @@ export default function CurveTools({
   onBroken,
   onWeighted,
 }: {
-  /** Clé primaire de la sélection — ne sert qu'à montrer l'état courant. */
+  /** Primary key of the selection — only used to show the current state. */
   primary: CurveKey | undefined;
   onType: (type: TangentType, target: TangentTarget) => void;
   onBroken: (broken: boolean) => void;

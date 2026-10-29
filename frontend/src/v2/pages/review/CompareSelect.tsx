@@ -14,7 +14,7 @@ import { findCompareMedia } from './reviewTypes';
 import { MAX_COMPARE } from './useCompareState';
 import { useT, type MessageKey } from '../../i18n';
 
-/** Nom du type de média dans le message « rien à comparer » — accordé au type maître. */
+/** Media type name in the "nothing to compare" message — agreed with the master type. */
 const KIND_LABEL: Record<string, MessageKey> = {
   VIDEO: 'entity.videoLower',
   IMAGE: 'entity.imageLower',
@@ -23,14 +23,14 @@ const KIND_LABEL: Record<string, MessageKey> = {
 };
 
 /**
- * Sélecteur de comparaison (vidéo, image, **modèle 3D et splat**) : coche d'autres versions de
- * la même tâche/asset — 1 version = A/B côte-à-côte/wipe ; 2-3 versions (vidéo, 34.D) = grille
- * 2×2 synchronisée ; en 3D/splat, les modèles cochés rejoignent la scène commune (caméra
- * liée). L'image reste mono-comparaison (coche exclusive). Rendu uniquement s'il existe une
- * autre version.
+ * Comparison selector (video, image, **3D model and splat**): checks other versions of the
+ * same task/asset — 1 version = side-by-side/wipe A/B; 2-3 versions (video, 34.D) = a
+ * synchronized 2×2 grid; in 3D/splat, the checked models join the shared scene (linked
+ * camera). Images stay single-comparison (exclusive check). Rendered only when another
+ * version exists.
  *
- * Le résumé du média résolu est transmis avec son identifiant : les viewers spatiaux en ont
- * besoin pour nommer l'onglet de comparaison, et l'ont déjà sous la main ici.
+ * The resolved media summary is passed along with its identifier: the spatial viewers need
+ * it to name the comparison tab, and already have it at hand here.
  */
 export default function CompareSelect({
   versionId,
@@ -43,23 +43,23 @@ export default function CompareSelect({
 }: {
   versionId: number;
   mediaId: number;
-  /** Type du média maître — les médias B doivent être du même type. */
+  /** Type of the master media — B media must be of the same type. */
   kind: string;
   compareIds: number[];
   onAdd: (mediaId: number, media?: MediaSummary) => void;
   onRemove: (mediaId: number) => void;
-  /** Remplacement exclusif (image) — garde la sémantique A/B simple. */
+  /** Exclusive replacement (image) — keeps the A/B semantics simple. */
   onSet: (mediaId: number | null, media?: MediaSummary) => void;
 }) {
   const t = useT();
   const qc = useQueryClient();
-  // Version cochée → média B résolu (nécessaire pour décocher et refléter l'état).
+  // Checked version → resolved B media (needed to uncheck and reflect the state).
   const [vidToMedia, setVidToMedia] = useState<Record<number, number>>({});
-  // L'image reste seule en A/B exclusif : la grille vidéo et la scène spatiale acceptent
-  // plusieurs versions à la fois.
+  // Images stay alone in exclusive A/B: the video grid and the spatial scene accept
+  // several versions at once.
   const multi = kind !== 'IMAGE';
 
-  // Mêmes queries que VersionNavigator (cache partagé) : version courante → liste parente.
+  // Same queries as VersionNavigator (shared cache): current version → parent list.
   const versionQ = useQuery({
     queryKey: qk.version(versionId),
     queryFn: () => api.get<{ version: VersionDetail }>(`/api/versions/${versionId}`).then((d) => d.version),
@@ -124,8 +124,8 @@ export default function CompareSelect({
         ? t('compare.vs', { name: others.find((v) => checked(v.id))?.name ?? '…' })
         : t('compare.grid', { count: compareIds.length + 1 });
 
-  // La grille 2×2 est propre à la vidéo ; en 3D/splat, les versions cochées rejoignent la
-  // scène commune — deux promesses différentes, deux infobulles.
+  // The 2×2 grid is specific to video; in 3D/splat, the checked versions join the
+  // shared scene — two different promises, two tooltips.
   const spatial = kind === 'MODEL_3D' || kind === 'SPLAT';
   const title = spatial
     ? t('compare.otherVersionsSpatial')

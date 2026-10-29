@@ -12,20 +12,20 @@ import {
   type CurveClipboard,
 } from './channels/clipboard';
 
-/** Réf lue dans les handlers seulement (jamais pendant le rendu) — possédée par `useCameraAnim`. */
+/** Ref read in the handlers only (never during render) — owned by `useCameraAnim`. */
 interface Readable<T> {
   readonly current: T;
 }
 
 /**
- * Sélection de clés du curve editor et presse-papier (Phase 27, Phase 40.E) : multi-sélection — la
- * dernière clé est « primaire » (poignées de tangente, caméra-objet) —, mode de tangente appliqué en
- * lot, suppression en lot, copier/coller en mémoire **et** dans `localStorage` (d'un média à l'autre).
+ * Key selection of the curve editor and clipboard (Phase 27, Phase 40.E): multi-selection — the
+ * last key is "primary" (tangent handles, camera-object) —, tangent mode applied in batch, batch
+ * deletion, copy/paste in memory **and** in `localStorage` (from one media to another).
  *
- * Le hook ne possède que la sélection : l'animation et son historique restent à l'appelant, qui
- * fournit `animRef`, `timeRef` (tête de lecture = point de collage) et `commit` (mutation avec
- * snapshot d'undo). C'est le point d'accroche des sélections à venir (par canal, par boîte de
- * transformation) : elles passent toutes par `setSelection`.
+ * The hook only owns the selection: the animation and its history stay with the caller, which
+ * provides `animRef`, `timeRef` (playhead = paste point) and `commit` (mutation with an undo
+ * snapshot). It is the attachment point for upcoming selections (per channel, per transform
+ * box): they all go through `setSelection`.
  */
 export function useCurveSelection(opts: {
   animRef: Readable<CameraAnimV2>;
@@ -40,13 +40,13 @@ export function useCurveSelection(opts: {
   }, [selection]);
 
   const setSelection = useCallback((sels: KeyRef[]) => setSelectionState(sels), []);
-  /** Vide la sélection — après un remplacement d'animation, les index ne désignent plus rien. */
+  /** Clears the selection — after an animation replacement, the indices no longer designate anything. */
   const clearSelection = useCallback(() => setSelectionState([]), []);
 
   /**
-   * Applique un profil de tangente aux clés sélectionnées — sur les deux côtés par défaut, sur un
-   * seul côté si on le demande (la clé se brise alors d'elle-même). La sélection pouvant s'étendre
-   * à plusieurs canaux, c'est aussi le chemin « appliquer à tout un ensemble de courbes ».
+   * Applies a tangent profile to the selected keys — on both sides by default, on one side only
+   * if requested (the key then breaks by itself). The selection may span several channels, so this
+   * is also the path for "apply to a whole set of curves".
    */
   const applyTangentType = useCallback(
     (type: TangentType, target: TangentTarget = 'both') => {
@@ -57,7 +57,7 @@ export function useCurveSelection(opts: {
     [animRef, commit],
   );
 
-  /** Brise (poignées indépendantes) ou unifie les tangentes des clés sélectionnées. */
+  /** Breaks (independent handles) or unifies the tangents of the selected keys. */
   const setSelectionBroken = useCallback(
     (broken: boolean) => {
       const sels = selectionRef.current;
@@ -67,7 +67,7 @@ export function useCurveSelection(opts: {
     [animRef, commit],
   );
 
-  /** Active/coupe la pondération des tangentes des clés sélectionnées (longueur de poignée). */
+  /** Enables/disables the tangent weighting of the selected keys (handle length). */
   const setSelectionWeighted = useCallback(
     (weighted: boolean) => {
       const sels = selectionRef.current;
@@ -77,7 +77,7 @@ export function useCurveSelection(opts: {
     [animRef, commit],
   );
 
-  /** Supprime les clés sélectionnées (Suppr). */
+  /** Deletes the selected keys (Delete). */
   const removeSelection = useCallback(() => {
     const sels = selectionRef.current;
     if (!sels.length) return;
@@ -85,11 +85,11 @@ export function useCurveSelection(opts: {
     setSelectionState([]);
   }, [animRef, commit]);
 
-  // ── Copier/coller de clés (40.E) : presse-papier mémoire + `localStorage` (cross-média). ──
+  // ── Copy/paste keys (40.E): in-memory clipboard + `localStorage` (cross-media). ──
   const clipboardRef = useRef<CurveClipboard | null>(loadClipboard());
   const [canPaste, setCanPaste] = useState(() => loadClipboard() != null);
 
-  /** Copie les clés sélectionnées (valeur, mode, tangentes) dans le presse-papier (Ctrl+C). */
+  /** Copies the selected keys (value, mode, tangents) to the clipboard (Ctrl+C). */
   const copySelection = useCallback(() => {
     const clip = copyKeys(animRef.current, selectionRef.current);
     if (!clip) return;
@@ -98,7 +98,7 @@ export function useCurveSelection(opts: {
     setCanPaste(true);
   }, [animRef]);
 
-  /** Colle le presse-papier à la tête de lecture et sélectionne les clés collées (Ctrl+V). */
+  /** Pastes the clipboard at the playhead and selects the pasted keys (Ctrl+V). */
   const paste = useCallback(() => {
     const clip = clipboardRef.current ?? loadClipboard();
     if (!clip) return;

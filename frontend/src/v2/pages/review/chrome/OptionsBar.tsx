@@ -9,12 +9,12 @@ import type { ReviewTool } from './tools';
 import { useT } from '../../../i18n';
 
 /**
- * Barre d'options — une ligne sous l'en-tête, qui ne montre que les paramètres de l'outil
- * **actif**. C'est ce qui permet de tout garder sans rien empiler : changer d'outil change la
- * ligne, au lieu d'ajouter un groupe flottant de plus au-dessus du média.
+ * Options bar — a line under the header that only shows the parameters of the **active** tool.
+ * This is what keeps everything without stacking: switching tool changes the line, instead of
+ * adding one more floating group above the media.
  *
- * La zone des paramètres défile horizontalement ; le groupe de validation reste épinglé hors
- * du défilement pour que l'action principale soit toujours atteignable.
+ * The parameter area scrolls horizontally; the commit group stays pinned outside the scroll so
+ * that the main action is always reachable.
  */
 export default function OptionsBar({
   tool,
@@ -22,7 +22,7 @@ export default function OptionsBar({
   children,
 }: {
   tool: ReviewTool;
-  /** Groupe de validation (`CommitGroup`) — seulement dans les modes qui écrivent. */
+  /** Commit group (`CommitGroup`) — only in the modes that write. */
   commit?: ReactNode;
   children?: ReactNode;
 }) {
@@ -45,8 +45,8 @@ export default function OptionsBar({
 }
 
 /**
- * Annuler / rétablir / enregistrer. L'état « non enregistré » se lit à une pastille dans le
- * bouton, jamais à un texte d'état posé à côté : la barre est déjà dense.
+ * Undo / redo / save. The "unsaved" state is read from a dot in the button, never from a status
+ * text placed next to it: the bar is already dense.
  */
 export function CommitGroup({
   dirty,
@@ -61,7 +61,7 @@ export function CommitGroup({
 }: {
   dirty: boolean;
   label: string;
-  /** Ce qui n'est pas enregistré — affiché en infobulle quand `dirty`. */
+  /** What is not saved — shown as a tooltip when `dirty`. */
   hint: string;
   onSave: () => void;
   onUndo?: () => void;

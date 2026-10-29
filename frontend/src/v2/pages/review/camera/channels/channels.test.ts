@@ -25,11 +25,11 @@ import { setTangentSlope, setWeighted } from './tangents';
 const base: SplatCamera = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } };
 const pose = (x: number): SplatCamera => ({ position: { x, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } });
 
-describe('model — opérations pures', () => {
-  it('upsertKey insère puis écrase au même temps, garde le tri', () => {
+describe('model — pure operations', () => {
+  it('upsertKey inserts then overwrites at the same time, keeps the sort', () => {
     let a = upsertKey(emptyAnim(), 'px', 1000, 5);
     a = upsertKey(a, 'px', 0, 1);
-    a = upsertKey(a, 'px', 1000, 9); // écrase
+    a = upsertKey(a, 'px', 1000, 9); // overwrites
     expect(a.channels.px?.keys.map((k) => [k.t, k.v])).toEqual([
       [0, 1],
       [1000, 9],
@@ -42,28 +42,28 @@ describe('model — opérations pures', () => {
     expect(animKeyTimes(a)).toEqual([0, 2000]);
     expect(animDuration(a)).toBe(2000);
     expect(hasAnimation(a)).toBe(true);
-    expect(hasAnimation(upsertKey(emptyAnim(), 'px', 0, 0))).toBe(false); // une seule colonne
+    expect(hasAnimation(upsertKey(emptyAnim(), 'px', 0, 0))).toBe(false); // a single column
   });
 
-  it('moveKey re-trie quand le temps dépasse la clé suivante', () => {
+  it('moveKey re-sorts when the time goes past the next key', () => {
     let a = upsertPoseAt(emptyAnim(), 0, pose(0));
     a = upsertPoseAt(a, 1000, pose(10));
-    a = moveKey(a, 'px', 0, { t: 2000 }); // dépasse l'autre clé
+    a = moveKey(a, 'px', 0, { t: 2000 }); // goes past the other key
     expect(a.channels.px?.keys.map((k) => k.t)).toEqual([1000, 2000]);
   });
 
-  it('deleteColumn retire les clés d’un temps sur tous les canaux', () => {
+  it('deleteColumn removes the keys at one time on all channels', () => {
     let a = upsertPoseAt(emptyAnim(), 0, pose(0));
     a = upsertPoseAt(a, 1000, pose(10));
     a = deleteColumn(a, 1000);
     expect(animKeyTimes(a)).toEqual([0]);
   });
 
-  it('moveKeysBatch déplace un lot multi-canaux depuis les index du baseline', () => {
+  it('moveKeysBatch moves a multi-channel batch from the baseline indices', () => {
     let a = upsertKey(emptyAnim(), 'px', 0, 0);
     a = upsertKey(a, 'px', 1000, 5);
     a = upsertKey(a, 'py', 1000, 3);
-    // Décale de +500 ms les deux clés à 1000 (index 1 sur px, index 0 sur py).
+    // Shifts the two keys at 1000 by +500 ms (index 1 on px, index 0 on py).
     const b = moveKeysBatch(a, [
       { channel: 'px', index: 1, t: 1500, v: 5 },
       { channel: 'py', index: 0, t: 1500, v: 3 },
@@ -72,7 +72,7 @@ describe('model — opérations pures', () => {
     expect(b.channels.py?.keys.map((k) => k.t)).toEqual([1500]);
   });
 
-  it('deleteKeys supprime un lot sans décaler les index restants', () => {
+  it('deleteKeys removes a batch without shifting the remaining indices', () => {
     let a = upsertKey(emptyAnim(), 'px', 0, 0);
     a = upsertKey(a, 'px', 1000, 5);
     a = upsertKey(a, 'px', 2000, 9);
@@ -83,38 +83,38 @@ describe('model — opérations pures', () => {
     expect(b.channels.px?.keys.map((k) => [k.t, k.v])).toEqual([[1000, 5]]);
   });
 
-  it('durée réglable : animPlayDuration prend l’override sinon le dernier temps', () => {
+  it('adjustable duration: animPlayDuration takes the override, otherwise the last time', () => {
     let a = upsertKey(upsertKey(emptyAnim(), 'px', 0, 0), 'px', 1000, 10);
     expect(animPlayDuration(a)).toBe(1000);
     a = setAnimDuration(a, 3000);
     expect(animPlayDuration(a)).toBe(3000);
-    a = setAnimDuration(a, 0); // retour automatique
+    a = setAnimDuration(a, 0); // back to automatic
     expect(a.durationMs).toBeUndefined();
     expect(animPlayDuration(a)).toBe(1000);
   });
 });
 
-describe('hermite — échantillonnage', () => {
-  it('evalChannel borne aux extrémités', () => {
+describe('hermite — sampling', () => {
+  it('evalChannel clamps to the ends', () => {
     const a = upsertKey(upsertKey(emptyAnim(), 'px', 0, 0), 'px', 1000, 10);
     expect(evalChannel(a.channels.px, -100, 0)).toBe(0);
     expect(evalChannel(a.channels.px, 1100, 0)).toBe(10);
   });
 
-  it('mode linear = interpolation droite (milieu = moyenne)', () => {
+  it('linear mode = straight interpolation (midpoint = average)', () => {
     let a = upsertKey(emptyAnim(), 'px', 0, 0, 'linear');
     a = upsertKey(a, 'px', 1000, 10, 'linear');
     expect(evalChannel(a.channels.px, 500, 0)).toBeCloseTo(5);
   });
 
-  it('mode step maintient la valeur de gauche', () => {
+  it('step mode holds the left value', () => {
     let a = upsertKey(emptyAnim(), 'px', 0, 0, 'step');
     a = upsertKey(a, 'px', 1000, 10, 'step');
     expect(evalChannel(a.channels.px, 999, 0)).toBe(0);
     expect(evalChannel(a.channels.px, 1000, 0)).toBe(10);
   });
 
-  it('mode auto passe exactement par les clés', () => {
+  it('auto mode passes exactly through the keys', () => {
     let a = upsertKey(emptyAnim(), 'px', 0, 0);
     a = upsertKey(a, 'px', 1000, 10);
     a = upsertKey(a, 'px', 2000, 0);
@@ -122,28 +122,28 @@ describe('hermite — échantillonnage', () => {
     expect(evalChannel(a.channels.px, 0, 0)).toBeCloseTo(0);
   });
 
-  it('canal absent → valeur de la pose de base', () => {
+  it('absent channel → value of the base pose', () => {
     const a = upsertKey(upsertKey(emptyAnim(), 'px', 0, 1), 'px', 1000, 2);
     const p = sampleAnimV2(a, 500, { ...base, target: { x: 7, y: 8, z: 9 } });
-    expect(p.target).toEqual({ x: 7, y: 8, z: 9 }); // cible non animée = base
+    expect(p.target).toEqual({ x: 7, y: 8, z: 9 }); // unanimated target = base
   });
 
-  it('boucle : enroule le temps sur la durée', () => {
+  it('loop: wraps the time over the duration', () => {
     let a = upsertKey(emptyAnim(true), 'px', 0, 0, 'linear');
     a = upsertKey(a, 'px', 1000, 10, 'linear');
     expect(sampleAnimV2(a, 1500, base).position.x).toBeCloseTo(5); // 1500 % 1000 = 500
   });
 });
 
-describe('hermite — tangentes pondérées', () => {
-  /** Rampe lissée en trois clés : de quoi comparer le chemin pondéré et le chemin Hermite. */
+describe('hermite — weighted tangents', () => {
+  /** Smoothed ramp over three keys: enough to compare the weighted path and the Hermite path. */
   const curve = () => {
     let a = upsertKey(emptyAnim(), 'px', 0, 0);
     a = upsertKey(a, 'px', 1000, 10);
     return upsertKey(a, 'px', 2000, 30);
   };
 
-  it('un poids de 1 reproduit l’Hermite (un Hermite EST le Bézier de poids 1)', () => {
+  it('a weight of 1 reproduces the Hermite (a Hermite IS the weight-1 Bézier)', () => {
     const plain = curve();
     const weighted = setWeighted(plain, [{ channel: 'px', index: 0 }], true);
     for (const t of [100, 400, 900]) {
@@ -151,11 +151,11 @@ describe('hermite — tangentes pondérées', () => {
     }
   });
 
-  it('un poids allongé change la forme mais garde les clés exactes', () => {
+  it('a stretched weight changes the shape but keeps the keys exact', () => {
     let a = setWeighted(curve(), [{ channel: 'px', index: 0 }], true);
     a = setTangentSlope(a, 'px', 0, 'out', 0.02, 1.5);
     expect(a.channels.px?.keys[0].wOut).toBeCloseTo(1.5, 9);
-    // Les clés restent sur la courbe, et le segment s'écarte du non pondéré.
+    // The keys stay on the curve, and the segment deviates from the unweighted one.
     expect(evalChannel(a.channels.px, 0, 0)).toBeCloseTo(0, 6);
     expect(evalChannel(a.channels.px, 1000, 0)).toBeCloseTo(10, 6);
     expect(evalChannel(a.channels.px, 500, 0)).not.toBeCloseTo(evalChannel(curve().channels.px, 500, 0), 3);
@@ -168,17 +168,17 @@ describe('fromV1 / normalizeAnim — migration', () => {
     { t: 1000, pose: pose(10), easing: 'ease-in-out' },
   ];
 
-  it('fromV1 crée un canal par grandeur, migre l’easing en mode', () => {
+  it('fromV1 creates one channel per quantity, migrates the easing into mode', () => {
     const a = fromV1(v1, true);
     expect(a.channels.px?.keys.map((k) => [k.t, k.v])).toEqual([
       [0, 0],
       [1000, 10],
     ]);
     expect(a.channels.px?.keys[0].mode).toBe('linear');
-    expect(a.channels.px?.keys[1].mode).toBe('auto'); // ease-in-out → lissé
+    expect(a.channels.px?.keys[1].mode).toBe('auto'); // ease-in-out → smoothed
   });
 
-  it('normalizeAnim accepte v1, v2, et rejette le vide', () => {
+  it('normalizeAnim accepts v1, v2, and rejects the empty one', () => {
     expect(normalizeAnim({ keyframes: v1, loop: false })?.version).toBe(2);
     expect(normalizeAnim(fromV1(v1, true))?.version).toBe(2);
     expect(normalizeAnim(null)).toBeNull();

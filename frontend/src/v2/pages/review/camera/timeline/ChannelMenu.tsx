@@ -36,7 +36,7 @@ const INFINITY_LABEL: Record<Extrapolation, MessageKey> = {
 
 const INFINITIES = Object.keys(INFINITY_LABEL) as Extrapolation[];
 
-/** Sous-menu d'extrapolation d'un côté (avant ou après les clés du canal). */
+/** Extrapolation submenu for one side (before or after the channel's keys). */
 function InfinitySub({
   label,
   current,
@@ -64,13 +64,12 @@ function InfinitySub({
 }
 
 /**
- * Actions d'**une courbe entière**, au clic droit sur sa ligne de canal (Phase 50, lot 7) : profil
- * de tangente appliqué à toutes ses clés, extrapolation avant/après ses clés, sélection de ses clés,
- * recadrage vertical, pose d'une clé. Le clic droit d'abord, conformément à la règle d'UI du
- * projet — aucun bouton nouveau dans une liste déjà dense.
+ * Actions on **a whole curve**, on right-click of its channel row (Phase 50, batch 7): tangent
+ * profile applied to all its keys, extrapolation before/after its keys, selecting its keys,
+ * vertical fit, setting a key. Right-click first, per the project's UI rule — no new button in an
+ * already dense list.
  *
- * En lecture seule, seules les actions de vue restent (sélectionner, recadrer) : rien de ce menu ne
- * peut alors écrire.
+ * Read-only: only the view actions remain (select, fit): nothing in this menu can then write.
  */
 export default function ChannelMenu({
   id,

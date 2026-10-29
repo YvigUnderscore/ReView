@@ -8,16 +8,16 @@ import type { useWipe } from './useWipe';
 import { useT } from '../../i18n';
 
 /**
- * Barre de wipe **visible et rotative** (comparaison A/B image & vidéo) : trait épais
- * contrasté, poignée centrale de déplacement (le long de la normale) et poignée de
- * rotation (le long de la barre). Double-clic sur la poignée centrale : réinitialise
- * (centre, vertical). À monter en `absolute inset-0` dans le conteneur du média.
+ * **Visible and rotatable** wipe bar (A/B image & video comparison): a thick, high-contrast
+ * line, a central move handle (along the normal) and a rotation handle (along the bar).
+ * Double-click the central handle: resets (center, vertical). Mount it as `absolute inset-0`
+ * in the media container.
  */
 export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe> }) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
-  // Rotation : le pivot est FIGÉ au début du drag (le centre courant de la barre) — sans
-  // ça, le centre recalculé bouge avec l'angle et la rotation « part dans tous les sens ».
+  // Rotation: the pivot is FROZEN at the start of the drag (the bar's current center) — without
+  // it, the recomputed center moves with the angle and the rotation "goes in all directions".
   const dragging = useRef<{ mode: 'move' | 'rotate'; pivot: [number, number] } | null>(null);
   const { pos, setPos, angle, setAngle, size, setSize } = wipe;
 
@@ -33,7 +33,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
   }, [setSize]);
 
   const [cx, cy] = wipeCenter(pos, angle, size.w || 1, size.h || 1);
-  // Poignée de rotation : le long de la barre, au-dessus du centre.
+  // Rotation handle: along the bar, above the center.
   const rotDist = Math.min(90, Math.max(50, size.h * 0.18));
   const a = (angle * Math.PI) / 180;
   const rotX = cx + Math.sin(a) * rotDist;
@@ -49,8 +49,8 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
       setPos(wipePosFromPoint(x, y, angle, rect.width, rect.height));
       return;
     }
-    // Rotation autour du pivot figé : nouvel angle depuis le pivot, puis `pos` recalculé
-    // pour que la barre continue de passer PAR le pivot (elle tourne sur place).
+    // Rotation around the frozen pivot: new angle from the pivot, then `pos` recomputed
+    // so that the bar keeps passing THROUGH the pivot (it rotates in place).
     const [pvx, pvy] = d.pivot;
     const nextAngle = wipeAngleFromPoint(x, y, pvx, pvy);
     setAngle(nextAngle);
@@ -61,7 +61,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
     e.stopPropagation();
     dragging.current = { mode, pivot: [cx, cy] };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    // Session live : manipuler le wipe vaut prise de main (co-pilote → driver).
+    // Live session: manipulating the wipe counts as taking over (co-pilot → driver).
     wipe.onGrab?.();
   };
   const release = () => (dragging.current = null);
@@ -71,7 +71,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-30 select-none overflow-hidden">
-      {/* Barre : trait épais à double liseré, bien visible sur tout fond. */}
+      {/* Bar: thick line with a double border, clearly visible on any background. */}
       <div
         className="absolute"
         style={{
@@ -84,7 +84,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
           boxShadow: '0 0 0 1.5px rgba(0,0,0,0.65), 0 0 10px rgba(0,0,0,0.5)',
         }}
       />
-      {/* Poignée de déplacement (centre) */}
+      {/* Move handle (center) */}
       <div
         className={`${handle} h-8 w-8 cursor-ew-resize`}
         style={{ left: cx - 16, top: cy - 16 }}
@@ -99,7 +99,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
       >
         <GripVertical size={15} />
       </div>
-      {/* Poignée de rotation (sur la barre) */}
+      {/* Rotation handle (on the bar) */}
       <div
         className={`${handle} h-6 w-6 cursor-grab active:cursor-grabbing`}
         style={{ left: rotX - 12, top: rotY - 12 }}
@@ -110,7 +110,7 @@ export default function WipeControl({ wipe }: { wipe: ReturnType<typeof useWipe>
       >
         <RotateCw size={12} />
       </div>
-      {/* Angle courant, affiché près de la poignée quand la barre n'est pas verticale */}
+      {/* Current angle, shown near the handle when the bar is not vertical */}
       {angle !== 0 && (
         <span
           className="absolute z-40 rounded bg-card/90 px-1 py-0.5 text-2xs tabular-nums text-muted-foreground"

@@ -4,15 +4,15 @@
 import type { CameraAnimV2, ChannelId, KeyRef } from './model';
 
 /**
- * Mise à l'échelle d'un lot de clés autour d'un pivot (boîte de transformation du curve editor,
- * Phase 50 lot 7) — pur et testable.
+ * Scales a batch of keys around a pivot (curve editor transform box, Phase 50 batch 7) — pure
+ * and testable.
  *
- * La fonction ne **modifie rien** : elle rend la liste des déplacements, que le geste passe à
- * `moveKeysBatch` par le chemin déjà en place (baseline du drag, undo unique, tri maintenu). Rien de
- * neuf dans le modèle, donc rien de neuf à faire migrer.
+ * The function **changes nothing**: it returns the list of moves, which the gesture passes to
+ * `moveKeysBatch` through the existing path (drag baseline, single undo, sort maintained).
+ * Nothing new in the model, so nothing new to migrate.
  */
 
-/** Déplacement demandé au modèle — même forme que celle des gestes de clés. */
+/** Move requested from the model — same shape as the key gestures. */
 export interface ScaledMove {
   channel: ChannelId;
   index: number;
@@ -20,7 +20,7 @@ export interface ScaledMove {
   v: number;
 }
 
-/** Étendue d'un lot de clés (bornes de la boîte). */
+/** Extent of a batch of keys (box bounds). */
 export interface KeyBounds {
   tMin: number;
   tMax: number;
@@ -28,7 +28,7 @@ export interface KeyBounds {
   vMax: number;
 }
 
-/** Bornes d'un lot de clés dans `anim`, ou `null` si aucune n'existe. */
+/** Bounds of a batch of keys in `anim`, or `null` if none exist. */
 export function keyBounds(anim: CameraAnimV2, refs: readonly KeyRef[]): KeyBounds | null {
   let bounds: KeyBounds | null = null;
   for (const r of refs) {
@@ -46,9 +46,9 @@ export function keyBounds(anim: CameraAnimV2, refs: readonly KeyRef[]): KeyBound
 }
 
 /**
- * Déplacements d'une mise à l'échelle : chaque clé s'éloigne (ou se rapproche) du pivot du facteur
- * donné, sur le temps, sur la valeur, ou sur les deux. Un facteur de 1 laisse l'axe intact.
- * `snapTime` sert à faire atterrir les temps sur une frame, comme tout déplacement de clé.
+ * Moves of a scaling: each key moves away from (or toward) the pivot by the given factor, along
+ * time, along value, or both. A factor of 1 leaves the axis untouched. `snapTime` lands the
+ * times on a frame, like any key move.
  */
 export function scaleKeyMoves(
   anim: CameraAnimV2,
@@ -77,9 +77,9 @@ export function scaleKeyMoves(
 }
 
 /**
- * Facteur d'échelle d'un geste : rapport des distances au pivot, de la position courante du
- * pointeur à celle du début. Sous une distance initiale négligeable, le rapport n'a pas de sens —
- * le facteur reste 1 plutôt que d'exploser.
+ * Scale factor of a gesture: ratio of the distances to the pivot, from the pointer's current
+ * position to its start position. Under a negligible initial distance the ratio is meaningless —
+ * the factor stays at 1 rather than blowing up.
  */
 export function scaleFactor(from: number, to: number, pivot: number, epsilon: number): number {
   const span = from - pivot;

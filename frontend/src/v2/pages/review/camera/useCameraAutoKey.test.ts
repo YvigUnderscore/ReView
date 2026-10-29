@@ -7,9 +7,9 @@ import { useCameraAutoKey } from './useCameraAutoKey';
 import { suspendAutoKey } from './autoKeyGate';
 
 /**
- * L'auto-key écoute le canvas, où l'on trouve aussi bien la caméra libre que le gizmo de la
- * caméra-objet. Hors caméra, le `pointerup` d'un drag de gizmo posait une clé de 8 canaux prise
- * sur la caméra **libre**, par-dessus celle que le gizmo venait d'écrire.
+ * Auto-key listens to the canvas, where both the free camera and the camera-object gizmo are found.
+ * Outside camera, the `pointerup` of a gizmo drag set an 8-channel key taken from the **free**
+ * camera, on top of the one the gizmo had just written.
  */
 
 let dom: HTMLDivElement;
@@ -27,7 +27,7 @@ afterEach(() => {
   dom.remove();
 });
 
-/** Rejoue un drag sur le canvas, du point `from` au point `to` (px). */
+/** Replays a drag on the canvas, from point `from` to point `to` (px). */
 function drag(from: [number, number], to: [number, number]) {
   dom.dispatchEvent(new PointerEvent('pointerdown', { clientX: from[0], clientY: from[1] }));
   dom.dispatchEvent(new PointerEvent('pointermove', { clientX: to[0], clientY: to[1] }));
@@ -35,28 +35,28 @@ function drag(from: [number, number], to: [number, number]) {
 }
 
 describe('useCameraAutoKey', () => {
-  it('pose une clé après un geste caméra franc', () => {
+  it('sets a key after a decisive camera gesture', () => {
     const insert = vi.fn();
     renderHook(() => useCameraAutoKey(true, getDom, insert));
     drag([10, 10], [60, 10]);
     expect(insert).toHaveBeenCalledTimes(1);
   });
 
-  it('ignore un clic net (moins de 3 px)', () => {
+  it('ignores a clean click (under 3 px)', () => {
     const insert = vi.fn();
     renderHook(() => useCameraAutoKey(true, getDom, insert));
     drag([10, 10], [11, 11]);
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('ne pose rien quand il est éteint', () => {
+  it('sets nothing when it is off', () => {
     const insert = vi.fn();
     renderHook(() => useCameraAutoKey(false, getDom, insert));
     drag([10, 10], [60, 10]);
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('ne pose rien tant que le portier le suspend (hors caméra)', () => {
+  it('sets nothing while the gate suspends it (outside camera)', () => {
     const insert = vi.fn();
     renderHook(() => useCameraAutoKey(true, getDom, insert));
     suspendAutoKey(true);
@@ -64,7 +64,7 @@ describe('useCameraAutoKey', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('reprend dès que le portier relâche, sans remonter l’écoute', () => {
+  it('resumes as soon as the gate releases, without remounting the listener', () => {
     const insert = vi.fn();
     renderHook(() => useCameraAutoKey(true, getDom, insert));
     suspendAutoKey(true);
@@ -74,7 +74,7 @@ describe('useCameraAutoKey', () => {
     expect(insert).toHaveBeenCalledTimes(1);
   });
 
-  it('débounce la molette, et la suspend aussi', () => {
+  it('debounces the wheel, and suspends it too', () => {
     const insert = vi.fn();
     renderHook(() => useCameraAutoKey(true, getDom, insert));
     dom.dispatchEvent(new WheelEvent('wheel', { deltaY: 10 }));

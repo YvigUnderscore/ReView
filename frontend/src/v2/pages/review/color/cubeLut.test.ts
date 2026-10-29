@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseCubeLut, readSource, sampleLut, tileLayout, toTiles } from './cubeLut';
 
-/** Construit un `.cube` de taille `n` à partir d'une fonction de transfert. */
+/** Builds an `n`-sized `.cube` from a transfer function. */
 const makeCube = (
   n: number,
   f: (r: number, g: number, b: number) => [number, number, number],
@@ -22,12 +22,12 @@ const makeCube = (
 
 const identity = (r: number, g: number, b: number): [number, number, number] => [r, g, b];
 
-describe('cubeLut — lecture', () => {
-  it('lit la taille et range les texels rouge en premier', () => {
+describe('cubeLut — reading', () => {
+  it('reads the size and orders the red texels first', () => {
     const lut = parseCubeLut(makeCube(5, identity));
     expect(lut.size).toBe(5);
     expect(lut.volume.length).toBe(5 * 5 * 5 * 4);
-    // (r=4, g=0, b=2) → rouge saturé, vert nul, bleu à mi-course.
+    // (r=4, g=0, b=2) → saturated red, zero green, blue at mid-course.
     const i = ((2 * 5 + 0) * 5 + 4) * 4;
     expect(lut.volume[i]).toBe(255);
     expect(lut.volume[i + 1]).toBe(0);
@@ -35,14 +35,14 @@ describe('cubeLut — lecture', () => {
     expect(lut.volume[i + 3]).toBe(255);
   });
 
-  it('refuse un fichier tronqué, sans taille ou surdimensionné', () => {
+  it('rejects a truncated file, one without a size, or an oversized one', () => {
     expect(() => parseCubeLut('0.0 0.0 0.0')).toThrow(/LUT_3D_SIZE missing/);
     expect(() => parseCubeLut('LUT_3D_SIZE 3\n0.0 0.0 0.0')).toThrow(/truncated/);
     expect(() => parseCubeLut('LUT_3D_SIZE 128\n')).toThrow(/unsupported/);
     expect(() => parseCubeLut('LUT_3D_SIZE 0\n')).toThrow(/unsupported/);
   });
 
-  it('lit la provenance dans l’en-tête écrit par le backend', () => {
+  it('reads the provenance from the header written by the backend', () => {
     expect(readSource('# ReView display transform | source: OpenColorIO 2.4.1')).toBe('ocio');
     expect(readSource('# ReView display transform | source: built-in colorimetric')).toBe('builtin');
     expect(readSource('# some other LUT\nLUT_3D_SIZE 2')).toBe('unknown');
@@ -52,8 +52,8 @@ describe('cubeLut — lecture', () => {
   });
 });
 
-describe('cubeLut — échantillonnage', () => {
-  it('une LUT identité rend la couleur d’entrée (interpolation comprise)', () => {
+describe('cubeLut — sampling', () => {
+  it('an identity LUT returns the input colour (interpolation included)', () => {
     const lut = parseCubeLut(makeCube(9, identity));
     for (const c of [
       [0, 0, 0],
@@ -66,7 +66,7 @@ describe('cubeLut — échantillonnage', () => {
     }
   });
 
-  it('une LUT qui inverse les canaux les inverse aussi à l’échantillonnage', () => {
+  it('a LUT that inverts the channels also inverts them when sampled', () => {
     const lut = parseCubeLut(makeCube(5, (r, g, b) => [b, r, g]));
     const out = sampleLut(lut, [1, 0, 0.5]);
     expect(out[0]).toBeCloseTo(0.5, 2);
@@ -74,24 +74,24 @@ describe('cubeLut — échantillonnage', () => {
     expect(out[2]).toBeCloseTo(0, 2);
   });
 
-  it('borne les entrées hors domaine plutôt que de lire hors grille', () => {
+  it('clamps out-of-domain inputs rather than reading outside the grid', () => {
     const lut = parseCubeLut(makeCube(4, identity));
     expect(sampleLut(lut, [-1, 2, 0.5])[0]).toBeCloseTo(0, 5);
     expect(sampleLut(lut, [-1, 2, 0.5])[1]).toBeCloseTo(1, 5);
   });
 });
 
-describe('cubeLut — atlas 2D (repli WebGL1)', () => {
-  it('dispose les tranches en grille la plus carrée possible', () => {
+describe('cubeLut — 2D atlas (WebGL1 fallback)', () => {
+  it('lays the slices out in the squarest possible grid', () => {
     expect(tileLayout(33)).toEqual({ cols: 6, rows: 6, width: 198, height: 198 });
     expect(tileLayout(16)).toEqual({ cols: 4, rows: 4, width: 64, height: 64 });
   });
 
-  it('reporte chaque texel du volume dans sa tuile', () => {
+  it('copies each texel of the volume into its tile', () => {
     const lut = parseCubeLut(makeCube(4, (r, g, b) => [r, g, b]));
     const atlas = toTiles(lut);
     expect(atlas.data.length).toBe(atlas.width * atlas.height * 4);
-    // Tranche b=2 → deuxième tuile de la première ligne (cols=2) → colonne 0, ligne 1.
+    // Slice b=2 → second tile of the first row (cols=2) → column 0, row 1.
     const { cols, width } = atlas;
     const b = 2;
     const ox = (b % cols) * 4;

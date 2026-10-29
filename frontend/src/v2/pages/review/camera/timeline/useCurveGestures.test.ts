@@ -9,16 +9,16 @@ import { setWeighted } from '../channels/tangents';
 import { inSel, useCurveGestures, type TangentSide } from './useCurveGestures';
 import type { TimeView, ValueView } from './viewTransform';
 
-// Vue calibrée pour des comptes ronds : 1 px = 10 ms en X, 1 px = 1 unité en Y (axe inversé).
+// View calibrated for round numbers: 1 px = 10 ms on X, 1 px = 1 unit on Y (inverted axis).
 const tv: TimeView = { t0: 0, t1: 1000, width: 100 };
 const vv: ValueView = { v0: 0, v1: 100, height: 100 };
 
-// Deux clés sur `px` : (t=0, v=0) dessinée en (0, 100), (t=500, v=50) dessinée en (50, 50).
+// Two keys on `px`: (t=0, v=0) drawn at (0, 100), (t=500, v=50) drawn at (50, 50).
 const anim = upsertKey(upsertKey(emptyAnim(), 'px', 0, 0), 'px', 500, 50);
 
 /**
- * Événement pointeur minimal : le hook ne lit que ces champs. Le `svgRef` n'étant jamais attaché en
- * test, le rectangle du SVG vaut l'origine — les coordonnées client sont donc les coordonnées locales.
+ * Minimal pointer event: the hook only reads these fields. The `svgRef` is never attached in tests,
+ * so the SVG rectangle is the origin — client coordinates are therefore the local coordinates.
  */
 function ptr(
   x: number,
@@ -34,7 +34,7 @@ function ptr(
     shiftKey: opts.shift ?? false,
     altKey: opts.alt ?? false,
     currentTarget: el,
-    // Un geste sur une clé/poignée a un `target` distinct du `currentTarget` du fond.
+    // A gesture on a key/handle has a `target` distinct from the background's `currentTarget`.
     target: opts.onKey ? {} : el,
     stopPropagation: vi.fn(),
     preventDefault: vi.fn(),
@@ -43,8 +43,8 @@ function ptr(
 }
 
 /**
- * 10 fps : la frame vaut 100 ms tout rond, soit 10 px dans cette vue calibrée (1 px = 10 ms). Le
- * snap des clés déplacées tombe donc sur des comptes lisibles.
+ * 10 fps: a frame is exactly 100 ms, i.e. 10 px in this calibrated view (1 px = 10 ms). The snap
+ * of moved keys therefore lands on readable numbers.
  */
 const FPS = 10;
 
@@ -73,7 +73,7 @@ function setup(over: { selection?: readonly KeyRef[]; editable?: boolean; anim?:
 }
 
 describe('inSel', () => {
-  it('reconnaît une clé de la sélection, canal et index confondus', () => {
+  it('recognizes a key in the selection, channel and index combined', () => {
     const sel: KeyRef[] = [{ channel: 'px', index: 1 }];
     expect(inSel(sel, 'px', 1)).toBe(true);
     expect(inSel(sel, 'px', 0)).toBe(false);
@@ -82,19 +82,19 @@ describe('inSel', () => {
 });
 
 describe('useCurveGestures — rubber-band', () => {
-  it('sélectionne les clés contenues dans le rectangle', () => {
+  it('selects the keys contained in the rectangle', () => {
     const { result, cb } = setup();
     act(() => result.current.surface.onPointerDown(ptr(40, 40).e));
     act(() => result.current.surface.onPointerMove(ptr(60, 60).e));
     expect(result.current.band).toEqual({ x0: 40, y0: 40, x1: 60, y1: 60 });
     act(() => result.current.surface.onPointerUp(ptr(60, 60).e));
-    // Seule la clé dessinée en (50, 50) est dans le rectangle.
+    // Only the key drawn at (50, 50) is inside the rectangle.
     expect(cb.onSelect).toHaveBeenCalledWith([{ channel: 'px', index: 1 }]);
     expect(cb.onScrub).not.toHaveBeenCalled();
     expect(result.current.band).toBeNull();
   });
 
-  it('avec Maj, ajoute à la sélection sans doublon', () => {
+  it('with Shift, adds to the selection without duplicates', () => {
     const { result, cb } = setup({ selection: [{ channel: 'px', index: 0 }] });
     act(() => result.current.surface.onPointerDown(ptr(40, 40).e));
     act(() => result.current.surface.onPointerMove(ptr(60, 60).e));
@@ -105,7 +105,7 @@ describe('useCurveGestures — rubber-band', () => {
     ]);
   });
 
-  it('un clic sans déplacement scrube au lieu de sélectionner', () => {
+  it('a click without movement scrubs instead of selecting', () => {
     const { result, cb } = setup();
     act(() => result.current.surface.onPointerDown(ptr(30, 30).e));
     act(() => result.current.surface.onPointerUp(ptr(31, 30).e));
@@ -113,7 +113,7 @@ describe('useCurveGestures — rubber-band', () => {
     expect(cb.onSelect).not.toHaveBeenCalled();
   });
 
-  it('ignore un pointerdown qui ne vient pas du fond du graphe', () => {
+  it('ignores a pointerdown that does not come from the graph background', () => {
     const { result, cb } = setup();
     act(() => result.current.surface.onPointerDown(ptr(40, 40, { onKey: true }).e));
     act(() => result.current.surface.onPointerMove(ptr(60, 60).e));
@@ -124,8 +124,8 @@ describe('useCurveGestures — rubber-band', () => {
   });
 });
 
-describe('useCurveGestures — déplacement de clés', () => {
-  it('sélectionne la clé, capture le pointeur puis rejoue le delta depuis la baseline', () => {
+describe('useCurveGestures — key move', () => {
+  it('selects the key, captures the pointer, then replays the delta from the baseline', () => {
     const { result, cb } = setup();
     const down = ptr(50, 50);
     act(() => result.current.startKeyGesture(down.e, 'px', 1));
@@ -133,22 +133,22 @@ describe('useCurveGestures — déplacement de clés', () => {
     expect(cb.onBeginStroke).toHaveBeenCalledTimes(1);
     expect(down.el.setPointerCapture).toHaveBeenCalledWith(7);
 
-    // +10 px en X = +100 ms ; −10 px en Y = +10 en valeur (axe inversé).
+    // +10 px on X = +100 ms; −10 px on Y = +10 in value (inverted axis).
     act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
     expect(cb.onMoveKeys).toHaveBeenCalledWith(anim, [{ channel: 'px', index: 1, t: 600, v: 60 }]);
-    // Deuxième frame : toujours calculée depuis la même baseline, jamais cumulée.
+    // Second frame: still computed from the same baseline, never accumulated.
     act(() => result.current.surface.onPointerMove(ptr(70, 40).e));
     expect(cb.onMoveKeys).toHaveBeenLastCalledWith(anim, [{ channel: 'px', index: 1, t: 700, v: 60 }]);
   });
 
-  it('déplace toute la sélection en un seul geste', () => {
+  it('moves the whole selection in a single gesture', () => {
     const selection: KeyRef[] = [
       { channel: 'px', index: 0 },
       { channel: 'px', index: 1 },
     ];
     const { result, cb } = setup({ selection });
     act(() => result.current.startKeyGesture(ptr(50, 50).e, 'px', 1));
-    // Clé déjà sélectionnée sans Maj : la sélection est conservée telle quelle.
+    // Key already selected without Shift: the selection is kept as is.
     expect(cb.onSelect).toHaveBeenCalledWith(selection);
     act(() => result.current.surface.onPointerMove(ptr(60, 50).e));
     expect(cb.onMoveKeys).toHaveBeenCalledWith(anim, [
@@ -157,7 +157,7 @@ describe('useCurveGestures — déplacement de clés', () => {
     ]);
   });
 
-  it('Maj sur une clé déjà sélectionnée la retire et n’arme aucun geste', () => {
+  it('Shift on an already selected key removes it and arms no gesture', () => {
     const { result, cb } = setup({
       selection: [
         { channel: 'px', index: 0 },
@@ -171,7 +171,7 @@ describe('useCurveGestures — déplacement de clés', () => {
     expect(cb.onMoveKeys).not.toHaveBeenCalled();
   });
 
-  it('en lecture seule, la clé se sélectionne mais ne se déplace pas', () => {
+  it('read-only: the key can be selected but not moved', () => {
     const { result, cb } = setup({ editable: false });
     act(() => result.current.startKeyGesture(ptr(50, 50).e, 'px', 1));
     expect(cb.onSelect).toHaveBeenCalledWith([{ channel: 'px', index: 1 }]);
@@ -181,33 +181,33 @@ describe('useCurveGestures — déplacement de clés', () => {
   });
 });
 
-describe('useCurveGestures — tangentes', () => {
+describe('useCurveGestures — tangents', () => {
   it.each<TangentSide>(['out', 'in'])('le côté %s remonte sa pente, sans poids', (side) => {
     const { result, cb } = setup();
     act(() => result.current.startTangentGesture(ptr(50, 50).e, side, 'px', 1));
     expect(cb.onBeginStroke).toHaveBeenCalledTimes(1);
-    // Pointeur en (60, 40) : Δt = +100 ms, Δv = +10 → pente 0,1 unité/ms.
+    // Pointer at (60, 40): Δt = +100 ms, Δv = +10 → slope 0.1 unit/ms.
     act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
     expect(cb.onSetTangent).toHaveBeenCalledWith('px', 1, side, 0.1, undefined);
   });
 
-  it('sur une clé pondérée, l’éloignement du pointeur règle aussi le poids', () => {
+  it('on a weighted key, the pointer distance also sets the weight', () => {
     const weighted = setWeighted(anim, [{ channel: 'px', index: 1 }], true);
     const { result, cb } = setup({ anim: weighted });
     act(() => result.current.startTangentGesture(ptr(50, 50).e, 'in', 'px', 1));
-    // Poignée tirée à 100 ms de la clé, sur un segment voisin de 500 ms → poids 3 × 100 / 500.
+    // Handle pulled 100 ms from the key, on a neighbouring 500 ms segment → weight 3 × 100 / 500.
     act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
     expect(cb.onSetTangent).toHaveBeenCalledWith('px', 1, 'in', 0.1, 0.6);
   });
 
-  it('à l’aplomb de la clé, la pente n’a pas de sens : rien n’est écrit', () => {
+  it('directly above the key, the slope is meaningless: nothing is written', () => {
     const { result, cb } = setup();
     act(() => result.current.startTangentGesture(ptr(50, 50).e, 'out', 'px', 1));
     act(() => result.current.surface.onPointerMove(ptr(50, 20).e));
     expect(cb.onSetTangent).not.toHaveBeenCalled();
   });
 
-  it('sur une clé disparue, le geste reste inerte', () => {
+  it('on a vanished key, the gesture stays inert', () => {
     const { result, cb } = setup();
     act(() => result.current.startTangentGesture(ptr(50, 50).e, 'out', 'px', 42));
     act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
@@ -215,30 +215,30 @@ describe('useCurveGestures — tangentes', () => {
   });
 });
 
-describe('useCurveGestures — snap à la frame et pan', () => {
-  it('une clé déplacée atterrit SUR une frame, Alt libère le placement', () => {
+describe('useCurveGestures — frame snap and pan', () => {
+  it('a moved key lands ON a frame, Alt releases the placement', () => {
     const { result, cb } = setup();
     act(() => result.current.startKeyGesture(ptr(50, 50).e, 'px', 1));
-    // +1,5 px = +15 ms : 515 ms tombe entre deux frames (100 ms) → 500 ms.
+    // +1.5 px = +15 ms: 515 ms falls between two frames (100 ms) → 500 ms.
     act(() => result.current.surface.onPointerMove(ptr(51.5, 50).e));
     expect(cb.onMoveKeys).toHaveBeenLastCalledWith(anim, [{ channel: 'px', index: 1, t: 500, v: 50 }]);
     act(() => result.current.surface.onPointerMove(ptr(51.5, 50, { alt: true }).e));
     expect(cb.onMoveKeys).toHaveBeenLastCalledWith(anim, [{ channel: 'px', index: 1, t: 515, v: 50 }]);
   });
 
-  it('le bouton du milieu déplace la vue au lieu de sélectionner', () => {
+  it('the middle button moves the view instead of selecting', () => {
     const { result, cb } = setup();
     const down = ptr(50, 50, { button: 1 });
     act(() => result.current.surface.onPointerDown(down.e));
     expect(down.el.setPointerCapture).toHaveBeenCalledWith(7);
-    // +10 px en X = fenêtre décalée de −100 ms ; −10 px en Y = −10 en valeur.
+    // +10 px on X = window shifted by −100 ms; −10 px on Y = −10 in value.
     act(() => result.current.surface.onPointerMove(ptr(60, 40).e));
     expect(cb.onPanView).toHaveBeenCalledWith(-100, -10);
     expect(result.current.band).toBeNull();
     expect(cb.onSelect).not.toHaveBeenCalled();
   });
 
-  it('le bouton du milieu sur une clé n’arme pas de déplacement', () => {
+  it('the middle button on a key arms no move', () => {
     const { result, cb } = setup();
     act(() => result.current.startKeyGesture(ptr(50, 50, { button: 1 }).e, 'px', 1));
     expect(cb.onSelect).not.toHaveBeenCalled();
@@ -246,24 +246,24 @@ describe('useCurveGestures — snap à la frame et pan', () => {
   });
 });
 
-describe('useCurveGestures — boîte de transformation', () => {
+describe('useCurveGestures — transform box', () => {
   const selection: KeyRef[] = [
     { channel: 'px', index: 0 },
     { channel: 'px', index: 1 },
   ];
 
-  it('la boîte suit l’étendue de la sélection', () => {
+  it('the box follows the extent of the selection', () => {
     const { result } = setup({ selection });
     expect(result.current.selectionBounds).toEqual({ tMin: 0, tMax: 500, vMin: 0, vMax: 50 });
     expect(setup().result.current.selectionBounds).toBeNull();
   });
 
-  it('tirer l’arête droite met les clés à l’échelle, l’arête gauche servant de pivot', () => {
+  it('dragging the right edge scales the keys, the left edge serving as pivot', () => {
     const { result, cb } = setup({ selection });
     const bounds = { tMin: 0, tMax: 500, vMin: 0, vMax: 50 };
     act(() => result.current.startScaleGesture(ptr(50, 50).e, 'right', bounds));
     expect(cb.onBeginStroke).toHaveBeenCalledTimes(1);
-    // Pointeur de 500 ms à 600 ms, pivot à 0 : facteur 1,2 sur le temps, valeurs intactes.
+    // Pointer from 500 ms to 600 ms, pivot at 0: factor 1.2 on time, values intact.
     act(() => result.current.surface.onPointerMove(ptr(60, 50).e));
     expect(cb.onMoveKeys).toHaveBeenLastCalledWith(anim, [
       { channel: 'px', index: 0, t: 0, v: 0 },
@@ -271,7 +271,7 @@ describe('useCurveGestures — boîte de transformation', () => {
     ]);
   });
 
-  it('en lecture seule, la boîte ne met rien à l’échelle', () => {
+  it('read-only: the box scales nothing', () => {
     const { result, cb } = setup({ selection, editable: false });
     const bounds = { tMin: 0, tMax: 500, vMin: 0, vMax: 50 };
     act(() => result.current.startScaleGesture(ptr(50, 50).e, 'right', bounds));

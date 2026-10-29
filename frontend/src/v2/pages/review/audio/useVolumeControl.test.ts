@@ -8,7 +8,7 @@ import { useVolumeControl } from './useVolumeControl';
 const player = () => ({ current: document.createElement('video') });
 
 describe('useVolumeControl', () => {
-  it('applique le volume au lecteur', () => {
+  it('applies the volume to the player', () => {
     const ref = player();
     const { result } = renderHook(() => useVolumeControl(ref));
     expect(ref.current.volume).toBe(1);
@@ -18,7 +18,7 @@ describe('useVolumeControl', () => {
     expect(result.current.muted).toBe(false);
   });
 
-  it('descendre à zéro coupe le son : c’est ce que le geste veut dire', () => {
+  it('lowering to zero mutes the sound: that is what the gesture means', () => {
     const ref = player();
     const { result } = renderHook(() => useVolumeControl(ref));
     act(() => result.current.setVolume(0));
@@ -26,7 +26,7 @@ describe('useVolumeControl', () => {
     expect(ref.current.muted).toBe(true);
   });
 
-  it('la coupure bascule sans perdre le niveau', () => {
+  it('muting toggles without losing the level', () => {
     const ref = player();
     const { result } = renderHook(() => useVolumeControl(ref));
     act(() => result.current.setVolume(0.6));
