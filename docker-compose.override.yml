@@ -9,8 +9,8 @@
 # DOCUMENTATION/getting-started/installation.md and docker-stack.md, and `scripts/install.sh`
 # writes it into COMPOSE_FILE.
 #
-# These two services have NO useful network authentication in dev (Redis has no password at
-# all), so they listen on loopback rather than 0.0.0.0, where they would offer the database
+# These two services have NO useful network authentication in dev (Redis only has the shared
+# REDIS_PASSWORD, a well-known default in dev), so they listen on loopback rather than 0.0.0.0, where they would offer the database
 # and the job queue to the whole network. Set DEV_BIND=0.0.0.0 to expose them deliberately
 # (access from another machine on the LAN).
 services:

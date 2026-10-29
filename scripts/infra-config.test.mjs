@@ -181,8 +181,20 @@ describe('docker-compose.yml', () => {
       const body = services.get(name);
       expect(body).toMatch(/DATABASE_URL: postgresql:\/\/.*@postgres:5432/);
       expect(body).toMatch(/S3_ENDPOINT: http:\/\/minio:9000/);
-      expect(body).toMatch(/REDIS_URL: redis:\/\/redis:6379/);
+      expect(body).toMatch(/REDIS_URL: redis:\/\/:\$\{REDIS_PASSWORD:-[^}]+\}@redis:6379/);
     }
+  });
+
+  it('protège Redis par un mot de passe, obligatoire en production', () => {
+    expect(services.get('redis')).toMatch(/--requirepass "\$\$REDIS_PASSWORD"/);
+    const prod = read('docker-compose.prod.yml');
+    expect(prod).toMatch(/REDIS_PASSWORD: \$\{REDIS_PASSWORD:\?/);
+    expect(prod).toMatch(/REDIS_URL: redis:\/\/:\$\{REDIS_PASSWORD:\?[^}]+\}@redis:6379/);
+  });
+
+  it('ne retombe jamais sur minioadmin (échec explicite si absent)', () => {
+    expect(compose).not.toMatch(/:-minioadmin/);
+    expect(compose).toMatch(/MINIO_ROOT_PASSWORD:\?/);
   });
 
   it('plafonne la mémoire du backend, du worker et de Postgres', () => {
