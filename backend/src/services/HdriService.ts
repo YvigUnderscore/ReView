@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
 import { badRequest, notFound } from '../lib/errors';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Library of HDRI environments uploadable by admins (Phase 15 V4). Stored without migration in a key/value
@@ -93,5 +94,7 @@ export async function remove(id: string): Promise<void> {
   const target = entries.find((e) => e.id === id);
   if (!target) throw notFound('HDRI not found');
   await writeLibrary(entries.filter((e) => e.id !== id));
-  await storage.deleteObject(target.storageKey).catch(() => undefined);
+  await storage
+    .deleteObject(target.storageKey)
+    .catch(ignoreFailure('HDRI object cleanup failed', { key: target.storageKey }));
 }

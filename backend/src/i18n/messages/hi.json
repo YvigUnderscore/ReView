@@ -12,7 +12,10 @@
   "digest.by": "{name} द्वारा",
   "digest.commentOn": "{media} पर {author}",
   "digest.optOut": "आपको यह ईमेल इसलिए मिला क्योंकि आपकी ReView प्रोफ़ाइल में दैनिक सारांश चालू है।",
-  "digest.preview": { "one": "कल से {count} परियोजना में क्या बदला।", "other": "कल से {count} परियोजनाओं में क्या बदला।" },
+  "digest.preview": {
+    "one": "कल से {count} परियोजना में क्या बदला।",
+    "other": "कल से {count} परियोजनाओं में क्या बदला।"
+  },
 
   "weekly.subject": "ReView — साप्ताहिक प्रोडक्शन रिपोर्ट",
   "weekly.title": "साप्ताहिक प्रोडक्शन रिपोर्ट",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "खुले नोट्स",
   "weekly.optOut": "आपको यह रिपोर्ट इसलिए मिली क्योंकि यह आपकी ReView प्रोफ़ाइल में चालू है (सुपरवाइज़र)।",
-  "weekly.preview": { "one": "{count} परियोजना का सप्ताह: वितरण, निर्णय, खुली टिप्पणियाँ।", "other": "{count} परियोजनाओं का सप्ताह: वितरण, निर्णय, खुली टिप्पणियाँ।" },
+  "weekly.preview": {
+    "one": "{count} परियोजना का सप्ताह: वितरण, निर्णय, खुली टिप्पणियाँ।",
+    "other": "{count} परियोजनाओं का सप्ताह: वितरण, निर्णय, खुली टिप्पणियाँ।"
+  },
 
   "smtp.test.subject": "ReView — SMTP परीक्षण",
   "smtp.test.title": "SMTP परीक्षण",
@@ -58,7 +64,10 @@
   "chat.system.renamed": "समूह का नाम अब « {title} » है",
   "chat.mediaPublished": "🎬 नया मीडिया प्रकाशित: {name}",
   "chat.decision": "{icon} version {version} पर निर्णय « {status} »",
-  "chat.decisionBulk": { "one": "{icon} {count} version पर निर्णय « {status} »", "other": "{icon} {count} versions पर निर्णय « {status} »" },
+  "chat.decisionBulk": {
+    "one": "{icon} {count} version पर निर्णय « {status} »",
+    "other": "{icon} {count} versions पर निर्णय « {status} »"
+  },
   "chat.newComment": "💬 किसी मीडिया पर नई टिप्पणी (प्रोजेक्ट #{project})",
   "chat.montageComment": "🎬 एडिट पर नई प्रतिक्रिया (प्रोजेक्ट #{project})",
   "share.mail.subject": "{project} तक पहुँच",
@@ -72,7 +81,10 @@
   "share.mail.cta": "लिंक खोलें",
   "share.mail.expiry": "यह लिंक {date} को समाप्त हो जाएगा।",
   "share.mail.noExpiry": "इस लिंक की कोई समाप्ति तिथि नहीं है।",
-  "share.mail.viewLimit": { "one": "इसे कुल {count} बार खोला जा सकता है।", "other": "इसे कुल {count} बार खोला जा सकता है।" },
+  "share.mail.viewLimit": {
+    "one": "इसे कुल {count} बार खोला जा सकता है।",
+    "other": "इसे कुल {count} बार खोला जा सकता है।"
+  },
   "share.mail.password": "यह पासवर्ड से सुरक्षित है, जो अलग से भेजा जाता है।",
   "share.mail.fallback": "यदि बटन काम न करे, तो यह लिंक अपने ब्राउज़र में चिपकाएँ:",
   "notesSheet.title": "review नोट्स",

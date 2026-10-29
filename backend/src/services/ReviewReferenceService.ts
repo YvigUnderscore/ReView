@@ -11,6 +11,7 @@ import { checkProjectAccess } from '../middleware/rbac';
 import { assertProjectWritable } from '../lib/projectGuard';
 import { resolveProjectIdForMedia } from '../lib/pipeline';
 import { assertMediaManage } from './MediaService';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * 2D review reference images (Phase 24, reworked): **linked to a comment**. They are shown only
@@ -140,11 +141,19 @@ export async function remove(user: SessionUser, mediaId: number, refId: number) 
   if (!ref || ref.mediaObjectId !== mediaId) return;
   if (ref.comment?.userId !== user.id) await assertMediaManage(mediaId, user);
   await prisma.reviewReference.delete({ where: { id: refId } });
-  await storage.deleteObject(ref.storageKey).catch(() => undefined);
+  await storage
+    .deleteObject(ref.storageKey)
+    .catch(ignoreFailure('reference object cleanup failed', { key: ref.storageKey }));
 }
 
 /** Purges the MinIO objects of a comment's references (before deletion; the DB cascades). */
 export async function purgeForComment(commentId: number) {
   const refs = await prisma.reviewReference.findMany({ where: { commentId }, select: { storageKey: true } });
-  await Promise.all(refs.map((r) => storage.deleteObject(r.storageKey).catch(() => undefined)));
+  await Promise.all(
+    refs.map((r) =>
+      storage
+        .deleteObject(r.storageKey)
+        .catch(ignoreFailure('reference object cleanup failed', { key: r.storageKey })),
+    ),
+  );
 }

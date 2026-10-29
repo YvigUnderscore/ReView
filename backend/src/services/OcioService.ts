@@ -23,6 +23,7 @@ import {
 } from '../lib/ocioBake';
 import { enqueueOcioBake } from '../workers/ocio/queue';
 import { fetchAllowlisted, readCappedBody } from '../lib/httpFetch';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Catalogue of OCIO colour configs (39.B). The official ACES configs are fetched from the **ASWF GitHub
@@ -358,8 +359,12 @@ export async function remove(id: string): Promise<void> {
     rest = rest.map((e, i) => ({ ...e, isDefault: i === 0 }));
   }
   await writeLibrary(rest);
-  await storage.deleteObject(target.storageKey).catch(() => undefined);
+  await storage
+    .deleteObject(target.storageKey)
+    .catch(ignoreFailure('OCIO config object cleanup failed', { key: target.storageKey }));
   // Baked LUTs no longer have an object: without this purge they would remain orphaned, and a reinstallation
   // of the same config (new id) would never touch them.
-  await storage.deletePrefix(lutPrefix(id)).catch(() => undefined);
+  await storage
+    .deletePrefix(lutPrefix(id))
+    .catch(ignoreFailure('OCIO LUT cleanup failed', { ocioConfigId: id }));
 }

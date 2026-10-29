@@ -8,6 +8,7 @@ import { createUpload, type CreateUploadInput, mediaSourceKey } from './MediaSer
 import { logAudit } from './AuditService';
 import { badRequest, notFound } from '../lib/errors';
 import { discardUploadObjects } from '../lib/staleUploads';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 type SessionUser = { id: number; role: Role };
 
@@ -88,8 +89,12 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
         // and the multipart is then still alive — the row gone, its `uploadId` would be nowhere and its parts
         // would stay on disk forever. If the upload has really disappeared, the abort fails and costs
         // nothing.
-        await storage.abortMultipartUpload(pending.storageKey, meta.multipartUploadId).catch(() => undefined);
-        await prisma.mediaObject.delete({ where: { id: pending.id } }).catch(() => undefined);
+        await storage
+          .abortMultipartUpload(pending.storageKey, meta.multipartUploadId)
+          .catch(ignoreFailure('multipart abort failed', { mediaId: pending.id }));
+        await prisma.mediaObject
+          .delete({ where: { id: pending.id } })
+          .catch(ignoreFailure('stale upload row delete failed', { mediaId: pending.id }));
       }
     }
 

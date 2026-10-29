@@ -8,6 +8,7 @@ import { mediaQueue } from './JobService';
 import { storage } from './StorageService';
 import { getOnlineUserIds } from './PresenceService';
 import { logAudit } from './AuditService';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Business logic of administration (studio metrics, system health, time series, global trash,
@@ -206,7 +207,9 @@ export async function trashProjects() {
 /** Requeues all failed media jobs. */
 export async function retryFailedJobs(actorId: number) {
   const failed = await mediaQueue.getFailed();
-  await Promise.all(failed.map((job) => job.retry().catch(() => undefined)));
+  await Promise.all(
+    failed.map((job) => job.retry().catch(ignoreFailure('media job retry failed', { jobId: job.id }))),
+  );
   logAudit({
     userId: actorId,
     action: 'JOBS_RETRY',

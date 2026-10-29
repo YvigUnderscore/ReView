@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { ignoreFailure } from '../lib/ignoreFailure';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { MediaKind, MediaStatus, TaskType, VersionStatus } from '@prisma/client';
@@ -100,7 +101,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (projectId) await prisma.project.delete({ where: { id: projectId } }).catch(() => undefined);
+  if (projectId)
+    await prisma.project
+      .delete({ where: { id: projectId } })
+      .catch(ignoreFailure('itest cleanup failed', { projectId }));
 });
 
 const auth = () => ({ Authorization: `Bearer ${token}` });

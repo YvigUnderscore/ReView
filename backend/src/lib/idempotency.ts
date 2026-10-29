@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from './prisma';
 import { logger } from './logger';
+import { ignoreFailure } from './ignoreFailure';
 
 /**
  * Idempotence of v1 writes (`Idempotency-Key` header).
@@ -78,7 +79,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
         where: { fingerprint: fp },
         data: { statusCode: IN_PROGRESS, response: {}, createdAt: new Date() },
       })
-      .catch(() => undefined);
+      .catch(ignoreFailure('[idempotency] expired reservation takeover failed'));
   }
 
   // Memorises the response at the moment it is sent. Only successes are kept: replaying a transient error (503 from a third-party service, a conflict
@@ -105,7 +106,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
     if (recorded) return;
     void prisma.idempotencyRecord
       .deleteMany({ where: { fingerprint: fp, statusCode: IN_PROGRESS } })
-      .catch(() => undefined);
+      .catch(ignoreFailure('[idempotency] reservation release failed'));
   });
 
   next();

@@ -26,6 +26,7 @@ import {
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { assertAssignable } from './EntityAssigneeService';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Business logic for review comments (thread, author/attachment enrichment, reactions, notifications).
@@ -632,7 +633,7 @@ const jsonAttachments = (refs: AttachmentRef[]): Prisma.InputJsonValue =>
 /** MinIO objects left orphaned — a storage failure must not make the write fail. */
 async function purgeAttachments(keys: string[]): Promise<void> {
   if (keys.length === 0) return;
-  await storage.deleteObjects(keys).catch(() => undefined);
+  await storage.deleteObjects(keys).catch(ignoreFailure('attachment cleanup failed', { keys }));
 }
 
 /** Deletes a comment (author or supervisor/admin). `false` if not found. */
@@ -677,6 +678,6 @@ export async function addReaction(user: SessionUser, projectId: number, id: numb
 export async function removeReaction(userId: number, projectId: number, id: number, emoji: string) {
   await prisma.reaction
     .delete({ where: { commentId_userId_emoji: { commentId: id, userId, emoji } } })
-    .catch(() => undefined);
+    .catch(ignoreFailure('reaction delete failed', { commentId: id, userId, emoji }));
   emitToProject(projectId, 'comment:reaction:remove', { commentId: id, emoji, userId });
 }

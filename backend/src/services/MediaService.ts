@@ -45,6 +45,7 @@ import { listReviewers, setReviewers, type ReviewerInput } from './ReviewAssignm
 import { type PaginationParams, type Paginated, pageArgs, paginate } from '../lib/pagination';
 import type { UsdRequest } from './ModelConvertService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Media business logic: presigned upload, finalize with magic-byte validation,
@@ -213,7 +214,9 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
 
   if (!detected) {
     await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.FAILED } });
-    await storage.deleteObject(media.storageKey).catch(() => undefined);
+    await storage
+      .deleteObject(media.storageKey)
+      .catch(ignoreFailure('rejected upload cleanup failed', { mediaId: id }));
     throw badRequest('Invalid file type (magic-bytes check failed)', 'INVALID_FILE');
   }
 
@@ -223,14 +226,18 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
   const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);
   if (realSize > maxFileSize) {
     await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.FAILED } });
-    await storage.deleteObject(media.storageKey).catch(() => undefined);
+    await storage
+      .deleteObject(media.storageKey)
+      .catch(ignoreFailure('rejected upload cleanup failed', { mediaId: id }));
     throw badRequest('File is too large', 'FILE_TOO_LARGE');
   }
   try {
     await assertProjectQuota(projectId, realSize);
   } catch (err) {
     await prisma.mediaObject.update({ where: { id }, data: { status: MediaStatus.FAILED } });
-    await storage.deleteObject(media.storageKey).catch(() => undefined);
+    await storage
+      .deleteObject(media.storageKey)
+      .catch(ignoreFailure('rejected upload cleanup failed', { mediaId: id }));
     throw err;
   }
 
@@ -1248,7 +1255,9 @@ export async function setAutoThumbnail(user: SessionUser, id: number, dataUrl: s
   });
   if (count === 0) {
     // A concurrent capture won: delete our object and return theirs.
-    await storage.deleteObject(key).catch(() => undefined);
+    await storage
+      .deleteObject(key)
+      .catch(ignoreFailure('duplicate thumbnail cleanup failed', { mediaId: id, key }));
     const fresh = await prisma.mediaObject.findUnique({ where: { id }, select: { thumbnailKey: true } });
     const url = fresh?.thumbnailKey ? await storage.getPresignedGetUrl(fresh.thumbnailKey) : null;
     return { thumbnailUrl: url, created: false };

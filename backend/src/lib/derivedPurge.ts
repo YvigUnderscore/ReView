@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { storage } from '../services/StorageService';
 import { logger } from './logger';
+import { ignoreFailure } from './ignoreFailure';
 
 /**
  * Purge of obsolete derivatives (37.H): versions beyond the N latest of each task/asset lose their HLS
@@ -134,8 +135,14 @@ async function purgeOneMedia(m: { id: number; metadata: unknown }): Promise<bool
   // The two deletions are independent: awaiting one after the other doubled the MinIO latency per media
   // for no ordering benefit.
   await Promise.all([
-    storage.deletePrefix(`derived/${m.id}/hls/`).catch(() => undefined),
-    sprite?.key ? storage.deleteObject(sprite.key).catch(() => undefined) : Promise.resolve(),
+    storage
+      .deletePrefix(`derived/${m.id}/hls/`)
+      .catch(ignoreFailure('HLS rendition purge failed', { mediaId: m.id })),
+    sprite?.key
+      ? storage
+          .deleteObject(sprite.key)
+          .catch(ignoreFailure('timeline sprite purge failed', { mediaId: m.id }))
+      : Promise.resolve(),
   ]);
   delete meta.hls;
   delete meta.timelineSprite;

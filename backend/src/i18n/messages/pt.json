@@ -12,7 +12,10 @@
   "digest.by": "por {name}",
   "digest.commentOn": "{author} em {media}",
   "digest.optOut": "Você recebe este e-mail porque o resumo diário está ativado no seu perfil do ReView.",
-  "digest.preview": { "one": "O que mexeu em {count} projeto desde ontem.", "other": "O que mexeu em {count} projetos desde ontem." },
+  "digest.preview": {
+    "one": "O que mexeu em {count} projeto desde ontem.",
+    "other": "O que mexeu em {count} projetos desde ontem."
+  },
 
   "weekly.subject": "ReView — relatório semanal de produção",
   "weekly.title": "Relatório semanal de produção",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Notas abertas",
   "weekly.optOut": "Você recebe este relatório porque ele está ativado no seu perfil do ReView (supervisores).",
-  "weekly.preview": { "one": "A semana em {count} projeto: entregas, decisões, notas abertas.", "other": "A semana em {count} projetos: entregas, decisões, notas abertas." },
+  "weekly.preview": {
+    "one": "A semana em {count} projeto: entregas, decisões, notas abertas.",
+    "other": "A semana em {count} projetos: entregas, decisões, notas abertas."
+  },
 
   "smtp.test.subject": "ReView — teste SMTP",
   "smtp.test.title": "Teste SMTP",
@@ -58,7 +64,10 @@
   "chat.system.renamed": "O grupo agora se chama « {title} »",
   "chat.mediaPublished": "🎬 Novo média publicado: {name}",
   "chat.decision": "{icon} Decisão « {status} » sobre a version {version}",
-  "chat.decisionBulk": { "one": "{icon} Decisão « {status} » sobre {count} version", "other": "{icon} Decisão « {status} » sobre {count} versions" },
+  "chat.decisionBulk": {
+    "one": "{icon} Decisão « {status} » sobre {count} version",
+    "other": "{icon} Decisão « {status} » sobre {count} versions"
+  },
   "chat.newComment": "💬 Novo comentário sobre um média (projeto #{project})",
   "chat.montageComment": "🎬 Novo retorno sobre uma montagem (projeto #{project})",
   "share.mail.subject": "Acesso a {project}",
@@ -72,7 +81,10 @@
   "share.mail.cta": "Abrir o link",
   "share.mail.expiry": "Este link expira em {date}.",
   "share.mail.noExpiry": "Este link não tem data de expiração.",
-  "share.mail.viewLimit": { "one": "Pode ser aberto {count} vez no total.", "other": "Pode ser aberto {count} vezes no total." },
+  "share.mail.viewLimit": {
+    "one": "Pode ser aberto {count} vez no total.",
+    "other": "Pode ser aberto {count} vezes no total."
+  },
   "share.mail.password": "Está protegido por uma palavra-passe, enviada separadamente.",
   "share.mail.fallback": "Se o botão não funcionar, cole este link no seu navegador:",
   "notesSheet.title": "Notas de review",

@@ -12,7 +12,10 @@
   "digest.by": "gant {name}",
   "digest.commentOn": "{author} war {media}",
   "digest.optOut": "Resev a rit ar postel-mañ rak gweredekaet eo an diverradenn pemdeziek en ho profil ReView.",
-  "digest.preview": { "one": "Ar pezh a zo fiñvet war {count} raktres abaoe dec'h.", "other": "Ar pezh a zo fiñvet war {count} raktres abaoe dec'h." },
+  "digest.preview": {
+    "one": "Ar pezh a zo fiñvet war {count} raktres abaoe dec'h.",
+    "other": "Ar pezh a zo fiñvet war {count} raktres abaoe dec'h."
+  },
 
   "weekly.subject": "ReView — danevell sizhuniek ar produadur",
   "weekly.title": "Danevell sizhuniek ar produadur",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Notennoù digor",
   "weekly.optOut": "Resev a rit an danevell-mañ rak gweredekaet eo en ho profil ReView (evezhierien).",
-  "weekly.preview": { "one": "Ar sizhun war {count} raktres : kasadennoù, divizoù, notennoù digor.", "other": "Ar sizhun war {count} raktres : kasadennoù, divizoù, notennoù digor." },
+  "weekly.preview": {
+    "one": "Ar sizhun war {count} raktres : kasadennoù, divizoù, notennoù digor.",
+    "other": "Ar sizhun war {count} raktres : kasadennoù, divizoù, notennoù digor."
+  },
 
   "smtp.test.subject": "ReView — prouad SMTP",
   "smtp.test.title": "Prouad SMTP",
@@ -52,13 +58,19 @@
   "notification.reviewAssigned": "Roet eo bet deoc'h review ar version {version}",
   "notification.reviewNoteUpdated": "Cheñchet eo bet ar gourc'hemenn war ur review fiziet ennoc'h : {version}",
   "notification.clientDecision": "{name} en deus respontet « {status} » war ar version {version} adalek ul liamm rannañ",
-  "chat.system.joined": { "one": "{names} a zo deuet er gaozeadenn", "other": "{names} a zo deuet er gaozeadenn" },
+  "chat.system.joined": {
+    "one": "{names} a zo deuet er gaozeadenn",
+    "other": "{names} a zo deuet er gaozeadenn"
+  },
   "chat.system.left": "{name} en deus kuitaet ar gaozeadenn",
   "chat.system.removed": "Lamet eo bet {name}",
   "chat.system.renamed": "« {title} » eo anv ar strollad bremañ",
   "chat.mediaPublished": "🎬 Media nevez embannet : {name}",
   "chat.decision": "{icon} Diviz « {status} » war ar version {version}",
-  "chat.decisionBulk": { "one": "{icon} Diviz « {status} » war {count} version", "other": "{icon} Diviz « {status} » war {count} versions" },
+  "chat.decisionBulk": {
+    "one": "{icon} Diviz « {status} » war {count} version",
+    "other": "{icon} Diviz « {status} » war {count} versions"
+  },
   "chat.newComment": "💬 Evezhiadenn nevez war ur media (raktres #{project})",
   "chat.montageComment": "🎬 Evezhiadenn nevez war ur montaj (raktres #{project})",
   "share.mail.subject": "Digor war {project}",
@@ -72,7 +84,10 @@
   "share.mail.cta": "Digeriñ al liamm",
   "share.mail.expiry": "Echuiñ a ra al liamm-mañ d'an {date}.",
   "share.mail.noExpiry": "N'en deus ket al liamm-mañ a zeiziad echuiñ.",
-  "share.mail.viewLimit": { "one": "Digeriñ a c'haller anezhañ {count} gwech.", "other": "Digeriñ a c'haller anezhañ {count} gwech." },
+  "share.mail.viewLimit": {
+    "one": "Digeriñ a c'haller anezhañ {count} gwech.",
+    "other": "Digeriñ a c'haller anezhañ {count} gwech."
+  },
   "share.mail.password": "Gwarezet eo gant ur ger-tremen, kaset a-du.",
   "share.mail.fallback": "Ma ne da ket an afell en-dro, pegit al liamm-mañ en ho merdeer :",
   "notesSheet.title": "Notennoù review",

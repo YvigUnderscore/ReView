@@ -5,6 +5,7 @@ import type { Prisma, ShotgridLink } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { conflict } from '../../lib/errors';
+import { ignoreFailure } from '../../lib/ignoreFailure';
 
 /**
  * Local <-> ShotGrid correspondence table.
@@ -175,7 +176,7 @@ export async function upsertLink(params: {
 export async function removeLink(connectionId: number, sgType: string, sgId: number): Promise<void> {
   await prisma.shotgridLink
     .delete({ where: { connectionId_sgType_sgId: { connectionId, sgType, sgId } } })
-    .catch(() => undefined);
+    .catch(ignoreFailure('[shotgrid] link delete failed', { connectionId, sgType, sgId }));
 }
 
 /** Ancillary data of a link, typed for its use. */

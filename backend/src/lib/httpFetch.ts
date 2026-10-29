@@ -7,6 +7,7 @@ import {
   OutboundTimeoutError,
   OutboundTooLargeError,
 } from './safeFetch';
+import { ignoreFailure } from './ignoreFailure';
 
 /**
  * Hardened egress **with a host allow-list re-evaluated at every hop**.
@@ -89,7 +90,7 @@ export async function fetchAllowlisted(
     if (!REDIRECT_STATUS.has(res.status)) return res;
 
     // A redirect body is of no interest, and leaving it open would hold the socket until garbage collection.
-    await res.body?.cancel().catch(() => undefined);
+    await res.body?.cancel().catch(ignoreFailure('response body cancel failed'));
     if (hop >= maxRedirects)
       // Deliberately plain patterns: they surface as a 502, they are not displayed.
       throw new OutboundBlockedError(current.href, 'redirect-limit-exceeded');
@@ -112,7 +113,7 @@ export async function fetchAllowlisted(
 export async function readCappedBody(res: Response, maxBytes: number, target = res.url): Promise<Buffer> {
   const declared = Number(res.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBytes) {
-    await res.body?.cancel().catch(() => undefined);
+    await res.body?.cancel().catch(ignoreFailure('response body cancel failed'));
     throw new OutboundTooLargeError(target, maxBytes);
   }
   if (!res.body) return Buffer.alloc(0);
@@ -125,7 +126,7 @@ export async function readCappedBody(res: Response, maxBytes: number, target = r
     if (done) break;
     seen += value.byteLength;
     if (seen > maxBytes) {
-      await reader.cancel().catch(() => undefined);
+      await reader.cancel().catch(ignoreFailure('response body cancel failed'));
       throw new OutboundTooLargeError(target, maxBytes);
     }
     chunks.push(Buffer.from(value));

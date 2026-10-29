@@ -6,6 +6,7 @@ import type { Request } from 'express';
 import { prisma } from './prisma';
 import { publishRedis } from './redis';
 import { env } from '../config/env';
+import { ignoreFailure } from './ignoreFailure';
 
 /**
  * Revocable login sessions (36.B). One login = one `UserSession` row whose id (sid) is embedded in the access and refresh JWTs: revoking the session
@@ -92,7 +93,7 @@ export async function touchSession(sid: string): Promise<void> {
       where: { id: sid },
       data: { lastSeenAt: new Date(), expiresAt: new Date(Date.now() + sessionLifetimeMs()) },
     })
-    .catch(() => undefined);
+    .catch(ignoreFailure('session touch failed', { sessionId: sid }));
 }
 
 /** Revokes a session (bounded to `userId` if supplied). Returns true if found. */

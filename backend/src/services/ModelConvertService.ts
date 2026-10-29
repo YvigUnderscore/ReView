@@ -41,6 +41,7 @@ import {
   buildThumbArgs,
   parseThumbSummary,
 } from '../lib/blenderThumb';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Conversion of 3D media to GLB — the only format read by the review's Three.js viewer.
@@ -577,7 +578,9 @@ export async function extractArchive(input: string, extractDir: string): Promise
     }
   } catch (err) {
     // Partial extraction = silently incomplete USD scene: we erase everything.
-    await rm(extractDir, { recursive: true, force: true }).catch(() => undefined);
+    await rm(extractDir, { recursive: true, force: true }).catch(
+      ignoreFailure('model extraction dir cleanup failed', { dir: extractDir }),
+    );
     const e = err as { message?: string };
     throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
       cause: err,

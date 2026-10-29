@@ -18,6 +18,7 @@ import { readSplatCloud } from '../lib/splatPoints';
 import { renderPointCloudPng } from '../lib/pointThumbnail';
 import { renderModelThumbnail } from '../services/ModelConvertService';
 import { registerWorkerShutdown } from './shutdown';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * **Spatial thumbnail** worker: produces the preview of 3D media and Gaussian splats.
@@ -112,7 +113,7 @@ export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbO
       data: { thumbnailKey: key },
     });
     if (count === 0) {
-      await storage.deleteObject(key).catch(() => undefined);
+      await storage.deleteObject(key).catch(ignoreFailure('[spatial-thumb] object cleanup failed', { key }));
       return 'raced';
     }
     return 'rendered';

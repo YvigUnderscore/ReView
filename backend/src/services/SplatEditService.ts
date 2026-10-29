@@ -7,6 +7,7 @@ import { storage, StorageService } from './StorageService';
 import { badRequest, notFound } from '../lib/errors';
 import { assertWritable } from '../lib/publishLock';
 import { assertMediaManage } from './MediaService';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Non-destructive edits of a splat (10.G): TRS transform + SDF crop volumes (JSON `metadata.splatEdits`)
@@ -149,7 +150,7 @@ export async function clearSplatSubsetOps(user: SessionUser, id: number) {
     where: { id },
     data: { metadata: meta as Prisma.InputJsonObject },
   });
-  if (key) await storage.deleteObject(key).catch(() => undefined);
+  if (key) await storage.deleteObject(key).catch(ignoreFailure('splat edit object cleanup failed', { key }));
   return { splatSubsetUrl: null };
 }
 
@@ -166,6 +167,6 @@ export async function clearSplatMask(user: SessionUser, id: number) {
     where: { id },
     data: { metadata: meta as Prisma.InputJsonObject },
   });
-  if (key) await storage.deleteObject(key).catch(() => undefined);
+  if (key) await storage.deleteObject(key).catch(ignoreFailure('splat edit object cleanup failed', { key }));
   return { splatMaskUrl: null };
 }

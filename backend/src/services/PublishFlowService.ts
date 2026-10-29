@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { ignoreFailure } from '../lib/ignoreFailure';
 import { MediaKind, Role, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
@@ -272,8 +273,9 @@ export async function complete(actor: Actor, mediaId: number, input: CompletePub
   if (shouldPublish || input.submitForReview) {
     const projectId = await resolveProjectIdForVersion(media.versionId);
     if (projectId) {
+      // Publication lock or rights: the media stays published, the version does not.
       await VersionService.update(actor, projectId, media.versionId, { status: nextStatus }).catch(
-        () => undefined, // publication lock or rights: the media stays published, the version does not
+        ignoreFailure('version status follow-up refused', { versionId: media.versionId }, 'debug'),
       );
     }
   }

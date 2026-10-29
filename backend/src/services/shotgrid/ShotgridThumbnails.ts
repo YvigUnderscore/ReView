@@ -6,6 +6,7 @@ import * as EntityThumbnailService from '../EntityThumbnailService';
 import type { ThumbnailHolder } from '../EntityThumbnailService';
 import { asString } from './shotgridMapper';
 import type { PullContext } from './ShotgridPullService';
+import { ignoreFailure } from '../../lib/ignoreFailure';
 
 /**
  * ShotGrid thumbnails of sequences, shots and assets.
@@ -94,7 +95,9 @@ export async function syncThumbnail(ctx: PullContext, params: ThumbnailSyncParam
      * Thumbnail removed from the site. We remove ONLY the one that came from there — the guard above has already set the others aside.
      */
     if (previous && params.currentKey) {
-      await storage.deleteObject(params.currentKey).catch(() => undefined);
+      await storage
+        .deleteObject(params.currentKey)
+        .catch(ignoreFailure('[shotgrid] previous thumbnail cleanup failed', { key: params.currentKey }));
       await EntityThumbnailService.set(params.holder, params.localId, null);
       ctx.journal.count('thumbnails', 'updated');
     }
@@ -160,7 +163,9 @@ async function fetchAndStore(ctx: PullContext, params: ThumbnailSyncParams, url:
    * file in the bucket with nothing designating it any more.
    */
   if (params.currentKey && params.currentKey !== key) {
-    await storage.deleteObject(params.currentKey).catch(() => undefined);
+    await storage
+      .deleteObject(params.currentKey)
+      .catch(ignoreFailure('[shotgrid] previous thumbnail cleanup failed', { key: params.currentKey }));
   }
   await EntityThumbnailService.set(params.holder, params.localId, key);
   return true;

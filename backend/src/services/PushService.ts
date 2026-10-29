@@ -7,6 +7,7 @@ import { logger } from '../lib/logger';
 import { badRequest } from '../lib/errors';
 import { assertPublicHttpTarget } from '../lib/ssrfGuard';
 import { env } from '../config/env';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Web Push (42.B, issue #66): per-browser subscriptions and push notification delivery.
@@ -117,7 +118,9 @@ export function sendToUser(userId: number, payload: { title: string; body: strin
         } catch (err) {
           const code = (err as { statusCode?: number }).statusCode;
           if (code === 404 || code === 410) {
-            await prisma.pushSubscription.delete({ where: { id: s.id } }).catch(() => {});
+            await prisma.pushSubscription
+              .delete({ where: { id: s.id } })
+              .catch(ignoreFailure('[push] expired subscription delete failed', { subscriptionId: s.id }));
           } else {
             logger.warn({ err }, '[push] envoi échoué');
           }

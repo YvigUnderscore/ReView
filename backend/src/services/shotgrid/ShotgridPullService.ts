@@ -39,6 +39,7 @@ import { enqueuePush } from './ShotgridPushService';
 import { emitToProject } from '../SocketService';
 import { isReplayable, TOUCHED_EVENT_NAME, type TouchedEntities, type TouchedKind } from './ShotgridTouched';
 import { resolveForTask, type TaskDepartment } from '../DepartmentService';
+import { ignoreFailure } from '../../lib/ignoreFailure';
 
 /**
  * Import of the production hierarchy from ShotGrid.
@@ -1014,7 +1015,12 @@ export async function trashRemoved(
       // The link survives the trashing: restoring on the ShotGrid side must bring back the entity as it was, with its history, not manufacture a copy.
       await (table as { update: (a: unknown) => Promise<unknown> })
         .update({ where: { id: link.localId }, data: { deletedAt: new Date() } })
-        .catch(() => undefined);
+        .catch(
+          ignoreFailure('[shotgrid] trash of a remotely retired entity failed', {
+            localType,
+            localId: link.localId,
+          }),
+        );
     }
     ctx.journal.count(`${localType}s`, 'skipped');
     await ctx.journal.log(
@@ -1045,7 +1051,9 @@ async function retireTask(ctx: PullContext, localId: number, sgId: number): Prom
     );
     return false;
   }
-  await prisma.task.delete({ where: { id: localId } }).catch(() => undefined);
+  await prisma.task
+    .delete({ where: { id: localId } })
+    .catch(ignoreFailure('[shotgrid] retired task delete failed', { taskId: localId }));
   return true;
 }
 

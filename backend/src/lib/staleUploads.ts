@@ -5,6 +5,7 @@ import { MediaStatus, type Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { logger } from './logger';
 import { storage } from '../services/StorageService';
+import { ignoreFailure } from './ignoreFailure';
 
 /** What is needed to know about an upload in order to erase the bytes it left in MinIO. */
 export type AbandonedUpload = {
@@ -37,15 +38,23 @@ export async function discardUploadObjects(media: AbandonedUpload): Promise<void
   const meta = media.metadata as Record<string, unknown> | null;
   const uploadId = meta?.multipartUploadId;
   if (media.imageSequence) {
-    await storage.deletePrefix(media.imageSequence.storagePrefix).catch(() => undefined);
-    await storage.deleteObject(media.storageKey).catch(() => undefined);
+    await storage
+      .deletePrefix(media.imageSequence.storagePrefix)
+      .catch(ignoreFailure('stale sequence cleanup failed', { mediaId: media.id }));
+    await storage
+      .deleteObject(media.storageKey)
+      .catch(ignoreFailure('stale upload cleanup failed', { mediaId: media.id }));
   } else if (typeof uploadId === 'string') {
-    await storage.abortMultipartUpload(media.storageKey, uploadId).catch(() => undefined);
+    await storage
+      .abortMultipartUpload(media.storageKey, uploadId)
+      .catch(ignoreFailure('stale multipart abort failed', { mediaId: media.id }));
   } else if (media.storageKey) {
     // Key still empty: `createUpload` creates the row before knowing the identifier that
     // builds the key. There is then nothing to delete, and `DeleteObject ''` is a wasted
     // round trip to MinIO.
-    await storage.deleteObject(media.storageKey).catch(() => undefined);
+    await storage
+      .deleteObject(media.storageKey)
+      .catch(ignoreFailure('stale upload cleanup failed', { mediaId: media.id }));
   }
 }
 
@@ -88,7 +97,9 @@ export async function purgeStaleUploads(hours = STALE_UPLOAD_HOURS): Promise<{ p
   await prisma.mediaObject.deleteMany({ where: { id: { in: stale.map((m) => m.id) } } });
   for (const media of stale) {
     await discardUploadObjects(media);
-    await storage.deletePrefix(`derived/${media.id}/`).catch(() => undefined);
+    await storage
+      .deletePrefix(`derived/${media.id}/`)
+      .catch(ignoreFailure('derived files cleanup failed', { mediaId: media.id }));
   }
   logger.info(
     { purged: stale.length, hours },

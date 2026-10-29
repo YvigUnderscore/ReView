@@ -16,6 +16,7 @@ import {
 } from '../../lib/ocioBake';
 import { getConfigDisplays, getEntry } from '../../services/OcioService';
 import { bakeWithPython, probePyOcio } from './bakeRunner';
+import { ignoreFailure } from '../../lib/ignoreFailure';
 
 /**
  * Baking of the display LUTs of an OCIO config, stored **next to** the `.ocio` in MinIO
@@ -142,7 +143,10 @@ export async function runBake(req: BakeRequest): Promise<BakeReport> {
       report.baked++;
     }
   } finally {
-    if (dir) await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    if (dir)
+      await rm(dir, { recursive: true, force: true }).catch(
+        ignoreFailure('[ocio] bake dir cleanup failed', { dir }),
+      );
   }
 
   report.method =

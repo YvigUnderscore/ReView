@@ -93,6 +93,7 @@ import {
 import { installShutdownHandlers, registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
 import { closeWorkerEvents } from '../lib/workerEvents';
 import { startWorkerMetricsServer, attachWorkerMetrics } from './metricsServer';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Media processing worker (FFmpeg) — BullMQ.
@@ -787,8 +788,12 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       }
       if (!scan.clean) {
         const quarantineKey = `quarantine/${mediaId}/${media.originalName}`;
-        await storage.copyObject(media.storageKey, quarantineKey).catch(() => undefined);
-        await storage.deleteObject(media.storageKey).catch(() => undefined);
+        await storage
+          .copyObject(media.storageKey, quarantineKey)
+          .catch(ignoreFailure('[ffmpeg] quarantine copy failed', { mediaId }));
+        await storage
+          .deleteObject(media.storageKey)
+          .catch(ignoreFailure('[ffmpeg] infected original delete failed', { mediaId }));
         await prisma.mediaObject.update({
           where: { id: mediaId },
           data: {
@@ -1209,7 +1214,9 @@ export const ffmpegWorker = new Worker<MediaJobData>(
   async (job) => {
     try {
       await handle(job.data.mediaObjectId, job.data.kind, progressReporter(job));
-      await job.updateProgress(mediaJobProgress(job.data.kind, 'done')).catch(() => undefined);
+      await job
+        .updateProgress(mediaJobProgress(job.data.kind, 'done'))
+        .catch(ignoreFailure('[ffmpeg] progress update failed', { jobId: job.id }));
     } catch (err) {
       // A scan in error (clamd unreachable) does not condemn the media — BullMQ retries; only a detection sets FAILED. But it leaves a media served WITHOUT having been
       // scanned: it now says so on the media, failing which the absence of a scan was indistinguishable from a clean scan (see `recordScanOutcome`).

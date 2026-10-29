@@ -4,6 +4,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from './prisma';
+import { ignoreFailure } from './ignoreFailure';
 
 /**
  * API tokens (36.C, extended by API v1): `rvk_<40 hex>`, stored hashed (sha256).
@@ -83,7 +84,7 @@ export async function authenticateApiToken(
     lastTouched.set(row.id, Date.now());
     void prisma.apiToken
       .update({ where: { id: row.id }, data: { lastUsedAt: new Date() } })
-      .catch(() => undefined);
+      .catch(ignoreFailure('API token lastUsedAt update failed', { tokenId: row.id }));
   }
   req.user = { id: row.user.id, email: row.user.email, role: row.user.role };
   req.apiToken = {

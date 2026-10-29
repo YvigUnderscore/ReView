@@ -12,7 +12,10 @@
   "digest.by": "per {name}",
   "digest.commentOn": "{author} sus {media}",
   "digest.optOut": "Recebètz aqueste corrièl perque lo resumit quotidian es activat dins vòstre perfil ReView.",
-  "digest.preview": { "one": "Çò qu'a bolegat sus {count} projècte dempuèi ièr.", "other": "Çò qu'a bolegat sus {count} projèctes dempuèi ièr." },
+  "digest.preview": {
+    "one": "Çò qu'a bolegat sus {count} projècte dempuèi ièr.",
+    "other": "Çò qu'a bolegat sus {count} projèctes dempuèi ièr."
+  },
 
   "weekly.subject": "ReView — rapòrt setmanièr de produccion",
   "weekly.title": "Rapòrt setmanièr de produccion",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Nòtas dubèrtas",
   "weekly.optOut": "Recebètz aqueste rapòrt perque es activat dins vòstre perfil ReView (supervisors).",
-  "weekly.preview": { "one": "La setmana sus {count} projècte : liuraisons, decisions, nòtas dobèrtas.", "other": "La setmana sus {count} projèctes : liuraisons, decisions, nòtas dobèrtas." },
+  "weekly.preview": {
+    "one": "La setmana sus {count} projècte : liuraisons, decisions, nòtas dobèrtas.",
+    "other": "La setmana sus {count} projèctes : liuraisons, decisions, nòtas dobèrtas."
+  },
 
   "smtp.test.subject": "ReView — tèst SMTP",
   "smtp.test.title": "Tèst SMTP",
@@ -58,7 +64,10 @@
   "chat.system.renamed": "Lo grop s'apèla ara « {title} »",
   "chat.mediaPublished": "🎬 Novèl mèdia publicat : {name}",
   "chat.decision": "{icon} Decision « {status} » sus la version {version}",
-  "chat.decisionBulk": { "one": "{icon} Decision « {status} » sus {count} version", "other": "{icon} Decision « {status} » sus {count} versions" },
+  "chat.decisionBulk": {
+    "one": "{icon} Decision « {status} » sus {count} version",
+    "other": "{icon} Decision « {status} » sus {count} versions"
+  },
   "chat.newComment": "💬 Novèl comentari sus un mèdia (projècte #{project})",
   "chat.montageComment": "🎬 Novèl retorn sus un montatge (projècte #{project})",
   "share.mail.subject": "Accès a {project}",
@@ -72,7 +81,10 @@
   "share.mail.cta": "Dobrir lo ligam",
   "share.mail.expiry": "Aqueste ligam expira lo {date}.",
   "share.mail.noExpiry": "Aqueste ligam a pas de data d'expiracion.",
-  "share.mail.viewLimit": { "one": "Se pòt dobrir {count} còp en tot.", "other": "Se pòt dobrir {count} còps en tot." },
+  "share.mail.viewLimit": {
+    "one": "Se pòt dobrir {count} còp en tot.",
+    "other": "Se pòt dobrir {count} còps en tot."
+  },
   "share.mail.password": "Es protegit per un senhal, mandat a despart.",
   "share.mail.fallback": "Se lo boton fonciona pas, pegatz aqueste ligam dins vòstre navegador :",
   "notesSheet.title": "Nòtas de review",

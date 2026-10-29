@@ -3,6 +3,7 @@
 
 import { AppError } from './errors';
 import { assertPublicHttpTarget } from './ssrfGuard';
+import { ignoreFailure } from './ignoreFailure';
 
 /**
  * PROJECT RULE — no bare `fetch` in `backend/src`.
@@ -133,7 +134,7 @@ async function fetchOnce(url: string, init: RequestInit, timeoutMs: number): Pro
 function limitResponseBody(res: Response, maxBytes: number, target: string): Response {
   const declared = Number(res.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBytes) {
-    void res.body?.cancel().catch(() => undefined);
+    void res.body?.cancel().catch(ignoreFailure('response body cancel failed'));
     throw new OutboundTooLargeError(target, maxBytes);
   }
   if (!res.body || NULL_BODY_STATUS.has(res.status)) return res;
@@ -177,7 +178,7 @@ export async function safeFetch(
       return maxBytes === undefined ? res : limitResponseBody(res, maxBytes, current.href);
 
     // Redirect: the body is of no interest to us, and leaving it open would hold the socket.
-    await res.body?.cancel().catch(() => undefined);
+    await res.body?.cancel().catch(ignoreFailure('response body cancel failed'));
     if (hop >= maxRedirects)
       throw new OutboundBlockedError(current.href, `redirect not followed (HTTP ${res.status})`);
     // Replaying a POST/PUT towards an address chosen by the server amounts to handing it the payload: only safe methods are followed.

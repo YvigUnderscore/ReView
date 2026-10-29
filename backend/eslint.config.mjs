@@ -45,6 +45,17 @@ export default defineConfig([
           selector: "TSNonNullExpression > MemberExpression[object.name='req'][property.name='user']",
           message: 'Use requireUser(req) from middleware/auth instead of asserting req.user!.',
         },
+        {
+          // A swallowed rejection loses the only trace of a storage or database incident.
+          selector:
+            "CallExpression[callee.property.name='catch'] > ArrowFunctionExpression[params.length=0][body.type='Identifier'][body.name='undefined']",
+          message: 'Use .catch(ignoreFailure(message, context)) from lib/ignoreFailure: log what is ignored.',
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name='catch'] > ArrowFunctionExpression[params.length=0][body.type='BlockStatement'][body.body.length=0]",
+          message: 'Use .catch(ignoreFailure(message, context)) from lib/ignoreFailure: log what is ignored.',
+        },
       ],
     },
   },

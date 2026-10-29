@@ -8,6 +8,7 @@ import { decryptSecret } from '../lib/crypto';
 import { signWebhookPayload, type WebhookEvent } from '../lib/webhooks';
 import { safeFetch } from '../lib/safeFetch';
 import { enqueueWebhookDelivery } from './JobService';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Outgoing webhooks (36.D): `emitWebhookEvent` (fire-and-forget, called by the business services) enqueues a BullMQ job
@@ -233,14 +234,14 @@ async function recordSuccess(
           deliveredAt: new Date(),
         },
       })
-      .catch(() => undefined);
+      .catch(ignoreFailure('[webhooks] delivery record update failed', { webhookId }));
   // The first success clears the streak: a recovering endpoint need not drag its past along.
   await prisma.webhook
     .update({
       where: { id: webhookId },
       data: { lastStatus: status, lastError: null, lastDeliveryAt: new Date(), failureStreak: 0 },
     })
-    .catch(() => undefined);
+    .catch(ignoreFailure('[webhooks] webhook status update failed', { webhookId }));
 }
 
 async function recordFailure(
@@ -282,7 +283,9 @@ async function recordFailure(
   // Repeatedly exhausted retries: the webhook is dead, so we stop writing to it. It stays in the database, reactivatable
   // with a checkbox once the endpoint is repaired.
   if (exhausted && (hook?.failureStreak ?? 0) >= FAILURE_STREAK_LIMIT) {
-    await prisma.webhook.update({ where: { id: webhookId }, data: { active: false } }).catch(() => undefined);
+    await prisma.webhook
+      .update({ where: { id: webhookId }, data: { active: false } })
+      .catch(ignoreFailure('[webhooks] webhook deactivation failed', { webhookId }));
     logger.warn(`[webhooks] webhook ${webhookId} désactivé après ${FAILURE_STREAK_LIMIT} livraisons perdues`);
   }
 }

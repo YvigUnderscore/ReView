@@ -23,6 +23,7 @@ import {
 import { exportPlan, type ExportSegment } from '../services/TimelineService';
 import { FfmpegTimeoutError, ffmpegTimeoutMs } from '../lib/ffmpegTimeout';
 import { registerWorkerShutdown } from './shutdown';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
  * Export of an automatic edit into a single file (Phase 45).
@@ -277,7 +278,9 @@ export const timelineExportWorker = new Worker<TimelineExportJobData>(
   (job) =>
     handle(job.data.timelineId, (percent) => {
       // Best effort: a lost progress update does not doom the export.
-      void job.updateProgress(percent).catch(() => undefined);
+      void job
+        .updateProgress(percent)
+        .catch(ignoreFailure('[timeline-export] progress update failed', { jobId: job.id }));
     }),
   // Only one export at a time: each job encodes a whole film; parallelizing them
   // would saturate the machine that also serves the ongoing transcodes.
