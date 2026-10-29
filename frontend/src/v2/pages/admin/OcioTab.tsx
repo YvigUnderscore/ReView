@@ -2,41 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Download, RefreshCw, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
-
-interface OcioConfig {
-  id: string;
-  name: string;
-  kind: 'studio' | 'cg';
-  acesVersion: string;
-  releaseTag: string;
-  isDefault: boolean;
-}
-
-interface OcioAsset {
-  assetName: string;
-  sizeBytes: number;
-  label: string;
-  installed: boolean;
-  recommendedDefault: boolean;
-  info: { acesVersion: string };
-}
-
-interface OcioRelease {
-  tag: string;
-  name: string;
-  publishedAt: string | null;
-  assets: OcioAsset[];
-}
+import { ocioApi, useOcioConfigsQuery, useOcioReleasesQuery, type OcioAsset } from '@/v2/lib/ocioApi';
 
 /**
  * OCIO colour management (39.B): fetches the official ACES configs from the
@@ -49,21 +24,14 @@ export default function OcioTab() {
   const [browse, setBrowse] = useState(false);
   const [busyAsset, setBusyAsset] = useState<string | null>(null);
 
-  const configsQ = useQuery({
-    queryKey: qk.admin('ocio-configs'),
-    queryFn: () => api.get<{ configs: OcioConfig[] }>('/api/studio/ocio/configs').then((d) => d.configs),
-  });
-  const releasesQ = useQuery({
-    queryKey: qk.admin('ocio-releases'),
-    queryFn: () => api.get<{ releases: OcioRelease[] }>('/api/studio/ocio/releases').then((d) => d.releases),
-    enabled: browse,
-  });
-  const refreshConfigs = () => qc.invalidateQueries({ queryKey: qk.admin('ocio-configs') });
+  const configsQ = useOcioConfigsQuery();
+  const releasesQ = useOcioReleasesQuery(browse);
+  const refreshConfigs = () => qc.invalidateQueries({ queryKey: qk.ocioConfigs });
 
   const install = async (tag: string, asset: OcioAsset) => {
     setBusyAsset(asset.assetName);
     try {
-      await api.post('/api/studio/ocio/install', { tag, assetName: asset.assetName });
+      await ocioApi.install(tag, asset.assetName);
       toast.success(t('ocio.configInstalled', { name: asset.label }));
       void refreshConfigs();
       void qc.invalidateQueries({ queryKey: qk.admin('ocio-releases') });
@@ -76,7 +44,7 @@ export default function OcioTab() {
 
   const setDefault = async (id: string) => {
     try {
-      await api.put(`/api/studio/ocio/configs/${id}/default`, {});
+      await ocioApi.setDefault(id);
       void refreshConfigs();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.action'));
@@ -85,7 +53,7 @@ export default function OcioTab() {
 
   const remove = async (id: string, name: string) => {
     try {
-      await api.del(`/api/studio/ocio/configs/${id}`);
+      await ocioApi.remove(id);
       toast.success(t('ocio.configDeleted', { name }));
       void refreshConfigs();
     } catch (err) {

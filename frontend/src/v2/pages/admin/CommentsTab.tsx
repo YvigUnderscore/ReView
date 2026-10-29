@@ -3,11 +3,9 @@
 
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, ExternalLink, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '@/lib/apiClient';
-import { qk } from '../../lib/query';
 import Avatar from '../../components/Avatar';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { Badge } from '../../components/ui/badge';
@@ -16,10 +14,12 @@ import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { fmtDateTime } from './adminShared';
-import type { AdminCommentRow, AdminProjectRow, Paginated, User } from '../../types/api';
+import type { AdminCommentRow } from '../../types/api';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 import { SearchInput } from '@/v2/components/ui/search-input';
+import { useAdminProjectsQuery, useUsersQuery } from '@/v2/lib/queries';
+import { adminCommentsAllKey, adminCommentsApi, useAdminCommentsQuery } from './adminCommentsApi';
 
 const PAGE_SIZE = 50;
 
@@ -35,28 +35,19 @@ export default function CommentsTab() {
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState<AdminCommentRow | null>(null);
 
-  const projectsQ = useQuery({
-    queryKey: qk.adminProjects,
-    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
-  });
-  const usersQ = useQuery({
-    queryKey: qk.users,
-    queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users),
-  });
+  const projectsQ = useAdminProjectsQuery();
+  const usersQ = useUsersQuery();
   const filter = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (projectId) filter.set('projectId', projectId);
   if (authorId) filter.set('authorId', authorId);
   if (resolved) filter.set('resolved', resolved);
   if (q.trim()) filter.set('q', q.trim());
-  const listQ = useQuery({
-    queryKey: qk.adminComments(filter.toString()),
-    queryFn: () => api.get<Paginated<AdminCommentRow>>(`/api/admin/comments?${filter}`),
-  });
+  const listQ = useAdminCommentsQuery(filter.toString());
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['admin', 'comments'] });
+  const invalidate = () => qc.invalidateQueries({ queryKey: adminCommentsAllKey });
   const toggleResolved = async (c: AdminCommentRow) => {
     try {
-      await api.patch(`/api/comments/${c.id}`, { isResolved: !c.isResolved });
+      await adminCommentsApi.setResolved(c.id, !c.isResolved);
       toast.success(c.isResolved ? t('comments.reopened') : t('comment.resolved'));
       void invalidate();
     } catch (e) {
@@ -66,7 +57,7 @@ export default function CommentsTab() {
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
-      await api.del(`/api/comments/${deleting.id}`);
+      await adminCommentsApi.remove(deleting.id);
       toast.success(t('comments.deleted'));
       setDeleting(null);
       void invalidate();

@@ -12,10 +12,11 @@ import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { fmtDateTime, versionStatusLabel } from './adminShared';
-import type { AdminProjectRow, AdminVersionRow, MediaKind, Paginated, VersionStatus } from '../../types/api';
+import type { AdminVersionRow, MediaKind, Paginated, VersionStatus } from '../../types/api';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 import { SearchInput } from '@/v2/components/ui/search-input';
+import { useAdminProjectsQuery } from '@/v2/lib/queries';
 
 const PAGE_SIZE = 50;
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
@@ -32,10 +33,7 @@ export default function VersionsTab() {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
 
-  const projectsQ = useQuery({
-    queryKey: qk.adminProjects,
-    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
-  });
+  const projectsQ = useAdminProjectsQuery();
   const filter = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (projectId) filter.set('projectId', projectId);
   if (status) filter.set('status', status);

@@ -8,6 +8,7 @@ import { getSocket } from '../../lib/socket';
 import { qk } from './query';
 import { useInfiniteList, type InfiniteList, type InfiniteListOptions } from './useInfiniteList';
 import type {
+  AdminProjectRow,
   AssetListItem,
   LiveSessionSummary,
   Notification,
@@ -15,6 +16,7 @@ import type {
   ReviewStatus,
   SequenceSummary,
   ShotSummary,
+  User,
   UserStatus,
 } from '../types/api';
 
@@ -223,5 +225,22 @@ export function useProjectTasks(projectId: number, enabled = true) {
       api.get<{ tasks: ProjectTask[] }>(`/api/tasks?projectId=${projectId}`).then((r) => r.tasks),
     enabled: enabled && projectId > 0,
     staleTime: 60_000,
+  });
+}
+
+/** Every project with its admin counters (admin screens: filters, scopes, the projects tab). */
+export function useAdminProjectsQuery(enabled = true) {
+  return useQuery({
+    queryKey: qk.adminProjects,
+    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
+    enabled,
+  });
+}
+
+/** The studio's accounts (admin users tab, author filters, member picker). */
+export function useUsersQuery() {
+  return useQuery({
+    queryKey: qk.users,
+    queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users),
   });
 }

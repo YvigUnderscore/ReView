@@ -3,26 +3,21 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/apiClient';
-import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { fmtBytes } from './adminShared';
 import { filterProjects, PROJECT_STATUSES, projectStatusLabels, quotaPct } from './adminProjects';
-import type { AdminProjectRow, ProjectStatus } from '../../types/api';
+import type { ProjectStatus } from '../../types/api';
 import { useT } from '../../i18n';
 import { SearchInput } from '@/v2/components/ui/search-input';
+import { useAdminProjectsQuery } from '@/v2/lib/queries';
 
 /** Admin list of projects: pipeline counters, storage/quota, sheets. */
 export default function ProjectsAdminTab() {
   const t = useT();
-  const projectsQ = useQuery({
-    queryKey: qk.adminProjects,
-    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
-  });
+  const projectsQ = useAdminProjectsQuery();
   const data = projectsQ.data;
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<ProjectStatus | 'ALL'>('ALL');

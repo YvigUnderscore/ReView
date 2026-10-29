@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
@@ -10,8 +10,8 @@ import PeopleList from '../../components/people/PeopleList';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { personLabel, type PersonOption } from '../../lib/peopleSearch';
-import type { User } from '../../types/api';
 import { useT } from '../../i18n';
+import { useUsersQuery } from '@/v2/lib/queries';
 
 /**
  * Who enters the project.
@@ -38,10 +38,7 @@ export default function AddMemberDialog({
   const t = useT();
   const qc = useQueryClient();
   const [added, setAdded] = useState<number[]>([]);
-  const usersQ = useQuery({
-    queryKey: qk.users,
-    queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users),
-  });
+  const usersQ = useUsersQuery();
 
   const people = useMemo<PersonOption[]>(
     () =>

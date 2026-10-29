@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
@@ -23,16 +23,14 @@ import { filterUsers, sortUsers, type UserSort } from './adminUsers';
 import type { Role, User } from '../../types/api';
 import { useT } from '../../i18n';
 import { SearchInput } from '@/v2/components/ui/search-input';
+import { useUsersQuery } from '@/v2/lib/queries';
 
 /** Account list (admin overhaul): search, role filter, sort, detailed sheet. */
 export default function UsersTab() {
   const t = useT();
   const qc = useQueryClient();
   const meId = useAuth((s) => s.user?.id) ?? 0;
-  const usersQ = useQuery({
-    queryKey: qk.users,
-    queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users),
-  });
+  const usersQ = useUsersQuery();
   const users = usersQ.data;
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role | 'ALL'>('ALL');

@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
-import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
@@ -22,7 +21,7 @@ import TokenSecret from '../../components/tokens/TokenSecret';
 import { serviceTokensKey } from '../../components/tokens/tokenApi';
 import { buildTokenDraft, EXPIRY_CHOICES } from '../../components/tokens/tokenScopes';
 import { useT, type MessageKey } from '../../i18n';
-import type { AdminProjectRow } from '../../types/api';
+import { useAdminProjectsQuery } from '@/v2/lib/queries';
 
 /** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -58,11 +57,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 export default function ServiceTokenDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();
   const qc = useQueryClient();
-  const projectsQ = useQuery({
-    queryKey: qk.adminProjects,
-    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
-    enabled: open,
-  });
+  const projectsQ = useAdminProjectsQuery(open);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

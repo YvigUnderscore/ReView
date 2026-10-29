@@ -10,13 +10,8 @@ import { Palette } from 'lucide-react';
 import { Hint } from './ui/hint';
 import { SettingsCard } from './settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
+import { useOcioConfigsQuery } from '@/v2/lib/ocioApi';
 
-interface OcioConfig {
-  id: string;
-  name: string;
-  acesVersion: string;
-  isDefault: boolean;
-}
 interface OcioDisplay {
   name: string;
   views: string[];
@@ -36,10 +31,7 @@ export default function ProjectColorSection({
   onChange: (v: ColorSettings | undefined) => void;
 }) {
   const t = useT();
-  const configsQ = useQuery({
-    queryKey: qk.ocioConfigs,
-    queryFn: () => api.get<{ configs: OcioConfig[] }>('/api/studio/ocio/configs').then((d) => d.configs),
-  });
+  const configsQ = useOcioConfigsQuery();
   const configs = configsQ.data ?? [];
   const defaultConfig = configs.find((c) => c.isDefault) ?? configs[0];
   const activeConfigId = value?.configId ?? defaultConfig?.id;

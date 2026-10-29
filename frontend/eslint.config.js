@@ -10,6 +10,7 @@ import jsxA11y from 'eslint-plugin-jsx-a11y'
 import vitest from '@vitest/eslint-plugin'
 import prettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import legacyApiComponents from './eslint.legacy-api-components.json' with { type: 'json' }
 
 /**
  * Import paths: three `../` or more is a path nobody can read or move safely; `@/` (= `src/`,
@@ -118,6 +119,28 @@ export default defineConfig([
       '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+    },
+  },
+  // Components do not call the HTTP layer: `api.*` belongs in a query module (lib/queries.ts,
+  // lib/*Api.ts, pages/**/*Api.ts) that the component consumes as hooks/functions. A warning, but
+  // lint runs with --max-warnings 0, so it blocks new offenders; the components that still do it are
+  // listed in eslint.legacy-api-components.json (ratchet: remove entries, never add).
+  {
+    files: ['src/**/*.tsx'],
+    ignores: ['src/**/*.test.tsx', ...legacyApiComponents.files],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              regex: 'lib/apiClient$',
+              importNames: ['api'],
+              message: 'Pas d’appel API dans un composant : passer par un module de requêtes (hooks).',
+            },
+          ],
+        },
+      ],
     },
   },
   // Test quality: a focused/disabled test that reaches dev skews the suite.

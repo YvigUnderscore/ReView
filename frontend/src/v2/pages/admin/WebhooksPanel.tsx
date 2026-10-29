@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Copy, Plus, ScrollText, Send, Trash2, Webhook as WebhookIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '@/lib/apiClient';
-import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -16,25 +14,12 @@ import { Panel } from './AdminPrimitives';
 import WebhookDeliveries from './WebhookDeliveries';
 import { isSilencedByFailures, scopeName } from './webhookLog';
 import { useT, type MessageKey } from '../../i18n';
-import type { AdminProjectRow } from '../../types/api';
 import { Hint } from '../../components/ui/hint';
+import { useAdminProjectsQuery } from '@/v2/lib/queries';
+import { useWebhooksQuery, webhooksApi, webhooksKey, type WebhookRow } from './webhooksApi';
 
 /** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
-
-interface WebhookRow {
-  id: number;
-  url: string;
-  events: string[];
-  active: boolean;
-  /** Scope: `null` = the whole studio; otherwise, this project and only it. */
-  projectId: number | null;
-  lastStatus: number | null;
-  lastError: string | null;
-  lastDeliveryAt: string | null;
-  failureStreak: number;
-  createdAt: string;
-}
 
 const eventRows = (t: Tr) => [
   { key: 'media.published', label: t('task.published') },
@@ -46,15 +31,9 @@ const eventRows = (t: Tr) => [
 export default function WebhooksPanel() {
   const t = useT();
   const qc = useQueryClient();
-  const hooksQ = useQuery({
-    queryKey: qk.admin('webhooks'),
-    queryFn: () => api.get<{ webhooks: WebhookRow[] }>('/api/admin/webhooks').then((d) => d.webhooks),
-  });
+  const hooksQ = useWebhooksQuery();
   const hooks = hooksQ.data ?? [];
-  const projectsQ = useQuery({
-    queryKey: qk.adminProjects,
-    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
-  });
+  const projectsQ = useAdminProjectsQuery();
   const projects = projectsQ.data?.projects ?? [];
 
   const [url, setUrl] = useState('');
@@ -64,14 +43,14 @@ export default function WebhooksPanel() {
   const [busy, setBusy] = useState(false);
   const [openLog, setOpenLog] = useState<number | null>(null);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: qk.admin('webhooks') });
+  const invalidate = () => qc.invalidateQueries({ queryKey: webhooksKey });
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim() || events.length === 0) return;
     setBusy(true);
     try {
-      const d = await api.post<{ secret: string }>('/api/admin/webhooks', {
+      const d = await webhooksApi.create({
         url: url.trim(),
         events,
         projectId: scope ? Number(scope) : null,
@@ -89,7 +68,7 @@ export default function WebhooksPanel() {
 
   const patch = async (h: WebhookRow, body: Partial<Pick<WebhookRow, 'active' | 'projectId'>>) => {
     try {
-      await api.patch(`/api/admin/webhooks/${h.id}`, body);
+      await webhooksApi.update(h.id, body);
       void invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -97,7 +76,7 @@ export default function WebhooksPanel() {
   };
   const remove = async (h: WebhookRow) => {
     try {
-      await api.del(`/api/admin/webhooks/${h.id}`);
+      await webhooksApi.remove(h.id);
       toast.success(t('webhooks.deleted'));
       void invalidate();
     } catch (err) {
@@ -106,7 +85,7 @@ export default function WebhooksPanel() {
   };
   const test = async (h: WebhookRow) => {
     try {
-      await api.post(`/api/admin/webhooks/${h.id}/test`);
+      await webhooksApi.test(h.id);
       toast.success(t('webhooks.testQueued'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
