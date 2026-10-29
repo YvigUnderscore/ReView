@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { prisma } from './prisma';
-import { forbidden, notFound } from '../lib/errors';
+import { forbidden, notFound } from './errors';
 
 /**
  * Archive lock (38.B): an ARCHIVED project is read-only — any write of content/structure is refused (403 PROJECT_ARCHIVED).

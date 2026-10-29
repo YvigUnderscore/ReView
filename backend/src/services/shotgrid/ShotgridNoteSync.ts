@@ -11,7 +11,7 @@ import { escapeHtml } from '../../lib/html';
 import { mediaSourceKey } from '../MediaService';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
-import { storage } from '../StorageService';
+import { storage } from '../../lib/storage';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import { asDate, asEntityRef, asString, type SgRecord } from './shotgridMapper';
 import { findByLocal, mapSgToLocal, upsertLink } from './shotgridLinks';

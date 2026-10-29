@@ -3,10 +3,10 @@
 
 import { MediaKind, MediaStatus, Prisma, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { announcePublication, createUpload } from './MediaService';
 import { logAudit } from './AuditService';
-import { enqueueMediaJob } from './JobService';
+import { enqueueMediaJob } from '../lib/queues';
 import { badRequest, notFound } from '../lib/errors';
 import { checkProjectAccess } from '../middleware/rbac';
 import { validateMediaHeader } from '../lib/fileSignatures';

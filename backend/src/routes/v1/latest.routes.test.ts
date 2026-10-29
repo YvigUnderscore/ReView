@@ -40,11 +40,11 @@ vi.mock('../../lib/projectSettings', async (importOriginal) => ({
     }),
   ),
 }));
-vi.mock('../../services/StorageService', () => ({
+vi.mock('../../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/${key}`)) },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-vi.mock('../../services/JobService', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
+vi.mock('../../lib/queues', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
 vi.mock('../../services/SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('../../services/AuditService', () => ({ logAudit: vi.fn() }));
 

@@ -5,7 +5,7 @@ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV3 } from '@aste
 import { z } from 'zod';
 import { paginationQuery } from './pagination';
 import { describeMounts } from './openapiRoutes';
-import { V1_BASE_PATH, V1_MOUNTS } from '../routes/v1';
+import type { Router } from 'express';
 
 /**
  * OpenAPI 3.0 generation from the Zod schemas (10.D6).
@@ -161,8 +161,8 @@ registry.registerComponent('securitySchemes', 'apiToken', {
  * Automatically registers all the v1 API routes, described from their own validation schemas. An endpoint added to a v1
  * router appears here without any other step.
  */
-function registerV1Paths(): void {
-  for (const route of describeMounts(V1_BASE_PATH, V1_MOUNTS)) {
+function registerV1Paths(v1: V1Surface): void {
+  for (const route of describeMounts(v1.base, v1.mounts)) {
     const { method, path, schemas, scope } = route;
     const request: Parameters<typeof registry.registerPath>[0]['request'] = {};
     if (schemas.params) request.params = schemas.params as never;
@@ -190,11 +190,20 @@ function registerV1Paths(): void {
   }
 }
 
+/**
+ * The v1 routers to document. Passed in by the caller (`routes/docs.routes`) rather than imported: `lib/`
+ * does not depend on `routes/`.
+ */
+export interface V1Surface {
+  base: string;
+  mounts: { prefix: string; router: Router }[];
+}
+
 /** Produces the OpenAPI 3.0 document (memoised). */
 let cached: ReturnType<OpenApiGeneratorV3['generateDocument']> | null = null;
-export function buildOpenApiDocument() {
+export function buildOpenApiDocument(v1: V1Surface) {
   if (cached) return cached;
-  registerV1Paths();
+  registerV1Paths(v1);
   cached = new OpenApiGeneratorV3(registry.definitions).generateDocument({
     openapi: '3.0.0',
     info: {

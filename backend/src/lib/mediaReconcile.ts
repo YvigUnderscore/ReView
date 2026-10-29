@@ -4,7 +4,7 @@
 import { MediaStatus, Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { logger } from './logger';
-import { mediaQueue } from '../services/JobService';
+import { mediaQueue } from './queues';
 
 /**
  * Reconciliation of media stuck in `PROCESSING`.

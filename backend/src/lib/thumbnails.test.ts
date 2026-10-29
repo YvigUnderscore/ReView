@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./prisma', () => ({
   prisma: { mediaObject: { findMany: vi.fn(), findFirst: vi.fn() }, $queryRaw: vi.fn() },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/${key}`)) },
 }));
 
@@ -20,7 +20,7 @@ import {
   firstMediaThumbKeysForProjects,
 } from './thumbnails';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 const findMany = vi.mocked(prisma.mediaObject.findMany);
 const queryRaw = vi.mocked(prisma.$queryRaw);

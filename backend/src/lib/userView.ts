@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Role, UserStatus } from '@prisma/client';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 import { imageTypeFromKey } from './uploadContentType';
 
 /** Raw identity fields of a user, as selected in the database. */

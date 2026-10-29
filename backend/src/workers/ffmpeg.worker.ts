@@ -8,9 +8,9 @@ import { join, extname } from 'node:path';
 import { mkdtemp, rm, readdir, mkdir, writeFile } from 'node:fs/promises';
 
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type MediaJobData } from '../services/JobService';
+import { QUEUE_NAMES, type MediaJobData } from '../lib/queues';
 import { prisma } from '../lib/prisma';
-import { storage, StorageService } from '../services/StorageService';
+import { storage, StorageService } from '../lib/storage';
 import { MediaStatus, Prisma } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { getTranscodeConfig, selectRenditions, type TranscodeConfig } from '../lib/transcodeConfig';

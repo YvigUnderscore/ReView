@@ -4,7 +4,7 @@
 import { Worker } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
 import { logger } from '../lib/logger';
-import { QUEUE_NAMES, type ShotgridJobData } from '../services/JobService';
+import { QUEUE_NAMES, type ShotgridJobData } from '../lib/queues';
 import {
   handleEvent,
   pollEvents,

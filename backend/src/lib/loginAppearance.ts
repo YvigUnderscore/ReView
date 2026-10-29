@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 import { imageTypeFromKey } from './uploadContentType';
 
 /**

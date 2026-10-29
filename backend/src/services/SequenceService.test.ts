@@ -24,7 +24,7 @@ vi.mock('../lib/thumbnails', () => ({
   firstMediaThumbKeyForSequence: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`url:${key}`)) },
 }));
 

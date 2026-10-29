@@ -27,7 +27,7 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./ApiEventService', () => ({ publish: vi.fn() }));
-vi.mock('./StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
+vi.mock('../lib/storage', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 vi.mock('./MediaService', () => ({ publish: vi.fn(), syncVersionPublication: vi.fn() }));
 vi.mock('../lib/trash', () => ({
   softDeleteVersion: vi.fn(),

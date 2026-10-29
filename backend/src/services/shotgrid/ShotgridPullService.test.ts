@@ -6,8 +6,8 @@ import { describe, it, expect, vi } from 'vitest';
 // The module pulls the whole synchronization chain: here we only test the conflict rule, which is pure. The heavy dependencies are neutralized.
 vi.mock('../../lib/prisma', () => ({ prisma: {} }));
 vi.mock('./ShotgridClient', () => ({ clientForSiteRecord: vi.fn() }));
-vi.mock('../JobService', () => ({ shotgridQueue: { add: vi.fn() } }));
-vi.mock('../StorageService', () => ({ storage: {}, StorageService: {} }));
+vi.mock('../../lib/queues', () => ({ shotgridQueue: { add: vi.fn() } }));
+vi.mock('../../lib/storage', () => ({ storage: {}, StorageService: {} }));
 
 import { arbitrate, descriptionPatch, isRealConflict, statusPatch } from './ShotgridPullService';
 import type { PullContext } from './ShotgridPullService';

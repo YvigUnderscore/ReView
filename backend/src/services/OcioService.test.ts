@@ -54,7 +54,7 @@ const { storageMock, enqueueMock, findUniqueMock, upsertMock } = vi.hoisted(() =
 vi.mock('../lib/prisma', () => ({
   prisma: { setting: { findUnique: findUniqueMock, upsert: upsertMock } },
 }));
-vi.mock('./StorageService', () => ({ storage: storageMock }));
+vi.mock('../lib/storage', () => ({ storage: storageMock }));
 vi.mock('../workers/ocio/queue', () => ({ enqueueOcioBake: enqueueMock }));
 
 const release = (tag: string, assetNames: string[]) => ({

@@ -3,14 +3,14 @@
 
 import { Worker } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type MaintenanceJobData } from '../services/JobService';
+import { QUEUE_NAMES, type MaintenanceJobData } from '../lib/queues';
 import { logger } from '../lib/logger';
 import { getNumericSetting, SETTING_KEYS } from '../lib/settings';
 import { purgeExpiredTrash } from '../lib/trash';
 import { purgeStaleUploads } from '../lib/staleUploads';
 import { purgeObsoleteDerived } from '../lib/derivedPurge';
 import { purgeIdempotencyRecords } from '../lib/idempotency';
-import { sweepRetention } from '../lib/retention';
+import { sweepRetention } from '../services/RetentionService';
 import { reconcileStuckMedia } from '../lib/mediaReconcile';
 import { sendDailyDigests } from '../services/DigestService';
 import { sendWeeklyReports } from '../services/WeeklyReportService';

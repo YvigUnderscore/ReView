@@ -3,7 +3,7 @@
 
 import { prisma } from './prisma';
 import { getRedis } from './redis';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 /**
  * Health probe mechanics: timeouts, parallel execution, memoisation.

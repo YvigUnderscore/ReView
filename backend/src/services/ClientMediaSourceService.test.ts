@@ -17,7 +17,7 @@ const { db, hdri } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/${key}?sig`)) },
 }));
 vi.mock('./MediaService', () => ({

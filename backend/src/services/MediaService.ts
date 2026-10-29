@@ -5,7 +5,7 @@ import { MediaKind, MediaStatus, Prisma, Role, VersionStatus } from '@prisma/cli
 import type { Readable } from 'node:stream';
 import { prisma } from '../lib/prisma';
 import { checkProjectAccess } from '../middleware/rbac';
-import { storage, StorageService } from './StorageService';
+import { storage, StorageService } from '../lib/storage';
 import { validateMediaHeader, getExtension, detectImage } from '../lib/fileSignatures';
 import { resolveProjectIdForVersion, resolveStorageContextForVersion } from '../lib/pipeline';
 import { checkNaming, resolveProjectSettingsById } from '../lib/projectSettings';
@@ -15,7 +15,7 @@ import { slugifyFilename } from '../lib/slug';
 import { softDeleteMedia, restoreMedia, purgeMedia } from '../lib/trash';
 import { logAudit } from './AuditService';
 import { emitToProject } from './SocketService';
-import { enqueueMediaJob, enqueueSpatialThumb } from './JobService';
+import { enqueueMediaJob, enqueueSpatialThumb } from '../lib/queues';
 import { jobKindFor, spatialThumbSource } from '../lib/mediaJobKind';
 import { getLiveSyncHz, getNumericSetting, isDraftModeEnabled, SETTING_KEYS } from '../lib/settings';
 import { logMediaAccess } from '../lib/mediaAccess';

@@ -15,7 +15,7 @@ import {
   versionInProjects,
   type SessionUser,
 } from '../lib/homeScope';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { effectiveThumbnailUrl, firstMediaThumbKeysForProjects } from '../lib/thumbnails';
 
 /**

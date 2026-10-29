@@ -59,6 +59,33 @@ export default defineConfig([
       ],
     },
   },
+  // Layering: `lib/` is the bottom layer (infrastructure clients, pure helpers). It must not reach up into
+  // services, routes, middleware or workers — those depend on it, never the reverse. Tests may wire layers.
+  {
+    files: ['src/lib/**/*.ts'],
+    ignores: ['src/lib/**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/services',
+                '**/services/**',
+                '**/routes',
+                '**/routes/**',
+                '**/workers/**',
+                '**/middleware/**',
+              ],
+              message:
+                'lib/ is the bottom layer: move the shared piece into lib/ or inject it from the caller.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // CLI scripts (seed, smoke): console is their legitimate output channel.
   {
     files: ['prisma/seed.ts', 'scripts/**/*.ts'],

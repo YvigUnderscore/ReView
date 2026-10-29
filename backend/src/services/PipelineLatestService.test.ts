@@ -13,7 +13,7 @@ vi.mock('../lib/prisma', () => ({
     department: { findMany: vi.fn() },
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}`) },
 }));
 

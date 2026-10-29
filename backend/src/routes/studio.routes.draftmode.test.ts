@@ -21,7 +21,7 @@ vi.mock('../middleware/auth', async () => ({
 vi.mock('../middleware/rbac', () => ({
   requireRole: () => (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
-vi.mock('../services/StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
+vi.mock('../lib/storage', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 vi.mock('../services/AuditService', () => ({ logAudit: vi.fn(), list: vi.fn() }));
 vi.mock('../lib/loginAppearance', () => ({
   getLoginAppearance: vi.fn(() => Promise.resolve({ bgKey: null })),

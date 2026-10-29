@@ -39,7 +39,7 @@ vi.mock('@aws-sdk/client-s3', () => {
 });
 vi.mock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: signed }));
 vi.mock('node:fs', () => ({ createReadStream: vi.fn(() => 'flux'), createWriteStream: vi.fn() }));
-vi.mock('../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('../config/env', () => ({
   env: {
     S3_BUCKET: 'review',
@@ -60,7 +60,7 @@ import {
   DEFAULT_GET_TTL_SECONDS,
   STREAMED_GET_TTL_SECONDS,
   PRESIGN_WINDOW_SECONDS,
-} from './StorageService';
+} from './storage';
 
 /** Type forced on the response by the last signature actually computed. */
 const lastImposedType = () =>

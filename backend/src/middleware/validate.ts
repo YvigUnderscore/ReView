@@ -2,13 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
+import type { Schemas } from '../lib/requestSchemas';
 
-export type Schemas = {
-  body?: z.ZodTypeAny;
-  params?: z.ZodTypeAny;
-  query?: z.ZodTypeAny;
-};
+export type { Schemas };
 
 /** Validation middleware carrying its schemas, read by the OpenAPI generator. */
 export interface ValidateMiddleware {

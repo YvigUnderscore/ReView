@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
-import { enqueueStorageCleanup } from '../services/JobService';
+import { storage } from './storage';
+import { enqueueStorageCleanup } from './queues';
 import { logger } from './logger';
 
 /**

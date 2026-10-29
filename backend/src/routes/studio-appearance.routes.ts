@@ -8,7 +8,7 @@ import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as AuditService from '../services/AuditService';
-import { storage } from '../services/StorageService';
+import { storage } from '../lib/storage';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { brandingUploadSchema, presignBrandingUpload } from '../lib/branding';
 import { getWatermarkConfig, setWatermarkConfig, watermarkConfigSchema } from '../lib/watermarkConfig';

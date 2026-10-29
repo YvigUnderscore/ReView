@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { storage, StorageService } from '../StorageService';
+import { storage, StorageService } from '../../lib/storage';
 import * as EntityThumbnailService from '../EntityThumbnailService';
 import type { ThumbnailHolder } from '../EntityThumbnailService';
 import { asString } from './shotgridMapper';

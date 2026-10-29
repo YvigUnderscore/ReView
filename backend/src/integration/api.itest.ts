@@ -6,7 +6,7 @@ import request from 'supertest';
 import { createApp } from '../app';
 import { MediaStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from '../services/StorageService';
+import { storage } from '../lib/storage';
 import { MAX_PAGE_SIZE } from '../lib/pagination';
 
 /**

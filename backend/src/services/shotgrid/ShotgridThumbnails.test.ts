@@ -12,7 +12,7 @@ const { putObject, deleteObject, setThumbnail } = vi.hoisted(() => ({
 
 vi.mock('../../lib/prisma', () => ({ prisma: {} }));
 vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock('../StorageService', () => ({
+vi.mock('../../lib/storage', () => ({
   storage: {
     putObject: (...a: unknown[]) => putObject(...a),
     deleteObject: (...a: unknown[]) => deleteObject(...a),

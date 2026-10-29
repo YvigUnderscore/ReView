@@ -11,7 +11,7 @@ import {
   retentionPolicySchema,
   setRetentionPolicy,
   sweepRetention,
-} from '../lib/retention';
+} from '../services/RetentionService';
 import { requireUser } from '../middleware/auth';
 
 /**

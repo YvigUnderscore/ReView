@@ -7,7 +7,7 @@ import { notFound } from '../lib/errors';
 import { pickMostAdvanced, groupByDepartment, type DepartmentGroup } from '../lib/pipelineOrder';
 import { resolveProjectSettingsById, type Department } from '../lib/projectSettings';
 import { ASSIGNEE_SELECT, toAssigneeView, type AssigneeView } from './EntityAssigneeService';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 /**
  * "What is the latest version?" — the question asked at each opening of an asset and at each edit computation

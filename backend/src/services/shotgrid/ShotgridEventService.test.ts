@@ -11,7 +11,7 @@ const { connection, runSync } = vi.hoisted(() => ({
 
 vi.mock('../../lib/prisma', () => ({ prisma: { shotgridConnection: connection } }));
 vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock('../JobService', () => ({ shotgridQueue: { add: vi.fn() } }));
+vi.mock('../../lib/queues', () => ({ shotgridQueue: { add: vi.fn() } }));
 vi.mock('./ShotgridSyncService', () => ({ runSync: (...args: unknown[]) => runSync(...args) }));
 
 import { coalesceKey, handleEvent, parseEventType } from './ShotgridEventService';

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: { setting: { findUnique: vi.fn(), upsert: vi.fn() } },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}?sig`),
     getPresignedPutUrl: vi.fn(async (k: string) => `https://minio/${k}?put`),
@@ -16,7 +16,7 @@ vi.mock('./StorageService', () => ({
 
 import { listWithUrls, presignUpload, add, remove } from './HdriService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 const findUnique = vi.mocked(prisma.setting.findUnique);
 const upsert = vi.mocked(prisma.setting.upsert);

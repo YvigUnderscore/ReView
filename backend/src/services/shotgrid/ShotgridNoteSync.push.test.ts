@@ -20,7 +20,7 @@ vi.mock('../../lib/logger', () => ({
 vi.mock('../../lib/annotationSvg', () => ({ annotationToSvg }));
 vi.mock('../../config/env', () => ({ env: { APP_URL: null } }));
 vi.mock('../MediaService', () => ({ mediaSourceKey: vi.fn(() => 'key') }));
-vi.mock('../StorageService', () => ({ storage }));
+vi.mock('../../lib/storage', () => ({ storage }));
 vi.mock('./ShotgridNoteAttachments', () => ({ importNoteAttachments: vi.fn(async () => 0) }));
 vi.mock('./ShotgridPullService', () => ({ touch: vi.fn(), confirmGone: vi.fn(async () => []) }));
 vi.mock('./shotgridSettings', () => ({ can: () => true }));

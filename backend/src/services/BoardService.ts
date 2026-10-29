@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { AppError, badRequest } from '../lib/errors';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 /**
  * Mood/reference boards (9.B): persistence of the Excalidraw scene.

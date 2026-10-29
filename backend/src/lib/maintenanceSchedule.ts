@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { logger } from './logger';
-import { maintenanceQueue } from '../services/JobService';
+import { maintenanceQueue } from './queues';
 
 /**
  * Maintenance rhythm: daily digest, weekly report, purges.

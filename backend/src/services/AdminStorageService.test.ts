@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   findMany: vi.fn<() => Promise<{ id: number; slug: string; name: string; deletedAt: Date | null }[]>>(),
 }));
 vi.mock('../lib/prisma', () => ({ prisma: { project: { findMany: mocks.findMany } } }));
-vi.mock('./StorageService', () => ({ storage: { iterateObjects: mocks.iterateObjects } }));
+vi.mock('../lib/storage', () => ({ storage: { iterateObjects: mocks.iterateObjects } }));
 
 import {
   classifyKey,

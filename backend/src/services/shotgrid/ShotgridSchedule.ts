@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { logger } from '../../lib/logger';
-import { shotgridQueue } from '../JobService';
+import { shotgridQueue } from '../../lib/queues';
 import { listActiveConnections } from './ShotgridSyncService';
 import { parseSettings } from './shotgridSettings';
 

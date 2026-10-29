@@ -27,7 +27,7 @@ const { db, logAudit } = vi.hoisted(() => ({
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('./AuditService', () => ({ logAudit }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(), getPresignedPutUrl: vi.fn(), forgetPresignedUrl: vi.fn() },
   StorageService: { departmentImageKey: vi.fn() },
 }));

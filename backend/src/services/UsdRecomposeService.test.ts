@@ -7,12 +7,12 @@ vi.mock('../lib/prisma', () => ({
   prisma: { mediaObject: { findUnique: vi.fn(), update: vi.fn() } },
 }));
 vi.mock('./MediaService', () => ({ assertMediaManage: vi.fn() }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 
 import { recomposeUsd } from './UsdRecomposeService';
 import { prisma } from '../lib/prisma';
-import { enqueueMediaJob } from './JobService';
+import { enqueueMediaJob } from '../lib/queues';
 
 const USER = { id: 5, role: 'ADMIN' as never };
 

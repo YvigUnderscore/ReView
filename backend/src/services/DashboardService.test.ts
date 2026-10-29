@@ -13,7 +13,7 @@ vi.mock('../lib/prisma', () => ({
     project: { count: vi.fn(), findMany: vi.fn() },
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}`) },
 }));
 // The home page shows the same image as elsewhere: the project's thumbnail, otherwise that of its first

@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('./StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
+vi.mock('../lib/storage', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 
 import { ShareScope } from '@prisma/client';
 import {

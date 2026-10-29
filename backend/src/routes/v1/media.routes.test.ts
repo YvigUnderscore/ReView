@@ -23,7 +23,7 @@ const { db, caller } = vi.hoisted(() => {
 });
 
 vi.mock('../../lib/prisma', () => ({ prisma: db }));
-vi.mock('../../services/StorageService', () => ({
+vi.mock('../../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn((key: string, ttl?: number) =>
       Promise.resolve(`https://minio/${key}?ttl=${ttl}`),
@@ -33,7 +33,7 @@ vi.mock('../../services/StorageService', () => ({
 }));
 // `mediaSourceKey` remains the real one: it decides which file gets served. Only the heavy
 // MediaService dependencies (files, socket, audit) are stubbed.
-vi.mock('../../services/JobService', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
+vi.mock('../../lib/queues', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
 vi.mock('../../services/SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('../../services/AuditService', () => ({ logAudit: vi.fn() }));
 

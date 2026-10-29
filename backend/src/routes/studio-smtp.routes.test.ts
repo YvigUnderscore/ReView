@@ -31,7 +31,7 @@ vi.mock('../middleware/auth', async () => ({
 vi.mock('../middleware/rbac', () => ({
   requireRole: () => (_r: Request, _s: Response, n: NextFunction) => n(),
 }));
-vi.mock('../services/SmtpService', () => smtp);
+vi.mock('../lib/smtpSettings', () => smtp);
 vi.mock('../services/AuditService', () => audit);
 vi.mock('../services/UserService', () => ({ getPreferences: vi.fn(() => Promise.resolve({})) }));
 vi.mock('../lib/settings', () => ({ resolveUserLocale: vi.fn(() => Promise.resolve('en')) }));

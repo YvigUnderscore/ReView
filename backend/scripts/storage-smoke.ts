@@ -10,7 +10,7 @@
  *
  * Run: `tsx scripts/storage-smoke.ts` (with MinIO started + .env configured).
  */
-import { storage } from '../src/services/StorageService';
+import { storage } from '../src/lib/storage';
 
 async function main(): Promise<void> {
   const key = `__smoke__/${Date.now()}.txt`;

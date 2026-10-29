@@ -16,7 +16,7 @@ vi.mock('./ReviewReferenceService', () => ({ purgeForComment: vi.fn() }));
 vi.mock('./WatchService', () => ({ notifyWatchers: vi.fn().mockResolvedValue([]) }));
 vi.mock('./ApiEventService', () => ({ publish: vi.fn() }));
 vi.mock('./shotgrid/ShotgridPushService', () => ({ enqueuePush: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(), getPresignedPutUrl: vi.fn() },
 }));
 vi.mock('../lib/userView', () => ({

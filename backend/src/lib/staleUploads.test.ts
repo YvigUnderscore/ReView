@@ -6,14 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./prisma', () => ({
   prisma: { mediaObject: { findMany: vi.fn(), deleteMany: vi.fn() } },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { deleteObject: vi.fn(), deletePrefix: vi.fn(), abortMultipartUpload: vi.fn() },
 }));
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn() } }));
 
 import { purgeStaleUploads, STALE_UPLOAD_HOURS } from './staleUploads';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 const findMany = vi.mocked(prisma.mediaObject.findMany);
 const deleteMany = vi.mocked(prisma.mediaObject.deleteMany);

@@ -26,7 +26,7 @@ const { db, share } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));

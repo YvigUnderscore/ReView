@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { __testing, isOidcReady, type OidcConfig } from './oidcConfig';
 
-vi.mock('../services/StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
+vi.mock('./storage', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 
 const { sanitize, FALLBACK } = __testing;
 

@@ -4,7 +4,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { storage } from '../../services/StorageService';
+import { storage } from '../../lib/storage';
 import { logger } from '../../lib/logger';
 import {
   bakeBuiltinLut,

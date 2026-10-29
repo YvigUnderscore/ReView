@@ -30,7 +30,7 @@ vi.mock('./CommentExportScope', () => scope);
 vi.mock('./CommentExportSheet', () => sheet);
 vi.mock('../lib/projectSettings', () => projectSettings);
 vi.mock('../lib/settings', () => ({ resolveUserLocale: vi.fn().mockResolvedValue('en') }));
-vi.mock('./StorageService', () => ({ storage: { getObjectBuffer: vi.fn() } }));
+vi.mock('../lib/storage', () => ({ storage: { getObjectBuffer: vi.fn() } }));
 
 import { Role } from '@prisma/client';
 import { exportNotes, orderThread } from './CommentExportService';

@@ -8,7 +8,7 @@ import { Role } from '@prisma/client';
 import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
-import { mediaQueue, storageCleanupQueue, webhookQueue } from '../services/JobService';
+import { mediaQueue, storageCleanupQueue, webhookQueue } from '../lib/queues';
 import { logAudit } from '../services/AuditService';
 import { badRequest, notFound } from '../lib/errors';
 

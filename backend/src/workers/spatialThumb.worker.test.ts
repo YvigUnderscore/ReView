@@ -35,7 +35,7 @@ vi.mock('../lib/prisma', () => ({
   },
 }));
 
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     downloadToFile: vi.fn(),
     uploadFile: vi.fn().mockResolvedValue(undefined),
@@ -54,7 +54,7 @@ vi.mock('../lib/logger', () => ({
 
 import { renderSpatialThumb, SpatialThumbPendingError } from './spatialThumb.worker';
 import { prisma } from '../lib/prisma';
-import { storage } from '../services/StorageService';
+import { storage } from '../lib/storage';
 import { renderModelThumbnail } from '../services/ModelConvertService';
 import { logger } from '../lib/logger';
 

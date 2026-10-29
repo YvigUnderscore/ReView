@@ -4,7 +4,7 @@
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { effectiveThumbnailUrl } from '../lib/thumbnails';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 

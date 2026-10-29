@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // No real database: each Prisma delegate touched by retention is simulated.
-vi.mock('./prisma', () => {
+vi.mock('../lib/prisma', () => {
   const delegate = () => ({
     findMany: vi.fn().mockResolvedValue([]),
     deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
@@ -24,11 +24,11 @@ vi.mock('./prisma', () => {
     },
   };
 });
-vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 // Only the audit write is simulated: the guards that retention borrows from it (floor, non-purgeable actions) must be the real ones,
 // otherwise the test merely verifies its own copy.
-vi.mock('../services/AuditService', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/AuditService')>()),
+vi.mock('./AuditService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./AuditService')>()),
   logAudit: vi.fn(),
 }));
 
@@ -42,9 +42,9 @@ import {
   sweepRetention,
   __testing,
   type RetentionPolicy,
-} from './retention';
-import { prisma } from './prisma';
-import { logAudit, AUDIT_RETENTION_MIN_DAYS, AUDIT_UNPURGEABLE_ACTIONS } from '../services/AuditService';
+} from './RetentionService';
+import { prisma } from '../lib/prisma';
+import { logAudit, AUDIT_RETENTION_MIN_DAYS, AUDIT_UNPURGEABLE_ACTIONS } from './AuditService';
 
 const DAY = 86_400_000;
 

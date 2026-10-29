@@ -11,7 +11,7 @@ vi.mock('../lib/prisma', () => ({
   },
 }));
 
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put'),
     forgetPresignedUrl: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('./StorageService', () => ({
 
 import { presign, resolveProject, set } from './EntityThumbnailService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 beforeEach(() => vi.clearAllMocks());
 

@@ -33,7 +33,7 @@ const { db, share, media, emptyBrowse } = vi.hoisted(() => {
 });
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/${key}?sig`)) },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));

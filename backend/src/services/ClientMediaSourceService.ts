@@ -3,7 +3,7 @@
 
 import type { MediaObject } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { mediaViewKey } from './MediaService';
 import { findWithUrl } from './HdriService';
 import { resolveProjectSettingsById } from '../lib/projectSettings';

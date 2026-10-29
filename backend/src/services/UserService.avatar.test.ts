@@ -7,7 +7,7 @@ vi.mock('../lib/prisma', () => ({
   prisma: { user: { findFirst: vi.fn(), update: vi.fn() } },
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: class {},
 }));

@@ -22,14 +22,14 @@ vi.mock('./prisma', () => {
     },
   };
 });
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: {
     deleteObject: vi.fn().mockResolvedValue(undefined),
     deleteObjects: vi.fn().mockResolvedValue([]),
     deletePrefix: vi.fn().mockResolvedValue(undefined),
   },
 }));
-vi.mock('../services/JobService', () => ({ enqueueStorageCleanup: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./queues', () => ({ enqueueStorageCleanup: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { purgeExpiredTrash, TRASH_PURGE_MAX_ITEMS } from './trash';

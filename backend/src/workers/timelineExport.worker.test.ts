@@ -120,7 +120,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 });
 
 vi.mock('../lib/redis', () => ({ redisConnectionOptions: {} }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     downloadToFile: vi.fn().mockResolvedValue(undefined),
     uploadFile: vi.fn().mockResolvedValue(undefined),
@@ -133,7 +133,7 @@ vi.mock('../lib/logger', () => ({
 vi.mock('./shutdown', () => ({ registerWorkerShutdown: vi.fn() }));
 
 import './timelineExport.worker';
-import { storage } from '../services/StorageService';
+import { storage } from '../lib/storage';
 import { exportPlan } from '../services/TimelineService';
 import { logger } from '../lib/logger';
 import { masterKey } from '../lib/timelineExport';

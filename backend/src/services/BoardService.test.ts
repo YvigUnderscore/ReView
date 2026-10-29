@@ -9,7 +9,7 @@ vi.mock('../lib/prisma', () => ({
   },
 }));
 
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/get/${key}`)),
     getPresignedPutUrl: vi.fn((key: string) => Promise.resolve(`https://minio/put/${key}`)),
@@ -19,7 +19,7 @@ vi.mock('./StorageService', () => ({
 
 import { AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import {
   MAX_DOCUMENT_BYTES,
   MAX_ELEMENTS,

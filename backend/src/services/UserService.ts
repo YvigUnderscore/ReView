@@ -9,7 +9,7 @@ import { prisma } from '../lib/prisma';
 import { invalidateAuthUser } from '../lib/userCache';
 import { logAudit } from './AuditService';
 import * as InvitationService from './InvitationService';
-import { storage, StorageService } from './StorageService';
+import { storage, StorageService } from '../lib/storage';
 import { getOnlineUserIds } from './PresenceService';
 import { toPublicUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';

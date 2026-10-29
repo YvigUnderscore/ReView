@@ -40,7 +40,7 @@ vi.mock('bullmq', () => ({
 }));
 
 vi.mock('../lib/redis', () => ({ redisConnectionOptions: {} }));
-vi.mock('../services/JobService', () => ({ QUEUE_NAMES: { MAINTENANCE: 'maintenance' } }));
+vi.mock('../lib/queues', () => ({ QUEUE_NAMES: { MAINTENANCE: 'maintenance' } }));
 vi.mock('../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('../lib/settings', () => ({
   getNumericSetting: vi.fn(() => Promise.resolve(30)),
@@ -63,7 +63,7 @@ vi.mock('../lib/trash', () => ({ purgeExpiredTrash: purges.trash }));
 vi.mock('../lib/derivedPurge', () => ({ purgeObsoleteDerived: purges.derived }));
 vi.mock('../lib/staleUploads', () => ({ purgeStaleUploads: purges.uploads }));
 vi.mock('../lib/idempotency', () => ({ purgeIdempotencyRecords: purges.idempotency }));
-vi.mock('../lib/retention', () => ({ sweepRetention: purges.retention }));
+vi.mock('../services/RetentionService', () => ({ sweepRetention: purges.retention }));
 vi.mock('../lib/mediaReconcile', () => ({ reconcileStuckMedia: purges.reconcile }));
 vi.mock('../services/DigestService', () => ({ sendDailyDigests: purges.digests }));
 vi.mock('../services/WeeklyReportService', () => ({ sendWeeklyReports: purges.weekly }));

@@ -3,7 +3,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { Registry, collectDefaultMetrics, Histogram, Gauge } from 'prom-client';
-import { ALL_QUEUES } from '../services/JobService';
+import { ALL_QUEUES } from './queues';
 import { logger } from './logger';
 
 /**

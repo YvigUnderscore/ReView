@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const { store } = vi.hoisted(() => ({ store: { getObjectBuffer: vi.fn() } }));
-vi.mock('./StorageService', () => ({ storage: store }));
+vi.mock('../lib/storage', () => ({ storage: store }));
 vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 
 import { createSheetImages, spriteTile } from './CommentExportSheet';

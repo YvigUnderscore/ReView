@@ -8,9 +8,9 @@ import { resolveProjectSettingsById, type Department } from '../lib/projectSetti
 import { buildItems, diffItems, totalDuration, type PickRow, type ShotRow } from '../lib/timelineBuild';
 import { masterKey } from '../lib/timelineExport';
 import { latestForShots, type LatestPick } from './PipelineLatestService';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { emitToProject } from './SocketService';
-import { enqueueTimelineExport, timelineExportJobId, timelineExportQueue } from './JobService';
+import { enqueueTimelineExport, timelineExportJobId, timelineExportQueue } from '../lib/queues';
 
 /**
  * Automatic timeline (montage) of a sequence or a project (Phase 45).

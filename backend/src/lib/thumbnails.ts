@@ -3,7 +3,7 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 /**
  * Resolution of "effective" thumbnails for cards (projects, assets, shots).

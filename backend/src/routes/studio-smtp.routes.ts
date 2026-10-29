@@ -10,7 +10,7 @@ import { validate } from '../middleware/validate';
 import { badRequest } from '../lib/errors';
 import { logger } from '../lib/logger';
 import * as AuditService from '../services/AuditService';
-import * as SmtpService from '../services/SmtpService';
+import * as SmtpService from '../lib/smtpSettings';
 import * as UserService from '../services/UserService';
 import { resolveUserLocale } from '../lib/settings';
 import { sendMail } from '../lib/mailer';

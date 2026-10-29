@@ -13,7 +13,7 @@ vi.mock('../lib/prisma', () => ({
     },
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     abortMultipartUpload: vi.fn().mockResolvedValue(undefined),
     deleteObject: vi.fn().mockResolvedValue(undefined),
@@ -33,7 +33,7 @@ vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 import { abortUpload, initMultipart, partSizeFor, MULTIPART_PART_SIZE } from './MediaUploadService';
 import { createUpload } from './MediaService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { Role } from '@prisma/client';
 
 const findFirst = vi.mocked(prisma.mediaObject.findFirst);

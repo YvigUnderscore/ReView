@@ -40,7 +40,7 @@ vi.mock('@aws-sdk/client-s3', () => {
 });
 vi.mock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: signed }));
 vi.mock('node:fs', () => ({ createReadStream: vi.fn(() => 'flux'), createWriteStream: vi.fn() }));
-vi.mock('../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('../config/env', () => ({
   env: {
     S3_BUCKET: 'review',
@@ -54,7 +54,7 @@ vi.mock('../config/env', () => ({
   },
 }));
 
-import { storage, PRESIGN_WINDOW_SECONDS, PRESIGN_CACHE_MAX } from './StorageService';
+import { storage, PRESIGN_WINDOW_SECONDS, PRESIGN_CACHE_MAX } from './storage';
 
 /** Options passed to the presigner on the last call that actually signed. */
 const lastSigningOptions = () => signed.mock.calls.at(-1)![2] as { expiresIn: number; signingDate: Date };

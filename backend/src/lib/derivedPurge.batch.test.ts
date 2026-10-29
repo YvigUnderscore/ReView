@@ -12,14 +12,14 @@ vi.mock('./prisma', () => ({
     mediaObject: { findMany: vi.fn(), update: vi.fn() },
   },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { deletePrefix: vi.fn(), deleteObject: vi.fn() },
 }));
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { purgeObsoleteDerived, selectObsoleteVersionIds, __testing } from './derivedPurge';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 const setting = vi.mocked(prisma.setting.findUnique);
 const taskFindMany = vi.mocked(prisma.task.findMany);

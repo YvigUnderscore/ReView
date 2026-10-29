@@ -3,7 +3,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { badRequest, notFound } from '../lib/errors';
 import { ignoreFailure } from '../lib/ignoreFailure';
 

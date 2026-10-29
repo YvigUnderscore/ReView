@@ -10,7 +10,7 @@ const { transport, smtp, createTransport } = vi.hoisted(() => ({
 }));
 
 vi.mock('nodemailer', () => ({ default: { createTransport } }));
-vi.mock('../services/SmtpService', () => smtp);
+vi.mock('./smtpSettings', () => smtp);
 vi.mock('./logger', () => ({ logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() } }));
 
 import { isMailerConfigured, sendMail } from './mailer';

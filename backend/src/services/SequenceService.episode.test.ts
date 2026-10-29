@@ -24,7 +24,7 @@ vi.mock('../lib/thumbnails', () => ({
   firstMediaThumbKeyForSequence: vi.fn(),
   effectiveThumbnailUrl: vi.fn(),
 }));
-vi.mock('./StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
+vi.mock('../lib/storage', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 
 import { createBulk, getDetail } from './SequenceService';
 

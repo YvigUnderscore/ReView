@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../lib/prisma', () => ({ prisma: {} }));
 vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn() } }));
-vi.mock('../StorageService', () => ({ storage: {} }));
+vi.mock('../../lib/storage', () => ({ storage: {} }));
 
 import { asRefs, guessType, sanitize, storedContentType } from './ShotgridNoteAttachments';
 

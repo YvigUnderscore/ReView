@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({ prisma: { mediaObject: { findUnique: vi.fn() } } }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getObjectBuffer: vi.fn(),
     getObjectStream: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock('./StorageService', () => ({
   },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/settings', () => ({ getNumericSetting: vi.fn(), SETTING_KEYS: {} }));
@@ -26,7 +26,7 @@ vi.mock('../lib/mediaAccess', () => ({ logMediaAccess: vi.fn() }));
 
 import { getHlsFile, resetHlsPlaylistCache, __hlsCacheTesting } from './MediaService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { checkProjectAccess } from '../middleware/rbac';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
 import { Role } from '@prisma/client';

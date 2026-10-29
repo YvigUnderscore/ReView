@@ -13,9 +13,9 @@ vi.mock('bullmq', () => ({
 
 // Deferred import (and not a top-level `await`, forbidden by the project's TS target): the bullmq mock must
 // be in place before the module declares its queues.
-let mod: typeof import('./JobService');
+let mod: typeof import('./queues');
 beforeAll(async () => {
-  mod = await import('./JobService');
+  mod = await import('./queues');
 });
 
 describe('queue declarations', () => {

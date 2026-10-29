@@ -7,7 +7,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { notFound } from '../../lib/errors';
 import { mediaSelect, toMedia } from '../../lib/v1Resources';
-import { storage } from '../../services/StorageService';
+import { storage } from '../../lib/storage';
 import { mediaSourceKey } from '../../services/MediaService';
 import { requireMediaProject } from './helpers';
 import { requireUser } from '../../middleware/auth';

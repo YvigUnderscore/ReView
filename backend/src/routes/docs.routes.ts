@@ -4,6 +4,7 @@
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { buildOpenApiDocument } from '../lib/openapi';
+import { V1_BASE_PATH, V1_MOUNTS } from './v1';
 import { getSourceUrl } from '../lib/settings';
 import { localeFromAcceptLanguage, t } from '../i18n';
 // The URL lands in an `href`: `safeSourceUrl` has filtered the protocol, we neutralize the rest.
@@ -64,7 +65,7 @@ const csp = (nonce: string): string =>
   ].join('; ');
 
 router.get('/openapi.json', (_req, res) => {
-  res.json(buildOpenApiDocument());
+  res.json(buildOpenApiDocument({ base: V1_BASE_PATH, mounts: V1_MOUNTS }));
 });
 
 router.get('/docs', async (req, res) => {

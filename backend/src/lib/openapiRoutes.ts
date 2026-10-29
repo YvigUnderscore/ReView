@@ -3,7 +3,7 @@
 
 import type { Router } from 'express';
 import type { z } from 'zod';
-import type { Schemas } from '../middleware/validate';
+import type { Schemas } from './requestSchemas';
 import type { Scope } from './apiScopes';
 
 /**

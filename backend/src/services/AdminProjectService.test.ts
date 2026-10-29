@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 // Pure functions under test: env/DB dependencies of the imports are stubbed out.
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('./StorageService', () => ({ storage: {} }));
+vi.mock('../lib/storage', () => ({ storage: {} }));
 
 import { buildHierarchy, hasPipelineOverride } from './AdminProjectService';
 import type { ProjectSettings } from '../lib/projectSettings';

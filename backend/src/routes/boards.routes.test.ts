@@ -22,7 +22,7 @@ const { db, actor } = vi.hoisted(() => ({
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('../services/SocketService', () => ({ emitToProject: vi.fn() }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/get/${key}`)),
     getPresignedPutUrl: vi.fn((key: string) => Promise.resolve(`https://minio/put/${key}`)),

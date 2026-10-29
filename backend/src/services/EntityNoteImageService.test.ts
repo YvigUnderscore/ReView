@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Role } from '@prisma/client';
 
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn(async (key: string) => `https://minio/${key}?sig`),
     getPresignedPutUrl: vi.fn(async (key: string) => `https://minio/${key}?put`),

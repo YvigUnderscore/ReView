@@ -3,7 +3,7 @@
 
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
-import { storage, StorageService } from './StorageService';
+import { storage, StorageService } from '../lib/storage';
 
 /**
  * Thumbnail chosen by hand for a sequence, a shot or an asset (C3).

@@ -3,7 +3,7 @@
 
 import { MediaKind, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage, StorageService } from './StorageService';
+import { storage, StorageService } from '../lib/storage';
 import { badRequest, notFound } from '../lib/errors';
 import { assertWritable } from '../lib/publishLock';
 import { assertMediaManage } from './MediaService';

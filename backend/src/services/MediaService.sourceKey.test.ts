@@ -4,11 +4,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/settings', () => ({ getNumericSetting: vi.fn(), SETTING_KEYS: {} }));

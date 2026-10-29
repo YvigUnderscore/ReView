@@ -3,9 +3,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildOpenApiDocument } from './openapi';
+import { V1_BASE_PATH, V1_MOUNTS } from '../routes/v1';
 
 describe('openapi', () => {
-  const doc = buildOpenApiDocument();
+  const doc = buildOpenApiDocument({ base: V1_BASE_PATH, mounts: V1_MOUNTS });
 
   it('generates a valid OpenAPI 3.0 document with the key paths', () => {
     expect(doc.openapi).toBe('3.0.0');

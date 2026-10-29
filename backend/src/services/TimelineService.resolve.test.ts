@@ -15,13 +15,13 @@ const { db, latest } = vi.hoisted(() => ({
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('./PipelineLatestService', () => latest);
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn((k: string) => Promise.resolve(`url:${k}`)),
     statObject: vi.fn(),
   },
 }));
-vi.mock('./JobService', () => ({
+vi.mock('../lib/queues', () => ({
   enqueueTimelineExport: vi.fn(),
   timelineExportJobId: vi.fn(),
   timelineExportQueue: { getJob: vi.fn() },

@@ -38,7 +38,7 @@ const { db, thumbs, store } = vi.hoisted(() => ({
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('../lib/thumbnails', () => thumbs);
-vi.mock('./StorageService', () => store);
+vi.mock('../lib/storage', () => store);
 
 import * as EpisodeService from './EpisodeService';
 import { AppError } from '../lib/errors';

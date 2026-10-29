@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { z } from 'zod';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 /**
  * Studio branding images (logo, login background, SSO button logo).

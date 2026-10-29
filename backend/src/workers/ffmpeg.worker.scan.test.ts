@@ -57,7 +57,7 @@ vi.mock('../lib/prisma', () => ({
   },
 }));
 
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     downloadToFile: vi.fn().mockResolvedValue(undefined),
     uploadFile: vi.fn().mockResolvedValue(undefined),

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Queue } from 'bullmq';
-import { redisConnectionOptions } from '../lib/redis';
+import { redisConnectionOptions } from './redis';
 
 /**
  * BullMQ job queues. The FFmpeg workers (transcoding, thumbnails) and the 3D conversion (assimp) are

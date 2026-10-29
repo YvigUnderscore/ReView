@@ -39,7 +39,7 @@ vi.mock('node:fs', () => ({
   createReadStream: vi.fn(() => 'flux-local'),
   createWriteStream: vi.fn(),
 }));
-vi.mock('../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('../config/env', () => ({
   env: {
     S3_BUCKET: 'review',
@@ -53,7 +53,7 @@ vi.mock('../config/env', () => ({
   },
 }));
 
-import { storage } from './StorageService';
+import { storage } from './storage';
 
 const lastInput = () => (send.mock.calls.at(-1)![0] as { input: Record<string, unknown> }).input;
 

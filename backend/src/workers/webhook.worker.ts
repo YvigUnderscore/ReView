@@ -3,7 +3,7 @@
 
 import { Worker } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type WebhookJobData } from '../services/JobService';
+import { QUEUE_NAMES, type WebhookJobData } from '../lib/queues';
 import { deliver } from '../services/WebhookService';
 import { logger } from '../lib/logger';
 import { registerWorkerShutdown } from './shutdown';

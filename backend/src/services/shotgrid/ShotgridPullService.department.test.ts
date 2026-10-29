@@ -6,8 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // The ShotGrid import only wrote the `department` string: on a project driven from the site, ALL tasks had `departmentId = null`.
 vi.mock('../../lib/prisma', () => ({ prisma: {} }));
 vi.mock('./ShotgridClient', () => ({ clientForSiteRecord: vi.fn() }));
-vi.mock('../JobService', () => ({ shotgridQueue: { add: vi.fn() } }));
-vi.mock('../StorageService', () => ({ storage: {}, StorageService: {} }));
+vi.mock('../../lib/queues', () => ({ shotgridQueue: { add: vi.fn() } }));
+vi.mock('../../lib/storage', () => ({ storage: {}, StorageService: {} }));
 vi.mock('../DepartmentService', () => ({ resolveForTask: vi.fn() }));
 
 import { departmentResolver } from './ShotgridPullService';

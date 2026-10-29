@@ -4,7 +4,7 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { logger } from './logger';
 import { htmlToText } from './mailText';
-import { getEffectiveConfig, type SmtpEffectiveConfig } from '../services/SmtpService';
+import { getEffectiveConfig, type SmtpEffectiveConfig } from './smtpSettings';
 
 /**
  * Sending emails (invitation, daily digest, weekly report, SMTP test).

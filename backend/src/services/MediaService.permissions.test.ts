@@ -24,11 +24,11 @@ const { db } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(() => Promise.resolve('https://minio.invalid/signed')) },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./WatchService', () => ({ notifyWatchers: vi.fn() }));

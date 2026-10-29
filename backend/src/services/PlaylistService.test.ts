@@ -23,7 +23,7 @@ vi.mock('../lib/prisma', () => ({
     $transaction: vi.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}`) },
 }));
 

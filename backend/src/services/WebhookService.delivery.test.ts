@@ -19,12 +19,12 @@ vi.mock('../lib/prisma', () => ({
 }));
 vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 vi.mock('../lib/crypto', () => ({ decryptSecret: vi.fn(() => 'shh') }));
-vi.mock('./JobService', () => ({ enqueueWebhookDelivery: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueWebhookDelivery: vi.fn() }));
 
 import { lookup } from 'node:dns/promises';
 import { prisma } from '../lib/prisma';
 import { decryptSecret } from '../lib/crypto';
-import { enqueueWebhookDelivery } from './JobService';
+import { enqueueWebhookDelivery } from '../lib/queues';
 import {
   deliver,
   emitWebhookEvent,

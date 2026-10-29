@@ -20,10 +20,10 @@ const { db } = vi.hoisted(() => ({
 }));
 
 vi.mock('./prisma', () => ({ prisma: db }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { deleteObject: vi.fn(), deletePrefix: vi.fn() },
 }));
-vi.mock('../services/JobService', () => ({ enqueueStorageCleanup: vi.fn() }));
+vi.mock('./queues', () => ({ enqueueStorageCleanup: vi.fn() }));
 
 import {
   purgeEpisode,

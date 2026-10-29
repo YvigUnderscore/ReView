@@ -25,7 +25,7 @@ const { putObject, presign, access, writable, resolveMedia } = vi.hoisted(() => 
   resolveMedia: vi.fn(),
 }));
 
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { putObject, getPresignedGetUrl: presign, deleteObject: vi.fn() },
 }));
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: access }));

@@ -9,8 +9,8 @@ import { join } from 'node:path';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type TimelineExportJobData } from '../services/JobService';
-import { storage } from '../services/StorageService';
+import { QUEUE_NAMES, type TimelineExportJobData } from '../lib/queues';
+import { storage } from '../lib/storage';
 import { logger } from '../lib/logger';
 import {
   concatList,

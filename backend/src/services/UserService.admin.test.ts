@@ -20,7 +20,7 @@ vi.mock('../lib/userCache', () => ({ invalidateAuthUser: vi.fn() }));
 vi.mock('../lib/sessions', () => ({ revokeAllCredentials: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./InvitationService', () => ({ assertCanInvite: vi.fn(), sendInvitation: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: class {},
 }));

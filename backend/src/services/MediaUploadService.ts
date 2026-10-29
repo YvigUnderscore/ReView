@@ -3,7 +3,7 @@
 
 import { MediaStatus, Prisma, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { createUpload, type CreateUploadInput, mediaSourceKey } from './MediaService';
 import { logAudit } from './AuditService';
 import { badRequest, notFound } from '../lib/errors';

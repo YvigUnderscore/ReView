@@ -34,7 +34,7 @@ const { db } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedPutUrl: vi.fn(),
     getPresignedGetUrl: vi.fn(),
@@ -45,7 +45,7 @@ vi.mock('./StorageService', () => ({
   },
   StorageService: { mediaKey: vi.fn(() => 'projects/p/sh/v/1/f.mov'), thumbnailKey: vi.fn() },
 }));
-vi.mock('./JobService', () => ({
+vi.mock('../lib/queues', () => ({
   enqueueMediaJob: vi.fn(() => Promise.resolve()),
   enqueueSpatialThumb: vi.fn(() => Promise.resolve()),
 }));
@@ -93,8 +93,8 @@ vi.mock('../lib/fileSignatures', async (importOriginal) => ({
 }));
 
 import { createUpload, finalize, reprocess } from './MediaService';
-import { storage } from './StorageService';
-import { enqueueMediaJob } from './JobService';
+import { storage } from '../lib/storage';
+import { enqueueMediaJob } from '../lib/queues';
 import { isDraftModeEnabled } from '../lib/settings';
 import { resolveProjectSettingsById } from '../lib/projectSettings';
 import { notifyWatchers } from './WatchService';

@@ -17,7 +17,7 @@ vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), err
 vi.mock('../../lib/annotationSvg', () => ({ annotationToSvg: vi.fn(() => null) }));
 vi.mock('../../config/env', () => ({ env: { APP_URL: null } }));
 vi.mock('../MediaService', () => ({ mediaSourceKey: vi.fn(() => 'key') }));
-vi.mock('../StorageService', () => ({ storage: {} }));
+vi.mock('../../lib/storage', () => ({ storage: {} }));
 vi.mock('./ShotgridNoteAttachments', () => ({ importNoteAttachments: vi.fn(async () => 0) }));
 vi.mock('./ShotgridPullService', () => ({
   touch: (...args: unknown[]) => touch(...args),

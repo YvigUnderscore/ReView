@@ -11,7 +11,7 @@ import {
   type ShareLink,
 } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { buildShareBrowse, type ShareBrowse } from './shareBrowse';

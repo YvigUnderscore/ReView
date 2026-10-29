@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   findMany: vi.fn<() => Promise<{ id: number; createdAt: Date; metadata: unknown }[]>>(),
   updateMany: vi.fn<(args: unknown) => Promise<{ count: number }>>(),
 }));
-vi.mock('../services/JobService', () => ({ mediaQueue: { getJobs: mocks.getJobs } }));
+vi.mock('./queues', () => ({ mediaQueue: { getJobs: mocks.getJobs } }));
 vi.mock('./prisma', () => ({
   prisma: { mediaObject: { findMany: mocks.findMany, updateMany: mocks.updateMany } },
 }));

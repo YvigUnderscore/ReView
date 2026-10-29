@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 /**
  * Map of MinIO storage (admin > Storage): walks the bucket and aggregates objects by key convention

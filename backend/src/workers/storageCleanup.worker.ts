@@ -3,8 +3,8 @@
 
 import { Worker } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type StorageCleanupJobData } from '../services/JobService';
-import { storage } from '../services/StorageService';
+import { QUEUE_NAMES, type StorageCleanupJobData } from '../lib/queues';
+import { storage } from '../lib/storage';
 import { logger } from '../lib/logger';
 import { registerWorkerShutdown } from './shutdown';
 

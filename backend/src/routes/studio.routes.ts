@@ -12,7 +12,7 @@ import { isValidDiscordWebhook } from '../lib/sanitize';
 import { badRequest, notFound } from '../lib/errors';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as AuditService from '../services/AuditService';
-import { storage } from '../services/StorageService';
+import { storage } from '../lib/storage';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { getLoginAppearance, loginBgUrl } from '../lib/loginAppearance';
 import {

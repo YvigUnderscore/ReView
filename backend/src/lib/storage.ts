@@ -24,8 +24,8 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createWriteStream, createReadStream } from 'node:fs';
 import { env } from '../config/env';
-import { logger } from '../lib/logger';
-import { OPAQUE_CONTENT_TYPE, safeUploadContentType } from '../lib/uploadContentType';
+import { logger } from './logger';
+import { OPAQUE_CONTENT_TYPE, safeUploadContentType } from './uploadContentType';
 
 /**
  * Width of the slice during which a presigned read URL does not change.

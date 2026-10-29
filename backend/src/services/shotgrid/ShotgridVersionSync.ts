@@ -9,8 +9,8 @@ import { MediaKind, MediaStatus, TaskType, VersionStatus } from '@prisma/client'
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { resolveStorageContextForVersion } from '../../lib/pipeline';
-import { storage, StorageService } from '../StorageService';
-import { enqueueMediaJob } from '../JobService';
+import { storage, StorageService } from '../../lib/storage';
+import { enqueueMediaJob } from '../../lib/queues';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import {
   asDate,

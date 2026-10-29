@@ -4,7 +4,7 @@
 import { MediaStatus, type Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { logger } from './logger';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 import { ignoreFailure } from './ignoreFailure';
 
 /** What is needed to know about an upload in order to erase the bytes it left in MinIO. */

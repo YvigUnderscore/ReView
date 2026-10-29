@@ -3,7 +3,7 @@
 
 import { type Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 /**
  * Catalogue of the versions that can be put into a playlist (C5).

@@ -7,7 +7,7 @@ import { logger } from '../lib/logger';
 import { decryptSecret } from '../lib/crypto';
 import { signWebhookPayload, type WebhookEvent } from '../lib/webhooks';
 import { safeFetch } from '../lib/safeFetch';
-import { enqueueWebhookDelivery } from './JobService';
+import { enqueueWebhookDelivery } from '../lib/queues';
 import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**

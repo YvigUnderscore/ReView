@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { prisma } from './prisma';
 import { encryptSecret, decryptSecret } from './crypto';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 import { imageTypeFromKey } from './uploadContentType';
 import { badRequest } from './errors';
 

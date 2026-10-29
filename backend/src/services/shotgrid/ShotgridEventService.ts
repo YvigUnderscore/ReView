@@ -3,7 +3,7 @@
 
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
-import { shotgridQueue } from '../JobService';
+import { shotgridQueue } from '../../lib/queues';
 import { asEntityRef, asString } from './shotgridMapper';
 import { eventBelongsToProject } from './shotgridProjectGuard';
 import { parseSettings } from './shotgridSettings';

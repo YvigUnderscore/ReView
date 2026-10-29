@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * `undefined` and sending continued without it: a silent failure, doubled by a degraded AUTH. And
  * plaintext dialogue must only be possible through an explicit setting, never by default.
  */
-vi.mock('../lib/prisma', () => ({
+vi.mock('./prisma', () => ({
   prisma: { setting: { findUnique: vi.fn(), upsert: vi.fn() } },
 }));
 vi.mock('../config/env', () => ({
@@ -23,16 +23,16 @@ vi.mock('../config/env', () => ({
     SMTP_FROM: 'ReView <no-reply@test>',
   },
 }));
-vi.mock('../lib/crypto', () => ({
+vi.mock('./crypto', () => ({
   encryptSecret: vi.fn((v: string) => `enc(${v})`),
   decryptSecret: vi.fn(() => 'motdepasse'),
 }));
-vi.mock('../lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
+vi.mock('./logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 
-import { prisma } from '../lib/prisma';
-import { decryptSecret } from '../lib/crypto';
-import { logger } from '../lib/logger';
-import { getEffectiveConfig, getPublicConfig, setConfig } from './SmtpService';
+import { prisma } from './prisma';
+import { decryptSecret } from './crypto';
+import { logger } from './logger';
+import { getEffectiveConfig, getPublicConfig, setConfig } from './smtpSettings';
 
 /** `Setting` row as the service reads it. */
 const stored = (value: Record<string, unknown>) =>

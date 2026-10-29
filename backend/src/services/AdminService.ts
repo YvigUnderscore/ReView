@@ -4,8 +4,8 @@
 import os from 'node:os';
 import { statfs } from 'node:fs/promises';
 import { prisma } from '../lib/prisma';
-import { mediaQueue } from './JobService';
-import { storage } from './StorageService';
+import { mediaQueue } from '../lib/queues';
+import { storage } from '../lib/storage';
 import { getOnlineUserIds } from './PresenceService';
 import { logAudit } from './AuditService';
 import { ignoreFailure } from '../lib/ignoreFailure';

@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 import { logger } from './logger';
 import { ignoreFailure } from './ignoreFailure';
 

@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: class {},
 }));

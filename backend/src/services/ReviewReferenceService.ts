@@ -4,7 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { detectImage } from '../lib/fileSignatures';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { checkProjectAccess } from '../middleware/rbac';

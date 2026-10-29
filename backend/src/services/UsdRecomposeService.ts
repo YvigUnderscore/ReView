@@ -8,7 +8,7 @@ import { assertWritable } from '../lib/publishLock';
 import { sanitizeVariantSelection, type UsdVariantSet } from '../lib/usdInspect';
 import { type UsdPurpose } from '../lib/blenderUsd';
 import { assertMediaManage } from './MediaService';
-import { enqueueMediaJob } from './JobService';
+import { enqueueMediaJob } from '../lib/queues';
 import { logAudit } from './AuditService';
 import type { UsdModelInfo, UsdRequest } from './ModelConvertService';
 

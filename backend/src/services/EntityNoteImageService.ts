@@ -4,7 +4,7 @@
 import { Role } from '@prisma/client';
 import { badRequest } from '../lib/errors';
 import { checkProjectAccess } from '../middleware/rbac';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { NOTE_KINDS, resolveProject, type NoteKind } from './EntityNoteService';
 
 /**

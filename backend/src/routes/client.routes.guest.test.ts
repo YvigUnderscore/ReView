@@ -32,7 +32,7 @@ const { db, share } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(() => Promise.resolve('https://minio/x?sig')) },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
@@ -66,7 +66,7 @@ vi.mock('../lib/watermarkConfig', () => ({
 }));
 vi.mock('../services/AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/mediaAccess', () => ({ logMediaAccess: vi.fn() }));
-vi.mock('../services/JobService', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
 vi.mock('../services/SocketService', () => ({ emitToProject: vi.fn() }));
 
 import express from 'express';

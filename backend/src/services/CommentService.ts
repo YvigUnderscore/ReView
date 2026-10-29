@@ -7,7 +7,7 @@ import { sanitizeHtml } from '../lib/sanitize';
 import { emitToProject } from './SocketService';
 import { notify, sendDiscord } from './NotificationService';
 import { toPublicUser, toPublicUserOrDeleted } from '../lib/userView';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import * as ReviewReferenceService from './ReviewReferenceService';
 import { notifyWatchers } from './WatchService';
 import { publish as publishApiEvent } from './ApiEventService';

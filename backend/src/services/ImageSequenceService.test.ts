@@ -24,7 +24,7 @@ vi.mock('../lib/prisma', () => ({
     $transaction: vi.fn(),
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     iterateObjects: async function* () {
       yield* objects;
@@ -41,7 +41,7 @@ vi.mock('./MediaService', () => ({
   announcePublication: vi.fn(),
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: vi.fn(async () => true) }));
 vi.mock('../lib/projectQuota', () => ({ assertProjectQuota: vi.fn() }));
 vi.mock('../lib/settings', () => ({
@@ -63,8 +63,8 @@ vi.mock('../lib/projectSettings', async (importOriginal) => ({
 
 import { completeSequence, frameUploadUrls, initSequence, listSequenceFrames } from './ImageSequenceService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
-import { enqueueMediaJob } from './JobService';
+import { storage } from '../lib/storage';
+import { enqueueMediaJob } from '../lib/queues';
 import { resolveProjectSettingsById } from '../lib/projectSettings';
 
 const user = { id: 3, role: Role.ARTIST };

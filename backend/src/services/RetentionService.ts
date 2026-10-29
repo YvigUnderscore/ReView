@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { z } from 'zod';
-import { prisma } from './prisma';
-import { logger } from './logger';
-import { AUDIT_RETENTION_MIN_DAYS, logAudit, purgeableAuditWhere } from '../services/AuditService';
+import { prisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
+import { AUDIT_RETENTION_MIN_DAYS, logAudit, purgeableAuditWhere } from './AuditService';
 
 /**
  * Log retention — lifecycle of the tables that never stop growing.

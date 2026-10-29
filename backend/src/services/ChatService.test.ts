@@ -22,7 +22,7 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('./SocketService', () => ({ emitToUser: vi.fn() }));
 vi.mock('./PushService', () => ({ sendToUser: vi.fn() }));
 vi.mock('./PresenceService', () => ({ getOnlineUserIds: () => [] }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: class {},
 }));

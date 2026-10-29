@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { prisma } from '../lib/prisma';
+import { prisma } from './prisma';
 import { env } from '../config/env';
-import { encryptSecret, decryptSecret } from '../lib/crypto';
-import { logger } from '../lib/logger';
+import { encryptSecret, decryptSecret } from './crypto';
+import { logger } from './logger';
 
 /**
  * SMTP configuration stored in the database (Phase 22): host/port/secure/user/from plus a password

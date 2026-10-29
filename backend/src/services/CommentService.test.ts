@@ -32,7 +32,7 @@ vi.mock('./EntityAssigneeService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./EntityAssigneeService')>()),
   assertAssignable: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn().mockResolvedValue('https://minio/url'),
     getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put'),
@@ -60,7 +60,7 @@ import {
   update,
 } from './CommentService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
 import { assertAssignable } from './EntityAssigneeService';

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { logger } from '../lib/logger';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { t, type Locale } from '../i18n';

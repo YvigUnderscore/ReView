@@ -11,7 +11,7 @@ const { db, redisCall, storagePing } = vi.hoisted(() => ({
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('../lib/redis', () => ({ getRedis: () => ({ call: redisCall }) }));
-vi.mock('../services/StorageService', () => ({ storage: { ping: storagePing } }));
+vi.mock('../lib/storage', () => ({ storage: { ping: storagePing } }));
 vi.mock('../lib/gracefulShutdown', () => ({ isShuttingDown: vi.fn(() => false) }));
 vi.mock('../lib/settings', () => ({
   getSourceUrl: vi.fn().mockResolvedValue('https://git.studio.tld/review'),

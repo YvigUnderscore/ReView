@@ -36,7 +36,7 @@ vi.mock('@aws-sdk/client-s3', () => {
 });
 vi.mock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: signed }));
 vi.mock('node:fs', () => ({ createReadStream: vi.fn(), createWriteStream: vi.fn() }));
-vi.mock('../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('../config/env', () => ({
   env: {
     S3_BUCKET: 'review',
@@ -50,7 +50,7 @@ vi.mock('../config/env', () => ({
   },
 }));
 
-import { storage, DELETE_OBJECTS_BATCH } from './StorageService';
+import { storage, DELETE_OBJECTS_BATCH } from './storage';
 
 type DeleteInput = { Bucket: string; Delete: { Objects: { Key: string }[] } };
 const inputs = (): DeleteInput[] => send.mock.calls.map((call) => (call[0] as { input: DeleteInput }).input);

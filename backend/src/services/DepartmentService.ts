@@ -4,7 +4,7 @@
 import { Prisma, type Department, type Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
-import { storage, StorageService } from './StorageService';
+import { storage, StorageService } from '../lib/storage';
 import { logAudit } from './AuditService';
 import { isProjectManager } from '../lib/projectRoles';
 import { parseTaskPolicy, writableDepartments } from '../lib/taskDepartmentPolicy';

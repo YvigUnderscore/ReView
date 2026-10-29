@@ -8,9 +8,9 @@ import { join } from 'node:path';
 import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type SpatialThumbJobData } from '../services/JobService';
+import { QUEUE_NAMES, type SpatialThumbJobData } from '../lib/queues';
 import { prisma } from '../lib/prisma';
-import { storage, StorageService } from '../services/StorageService';
+import { storage, StorageService } from '../lib/storage';
 import { logger } from '../lib/logger';
 import { getExtension } from '../lib/fileSignatures';
 import { spatialThumbSource } from '../lib/mediaJobKind';

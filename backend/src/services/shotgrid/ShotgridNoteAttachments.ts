@@ -4,7 +4,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
-import { storage } from '../StorageService';
+import { storage } from '../../lib/storage';
 import { safeUploadContentType } from '../../lib/uploadContentType';
 import { belongsToProject } from './shotgridProjectGuard';
 import { attachmentName, attachmentUrl, asEntityRef, type SgRecord } from './shotgridMapper';

@@ -12,20 +12,20 @@ vi.mock('./prisma', () => ({
     project: { findMany: vi.fn(), deleteMany: vi.fn() },
   },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: {
     deleteObject: vi.fn(),
     deleteObjects: vi.fn(),
     deletePrefix: vi.fn(),
   },
 }));
-vi.mock('../services/JobService', () => ({ enqueueStorageCleanup: vi.fn() }));
+vi.mock('./queues', () => ({ enqueueStorageCleanup: vi.fn() }));
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { purgeMedia, purgeMedias, purgeProjects } from './trash';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
-import { enqueueStorageCleanup } from '../services/JobService';
+import { storage } from './storage';
+import { enqueueStorageCleanup } from './queues';
 
 const findUnique = vi.mocked(prisma.mediaObject.findUnique);
 const findMany = vi.mocked(prisma.mediaObject.findMany);

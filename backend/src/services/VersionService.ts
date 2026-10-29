@@ -4,7 +4,7 @@
 import { MediaStatus, Role, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { nextVersionName } from '../lib/versionNaming';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import * as MediaService from './MediaService';
 import { softDeleteVersion, restoreVersion, purgeVersion } from '../lib/trash';
 import { logAudit } from './AuditService';
