@@ -61,15 +61,16 @@ router.get('/projects/:projectId/runs', validate({ params: projectParam }), asyn
   });
 });
 
+const logsQuery = z.object({
+  level: z.enum(['info', 'warn', 'error', 'conflict']).optional(),
+  skip: z.coerce.number().int().min(0).default(0),
+  take: z.coerce.number().int().min(1).max(500).default(200),
+});
 router.get(
   '/runs/:runId/logs',
   validate({
     params: runParam,
-    query: z.object({
-      level: z.enum(['info', 'warn', 'error', 'conflict']).optional(),
-      skip: z.coerce.number().int().min(0).default(0),
-      take: z.coerce.number().int().min(1).max(500).default(200),
-    }),
+    query: logsQuery,
   }),
   async (req, res) => {
     const runId = Number(req.params.runId);
@@ -79,7 +80,8 @@ router.get(
     });
     if (!run) throw notFound('Run not found');
     await assertProjectManager(requireUser(req), run.connection.projectId, { allowMembers: true });
-    const { level, skip, take } = req.query as unknown as { level?: string; skip: number; take: number };
+    // Re-read: the coercion of `validate` does not persist on `req.query` under Express 5.
+    const { level, skip, take } = logsQuery.parse(req.query);
     res.json(await Journal.listLogs(runId, { level, skip, take }));
   },
 );

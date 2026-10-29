@@ -32,25 +32,21 @@ router.get(
  *
  * Declared before `/:id` so that "candidates" is not read as an identifier.
  */
-router.get(
-  '/candidates',
-  validate({
-    query: z.object({
-      projectId: z.coerce.number().int().positive(),
-      q: z.string().trim().max(120).optional(),
-      sequenceId: z.union([z.coerce.number().int().positive(), z.literal('none')]).optional(),
-      department: z.string().trim().max(40).optional(),
-      latestOnly: z.coerce.boolean().optional(),
-      limit: z.coerce.number().int().min(1).max(300).optional(),
-    }),
-  }),
-  async (req, res) => {
-    const projectId = Number(req.query.projectId);
-    await assertProjectAccess(req, projectId);
-    const query = req.query as unknown as PlaylistCandidateService.CandidateQuery;
-    res.json({ candidates: await PlaylistCandidateService.list(projectId, requireUser(req).id, query) });
-  },
-);
+const candidatesQuery = z.object({
+  projectId: z.coerce.number().int().positive(),
+  q: z.string().trim().max(120).optional(),
+  sequenceId: z.union([z.coerce.number().int().positive(), z.literal('none')]).optional(),
+  department: z.string().trim().max(40).optional(),
+  latestOnly: z.coerce.boolean().optional(),
+  limit: z.coerce.number().int().min(1).max(300).optional(),
+});
+router.get('/candidates', validate({ query: candidatesQuery }), async (req, res) => {
+  // Re-read through the schema: under Express 5 the coercion of `validate` does not persist on
+  // `req.query` (`limit` would reach Prisma as a string).
+  const { projectId, ...query } = candidatesQuery.parse(req.query);
+  await assertProjectAccess(req, projectId);
+  res.json({ candidates: await PlaylistCandidateService.list(projectId, requireUser(req).id, query) });
+});
 
 // POST /api/playlists — creates (initial items from the selected versions and/or media)
 router.post(
