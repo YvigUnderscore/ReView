@@ -5,23 +5,23 @@ import type * as THREE from 'three';
 import type { SplatMesh } from '@sparkjsdev/spark';
 
 /**
- * Bbox locale des splats **visibles** (opacité > 0) — 11.D. `mesh.getBoundingBox` de Spark lit
- * les données d'origine et compte donc les splats masqués par la suppression non-destructive :
- * après une suppression, F/H recadraient sur l'étendue d'avant. Ici une passe `forEachSplat`
- * filtre les masqués ; le résultat est mis en cache par mesh et invalidé à chaque mutation du
- * masque (suppression, undo/redo, masque persisté appliqué au chargement).
+ * Local bbox of the **visible** splats (opacity > 0), 11.D. Spark's `mesh.getBoundingBox` reads the
+ * original data and therefore counts the splats masked by non-destructive deletion: after a
+ * deletion, F/H reframed on the previous extent. Here a `forEachSplat` pass filters out the masked
+ * ones; the result is cached per mesh and invalidated on every mask mutation (deletion, undo/redo,
+ * persisted mask applied on load).
  */
 const cache = new WeakMap<SplatMesh, THREE.Box3 | null>();
 
-/** À appeler après toute mutation d'opacité du packedSplats (cf. deleteSplats). */
+/** To call after any opacity mutation of the packedSplats (cf. deleteSplats). */
 export function invalidateVisibleBounds(mesh: SplatMesh): void {
   cache.delete(mesh);
 }
 
 /**
- * Bbox locale des splats visibles (clonée — les consommateurs la transforment en monde),
- * ou null si aucune donnée / aucun splat visible. Repli `getBoundingBox` si `forEachSplat`
- * est indisponible.
+ * Local bbox of the visible splats (cloned: consumers transform it into world space), or null if
+ * there is no data or no visible splat. Falls back to `getBoundingBox` if `forEachSplat` is
+ * unavailable.
  */
 export function visibleLocalBox(three: typeof THREE, mesh: SplatMesh): THREE.Box3 | null {
   if (cache.has(mesh)) {

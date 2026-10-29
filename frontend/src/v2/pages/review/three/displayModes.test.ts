@@ -19,8 +19,8 @@ function makeModel() {
   return { root, mesh, orig };
 }
 
-describe('displayModes — override non destructif des matériaux (39.C)', () => {
-  it('remplace le matériau puis le restaure en shaded, sans perdre l’original', () => {
+describe('displayModes — non-destructive override of the materials (39.C)', () => {
+  it('replaces the material then restores it to shaded, without losing the original', () => {
     const res = createDisplayResources(THREE);
     const { root, mesh, orig } = makeModel();
 
@@ -36,7 +36,7 @@ describe('displayModes — override non destructif des matériaux (39.C)', () =>
     res.dispose();
   });
 
-  it('overrideMaterialFor renvoie null pour shaded, le bon matériau sinon', () => {
+  it('overrideMaterialFor returns null for shaded, the right material otherwise', () => {
     const res = createDisplayResources(THREE);
     expect(overrideMaterialFor('shaded', res)).toBeNull();
     expect(overrideMaterialFor('matcap', res)).toBe(res.matcap);
@@ -44,7 +44,7 @@ describe('displayModes — override non destructif des matériaux (39.C)', () =>
     res.dispose();
   });
 
-  it('sauvegarde l’original une seule fois (ré-application idempotente)', () => {
+  it('saves the original only once (idempotent re-application)', () => {
     const res = createDisplayResources(THREE);
     const { root, mesh, orig } = makeModel();
     applyDisplayMode(root, 'uv', res);
@@ -53,14 +53,14 @@ describe('displayModes — override non destructif des matériaux (39.C)', () =>
     res.dispose();
   });
 
-  it('makeUvCheckerTexture / makeMatcapTexture produisent des DataTexture RGBA sRGB', () => {
+  it('makeUvCheckerTexture / makeMatcapTexture produce sRGB RGBA DataTextures', () => {
     const uv = makeUvCheckerTexture(THREE, 64, 8);
     expect(uv.image.width).toBe(64);
     expect(uv.image.data!.length).toBe(64 * 64 * 4);
     expect(uv.colorSpace).toBe(THREE.SRGBColorSpace);
     const matcap = makeMatcapTexture(THREE, 64);
     expect(matcap.image.height).toBe(64);
-    // Le centre (sphère éclairée) est plus clair que le coin (fond).
+    // The centre (lit sphere) is brighter than the corner (background).
     const data = matcap.image.data!;
     const center = data[(32 * 64 + 32) * 4];
     const corner = data[0];

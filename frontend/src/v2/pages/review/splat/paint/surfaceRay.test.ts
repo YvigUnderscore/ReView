@@ -6,12 +6,12 @@ import * as THREE from 'three';
 import { makeProjector, paintHandle, raycastSurface, type PaintSceneHandle } from './surfaceRay';
 
 /**
- * Le nuage est remplacé par un **plan** : `SplatMesh.raycast` est la seule chose que la brosse
- * lui demande, et un plan la satisfait exactement comme une surface réelle. Rien ici ne touche
- * au GPU — `Raycaster`, `Matrix4` et la caméra sont du calcul pur.
+ * The cloud is replaced by a **plane**: `SplatMesh.raycast` is the only thing the brush asks of it,
+ * and a plane satisfies it exactly as a real surface would. Nothing here touches the GPU:
+ * `Raycaster`, `Matrix4` and the camera are pure computation.
  *
- * Depuis le lot 13 la brosse sert aussi le modèle 3D : le second jeu de cas décrit la différence
- * — un nuage répond au rayon lui-même, un modèle porte sa géométrie dans ses enfants.
+ * Since lot 13 the brush also serves the 3D model: the second set of cases describes the
+ * difference, a cloud answering the ray itself while a model holds its geometry in its children.
  */
 const VIEWPORT = { width: 200, height: 200 };
 
@@ -38,7 +38,7 @@ function fakeHandle(meshPosition = new THREE.Vector3(), planeZ = 0) {
   return { THREE, camera, mesh } as unknown as PaintSceneHandle;
 }
 
-/** Objet dont le raycast pose un point à `z`, à la façon d'une surface plane. */
+/** Object whose raycast returns a point at `z`, like a flat surface. */
 function planeAt(z: number, name: string) {
   const object = new THREE.Object3D();
   object.name = name;
@@ -57,8 +57,9 @@ function planeAt(z: number, name: string) {
 }
 
 /**
- * Poignée d'un **modèle** : `mesh` est le groupe racine (espace des traits, comme côté splat) et
- * `modelObject` l'objet du modèle chargé — c'est lui, et lui seul, que le rayon interroge.
+ * Handle of a **model**: `mesh` is the root group (the space of the strokes, as on the splat side)
+ * and `modelObject` the object of the loaded model: it is that one, and that one alone, that the
+ * ray queries.
  */
 function fakeModelHandle() {
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
@@ -74,7 +75,7 @@ function fakeModelHandle() {
 }
 
 describe('raycastSurface', () => {
-  it('touche la surface au centre de la vue et rend le point en espace monde ET objet', () => {
+  it('hits the surface at the centre of the view and returns the point in world AND object space', () => {
     const sample = raycastSurface(fakeHandle(), [100, 100], VIEWPORT, 6);
     expect(sample).not.toBeNull();
     expect(sample!.world[0]).toBeCloseTo(0, 5);
@@ -84,29 +85,29 @@ describe('raycastSurface', () => {
     expect(sample!.screenStep).toBe(6);
   });
 
-  it('ramène le point en espace objet quand le média est transformé', () => {
-    // Mesh décalé de 3 en x : le point du monde (0,0,0) vaut (-3,0,0) en espace objet.
+  it('brings the point back into object space when the media is transformed', () => {
+    // Mesh offset by 3 in x: the world point (0,0,0) is (-3,0,0) in object space.
     const sample = raycastSurface(fakeHandle(new THREE.Vector3(3, 0, 0)), [100, 100], VIEWPORT, 0);
     expect(sample!.world[0]).toBeCloseTo(0, 5);
     expect(sample!.object[0]).toBeCloseTo(-3, 5);
   });
 
-  it('oriente la normale approchée vers la caméra, en espace objet', () => {
+  it('orients the approximate normal towards the camera, in object space', () => {
     const sample = raycastSurface(fakeHandle(), [100, 100], VIEWPORT, 0);
     expect(sample!.toCamera[2]).toBeCloseTo(1, 5);
     expect(Math.hypot(...sample!.toCamera)).toBeCloseTo(1, 5);
   });
 
-  it('renvoie null quand le rayon ne touche rien (le trait s’arrête là)', () => {
+  it('returns null when the ray hits nothing (the stroke stops there)', () => {
     const handle = fakeHandle();
-    // Plan parallèle au rayon central : aucune intersection.
+    // Plane parallel to the central ray: no intersection.
     Object.assign(handle.mesh, { raycast: () => {} });
     expect(raycastSurface(handle, [100, 100], VIEWPORT, 0)).toBeNull();
   });
 });
 
 describe('makeProjector', () => {
-  it('projette le centre de l’objet au centre de la vue', () => {
+  it('projects the centre of the object to the centre of the view', () => {
     const project = makeProjector(fakeHandle(), VIEWPORT);
     const screen = project(0, 0, 0);
     expect(screen).not.toBeNull();
@@ -114,7 +115,7 @@ describe('makeProjector', () => {
     expect(screen![1]).toBeCloseTo(100, 4);
   });
 
-  it('descend à l’écran quand le point descend dans la scène', () => {
+  it('goes down the screen when the point goes down in the scene', () => {
     const project = makeProjector(fakeHandle(), VIEWPORT);
     const up = project(0, 1, 0)!;
     const down = project(0, -1, 0)!;
@@ -122,16 +123,16 @@ describe('makeProjector', () => {
     expect(down[1]).toBeGreaterThan(100);
   });
 
-  it('refuse un point derrière la caméra au lieu de rendre un pixel plausible', () => {
+  it('refuses a point behind the camera instead of returning a plausible pixel', () => {
     const project = makeProjector(fakeHandle(), VIEWPORT);
     expect(project(0, 0, 20)).toBeNull();
   });
 });
 
-describe('surface peinte d’un modèle 3D', () => {
-  it('descend dans les enfants du modèle — un groupe ne répond pas lui-même au rayon', () => {
+describe('painted surface of a 3D model', () => {
+  it('descends into the children of the model: a group does not answer the ray itself', () => {
     const handle = fakeModelHandle();
-    // Sans enfant peignable, le rayon ne touche rien : le groupe racine n'a pas de géométrie.
+    // Without a paintable child, the ray hits nothing: the root group has no geometry.
     expect(raycastSurface(handle, [100, 100], VIEWPORT, 0)).toBeNull();
     handle.modelObject!.add(planeAt(0, 'surface'));
     handle.mesh.updateMatrixWorld(true);
@@ -140,22 +141,22 @@ describe('surface peinte d’un modèle 3D', () => {
     expect(sample!.depth).toBeCloseTo(10, 5);
   });
 
-  it('ignore ce qui n’est pas la surface du modèle — traits déjà posés, clones de comparaison', () => {
+  it('ignores what is not the surface of the model: strokes already laid, comparison clones', () => {
     const handle = fakeModelHandle();
     handle.modelObject!.add(planeAt(0, 'surface'));
-    // Un trait est enfant du groupe RACINE, plus près de la caméra que la surface : sans le
-    // ciblage sur `modelObject`, peindre par-dessus un trait accrocherait le trait.
+    // A stroke is a child of the ROOT group, closer to the camera than the surface: without the
+    // targeting of `modelObject`, painting over a stroke would snap to the stroke.
     handle.mesh.add(planeAt(5, 'trait'));
     handle.mesh.updateMatrixWorld(true);
     const sample = raycastSurface(handle, [100, 100], VIEWPORT, 0);
     expect(sample!.depth).toBeCloseTo(10, 5);
   });
 
-  it('écarte les options de variante invisibles, toutes cuites au même endroit', () => {
+  it('discards invisible variant options, all baked in the same place', () => {
     const handle = fakeModelHandle();
-    const hidden = planeAt(5, 'variante cachée');
+    const hidden = planeAt(5, 'hidden variant');
     hidden.visible = false;
-    handle.modelObject!.add(hidden, planeAt(0, 'variante visible'));
+    handle.modelObject!.add(hidden, planeAt(0, 'visible variant'));
     handle.mesh.updateMatrixWorld(true);
     const sample = raycastSurface(handle, [100, 100], VIEWPORT, 0);
     expect(sample!.depth).toBeCloseTo(10, 5);
@@ -163,7 +164,7 @@ describe('surface peinte d’un modèle 3D', () => {
 });
 
 describe('paintHandle', () => {
-  it('refuse une poignée sans objet à peindre — la scène n’est pas montée', () => {
+  it('refuses a handle without an object to paint: the scene is not mounted', () => {
     expect(paintHandle(null)).toBeNull();
     expect(paintHandle({ THREE } as unknown as PaintSceneHandle)).toBeNull();
     const handle = fakeModelHandle();

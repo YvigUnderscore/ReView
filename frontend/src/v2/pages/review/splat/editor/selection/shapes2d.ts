@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Géométrie 2D de la sélection de splats (10.G) — fonctions pures (testables sans WebGL).
- * Les formes sont exprimées en pixels écran ; la projection 3D→2D vit dans `screenSelect.ts`.
+ * 2D geometry of the splat selection (10.G): pure functions (testable without WebGL).
+ * Shapes are expressed in screen pixels; the 3D→2D projection lives in `screenSelect.ts`.
  */
 
 export interface Rect2D {
@@ -13,13 +13,13 @@ export interface Rect2D {
   h: number;
 }
 
-/** Forme de sélection tracée à l'écran : rectangle (marquee) ou polygone libre (lasso). */
+/** Selection shape drawn on screen: rectangle (marquee) or free polygon (lasso). */
 export type SelectionShape = { kind: 'rect'; rect: Rect2D } | { kind: 'lasso'; points: [number, number][] };
 
-/** Combinaison avec la sélection existante (modificateurs Maj = ajouter, Alt = retirer). */
+/** Combination with the existing selection (modifiers: Shift = add, Alt = remove). */
 export type SelectCombine = 'replace' | 'add' | 'subtract';
 
-/** Rectangle normalisé (w/h ≥ 0) à partir de deux coins de drag quelconques. */
+/** Normalized rectangle (w/h ≥ 0) from any two drag corners. */
 export function normalizeRect(x0: number, y0: number, x1: number, y1: number): Rect2D {
   return {
     x: Math.min(x0, x1),
@@ -33,7 +33,7 @@ export function pointInRect(x: number, y: number, r: Rect2D): boolean {
   return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
 
-/** Point dans polygone (ray casting pair/impair) — polygone implicitement fermé. */
+/** Point in polygon (even-odd ray casting); the polygon is implicitly closed. */
 export function pointInPolygon(x: number, y: number, poly: [number, number][]): boolean {
   if (poly.length < 3) return false;
   let inside = false;
@@ -45,13 +45,13 @@ export function pointInPolygon(x: number, y: number, poly: [number, number][]): 
   return inside;
 }
 
-/** Prédicat écran (px) correspondant à une forme de sélection. */
+/** Screen predicate (px) matching a selection shape. */
 export function shapePredicate(shape: SelectionShape): (x: number, y: number) => boolean {
   if (shape.kind === 'rect') return (x, y) => pointInRect(x, y, shape.rect);
   return (x, y) => pointInPolygon(x, y, shape.points);
 }
 
-/** Fusionne les indices touchés avec la sélection précédente selon le mode. */
+/** Merges the touched indices with the previous selection according to the mode. */
 export function combineSelection(
   prev: ReadonlySet<number>,
   hits: Iterable<number>,

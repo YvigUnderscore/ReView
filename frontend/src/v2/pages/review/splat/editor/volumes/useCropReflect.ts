@@ -8,10 +8,10 @@ import type { VolumesState } from './useVolumes';
 import { buildCropChecks, pointCropped } from './cropPoints';
 
 /**
- * Reflet des volumes de crop dans l'overlay « Points » (Phase 28) : en mode points, recalcule
- * (débouncé) quels centres tombent sous les volumes — mêmes TRS que la sérialisation — et les
- * escamote via le canal `setCropped` du nuage (séparé du masque de suppression). Recalculé quand
- * la liste des volumes change ou qu'une TRS est modifiée (gizmo/champs, `trsTick`).
+ * Mirror of the crop volumes in the "Points" overlay (Phase 28): in points mode, recomputes
+ * (debounced) which centres fall under the volumes, using the same TRS as the serialization, and
+ * carves them out via the cloud's `setCropped` channel (separate from the deletion mask).
+ * Recomputed when the list of volumes changes or a TRS is modified (gizmo/fields, `trsTick`).
  */
 export function useCropReflect(
   splat: SplatViewer,
@@ -24,7 +24,7 @@ export function useCropReflect(
     if (!enabled || !ready || renderMode !== 'points') return;
     const handle = getSceneHandle();
     if (!handle) return;
-    // Débouncé : le drag du gizmo fait défiler `trsTick` — un recalcul par pause suffit.
+    // Debounced: the gizmo drag advances `trsTick`, so one recomputation per pause is enough.
     const t = setTimeout(() => {
       const checks = buildCropChecks(handle.THREE, serialize());
       const indices: number[] = [];

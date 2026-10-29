@@ -14,45 +14,45 @@ import { readCullingOff, writeCullingOff } from './scene/cullingDefault';
 import { splatEditRail, splatSwitcherModes, splatToolsFor } from './splatChrome';
 import type { SplatViewer } from './useSplat';
 
-/** Tracé de sélection armé dans l'overlay ancré à la vue (null : aucun tracé en cours). */
+/** Armed selection trace in the overlay anchored to the view (null: no trace in progress). */
 export type SplatSelectTool = 'rect' | 'lasso' | 'brush';
 
 /**
- * Bascule du splat — liste fixe, calculée une fois. Elle ne porte que des **clés** de
- * traduction, jamais de libellé traduit : rien n'y fige la langue au chargement. La rendre
- * stable évite de réinscrire le gestionnaire clavier du chrome à chaque rendu.
+ * Splat toggle: fixed list, computed once. It only carries translation **keys**, never a
+ * translated label: nothing freezes the language at load time. Keeping it stable avoids
+ * re-registering the chrome's keyboard handler on every render.
  */
 const SWITCHER_MODES = splatSwitcherModes();
 
 export interface SplatViewState {
-  /** État du chrome (mode, outil, panneau, tiroir) et son patcheur — préférences persistées. */
+  /** Chrome state (mode, tool, panel, drawer) and its patcher: persisted preferences. */
   state: ChromeState;
   update: (patch: Partial<ChromeState>) => void;
   /**
-   * Bascule réellement offerte — la MÊME liste pour l'en-tête et pour les touches numériques.
-   * Sans cette unicité, un segment retiré de l'en-tête resterait armable au clavier.
+   * Toggle really offered: the SAME list for the header and the number keys.
+   * Without this uniqueness, a segment removed from the header would stay armable from the keyboard.
    */
   modes: ReviewMode[];
-  /** Interrupteur de culling du panneau — préférence mémorisée par utilisateur. */
+  /** Panel culling switch: preference remembered per user. */
   culling: { off: boolean; onOff: (off: boolean) => void };
-  /** Outil armé résolu dans le mode courant (repli : premier outil du mode). */
+  /** Armed tool resolved in the current mode (fallback: first tool of the mode). */
   activeTool: ReviewTool;
   /**
-   * Second groupe du rail : les outils d'édition du nuage, ramenés à gauche au lot 13. Absent
-   * sans éditeur monté — et la même absence vaut pour le clavier (`splatToolsFor`).
+   * Second rail group: the cloud's editing tools, moved to the left in lot 13. Absent
+   * without a mounted editor, and the same absence applies to the keyboard (`splatToolsFor`).
    */
   railExtra?: RailSection;
-  /** Tracé de sélection à armer dans l'overlay, déduit de l'outil de l'éditeur. */
+  /** Selection trace to arm in the overlay, deduced from the editor tool. */
   selectTool: SplatSelectTool | null;
-  /** L'animation caméra diffère de la présentation persistée (bouton « Enregistrer »). */
+  /** The camera animation differs from the persisted presentation ("Save" button). */
   animDirty: boolean;
 }
 
 /**
- * État de vue du bloc splat : chrome (mode/outil/panneau), culling, correspondance outil armé →
- * tracé de sélection, et l'écart entre l'animation courante et la présentation persistée.
- * Extrait de `SplatReview` (budget lignes) — rien ici ne touche à la scène Three, sauf
- * l'interrupteur de culling, qui la pilote par la poignée du viewer.
+ * Splat view state: chrome (mode, tool, panel), culling, mapping of the armed tool to the
+ * selection trace, and the gap between the current animation and the persisted presentation.
+ * Extracted from `SplatReview` (line budget): nothing here touches the Three scene, except the
+ * culling switch, which drives it through the viewer's handle.
  */
 export function useSplatView({
   splat,
@@ -64,27 +64,27 @@ export function useSplatView({
   splat: SplatViewer;
   data: MediaResp;
   pres: PresentationState;
-  /** Outil courant de l'éditeur splat (l'overlay de tracé en dépend). */
+  /** Current tool of the splat editor (the trace overlay depends on it). */
   editorTool: EditorTool;
-  /** Éditeur monté : sans lui, les outils d'édition ne sont ni au rail ni au clavier. */
+  /** Editor mounted: without it, the editing tools are neither on the rail nor on the keyboard. */
   showEdit: boolean;
 }): SplatViewState {
-  // Garde de vol : clic droit maintenu = mode de navigation, le clavier appartient au vol et
-  // aucune lettre d'outil n'arme de gizmo (`S` armait l'Échelle en reculant).
+  // Flight guard: right button held means navigation mode, the keyboard belongs to the flight and
+  // no tool letter arms a gizmo (`S` used to arm Scale while reversing).
   //
-  // `modes` est la bascule que le splat offre VRAIMENT : « Mise en scène » et « Nettoyer » l'ont
-  // quittée (cf. `splatChrome`), il n'y reste qu'« Explorer » — la bascule s'efface donc. Les
-  // touches numériques lisent la même liste : un segment absent de l'en-tête ne s'arme pas au
-  // clavier. Les LETTRES d'outils, elles, continuent de mener aux deux modes — et à eux seuls :
-  // `toolsOf` est la MÊME liste que celle du rail, éditeur absent compris, donc aucune lettre
-  // n'arme un outil qui n'est nulle part à l'écran.
+  // `modes` is the switch the splat REALLY offers: "Staging" and "Clean up" have left it
+  // (cf. `splatChrome`): only "Explore" remains, so the switch disappears. The number keys
+  // read the same list: a segment absent from the header cannot be armed from the keyboard.
+  // The tool LETTERS, for their part, keep leading to both modes, and to them alone:
+  // `toolsOf` is the SAME list as the rail's, editor absence included, so no letter arms a tool
+  // that is nowhere on screen.
   const toolsOf = useCallback((mode: ModeId) => splatToolsFor(mode, showEdit), [showEdit]);
   const { state, update } = useChromeState('SPLAT', {
     modes: SWITCHER_MODES,
     tools: toolsOf,
     isFlying: splat.isFlying,
   });
-  // Culling Spark actif par défaut, sauf préférence contraire — mémorisée par utilisateur.
+  // Spark culling active by default, unless the user prefers otherwise: remembered per user.
   const [cullingOff, setCullingOffState] = useState(readCullingOff);
   const onCullingOff = useCallback(
     (off: boolean) => {
@@ -95,17 +95,17 @@ export function useSplatView({
     [splat],
   );
 
-  // Mode Mise en scène = atelier caméra : entrer dans le mode sort de la caméra du plan (PiP +
-  // caméra-objet), en sortir y rentre. **Seule écriture** du mode layout côté splat depuis la
-  // Phase 50 : l'interrupteur du panneau Caméra pilote `state.mode`, comme en 3D, au lieu
-  // d'appeler `setLayoutMode` en parallèle (deux sources de vérité qui pouvaient diverger).
+  // Staging mode = camera workshop: entering the mode takes the camera off the plan (PiP and
+  // camera-object), leaving it puts it back. **The only write** of the layout mode on the splat side
+  // since Phase 50: the Camera panel toggle drives `state.mode`, as in 3D, instead of calling
+  // `setLayoutMode` in parallel (two sources of truth that could diverge).
   const { setLayoutMode } = pres.layout;
   useEffect(() => {
     setLayoutMode(state.mode === 'stage');
   }, [state.mode, setLayoutMode]);
 
-  // « Non enregistré » = l'animation diffère de la présentation persistée — et plus « une
-  // animation existe » (qui restait sale pour toujours, même juste après une publication).
+  // "Not saved" = the animation differs from the persisted presentation, and no longer "an
+  // animation exists" (which stayed dirty forever, even just after publishing).
   const savedAnimJson = useMemo(
     () => JSON.stringify(normalizeAnim(data.splatPresentation?.cameraAnim)),
     [data.splatPresentation],
@@ -121,8 +121,8 @@ export function useSplatView({
           ? 'brush'
           : null;
 
-  // Repli en deux crans : le premier outil du mode, sinon celui du mode par défaut — « Nettoyer »
-  // sans éditeur monté n'a aucun outil, et la barre d'options a besoin d'un descripteur.
+  // Two-step fallback: the first tool of the mode, else the one of the default mode. "Clean up"
+  // without a mounted editor has no tool, and the options bar needs a descriptor.
   const modeTools = toolsOf(state.mode);
   const activeTool =
     modeTools.find((tool) => tool.id === state.tool) ?? modeTools[0] ?? toolsFor(DEFAULT_MODE, 'SPLAT')[0];

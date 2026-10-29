@@ -7,9 +7,9 @@ import type { BakedSplat } from './bakeSplats';
 import { writeSpz } from './writeSpz';
 
 /**
- * Prouve la justesse de l'export SPZ (41.C) **sans WebGL** : on écrit des splats cuits avec le
- * `SpzWriter` de Spark, puis on les relit avec son `SpzReader` et on compare aux tolérances de
- * quantification du format. Si Spark relit ce qu'on a écrit, tout viewer (dont ReView) le fera.
+ * Proves the correctness of the SPZ export (41.C) **without WebGL**: baked splats are written with
+ * Spark's `SpzWriter`, then read back with its `SpzReader` and compared within the quantization
+ * tolerances of the format. If Spark reads back what we wrote, any viewer (ReView included) will too.
  */
 
 interface DecodedSplat {
@@ -50,14 +50,14 @@ const baked = (over: Partial<BakedSplat> = {}): BakedSplat => ({
 });
 
 describe('writeSpz', () => {
-  it('produit un conteneur gzip non vide', async () => {
+  it('produces a non-empty gzip container', async () => {
     const bytes = await writeSpz([baked()]);
     expect(bytes.byteLength).toBeGreaterThan(2);
     expect(bytes[0]).toBe(0x1f); // magic gzip
     expect(bytes[1]).toBe(0x8b);
   });
 
-  it('relit le bon nombre de splats et des centres fidèles', async () => {
+  it('reads back the right number of splats and faithful centres', async () => {
     const splats = [
       baked({ center: [1, 2, 3] }),
       baked({ center: [-0.5, 0.25, 10] }),
@@ -72,7 +72,7 @@ describe('writeSpz', () => {
     });
   });
 
-  it('conserve opacité, couleur et échelle aux tolérances de quantification', async () => {
+  it('keeps opacity, colour and scale within the quantization tolerances', async () => {
     const splats = [
       baked({ opacity: 0.8, color: [0.9, 0.1, 0.4], scales: [0.05, 0.2, 0.5] }),
       baked({ opacity: 0.3, color: [0.2, 0.7, 0.6], scales: [0.1, 0.1, 0.1] }),
@@ -82,21 +82,21 @@ describe('writeSpz', () => {
       expect(decoded[i].alpha).toBeCloseTo(s.opacity, 1);
       for (let k = 0; k < 3; k++) {
         expect(decoded[i].rgb[k]).toBeCloseTo(s.color[k], 1);
-        // Échelle log-quantifiée : ~6,5 % par pas → tolérance relative généreuse.
+        // Log-quantized scale: ~6.5% per step, so a generous relative tolerance.
         expect(decoded[i].scale[k] / s.scales[k]).toBeGreaterThan(0.85);
         expect(decoded[i].scale[k] / s.scales[k]).toBeLessThan(1.15);
       }
     });
   });
 
-  it('conserve l’orientation (quaternion) après aller-retour', async () => {
-    // Rotation quelconque normalisée.
+  it('keeps the orientation (quaternion) after a round trip', async () => {
+    // Arbitrary normalized rotation.
     const raw = [0.2, -0.5, 0.3, 0.78];
     const n = Math.hypot(...raw);
     const q = raw.map((v) => v / n) as [number, number, number, number];
     const decoded = await readSpz(await writeSpz([baked({ quaternion: q })]));
     const d = decoded[0].quat;
-    // |produit scalaire| ≈ 1 si les quaternions représentent la même rotation.
+    // |dot product| ≈ 1 if the quaternions represent the same rotation.
     const dot = Math.abs(q[0] * d[0] + q[1] * d[1] + q[2] * d[2] + q[3] * d[3]);
     expect(dot).toBeGreaterThan(0.99);
   });

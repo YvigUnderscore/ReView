@@ -16,21 +16,21 @@ import {
 import { disposeVolume, type VolumeRuntime } from './editor/volumes/cropVolume';
 
 /**
- * Rejeu des éditions du nuage **en lecture** : transformation et flip d'orientation, puis volumes
- * de crop (sans filaire), masque de suppression et transformations de sous-ensembles.
+ * Replays the cloud edits in **read mode**: orientation transform and flip, then crop volumes
+ * (without wireframe), deletion mask and subset transforms.
  *
- * Deux sources, jamais mélangées sur la transformation :
- *  - les éditions du **média**, quand aucun commentaire n'est lu — l'éditeur les gère lui-même
- *    quand il est monté, d'où le retrait ;
- *  - la **proposition** d'un commentaire (lot 14), qui prend la main dès qu'elle existe, éditeur
- *    monté ou non. C'est tout l'objet du lot : un gestionnaire est la seule personne capable de
- *    produire une proposition, et jusqu'ici c'était la seule à qui on refusait de la montrer.
- *    L'éditeur, lui, se suspend (`useEditorSuspend`) et reprend sa scène intacte à la sortie.
+ * Two sources, never mixed for the transform:
+ *  - the **media** edits, when no comment is being read: the editor manages them itself
+ *    when it is mounted, hence the removal;
+ *  - the **proposal** of a comment (lot 14), which takes over as soon as it exists, editor
+ *    mounted or not. That is the whole point of the lot: a manager is the only person able to
+ *    produce a proposal, and until now they were the only one refused the ability to show it.
+ *    The editor suspends itself (`useEditorSuspend`) and gets its scene back intact on exit.
  *
- * Les binaires de la proposition (masque, ops de sous-ensemble) sont **défaits à la sortie** : le
- * masque restaure les seuls splats qu'il avait masqués en plus, et les ops rejouées sont annulées
- * par leur instantané. Sans cela, relâcher le commentaire laisserait le nuage du média troué et
- * déplacé jusqu'au prochain rechargement.
+ * The binaries of the proposal (mask, subset ops) are **undone on exit**: the mask restores
+ * only the splats it had additionally masked, and the replayed ops are cancelled by their
+ * snapshot. Without this, releasing the comment would leave the media's cloud holed and moved
+ * until the next reload.
  */
 export function useSavedSplatEdits(
   splat: SplatViewer,
@@ -39,7 +39,7 @@ export function useSavedSplatEdits(
   proposal?: SplatEditProposal | null,
 ): void {
   const { applyTransform, setBaseFlip, ready, getSceneHandle } = splat;
-  // La lecture pilote le nuage quand il n'y a pas d'éditeur, ou quand une proposition est lue.
+  // Reading drives the cloud when there is no editor, or when a proposal is being read.
   const reading = !showEdit || proposal != null;
   const saved = proposal ?? data.splatEdits;
 
@@ -52,11 +52,11 @@ export function useSavedSplatEdits(
     }
   }, [reading, ready, applyTransform, savedTransform, setBaseFlip, savedFlip]);
 
-  // Les éditions comptent pour tous les spectateurs : elles sont rejouées telles quelles.
+  // Edits count for all viewers: they are replayed as they are.
   const savedVolumes = saved?.volumes ?? null;
-  // Binaires : ceux de la proposition quand elle est lue, ceux du média sinon. Éditeur monté, les
-  // binaires DU MÉDIA sont déjà chargés par la persistance — les rejouer ici masquerait deux fois
-  // et surtout rejouerait deux fois les ops de sous-ensemble, qui ne sont pas idempotentes.
+  // Binaries: those of the proposal when it is read, those of the media otherwise. With the editor
+  // mounted, the media's OWN binaries are already loaded by persistence: replaying them here would
+  // mask twice and, above all, replay the subset ops twice, which are not idempotent.
   const maskUrl = proposal ? proposal.maskUrl : showEdit ? null : data.splatMaskUrl;
   const subsetUrl = proposal ? proposal.subsetUrl : showEdit ? null : data.splatSubsetUrl;
   const undoBinaries = proposal != null;
@@ -76,8 +76,8 @@ export function useSavedSplatEdits(
       if (maskUrl) {
         const indices = await fetchMaskIndices(maskUrl).catch(() => []);
         if (!disposed && indices.length) {
-          // `hideSplats` ignore ce qui est déjà masqué et rend les opacités d'origine du reste :
-          // c'est exactement ce qu'il faut rendre à la sortie, sans toucher au masque du média.
+          // `hideSplats` ignores what is already masked and returns the original opacities of the rest:
+          // exactly what must be given back on exit, without touching the media's mask.
           if (undoBinaries) hidden = hideSplats(handle, indices);
           else applyMaskIndices(handle, indices);
         }

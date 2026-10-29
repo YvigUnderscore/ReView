@@ -6,29 +6,29 @@ import type { SplatSceneHandle } from '../../useSplat';
 import { combineSelection, type SelectCombine } from './shapes2d';
 
 /**
- * Brush de surface (10.G-V3 ; Phase 28) : sélectionne les splats sous le disque du pinceau **et**
- * proches de la profondeur de la surface visée — un raycast au centre du pinceau donne le point de
- * surface, seuls les splats dont la profondeur vue tombe dans une bande autour de ce point sont
- * pris (les splats traversés loin derrière sont ignorés). Repli prévu par le plan : l'API
- * `Readback` de Spark lit par **index de splat**, pas par pixel — pas de depth-picking par
- * pixel exploitable en l'état ; `SplatMesh.raycast` fournit la surface, la bande fait le tri.
+ * Surface brush (10.G-V3; Phase 28): selects the splats under the brush disc **and** close to
+ * the depth of the targeted surface. A raycast at the centre of the brush gives the surface point;
+ * only splats whose seen depth falls within a band around this point are taken (splats traversed
+ * far behind are ignored). Planned fallback: Spark's `Readback` API reads by **splat index**,
+ * not per pixel, so no usable per-pixel depth picking as it stands; `SplatMesh.raycast` provides
+ * the surface and the band does the sorting.
  */
 
-/** Fraction de la profondeur touchée servant de demi-bande de surface (Phase 28). */
+/** Fraction of the touched depth used as the half-width of the surface band (Phase 28). */
 export const DEPTH_BAND_FRACTION = 0.03;
 
 /**
- * Demi-épaisseur (espace vue) de la bande de surface : **fixe** relativement à la profondeur
- * touchée, **indépendante du rayon du pinceau** (Phase 28). Un gros pinceau ne creuse donc plus
- * en profondeur (« perçage » corrigé) : il élargit l'empreinte à l'écran, pas l'épaisseur.
+ * Half-thickness (view space) of the surface band: **fixed** relative to the touched depth,
+ * **independent of the brush radius** (Phase 28). A large brush therefore no longer digs in
+ * depth ("drilling" fixed): it widens the footprint on screen, not the thickness.
  */
 export function depthBand(hitViewZ: number, fraction = DEPTH_BAND_FRACTION): number {
   return Math.max(Math.abs(hitViewZ) * fraction, 1e-6);
 }
 
 /**
- * Pur : indices dont la projection tombe dans le disque écran du pinceau ET dont la profondeur
- * vue (w du clip, pour une caméra perspective) est dans la bande de surface.
+ * Pure: indices whose projection falls in the brush's screen disc AND whose seen depth
+ * (clip w, for a perspective camera) lies within the surface band.
  */
 export function collectBrushHits(
   e: ArrayLike<number>,
@@ -50,8 +50,8 @@ export function collectBrushHits(
     const y = centers[3 * i + 1];
     const z = centers[3 * i + 2];
     const w = e[3] * x + e[7] * y + e[11] * z + e[15];
-    if (w <= 0) continue; // derrière la caméra
-    if (w < zMin || w > zMax) continue; // hors de la bande de surface
+    if (w <= 0) continue; // behind the camera
+    if (w < zMin || w > zMax) continue; // outside the surface band
     const sx = (((e[0] * x + e[4] * y + e[8] * z + e[12]) / w) * 0.5 + 0.5) * width;
     const sy = (((e[1] * x + e[5] * y + e[9] * z + e[13]) / w) * -0.5 + 0.5) * height;
     const dx = sx - brush.x;
@@ -62,8 +62,8 @@ export function collectBrushHits(
 }
 
 /**
- * Applique un coup de pinceau : raycast de surface au centre, bande de profondeur, disque
- * écran. Renvoie `null` si le pinceau est dans le vide (aucune surface touchée).
+ * Applies a brush stroke: surface raycast at the centre, depth band, screen disc.
+ * Returns `null` if the brush is over the void (no surface touched).
  */
 export function selectByBrush(
   handle: SplatSceneHandle,
@@ -85,7 +85,7 @@ export function selectByBrush(
   mesh.raycast(raycaster, hits);
   if (hits.length === 0) return null;
   hits.sort((a, b) => a.distance - b.distance);
-  // Profondeur vue de la surface = -z en espace caméra (équivaut au w du clip perspective).
+  // Seen depth of the surface = -z in camera space (equivalent to the perspective clip w).
   const hitView = hits[0].point.clone().applyMatrix4(camera.matrixWorldInverse);
   const viewZ = -hitView.z;
   const halfDepth = depthBand(viewZ);

@@ -23,37 +23,37 @@ import { applyCulling } from './scene/viewerConfig';
 import { renderPipPass, type PipRect } from '../viewer/pipWindow';
 import { useRenderGate, SETTLE_WINDOW_MS } from '../viewer/renderScheduler';
 
-// Contrats du viewer (scène, poignée d'édition, API rendue à la page) : définis dans
-// `scene/splatViewerTypes`, réexportés ici — l'entrée publique du viewer reste `useSplat`.
+// Viewer contracts (scene, editing handle, API rendered to the page): defined in
+// `scene/splatViewerTypes`, re-exported here: the viewer's public entry point stays `useSplat`.
 export type { SplatSceneHandle, SplatViewer } from './scene/splatViewerTypes';
 
 /**
  * Viewer Gaussian Splat (Spark/SparkJS) — 10.G.
- * Orchestrateur mince : délègue le montage de la scène à `scene/createScene`, l'auto-cadrage à
- * `scene/frameCamera`, le raycast à `scene/raycast` et la miniature à `scene/thumbnail`. Gère
- * ici le cycle de vie React, la boucle de rendu, les pastilles de points et la vue caméra
- * (stockée dans `Comment.cameraState`, comme la review 3D). Aucune dépendance à model-viewer.
+ * Thin orchestrator: delegates the scene mounting to `scene/createScene`, the auto-framing to
+ * `scene/frameCamera`, the raycast to `scene/raycast` and the thumbnail to `scene/thumbnail`. Handles
+ * here the React lifecycle, the render loop, the points hotspots and the camera view
+ * (stored in `Comment.cameraState`, like the 3D review). No dependency on model-viewer.
  *
- * three + OrbitControls + Spark sont importés dynamiquement (uniquement à l'ouverture d'un
- * splat) pour rester hors du bundle initial — les imports type-only ci-dessus sont erased.
+ * three, OrbitControls and Spark are imported dynamically (only when a splat is opened)
+ * to stay out of the initial bundle: the type-only imports above are erased.
  *
- * Les poignées impératives (miniature, modes de rendu, stats, culling, PiP) vivent dans
- * `scene/useSplatHandles` ; les points d'intérêt, dans `poi/usePoiMarkers` — le même hook que le
- * viewer 3D. Les deux ne lisent que les refs montées ici.
+ * The imperative handles (thumbnail, render modes, stats, culling, PiP) live in
+ * `scene/useSplatHandles`; the points of interest in `poi/usePoiMarkers`, the same hook as the
+ * 3D viewer. Both only read the refs mounted here.
  */
 export function useSplat(url: string | null, fileName: string, frameAspect?: number): SplatViewer {
   const containerRef = useRef<HTMLDivElement>(null);
-  // Aspect du cadre de livraison (Phase 25) : la caméra le garde quel que soit l'écran,
-  // la vue étant étendue au conteneur entier (setViewOffset, cf. resizeRendererCamera).
+  // Delivery frame aspect (Phase 25): the camera keeps it whatever the screen,
+  // the view being extended to the whole container (setViewOffset, cf. resizeRendererCamera).
   const frameAspectRef = useRef<number>(DEFAULT_REVIEW_ASPECT);
   frameAspectRef.current = frameAspect ?? DEFAULT_REVIEW_ASPECT;
   const sceneRef = useRef<SplatScene | null>(null);
   const threeRef = useRef<typeof import('three') | null>(null);
-  // Résolveur d'une capture de miniature en attente (rempli après le prochain rendu).
+  // Resolver of a pending thumbnail capture (filled after the next render).
   const captureReq = useRef<((d: string | null) => void) | null>(null);
-  // Points d'intérêt : le MÊME hook que le viewer 3D (`poi/usePoiMarkers`). Ne diffèrent ici
-  // que l'objet porteur (le SplatMesh), le rayon de la scène et le rayon de surface — un splat
-  // n'a pas de triangles, c'est `raycastAt` qui interroge le nuage.
+  // Points of interest: the SAME hook as the 3D viewer (`poi/usePoiMarkers`). They differ here only
+  // by the carrying object (the SplatMesh), the scene ray and the surface ray: a splat has no
+  // triangles, so it is `raycastAt` that queries the cloud.
   const poiAccess = useCallback((): PoiSceneAccess | null => {
     const scene = sceneRef.current;
     const THREE = threeRef.current;
@@ -70,20 +70,20 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   }, []);
   const poi = usePoiMarkers(poiAccess);
   const { mountMarker, project: projectPoi } = poi;
-  // Overlay « nuage de points » du mode points (enfant du mesh, construit à la demande) —
-  // réactif à la sélection et aux suppressions (setSelection/setHidden).
+  // Point-cloud overlay of the points mode (child of the mesh, built on demand),
+  // reactive to the selection and to deletions (setSelection/setHidden).
   const pointsRef = useRef<PointCloud | null>(null);
-  // Échantillonneur de stats (FPS, splats) alimenté par la boucle de rendu.
+  // Stats sampler (FPS, splats), fed by the render loop.
   const statsRef = useRef<StatsSampler | null>(null);
-  // Callbacks appelés à chaque frame (dt en secondes) — animation caméra, presets (V5).
+  // Callbacks called on each frame (dt in seconds): camera animation, presets (V5).
   const frameCbs = useRef(new Set<(dt: number) => void>());
-  // Contrôles de vol (clic droit + ZQSD) — exposés pour inhiber les raccourcis d'édition (11.G).
+  // Flight controls (right click + ZQSD): exposed to inhibit the editing shortcuts (11.G).
   const flyRef = useRef<ReturnType<typeof createFlyControls> | null>(null);
-  // Rect de la fenêtre PiP (mode layout, Phase 27) — non-null : 2ᵉ passe de rendu par frame.
+  // PiP window rect (layout mode, Phase 27): non-null means a second render pass per frame.
   const pipRectRef = useRef<PipRect | null>(null);
-  // Rendu à la demande (F14) — porte l'invalidation, le comptage des lecteurs de FPS, la boucle.
+  // On-demand rendering (F14): carries the invalidation, the FPS-reader count and the loop.
   const gate = useRenderGate();
-  // Capture de vue du panneau Export : rendu dédié au cadre de livraison, sans la grille de sol.
+  // View capture for the Export panel: rendering dedicated to the delivery frame, without the floor grid.
   const captureView = viewCapturer(
     () => sceneRef.current,
     () => frameAspectRef.current,
@@ -91,13 +91,13 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
   );
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  // Progression du téléchargement du fichier splat (41.B) — démarre à 0, passe à null une fois
-  // le fichier reçu (le décodage/LOD prend le relais, sans progression mesurable).
+  // Progress of the splat file download (41.B): starts at 0, becomes null once the file is
+  // received (decoding/LOD takes over, with no measurable progress).
   const [progress, setProgress] = useState<number | null>(0);
 
   useEffect(() => {
-    // Pas de reset d'état ici (règle react-hooks/set-state-in-effect) : la page review
-    // remonte via `key={mediaId}` à chaque média, donc ready/loadError repartent de false.
+    // No state reset here (react-hooks/set-state-in-effect rule): the review page is remounted
+    // via `key={mediaId}` for each media, so ready/loadError start again from false.
     const container = containerRef.current;
     if (!url || !container) return;
 
@@ -114,36 +114,36 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
 
       const modules: SplatModules = { THREE, OrbitControls, SparkRenderer, SplatMesh };
       const { renderer, scene, camera, controls, spark } = createScene(modules, container);
-      // Culling actif par défaut (lot 8), sauf préférence contraire de l'utilisateur. Même
-      // lecture que l'interrupteur du panneau (`useSplatView`) : les deux ne peuvent plus
-      // diverger, ni entre elles ni avec ce qui est mémorisé.
+      // Culling active by default (lot 8), unless the user prefers otherwise. Same reading as
+      // the panel toggle (`useSplatView`): the two can no longer diverge, neither from each other
+      // nor from what is remembered.
       applyCulling(spark, readCullingOff());
-      // Navigation fly type Unreal (clic droit + ZQSD/WASD + A/E) — gèle l'orbite en vol.
+      // Unreal-style fly navigation (right click + ZQSD/WASD + A/E): freezes the orbit in flight.
       const fly = createFlyControls(THREE, camera, controls, renderer.domElement);
       flyRef.current = fly;
 
-      // Pastilles numérotées des points d'intérêt (DOM, projetées à l'écran) : inertes en
-      // relecture, manipulables pendant la rédaction (cf. `objectHotspot.setInteractive`).
+      // Numbered points-of-interest pins (DOM, projected on screen): inert when reading,
+      // manipulable while composing (cf. `objectHotspot.setInteractive`).
       const unmountMarker = mountMarker(THREE, container);
 
-      // Auto-cadrage : après chargement, cale caméra + cible sur la bbox du splat (une seule fois).
+      // Auto-framing: after loading, sets camera and target on the splat's bbox (once only).
       let framed = false;
       const onReady = () => {
         if (cancelled) return;
-        setProgress(null); // fichier reçu : le décodage/LOD prend le relais (41.B)
+        setProgress(null); // file received: decoding/LOD takes over (41.B)
         if (!framed) framed = frameCameraToMesh(THREE, mesh, camera, controls);
-        // Le nuage continue de se raffiner après `onLoad` (décodage, LOD, premier tri) : on
-        // laisse deux secondes de plein régime avant de retomber sur le rendu à la demande.
+        // The cloud keeps refining after `onLoad` (decoding, LOD, first sort): we allow two seconds
+        // at full speed before falling back to on-demand rendering.
         gate.invalidate(SETTLE_WINDOW_MS);
         setReady(true);
       };
 
-      // `lod: true` : les données LOD sont construites au chargement (worker WASM) — sans
-      // elles, `SparkRenderer.enableLod` est inerte (driveLod filtre sur packedSplats.lodSplats).
-      // `nonLod: true` : conserve AUSSI les splats de base (sans lui, le rendu direct — LOD
-      // désengagé, notre défaut — est vide). Le LOD ne s'applique que si V7 l'engage.
-      // SOG (41.C lecture) : Spark mappe l'extension `.sog`→PCSOGSZIP mais pas `.sogs` — on
-      // normalise pour la détection de type (le conteneur zip PCSOGS reste servi tel quel).
+      // `lod: true`: the LOD data is built at load time (WASM worker); without it,
+      // `SparkRenderer.enableLod` is inert (driveLod filters on packedSplats.lodSplats).
+      // `nonLod: true`: ALSO keeps the base splats (without it, direct rendering, LOD disengaged,
+      // our default, is empty). The LOD only applies if V7 engages it.
+      // SOG (41.C reading): Spark maps the `.sog` extension to PCSOGSZIP but not `.sogs`, so we
+      // normalise it for type detection (the PCSOGS zip container is still served as is).
       const mesh = new SplatMesh({
         url,
         fileName: fileName.replace(/\.sogs$/i, '.sog'),
@@ -151,20 +151,20 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
         lod: true,
         nonLod: true,
         onLoad: onReady,
-        // Progression réseau (41.B) : le GET présigné MinIO renvoie Content-Length → ratio réel.
+        // Network progress (41.B): the presigned MinIO GET returns Content-Length, so the ratio is real.
         onProgress: (e: ProgressEvent) => {
           if (cancelled) return;
           setProgress(e.lengthComputable && e.total > 0 ? Math.min(1, e.loaded / e.total) : null);
         },
       });
-      // Orientation à l'import (11.E) : les .ply/.spz gaussians sont généralement Y-down —
-      // un groupe parent porte le flip (rotation π sur X), la transform utilisateur restant
-      // sur le mesh (gizmo, hotspots et painter suivent matrixWorld, le flip est transparent).
+      // Import orientation (11.E): the gaussian .ply/.spz files are usually Y-down:
+      // a parent group carries the flip (rotation of π about X), the user transform staying
+      // on the mesh (gizmo, hotspots and painter follow matrixWorld, the flip is transparent).
       const pivot = new THREE.Group();
       pivot.rotation.x = Math.PI;
       scene.add(pivot);
       pivot.add(mesh);
-      // Caméra layout du PiP (mode layout) : indépendante de la caméra libre, sans viewOffset.
+      // Layout camera of the PiP (layout mode): independent of the free camera, without viewOffset.
       const layoutCam = new THREE.PerspectiveCamera(camera.fov, 16 / 9, camera.near, camera.far);
       statsRef.current = createStatsSampler(() => ({
         activeSplats: spark.activeSplats,
@@ -175,7 +175,7 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       init?.then(onReady).catch(() => !cancelled && setLoadError(true));
 
       const resize = () => {
-        gate.invalidate(); // `setSize` vide le tampon de dessin : il faut redessiner tout de suite
+        gate.invalidate(); // `setSize` empties the drawing buffer: redraw immediately
         const { clientWidth: w, clientHeight: h } = container;
         resizeRendererCamera(renderer, camera, w, h, frameAspectRef.current);
       };
@@ -183,16 +183,16 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
       const ro = new ResizeObserver(resize);
       ro.observe(container);
 
-      // `update` est joué à chaque tour ; seul `draw` (passes GPU + mesures de mise en page)
-      // est sauté quand l'image serait identique — cf. `renderScheduler` pour les garde-fous.
+      // `update` runs every tick; only `draw` (GPU passes and layout measurements) is skipped
+      // when the image would be identical: see `renderScheduler` for the guards.
       const stopLoop = gate.start({
         renderer,
         controls,
         isBusy: () => fly.flying || frameCbs.current.size > 0 || !!captureReq.current,
         update: (dt) => {
-          // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
-          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé. Hors vol,
-          // l'orbite conserve le tilt réglé (cf. `cameraRoll.updateOrbitKeepingRoll`).
+          // In flight, the camera is driven by flyControls; OrbitControls (frozen) must not
+          // re-frame it on its target, otherwise the keyboard movement would be cancelled. Out of flight,
+          // the orbit keeps the tilt that was set (cf. `cameraRoll.updateOrbitKeepingRoll`).
           if (fly.flying) fly.update(dt);
           else updateOrbitKeepingRoll(THREE, camera, controls);
           frameCbs.current.forEach((cb) => cb(dt));
@@ -200,15 +200,15 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
         draw: (now) => {
           renderer.render(scene, camera);
           const { clientWidth: w, clientHeight: h } = container;
-          // PiP du mode layout (Phase 27) : vue de la caméra layout dans la fenêtre flottante.
-          // La profondeur suit la caméra libre : le cadrage (`F`, taille réelle) recale near/far
-          // sur l'échelle de la scène, et la caméra du PiP restait sur ceux du chargement.
+          // Layout-mode PiP (Phase 27): view of the layout camera in the floating window.
+          // The depth follows the free camera: framing (`F`, real size) resets near/far
+          // on the scene scale, and the PiP camera stayed on the loading ones.
           const pip = pipRectRef.current;
           if (pip) renderPipPass(renderer, scene, layoutCam, pip, w, h, camera);
           statsRef.current?.frame(now);
-          // Projette les points monde → pixels et positionne les pastilles (ou les masque).
+          // Projects the world points to pixels and positions the pins (or hides them).
           projectPoi(camera, mesh, w, h);
-          // Capture de miniature demandée : le buffer de dessin est intact juste après le rendu.
+          // Thumbnail capture requested: the drawing buffer is intact right after the render.
           const shot = captureReq.current;
           captureReq.current = null;
           shot?.(toThumbnail(renderer.domElement));
@@ -244,11 +244,11 @@ export function useSplat(url: string | null, fileName: string, frameAspect?: num
     };
   }, [url, fileName, gate, mountMarker, projectPoi]);
 
-  // Handles de pose caméra (capture/restauration vue libre + PiP layout) — hook dédié (budget).
+  // Camera-pose handles (free-view capture/restore + layout PiP): dedicated hook (budget).
   const { captureCamera, restoreCamera, restorePipCamera } = useCameraHandles(sceneRef, threeRef);
 
-  // Poignées impératives (miniature, transformation, modes, stats, culling, PiP) — hook dédié
-  // (budget) : elles ne font que lire les refs montées ci-dessus.
+  // Imperative handles (thumbnail, transform, modes, stats, culling, PiP): dedicated hook
+  // (budget): they only read the refs mounted above.
   const handles = useSplatHandles({
     sceneRef,
     threeRef,

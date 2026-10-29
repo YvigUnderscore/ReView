@@ -16,15 +16,15 @@ import type { ModelMeasureState } from './useModelMeasure';
 import { intlLocale, useT, type MessageKey, type Tr } from '../../../i18n';
 
 /**
- * Panneau Infos du viewer 3D : ce qui se mesure pendant le rendu, la fiche technique du
- * fichier (provenance de conversion comprise), la scène USD et l'inspecteur de textures.
- * Séparé de `Model3DPanels`, qui n'aiguille que les six onglets — la fiche est le seul
- * panneau à croiser trois sources (statistiques Three, `modelSource`, description USD).
+ * Info panel of the 3D viewer: what is measured during rendering, the technical sheet of the
+ * file (including its conversion provenance), the USD scene and the texture inspector.
+ * Separate from `Model3DPanels`, which only routes the six tabs: the sheet is the only
+ * panel to cross three sources (Three statistics, `modelSource`, USD description).
  */
 
 const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
 
-/** Libellé du convertisseur qui a produit le GLB affiché ; `assimp` se dit tel quel. */
+/** Label of the converter that produced the displayed GLB; `assimp` is shown as is. */
 const CONVERTER_KEY: Record<string, MessageKey> = {
   copy: 'model3d.converter.copy',
   gltf: 'model3d.converter.gltf',
@@ -33,9 +33,9 @@ const CONVERTER_KEY: Record<string, MessageKey> = {
 };
 
 /**
- * Convertisseur retenu, suivi du badge « natif » quand la chaîne USD complète a été
- * employée : c'est la différence entre des matériaux fidèles et une géométrie nue, et elle
- * explique la moitié des « pourquoi ça ne ressemble pas à mon rendu ».
+ * Converter used, followed by the "native" badge when the full USD chain was used:
+ * that is the difference between faithful materials and bare geometry, and it explains
+ * half of the "why doesn't it look like my render" questions.
  */
 function converterValue(source: ModelSource, t: Tr): ReactNode {
   const key = CONVERTER_KEY[source.converter];
@@ -63,13 +63,13 @@ export default function Model3DInfo({
 }: {
   data: MediaResp;
   inspect: Model3DInspectState;
-  /** Dimensions réelles + outil de mesure (39.G). */
+  /** Real dimensions and measuring tool (39.G). */
   measure: ModelMeasureState;
   m: Model3DThreeState;
   /**
-   * Raccourci vers la recomposition USD, qui vit au panneau Scène depuis le lot 13. Le bouton
-   * n'ouvre plus de modale : il amène là où la sélection de variantes se règle en regardant
-   * la scène. Absent sans droits ou sans source USD.
+   * Shortcut to the USD recomposition, which has lived in the Scene panel since lot 13. The button
+   * no longer opens a modal: it leads to where the variant selection is set, while looking at
+   * the scene. Absent without rights or without a USD source.
    */
   onRecompose?: () => void;
 }) {
@@ -109,7 +109,7 @@ export default function Model3DInfo({
         <>
           <Model3DMeasureGroup measure={measure} realScale={m.realScale} onRealScale={m.setRealScale} />
           {source?.usd && <UsdSceneGroup usd={source.usd} />}
-          {/* Un modèle sans texture est courant (sculpt, blocking) : pas de groupe vide. */}
+          {/* A model without textures is common (sculpt, blocking): no empty group. */}
           {s && s.textures.length > 0 && <TexturesGroup textures={s.textures} />}
         </>
       }

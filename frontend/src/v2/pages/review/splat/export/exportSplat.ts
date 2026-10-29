@@ -8,24 +8,24 @@ import { writeSpz } from './writeSpz';
 import { t } from '../../../../i18n';
 
 /**
- * Export splat côté client (41.A/C) — lit les splats **édités** du viewer, applique les éditions
- * persistées et écrit un **.spz** nettoyé téléchargé par le navigateur. 100 % local : le fichier
- * original dans MinIO n'est jamais touché (verrou de publication respecté par construction).
+ * Client-side splat export (41.A/C): reads the viewer's **edited** splats, applies the persisted
+ * edits and writes a cleaned **.spz** downloaded by the browser. 100% local: the original file in
+ * MinIO is never touched (publication lock respected by construction).
  */
 
-/** Éditions effectives à cuire dans l'export (TRS globale + volumes de crop). */
+/** Effective edits to bake into the export (global TRS and crop volumes). */
 export interface ExportEdits {
   transform: SplatTransform | null;
   volumes: SdfVolumeData[];
 }
 
-/** Nom du fichier exporté : base d'origine (sans extension) + suffixe + `.spz`. */
+/** Name of the exported file: original base (without extension) + suffix + `.spz`. */
 export function cleanExportName(originalName: string): string {
   const base = originalName.replace(/\.[^./\\]+$/, '').trim() || 'splat';
   return `${base}-nettoye.spz`;
 }
 
-/** Déclenche le téléchargement navigateur d'un binaire (Blob → lien temporaire). */
+/** Triggers the browser download of a binary (Blob → temporary link). */
 export function downloadBytes(bytes: Uint8Array, fileName: string, type = 'application/octet-stream'): void {
   const blob = new Blob([bytes as unknown as BlobPart], { type });
   const url = URL.createObjectURL(blob);
@@ -36,11 +36,11 @@ export function downloadBytes(bytes: Uint8Array, fileName: string, type = 'appli
   document.body.appendChild(a);
   a.click();
   a.remove();
-  // Laisse le temps au téléchargement de démarrer avant de révoquer l'URL.
+  // Gives the download time to start before revoking the URL.
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
-/** Cuit les splats édités du viewer en un binaire .spz nettoyé (bytes + nombre de splats gardés). */
+/** Bakes the viewer's edited splats into a cleaned .spz binary (bytes and number of splats kept). */
 export async function buildCleanSpz(
   handle: SplatSceneHandle,
   edits: ExportEdits,

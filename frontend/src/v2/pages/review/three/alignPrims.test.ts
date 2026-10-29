@@ -13,7 +13,7 @@ const box = (path: string, x0: number, x1: number): AlignItem => ({
 describe('alignOffsets', () => {
   const items = [box('/a', 0, 2), box('/b', 5, 7), box('/c', 10, 14)];
 
-  it('aligne les min sur le min commun', () => {
+  it('aligns the mins to the common min', () => {
     const offsets = alignOffsets(items, 0, 'min');
     expect(offsets).toEqual([
       { path: '/a', offset: 0 },
@@ -22,7 +22,7 @@ describe('alignOffsets', () => {
     ]);
   });
 
-  it('aligne les max sur le max commun', () => {
+  it('aligns the maxes to the common max', () => {
     const offsets = alignOffsets(items, 0, 'max');
     expect(offsets).toEqual([
       { path: '/a', offset: 12 },
@@ -31,8 +31,8 @@ describe('alignOffsets', () => {
     ]);
   });
 
-  it('aligne les centres sur le centre de l’ensemble', () => {
-    // Ensemble = [0, 14] → centre 7 ; centres actuels : 1, 6, 12.
+  it('aligns the centres to the centre of the set', () => {
+    // Set = [0, 14] → centre 7; current centres: 1, 6, 12.
     const offsets = alignOffsets(items, 0, 'center');
     expect(offsets).toEqual([
       { path: '/a', offset: 6 },
@@ -41,14 +41,14 @@ describe('alignOffsets', () => {
     ]);
   });
 
-  it('moins de deux prims : rien à faire', () => {
+  it('fewer than two prims: nothing to do', () => {
     expect(alignOffsets([box('/a', 0, 1)], 0, 'min')).toEqual([]);
   });
 });
 
 describe('distributeOffsets', () => {
-  it('espace les centres régulièrement, extrêmes fixes', () => {
-    // Centres : 0, 1, 10 → cible 0, 5, 10.
+  it('spaces the centres evenly, extremes fixed', () => {
+    // Centres: 0, 1, 10 → target 0, 5, 10.
     const items = [box('/a', -1, 1), box('/b', 0, 2), box('/c', 9, 11)];
     const offsets = distributeOffsets(items, 0);
     expect(offsets).toEqual([
@@ -58,7 +58,7 @@ describe('distributeOffsets', () => {
     ]);
   });
 
-  it('moins de trois prims : rien à répartir', () => {
+  it('fewer than three prims: nothing to distribute', () => {
     expect(distributeOffsets([box('/a', 0, 1), box('/b', 2, 3)], 0)).toEqual([]);
   });
 });

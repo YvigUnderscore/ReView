@@ -9,7 +9,7 @@ import type { SplatCamera } from '../../reviewTypes';
 import { captureSplatCamera, restoreSplatCamera } from './splatCameraState';
 import { applyPoseToCamera } from '../../three/applyPose';
 
-/** Minimum de scène requis pour capturer/restaurer une pose caméra (viewer libre + PiP layout). */
+/** Minimum scene required to capture or restore a camera pose (free viewer and layout PiP). */
 interface CameraScene {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
@@ -18,9 +18,9 @@ interface CameraScene {
 }
 
 /**
- * Handles impératifs de pose caméra du viewer splat, extraits de `useSplat` (budget de taille) :
- * capture/restauration de la vue libre (avec DoF Spark) et restauration de la caméra layout du
- * PiP (Phase 27). Ne dépendent que des refs scène/Three — no-op tant que la scène n'est pas prête.
+ * Imperative camera-pose handles of the splat viewer, extracted from `useSplat` (size budget):
+ * capture and restoration of the free view (with Spark DoF) and restoration of the layout camera
+ * of the PiP (Phase 27). They only depend on the scene and Three refs: no-op until the scene is ready.
  */
 export function useCameraHandles<S extends CameraScene>(
   sceneRef: RefObject<S | null>,
@@ -31,7 +31,7 @@ export function useCameraHandles<S extends CameraScene>(
     const THREE = threeRef.current;
     if (!s || !THREE) return undefined;
     const cam = captureSplatCamera(THREE, s.camera, s.controls);
-    // DoF Spark toujours inclus (0 = net partout) : répliqué en session live et restauré avec les commentaires.
+    // Spark DoF always included (0 = sharp everywhere): replicated in the live session and restored with the comments.
     cam.apertureAngle = s.spark.apertureAngle;
     cam.focalDistance = s.spark.focalDistance;
     return cam;

@@ -7,49 +7,49 @@ import type { SplatViewer } from '../useSplat';
 import { detachVolume, reattachVolume, type VolumeRuntime } from './volumes/cropVolume';
 
 /**
- * **Suspension de l'éditeur pendant la lecture d'une proposition** (Phase 50, lot 14).
+ * **Suspending the editor while a proposal is being read** (Phase 50, lot 14).
  *
- * Un gestionnaire est la seule personne capable de PRODUIRE une proposition d'édition de nuage.
- * C'est donc précisément à lui qu'il faut pouvoir en montrer une — et jusqu'au lot 14, le rejeu
- * se coupait dès que l'éditeur était monté : deux gestionnaires ne pouvaient pas se lire l'un
- * l'autre, le bandeau « scène proposée » s'allumait et le nuage ne bougeait pas.
+ * A manager is the only person able to PRODUCE a cloud-edit proposal, so it is precisely to them
+ * that one must be able to show one. Until lot 14, the replay cut out as soon as the editor was
+ * mounted: two managers could not read each other's proposal, the "proposed scene" banner lit up
+ * and the cloud did not move.
  *
- * Le viewer n'a qu'un nuage : la réponse n'est pas de renoncer au rejeu, c'est de **rendre la
- * main**. Pendant la lecture, l'édition locale se retire de la scène ; à la sortie (Échap, ou
- * désélection du commentaire), elle revient telle qu'elle était.
+ * The viewer has only one cloud: the answer is not to give up the replay, but to **yield control**.
+ * While reading, the local edit is removed from the scene; on exit (Escape, or deselecting the
+ * comment) it comes back as it was.
  *
- * Ce qui se suspend, et ce qui ne se suspend pas :
- *  - la **transformation** du nuage et le **flip** d'orientation → rendus à la proposition, puis
- *    ré-appliqués à l'identique à la sortie ;
- *  - les **volumes de crop** locaux → détachés de la scène, jamais libérés (leur TRS reste
- *    lisible, l'enregistrement d'après la porte intacte), puis ré-attachés ;
- *  - les **splats supprimés localement** → ils RESTENT masqués. Un splat masqué a perdu son
- *    opacité d'origine dans les données paquées (`hideSplats` écrit 0) : la rendre exigerait un
- *    instantané que l'éditeur ne garde pas. La proposition lue masque donc ce qu'elle veut en
- *    plus, et c'est tout ce qu'on peut promettre honnêtement — ce que l'auteur a déjà supprimé
- *    ne réapparaît pas le temps d'une lecture.
+ * What is suspended, and what is not:
+ *  - the **transform** of the cloud and the **orientation flip** → yielded to the proposal, then
+ *    re-applied identically on exit;
+ *  - the local **crop volumes** → detached from the scene, never freed (their TRS stays readable,
+ *    the next save intact), then re-attached;
+ *  - the **locally deleted splats** → they REMAIN masked. A masked splat has lost its original
+ *    opacity in the packed data (`hideSplats` writes 0): restoring it would require a snapshot the
+ *    editor does not keep. The read proposal therefore masks whatever else it wants, and that is
+ *    all one can honestly promise: what the author already deleted does not reappear for the
+ *    duration of a reading.
  */
 export function useEditorSuspend(opts: {
-  /** L'éditeur est-il monté ? (hors éditeur, il n'y a rien à suspendre) */
+  /** Is the editor mounted? (outside the editor there is nothing to suspend) */
   enabled: boolean;
-  /** Une proposition de commentaire est-elle en cours de lecture ? */
+  /** Is a comment proposal being read? */
   suspended: boolean;
   splat: SplatViewer;
-  /** Volumes de crop vivants de l'éditeur, par identifiant. */
+  /** Live crop volumes of the editor, by identifier. */
   runtimesRef: RefObject<Map<number, VolumeRuntime>>;
-  /** TRS et flip locaux, à rendre à l'identique à la sortie. */
+  /** Local TRS and flip, to be restored identically on exit. */
   transform: SplatTransform;
   baseFlip: boolean;
 }): void {
   const { enabled, suspended, splat, runtimesRef, transform, baseFlip } = opts;
   const { ready, applyTransform, setBaseFlip, getSceneHandle } = splat;
   /**
-   * L'état local le plus RÉCENT, lu au moment de rendre la main.
+   * The MOST RECENT local state, read at the moment control is yielded.
    *
-   * Un ref, et non des dépendances d'effet : mettre `transform` en dépendance relancerait la
-   * suspension à chaque cran d'édition, et le lire dans la fermeture de l'effet rendrait la
-   * valeur d'il y a une lecture — celle d'avant, si l'auteur a reposé la main sur le gizmo
-   * pendant qu'il lisait la proposition d'un autre.
+   * A ref, not effect dependencies: putting `transform` in the dependencies would restart the
+   * suspension on every edit step, and reading it in the effect closure would give the value from
+   * one reading ago, the one from before if the author put their hand back on the gizmo while
+   * reading someone else's proposal.
    */
   const local = useRef({ transform, baseFlip });
   useEffect(() => {
@@ -63,8 +63,8 @@ export function useEditorSuspend(opts: {
     detached.forEach(detachVolume);
     return () => {
       if (handle) detached.forEach((runtime) => reattachVolume(handle, runtime));
-      // Le rejeu de la proposition a écrit la TRS et le flip dans la scène : on les réécrit
-      // avec les valeurs locales, que l'état React n'a jamais perdues.
+      // The replay of the proposal wrote the TRS and the flip into the scene: rewrite them
+      // with the local values, which the React state never lost.
       applyTransform(local.current.transform);
       setBaseFlip(local.current.baseFlip);
     };

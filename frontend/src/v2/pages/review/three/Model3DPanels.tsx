@@ -33,12 +33,12 @@ import { useT } from '../../../i18n';
 const RAD = Math.PI / 180;
 
 /**
- * Contenu du dock inspecteur pour le viewer 3D. Rassemble ce qui flottait dans `InspectBar`,
+ * Content of the inspector dock for the 3D viewer. Gathers what floated in `InspectBar`,
  * `Model3DVariantsBar`, `LightingBar`, `BookmarksBar`, `TurntableBar`, `SectionBar`,
- * `ModelInfoPanel` et `CameraBar`. Cinq onglets depuis la Phase 50 : « Affichage » est passé
- * en popover au coin haut-gauche du viewer (`Model3DRenderMenu`), là où l'on essaie un mode de
- * rendu en regardant le modèle. L'onglet Infos vit dans `Model3DInfo` : c'est le seul dont le
- * contenu ne tient pas en quelques lignes ici.
+ * `ModelInfoPanel` and `CameraBar`. Five tabs since Phase 50: "Display" moved to a popover in the
+ * top-left corner of the viewer (`Model3DRenderMenu`), where one tries a render mode while looking
+ * at the model. The Info tab lives in `Model3DInfo`: it is the only one whose content does not fit
+ * in a few lines here.
  */
 export default function Model3DPanels({
   panel,
@@ -69,49 +69,49 @@ export default function Model3DPanels({
   lighting: Model3DLightingState;
   inspect: Model3DInspectState;
   /**
-   * Mise en scène — l'interrupteur du panneau Caméra EST son entrée depuis la Phase 50 :
-   * la bascule de mode ne porte plus de segment « Mise en scène », qui ne faisait qu'allumer
-   * le layout que cet interrupteur allumait déjà. Il arme donc le mode entier (vue PiP,
-   * caméra-objet, outils caméra au rail, bouton « Publier » en barre d'options).
+   * Staging: the Camera panel toggle IS its entry since Phase 50: the mode switch no longer carries
+   * a "Staging" segment, which only turned on the layout this toggle already turned on. It therefore
+   * arms the whole mode (PiP view, camera-object, camera tools on the rail, "Publish" button in the
+   * options bar).
    */
   staging: { active: boolean; toggle: () => void };
   bookmarks: Model3DBookmarksState;
   turntable: TurntableState;
   section: SectionPlaneState;
   grid: { visible: boolean; toggle: () => void };
-  /** Dimensions réelles et outil de mesure (39.G) — affichés dans l'onglet Infos. */
+  /** Real dimensions and measuring tool (39.G), shown in the Info tab. */
   measure: ModelMeasureState;
-  /** Scenegraph USD + override (46.C), absent si le media n'est pas une scene USD. */
+  /** USD scenegraph and override (46.C), absent if the media is not a USD scene. */
   scene?: UsdSceneState;
-  /** Enregistre l'override de base — absent apres publication ou sans droits (46.D). */
+  /** Saves the base override: absent after publication or without rights (46.D). */
   onSaveOverride?: () => void;
   savingOverride?: boolean;
-  /** Recomposition USD autorisée (gestionnaire + source USD) : son groupe vit au panneau Scène. */
+  /** USD recomposition allowed (manager and USD source): its group lives in the Scene panel. */
   canRecompose?: boolean;
   /**
-   * Raccourci de la fiche technique vers ce groupe. Il ouvrait une modale qui recouvrait le
-   * viewer ; il n'ouvre plus rien — il amène au panneau Scène, où la recomposition se règle
-   * sans quitter la scène des yeux.
+   * Shortcut from the technical sheet to this group. It used to open a modal covering the
+   * viewer; it no longer opens anything: it leads to the Scene panel, where the recomposition is set
+   * without leaving the scene in sight.
    */
   onRecompose?: () => void;
   onImportAnim?: (file: File) => void;
-  /** Preset orbite (gestionnaire). */
+  /** Orbit preset (manager). */
   onOrbit?: () => void;
-  /** Efface la présentation persistée (gestionnaire — confirmée ici). */
+  /** Clears the persisted presentation (manager, confirmed here). */
   onClearPresentation?: () => void;
 }) {
   const t = useT();
   if (panel === 'camera') {
     const saved = data.splatPresentation?.bookmarks ?? [];
-    // Focale/tilt reflètent la valeur échantillonnée au temps courant quand le canal est animé.
-    // Les modifier pose une clé `fov`/`roll` au playhead dès qu'on est hors caméra — sans quoi le
-    // panneau affichait la valeur du plan et écrivait sur la caméra libre (cf. `shouldKeyLens`).
+    // Focal length and tilt reflect the value sampled at the current time when the channel is animated.
+    // Modifying them sets an `fov`/`roll` key at the playhead as soon as we are off-camera; otherwise the
+    // panel showed the value of the plane and wrote onto the free camera (cf. `shouldKeyLens`).
     const fovNow = anim.anim.channels.fov ? evalChannel(anim.anim.channels.fov, anim.timeMs, m.fov) : m.fov;
     const rollNow = anim.anim.channels.roll
       ? evalChannel(anim.anim.channels.roll, anim.timeMs, m.roll)
       : m.roll;
-    // Cadre de review : ce panneau ne fait que le DIRE — son ratio vient des réglages pipeline,
-    // sauf pour un média dont une présentation a déjà gelé l'aspect (`reviewAspect`).
+    // Review frame: this panel only STATES it; its ratio comes from the pipeline settings,
+    // except for a media whose presentation has already frozen the aspect (`reviewAspect`).
     const frame = mediaReviewAspect(data);
     return (
       <CameraPanel
@@ -129,7 +129,7 @@ export default function Model3DPanels({
         layout={{
           active: staging.active,
           onToggle: staging.toggle,
-          // Nommé par le mode qu'il arme, pas par la fenêtre qu'il ouvre.
+          // Named by the mode it arms, not by the window it opens.
           label: t('mode.stage'),
           hint: t('mode.stage.hint'),
           onOrbit,
@@ -183,10 +183,10 @@ export default function Model3DPanels({
             speed: turntable.speed,
             onSpeed: turntable.setSpeed,
           }}
-          // LOD, culling et effet d'apparition sont propres au splat : le modèle n'en a pas.
-          // Ses compteurs de rendu sont dans le groupe qui suit.
+          // LOD, culling and reveal effect are specific to the splat: the model has none.
+          // Its render counters are in the group that follows.
           perf={{}}
-          // Scenegraph USD (46.C) : l'arbre reel de la scene, au-dessus des reperes de scene.
+          // USD scenegraph (46.C): the real tree of the scene, above the scene landmarks.
           scenegraph={
             scene && scene.tree.length > 0 ? (
               <ScenegraphPanel
@@ -199,8 +199,8 @@ export default function Model3DPanels({
               />
             ) : undefined
           }
-          // Recomposition au contact de l'arbre qu'elle change (lot 13) : la modale qui
-          // recouvrait le viewer est devenue ce groupe, qui défile avec le panneau.
+          // Recomposition in contact with the tree it changes (lot 13): the modal that
+          // covered the viewer became this group, which scrolls with the panel.
           recompose={
             canRecompose && data.modelSource?.usd ? (
               <UsdRecomposeGroup mediaId={data.media.id} usd={data.modelSource.usd} />

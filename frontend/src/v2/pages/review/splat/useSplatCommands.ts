@@ -8,18 +8,18 @@ import type { PresentationState } from './presentation/usePresentation';
 import { useT } from '../../../i18n';
 
 /**
- * Palette Ctrl+K (B3) du bloc splat : cadrer/reset, lecture caméra, pose de clé, preset orbite,
- * effacement de présentation. `pres` et les rappels de cadrage sont neufs à chaque rendu — les
- * commandes les rappellent via des refs synchronisées en effet, la liste reste stable et ne
- * republie pas le registre à chaque image. Extrait de `SplatReview` (budget lignes).
+ * Ctrl+K palette (B3) of the splat block: frame/reset, camera reading, key pose, orbit preset,
+ * presentation clearing. `pres` and the framing callbacks are new on every render: the commands
+ * recall them via refs synchronised in an effect, so the list stays stable and does not republish
+ * the registry on every frame. Extracted from `SplatReview` (line budget).
  */
 export function useSplatCommands(opts: {
   pres: PresentationState;
   frameView: () => void;
   homeView: () => void;
-  /** Gestionnaire : peut poser des clés et éditer la mise en scène. */
+  /** Manager: can place keyframes and edit the staging. */
   canPresent: boolean;
-  /** Une présentation est persistée — seule elle peut être effacée. */
+  /** A presentation is persisted: only it can be cleared. */
   hasPresentation: boolean;
 }): void {
   const { pres, frameView, homeView, canPresent, hasPresentation } = opts;

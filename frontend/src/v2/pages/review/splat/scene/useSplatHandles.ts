@@ -13,7 +13,7 @@ import type { SplatHandles, SplatScene, SplatSceneHandle } from './splatViewerTy
 import type { SplatStats, StatsSampler } from './stats';
 import { applyCulling } from './viewerConfig';
 
-/** Refs de la scène que `useSplat` monte et que les poignées ne font que lire (ou piloter). */
+/** Scene refs that `useSplat` mounts and that the handles only read (or drive). */
 export interface SplatSceneRefs {
   sceneRef: RefObject<SplatScene | null>;
   threeRef: RefObject<typeof import('three') | null>;
@@ -23,16 +23,16 @@ export interface SplatSceneRefs {
   frameCbs: RefObject<Set<(dt: number) => void>>;
   flyRef: RefObject<FlyControls | null>;
   pipRectRef: RefObject<PipRect | null>;
-  /** Rendu à la demande (F14) — `subscribeStats` y compte les lecteurs de FPS. */
+  /** On-demand rendering (F14): `subscribeStats` counts the FPS readers here. */
   gate: RenderGate;
 }
 
 /**
- * Poignées impératives du viewer splat : miniature, transformation, modes de rendu, stats,
- * culling, PiP. Les points d'intérêt n'en font plus partie : ils sont passés au hook partagé
- * `poi/usePoiMarkers`, le même que celui du viewer 3D. Extraites de `useSplat` (budget lignes), qui garde le cycle de vie
- * de la scène et la boucle de rendu — ici, rien ne monte ni ne démonte quoi que ce soit, chaque
- * fonction lit les refs au moment de l'appel. Ordre d'origine conservé.
+ * Imperative handles of the splat viewer: thumbnail, transform, render modes, stats, culling, PiP.
+ * The points of interest are no longer part of them: they are passed to the shared hook
+ * `poi/usePoiMarkers`, the same one as the 3D viewer. Extracted from `useSplat` (line budget),
+ * which keeps the scene lifecycle and the render loop. Here nothing mounts or unmounts anything:
+ * each function reads the refs at call time. Original order preserved.
  */
 export function useSplatHandles(refs: SplatSceneRefs): SplatHandles {
   const { sceneRef, threeRef, captureReq, pointsRef, statsRef } = refs;
@@ -66,8 +66,8 @@ export function useSplatHandles(refs: SplatSceneRefs): SplatHandles {
   );
 
   const subscribeStats = useCallback(
-    // L'échantillonneur existe dès le montage de la scène (avant `ready`) ; les panneaux du
-    // HUD ne sont montés qu'une fois le viewer prêt, l'abonnement est donc toujours effectif.
+    // The sampler exists as soon as the scene is mounted (before `ready`); the HUD panels
+    // are only mounted once the viewer is ready, so the subscription is always effective.
     (cb: (stats: SplatStats) => void): (() => void) =>
       gate.countSub(statsRef.current?.subscribe(cb)) ?? (() => undefined),
     [gate, statsRef],

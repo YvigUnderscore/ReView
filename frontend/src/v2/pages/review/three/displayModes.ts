@@ -4,18 +4,17 @@
 import type * as THREE from 'three';
 
 /**
- * Modes d'affichage du viewer 3D d'inspection (Phase 39, 39.C) — override **non destructif** des
- * matériaux du modèle : chaque mesh conserve son matériau d'origine dans `userData.__origMaterial`,
- * remplacé par un matériau d'override partagé (une seule instance par mode, réutilisée sur tous les
- * meshes). `shaded` restaure l'original. Purement local au rendu : ne touche jamais au fichier ni à
- * la version (compatible verrou de publication). Helpers testables sans contexte WebGL.
+ * Display modes of the 3D inspection viewer (Phase 39, 39.C): **non-destructive** override of the model's
+ * materials: each mesh keeps its original material in `userData.__origMaterial`, replaced by a shared
+ * override material (one instance per mode, reused on all meshes). `shaded` restores the original.
+ * Purely local to rendering: never touches the file or the version (compatible with the publication lock).
  */
 
 export type DisplayMode = 'shaded' | 'wireframe' | 'normals' | 'matcap' | 'uv';
 
 export const DISPLAY_MODES: DisplayMode[] = ['shaded', 'wireframe', 'normals', 'matcap', 'uv'];
 
-/** Matériaux d'override partagés, construits paresseusement puis réutilisés (et libérés au dispose). */
+/** Shared override materials, built lazily then reused (and freed on dispose). */
 export interface DisplayResources {
   wireframe: THREE.Material;
   normals: THREE.Material;
@@ -26,8 +25,8 @@ export interface DisplayResources {
 }
 
 /**
- * Damier UV procédural (DataTexture) : cases contrastées + gradient rouge (U) / vert (V) pour
- * révéler l'orientation et l'étirement des UV. Testable (pas de canvas).
+ * Procedural UV checker (DataTexture): contrasting squares plus a red (U) / green (V) gradient
+ * to reveal the orientation and stretching of the UVs. Testable (no canvas).
  */
 export function makeUvCheckerTexture(
   three: typeof import('three'),
@@ -41,7 +40,7 @@ export function makeUvCheckerTexture(
       const i = (y * size + x) * 4;
       const checker = (Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0;
       const base = checker ? 210 : 60;
-      // Gradient d'orientation : U→rouge (droite), V→vert (haut).
+      // Orientation gradient: U to red (right), V to green (top).
       const u = x / size;
       const v = y / size;
       data[i] = Math.min(255, base + u * 45);
@@ -58,8 +57,8 @@ export function makeUvCheckerTexture(
 }
 
 /**
- * Matcap « argile » procédural (DataTexture) : sphère éclairée douce, pour juger la forme
- * indépendamment des matériaux/textures du modèle. Testable (pas de canvas).
+ * Procedural "clay" matcap (DataTexture): a soft-lit sphere, to judge the shape independently
+ * of the model's materials and textures. Testable (no canvas).
  */
 export function makeMatcapTexture(three: typeof import('three'), size = 256): THREE.DataTexture {
   const data = new Uint8Array(size * size * 4);
@@ -73,7 +72,7 @@ export function makeMatcapTexture(three: typeof import('three'), size = 256): TH
       let shade = 0.12;
       if (r2 <= 1) {
         const nz = Math.sqrt(1 - r2);
-        // Lumière haut-droite + rim doux.
+        // Top-right light and soft rim.
         const diffuse = Math.max(0, nx * 0.4 + ny * 0.5 + nz * 0.75);
         const rim = Math.pow(1 - nz, 2) * 0.25;
         shade = Math.min(1, 0.18 + diffuse * 0.8 + rim);
@@ -91,7 +90,7 @@ export function makeMatcapTexture(three: typeof import('three'), size = 256): TH
   return tex;
 }
 
-/** Construit (une fois) les matériaux d'override partagés + leurs textures procédurales. */
+/** Builds (once) the shared override materials and their procedural textures. */
 export function createDisplayResources(three: typeof import('three')): DisplayResources {
   const uvTex = makeUvCheckerTexture(three);
   const matcapTex = makeMatcapTexture(three);
@@ -112,7 +111,7 @@ export function createDisplayResources(three: typeof import('three')): DisplayRe
   };
 }
 
-/** Renvoie le matériau d'override d'un mode (ou `null` pour `shaded` = restauration). */
+/** Returns the override material of a mode (or `null` for `shaded`, i.e. restoration). */
 export function overrideMaterialFor(mode: DisplayMode, res: DisplayResources): THREE.Material | null {
   switch (mode) {
     case 'wireframe':
@@ -132,8 +131,8 @@ export function overrideMaterialFor(mode: DisplayMode, res: DisplayResources): T
 type MeshLike = THREE.Object3D & { isMesh?: boolean; material?: THREE.Material | THREE.Material[] };
 
 /**
- * Applique un mode d'affichage à tout le sous-arbre `root` : sauvegarde le matériau d'origine au
- * premier override (dans `userData.__origMaterial`) et le restaure en `shaded`. Idempotent.
+ * Applies a display mode to the whole `root` subtree: saves the original material at the first
+ * override (in `userData.__origMaterial`) and restores it for `shaded`. Idempotent.
  */
 export function applyDisplayMode(root: THREE.Object3D, mode: DisplayMode, res: DisplayResources): void {
   const override = overrideMaterialFor(mode, res);

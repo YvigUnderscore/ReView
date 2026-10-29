@@ -9,20 +9,20 @@ import { lengthText } from './measure';
 import type { ModelMeasureState } from './useModelMeasure';
 import { intlLocale, useT, type Tr } from '../../../i18n';
 
-/** Ligne d'invite de l'outil de mesure selon le nombre de points déjà posés. */
+/** Invite line of the measuring tool, depending on the number of points already placed. */
 function measureHint(state: ModelMeasureState, t: Tr): string {
   if (state.length) return lengthText(state.length, intlLocale());
   return state.points === 1 ? t('measure.secondPoint') : t('measure.firstPoint');
 }
 
 /**
- * Dimensions réelles et outil de mesure, dans le panneau Infos.
+ * Real dimensions and measuring tool, in the Info panel.
  *
- * Le chargement ramène tout modèle à deux unités monde : sans ces lignes, aucune longueur
- * n'est lisible dans le produit et l'A/B compare des formes sans jamais comparer des tailles.
- * Les dimensions sont celles de la boîte englobante **du fichier**, converties avec le
- * `metersPerUnit` de la scène ; la bascule « taille réelle » rend au modèle ses proportions
- * dans la scène, et la mesure point-à-point répond au « ça fait combien ? ».
+ * Loading brings every model back to two world units: without these lines, no length
+ * is readable in the product and the A/B compares shapes without ever comparing sizes.
+ * The dimensions are those of the **file**'s bounding box, converted with the scene's
+ * `metersPerUnit`; the "real size" toggle gives the model back its proportions in the scene,
+ * and point-to-point measuring answers "how big is it?".
  */
 export default function Model3DMeasureGroup({
   measure,

@@ -4,17 +4,17 @@
 import type * as THREE from 'three';
 import type { LightingConfig } from '../reviewTypes';
 
-/** Environnement HDRI prêt à l'emploi (texture PMREM) + libération. */
+/** Ready-to-use HDRI environment (PMREM texture) and its release. */
 export interface HdriEnvironment {
   texture: THREE.Texture;
   dispose: () => void;
 }
 
 /**
- * Charge un HDRI équirectangulaire (.hdr via RGBELoader, .exr via EXRLoader) et le pré-filtre en
- * carte d'environnement (`PMREMGenerator`) exploitable par les matériaux PBR (Phase 29). Import
- * dynamique des loaders (hors bundle initial). Impur (GPU). La configuration (exposition/rotation/
- * fond) est appliquée à part par `applyLighting`.
+ * Loads an equirectangular HDRI (.hdr via RGBELoader, .exr via EXRLoader) and pre-filters it into an
+ * environment map (`PMREMGenerator`) usable by the PBR materials (Phase 29). Dynamic import of the
+ * loaders (out of the initial bundle). Impure (GPU). The configuration (exposure, rotation, background)
+ * is applied separately by `applyLighting`.
  */
 export async function loadHdriEnvironment(
   THREE: typeof import('three'),
@@ -39,10 +39,10 @@ export async function loadHdriEnvironment(
 }
 
 /**
- * Applique un éclairage au scene/renderer (Phase 29) : exposition (tone mapping), environnement
- * (image-based lighting), rotation Y de l'environnement et du fond, fond HDRI optionnel. Quand un
- * HDRI est actif, les lumières par défaut de la scène sont **atténuées** (évite le sur-éclairage) —
- * leur intensité d'origine est mémorisée dans `userData.baseIntensity` pour restauration.
+ * Applies lighting to the scene and renderer (Phase 29): exposure (tone mapping), environment
+ * (image-based lighting), Y rotation of the environment and of the background, optional HDRI background.
+ * When an HDRI is active, the scene's default lights are **attenuated** (avoids over-lighting);
+ * their original intensity is stored in `userData.baseIntensity` for restoration.
  */
 export function applyLighting(
   scene: THREE.Scene,
@@ -57,7 +57,7 @@ export function applyLighting(
   scene.background = env && cfg.showBackground ? env : null;
   scene.backgroundRotation.set(0, rot, 0);
 
-  // Atténue les lumières « studio » par défaut quand l'HDRI éclaire déjà la scène.
+  // Attenuates the default 'studio' lights when the HDRI already lights the scene.
   scene.traverse((o) => {
     const light = o as THREE.Light;
     if (!light.isLight) return;

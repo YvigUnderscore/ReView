@@ -5,20 +5,20 @@ import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import { createPointCloud, type PointCloud } from './pointCloud';
 
 /**
- * Modes de visualisation d'un splat (10.G), à la manière d'un logiciel 3D :
- * - `splats`   : rendu gaussien normal (falloff plein) ;
- * - `ellipses` : chaque gaussienne en **bordure translucide** (falloff nul + opacité réduite,
- *                V2) — les contours des ellipses se lisent sans que la masse ne bouche la vue ;
- * - `points`   : nuage de centres (overlay `PointCloud`, splats masqués). Voir `pointCloud.ts`.
+ * Display modes of a splat (10.G), in the manner of 3D software:
+ * - `splats`: normal gaussian rendering (full falloff);
+ * - `ellipses`: each gaussian as a **translucent outline** (zero falloff and reduced opacity,
+ *   V2): the outlines of the ellipses can be read without the mass blocking the view;
+ * - `points`: cloud of centres (`PointCloud` overlay, masked splats). See `pointCloud.ts`.
  */
 export type RenderMode = 'splats' | 'ellipses' | 'points';
 
-/** Opacité du mode « ellipses » : assez faible pour lire les contours superposés (~15 %). */
+/** Opacity of the "ellipses" mode: low enough to read overlapping outlines (~15%). */
 export const ELLIPSES_OPACITY = 0.15;
 
 /**
- * Règle l'atténuation du noyau gaussien du SparkRenderer (1 = splats mous, 0 = ellipses pleines).
- * Écrit le champ ET l'uniforme pour une prise d'effet immédiate quel que soit le cycle de sync.
+ * Sets the attenuation of the SparkRenderer's gaussian kernel (1 = soft splats, 0 = solid ellipses).
+ * Writes both the field and the uniform so that it takes effect immediately, whatever the sync cycle.
  */
 export function setFalloff(spark: SparkRenderer, value: number): void {
   spark.falloff = value;
@@ -26,11 +26,11 @@ export function setFalloff(spark: SparkRenderer, value: number): void {
 }
 
 /**
- * Bascule la scène dans un mode de visualisation : règle opacité/falloff du rendu gaussien et
- * (re)construit l'overlay de points à la demande. Renvoie l'overlay courant (null hors mode
- * points) — l'appelant garde la référence pour les reflets live (sélection, masque, crop) et la
- * libération au démontage. L'overlay est reconstruit à chaque entrée dans le mode (l'état masqué
- * courant est capté à la construction ; sélection et suppressions suivantes reflétées en direct).
+ * Switches the scene into a display mode: sets the opacity and falloff of the gaussian rendering
+ * and (re)builds the points overlay on demand. Returns the current overlay (null outside points
+ * mode): the caller keeps the reference for live mirrors (selection, mask, crop) and for release on
+ * unmount. The overlay is rebuilt on each entry into the mode (the current masked state is captured
+ * at construction; subsequent selection and deletions are mirrored live).
  */
 export function applyRenderModeToScene(
   three: typeof import('three'),
@@ -40,14 +40,14 @@ export function applyRenderModeToScene(
 ): PointCloud | null {
   current?.dispose();
   if (mode === 'points') {
-    // Masque les splats (opacité 0) mais garde le mesh « visible » pour rendre l'overlay enfant.
+    // Masks the splats (opacity 0) but keeps the mesh "visible" so the overlay child renders.
     scene.mesh.opacity = 0;
     const cloud = createPointCloud(three, scene.mesh);
     scene.mesh.add(cloud.points);
     return cloud;
   }
   if (mode === 'ellipses') {
-    // Bordures : ellipses plates (falloff nul) rendues translucides (V2).
+    // Outlines: flat ellipses (zero falloff) rendered translucent (V2).
     scene.mesh.opacity = ELLIPSES_OPACITY;
     setFalloff(scene.spark, 0);
   } else {

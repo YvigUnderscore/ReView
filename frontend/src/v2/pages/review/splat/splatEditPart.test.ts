@@ -11,10 +11,9 @@ import {
 import { IDENTITY_SPLAT_TRANSFORM, splitAnnotationParts, type SplatEdits } from '../reviewTypes';
 
 /**
- * La proposition d'édition de nuage jointe à un commentaire (Phase 50, lot 14) : ce qu'elle
- * porte — le geste ENTIER, suppressions comprises —, la façon dont les deux binaires voyagent
- * (par référence, comme les images d'un point d'intérêt), et le fait qu'elle se relise telle
- * qu'elle est partie.
+ * The cloud-edit proposal attached to a comment (Phase 50, lot 14): what it carries (the WHOLE
+ * gesture, deletions included), the way the two binaries travel (by reference, like the images of
+ * a point of interest), and the fact that it reads back exactly as it left.
  */
 const trs = {
   position: [1, 0, -2] as [number, number, number],
@@ -27,12 +26,12 @@ const MASK = 'comments/attachments/7/splat-mask.bin';
 const SUBSET = 'comments/attachments/7/splat-subset.bin';
 const refs = { mask: { key: MASK, count: 3 }, subset: { key: SUBSET, count: 1 } };
 
-describe('buildSplatEditPart — ce qui part avec le commentaire', () => {
-  it('emporte la transformation, les volumes et le flip', () => {
+describe('buildSplatEditPart — what leaves with the comment', () => {
+  it('carries the transform, the volumes and the flip', () => {
     expect(buildSplatEditPart(edits)).toEqual({ type: 'splat-edit', ...edits });
   });
 
-  it('emporte les références des deux binaires, jamais le binaire lui-même', () => {
+  it('carries the references of the two binaries, never the binary itself', () => {
     const part = buildSplatEditPart(edits, refs)!;
     expect(part.mask).toEqual(refs.mask);
     expect(part.subset).toEqual(refs.subset);
@@ -40,11 +39,11 @@ describe('buildSplatEditPart — ce qui part avec le commentaire', () => {
   });
 
   /**
-   * Le cas qui manquait à la vague 1, et qui est le geste le plus courant du viewer splat :
-   * supprimer des splats sans rien déplacer. La proposition doit exister — sinon nettoyer un
-   * nuage pour les autres n'a aucune adresse dans un studio qui publie d'office.
+   * The case missing from wave 1, and the most common gesture of the splat viewer: deleting splats
+   * without moving anything. The proposal must exist: otherwise cleaning a cloud for others has no
+   * address in a studio that publishes by default.
    */
-  it('part pour un nettoyage seul : masque sans transformation ni volume', () => {
+  it('leaves for a clean-up alone: mask without transformation or volume', () => {
     const part = buildSplatEditPart(
       { transform: IDENTITY_SPLAT_TRANSFORM, volumes: [] },
       {
@@ -54,23 +53,23 @@ describe('buildSplatEditPart — ce qui part avec le commentaire', () => {
     expect(part).toEqual({ type: 'splat-edit', transform: null, volumes: [], mask: refs.mask });
   });
 
-  it('ne part pas quand rien n’est proposé (édition vide ou transformation d’identité)', () => {
+  it('does not leave when nothing is proposed (empty edit or identity transform)', () => {
     expect(buildSplatEditPart(null)).toBeNull();
     expect(buildSplatEditPart({ transform: null, volumes: [] })).toBeNull();
     expect(
       buildSplatEditPart({ transform: IDENTITY_SPLAT_TRANSFORM, volumes: [], baseFlip: true }),
     ).toBeNull();
-    // Références vides : rien n'a été déposé, donc rien n'est annoncé.
+    // Empty references: nothing has been deposited, so nothing is announced.
     expect(buildSplatEditPart(null, { mask: null, subset: null })).toBeNull();
   });
 
-  it('ne recopie jamais un champ interne de l’éditeur', () => {
+  it('never copies an internal field of the editor', () => {
     const part = buildSplatEditPart({ ...edits, splatMaskKey: 'k', deleted: [1, 2] } as SplatEdits)!;
     expect(Object.keys(part).sort()).toEqual(['baseFlip', 'transform', 'type', 'volumes']);
   });
 });
 
-describe('hasSplatEditProposal — y a-t-il quelque chose à joindre ?', () => {
+describe('hasSplatEditProposal — is there anything to attach?', () => {
   const draft = (over: Record<string, unknown>) =>
     ({
       edits: { transform: IDENTITY_SPLAT_TRANSFORM, volumes: [] },
@@ -79,7 +78,7 @@ describe('hasSplatEditProposal — y a-t-il quelque chose à joindre ?', () => {
       ...over,
     }) as never;
 
-  it('oui dès qu’un binaire, un volume, un flip ou un déplacement existe', () => {
+  it('yes as soon as a binary, a volume, a flip or a displacement exists', () => {
     expect(hasSplatEditProposal(draft({ mask: { bytes: new Uint8Array(2), count: 3 } }))).toBe(true);
     expect(hasSplatEditProposal(draft({ subset: { bytes: new Uint8Array(8), count: 1 } }))).toBe(true);
     expect(hasSplatEditProposal(draft({ edits: { transform: null, volumes: [volume] } }))).toBe(true);
@@ -89,25 +88,25 @@ describe('hasSplatEditProposal — y a-t-il quelque chose à joindre ?', () => {
     );
   });
 
-  it('non pour une édition vierge, ou pas d’édition du tout', () => {
+  it('no for a blank edit, or no edit at all', () => {
     expect(hasSplatEditProposal(null)).toBe(false);
     expect(hasSplatEditProposal(draft({}))).toBe(false);
   });
 });
 
-describe('readSplatEditPart — ce qui se rejoue à la lecture', () => {
-  it('relit exactement ce qui est parti (aller-retour), binaires compris', () => {
+describe('readSplatEditPart — what is replayed on reading', () => {
+  it('reads back exactly what left (round trip), binaries included', () => {
     const part = buildSplatEditPart(edits, refs)!;
     expect(readSplatEditPart([part])).toEqual({ ...edits, ...refs });
   });
 
-  it('rend null quand aucune part ne propose d’édition', () => {
+  it('returns null when no part proposes an edit', () => {
     expect(readSplatEditPart([])).toBeNull();
     expect(readSplatEditPart([{ type: 'rect' }])).toBeNull();
     expect(readSplatEditPart([{ type: 'splat-edit' }])).toBeNull();
   });
 
-  it('tolère une part abîmée plutôt que de faire tomber la lecture du commentaire', () => {
+  it('tolerates a damaged part rather than breaking the reading of the comment', () => {
     const broken = { type: 'splat-edit', transform: { position: [0, 0] }, volumes: [{ shape: 'blob' }] };
     expect(readSplatEditPart([broken as never])).toBeNull();
     const half = { type: 'splat-edit', transform: 'nope', volumes: [volume] };
@@ -117,16 +116,16 @@ describe('readSplatEditPart — ce qui se rejoue à la lecture', () => {
       mask: null,
       subset: null,
     });
-    // Référence sans clé exploitable : le reste de la proposition se rejoue quand même.
+    // Reference without a usable key: the rest of the proposal still replays.
     const noKey = { type: 'splat-edit', transform: trs, volumes: [], mask: { count: 3 } };
     expect(readSplatEditPart([noKey as never])?.mask).toBeNull();
   });
 });
 
-describe('resolveSplatEditProposal — les binaires ne se lisent que dans le commentaire porteur', () => {
+describe('resolveSplatEditProposal — the binaries are read only in the carrying comment', () => {
   const part = readSplatEditPart([buildSplatEditPart(edits, refs)!])!;
 
-  it('résout les URL présignées des pièces jointes du commentaire', () => {
+  it('resolves the presigned URLs of the attachments of the comment', () => {
     const resolved = resolveSplatEditProposal(part, [
       { key: MASK, url: 'https://minio/mask' },
       { key: SUBSET, url: 'https://minio/subset' },
@@ -141,11 +140,11 @@ describe('resolveSplatEditProposal — les binaires ne se lisent que dans le com
   });
 
   /**
-   * La garantie de sécurité : la clé ne sert d'INDEX que dans les pièces du commentaire, déjà
-   * filtrées par préfixe côté serveur. Une clé étrangère ne donne donc rien à charger — aucune
-   * URL n'est signée pour elle ici.
+   * The security guarantee: the key only serves as an INDEX among the attachments of the comment,
+   * already filtered by prefix on the server side. A foreign key therefore gives nothing to load:
+   * no URL is signed for it here.
    */
-  it('ne donne aucune URL à une clé absente des pièces jointes', () => {
+  it('gives no URL to a key absent from the attachments', () => {
     const resolved = resolveSplatEditProposal(part, [
       { key: 'comments/attachments/9/splat-mask.bin', url: 'https://minio/autrui' },
     ]);
@@ -154,20 +153,20 @@ describe('resolveSplatEditProposal — les binaires ne se lisent que dans le com
     expect(resolveSplatEditProposal(part, undefined)?.maskUrl).toBeNull();
   });
 
-  it('pas de proposition ⇒ rien à résoudre', () => {
+  it('no proposal ⇒ nothing to resolve', () => {
     expect(resolveSplatEditProposal(null, [])).toBeNull();
   });
 });
 
-describe('splitAnnotationParts — la part ne se confond pas avec un dessin', () => {
-  it('extrait la proposition et l’exclut des formes 2D', () => {
+describe('splitAnnotationParts — the part is not confused with a drawing', () => {
+  it('extracts the proposal and excludes it from the 2D shapes', () => {
     const out = splitAnnotationParts([buildSplatEditPart(edits, refs)!, { type: 'rect', x: 0, y: 0 }]);
     expect(out.splatEdit).toEqual({ ...edits, ...refs });
     expect(out.shapes).toHaveLength(1);
     expect((out.shapes[0] as { type: string }).type).toBe('rect');
   });
 
-  it('annotation absente ou sans proposition → null', () => {
+  it('annotation absent or without proposal → null', () => {
     expect(splitAnnotationParts(null).splatEdit).toBeNull();
     expect(splitAnnotationParts([{ type: 'rect' }]).splatEdit).toBeNull();
   });

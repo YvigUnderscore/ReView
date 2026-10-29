@@ -9,42 +9,42 @@ import type { PaintSceneHandle } from './surfaceRay';
 import { strokeCenter, type Vec3 } from './surfaceTrace';
 
 /**
- * Traits de la brosse de surface 3D : (dé)sérialisation depuis le tableau `Comment.annotation`
- * (parties typées, comme les hotspots) et construction de la ligne 3D — **enfant de l'objet
- * peint** (espace objet → suit la transformation du média), le nuage côté splat, le groupe racine
- * côté modèle.
+ * Strokes of the 3D surface brush: (de)serialization from the `Comment.annotation` array (typed
+ * parts, like the hotspots) and construction of the 3D line, **child of the painted object**
+ * (object space, so it follows the media transform): the cloud on the splat side, the root group
+ * on the model side.
  *
- * Le type de part reste `splat-paint` bien que la brosse serve les deux types spatiaux : c'est un
- * discriminant **écrit dans les commentaires existants**, et le renommer rendrait muets tous les
- * traits déjà envoyés. Le schéma Zod du serveur (`lib/commentPayload`) ne regarde d'ailleurs pas
- * le type de média.
+ * The part type stays `splat-paint` although the brush serves both spatial types: it is a
+ * discriminator **written in the existing comments**, and renaming it would silence all the
+ * strokes already sent. The server's Zod schema (`lib/commentPayload`) does not look at the media
+ * type either.
  *
- * L'épaisseur est en **pixels d'écran** : `LineMaterial` la tient constante quel que soit le
- * zoom (cf. `lineModules`), là où l'ancien tube en unités monde grossissait en approchant et
- * disparaissait en reculant. Les traits d'avant ce changement gardent leur nombre — il valait
- * 1 à 5 « relatif », il vaut 1 à 5 pixels : à peu près le même trait à l'écran.
+ * The thickness is in **screen pixels**: `LineMaterial` keeps it constant whatever the zoom
+ * (cf. `lineModules`), whereas the former tube in world units grew when approaching and vanished
+ * when receding. Strokes from before this change keep their numbers: they used to be 1 to 5
+ * "relative", they are now 1 to 5 pixels, which is roughly the same stroke on screen.
  */
 
 /**
- * Bornes de l'épaisseur, en pixels d'écran — **la même unité que l'anneau du curseur** de
- * l'overlay et que le champ de la barre d'options : `linewidth` est une largeur en pixels quand
- * `worldUnits` est faux, et `strokeFrame` donne au matériau la résolution en pixels CSS. Ce que
- * l'on règle est donc exactement ce que l'on voit sous le pointeur.
+ * Bounds of the thickness, in screen pixels: **the same unit as the cursor ring** of the overlay
+ * and as the options bar field. `linewidth` is a width in pixels when `worldUnits` is false, and
+ * `strokeFrame` gives the material the resolution in CSS pixels. What one sets is therefore
+ * exactly what one sees under the pointer.
  *
- * Le plafond est passé de 16 à 32 px (lot 13) : entourer un objet entier dans un plan large
- * demandait un trait plus épais que ce que la brosse acceptait.
+ * The ceiling went from 16 to 32 px (lot 13): wrapping a whole object in a wide plane required a
+ * thicker stroke than the brush accepted.
  */
 export const MIN_STROKE_PX = 1;
 export const MAX_STROKE_PX = 32;
 export const DEFAULT_STROKE_PX = 3;
 
-/** Épaisseur ramenée dans les bornes — un trait relu ne peut pas être nul ni démesuré. */
+/** Thickness brought back within the bounds: a stroke read back can be neither zero nor excessive. */
 export function clampStrokeWidth(width: unknown): number {
   const value = typeof width === 'number' && Number.isFinite(width) ? width : DEFAULT_STROKE_PX;
   return Math.min(MAX_STROKE_PX, Math.max(MIN_STROKE_PX, value));
 }
 
-/** Triplet fini, ou `null` : la normale est facultative (traits d'avant l'occlusion). */
+/** Finite triplet, or `null`: the normal is optional (strokes from before occlusion). */
 function readVec3(value: unknown): Vec3 | null {
   if (!Array.isArray(value) || value.length !== 3) return null;
   const [x, y, z] = value;
@@ -53,9 +53,9 @@ function readVec3(value: unknown): Vec3 | null {
 }
 
 /**
- * Extrait les traits valides d'un tableau d'annotation de commentaire (pur). Les traits sont
- * **normalisés** au passage : épaisseur bornée, normale absente si elle est illisible — le
- * rendu n'a plus à se défendre de ce qui a été écrit par une version antérieure.
+ * Extracts the valid strokes from a comment annotation array (pure). The strokes are
+ * **normalized** on the way: thickness bounded, normal absent if unreadable. The renderer no
+ * longer has to defend against what an earlier version wrote.
  */
 export function decodeStrokes(annotation: unknown): SplatPaintStroke[] {
   if (!Array.isArray(annotation)) return [];
@@ -85,20 +85,19 @@ export function decodeStrokes(annotation: unknown): SplatPaintStroke[] {
 }
 
 /**
- * Construit la ligne 3D d'un trait (à ajouter comme enfant de l'objet peint).
+ * Builds the 3D line of a stroke (to add as a child of the painted object).
  *
- * `frustumCulled` est laissé à faux : la sphère englobante d'une `LineGeometry` ignore
- * l'épaisseur écran, et un trait rasant le bord du cadre disparaissait d'un coup.
+ * `frustumCulled` is left false: the bounding sphere of a `LineGeometry` ignores the screen
+ * thickness, and a stroke grazing the edge of the frame would vanish at once.
  *
- * Deux réglages tiennent le trait sur une **vraie surface**, ce que le nuage n'imposait pas :
+ * Two settings keep the stroke on a **real surface**, which the cloud did not require:
  *
- *  - `polygonOffset` rapproche le trait de l'œil dans le tampon de profondeur. Un trait peint
- *    exactement sur un maillage y est coplanaire : sans ce décalage, il s'y bat en z et sort en
- *    pointillés clignotants. Le nuage n'écrivant pas la profondeur, le réglage y est sans effet.
- *  - `raycast` devient inerte : les traits sont enfants de l'objet peint, et le rayon de la
- *    brosse descend la hiérarchie sur un modèle. Sans cela, peindre par-dessus un trait existant
- *    accrocherait le trait au lieu de la surface — et la gomme, qui mesure à l'écran, n'a pas
- *    besoin d'être touchée par un rayon.
+ *  - `polygonOffset` brings the stroke closer to the eye in the depth buffer. A stroke painted
+ *    exactly on a mesh is coplanar with it: without this offset, it fights it in z and comes out
+ *    as flickering dashes. The cloud does not write depth, so the setting has no effect there.
+ *  - `raycast` becomes inert: the strokes are children of the painted object, and the brush ray
+ *    descends the hierarchy on a model. Without this, painting over an existing stroke would snap
+ *    to the stroke instead of the surface. The eraser measures on screen and needs no ray.
  */
 export function buildStrokeLine(
   handle: PaintSceneHandle,
@@ -110,23 +109,23 @@ export function buildStrokeLine(
   const material = new lines.LineMaterial({
     color: stroke.color,
     linewidth: clampStrokeWidth(stroke.width),
-    // Épaisseur en pixels d'écran ; la résolution est donnée à chaque image par `strokeFrame`.
+    // Thickness in screen pixels; the resolution is given on every frame by `strokeFrame`.
     worldUnits: false,
-    // L'occlusion approchée module l'opacité : sans transparence, elle n'aurait aucun effet.
+    // Approximate occlusion modulates the opacity: without transparency it would have no effect.
     transparent: true,
     polygonOffset: true,
     polygonOffsetFactor: -4,
     polygonOffsetUnits: -4,
   });
   const line = new lines.Line2(geometry, material);
-  line.renderOrder = 5; // au-dessus des splats (qui n'écrivent pas la profondeur)
+  line.renderOrder = 5; // above the splats (which do not write depth)
   line.frustumCulled = false;
   line.raycast = () => {};
   attachStrokeFrame(line, handle, stroke.normal ?? null, strokeCenter(stroke.points));
   return line;
 }
 
-/** Libère une ligne de trait (géométrie + matériau) et la retire de la scène. */
+/** Frees a stroke line (geometry and material) and removes it from the scene. */
 export function disposeStrokeLine(line: Line2): void {
   line.onBeforeRender = () => {};
   line.geometry.dispose();

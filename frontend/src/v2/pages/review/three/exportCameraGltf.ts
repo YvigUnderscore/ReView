@@ -7,18 +7,18 @@ import { bakeToKeyframes } from '../camera/channels/hermite';
 import type { CameraAnimV2 } from '../camera/channels/model';
 
 /**
- * Export d'une **animation caméra** (keyframes de review) vers un **glTF 2.0** minimal —
- * caméra perspective animée en translation + rotation, importable dans un logiciel 3D
- * (Blender/Maya/Houdini). Généré à la main (déterministe/testable) plutôt que via `GLTFExporter`,
- * dont l'export d'animation caméra a des subtilités non vérifiables sans navigateur.
+ * Export of a **camera animation** (review keyframes) to a minimal **glTF 2.0**: an animated
+ * perspective camera with translation and rotation, importable into 3D software (Blender, Maya,
+ * Houdini). Hand-generated (deterministic and testable) rather than via `GLTFExporter`, whose
+ * camera-animation export has subtleties that cannot be verified without a browser.
  *
- * Note : le format `.abc` (Alembic) demanderait un writer Ogawa (worker conteneurisé) ; le glTF
- * est l'interchange universellement importable produisible côté client.
+ * Note: the `.abc` format (Alembic) would require an Ogawa writer (containerised worker); glTF is the
+ * universally importable interchange that can be produced client-side.
  */
 
-const F32 = 5126; // GLTF componentType FLOAT
+const F32 = 5126; // glTF componentType FLOAT
 
-/** Encode un ArrayBuffer en base64 (btoa dispo navigateur + env de test happy-dom). */
+/** Encodes an ArrayBuffer in base64 (btoa is available in the browser and in the happy-dom test environment). */
 function toBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let bin = '';
@@ -27,8 +27,8 @@ function toBase64(buf: ArrayBuffer): string {
 }
 
 /**
- * Construit l'objet glTF (buffer binaire embarqué en data-URI) pour l'animation caméra. Pur :
- * `three` sert uniquement à dériver la rotation (quaternion) de chaque pose via `applyPoseToCamera`.
+ * Builds the glTF object (binary buffer embedded as a data URI) for the camera animation. Pure:
+ * `three` is only used to derive the rotation (quaternion) of each pose via `applyPoseToCamera`.
  */
 export function buildCameraGltf(
   three: typeof import('three'),
@@ -41,7 +41,7 @@ export function buildCameraGltf(
   const rotations = new Float32Array(n * 4);
   const cam = new three.PerspectiveCamera();
   keyframes.forEach((k, i) => {
-    times[i] = k.t / 1000; // ms → secondes
+    times[i] = k.t / 1000; // ms → seconds
     applyPoseToCamera(three, cam, k.pose);
     translations[i * 3] = cam.position.x;
     translations[i * 3 + 1] = cam.position.y;
@@ -52,7 +52,7 @@ export function buildCameraGltf(
     rotations[i * 4 + 3] = cam.quaternion.w;
   });
 
-  // Buffer unique : [times | translations | rotations], tout en float32 (aligné 4).
+  // Single buffer: [times | translations | rotations], all float32 (4-byte aligned).
   const tBytes = n * 4;
   const trBytes = n * 12;
   const rBytes = n * 16;
@@ -104,7 +104,7 @@ export function buildCameraGltf(
   };
 }
 
-/** Déclenche le téléchargement du glTF de l'animation caméra (three importé à la volée). */
+/** Triggers the download of the camera animation's glTF (three imported on the fly). */
 export async function downloadCameraGltf(
   keyframes: SplatCameraKeyframe[],
   filename = 'review-camera.gltf',
@@ -120,10 +120,10 @@ export async function downloadCameraGltf(
   URL.revokeObjectURL(url);
 }
 
-/** Base neutre pour le bake d'export (les canaux animés priment ; fov par défaut si non animé). */
+/** Neutral base for the export bake (animated channels take precedence; default fov if not animated). */
 const EXPORT_BASE: SplatCamera = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 }, fov: 45 };
 
-/** Exporte une animation caméra v2 (F-curves) : bake en keyframes puis téléchargement glTF. */
+/** Exports a camera animation v2 (F-curves): baked into keyframes, then glTF download. */
 export async function downloadAnimGltf(anim: CameraAnimV2, filename = 'review-camera.gltf'): Promise<void> {
   await downloadCameraGltf(bakeToKeyframes(anim, EXPORT_BASE), filename);
 }

@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_STROKE_PX, MAX_STROKE_PX, MIN_STROKE_PX, clampStrokeWidth, decodeStrokes } from './strokes';
 
 /**
- * `strokeRadius` a disparu avec le tube en unités monde : l'épaisseur est désormais un nombre de
- * pixels d'écran, tenu par `LineMaterial`, et il n'y a plus de rayon à dériver de la taille de la
- * scène. Le test qui verrouillait cette proportionnalité est donc remplacé, en connaissance de
- * cause, par celui de la seule normalisation qui reste : les bornes de l'épaisseur.
+ * `strokeRadius` disappeared with the tube in world units: the thickness is now a number of
+ * screen pixels, kept by `LineMaterial`, and there is no radius left to derive from the scene
+ * size. The test that locked in this proportionality is therefore replaced, knowingly, by the
+ * one for the only normalization that remains: the thickness bounds.
  */
 describe('clampStrokeWidth', () => {
-  it('borne l’épaisseur relue et retombe sur le défaut si elle est illisible', () => {
+  it('bounds the read-back thickness and falls back to the default if unreadable', () => {
     expect(clampStrokeWidth(0)).toBe(MIN_STROKE_PX);
     expect(clampStrokeWidth(1000)).toBe(MAX_STROKE_PX);
     expect(clampStrokeWidth(4)).toBe(4);
@@ -22,14 +22,14 @@ describe('clampStrokeWidth', () => {
 });
 
 describe('decodeStrokes', () => {
-  it("extrait les traits valides d'un tableau d'annotation mixte (hotspot + 2D + traits)", () => {
+  it("extracts the valid strokes from a mixed annotation array (hotspot + 2D + strokes)", () => {
     const annotation = [
       { type: 'hotspot', position: '0 0 0', normal: '0 0 1' },
       { type: 'pen', points: [[0, 0]] },
       { type: 'splat-paint', points: [0, 0, 0, 1, 1, 1], color: '#ff0000', width: 2 },
-      { type: 'splat-paint', points: [0, 0, 0], color: '#00ff00', width: 1 }, // trop court
+      { type: 'splat-paint', points: [0, 0, 0], color: '#00ff00', width: 1 }, // too short
       { type: 'splat-paint', points: [0, 0, 0, 1, NaN, 1], color: '#0000ff', width: 1 }, // NaN
-      { type: 'splat-paint', points: [0, 0, 0, 1, 1], color: '#0000ff', width: 1 }, // pas multiple de 3
+      { type: 'splat-paint', points: [0, 0, 0, 1, 1], color: '#0000ff', width: 1 }, // not a multiple of 3
     ];
     const strokes = decodeStrokes(annotation);
     expect(strokes).toHaveLength(1);
@@ -37,13 +37,13 @@ describe('decodeStrokes', () => {
     expect(strokes[0].width).toBe(2);
   });
 
-  it('tolère les annotations non-tableau (null, objet, chaîne)', () => {
+  it('tolerates non-array annotations (null, object, string)', () => {
     expect(decodeStrokes(null)).toEqual([]);
     expect(decodeStrokes({ type: 'splat-paint' })).toEqual([]);
     expect(decodeStrokes('x')).toEqual([]);
   });
 
-  it('normalise l’épaisseur du trait relu — elle ne peut être ni nulle ni démesurée', () => {
+  it('normalizes the thickness of a read-back stroke: it can be neither zero nor excessive', () => {
     const [thin, fat] = decodeStrokes([
       { type: 'splat-paint', points: [0, 0, 0, 1, 1, 1], color: '#fff', width: 0 },
       { type: 'splat-paint', points: [0, 0, 0, 1, 1, 1], color: '#fff', width: 900 },
@@ -52,7 +52,7 @@ describe('decodeStrokes', () => {
     expect(fat.width).toBe(MAX_STROKE_PX);
   });
 
-  it('garde une normale exploitable et écarte celle qui ne l’est pas', () => {
+  it('keeps a usable normal and discards one that is not', () => {
     const [kept, dropped, malformed] = decodeStrokes([
       { type: 'splat-paint', points: [0, 0, 0, 1, 1, 1], color: '#fff', width: 2, normal: [0, 0, 1] },
       { type: 'splat-paint', points: [0, 0, 0, 1, 1, 1], color: '#fff', width: 2, normal: [0, 0] },
@@ -63,7 +63,7 @@ describe('decodeStrokes', () => {
     expect(malformed.normal).toBeUndefined();
   });
 
-  it('accepte un trait antérieur à la normale : il reste lisible tel quel', () => {
+  it('accepts a stroke from before the normal: it stays readable as is', () => {
     const [stroke] = decodeStrokes([
       { type: 'splat-paint', points: [0, 0, 0, 1, 1, 1], color: '#abcdef', width: 3 },
     ]);

@@ -9,14 +9,13 @@ import type { MediaResp, SplatEdits } from '../reviewTypes';
 import type { SplatViewer } from './useSplat';
 
 /**
- * Le rejeu du nuage en lecture : les éditions du MÉDIA par défaut, et la proposition du
- * commentaire sélectionné quand il y en a une (Phase 50, lot 14). C'est ce qui rend la
- * proposition visible à celui qui lit le commentaire — sans quoi elle ne serait qu'un blob
- * dans une colonne.
+ * Replays the cloud in read mode: the media's edits by default, and the proposal of the
+ * selected comment when there is one (Phase 50, lot 14). This is what makes the proposal visible
+ * to whoever reads the comment; without it, it would be only a blob in a column.
  *
- * Le cas qui compte le plus est le dernier : **éditeur monté**. Un gestionnaire est la seule
- * personne capable de produire une proposition, et c'était la seule à qui le rejeu était
- * refusé — deux gestionnaires ne pouvaient pas se lire l'un l'autre.
+ * The case that matters most is the last one: **editor mounted**. A manager is the only person able to
+ * produce a proposal, and it was the only one for whom the replay was refused: two managers could not
+ * read each other.
  */
 const trs = (x: number) => ({
   position: [x, 0, 0] as [number, number, number],
@@ -40,8 +39,8 @@ function viewer() {
     applyTransform: vi.fn(),
     setBaseFlip: vi.fn(),
     ready: true,
-    // Aucune poignée de scène : l'effet des volumes/masque sort tout de suite, et le test
-    // reste sur ce qu'il vérifie — quelle édition pilote le nuage.
+    // No scene handle: the effect of the volumes and mask shows straight away, and the test
+    // stays on what it checks: which edit drives the cloud.
     getSceneHandle: () => null,
   } as unknown as SplatViewer;
 }
@@ -49,22 +48,22 @@ function viewer() {
 const media = (edits: SplatEdits | null) =>
   ({ splatEdits: edits, splatMaskUrl: null, splatSubsetUrl: null }) as unknown as MediaResp;
 
-describe('useSavedSplatEdits — ce qui pilote le nuage en lecture', () => {
-  it('rejoue les éditions du média quand aucun commentaire n’est lu', () => {
+describe('useSavedSplatEdits — what drives the cloud in reading', () => {
+  it('replays the media edits when no comment is being read', () => {
     const splat = viewer();
     renderHook(() => useSavedSplatEdits(splat, media(savedEdits), false, null));
     expect(splat.applyTransform).toHaveBeenCalledWith(savedEdits.transform);
     expect(splat.setBaseFlip).toHaveBeenCalledWith(true);
   });
 
-  it('rejoue la proposition du commentaire sélectionné à la place', () => {
+  it('replays the selected comment\'s proposal instead', () => {
     const splat = viewer();
     renderHook(() => useSavedSplatEdits(splat, media(savedEdits), false, proposal));
     expect(splat.applyTransform).toHaveBeenCalledWith(proposal.transform);
     expect(splat.setBaseFlip).toHaveBeenCalledWith(false);
   });
 
-  it('rend le nuage du média dès que la proposition est relâchée', () => {
+  it('restores the media cloud as soon as the proposal is released', () => {
     const splat = viewer();
     const initialProps: { p: SplatEditProposal | null } = { p: proposal };
     const { rerender } = renderHook(
@@ -76,22 +75,22 @@ describe('useSavedSplatEdits — ce qui pilote le nuage en lecture', () => {
     expect(splat.setBaseFlip).toHaveBeenLastCalledWith(true);
   });
 
-  it('ne touche à rien quand l’éditeur est monté et qu’aucun commentaire ne propose', () => {
+  it('touches nothing when the editor is mounted and no comment proposes', () => {
     const splat = viewer();
     renderHook(() => useSavedSplatEdits(splat, media(savedEdits), true, null));
     expect(splat.applyTransform).not.toHaveBeenCalled();
     expect(splat.setBaseFlip).not.toHaveBeenCalled();
   });
 
-  /** Le défaut du lot : `showEdit` coupait le rejeu à ceux-là même qui produisent les propositions. */
-  it('rejoue la proposition MÊME éditeur monté — un gestionnaire peut lire un gestionnaire', () => {
+  /** The batch's defect: `showEdit` cut the replay for exactly those who produce the proposals. */
+  it('replays the proposal EVEN with the editor mounted: a manager can read a manager', () => {
     const splat = viewer();
     renderHook(() => useSavedSplatEdits(splat, media(savedEdits), true, proposal));
     expect(splat.applyTransform).toHaveBeenCalledWith(proposal.transform);
     expect(splat.setBaseFlip).toHaveBeenCalledWith(false);
   });
 
-  it('éditeur monté : relâcher la proposition ne réapplique PAS le média — l’éditeur reprend', () => {
+  it('editor mounted: releasing the proposal does NOT reapply the media; the editor takes back', () => {
     const splat = viewer();
     const initialProps: { p: SplatEditProposal | null } = { p: proposal };
     const { rerender } = renderHook(
@@ -99,8 +98,8 @@ describe('useSavedSplatEdits — ce qui pilote le nuage en lecture', () => {
       { initialProps },
     );
     rerender({ p: null });
-    // La dernière écriture reste celle de la proposition : c'est `useEditorSuspend` qui rend
-    // ensuite la TRS locale, et non les éditions enregistrées du média.
+    // The last write stays that of the proposal: it is `useEditorSuspend` that then restores
+    // the local TRS, not the media's saved edits.
     expect(splat.applyTransform).toHaveBeenLastCalledWith(proposal.transform);
   });
 });

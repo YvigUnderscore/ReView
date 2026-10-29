@@ -4,22 +4,22 @@
 import { createSampler, type Sampler } from '../../three/statsSampler';
 
 /**
- * Métriques du viewer splat (10.G-V1), sans dépendance Three/Spark : l'échantillonneur reçoit
- * un `read()` branché sur le renderer (splats actifs, draw calls…) et calcule le FPS sur une
- * fenêtre glissante. Pur et testable ; la boucle de rendu appelle `frame(now)` à chaque frame,
- * les panneaux du HUD s'abonnent (aucune mesure ni émission sans abonné).
+ * Metrics of the splat viewer (10.G-V1), without Three/Spark dependency: the sampler receives a
+ * `read()` wired to the renderer (active splats, draw calls…) and computes the FPS over a sliding
+ * window. Pure and testable; the render loop calls `frame(now)` on each frame, and the HUD panels
+ * subscribe (no measurement nor emission without a subscriber).
  *
- * La mécanique de fenêtre est partagée avec le viewer 3D (`three/statsSampler`) : ici on ne
- * décrit plus que les compteurs propres au nuage.
+ * The window mechanics are shared with the 3D viewer (`three/statsSampler`): here we only describe
+ * the counters specific to the cloud.
  */
 export interface SplatStats {
-  /** Images par seconde, moyennées sur la fenêtre d'échantillonnage. */
+  /** Frames per second, averaged over the sampling window. */
   fps: number;
-  /** Splats rendus par Spark après tri/LOD (`SparkRenderer.activeSplats`). */
+  /** Splats rendered by Spark after sorting and LOD (`SparkRenderer.activeSplats`). */
   activeSplats: number;
-  /** Nombre total de splats du fichier (`PackedSplats.numSplats`). */
+  /** Total number of splats in the file (`PackedSplats.numSplats`). */
   totalSplats: number;
-  /** Draw calls WebGL de la dernière frame (`renderer.info.render.calls`). */
+  /** WebGL draw calls of the last frame (`renderer.info.render.calls`). */
   calls: number;
 }
 

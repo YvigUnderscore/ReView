@@ -4,15 +4,15 @@
 import { describe, expect, it } from 'vitest';
 import { collectBrushHits, depthBand } from './surfaceBrush';
 
-// Matrice clip : x/y passent tels quels, w = z (profondeur vue), cz forcé à 0 (dans le frustum).
+// Clip matrix: x/y pass through as-is, w = z (seen depth), cz forced to 0 (inside the frustum).
 const DEPTH_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
 const VIEWPORT = { width: 100, height: 100 };
 const NONE = () => false;
 
 describe('collectBrushHits', () => {
-  it('prend les splats de surface (bande de profondeur) et ignore les traversés derrière', () => {
-    // 3 splats alignés au centre écran : z=1 (surface), z=1.2 (dans la bande), z=3 (derrière).
-    // x/y multipliés par w à la projection → x=0 reste au centre quel que soit z.
+  it('takes surface splats (depth band) and ignores those traversed behind', () => {
+    // 3 splats aligned at the screen centre: z=1 (surface), z=1.2 (in the band), z=3 (behind).
+    // x/y multiplied by w at projection, so x=0 stays at the centre whatever z.
     const centers = new Float32Array([0, 0, 1, 0, 0, 1.2, 0, 0, 3]);
     const hits = collectBrushHits(
       DEPTH_MATRIX,
@@ -25,20 +25,20 @@ describe('collectBrushHits', () => {
     expect(hits).toEqual([0, 1]);
   });
 
-  it('respecte le disque écran du pinceau et le filtre des masqués', () => {
-    // z=1 partout → écran : (50,50) et (75,50) — pinceau r=10 en (50,50) ne prend que le 1ᵉʳ.
+  it('respects the brush screen disc and the hidden filter', () => {
+    // z=1 everywhere → screen: (50,50) and (75,50); brush r=10 at (50,50) only takes the 1st.
     const centers = new Float32Array([0, 0, 1, 0.5, 0, 1]);
     const brush = { x: 50, y: 50, radiusPx: 10 };
     const band = { viewZ: 1, halfDepth: 0.5 };
     expect(collectBrushHits(DEPTH_MATRIX, centers, NONE, VIEWPORT, brush, band)).toEqual([0]);
     expect(collectBrushHits(DEPTH_MATRIX, centers, (i) => i === 0, VIEWPORT, brush, band)).toEqual([]);
-    // Rayon élargi : les deux.
+    // Enlarged radius: both.
     expect(collectBrushHits(DEPTH_MATRIX, centers, NONE, VIEWPORT, { ...brush, radiusPx: 30 }, band)).toEqual(
       [0, 1],
     );
   });
 
-  it('exclut les centres derrière la caméra (w ≤ 0)', () => {
+  it('excludes centres behind the camera (w ≤ 0)', () => {
     const centers = new Float32Array([0, 0, -1]);
     expect(
       collectBrushHits(
@@ -54,12 +54,12 @@ describe('collectBrushHits', () => {
 });
 
 describe('depthBand', () => {
-  it('croît avec la profondeur mais reste indépendante du rayon (ne perce plus)', () => {
+  it('grows with depth but stays independent of the radius (no longer drills)', () => {
     const near = depthBand(1);
     const far = depthBand(10);
-    expect(far).toBeCloseTo(near * 10); // proportionnelle à la profondeur
+    expect(far).toBeCloseTo(near * 10); // proportional to depth
     expect(near).toBeGreaterThan(0);
-    // Fraction fixe de la profondeur — un « gros pinceau » ne change pas l'épaisseur.
+    // Fixed fraction of the depth: a "large brush" does not change the thickness.
     expect(depthBand(1, 0.03)).toBeCloseTo(0.03);
   });
 });

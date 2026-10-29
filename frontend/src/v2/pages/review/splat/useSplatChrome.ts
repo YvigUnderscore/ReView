@@ -8,7 +8,7 @@ import type { EditorTool } from './editor/useSplatEditor';
 import type { SplatEditorState } from './editor/useSplatEditor';
 import type { SplatPaintState } from './paint/useSplatPaint';
 
-/** Traduction rail → outil de l'éditeur splat. Tout le reste laisse l'éditeur au repos. */
+/** Maps a rail choice to a splat editor tool. Everything else leaves the editor at rest. */
 const EDITOR_TOOL: Partial<Record<ToolId, EditorTool>> = {
   'sel-rect': 'select-rect',
   'sel-lasso': 'select-lasso',
@@ -19,9 +19,9 @@ const EDITOR_TOOL: Partial<Record<ToolId, EditorTool>> = {
 };
 
 /**
- * Fait suivre l'outil armé dans le rail aux hooks qui portent réellement le geste : l'éditeur
- * (sélection, gizmos), le painter 3D et la mise au point au clic. Le rail est la seule source
- * de vérité de l'outil courant — les hooks ne pilotent plus leur propre barre.
+ * Makes the tool armed on the rail follow the hooks that actually carry the gesture: the editor
+ * (selection, gizmos), the 3D painter and focus-on-click. The rail is the only source of truth
+ * for the current tool: the hooks no longer drive their own bar.
  */
 export function useSplatChrome({
   state,
@@ -36,7 +36,7 @@ export function useSplatChrome({
   paint: SplatPaintState;
   focusPick: boolean;
   onToggleFocusPick: () => void;
-  /** Gizmo de la caméra-objet du mode layout (mise en scène). */
+  /** Gizmo of the layout mode's camera-object (staging). */
   cameraRig?: { mode: 'translate' | 'rotate'; setMode: (m: 'translate' | 'rotate') => void };
 }) {
   const tool = state.tool;
@@ -47,13 +47,13 @@ export function useSplatChrome({
     setTool(EDITOR_TOOL[tool] ?? 'navigate');
   }, [tool, setTool]);
 
-  // Brosse de surface et gomme de trait partagent le même overlay : le rail dit lequel des deux
-  // est armé, le hook de peinture en déduit ce que fait le clic.
+  // The surface brush and the stroke eraser share the same overlay: the rail says which of the two
+  // is armed, and the painting hook deduces what the click does.
   useEffect(() => {
     setArmed(tool === 'paint' ? 'paint' : tool === 'paint-erase' ? 'erase' : null);
   }, [tool, setArmed]);
 
-  // La mise au point au clic est un mode du rig caméra : on l'arme et on le désarme avec l'outil.
+  // Focus-on-click is a mode of the camera rig: it is armed and disarmed with the tool.
   useEffect(() => {
     if ((tool === 'focus') !== focusPick) onToggleFocusPick();
   }, [tool, focusPick, onToggleFocusPick]);

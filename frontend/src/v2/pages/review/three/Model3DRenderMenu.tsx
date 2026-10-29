@@ -9,17 +9,17 @@ import type { Model3DVariantsState } from './useModel3DVariants';
 import { useT } from '../../../i18n';
 
 /**
- * Réglages de rendu du viewer 3D, **dans le viewer** — coin haut-gauche, en popover.
+ * 3D viewer render settings, **inside the viewer**: top-left corner, as a popover.
  *
- * Ils vivaient dans l'onglet « Affichage » du dock : à l'autre bout de l'écran, derrière un
- * repli, pour des bascules qu'on essaie en rafale (shaded → wireframe → matcap → shaded) en
- * regardant le modèle. L'onglet a donc disparu ; son contenu est ici, entier — mode de rendu,
- * variante de matériaux, caméra embarquée, squelette du rig — et rendu par le **même**
- * `DisplayPanel`, pour qu'un réglage ajouté demain arrive aux deux endroits ou à aucun.
+ * They used to live in the "Display" tab of the dock: at the other end of the screen, behind a fold,
+ * for toggles one tries in quick succession (shaded → wireframe → matcap → shaded) while looking at
+ * the model. The tab has therefore disappeared; its content is here, in full: render mode,
+ * material variant, embedded camera, rig skeleton, rendered by the **same** `DisplayPanel`, so that a
+ * setting added tomorrow reaches both places or neither.
  *
- * Le chemin du mode de rendu n'est pas doublé : c'est l'état `useModel3DInspect` du composant
- * de review qui est branché ici, celui-là même qui applique l'override non destructif à la
- * scène et que la vue caméra d'un commentaire rejoue.
+ * The render-mode path is not duplicated: it is the `useModel3DInspect` state of the review component
+ * that is plugged in here, the very one that applies the non-destructive override to the scene and
+ * that a comment's camera view replays.
  */
 export default function Model3DRenderMenu({
   inspect,
@@ -39,8 +39,8 @@ export default function Model3DRenderMenu({
         <SlidersHorizontal size={13} />
         {t('viewer.render.title')}
       </PopoverTrigger>
-      {/* Ancré au bord gauche du déclencheur : le popover descend le long du bord du viewer
-          plutôt que de recouvrir le centre du cadre, qui est ce qu'on regarde. */}
+      {/* Anchored to the left edge of the trigger: the popover drops along the viewer's edge
+          rather than covering the centre of the frame, which is what one looks at. */}
       <PopoverContent align="start" className="flex w-60 flex-col gap-4 p-3">
         <DisplayPanel
           model={{

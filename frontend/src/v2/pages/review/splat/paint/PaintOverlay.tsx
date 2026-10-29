@@ -6,18 +6,18 @@ import type { PaintTool } from './useSplatPaint';
 import type { StrokeGesture } from './useStrokeGesture';
 import { ERASE_TOLERANCE_PX } from './surfaceTrace';
 
-/** Distance (px) entre deux échantillons du trait — un raycast de surface par échantillon. */
+/** Distance (px) between two samples of the stroke: one surface raycast per sample. */
 const SAMPLE_STEP = 6;
 
 /**
- * Overlay de la brosse de surface 3D : capte le geste, le remonte échantillon par échantillon
- * (le hook raycaste et construit le trait 3D dans la foulée) et montre **la taille réelle de la
- * brosse** — un cercle du diamètre de l'épaisseur, en pixels, puisque l'épaisseur est désormais
- * constante à l'écran. La molette est relayée au canvas pour conserver le zoom d'orbite.
+ * Overlay of the 3D surface brush: captures the gesture, reports it sample by sample (the hook
+ * raycasts and builds the 3D stroke along the way) and shows **the real size of the brush**: a
+ * circle with the diameter of the thickness, in pixels, since the thickness is now constant on
+ * screen. The wheel is relayed to the canvas to keep the orbit zoom.
  *
- * Le guide pointillé 2D ne s'affiche que sur la portion du geste **qui ne touche aucune
- * surface** : il dit « le rayon passe dans le vide, rien ne sera peint ici » au lieu de laisser
- * croire à un trait. Le reste du temps, ce qu'on voit est la ligne 3D elle-même.
+ * The 2D dotted guide is only shown on the portion of the gesture **that touches no surface**:
+ * it says "the ray passes through the void, nothing will be painted here" instead of letting one
+ * believe in a stroke. The rest of the time, what is seen is the 3D line itself.
  */
 export default function PaintOverlay({
   mode,
@@ -29,7 +29,7 @@ export default function PaintOverlay({
 }: {
   mode: PaintTool;
   color: string;
-  /** Épaisseur du trait, en pixels d'écran. */
+  /** Stroke thickness, in screen pixels. */
   width: number;
   getCanvas: () => HTMLElement | null;
   gesture: StrokeGesture;
@@ -39,7 +39,7 @@ export default function PaintOverlay({
   const drawing = useRef(false);
   const lastRef = useRef<[number, number] | null>(null);
   const [cursor, setCursor] = useState<[number, number] | null>(null);
-  // Portion du geste tombée dans le vide (depuis le dernier échantillon qui a touché).
+  // Portion of the gesture that fell into the void (since the last sample that hit).
   const [miss, setMiss] = useState<[number, number][]>([]);
 
   const local = (e: PointerEvent): [number, number] => {
@@ -59,7 +59,7 @@ export default function PaintOverlay({
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // pointeur synthétique (tests) sans capture possible — le geste fonctionne quand même
+      // synthetic pointer (tests) without possible capture: the gesture still works
     }
     const point = local(e);
     setCursor(point);

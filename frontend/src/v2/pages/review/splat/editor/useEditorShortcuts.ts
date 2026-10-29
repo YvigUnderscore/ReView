@@ -7,20 +7,20 @@ import { UNDO_PRIORITY, useUndoScope } from '../../../../lib/undoScope';
 import type { SplatViewer } from '../useSplat';
 
 /**
- * Raccourcis clavier de l'éditeur de splat : F/H (cadrer la sélection / vue d'origine), Suppr
- * (suppression de la sélection), Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y (historique). Inactifs dans les
- * champs, les dialogs et pendant un vol (clic droit + ZQSD — les touches pilotent la caméra).
+ * Keyboard shortcuts of the splat editor: F/H (frame the selection / original view), Delete
+ * (delete the selection), Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y (history). Inactive in fields, dialogs
+ * and during a fly (right click + ZQSD: the keys drive the camera).
  *
- * Le choix de l'outil ne passe plus par ici : depuis la refonte du chrome, c'est le rail qui
- * l'arme (`useChromeState`), et lui seul, pour que la lettre et le bouton ne divergent jamais.
+ * The tool choice no longer goes through here: since the chrome redesign, the rail arms it
+ * (`useChromeState`), and only it, so that the letter and the button never diverge.
  *
- * L'historique, lui, ne passe plus par ce gestionnaire : il s'inscrit au registre partagé
- * (`lib/undoScope`) au rang de REPLI (`UNDO_PRIORITY.editor`). C'est ce qui départage l'éditeur
- * de la brosse 3D et du composer d'annotation, qui écoutent les mêmes touches — avant, deux
- * historiques non vides se défaisaient ensemble sur une seule frappe. Corollaire assumé : le
- * vol ne bloque plus l'historique. La garde de vol protège les touches que le vol **utilise**
- * (ZQSD, et donc F/H/Suppr par voisinage) ; Ctrl+Z n'en est pas, et refuser d'annuler parce
- * qu'un clic droit est maintenu n'a jamais servi personne.
+ * History no longer goes through this handler: it registers in the shared registry
+ * (`lib/undoScope`) at the FALLBACK rank (`UNDO_PRIORITY.editor`). This is what arbitrates
+ * between the editor and the 3D brush and the annotation composer, which listen to the same
+ * keys: before, two non-empty histories were undone together on a single keypress. Accepted
+ * corollary: the fly no longer blocks history. The fly guard protects the keys the fly **uses**
+ * (ZQSD, and therefore F/H/Delete by proximity); Ctrl+Z is not one of them, and refusing to undo
+ * because a right button is held never served anyone.
  */
 export function useEditorShortcuts(opts: {
   enabled: boolean;

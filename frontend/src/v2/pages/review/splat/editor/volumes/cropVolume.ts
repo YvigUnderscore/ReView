@@ -4,16 +4,16 @@
 import type * as THREE from 'three';
 import type { SplatSceneHandle } from '../../useSplat';
 
-/** Forme du volume de crop. */
+/** Shape of the crop volume. */
 export type VolumeShape = 'box' | 'sphere';
-/** Effet du volume : creuser (supprime l'intérieur) ou isoler (ne garde que l'intérieur). */
+/** Volume effect: carve (removes the interior) or isolate (keeps only the interior). */
 export type VolumeMode = 'delete' | 'isolate';
 
-/** Couleurs des filaires de volume (rouge = creuser, vert = isoler) — constantes Three. */
+/** Wireframe colours of the volumes (red = carve, green = isolate): Three constants. */
 const WIRE_DELETE = 0xef4444;
 const WIRE_ISOLATE = 0x22c55e;
 
-/** Objets Spark/Three d'un volume vivant dans la scène (non sérialisés — cf. H5). */
+/** Spark/Three objects of a volume alive in the scene (not serialized, see H5). */
 export interface VolumeRuntime {
   edit: THREE.Object3D & { invert: boolean };
   sdf: THREE.Object3D & { radius: number };
@@ -21,21 +21,21 @@ export interface VolumeRuntime {
 }
 
 /**
- * Volumes de crop SDF non-destructifs (10.G) : un `SplatEdit` (enfant du SplatMesh — usage
- * documenté Spark, pas de `editable` global) contenant un `SplatEditSdf` opacité 0 en mode
- * MULTIPLY — l'intérieur du volume est effacé du rendu ; `invert` sur l'édit isole au
- * contraire l'intérieur. Le SDF est un Object3D : le gizmo le déplace/tourne/redimensionne
- * nativement. Un filaire enfant matérialise le volume (rouge = creuser, vert = isoler).
+ * Non-destructive SDF crop volumes (10.G): a `SplatEdit` (child of the SplatMesh, documented Spark
+ * usage, no global `editable`) containing a `SplatEditSdf` with opacity 0 in MULTIPLY mode: the
+ * interior of the volume is erased from the rendering; `invert` on the edit instead isolates the
+ * interior. The SDF is an Object3D: the gizmo moves, rotates and resizes it natively. A child
+ * wireframe represents the volume (red = carve, green = isolate).
  *
- * Correspondance filaire ↔ SDF (11.F ; Phase 28, ellipsoïde) : boîte → demi-extents = `scale`
- * (filaire 2×2×2, `radius` 0 = pas d'arrondi) ; « sphère » → **ELLIPSOID** (demi-axes = `scale`,
- * `radius` 0), donc redimensionnement **non uniforme** natif (l'échelle des 3 axes est respectée).
+ * Wireframe ↔ SDF correspondence (11.F; Phase 28, ellipsoid): box → half-extents = `scale`
+ * (wireframe 2×2×2, `radius` 0 = no rounding); "sphere" → **ELLIPSOID** (half-axes = `scale`,
+ * `radius` 0), so **non-uniform** resizing is native (the scale of the 3 axes is respected).
  */
 export async function createVolume(
   handle: SplatSceneHandle,
   shape: VolumeShape,
   mode: VolumeMode,
-  /** Filaire visible (true en édition ; false en lecture seule — le volume agit sans se voir). */
+  /** Visible wireframe (true when editing; false read-only: the volume acts without being seen). */
   showWire = true,
 ): Promise<VolumeRuntime> {
   const { THREE, mesh } = handle;
@@ -47,24 +47,24 @@ export async function createVolume(
     invert: mode === 'isolate',
   });
   const sdf = new SplatEditSdf({
-    // « Sphère » = ELLIPSOID (demi-axes = échelle) → resize non uniforme correct (Phase 28).
+    // "Sphere" = ELLIPSOID (half-axes = scale) → correct non-uniform resize (Phase 28).
     type: shape === 'box' ? SplatEditSdfType.BOX : SplatEditSdfType.ELLIPSOID,
     opacity: 0,
     color: new THREE.Color(1, 1, 1),
-    radius: 0, // aucun arrondi : boîte comme ellipsoïde tirent leur taille de `scale`
+    radius: 0, // no rounding: box and ellipsoid both take their size from `scale`
   });
   edit.addSdf(sdf);
-  edit.add(sdf); // enfant → transform par le graphe de scène (gizmo)
+  edit.add(sdf); // child: transform handled by the scene graph (gizmo)
 
-  // Placement initial : centré sur la bbox du splat, dimensionné au tiers de son rayon.
+  // Initial placement: centred on the splat's bbox, sized to a third of its radius.
   const box = mesh.getBoundingBox(true);
   const center = box.getCenter(new THREE.Vector3());
   const radius = Math.max(box.getBoundingSphere(new THREE.Sphere()).radius, 0.001);
   sdf.position.copy(center);
   sdf.scale.setScalar(radius / 3);
 
-  // Filaire de visualisation, calé sur le volume réellement creusé : boîte 2³ (demi-extent 1,
-  // suit `scale` = demi-extents SDF) / sphère r=1 (suit `scale`, dont le rayon SDF est dérivé).
+  // Visualization wireframe, matched to the volume actually carved: 2³ box (half-extent 1,
+  // follows `scale` = SDF half-extents) / sphere r=1 (follows `scale`, from which the SDF radius is derived).
   const geo = shape === 'box' ? new THREE.BoxGeometry(2, 2, 2) : new THREE.SphereGeometry(1, 16, 12);
   const wire = new THREE.LineSegments(
     new THREE.EdgesGeometry(geo),
@@ -78,7 +78,7 @@ export async function createVolume(
   return { edit, sdf: sdf, wire };
 }
 
-/** Applique une TRS sérialisée au SDF du volume (rechargement d'éditions persistées). */
+/** Applies a serialized TRS to the volume's SDF (reload of persisted edits). */
 export function applyVolumeData(
   runtime: VolumeRuntime,
   data: { position: number[]; quaternion: number[]; scale: number[] },
@@ -88,7 +88,7 @@ export function applyVolumeData(
   runtime.sdf.scale.fromArray(data.scale);
 }
 
-/** Change l'effet du volume (creuser ↔ isoler) et la couleur du filaire. */
+/** Changes the volume's effect (carve ↔ isolate) and the wireframe colour. */
 export function setVolumeMode(runtime: VolumeRuntime, mode: VolumeMode): void {
   runtime.edit.invert = mode === 'isolate';
   (runtime.wire.material as THREE.LineBasicMaterial).color.setHex(
@@ -96,18 +96,18 @@ export function setVolumeMode(runtime: VolumeRuntime, mode: VolumeMode): void {
   );
 }
 
-/** Détache le volume de la scène (l'édit SDF cesse de s'appliquer) — ressources conservées
- * pour un ré-attachement (undo/redo). */
+/** Detaches the volume from the scene (the SDF edit stops applying); resources are kept
+ * for a re-attachment (undo/redo). */
 export function detachVolume(runtime: VolumeRuntime): void {
   runtime.edit.removeFromParent();
 }
 
-/** Ré-attache un volume détaché (redo d'un ajout / undo d'une suppression). */
+/** Re-attaches a detached volume (redo of an addition / undo of a deletion). */
 export function reattachVolume(handle: SplatSceneHandle, runtime: VolumeRuntime): void {
   handle.mesh.add(runtime.edit);
 }
 
-/** Libération définitive (démontage de l'éditeur) : détache et libère le filaire. */
+/** Final release (editor unmount): detaches and releases the wireframe. */
 export function disposeVolume(runtime: VolumeRuntime): void {
   detachVolume(runtime);
   runtime.wire.geometry.dispose();

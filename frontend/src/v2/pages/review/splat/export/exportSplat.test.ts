@@ -7,7 +7,7 @@ import { SpzReader } from '@sparkjsdev/spark';
 import type { SplatSceneHandle } from '../useSplat';
 import { buildCleanSpz, cleanExportName } from './exportSplat';
 
-/** Faux handle minimal : seuls `THREE` et `mesh.packedSplats.forEachSplat` sont lus par l'export. */
+/** Minimal fake handle: only `THREE` and `mesh.packedSplats.forEachSplat` are read by the export. */
 function fakeHandle(raws: { center: [number, number, number]; opacity: number }[]): SplatSceneHandle {
   const packedSplats = {
     forEachSplat: (
@@ -35,21 +35,21 @@ function fakeHandle(raws: { center: [number, number, number]; opacity: number }[
 }
 
 describe('cleanExportName', () => {
-  it('remplace l’extension par le suffixe .spz', () => {
+  it('replaces the extension with the .spz suffix', () => {
     expect(cleanExportName('scene.ply')).toBe('scene-nettoye.spz');
     expect(cleanExportName('ma capture.spz')).toBe('ma capture-nettoye.spz');
   });
-  it('gère l’absence d’extension et le vide', () => {
+  it('handles a missing extension and an empty name', () => {
     expect(cleanExportName('scene')).toBe('scene-nettoye.spz');
     expect(cleanExportName('')).toBe('splat-nettoye.spz');
   });
 });
 
 describe('buildCleanSpz', () => {
-  it('exporte les splats visibles et compte ceux gardés', async () => {
+  it('exports the visible splats and counts those kept', async () => {
     const handle = fakeHandle([
       { center: [0, 0, 0], opacity: 1 },
-      { center: [1, 0, 0], opacity: 0 }, // masqué → exclu
+      { center: [1, 0, 0], opacity: 0 }, // masked → excluded
       { center: [2, 0, 0], opacity: 1 },
     ]);
     const { bytes, kept } = await buildCleanSpz(handle, { transform: null, volumes: [] });
@@ -59,7 +59,7 @@ describe('buildCleanSpz', () => {
     expect(reader.numSplats).toBe(2);
   });
 
-  it('lève si tous les splats sont masqués', async () => {
+  it('throws if all splats are masked', async () => {
     const handle = fakeHandle([{ center: [0, 0, 0], opacity: 0 }]);
     await expect(buildCleanSpz(handle, { transform: null, volumes: [] })).rejects.toThrow();
   });

@@ -11,14 +11,14 @@ import {
 import { t } from '../../../../../i18n';
 
 /**
- * Transformations de sous-ensembles de splats persistées (Phase 28) — encodage binaire pur
- * (testable sans WebGL). Chaque op = la matrice **delta** (locale au mesh, autour du barycentre,
- * telle que produite par le gizmo) + les indices des splats concernés. Les ops sont rejouées
- * dans l'ordre au chargement (`PackedSplats.setSplat`), pour tous — le fichier original reste
- * intact. Stocké dans MinIO (`metadata.splatSubsetKey`), transporté en base64 dans le JSON d'API.
+ * Persisted transformations of splat subsets (Phase 28), pure binary encoding
+ * (testable without WebGL). Each op is the **delta** matrix (local to the mesh, around the
+ * barycentre, as produced by the gizmo) plus the indices of the affected splats. Ops are replayed
+ * in order on load (`PackedSplats.setSplat`), for everyone; the original file stays
+ * intact. Stored in MinIO (`metadata.splatSubsetKey`), transported as base64 in the API JSON.
  */
 
-/** Une transformation de sous-ensemble : matrice 4×4 (16 éléments column-major) + indices. */
+/** A subset transformation: 4x4 matrix (16 elements, column-major) plus indices. */
 export interface SubsetOp {
   delta: number[];
   indices: number[];
@@ -26,7 +26,7 @@ export interface SubsetOp {
 
 const VERSION = 1;
 
-/** Encode la liste d'ops : uint32 version + uint32 nb d'ops, puis par op 16×float64 + uint32 n + n×uint32. */
+/** Encodes the op list: uint32 version + uint32 op count, then per op 16×float64 + uint32 n + n×uint32. */
 export function encodeSubsetOps(ops: readonly SubsetOp[]): Uint8Array {
   const size = 8 + ops.reduce((acc, op) => acc + 16 * 8 + 4 + op.indices.length * 4, 0);
   const buf = new ArrayBuffer(size);
@@ -38,7 +38,7 @@ export function encodeSubsetOps(ops: readonly SubsetOp[]): Uint8Array {
   o += 4;
   for (const op of ops) {
     for (let i = 0; i < 16; i++) {
-      view.setFloat64(o, op.delta[i] ?? (i % 5 === 0 ? 1 : 0), true); // défaut identité
+      view.setFloat64(o, op.delta[i] ?? (i % 5 === 0 ? 1 : 0), true); // identity by default
       o += 8;
     }
     view.setUint32(o, op.indices.length, true);
@@ -51,7 +51,7 @@ export function encodeSubsetOps(ops: readonly SubsetOp[]): Uint8Array {
   return new Uint8Array(buf);
 }
 
-/** Décode la liste d'ops — lève si le format est inconnu ou tronqué. */
+/** Decodes the op list; throws if the format is unknown or truncated. */
 export function decodeSubsetOps(bytes: Uint8Array): SubsetOp[] {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (bytes.byteLength < 8 || view.getUint32(0, true) !== VERSION)
@@ -79,24 +79,24 @@ export function decodeSubsetOps(bytes: Uint8Array): SubsetOp[] {
   return ops;
 }
 
-/** Télécharge et décode les transformations de sous-ensembles persistées. */
+/** Downloads and decodes the persisted subset transformations. */
 export async function fetchSubsetOps(url: string): Promise<SubsetOp[]> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(t('splat.opsUnavailable', { status: res.status }));
   return decodeSubsetOps(new Uint8Array(await res.arrayBuffer()));
 }
 
-/** Rejoue les ops dans l'ordre sur les données paquées (au chargement — éditeur comme spectateur). */
+/** Replays the ops in order on the packed data (on load, for editor and viewer alike). */
 export function applySubsetOps(handle: SplatSceneHandle, ops: readonly SubsetOp[]): void {
   applySubsetOpsReversible(handle, ops);
 }
 
 /**
- * Même rejeu, mais en rendant de quoi le DÉFAIRE (Phase 50, lot 14).
+ * Same replay, but also returns what is needed to UNDO it (Phase 50, lot 14).
  *
- * Les ops d'un chargement de média sont définitives : elles décrivent le nuage tel qu'il est
- * livré. Celles d'une **proposition de commentaire** ne le sont pas — on les relâche en quittant
- * le commentaire, et sans instantané le nuage resterait déplacé jusqu'au prochain rechargement.
+ * The ops of a media load are final: they describe the cloud as delivered. Those of a
+ * **comment proposal** are not: they are released when leaving the comment, and without a
+ * snapshot the cloud would stay moved until the next reload.
  */
 export function applySubsetOpsReversible(
   handle: SplatSceneHandle,
@@ -113,7 +113,7 @@ export function applySubsetOpsReversible(
   return snaps;
 }
 
-/** Défait un rejeu, du dernier au premier : deux ops peuvent avoir touché le même splat. */
+/** Undoes a replay, from last to first: two ops may have touched the same splat. */
 export function revertSubsetOps(handle: SplatSceneHandle, snaps: readonly SubsetSnapshot[]): void {
   for (let i = snaps.length - 1; i >= 0; i--) restoreSubset(handle, snaps[i]);
 }

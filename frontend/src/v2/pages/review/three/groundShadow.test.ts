@@ -25,8 +25,8 @@ const planeOf = (scene: THREE.Scene) =>
     (o) => (o as THREE.Mesh).isMesh && (o as THREE.Mesh).material instanceof THREE.ShadowMaterial,
   );
 
-describe("groundShadow — sol récepteur d'ombres (39.F)", () => {
-  it('ajoute un plan ShadowMaterial et arme la key light quand activé', () => {
+describe('groundShadow — shadow-receiving ground (39.F)', () => {
+  it('adds a ShadowMaterial plane and arms the key light when enabled', () => {
     const { handle, scene, key, fill, mesh, renderer } = makeHandle();
     setGroundShadow(handle, true);
 
@@ -34,17 +34,17 @@ describe("groundShadow — sol récepteur d'ombres (39.F)", () => {
     expect(plane).toBeDefined();
     expect(plane!.receiveShadow).toBe(true);
     expect((plane!.material as THREE.ShadowMaterial).isShadowMaterial).toBe(true);
-    // Key light = la plus intense ; la fill reste sans ombre.
+    // Key light = the most intense; the fill stays without shadow.
     expect(key.castShadow).toBe(true);
     expect(fill.castShadow).toBe(false);
-    // Le modèle projette des ombres, le shadow map est actif.
+    // The model casts shadows, the shadow map is active.
     expect(mesh.castShadow).toBe(true);
     expect(renderer.shadowMap.enabled).toBe(true);
   });
 
-  it('positionne le sol au bas de la boîte englobante du modèle', () => {
+  it('positions the ground at the bottom of the model bounding box', () => {
     const { handle, scene, mesh } = makeHandle();
-    mesh.position.set(2, 5, -1); // décale le modèle
+    mesh.position.set(2, 5, -1); // offsets the model
     setGroundShadow(handle, true);
     const plane = planeOf(scene) as THREE.Mesh;
     const box = new THREE.Box3().setFromObject(mesh);
@@ -52,7 +52,7 @@ describe("groundShadow — sol récepteur d'ombres (39.F)", () => {
     expect(plane.rotation.x).toBeCloseTo(-Math.PI / 2, 5);
   });
 
-  it('retire le plan et désactive tout quand désactivé', () => {
+  it('removes the plane and disables everything when disabled', () => {
     const { handle, scene, key, renderer } = makeHandle();
     setGroundShadow(handle, true);
     setGroundShadow(handle, false);
@@ -62,7 +62,7 @@ describe("groundShadow — sol récepteur d'ombres (39.F)", () => {
     expect(scene.userData.__groundShadow).toBeUndefined();
   });
 
-  it('est idempotent : un seul plan après plusieurs activations', () => {
+  it('is idempotent: a single plane after several activations', () => {
     const { handle, scene } = makeHandle();
     setGroundShadow(handle, true);
     setGroundShadow(handle, true);
@@ -72,7 +72,7 @@ describe("groundShadow — sol récepteur d'ombres (39.F)", () => {
     expect(planes).toHaveLength(1);
   });
 
-  it('sans renderer, ne fait rien', () => {
+  it('without a renderer, does nothing', () => {
     const { scene, mesh } = makeHandle();
     const handle = { THREE, scene, mesh } as unknown as ViewerSceneHandle;
     expect(() => setGroundShadow(handle, true)).not.toThrow();

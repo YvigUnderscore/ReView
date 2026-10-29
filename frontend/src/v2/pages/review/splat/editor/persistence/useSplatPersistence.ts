@@ -12,11 +12,10 @@ import { applySubsetOps, encodeSubsetOps, fetchSubsetOps, type SubsetOp } from '
 import { useT } from '../../../../../i18n';
 
 /**
- * Persistance des éditions du splat (extrait de `useSplatEditor`, budget de taille) :
- * rechargement des éditions binaires persistées (masque de suppression, transformations de
- * sous-ensembles — Phase 28) et enregistrement/réinitialisation serveur (JSON + binaires).
- * L'état édité (transform, volumes, journal d'ops) reste dans l'éditeur — le hook ne fait
- * que le sérialiser vers l'API et rejouer ce qui est enregistré au chargement.
+ * Persistence of splat edits (extracted from `useSplatEditor` to keep its size in check):
+ * reloading the persisted binary edits (deletion mask, subset transforms, Phase 28) and saving or
+ * resetting them on the server (JSON + binaries). The edited state (transform, volumes, op log)
+ * stays in the editor; this hook only serializes it to the API and replays what was saved on load.
  */
 export function useSplatPersistence(opts: {
   splat: SplatViewer;
@@ -24,20 +23,20 @@ export function useSplatPersistence(opts: {
   enabled: boolean;
   savedMaskUrl: string | null;
   savedSubsetUrl: string | null;
-  /** Masque cumulé (indices masqués) — alimenté ici au chargement, lu à l'enregistrement. */
+  /** Cumulative mask (masked indices), filled here on load and read on save. */
   deletedRef: RefObject<Set<number>>;
-  /** Journal des ops de sous-ensemble — alimenté ici au chargement, lu à l'enregistrement. */
+  /** Subset op log, filled here on load and read on save. */
   subsetOpsRef: RefObject<SubsetOp[]>;
   setDeletedCount: (n: number) => void;
   notifyHiddenChanged: (indices: Iterable<number>) => void;
-  /** Sérialise l'état courant (transform + volumes + baseFlip) au moment d'enregistrer. */
+  /** Serializes the current state (transform + volumes + baseFlip) when saving. */
   buildEdits: () => SplatEdits;
   /**
-   * Volumes binaires DÉJÀ enregistrés au média, relevés ici au chargement (Phase 50, lot 14).
+   * Binary volumes ALREADY saved on the media, recorded here on load (Phase 50, lot 14).
    *
-   * C'est ce qui permet de distinguer ce que l'auteur a ajouté de ce qu'il a simplement trouvé :
-   * une proposition jointe à un commentaire ne doit porter que son geste à lui, sinon chaque
-   * note rejouerait sur le nuage du lecteur des ops déjà appliquées chez lui.
+   * This distinguishes what the author added from what they merely found: a proposal attached
+   * to a comment must carry only its own gesture, otherwise each note would replay on the
+   * reader's cloud the ops already applied on theirs.
    */
   basesRef: RefObject<{ mask: number; subset: number }>;
   onSaved: (patch: SplatEditsPatch) => void;
@@ -51,8 +50,8 @@ export function useSplatPersistence(opts: {
   const maskInitRef = useRef(false);
   const subsetInitRef = useRef(false);
 
-  // Recharge le masque persisté (une fois) : masque appliqué + compteur initialisé, pour que
-  // les suppressions suivantes s'y cumulent à l'enregistrement.
+  // Reloads the persisted mask (once): applied to the display and counter initialized, so that
+  // subsequent deletions accumulate onto it on save.
   useEffect(() => {
     if (!enabled || !ready || maskInitRef.current || !savedMaskUrl) return;
     maskInitRef.current = true;
@@ -68,8 +67,8 @@ export function useSplatPersistence(opts: {
       .catch(() => toast.error(t('splat.maskUnreadable')));
   }, [enabled, ready, savedMaskUrl, splat, deletedRef, basesRef, setDeletedCount, notifyHiddenChanged, t]);
 
-  // Recharge les transformations de sous-ensembles persistées (une fois) : rejouées sur les
-  // données paquées + journal initialisé, pour que les ops suivantes s'y cumulent.
+  // Reloads the persisted subset transforms (once): replayed on the packed data and op log
+  // initialized, so that subsequent ops accumulate onto it.
   useEffect(() => {
     if (!enabled || !ready || subsetInitRef.current || !savedSubsetUrl) return;
     subsetInitRef.current = true;
@@ -84,7 +83,7 @@ export function useSplatPersistence(opts: {
       .catch(() => toast.error(t('splat.transformUnreadable')));
   }, [enabled, ready, savedSubsetUrl, splat, subsetOpsRef, basesRef, t]);
 
-  /** Enregistre toutes les éditions : transform + volumes (JSON), masque et ops binaires. */
+  /** Saves all edits: transform + volumes (JSON), mask and binary ops. */
   const save = useCallback(async () => {
     setBusy(true);
     try {
@@ -129,10 +128,9 @@ export function useSplatPersistence(opts: {
     }
   }, [mediaId, buildEdits, deletedRef, subsetOpsRef, savedMaskUrl, savedSubsetUrl, onSaved, onClean, t]);
 
-  // Une « réinitialisation » purgeant les trois points d'écriture serveur a vécu ici jusqu'au
-  // lot 14 : aucun appelant dans tout le front ne l'invoquait (code mort, interdit par le
-  // CLAUDE.md du projet), et l'écriture globale se referme désormais à la publication. Le
-  // besoin qu'elle servait — revenir à ce qui est enregistré — est tenu par la reprise locale
-  // de `useSplatEditor` (`revertEdits`), qui ne touche à rien côté serveur.
+  // A "reset" that purged the three server write points lived here until lot 14: no caller in
+  // the whole front invoked it (dead code, forbidden by the project's CLAUDE.md), and the global
+  // write now closes at publication. The need it served, returning to what is saved, is covered
+  // by the local revert in `useSplatEditor` (`revertEdits`), which touches nothing on the server.
   return { busy, save };
 }

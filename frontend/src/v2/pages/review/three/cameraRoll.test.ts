@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyRoll, rollFromCamera, rollFromUp, rollOrientation, updateOrbitKeepingRoll } from './cameraRoll';
 
-describe('cameraRoll — tilt via camera.up (mode layout)', () => {
-  it('roll 0 : up = +Y (horizon droit) pour une vue horizontale', () => {
+describe('cameraRoll — tilt via camera.up (layout mode)', () => {
+  it('roll 0: up = +Y (level horizon) for a horizontal view', () => {
     const camera = new THREE.PerspectiveCamera();
     applyRoll(THREE, camera, new THREE.Vector3(0, 0, -1), 0);
     expect(camera.up.x).toBeCloseTo(0);
@@ -14,14 +14,14 @@ describe('cameraRoll — tilt via camera.up (mode layout)', () => {
     expect(camera.up.z).toBeCloseTo(0);
   });
 
-  it('roll π/2 : up bascule à ±X (rotation autour de la vue)', () => {
+  it('roll π/2: up tilts to ±X (rotation around the view)', () => {
     const camera = new THREE.PerspectiveCamera();
     applyRoll(THREE, camera, new THREE.Vector3(0, 0, -1), Math.PI / 2);
     expect(Math.abs(camera.up.x)).toBeCloseTo(1);
     expect(camera.up.y).toBeCloseTo(0);
   });
 
-  it('round-trip : rollFromUp retrouve le roll appliqué', () => {
+  it('round-trip: rollFromUp recovers the applied roll', () => {
     const camera = new THREE.PerspectiveCamera();
     const forward = new THREE.Vector3(1, -0.5, -1);
     for (const roll of [0, 0.3, -0.8, 1.2]) {
@@ -30,15 +30,15 @@ describe('cameraRoll — tilt via camera.up (mode layout)', () => {
     }
   });
 
-  it('vue verticale : up non dégénéré (bascule sur +Z)', () => {
+  it('vertical view: non-degenerate up (tilts to +Z)', () => {
     const camera = new THREE.PerspectiveCamera();
     applyRoll(THREE, camera, new THREE.Vector3(0, -1, 0), 0);
     expect(camera.up.length()).toBeCloseTo(1);
   });
 
-  it('roll 0 : restaure le up monde quel que soit l’axe de vue (Phase 26, fix tilt)', () => {
+  it('roll 0: restores the world up whatever the view axis (Phase 26, tilt fix)', () => {
     const camera = new THREE.PerspectiveCamera();
-    // Un roll non nul a figé un up penché ; revenir à 0 doit rendre (0,1,0), pas un up projeté.
+    // A non-zero roll froze a tilted up; returning to 0 must give (0,1,0), not a projected up.
     const forward = new THREE.Vector3(1, -0.5, -1);
     applyRoll(THREE, camera, forward, 0.7);
     applyRoll(THREE, camera, forward, 0);
@@ -49,15 +49,15 @@ describe('cameraRoll — tilt via camera.up (mode layout)', () => {
 });
 
 /**
- * Orbite : `OrbitControls.update()` ne fait, pour ce qui concerne le tilt, qu'une chose —
- * `object.lookAt(target)` après avoir replacé la position sur sa sphère. Le faux contrôleur
- * ci-dessous reproduit exactement ces deux gestes ; c'est ce qui suffit à observer la dérive.
+ * Orbit: as far as the tilt is concerned, `OrbitControls.update()` does only one thing:
+ * `object.lookAt(target)` after repositioning the position on its sphere. The fake controller
+ * below reproduces exactly these two steps; that is enough to observe the drift.
  */
 function fakeControls(camera: THREE.PerspectiveCamera, target: THREE.Vector3) {
   return { target, update: () => camera.lookAt(target) };
 }
 
-/** Fait tourner la caméra autour de sa cible (ce que produit un drag au clic gauche). */
+/** Rotates the camera around its target (what a left-button drag produces). */
 function orbit(camera: THREE.PerspectiveCamera, target: THREE.Vector3, angle: number): void {
   const offset = camera.position
     .clone()
@@ -66,7 +66,7 @@ function orbit(camera: THREE.PerspectiveCamera, target: THREE.Vector3, angle: nu
   camera.position.copy(target).add(offset);
 }
 
-describe('cameraRoll — le tilt à travers l’orbite', () => {
+describe('cameraRoll — the tilt through the orbit', () => {
   const setup = (roll: number) => {
     const camera = new THREE.PerspectiveCamera();
     const target = new THREE.Vector3(0, 0, 0);
@@ -77,35 +77,35 @@ describe('cameraRoll — le tilt à travers l’orbite', () => {
     return { camera, target, controls };
   };
 
-  it('le `up` figé d’`applyRoll` fait DÉRIVER le tilt dès qu’on orbite (le défaut)', () => {
+  it('the `up` frozen by `applyRoll` makes the tilt DRIFT as soon as one orbits (the default)', () => {
     const { camera, target, controls } = setup(0.5);
     expect(rollFromCamera(THREE, camera)).toBeCloseTo(0.5);
     orbit(camera, target, Math.PI / 3);
-    controls.update(); // orbite nue : `lookAt` relit le `up` penché, devenu obsolète
+    controls.update(); // bare orbit: `lookAt` re-reads the tilted up, now obsolete
     expect(Math.abs(rollFromCamera(THREE, camera) - 0.5)).toBeGreaterThan(0.05);
   });
 
-  it('`updateOrbitKeepingRoll` garde le tilt réglé, quart de tour après quart de tour', () => {
+  it('`updateOrbitKeepingRoll` keeps the set tilt, quarter turn after quarter turn', () => {
     const { camera, target, controls } = setup(0.5);
     for (let i = 0; i < 8; i++) {
       orbit(camera, target, Math.PI / 4);
       updateOrbitKeepingRoll(THREE, camera, controls);
       expect(rollFromCamera(THREE, camera)).toBeCloseTo(0.5);
     }
-    // Et le `up` est reparti à plat : c'est l'orientation qui porte le tilt, plus un vecteur monde.
+    // And the up is back to flat: it is the orientation that carries the tilt, no longer a world vector.
     expect(camera.up.y).toBeCloseTo(1);
   });
 
-  it('tilt nul : l’orbite reste exactement celle d’avant (aucune recomposition)', () => {
+  it('zero tilt: the orbit stays exactly as before (no recomposition)', () => {
     const { camera, target, controls } = setup(0);
     orbit(camera, target, 0.7);
     updateOrbitKeepingRoll(THREE, camera, controls);
     const kept = camera.quaternion.clone();
-    camera.lookAt(target); // ce que ferait `controls.update()` seul
+    camera.lookAt(target); // what `controls.update()` alone would do
     expect(kept.angleTo(camera.quaternion)).toBeCloseTo(0);
   });
 
-  it('caméra confondue avec sa cible : orbite nue, aucun NaN', () => {
+  it('camera coinciding with its target: bare orbit, no NaN', () => {
     const camera = new THREE.PerspectiveCamera();
     const target = new THREE.Vector3(1, 1, 1);
     camera.position.copy(target);
@@ -116,8 +116,8 @@ describe('cameraRoll — le tilt à travers l’orbite', () => {
   });
 });
 
-describe('cameraRoll — roulis dans l’orientation', () => {
-  it('`rollOrientation` après un `lookAt` à plat = `lookAt` avec le `up` d’`applyRoll`', () => {
+describe('cameraRoll — roll in the orientation', () => {
+  it('`rollOrientation` after a flat `lookAt` = `lookAt` with the `up` of `applyRoll`', () => {
     const target = new THREE.Vector3(2, -1, 0);
     for (const roll of [0.3, -0.8, 1.2]) {
       const viaUp = new THREE.PerspectiveCamera();
@@ -127,14 +127,14 @@ describe('cameraRoll — roulis dans l’orientation', () => {
 
       const viaOrientation = new THREE.PerspectiveCamera();
       viaOrientation.position.copy(viaUp.position);
-      viaOrientation.lookAt(target); // up = +Y : orientation sans roulis
+      viaOrientation.lookAt(target); // up = +Y: orientation without roll
       rollOrientation(THREE, viaOrientation, roll);
 
       expect(viaUp.quaternion.angleTo(viaOrientation.quaternion)).toBeCloseTo(0);
     }
   });
 
-  it('`rollFromCamera` lit le tilt affiché, que le roulis vienne du `up` ou de l’orientation', () => {
+  it('`rollFromCamera` reads the displayed tilt, whether the roll comes from the `up` or the orientation', () => {
     const target = new THREE.Vector3(0, 0, 0);
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(4, 1, -2);
@@ -143,7 +143,7 @@ describe('cameraRoll — roulis dans l’orientation', () => {
     expect(rollFromCamera(THREE, camera)).toBeCloseTo(-0.6);
   });
 
-  it('roulis négligeable : l’orientation n’est pas touchée', () => {
+  it('negligible roll: the orientation is not touched', () => {
     const camera = new THREE.PerspectiveCamera();
     camera.lookAt(new THREE.Vector3(1, 0, -3));
     const before = camera.quaternion.clone();

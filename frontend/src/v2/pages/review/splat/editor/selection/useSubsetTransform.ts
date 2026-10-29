@@ -17,7 +17,7 @@ import {
   type SubsetSnapshot,
 } from '../operations/transformSplats';
 
-/** Applique espace/snaps/taille au TransformControls (réglages de la cible « splat »). */
+/** Applies space, snaps and size to the TransformControls (settings of the "splat" target). */
 function applySettings(control: TransformControls, s: GizmoSettings): void {
   control.setSpace(s.space);
   control.setTranslationSnap(s.translationSnap);
@@ -27,11 +27,11 @@ function applySettings(control: TransformControls, s: GizmoSettings): void {
 }
 
 /**
- * Gizmo TRS d'un **sous-ensemble** de splats (Phase 28) : un objet proxy est placé au barycentre
- * de la sélection (enfant du SplatMesh), le `TransformControls` s'y attache, et chaque delta de
- * manipulation est appliqué aux seuls splats sélectionnés autour du pivot (`applySubsetDelta`).
- * Chaque drag est annulable (snapshot des valeurs d'origine). Actif quand une sélection existe et
- * qu'aucun volume n'est ciblé — sinon c'est le mesh entier / le volume qui prend le gizmo.
+ * TRS gizmo for a **subset** of splats (Phase 28): a proxy object is placed at the barycentre
+ * of the selection (child of the SplatMesh), the `TransformControls` attaches to it, and each
+ * manipulation delta is applied only to the selected splats around the pivot (`applySubsetDelta`).
+ * Each drag is undoable (snapshot of the original values). Active when a selection exists and
+ * no volume is targeted; otherwise the whole mesh or the volume takes the gizmo.
  */
 export function useSubsetTransform(
   splat: SplatViewer,
@@ -42,7 +42,7 @@ export function useSubsetTransform(
     settings: GizmoSettings;
     pushHistory: (op: EditOp) => void;
     onChange: () => void;
-    /** Journal des ops committées (persistance Phase 28) — tenu en phase avec undo/redo. */
+    /** Log of committed ops (Phase 28 persistence), kept in step with undo/redo. */
     opsRef: RefObject<SubsetOp[]>;
   },
 ): void {
@@ -57,8 +57,8 @@ export function useSubsetTransform(
   cbRef.current = { pushHistory, onChange };
   const controlRef = useRef<TransformControls | null>(null);
 
-  // `selected` (Set d'état de `useSelection`) ne change de référence qu'au vrai changement
-  // d'ensemble → l'effet recrée alors le proxy/gizmo au nouveau barycentre.
+  // `selected` (Set state of `useSelection`) only changes reference on a real change of the set,
+  // so the effect recreates the proxy and gizmo at the new barycentre.
   useEffect(() => {
     if (!enabled || !ready) return;
     const handle = getSceneHandle();
@@ -93,7 +93,7 @@ export function useSubsetTransform(
       let lastDelta: THREE.Matrix4 | null = null;
 
       const onDragging = (e: { value: unknown }) => {
-        controls.enabled = !e.value; // gèle l'orbite pendant la manipulation
+        controls.enabled = !e.value; // freezes the orbit during manipulation
         if (e.value) {
           snap = snapshotSubset(handle, selected);
           proxy.updateMatrix();
@@ -102,7 +102,7 @@ export function useSubsetTransform(
         } else if (snap && lastDelta) {
           const s = snap;
           const d = lastDelta.clone();
-          // Journal de persistance (Phase 28) : l'op est enregistrée au commit et suit undo/redo.
+          // Persistence log (Phase 28): the op is recorded on commit and follows undo/redo.
           const record = { delta: [...d.elements], indices: [...s.indices] };
           opsRef.current.push(record);
           cbRef.current.pushHistory({
@@ -117,7 +117,7 @@ export function useSubsetTransform(
               opsRef.current.push(record);
             },
           });
-          // Recentre le proxy sur le nouveau barycentre, transform remise à l'identité.
+          // Recenters the proxy on the new barycentre, transform reset to identity.
           const after = snapshotSubset(handle, selected);
           proxy.position.copy(after ? after.pivot : proxy.position);
           proxy.rotation.set(0, 0, 0);
@@ -131,7 +131,7 @@ export function useSubsetTransform(
       const onObjectChange = () => {
         if (!snap || !startInv) return;
         proxy.updateMatrix();
-        const delta = proxy.matrix.clone().multiply(startInv); // local : M1 · M0⁻¹ (autour du pivot)
+        const delta = proxy.matrix.clone().multiply(startInv); // local: M1 · M0⁻¹ (around the pivot)
         applySubsetDelta(handle, snap, delta);
         lastDelta = delta;
         cbRef.current.onChange();

@@ -4,35 +4,35 @@
 import type * as THREE from 'three';
 
 /**
- * Tilt (roll) de la caméra autour de l'axe de vue. Purs/testables, partagés viewer 3D et splat.
- * `roll = 0` → horizon droit (up = projection de +Y perpendiculaire à la vue). `roll` en radians.
+ * Tilt (roll) of the camera around the view axis. Pure and testable, shared by the 3D viewer and the splat.
+ * `roll = 0` → level horizon (up = projection of +Y perpendicular to the view). `roll` in radians.
  *
- * DEUX PORTEURS DU TILT, ET C'EST VOULU.
- * - **`camera.up`** (`applyRoll`) pour une caméra orientée par un `lookAt` **ponctuel** : la caméra
- *   du PiP (`three/applyPose`), une pose restaurée, un réglage du panneau. `up` y est la consigne
- *   donnée au `lookAt` qui suit immédiatement — le résultat est exact.
- * - **l'orientation** (`rollOrientation`) pour une caméra que l'on fait **tourner** : l'orbite et le
- *   vol. Un `up` figé en repère monde cesse de décrire le tilt réglé dès que la direction de vue
- *   change ; le tilt y est donc traité pour ce qu'il est, un angle (`updateOrbitKeepingRoll`).
+ * TWO CARRIERS OF THE TILT, AND THIS IS DELIBERATE.
+ * - **`camera.up`** (`applyRoll`) for a camera oriented by a **one-off** `lookAt`: the PiP camera
+ *   (`three/applyPose`), a restored pose, a panel setting. There, `up` is the instruction given to the
+ *   `lookAt` that follows immediately: the result is exact.
+ * - **the orientation** (`rollOrientation`) for a camera that one makes **rotate**: orbit and flight.
+ *   An `up` frozen in the world frame stops describing the set tilt as soon as the view direction
+ *   changes; the tilt is therefore treated for what it is, an angle (`updateOrbitKeepingRoll`).
  *
- * Les deux formes sont interchangeables et le test le verrouille : `lookAt` avec le `up`
- * d'`applyRoll` donne exactement l'orientation que compose `rollOrientation` après un `lookAt`
- * à plat. `rollFromCamera` relit le tilt affiché sans avoir à savoir lequel des deux l'a posé.
+ * The two forms are interchangeable and the test locks it in: `lookAt` with the `up` of `applyRoll`
+ * gives exactly the orientation that `rollOrientation` composes after a flat `lookAt`.
+ * `rollFromCamera` reads the displayed tilt without having to know which of the two set it.
  */
 
-/** Up « sans roll » : composante de +Y (ou +Z si vue verticale) perpendiculaire à `forward`. */
+/** Non-rolled up: component of +Y (or +Z for a vertical view) perpendicular to `forward`. */
 function baseUp(three: typeof import('three'), forward: THREE.Vector3): THREE.Vector3 {
   const worldUp = new three.Vector3(0, 1, 0);
   const up = worldUp.clone().addScaledVector(forward, -worldUp.dot(forward));
   if (up.lengthSq() < 1e-8) {
-    // Vue quasi verticale : bascule sur +Z pour éviter un up dégénéré.
+    // Near-vertical view: switches to +Z to avoid a degenerate up.
     const alt = new three.Vector3(0, 0, 1);
     up.copy(alt).addScaledVector(forward, -alt.dot(forward));
   }
   return up.normalize();
 }
 
-/** Applique le roll : positionne `camera.up`. `forward` = direction de vue (cible - position). */
+/** Applies the roll: sets `camera.up`. `forward` = view direction (target minus position). */
 export function applyRoll(
   three: typeof import('three'),
   camera: THREE.PerspectiveCamera,
@@ -40,9 +40,9 @@ export function applyRoll(
   roll: number,
 ): void {
   if (!roll) {
-    // Roll nul → up monde par défaut (Phase 26, fix tilt) : ne fige plus un up projeté sur la
-    // vue courante, qui devenait obsolète dès qu'on orbitait ensuite (tilt résiduel). Vue quasi
-    // verticale exceptée (up ∥ vue → lookAt dégénéré) : on garde le up projeté.
+    // Zero roll: default world up (Phase 26, tilt fix). It no longer freezes an up projected onto the
+    // current view, which became obsolete as soon as one orbited afterwards (residual tilt). Near-vertical
+    // view excepted (up parallel to the view, degenerate lookAt): the projected up is kept.
     const f0 = forward.clone().normalize();
     if (Math.abs(f0.y) > 0.9999) camera.up.copy(baseUp(three, f0));
     else camera.up.set(0, 1, 0);
@@ -50,12 +50,12 @@ export function applyRoll(
   }
   const f = forward.clone().normalize();
   const up = baseUp(three, f);
-  const perp = new three.Vector3().crossVectors(f, up); // dans le plan ⟂ vue
+  const perp = new three.Vector3().crossVectors(f, up); // in the plane perpendicular to the view
   up.multiplyScalar(Math.cos(roll)).addScaledVector(perp, Math.sin(roll)).normalize();
   camera.up.copy(up);
 }
 
-/** Lit le roll courant depuis `camera.up` et la direction de vue (angle signé autour de `forward`). */
+/** Reads the current roll from `camera.up` and the view direction (signed angle around `forward`). */
 export function rollFromUp(three: typeof import('three'), forward: THREE.Vector3, up: THREE.Vector3): number {
   const f = forward.clone().normalize();
   const base = baseUp(three, f);
@@ -64,13 +64,13 @@ export function rollFromUp(three: typeof import('three'), forward: THREE.Vector3
   return Math.atan2(perp.dot(u), base.dot(u));
 }
 
-/** En deçà de cet angle (radians), l'horizon est droit : il n'y a pas de tilt à conserver. */
+/** Below this angle (radians) the horizon is level: there is no tilt to keep. */
 const ROLL_EPSILON = 1e-6;
 
 /**
- * Tilt **réellement affiché**, lu de l'orientation de la caméra (son axe +Y local) et non de
- * `camera.up`. C'est la seule lecture fiable : `camera.up` est la *consigne* donnée à `lookAt`,
- * l'orientation est le *résultat*, et les deux divergent dès qu'on tourne la vue.
+ * Tilt **actually displayed**, read from the camera's orientation (its local +Y axis) and not from
+ * `camera.up`. It is the only reliable reading: `camera.up` is the *instruction* given to `lookAt`,
+ * the orientation is the *result*, and the two diverge as soon as the view is rotated.
  */
 export function rollFromCamera(three: typeof import('three'), camera: THREE.PerspectiveCamera): number {
   const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -79,10 +79,10 @@ export function rollFromCamera(three: typeof import('three'), camera: THREE.Pers
 }
 
 /**
- * Compose le tilt dans l'**orientation**, autour de l'axe de vue, après un `lookAt` sans roulis.
- * `-roll` : l'angle mesuré par `rollFromUp` (celui de `up` autour de `forward`) est de signe
- * opposé à une rotation autour du +Z local — même convention que `flyControls.flyLookEuler`, et
- * le résultat est exactement l'orientation que produirait `lookAt` avec le `up` d'`applyRoll`.
+ * Composes the tilt into the **orientation**, around the view axis, after a `lookAt` without roll.
+ * `-roll`: the angle measured by `rollFromUp` (that of `up` around `forward`) has the opposite sign
+ * to a rotation around the local +Z: same convention as `flyControls.flyLookEuler`, and the result is
+ * exactly the orientation that `lookAt` would produce with the `up` of `applyRoll`.
  */
 export function rollOrientation(
   three: typeof import('three'),
@@ -94,20 +94,20 @@ export function rollOrientation(
 }
 
 /**
- * `controls.update()` qui **conserve le tilt** — à appeler à la place de `controls.update()` dans
- * la boucle de rendu (les deux viewers).
+ * `controls.update()` that **keeps the tilt**: to be called instead of `controls.update()` in the
+ * render loop (both viewers).
  *
- * POURQUOI. `OrbitControls.update()` termine par `object.lookAt(target)`, qui reconstruit
- * l'orientation à partir de `camera.up`. Or le tilt du panneau Caméra vit justement dans
- * `camera.up` (`applyRoll`), sous forme d'un vecteur figé **en repère monde**, projeté sur la
- * direction de vue qu'on avait au moment du réglage. Orbiter change cette direction sans toucher au
- * vecteur : l'angle entre `up` et l'horizon de la nouvelle vue n'est plus celui qu'on avait réglé,
- * et la caméra paraît prendre une rotation à mesure qu'on tourne au clic gauche. Le pôle d'orbite,
- * lui, n'est pas en cause — OrbitControls le fige à la construction (`_quat`, lu une seule fois).
+ * WHY. `OrbitControls.update()` ends with `object.lookAt(target)`, which rebuilds the orientation from
+ * `camera.up`. The tilt of the Camera panel lives precisely in `camera.up` (`applyRoll`), as a vector
+ * frozen **in the world frame**, projected onto the view direction we had at the time of the setting.
+ * Orbiting changes that direction without touching the vector: the angle between `up` and the horizon
+ * of the new view is no longer the one we set, and the camera seems to take on a rotation as one drags
+ * with the left button. The orbit pole itself is not at fault: OrbitControls freezes it at construction
+ * (`_quat`, read only once).
  *
- * Le tilt est donc traité pour ce qu'il est : un **angle**, relu avant l'orbite et recomposé après.
- * `camera.up` repart à plat avant `lookAt` (l'état exact du tilt nul, seul chemin où l'orbite était
- * déjà stable), et l'angle est remis dans l'orientation. À tilt nul, rien ne se passe du tout.
+ * The tilt is therefore treated for what it is: an **angle**, read before the orbit and recomposed after.
+ * `camera.up` restarts flat before `lookAt` (the exact state of zero tilt, the only path where the orbit
+ * was already stable), and the angle is put back into the orientation. At zero tilt, nothing happens.
  */
 export function updateOrbitKeepingRoll(
   three: typeof import('three'),
@@ -116,7 +116,7 @@ export function updateOrbitKeepingRoll(
 ): void {
   const roll = rollFromCamera(three, camera);
   const forward = new three.Vector3().subVectors(controls.target, camera.position);
-  // Horizon droit, ou caméra confondue avec sa cible (`lookAt` y est dégénéré) : orbite nue.
+  // Level horizon, or camera coinciding with its target (`lookAt` is degenerate there): bare orbit.
   if (Math.abs(roll) < ROLL_EPSILON || forward.lengthSq() < 1e-12) {
     controls.update();
     return;
@@ -127,12 +127,11 @@ export function updateOrbitKeepingRoll(
 }
 
 /**
- * Vue caméra **réellement affichée** (position/cible/roll) — lue depuis la pose de la
- * caméra (quaternion), pas depuis `controls.target` : pendant le vol (clic droit),
- * OrbitControls est gelé et sa cible n'est recalée qu'au relâchement — capturer la cible
- * des controls figeait la rotation diffusée en session live (retours 33). La cible est
- * reprojetée devant la caméra à la distance d'orbite courante ; hors vol (caméra orientée
- * par `lookAt`), le résultat est identique à l'ancienne lecture des controls.
+ * **Actually displayed** camera view (position/target/roll), read from the camera's pose (quaternion),
+ * not from `controls.target`: during flight (right click), OrbitControls is frozen and its target is
+ * only re-set on release; capturing the controls' target froze the rotation broadcast in the live
+ * session (feedback 33). The target is reprojected in front of the camera at the current orbit distance;
+ * out of flight (camera oriented by `lookAt`), the result is identical to the former reading of the controls.
  */
 export function captureCameraView(
   three: typeof import('three'),

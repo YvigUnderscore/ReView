@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Masque de suppression d'un splat (10.G) — encodage binaire pur (testable sans WebGL).
- * Un bitset : le bit `i` vaut 1 si le splat d'indice `i` est masqué. Stocké tel quel dans
- * MinIO (`metadata.splatMaskKey`), transporté en base64 dans le JSON d'API.
+ * Deletion mask of a splat (10.G), pure binary encoding (testable without WebGL).
+ * A bitset: bit `i` is 1 if the splat at index `i` is masked. Stored as-is in
+ * MinIO (`metadata.splatMaskKey`), transported as base64 in the API JSON.
  */
 
-/** Encode un ensemble d'indices masqués en bitset (taille = ⌈(max+1)/8⌉ octets). */
+/** Encodes a set of masked indices as a bitset (size = ⌈(max+1)/8⌉ bytes). */
 export function encodeMask(indices: Iterable<number>): Uint8Array {
   let max = -1;
   const list: number[] = [];
@@ -22,7 +22,7 @@ export function encodeMask(indices: Iterable<number>): Uint8Array {
   return bytes;
 }
 
-/** Décode un bitset en liste d'indices masqués. */
+/** Decodes a bitset into a list of masked indices. */
 export function decodeMask(bytes: Uint8Array): number[] {
   const out: number[] = [];
   for (let b = 0; b < bytes.length; b++) {
@@ -33,7 +33,7 @@ export function decodeMask(bytes: Uint8Array): number[] {
   return out;
 }
 
-/** Uint8Array → base64 (par blocs — évite le dépassement de pile de String.fromCharCode). */
+/** Uint8Array to base64 (chunked, to avoid the stack overflow of String.fromCharCode). */
 export function bytesToBase64(bytes: Uint8Array): string {
   const CHUNK = 0x8000;
   let bin = '';
@@ -41,7 +41,7 @@ export function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-/** base64 → Uint8Array. */
+/** base64 to Uint8Array. */
 export function base64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);

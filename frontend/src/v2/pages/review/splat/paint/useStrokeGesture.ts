@@ -10,28 +10,28 @@ import { raycastSurface, type PaintSceneHandle, type Viewport } from './surfaceR
 import { breaksRun, flattenObject, runNormal, type SurfaceSample } from './surfaceTrace';
 
 /**
- * Geste de la brosse de surface 3D : de l'échantillon écran au trait posé sur le nuage.
+ * Gesture of the 3D surface brush: from the screen sample to the stroke laid on the cloud.
  *
- * Deux défauts du painter d'origine disparaissent ici. D'abord **l'aperçu** : le trait n'existait
- * qu'au lâcher, le geste ne montrant qu'une polyligne 2D plaquée sur l'écran, qui ne suivait pas
- * le relief — on découvrait le trait réel une fois trop tard. Chaque échantillon est maintenant
- * raycasté à la volée et la ligne 3D est reconstruite dans la foulée : ce qu'on voit pendant le
- * geste est exactement ce qui sera envoyé. Ensuite **la corde droite** : un geste qui traverse un
- * trou reliait les deux bords par un segment flottant. Un geste produit donc désormais *un ou
- * plusieurs* traits — un par portion continue de surface (cf. `surfaceTrace.breaksRun`).
+ * Two defects of the original painter disappear here. First, **the preview**: the stroke only
+ * existed on release, the gesture showing only a 2D polyline pasted onto the screen, which did not
+ * follow the relief, so the real stroke was discovered too late. Each sample is now raycast on the
+ * fly and the 3D line is rebuilt along the way: what one sees during the gesture is exactly what
+ * will be sent. Second, **the straight rope**: a gesture crossing a hole joined the two edges with
+ * a floating segment. A gesture now produces *one or several* strokes, one per continuous portion
+ * of surface (cf. `surfaceTrace.breaksRun`).
  */
 export interface StrokeGesture {
-  /** Début du geste (appui). */
+  /** Start of the gesture (press). */
   begin: () => void;
-  /** Un échantillon écran. Renvoie vrai si le rayon a touché la surface. */
+  /** A screen sample. Returns true if the ray hit the surface. */
   sample: (point: [number, number], viewport: Viewport) => boolean;
-  /** Fin du geste (lâcher) : les portions continues deviennent des traits. */
+  /** End of the gesture (release): the continuous portions become strokes. */
   end: () => void;
-  /** Abandonne l'aperçu sans rien poser (changement d'outil, démontage). */
+  /** Abandons the preview without laying anything (tool change, unmount). */
   cancel: () => void;
 }
 
-/** Portion continue de surface en cours de tracé. */
+/** Continuous surface portion being traced. */
 interface Run {
   samples: SurfaceSample[];
   line: Line2 | null;
@@ -45,7 +45,7 @@ export function useStrokeGesture({
   onStrokes,
 }: {
   getSceneHandle: () => PaintSceneHandle | null;
-  /** Classes `Line2`, ou `null` si l'import à la demande n'est pas encore arrivé. */
+  /** `Line2` classes, or `null` if the on-demand import has not arrived yet. */
   getLines: () => LineModules | null;
   color: string;
   width: number;
@@ -53,9 +53,9 @@ export function useStrokeGesture({
 }): StrokeGesture {
   const runsRef = useRef<Run[]>([]);
   const lastScreenRef = useRef<[number, number] | null>(null);
-  // Portion ouverte : fermée par un rayon dans le vide ou par une coupure de surface.
+  // Open portion: closed by a ray into the void or by a surface cut.
   const openRef = useRef(false);
-  // Couleur et épaisseur relues au moment du geste, jamais celles capturées au montage.
+  // Colour and thickness read at the time of the gesture, never those captured at mount.
   const styleRef = useRef({ color, width });
   useEffect(() => {
     styleRef.current = { color, width };
@@ -68,7 +68,7 @@ export function useStrokeGesture({
     lastScreenRef.current = null;
   }, []);
 
-  /** Reconstruit la ligne d'aperçu de la portion en cours (WYSIWYG : le trait final, déjà). */
+  /** Rebuilds the preview line of the current portion (WYSIWYG: the final stroke, already). */
   const refresh = useCallback((handle: PaintSceneHandle, lines: LineModules, run: Run) => {
     if (run.samples.length < 2) return;
     if (run.line) disposeStrokeLine(run.line);
@@ -94,7 +94,7 @@ export function useStrokeGesture({
       lastScreenRef.current = point;
       const hit = raycastSurface(handle, point, viewport, step);
       if (!hit) {
-        openRef.current = false; // rayon dans le vide : la portion s'arrête ici
+        openRef.current = false; // ray into the void: the portion stops here
         return false;
       }
       const open = openRef.current ? runsRef.current[runsRef.current.length - 1] : undefined;
@@ -118,7 +118,7 @@ export function useStrokeGesture({
     const strokes: SplatPaintStroke[] = [];
     for (const run of runsRef.current) {
       if (run.line) disposeStrokeLine(run.line);
-      if (run.samples.length < 2) continue; // un point isolé n'est pas un trait
+      if (run.samples.length < 2) continue; // an isolated point is not a stroke
       const normal = runNormal(run.samples);
       strokes.push({
         type: 'splat-paint',
@@ -134,7 +134,7 @@ export function useStrokeGesture({
     if (strokes.length > 0) onStrokes(strokes);
   }, [onStrokes]);
 
-  // Démontage : l'aperçu ne doit pas survivre à la scène qui le porte.
+  // Unmount: the preview must not survive the scene that carries it.
   useEffect(() => discard, [discard]);
 
   return { begin, sample, end, cancel: discard };

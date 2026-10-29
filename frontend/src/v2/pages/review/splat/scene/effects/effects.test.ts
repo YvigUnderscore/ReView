@@ -6,7 +6,7 @@ import type { SplatMesh } from '@sparkjsdev/spark';
 import { createDebugColor, depthGlsl } from './debugColor';
 import { createReveal, revealGlsl } from './reveal';
 
-/** Faux namespace dyno : capture les uniformes et rend les modifiers inspectables. */
+/** Fake dyno namespace: captures the uniforms and makes the modifiers inspectable. */
 function makeDyno() {
   return {
     Gsplat: { type: 'Gsplat' },
@@ -15,7 +15,7 @@ function makeDyno() {
     unindentLines: (s: string) => s.split('\n'),
     gsplatNormal: () => ({ normal: true }),
     dyno: ({ statements }: { statements: (ctx: unknown) => string[] }) => {
-      // Vérifie que le GLSL se génère sans erreur avec des noms symboliques.
+      // Checks that the GLSL generates without error with symbolic names.
       statements({
         inputs: { gsplat: 'in_g', u: 'in_u', n: 'in_n', camPos: 'in_cam', dMin: 'in_min', dMax: 'in_max' },
         outputs: { gsplat: 'out_g' },
@@ -37,8 +37,8 @@ function makeMesh() {
   } as unknown as SplatMesh;
 }
 
-describe('revealGlsl / depthGlsl (GLSL pur)', () => {
-  it('chaque type de reveal module l’alpha avec la progression', () => {
+describe('revealGlsl / depthGlsl (pure GLSL)', () => {
+  it('each reveal type modulates the alpha with the progression', () => {
     for (const type of ['fade', 'sweep', 'dissolve'] as const) {
       const glsl = revealGlsl(type, 'g', 'u', '-1.0', '3.0');
       expect(glsl).toContain('g.rgba.a *=');
@@ -47,7 +47,7 @@ describe('revealGlsl / depthGlsl (GLSL pur)', () => {
     expect(revealGlsl('dissolve', 'g', 'u', '-1.0', '3.0')).toContain('g.index');
   });
 
-  it('la heatmap de profondeur colore par distance caméra', () => {
+  it('the depth heatmap colours by camera distance', () => {
     const glsl = depthGlsl('g', 'cam', 'a', 'b');
     expect(glsl).toContain('distance(g.center, cam)');
     expect(glsl).toContain('g.rgba.rgb = mix(');
@@ -55,7 +55,7 @@ describe('revealGlsl / depthGlsl (GLSL pur)', () => {
 });
 
 describe('createReveal', () => {
-  it('attache un objectModifier, pilote la progression, se retire proprement', () => {
+  it('attaches an objectModifier, drives the progression, removes itself cleanly', () => {
     const dyno = makeDyno();
     const mesh = makeMesh();
     const reveal = createReveal(dyno, mesh, 'sweep');
@@ -70,7 +70,7 @@ describe('createReveal', () => {
 });
 
 describe('createDebugColor', () => {
-  it('normales : worldModifier statique ; depth : uniformes caméra recalés', () => {
+  it('normals: static worldModifier; depth: camera uniforms recomputed', () => {
     const dyno = makeDyno();
     const normal = makeMesh();
     const rt1 = createDebugColor(dyno, normal, 'normal');

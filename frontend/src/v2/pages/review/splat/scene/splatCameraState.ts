@@ -7,16 +7,17 @@ import type { SplatCamera } from '../../reviewTypes';
 import { applyRoll, captureCameraView } from '../../three/cameraRoll';
 
 /**
- * Capture/restauration de la vue caméra du splat (extrait de `useSplat`, budget 300) : position,
- * cible, fov et **tilt (roll)** — le roll est lu/appliqué via `camera.up` (mode layout). Pur/testable.
+ * Capture and restoration of the splat's camera view (extracted from `useSplat`, budget 300):
+ * position, target, fov and **tilt (roll)**. The roll is read and applied via `camera.up` (layout
+ * mode). Pure and testable.
  */
 export function captureSplatCamera(
   three: typeof import('three'),
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
 ): SplatCamera {
-  // Pose réelle (quaternion) : suit aussi la rotation en cours de vol (live, retours 33).
-  // Le roll reste omis si l'horizon est droit (rétro-compat des états enregistrés).
+  // Actual pose (quaternion): also follows the rotation in progress during a fly (live, returns 33).
+  // The roll is omitted if the horizon is level (backward compatibility of saved states).
   return captureCameraView(three, camera, controls);
 }
 
@@ -34,7 +35,7 @@ export function restoreSplatCamera(
     camera.updateProjectionMatrix();
   }
   if (c.target) controls.target.set(c.target.x, c.target.y, c.target.z);
-  // Tilt (roll) : oriente `camera.up` selon la direction de vue courante (mode layout).
+  // Tilt (roll): orients `camera.up` according to the current view direction (layout mode).
   const forward = new three.Vector3().subVectors(controls.target, camera.position);
   applyRoll(three, camera, forward, c.roll ?? 0);
   controls.update();

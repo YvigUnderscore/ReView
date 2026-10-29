@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import CompareSelect from '../CompareSelect';
 import type { MediaSummary } from '../../../types/api';
 
-/** Sélection d'autres versions exposée par les hooks de comparaison spatiale. */
+/** Selection of other versions exposed by the spatial comparison hooks. */
 export interface CompareVersionsApi {
   ids: number[];
   add: (mediaId: number, media?: MediaSummary) => void;
@@ -14,13 +14,12 @@ export interface CompareVersionsApi {
 }
 
 /**
- * Coin droit de l'en-tête des viewers spatiaux : les onglets de comparaison du viewer
- * (modèles ou splats déjà en scène) suivis du sélecteur d'autres **versions**.
+ * Right corner of the header of the spatial viewers: the viewer's comparison tabs (models or splats
+ * already in the scene), followed by the picker of other **versions**.
  *
- * Le sélecteur n'était monté que pour la vidéo et l'image : comparer v003 et v004 d'un même
- * asset, le cas de review le plus courant, était impossible en 3D et en splat alors que la
- * scène commune savait déjà les accueillir. Il se masque tout seul quand la tâche ou l'asset
- * ne porte qu'une version.
+ * The picker was only mounted for video and image: comparing v003 and v004 of the same asset, the most
+ * common review case, was impossible in 3D and for splats, whereas the common scene already knew how to
+ * accommodate them. It hides itself on its own when the task or asset carries only one version.
  */
 export default function SpatialCompareHeader({
   versionId,
@@ -33,7 +32,7 @@ export default function SpatialCompareHeader({
   mediaId: number;
   kind: 'MODEL_3D' | 'SPLAT';
   versions: CompareVersionsApi;
-  /** Barre d'onglets du viewer (comparaison déjà chargée), à gauche du sélecteur. */
+  /** Viewer tab bar (comparison already loaded), to the left of the picker. */
   children?: ReactNode;
 }) {
   return (

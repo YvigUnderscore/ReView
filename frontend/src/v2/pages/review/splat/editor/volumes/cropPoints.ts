@@ -5,21 +5,21 @@ import type { SdfVolumeData } from '../../../reviewTypes';
 import type { VolumeMode, VolumeShape } from './cropVolume';
 
 /**
- * Reflet des volumes de crop dans l'overlay « Points » (Phase 28) : l'overlay est un nuage
- * séparé (`pointCloud.ts`) que le `SplatEdit` SDF de Spark ne touche pas — on recalcule donc
- * **géométriquement** quels centres tombent dans les volumes, avec la même sémantique que le
- * rendu gaussien : un volume « creuser » cache l'intérieur, un volume « isoler » cache tout ce
- * qui est hors de lui (plusieurs isolats → seule l'intersection reste). Fonctions pures.
+ * Mirror of the crop volumes in the "Points" overlay (Phase 28): the overlay is a separate cloud
+ * (`pointCloud.ts`) that Spark's SDF `SplatEdit` does not touch, so which centres fall inside the
+ * volumes is recomputed **geometrically**, with the same semantics as the gaussian rendering: a
+ * "carve" volume hides its interior, an "isolate" volume hides everything outside it (several
+ * isolating volumes: only their intersection remains). Pure functions.
  */
 
-/** Test de crop précompilé : matrice inverse (16, column-major) du TRS local du volume. */
+/** Precompiled crop test: inverse matrix (16, column-major) of the volume's local TRS. */
 export interface CropCheck {
   shape: VolumeShape;
   mode: VolumeMode;
   inv: ArrayLike<number>;
 }
 
-/** Précompile les tests depuis les TRS sérialisés des volumes (espace local du mesh). */
+/** Precompiles the tests from the serialized volume TRS (local space of the mesh). */
 export function buildCropChecks(three: typeof import('three'), data: SdfVolumeData[]): CropCheck[] {
   const p = new three.Vector3();
   const q = new three.Quaternion();
@@ -33,11 +33,11 @@ export function buildCropChecks(three: typeof import('three'), data: SdfVolumeDa
   });
 }
 
-/** Un point (espace local du mesh) est-il escamoté par l'ensemble des volumes ? */
+/** Is a point (local space of the mesh) carved out by the set of volumes? */
 export function pointCropped(x: number, y: number, z: number, checks: readonly CropCheck[]): boolean {
   for (const c of checks) {
     const m = c.inv;
-    // Point → espace unité du volume (la matrice inverse absorbe position/rotation/échelle).
+    // Point to the unit space of the volume (the inverse matrix absorbs position, rotation and scale).
     const lx = m[0] * x + m[4] * y + m[8] * z + m[12];
     const ly = m[1] * x + m[5] * y + m[9] * z + m[13];
     const lz = m[2] * x + m[6] * y + m[10] * z + m[14];

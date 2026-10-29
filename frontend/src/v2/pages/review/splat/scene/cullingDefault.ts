@@ -2,53 +2,53 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Culling Spark du viewer splat : le défaut, et la mémoire du choix — écrits une seule fois.
+ * Spark culling of the splat viewer: the default, and the memory of the choice, written only once.
  *
- * Le défaut vivait en double : au montage de la scène (`useSplat`, `applyCulling(spark, …)`) et
- * dans l'état du HUD (`useSplatView`). Les deux littéraux devaient rester d'accord sans que rien
- * ne l'impose — une divergence et l'interrupteur du panneau mentait dès le premier rendu, sans
- * que le nuage ne change. Ils lisent désormais tous deux `readCullingOff()`.
+ * The default used to live twice: when the scene is mounted (`useSplat`, `applyCulling(spark, …)`)
+ * and in the HUD state (`useSplatView`). The two literals had to agree without anything enforcing
+ * it: a divergence and the panel's toggle would lie from the first render, without the cloud
+ * changing. They now both read `readCullingOff()`.
  *
- * `off === true` = culling **neutralisé** (`CULLING_OFF` de `viewerConfig`) : rien ne disparaît
- * en zoom fort ni en bord de cadre, au prix du rendu de splats qu'on ne verra pas.
+ * `off === true` = culling **disabled** (`CULLING_OFF` from `viewerConfig`): nothing disappears at
+ * a strong zoom or at the edge of the frame, at the cost of rendering splats nobody will see.
  *
- * **Le culling est actif par défaut** (Phase 50, lot 8). Il était neutralisé depuis 10.G-V1 pour
- * qu'aucun splat ne disparaisse ; sur les scans que les studios ouvrent réellement, cela revenait
- * à payer en permanence le rendu de gaussiennes hors cadre. Qui voit des splats s'évanouir en
- * zoom fort garde l'échappatoire à un clic (panneau *Scène*, ou menu clic droit du viewer).
+ * **Culling is active by default** (Phase 50, lot 8). It had been disabled since 10.G-V1 so that no
+ * splat would vanish; on the scans studios actually open, this meant permanently paying for the
+ * rendering of out-of-frame gaussians. Whoever sees splats vanish on a strong zoom keeps the
+ * one-click escape hatch (the *Scene* panel, or the viewer's right-click menu).
  *
- * Le choix est **mémorisé par utilisateur**, comme la grille de sol (`useSceneGrid`) : c'est une
- * préférence de confort, pas un réglage de studio — aucun héritage admin ne le décide.
+ * The choice is **remembered per user**, like the floor grid (`useSceneGrid`): it is a comfort
+ * preference, not a studio setting, so no admin inheritance decides it.
  */
 
-/** Clé de la préférence locale (par navigateur, par utilisateur). */
+/** Key of the local preference (per browser, per user). */
 const STORAGE_KEY = 'review-splat-culling-off';
 
-/** Défaut hors préférence enregistrée : culling actif. */
+/** Default when no preference is saved: culling active. */
 export const DEFAULT_CULLING_OFF = false;
 
-/** Lit la préférence depuis sa valeur brute — fonction pure, testable sans `localStorage`. */
+/** Reads the preference from its raw value: pure function, testable without `localStorage`. */
 export function parseCullingOff(raw: string | null): boolean {
   if (raw === '1') return true;
   if (raw === '0') return false;
-  return DEFAULT_CULLING_OFF; // absente ou illisible : le défaut, jamais une valeur au hasard
+  return DEFAULT_CULLING_OFF; // missing or unreadable: the default, never a random value
 }
 
-/** Préférence de l'utilisateur, ou le défaut. */
+/** The user's preference, or the default. */
 export function readCullingOff(): boolean {
   try {
     return parseCullingOff(localStorage.getItem(STORAGE_KEY));
   } catch {
-    // Stockage inaccessible (mode privé, politique de site) : le défaut suffit à afficher.
+    // Storage inaccessible (private mode, site policy): the default is enough to display.
     return DEFAULT_CULLING_OFF;
   }
 }
 
-/** Mémorise le choix de l'utilisateur. */
+/** Remembers the user's choice. */
 export function writeCullingOff(off: boolean): void {
   try {
     localStorage.setItem(STORAGE_KEY, off ? '1' : '0');
   } catch {
-    // Rien à rattraper : la session en cours garde son réglage, il ne survivra pas au rechargement.
+    // Nothing to catch up: the current session keeps its setting; it will not survive a reload.
   }
 }

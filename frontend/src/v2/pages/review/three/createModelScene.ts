@@ -5,28 +5,29 @@ import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { configureRenderer } from './sceneConfig';
 
-/** Modules Three importés dynamiquement (hors bundle initial), passés à `createModelScene`. */
+/** Three modules dynamically imported (out of the initial bundle), passed to `createModelScene`. */
 export interface ModelSceneModules {
   THREE: typeof import('three');
   OrbitControls: typeof OrbitControls;
 }
 
-/** Cœur de la scène Three d'un modèle GLB (le modèle est ajouté à `root` après chargement). */
+/** Core of the Three scene of a GLB model (the model is added to `root` after loading). */
 export interface ModelScene {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
-  /** Parent du modèle chargé — porte la transformation utilisateur (gizmo, orientation). */
+  /** Parent of the loaded model: carries the user transform (gizmo, orientation). */
   root: THREE.Group;
   dispose: () => void;
 }
 
 /**
- * Socle Three commun 3D/splat (Phase 15, V0) : renderer WebGL2 (gestion de couleur sRGB + ACES),
- * scène, caméra perspective, OrbitControls (damping, contrôles proches de model-viewer), éclairage
- * neutre par défaut (avant HDRI, V4). Impur (instancie le renderer) — logique testable extraite
- * dans `sceneConfig`. L'orchestrateur (`useModel3DThree`) gère le cycle de vie et la boucle.
+/**
+ * Common 3D/splat Three base (Phase 15, V0): WebGL2 renderer (sRGB and ACES colour management),
+ * scene, perspective camera, OrbitControls (damping, controls close to model-viewer), and a neutral
+ * default lighting (before the HDRI, V4). Impure (it instantiates the renderer): the testable logic
+ * is extracted into `sceneConfig`. The orchestrator (`useModel3DThree`) manages the lifecycle and the loop.
  */
 export function createModelScene(
   { THREE, OrbitControls }: ModelSceneModules,
@@ -46,7 +47,7 @@ export function createModelScene(
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
 
-  // Éclairage neutre par défaut (avant application d'une HDRI, V4) : le modèle reste lisible.
+  // Neutral default lighting (before an HDRI is applied, V4): the model stays readable.
   const hemi = new THREE.HemisphereLight(0xffffff, 0x2a2a35, 1.1);
   scene.add(hemi);
   const key = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -64,21 +65,21 @@ export function createModelScene(
     if (disposed) return;
     disposed = true;
     controls.dispose();
-    // `renderer.dispose()` ne libère que les caches JS de Three (three 0.183 : renderLists,
-    // renderStates, properties, objects, bindingStates, programCache, xr). Ni les géométries,
-    // ni les matériaux, ni les textures du modèle chargé — il faut parcourir la scène (F9).
+    // `renderer.dispose()` only frees Three's JS caches (three 0.183: renderLists,
+    // renderStates, properties, objects, bindingStates, programCache, xr). Neither the geometries,
+    // nor the materials, nor the textures of the loaded model: the scene must be traversed (F9).
     disposeSceneTree(scene);
     renderer.dispose();
-    // Le contexte WebGL lui-même : Chrome plafonne le nombre de contextes simultanés, et un
-    // contexte abandonné fait perdre le plus ancien canvas (viewer noir) après quelques
-    // allers-retours entre versions d'un même asset.
+    // The WebGL context itself: Chrome caps the number of simultaneous contexts, and an
+    // abandoned context makes the oldest canvas lose (black viewer) after a few round trips
+    // between versions of the same asset.
     renderer.forceContextLoss();
     renderer.domElement.remove();
   };
   return { renderer, scene, camera, controls, root, dispose };
 }
 
-/** Ressources GPU effectivement libérées — grandeur mesurable (tests de `dispose`). */
+/** GPU resources actually freed: a measurable quantity (`dispose` tests). */
 export interface DisposeCounts {
   geometries: number;
   materials: number;
@@ -89,17 +90,17 @@ const isTexture = (value: unknown): value is THREE.Texture =>
   !!value && typeof value === 'object' && (value as { isTexture?: boolean }).isTexture === true;
 
 /**
- * Libère géométries, matériaux et textures de tout un sous-arbre de scène (F9). `seen` dédoublonne :
- * un matériau ou une texture partagés par plusieurs maillages — le cas courant d'un GLB, et celui
- * des clones de mise en scène, qui partagent géométrie et matériaux avec leur source — ne sont
- * libérés **qu'une fois**, et le compte rendu reste juste.
+ * Frees geometries, materials and textures of a whole scene subtree (F9). `seen` de-duplicates:
+ * a material or texture shared by several meshes (the common case of a GLB, and that of scene-staging
+ * clones, which share geometry and materials with their source) is freed **only once**, and the
+ * report stays correct.
  *
- * Deux ressources sont volontairement épargnées :
- * - `scene.environment` / `scene.background` (carte HDRI pré-filtrée) : elles appartiennent à
- *   `useModel3DLighting`, qui les libère de son côté et peut les garder d'une scène à l'autre.
- *   Le parcours ne suit que les matériaux portés par les objets, jamais ces deux champs.
- * - Tout ce qui figure déjà dans `seen` : l'appelant peut y déposer les textures qu'un autre
- *   viewer utilise encore, pour qu'elles survivent au démontage de celui-ci.
+ * Two resources are deliberately spared:
+ * - `scene.environment` / `scene.background` (pre-filtered HDRI map): they belong to
+ *   `useModel3DLighting`, which frees them on its side and may keep them from one scene to the next.
+ *   The traversal only follows the materials carried by objects, never these two fields.
+ * - Everything already in `seen`: the caller may put in it the textures that another viewer still
+ *   uses, so that they survive the teardown of this one.
  */
 export function disposeSceneTree(root: THREE.Object3D, seen = new Set<object>()): DisposeCounts {
   const counts: DisposeCounts = { geometries: 0, materials: 0, textures: 0 };
@@ -114,11 +115,11 @@ export function disposeSceneTree(root: THREE.Object3D, seen = new Set<object>())
   const disposeMaterial = (material: THREE.Material) => {
     if (seen.has(material)) return;
     seen.add(material);
-    // Les textures sont cherchées dans les **propriétés** du matériau plutôt que dans une liste
-    // de noms (map, normalMap, roughnessMap…) : un slot ajouté par une extension glTF
-    // (KHR_materials_*) serait sinon laissé sur le GPU à chaque chargement.
+    // Textures are looked up in the material's **properties** rather than in a list of names
+    // (map, normalMap, roughnessMap…): a slot added by a glTF extension (KHR_materials_*) would
+    // otherwise be left on the GPU at every load.
     for (const value of Object.values(material)) if (isTexture(value)) disposeTexture(value);
-    // ShaderMaterial : les textures vivent dans `uniforms[x].value`, hors des propriétés.
+    // ShaderMaterial: textures live in `uniforms[x].value`, outside the properties.
     const uniforms = (material as { uniforms?: Record<string, { value?: unknown }> }).uniforms;
     if (uniforms) for (const u of Object.values(uniforms)) if (isTexture(u?.value)) disposeTexture(u.value);
     material.dispose();
