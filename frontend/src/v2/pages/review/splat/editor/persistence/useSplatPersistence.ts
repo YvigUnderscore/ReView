@@ -3,13 +3,13 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../../../../lib/apiClient';
-import type { SplatEdits, SplatEditsPatch } from '../../../reviewTypes';
+import { api } from '@/lib/apiClient';
+import type { SplatEdits, SplatEditsPatch } from '@/v2/pages/review/reviewTypes';
 import type { SplatViewer } from '../../useSplat';
 import { applyMaskIndices, fetchMaskIndices } from './applyEdits';
 import { bytesToBase64, encodeMask } from './mask';
 import { applySubsetOps, encodeSubsetOps, fetchSubsetOps, type SubsetOp } from './subsetOps';
-import { useT } from '../../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Persistence of splat edits (extracted from `useSplatEditor` to keep its size in check):

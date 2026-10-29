@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { clampPipRect, defaultPipRect, type PipRect } from './pipWindow';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Floating PiP window (layout mode, Phase 27): a **draggable** DOM frame (drag on the frame)

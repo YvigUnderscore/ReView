@@ -3,7 +3,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 import PoiDraftRows from './PoiDraftRows';
 import type { PoiDraft, PoiDraftState } from './usePoiDraft';
 

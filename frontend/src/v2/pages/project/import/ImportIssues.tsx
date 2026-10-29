@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Download } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { useT } from '../../../i18n';
+import { Button } from '@/v2/components/ui/button';
+import { useT } from '@/v2/i18n';
 import { saveTextFile } from './api';
 import { isBlocking, issueLabel, toReportCsv } from './report';
 import type { ImportReport } from './types';

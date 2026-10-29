@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import TexturesGroup from './TexturesGroup';
 import { DOCK_GROUP_COLLAPSE_THRESHOLD } from '../chrome/dockGroupSize';
 import type { TextureInfo } from '../three/modelStats';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * Texture inspector: the 48 px thumbnail was not clickable, so one could not judge a texture, only

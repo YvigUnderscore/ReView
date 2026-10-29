@@ -10,7 +10,7 @@
  * transparent token renewal that apiClient provides.
  */
 
-import { api, getToken } from '../../../lib/apiClient';
+import { api, getToken } from '@/lib/apiClient';
 import { t } from '../../i18n';
 import {
   dataURLToBlob,

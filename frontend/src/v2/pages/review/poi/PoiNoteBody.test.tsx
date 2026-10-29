@@ -3,8 +3,8 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { stubLayoutMetrics } from '../../../../test/layoutMetrics';
-import { t } from '../../../i18n';
+import { stubLayoutMetrics } from '@/test/layoutMetrics';
+import { t } from '@/v2/i18n';
 import PoiNoteBody from './PoiNoteBody';
 
 /**

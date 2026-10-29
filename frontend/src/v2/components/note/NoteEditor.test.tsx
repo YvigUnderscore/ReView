@@ -3,7 +3,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 import NoteEditor from './NoteEditor';
 

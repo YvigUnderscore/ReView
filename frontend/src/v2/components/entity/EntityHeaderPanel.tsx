@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, FileText, Users } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import Avatar from '../Avatar';
 import EntityNoteDialog from './EntityNoteDialog';
 import type { ScopePerson } from './EntityTeamList';

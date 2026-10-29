@@ -4,8 +4,8 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
-import { getSocket } from '../../../lib/socket';
+import { api } from '@/lib/apiClient';
+import { getSocket } from '@/lib/socket';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import type { TimelineMarker } from '../../types/api';

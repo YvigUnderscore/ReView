@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';

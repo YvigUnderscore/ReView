@@ -3,8 +3,8 @@
 
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { t } from '../../../i18n';
-import { isEditable } from '../../../lib/shortcuts';
+import { t } from '@/v2/i18n';
+import { isEditable } from '@/v2/lib/shortcuts';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { appendBookmark, bookmarkShortcutIndex, removeBookmarkAt, MAX_BOOKMARKS } from './cameraBookmarks';

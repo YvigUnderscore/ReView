@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Hashing is verified by hashFile.test: here it must above all not cost 20 GB of reading.
 vi.mock('./hashFile', () => ({ sha256OfFile: vi.fn().mockResolvedValue('a'.repeat(64)) }));
-vi.mock('./apiClient', () => ({
+vi.mock('../../lib/apiClient', () => ({
   getToken: vi.fn(() => 'jeton'),
   api: { post: vi.fn(), get: vi.fn() },
 }));
@@ -17,7 +17,7 @@ vi.mock('./uploadTransfer', async (original) => ({
 }));
 
 import { inferMediaKind, uploadMedia } from './uploadClient';
-import { api, getToken } from './apiClient';
+import { api, getToken } from '../../lib/apiClient';
 import { putWithProgress } from './uploadTransfer';
 
 const post = vi.mocked(api.post);

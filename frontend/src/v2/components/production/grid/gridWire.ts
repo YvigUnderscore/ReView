@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
-import type { MessageKey, Tr } from '../../../i18n';
+import { TASK_STATUS_LABEL_KEY } from '@/v2/lib/taskStatus';
+import type { MessageKey, Tr } from '@/v2/i18n';
 import type { StatusFamily } from '../productionWire';
 
 /**

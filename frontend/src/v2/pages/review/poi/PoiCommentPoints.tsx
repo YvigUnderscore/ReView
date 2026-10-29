@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { Lightbox } from '../../../components/ui/lightbox';
-import { isImageAttachment, type CommentAttachment } from '../../../../lib/commentAttachments';
+import { Lightbox } from '@/v2/components/ui/lightbox';
+import { isImageAttachment, type CommentAttachment } from '@/v2/lib/commentAttachments';
 import PoiNoteBody from './PoiNoteBody';
 import type { PoiCardImage } from './poiCards';
 import type { PoiPoint } from './poiPoints';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Points of interest of a comment, on review: a numbered row per point, its remark, and its images.

@@ -8,7 +8,7 @@ import { planHide, useSceneEditShortcuts } from './useSceneEditShortcuts';
 import { clonePath, emptyOverride, setPrimEdit, type PrimEdit, type SceneOverride } from './sceneOverride';
 import type { UsdSceneState } from './useUsdScene';
 import { useEditHistory } from '../splat/editor/operations/history';
-import { UNDO_PRIORITY, useUndoScope } from '../../../lib/undoScope';
+import { UNDO_PRIORITY, useUndoScope } from '@/v2/lib/undoScope';
 
 /**
  * Rearranging a USD scene from the keyboard (batch 13). Three promises are checked here:

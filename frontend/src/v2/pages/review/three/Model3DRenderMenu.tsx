@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { SlidersHorizontal } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/v2/components/ui/popover';
 import DisplayPanel from '../panels/DisplayPanel';
 import type { Model3DInspectState } from './useModel3DInspect';
 import type { Model3DVariantsState } from './useModel3DVariants';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * 3D viewer render settings, **inside the viewer**: top-left corner, as a popover.

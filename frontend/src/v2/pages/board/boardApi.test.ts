@@ -3,12 +3,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../lib/apiClient', () => ({
+vi.mock('@/lib/apiClient', () => ({
   api: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
   getToken: () => 'jwt',
 }));
 
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { BoardConflictError, loadBoard, persistBoard, presignBoardFiles, saveBoard } from './boardApi';
 import { MAX_INLINE_DATAURL, type BoardFiles } from './boardFiles';
 

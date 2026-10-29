@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Axis3d, Download, Info, Sun, Video, type LucideIcon } from 'lucide-react';
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 import { isSpatialKind } from './modes';
-import type { MessageKey } from '../../../i18n';
+import type { MessageKey } from '@/v2/i18n';
 
 /**
  * Inspector dock — the settings that are **not** tools: what you set once and forget, as opposed

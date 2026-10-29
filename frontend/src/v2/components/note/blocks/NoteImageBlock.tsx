@@ -9,7 +9,7 @@ import { IMAGE_WIDTH, isNoteImageKey, type ImageAlign } from '../noteMarkdown';
 import { useNoteImageResolver } from '../noteImages';
 import type { ImageEditBlock } from '../noteEditorModel';
 import NoteImageDrop from './NoteImageDrop';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * An image placed on its own in the thread.

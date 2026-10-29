@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Circle, Cuboid, Eraser, Focus, Plus, Redo2, Trash2, Undo2, X } from 'lucide-react';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
+import { Badge } from '@/v2/components/ui/badge';
+import { Button } from '@/v2/components/ui/button';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
 import OptionsBar, { CommitGroup } from '../chrome/OptionsBar';
 import type { ReviewTool, ToolId } from '../chrome/tools';
 import type { ModeId } from '../chrome/modes';
@@ -15,8 +15,8 @@ import PaintOptions from './PaintOptions';
 import TransformOptions from './TransformOptions';
 import PoiOptions from '../poi/PoiOptions';
 import type { PoiDraftState } from '../poi/usePoiDraft';
-import { useT } from '../../../i18n';
-import { intlLocale } from '../../../i18n';
+import { useT } from '@/v2/i18n';
+import { intlLocale } from '@/v2/i18n';
 
 /**
  * Options bar of the splat viewer: the settings of the single armed tool. Replaces

@@ -4,7 +4,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronUp, Images } from 'lucide-react';
-import { Lightbox } from '../../../components/ui/lightbox';
+import { Lightbox } from '@/v2/components/ui/lightbox';
 import PoiNoteBody from './PoiNoteBody';
 import { POI_CARD_ATTR, sameAnchors, subscribePoiAnchors } from './poiAnchor';
 import {
@@ -14,7 +14,7 @@ import {
   type PoiCardSide,
   type PoiSceneCard,
 } from './poiCards';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The reviewed comment, **in the scene**: one card per point, anchored to its hotspot.

@@ -3,7 +3,7 @@
 
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { SkeletonRows } from '../ui/skeleton';
 import { readRetakes, type RetakeBucket } from './productionWire';

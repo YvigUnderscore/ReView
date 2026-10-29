@@ -3,7 +3,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 import EntityNoteDialog from './EntityNoteDialog';
 

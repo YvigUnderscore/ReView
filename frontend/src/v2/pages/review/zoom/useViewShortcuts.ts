@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef } from 'react';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 
 /** The two view commands of the flat viewers — the ones the rail names `fit` and `reset`. */
 export interface ViewCommands {

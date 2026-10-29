@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { Group, ReadRow } from '../chrome/DockGroup';
 import { isLongDockGroup } from '../chrome/dockGroupSize';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 export interface InfoRow {
   label: string;

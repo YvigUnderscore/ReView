@@ -3,7 +3,7 @@
 
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { SplatViewer } from './splat/useSplat';

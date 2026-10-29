@@ -4,7 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, FolderOpen } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import EntityCard, { EntityContainer } from '../../components/EntityCard';

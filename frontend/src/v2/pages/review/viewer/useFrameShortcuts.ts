@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect } from 'react';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 
 /**
  * Framing shortcuts shared by the 3D/splat viewers (Phase 17): `F` frames the selection or the

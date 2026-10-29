@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useReviewStatusesQuery } from '../../lib/queries';
 import ConfirmDialog from '../../components/ConfirmDialog';

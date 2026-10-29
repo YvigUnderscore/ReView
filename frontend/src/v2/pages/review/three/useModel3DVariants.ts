@@ -7,7 +7,7 @@ import { applyVariant, readVariants } from './materialVariants';
 import { collectEmbeddedCameras, type EmbeddedCameraView } from './embeddedCameras';
 import { restoreModelCamera } from './modelCamera';
 import type { Model3DThreeState } from './useModel3DThree';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Material variants + embedded cameras of the 3D model (Phase 40, 40.C). Reads the glTF exposed by

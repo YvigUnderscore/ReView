@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Camera, FileDown, LayoutGrid, Scissors } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import type { MediaKind } from '../../../types/api';
+import { Button } from '@/v2/components/ui/button';
+import type { MediaKind } from '@/v2/types/api';
 import type { PanelId } from '../chrome/panels';
 import { sheetRows } from './mediaSheet';
 import InfoPanel from './InfoPanel';
 import ExportPanel from './ExportPanel';
 import type { MediaResp } from '../reviewTypes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Inspector dock content for flat viewers: the technical sheet and the export.

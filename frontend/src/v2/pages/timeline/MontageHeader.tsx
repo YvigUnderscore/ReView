@@ -4,7 +4,7 @@
 import { Link } from 'react-router-dom';
 import { Clapperboard, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { reviewPath } from '../../lib/slug';
 import { ContextMenuItem } from '../../components/ui/context-menu';
 import { shotLabelOf, type MontageComment } from './montageFeedback';

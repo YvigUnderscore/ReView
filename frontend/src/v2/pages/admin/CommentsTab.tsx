@@ -6,7 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, ExternalLink, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import Avatar from '../../components/Avatar';
 import ConfirmDialog from '../../components/ConfirmDialog';

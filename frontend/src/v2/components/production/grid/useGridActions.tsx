@@ -5,15 +5,15 @@ import { useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tag, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { useStatusMenu } from '../../../lib/useStatusMenu';
-import { useUndoToast } from '../../../lib/useUndoToast';
-import { useProjectMembers } from '../../../lib/useProjectRole';
-import { currentStatusValue } from '../../../lib/statusMenu';
-import type { MenuEntry } from '../../../lib/menuSpec';
-import type { TaskStatus } from '../../../types/api';
-import { useT, type Tr } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { useStatusMenu } from '@/v2/lib/useStatusMenu';
+import { useUndoToast } from '@/v2/lib/useUndoToast';
+import { useProjectMembers } from '@/v2/lib/useProjectRole';
+import { currentStatusValue } from '@/v2/lib/statusMenu';
+import type { MenuEntry } from '@/v2/lib/menuSpec';
+import type { TaskStatus } from '@/v2/types/api';
+import { useT, type Tr } from '@/v2/i18n';
 import type { GridCell, GridRow } from './gridWire';
 
 /**

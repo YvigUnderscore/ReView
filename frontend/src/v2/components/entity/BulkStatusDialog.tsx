@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { NO_STATUS, statusChoices } from '../../lib/statusMenu';
 import { usePipelineStatuses } from '../../lib/shotgridApi';
 import { useT } from '../../i18n';

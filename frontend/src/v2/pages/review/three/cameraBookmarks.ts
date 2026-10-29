@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 import type { CameraBookmark, SplatCamera } from '../reviewTypes';
 
 /** Maximum number of bookmarks, aligned with the keyboard shortcuts Alt+1 to Alt+9. */

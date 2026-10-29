@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useT, intlLocale } from '../../i18n';
 import { useSgLinks, type SgLinkType } from './useSgLinks';
 

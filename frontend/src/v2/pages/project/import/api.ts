@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api, getToken } from '../../../../lib/apiClient';
-import { t } from '../../../i18n';
+import { api, getToken } from '@/lib/apiClient';
+import { t } from '@/v2/i18n';
 import type { ColumnOverride, ImportReport } from './types';
 
 /** Calls of the CSV import. An export or template is a file, not data to hide. */

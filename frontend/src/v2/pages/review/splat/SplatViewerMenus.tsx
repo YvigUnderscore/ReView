@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { SlidersHorizontal } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/v2/components/ui/popover';
 import DisplayPanel from '../panels/DisplayPanel';
 import type { SplatCompareState } from './compare/useSplatCompare';
 import type { SplatEditorState } from './editor/useSplatEditor';
 import type { PresentationState } from './presentation/usePresentation';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Menu of the splat viewer, **inside the viewer**: top-left corner, as a popover, exactly like the render

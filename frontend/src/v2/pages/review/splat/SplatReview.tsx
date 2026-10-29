@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, type ReactNode } from 'react';
-import type { Role } from '../../../types/api';
+import type { Role } from '@/v2/types/api';
 import type { MediaResp, SplatEditsPatch } from '../reviewTypes';
 import type { Annotations } from '../useAnnotations';
 import type { SplatViewer } from './useSplat';
@@ -37,7 +37,7 @@ import SplatContextMenu from './SplatContextMenu';
 import { hasSplatEditProposal } from './splatEditPart';
 import Model3DNotice from '../three/Model3DNotice';
 import { useCommentSceneEscape } from '../three/useCommentSceneEscape';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Splat block of the review, mounted in the unified chrome: tool rail on the left, options of the armed

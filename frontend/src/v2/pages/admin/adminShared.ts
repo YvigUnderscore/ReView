@@ -182,7 +182,7 @@ export const ROLES: Role[] = ['ADMIN', 'SUPERVISOR', 'ARTIST', 'CLIENT'];
  * screens gave two different sizes for the same file. The header comment of
  * `lib/formatBytes` announced this replacement; it had never been done.
  */
-export { formatBytes as fmtBytes } from '../../../lib/formatBytes';
+export { formatBytes as fmtBytes } from '../../lib/formatBytes';
 /** Short localized date+time (dense admin lists). */
 export const fmtDateTime = (iso: string) =>
   new Date(iso).toLocaleString(intlLocale(), {

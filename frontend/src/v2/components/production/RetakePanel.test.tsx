@@ -4,8 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import RetakePanel from './RetakePanel';
-import type { MockResolver } from '../../../test/apiMock';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import type { MockResolver } from '@/test/apiMock';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 
 /**

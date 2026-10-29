@@ -3,7 +3,7 @@
 
 import { useRef, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { Check, MoveDiagonal2 } from 'lucide-react';
-import type { WidgetSpan } from '../../../lib/widgetLayout';
+import type { WidgetSpan } from '@/v2/lib/widgetLayout';
 import {
   OVERVIEW_ROWS,
   gridGeometry,
@@ -12,7 +12,7 @@ import {
   type OverviewRows,
   type WidgetSize,
 } from './overviewSizing';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * A block's resize handle: the gesture the user asked for.

@@ -8,7 +8,7 @@ import {
   snapshotSubset,
   type SubsetSnapshot,
 } from '../operations/transformSplats';
-import { t } from '../../../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * Persisted transformations of splat subsets (Phase 28), pure binary encoding

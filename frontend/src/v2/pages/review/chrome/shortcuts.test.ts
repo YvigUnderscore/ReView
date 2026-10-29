@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { hasMessage } from '../../../i18n';
+import { hasMessage } from '@/v2/i18n';
 import { modesFor, switcherModesFor, type ModeId } from './modes';
 import { toolsFor, viewActionsFor } from './tools';
 import {
@@ -12,7 +12,7 @@ import {
   type ChromeKeyContext,
   type KeyToken,
 } from './shortcuts';
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Trash2 } from 'lucide-react';
-import { Badge } from '../../../components/ui/badge';
-import { IconButton } from '../../../components/ui/icon-button';
+import { Badge } from '@/v2/components/ui/badge';
+import { IconButton } from '@/v2/components/ui/icon-button';
 import type { PoiDraftState } from './usePoiDraft';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Options bar of the "Point of interest" tool: **the same in both viewers**.

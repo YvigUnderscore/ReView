@@ -4,7 +4,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import BatchGenerator from '../../components/BatchGenerator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';

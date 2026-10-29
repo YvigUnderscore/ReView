@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import type { MessageKey } from '../../../i18n';
+import type { MessageKey } from '@/v2/i18n';
 import type { MediaResp } from '../reviewTypes';
 import { sheetRows } from './mediaSheet';
 

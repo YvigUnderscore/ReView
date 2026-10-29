@@ -11,8 +11,8 @@ import {
   Scissors,
   type LucideIcon,
 } from 'lucide-react';
-import type { MediaKind, Role } from '../../../types/api';
-import type { MessageKey } from '../../../i18n';
+import type { MediaKind, Role } from '@/v2/types/api';
+import type { MessageKey } from '@/v2/i18n';
 
 /**
  * Mode toggle — the place that decides what exists on screen. Modes are picked with the number

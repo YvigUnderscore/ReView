@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useReviewStatusesQuery } from '../../lib/queries';
 import { useTheme } from '../../stores/useTheme';
 import { reviewStatusStyle } from '../../components/reviewDecision.helpers';

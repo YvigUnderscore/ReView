@@ -5,7 +5,7 @@ import type { MediaResp } from '../reviewTypes';
 import VersionNavigator from '../VersionNavigator';
 import PlaylistNavigator from '../PlaylistNavigator';
 import TimelineNavigator from '../TimelineNavigator';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Left corner of the merged header: what is being looked at. Media name, draft badge, version

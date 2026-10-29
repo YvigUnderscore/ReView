@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The "the viewer awaits a click" banner of the two spatial viewers. The 3D model had one, the splat had

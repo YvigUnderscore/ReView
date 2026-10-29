@@ -3,10 +3,10 @@
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import { snapToFrame } from './timeline/viewTransform';
 import type { CameraAnimState } from './useCameraAnim';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Camera transport shortcuts (long promised by the transport labels): **Space** play/pause,

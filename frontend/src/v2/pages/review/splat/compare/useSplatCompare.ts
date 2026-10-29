@@ -5,15 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { SplatMesh } from '@sparkjsdev/spark';
-import { api } from '../../../../../lib/apiClient';
-import { qk } from '../../../../lib/query';
-import type { Media, MediaSummary, VersionDetail } from '../../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import type { Media, MediaSummary, VersionDetail } from '@/v2/types/api';
 import type { MediaResp } from '../../reviewTypes';
 import { visibleLocalBox } from '../scene/visibleBounds';
 import type { SplatSceneHandle, SplatViewer } from '../useSplat';
 import { mergeCompareMedia, useCompareVersions } from '../../three/useCompareVersions';
 import { normalizationFor, type SiblingNormalization } from './normalize';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Splat comparison (10.G-V8): the SPLAT siblings of the current version **and the splats ticked in other

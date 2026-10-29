@@ -3,8 +3,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
 import {
   DEFAULT_LIGHTING,
   type LightingConfig,

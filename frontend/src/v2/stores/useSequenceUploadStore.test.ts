@@ -12,7 +12,7 @@ const { enqueue, upload, toasts } = vi.hoisted(() => ({
 vi.mock('sonner', () => ({ toast: toasts }));
 vi.mock('./useUploadStore', () => ({ useUploadStore: { getState: () => ({ enqueue }) } }));
 vi.mock('../lib/sequenceUpload', () => ({ uploadImageSequence: upload }));
-vi.mock('../lib/apiClient', () => ({ api: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('../../lib/apiClient', () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 
 import { planDrop, sendPlan, useSequenceUploadStore } from './useSequenceUploadStore';
 

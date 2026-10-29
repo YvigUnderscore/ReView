@@ -13,10 +13,10 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '../../../../components/ui/context-menu';
+} from '@/v2/components/ui/context-menu';
 import type { ChannelId, Extrapolation, TangentType } from '../channels/model';
 import { TANGENT_TYPES } from '../channels/tangents';
-import { useT, type MessageKey } from '../../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
 const TYPE_LABEL: Record<TangentType, MessageKey> = {
   auto: 'camera.tangent.auto',

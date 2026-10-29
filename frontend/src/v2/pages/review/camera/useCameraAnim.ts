@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import type { SplatCamera } from '../reviewTypes';
 import { isFlyMoveCode } from '../viewer/flyControls';
 import {

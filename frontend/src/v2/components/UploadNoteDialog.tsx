@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useUploadNoteStore } from '../../stores/useUploadNoteStore';
+import { useUploadNoteStore } from '../stores/useUploadNoteStore';
 import { noteIssue, toNotePayload } from '../lib/reviewRequestRule';
 import type { ReviewRequestRule } from '../types/api';
 import { Button } from './ui/button';

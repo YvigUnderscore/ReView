@@ -3,7 +3,7 @@
 
 import { useState, type KeyboardEvent, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useProjectContext } from '../../stores/useProjectContext';
 import type { Membership } from '../../types/api';

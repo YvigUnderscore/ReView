@@ -3,7 +3,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Template for the dock's `<Select>`s: the primitive is sized for forms, while the panels are two

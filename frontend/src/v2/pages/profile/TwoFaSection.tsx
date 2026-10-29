@@ -5,7 +5,7 @@ import { useState } from 'react';
 import QRCode from 'qrcode';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useAuth } from '../../stores/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';

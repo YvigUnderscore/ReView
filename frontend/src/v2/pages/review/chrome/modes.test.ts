@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import type { MediaKind, Role } from '../../../types/api';
+import type { MediaKind, Role } from '@/v2/types/api';
 import { DEFAULT_MODE, allowedModesFor, canSwitchMode, modesFor, switcherModesFor } from './modes';
 
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];

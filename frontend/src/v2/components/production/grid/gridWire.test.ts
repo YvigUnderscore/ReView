@@ -22,7 +22,7 @@ import {
   type GridDepartment,
   type GridRow,
 } from './gridWire';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 import type { StatusFamily } from '../productionWire';
 
 /**

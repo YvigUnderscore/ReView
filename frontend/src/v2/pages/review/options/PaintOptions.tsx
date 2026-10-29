@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Eraser, Redo2, Undo2 } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
 import type { ReviewTool } from '../chrome/tools';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import { MAX_STROKE_PX, MIN_STROKE_PX } from '../splat/paint/strokes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /** Stroke colours of the 3D brush: annotation data, not theme tokens. */
 const INK = ['#ff4d4d', '#ffb020', '#3ddc68', '#38b6ff'];

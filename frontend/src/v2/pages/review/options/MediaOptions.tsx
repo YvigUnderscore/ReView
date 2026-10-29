@@ -3,16 +3,16 @@
 
 import type { ReactNode } from 'react';
 import { Eraser, Redo2, Undo2 } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
-import { USER_COLORS } from '../../../lib/userColor';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
+import { USER_COLORS } from '@/v2/lib/userColor';
 import OptionsBar from '../chrome/OptionsBar';
 import type { ModeId } from '../chrome/modes';
 import type { ReviewTool } from '../chrome/tools';
 import type { CompareMode } from '../useCompareState';
 import type { Annotations } from '../useAnnotations';
-import { useT, type MessageKey } from '../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
 /** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;

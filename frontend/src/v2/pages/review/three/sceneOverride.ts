@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdPurpose } from '../../../types/api';
+import type { UsdPurpose } from '@/v2/types/api';
 import { isSelfOrDescendant, parentPath } from './usdScenegraph';
 
 /**

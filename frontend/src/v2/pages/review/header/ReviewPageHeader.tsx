@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ReactNode } from 'react';
-import { Skeleton } from '../../../components/ui/skeleton';
+import { Skeleton } from '@/v2/components/ui/skeleton';
 
 interface Props {
   /** True when the viewer chrome already hosts the header: the page then renders none. */

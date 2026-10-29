@@ -3,8 +3,8 @@
 
 import { create } from 'zustand';
 import { toast } from 'sonner';
-import { t } from '../v2/i18n';
-import { api } from '../lib/apiClient';
+import { t } from '../i18n';
+import { api } from '../../lib/apiClient';
 import { detectSequences, type FileSequence } from '../lib/imageSequence';
 import { uploadImageSequence } from '../lib/sequenceUpload';
 import { useUploadStore } from './useUploadStore';

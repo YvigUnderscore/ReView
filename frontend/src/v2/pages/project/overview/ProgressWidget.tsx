@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { TASK_STATUSES, TASK_STATUS_BAR, TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
+import { TASK_STATUSES, TASK_STATUS_BAR, TASK_STATUS_LABEL_KEY } from '@/v2/lib/taskStatus';
 import { useProjectActivity } from './useProjectActivity';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Project progress: the distribution of tasks by status, as a gauge and its legend.

@@ -6,7 +6,7 @@ import { Bold, Code, Italic, Link2, List, ListOrdered, Quote } from 'lucide-reac
 import { applyMark, type MarkKind } from '../noteEditorMarks';
 import { renderNoteHtml } from '../noteRender';
 import { isAcceptedNoteImage, useNoteImageResolver } from '../noteImages';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * A paragraph of the note.

@@ -11,6 +11,15 @@ import vitest from '@vitest/eslint-plugin'
 import prettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+/**
+ * Import paths: three `../` or more is a path nobody can read or move safely; `@/` (= `src/`,
+ * declared in tsconfig `paths`, vite.config.js and vitest.config.ts) says where the module lives.
+ */
+const DEEP_RELATIVE_IMPORT = {
+  regex: '^(\\.\\./){3,}',
+  message: 'Import trop profond : utiliser l’alias `@/` (= src/).',
+}
+
 export default defineConfig([
   // Application code only: the build, static assets and
   // tooling config files (CommonJS, outside the scope of the application lint) are excluded.
@@ -75,6 +84,7 @@ export default defineConfig([
       // autoFocus in dialogs complies with the ARIA Authoring Practices.
       'jsx-a11y/media-has-caption': 'off',
       'jsx-a11y/no-autofocus': 'off',
+      'no-restricted-imports': ['error', { patterns: [DEEP_RELATIVE_IMPORT] }],
       'no-restricted-syntax': [
         'error',
         {

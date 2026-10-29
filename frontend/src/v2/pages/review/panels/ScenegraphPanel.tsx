@@ -4,8 +4,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RotateCcw, Search } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '../../../components/ui/context-menu';
-import type { UsdBakedVariant, UsdModelInfo } from '../../../types/api';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/v2/components/ui/context-menu';
+import type { UsdBakedVariant, UsdModelInfo } from '@/v2/types/api';
 import { ancestorPaths, flattenTree, searchPrimTree } from '../three/usdScenegraph';
 import { isHidden, isHiddenByAncestor } from '../three/sceneOverride';
 import type { UsdSceneState } from '../three/useUsdScene';
@@ -19,8 +19,8 @@ import {
   rowIndexOf,
   variantTitleIndex,
 } from './scenegraphRows';
-import { useT } from '../../../i18n';
-import { isEditable } from '../../../lib/shortcuts';
+import { useT } from '@/v2/i18n';
+import { isEditable } from '@/v2/lib/shortcuts';
 
 /**
  * USD scenegraph of the dock (Phase 46, 46.C/46.E; B1/B2): the real tree of the scene, selection

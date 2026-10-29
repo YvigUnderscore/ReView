@@ -4,7 +4,7 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, RotateCw, XCircle } from 'lucide-react';
-import { ApiError, api } from '../../../lib/apiClient';
+import { ApiError, api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';

@@ -6,7 +6,7 @@ import ReviewHeaderActions from './ReviewHeaderActions';
 import ReviewHeaderIdentity from './ReviewHeaderIdentity';
 import ReviewCommentsColumn from './ReviewCommentsColumn';
 import { chromeHostsHeader } from './headerComposition';
-import type { ReviewComment } from '../../../types/api';
+import type { ReviewComment } from '@/v2/types/api';
 import type { MediaResp } from '../reviewTypes';
 import type { useAnnotations } from '../useAnnotations';
 import type { useCompareState } from '../useCompareState';

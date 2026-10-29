@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getSocket } from '../../../lib/socket';
+import { getSocket } from '@/lib/socket';
 import { reviewPath } from '../../lib/slug';
 import { useAuth } from '../../stores/useAuth';
 import type { ImageViewApi } from '../../components/ImageReviewViewer';

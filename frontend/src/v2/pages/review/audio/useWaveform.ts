@@ -3,8 +3,8 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
 import { decodeWaveformPeaks, type WaveformMeta } from './waveformData';
 
 /** Media response, reduced to the only field we need (cache shared with the review). */

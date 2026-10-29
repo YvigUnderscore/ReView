@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { KeyRound, Mail } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';

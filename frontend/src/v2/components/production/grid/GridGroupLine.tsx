@@ -5,7 +5,7 @@ import { ChevronRight } from 'lucide-react';
 import { FAMILY_BAR } from '../productionWire';
 import { HEAD_W, lineWidth } from './gridLayout';
 import { FAMILIES, familyTally, type SequenceGroup } from './gridWire';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The row of a sequence: its name, and the progress of all its shots.

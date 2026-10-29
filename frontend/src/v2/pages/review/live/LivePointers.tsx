@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { MousePointer2 } from 'lucide-react';
-import { userColor } from '../../../lib/userColor';
+import { userColor } from '@/v2/lib/userColor';
 import { useLivePointers } from './pointerBus';
 
 /**

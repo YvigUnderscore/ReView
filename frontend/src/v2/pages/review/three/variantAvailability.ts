@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdBakedVariant } from '../../../types/usd';
+import type { UsdBakedVariant } from '@/v2/types/usd';
 
 /**
  * Availability of a variant option in review (46.P).

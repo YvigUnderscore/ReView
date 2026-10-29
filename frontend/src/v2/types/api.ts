@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { CommentAttachment } from '../../lib/commentAttachments';
+import type { CommentAttachment } from '../lib/commentAttachments';
 
 /**
  * Shared API types (10.E2) — one entity, one definition.

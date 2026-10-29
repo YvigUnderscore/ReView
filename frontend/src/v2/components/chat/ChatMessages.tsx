@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import Avatar from '../Avatar';
 import { useChat } from '../../stores/useChat';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { timeAgo } from '../../lib/time';
 import { chatSystemText } from '../../lib/chatSystemText';
 import type { ChatMessage } from '../../types/chat';

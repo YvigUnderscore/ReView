@@ -3,12 +3,12 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Layers, Loader2, UploadCloud, X } from 'lucide-react';
-import { useUploadStore, type UploadItem, type UploadStatus } from '../../stores/useUploadStore';
+import { useUploadStore, type UploadItem, type UploadStatus } from '../stores/useUploadStore';
 import {
   useSequenceUploadStore,
   type SequenceUploadItem,
   type SequenceUploadStatus,
-} from '../../stores/useSequenceUploadStore';
+} from '../stores/useSequenceUploadStore';
 import SequenceGroupDialog from './SequenceGroupDialog';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useMediaQuery } from '../lib/useMediaQuery';

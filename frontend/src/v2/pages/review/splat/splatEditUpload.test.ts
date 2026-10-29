@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { httpError, mockApi } from '../../../../test/apiMock';
+import { httpError, mockApi } from '@/test/apiMock';
 import { MAX_SPLAT_EDIT_BLOB_BYTES, uploadSplatEditBlobs } from './splatEditUpload';
 import type { SplatEditDraft } from './splatEditPart';
 

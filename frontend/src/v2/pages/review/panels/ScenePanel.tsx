@@ -3,16 +3,16 @@
 
 import type { ReactNode } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
-import { Select } from '../../../components/ui/select';
-import { Switch } from '../../../components/ui/switch';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
+import { Select } from '@/v2/components/ui/select';
+import { Switch } from '@/v2/components/ui/switch';
 import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { LodMode } from '../splat/scene/lod';
 import type { RevealConfig } from '../splat/presentation/usePresentation';
 import type { RevealType } from '../splat/scene/effects/reveal';
-import { useT, type MessageKey } from '../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
 /** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;

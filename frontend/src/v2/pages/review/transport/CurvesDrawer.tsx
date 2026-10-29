@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Crosshair, Maximize2 } from 'lucide-react';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import { CHANNEL_IDS, type ChannelId } from '../camera/channels/model';
 import type { CameraAnimState } from '../camera/useCameraAnim';
 import ChannelList from '../camera/timeline/ChannelList';
@@ -12,7 +12,7 @@ import CurveTools from '../camera/timeline/CurveTools';
 import TimeRuler, { RULER_HEIGHT } from '../camera/timeline/TimeRuler';
 import { useCurveView } from '../camera/timeline/useCurveView';
 import { DRAWER_DEFAULT_H, DRAWER_MAX_H, DRAWER_MIN_H } from '../chrome/chromeState';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * "Curves" drawer anchored under the transport: the sequencer of the camera animation — a graduated

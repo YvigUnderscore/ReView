@@ -7,8 +7,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UploadWidget, { UploadRow } from './UploadWidget';
-import { useUploadStore, type UploadItem } from '../../stores/useUploadStore';
-import { useSequenceUploadStore } from '../../stores/useSequenceUploadStore';
+import { useUploadStore, type UploadItem } from '../stores/useUploadStore';
+import { useSequenceUploadStore } from '../stores/useSequenceUploadStore';
 import { t } from '../i18n';
 
 /**

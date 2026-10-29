@@ -3,9 +3,9 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
-import { useRegisterReviewCommands, type ReviewCommand } from '../../../lib/reviewCommands';
+import { useRegisterReviewCommands, type ReviewCommand } from '@/v2/lib/reviewCommands';
 import type { PresentationState } from './presentation/usePresentation';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Ctrl+K palette (B3) of the splat block: frame/reset, camera reading, key pose, orbit preset,

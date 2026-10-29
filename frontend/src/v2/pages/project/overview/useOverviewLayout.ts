@@ -3,14 +3,14 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { usePreferences, useUpdatePreferences } from '../../../lib/usePreferences';
-import { useProjectRole } from '../../../lib/useProjectRole';
-import { useAuth } from '../../../stores/useAuth';
-import type { WidgetsPref } from '../../../lib/widgetLayout';
-import type { Role } from '../../../types/api';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { usePreferences, useUpdatePreferences } from '@/v2/lib/usePreferences';
+import { useProjectRole } from '@/v2/lib/useProjectRole';
+import { useAuth } from '@/v2/stores/useAuth';
+import type { WidgetsPref } from '@/v2/lib/widgetLayout';
+import type { Role } from '@/v2/types/api';
+import { useT } from '@/v2/i18n';
 import { OVERVIEW_PREFERENCE_KEY, resolveOverviewLayout, roleLayout } from './overviewWidgets';
 
 /** Response of `GET /api/studio/overview-layout`: an absent role has never been set. */

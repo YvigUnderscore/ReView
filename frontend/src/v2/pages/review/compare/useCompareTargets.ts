@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import type { MediaKind, VersionDetail, VersionListItem } from '../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import type { MediaKind, VersionDetail, VersionListItem } from '@/v2/types/api';
 
 /** A comparable media, named for the B selector. */
 export interface CompareTargetMedia {

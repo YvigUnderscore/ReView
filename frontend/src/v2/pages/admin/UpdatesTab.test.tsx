@@ -12,14 +12,14 @@ const { api, toast } = vi.hoisted(() => ({
 // The REAL module, of which only `api` is replaced: the panel also imports `ApiError`
 // to tell a final 404 from a passing outage, and a mock that does not export it
 // makes it `undefined` — `instanceof` then throws, and the screen no longer renders anything at all.
-vi.mock('../../../lib/apiClient', async () => {
-  const actual = await vi.importActual<typeof import('../../../lib/apiClient')>('../../../lib/apiClient');
+vi.mock('@/lib/apiClient', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/apiClient')>('@/lib/apiClient');
   return { ...actual, api };
 });
 vi.mock('sonner', () => ({ toast }));
 
 import UpdatesTab from './UpdatesTab';
-import { ApiError } from '../../../lib/apiClient';
+import { ApiError } from '@/lib/apiClient';
 import { t } from '../../i18n';
 import type { OpsOverview } from './ops';
 

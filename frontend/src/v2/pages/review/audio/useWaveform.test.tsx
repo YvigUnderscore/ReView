@@ -3,7 +3,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { renderWithProviders } from '../../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { useWaveform } from './useWaveform';
 
 const encode = (bytes: number[]): string => btoa(String.fromCharCode(...bytes));

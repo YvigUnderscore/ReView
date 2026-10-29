@@ -8,7 +8,7 @@ import { applyRoll } from '../../three/cameraRoll';
 import type { SplatViewer } from '../useSplat';
 import { normalizeAnim } from '../../camera/channels/model';
 import type { CameraAnimState } from '../../camera/useCameraAnim';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Camera settings of the splat viewer (10.G-V5): focal length (fov), Spark depth of field (`focalDistance` +

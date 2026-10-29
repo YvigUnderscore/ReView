@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api } from '../../../../lib/apiClient';
-import { MAX_COMMENT_ATTACHMENTS, type CommentAttachment } from '../../../../lib/commentAttachments';
-import { t } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { MAX_COMMENT_ATTACHMENTS, type CommentAttachment } from '@/v2/lib/commentAttachments';
+import { t } from '@/v2/i18n';
 import type { SplatEditBlob, SplatEditBlobRef, SplatEditDraft } from './splatEditPart';
 
 /**

@@ -8,7 +8,7 @@ import { ListPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { deliverFiles } from '../../stores/deliverFiles';
+import { deliverFiles } from '../stores/deliverFiles';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { SkeletonRows } from '../components/ui/skeleton';

@@ -3,14 +3,14 @@
 
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
-import PipelineStatusSelect from '../../../components/shotgrid/PipelineStatusSelect';
-import { useProjectMembers } from '../../../lib/useProjectRole';
-import type { TaskStatus } from '../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { TASK_STATUS_COLOR, TASK_STATUS_LABEL_KEY } from '@/v2/lib/taskStatus';
+import PipelineStatusSelect from '@/v2/components/shotgrid/PipelineStatusSelect';
+import { useProjectMembers } from '@/v2/lib/useProjectRole';
+import type { TaskStatus } from '@/v2/types/api';
 import { useProjectActivity, type ActivityTask, type ProjectActivity } from './useProjectActivity';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The tasks to handle, most urgent first: status and assignment on click, for whoever manages the

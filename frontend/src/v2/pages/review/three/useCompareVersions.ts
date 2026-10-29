@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useState } from 'react';
-import type { MediaSummary } from '../../../types/api';
+import type { MediaSummary } from '@/v2/types/api';
 
 /**
  * Media of **other versions** selected for spatial comparison (3D and splat).

@@ -6,12 +6,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const { api } = vi.hoisted(() => ({ api: { post: vi.fn() } }));
-vi.mock('../../../../lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
+vi.mock('@/lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import UsdRecomposeGroup from './UsdRecomposeGroup';
-import type { UsdModelInfo } from '../../../types/api';
-import { t } from '../../../i18n';
+import type { UsdModelInfo } from '@/v2/types/api';
+import { t } from '@/v2/i18n';
 
 /**
  * USD recomposition is no longer a modal (batch 13).

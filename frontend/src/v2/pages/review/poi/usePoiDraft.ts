@@ -3,10 +3,10 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { MAX_COMMENT_ATTACHMENTS } from '../../../../lib/commentAttachments';
+import { MAX_COMMENT_ATTACHMENTS } from '@/v2/lib/commentAttachments';
 import type { Hotspot3D } from '../reviewTypes';
 import { MAX_POI_POINTS } from './poiPoints';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /** Point of interest being drafted: its images are still local files. */
 export interface PoiDraft {

@@ -6,7 +6,7 @@ import { canSwitchMode, modesFor, switcherModesFor } from '../chrome/modes';
 import { reconcileChrome, defaultChromeState } from '../chrome/chromeState';
 import { chromeCommandFor, type ChromeKeyContext } from '../chrome/shortcuts';
 import { DEFAULT_TOOL, toolsFor } from '../chrome/tools';
-import { hasMessage } from '../../../i18n';
+import { hasMessage } from '@/v2/i18n';
 import { splatEditRail, splatEditTools, splatSwitcherModes, splatToolsFor } from './splatChrome';
 
 /**

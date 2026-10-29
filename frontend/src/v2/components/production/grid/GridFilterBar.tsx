@@ -4,14 +4,14 @@
 import { Select } from '../../ui/select';
 import { Checkbox } from '../../ui/checkbox';
 import { Button } from '../../ui/button';
-import { useEpisodesEnabled, useEpisodesQuery } from '../../../lib/episodesApi';
-import { useSequencesQuery } from '../../../lib/queries';
-import { useDepartments } from '../../../lib/departmentsApi';
-import { useProjectMembers } from '../../../lib/useProjectRole';
-import { usePipelineStatuses } from '../../../lib/shotgridApi';
-import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
+import { useEpisodesEnabled, useEpisodesQuery } from '@/v2/lib/episodesApi';
+import { useSequencesQuery } from '@/v2/lib/queries';
+import { useDepartments } from '@/v2/lib/departmentsApi';
+import { useProjectMembers } from '@/v2/lib/useProjectRole';
+import { usePipelineStatuses } from '@/v2/lib/shotgridApi';
+import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from '@/v2/lib/taskStatus';
 import { NO_FILTERS, hasFilters, type GridFilters } from './gridWire';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The grid's filters.

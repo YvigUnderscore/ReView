@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type * as THREE from 'three';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * Tech sheet of the 3D model (Phase 39, 39.C): walks the loaded subtree to count geometry

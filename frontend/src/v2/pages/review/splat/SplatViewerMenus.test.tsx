@@ -8,7 +8,7 @@ import { splatEditTools } from './splatChrome';
 import { panelsFor } from '../chrome/panels';
 import type { SplatCompareState } from './compare/useSplatCompare';
 import type { SplatEditorState } from './editor/useSplatEditor';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * The splat's RENDER settings live on the viewer (Phase 50, batch 12), in the same language as the render

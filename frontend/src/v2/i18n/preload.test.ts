@@ -8,7 +8,7 @@ import {
   i18nPreloadSnippet,
   injectPreloadScript,
   localesCoveringBaseCatalog,
-} from '../../../vite.config.js';
+} from '@/../vite.config.js';
 import { BASE_LOCALE, LOCALE_CODES, LOCALE_STORAGE_KEY, isSharePath, negotiateLocale } from './index';
 
 /**

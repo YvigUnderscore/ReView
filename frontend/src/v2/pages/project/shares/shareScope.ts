@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ShareLink, ShareScope } from '../../../types/api';
+import type { ShareLink, ShareScope } from '@/v2/types/api';
 
 /**
  * Scope of a share link: the client-side part of the decision "what does this link open".

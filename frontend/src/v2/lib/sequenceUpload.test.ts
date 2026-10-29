@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./apiClient', () => ({
+vi.mock('../../lib/apiClient', () => ({
   getToken: vi.fn(() => 'jeton'),
   api: { post: vi.fn(), get: vi.fn() },
 }));
@@ -15,7 +15,7 @@ vi.mock('./uploadTransfer', async (original) => ({
 
 import { uploadImageSequence } from './sequenceUpload';
 import { detectSequences } from './imageSequence';
-import { api } from './apiClient';
+import { api } from '../../lib/apiClient';
 import { putWithProgress, UploadHttpError } from './uploadTransfer';
 
 /**

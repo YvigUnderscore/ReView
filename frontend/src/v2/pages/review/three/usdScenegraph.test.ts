@@ -18,7 +18,7 @@ import {
   searchPrimTree,
   type PrimNode,
 } from './usdScenegraph';
-import type { UsdPrim } from '../../../types/api';
+import type { UsdPrim } from '@/v2/types/api';
 
 const prim = (path: string, over: Partial<UsdPrim> = {}): UsdPrim => ({
   path,

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { getToken } from '../../../lib/apiClient';
-import { getSocket } from '../../../lib/socket';
+import { getToken } from '@/lib/apiClient';
+import { getSocket } from '@/lib/socket';
 import { applyHlsAuth, isExpiredMediaUrlError, MAX_HLS_REFRESHES } from './hlsSource';
 import { canUseHlsJs, loadHls, type HlsInstance } from './hlsRuntime';
 

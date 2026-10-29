@@ -3,10 +3,10 @@
 
 import type { ReactNode } from 'react';
 import { PanelRightClose } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
+import { IconButton } from '@/v2/components/ui/icon-button';
 import { RailButton } from './ToolRail';
 import type { PanelId, ReviewPanel } from './panels';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Inspector dock — right column. Only one panel open at a time; clicking the open tab again closes

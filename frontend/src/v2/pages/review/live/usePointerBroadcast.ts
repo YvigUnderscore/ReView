@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect } from 'react';
-import { getSocket } from '../../../../lib/socket';
+import { getSocket } from '@/lib/socket';
 import { clearPointers, setPointerEmitter } from './pointerBus';
 
 /**

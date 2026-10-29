@@ -14,9 +14,9 @@ import {
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { useT } from '../i18n';
-import { formatBytes } from '../../lib/formatBytes';
-import type { FileSequence } from '../../lib/imageSequence';
-import { useSequenceUploadStore, type SequenceProposal } from '../../stores/useSequenceUploadStore';
+import { formatBytes } from '../lib/formatBytes';
+import type { FileSequence } from '../lib/imageSequence';
+import { useSequenceUploadStore, type SequenceProposal } from '../stores/useSequenceUploadStore';
 
 /**
  * Grouping proposal for a drop.

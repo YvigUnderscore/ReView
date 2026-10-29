@@ -13,7 +13,7 @@ import { cameraPoseFromView } from '../camera/cameraPose';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { importCameraFile } from './importCameraAbc';
 import type { Model3DThreeState } from './useModel3DThree';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Camera controller of the Three 3D viewer (Phase 16/17): keyframe reader (driven by the layout

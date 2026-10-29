@@ -4,7 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Diff, SplitSquareHorizontal, X } from 'lucide-react';
 import type { ComponentProps } from 'react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import ImageReviewViewer from '../../components/ImageReviewViewer';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';

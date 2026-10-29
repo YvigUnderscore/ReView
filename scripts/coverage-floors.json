@@ -39,10 +39,6 @@
       "statements": 85.7,
       "branches": 80.9
     },
-    "src/stores": {
-      "statements": 73,
-      "branches": 58.3
-    },
     "autres": {
       "statements": 60.5,
       "branches": 54.4
@@ -58,6 +54,10 @@
     "src/v2/pages": {
       "statements": 52.1,
       "branches": 44.6
+    },
+    "src/v2/stores": {
+      "statements": 65.2,
+      "branches": 50.7
     }
   }
 }

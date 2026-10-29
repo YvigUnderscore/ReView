@@ -4,7 +4,7 @@
 import { memo } from 'react';
 import { ChevronDown, ChevronRight, Copy, Eye, EyeOff, Lock, LockOpen, Trash2 } from 'lucide-react';
 import type { PrimNode } from '../three/usdScenegraph';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * A row of the virtualised scenegraph, positioned absolutely in the virtualizer's spacer.

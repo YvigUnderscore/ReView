@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { toast } from 'sonner';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * Warns before overwriting an existing camera animation (Phase 27): a non-blocking toast with a

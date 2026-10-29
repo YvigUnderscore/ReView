@@ -3,7 +3,7 @@
 
 import { FAMILIES, FAMILY_LABEL } from './gridWire';
 import { FAMILY_BAR } from '../productionWire';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Legend of the status families.

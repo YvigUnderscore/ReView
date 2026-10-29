@@ -3,17 +3,17 @@
 
 import type { ReactNode } from 'react';
 import { Layers } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/v2/components/ui/button';
 import InfoPanel, { type InfoRow } from '../panels/InfoPanel';
 import TexturesGroup from '../panels/TexturesGroup';
 import UsdSceneGroup from '../panels/UsdSceneGroup';
 import type { MediaResp } from '../reviewTypes';
-import type { ModelSource } from '../../../types/api';
+import type { ModelSource } from '@/v2/types/api';
 import Model3DMeasureGroup from './Model3DMeasureGroup';
 import type { Model3DInspectState } from './useModel3DInspect';
 import type { Model3DThreeState } from './useModel3DThree';
 import type { ModelMeasureState } from './useModelMeasure';
-import { intlLocale, useT, type MessageKey, type Tr } from '../../../i18n';
+import { intlLocale, useT, type MessageKey, type Tr } from '@/v2/i18n';
 
 /**
  * Info panel of the 3D viewer: what is measured during rendering, the technical sheet of the

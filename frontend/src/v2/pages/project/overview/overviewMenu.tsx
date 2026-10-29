@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Check, LayoutGrid, Plus, RefreshCw, RotateCcw, UserCog, UserMinus } from 'lucide-react';
-import { separator, type MenuEntry } from '../../../lib/menuSpec';
-import { ROLE_LABEL_KEY } from '../../../lib/userStatus';
-import type { WidgetsPref } from '../../../lib/widgetLayout';
-import type { Role } from '../../../types/api';
-import type { Tr } from '../../../i18n';
+import { separator, type MenuEntry } from '@/v2/lib/menuSpec';
+import { ROLE_LABEL_KEY } from '@/v2/lib/userStatus';
+import type { WidgetsPref } from '@/v2/lib/widgetLayout';
+import type { Role } from '@/v2/types/api';
+import type { Tr } from '@/v2/i18n';
 import { OVERVIEW_WIDGET_DEFS, addableOverviewWidgets, type OverviewWidgetId } from './overviewWidgets';
 
 /**

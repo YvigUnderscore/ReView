@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { MessageKey } from '../../../i18n';
+import type { MessageKey } from '@/v2/i18n';
 import { switcherModesFor, type ModeId, type ReviewMode } from '../chrome/modes';
 import { DEFAULT_TOOL, toolsFor, type RailSection, type ReviewTool } from '../chrome/tools';
 

@@ -3,11 +3,11 @@
 
 import Avatar from '../../Avatar';
 import EntityContextMenu from '../../ui/entity-menu';
-import { initialsFrom } from '../../../lib/initials';
+import { initialsFrom } from '@/v2/lib/initials';
 import { FAMILY_BAR } from '../productionWire';
 import { cellKind, statusName, type GridCell, type GridCellStatus, type GridDepartment } from './gridWire';
 import type { GridActions } from './useGridActions';
-import { intlLocale, useT, type Tr } from '../../../i18n';
+import { intlLocale, useT, type Tr } from '@/v2/i18n';
 
 /**
  * A grid cell: where THIS department stands on THIS shot.

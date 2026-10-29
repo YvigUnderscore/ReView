@@ -8,7 +8,7 @@ import { FileClock, X, Trash2, Send, Eye, UserPlus } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { reviewPath } from '../lib/slug';
-import { useUploadStore } from '../../stores/useUploadStore';
+import { useUploadStore } from '../stores/useUploadStore';
 import type { Media, ReviewRequestRule } from '../types/api';
 import type { ReviewAssignee } from '../types/entities';
 import ReviewersDialog from './review/ReviewersDialog';

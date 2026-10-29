@@ -4,9 +4,9 @@
 import { AlertTriangle } from 'lucide-react';
 import { Group, ReadRow } from '../chrome/DockGroup';
 import { isLongDockGroup } from '../chrome/dockGroupSize';
-import type { UsdModelInfo } from '../../../types/api';
+import type { UsdModelInfo } from '@/v2/types/api';
 import { purposeLabel, unitLabel, variantValue } from '../usdDisplay';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * USD section of the technical sheet (Phase 45, 45.F): what the converter actually opened and composed.

@@ -3,7 +3,7 @@
 
 import { switcherModesFor, type ModeId, type ReviewMode } from '../chrome/modes';
 import { DEFAULT_TOOL, toolsFor, type ReviewTool } from '../chrome/tools';
-import type { MessageKey } from '../../../i18n';
+import type { MessageKey } from '@/v2/i18n';
 
 /**
  * Mode switcher and rail of the **3D model** viewer: the only deviations from the common spatial

@@ -19,7 +19,7 @@ import {
   Play,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import {
   ContextMenu,

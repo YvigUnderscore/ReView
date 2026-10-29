@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 import { DEFAULT_MODE, allowedModesFor, isSpatialKind, type ModeId } from './modes';
 import { panelsFor, type PanelId } from './panels';
 import { DEFAULT_TOOL, toolsFor, type ToolId } from './tools';

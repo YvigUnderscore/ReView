@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import type { Tr } from '../../../i18n';
+import type { Tr } from '@/v2/i18n';
 import { fieldLabel, isBlocking, issueLabel, toReportCsv } from './report';
 import { CSV_FIELDS, type ImportReport } from './types';
 

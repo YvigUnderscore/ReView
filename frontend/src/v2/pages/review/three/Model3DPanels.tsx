@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Download, Upload } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/v2/components/ui/button';
 import type { PanelId } from '../chrome/panels';
 import CameraPanel from '../panels/CameraPanel';
 import ExportPanel, { CaptureViewButton } from '../panels/ExportPanel';
@@ -28,7 +28,7 @@ import type { SectionPlaneState } from './useSectionPlane';
 import type { TurntableState } from './useTurntable';
 import type { UsdSceneState } from './useUsdScene';
 import type { CameraAnimState } from '../camera/useCameraAnim';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 const RAD = Math.PI / 180;
 

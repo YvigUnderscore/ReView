@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { t } from '../v2/i18n';
+import { t } from '../i18n';
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { uploadMedia, inferMediaKind } from '../lib/uploadClient';
-import { api } from '../lib/apiClient';
-import type { MediaKind } from '../v2/types/api';
+import { api } from '../../lib/apiClient';
+import type { MediaKind } from '../types/api';
 
 /**
  * Global upload store (Zustand).

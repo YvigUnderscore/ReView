@@ -8,7 +8,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import ToolRail from './ToolRail';
 import { toolsFor, viewActionsFor, type RailSection } from './tools';
 import { splatEditRail } from '../splat/splatChrome';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * The multi-group rail (Phase 50, batch 13). What is verified: a tool in a second group is

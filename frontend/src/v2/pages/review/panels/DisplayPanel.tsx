@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Circle, Eclipse, Grid2x2, Grid3x3, Grip, Sparkles, Triangle } from 'lucide-react';
-import { Select } from '../../../components/ui/select';
-import { SegmentedControl, type SegmentedItem } from '../../../components/ui/segmented-control';
-import { Switch } from '../../../components/ui/switch';
+import { Select } from '@/v2/components/ui/select';
+import { SegmentedControl, type SegmentedItem } from '@/v2/components/ui/segmented-control';
+import { Switch } from '@/v2/components/ui/switch';
 import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { DebugColorMode } from '../splat/scene/effects/debugColor';
 import type { RenderMode } from '../splat/scene/renderModes';
 import type { DisplayMode } from '../three/displayModes';
-import { useT, type MessageKey } from '../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
 /** Translator passed to the label tables, recomputed on each render. */
 type T = (key: MessageKey) => string;

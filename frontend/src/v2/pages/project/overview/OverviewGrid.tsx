@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Suspense, lazy, useState } from 'react';
-import WidgetShell, { type WidgetDragHandle } from '../../../components/widgets/WidgetShell';
-import RetakePanel from '../../../components/production/RetakePanel';
-import type { WidgetSettings, WidgetsPref } from '../../../lib/widgetLayout';
+import WidgetShell, { type WidgetDragHandle } from '@/v2/components/widgets/WidgetShell';
+import RetakePanel from '@/v2/components/production/RetakePanel';
+import type { WidgetSettings, WidgetsPref } from '@/v2/lib/widgetLayout';
 import CountsWidget, { type ProjectCounts } from './CountsWidget';
 import LatestMediaWidget from './LatestMediaWidget';
 import ProgressWidget from './ProgressWidget';
@@ -30,7 +30,7 @@ import {
   visibleOverviewWidgets,
   type OverviewWidgetId,
 } from './overviewWidgets';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The overview grid: twelve columns, rows, and blocks that can be dragged.
@@ -44,7 +44,7 @@ import { useT } from '../../../i18n';
  * Drag-and-drop follows the same rule as on the home page: @dnd-kit is only downloaded on entering
  * composition. Outside composition it is a page: no handle, no border, no button on the blocks.
  */
-const WidgetSortable = lazy(() => import('../../../components/widgets/WidgetSortable'));
+const WidgetSortable = lazy(() => import('@/v2/components/widgets/WidgetSortable'));
 
 export interface OverviewGridProps {
   projectId: number;

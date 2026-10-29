@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import Hls from 'hls.js';
-import { getToken } from '../../../lib/apiClient';
+import { getToken } from '@/lib/apiClient';
 import { playbackSource } from './mediaSource';
 import { usePlayingFromElements } from './usePlayingFromElements';
 import { clipIndexAt, globalTimeOf, holdsOnClock, localTimeAt, nextPlayableIndex } from './timelinePlayback';

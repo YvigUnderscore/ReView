@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef } from 'react';
-import { isEditable } from '../../../lib/shortcuts';
-import { UNDO_PRIORITY, useUndoScope } from '../../../lib/undoScope';
+import { isEditable } from '@/v2/lib/shortcuts';
+import { UNDO_PRIORITY, useUndoScope } from '@/v2/lib/undoScope';
 import { isHidden, parseClonePath, type SceneOverride } from './sceneOverride';
 import type { UsdSceneState } from './useUsdScene';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Keyboard rearrangement of the USD scene (batch 13): **Delete** hides the selection, and

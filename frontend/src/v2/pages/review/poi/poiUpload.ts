@@ -5,7 +5,7 @@ import {
   isAllowedAttachment,
   MAX_COMMENT_ATTACHMENTS,
   type CommentAttachment,
-} from '../../../../lib/commentAttachments';
+} from '@/v2/lib/commentAttachments';
 import type { PoiDraft } from './usePoiDraft';
 import type { PoiPoint } from './poiPoints';
 

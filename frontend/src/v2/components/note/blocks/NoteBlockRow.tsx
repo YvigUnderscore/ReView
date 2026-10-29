@@ -9,7 +9,7 @@ import NoteTextBlock from './NoteTextBlock';
 import NoteGalleryBlock from './NoteGalleryBlock';
 import NoteImageBlock from './NoteImageBlock';
 import { HeadingEditor, ProgressEditor, SmallEditor, TitleEditor } from './NoteSimpleBlocks';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The frame of a block being edited: what surrounds it, never what it contains.

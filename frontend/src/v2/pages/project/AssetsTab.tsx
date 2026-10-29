@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Plus, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
 import { useMultiSelect } from '../../lib/useMultiSelect';
 import { bulkDelete } from '../../lib/bulkApi';

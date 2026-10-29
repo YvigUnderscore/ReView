@@ -3,8 +3,8 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { stubLayoutMetrics } from '../../../../test/layoutMetrics';
-import { t } from '../../../i18n';
+import { stubLayoutMetrics } from '@/test/layoutMetrics';
+import { t } from '@/v2/i18n';
 import PoiSceneCards from './PoiSceneCards';
 import { announcePoiAnchors, POI_ANCHOR_ATTR } from './poiAnchor';
 import type { PoiSceneCard } from './poiCards';

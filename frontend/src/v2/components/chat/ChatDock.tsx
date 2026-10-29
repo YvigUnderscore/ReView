@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Bell, BellOff, LogOut, Pencil, UserPlus, X } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useAuth } from '../../stores/useAuth';
 import { useChat, conversationLabel } from '../../stores/useChat';
 import Avatar from '../Avatar';

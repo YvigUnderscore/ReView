@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { mockApi } from '../../../test/apiMock';
+import { mockApi } from '@/test/apiMock';
 import { splitAnnotationParts, type MediaResp, type SplatEdits } from './reviewTypes';
 import type { SplatEditDraft } from './splat/splatEditPart';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';

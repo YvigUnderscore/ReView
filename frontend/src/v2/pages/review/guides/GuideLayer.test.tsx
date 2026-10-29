@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import CompositionGuides from '../CompositionGuides';
 import ReviewFrame from '../ReviewFrame';
-import { useGuides } from '../../../stores/useGuides';
+import { useGuides } from '@/v2/stores/useGuides';
 import {
   GUIDE_COLOR,
   GUIDE_OPACITY,

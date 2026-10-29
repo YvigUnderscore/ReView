@@ -4,7 +4,7 @@
 import { useRef, useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Columns2, Diff, X } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';

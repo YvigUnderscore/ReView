@@ -4,14 +4,14 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileVideo, Play } from 'lucide-react';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { reviewPath } from '../../../lib/slug';
-import { Skeleton } from '../../../components/ui/skeleton';
-import type { MediaRef } from '../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { reviewPath } from '@/v2/lib/slug';
+import { Skeleton } from '@/v2/components/ui/skeleton';
+import type { MediaRef } from '@/v2/types/api';
 import { tileCapacity, tileGridClass, type OverviewRows } from './overviewSizing';
-import type { WidgetSpan } from '../../../lib/widgetLayout';
-import { useT } from '../../../i18n';
+import type { WidgetSpan } from '@/v2/lib/widgetLayout';
+import { useT } from '@/v2/i18n';
 
 /**
  * The project's latest published media, as thumbnails clickable through to the review.

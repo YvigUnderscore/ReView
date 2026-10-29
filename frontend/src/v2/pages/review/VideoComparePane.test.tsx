@@ -7,7 +7,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { api } = vi.hoisted(() => ({ api: { get: vi.fn() } }));
-vi.mock('../../../lib/apiClient', () => ({ api }));
+vi.mock('@/lib/apiClient', () => ({ api }));
 
 import VideoComparePane from './VideoComparePane';
 import { t } from '../../i18n';

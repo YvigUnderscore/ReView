@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Save, Trash2 } from 'lucide-react';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { Select } from '../../../components/ui/select';
-import { Switch } from '../../../components/ui/switch';
+import { Badge } from '@/v2/components/ui/badge';
+import { Button } from '@/v2/components/ui/button';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { Select } from '@/v2/components/ui/select';
+import { Switch } from '@/v2/components/ui/switch';
 import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { Model3DLightingState } from '../three/useModel3DLighting';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Lighting panel of the dock: 3D model only, since a splat carries its light baked in. Takes over

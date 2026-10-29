@@ -12,23 +12,23 @@ import {
   PanelRightOpen,
   PictureInPicture2,
 } from 'lucide-react';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import Avatar from '../../../components/Avatar';
-import ShortcutsHelp from '../../../components/ShortcutsHelp';
-import ReviewDecisionBadge from '../../../components/ReviewDecisionBadge';
-import ReviewDecisionDialog from '../../../components/ReviewDecisionDialog';
-import ReviewersDialog from '../../../components/review/ReviewersDialog';
-import { useSgLinks } from '../../../components/shotgrid/useSgLinks';
-import { useAuth } from '../../../stores/useAuth';
-import type { VersionDetail } from '../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import Avatar from '@/v2/components/Avatar';
+import ShortcutsHelp from '@/v2/components/ShortcutsHelp';
+import ReviewDecisionBadge from '@/v2/components/ReviewDecisionBadge';
+import ReviewDecisionDialog from '@/v2/components/ReviewDecisionDialog';
+import ReviewersDialog from '@/v2/components/review/ReviewersDialog';
+import { useSgLinks } from '@/v2/components/shotgrid/useSgLinks';
+import { useAuth } from '@/v2/stores/useAuth';
+import type { VersionDetail } from '@/v2/types/api';
 import type { MediaResp } from '../reviewTypes';
 import CompareSelect from '../CompareSelect';
 import LiveControl from '../LiveControl';
 import { useReviewPresence } from '../useReviewPresence';
 import type { LiveSession } from '../useLiveSession';
 import { headerActions, type HeaderActionId } from './headerComposition';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /** Header action button: same frame for all, only the icon changes. */
 const ACTION_BTN =

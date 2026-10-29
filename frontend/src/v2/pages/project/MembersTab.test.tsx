@@ -4,10 +4,10 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import MembersTab from './MembersTab';
-import { renderWithProviders } from '../../../test/renderWithProviders';
-import { openContextMenu, openSubmenu, clickMenuRadio } from '../../../test/menu';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import { openContextMenu, openSubmenu, clickMenuRadio } from '@/test/menu';
 import { t } from '../../i18n';
-import type { MockResolver } from '../../../test/apiMock';
+import type { MockResolver } from '@/test/apiMock';
 
 /**
  * The members tab: a role AND a department are assigned here.

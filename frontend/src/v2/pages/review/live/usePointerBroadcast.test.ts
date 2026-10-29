@@ -5,7 +5,7 @@ import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const emit = vi.fn();
-vi.mock('../../../../lib/socket', () => ({ getSocket: () => ({ emit }) }));
+vi.mock('@/lib/socket', () => ({ getSocket: () => ({ emit }) }));
 
 import { canSendPointer, clearPointers, getPointers, receivePointer, sendPointer } from './pointerBus';
 import { usePointerBroadcast } from './usePointerBroadcast';

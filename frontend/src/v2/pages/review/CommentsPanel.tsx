@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { ImagePlus, PencilLine } from 'lucide-react';
 import { toast } from 'sonner';
-import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
+import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../lib/commentAttachments';
 import AttachmentDraftList from '../../components/comments/AttachmentDraftList';
 import { removeDraft, toDrafts } from '../../components/comments/attachmentDrafts';
 import { useObjectUrls } from '../../components/comments/useObjectUrls';

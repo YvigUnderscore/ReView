@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/v2/components/ui/button';
 import { Download, Upload } from 'lucide-react';
 import type { PanelId } from '../chrome/panels';
 import CameraPanel from '../panels/CameraPanel';
@@ -22,9 +22,9 @@ import type { SplatStats } from './scene/stats';
 import type { SplatViewer } from './useSplat';
 import { buildCleanSpz, cleanExportName, downloadBytes, type ExportEdits } from './export/exportSplat';
 import { downloadAnimGltf } from '../three/exportCameraGltf';
-import { useT } from '../../../i18n';
-import { formatBytes } from '../../../../lib/formatBytes';
-import { intlLocale } from '../../../i18n';
+import { useT } from '@/v2/i18n';
+import { formatBytes } from '@/v2/lib/formatBytes';
+import { intlLocale } from '@/v2/i18n';
 
 const RAD = Math.PI / 180;
 const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());

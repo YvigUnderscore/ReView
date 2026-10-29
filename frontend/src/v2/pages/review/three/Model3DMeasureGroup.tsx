@@ -3,11 +3,11 @@
 
 import { Ruler } from 'lucide-react';
 import { Group, ReadRow, Row } from '../chrome/DockGroup';
-import { IconButton } from '../../../components/ui/icon-button';
-import { Switch } from '../../../components/ui/switch';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { Switch } from '@/v2/components/ui/switch';
 import { lengthText } from './measure';
 import type { ModelMeasureState } from './useModelMeasure';
-import { intlLocale, useT, type Tr } from '../../../i18n';
+import { intlLocale, useT, type Tr } from '@/v2/i18n';
 
 /** Invite line of the measuring tool, depending on the number of points already placed. */
 function measureHint(state: ModelMeasureState, t: Tr): string {

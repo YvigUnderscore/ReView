@@ -5,10 +5,10 @@ import type { ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { FileSpreadsheet, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/v2/components/ui/button';
 import { Group } from '../chrome/DockGroup';
-import { downloadNotes, type NotesExportRequest, type NotesFormat } from '../../../lib/notesExport';
-import { useT } from '../../../i18n';
+import { downloadNotes, type NotesExportRequest, type NotesFormat } from '@/v2/lib/notesExport';
+import { useT } from '@/v2/i18n';
 
 /**
  * Notes output from the dock's Export panel.

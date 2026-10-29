@@ -8,13 +8,13 @@ import {
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
-} from '../../../components/ui/context-menu';
-import type { UsdBakedVariant, UsdModelInfo } from '../../../types/api';
+} from '@/v2/components/ui/context-menu';
+import type { UsdBakedVariant, UsdModelInfo } from '@/v2/types/api';
 import { isClonePath, isHidden } from '../three/sceneOverride';
 import { isSelfOrDescendant } from '../three/usdScenegraph';
 import { variantOptionAvailable } from '../three/variantAvailability';
 import type { UsdSceneState } from '../three/useUsdScene';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Actions of a USD prim (46.E/46.M): content **shared** between the right-click on a scenegraph row

@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { NumberField } from '../../ui/number-field';
 import { Input } from '../../ui/input';
 import type { HeadingBlock, ProgressEditBlock, SmallEditBlock, TitleBlock } from '../noteEditorModel';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Blocks that fit on one line: a section title, a gauge, a sub-text.

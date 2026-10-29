@@ -3,8 +3,8 @@
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
-import { stubLayoutMetrics } from '../../../test/layoutMetrics';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import { stubLayoutMetrics } from '@/test/layoutMetrics';
 import type { ReviewComment } from '../../types/api';
 import CommentItem from './CommentItem';
 import { VISIBLE_REPLIES } from './collapse';

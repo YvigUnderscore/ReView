@@ -195,6 +195,8 @@ function i18nCatalogPreload() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), i18nCatalogPreload()],
+  // `@/…` = `src/…` (same mapping in tsconfig `paths` and vitest.config.ts).
+  resolve: { alias: { '@': path.join(path.dirname(fileURLToPath(import.meta.url)), 'src') } },
   define: {
     // Read by `src/v2/i18n/index.ts`. A string literal rather than an array: the
     // replacement is textual, and a comma is shorter than a JSON array.

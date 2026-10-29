@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 import AssetTaskCards from './AssetTaskCards';
 import type { AssetTreeTask, DepartmentGroup } from '../../types/api';

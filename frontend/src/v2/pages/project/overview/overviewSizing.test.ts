@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import type { WidgetSpan } from '../../../lib/widgetLayout';
+import type { WidgetSpan } from '@/v2/lib/widgetLayout';
 import {
   FALLBACK_GEOMETRY,
   OVERVIEW_GRID_CLASS,

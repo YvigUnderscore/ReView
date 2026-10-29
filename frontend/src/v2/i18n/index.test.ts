@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { localesCoveringBaseCatalog } from '../../../vite.config.js';
+import { localesCoveringBaseCatalog } from '@/../vite.config.js';
 import {
   BASE_LOCALE,
   LOCALES,

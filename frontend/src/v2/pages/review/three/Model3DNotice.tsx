@@ -3,7 +3,7 @@
 
 import { Undo2 } from 'lucide-react';
 import PoiNotice from '../poi/PoiNotice';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Status banner of the 3D viewer, above the scene: what the viewer expects from you, or the

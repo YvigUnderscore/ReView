@@ -9,7 +9,7 @@ const { api, projectRole } = vi.hoisted(() => ({
   api: { patch: vi.fn(), del: vi.fn() },
   projectRole: { canManage: true },
 }));
-vi.mock('../../../lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
+vi.mock('@/lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-query')>()),

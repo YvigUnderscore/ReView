@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Columns3 } from 'lucide-react';
-import { SegmentedControl } from '../../../../components/ui/segmented-control';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
 import type { SplatCompareState } from './useSplatCompare';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…` : name);
 

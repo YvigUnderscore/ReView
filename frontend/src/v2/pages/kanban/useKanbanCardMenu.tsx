@@ -5,7 +5,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { Button } from '../../components/ui/button';

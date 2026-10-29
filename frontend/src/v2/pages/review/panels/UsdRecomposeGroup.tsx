@@ -5,14 +5,14 @@ import { useState } from 'react';
 import { Layers } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import type { UsdModelInfo, UsdPurpose, UsdVariantSelection } from '../../../types/api';
-import { Button } from '../../../components/ui/button';
-import { Select } from '../../../components/ui/select';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import type { UsdModelInfo, UsdPurpose, UsdVariantSelection } from '@/v2/types/api';
+import { Button } from '@/v2/components/ui/button';
+import { Select } from '@/v2/components/ui/select';
 import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import { initialSelection, purposeLabel, variantValue } from '../usdDisplay';
-import { useT, type MessageKey } from '../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
 /** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;

@@ -3,7 +3,7 @@
 
 import { createContext, useContext } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import type { NoteKind } from '../../lib/notesApi';
 import { t } from '../../i18n';
 import type { ImageResolver } from './noteRender';

@@ -11,7 +11,7 @@ const { download, toasts } = vi.hoisted(() => ({
   toasts: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
 }));
 
-vi.mock('../../../lib/notesExport', () => ({ downloadNotes: download }));
+vi.mock('@/v2/lib/notesExport', () => ({ downloadNotes: download }));
 vi.mock('sonner', () => ({ toast: toasts }));
 
 import NotesExportPanel from './NotesExportPanel';

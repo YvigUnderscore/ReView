@@ -5,10 +5,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { Group } from '../chrome/DockGroup';
 import { isLongDockGroup } from '../chrome/dockGroupSize';
-import { Lightbox, type LightboxImage } from '../../../components/ui/lightbox';
+import { Lightbox, type LightboxImage } from '@/v2/components/ui/lightbox';
 import { drawTexturePreview, textureFullUrl } from '../three/textureImage';
 import type { TextureInfo } from '../three/modelStats';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Texture inspector of the technical sheet (Phase 39, 39.C): one preview per glTF channel, the

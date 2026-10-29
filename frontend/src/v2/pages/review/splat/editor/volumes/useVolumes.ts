@@ -3,11 +3,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { SdfVolumeData } from '../../../reviewTypes';
+import type { SdfVolumeData } from '@/v2/pages/review/reviewTypes';
 import type { SplatViewer } from '../../useSplat';
-import { readMeshTransform } from '../../../viewer/gizmos/meshTransform';
+import { readMeshTransform } from '@/v2/pages/review/viewer/gizmos/meshTransform';
 import type { EditOp } from '../operations/history';
-import { t } from '../../../../../i18n';
+import { t } from '@/v2/i18n';
 import {
   applyVolumeData,
   createVolume,

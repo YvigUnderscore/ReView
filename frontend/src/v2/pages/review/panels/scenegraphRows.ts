@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdModelInfo } from '../../../types/api';
+import type { UsdModelInfo } from '@/v2/types/api';
 import { clonePath, clonesOf, type SceneOverride } from '../three/sceneOverride';
 import type { PrimNode } from '../three/usdScenegraph';
 

@@ -3,11 +3,7 @@
 
 import { useState } from 'react';
 import { Paperclip } from 'lucide-react';
-import {
-  isAudioAttachment,
-  isImageAttachment,
-  type DisplayAttachment,
-} from '../../../lib/commentAttachments';
+import { isAudioAttachment, isImageAttachment, type DisplayAttachment } from '../../lib/commentAttachments';
 import { Lightbox } from '../ui/lightbox';
 import { useT } from '../../i18n';
 

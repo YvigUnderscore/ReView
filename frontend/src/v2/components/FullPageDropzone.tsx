@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { useT } from '../i18n';
-import { filesFromDataTransfer } from '../../lib/dropEntries';
+import { filesFromDataTransfer } from '../lib/dropEntries';
 
 /**
  * Full-screen drop zone (10.C7): an overlay appears as soon as files are dragged

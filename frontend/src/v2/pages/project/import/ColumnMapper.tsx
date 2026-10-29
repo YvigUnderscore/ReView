@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Select } from '../../../components/ui/select';
-import { useT } from '../../../i18n';
+import { Select } from '@/v2/components/ui/select';
+import { useT } from '@/v2/i18n';
 import { fieldLabel } from './report';
 import { CSV_FIELDS, type CsvField, type DetectedColumn } from './types';
 

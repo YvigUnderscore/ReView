@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 import {
   chromePrefsKey,
   defaultChromeState,

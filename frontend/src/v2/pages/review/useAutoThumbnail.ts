@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp } from './reviewTypes';
 import type { MediaKind } from '../../types/api';

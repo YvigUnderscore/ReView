@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Hls from 'hls.js';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 
 /**
  * Source of a montage media — the same as the review's: the HLS master served by the authenticated

@@ -4,7 +4,7 @@
 import { ChevronsLeft, ChevronsRight, type LucideIcon } from 'lucide-react';
 import type { ModeId } from './modes';
 import type { RailSection, ToolId, ViewAction } from './tools';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Tool rail — left column. It only holds the pointing tools exclusive to the active mode (one armed

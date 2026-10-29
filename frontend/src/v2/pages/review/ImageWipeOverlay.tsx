@@ -3,7 +3,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useWipe, type WipeShared } from './useWipe';

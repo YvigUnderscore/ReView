@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { WidgetHeight, WidgetSettings, WidgetSpan } from '../../../lib/widgetLayout';
+import type { WidgetHeight, WidgetSettings, WidgetSpan } from '@/v2/lib/widgetLayout';
 
 /**
  * The size model of the overview: width **and** height, in grid rows.

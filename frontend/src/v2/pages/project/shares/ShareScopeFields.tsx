@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { usePlaylists } from '../../../lib/playlistApi';
-import { Label } from '../../../components/ui/label';
-import { Select } from '../../../components/ui/select';
-import { Checkbox } from '../../../components/ui/checkbox';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { usePlaylists } from '@/v2/lib/playlistApi';
+import { Label } from '@/v2/components/ui/label';
+import { Select } from '@/v2/components/ui/select';
+import { Checkbox } from '@/v2/components/ui/checkbox';
+import { useT } from '@/v2/i18n';
 import { toggleMedia, versionsOf, type ScopeState, type ShareCandidate, type ShareScope } from './shareScope';
 
 /**

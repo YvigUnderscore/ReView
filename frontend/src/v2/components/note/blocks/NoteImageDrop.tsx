@@ -4,7 +4,7 @@
 import { useRef, useState } from 'react';
 import { ImagePlus, Loader2 } from 'lucide-react';
 import { NOTE_IMAGE_ACCEPT, isAcceptedNoteImage } from '../noteImages';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Bringing an image into a note.

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Film, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import CreateEntityButton from '../../components/entity/CreateEntityButton';
 import MarkAllSeenButton from '../../components/entity/MarkAllSeenButton';

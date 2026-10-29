@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
-import type { CommentAttachment } from '../../lib/commentAttachments';
+import type { CommentAttachment } from './commentAttachments';
 import { qk } from './query';
 import type { CommentState } from '../components/comments/commentState';
 import { useT } from '../i18n';

@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, Search, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import ConfirmDialog from '../../components/ConfirmDialog';

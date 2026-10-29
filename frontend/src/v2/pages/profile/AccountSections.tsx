@@ -4,7 +4,7 @@
 import { useRef, useState } from 'react';
 import { KeyRound, UserRound, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useAuth, type AuthUser } from '../../stores/useAuth';
 import Avatar from '../../components/Avatar';
 import { Button } from '../../components/ui/button';

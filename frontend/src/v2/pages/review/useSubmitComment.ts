@@ -4,8 +4,8 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { RefObject } from 'react';
-import { api } from '../../../lib/apiClient';
-import { uploadCommentAttachments } from '../../../lib/commentAttachments';
+import { api } from '@/lib/apiClient';
+import { uploadCommentAttachments } from '../../lib/commentAttachments';
 import { qk } from '../../lib/query';
 import type { ReviewComment } from '../../types/api';
 import type { MediaResp } from './reviewTypes';

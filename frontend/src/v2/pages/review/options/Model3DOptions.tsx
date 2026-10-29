@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { RotateCcw } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
 import OptionsBar, { CommitGroup } from '../chrome/OptionsBar';
 import type { ModeId } from '../chrome/modes';
 import type { ReviewTool } from '../chrome/tools';
@@ -14,7 +14,7 @@ import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import PaintOptions from './PaintOptions';
 import PoiOptions from '../poi/PoiOptions';
 import type { PoiDraftState } from '../poi/usePoiDraft';
-import { useT, type Tr } from '../../../i18n';
+import { useT, type Tr } from '@/v2/i18n';
 
 const rotations = (t: Tr) =>
   [

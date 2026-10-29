@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Heading2, Heading3, Image, Images, Minus, Percent, Plus, Type } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
 import type { EditorBlockKind } from '../noteEditorModel';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Add a block, at the exact place where one is.

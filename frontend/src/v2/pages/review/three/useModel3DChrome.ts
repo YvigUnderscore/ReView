@@ -11,7 +11,7 @@ import { eulerTransformFromMesh } from './modelGizmoTransform';
 import type { Model3DThreeState } from './useModel3DThree';
 import { usePrimGizmo } from './usePrimGizmo';
 import type { UsdSceneState } from './useUsdScene';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /** Stable empty target for the per-prim gizmo when no USD scene is mounted. */
 const EMPTY_TARGETS = () => [];

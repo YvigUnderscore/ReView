@@ -9,7 +9,7 @@ import { buildPrimTree, flattenTree, type PrimNode } from '../three/usdScenegrap
 import { emptyOverride } from '../three/sceneOverride';
 import { useScenegraphView } from '../three/useScenegraphView';
 import type { UsdSceneState } from '../three/useUsdScene';
-import type { UsdModelInfo, UsdPrim } from '../../../types/api';
+import type { UsdModelInfo, UsdPrim } from '@/v2/types/api';
 
 /**
  * The scenegraph of a production scene (F10/F18).

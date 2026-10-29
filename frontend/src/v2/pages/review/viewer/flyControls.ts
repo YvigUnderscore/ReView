@@ -3,7 +3,7 @@
 
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import { applyRoll, rollFromCamera } from '../three/cameraRoll';
 import { inhibitOrbit } from './controlsLock';
 

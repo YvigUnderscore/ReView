@@ -13,9 +13,9 @@ import {
   type WidgetDefinition,
   type WidgetSettings,
   type WidgetsPref,
-} from '../../../lib/widgetLayout';
+} from '@/v2/lib/widgetLayout';
 import { resolveRows, type OverviewRows, type WidgetSize } from './overviewSizing';
-import type { Role } from '../../../types/api';
+import type { Role } from '@/v2/types/api';
 
 /**
  * Registry of the project overview blocks (batch 10).

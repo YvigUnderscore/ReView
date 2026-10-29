@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { ReviewAssignee } from '../../types/entities';
 import type { MediaResp } from './reviewTypes';

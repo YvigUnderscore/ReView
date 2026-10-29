@@ -3,7 +3,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import HomeGrid from './HomeGrid';
 import type { HomeWidgetsPref } from './homeWidgets';
 import type { DashboardActivityItem, DashboardData, DashboardProject } from './homeTypes';

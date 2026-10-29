@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import AttentionPanel from '../../../components/production/AttentionPanel';
-import { SkeletonRows } from '../../../components/ui/skeleton';
-import type { ProductionOverview } from '../../../types/production';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import AttentionPanel from '@/v2/components/production/AttentionPanel';
+import { SkeletonRows } from '@/v2/components/ui/skeleton';
+import type { ProductionOverview } from '@/v2/types/production';
 
 /**
  * What is blocking: overdue, unassigned, awaiting review.

@@ -4,12 +4,12 @@
 import type { ReactNode } from 'react';
 import { Camera, FileArchive, FileDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/v2/components/ui/button';
 import { Group } from '../chrome/DockGroup';
 import NotesExportPanel from './NotesExportPanel';
 import { downloadImage } from '../mediaCapture';
 import { exportFileName } from '../useMediaExport';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Export panel of the dock: the media first (with or without the baked edits), then the staging, and

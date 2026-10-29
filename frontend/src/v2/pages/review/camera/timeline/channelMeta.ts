@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ChannelId } from '../channels/model';
-import type { MessageKey } from '../../../../i18n';
+import type { MessageKey } from '@/v2/i18n';
 
 /** Display metadata of a channel (short label + theme color token). */
 export interface ChannelMeta {

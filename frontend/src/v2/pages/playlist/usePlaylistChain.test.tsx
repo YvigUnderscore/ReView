@@ -4,7 +4,7 @@
 import { useRef } from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import type { PlaylistItemEntry } from '../../types/api';
 import { usePlaylistChain } from './usePlaylistChain';
 

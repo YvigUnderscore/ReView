@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { Tr } from '../../../i18n';
+import type { Tr } from '@/v2/i18n';
 import type { CsvField, CsvIssue, ImportReport } from './types';
 
 /**

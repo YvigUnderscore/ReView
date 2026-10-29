@@ -4,12 +4,12 @@
 import { useRef, useState } from 'react';
 import { ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import {
   ATTACHMENT_ACCEPT,
   MAX_COMMENT_ATTACHMENTS,
   uploadCommentAttachments,
-} from '../../../lib/commentAttachments';
+} from '../../lib/commentAttachments';
 import { useImagePaste } from '../../lib/useImagePaste';
 import { useMentions } from './useMentions';
 import MentionMenu from './MentionMenu';

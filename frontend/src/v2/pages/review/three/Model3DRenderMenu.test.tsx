@@ -8,7 +8,7 @@ import { panelsFor } from '../chrome/panels';
 import { DISPLAY_MODES } from './displayModes';
 import type { Model3DInspectState } from './useModel3DInspect';
 import type { Model3DVariantsState } from './useModel3DVariants';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * The "Display" tab of the 3D dock has disappeared: its settings live in a popover in the top-left

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { create } from 'zustand';
-import { fetchReviewRequestRule } from '../v2/lib/reviewRequestRule';
-import type { ReviewRequestRule } from '../v2/types/api';
+import { fetchReviewRequestRule } from '../lib/reviewRequestRule';
+import type { ReviewRequestRule } from '../types/api';
 
 /**
  * The instruction required AT UPLOAD (Phase 50).

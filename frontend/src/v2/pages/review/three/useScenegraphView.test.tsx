@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useScenegraphView } from './useScenegraphView';
 import { buildPrimTree, type PrimNode } from './usdScenegraph';
-import type { UsdPrim } from '../../../types/api';
+import type { UsdPrim } from '@/v2/types/api';
 
 /**
  * The scenegraph's memory: search and expansion.

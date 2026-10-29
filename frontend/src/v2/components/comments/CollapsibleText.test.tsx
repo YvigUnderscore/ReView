@@ -5,7 +5,7 @@ import { afterEach, describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CollapsibleText from './CollapsibleText';
-import { stubLayoutMetrics } from '../../../test/layoutMetrics';
+import { stubLayoutMetrics } from '@/test/layoutMetrics';
 import { t } from '../../i18n';
 
 /**

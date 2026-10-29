@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ReactNode } from 'react';
-import type { MediaKind, Role } from '../../../types/api';
-import { Badge } from '../../../components/ui/badge';
-import { ErrorBoundary } from '../../../components/ui/error-boundary';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
+import type { MediaKind, Role } from '@/v2/types/api';
+import { Badge } from '@/v2/components/ui/badge';
+import { ErrorBoundary } from '@/v2/components/ui/error-boundary';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
 import ToolRail from './ToolRail';
 import InspectorDock from './InspectorDock';
 import { useReviewHeaderSlots } from '../header/reviewHeaderSlots';
@@ -21,7 +21,7 @@ import {
 } from './tools';
 import type { ChromeState } from './chromeState';
 import './chrome.css';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Review chrome container: the five fixed slots, identical for the four media types. Mode toggle

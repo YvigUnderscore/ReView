@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdPrim } from '../../../types/api';
+import type { UsdPrim } from '@/v2/types/api';
 
 /**
  * USD scenegraph of the review (Phase 46, 46.A) — **pure and testable** logic.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useState } from 'react';
-import { getSocket } from '../../../lib/socket';
+import { getSocket } from '@/lib/socket';
 import { useAuth } from '../../stores/useAuth';
 
 /** Spectator of a review (`review:presence` socket payload). */

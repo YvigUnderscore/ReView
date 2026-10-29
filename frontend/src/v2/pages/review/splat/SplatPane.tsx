@@ -4,7 +4,7 @@
 import { type ReactNode, type RefObject } from 'react';
 import { VIEWER_ZONE } from '../reviewTypes';
 import ReviewFrame from '../ReviewFrame';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Gaussian Splat pane of the review (Spark / SparkJS viewer), batch 10.G.

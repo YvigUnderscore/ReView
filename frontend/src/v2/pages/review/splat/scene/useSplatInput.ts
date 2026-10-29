@@ -14,7 +14,7 @@ import type { PresentationState } from '../presentation/usePresentation';
 import type { SplatViewer } from '../useSplat';
 import { useSplatCommands } from '../useSplatCommands';
 import { frameCameraToMesh } from './frameCamera';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 export interface SplatInput {
   /** Frames the selection if present (editing), otherwise the visible splat: F key. */

@@ -9,7 +9,7 @@ import { captureCenters, selectByShape } from './screenSelect';
 import { selectionOp } from './selectionHistory';
 import type { SelectCombine, SelectionShape } from './shapes2d';
 import { selectByBrush } from './surfaceBrush';
-import { useT } from '../../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Per-splat selection (10.G, perf and readability reviewed in V2): set of selected indices,

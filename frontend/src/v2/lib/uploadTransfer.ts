@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { t } from '../v2/i18n';
+import { t } from '../i18n';
 
 /**
  * Transfer primitives of the upload engine (wave 2).

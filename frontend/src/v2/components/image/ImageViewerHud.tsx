@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Expand, Info } from 'lucide-react';
-import { formatBytes } from '../../../lib/formatBytes';
+import { formatBytes } from '../../lib/formatBytes';
 import { useT } from '../../i18n';
 
 /** Zoom controls of the image viewer, and a collapsible info panel. */

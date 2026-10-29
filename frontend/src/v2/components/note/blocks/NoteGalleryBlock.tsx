@@ -24,7 +24,7 @@ import { REFS_COLS, REFS_HEIGHT, isNoteImageKey, type NoteImage } from '../noteM
 import { useNoteImageResolver } from '../noteImages';
 import type { GalleryBlock } from '../noteEditorModel';
 import NoteImageDrop from './NoteImageDrop';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The reference board: several images, laid out the way one wants to see them.

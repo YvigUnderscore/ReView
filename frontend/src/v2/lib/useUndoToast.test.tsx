@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, vi } from 'vitest';
+import { afterAll, describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import { t } from '../i18n';
@@ -18,6 +18,11 @@ function Screen({ undo }: { undo?: () => Promise<unknown> }) {
 }
 
 describe('useUndoToast', () => {
+  // A replaced toast is removed by sonner 200 ms later (`TIME_BEFORE_UNMOUNT`). If the file ends
+  // first, that timer fires after the DOM environment is torn down ("window is not defined"),
+  // which vitest reports as an unhandled error: let it run out before leaving.
+  afterAll(() => new Promise<void>((resolve) => setTimeout(resolve, 300)));
+
   it('replays the inverse on clicking "Undo", then confirms it', async () => {
     const undo = vi.fn<() => Promise<unknown>>(() => Promise.resolve());
     const { user } = renderWithProviders(<Screen undo={undo} />);

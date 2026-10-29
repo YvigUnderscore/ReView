@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { X } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Select } from '../../../components/ui/select';
+import { Button } from '@/v2/components/ui/button';
+import { Select } from '@/v2/components/ui/select';
 import type { CompareTarget } from './useCompareTargets';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * A and B settings of the comparison, in the options bar of the "Compare" mode.

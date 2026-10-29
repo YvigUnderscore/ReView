@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link } from 'react-router-dom';
-import { qk } from '../../../lib/query';
-import { useInfiniteList } from '../../../lib/useInfiniteList';
-import AssignedTaskRow from '../../../components/AssignedTaskRow';
-import ListSentinel from '../../../components/ListSentinel';
-import { SkeletonRows } from '../../../components/ui/skeleton';
+import { qk } from '@/v2/lib/query';
+import { useInfiniteList } from '@/v2/lib/useInfiniteList';
+import AssignedTaskRow from '@/v2/components/AssignedTaskRow';
+import ListSentinel from '@/v2/components/ListSentinel';
+import { SkeletonRows } from '@/v2/components/ui/skeleton';
 import type { MyTaskItem } from '../../mywork/myWorkTypes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * What this project asks of me: the one question an artist comes to the overview with, and which

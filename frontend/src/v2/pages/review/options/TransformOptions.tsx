@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { NumberField } from '../../../components/ui/number-field';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
 import type { SplatTransform } from '../reviewTypes';
 import type { GizmoSettings, GizmoTargetKind } from '../viewer/gizmos/gizmoSettings';
 import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
-import { useT, type Tr } from '../../../i18n';
+import { useT, type Tr } from '@/v2/i18n';
 
 const AXES = ['X', 'Y', 'Z'] as const;
 

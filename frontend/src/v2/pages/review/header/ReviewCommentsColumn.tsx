@@ -3,7 +3,7 @@
 
 import type { RefObject } from 'react';
 import CommentsPanel from '../CommentsPanel';
-import type { ReviewComment } from '../../../types/api';
+import type { ReviewComment } from '@/v2/types/api';
 import type { MediaResp } from '../reviewTypes';
 import type { useAnnotations } from '../useAnnotations';
 import type { useTimelineMarkers } from '../useTimelineMarkers';

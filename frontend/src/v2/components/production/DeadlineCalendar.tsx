@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { TASK_STATUS_BAR, TASK_STATUS_LABEL_KEY } from '../../lib/taskStatus';
 import type { ScheduleTask } from '../../types/api';

@@ -3,7 +3,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp } from './reviewTypes';
 import { isEmptyOverride, mergeOverrides, normalizeOverride } from './three/sceneOverride';

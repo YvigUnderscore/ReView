@@ -13,12 +13,12 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '../../../components/ui/context-menu';
+} from '@/v2/components/ui/context-menu';
 import type { Hotspot3D } from '../reviewTypes';
 import { copyImageToClipboard } from '../mediaCapture';
 import { useSpatialContextMenu } from '../viewer/useSpatialContextMenu';
 import type { SplatViewer } from './useSplat';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Right-click menu of the splat viewer (Phase 50, batch 8).

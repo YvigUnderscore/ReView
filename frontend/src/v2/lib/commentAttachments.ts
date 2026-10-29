@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { t } from '../v2/i18n';
-import { api } from './apiClient';
+import { t } from '../i18n';
+import { api } from '../../lib/apiClient';
 
 /**
  * Attachment as it is DISPLAYED. The MinIO key is not part of it: the client portal

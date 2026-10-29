@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ListPlus, Plus, Users } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { deliverFiles } from '../../stores/deliverFiles';
+import { deliverFiles } from '../stores/deliverFiles';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import { useAssignMenu, useDepartmentMenu } from '../lib/useAssignMenu';
 import { entriesOf } from '../lib/menuSpec';

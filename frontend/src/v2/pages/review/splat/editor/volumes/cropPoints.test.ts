@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { SdfVolumeData } from '../../../reviewTypes';
+import type { SdfVolumeData } from '@/v2/pages/review/reviewTypes';
 import { buildCropChecks, pointCropped } from './cropPoints';
 
 const vol = (over: Partial<SdfVolumeData>): SdfVolumeData => ({

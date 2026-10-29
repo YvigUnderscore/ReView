@@ -7,7 +7,7 @@ import GridCellView from './GridCellView';
 import { HEAD_W, lineWidth } from './gridLayout';
 import type { GridDepartment, GridRow } from './gridWire';
 import type { GridActions } from './useGridActions';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * A grid row: a shot, and what each department has done with it.

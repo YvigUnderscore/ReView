@@ -4,21 +4,15 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Select } from '../../../components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../../components/ui/dialog';
-import type { SharePermission } from '../../../types/api';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { Button } from '@/v2/components/ui/button';
+import { Input } from '@/v2/components/ui/input';
+import { Label } from '@/v2/components/ui/label';
+import { Select } from '@/v2/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/v2/components/ui/dialog';
+import type { SharePermission } from '@/v2/types/api';
+import { useT } from '@/v2/i18n';
 import ShareScopeFields from './ShareScopeFields';
 import { clientUrl } from './shareUrl';
 import { emptyScope, isScopeReady, scopePayload, type ScopedShareLink, type ScopeState } from './shareScope';

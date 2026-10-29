@@ -29,7 +29,7 @@ import { useSubsetTransform } from './selection/useSubsetTransform';
 import { useEditorShortcuts } from './useEditorShortcuts';
 import { useVolumes } from './volumes/useVolumes';
 import { useCropReflect } from './volumes/useCropReflect';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /** Active editor tool: navigation (default, no tool), gizmo or selection. */
 export type EditorTool = 'navigate' | GizmoMode | 'select-rect' | 'select-lasso' | 'brush';

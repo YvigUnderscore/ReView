@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import CollapsibleText from '../../../components/comments/CollapsibleText';
+import CollapsibleText from '@/v2/components/comments/CollapsibleText';
 import type { PoiCardImage } from './poiCards';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * A point's remark, as it is READ: in the comment thread as well as on the card anchored in the scene.

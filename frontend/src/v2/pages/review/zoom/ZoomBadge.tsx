@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Minimize2 } from 'lucide-react';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 import type { ViewportZoom } from './useViewportZoom';
 
 /**

@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -9,6 +11,8 @@ import { defineConfig } from 'vitest/config';
  * happy-dom environment (localStorage, lightweight DOM).
  */
 export default defineConfig({
+  // `@/…` = `src/…` — keep in sync with tsconfig `paths` and vite.config.js.
+  resolve: { alias: { '@': path.join(path.dirname(fileURLToPath(import.meta.url)), 'src') } },
   test: {
     environment: 'happy-dom',
     // The frontend tooling scripts (build-docs) live outside `src`: their

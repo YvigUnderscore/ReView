@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import ReviewsFilters from './ReviewsFilters';
 import { filtersFrom } from './reviewsTypes';
 import { t } from '../../i18n';

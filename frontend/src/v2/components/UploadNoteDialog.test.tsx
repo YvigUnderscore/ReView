@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import { queryClient } from '../lib/query';
-import { useUploadNoteStore, withUploadNote } from '../../stores/useUploadNoteStore';
+import { useUploadNoteStore, withUploadNote } from '../stores/useUploadNoteStore';
 import UploadNoteDialog from './UploadNoteDialog';
 import { t } from '../i18n';
 

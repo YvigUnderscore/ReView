@@ -8,7 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
-import { deliverFiles } from '../../stores/deliverFiles';
+import { deliverFiles } from '../stores/deliverFiles';
 import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import FullPageDropzone from '../components/FullPageDropzone';

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Group, Row } from './DockGroup';
 import { DOCK_GROUP_COLLAPSE_THRESHOLD, isLongDockGroup } from './dockGroupSize';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * Collapsing of dock groups (Phase 50, batch 6). None of them used to collapse: the Info panel of

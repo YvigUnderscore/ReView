@@ -4,7 +4,7 @@
 import { type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import { useT } from '../../i18n';

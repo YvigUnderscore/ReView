@@ -4,8 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import SequenceShotPicker from './SequenceShotPicker';
-import type { MockRequest } from '../../../test/apiMock';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import type { MockRequest } from '@/test/apiMock';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 
 /**

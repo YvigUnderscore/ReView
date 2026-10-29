@@ -4,9 +4,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { useProjectRole } from '../../../lib/useProjectRole';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { useProjectRole } from '@/v2/lib/useProjectRole';
 import { Button } from '../../ui/button';
 import { SkeletonRows } from '../../ui/skeleton';
 import GridFilterBar from './GridFilterBar';
@@ -25,7 +25,7 @@ import {
   type GridFilters,
   type ProjectGrid,
 } from './gridWire';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * The tracking grid: one shot per row, one department per column.

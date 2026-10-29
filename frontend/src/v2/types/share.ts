@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { MediaKind } from './api';
-import type { DisplayAttachment } from '../../lib/commentAttachments';
+import type { DisplayAttachment } from '../lib/commentAttachments';
 
 // ── Client sharing (35.C/35.D) — module separate from api.ts for the line budget ─
 export type SharePermission = 'VIEW' | 'COMMENT' | 'DECIDE';

@@ -5,7 +5,7 @@ import type { SdfVolumeData, SplatTransform } from '../../reviewTypes';
 import type { SplatSceneHandle } from '../useSplat';
 import { bakeSplats } from './bakeSplats';
 import { writeSpz } from './writeSpz';
-import { t } from '../../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * Client-side splat export (41.A/C): reads the viewer's **edited** splats, applies the persisted

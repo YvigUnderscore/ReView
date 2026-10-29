@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect } from 'react';
-import { isEditable } from '../../../../lib/shortcuts';
-import { UNDO_PRIORITY, useUndoScope } from '../../../../lib/undoScope';
+import { isEditable } from '@/v2/lib/shortcuts';
+import { UNDO_PRIORITY, useUndoScope } from '@/v2/lib/undoScope';
 import type { SplatViewer } from '../useSplat';
 
 /**

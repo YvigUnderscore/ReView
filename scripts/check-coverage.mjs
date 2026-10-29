@@ -38,7 +38,7 @@ export const METRICS = ['statements', 'branches'];
  */
 export const BUCKETS = {
   backend: ['src/lib', 'src/middleware', 'src/services', 'src/routes', 'src/workers'],
-  frontend: ['src/lib', 'src/stores', 'src/v2/lib', 'src/v2/hooks', 'src/v2/components', 'src/v2/pages'],
+  frontend: ['src/lib', 'src/v2/lib', 'src/v2/stores', 'src/v2/hooks', 'src/v2/components', 'src/v2/pages'],
 };
 
 /** Fallback folder for files outside the declared buckets. */

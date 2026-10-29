@@ -16,7 +16,7 @@ import { createDebugColor, type DebugColorMode, type DebugColorRuntime } from '.
 import { createReveal, type RevealRuntime, type RevealType } from '../scene/effects/reveal';
 import { applyLod, createAutoLod, type LodMode } from '../scene/lod';
 import type { SplatViewer } from '../useSplat';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 export interface RevealConfig {
   type: RevealType;

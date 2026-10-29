@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useT } from '../../i18n';
 import { useDepartments } from '../../lib/departmentsApi';

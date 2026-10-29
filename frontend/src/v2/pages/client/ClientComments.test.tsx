@@ -6,7 +6,7 @@ import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { render as mountInDom, screen } from '@testing-library/react';
 import ClientComments from './ClientComments';
-import { stubLayoutMetrics } from '../../../test/layoutMetrics';
+import { stubLayoutMetrics } from '@/test/layoutMetrics';
 import { t } from '../../i18n';
 import type { ClientComment } from '../../types/api';
 

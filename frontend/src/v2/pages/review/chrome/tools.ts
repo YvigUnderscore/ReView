@@ -27,8 +27,8 @@ import {
   Type,
   type LucideIcon,
 } from 'lucide-react';
-import type { MediaKind } from '../../../types/api';
-import type { MessageKey } from '../../../i18n';
+import type { MediaKind } from '@/v2/types/api';
+import type { MessageKey } from '@/v2/i18n';
 import { isSpatialKind, modesFor, type ModeId } from './modes';
 
 /**

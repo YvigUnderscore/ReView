@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import type { PlaylistDetail, PlaylistItemEntry } from '../../types/api';

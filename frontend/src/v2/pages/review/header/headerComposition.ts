@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 import type { CompareMode } from '../useCompareState';
 
 /**

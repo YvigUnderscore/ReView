@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { intlLocale, useT } from '../../../i18n';
+import { intlLocale, useT } from '@/v2/i18n';
 import type { ImportCounts } from './types';
 
 /**

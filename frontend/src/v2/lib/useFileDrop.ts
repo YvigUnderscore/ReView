@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState, type DragEvent } from 'react';
-import { filesFromDataTransfer } from '../../lib/dropEntries';
+import { filesFromDataTransfer } from './dropEntries';
 
 /**
  * Drop target for files (Phase 46).

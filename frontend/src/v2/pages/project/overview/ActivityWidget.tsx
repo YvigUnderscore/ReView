@@ -4,7 +4,7 @@
 import { Link } from 'react-router-dom';
 import { FileVideo, Layers } from 'lucide-react';
 import { useProjectActivity } from './useProjectActivity';
-import { intlLocale, useT } from '../../../i18n';
+import { intlLocale, useT } from '@/v2/i18n';
 
 /**
  * The project's latest updates: uploaded versions and published media.

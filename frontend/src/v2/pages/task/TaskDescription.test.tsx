@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const { api } = vi.hoisted(() => ({ api: { patch: vi.fn() } }));
-vi.mock('../../../lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
+vi.mock('@/lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import TaskDescription from './TaskDescription';

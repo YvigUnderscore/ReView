@@ -3,10 +3,10 @@
 
 import type { ReactNode } from 'react';
 import { Check, Redo2, Undo2 } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { IconButton } from '../../../components/ui/icon-button';
+import { Button } from '@/v2/components/ui/button';
+import { IconButton } from '@/v2/components/ui/icon-button';
 import type { ReviewTool } from './tools';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Options bar — a line under the header that only shows the parameters of the **active** tool.

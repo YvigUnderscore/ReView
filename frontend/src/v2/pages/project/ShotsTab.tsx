@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Clapperboard, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useWatch } from '../../lib/useWatch';
 import ViewToggle from '../../components/ViewToggle';
 import { useViewMode } from '../../stores/useViewPref';

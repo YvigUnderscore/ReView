@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Smile } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import type { ReviewComment } from '../../types/api';
 import { useT } from '../../i18n';
 

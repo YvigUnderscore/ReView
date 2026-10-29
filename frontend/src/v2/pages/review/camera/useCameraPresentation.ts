@@ -3,9 +3,9 @@
 
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import type { SplatEditsPatch, SplatPresentation } from '../reviewTypes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Persistence of the camera presentation (Phase 17), shared by 3D/splat: PATCH

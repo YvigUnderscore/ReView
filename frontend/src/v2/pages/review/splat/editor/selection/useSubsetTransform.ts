@@ -6,10 +6,10 @@ import type * as THREE from 'three';
 import type { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { SplatViewer } from '../../useSplat';
 import type { SubsetOp } from '../persistence/subsetOps';
-import type { GizmoMode } from '../../../viewer/gizmos/useTransformGizmo';
-import type { GizmoSettings } from '../../../viewer/gizmos/gizmoSettings';
+import type { GizmoMode } from '@/v2/pages/review/viewer/gizmos/useTransformGizmo';
+import type { GizmoSettings } from '@/v2/pages/review/viewer/gizmos/gizmoSettings';
 import type { EditOp } from '../operations/history';
-import { useT } from '../../../../../i18n';
+import { useT } from '@/v2/i18n';
 import {
   applySubsetDelta,
   restoreSubset,

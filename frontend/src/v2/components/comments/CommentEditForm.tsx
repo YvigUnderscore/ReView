@@ -9,7 +9,7 @@ import {
   MAX_COMMENT_ATTACHMENTS,
   uploadCommentAttachments,
   type CommentAttachment,
-} from '../../../lib/commentAttachments';
+} from '../../lib/commentAttachments';
 import { useImagePaste } from '../../lib/useImagePaste';
 import { useEditComment } from '../../lib/commentsApi';
 import type { ReviewComment } from '../../types/api';

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Box, Video } from 'lucide-react';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
-import { useT } from '../../../i18n';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
+import { useT } from '@/v2/i18n';
 
 export type TrackId = 'camera' | 'clip';
 

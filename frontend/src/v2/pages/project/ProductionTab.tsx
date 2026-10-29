@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, BarChart3, CalendarClock, Repeat, Users } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { ProjectSchedule } from '../../types/api';
 import type { ProductionOverview } from '../../types/production';

@@ -8,7 +8,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 const { api } = vi.hoisted(() => ({ api: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }));
 // `useAuth` (imported by the tab) registers its session handler when the
 // module loads: the mock must export it, otherwise the tab's import fails before any test runs.
-vi.mock('../../../lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
+vi.mock('@/lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import SmtpTab from './SmtpTab';

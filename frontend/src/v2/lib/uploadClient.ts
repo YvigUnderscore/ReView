@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api, getToken } from './apiClient';
-import { t } from '../v2/i18n';
+import { api, getToken } from '../../lib/apiClient';
+import { t } from '../i18n';
 import { sha256OfFile } from './hashFile';
 import { isAbortError, putWithProgress, runPool, throwIfAborted, withRetry } from './uploadTransfer';
-import type { MediaKind } from '../v2/types/api';
+import type { MediaKind } from '../types/api';
 
 // `.usd` (generic container, binary or ASCII) was missing: it only arrived as MODEL_3D through
 // the fallback of `inferMediaKind`, hence never from a file picker filter (45.F).

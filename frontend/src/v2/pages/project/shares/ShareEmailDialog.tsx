@@ -3,18 +3,12 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { Button } from '../../../components/ui/button';
-import { Label } from '../../../components/ui/label';
-import { Textarea } from '../../../components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../../components/ui/dialog';
-import { useT, intlLocale } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { Button } from '@/v2/components/ui/button';
+import { Label } from '@/v2/components/ui/label';
+import { Textarea } from '@/v2/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/v2/components/ui/dialog';
+import { useT, intlLocale } from '@/v2/i18n';
 import { parseRecipients, type ScopedShareLink } from './shareScope';
 
 /**

@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { ImagePlus, Play, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { fileToThumbnailDataUrl } from '../review/mediaCapture';
 import { reviewPath } from '../../lib/slug';

@@ -3,10 +3,10 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { TASK_STATUS_PRIORITY } from '../../../lib/taskStatus';
-import type { TaskWithAssignee } from '../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { TASK_STATUS_PRIORITY } from '@/v2/lib/taskStatus';
+import type { TaskWithAssignee } from '@/v2/types/api';
 
 /**
  * `GET /api/projects/:id/activity`: the response shared by three blocks of the overview: progress,

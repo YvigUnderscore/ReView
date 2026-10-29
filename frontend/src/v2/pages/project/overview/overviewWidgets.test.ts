@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import type { WidgetsPref } from '../../../lib/widgetLayout';
+import type { WidgetsPref } from '@/v2/lib/widgetLayout';
 import { OVERVIEW_ROWS } from './overviewSizing';
 import {
   ALL_OVERVIEW_IDS,

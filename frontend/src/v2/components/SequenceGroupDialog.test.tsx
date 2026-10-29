@@ -9,8 +9,8 @@ const { accept, cancel } = vi.hoisted(() => ({ accept: vi.fn(), cancel: vi.fn() 
 
 import SequenceGroupDialog from './SequenceGroupDialog';
 import { t } from '../i18n';
-import { detectSequences } from '../../lib/imageSequence';
-import { useSequenceUploadStore } from '../../stores/useSequenceUploadStore';
+import { detectSequences } from '../lib/imageSequence';
+import { useSequenceUploadStore } from '../stores/useSequenceUploadStore';
 
 /**
  * The grouping proposal.

@@ -3,7 +3,7 @@
 
 import { useRef, useState } from 'react';
 import { Layers } from 'lucide-react';
-import { deliverFiles } from '../../../stores/deliverFiles';
+import { deliverFiles } from '../../stores/deliverFiles';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/ui/empty-state';
 import { Skeleton } from '../../components/ui/skeleton';

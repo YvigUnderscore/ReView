@@ -5,7 +5,7 @@ import { Diamond } from 'lucide-react';
 import type { CameraAnimV2, ChannelId, Extrapolation, TangentType } from '../channels/model';
 import { CHANNEL_META, channelColor } from './channelMeta';
 import ChannelMenu from './ChannelMenu';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Channel list of the animation editor (Phase 17): color swatch (theme token) + label, clickable

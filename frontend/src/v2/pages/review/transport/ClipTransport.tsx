@@ -3,11 +3,11 @@
 
 import type { ReactNode } from 'react';
 import { Gauge, Pause, Play, Repeat } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { Select } from '../../../components/ui/select';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { Select } from '@/v2/components/ui/select';
 import type { Model3DThreeState } from '../three/useModel3DThree';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 const fmt = (ms: number) => (ms / 1000).toFixed(2);
 

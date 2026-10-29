@@ -5,15 +5,9 @@ import { useState, type ChangeEvent, type DragEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '../../../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../components/ui/dialog';
-import { useT } from '../../../i18n';
+import { Button } from '@/v2/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/v2/components/ui/dialog';
+import { useT } from '@/v2/i18n';
 import { fetchTemplate, runImport, saveTextFile } from './api';
 import ColumnMapper from './ColumnMapper';
 import ImportIssues from './ImportIssues';

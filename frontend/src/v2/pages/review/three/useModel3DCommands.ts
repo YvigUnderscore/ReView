@@ -3,11 +3,11 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { confirmClearPresentation } from '../camera/confirmReplaceAnim';
-import { useRegisterReviewCommands, type ReviewCommand } from '../../../lib/reviewCommands';
+import { useRegisterReviewCommands, type ReviewCommand } from '@/v2/lib/reviewCommands';
 import type { Model3DThreeState } from './useModel3DThree';
 import type { useModel3DCamera } from './useModel3DCamera';
 import type { ModelMeasureState } from './useModelMeasure';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 type CameraState = ReturnType<typeof useModel3DCamera>;
 

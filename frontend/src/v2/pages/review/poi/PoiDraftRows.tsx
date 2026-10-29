@@ -3,13 +3,13 @@
 
 import { useRef } from 'react';
 import { ImagePlus, X } from 'lucide-react';
-import AttachmentDraftList from '../../../components/comments/AttachmentDraftList';
-import { fileIndexOf, toDrafts } from '../../../components/comments/attachmentDrafts';
-import { useObjectUrls } from '../../../components/comments/useObjectUrls';
-import { ATTACHMENT_ACCEPT } from '../../../../lib/commentAttachments';
-import { Textarea } from '../../../components/ui/textarea';
+import AttachmentDraftList from '@/v2/components/comments/AttachmentDraftList';
+import { fileIndexOf, toDrafts } from '@/v2/components/comments/attachmentDrafts';
+import { useObjectUrls } from '@/v2/components/comments/useObjectUrls';
+import { ATTACHMENT_ACCEPT } from '@/v2/lib/commentAttachments';
+import { Textarea } from '@/v2/components/ui/textarea';
 import type { PoiDraft, PoiDraftState } from './usePoiDraft';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Points of interest in preparation, in the composer: one row per point, numbered in placement order.

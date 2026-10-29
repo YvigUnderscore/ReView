@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import CompareSelect from '../CompareSelect';
-import type { MediaSummary } from '../../../types/api';
+import type { MediaSummary } from '@/v2/types/api';
 
 /** Selection of other versions exposed by the spatial comparison hooks. */
 export interface CompareVersionsApi {

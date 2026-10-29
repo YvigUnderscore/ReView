@@ -4,9 +4,9 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { useT } from '@/v2/i18n';
 import type { Transform } from '../reviewTypes';
 
 /**

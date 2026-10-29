@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const { api } = vi.hoisted(() => ({ api: { get: vi.fn(), post: vi.fn(), del: vi.fn() } }));
-vi.mock('../../../lib/apiClient', () => ({ api }));
+vi.mock('@/lib/apiClient', () => ({ api }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../../lib/queries', () => ({
   useProjectsQuery: () => ({ data: [{ id: 4, name: 'Dune' }] }),

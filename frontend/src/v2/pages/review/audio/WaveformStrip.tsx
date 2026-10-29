@@ -4,7 +4,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { WaveformTrack } from './useWaveform';
 import { waveformBars } from './waveformData';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /** One bar every ~3 px: thin enough to show a syllable, thick enough to stay crisp. */
 const PX_PER_BAR = 3;

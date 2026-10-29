@@ -17,12 +17,12 @@ import {
   Undo2,
 } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '../../../components/ui/button';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
+import { Button } from '@/v2/components/ui/button';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
 import type { CameraAnimState } from '../camera/useCameraAnim';
 import { snapToFrame, timecode, trackPct } from '../camera/timeline/viewTransform';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Ceiling of the time and duration fields, in seconds — **the same as the server's** (`3 600 000 ms`).

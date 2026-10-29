@@ -8,7 +8,7 @@ import { toolsFor, type ReviewTool } from '../chrome/tools';
 import type { SplatEditorState } from '../splat/editor/useSplatEditor';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import type { PoiDraftState } from '../poi/usePoiDraft';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * The user's request, word for word: "when the project does not use drafts, while editing splats,

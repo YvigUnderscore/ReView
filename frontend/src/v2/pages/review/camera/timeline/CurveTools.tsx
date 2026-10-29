@@ -20,7 +20,7 @@ import {
   typeOut,
   type TangentTarget,
 } from '../channels/tangents';
-import { useT, type MessageKey } from '../../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
 const TYPE_LABEL: Record<TangentType, MessageKey> = {
   auto: 'camera.tangent.auto',

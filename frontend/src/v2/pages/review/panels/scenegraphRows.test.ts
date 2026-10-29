@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { aimedPrimPath, buildRows, rowIndexOf, variantTitleIndex } from './scenegraphRows';
 import { buildPrimTree } from '../three/usdScenegraph';
 import { IDENTITY_TRANSFORM, addClone, emptyOverride } from '../three/sceneOverride';
-import type { UsdModelInfo, UsdPrim } from '../../../types/api';
+import type { UsdModelInfo, UsdPrim } from '@/v2/types/api';
 
 /**
  * Arithmetic of the scenegraph rows.

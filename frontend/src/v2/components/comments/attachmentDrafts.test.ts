@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import type { CommentAttachment } from '../../../lib/commentAttachments';
+import type { CommentAttachment } from '../../lib/commentAttachments';
 import { fileIndexOf, imageDrafts, removeDraft, toDrafts } from './attachmentDrafts';
 
 const png = (name: string) => new File(['x'], name, { type: 'image/png' });

@@ -3,7 +3,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useUndoToast } from '../../lib/useUndoToast';
 import type { TimelineSnapshotSummary, TimelineView } from '../../types/api';

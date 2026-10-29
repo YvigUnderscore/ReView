@@ -13,7 +13,7 @@ import {
   type ModelPerf,
 } from './perfStats';
 import type { Model3DThreeState } from './useModel3DThree';
-import { intlLocale, useT } from '../../../i18n';
+import { intlLocale, useT } from '@/v2/i18n';
 
 const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
 

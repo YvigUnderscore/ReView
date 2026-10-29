@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { SdfVolumeData } from '../../../reviewTypes';
-import { t } from '../../../../../i18n';
+import type { SdfVolumeData } from '@/v2/pages/review/reviewTypes';
+import { t } from '@/v2/i18n';
 import type { SplatSceneHandle } from '../../useSplat';
 import { hideSplats } from '../operations/deleteSplats';
 import { applyVolumeData, createVolume, type VolumeRuntime } from '../volumes/cropVolume';

@@ -3,7 +3,7 @@
 
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { MediaSummary } from '../../../types/api';
+import type { MediaSummary } from '@/v2/types/api';
 import { mergeCompareMedia, useCompareVersions } from './useCompareVersions';
 
 afterEach(cleanup);

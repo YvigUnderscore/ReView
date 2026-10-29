@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { renderWithProviders, page } from '../../../test/renderWithProviders';
+import { renderWithProviders, page } from '@/test/renderWithProviders';
 import AssignedToMeSection from './AssignedToMeSection';
 import { t } from '../../i18n';
 

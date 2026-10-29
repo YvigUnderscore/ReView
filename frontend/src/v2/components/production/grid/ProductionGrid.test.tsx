@@ -4,9 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import ProductionGrid from './ProductionGrid';
-import { httpError, type MockRequest, type MockResolver } from '../../../../test/apiMock';
-import { renderWithProviders } from '../../../../test/renderWithProviders';
-import { t } from '../../../i18n';
+import { httpError, type MockRequest, type MockResolver } from '@/test/apiMock';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import { t } from '@/v2/i18n';
 import { COL_W_MIN, columnWidth } from './gridLayout';
 import type { GridCell, GridRow, ProjectGrid } from './gridWire';
 

@@ -7,7 +7,7 @@ import type { MarkerHandlers } from '../three/objectHotspot';
 import type { Hotspot3D } from '../reviewTypes';
 import { isClickGesture } from '../three/usdPicking';
 import type { Annotations } from '../useAnnotations';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
  * Minimal contract of a spatial viewer capable of carrying points of interest. The 3D model and the splat

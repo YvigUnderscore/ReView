@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 import {
   chromeHostsHeader,
   headerActions,

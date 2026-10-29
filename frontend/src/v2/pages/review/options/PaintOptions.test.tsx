@@ -7,7 +7,7 @@ import PaintOptions from './PaintOptions';
 import { toolsFor, type ReviewTool } from '../chrome/tools';
 import { MAX_STROKE_PX, MIN_STROKE_PX } from '../splat/paint/strokes';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
  * Settings of the surface brush: the SAME in both spatial options bars. What is checked here is the

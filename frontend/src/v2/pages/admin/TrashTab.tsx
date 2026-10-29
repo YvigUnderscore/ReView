@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { bulkPurge, bulkRestore } from '../../lib/bulkApi';
 import { useMultiSelect } from '../../lib/useMultiSelect';

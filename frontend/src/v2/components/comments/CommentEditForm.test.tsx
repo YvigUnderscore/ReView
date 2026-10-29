@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { useProjectContext } from '../../stores/useProjectContext';
 import type { ReviewComment } from '../../types/api';
 import CommentEditForm from './CommentEditForm';

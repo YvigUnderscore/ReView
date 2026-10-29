@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Aperture, BookmarkPlus, Frame, Home, Orbit, Trash2, X } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { Switch } from '../../../components/ui/switch';
+import { Button } from '@/v2/components/ui/button';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { Switch } from '@/v2/components/ui/switch';
 import { Group, Row } from '../chrome/DockGroup';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /** Saved view: a named camera pose, shared with the team (3D). */
 export interface CameraBookmark {
