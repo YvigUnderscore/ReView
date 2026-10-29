@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Recherche de texte fragmenté.
+ * Fragmented text search.
  *
- * Testing Library compare le texte **propre** à un élément — les nœuds texte qui sont ses
- * enfants directs, mis bout à bout. Deux phrases séparées par un `<br/>` dans un même
- * paragraphe forment donc une seule chaîne, et `getByText('Première phrase.')` échoue sur
- * un écran pourtant correct. `textIncluding` cible le fragment sans remonter aux ancêtres
- * (eux n'ont pas de nœud texte direct qui le contienne), là où `{ exact: false }`
- * remonterait tout l'arbre et renverrait plusieurs correspondances.
+ * Testing Library compares the **own** text of an element: the text nodes that are its
+ * direct children, end to end. Two sentences separated by a `<br/>` in the same
+ * paragraph therefore form a single string, and `getByText('Première phrase.')` fails on
+ * a screen that is nonetheless correct. `textIncluding` targets the fragment without going up to ancestors
+ * (they have no direct text node containing it), whereas `{ exact: false }`
+ * would go up the whole tree and return several matches.
  */
 export const textIncluding =
   (fragment: string) =>

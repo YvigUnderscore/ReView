@@ -123,8 +123,8 @@ class ReviewClient:
         if payload is not None:
             head["Content-Type"] = "application/json"
         head.update(headers or {})
-        # Une écriture ne se rejoue que si le serveur peut la reconnaître : sans clé
-        # d'idempotence, un POST rejoué crée une seconde version.
+        # A write can only be replayed if the server can recognize it: without an idempotency key,
+        # a replayed POST creates a second version.
         retryable = method.upper() in {"GET", "HEAD"} or "Idempotency-Key" in head
         raw = self._send(method.upper(), url, payload, head, timeout or self.timeout, retryable)
         return json.loads(raw) if raw else {}

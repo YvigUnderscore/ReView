@@ -26,16 +26,16 @@ import { hasSurfaceHits, useSurfaceSearch } from './palette/useSurfaceSearch';
 import { useT } from '../i18n';
 
 /**
- * Palette de commandes globale (10.A2) : Ctrl/Cmd+K → recherche multi-entités
- * via GET /api/search (RBAC serveur), navigation clavier complète (cmdk).
- * Actions rapides (Kanban/Board du projet courant) quand la saisie est vide.
+ * Global command palette (10.A2): Ctrl/Cmd+K → multi-entity search
+ * via GET /api/search (server-side RBAC), full keyboard navigation (cmdk).
+ * Quick actions (Kanban/Board of the current project) when the input is empty.
  *
- * Trois précautions pour qu'elle reste instantanée sous la frappe : la saisie est débouncée,
- * la requête précédente est **annulée** dès que la suivante part (`cancelQueries` coupe
- * l'`AbortSignal` que `fetchSearch` transmet à `fetch`), et le serveur borne chaque famille
- * de résultats. Le rendu des familles servies par l'API vit dans `palette/PaletteResults` ;
- * la documentation et les réglages, qui sont des écrans et non des données, se cherchent en
- * mémoire (`palette/useSurfaceSearch`).
+ * Three precautions so that it stays instant while typing: the input is debounced,
+ * the previous request is **cancelled** as soon as the next one leaves (`cancelQueries` cuts
+ * the `AbortSignal` that `fetchSearch` passes to `fetch`), and the server caps each family
+ * of results. The rendering of the families served by the API lives in `palette/PaletteResults`;
+ * the documentation and the settings, which are screens rather than data, are searched in
+ * memory (`palette/useSurfaceSearch`).
  */
 
 const DEBOUNCE_MS = 200;
@@ -58,19 +58,19 @@ export default function CommandPalette({
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
   /**
-   * Élément actif de la liste, tenu par nous plutôt que par cmdk.
+   * Active item of the list, held by us rather than by cmdk.
    *
-   * `shouldFilter={false}` désactive la passe de filtrage de cmdk — et c'est cette passe qui,
-   * chez lui, resélectionne le premier item. Résultat : après une frappe, les actions rapides
-   * étaient démontées et les résultats montés, mais la valeur active restait celle d'un item
-   * disparu. **Plus aucun élément n'était sélectionné**, donc Entrée ne faisait rien : il
-   * fallait d'abord appuyer sur ↓. Une palette dont la première frappe d'Entrée est perdue
-   * n'est pas une palette.
+   * `shouldFilter={false}` disables cmdk's filtering pass, and it is that pass which,
+   * in cmdk's own logic, reselects the first item. Result: after typing, the quick actions
+   * were unmounted and the results mounted, but the active value remained that of an item
+   * that had disappeared. **No element was selected anymore**, so Enter did nothing: one
+   * had first to press ↓. A palette whose first Enter keystroke is lost
+   * is not a palette.
    */
   const [active, setActive] = useState('');
   const inFlight = useRef('');
 
-  // Raccourci global Ctrl/Cmd+K (prime sur les champs de saisie, comme VS Code/Linear)
+  // Global Ctrl/Cmd+K shortcut (takes precedence over input fields, like VS Code/Linear)
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -82,8 +82,8 @@ export default function CommandPalette({
     return () => document.removeEventListener('keydown', down);
   }, [open, onOpenChange]);
 
-  // Debounce de la saisie : la recherche en vol pour l'ancienne chaîne est abandonnée, elle
-  // n'intéresse plus personne et occupe une connexion.
+  // Input debounce: the in-flight search for the old string is abandoned; it
+  // interests no one anymore and occupies a connection.
   useEffect(() => {
     const value = q.trim();
     const timer = setTimeout(() => {
@@ -105,12 +105,12 @@ export default function CommandPalette({
     staleTime: 30_000,
   });
 
-  // La requête a changé : le jeu de résultats va changer aussi. On vide la sélection pour que
-  // cmdk reprenne la main et désigne le premier item dès qu'il est monté.
+  // The query changed: the result set will change too. We clear the selection so that
+  // cmdk takes over again and designates the first item as soon as it is mounted.
   //
-  // Ajusté PENDANT le rendu plutôt que dans un effet (motif React admis, déjà employé par
-  // `Shell` au changement de type de média) : dans un effet, la liste se serait affichée un
-  // rendu entier sans sélection — exactement la fenêtre où l'utilisateur appuie sur Entrée.
+  // Adjusted DURING render rather than in an effect (an accepted React pattern, already used by
+  // `Shell` when the media type changes): in an effect, the list would have been displayed for a
+  // whole render without selection, exactly the window in which the user presses Enter.
   const [lastQuery, setLastQuery] = useState(debounced);
   if (lastQuery !== debounced) {
     setLastQuery(debounced);
@@ -138,19 +138,19 @@ export default function CommandPalette({
 
   const typed = q.trim();
   const hasQuery = typed.length > 0;
-  // Saisie vidée → on ré-affiche les actions rapides, jamais les vieux résultats
+  // Input cleared → we redisplay the quick actions, never the old results
   const results = canSearch ? (data ?? EMPTY_SEARCH) : EMPTY_SEARCH;
 
-  // Commandes contextuelles du viewer de review monté (B3) — filtrées côté client, la
-  // recherche serveur ne les connaît pas.
+  // Contextual commands of the mounted review viewer (B3), filtered client-side, since
+  // the server search does not know them.
   const reviewCommands = useReviewCommands((s) => s.commands);
   const matchingReview = hasQuery
     ? reviewCommands.filter((c) => c.label.toLowerCase().includes(typed.toLowerCase()))
     : reviewCommands;
 
-  // Documentation et réglages : deux familles d'**écrans**, calculées en mémoire (le corpus
-  // de doc et l'index des réglages vivent côté client). Elles suivent la frappe sans attendre
-  // le débounce, comme les destinations et les actions rapides — rien ne part sur le réseau.
+  // Documentation and settings: two families of **screens**, computed in memory (the doc
+  // corpus and the settings index live client-side). They follow typing without waiting for
+  // the debounce, like the destinations and quick actions: nothing goes out on the network.
   const surfaces = useSurfaceSearch(typed, typed.length >= MIN_SEARCH_LENGTH);
 
   const hasResults = hasSearchResults(results) || matchingReview.length > 0 || hasSurfaceHits(surfaces);

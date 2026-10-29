@@ -110,8 +110,8 @@ class Reads(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertTrue(os.path.exists(os.path.join(folder, "SH0100_comp_v003.mov")))
             self.assertIn(folder, out)
-            # Chaque média signe son URL au moment d'être rapatrié : une URL demandée en
-            # même temps que la liste aurait expiré pendant le plan précédent.
+            # Each media signs its URL at the moment it is fetched: a URL requested at the
+            # same time as the list would have expired during the previous shot.
             self.assertFalse(client.calls[0][2]["urls"])
             self.assertEqual(client.calls[1][0], "download")
 
@@ -131,7 +131,7 @@ class Reads(unittest.TestCase):
 
 
 class ConsoleEncoding(unittest.TestCase):
-    """Une console Windows en cp1252 ne doit pas faire échouer une publication réussie."""
+    """A Windows console in cp1252 must not make a successful publish fail."""
 
     class NarrowStream(io.StringIO):
         encoding = "cp1252"

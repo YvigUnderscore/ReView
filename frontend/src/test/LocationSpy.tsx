@@ -5,12 +5,12 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 /**
- * Sonde d'URL du routeur mémoire.
+ * URL probe of the memory router.
  *
- * Monté par `renderWithProviders`, il rapporte l'URL courante à chaque navigation — c'est
- * ainsi qu'un test constate qu'une connexion réussie a bien quitté `/login`, ou qu'un
- * onglet s'est bien écrit dans la query-string. Fichier séparé parce qu'il ne doit rien
- * exporter d'autre qu'un composant (rechargement à chaud).
+ * Mounted by `renderWithProviders`, it reports the current URL at each navigation: this is
+ * how a test checks that a successful sign-in did leave `/login`, or that a
+ * tab did get written into the query string. It is a separate file because it must export nothing
+ * other than a component (hot reload).
  */
 export function LocationSpy({ onChange }: { onChange: (path: string) => void }) {
   const location = useLocation();

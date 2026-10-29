@@ -18,24 +18,24 @@ import { getConfigDisplays, getEntry } from '../../services/OcioService';
 import { bakeWithPython, probePyOcio } from './bakeRunner';
 
 /**
- * Cuisson des LUT d'affichage d'une config OCIO, rangées **à côté** du `.ocio` dans MinIO
- * (`studio/ocio/luts/<configId>/`). Déclenchée à l'installation d'une config et rejouable
- * depuis l'admin ; le viewer, lui, ne fait que lire.
+ * Baking of the display LUTs of an OCIO config, stored **next to** the `.ocio` in MinIO
+ * (`studio/ocio/luts/<configId>/`). Triggered when a config is installed and replayable
+ * from the admin; the viewer only reads them.
  *
- * Ordre des voies, la plus fidèle d'abord : OpenColorIO via `bake_lut.py`, puis le repli
- * colorimétrique intégré. Un couple qu'aucune des deux ne sait cuire **n'est pas** approché :
- * il est compté dans `skipped` et le viewer affichera « transformée indisponible ».
+ * Order of paths, most faithful first: OpenColorIO via `bake_lut.py`, then the built-in
+ * colorimetric fallback. A pair neither can bake **is not** approximated:
+ * it is counted in `skipped` and the viewer shows "transform unavailable".
  */
 
-/** Plafond de couples cuits en une passe (une config ACES en expose ~40). */
+/** Cap on pairs baked in one pass (an ACES config exposes ~40). */
 export const MAX_COUPLES = 64;
 
 export interface BakeRequest {
   configId: string;
-  /** Couple précis à cuire ; sinon tous les couples de la config. */
+  /** Specific pair to bake; otherwise all pairs of the config. */
   display?: string;
   view?: string;
-  /** Recuire même si l'objet existe déjà (changement d'outillage). */
+  /** Re-bake even if the object already exists (tooling change). */
   force?: boolean;
 }
 
@@ -47,7 +47,7 @@ export interface BakeReport {
   method: 'ocio' | 'builtin' | 'mixed' | 'none';
 }
 
-/** Vrai si l'objet existe déjà dans MinIO. */
+/** True if the object already exists in MinIO. */
 async function exists(key: string): Promise<boolean> {
   try {
     await storage.statObject(key);
@@ -57,7 +57,7 @@ async function exists(key: string): Promise<boolean> {
   }
 }
 
-/** Couples display/view à cuire pour une requête. */
+/** display/view pairs to bake for a request. */
 export function couplesFor(
   displays: { name: string; views: string[] }[],
   req: Pick<BakeRequest, 'display' | 'view'>,
@@ -72,20 +72,20 @@ export function couplesFor(
   return out;
 }
 
-/** Cuisson intégrée d'un couple → texte `.cube`, ou `null` si la vue est hors de portée. */
+/** Built-in baking of a pair into `.cube` text, or `null` if the view is out of range. */
 export function builtinCube(display: string, view: string): string | null {
   const lut = bakeBuiltinLut(display, view);
   return lut ? serializeCube(lut, `${display} / ${view}`, BUILTIN_SOURCE) : null;
 }
 
-/** Dépose un `.cube` dans MinIO (texte brut : le viewer le lit par `fetch`). */
+/** Writes a `.cube` into MinIO (raw text: the viewer reads it via `fetch`). */
 async function put(key: string, text: string): Promise<void> {
   await storage.putObject(key, Buffer.from(text, 'utf-8'), 'text/plain; charset=utf-8');
 }
 
 /**
- * Cuit les LUT demandées. Le `.ocio` n'est téléchargé que si la voie OpenColorIO est
- * disponible — le repli intégré n'en a pas besoin.
+ * Bakes the requested LUTs. The `.ocio` is only downloaded if the OpenColorIO path is
+ * available: the built-in fallback does not need it.
  */
 export async function runBake(req: BakeRequest): Promise<BakeReport> {
   const entry = await getEntry(req.configId);

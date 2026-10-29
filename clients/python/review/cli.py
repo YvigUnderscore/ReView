@@ -69,8 +69,8 @@ def _publish(client: ReviewClient, args: argparse.Namespace) -> None:
 
 
 def _latest(client: ReviewClient, args: argparse.Namespace) -> None:
-    # `--download` ne demande pas d'URL : `download()` signe la sienne, média par média,
-    # au moment où il le rapatrie — une URL signée trop tôt expire pendant un gros plan.
+    # `--download` does not take a URL: `download()` signs its own, media by media,
+    # at the moment it fetches it. A signed URL requested too early expires during a long shot.
     answer = client.latest(
         args.path,
         published=not args.drafts,
@@ -145,7 +145,7 @@ def main(argv: Sequence[str] | None = None, *, factory: Callable[..., ReviewClie
         _say(str(exc), stream=sys.stderr)
         return 2
     except ReviewApiError as exc:
-        # Le message du serveur peut porter des guillemets français : `_say` les encaisse.
+        # The server message may contain French-style quotation marks: `_say` absorbs them.
         _say(f"{exc.status} {exc.code}: {exc.message}", stream=sys.stderr)
         return 1
     except ReviewError as exc:

@@ -10,7 +10,7 @@ import { Lightbulb } from 'lucide-react';
 import { SettingsCard } from './settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
-/** Entrée de la bibliothèque HDRI instance (miroir de `HdriService.listWithUrls`). */
+/** Entry of the instance HDRI library (mirror of `HdriService.listWithUrls`). */
 interface HdriItem {
   id: string;
   name: string;
@@ -24,9 +24,9 @@ const NEUTRAL: LightingDefault = {
 };
 
 /**
- * Section « Éclairage 3D par défaut » des réglages projet (39.F) : HDRI de la bibliothèque instance,
- * exposition, rotation Y, fond, sol d'ombres. Rejoué à l'ouverture d'un média 3D sans éclairage
- * propre. Sans défaut, le projet reste en éclairage studio neutre.
+ * "Default 3D lighting" section of the project settings (39.F): HDRI from the instance library,
+ * exposure, Y rotation, background, shadow floor. Replayed when opening a 3D media without its own
+ * lighting. Without a default, the project stays under neutral studio lighting.
  */
 export default function ProjectDefaultLightingSection({
   value,

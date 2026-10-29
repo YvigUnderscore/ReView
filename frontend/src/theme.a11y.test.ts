@@ -5,39 +5,39 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Accessibilité **mesurée** du thème — les garanties que l'application donne sur ses
- * couleurs et sa typographie, vérifiées sur le fichier de tokens plutôt que promises.
+ * Measured accessibility of the theme: the guarantees the application gives about its
+ * colors and typography, verified on the token file rather than merely promised.
  *
- * Trois propriétés, toutes issues de l'audit du 2026-08-21 :
- *   1. WCAG 1.4.11 — la limite d'un contrôle de saisie tient 3:1 avec la surface qui
- *      l'entoure. Les champs de ReView n'ont pas de fond contrasté : ce trait est leur
- *      seule frontière, et il tenait 1,4:1.
- *   2. Un plancher typographique — la rampe ne descend pas sous 11 px, ni sous 10 px une
- *      fois la densité compacte appliquée (elle tombait à 9,06 px sur des libellés).
- *   3. WCAG 1.4.4 — le zoom reste possible : la balise viewport ne le verrouille pas.
+ * Three properties, all stemming from the audit of 2026-08-21:
+ *   1. WCAG 1.4.11: the edge of a text input holds 3:1 against the surface around it.
+ *      ReView's fields have no contrasted background: this line is their
+ *      only boundary, and it held only 1.4:1.
+ *   2. A typographic floor: the scale does not go below 11 px, nor below 10 px once the
+ *      compact density is applied (it fell to 9.06 px on labels).
+ *   3. WCAG 1.4.4: zoom remains possible: the viewport meta tag does not lock it.
  *
- * Les ratios se recalculent ici plutôt que de vivre en commentaire : changer un token
- * sans mesurer redevient impossible.
+ * The ratios are recomputed here rather than living in a comment: changing a token
+ * without measuring becomes impossible again.
  */
 
 const css = readFileSync('src/index.css', 'utf8');
 const html = readFileSync('index.html', 'utf8');
 
-/** Tokens d'un bloc de règles, `--nom: valeur`. */
+/** Tokens of a rule block, `--name: value`. */
 function tokensOf(source: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [, name, value] of source.matchAll(/--([\w-]+):\s*([^;]+);/g)) out[name] = value.trim();
   return out;
 }
 
-/** Blocs `:root` (thème clair) et `.dark`, dans l'ordre du fichier. */
+/** `:root` (light theme) and `.dark` blocks, in file order. */
 function themes(): { light: Record<string, string>; dark: Record<string, string> } {
   const light: Record<string, string> = {};
   const dark: Record<string, string> = {};
   for (const [, selector, body] of css.matchAll(/(:root|\.dark)\s*\{([^}]*)\}/g)) {
     Object.assign(selector === '.dark' ? dark : light, tokensOf(body));
   }
-  // Le thème sombre n'est qu'une surcharge : ce qu'il ne redéfinit pas vient de `:root`.
+  // The dark theme is only an override: whatever it does not redefine comes from `:root`.
   return { light, dark: { ...light, ...dark } };
 }
 
@@ -63,23 +63,23 @@ export function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** Surfaces sur lesquelles un champ de saisie peut se poser. */
+/** Surfaces on which a text input can sit. */
 const SURFACES = ['background', 'card', 'popover', 'secondary', 'muted'];
 
-describe('contraste des tokens (WCAG 1.4.11 et 1.4.3)', () => {
+describe('token contrast (WCAG 1.4.11 and 1.4.3)', () => {
   for (const [name, theme] of Object.entries(themes())) {
-    it(`thème ${name} : la bordure de champ tient 3:1 sur toutes les surfaces`, () => {
+    it(`theme ${name}: the field border holds 3:1 on all surfaces`, () => {
       for (const surface of SURFACES) {
         expect(contrast(theme.input, theme[surface]), `--input sur --${surface}`).toBeGreaterThanOrEqual(3);
       }
     });
 
     /**
-     * Même règle que `--input`, pour l'autre famille de contrôles : un bouton `outline`
-     * n'a pas d'aplat, sa bordure *est* le bouton. Le token n'existait pas et la variante
-     * empruntait `--border`, un trait décoratif à 1,37:1 en clair et 1,17:1 en sombre.
+     * Same rule as `--input`, for the other family of controls: an `outline` button
+     * has no flat fill, its border *is* the button. The token did not exist, and the variant
+     * borrowed `--border`, a decorative line at 1.37:1 in light and 1.17:1 in dark.
      */
-    it(`thème ${name} : la bordure de contrôle tient 3:1 sur toutes les surfaces`, () => {
+    it(`theme ${name}: the control border holds 3:1 on all surfaces`, () => {
       for (const surface of SURFACES) {
         expect(
           contrast(theme['border-strong'], theme[surface]),
@@ -89,43 +89,43 @@ describe('contraste des tokens (WCAG 1.4.11 et 1.4.3)', () => {
     });
 
     /**
-     * `--border` reste décoratif — aucun seuil WCAG ne s'y applique — mais un séparateur
-     * qu'on ne voit pas ne sépare rien. En sombre il valait exactement `--secondary`, soit
-     * 1,00:1 : le filet disparaissait purement et simplement. Le plancher est bas à
-     * dessein : ce token est posé par défaut sur tout élément, le durcir repeindrait
-     * l'application entière. Ce qui doit se lire comme un contrôle prend `--border-strong`.
+     * `--border` stays decorative (no WCAG threshold applies to it), but a separator
+     * that one cannot see separates nothing. In dark it was exactly `--secondary`, that is
+     * 1.00:1: the hairline simply disappeared. The floor is low on purpose:
+     * this token is set by default on every element, hardening it would repaint
+     * the whole application. What must read as a control takes `--border-strong`.
      */
-    it(`thème ${name} : le séparateur reste perceptible sur toutes les surfaces`, () => {
+    it(`theme ${name}: the separator stays perceptible on all surfaces`, () => {
       for (const surface of SURFACES) {
         expect(contrast(theme.border, theme[surface]), `--border sur --${surface}`).toBeGreaterThan(1.25);
       }
     });
 
-    /** Le trait de contrôle se distingue du trait décoratif, sinon les deux tokens sont un seul. */
-    it(`thème ${name} : la bordure de contrôle domine nettement le séparateur`, () => {
+    /** The control stroke is distinguished from the decorative one, otherwise the two tokens are one. */
+    it(`theme ${name}: the control border clearly dominates the separator`, () => {
       expect(contrast(theme['border-strong'], theme.card)).toBeGreaterThan(
         contrast(theme.border, theme.card) * 2,
       );
     });
 
-    it(`thème ${name} : le texte tient 4,5:1, y compris atténué`, () => {
+    it(`theme ${name}: the text holds 4.5:1, including muted`, () => {
       expect(contrast(theme.foreground, theme.background)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme['muted-foreground'], theme.background)).toBeGreaterThanOrEqual(4.5);
     });
 
     /**
-     * Le garde-fou ne regardait ni l'anneau de focus, ni l'accent, ni la couleur d'alerte —
-     * c'est-à-dire précisément les trois tokens qui se dégradaient. Mesuré sur l'instance
-     * de démonstration : `--ring` tombait à 1,93:1 en thème clair dès qu'un administrateur
-     * posait sa propre couleur d'accent, rendant le focus clavier invisible.
+     * The guard did not look at the focus ring, nor at the accent, nor the alert color:
+     * that is to say, precisely the three tokens that were degrading. Measured on the demo
+     * instance: `--ring` fell to 1.93:1 in the light theme as soon as an administrator
+     * set their own accent color, making keyboard focus invisible.
      */
-    it(`thème ${name} : l'anneau de focus tient 3:1 sur toutes les surfaces`, () => {
+    it(`theme ${name}: the focus ring holds 3:1 on all surfaces`, () => {
       for (const surface of SURFACES) {
         expect(contrast(theme.ring, theme[surface]), `--ring sur --${surface}`).toBeGreaterThanOrEqual(3);
       }
     });
 
-    it(`thème ${name} : l'accent tient 3:1 sur le fond, et son encre 4,5:1 sur lui`, () => {
+    it(`theme ${name}: the accent holds 3:1 on the background, and its ink 4.5:1 on it`, () => {
       expect(contrast(theme.primary, theme.background), '--primary sur --background').toBeGreaterThanOrEqual(
         3,
       );
@@ -135,7 +135,7 @@ describe('contraste des tokens (WCAG 1.4.11 et 1.4.3)', () => {
       ).toBeGreaterThanOrEqual(4.5);
     });
 
-    it(`thème ${name} : la couleur d'alerte reste lisible`, () => {
+    it(`theme ${name}: the alert color stays readable`, () => {
       expect(contrast(theme.destructive, theme.background)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme.destructive, theme.card)).toBeGreaterThanOrEqual(4.5);
     });
@@ -149,12 +149,12 @@ describe('plancher typographique', () => {
     return Number.parseFloat(block?.[1] ?? '0');
   };
 
-  it('déclare toute la rampe en rem', () => {
+  it('declares the whole ramp in rem', () => {
     expect(ramp.length).toBeGreaterThanOrEqual(5);
     for (const [name, value] of ramp) expect(value, name).toMatch(/rem$/);
   });
 
-  it('ne descend pas sous 11 px en densité normale, ni sous 10 px en compact', () => {
+  it('does not go below 11 px in normal density, nor below 10 px in compact', () => {
     const smallest = Math.min(...ramp.map(([, value]) => Number.parseFloat(value)));
     expect(smallest * rootSize('html')).toBeGreaterThanOrEqual(11);
     expect(smallest * rootSize("html\\[data-density='compact'\\]")).toBeGreaterThanOrEqual(10);
@@ -162,33 +162,33 @@ describe('plancher typographique', () => {
 });
 
 /**
- * L'étiquette de section en capitales est une convention assumée, mais elle ne peut pas
- * *porter* d'information : `text-transform` ne produit rien en zh-Hans, ja et ko — trois
- * des quatorze langues de ReView. La classe ne déclare donc que la casse et
- * l'interlettrage ; la hiérarchie tient par la taille, la graisse et la couleur, laissées
- * au site d'appel, et reste donc lisible dans une langue sans casse.
+ * The uppercase section label is a deliberate convention, but it cannot
+ * *carry* information: `text-transform` produces nothing in zh-Hans, ja and ko, three of
+ * the fourteen languages of ReView. The class therefore only declares the case and
+ * the letter-spacing; the hierarchy rests on size, weight and color, left to the
+ * call site, and so remains readable in a language without case.
  */
-describe('étiquette de section (.section-label)', () => {
+describe('section label (.section-label)', () => {
   const block = /\.section-label\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
 
-  it('est déclarée une seule fois, dans la feuille de tokens', () => {
+  it('is declared only once, in the token sheet', () => {
     expect(block).toContain('text-transform: uppercase');
     expect(css.match(/\.section-label\s*\{/g)).toHaveLength(1);
   });
 
-  it('ne fixe ni taille, ni graisse, ni couleur — rien qui porte la hiérarchie', () => {
+  it('sets neither size, nor weight, nor color: nothing that carries the hierarchy', () => {
     for (const property of ['font-size', 'font-weight', 'color']) {
       expect(block, property).not.toContain(property);
     }
   });
 
-  it('emploie le token d’interlettrage plutôt qu’une valeur en dur', () => {
+  it('uses the letter-spacing token rather than a hard-coded value', () => {
     expect(block).toContain('letter-spacing: var(--tracking-wide)');
   });
 });
 
 describe('zoom (WCAG 1.4.4)', () => {
-  it('ne verrouille pas le viewport', () => {
+  it('does not lock the viewport', () => {
     const viewport = /<meta name="viewport" content="([^"]+)"/.exec(html)?.[1] ?? '';
     expect(viewport).toContain('width=device-width');
     expect(viewport).not.toMatch(/user-scalable\s*=\s*no|maximum-scale/);
@@ -196,31 +196,31 @@ describe('zoom (WCAG 1.4.4)', () => {
 });
 
 /**
- * `color-scheme` — ce qui relie le thème de l'application à tout ce qu'elle embarque.
+ * `color-scheme`: what links the application's theme to everything it embeds.
  *
- * Il n'était déclaré nulle part. Les contrôles natifs et les barres de défilement suivaient
- * donc l'OS, mais surtout les **147 figures de la documentation** : servies en
- * `<img src="…svg">`, elles portent chacune une variante `@media (prefers-color-scheme: dark)`
- * qui se résolvait contre le système. Un lecteur en thème clair sur un OS sombre voyait des
- * pavés bleu nuit au milieu d'une page blanche — et le symétrique en thème sombre.
- * `color-scheme` se propage à l'image embarquée : c'est ce qui recolle les deux.
+ * It was declared nowhere. Native controls and scroll bars followed the OS, though above all
+ * the **147 documentation figures**: served as `<img src="…svg">`, each carries
+ * a `@media (prefers-color-scheme: dark)` variant that resolved against the system.
+ * A reader in light theme on a dark OS saw midnight-blue blocks
+ * in the middle of a white page, and the reverse in dark theme.
+ * `color-scheme` propagates to the embedded image: that is what ties the two together.
  */
-describe('color-scheme (propagation aux contenus embarqués)', () => {
-  // Le fichier pose d'abord `:root` (thème clair), puis `.dark`. Couper à ce sélecteur
-  // sépare les deux jeux de tokens sans dépendre d'un comptage d'accolades.
+describe('color-scheme (propagation to embedded content)', () => {
+  // The file first sets `:root` (light theme), then `.dark`. Cutting at this selector
+  // separates the two sets of tokens without depending on a brace count.
   const [avantDark, apresDark] = css.split(/\n\s*\.dark\s*\{/);
 
-  it('le thème clair déclare color-scheme: light', () => {
+  it('the light theme declares color-scheme: light', () => {
     expect(avantDark).toContain('color-scheme: light');
   });
 
-  it('le thème sombre déclare color-scheme: dark', () => {
+  it('the dark theme declares color-scheme: dark', () => {
     expect(apresDark).toBeDefined();
     expect(apresDark?.slice(0, 2000)).toContain('color-scheme: dark');
   });
 
-  it('les figures de documentation portent bien une variante sombre à faire suivre', () => {
-    // Si ce contrat disparaissait, la déclaration ci-dessus n'aurait plus d'objet.
+  it('the documentation figures do carry a dark variant to follow', () => {
+    // If this contract disappeared, the declaration above would have no object.
     const figure = readFileSync('../DOCUMENTATION/assets/user-guide/comment-states.svg', 'utf8');
     expect(figure).toContain('@media (prefers-color-scheme: dark)');
   });

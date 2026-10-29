@@ -3,14 +3,14 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Le hachage est vérifié par hashFile.test : ici il ne doit surtout pas coûter 20 Go de lecture.
+// Hashing is verified by hashFile.test: here it must above all not cost 20 GB of reading.
 vi.mock('./hashFile', () => ({ sha256OfFile: vi.fn().mockResolvedValue('a'.repeat(64)) }));
 vi.mock('./apiClient', () => ({
   getToken: vi.fn(() => 'jeton'),
   api: { post: vi.fn(), get: vi.fn() },
 }));
-// `putWithProgress` est le seul point réseau simulé : le reste (réessai, pool, annulation)
-// est le code réel, c'est justement lui qu'on veut éprouver.
+// `putWithProgress` is the only simulated network endpoint: the rest (retry, pool, cancellation)
+// is the real code, and that is precisely what we want to test.
 vi.mock('./uploadTransfer', async (original) => ({
   ...(await original<typeof import('./uploadTransfer')>()),
   putWithProgress: vi.fn(),
@@ -27,7 +27,7 @@ const token = vi.mocked(getToken);
 const MB = 1024 * 1024;
 const f = (name: string, type = '') => new File(['x'], name, { type });
 
-/** Fichier factice : seules la taille et le découpage comptent pour le moteur d'envoi. */
+/** Dummy file: only the size and the splitting matter to the upload engine. */
 function bigFile(size: number, name = 'master.mov'): { file: File; slices: [number, number][] } {
   const slices: [number, number][] = [];
   const file = {
@@ -42,7 +42,7 @@ function bigFile(size: number, name = 'master.mov'): { file: File; slices: [numb
   return { file, slices };
 }
 
-/** Router de l'API d'upload : init multipart, URLs de parts, complete, finalize. */
+/** API router for upload: multipart init, part URLs, complete, finalize. */
 function routeApi(options: { uploadedParts?: { partNumber: number; etag: string }[] } = {}) {
   const partRequests: number[][] = [];
   post.mockImplementation((path: string, body?: unknown) => {
@@ -77,7 +77,7 @@ const completedParts = () =>
     parts: { partNumber: number; etag: string }[];
   }) ?? null;
 
-/** Laisse le moteur avancer d'un tour complet de boucle d'événements. */
+/** Lets the engine advance by one full turn of the event loop. */
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeEach(() => {
@@ -91,22 +91,22 @@ afterEach(() => {
 });
 
 describe('inferMediaKind', () => {
-  it('reconnaît les modèles 3D par extension (prioritaire sur le MIME)', () => {
+  it('recognizes 3D models by extension (takes priority over MIME)', () => {
     expect(inferMediaKind(f('scene.glb'))).toBe('MODEL_3D');
     expect(inferMediaKind(f('Scene.GLTF'))).toBe('MODEL_3D');
     expect(inferMediaKind(f('rig.fbx', 'application/octet-stream'))).toBe('MODEL_3D');
     expect(inferMediaKind(f('archive.zip', 'application/zip'))).toBe('MODEL_3D');
   });
 
-  it('reconnaît toutes les déclinaisons USD (45.F)', () => {
-    // `.usd` n'était pas listé : il n'arrivait en MODEL_3D que par le repli final.
+  it('recognizes all USD variants (45.F)', () => {
+    // `.usd` was not listed: it only arrived as MODEL_3D through the final fallback.
     expect(inferMediaKind(f('scene.usd'))).toBe('MODEL_3D');
     expect(inferMediaKind(f('asset.usda'))).toBe('MODEL_3D');
     expect(inferMediaKind(f('asset.usdc'))).toBe('MODEL_3D');
     expect(inferMediaKind(f('PACK.USDZ'))).toBe('MODEL_3D');
   });
 
-  it('reconnaît les Gaussian Splats par extension (viewer Spark)', () => {
+  it('recognizes Gaussian Splats by extension (Spark viewer)', () => {
     expect(inferMediaKind(f('scan.ply'))).toBe('SPLAT');
     expect(inferMediaKind(f('scene.spz'))).toBe('SPLAT');
     expect(inferMediaKind(f('cloud.splat'))).toBe('SPLAT');
@@ -114,24 +114,24 @@ describe('inferMediaKind', () => {
     expect(inferMediaKind(f('compressed.SOG'))).toBe('SPLAT');
   });
 
-  it('reconnaît vidéo et image par type MIME', () => {
+  it('recognizes video and image by MIME type', () => {
     expect(inferMediaKind(f('plan.mp4', 'video/mp4'))).toBe('VIDEO');
     expect(inferMediaKind(f('ref.png', 'image/png'))).toBe('IMAGE');
   });
 
-  it('repli MODEL_3D pour les types inconnus', () => {
+  it('MODEL_3D fallback for unknown types', () => {
     expect(inferMediaKind(f('donnees.bin', 'application/octet-stream'))).toBe('MODEL_3D');
   });
 });
 
-describe('uploadMedia — petit fichier', () => {
-  it('refuse de démarrer sans token (aucun appel réseau)', async () => {
+describe('uploadMedia — small file', () => {
+  it('refuses to start without a token (no network call)', async () => {
     token.mockReturnValue(null);
     await expect(uploadMedia(f('a.png', 'image/png'), 1)).rejects.toThrow();
     expect(post).not.toHaveBeenCalled();
   });
 
-  it('fait un seul PUT présigné, puis finalize, et remonte l’avertissement de nommage', async () => {
+  it('makes a single presigned PUT, then finalize, and surfaces the naming warning', async () => {
     routeApi();
     const pct: number[] = [];
     const res = await uploadMedia(f('ref.png', 'image/png'), 4, { onProgress: (p) => pct.push(p) });
@@ -144,7 +144,7 @@ describe('uploadMedia — petit fichier', () => {
 });
 
 describe('uploadMedia — multipart', () => {
-  it('découpe le fichier et envoie chaque part une seule fois', async () => {
+  it('splits the file and sends each part exactly once', async () => {
     routeApi();
     const { file, slices } = bigFile(40 * MB);
     put.mockImplementation((url) => Promise.resolve(`"etag-${url.slice(-1)}"`));
@@ -157,7 +157,7 @@ describe('uploadMedia — multipart', () => {
       [16 * MB, 32 * MB],
       [32 * MB, 40 * MB],
     ]);
-    // Les guillemets de l'ETag S3 sont retirés avant `complete`.
+    // The quotes around the S3 ETag are stripped before `complete`.
     expect(completedParts()?.parts).toEqual([
       { partNumber: 1, etag: 'etag-1' },
       { partNumber: 2, etag: 'etag-2' },
@@ -166,7 +166,7 @@ describe('uploadMedia — multipart', () => {
     expect(res.mediaObjectId).toBe(7);
   });
 
-  it('ne renvoie pas les parts déjà reçues à la reprise', async () => {
+  it('does not resend the parts already received on resume', async () => {
     routeApi({ uploadedParts: [{ partNumber: 1, etag: 'deja' }] });
     const { file } = bigFile(40 * MB);
 
@@ -177,7 +177,7 @@ describe('uploadMedia — multipart', () => {
     expect(completedParts()?.parts.map((p) => p.partNumber)).toEqual([1, 2, 3]);
   });
 
-  it('envoie quatre parts de front, pas une par une', async () => {
+  it('sends four parts at once, not one by one', async () => {
     routeApi();
     const { file } = bigFile(128 * MB); // 8 parts
     let inFlight = 0;
@@ -195,7 +195,7 @@ describe('uploadMedia — multipart', () => {
     });
 
     const run = uploadMedia(file, 4);
-    // Laisse le pool se remplir avant de libérer quoi que ce soit.
+    // Lets the pool fill before releasing anything.
     await tick();
     expect(release).toHaveLength(4); // quatre parts de front, pas huit, pas une
     while (release.length > 0) {
@@ -207,7 +207,7 @@ describe('uploadMedia — multipart', () => {
     expect(put).toHaveBeenCalledTimes(8);
   });
 
-  it('réessaie une part en échec avec une URL fraîche, sans perdre les autres', async () => {
+  it('retries a failed part with a fresh URL, without losing the others', async () => {
     const partRequests = routeApi();
     const { file } = bigFile(40 * MB);
     let firstAttempt = true;
@@ -220,12 +220,12 @@ describe('uploadMedia — multipart', () => {
     });
 
     await expect(uploadMedia(file, 4)).resolves.toMatchObject({ mediaObjectId: 7 });
-    // Un lot de trois parts, puis une re-signature ciblée de la seule part rejouée.
+    // A batch of three parts, then a targeted re-signing of the only part replayed.
     expect(partRequests).toEqual([[1, 2, 3], [2]]);
     expect(completedParts()?.parts.map((p) => p.partNumber)).toEqual([1, 2, 3]);
   });
 
-  it('remonte l’échec quand une part ne passe pas malgré les réessais', async () => {
+  it('surfaces the failure when a part still fails despite retries', async () => {
     routeApi();
     const { file } = bigFile(40 * MB);
     put.mockRejectedValue(new Error('stockage injoignable'));
@@ -240,8 +240,8 @@ describe('uploadMedia — multipart', () => {
   });
 });
 
-describe('uploadMedia — annulation', () => {
-  it('n’envoie rien si le signal est déjà déclenché', async () => {
+describe('uploadMedia — cancellation', () => {
+  it('sends nothing if the signal is already triggered', async () => {
     routeApi();
     const ctrl = new AbortController();
     ctrl.abort();
@@ -250,7 +250,7 @@ describe('uploadMedia — annulation', () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it('abandonne le multipart côté serveur quand l’envoi est coupé en cours', async () => {
+  it('aborts the multipart on the server when the upload is cut mid-way', async () => {
     routeApi();
     const ctrl = new AbortController();
     const { file } = bigFile(40 * MB);
@@ -260,7 +260,7 @@ describe('uploadMedia — annulation', () => {
     });
 
     await expect(uploadMedia(file, 4, { signal: ctrl.signal })).rejects.toThrow();
-    // Les parts déjà déposées cessent d'être facturées ; le média UPLOADING disparaît.
+    // The parts already dropped stop being billed; the UPLOADING media disappears.
     expect(post).toHaveBeenCalledWith('/api/media/multipart/7/abort');
     expect(completedParts()).toBeNull();
   });

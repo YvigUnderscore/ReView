@@ -22,7 +22,7 @@ import {
 } from './metricsServer';
 import { registerShutdownTask } from '../lib/gracefulShutdown';
 
-/** Émetteur minimal : le double de `Worker` BullMQ, réduit à ses deux événements. */
+/** Minimal emitter: the BullMQ `Worker` double, reduced to its two events. */
 function fakeWorker() {
   const listeners = new Map<string, (job: unknown, err?: unknown) => void>();
   return {
@@ -43,27 +43,27 @@ afterEach(() => {
 });
 
 describe('jobKind / jobDurationSec', () => {
-  it('préfère le type métier du job à son nom de file', () => {
+  it('prefers the business type of the job over its queue name', () => {
     expect(jobKind({ name: 'process', data: { kind: 'hls' } })).toBe('hls');
     expect(jobKind({ name: 'process' })).toBe('process');
     expect(jobKind(null)).toBe('unknown');
   });
 
-  it('mesure la durée entre prise en charge et fin', () => {
+  it('measures the time between pickup and completion', () => {
     expect(jobDurationSec({ processedOn: 1_000, finishedOn: 4_000 })).toBe(3);
   });
 
-  it('n’invente pas de durée pour un job jamais pris en charge', () => {
+  it('does not invent a duration for a job never picked up', () => {
     expect(jobDurationSec({ finishedOn: 4_000 })).toBeNull();
   });
 
-  it('retombe sur l’instant courant quand la fin manque (job calé)', () => {
+  it('falls back to the current time when the end is missing (stalled job)', () => {
     expect(jobDurationSec({ processedOn: 1_000 }, 3_000)).toBe(2);
   });
 });
 
 describe('attachWorkerMetrics', () => {
-  it('compte les réussites et les échecs, avec leur durée', async () => {
+  it('counts successes and failures, with their duration', async () => {
     const worker = fakeWorker();
     attachWorkerMetrics('media-test', worker);
     worker.emit('completed', { data: { kind: 'hls' }, processedOn: 0, finishedOn: 12_000 });
@@ -77,7 +77,7 @@ describe('attachWorkerMetrics', () => {
     expect(text).toContain('review_worker_job_duration_seconds_sum{queue="media-test",kind="hls"} 12');
   });
 
-  it('compte un job sans horodatage sans fausser l’histogramme', async () => {
+  it('counts a job without timestamp without skewing the histogram', async () => {
     observeWorkerJob('media-test', 'sans-duree', 'completed', null);
     const text = await workerRegistry.metrics();
     expect(text).toContain('kind="sans-duree",outcome="completed"} 1');
@@ -86,7 +86,7 @@ describe('attachWorkerMetrics', () => {
 });
 
 describe('providedToken', () => {
-  it('lit le jeton dans l’en-tête puis dans l’URL', () => {
+  it('reads the token from the header, then from the URL', () => {
     expect(providedToken('/metrics', 'Bearer abc')).toBe('abc');
     expect(providedToken('/metrics?token=xyz', undefined)).toBe('xyz');
     expect(providedToken('/metrics', undefined)).toBeUndefined();
@@ -94,7 +94,7 @@ describe('providedToken', () => {
 });
 
 describe('startWorkerMetricsServer', () => {
-  /** Port 0 : le noyau choisit un port libre — deux suites en parallèle ne se marchent pas dessus. */
+  /** Port 0: the kernel picks a free port, so two suites running in parallel don't step on each other. */
   const start = () => {
     const server = startWorkerMetricsServer(0);
     servers.push(server);
@@ -103,20 +103,20 @@ describe('startWorkerMetricsServer', () => {
     });
   };
 
-  it('sert le registre du worker sur /metrics, et rien ailleurs', async () => {
+  it('serves the worker registry on /metrics, and nothing elsewhere', async () => {
     const base = await start();
     const metrics = await fetch(`${base}/metrics`);
     expect(metrics.status).toBe(200);
     const body = await metrics.text();
     expect(body).toContain('review_worker_info');
-    // Métriques de process : c'est ce qui rend « le worker est vivant » mesurable.
+    // Process metrics: this is what makes "the worker is alive" measurable.
     expect(body).toContain('process_resident_memory_bytes');
 
     const other = await fetch(`${base}/`);
     expect(other.status).toBe(404);
   });
 
-  it('exige le jeton quand METRICS_TOKEN est posé', async () => {
+  it('requires the token when METRICS_TOKEN is set', async () => {
     envMock.METRICS_TOKEN = 'jeton-de-test';
     const base = await start();
     expect((await fetch(`${base}/metrics`)).status).toBe(401);
@@ -124,7 +124,7 @@ describe('startWorkerMetricsServer', () => {
     expect((await fetch(`${base}/metrics?token=jeton-de-test`)).status).toBe(200);
   });
 
-  it('s’éteint avec le process (tâche d’extinction enregistrée)', async () => {
+  it('shuts down with the process (registered shutdown task)', async () => {
     await start();
     expect(vi.mocked(registerShutdownTask)).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'worker-metrics', phase: 10 }),

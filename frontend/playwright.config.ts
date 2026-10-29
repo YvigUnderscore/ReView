@@ -4,23 +4,23 @@
 import { defineConfig } from '@playwright/test';
 
 /**
- * Smoke E2E (10.F3) — protège le parcours critique complet :
- * auth → projet → shot → tâche → upload → review.
+ * Smoke E2E (10.F3): protects the complete critical path:
+ * auth → project → shot → task → upload → review.
  *
- * Prérequis : services Postgres + Redis + MinIO joignables (stack docker dev ou CI).
- * Les serveurs backend (:3000) et frontend (:5173) sont lancés automatiquement
- * (réutilisés s'ils tournent déjà — cas du poste de dev).
+ * Prerequisites: Postgres + Redis + MinIO services reachable (dev docker stack or CI).
+ * The backend (:3000) and frontend (:5173) servers are started automatically
+ * (reused if already running, which is the case on a dev machine).
  */
 export default defineConfig({
   testDir: 'e2e',
   /**
-   * `npm run test:e2e` n'exécute que le smoke.
+   * `npm run test:e2e` only runs the smoke test.
    *
-   * `docs-capture.spec.ts` partage ce dossier mais n'est pas un test : c'est le générateur
-   * des captures de `DOCUMENTATION/assets/`. Ramassé par la même commande, il réécrivait
-   * dix-neuf PNG suivis par git et laissait un projet de démonstration dans la base à
-   * chaque validation — de quoi rendre une suite « verte » salissante, et impossible à
-   * brancher en CI. Le générateur reste lançable, explicitement :
+   * `docs-capture.spec.ts` shares this folder but is not a test: it is the generator
+   * of the screenshots in `DOCUMENTATION/assets/`. Picked up by the same command, it rewrote
+   * nineteen git-tracked PNGs and left a demo project in the database on
+   * every validation: enough to make a suite "green" but dirty, and impossible to
+   * plug into CI. The generator remains runnable, explicitly:
    *
    *   E2E_DOCS=1 npx playwright test e2e/docs-capture.spec.ts
    */
@@ -31,8 +31,8 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
     trace: 'retain-on-failure',
-    // Par défaut : Chromium bundlé Playwright (téléchargé en CI). En local, un navigateur
-    // système peut être utilisé sans téléchargement : E2E_CHANNEL=msedge npm run test:e2e
+    // Default: the Chromium bundled with Playwright (downloaded in CI). Locally, a system browser
+    // can be used without downloading: E2E_CHANNEL=msedge npm run test:e2e
     channel: process.env.E2E_CHANNEL,
   },
   webServer: [

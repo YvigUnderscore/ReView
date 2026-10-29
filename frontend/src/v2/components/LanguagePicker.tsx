@@ -5,13 +5,13 @@ import { LOCALES, setLocale, useLocale, useT, type Locale } from '../i18n';
 import { Select } from './ui/select';
 
 /**
- * Sélecteur de langue — liste toutes les langues du registre, chacune annoncée dans sa
- * propre langue (un lecteur ne cherche pas « German », il cherche « Deutsch »).
+ * Language picker: lists all languages of the registry, each announced in its
+ * own language (a reader does not look for "German", they look for "Deutsch").
  *
- * Les langues régionales sont regroupées à part : ce n'est pas un détail de rangement,
- * c'est la manière de les rendre visibles au lieu de les noyer. Le libellé de couverture
- * et l'avertissement de traduction automatique vivent dans `TranslationNotice`, à afficher
- * à côté de ce sélecteur.
+ * Regional languages are grouped apart: this is not a detail of storage,
+ * it is the way to make them visible instead of drowning them. The coverage label
+ * and the machine-translation warning live in `TranslationNotice`, to be displayed
+ * next to this picker.
  */
 export default function LanguagePicker({
   id,
@@ -21,9 +21,9 @@ export default function LanguagePicker({
   id?: string;
   className?: string;
   /**
-   * Appelé après la bascule. Le composant sert aussi l'écran de connexion, où aucun
-   * compte n'existe encore : c'est donc à l'appelant de décider si le choix se
-   * persiste côté serveur.
+   * Called after the switch. The component also serves the sign-in screen, where no
+   * account exists yet: it is therefore up to the caller to decide whether the choice
+   * persists server-side.
    */
   onSelect?: (locale: Locale) => void;
 }) {

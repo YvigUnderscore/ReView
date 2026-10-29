@@ -11,9 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useT } from '../i18n';
 
 /**
- * La saisie elle-même. Composant à part pour une raison précise : il est **monté à chaque
- * dépôt retenu**, et son champ repart donc vide sans qu'un effet ait à le remettre à zéro —
- * la consigne du dépôt précédent ne concerne pas celui-ci.
+ * The input itself. A separate component for a precise reason: it is **mounted for each**
+ * retained drop, so its field starts empty without an effect having to reset it,
+ * and the previous drop's instruction does not concern this one.
  */
 function NoteForm({
   rule,
@@ -63,12 +63,12 @@ function NoteForm({
 }
 
 /**
- * La consigne demandée avant l'envoi, quand le projet l'exige.
+ * The instruction requested before sending, when the project requires it.
  *
- * Monté une seule fois, avec le widget d'upload : le dépôt part de cinq endroits, et cinq
- * copies du même dialogue auraient fini par diverger. La file retient le geste, celui-ci
- * pose la question, et le bouton reste fermé tant que la consigne ne convient pas — c'est
- * là, et pas dans un toast d'erreur, que « sans message, rien ne part » se lit.
+ * Mounted once, with the upload widget: the drop leaves from five places, and five
+ * copies of the same dialog would have ended up diverging. The queue holds the gesture, this one
+ * asks the question, and the button stays closed until the instruction is acceptable. That is
+ * where "without a message, nothing goes out" is read, and not in an error toast.
  */
 export default function UploadNoteDialog() {
   const t = useT();

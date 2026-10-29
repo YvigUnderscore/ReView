@@ -4,20 +4,20 @@
 import { t } from '../v2/i18n';
 
 /**
- * Primitives de transfert du moteur de téléversement (vague 2).
+ * Transfer primitives of the upload engine (wave 2).
  *
- * Trois manques structurels de l'envoi d'origine sont traités ici, à l'écart du flux
- * métier de `uploadClient` :
- *  - **annulation réelle** : un `AbortSignal` interrompt la requête en vol (`xhr.abort`),
- *    là où « retirer la ligne » laissait le transfert consommer la bande passante ;
- *  - **réessai par part** : une coupure sur une part faisait échouer 20 Go d'envoi ; on
- *    réessaie trois fois avec attente progressive, et on re-signe l'URL quand le refus
- *    ressemble à une signature périmée (les présignatures vivent une heure) ;
- *  - **parallélisme borné** : S3 accepte plusieurs parts de front, une boucle `for` n'en
- *    utilisait qu'une seule connexion.
+ * Three structural gaps of the original upload are handled here, apart from the business flow
+ * of `uploadClient`:
+ *  - **real cancellation**: an `AbortSignal` interrupts the in-flight request (`xhr.abort`),
+ *    whereas "removing the row" let the transfer keep consuming bandwidth;
+ *  - **per-part retry**: a cut on one part made 20 GB of upload fail; we
+ *    retry three times with progressive waits, and re-sign the URL when the refusal
+ *    looks like an expired signature (presigned URLs live one hour);
+ *  - **bounded parallelism**: S3 accepts several parts at once, whereas a `for` loop
+ *    used only a single connection.
  */
 
-/** Annulation demandée par l'utilisateur : ni un échec réseau, ni à réessayer. */
+/** Cancellation requested by the user: neither a network failure nor to be retried. */
 class UploadAbortError extends Error {
   constructor() {
     super('aborted');
@@ -25,7 +25,7 @@ class UploadAbortError extends Error {
   }
 }
 
-/** Refus HTTP du stockage — le statut décide du réessai et de la re-signature. */
+/** HTTP refusal from the storage: the status decides the retry and the re-signing. */
 export class UploadHttpError extends Error {
   readonly status: number;
 
@@ -38,7 +38,7 @@ export class UploadHttpError extends Error {
 
 export const isAbortError = (err: unknown): boolean => err instanceof UploadAbortError;
 
-/** Un 4xx définitif ne se réessaie pas ; tout le reste (réseau, 5xx, 408, 429) si. */
+/** A definitive 4xx is not retried; everything else (network, 5xx, 408, 429) is. */
 function isRetriable(err: unknown): boolean {
   if (isAbortError(err)) return false;
   if (err instanceof UploadHttpError && err.status >= 400 && err.status < 500) {
@@ -51,11 +51,11 @@ export function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new UploadAbortError();
 }
 
-/** Attente interruptible — un abandon ne doit pas patienter jusqu'au bout du backoff. */
+/** Interruptible wait: an abort must not wait out the whole backoff. */
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Signal déjà déclenché : `addEventListener('abort')` ne se rejouerait pas, et le
-    // backoff s'écoulerait en entier après une annulation.
+    // Signal already triggered: `addEventListener('abort')` would not replay, and the
+    // backoff would elapse in full after a cancellation.
     if (signal?.aborted) return reject(new UploadAbortError());
     const timer = setTimeout(() => {
       signal?.removeEventListener('abort', onAbort);
@@ -69,7 +69,7 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/** PUT XHR avec progression et annulation ; renvoie l'ETag (multipart) — null si absent. */
+/** XHR PUT with progress and cancellation; returns the ETag (multipart), or null if absent. */
 export function putWithProgress(
   url: string,
   body: Blob,
@@ -103,12 +103,12 @@ export function putWithProgress(
   });
 }
 
-/** Attentes entre deux tentatives : trois réessais, de plus en plus espacés. */
+/** Waits between two attempts: three retries, increasingly spaced. */
 export const RETRY_DELAYS = [500, 1500, 4000];
 
 /**
- * Rejoue `attempt` jusqu'à épuisement des attentes. Le numéro de tentative est passé à
- * l'appelant pour qu'il puisse, par exemple, redemander une URL présignée.
+ * Replays `attempt` until the waits are exhausted. The attempt number is passed to
+ * the caller so that it can, for example, request a new presigned URL.
  */
 export async function withRetry<T>(
   attempt: (tryIndex: number) => Promise<T>,
@@ -129,8 +129,8 @@ export async function withRetry<T>(
 }
 
 /**
- * Exécute `task` sur chaque élément avec au plus `limit` tâches simultanées, et s'arrête
- * à la première erreur (les tâches déjà lancées vont à leur terme, aucune n'est orpheline).
+ * Runs `task` on each item with at most `limit` tasks at once, and stops
+ * at the first error (tasks already started run to completion, none is orphaned).
  */
 export async function runPool<T>(items: T[], limit: number, task: (item: T) => Promise<void>): Promise<void> {
   let cursor = 0;

@@ -25,24 +25,24 @@ import SgProjectSection from './shotgrid/SgProjectSection';
 import EpisodesToggle from '../pages/project/EpisodesToggle';
 
 /**
- * Onglet « Réglages » d'un projet (admin/superviseur) : la composition des sections, et
- * l'enregistrement qu'elles partagent — héritage studio, frame de départ, format & cadence,
- * nomenclature, départements, puis les règles de review, de couleur et de diffusion.
+ * "Settings" tab of a project (admin/supervisor): the composition of the sections, and
+ * the save they share: studio inheritance, start frame, format and frame rate,
+ * nomenclature, departments, then the review, color and distribution rules.
  *
- * Chaque section est autonome : elle reçoit sa valeur et rend la nouvelle, sans savoir
- * comment on l'enregistre. Ce fichier ne garde donc qu'un seul geste d'enregistrement.
+ * Each section is autonomous: it receives its value and renders the new one, without knowing
+ * how it gets saved. This file therefore keeps only one save gesture.
  *
- * L'écran manipule les réglages EFFECTIFS. Les réenregistrer en bloc figeait dans le projet
- * tout ce qu'il ne faisait qu'hériter : on n'envoie donc que les sections réellement
- * modifiées, en PATCH (`buildSettingsPatch`).
+ * The screen handles the EFFECTIVE settings. Re-saving them in bulk would freeze into the project
+ * everything it merely inherited: so we only send the sections actually
+ * modified, as a PATCH (`buildSettingsPatch`).
  *
- * **Pas d'undo/redo ici, et c'est un choix.** Le formulaire est un BROUILLON : rien ne part avant
- * « Enregistrer », et `baseline` garde l'état de référence. Tant qu'on n'a pas enregistré,
- * abandonner c'est quitter l'onglet ; chaque champ de texte a déjà le Ctrl+Z du navigateur, qui
- * fait mieux le travail dans une saisie. Un Ctrl+Z de formulaire devrait choisir ce qu'il défait
- * — la frappe, le champ, la section, le brouillon entier — et chaque réponse est fausse pour la
- * moitié des cas. Après enregistrement, l'inverse ne s'invente pas non plus : rendre une section
- * au studio est un geste explicite, et il existe déjà (`ProjectSettingsInheritance`).
+ * **No undo/redo here, and this is a choice.** The form is a DRAFT: nothing goes out before
+ * "Save", and `baseline` keeps the reference state. Until one has saved, abandoning it means
+ * leaving the tab; each text field already has the browser's Ctrl+Z, which does the job better
+ * in an input. A form-level Ctrl+Z would have to choose what it undoes
+ * (the keystroke, the field, the section, the whole draft), and every answer is wrong for
+ * half the cases. After saving, the reverse is not invented either: handing a section
+ * back to the studio is an explicit gesture, and it already exists (`ProjectSettingsInheritance`).
  */
 export default function ProjectSettingsTab({
   projectId,
@@ -59,13 +59,13 @@ export default function ProjectSettingsTab({
 }) {
   const t = useT();
   const [draft, setDraft] = useState<ProjectSettings | null>(settings);
-  // Point de départ du brouillon : c'est lui qui dit ce que la personne a réellement touché.
+  // Starting point of the draft: it is what says what the person actually touched.
   const [baseline, setBaseline] = useState<ProjectSettings | null>(settings);
   const [savingSettings, setSavingSettings] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Synchronise le brouillon local quand les settings arrivent (asynchrones)
+  // Syncs the local draft when the settings arrive (asynchronously)
   if (settings && !draft) {
     setDraft(settings);
     setBaseline(settings);
@@ -97,7 +97,7 @@ export default function ProjectSettingsTab({
     }
   };
 
-  /** Une section rendue au studio change les effectifs : le brouillon repart de là. */
+  /** A section handed back to the studio changes the effective settings: the draft restarts from there. */
   const applyReverted = (fresh: ProjectSettings) => {
     setDraft(fresh);
     setBaseline(fresh);

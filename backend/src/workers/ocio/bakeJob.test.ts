@@ -10,22 +10,22 @@ const displays = [
   { name: 'Rec.1886 Rec.709 - Display', views: ['ACES 1.0 - SDR Video', 'Raw'] },
 ];
 
-describe('bakeJob — choix des couples', () => {
-  it('cuit tous les couples de la config par défaut', () => {
+describe('bakeJob — choosing the pairs', () => {
+  it('bakes all the pairs of the default config', () => {
     expect(couplesFor(displays, {})).toHaveLength(5);
   });
 
-  it('un couple explicite ne cuit que lui', () => {
+  it('an explicit pair bakes only that one', () => {
     expect(couplesFor(displays, { display: 'sRGB - Display', view: 'Raw' })).toEqual([
       { display: 'sRGB - Display', view: 'Raw' },
     ]);
   });
 
-  it('un display seul ne suffit pas à cibler : la config entière est cuite', () => {
+  it('a display alone is not enough to target: the whole config is baked', () => {
     expect(couplesFor(displays, { display: 'sRGB - Display' })).toHaveLength(5);
   });
 
-  it('plafonne le nombre de couples (une config vérolée ne noie pas la file)', () => {
+  it('caps the number of pairs (a corrupted config does not flood the queue)', () => {
     const many = Array.from({ length: 20 }, (_, i) => ({
       name: `D${i}`,
       views: ['Raw', 'Un-tone-mapped', 'Log', 'ACES 1.0 - SDR Video'],
@@ -34,15 +34,15 @@ describe('bakeJob — choix des couples', () => {
   });
 });
 
-describe('bakeJob — repli intégré', () => {
-  it('produit un .cube relisible pour une vue colorimétrique', () => {
+describe('bakeJob — built-in fallback', () => {
+  it('produces a re-readable .cube for a colorimetric view', () => {
     const text = builtinCube('sRGB - Display', 'Un-tone-mapped')!;
     expect(text).toContain('LUT_3D_SIZE 33');
     expect(text).toContain('source: built-in colorimetric');
     expect(parseCube(text).size).toBe(33);
   });
 
-  it('rend null pour une vue tone-mappée : cette LUT-là n’est pas approchée', () => {
+  it('returns null for a tone-mapped view: this LUT is not approximated', () => {
     expect(builtinCube('sRGB - Display', 'ACES 1.0 - SDR Video')).toBeNull();
   });
 });

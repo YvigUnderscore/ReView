@@ -2,27 +2,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Reconnaissance des séquences d'images au dépôt.
+ * Recognition of image sequences on drop.
  *
- * Déposer un plan, en VFX, c'est déposer mille fichiers. Sans cette lecture, la file
- * d'upload en fait mille médias : mille vignettes, mille lignes de version, une review
- * impossible. On regarde donc les noms **avant** de lancer quoi que ce soit, et on
- * propose le regroupement — la décision reste à l'utilisateur, jamais prise en silence.
+ * Dropping a shot, in VFX, means dropping a thousand files. Without this reading, the queue
+ * would turn it into a thousand media: a thousand thumbnails, a thousand version lines, an unusable review.
+ * So we look at the names **before** starting anything, and we
+ * propose the grouping: the decision stays with the user, never taken silently.
  *
- * La même grammaire vit côté serveur (`backend/src/lib/imageSequence.ts`), qui refait le
- * contrôle sur ce qu'il reçoit : les deux dépôts ne partagent aucun paquet, et un client
- * n'est de toute façon jamais l'autorité sur ce qu'on écrit dans le stockage.
+ * The same grammar lives on the server side (`backend/src/lib/imageSequence.ts`), which repeats the
+ * check on what it receives: the two sides share no package, and a client
+ * is in any case never the authority on what gets written to storage.
  */
 
-/** En dessous, ce n'est pas une séquence : ce sont des fichiers. */
+/** Below this, it is not a sequence: they are just files. */
 export const MIN_SEQUENCE_FRAMES = 2;
 
 /**
- * Le numéro de frame est le **dernier** groupe de chiffres avant l'extension.
+ * The frame number is the **last** group of digits before the extension.
  *
- * `SH0100_comp_v003.1001.exr` en porte deux : prendre le premier regrouperait tout le plan
- * sous « version 3 ». La capture gourmande, terminée par un caractère non numérique,
- * pousse la frontière aussi loin que possible vers la droite.
+ * `SH0100_comp_v003.1001.exr` has two: taking the first would group the whole shot
+ * under "version 3". The greedy capture, ended by a non-numeric character,
+ * pushes the boundary as far to the right as possible.
  */
 const FRAME_NAME = /^(.*[^\d])?(\d+)(\.[A-Za-z0-9]+)$/;
 
@@ -37,47 +37,47 @@ export function parseFrameName(name: string): ParsedFrameName | null {
   const m = FRAME_NAME.exec(name);
   if (!m) return null;
   const digits = m[2];
-  // Au-delà de neuf chiffres, ce n'est plus une frame mais un identifiant (horodatage).
+  // Beyond nine digits, it is no longer a frame but an identifier (timestamp).
   if (digits.length > 9) return null;
   return { base: m[1] ?? '', number: Number(digits), digits: digits.length, extension: m[3].toLowerCase() };
 }
 
-/** Motif de nommage au format FFmpeg, tel que le serveur l'attend. */
+/** Naming pattern in FFmpeg format, as the server expects it. */
 export const framePattern = (base: string, digits: number, extension: string): string =>
   `${base}%0${String(digits)}d${extension}`;
 
 export interface FileSequence {
-  /** Motif FFmpeg (`SH0100_comp_v003.%04d.exr`) — deviendra le nom du média. */
+  /** FFmpeg pattern (`SH0100_comp_v003.%04d.exr`): becomes the name of the media. */
   pattern: string;
   extension: string;
   digits: number;
-  /** Fichiers triés par numéro de frame. */
+  /** Files sorted by frame number. */
   files: File[];
   frames: number[];
   startFrame: number;
   endFrame: number;
   frameCount: number;
-  /** Numéros absents entre la première et la dernière frame. */
+  /** Missing numbers between the first and the last frame. */
   missingFrames: number;
   totalSize: number;
 }
 
 /**
- * Formats qui peuvent constituer une séquence.
+ * Formats that can make up a sequence.
  *
- * Restreint aux images acceptées par l'ingestion (`SUPPORTED_EXTENSIONS[IMAGE]` côté
- * serveur) : sans ce filtre, dix `.mov` numérotés `plan.001.mov` seraient proposés comme
- * une séquence, et le serveur refuserait le lot après coup.
+ * Restricted to the images accepted by ingestion (`SUPPORTED_EXTENSIONS[IMAGE]` on the
+ * server): without this filter, ten `.mov` numbered `shot.001.mov` would be proposed as
+ * a sequence, and the server would refuse the batch afterwards.
  */
 const SEQUENCE_EXTENSIONS = ['.exr', '.dpx', '.tif', '.tiff', '.tga', '.png', '.jpg', '.jpeg'];
 
 /**
- * Regroupe un dépôt en séquences candidates et fichiers isolés.
+ * Groups a drop into candidate sequences and isolated files.
  *
- * La clé de regroupement est (base, largeur du champ, extension) : `plan.999.exr` et
- * `plan.1000.exr` ne forment pas le même motif FFmpeg, et les fondre produirait un motif
- * que le serveur ne saurait pas relire. Le cas est rare — les studios paddent — et deux
- * propositions distinctes se corrigent d'un clic.
+ * The grouping key is (base, field width, extension): `shot.999.exr` and
+ * `shot.1000.exr` do not form the same FFmpeg pattern, and merging them would produce a pattern
+ * that the server could not read back. The case is rare (studios pad their numbers), and two
+ * distinct proposals are corrected with a single click.
  */
 export function detectSequences(files: File[]): { sequences: FileSequence[]; singles: File[] } {
   const buckets = new Map<string, { parsed: ParsedFrameName; file: File }[]>();

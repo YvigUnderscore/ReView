@@ -11,11 +11,11 @@ import { textIncluding } from '../text';
 import { renderWithProviders } from '../renderWithProviders';
 
 /**
- * Le partage client est la seule surface que voit quelqu'un d'extérieur au studio. Trois
- * choses ne doivent jamais lui échapper : un lien mort doit se dire (et se distinguer d'un
- * quota atteint), un lien en lecture seule ne doit pas offrir d'écrire, et un média que le
- * navigateur ne sait pas ouvrir doit produire un message pour lui — pas la consigne de
- * relance de conversion destinée à un artiste.
+ * Client sharing is the only surface that someone outside the studio sees. Three
+ * things must never escape it: a dead link must say so (and be distinguished from a
+ * reached quota), a read-only link must not offer to write, and a media that the
+ * browser cannot open must produce a message for the viewer, not the internal instruction to
+ * restart a conversion meant for an artist.
  */
 
 const TOKEN = 'share-token';
@@ -49,7 +49,7 @@ const mount = (api: Record<string, MockResolver>) =>
   });
 
 describe('ClientSharePage', () => {
-  it('distingue un lien révoqué d’un lien qui a épuisé ses vues', async () => {
+  it('distinguishes a revoked link from one that has used up its views', async () => {
     const { unmount } = mount({ [`GET /api/client/${TOKEN}`]: httpError(404, 'gone') });
     expect(await screen.findByText(t('share.invalid'))).toBeInTheDocument();
     unmount();
@@ -58,7 +58,7 @@ describe('ClientSharePage', () => {
     expect(await screen.findByText(t('share.viewLimit'))).toBeInTheDocument();
   });
 
-  it('demande le mot de passe avant de montrer quoi que ce soit', async () => {
+  it('asks for the password before showing anything', async () => {
     mount({
       [`GET /api/client/${TOKEN}`]: payload({ locked: true, media: undefined, project: undefined }),
     });
@@ -67,7 +67,7 @@ describe('ClientSharePage', () => {
     expect(screen.queryByText(media.originalName)).not.toBeInTheDocument();
   });
 
-  it('ouvre la review après le déverrouillage et garde la session de partage', async () => {
+  it('opens the review after unlocking and keeps the sharing session', async () => {
     let locked = true;
     const { user, api } = mount({
       [`GET /api/client/${TOKEN}`]: () =>
@@ -85,11 +85,11 @@ describe('ClientSharePage', () => {
 
     expect(await screen.findByText(media.originalName)).toBeInTheDocument();
     expect(sessionStorage.getItem(`share-auth:${TOKEN}`)).toBe('share-session');
-    // La session voyage en en-tête, jamais dans l'URL.
+    // The session travels in a header, never in the URL.
     expect(api.called(`GET /api/client/${TOKEN}`).at(-1)?.url.search).toBe('');
   });
 
-  it('dit au visiteur, dans ses mots, qu’un média ne s’ouvre pas ici', async () => {
+  it('tells the visitor, in plain words, that a media cannot be opened here', async () => {
     const { user } = mount({
       [`GET /api/client/${TOKEN}`]: payload(),
       [`GET /api/client/${TOKEN}/media/5/url`]: httpError(422, 'no viewable derivative'),
@@ -100,11 +100,11 @@ describe('ClientSharePage', () => {
 
     const notice = await screen.findByText(textIncluding(t('client.mediaUnavailable')));
     expect(notice).toHaveTextContent(t('client.contactStudio'));
-    // Aucune consigne interne (« relancer la conversion ») ne fuit vers le client.
+    // No internal instruction ("restart the conversion") leaks to the client.
     expect(screen.queryByRole('button', { name: t('model3d.reconvert') })).not.toBeInTheDocument();
   });
 
-  it('n’offre pas d’écrire sur un lien en lecture seule', async () => {
+  it('does not offer to write on a read-only link', async () => {
     const { user } = mount({
       [`GET /api/client/${TOKEN}`]: payload({ permission: 'VIEW' }),
       [`GET /api/client/${TOKEN}/media/5/url`]: httpError(422, 'no viewable derivative'),
@@ -117,7 +117,7 @@ describe('ClientSharePage', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
-  it('annonce une sélection vide plutôt qu’une page blanche', async () => {
+  it('announces an empty selection rather than a blank page', async () => {
     mount({ [`GET /api/client/${TOKEN}`]: payload({ media: [] }) });
 
     expect(await screen.findByText(t('client.noPublished'))).toBeInTheDocument();

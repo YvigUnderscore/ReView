@@ -4,11 +4,11 @@
 import type { ReactNode } from 'react';
 
 /**
- * Un libellé courant au-dessus de son champ, dans la graisse des panneaux de réglages.
+ * A common label above its field, in the weight of the settings panels.
  *
- * Les sections de réglages alignent trois ou quatre champs courts sur une même ligne : le
- * `<label>` enveloppe ici le contrôle, il n'y a donc aucun `htmlFor` à ne pas oublier. Le
- * `Field` de `ui/` reste le bon outil pour un formulaire en colonne, avec aide et erreur.
+ * The settings sections line up three or four short fields on one row: the
+ * `<label>` wraps the control here, so there is no `htmlFor` to forget. The
+ * `Field` of `ui/` remains the right tool for a column form, with help and error.
  */
 export default function ProjectSettingsField({ label, children }: { label: string; children: ReactNode }) {
   return (

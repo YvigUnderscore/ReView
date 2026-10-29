@@ -7,7 +7,7 @@ vi.mock('./apiClient', () => ({
   getToken: vi.fn(() => 'jeton'),
   api: { post: vi.fn(), get: vi.fn() },
 }));
-// Seul le point réseau est simulé : le pool, le réessai et l'annulation sont le vrai code.
+// Only the network endpoint is simulated: the pool, retry and cancellation are the real code.
 vi.mock('./uploadTransfer', async (original) => ({
   ...(await original<typeof import('./uploadTransfer')>()),
   putWithProgress: vi.fn(),
@@ -19,11 +19,11 @@ import { api } from './apiClient';
 import { putWithProgress, UploadHttpError } from './uploadTransfer';
 
 /**
- * Envoi d'une séquence : N fichiers, UN média.
+ * Sending a sequence: N files, ONE media.
  *
- * Trois choses doivent tenir, parce que chacune coûte un plan entier quand elle lâche :
- * toutes les frames partent (pas seulement le premier lot), une reprise saute ce qui est
- * déjà arrivé, et une annulation libère les frames déjà déposées côté serveur.
+ * Three things must hold, because each one costs a whole shot when it fails:
+ * all the frames go out (not only the first batch), a resume skips what has
+ * already arrived, and a cancellation frees the frames already dropped on the server side.
  */
 
 const post = vi.mocked(api.post);
@@ -37,7 +37,7 @@ const sequenceOf = (from: number, to: number) => {
   return detectSequences(files).sequences[0];
 };
 
-/** Route l'API de séquence ; `uploadedFrames` simule une reprise. */
+/** Routes the sequence API; `uploadedFrames` simulates a resume. */
 function routeApi(uploadedFrames: string[] = []) {
   const urlRequests: string[][] = [];
   post.mockImplementation((path: string, body?: unknown) => {
@@ -69,7 +69,7 @@ beforeEach(() => {
 });
 
 describe('uploadImageSequence', () => {
-  it('déclare le motif et toutes les frames au serveur, en un seul média', async () => {
+  it('declares the pattern and all the frames to the server, as one media', async () => {
     routeApi();
     const res = await uploadImageSequence(sequenceOf(1001, 1010), 4);
     const init = post.mock.calls.find(([p]) => p === '/api/media/sequence/init')![1] as {
@@ -81,28 +81,28 @@ describe('uploadImageSequence', () => {
     expect(res).toMatchObject({ mediaObjectId: 7, status: 'PROCESSING' });
   });
 
-  it('porte la consigne d’upload à la finalisation, comme un fichier unique', async () => {
+  it('carries the upload instruction to finalization, like a single file', async () => {
     routeApi();
     await uploadImageSequence(sequenceOf(1001, 1003), 4, { note: 'Comp v3, regarder le bord gauche' });
     const complete = post.mock.calls.find(([p]) => p === '/api/media/sequence/7/complete');
     expect(complete?.[1]).toEqual({ note: 'Comp v3, regarder le bord gauche' });
   });
 
-  it('envoie toutes les frames, par lots d’URLs successifs', async () => {
+  it('sends all the frames, in successive batches of URLs', async () => {
     const urlRequests = routeApi();
     await uploadImageSequence(sequenceOf(1001, 1100), 4);
     expect(put).toHaveBeenCalledTimes(100);
-    // 100 frames par lots de 32 : quatre demandes d'URLs, la dernière partielle.
+    // 100 frames in batches of 32: four URL requests, the last one partial.
     expect(urlRequests.map((r) => r.length)).toEqual([32, 32, 32, 4]);
   });
 
-  it('reprend un envoi interrompu sans renvoyer ce qui est déjà arrivé', async () => {
+  it('resumes an interrupted upload without resending what has already arrived', async () => {
     routeApi(['plan.1001.exr', 'plan.1002.exr', 'plan.1003.exr']);
     await uploadImageSequence(sequenceOf(1001, 1010), 4);
     expect(put).toHaveBeenCalledTimes(7);
   });
 
-  it('rend une progression en octets ET en fichiers', async () => {
+  it('returns progress in bytes AND in files', async () => {
     routeApi();
     const seen: { percent: number; files: number; totalFiles: number }[] = [];
     await uploadImageSequence(sequenceOf(1001, 1004), 4, {
@@ -110,11 +110,11 @@ describe('uploadImageSequence', () => {
     });
     expect(seen[0]).toEqual({ percent: 0, files: 0, totalFiles: 4 });
     expect(seen.at(-1)).toMatchObject({ files: 4, totalFiles: 4 });
-    // Le pourcentage reste sous 100 tant que la finalisation serveur n'a pas répondu.
+    // The percentage stays below 100 until the server finalization has responded.
     expect(Math.max(...seen.map((s) => s.percent))).toBeLessThanOrEqual(99);
   });
 
-  it('libère les frames déjà déposées quand l’envoi est annulé', async () => {
+  it('frees the frames already dropped when the upload is cancelled', async () => {
     routeApi();
     const ctrl = new AbortController();
     put.mockImplementation(async () => {
@@ -126,9 +126,9 @@ describe('uploadImageSequence', () => {
     expect(post.mock.calls.some(([p]) => p === '/api/media/sequence/7/complete')).toBe(false);
   });
 
-  it('ne finalise pas quand une frame échoue définitivement', async () => {
+  it('does not finalize when a frame fails definitively', async () => {
     routeApi();
-    // 400 : refus définitif, aucun réessai — un lot incomplet ne doit jamais être finalisé.
+    // 400: definitive refusal, no retry: an incomplete batch must never be finalized.
     put.mockRejectedValue(new UploadHttpError(400));
     await expect(uploadImageSequence(sequenceOf(1001, 1010), 4)).rejects.toThrow();
     expect(post.mock.calls.some(([p]) => p === '/api/media/sequence/7/complete')).toBe(false);

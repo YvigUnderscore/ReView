@@ -26,14 +26,14 @@ const md = (name, content) => {
 };
 
 describe('sectionLabel', () => {
-  it('met en capitales chaque mot d’un nom de dossier', () => {
+  it('capitalizes each word of a folder name', () => {
     expect(sectionLabel('getting-started')).toBe('Getting Started');
     expect(sectionLabel('api')).toBe('Api');
   });
 });
 
 describe('orderSections', () => {
-  it('range les sections connues dans l’ordre du sommaire', () => {
+  it('orders the known sections in the table-of-contents order', () => {
     expect(orderSections(['development', 'api', 'getting-started'])).toEqual([
       'getting-started',
       'api',
@@ -41,11 +41,11 @@ describe('orderSections', () => {
     ]);
   });
 
-  it('renvoie les sections inconnues à la fin, par ordre alphabétique', () => {
+  it('returns unknown sections at the end, in alphabetical order', () => {
     expect(orderSections(['zebra', 'api', 'alpha'])).toEqual(['api', 'alpha', 'zebra']);
   });
 
-  it('ne modifie pas le tableau reçu', () => {
+  it('does not modify the array received', () => {
     const dirs = ['development', 'api'];
     orderSections(dirs);
     expect(dirs).toEqual(['development', 'api']);
@@ -53,15 +53,15 @@ describe('orderSections', () => {
 });
 
 describe('pageTitle', () => {
-  it('retient le premier titre de niveau 1', async () => {
+  it('keeps the first level-1 heading', async () => {
     expect(await pageTitle(md('page.md', '# Validation & tests\n\nTexte.\n'))).toBe('Validation & tests');
   });
 
-  it('retombe sur le nom du fichier quand la page n’a pas de titre', async () => {
+  it('falls back to the file name when the page has no title', async () => {
     expect(await pageTitle(md('sans-titre.md', 'Juste du texte.\n'))).toBe('sans-titre');
   });
 
-  it('ignore un titre de niveau 2', async () => {
+  it('ignores a level-2 heading', async () => {
     expect(await pageTitle(md('niveau2.md', '## Sous-titre\n\n# Vrai titre\n'))).toBe('Vrai titre');
   });
 });
@@ -77,7 +77,7 @@ describe('parsePageMeta', () => {
     '## Transport',
   ].join('\n');
 
-  it('lit titre, sous-titre et date de mise à jour', () => {
+  it('reads title, subtitle and update date', () => {
     expect(parsePageMeta(page, 'fallback')).toEqual({
       title: 'Video review',
       summary: 'Frame-accurate playback, comparison and timeline markers.',
@@ -85,7 +85,7 @@ describe('parsePageMeta', () => {
     });
   });
 
-  it('tolère une page sans préambule : elle reste servable', () => {
+  it('tolerates a page without a preamble: it remains servable', () => {
     expect(parsePageMeta('# Titre seul\n\nTexte.\n', 'fallback')).toEqual({
       title: 'Titre seul',
       summary: '',
@@ -93,42 +93,42 @@ describe('parsePageMeta', () => {
     });
   });
 
-  it('ne prend pas un paragraphe en gras pour un sous-titre', () => {
+  it('does not take a bold paragraph for a subtitle', () => {
     expect(parsePageMeta('# Titre\n\n**Gras.**\n', 'fallback').summary).toBe('');
   });
 
-  it('retombe sur le nom de fichier quand il n’y a pas de titre', () => {
+  it('falls back to the file name when there is no title', () => {
     expect(parsePageMeta('Texte.\n', 'sans-titre').title).toBe('sans-titre');
   });
 });
 
 /**
- * Les titres de chapitre sont le seul index de contenu de la documentation : sans eux, la
- * palette ne rendait rien sur « watermark », alors que trois chapitres en parlent.
+ * Chapter titles are the only content index of the documentation: without them, the
+ * palette returned nothing for "watermark", although three chapters talk about it.
  */
 describe('pageHeadings', () => {
-  it('retient les chapitres, pas le titre de la page', () => {
+  it('keeps the chapters, not the page title', () => {
     const page = '# Secure distribution\n\n## Viewer watermark\n\ntexte\n\n### Burn-in\n';
     expect(pageHeadings(page)).toEqual(['Viewer watermark', 'Burn-in']);
   });
 
-  it('ignore les dièses d’un bloc de code — un commentaire de shell n’est pas un chapitre', () => {
+  it('ignores the hashes of a code block: a shell comment is not a chapter', () => {
     const page = ['## Vrai chapitre', '', '```bash', '## pas un chapitre', '```', ''].join('\n');
     expect(pageHeadings(page)).toEqual(['Vrai chapitre']);
   });
 
-  it('rend le titre en texte brut et ne le répète pas', () => {
+  it('renders the title as plain text and does not repeat it', () => {
     const page = '## Using `ffmpeg`\n\n## Using `ffmpeg`\n\n## The **hard** part\n';
     expect(pageHeadings(page)).toEqual(['Using ffmpeg', 'The hard part']);
   });
 
-  it('rend une liste vide pour une page sans chapitre', () => {
+  it('returns an empty list for a page without chapters', () => {
     expect(pageHeadings('# Titre\n\nUn paragraphe.\n')).toEqual([]);
   });
 });
 
 describe('orderPages', () => {
-  it('suit l’ordre de lecture de la section, pas l’alphabet', () => {
+  it('follows the reading order of the section, not the alphabet', () => {
     expect(orderPages('api', ['python-client.md', 'overview.md', 'authentication.md'])).toEqual([
       'overview.md',
       'authentication.md',
@@ -136,7 +136,7 @@ describe('orderPages', () => {
     ]);
   });
 
-  it('range les pages hors sommaire à la fin, par ordre alphabétique', () => {
+  it('puts the pages outside the table of contents at the end, in alphabetical order', () => {
     expect(orderPages('api', ['zeta.md', 'overview.md', 'alpha.md'])).toEqual([
       'overview.md',
       'alpha.md',
@@ -144,11 +144,11 @@ describe('orderPages', () => {
     ]);
   });
 
-  it('retombe sur l’alphabet pour une section inconnue', () => {
+  it('falls back to the alphabet for an unknown section', () => {
     expect(orderPages('tutorials', ['b.md', 'a.md'])).toEqual(['a.md', 'b.md']);
   });
 
-  it('ne modifie pas le tableau reçu', () => {
+  it('does not modify the array received', () => {
     const files = ['python-client.md', 'overview.md'];
     orderPages('api', files);
     expect(files).toEqual(['python-client.md', 'overview.md']);
@@ -156,23 +156,23 @@ describe('orderPages', () => {
 });
 
 describe('unlistedPages', () => {
-  it('signale les pages absentes du sommaire', () => {
+  it('reports the pages missing from the table of contents', () => {
     expect(unlistedPages('api', ['overview.md', 'nouvelle.md'])).toEqual(['nouvelle.md']);
   });
 
-  it('ne signale rien pour une section sans sommaire', () => {
+  it('reports nothing for a section without a table of contents', () => {
     expect(unlistedPages('tutorials', ['a.md'])).toEqual([]);
   });
 });
 
 describe('plainText', () => {
-  it('retire le markdown en ligne — titre et sous-titre sont rendus en texte brut', () => {
+  it('strips inline markdown: title and subtitle are rendered as plain text', () => {
     expect(plainText('From `git clone` to a running studio')).toBe('From git clone to a running studio');
     expect(plainText('the only **ADMIN** of the studio')).toBe('the only ADMIN of the studio');
     expect(plainText('see [the guide](x.md) first')).toBe('see the guide first');
   });
 
-  it('laisse le texte ordinaire intact', () => {
+  it('leaves ordinary text intact', () => {
     expect(plainText('  Video review  ')).toBe('Video review');
   });
 });

@@ -89,8 +89,8 @@ class Errors(unittest.TestCase):
         self.assertEqual(caught.exception.status, 404)
         self.assertFalse(caught.exception.is_retryable)
 
-    # Un frontal en panne rend une page HTML, pas le JSON de l'API : le client doit
-    # quand même produire une erreur exploitable.
+    # A broken front end returns an HTML page, not the API's JSON: the client must
+    # still produce a usable error.
     def test_survives_an_error_body_that_is_not_json(self) -> None:
         api = client(http_error(400, b"<html>bad gateway</html>"))
         with self.assertRaises(ReviewApiError) as caught:
@@ -116,7 +116,7 @@ class Retries(unittest.TestCase):
         api.me()
         self.assertEqual(api.sleeper.slept, [7.0])
 
-    # Sans clé d'idempotence, rejouer un POST publierait une seconde version.
+    # Without an idempotency key, replaying a POST would publish a second version.
     def test_never_replays_a_write_that_cannot_be_recognised(self) -> None:
         api = client(http_error(503), json_response({}))
         with self.assertRaises(ReviewApiError):
@@ -143,8 +143,8 @@ class Retries(unittest.TestCase):
 
 
 class Downloads(unittest.TestCase):
-    # Une URL présignée porte déjà sa signature : y ajouter l'en-tête d'autorisation fait
-    # refuser la requête par le stockage objet.
+    # A presigned URL already carries its signature: adding the authorization header makes
+    # the object storage reject the request.
     def test_downloads_without_the_authorization_header(self) -> None:
         api = client(json_response({"url": "https://minio/plate.mov"}), json_response("BYTES"))
         with tempfile.TemporaryDirectory() as folder:

@@ -2,25 +2,25 @@
 # SPDX-FileCopyrightText: 2026 Yvig Bidon
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Cuisson d'une LUT 3D d'affichage a partir d'une config OCIO (ReView).
+"""Bake a 3D display LUT from an OCIO config (ReView).
 
-Ce script est la voie **exacte** du produit : il demande a OpenColorIO le processeur
-`espace d'entree -> (display, view)` de la config du studio, l'applique a une grille
-reguliere, et ecrit un `.cube` (Iridas/Resolve) que le viewer WebGL echantillonne tel quel.
-Il couvre donc aussi les vues tone-mappees (RRT + ODT ACES), que le repli TypeScript
-(`backend/src/lib/ocioBake.ts`) refuse volontairement d'approcher.
+This script is the product's **exact** path: it asks OpenColorIO for the processor
+`input space -> (display, view)` of the studio config, applies it to a regular grid,
+and writes a `.cube` (Iridas/Resolve) that the WebGL viewer samples as is.
+It therefore also covers tone-mapped views (ACES RRT + ODT), which the TypeScript
+fallback (`backend/src/lib/ocioBake.ts`) deliberately refuses to approximate.
 
-Dependance : PyOpenColorIO (roue PyPI `opencolorio`, BSD-3-Clause). Elle n'est pas dans
-l'image par defaut ; l'ajouter au venv deja present pour l'USD :
+Dependency: PyOpenColorIO (PyPI wheel `opencolorio`, BSD-3-Clause). It is not in the
+default image; add it to the venv already present for USD:
 
     /opt/usdenv/bin/pip install --no-cache-dir opencolorio
 
-Convention de domaine (celle du viewer) : l'entree de la LUT est le **code d'entree encode
-dans [0,1]** (par defaut l'espace texture sRGB, ce que contient un JPEG/PNG de review) et la
-sortie est le **code d'affichage**. Le rouge varie le plus vite, comme le veut le format.
+Domain convention (the viewer's): the LUT input is the **encoded input code in
+[0,1]** (by default the sRGB texture space, which is what a review JPEG/PNG contains) and
+the output is the **display code**. Red varies the fastest, as the format requires.
 
-Sortie : le fichier `--out`, plus une ligne `REVIEW_OCIO_JSON {...}` sur stdout (le reste du
-bruit eventuel d'OCIO part sur stderr).
+Output: the `--out` file, plus a `REVIEW_OCIO_JSON {...}` line on stdout (any remaining
+OCIO noise goes to stderr).
 """
 
 import argparse
@@ -33,7 +33,7 @@ MAX_SIZE = 65
 
 
 def build_grid(size):
-    """Grille reguliere [0,1]^3, rouge variant le plus vite (ordre .cube)."""
+    """Regular [0,1]^3 grid, red varying the fastest (.cube order)."""
     values = array.array("f", bytes(4 * size * size * size * 3))
     last = float(size - 1)
     i = 0
@@ -49,8 +49,8 @@ def build_grid(size):
 
 def write_cube(path, values, size, title, source):
     with open(path, "w", encoding="utf-8") as fh:
-        # Meme forme que `CUBE_SOURCE_PREFIX` dans backend/src/lib/ocioBake.ts : le viewer
-        # relit cette ligne pour afficher la provenance de la transformee.
+        # Same shape as `CUBE_SOURCE_PREFIX` in backend/src/lib/ocioBake.ts: the viewer
+        # re-reads this line to display the provenance of the transform.
         fh.write("# ReView display transform | source: %s\n" % source)
         fh.write('TITLE "%s"\n' % title.replace('"', "").replace("\n", " "))
         fh.write("LUT_3D_SIZE %d\n" % size)
@@ -87,8 +87,8 @@ def main():
         sys.stderr.write("unknown view %r (have: %s)\n" % (args.view, ", ".join(views)))
         return 3
 
-    # `--inputspace` porte plusieurs candidats separes par ';' : les configs ACES ont renomme
-    # l'espace texture sRGB d'une generation a l'autre. On retient le premier qui existe.
+    # `--inputspace` takes several candidates separated by ';': ACES configs renamed
+    # the sRGB texture space from one generation to the next. We keep the first one that exists.
     known = set(config.getColorSpaceNames())
     candidates = [c for c in args.inputspace.split(";") if c]
     inputspace = next((c for c in candidates if c in known), None)
@@ -103,7 +103,7 @@ def main():
 
     values = build_grid(args.size)
     cpu.applyRGB(values)
-    # Le viewer echantillonne un code d'affichage : on borne, comme le ferait l'ecran.
+    # The viewer samples a display code: we clamp it, as the screen would.
     for i, v in enumerate(values):
         if v < 0.0:
             values[i] = 0.0

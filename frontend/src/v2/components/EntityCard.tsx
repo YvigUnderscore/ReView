@@ -15,7 +15,7 @@ import EntityCardMeta, { MetaDescription, type EntityMeta } from './entity/Entit
 import EntityThumb from './entity/EntityThumb';
 import { useT } from '../i18n';
 
-/** État de multi-sélection d'une carte (13.A). */
+/** Multi-selection state of a card (13.A). */
 export interface EntitySelection {
   selected: boolean;
   onSelect: (mods: SelectModifiers) => void;
@@ -30,24 +30,24 @@ export interface EntityCardProps {
   badge?: ReactNode;
   thumbnailUrl?: string | null;
   view: ViewMode;
-  /** Boutons d'action (édition/suppression…) visibles au survol. */
+  /** Action buttons (edit/delete…) visible on hover. */
   actions?: EntityItemAction[];
-  /** Multi-sélection : affiche une case cochable (survol ou cochée). */
+  /** Multi-selection: shows a tickable checkbox (on hover or when ticked). */
   selection?: EntitySelection;
-  /** Actions du menu contextuel (clic droit). */
+  /** Context-menu actions (right click). */
   contextActions?: EntityItemAction[];
   /**
-   * Entrées de menu déclaratives, pour ce que `EntityItemAction` ne sait pas exprimer —
-   * un groupe radio de statuts, par exemple. Elles se placent avant les actions.
+   * Declarative menu entries, for what `EntityItemAction` cannot express,
+   * for example a radio group of statuses. They are placed before the actions.
    */
   contextEntries?: MenuEntry[];
-  /** Épinglage aux favoris (42.A3 — №71) : injecte l'action « épingler » au clic droit + étoile. */
+  /** Pinning to favorites (42.A3, №71): injects the "pin" action on right click, plus a star. */
   favorite?: { type: FavType; entityId: number };
-  /** Aperçu animé au survol (42.A — №78) : sprite de miniatures (vue cartes). */
+  /** Animated preview on hover (42.A, №78): thumbnail sprite (cards view). */
   hoverSprite?: SpriteData | null;
   /**
-   * Ce que la carte dit de l'entité au-delà de son nom : description, visages des
-   * responsables, attente de review, dernière modification. Absent = carte d'avant.
+   * What the card says about the entity beyond its name: description, the faces of
+   * those responsible, review wait, last modification. Absent = older card.
    */
   meta?: EntityMeta;
 }
@@ -78,11 +78,11 @@ function Actions({ actions }: { actions?: EntityItemAction[] }) {
   );
 }
 
-/** Case de sélection : capte les modificateurs (Shift/Ctrl) et neutralise la navigation. */
+/** Selection checkbox: captures the modifiers (Shift/Ctrl) and neutralizes navigation. */
 function SelectBox({ selection, className }: { selection: EntitySelection; className?: string }) {
   const t = useT();
-  // La case interne est inerte (tabIndex -1) : c'est ce conteneur qui porte l'interaction,
-  // clavier compris — les modificateurs se lisent aussi bien sur un événement clavier.
+  // The inner checkbox is inert (tabIndex -1): this container carries the interaction,
+  // keyboard included, since modifiers can be read from a keyboard event too.
   const select = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) =>
     selection.onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
   return (
@@ -114,7 +114,7 @@ function SelectBox({ selection, className }: { selection: EntitySelection; class
   );
 }
 
-/** Carte ou ligne compacte selon `view`. Cliquable via `to` (lien) ou `onClick`. */
+/** Card or compact row depending on `view`. Clickable via `to` (link) or `onClick`. */
 function EntityCard({
   to,
   onClick,
@@ -135,13 +135,13 @@ function EntityCard({
   const t = useT();
   const highlighted = active || selection?.selected;
   /**
-   * Trois états de bordure, dans cet ordre de priorité.
+   * Three border states, in this order of priority.
    *
-   * La sélection et la carte courante passent avant « non consulté » : une carte cochée
-   * doit se lire comme cochée, sinon une action de masse s'exerce sur ce qu'on croit avoir
-   * désélectionné. « Non consulté » n'emprunte donc pas `primary` — il prend `info`, qui
-   * n'a aucun autre emploi sur une carte, et l'anneau reste plus discret que celui de la
-   * sélection : c'est une invitation à regarder, pas un état qu'on a choisi.
+   * Selection and the current card take precedence over "unviewed": a ticked card
+   * must read as ticked, otherwise a mass action would apply to what one believes to have
+   * deselected. "Unviewed" therefore does not borrow `primary`: it takes `info`, which
+   * has no other use on a card, and the ring stays more discreet than that of the
+   * selection: it is an invitation to look, not a state one has chosen.
    */
   const activeRing = highlighted
     ? 'border-primary ring-1 ring-primary'
@@ -150,7 +150,7 @@ function EntityCard({
       : 'border-border';
   const clickable = onClick ? 'cursor-pointer text-left w-full' : '';
 
-  // Favoris (42.A3) : action clic droit « épingler/retirer » + indicateur étoile.
+  // Favorites (42.A3): right-click action "pin/unpin" plus a star indicator.
   const isFav = useFavorites((s) => (favorite ? s.isFav(favorite.type, favorite.entityId) : false));
   const toggleFav = useFavorites((s) => s.toggle);
   const favAction: EntityItemAction[] = favorite
@@ -216,7 +216,7 @@ function EntityCard({
     );
   }
 
-  // Vue cartes — léger « hover lift » (désactivé si prefers-reduced-motion)
+  // Card view: light "hover lift" (disabled if prefers-reduced-motion)
   return wrap(
     <div
       className={`group overflow-hidden rounded-lg border ${activeRing} bg-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-colors`}
@@ -254,30 +254,30 @@ function EntityCard({
 }
 
 /**
- * Retard d'apparition de la dernière carte animée, en rangs de 30 ms.
+ * Entrance delay of the last animated card, in rows of 30 ms.
  *
- * Au-delà, toutes partent ensemble : une page de cent cartes descendue par la sentinelle
- * étalait son entrée sur trois secondes, et les cartes du bas finissaient d'apparaître
- * bien après qu'on ait commencé à lire. Douze, c'est ce qu'un écran large affiche.
+ * Beyond that, they all leave together: a page of a hundred cards scrolled into view by the sentinel
+ * spread its entrance over three seconds, and the cards at the bottom finished appearing
+ * well after reading had begun. Twelve is what a wide screen shows.
  */
 const STAGGER_RANKS = 12;
 
-/** Conteneur adaptatif : grille en mode cartes (apparition en cascade), pile en mode compact. */
+/** Adaptive container: grid in cards mode (cascading entrance), stack in compact mode. */
 export function EntityContainer({ view, children }: { view: ViewMode; children: ReactNode }) {
   if (view !== 'cards') return <div className="space-y-1.5">{children}</div>;
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {Children.toArray(children).map((child, i) => (
-        // Clé reprise de l'enfant (`key={shot.id}` chez l'appelant), jamais l'index :
-        // keyée par position, l'enveloppe changeait de carte au moindre filtre, React
-        // réutilisait le nœud de la voisine et rejouait le fondu sur des cartes déjà là.
+        // Key taken from the child (`key={shot.id}` in the caller), never the index:
+        // keyed by position, the wrapper changed card at the slightest filter, React
+        // reused the neighbour's node and replayed the fade on cards already there.
         <div
           key={isValidElement(child) ? child.key : i}
           className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200 fill-mode-backwards motion-reduce:animate-none"
           style={{
             animationDelay: `${Math.min(i, STAGGER_RANKS) * 30}ms`,
-            // Même courbe que l'ancienne transition (ease-out doux) : l'apparition est
-            // passée du moteur d'animation JS à une animation CSS, à l'identique.
+            // Same curve as the former transition (soft ease-out): the entrance has
+            // moved from the JS animation engine to a CSS animation, identically.
             animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
@@ -288,14 +288,14 @@ export function EntityContainer({ view, children }: { view: ViewMode; children: 
   );
 }
 
-/** Icônes d'action prêtes à l'emploi. */
+/** Ready-made action icons. */
 export const EditIcon = <Pencil size={14} />;
 export const DeleteIcon = <Trash2 size={14} />;
 
 /**
- * Mémoïsée : une liste d'entités en monte jusqu'à deux mille, chacune avec son menu
- * contextuel Radix, sa case et son aperçu au survol. Cocher une case ne doit re-rendre
- * que la carte cochée — encore faut-il que l'appelant lui passe des props stables
- * (cf. `pages/reviews/ReviewCard`, qui porte la frontière de mémoïsation de la page).
+ * Memoized: a list of entities goes up to two thousand, each with its Radix context
+ * menu, its checkbox and its hover preview. Ticking a checkbox must only re-render
+ * the ticked card, provided the caller passes it stable props
+ * (cf. `pages/reviews/ReviewCard`, which holds the page's memoization boundary).
  */
 export default memo(EntityCard);

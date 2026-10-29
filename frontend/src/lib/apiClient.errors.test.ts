@@ -4,9 +4,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Le catalogue est mimé plutôt que lu : ce qui est vérifié ici est le **mécanisme** —
- * traduire par le code, se rabattre sur le message du serveur — et non le contenu du
- * catalogue, qui vit dans `messages/*.json` et bouge à chaque lot de traduction.
+ * The catalog is mocked rather than read: what is verified here is the **mechanism**:
+ * translating by code, falling back to the server message, and not the content of the
+ * catalog, which lives in `messages/*.json` and changes with each translation batch.
  */
 const TRANSLATED: Record<string, (p: Record<string, unknown>) => string> = {
   'error.PROJECT_ARCHIVED': () => 'Le projet est archivé',
@@ -33,30 +33,30 @@ beforeEach(() => {
 });
 
 describe('apiErrorMessage', () => {
-  it('traduit par le code : le message anglais du serveur reste une trace', () => {
+  it('translates by code: the English server message stays only as a trace', () => {
     const body = { error: 'Project is archived', code: 'PROJECT_ARCHIVED' };
     expect(apiErrorMessage(body, 403)).toBe('Le projet est archivé');
   });
 
-  it('code pas encore traduit : affiche le message du serveur, jamais la clé', () => {
+  it('untranslated code: shows the server message, never the key', () => {
     const body = { error: 'Version already published', code: 'PUBLISHED_LOCKED' };
     expect(apiErrorMessage(body, 403)).toBe('Version already published');
   });
 
-  it('réponse sans code : affiche le message du serveur', () => {
+  it('response without code: shows the server message', () => {
     expect(apiErrorMessage({ error: 'Something odd' }, 400)).toBe('Something odd');
   });
 
-  it('réponse vide : message générique portant le statut', () => {
+  it('empty response: generic message carrying the status', () => {
     expect(apiErrorMessage({}, 502)).toBe('common.error.http({"status":502})');
   });
 
   /**
-   * Traduire par le code effaçait ce que le serveur disait de précis : « compte
-   * verrouillé » redevenait « refus d'authentification », et le lecteur repartait dans les
-   * journaux. Les détails de la faute nourrissent donc la phrase traduite.
+   * Translating by code erased what the server said precisely: "account
+   * locked" became "authentication refused" again, and the reader went back to the
+   * logs. The details of the failure therefore feed the translated sentence.
    */
-  it('les détails du serveur nourrissent le message traduit', () => {
+  it('the server details feed the translated message', () => {
     const reason = "Can't authenticate user 'demo' because the account is locked.";
     expect(
       apiErrorMessage(
@@ -67,8 +67,8 @@ describe('apiErrorMessage', () => {
   });
 });
 
-describe('api — erreur levée', () => {
-  it('porte le statut et le code, et un message déjà traduit', async () => {
+describe('api — thrown error', () => {
+  it('carries the status and the code, and an already translated message', async () => {
     mockFetch.mockResolvedValue(
       errorResponse({ error: 'Project is archived', code: 'PROJECT_ARCHIVED' }, 403),
     );
@@ -78,7 +78,7 @@ describe('api — erreur levée', () => {
     expect(error).toMatchObject({ status: 403, code: 'PROJECT_ARCHIVED', message: 'Le projet est archivé' });
   });
 
-  it('sans corps JSON : ni code ni message serveur, mais un statut', async () => {
+  it('without a JSON body: neither server code nor message, but a status', async () => {
     mockFetch.mockResolvedValue(new Response('boom', { status: 500 }));
     const error = (await api.get('/x').catch((e: unknown) => e)) as InstanceType<typeof ApiError>;
 

@@ -9,21 +9,21 @@ import { api } from '../lib/apiClient';
 import type { MediaKind } from '../v2/types/api';
 
 /**
- * Store global des uploads (Zustand).
+ * Global upload store (Zustand).
  *
- * Permet la navigation libre pendant un upload : l'état vit ici, hors de l'arbre de
- * pages, et survit aux changements de route. Le flux délègue à `uploadClient`
- * (URL présignée → PUT direct MinIO → finalize), donc rien ne bloque le thread UI.
+ * Allows free navigation during an upload: the state lives here, outside the tree of
+ * pages, and survives route changes. The flow delegates to `uploadClient`
+ * (presigned URL → direct PUT to MinIO → finalize), so nothing blocks the UI thread.
  *
- * **File bornée (vague 2)** : déposer trente plans lançait trente transferts de front,
- * qui se disputaient la bande passante et faisaient expirer les signatures des derniers.
- * Trois fichiers montent à la fois, les suivants attendent leur créneau en `pending`.
- * Chaque transfert porte un `AbortController` : retirer une ligne coupe réellement la
- * requête en vol et abandonne le multipart côté serveur.
+ * **Bounded queue (wave 2):** dropping thirty shots launched thirty transfers at once,
+ * which competed for bandwidth and made the signatures of the last ones expire.
+ * Three files go up at a time; the next ones wait for their slot in `pending`.
+ * Each transfer carries an `AbortController`: removing a row really cuts the
+ * in-flight request and abandons the multipart on the server.
  *
- * Après finalize, si le média part en traitement (transcodage vidéo, conversion 3D…),
- * l'item passe en `processing` et le store **suit le statut** (poll léger) jusqu'à
- * READY/FAILED — la notification d'upload devient une notification de transcodage.
+ * After finalize, if the media goes into processing (video transcoding, 3D conversion…),
+ * the item moves to `processing` and the store **tracks the status** (light poll) until
+ * READY/FAILED: the upload notification becomes a transcoding notification.
  */
 
 export type UploadStatus = 'pending' | 'uploading' | 'finalizing' | 'processing' | 'done' | 'error';
@@ -39,12 +39,12 @@ export interface UploadItem {
   error?: string;
 }
 
-/** Ce qu'un dépôt sait de lui-même en plus du fichier et de sa version. */
+/** What a drop knows about itself, beyond the file and its version. */
 export interface EnqueueOptions {
   kind?: MediaKind;
   /**
-   * Consigne écrite avant l'envoi (Phase 50), quand le projet l'exige. Elle voyage jusqu'au
-   * `finalize` : c'est le seul moment où le serveur peut la refuser avant de publier.
+   * Instruction written before sending (Phase 50), when the project requires it. It travels to
+   * `finalize`: that is the only moment when the server can refuse it before publishing.
    */
   note?: string | null;
 }
@@ -52,13 +52,13 @@ export interface EnqueueOptions {
 const POLL_MS = 3000;
 const POLL_MAX_MS = 20 * 60_000; // au-delà on abandonne le suivi (le worker a un souci)
 
-/** Transferts simultanés. Au-delà, les connexions se gênent plus qu'elles n'aident. */
+/** Simultaneous transfers. Beyond that, connections hinder each other more than they help. */
 const MAX_CONCURRENT_UPLOADS = 3;
 
-/** Statuts qui consomment un créneau de transfert (le traitement serveur, lui, est gratuit). */
+/** Statuses that consume a transfer slot (server processing, for its part, is free). */
 const isTransferring = (s: UploadStatus): boolean => s === 'uploading' || s === 'finalizing';
 
-/** Un transfert en attente de créneau, tel que `startUpload` le reprendra. */
+/** A transfer waiting for a slot, as `startUpload` will pick it up. */
 interface QueuedJob {
   file: File;
   versionId: number;
@@ -66,20 +66,20 @@ interface QueuedJob {
   note?: string | null;
 }
 
-/** Fichiers en attente de créneau — hors du store : un `File` n'a rien à faire dans l'état rendu. */
+/** Files waiting for a slot: outside the store, since a `File` has no business in the rendered state. */
 const queued = new Map<string, QueuedJob>();
-/** Annulation des transferts en vol, par identifiant d'item. */
+/** Cancellation of in-flight transfers, by item identifier. */
 const controllers = new Map<string, AbortController>();
 
 interface UploadState {
   uploads: UploadItem[];
-  /** Met un fichier en file (démarrage immédiat si un créneau est libre). Retourne l'id local. */
+  /** Queues a file (starts immediately if a slot is free). Returns the local id. */
   enqueue: (file: File, versionId: number, opts?: EnqueueOptions) => string;
   updateUpload: (id: string, patch: Partial<UploadItem>) => void;
-  /** Retire la ligne — et annule vraiment le transfert s'il est en cours. */
+  /** Removes the row, and really cancels the transfer if it is in progress. */
   removeUpload: (id: string) => void;
   clearCompleted: () => void;
-  /** Nombre d'uploads en cours (pour badges/indicateurs). */
+  /** Number of uploads in progress (for badges/indicators). */
   activeCount: () => number;
 }
 
@@ -125,9 +125,9 @@ export const useUploadStore = create<UploadState>((set, get) => ({
 }));
 
 /**
- * Démarre les transferts en attente tant qu'il reste un créneau. Le compte des transferts
- * actifs se lit dans l'état plutôt que dans un compteur parallèle : vider le store (tests,
- * déconnexion) ne peut donc pas laisser la file bloquée sur un créneau fantôme.
+ * Starts the pending transfers as long as a slot is free. The count of active transfers is read
+ * from the state rather than from a parallel counter: emptying the store (tests,
+ * sign-out) therefore cannot leave the queue blocked on a ghost slot.
  */
 function pump(get: () => UploadState): void {
   const { uploads } = get();
@@ -156,17 +156,17 @@ async function startUpload(id: string, job: QueuedJob, get: () => UploadState): 
       onProgress: (pct) =>
         updateUpload(id, { progress: pct, status: pct >= 100 ? 'finalizing' : 'uploading' }),
     });
-    // Nom non conforme à la nomenclature du projet en mode « avertir » (38.C).
+    // Name not compliant with the project nomenclature in "warn" mode (38.C).
     if (res.namingWarning) toast.warning(t('naming.warningFile', { name: job.file.name }));
     if (res.status === 'PROCESSING') {
-      // Traitement serveur (transcodage/conversion) : on suit jusqu'à READY.
+      // Server processing (transcoding/conversion): we follow it until READY.
       updateUpload(id, { status: 'processing', progress: 100, mediaObjectId: res.mediaObjectId });
       followProcessing(id, res.mediaObjectId, get);
     } else {
       updateUpload(id, { status: 'done', progress: 100, mediaObjectId: res.mediaObjectId });
     }
   } catch (err) {
-    // Annulation demandée : la ligne a déjà disparu, il n'y a pas d'échec à signaler.
+    // Cancellation requested: the row has already disappeared, so there is no failure to report.
     if (!controller.signal.aborted) {
       updateUpload(id, {
         status: 'error',
@@ -179,7 +179,7 @@ async function startUpload(id: string, job: QueuedJob, get: () => UploadState): 
   }
 }
 
-/** Poll léger du statut média jusqu'à READY/FAILED (item retiré du store = arrêt). */
+/** Light poll of the media status until READY/FAILED (item removed from the store = stop). */
 function followProcessing(id: string, mediaObjectId: number, get: () => UploadState) {
   const startedAt = Date.now();
   const tick = async () => {
@@ -195,7 +195,7 @@ function followProcessing(id: string, mediaObjectId: number, get: () => UploadSt
       if (media.status === 'FAILED')
         return get().updateUpload(id, { status: 'error', error: t('uploads.error.processingFailed') });
     } catch {
-      // Erreur réseau transitoire : on retentera au prochain tick.
+      // Transient network error: we will retry at the next tick.
     }
     window.setTimeout(() => void tick(), POLL_MS);
   };

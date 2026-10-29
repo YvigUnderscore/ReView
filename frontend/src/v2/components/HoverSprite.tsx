@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 
-/** Sprite de miniatures : grille `cols`×`rows`, `count` vignettes (42.A — №78). */
+/** Thumbnail sprite: `cols`×`rows` grid, `count` thumbnails (42.A, №78). */
 export interface SpriteData {
   url: string;
   count: number;
@@ -12,29 +12,29 @@ export interface SpriteData {
 }
 
 /**
- * Aperçu animé au survol (42.A — №78) : superpose la carte et fait défiler les vignettes
- * du sprite tant que la souris est dessus. Transparent au repos → laisse voir la miniature
- * statique en dessous. Se pilote seul (il est au-dessus, donc reçoit le survol).
+ * Animated hover preview (42.A, №78): overlays the card and scrolls the thumbnails
+ * of the sprite while the mouse is over it. Transparent at rest, so it lets the
+ * static thumbnail below show through. Driven on its own (it is on top, so it receives the hover).
  *
- * La mosaïque n'entre dans le style **qu'après** un premier survol. Un fond CSS est
- * téléchargé dès que l'élément entre dans l'arbre de rendu — `opacity: 0` ne diffère rien,
- * seul `display: none` le ferait : une page de cent cartes réclamait cent planches-contact
- * de plusieurs centaines de kilo-octets pour un survol qui n'aurait peut-être jamais lieu,
- * et annulait le `loading="lazy"` posé juste à côté sur la miniature statique.
+ * The mosaic only enters the style **after** a first hover. A CSS background is
+ * downloaded as soon as the element enters the render tree. `opacity: 0` changes nothing,
+ * only `display: none` would: a page of a hundred cards called for a hundred contact sheets
+ * of several hundred kilobytes for a hover that might never happen,
+ * and cancelled the `loading="lazy"` set right beside it on the static thumbnail.
  */
 export default function HoverSprite({ sprite }: { sprite: SpriteData }) {
   const [hovered, setHovered] = useState(false);
   const [frame, setFrame] = useState(0);
-  // Armé au premier survol, et jamais désarmé : le second survol doit être instantané.
+  // Armed on the first hover, and never disarmed: the second hover must be instantaneous.
   const [armed, setArmed] = useState(false);
-  // On ne dévoile la mosaïque qu'une fois décodée. Poser l'URL avant ferait apparaître
-  // l'image par bandes sous le fondu, là où l'ancien code la tenait prête d'avance.
+  // The mosaic is only revealed once decoded. Setting the URL beforehand would make
+  // the image appear in strips under the fade, where the former code had it ready in advance.
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!armed) return;
-    // Préchargement hors du DOM : c'est LA requête réseau de la mosaïque. Le fond CSS
-    // posé ensuite tape dans le cache du navigateur, il n'en déclenche pas de seconde.
+    // Preload off the DOM: this IS the network request of the mosaic. The CSS background
+    // set afterwards hits the browser cache, so it triggers no second request.
     const img = new Image();
     const reveal = () => setReady(true);
     img.addEventListener('load', reveal);
@@ -50,7 +50,7 @@ export default function HoverSprite({ sprite }: { sprite: SpriteData }) {
 
   const col = frame % sprite.cols;
   const row = Math.floor(frame / sprite.cols);
-  // Position en % (0→100) pour que chaque tuile remplisse la carte quelle que soit sa taille.
+  // Position in % (0→100) so that each tile fills the card whatever its size.
   const posX = sprite.cols > 1 ? (col / (sprite.cols - 1)) * 100 : 0;
   const posY = sprite.rows > 1 ? (row / (sprite.rows - 1)) * 100 : 0;
   const shown = hovered && ready;

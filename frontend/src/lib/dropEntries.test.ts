@@ -5,9 +5,9 @@ import { describe, it, expect } from 'vitest';
 import { filesFromDataTransfer } from './dropEntries';
 
 /**
- * Déposer un dossier de plans ne produisait rien, sans message : `DataTransfer.files`
- * ignore les répertoires. Ces cas décrivent l'arborescence telle que la rend l'API
- * d'entrées des navigateurs, y compris ses pièges (lecture par lots, fichiers cachés).
+ * Dropping a folder of shots produced nothing, without any message: `DataTransfer.files`
+ * ignores directories. These cases describe the tree as the browsers' entries API renders it,
+ * including its pitfalls (batched reading, hidden files).
  */
 
 const fileEntry = (name: string): FileSystemEntry =>
@@ -18,7 +18,7 @@ const fileEntry = (name: string): FileSystemEntry =>
     file: (cb: (f: File) => void) => cb(new File(['x'], name)),
   }) as unknown as FileSystemEntry;
 
-/** Répertoire dont le lecteur rend les enfants **par lots**, comme le fait Chrome. */
+/** Directory whose children the reader returns **in batches**, as Chrome does. */
 const dirEntry = (name: string, children: FileSystemEntry[], batch = 100): FileSystemEntry => {
   let cursor = 0;
   return {
@@ -42,13 +42,13 @@ const transfer = (entries: (FileSystemEntry | null)[], files: File[] = []): Data
   }) as unknown as DataTransfer;
 
 describe('filesFromDataTransfer', () => {
-  it('déplie un dossier déposé en liste plate de fichiers', async () => {
+  it('unfolds a dropped folder into a flat list of files', async () => {
     const dt = transfer([dirEntry('SQ010', [fileEntry('sh010.mov'), fileEntry('sh020.mov')])]);
     const files = await filesFromDataTransfer(dt);
     expect(files.map((f) => f.name)).toEqual(['sh010.mov', 'sh020.mov']);
   });
 
-  it('descend dans les sous-dossiers et mêle fichiers et dossiers du même dépôt', async () => {
+  it('descends into subfolders and mixes files and folders of the same drop', async () => {
     const dt = transfer([
       fileEntry('brief.pdf'),
       dirEntry('SQ010', [dirEntry('sh010', [fileEntry('sh010_v001.exr')])]),
@@ -57,42 +57,42 @@ describe('filesFromDataTransfer', () => {
     expect(files.map((f) => f.name)).toEqual(['brief.pdf', 'sh010_v001.exr']);
   });
 
-  it('relit jusqu’au bout un dossier rendu par lots', async () => {
+  it('reads a batched folder to the end', async () => {
     const many = Array.from({ length: 250 }, (_, i) => fileEntry(`sh${i}.mov`));
     const files = await filesFromDataTransfer(transfer([dirEntry('SQ010', many, 100)]));
     expect(files).toHaveLength(250);
   });
 
-  it('ignore les fichiers de service du système de fichiers', async () => {
+  it('ignores filesystem service files', async () => {
     const dt = transfer([dirEntry('SQ010', [fileEntry('.DS_Store'), fileEntry('sh010.mov')])]);
     expect((await filesFromDataTransfer(dt)).map((f) => f.name)).toEqual(['sh010.mov']);
   });
 
-  it('rend un plan entier : 1 200 frames EXR ne se coupent pas à 500', async () => {
+  it('renders a whole shot: 1,200 EXR frames are not cut at 500', async () => {
     const plan = Array.from({ length: 1200 }, (_, i) =>
       fileEntry(`SH0100_comp_v003.${String(1001 + i)}.exr`),
     );
     expect(await filesFromDataTransfer(transfer([dirEntry('SH0100', plan)]))).toHaveLength(1200);
   });
 
-  it('borne tout de même un dépôt démesuré plutôt que de noyer la file', async () => {
+  it('still bounds an oversized drop rather than flooding the queue', async () => {
     const many = Array.from({ length: 10_400 }, (_, i) => fileEntry(`sh${String(i)}.mov`));
     expect(await filesFromDataTransfer(transfer([dirEntry('SQ010', many)]))).toHaveLength(10_000);
   });
 
-  it('replie sur `files` quand l’API d’entrées est absente (comportement d’origine)', async () => {
+  it('falls back to `files` when the entries API is absent (original behaviour)', async () => {
     const plain = [new File(['x'], 'plan.mov')];
     const dt = { files: plain, items: [{ kind: 'file' }] } as unknown as DataTransfer;
     expect(await filesFromDataTransfer(dt)).toEqual(plain);
   });
 
-  it('replie sur `files` si l’arborescence ne donne rien de lisible', async () => {
+  it('falls back to `files` if the tree yields nothing readable', async () => {
     const plain = [new File(['x'], 'plan.mov')];
     const dt = transfer([dirEntry('vide', [])], plain);
     expect(await filesFromDataTransfer(dt)).toEqual(plain);
   });
 
-  it('rend une liste vide sans dataTransfer', async () => {
+  it('returns an empty list without a dataTransfer', async () => {
     expect(await filesFromDataTransfer(null)).toEqual([]);
   });
 });

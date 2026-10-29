@@ -4,27 +4,27 @@
 import type { Sha256Request, Sha256Response } from './sha256.worker';
 
 /**
- * sha256 d'un fichier, hors du thread principal quand c'est possible.
+ * sha256 of a file, off the main thread when possible.
  *
- * Le hachage sert au checksum bout-en-bout et à la déduplication (37.B) : il doit être
- * calculé avant l'envoi, mais rien n'oblige à le calculer *sur le thread qui dessine*.
- * Un worker unique, créé à la première demande et réutilisé, porte le calcul ; s'il est
- * indisponible (environnement de test, worker refusé, module illisible), le repli
- * historique sur le thread principal reprend la main — le téléversement n'échoue jamais
- * faute de worker.
+ * The hash serves the end-to-end checksum and deduplication (37.B): it must be
+ * computed before upload, but nothing requires computing it *on the thread that draws*.
+ * A single worker, created on first request and reused, carries the computation; if it
+ * is unavailable (test environment, worker refused, unreadable module), the
+ * historical fallback on the main thread takes over: the upload never fails.
+ * for lack of a worker.
  */
 
-/** Taille de tranche de lecture, identique côté worker et côté repli. */
+/** Read slice size, identical on the worker side and the fallback side. */
 const HASH_CHUNK = 8 * 1024 * 1024;
 
 /**
- * sha256 hex calculé sur le thread appelant — repli, et implémentation de référence.
+ * sha256 hex computed on the calling thread: fallback, and reference implementation.
  *
- * `hash-wasm` est chargé ici et nulle part ailleurs (F15) : en tête de module, il entrait
- * dans le fichier d'entrée — 7,6 ko gzip que téléchargeait quiconque ouvrait l'application,
- * relecteur qui ne téléversera jamais rien compris — alors que le calcul normal se fait
- * dans `sha256.worker.ts`, qui a son propre bundle. Ce chemin-ci ne sert qu'aux
- * environnements sans `Worker`.
+ * `hash-wasm` is loaded here and nowhere else (F15): at module top level it went
+ * into the entry file: 7.6 kB gzipped, downloaded by anyone who opened the application,
+ * including reviewers who will never upload anything. The normal computation, for its part,
+ * takes place in `sha256.worker.ts`, which has its own bundle. This path only serves
+ * environments without `Worker`.
  */
 export async function sha256OnMainThread(blob: Blob): Promise<string> {
   const { createSHA256 } = await import('hash-wasm');
@@ -36,12 +36,12 @@ export async function sha256OnMainThread(blob: Blob): Promise<string> {
   return hasher.digest('hex');
 }
 
-/** `undefined` = pas encore tenté, `null` = définitivement indisponible. */
+/** `undefined` = not attempted yet, `null` = permanently unavailable. */
 let worker: Worker | null | undefined;
 let nextId = 0;
 const pending = new Map<number, { resolve: (hash: string) => void; reject: (err: Error) => void }>();
 
-/** Abandonne le worker et fait échouer les demandes en cours : l'appelant repliera. */
+/** Abandons the worker and fails the pending requests: the caller will fall back. */
 function giveUpWorker(reason: string): void {
   worker?.terminate();
   worker = null;
@@ -51,7 +51,7 @@ function giveUpWorker(reason: string): void {
 
 function getWorker(): Worker | null {
   if (worker !== undefined) return worker;
-  // happy-dom (tests) et les contextes sans worker : on ne tente même pas.
+  // happy-dom (tests) and contexts without a worker: we do not even try.
   if (typeof Worker === 'undefined') {
     worker = null;
     return null;
@@ -77,8 +77,8 @@ function hashInWorker(w: Worker, blob: Blob, signal?: AbortSignal): Promise<stri
   const id = nextId++;
   return new Promise<string>((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    // Annulation : on cesse d'attendre. Le worker terminera son calcul dans le vide,
-    // sa réponse ne trouvera plus de demandeur — moins coûteux que de le recréer.
+    // Cancellation: we stop waiting. The worker will finish its computation into the void,
+    // its reply will find no requester: cheaper than recreating it.
     signal?.addEventListener(
       'abort',
       () => {
@@ -93,8 +93,8 @@ function hashInWorker(w: Worker, blob: Blob, signal?: AbortSignal): Promise<stri
 }
 
 /**
- * sha256 hex du fichier. Utilise le worker si possible, sinon le thread principal.
- * `signal` interrompt l'attente (le repli, lui, s'arrête à la tranche suivante).
+ * sha256 hex of the file. Uses the worker if possible, otherwise the main thread.
+ * `signal` interrupts the wait (the fallback, for its part, stops at the next slice).
  */
 export async function sha256OfFile(file: Blob, signal?: AbortSignal): Promise<string> {
   const w = getWorker();
@@ -102,7 +102,7 @@ export async function sha256OfFile(file: Blob, signal?: AbortSignal): Promise<st
     try {
       return await hashInWorker(w, file, signal);
     } catch (err) {
-      // Annulation demandée : ne pas relancer un calcul complet sur le thread principal.
+      // Cancellation requested: do not restart a full computation on the main thread.
       if (signal?.aborted) throw err;
     }
   }

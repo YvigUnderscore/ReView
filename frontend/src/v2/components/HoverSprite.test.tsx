@@ -7,26 +7,26 @@ import userEvent from '@testing-library/user-event';
 import HoverSprite, { type SpriteData } from './HoverSprite';
 
 /**
- * La planche-contact de survol pèse plusieurs centaines de kilo-octets (jusqu'à 240
- * vignettes de 160 px). La page Reviews en affiche cent par page : tant que personne ne
- * survole, **aucune** ne doit partir sur le réseau.
+ * The hover contact sheet weighs several hundred kilobytes (up to 240
+ * thumbnails of 160 px). The Reviews page shows a hundred per page: as long as nobody
+ * hovers, **none** must go out on the network.
  *
- * La grandeur mesurée est donc un **nombre de requêtes**, comptées des deux côtés d'où
- * elles peuvent naître : le préchargement JS (`new Image()`) et le fond CSS (une `url()`
- * posée sur un élément rendu est une requête, `opacity: 0` ne la diffère pas — seul
- * `display: none` le ferait).
+ * The quantity measured is therefore a **number of requests**, counted on both sides from where
+ * they can originate: JS preloading (`new Image()`) and the CSS background (a `url()`
+ * set on a rendered element is a request, `opacity: 0` does not defer it; only
+ * `display: none` would).
  */
 
 interface PendingImage {
   url: string;
-  /** Simule la fin du téléchargement côté navigateur. */
+  /** Simulates the end of the download on the browser side. */
   load: () => void;
 }
 
-/** Requêtes de préchargement observées pendant un test. */
+/** Preload requests observed during a test. */
 const pending: PendingImage[] = [];
 
-/** `Image` de substitution : elle enregistre la requête au lieu de l'émettre. */
+/** Substitute `Image`: it records the request instead of emitting it. */
 class FakeImage {
   private handlers: Record<string, (() => void)[]> = {};
   private url = '';
@@ -56,7 +56,7 @@ const sprite = (i: number): SpriteData => ({
   rows: 4,
 });
 
-/** Une page de cartes, chacune coiffée de son aperçu au survol. */
+/** A page of cards, each capped with its hover preview. */
 function Grid({ size }: { size: number }) {
   return (
     <div>
@@ -69,12 +69,12 @@ function Grid({ size }: { size: number }) {
   );
 }
 
-/** Éléments dont le style réclame une mosaïque au réseau. */
+/** Elements whose style calls for a mosaic from the network. */
 const painted = (root: HTMLElement) => root.querySelectorAll('[style*="minio/sprite-"]').length;
 
 const overlayOf = (index: number) => screen.getByTestId(`card-${index}`).firstElementChild as HTMLElement;
 
-describe('HoverSprite — la mosaïque ne part qu’au survol', () => {
+describe('HoverSprite — the mosaic is only fetched on hover', () => {
   beforeEach(() => {
     pending.length = 0;
     vi.stubGlobal('Image', FakeImage);
@@ -84,21 +84,21 @@ describe('HoverSprite — la mosaïque ne part qu’au survol', () => {
     vi.useRealTimers();
   });
 
-  it('ne réclame aucune mosaïque sur une page de cent cartes', () => {
+  it('requests no mosaic on a page of a hundred cards', () => {
     const { container } = render(<Grid size={100} />);
 
     expect(pending).toHaveLength(0);
     expect(painted(container)).toBe(0);
   });
 
-  it('ne tire que celle qu’on survole, une seule fois, et sans la montrer à moitié', async () => {
+  it('fetches only the one hovered, once, and without showing it half-loaded', async () => {
     const user = userEvent.setup();
     const { container } = render(<Grid size={100} />);
 
     await user.hover(overlayOf(7));
     expect(pending.map((p) => p.url)).toEqual(['https://minio/sprite-7.jpg']);
-    // Rien n'est encore peint : un fond CSS en cours de chargement apparaîtrait par
-    // bandes sous le fondu. La carte montre toujours sa miniature statique.
+    // Nothing is painted yet: a CSS background still loading would appear in
+    // strips under the fade. The card always shows its static thumbnail.
     expect(painted(container)).toBe(0);
     expect(overlayOf(7).style.opacity).toBe('0');
 
@@ -107,11 +107,11 @@ describe('HoverSprite — la mosaïque ne part qu’au survol', () => {
     expect(overlayOf(7).style.backgroundImage).toContain('sprite-7.jpg');
     expect(overlayOf(7).style.opacity).toBe('1');
 
-    // Le voisin n'a rien demandé.
+    // The neighbour asked for nothing.
     expect(overlayOf(8).style.backgroundImage).toBe('');
 
-    // Sortir puis revenir ne redemande rien : le drapeau est collant, le second survol
-    // est instantané.
+    // Leaving and coming back requests nothing again: the flag is sticky, the second hover
+    // is instantaneous.
     await user.unhover(overlayOf(7));
     expect(overlayOf(7).style.opacity).toBe('0');
     await user.hover(overlayOf(7));
@@ -119,12 +119,12 @@ describe('HoverSprite — la mosaïque ne part qu’au survol', () => {
     expect(overlayOf(7).style.opacity).toBe('1');
   });
 
-  it('fait défiler les vignettes une fois la mosaïque chargée', () => {
+  it('scrolls the thumbnails once the mosaic is loaded', () => {
     vi.useFakeTimers();
     render(<Grid size={3} />);
 
-    // `fireEvent` plutôt que `userEvent` : ce dernier planifie ses gestes sur de vrais
-    // délais, que des minuteurs simulés n'avancent pas.
+    // `fireEvent` rather than `userEvent`: the latter schedules its gestures on real
+    // delays, which simulated timers do not advance.
     fireEvent.mouseOver(overlayOf(1));
     act(() => pending[0].load());
     const first = overlayOf(1).style.backgroundPosition;

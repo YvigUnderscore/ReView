@@ -4,32 +4,32 @@
 import { createSHA256 } from 'hash-wasm';
 
 /**
- * Worker de hachage sha256 (vague 2 — moteur de téléversement).
+ * sha256 hashing worker (wave 2: upload engine).
  *
- * Le checksum bout-en-bout (37.B) portait sur le thread principal : un master de 20 Go
- * gelait l'interface plusieurs dizaines de secondes **avant** que le premier octet ne
- * parte. Le calcul vit désormais ici ; le `Blob` traverse la frontière du worker par
- * référence (aucune copie des octets), seul le résultat hexadécimal revient.
+ * The end-to-end checksum (37.B) ran on the main thread: a 20 GB master would
+ * freeze the interface for tens of seconds **before** the first byte
+ * left. The computation now lives here; the `Blob` crosses the worker boundary by
+ * reference (no copy of the bytes), and only the hexadecimal result comes back.
  *
- * Le protocole est volontairement minimal : une requête porte un identifiant, la
- * réponse le renvoie — un worker unique sert donc plusieurs fichiers en parallèle.
+ * The protocol is deliberately minimal: a request carries an identifier, and the
+ * reply returns it, so a single worker serves several files in parallel.
  */
 
-/** Requête de hachage : un blob à lire, un identifiant à renvoyer tel quel. */
+/** Hashing request: a blob to read, an identifier to return as is. */
 export interface Sha256Request {
   id: number;
   blob: Blob;
 }
 
-/** Réponse : le hachage hexadécimal, ou le motif de l'échec. */
+/** Reply: the hexadecimal hash, or the reason for the failure. */
 export type Sha256Response = { id: number; hash: string } | { id: number; error: string };
 
-/** Taille de tranche de lecture — compromis mémoire / nombre d'allers-retours. */
+/** Read slice size: a trade-off between memory and the number of round trips. */
 const CHUNK = 8 * 1024 * 1024;
 
 /**
- * Contexte du worker. `lib` ne contient pas `WebWorker` (tsconfig ciblant le DOM) : on
- * décrit ici la surface réellement utilisée plutôt que d'élargir la configuration.
+ * Worker context. `lib` does not contain `WebWorker` (tsconfig targeting the DOM): we
+ * describe here the surface actually used rather than widening the configuration.
  */
 const ctx = self as unknown as {
   addEventListener(type: 'message', fn: (event: MessageEvent<Sha256Request>) => void): void;

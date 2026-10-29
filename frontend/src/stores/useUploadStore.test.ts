@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUploadStore } from './useUploadStore';
 import { uploadMedia } from '../lib/uploadClient';
 
-// Le store délègue le flux réseau à uploadClient : on le simule intégralement.
+// The store delegates the network flow to uploadClient: it is fully simulated.
 vi.mock('../lib/uploadClient', () => ({
   uploadMedia: vi.fn(),
   inferMediaKind: () => 'IMAGE' as const,
@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 
 describe('useUploadStore', () => {
-  it('enqueue → done : progression puis mediaObjectId', async () => {
+  it('enqueue → done: progress then mediaObjectId', async () => {
     uploadMediaMock.mockImplementation(async (_f, _v, opts) => {
       opts?.onProgress?.(50);
       opts?.onProgress?.(100);
@@ -37,7 +37,7 @@ describe('useUploadStore', () => {
     expect(u.versionId).toBe(7);
   });
 
-  it('enqueue → error : le message d’échec est conservé', async () => {
+  it('enqueue → error: the failure message is kept', async () => {
     uploadMediaMock.mockRejectedValue(new Error('PUT 403'));
     const id = useUploadStore.getState().enqueue(file, 7);
     await flush();
@@ -46,7 +46,7 @@ describe('useUploadStore', () => {
     expect(u.error).toBe('PUT 403');
   });
 
-  it('activeCount ne compte que les uploads non terminés', async () => {
+  it('activeCount counts only unfinished uploads', async () => {
     uploadMediaMock.mockResolvedValue({ mediaObjectId: 1, status: 'READY' });
     useUploadStore.getState().enqueue(file, 1);
     expect(useUploadStore.getState().activeCount()).toBe(1);
@@ -54,7 +54,7 @@ describe('useUploadStore', () => {
     expect(useUploadStore.getState().activeCount()).toBe(0);
   });
 
-  it('clearCompleted retire uniquement les uploads terminés', async () => {
+  it('clearCompleted removes only completed uploads', async () => {
     uploadMediaMock.mockResolvedValueOnce({ mediaObjectId: 1, status: 'READY' });
     uploadMediaMock.mockRejectedValueOnce(new Error('boom'));
     useUploadStore.getState().enqueue(file, 1);
@@ -66,11 +66,11 @@ describe('useUploadStore', () => {
   });
 });
 
-/** Compte les items d'un statut donné — la file se lit à ça et rien d'autre. */
+/** Counts the items of a given status: the queue is read from this and nothing else. */
 const count = (status: string) => useUploadStore.getState().uploads.filter((u) => u.status === status).length;
 
-describe('useUploadStore — file bornée', () => {
-  it('ne lance que trois transferts de front, les suivants attendent leur créneau', async () => {
+describe('useUploadStore — bounded queue', () => {
+  it('launches only three transfers at once, the next ones wait for their slot', async () => {
     const gates: (() => void)[] = [];
     uploadMediaMock.mockImplementation(
       () => new Promise((resolve) => gates.push(() => resolve({ mediaObjectId: 1, status: 'READY' }))),
@@ -85,13 +85,13 @@ describe('useUploadStore — file bornée', () => {
     gates.shift()!();
     await flush();
 
-    // Un créneau libéré = un transfert de plus démarré, jamais deux.
+    // A freed slot = one more transfer started, never two.
     expect(uploadMediaMock).toHaveBeenCalledTimes(4);
     expect(count('uploading')).toBe(3);
     expect(count('pending')).toBe(1);
   });
 
-  it('retirer un fichier encore en attente le sort de la file sans jamais l’envoyer', async () => {
+  it('removing a file still pending takes it out of the queue without ever sending it', async () => {
     const gates: (() => void)[] = [];
     uploadMediaMock.mockImplementation(
       () => new Promise((resolve) => gates.push(() => resolve({ mediaObjectId: 1, status: 'READY' }))),
@@ -110,7 +110,7 @@ describe('useUploadStore — file bornée', () => {
 });
 
 describe('useUploadStore — annulation', () => {
-  it('retirer une ligne coupe réellement le transfert en vol', () => {
+  it('removing a row really cuts the in-flight transfer', () => {
     let signal: AbortSignal | undefined;
     uploadMediaMock.mockImplementation((_f, _v, opts) => {
       signal = opts?.signal;
@@ -126,7 +126,7 @@ describe('useUploadStore — annulation', () => {
     expect(useUploadStore.getState().uploads).toHaveLength(0);
   });
 
-  it('une annulation ne laisse pas de ligne en erreur derrière elle', async () => {
+  it('a cancellation leaves no error row behind it', async () => {
     uploadMediaMock.mockImplementation(
       (_f, _v, opts) =>
         new Promise((_resolve, reject) => {
@@ -141,7 +141,7 @@ describe('useUploadStore — annulation', () => {
     expect(useUploadStore.getState().uploads).toEqual([]);
   });
 
-  it('libère le créneau pris par le transfert annulé', async () => {
+  it('frees the slot taken by the cancelled transfer', async () => {
     uploadMediaMock.mockImplementation(
       (_f, _v, opts) =>
         new Promise((_resolve, reject) => {

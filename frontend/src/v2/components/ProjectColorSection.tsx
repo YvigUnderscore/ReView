@@ -23,10 +23,10 @@ interface OcioDisplay {
 }
 
 /**
- * Section « Gestion de couleur (OCIO) » des réglages projet (39.B) : choix d'une config installée
- * (ou défaut studio), puis display + view. Les listes viennent de la config OCIO installée (Admin →
- * Couleur). Sans config installée, invite l'admin à en installer une. La transformation couleur
- * pixel-exacte au rendu est un lot ultérieur : ce choix fixe l'intention display/view du projet.
+ * "Color management (OCIO)" section of the project settings (39.B): choice of an installed config
+ * (or studio default), then display and view. The lists come from the installed OCIO config (Admin →
+ * Color). Without an installed config, it prompts the admin to install one. The pixel-exact color
+ * transform at render time is a later batch: this choice sets the project's display/view intent.
  */
 export default function ProjectColorSection({
   value,

@@ -16,14 +16,14 @@ import { catchUpOnBoot, scheduleShotgridJobs } from '../services/shotgrid/Shotgr
 import { registerWorkerShutdown } from './shutdown';
 
 /**
- * Travaux ShotGrid : application des événements reçus, relevé périodique, écritures
- * sortantes et réconciliation.
+ * ShotGrid jobs: applying received events, periodic polling, outgoing writes
+ * and reconciliation.
  *
- * La réconciliation mérite un mot. ReView n'est pas toujours joignable : une mise à
- * jour, une coupure réseau, un webhook que ShotGrid a fini par désactiver après cent
- * échecs — et le miroir dérive sans que personne ne s'en aperçoive. Deux filets :
- * un passage nocturne, et un rattrapage au démarrage de l'instance qui relit tout ce
- * qui a bougé pendant l'absence. ShotGrid fait autorité : au réveil, ReView se réaligne.
+ * Reconciliation deserves a word. ReView is not always reachable: an update,
+ * a network outage, a webhook that ShotGrid eventually disabled after a hundred
+ * failures, and the mirror drifts without anyone noticing. Two safety nets:
+ * a nightly pass, and a catch-up at instance startup that re-reads everything that
+ * changed during the absence. ShotGrid is authoritative: on wake-up, ReView realigns.
  */
 export const shotgridWorker = new Worker<ShotgridJobData, void, string>(
   QUEUE_NAMES.SHOTGRID,
@@ -53,9 +53,9 @@ shotgridWorker.on('failed', (job, err) =>
   logger.warn({ err, kind: job?.data.kind }, '[shotgrid.worker] échec'),
 );
 
-// Réexport : le planificateur vit désormais dans un module sans effet de bord, pour que
-// le process API puisse le rappeler après un changement de réglages sans instancier ce
-// worker au passage.
+// Re-export: the scheduler now lives in a module with no side effects, so that
+// the API process can call it after a settings change without instantiating this
+// worker at the same time.
 export { catchUpOnBoot, scheduleShotgridJobs };
 
 export function startShotgridWorker(): void {

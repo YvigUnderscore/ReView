@@ -4,17 +4,17 @@
 import { useT } from '../i18n';
 import { useBranding } from '../lib/branding';
 
-/** Repli si le branding n'est pas encore chargé (ou si l'API est injoignable). */
+/** Fallback if the branding is not yet loaded (or if the API is unreachable). */
 const UPSTREAM_SOURCE_URL = 'https://github.com/YvigUnderscore/ReView';
 
 /**
- * Mention de licence exigée par l'AGPL §13 : toute personne qui interagit avec ReView à
- * travers le réseau doit se voir offrir le code source correspondant. Elle doit donc
- * apparaître sur les surfaces **publiques** (connexion, partage client), pas seulement
- * dans l'administration.
+ * License notice required by AGPL §13: any person who interacts with ReView over
+ * the network must be offered the corresponding source code. It must therefore
+ * appear on the **public** surfaces (sign-in, client sharing), not only
+ * in administration.
  *
- * L'URL vient du réglage studio `studio_source_url` : une instance qui tourne avec des
- * modifications doit pointer ses propres sources, pas le dépôt amont.
+ * The URL comes from the studio setting `studio_source_url`: an instance running with
+ * modifications must point to its own sources, not to the upstream repository.
  */
 export default function SourceNotice({ className = '' }: { className?: string }) {
   const t = useT();

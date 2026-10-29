@@ -14,10 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { useT } from '../i18n';
 
 /**
- * « Ajouter à la playlist » (Phase 33) : choisit une playlist du projet ou en crée
- * une, puis y ajoute des médias et/ou des versions (médias résolus en versions côté
- * serveur, dédupliqués). Ouvert depuis les clics droits : cartes Reviews (+ barre de
- * sélection), cartes de version (task/asset) et review courante.
+ * "Add to playlist" (Phase 33): chooses a playlist of the project or creates
+ * one, then adds media and/or versions to it (media resolved into versions server-side,
+ * deduplicated). Opened from right-click menus: Reviews cards (+ selection bar),
+ * version cards (task/asset) and the current review.
  */
 export default function AddToPlaylistDialog({
   open,

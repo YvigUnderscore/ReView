@@ -10,9 +10,9 @@ import { useAuth } from '../v2/stores/useAuth';
 import { renderWithProviders } from './renderWithProviders';
 
 /**
- * Le harnais est le socle de tous les tests d'écran : s'il ment sur la session, sur l'URL
- * ou sur le réseau, ce sont quarante tests qui mentent avec lui. On vérifie donc ses
- * quatre promesses, sur un composant minuscule dont on maîtrise tout.
+ * The harness is the foundation of all the screen tests: if it lies about the session, the URL
+ * or the network, forty tests lie with it. So we verify its
+ * four promises, on a tiny component whose every aspect we control.
  */
 
 function Probe() {
@@ -33,7 +33,7 @@ function Probe() {
 }
 
 describe('renderWithProviders', () => {
-  it('monte l’écran sous le motif de route demandé, paramètres compris', async () => {
+  it('mounts the screen under the requested route pattern, parameters included', async () => {
     renderWithProviders(<Probe />, {
       route: '/projects/12?tab=shots',
       path: '/projects/:id',
@@ -44,7 +44,7 @@ describe('renderWithProviders', () => {
     expect(await screen.findByText('label:ok')).toBeInTheDocument();
   });
 
-  it('ouvre une session d’administrateur par défaut, et rien du tout sur `null`', () => {
+  it('opens an administrator session by default, and nothing at all on `null`', () => {
     const { unmount } = renderWithProviders(<Probe />, { api: { 'GET /api/probe': {} } });
     expect(screen.getByText('role:ADMIN')).toBeInTheDocument();
     unmount();
@@ -54,16 +54,16 @@ describe('renderWithProviders', () => {
     expect(useAuth.getState().user).toBeNull();
   });
 
-  it('ne remplace que ce qu’on lui passe de la session', () => {
+  it('only replaces what is passed to it from the session', () => {
     renderWithProviders(<Probe />, { user: { role: 'ARTIST' }, api: { 'GET /api/probe': {} } });
 
     expect(screen.getByText('role:ARTIST')).toBeInTheDocument();
-    // Le reste du compte par défaut est conservé : un test sur le rôle n'a pas à réécrire
-    // une identité complète.
+    // The rest of the default account is kept: a test on the role does not have to rewrite
+    // a complete identity.
     expect(useAuth.getState().user?.email).toBe('admin@review.local');
   });
 
-  it('suit l’URL du routeur mémoire à chaque navigation', async () => {
+  it('follows the memory router URL on each navigation', async () => {
     const { user, currentPath } = renderWithProviders(<Probe />, {
       route: '/depart',
       path: '/depart',
@@ -78,12 +78,12 @@ describe('renderWithProviders', () => {
     await waitFor(() => expect(currentPath()).toBe('/ailleurs'));
   });
 
-  it('laisse un test resserrer une réponse posée d’office par le harnais', async () => {
+  it('lets a test tighten a response set by default by the harness', async () => {
     const { api: mock } = renderWithProviders(<Probe />, {
       api: {
         'GET /api/probe': {},
-        // `GET /api/notifications` fait partie des réponses par défaut : la redéfinir doit
-        // gagner, sinon aucun test ne pourrait s'y intéresser.
+        // `GET /api/notifications` is one of the default answers: redefining it must
+        // win, otherwise no test could take an interest in it.
         'GET /api/notifications': { notifications: [{ id: 1 }], unread: 1 },
       },
     });
@@ -93,7 +93,7 @@ describe('renderWithProviders', () => {
     expect(mock.unhandled).toEqual([]);
   });
 
-  it('repart d’un cache neuf : deux montages successifs interrogent deux fois le serveur', async () => {
+  it('starts from a fresh cache: two successive mounts query the server twice', async () => {
     const first = renderWithProviders(<Probe />, { api: { 'GET /api/probe': { label: 'un' } } });
     expect(await screen.findByText('label:un')).toBeInTheDocument();
     expect(first.api.called('GET /api/probe')).toHaveLength(1);

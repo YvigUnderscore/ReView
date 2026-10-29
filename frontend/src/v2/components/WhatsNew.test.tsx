@@ -7,17 +7,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WhatsNew from './WhatsNew';
 
 /**
- * Ce que le panneau « Nouveautés » coûte au premier écran (F6).
+ * What the "What's new" panel costs on the first screen (F6).
  *
- * Il est monté par la coquille, donc sur **toute** page authentifiée, et il partait chercher
- * les 24 568 octets de `/docs/CHANGELOG.md` — non compressés, nginx servant ce `.md` en
- * `application/octet-stream` — pour un dialogue ouvert une fois par trimestre. Avant
- * ouverture il n'a pourtant besoin que du titre de la dernière entrée, c'est-à-dire du
- * premier `## ` du fichier : une requête `Range` de 2 ko suffit, et le document entier
- * n'arrive qu'à l'ouverture réelle.
+ * It is mounted by the shell, so on **every** authenticated page, and it went to fetch
+ * the 24,568 bytes of `/docs/CHANGELOG.md`, uncompressed (nginx serves this `.md` as
+ * `application/octet-stream`), for a dialog opened once a quarter. Before being
+ * opened, it only needs the title of the latest entry, that is the first
+ * `## ` of the file: a 2 kB `Range` request is enough, and the whole document
+ * only arrives on actual opening.
  *
- * Les trois propriétés gardées ici : rien au montage, rien que l'en-tête ensuite, le
- * document entier seulement à l'ouverture — et la pastille qui continue de fonctionner.
+ * The three properties guarded here: nothing at mount, only the header afterwards, the
+ * whole document only on opening, and the badge continues to work.
  */
 
 const LATEST = '2026-09 — Bande de montage';
@@ -36,20 +36,20 @@ const CHANGELOG = [
   '',
 ].join('\n');
 
-/** Ce que renvoie un serveur qui honore `Range` : coupé au milieu d'une ligne. */
+/** What a server honouring `Range` returns: cut in the middle of a line. */
 const PARTIAL = `${CHANGELOG.split('\n').slice(0, 6).join('\n')}\nDu te`;
 
 const SEEN_KEY = 'review:changelog-seen';
 
-/** En-tête `Range` de l'appel numéro `n`, ou undefined si l'appel n'en portait pas. */
+/** `Range` header of call number `n`, or undefined if that call carried none. */
 const rangeOf = (spy: ReturnType<typeof vi.fn>, n: number): string | undefined => {
   const init = spy.mock.calls[n]?.[1] as { headers?: Record<string, string> } | undefined;
   return init?.headers?.Range;
 };
 
 /**
- * @param honorsRange false simule un serveur qui ignore `Range` (compression à la volée,
- * cache intermédiaire) et renvoie 200 avec tout le fichier.
+ * @param honorsRange false simulates a server that ignores `Range` (on-the-fly compression,
+ * intermediate cache) and returns 200 with the whole file.
  */
 function renderPanel({ honorsRange = true } = {}) {
   const idles: (() => void)[] = [];
@@ -61,8 +61,8 @@ function renderPanel({ honorsRange = true } = {}) {
     ),
   );
   vi.stubGlobal('fetch', fetchSpy);
-  // `requestIdleCallback` n'existe pas sous happy-dom : on le fournit pour pouvoir décider
-  // du moment exact où le navigateur « se libère ».
+  // `requestIdleCallback` does not exist under happy-dom: we provide it so that we can decide
+  // the exact moment when the browser "frees up".
   const previous = window.requestIdleCallback;
   window.requestIdleCallback = ((cb: () => void) => {
     idles.push(cb);
@@ -81,7 +81,7 @@ function renderPanel({ honorsRange = true } = {}) {
     restore: () => {
       window.requestIdleCallback = previous;
     },
-    /** Joue ce que le navigateur jouerait une fois la page posée. */
+    /** Plays what the browser would play once the page is set. */
     goIdle: () => act(() => idles.splice(0).forEach((cb) => cb())),
   };
 }
@@ -95,10 +95,10 @@ afterEach(() => {
 });
 
 describe('WhatsNew', () => {
-  it('n’émet aucune requête au montage', async () => {
+  it('makes no request on mount', async () => {
     const { fetchSpy, restore } = renderPanel();
-    // Laisse passer les effets et les micro-tâches : si une requête devait partir, elle
-    // serait partie.
+    // Let effects and microtasks run: if a request had to leave, it would
+    // have left by now.
     await act(async () => {
       await Promise.resolve();
     });
@@ -106,35 +106,35 @@ describe('WhatsNew', () => {
     restore();
   });
 
-  it('ne lit que l’en-tête du changelog quand le navigateur se libère', async () => {
+  it('reads only the changelog header when the browser is free', async () => {
     const { fetchSpy, goIdle, restore } = renderPanel();
     goIdle();
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     expect(fetchSpy.mock.calls[0][0]).toBe('/docs/CHANGELOG.md');
-    // 2 ko : dix fois la marge nécessaire pour atteindre le premier `## `, contre 24 568.
+    // 2 kB: ten times the margin needed to reach the first `## `, against 24,568.
     expect(rangeOf(fetchSpy, 0)).toBe('bytes=0-2047');
     expect(await screen.findByRole('button')).toBeInTheDocument();
     restore();
   });
 
-  it('calcule la pastille sur ce seul en-tête, et la retire à l’ouverture', async () => {
+  it('computes the dot from this header alone, and removes it on opening', async () => {
     localStorage.setItem(SEEN_KEY, '2026-08 — Plus ancien');
     const { fetchSpy, goIdle, container, restore } = renderPanel();
     goIdle();
     const button = await screen.findByRole('button');
-    // La pastille est décidée sans avoir téléchargé autre chose que les 2 ko d'en-tête.
+    // The badge is decided without having downloaded anything but the 2 kB header.
     expect(container.querySelector('.bg-accent-2')).not.toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(rangeOf(fetchSpy, 0)).toBe('bytes=0-2047');
 
     fireEvent.click(button);
     await waitFor(() => expect(container.querySelector('.bg-accent-2')).toBeNull());
-    // Le titre retenu comme « vu » est bien celui lu dans l'en-tête tronqué.
+    // The title kept as "seen" is indeed the one read in the truncated header.
     expect(localStorage.getItem(SEEN_KEY)).toBe(LATEST);
     restore();
   });
 
-  it('ne va chercher le document entier qu’à l’ouverture du panneau', async () => {
+  it('fetches the whole document only when the panel is opened', async () => {
     const { fetchSpy, goIdle, restore } = renderPanel();
     goIdle();
     const button = await screen.findByRole('button');
@@ -142,22 +142,22 @@ describe('WhatsNew', () => {
 
     fireEvent.click(button);
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
-    // Second appel : le fichier complet, donc sans `Range`.
+    // Second call: the full file, hence without `Range`.
     expect(rangeOf(fetchSpy, 1)).toBeUndefined();
-    // Et les deux entrées du fichier, rendues (le moteur markdown arrive par import()).
+    // And the two entries of the file, rendered (the markdown engine arrives via import()).
     expect(await screen.findByText(LATEST)).toBeInTheDocument();
     expect(await screen.findByText('2026-08 — Plus ancien')).toBeInTheDocument();
     restore();
   });
 
-  it('ne télécharge pas deux fois quand le serveur ignore Range', async () => {
+  it('does not download twice when the server ignores Range', async () => {
     const { fetchSpy, goIdle, restore } = renderPanel({ honorsRange: false });
     goIdle();
     const button = await screen.findByRole('button');
     expect(rangeOf(fetchSpy, 0)).toBe('bytes=0-2047');
 
     fireEvent.click(button);
-    // Le serveur a déjà tout envoyé : redemander le même fichier serait payer deux fois.
+    // The server has already sent everything: requesting the same file again would pay twice.
     expect(await screen.findByText(LATEST)).toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     restore();

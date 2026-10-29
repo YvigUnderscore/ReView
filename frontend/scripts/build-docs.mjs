@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Build de la documentation in-app : copie DOCUMENTATION/ (racine du repo) vers
-// public/docs/ et génère public/docs/manifest.json (sections ordonnées, titres,
-// sous-titres, date de mise à jour, titres de chapitre).
-// Exécuté automatiquement avant `npm run dev` et `npm run build` (predev/prebuild).
+// Builds the in-app documentation: copies DOCUMENTATION/ (repo root) to
+// public/docs/ and generates public/docs/manifest.json (ordered sections, titles,
+// subtitles, update date, chapter titles).
+// Runs automatically before `npm run dev` and `npm run build` (predev/prebuild).
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SOURCE = path.resolve(__dirname, '../../DOCUMENTATION');
 const TARGET = path.resolve(__dirname, '../public/docs');
 
-// Ordre d'affichage des sections dans la page /docs (les dossiers inconnus vont à la fin).
+// Display order of sections on the /docs page (unknown folders go last).
 const SECTION_ORDER = [
   'getting-started',
   'user-guide',
@@ -24,12 +24,12 @@ const SECTION_ORDER = [
 ];
 
 /**
- * Ordre de lecture à l'intérieur d'une section.
+ * Reading order inside a section.
  *
- * L'ordre alphabétique met « 3d-alembic » avant « overview » et sépare les quatre pages de
- * review : ce n'est pas un sommaire, c'est un listing. Une page absente de cette table part
- * à la fin, par ordre alphabétique — elle n'est jamais perdue, seulement mal placée, et le
- * build le signale.
+ * Alphabetical order would put "3d-alembic" before "overview" and split the four pages of
+ * review: this is not a table of contents, it is a listing. A page missing from this table goes
+ * to the end, in alphabetical order. It is never lost, only misplaced, and the
+ * build reports it.
  */
 export const PAGE_ORDER = {
   'getting-started': ['feature-tour.md', 'installation.md', 'first-run.md', 'docker-stack.md', 'updating.md'],
@@ -112,7 +112,7 @@ export const sectionLabel = (dir) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
 
-/** Ordre d'affichage : les sections connues d'abord, le reste par ordre alphabétique. */
+/** Display order: known sections first, the rest in alphabetical order. */
 export const orderSections = (dirs) =>
   [...dirs].sort((a, b) => {
     const ia = SECTION_ORDER.indexOf(a);
@@ -120,7 +120,7 @@ export const orderSections = (dirs) =>
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
   });
 
-/** Ordre de lecture d'une section ; les pages non listées ferment la marche. */
+/** Reading order of a section; pages not listed come last. */
 export const orderPages = (dir, files) => {
   const wanted = PAGE_ORDER[dir] ?? [];
   return [...files].sort((a, b) => {
@@ -130,17 +130,17 @@ export const orderPages = (dir, files) => {
   });
 };
 
-/** Pages présentes sur le disque mais absentes du sommaire : elles partiront à la fin. */
+/** Pages present on disk but missing from the table of contents: they will go at the end. */
 export const unlistedPages = (dir, files) => {
   const wanted = PAGE_ORDER[dir];
   return wanted ? files.filter((f) => !wanted.includes(f)) : [];
 };
 
 /**
- * Titre et sous-titre sont rendus en texte brut — dans l'en-tête de la page, dans la liste
- * du sommaire, dans l'infobulle. Le markdown en ligne qu'ils portent (`code`, **gras**,
- * *italique*, [lien](url)) s'y afficherait tel quel : « From `git clone` to… ». Il est donc
- * retiré ici, et conservé dans le fichier, où GitHub le rend correctement.
+ * Title and subtitle are rendered as plain text: in the page header, in the list
+ * of the table of contents, in the tooltip. The inline markdown they carry (`code`, **bold**,
+ * *italic*, [link](url)) would be displayed as is there: "From `git clone` to…". It is therefore
+ * stripped here, and kept in the file, where GitHub renders it correctly.
  */
 export const plainText = (markdown) =>
   markdown
@@ -150,14 +150,14 @@ export const plainText = (markdown) =>
     .trim();
 
 /**
- * Métadonnées d'une page, lues sur sa forme conventionnelle :
+ * Metadata of a page, read from its conventional form:
  *
  *     # Titre
- *     *Sous-titre d'une ligne.*
+ *     *One-line subtitle.*
  *     > Updated: 2026-08-23
  *
- * Le titre retombe sur le nom du fichier, le reste sur une chaîne vide : une page qui ne
- * suit pas la convention reste servable, elle est seulement moins bien présentée.
+ * The title falls back to the file name, the rest to an empty string: a page that does not
+ * follow the convention remains servable, it is just less well presented.
  */
 export function parsePageMeta(text, fallbackTitle) {
   const lines = text.split('\n');
@@ -177,16 +177,16 @@ export function parsePageMeta(text, fallbackTitle) {
 }
 
 /**
- * Titres internes d'une page — ce par quoi on la retrouve.
+ * Internal headings of a page: what we find it by.
  *
- * Le manifest ne portait que le titre et le sous-titre : chercher « watermark » dans la
- * palette ne rendait aucune page, alors que la documentation lui consacre trois chapitres.
- * Indexer le corps entier reviendrait à transporter 1,2 Mo de markdown à chaque session ;
- * les titres de chapitre en sont la table des matières, pour trente kilo-octets — et ils
- * disent, en plus, *pourquoi* la page correspond.
+ * The manifest only carried the title and subtitle: searching "watermark" in the
+ * palette rendered no page, although the documentation devotes three chapters to it.
+ * Indexing the whole body would mean shipping 1.2 MB of markdown with every session;
+ * the chapter titles are its table of contents, for thirty kilobytes, and they
+ * also say *why* the page matches.
  *
- * Les blocs de code sont retirés d'abord : un `## ` au milieu d'un extrait de shell n'est
- * pas un chapitre. Le niveau 1 est exclu — c'est le titre de la page, déjà indexé.
+ * Code blocks are removed first: a `## ` in the middle of a shell snippet is not
+ * a chapter. Level 1 is excluded, since it is the page title, already indexed.
  */
 export function pageHeadings(markdown) {
   const prose = markdown.replace(/^```[\s\S]*?^```/gm, '');
@@ -201,13 +201,13 @@ export function pageHeadings(markdown) {
   return [...found];
 }
 
-/** Titre d'une page : son premier titre de niveau 1, à défaut le nom du fichier. */
+/** Title of a page: its first level-1 heading, failing that the file name. */
 export async function pageTitle(filePath) {
   const text = await readFile(filePath, 'utf8');
   return parsePageMeta(text, path.basename(filePath, '.md')).title;
 }
 
-/** Métadonnées d'une page du dossier source. */
+/** Metadata of a page in the source folder. */
 async function readPage(dir, file) {
   const filePath = path.join(SOURCE, dir, file);
   const text = await readFile(filePath, 'utf8');
@@ -255,5 +255,5 @@ async function main() {
     console.warn(`build-docs: hors sommaire (rangées en fin de section) : ${unlisted.join(', ')}`);
 }
 
-// Importable pour les tests ; exécuté seulement quand on l'appelle directement.
+// Importable for tests; only runs when called directly.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

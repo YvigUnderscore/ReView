@@ -7,8 +7,8 @@ import { useT } from '../i18n';
 import type { ReviewStatus } from '../types/api';
 
 /**
- * Badge de décision de review (Phase 31). La couleur vient du statut configuré
- * par le studio (donnée dynamique → style inline, pas un token de thème).
+ * Review decision badge (Phase 31). The color comes from the status configured
+ * by the studio (dynamic data, so inline style, not a theme token).
  */
 export default function ReviewDecisionBadge({
   status,

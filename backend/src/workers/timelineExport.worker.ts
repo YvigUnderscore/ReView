@@ -25,24 +25,24 @@ import { FfmpegTimeoutError, ffmpegTimeoutMs } from '../lib/ffmpegTimeout';
 import { registerWorkerShutdown } from './shutdown';
 
 /**
- * Export d'un montage automatique en un fichier unique (Phase 45).
+ * Export of an automatic edit into a single file (Phase 45).
  *
- * Chaque plan est d'abord ramené au profil commun du projet (résolution, cadence, audio
- * stéréo 48 kHz), puis l'ensemble est concaténé sans ré-encodage. Les plans manquants
- * deviennent des cartons noirs portant leur code : le master dure exactement ce que dure
- * le montage à l'écran, trous compris — un fichier plus court que la timeline serait un
- * mensonge sur l'état de la production.
+ * Each shot is first brought to the project's common profile (resolution, frame rate, stereo
+ * 48 kHz audio), then the whole is concatenated without re-encoding. Missing shots
+ * become black cards carrying their code: the master lasts exactly as long as the
+ * edit on screen, gaps included. A file shorter than the timeline would be a
+ * lie about the state of production.
  */
 
-/** Texte porté par un carton dans le master (l'export n'a pas de contexte de langue). */
+/** Text carried by a card in the master (the export has no language context). */
 const PLACEHOLDER_LABEL = 'no media';
 
 /**
- * Encode un segment vers le profil commun, à partir d'un fichier local.
+ * Encodes a segment to the common profile, from a local file.
  *
- * Le délai est proportionné à la durée du plan : sans lui, un plan au conteneur exotique
- * qui fait boucler ffmpeg immobilise **définitivement** la file d'export — qui est à
- * concurrence 1, donc plus aucun montage ne s'exporte jusqu'au redémarrage du worker.
+ * The timeout is proportional to the shot's duration: without it, a shot with an exotic container
+ * that makes ffmpeg loop would **permanently** freeze the export queue, which runs at
+ * concurrency 1, so no edit exports until the worker restarts.
  */
 function encodeSource(
   input: string,
@@ -60,7 +60,7 @@ function encodeSource(
       try {
         cmd.kill('SIGKILL');
       } catch {
-        // Processus déjà mort : rien à faire.
+        // Process already dead: nothing to do.
       }
       reject(new FfmpegTimeoutError(label, timeoutMs));
     }, timeoutMs);
@@ -83,12 +83,12 @@ function encodeSource(
 }
 
 /**
- * Lance le binaire ffmpeg directement.
+ * Launches the ffmpeg binary directly.
  *
- * `fluent-ffmpeg` valide les formats d'entrée contre sa propre liste et rejette `lavfi`
- * (« Input formats lavfi are not available ») : or les cartons n'ont pas de fichier
- * source, ils sont entièrement synthétisés par ce device. On garde donc la bibliothèque
- * pour les fichiers réels, et on parle au binaire pour ce cas-là.
+ * `fluent-ffmpeg` validates input formats against its own list and rejects `lavfi`
+ * ("Input formats lavfi are not available"). Yet title cards have no source file;
+ * they are fully synthesized by that device. So we keep the library
+ * for real files, and talk to the binary for that case.
  */
 function runFfmpeg(args: string[], label: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -106,7 +106,7 @@ function runFfmpeg(args: string[], label: string, timeoutMs: number): Promise<vo
       finish(() => reject(new FfmpegTimeoutError(label, timeoutMs)));
     }, timeoutMs);
     if (typeof timer.unref === 'function') timer.unref();
-    // La sortie d'erreur de ffmpeg est verbeuse : seule sa fin sert au diagnostic.
+    // ffmpeg's error output is verbose: only its tail is useful for diagnosis.
     child.stderr.on('data', (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-4000);
     });
@@ -120,12 +120,12 @@ function runFfmpeg(args: string[], label: string, timeoutMs: number): Promise<vo
 }
 
 /**
- * Fabrique un carton noir de la durée voulue, marqué du code du plan.
+ * Builds a black card of the requested duration, marked with the shot's code.
  *
- * L'incrustation du texte dépend de `drawtext`, donc d'une configuration de polices
- * présente sur la machine (l'image du worker installe DejaVu). Là où elle manque, ffmpeg
- * échoue : on refait alors le carton sans texte plutôt que de perdre tout l'export — un
- * master avec des trous muets reste utilisable, un master absent non.
+ * Burning in the text depends on `drawtext`, hence on a font configuration
+ * present on the machine (the worker image installs DejaVu). Where it is missing, ffmpeg
+ * fails: we then rebuild the card without text rather than losing the whole export. A
+ * master with silent gaps stays usable; a missing master does not.
  */
 async function encodePlaceholder(
   output: string,
@@ -183,7 +183,7 @@ function encodePlaceholderWith(
   );
 }
 
-/** Colle les segments normalisés bout à bout, sans ré-encoder (`concat` demuxer). */
+/** Joins the normalized segments end to end, without re-encoding (`concat` demuxer). */
 function concatSegments(listFile: string, output: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -198,7 +198,7 @@ function concatSegments(listFile: string, output: string, timeoutMs: number): Pr
       try {
         cmd.kill('SIGKILL');
       } catch {
-        // Processus déjà mort : rien à faire.
+        // Process already dead: nothing to do.
       }
       reject(new FfmpegTimeoutError('concat', timeoutMs));
     }, timeoutMs);
@@ -220,7 +220,7 @@ function concatSegments(listFile: string, output: string, timeoutMs: number): Pr
   });
 }
 
-/** Prépare un segment (source encodée ou carton) et renvoie son chemin local. */
+/** Prepares a segment (encoded source or card) and returns its local path. */
 async function buildSegment(
   segment: ExportSegment,
   index: number,
@@ -253,8 +253,8 @@ async function handle(timelineId: number, onProgress: (percent: number) => void)
   try {
     const paths: string[] = [];
     for (const [index, segment] of plan.segments.entries()) {
-      // Progression par plan : la préparation des segments occupe l'essentiel du travail,
-      // la concaténation finale est une copie sans ré-encodage.
+      // Per-shot progress: preparing the segments takes most of the work,
+      // the final concatenation is a copy without re-encoding.
       onProgress(Math.round((index / plan.segments.length) * 90));
       paths.push(await buildSegment(segment, index, dir, plan.profile));
     }
@@ -276,11 +276,11 @@ export const timelineExportWorker = new Worker<TimelineExportJobData>(
   QUEUE_NAMES.TIMELINE_EXPORT,
   (job) =>
     handle(job.data.timelineId, (percent) => {
-      // Best effort : une progression perdue ne condamne pas l'export.
+      // Best effort: a lost progress update does not doom the export.
       void job.updateProgress(percent).catch(() => undefined);
     }),
-  // Un seul export à la fois : chaque job encode un film entier, les paralléliser
-  // saturerait la machine qui sert aussi les transcodages courants.
+  // Only one export at a time: each job encodes a whole film; parallelizing them
+  // would saturate the machine that also serves the ongoing transcodes.
   { connection: redisConnectionOptions, autorun: false, concurrency: 1 },
 );
 
@@ -288,9 +288,9 @@ timelineExportWorker.on('failed', (job, err) =>
   logger.error({ err }, `[timelineExport.worker] ✗ montage=${job?.data.timelineId}`),
 );
 
-/** Démarré par le process worker principal (cf. ffmpeg.worker). */
+/** Started by the main worker process (cf. ffmpeg.worker). */
 export function startTimelineExportWorker(): void {
-  // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
+  // The worker loop lives as long as the process: nothing to wait for here.
   void timelineExportWorker.run();
   registerWorkerShutdown('timelineExport.worker', timelineExportWorker);
   logger.info('[timelineExport.worker] démarré.');

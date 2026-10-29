@@ -7,25 +7,25 @@ import { isAbortError, putWithProgress, runPool, throwIfAborted, withRetry } fro
 import type { FileSequence } from './imageSequence';
 
 /**
- * Envoi d'une séquence d'images : N fichiers, UN média.
+ * Sending an image sequence: N files, ONE media.
  *
- * Le multipart résumable découpe un fichier en parts ; ici c'est l'inverse. Les trois
- * acquis du moteur d'envoi sont rejoués à l'échelle de la frame : parallélisme borné,
- * réessai avec re-signature, annulation réelle. La reprise, elle, ne coûte rien au client —
- * `init` renvoie les frames déjà présentes dans le stockage, qui sont simplement sautées.
+ * Resumable multipart splits a file into parts; here it is the reverse. The three
+ * gains of the upload engine are replayed at frame scale: bounded parallelism,
+ * retry with re-signing, real cancellation. The resume, for its part, costs the client nothing:
+ * `init` returns the frames already in storage, which are simply skipped.
  *
- * La progression est double, et c'est délibéré : « 342 / 1200 frames » dit à l'artiste où
- * il en est bien mieux qu'un pourcentage d'octets, mais les frames n'ont pas toutes la même
- * taille — on compte donc les octets pour la barre et les fichiers pour le texte.
+ * Progress is dual, and deliberately so: "342 / 1200 frames" tells the artist where
+ * they stand far better than a byte percentage, but the frames are not all the same
+ * size, so we count the bytes for the bar and the files for the text.
  */
 
-/** Frames envoyées de front. Même arbitrage que les parts d'un gros fichier. */
+/** Frames sent at once. Same trade-off as the parts of a large file. */
 const FRAME_CONCURRENCY = 4;
-/** URLs demandées par lot (le serveur borne à 64). */
+/** URLs requested per batch (the server caps it at 64). */
 const FRAME_URL_BATCH = 32;
 
 export interface SequenceProgress {
-  /** Octets transférés, frames déjà présentes comprises. */
+  /** Bytes transferred, including frames already present. */
   bytes: number;
   totalBytes: number;
   percent: number;
@@ -36,11 +36,11 @@ export interface SequenceProgress {
 export interface SequenceUploadOptions {
   onProgress?: (progress: SequenceProgress) => void;
   signal?: AbortSignal;
-  /** Cadence imposée ; sinon héritée du pipeline du plan côté serveur. */
+  /** Imposed frame rate; otherwise inherited from the shot's pipeline on the server. */
   framerate?: number;
   /**
-   * Consigne d'upload (Phase 50). Portée par la finalisation, comme pour un fichier
-   * unique : un projet qui l'exige refuse la séquence qui arrive sans elle.
+   * Upload instruction (Phase 50). Carried by the finalization, as for a single
+   * file: a project that requires it refuses the sequence that arrives without it.
    */
   note?: string | null;
 }
@@ -49,7 +49,7 @@ export interface SequenceUploadResult {
   mediaObjectId: number;
   status: string;
   frameCount: number;
-  /** Numéros absents entre la première et la dernière frame arrivées. */
+  /** Missing numbers between the first and the last frame received. */
   missingFrames: number;
 }
 
@@ -96,8 +96,8 @@ export async function uploadImageSequence(
       missingFrames: done.missingFrames,
     };
   } catch (err) {
-    // Abandon : les frames déjà déposées seraient facturées et invisibles — la route
-    // d'annulation vide le préfixe et supprime le média resté en UPLOADING.
+    // Abort: the frames already dropped would be billed and invisible. The cancel route
+    // empties the prefix and deletes the media left in UPLOADING.
     if (isAbortError(err) || signal?.aborted) {
       void api.post(`/api/media/multipart/${init.mediaObjectId}/abort`).catch(() => undefined);
     }
@@ -105,7 +105,7 @@ export async function uploadImageSequence(
   }
 }
 
-/** Envoie les frames manquantes ; celles déjà en place comptent dans la progression. */
+/** Sends the missing frames; those already in place count toward progress. */
 async function sendFrames(
   sequence: FileSequence,
   init: InitResponse,
@@ -157,7 +157,7 @@ async function frameUrls(mediaObjectId: number, names: string[]): Promise<Map<st
   return new Map(urls.map((u) => [u.name, u.url]));
 }
 
-/** Une frame, avec réessai : chaque nouvelle tentative repart d'une signature fraîche. */
+/** One frame, with retry: each new attempt starts from a fresh signature. */
 async function sendFrame(
   mediaObjectId: number,
   file: File,
@@ -171,8 +171,8 @@ async function sendFrame(
       const target =
         tryIndex === 0 ? url : ((await frameUrls(mediaObjectId, [file.name])).get(file.name) ?? url);
       inFlight.set(file.name, 0);
-      // Pas de Content-Type : le serveur l'arrête lui-même à la finalisation, et la
-      // signature S3 ne le couvre pas.
+      // No Content-Type: the server sets it itself at finalization, and the
+      // S3 signature does not cover it.
       await putWithProgress(
         target,
         file,

@@ -10,28 +10,28 @@ import { uploadImageSequence } from '../lib/sequenceUpload';
 import { useUploadStore } from './useUploadStore';
 
 /**
- * Dépôt d'un lot de fichiers : proposer le regroupement, puis l'envoyer.
+ * Drop of a batch of files: propose the grouping, then send it.
  *
- * Deux temps distincts. `planDrop` reconnaît les séquences d'images et ouvre la
- * proposition ; rien n'est créé tant que l'utilisateur n'a pas tranché — un regroupement
- * imposé en silence produirait un média dont personne n'a voulu. Quand aucun motif n'est
- * reconnu, il s'efface et rend le dépôt tel quel, sans dialogue. `sendPlan` envoie ensuite
- * le plan retenu dans une version : les séquences dans leur propre file, le reste dans la
+ * Two distinct steps. `planDrop` recognizes the image sequences and opens the
+ * proposal; nothing is created while the user has not decided. An imposed grouping made
+ * silently would produce a media nobody wanted. When no pattern is recognized, it steps aside and returns the drop as is, without a dialog. `sendPlan` then sends
+ * the chosen plan into a version: sequences in their own queue, the rest in the
+ * ordinary one.
  * file ordinaire (`useUploadStore`).
  *
- * La séparation existe pour la version : elle ne se crée qu'APRÈS la décision (et la
- * consigne, cf. `deliverFiles`), sans quoi renoncer au dialogue laisserait une version vide.
+ * The separation exists for the version: it is only created AFTER the decision (and the
+ * instruction, see `deliverFiles`), otherwise giving up on the dialog would leave an empty version.
  *
- * Les séquences ont leur propre file parce qu'elles n'ont ni la même granularité
- * (« 342 / 1200 frames ») ni le même coût : une seule à la fois, chacune parallélisant déjà
- * ses frames.
+ * Sequences have their own queue because they have neither the same granularity
+ * ("342 / 1200 frames") nor the same cost: only one at a time, each already parallelizing its
+ * frames.
  */
 
 export type SequenceUploadStatus = 'pending' | 'uploading' | 'processing' | 'done' | 'error';
 
 export interface SequenceUploadItem {
   id: string;
-  /** Motif de nommage, affiché tel quel : c'est ainsi que l'artiste nomme son plan. */
+  /** Naming pattern, shown as is: that is how the artist names the shot. */
   pattern: string;
   versionId: number;
   totalFrames: number;
@@ -42,26 +42,26 @@ export interface SequenceUploadItem {
   error?: string;
 }
 
-/** Ce qu'un dépôt deviendra : des séquences (un média chacune) et des fichiers isolés. */
+/** What a drop will become: sequences (one media each) and isolated files. */
 export interface DropPlan {
   sequences: FileSequence[];
   singles: File[];
 }
 
-/** Dépôt en attente de décision : ce que la lecture des noms a reconnu. */
+/** Drop awaiting a decision: what reading the names recognized. */
 export interface SequenceProposal extends DropPlan {
-  /** Rend la main au dépôt : le plan retenu, ou `null` s'il est abandonné. */
+  /** Hands control back to the drop: the chosen plan, or `null` if abandoned. */
   resolve: (plan: DropPlan | null) => void;
 }
 
 const POLL_MS = 3000;
-/** Au-delà, on cesse de suivre : l'assemblage a un souci que le poll ne dira pas. */
+/** Beyond this, we stop tracking: the assembly has a problem that the poll will not report. */
 const POLL_MAX_MS = 60 * 60_000;
 
-/** Une séquence à la fois : chacune sature déjà le lien avec ses quatre frames de front. */
+/** One sequence at a time: each already saturates the link with its four frames at once. */
 const MAX_CONCURRENT_SEQUENCES = 1;
 
-/** Les fichiers restent hors du store : un `File` n'a rien à faire dans l'état rendu. */
+/** Files stay out of the store: a `File` has no business in the rendered state. */
 interface QueuedSequence {
   sequence: FileSequence;
   versionId: number;
@@ -73,7 +73,7 @@ const controllers = new Map<string, AbortController>();
 interface SequenceUploadState {
   proposal: SequenceProposal | null;
   uploads: SequenceUploadItem[];
-  /** Retient en séquences celles qui sont cochées, en fichiers tout le reste. */
+  /** Keeps as sequences those that are ticked, and as files everything else. */
   acceptProposal: (grouped: FileSequence[]) => void;
   cancelProposal: () => void;
   removeUpload: (id: string) => void;
@@ -111,23 +111,23 @@ export const useSequenceUploadStore = create<SequenceUploadState>((set, get) => 
 }));
 
 /**
- * Lit un dépôt et, s'il contient des séquences, demande le regroupement.
+ * Reads a drop and, if it contains sequences, asks for the grouping.
  *
- * Rend le plan retenu, ou `null` si l'utilisateur renonce. Sans motif reconnu, le dépôt
- * repart aussitôt tel quel — le chemin ordinaire ne gagne aucun écran.
+ * Returns the chosen plan, or `null` if the user gives up. Without a recognized pattern, the drop
+ * goes straight out as is: the ordinary path gains no screen.
  */
 export function planDrop(files: File[]): Promise<DropPlan | null> {
   const { sequences, singles } = detectSequences(files);
   if (sequences.length === 0) return Promise.resolve({ sequences: [], singles: files });
-  // Un dépôt arrivé pendant qu'un autre attend sa décision le remplace : l'ancien est
-  // abandonné explicitement plutôt que laissé suspendu à jamais.
+  // A drop arriving while another awaits its decision replaces it: the old one is
+  // explicitly abandoned rather than left suspended forever.
   useSequenceUploadStore.getState().cancelProposal();
   return new Promise((resolve) => {
     useSequenceUploadStore.setState({ proposal: { sequences, singles, resolve } });
   });
 }
 
-/** Envoie un plan dans une version, la consigne d'upload accompagnant chaque média. */
+/** Sends a plan into a version, the upload instruction accompanying each media. */
 export function sendPlan(plan: DropPlan, versionId: number, note: string | null): void {
   const { enqueue } = useUploadStore.getState();
   for (const file of plan.singles) enqueue(file, versionId, { note });
@@ -158,7 +158,7 @@ type Setter = (fn: (state: SequenceUploadState) => Partial<SequenceUploadState>)
 const patch = (set: Setter, id: string, changes: Partial<SequenceUploadItem>): void =>
   set((s) => ({ uploads: s.uploads.map((u) => (u.id === id ? { ...u, ...changes } : u)) }));
 
-/** Démarre les envois en attente tant qu'il reste un créneau. */
+/** Starts the pending sends as long as a slot is free. */
 function pump(set: Setter, get: () => SequenceUploadState): void {
   const { uploads } = get();
   let running = uploads.filter((u) => u.status === 'uploading').length;
@@ -188,8 +188,8 @@ async function startSequence(
       note: job.note,
       onProgress: (p) => patch(set, id, { progress: p.percent, framesDone: p.files }),
     });
-    // Une livraison à trous n'est pas une erreur, mais elle se dit : c'est le genre
-    // d'oubli qu'un artiste veut connaître avant la review, pas pendant.
+    // A gappy delivery is not an error, but it should be said: it is the kind of
+    // oversight an artist wants to know about before the review, not during.
     if (res.missingFrames > 0) toast.warning(t('imageSequence.gaps', { count: res.missingFrames }));
     patch(set, id, {
       status: 'processing',
@@ -211,7 +211,7 @@ async function startSequence(
   }
 }
 
-/** Poll léger jusqu'à READY/FAILED — l'assemblage d'un plan long prend des minutes. */
+/** Light poll until READY/FAILED: the assembly of a long shot takes minutes. */
 function followProcessing(
   id: string,
   mediaObjectId: number,
@@ -232,7 +232,7 @@ function followProcessing(
       if (media.status === 'FAILED')
         return patch(set, id, { status: 'error', error: t('uploads.error.processingFailed') });
     } catch {
-      // Coupure passagère : on retentera au prochain tick.
+      // Transient outage: we will retry at the next tick.
     }
     window.setTimeout(() => void tick(), POLL_MS);
   };

@@ -5,15 +5,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 
 /**
- * Worker d'export de montage — les décisions, pas les octets.
+ * Export worker for an edit: the decisions, not the bytes.
  *
- * Les 297 lignes de ce worker n'avaient aucun test : ni Redis, ni ffmpeg, ni MinIO ne sont
- * disponibles dans une suite unitaire, et rien de pur n'en est exporté. On capture donc le
- * processeur que le worker confie à BullMQ et on l'appelle directement, ffmpeg et stockage
- * doublés. Ce qui est vérifié est ce que le fichier promet : un master qui dure exactement
- * ce que dure la timeline (les plans manquants deviennent des cartons, ils ne disparaissent
- * pas), un carton sans texte plutôt qu'un export perdu quand `drawtext` manque, et le
- * temporaire effacé même en cas d'échec.
+ * The 297 lines of this worker had no test: neither Redis, ffmpeg nor MinIO are
+ * available in a unit suite, and nothing pure is exported from it. We therefore capture the
+ * processor that the worker hands to BullMQ and call it directly, with ffmpeg and storage
+ * doubled. What is checked is what the file promises: a master lasting exactly
+ * as long as the timeline (missing shots become title cards, they do not vanish),
+ * a card without text rather than a lost export when `drawtext` is missing, and the
+ * temporary directory removed even on failure.
  */
 
 type Processor = (job: {
@@ -21,7 +21,7 @@ type Processor = (job: {
   updateProgress: (p: number) => Promise<void>;
 }) => Promise<void>;
 
-// `vi.hoisted` : les fabriques de `vi.mock` sont remontées au-dessus des déclarations.
+// `vi.hoisted`: the factories of `vi.mock` are hoisted above the declarations.
 const captured = vi.hoisted((): { processor?: Processor } => ({}));
 
 vi.mock('bullmq', () => ({
@@ -40,7 +40,7 @@ vi.mock('bullmq', () => ({
       return Promise.resolve();
     }
   },
-  // `JobService` construit ses files à l'import : sans ce double, il ouvrirait Redis.
+  // `JobService` builds its queues at import time: without this double, it would open Redis.
   Queue: class {
     constructor(readonly name: string) {}
     add() {
@@ -49,7 +49,7 @@ vi.mock('bullmq', () => ({
   },
 }));
 
-/** Chaque appel ffmpeg réussit, sauf si `ffmpegFails` porte une erreur pour cette étape. */
+/** Each ffmpeg call succeeds unless `ffmpegFails` carries an error for that step. */
 const ffmpegCalls: { inputs: string[]; output: string }[] = [];
 let ffmpegError: Error | null = null;
 
@@ -88,8 +88,8 @@ vi.mock('fluent-ffmpeg', () => {
 });
 
 /**
- * Cartons : le worker parle au binaire directement (lavfi est refusé par fluent-ffmpeg).
- * `spawnExitCodes` se consomme appel par appel — de quoi faire échouer le premier seulement.
+ * Title cards: the worker talks to the binary directly (lavfi is rejected by fluent-ffmpeg).
+ * `spawnExitCodes` is consumed call by call, enough to make only the first one fail.
  */
 const spawnCalls: string[][] = [];
 const spawnExitCodes: number[] = [];
@@ -147,7 +147,7 @@ const plan = (segments: { shotCode: string; duration: number; storageKey: string
   segments,
 });
 
-/** Joue le processeur du worker et rend la suite des progressions rapportées. */
+/** Runs the worker's processor and returns the sequence of reported progress values. */
 async function runJob(timelineId = 7): Promise<number[]> {
   const progress: number[] = [];
   await captured.processor!({
@@ -171,8 +171,8 @@ beforeEach(() => {
   vi.mocked(logger.warn).mockClear();
 });
 
-describe('timelineExport.worker — export d’un montage', () => {
-  it('encode chaque plan puis dépose le master sous la clé du montage', async () => {
+describe('timelineExport.worker — exporting an edit', () => {
+  it('encodes each shot, then drops the master under the key of the edit', async () => {
     vi.mocked(exportPlan).mockResolvedValue(
       plan([
         { shotCode: 'SH010', duration: 4, storageKey: 'media/1.mov' },
@@ -183,18 +183,18 @@ describe('timelineExport.worker — export d’un montage', () => {
     const progress = await runJob();
 
     expect(vi.mocked(storage.downloadToFile)).toHaveBeenCalledTimes(2);
-    // Deux encodages de segment + une concaténation.
+    // Two segment encodes + one concatenation.
     expect(ffmpegCalls).toHaveLength(3);
     expect(vi.mocked(storage.uploadFile)).toHaveBeenCalledWith(
       masterKey(7),
       expect.stringContaining('master.mp4'),
       'video/mp4',
     );
-    // La progression finit à 100 : un export terminé ne reste pas coincé à 90 %.
+    // Progress ends at 100: a finished export does not stay stuck at 90%.
     expect(progress.at(-1)).toBe(100);
   });
 
-  it('remplace un plan sans média par un carton : le master dure ce que dure la timeline', async () => {
+  it('replaces a shot without media by a card: the master lasts as long as the timeline', async () => {
     vi.mocked(exportPlan).mockResolvedValue(
       plan([
         { shotCode: 'SH010', duration: 4, storageKey: 'media/1.mov' },
@@ -204,42 +204,42 @@ describe('timelineExport.worker — export d’un montage', () => {
 
     await runJob();
 
-    // Le plan manquant n'est pas sauté : il passe par le device lavfi, avec son code.
+    // The missing shot is not skipped: it goes through the lavfi device, with its code.
     expect(spawnCalls).toHaveLength(1);
     expect(spawnCalls[0]).toContain('lavfi');
     expect(spawnCalls[0]?.join(' ')).toContain('SH020');
     expect(vi.mocked(storage.downloadToFile)).toHaveBeenCalledTimes(1);
   });
 
-  it('refait le carton sans texte quand drawtext échoue, plutôt que de perdre l’export', async () => {
+  it('redoes the card without text when drawtext fails, rather than losing the export', async () => {
     vi.mocked(exportPlan).mockResolvedValue(plan([{ shotCode: 'SH030', duration: 2, storageKey: null }]));
-    // Première tentative refusée (police absente), seconde acceptée.
+    // First attempt refused (font missing), second accepted.
     spawnExitCodes.push(1, 0);
 
     await runJob();
 
     expect(spawnCalls).toHaveLength(2);
-    // Le second appel n'incruste plus de texte.
+    // The second call no longer embeds any text.
     expect(spawnCalls[0]).toContain('-vf');
     expect(spawnCalls[1]).not.toContain('-vf');
     expect(vi.mocked(logger.warn)).toHaveBeenCalled();
     expect(vi.mocked(storage.uploadFile)).toHaveBeenCalledTimes(1);
   });
 
-  it('refuse un montage vide au lieu de déposer un fichier de zéro seconde', async () => {
+  it('refuses an empty edit instead of dropping a zero-second file', async () => {
     vi.mocked(exportPlan).mockResolvedValue(plan([]));
     await expect(runJob()).rejects.toThrow(/no shot to export/);
     expect(vi.mocked(storage.uploadFile)).not.toHaveBeenCalled();
   });
 
-  it('efface son répertoire temporaire même quand ffmpeg échoue', async () => {
+  it('removes its temporary directory even when ffmpeg fails', async () => {
     vi.mocked(exportPlan).mockResolvedValue(
       plan([{ shotCode: 'SH040', duration: 3, storageKey: 'media/3.mov' }]),
     );
     ffmpegError = new Error('ffmpeg exploded');
 
     await expect(runJob()).rejects.toThrow(/ffmpeg exploded/);
-    // Le `finally` du worker : sans lui, chaque échec laisserait un montage entier sur disque.
+    // The worker's `finally`: without it, every failure would leave a whole edit on disk.
     expect(removed.some((p) => p.includes('review-timeline-'))).toBe(true);
   });
 });

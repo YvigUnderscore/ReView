@@ -6,16 +6,16 @@ import { LayoutGrid, List, RotateCcw } from 'lucide-react';
 import { useHasOverride, useViewMode, useViewPref } from '../stores/useViewPref';
 
 /**
- * Bascule cartes ↔ compact d'une liste.
+ * Cards / compact toggle for a list.
  *
- * Cliquer pose un **écart propre à cette liste** : une grille de plans se lit en vignettes,
- * une liste de tâches en lignes, et un réglage unique ne peut pas répondre pour les deux.
- * Tant qu'aucun écart n'est posé, la liste suit le réglage du compte — le troisième bouton
- * apparaît alors pour l'y ramener, sans quoi rien n'indiquerait qu'un écart existe ni
- * comment le lever.
+ * Clicking sets a **deviation specific to this list**: a shot grid reads as thumbnails,
+ * a task list as rows, and a single setting cannot answer for both.
+ * As long as no deviation is set, the list follows the account's setting; the third button
+ * then appears to bring it back, otherwise nothing would indicate that a deviation exists, nor
+ * how to lift it.
  */
 
-// Hissé hors du render (règle react-hooks/static-components)
+// Hoisted out of render (react-hooks/static-components rule)
 function ModeButton({
   active,
   icon,

@@ -15,13 +15,13 @@ import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 import SettingsRow from './settings/SettingsRow';
 
 /**
- * Réglages d'affichage (42.A1) : thème (système/clair/sombre — №102), densité (№74), vue
- * par défaut des listes et langue. Personnalisation locale (localStorage), appliquée
- * instantanément sans flash.
+ * Display settings (42.A1): theme (system/light/dark, №102), density (№74), default view
+ * for lists and language. Local customization (localStorage), applied
+ * instantly without flash.
  *
- * Le panneau redéfinissait **son propre** contrôle segmenté alors que `ui/segmented-control`
- * existe et sert quatre autres écrans : deux dessins pour un même geste, sur la page que
- * chacun ouvre en premier. Il emploie désormais la primitive partagée.
+ * The panel redefined **its own** segmented control while `ui/segmented-control`
+ * exists and serves four other screens: two designs for the same gesture, on the page that
+ * everyone opens first. It now uses the shared primitive.
  */
 export default function DisplaySettings() {
   const t = useT();
@@ -29,12 +29,12 @@ export default function DisplaySettings() {
   const setMode = useTheme((s) => s.setMode);
   const density = useDensity((s) => s.density);
   const setDensity = useDensity((s) => s.setDensity);
-  // Le thème reste propre à l'appareil (un poste peut être en salle sombre) ; la langue et
-  // la densité suivent le compte — le serveur se sert de la langue pour les emails, et
-  // repartir en confortable sur chaque nouveau poste était une contrariété inutile (A2).
+  // The theme stays specific to the device (a workstation may be in a dark room); the language and
+  // density follow the account: the server uses the language for emails, and
+  // resetting to comfortable on each new workstation was a needless annoyance (A2).
   const updatePrefs = useUpdatePreferences();
-  // Vue par défaut de toutes les listes. Une liste qui a son propre réglage garde le
-  // sien : c'est ce qu'un écart veut dire, et le lever se fait depuis la liste.
+  // Default view of all lists. A list with its own setting keeps its
+  // own: that is what a deviation means, and lifting it is done from the list.
   const viewGlobal = useViewPref((s) => s.global);
   const setViewGlobal = useViewPref((s) => s.setGlobal);
 

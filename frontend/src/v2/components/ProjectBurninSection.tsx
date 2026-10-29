@@ -8,8 +8,8 @@ import { Hint } from './ui/hint';
 import { SettingsCard } from './settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
-// Recalculé au rendu : en constante de module, les libellés resteraient figés dans la
-// langue chargée au démarrage.
+// Computed at render: as a module constant, the labels would stay frozen in the
+// language loaded at startup.
 const flags = (t: (key: MessageKey) => string): { key: keyof BurninConfig & string; label: string }[] => [
   { key: 'enabled', label: t('burnin.onProxies') },
   { key: 'showShot', label: t('burnin.shotCode') },
@@ -19,7 +19,7 @@ const flags = (t: (key: MessageKey) => string): { key: keyof BurninConfig & stri
   { key: 'slate', label: t('burnin.slate') },
 ];
 
-/** Valeurs proposées quand on personnalise (l'override remplace le template champ par champ). */
+/** Values offered when customizing (the override replaces the template field by field). */
 const CUSTOM_DEFAULTS: Partial<BurninConfig> = {
   enabled: true,
   showShot: true,
@@ -31,8 +31,8 @@ const CUSTOM_DEFAULTS: Partial<BurninConfig> = {
 };
 
 /**
- * Section « Burn-ins » des réglages projet (35.A) : override du template studio.
- * Sans override, le projet hérite du template configuré dans Admin → Diffusion.
+ * "Burn-ins" section of the project settings (35.A): override of the studio template.
+ * Without an override, the project inherits the template configured in Admin → Distribution.
  */
 export default function ProjectBurninSection({
   value,

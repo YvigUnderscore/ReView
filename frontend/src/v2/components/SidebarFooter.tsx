@@ -16,7 +16,7 @@ import { useT } from '../i18n';
 
 const STATUSES: UserStatus[] = ['AVAILABLE', 'AWAY', 'DND'];
 
-/** Pied de sidebar : profil/statut de l'utilisateur courant + présence des autres. */
+/** Sidebar footer: current user's profile/status, plus presence of the others. */
 export default function SidebarFooter() {
   const t = useT();
   const user = useAuth((s) => s.user);

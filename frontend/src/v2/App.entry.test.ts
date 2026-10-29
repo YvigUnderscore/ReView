@@ -7,27 +7,27 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 /**
- * Ce qu'il y a dans le **premier chargement**, mesuré sur le graphe d'imports statiques.
+ * What is in the **first load**, measured on the static import graph.
  *
- * Le budget en octets (`scripts/check-bundle-budget.mjs`) dit qu'on a dépassé ; il ne dit
- * jamais *quoi*. Or une seule ligne suffit à ramener une bibliothèque entière dans le
- * fichier d'entrée : un `import { motion } from 'framer-motion'` ajouté à un composant de
- * la coquille, un onglet repassé en import statique « pour aller plus vite ». Le mal est
- * fait au commit d'après, sur un changement sans rapport, et personne ne fait le lien.
+ * The byte budget (`scripts/check-bundle-budget.mjs`) says that we went over; it never
+ * says *what*. Yet a single line is enough to bring a whole library into the
+ * entry file: an `import { motion } from 'framer-motion'` added to a component of
+ * the shell, or a tab re-imported statically "to go faster". The harm is done
+ * in the next commit, on an unrelated change, and nobody makes the link.
  *
- * Ce test-ci parcourt exactement ce que le navigateur télécharge avant d'exécuter quoi que
- * ce soit : `main.jsx` et la fermeture de ses imports **statiques** — les `import()`
- * dynamiques, eux, sont des chunks à part et s'arrêtent donc la marche. Chaque interdit
- * porte le poids gzip qu'il a coûté, mesuré sur un build réel.
+ * This test walks exactly what the browser downloads before running anything:
+ * `main.jsx` and the closure of its **static** imports. The dynamic `import()`s are
+ * separate chunks and so end the walk. Each prohibition
+ * carries the gzip weight it cost, measured on a real build.
  */
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ENTRY = path.join(SRC, 'main.jsx');
 
-/** Extensions tentées dans l'ordre, à la manière du résolveur de Vite. */
+/** Extensions tried in order, the way Vite's resolver does. */
 const CANDIDATES = ['', '.ts', '.tsx', '.js', '.jsx', '.json', '/index.ts', '/index.tsx', '/index.js'];
 
-/** Les fichiers qu'on ne parcourt pas : ils n'ont pas d'imports à suivre. */
+/** Files we do not walk: they have no imports to follow. */
 const LEAF = /\.(css|json|svg|png|jpg|woff2?)$/;
 
 function resolveSpec(fromFile: string, spec: string): string | null {
@@ -41,12 +41,12 @@ function resolveSpec(fromFile: string, spec: string): string | null {
 }
 
 /**
- * Spécificateurs importés **statiquement** par un fichier.
+ * Specifiers imported **statically** by a file.
  *
- * Les trois formes qui produisent du code au chargement : `import … from`, `import 'x'`
- * (effet de bord) et `export … from` (ré-export). `import type` est écarté — TypeScript
- * l'efface — et `import('x')`, qui n'est jamais en début de ligne suivi d'un espace, ne
- * peut pas être confondu avec les précédentes.
+ * The three forms that produce code at load time: `import … from`, `import 'x'`
+ * (side effect) and `export … from` (re-export). `import type` is set aside: TypeScript
+ * erases it, and `import('x')`, which is never at the start of a line followed by a space, cannot
+ * be confused with the previous ones.
  */
 function staticSpecifiers(source: string): string[] {
   const out: string[] = [];
@@ -60,7 +60,7 @@ function staticSpecifiers(source: string): string[] {
 }
 
 interface EntryGraph {
-  /** Fichiers du dépôt, en chemin relatif à `src/`, séparateurs `/`. */
+  /** Files of the repo, as paths relative to `src/`, with `/` separators. */
   files: Set<string>;
   /** Paquets de `node_modules` atteints statiquement. */
   packages: Set<string>;
@@ -83,7 +83,7 @@ function walkEntryGraph(): EntryGraph {
         if (resolved) queue.push(resolved);
         continue;
       }
-      // Paquet : on note son nom (avec la portée `@scope/nom`) et on s'arrête là.
+      // Package: we note its name (with the `@scope/name` scope) and stop there.
       const parts = spec.split('/');
       packages.add(spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]);
     }
@@ -91,12 +91,12 @@ function walkEntryGraph(): EntryGraph {
   return { files, packages };
 }
 
-describe('graphe du premier chargement', () => {
+describe('first-load graph', () => {
   const graph = walkEntryGraph();
 
-  it('part bien de main.jsx et atteint la coquille', () => {
-    // Garde-fou du garde-fou : un parcours qui ne trouverait plus rien passerait tous les
-    // interdits ci-dessous sans rien vérifier.
+  it('starts from main.jsx and reaches the shell', () => {
+    // Guard against the guard: a walk that found nothing would pass all the
+    // prohibitions below without checking anything.
     expect(graph.files.has('v2/App.tsx')).toBe(true);
     expect(graph.files.has('v2/components/Shell.tsx')).toBe(true);
     expect(graph.packages.has('react')).toBe(true);
@@ -113,7 +113,7 @@ describe('graphe du premier chargement', () => {
     expect([...graph.packages]).not.toContain(pkg);
   });
 
-  it('n’embarque ni la page projet, ni ses onglets, ni les panneaux ShotGrid (F4)', () => {
+  it('does not embed the project page, its tabs, nor the ShotGrid panels (F4)', () => {
     const fautifs = [...graph.files].filter(
       (f) =>
         f === 'v2/pages/ProjectPage.tsx' ||
@@ -124,7 +124,7 @@ describe('graphe du premier chargement', () => {
     expect(fautifs).toEqual([]);
   });
 
-  it('n’embarque pas le rendu markdown de la documentation (F6)', () => {
+  it('does not embed the markdown rendering of the documentation (F6)', () => {
     expect(graph.files.has('v2/pages/docs/docsRender.ts')).toBe(false);
   });
 });

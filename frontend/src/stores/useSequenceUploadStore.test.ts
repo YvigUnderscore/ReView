@@ -17,13 +17,13 @@ vi.mock('../lib/apiClient', () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 import { planDrop, sendPlan, useSequenceUploadStore } from './useSequenceUploadStore';
 
 /**
- * Le point d'entrée d'un dépôt.
+ * The entry point of a drop.
  *
- * La règle du lot est là : **proposer, jamais imposer**. Rien ne part tant que
- * l'utilisateur n'a pas tranché, et un dépôt sans motif reconnu ne doit ni ouvrir de
- * dialogue ni changer quoi que ce soit au comportement d'avant. La décision rend la main
- * au dépôt (`planDrop`), qui n'envoie qu'ensuite (`sendPlan`) : c'est ce qui permet de ne
- * créer la version qu'une fois le dialogue tranché.
+ * The batch rule is what matters: **propose, never impose**. Nothing goes out until the
+ * user has decided, and a drop with no recognized pattern must neither open a dialog nor change
+ * anything about the previous behaviour. The decision hands control back
+ * to the drop (`planDrop`), which only sends afterwards (`sendPlan`): this is what lets the
+ * version be created only once the dialog is settled.
  */
 
 const file = (name: string, size = 1000): File => ({ name, size }) as unknown as File;
@@ -40,20 +40,20 @@ beforeEach(() => {
   upload.mockResolvedValue({ mediaObjectId: 7, status: 'PROCESSING', frameCount: 10, missingFrames: 0 });
 });
 
-/** Ouvre la proposition et rend la promesse du dépôt, encore pendante. */
+/** Opens the proposal and returns the drop's promise, still pending. */
 const propose = (files: File[]) => {
   const pending = planDrop(files);
   return { pending, proposal: useSequenceUploadStore.getState().proposal };
 };
 
 describe('planDrop', () => {
-  it('rend le dépôt tel quel, sans dialogue, quand aucun motif n’est reconnu', async () => {
+  it('returns the drop as is, without a dialog, when no pattern is recognized', async () => {
     const files = [file('plan.mov'), file('brief.pdf')];
     await expect(planDrop(files)).resolves.toEqual({ sequences: [], singles: files });
     expect(useSequenceUploadStore.getState().proposal).toBeNull();
   });
 
-  it('ouvre la proposition et n’envoie RIEN tant que l’utilisateur n’a pas tranché', () => {
+  it('opens the proposal and sends NOTHING until the user has decided', () => {
     const { proposal } = propose([...plan(1001, 1010), file('notes.txt')]);
     expect(proposal?.sequences.map((s) => s.pattern)).toEqual(['plan.%04d.exr']);
     expect(proposal?.singles.map((s) => s.name)).toEqual(['notes.txt']);
@@ -61,7 +61,7 @@ describe('planDrop', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
-  it('abandonne explicitement un dépôt encore en attente quand un autre arrive', async () => {
+  it('explicitly abandons a drop still pending when another one arrives', async () => {
     const first = propose(plan(1001, 1010));
     propose(plan(2001, 2005));
     await expect(first.pending).resolves.toBeNull();
@@ -70,7 +70,7 @@ describe('planDrop', () => {
 });
 
 describe('acceptProposal', () => {
-  it('rend la séquence retenue, et le reste en fichiers', async () => {
+  it('returns the chosen sequence, and the rest as files', async () => {
     const { pending, proposal } = propose([...plan(1001, 1010), file('notes.txt')]);
     useSequenceUploadStore.getState().acceptProposal(proposal!.sequences);
     const decided = await pending;
@@ -79,7 +79,7 @@ describe('acceptProposal', () => {
     expect(useSequenceUploadStore.getState().proposal).toBeNull();
   });
 
-  it('rend ses frames en fichiers isolés quand la séquence est refusée', async () => {
+  it('returns its frames as isolated files when the sequence is refused', async () => {
     const { pending } = propose(plan(1001, 1010));
     useSequenceUploadStore.getState().acceptProposal([]);
     const decided = await pending;
@@ -89,7 +89,7 @@ describe('acceptProposal', () => {
 });
 
 describe('cancelProposal', () => {
-  it('referme sans rien envoyer, et le dépôt apprend qu’il est abandonné', async () => {
+  it('closes without sending anything, and the drop learns it has been abandoned', async () => {
     const { pending } = propose(plan(1001, 1010));
     useSequenceUploadStore.getState().cancelProposal();
     await expect(pending).resolves.toBeNull();
@@ -106,7 +106,7 @@ describe('sendPlan', () => {
     return pending.then((p) => p!);
   };
 
-  it('envoie la séquence en UN média et les fichiers isolés dans la file ordinaire', async () => {
+  it('sends the sequence as ONE media and the isolated files in the ordinary queue', async () => {
     sendPlan(await sequenceOf([...plan(1001, 1010), file('notes.txt')]), 4, 'Comp v3');
     expect(useSequenceUploadStore.getState().uploads).toHaveLength(1);
     expect(useSequenceUploadStore.getState().uploads[0]).toMatchObject({
@@ -120,7 +120,7 @@ describe('sendPlan', () => {
     });
   });
 
-  it('porte la consigne jusqu’à l’envoi de la séquence', async () => {
+  it('carries the instruction through to the sending of the sequence', async () => {
     sendPlan(await sequenceOf(plan(1001, 1010)), 4, 'Comp v3');
     await vi.waitFor(() => expect(upload).toHaveBeenCalledTimes(1));
     expect(upload).toHaveBeenCalledWith(
@@ -130,14 +130,14 @@ describe('sendPlan', () => {
     );
   });
 
-  it('signale une livraison à trous plutôt que de la laisser passer sans un mot', async () => {
+  it('flags a gappy delivery rather than letting it through silently', async () => {
     upload.mockResolvedValue({ mediaObjectId: 7, status: 'PROCESSING', frameCount: 9, missingFrames: 1 });
     sendPlan(await sequenceOf(plan(1001, 1010)), 4, null);
     await vi.waitFor(() => expect(toasts.warning).toHaveBeenCalledTimes(1));
     expect(useSequenceUploadStore.getState().uploads[0].status).toBe('processing');
   });
 
-  it('remonte l’échec sans effacer la ligne : l’artiste doit voir ce qui a raté', async () => {
+  it('surfaces the failure without erasing the row: the artist must see what went wrong', async () => {
     upload.mockRejectedValue(new Error('403'));
     sendPlan(await sequenceOf(plan(1001, 1010)), 4, null);
     await vi.waitFor(() => expect(useSequenceUploadStore.getState().uploads[0].status).toBe('error'));

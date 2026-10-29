@@ -7,8 +7,8 @@ import { readableInk, userColor as colorFor } from '../lib/userColor';
 import { useT } from '../i18n';
 
 /**
- * Avatar utilisateur : image uploadée si disponible, sinon pastille à initiales
- * colorée de façon déterministe. Pastille de statut optionnelle (online + statut).
+ * User avatar: uploaded image if available, otherwise an initials badge
+ * deterministically colored. Optional status dot (online + status).
  */
 export default function Avatar({
   seed,
@@ -39,8 +39,8 @@ export default function Avatar({
       ) : (
         <div
           className="flex items-center justify-center rounded-full font-semibold"
-          // Encre calculée, pas figée en blanc : aucune des douze teintes de la palette ne
-          // tenait 4,5:1 avec du blanc (1,98:1 au pire). `readableInk` choisit la meilleure.
+          // Computed ink, not fixed to white: none of the twelve palette tints
+          // reached 4.5:1 with white (1.98:1 at worst). `readableInk` picks the best one.
           style={{
             width: size,
             height: size,

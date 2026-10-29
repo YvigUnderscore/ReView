@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isAbortError, putWithProgress, runPool, throwIfAborted, withRetry } from './uploadTransfer';
 
 /**
- * Les trois manques du moteur d'upload se vérifient ici : couper un transfert en vol,
- * réessayer une part sans perdre les autres, et n'en envoyer qu'un nombre borné de front.
+ * The three shortcomings of the upload engine are verified here: cutting a transfer in flight,
+ * retrying a part without losing the others, and sending only a bounded number of them at once.
  */
 
 type ProgressEvent = { lengthComputable: boolean; loaded: number };
@@ -53,7 +53,7 @@ afterEach(() => {
 });
 
 describe('putWithProgress', () => {
-  it('rend l’ETag de la part et relaie la progression', async () => {
+  it('returns the part ETag and relays the progress', async () => {
     const seen: number[] = [];
     const p = putWithProgress('https://s3/part1', blob, null, (loaded) => seen.push(loaded));
     last().upload.onprogress?.({ lengthComputable: true, loaded: 2 });
@@ -62,7 +62,7 @@ describe('putWithProgress', () => {
     expect(seen).toEqual([2]);
   });
 
-  it('rejette sur refus HTTP, sans confondre avec une annulation', async () => {
+  it('rejects on HTTP refusal, without confusing it with a cancellation', async () => {
     const p = putWithProgress('https://s3/part1', blob, null, () => {});
     last().status = 503;
     last().onload?.();
@@ -70,7 +70,7 @@ describe('putWithProgress', () => {
     await p.catch((err: unknown) => expect(isAbortError(err)).toBe(false));
   });
 
-  it('coupe la requête en vol quand le signal est déclenché', async () => {
+  it('cuts the in-flight request when the signal is triggered', async () => {
     const ctrl = new AbortController();
     const p = putWithProgress('https://s3/part1', blob, null, () => {}, ctrl.signal);
     const xhr = last();
@@ -79,7 +79,7 @@ describe('putWithProgress', () => {
     await p.catch((err: unknown) => expect(isAbortError(err)).toBe(true));
   });
 
-  it('refuse de partir si le signal est déjà déclenché (aucun octet envoyé)', async () => {
+  it('refuses to start if the signal is already triggered (no byte sent)', async () => {
     const ctrl = new AbortController();
     ctrl.abort();
     await putWithProgress('https://s3/part1', blob, null, () => {}, ctrl.signal).catch((err: unknown) =>
@@ -90,7 +90,7 @@ describe('putWithProgress', () => {
 });
 
 describe('withRetry', () => {
-  it('réessaie une part en échec et finit par réussir', async () => {
+  it('retries a failed part and eventually succeeds', async () => {
     vi.useFakeTimers();
     const attempts: number[] = [];
     const run = withRetry(async (i) => {
@@ -103,7 +103,7 @@ describe('withRetry', () => {
     expect(attempts).toEqual([0, 1, 2]);
   });
 
-  it('abandonne après le dernier réessai en relançant l’erreur d’origine', async () => {
+  it('gives up after the last retry, rethrowing the original error', async () => {
     vi.useFakeTimers();
     const outcome = withRetry(async () => {
       throw new Error('toujours cassé');
@@ -115,7 +115,7 @@ describe('withRetry', () => {
     expect(await outcome).toBe('toujours cassé');
   });
 
-  it('ne réessaie pas une annulation : l’attente est coupée net', async () => {
+  it('does not retry a cancellation: the wait is cut off immediately', async () => {
     vi.useFakeTimers();
     const ctrl = new AbortController();
     let calls = 0;
@@ -134,7 +134,7 @@ describe('withRetry', () => {
 });
 
 describe('runPool', () => {
-  it('n’exécute jamais plus de tâches que la limite', async () => {
+  it('never runs more tasks than the limit', async () => {
     let inFlight = 0;
     let peak = 0;
     const release: (() => void)[] = [];
@@ -155,7 +155,7 @@ describe('runPool', () => {
     expect(peak).toBe(4);
   });
 
-  it('remonte la première erreur sans laisser de promesse orpheline', async () => {
+  it('surfaces the first error without leaving an orphan promise', async () => {
     const done: number[] = [];
     await expect(
       runPool([1, 2, 3, 4], 2, async (n) => {
@@ -166,13 +166,13 @@ describe('runPool', () => {
     expect(done).not.toContain(2);
   });
 
-  it('ne fait rien sur une liste vide', async () => {
+  it('does nothing on an empty list', async () => {
     await expect(runPool([], 4, () => Promise.reject(new Error('jamais')))).resolves.toBeUndefined();
   });
 });
 
 describe('throwIfAborted', () => {
-  it('laisse passer un signal absent ou intact, jette sinon', () => {
+  it('lets an absent or intact signal pass, throws otherwise', () => {
     expect(() => throwIfAborted()).not.toThrow();
     const ctrl = new AbortController();
     expect(() => throwIfAborted(ctrl.signal)).not.toThrow();

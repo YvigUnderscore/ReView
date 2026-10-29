@@ -6,47 +6,47 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import ListSentinel, { ListCount } from './ListSentinel';
 
 /**
- * Ce que la liste doit dire d'elle-même : combien de lignes sur combien, et qu'il en
- * reste. C'est exactement ce qui manquait — cent plans sur douze cents, sans un mot.
+ * What the list must say about itself: how many rows out of how many, and whether more
+ * remains. That is exactly what was missing: a hundred shots out of twelve hundred, without a word.
  *
- * Les assertions portent sur la branche choisie, jamais sur le texte traduit : le
- * catalogue peut changer de formulation sans invalider le comportement vérifié ici.
+ * The assertions target the chosen branch, never the translated text: the
+ * catalog can change its wording without invalidating the behaviour checked here.
  */
 describe('ListCount', () => {
-  it('n’affiche pas le libellé de liste complète tant qu’elle est tronquée', () => {
+  it('does not show the full-list label while the list is truncated', () => {
     const html = renderToStaticMarkup(<ListCount loaded={100} total={1247} label="1,247 media" />);
     expect(html).not.toContain('1,247 media');
     expect(html).toContain('<p');
   });
 
-  it('rend le libellé complet une fois tout chargé', () => {
+  it('renders the full label once everything is loaded', () => {
     expect(renderToStaticMarkup(<ListCount loaded={12} total={12} label="12 media" />)).toContain('12 media');
   });
 
-  it('garde un compteur quand aucun libellé complet n’est fourni', () => {
+  it('keeps a counter when no full label is provided', () => {
     expect(renderToStaticMarkup(<ListCount loaded={12} total={12} />)).toContain('<p');
   });
 
-  it('ne dit rien sur une liste vide — l’état vide s’en charge', () => {
+  it('says nothing about an empty list: the empty state handles it', () => {
     expect(renderToStaticMarkup(<ListCount loaded={0} total={0} />)).toBe('');
   });
 });
 
 describe('ListSentinel', () => {
-  it('n’occupe aucune place quand la liste est complète', () => {
+  it('takes up no space when the list is complete', () => {
     const html = renderToStaticMarkup(
       <ListSentinel hasMore={false} isLoading={false} onLoadMore={() => {}} />,
     );
     expect(html).toBe('');
   });
 
-  it('offre une commande explicite tant qu’il reste des pages', () => {
+  it('offers an explicit command while pages remain', () => {
     const html = renderToStaticMarkup(<ListSentinel hasMore isLoading={false} onLoadMore={() => {}} />);
     expect(html).toContain('<button');
     expect(html).not.toContain('disabled=""');
   });
 
-  it('verrouille la commande pendant le chargement — deux clics, une seule page', () => {
+  it('locks the command during loading: two clicks, a single page', () => {
     const html = renderToStaticMarkup(<ListSentinel hasMore isLoading onLoadMore={() => {}} />);
     expect(html).toContain('disabled=""');
   });

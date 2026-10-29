@@ -10,11 +10,11 @@ import { deferred, type MockRequest, type MockResolver } from '../apiMock';
 import { page, renderWithProviders } from '../renderWithProviders';
 
 /**
- * La liste des projets est le premier écran d'un studio, et le premier à mentir : elle a
- * longtemps affiché sa première page comme si c'était tout le catalogue. Ce fichier tient
- * les quatre états qui comptent — chargement, vide, peuplé, tronqué — et surtout la
- * frontière entre les deux premiers : annoncer « aucun projet » pendant le chargement
- * ferait croire à une perte de données.
+ * The project list is the first screen of a studio, and the first to lie: it long
+ * displayed its first page as if it were the whole catalog. This file holds the
+ * four states that matter (loading, empty, populated, truncated), and above all the
+ * boundary between the first two: announcing "no project" while loading
+ * would suggest a data loss.
  */
 
 const project = (id: number, name: string): Project => ({
@@ -34,11 +34,11 @@ const mount = (api: Record<string, MockResolver>, role?: 'ADMIN' | 'ARTIST') =>
   });
 
 describe('ProjectsPage', () => {
-  it('n’annonce pas une liste vide tant que la réponse n’est pas arrivée', async () => {
+  it('does not announce an empty list before the response arrives', async () => {
     const pending = deferred<ReturnType<typeof page<Project>>>();
     const { container } = mount({ 'GET /api/projects': () => pending.promise });
 
-    // Le squelette tient la place ; ni l'état vide ni une carte ne sont affichés.
+    // The skeleton holds the place; neither the empty state nor a card is shown.
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText(t('projects.empty.title'))).not.toBeInTheDocument();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
@@ -47,7 +47,7 @@ describe('ProjectsPage', () => {
     expect(await screen.findByRole('link', { name: /Alpha/ })).toBeInTheDocument();
   });
 
-  it('propose la création quand le studio n’a encore aucun projet', async () => {
+  it('offers creation when the studio has no project yet', async () => {
     mount({ 'GET /api/projects': page<Project>([]) });
 
     expect(await screen.findByText(t('projects.empty.title'))).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe('ProjectsPage', () => {
     expect(screen.getByRole('button', { name: t('projects.empty.action') })).toBeInTheDocument();
   });
 
-  it('n’offre pas la création à un compte qui n’administre pas', async () => {
+  it('does not offer creation to an account that does not administer', async () => {
     mount({ 'GET /api/projects': page<Project>([]) }, 'ARTIST');
 
     expect(await screen.findByText(t('projects.empty.title'))).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe('ProjectsPage', () => {
     expect(screen.queryByRole('button', { name: t('common.create') })).not.toBeInTheDocument();
   });
 
-  it('rend une carte par projet, chacune pointant sur son URL parlante', async () => {
+  it('renders one card per project, each pointing to its readable URL', async () => {
     mount({ 'GET /api/projects': page([project(12, 'Alpha Centauri'), project(34, 'Bêta Pictoris')]) });
 
     const first = await screen.findByRole('link', { name: /Alpha Centauri/ });
@@ -72,11 +72,11 @@ describe('ProjectsPage', () => {
       'href',
       '/projects/beta-pictoris-34',
     );
-    // Le compteur annonce le total du serveur, pas la taille de la page rendue.
+    // The counter announces the server total, not the size of the rendered page.
     expect(screen.getByText(t('projects.count', { count: 2 }))).toBeInTheDocument();
   });
 
-  it('dit ce qui reste à charger et va chercher la page suivante à la demande', async () => {
+  it('says what remains to load and fetches the next page on demand', async () => {
     const { user, api } = mount({
       'GET /api/projects': ({ url }: MockRequest) =>
         url.searchParams.get('page') === '2'
@@ -84,14 +84,14 @@ describe('ProjectsPage', () => {
           : page([project(1, 'Alpha'), project(2, 'Beta')], { total: 3, hasMore: true }),
     });
 
-    // Deux lignes sur trois : la troncature est dite, pas subie.
+    // Two lines out of three: the truncation is stated, not suffered.
     expect(await screen.findByText(t('list.countOf', { loaded: '2', total: '3' }))).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Gamma/ })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: t('list.loadMore') }));
 
     expect(await screen.findByRole('link', { name: /Gamma/ })).toBeInTheDocument();
-    // Une fois tout descendu, la sentinelle disparaît et le compteur redevient le total.
+    // Once everything is down, the sentinel disappears and the counter goes back to the total.
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: t('list.loadMore') })).not.toBeInTheDocument(),
     );
@@ -99,7 +99,7 @@ describe('ProjectsPage', () => {
     expect(api.called('GET /api/projects')).toHaveLength(2);
   });
 
-  it('crée un projet depuis le dialogue et rafraîchit la liste', async () => {
+  it('creates a project from the dialog and refreshes the list', async () => {
     let created = false;
     const { user, api } = mount({
       'GET /api/projects': () => (created ? page([project(9, 'Nouveau')]) : page<Project>([])),
@@ -115,7 +115,7 @@ describe('ProjectsPage', () => {
     await user.click(within(dialog).getByRole('button', { name: t('common.create') }));
 
     expect(api.called('POST /api/projects')[0]?.body).toEqual({ name: 'Nouveau' });
-    // Retour visible : la liste invalidée réaffiche le projet fraîchement créé.
+    // Visible feedback: the invalidated list redisplays the freshly created project.
     expect(await screen.findByRole('link', { name: /Nouveau/ })).toBeInTheDocument();
   });
 });

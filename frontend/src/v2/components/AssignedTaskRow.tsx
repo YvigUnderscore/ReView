@@ -22,26 +22,26 @@ import type { TaskStatus } from '../types/api';
 import { intlLocale, useT } from '../i18n';
 
 /**
- * Une tâche qui m'est assignée, en ligne actionnable : statut au clic droit (même mutation
- * que le kanban), échéance visible quand elle existe, ouverture au clic.
+ * A task assigned to me, as an actionable row: status on right click (same mutation
+ * as the kanban), due date shown when there is one, opened on click.
  *
- * Partagée par le bloc « mes tâches » de l'Accueil et par la page qui le déplie : les deux
- * montrent la même ligne parce qu'on y fait le même geste. La dupliquer aurait suffi à ce
- * que le menu contextuel n'existe que d'un côté.
+ * Shared by the "my tasks" block of the Home page and by the page that expands it: both
+ * show the same row because the same gesture is performed on it. Duplicating it would have sufficed to
+ * make the context menu exist only on one side.
  */
 
-/** Ce dont la ligne a besoin — un sous-ensemble structurel, pas un type d'API de plus. */
+/** What the row needs: a structural subset, not one more API type. */
 export interface AssignedTask {
   id: number;
   name: string;
   status: TaskStatus;
   location: string;
   dueDate: string | null;
-  /** Renseigné par la page transverse : à l'Accueil, le projet est déjà le contexte. */
+  /** Filled in by the cross-cutting page: on the Home page, the project is already the context. */
   projectName?: string | null;
 }
 
-/** Échéance dépassée ? — hors composant, même motif que `timeAgo` (règle purity). */
+/** Is the due date passed? Outside the component, same pattern as `timeAgo` (purity rule). */
 const isPast = (d: Date) => d.getTime() < Date.now();
 
 function DueDate({ iso }: { iso: string }) {
@@ -65,8 +65,8 @@ export default function AssignedTaskRow({ task }: { task: AssignedTask }) {
     onSuccess: () => {
       toast.success(tr('home.statusUpdated'));
       void qc.invalidateQueries({ queryKey: qk.dashboard });
-      // La page « mes tâches » lit la même vérité : un statut changé depuis l'Accueil doit
-      // l'en retirer aussi, et réciproquement.
+      // The "my tasks" page reads the same truth: a status changed from the Home page must
+      // remove it from there as well, and vice versa.
       void qc.invalidateQueries({ queryKey: qk.myTasksAll });
     },
     onError: (e) =>

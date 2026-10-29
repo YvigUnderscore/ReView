@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-/** Options réellement passées à socket.io par `getSocket`. */
+/** Options actually passed to socket.io by `getSocket`. */
 interface SocketOpts {
   auth: (cb: (data: object) => void) => void;
   query?: Record<string, string>;
@@ -15,8 +15,8 @@ interface FakeSocket {
   emit: ReturnType<typeof vi.fn>;
 }
 
-// `vi.hoisted` : la fabrique du mock s'exécute avant l'initialisation des `const` du
-// fichier, elle ne peut donc capturer qu'un état hissé avec elle.
+// `vi.hoisted`: the mock factory runs before the file's `const` declarations are initialized,
+// so it can only capture state hoisted along with it.
 const state = vi.hoisted(() => ({ created: [] as unknown[] }));
 
 vi.mock('socket.io-client', () => ({
@@ -31,7 +31,7 @@ import { getSocket, disconnectSocket, emitActivity } from './socket';
 
 const created = state.created as FakeSocket[];
 
-/** Lit la charge d'authentification que socket.io réclamerait à la connexion. */
+/** Reads the auth payload that socket.io would send at connection time. */
 function readAuth(socket: FakeSocket): object {
   let payload: object = {};
   socket.opts.auth((data) => {
@@ -47,34 +47,34 @@ beforeEach(() => {
 });
 
 describe('getSocket', () => {
-  it('réutilise la même instance', () => {
+  it('reuses the same instance', () => {
     localStorage.setItem('token', 'jwt-1');
     expect(getSocket()).toBe(getSocket());
     expect(created).toHaveLength(1);
   });
 
-  it('passe le jeton dans `auth` et jamais dans la query string', () => {
+  it('passes the token in `auth` and never in the query string', () => {
     localStorage.setItem('token', 'jwt-1');
     getSocket();
     expect(created[0].opts.query).toBeUndefined();
     expect(readAuth(created[0])).toEqual({ token: 'jwt-1' });
   });
 
-  it('relit le jeton à chaque connexion (renouvellement pris en compte)', () => {
+  it('rereads the token on each connection (renewal taken into account)', () => {
     localStorage.setItem('token', 'jwt-1');
     getSocket();
     localStorage.setItem('token', 'jwt-2');
     expect(readAuth(created[0])).toEqual({ token: 'jwt-2' });
   });
 
-  it('sans session : charge vide plutôt qu’un jeton `null`', () => {
+  it('without a session: empty payload rather than a `null` token', () => {
     getSocket();
     expect(readAuth(created[0])).toEqual({ token: '' });
   });
 });
 
 describe('disconnectSocket', () => {
-  it('ferme le canal et en rouvre un neuf au compte suivant', () => {
+  it('closes the channel and opens a new one for the next account', () => {
     localStorage.setItem('token', 'jwt-1');
     const first = getSocket();
     disconnectSocket();
@@ -87,7 +87,7 @@ describe('disconnectSocket', () => {
     expect(readAuth(created[1])).toEqual({ token: 'jwt-2' });
   });
 
-  it('est sans effet quand aucun socket n’est ouvert', () => {
+  it('has no effect when no socket is open', () => {
     expect(() => {
       disconnectSocket();
     }).not.toThrow();
@@ -96,7 +96,7 @@ describe('disconnectSocket', () => {
 });
 
 describe('emitActivity', () => {
-  it('émet sur le socket courant, et plus rien après fermeture', () => {
+  it('emits on the current socket, and nothing after closing', () => {
     getSocket();
     emitActivity();
     expect(created[0].emit).toHaveBeenCalledWith('activity');

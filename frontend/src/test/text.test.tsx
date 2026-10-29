@@ -6,13 +6,13 @@ import { render, screen } from '@testing-library/react';
 import { textIncluding } from './text';
 
 /**
- * Le cas qui justifie ce matcher : deux phrases séparées par un `<br/>` forment, pour
- * Testing Library, **un seul** texte propre à l'élément. La recherche exacte échoue alors
- * sur un écran parfaitement correct — c'est très exactement la forme du message « média
- * indisponible » servi à un invité.
+ * The case that justifies this matcher: two sentences separated by a `<br/>` form, for
+ * Testing Library, **a single** own text of the element. The exact search then fails
+ * on a perfectly correct screen: it is exactly the shape of the "media unavailable"
+ * message served to a guest.
  */
 describe('textIncluding', () => {
-  it('trouve un fragment là où la recherche exacte échoue', () => {
+  it('finds a fragment where exact search fails', () => {
     render(
       <p>
         Première phrase.
@@ -25,14 +25,14 @@ describe('textIncluding', () => {
     expect(screen.getByText(textIncluding('Première phrase.'))).toHaveTextContent('Seconde phrase.');
   });
 
-  it('ne remonte pas jusqu’aux ancêtres, qui n’ont pas ce texte en propre', () => {
+  it('does not go up to ancestors, which do not have this text on their own', () => {
     render(
       <section>
         <p>Une seule phrase.</p>
       </section>,
     );
 
-    // Une seule correspondance : sinon `getByText` lèverait « found multiple elements ».
+    // Only one match: otherwise `getByText` would throw "found multiple elements".
     expect(screen.getByText(textIncluding('seule')).tagName).toBe('P');
   });
 });

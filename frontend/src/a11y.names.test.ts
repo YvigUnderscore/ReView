@@ -7,41 +7,40 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Champs de saisie **sans nom accessible** — mesure et cliquet.
+ * Input fields **without an accessible name**: measurement and ratchet.
  *
- * Un `<select>` posé nu s'annonce « liste déroulante » et rien d'autre : sur une page de
- * kanban, où chaque carte porte son sélecteur de statut, un lecteur d'écran énumère des
- * contrôles indiscernables. `jsx-a11y` ne le voit pas : `label-has-associated-control`
- * n'agit que s'il existe déjà un `<label>`, et `control-has-associated-label` appartient au
- * preset strict, non activé.
+ * A bare `<select>` is announced as "dropdown" and nothing else: on a kanban page, where each card
+ * carries its status selector, a screen reader lists indistinguishable controls. `jsx-a11y` does not
+ * see it: `label-has-associated-control` only acts if a `<label>` already exists, and
+ * `control-has-associated-label` belongs to the strict preset, which is not enabled.
  *
- * Le contrôle est syntaxique — pas de rendu, pas d'arbre d'accessibilité : il relève les
- * balises de saisie qui n'ont **aucune** source de nom (`aria-label`, `aria-labelledby`,
- * `title`, `id` associé, libellé englobant, ou props transmises par une primitive). Le
- * total est comparé à un plafond, à baisser quand on descend et jamais à relever.
+ * The check is syntactic: no rendering, no accessibility tree. It flags the input
+ * tags that have **no** name source (`aria-label`, `aria-labelledby`,
+ * `title`, an associated `id`, an enclosing label, or props passed through by a primitive). The
+ * total is compared to a ceiling, which is lowered as we go and never raised.
  */
 
 /**
- * Reliquat de champs anonymes toléré — dette chiffrée, à faire descendre jusqu'à 0 et
- * jamais à relever. Vingt-quatre au 2026-08-22, dix-sept réellement atteints ; trois au
- * 2026-09-08, une fois nommés les sélecteurs de la review, du montage et de ShotGrid —
- * par `aria-label` quand le contrôle est seul, par le libellé de la ligne relié en
- * `htmlFor` là où il en existait déjà un à l'écran (réglages ShotGrid). Les trois qui
- * restent sont des champs de panneaux d'administration ; le sélecteur de statut du
- * kanban, lui, est nommé (test suivant).
+ * Tolerated remainder of anonymous fields: a quantified debt, to be brought down to 0 and
+ * never raised. Twenty-four on 2026-08-22, seventeen actually reached; three on
+ * 2026-09-08, once the selectors of review, assembly and ShotGrid were named:
+ * with `aria-label` when the control is alone, with the label of the row linked through
+ * `htmlFor` where one already existed on screen (ShotGrid settings). The three that
+ * remain are fields of administration panels; the kanban status selector, for its part,
+ * is named (next test).
  */
 const CEILING = 3;
 
 const FIELDS = new Set(['input', 'select', 'textarea']);
 
 /**
- * Attributs qui donnent, ou transmettent, un nom accessible. `title` et `placeholder`
- * comptent : l'algorithme accname les retient en dernier recours. Nom médiocre, donc,
- * mais pas nom absent — le contrôle vise l'anonymat complet, la seule faute franche.
+ * Attributes that give, or pass on, an accessible name. `title` and `placeholder`
+ * count: the accname algorithm uses them as a last resort. A poor name, then,
+ * but not an absent one: the check targets complete anonymity, the only clear fault.
  */
 const NAMING_ATTRS = new Set(['aria-label', 'aria-labelledby', 'id', 'title', 'placeholder']);
 
-/** Éléments dont le contenu est libellé : le `<label>` englobant nomme son contrôle. */
+/** Elements whose content is a label: an enclosing `<label>` names its control. */
 const LABELLING_TAGS = /^(label|Label|.*Field|Field)$/;
 
 function* sources(dir: string): Generator<string> {
@@ -54,7 +53,7 @@ function* sources(dir: string): Generator<string> {
 
 const tagOf = (node: ts.JsxSelfClosingElement | ts.JsxOpeningElement) => node.tagName.getText();
 
-/** Le contrôle est-il englobé par un libellé (motif `Field`, `<label>…</label>`) ? */
+/** Is the control enclosed by a label (`Field` pattern, `<label>…</label>`)? */
 function insideLabel(node: ts.Node): boolean {
   for (let cur = node.parent; cur; cur = cur.parent) {
     if (ts.isJsxElement(cur) && LABELLING_TAGS.test(cur.openingElement.tagName.getText())) return true;
@@ -65,14 +64,14 @@ function insideLabel(node: ts.Node): boolean {
 function isAnonymous(node: ts.JsxSelfClosingElement | ts.JsxOpeningElement): boolean {
   let hidden = false;
   for (const attr of node.attributes.properties) {
-    // `{...props}` : une primitive transmet le nom que lui donne l'appelant.
+    // `{...props}`: a primitive passes on the name its caller gives it.
     if (ts.isJsxSpreadAttribute(attr)) return false;
     if (!ts.isJsxAttribute(attr)) continue;
     const name = attr.name.getText();
     if (NAMING_ATTRS.has(name)) return false;
-    // `type="hidden"`, et le sélecteur de fichier caché derrière un bouton
-    // (`className="hidden"`) : `display: none` les sort de l'arbre d'accessibilité,
-    // c'est le bouton visible qui porte le nom.
+    // `type="hidden"`, and the hidden file picker behind a button
+    // (`className="hidden"`): `display: none` removes them from the accessibility tree,
+    // so it is the visible button that carries the name.
     if (attr.initializer && ts.isStringLiteral(attr.initializer)) {
       if (name === 'type' && attr.initializer.text === 'hidden') hidden = true;
       if (name === 'className' && /\bhidden\b/.test(attr.initializer.text)) hidden = true;
@@ -81,7 +80,7 @@ function isAnonymous(node: ts.JsxSelfClosingElement | ts.JsxOpeningElement): boo
   return !hidden && !insideLabel(node);
 }
 
-/** Champs anonymes du frontend, `fichier:ligne` et balise. */
+/** Anonymous fields of the frontend, as `file:line` and tag. */
 function anonymousFields(root = 'src'): string[] {
   const found: string[] = [];
   for (const file of sources(root)) {
@@ -107,26 +106,26 @@ function anonymousFields(root = 'src'): string[] {
 }
 
 /**
- * Ce contrôle parcourt l'intégralité de `src` et analyse chaque `.tsx` avec le compilateur
- * TypeScript : quelques dizaines de millisecondes sur une machine de développement, près de
- * quatre secondes sur un runner partagé — et davantage sous la concurrence de la suite
- * entière, où le plafond de cinq secondes de vitest était franchi.
+ * This check walks the whole of `src` and parses each `.tsx` with the
+ * TypeScript compiler: a few tens of milliseconds on a development machine, nearly
+ * four seconds on a shared runner, and more under the concurrency of the whole
+ * suite, where vitest's five-second ceiling was exceeded.
  */
-describe('noms accessibles des champs de saisie', { timeout: 60_000 }, () => {
-  it('ne laisse pas remonter le nombre de champs anonymes', () => {
+describe('accessible names of input fields', { timeout: 60_000 }, () => {
+  it('does not let the count of anonymous fields go up', () => {
     const found = anonymousFields();
     expect(found.length, `champs sans nom accessible :\n${found.join('\n')}`).toBeLessThanOrEqual(CEILING);
   });
 
-  it('nomme le sélecteur de statut, présent sur chaque carte de kanban', () => {
+  it('names the status selector present on each kanban card', () => {
     const source = readFileSync('src/v2/components/shotgrid/PipelineStatusSelect.tsx', 'utf8');
-    // Deux `<select>` : le référentiel du projet et le repli sur l'énumération figée.
+    // Two `<select>`: the project's reference list and the fallback to the frozen enumeration.
     expect(source.match(/aria-label=/g)).toHaveLength(2);
   });
 });
 
-describe('détection', () => {
-  it('reconnaît les sources de nom et les absences', () => {
+describe('detection', () => {
+  it('recognizes name sources and their absence', () => {
     const parse = (source: string) =>
       ts.createSourceFile('T.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const firstField = (source: string) => {

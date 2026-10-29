@@ -7,18 +7,18 @@ import { formatListCount } from '../lib/infiniteList';
 import { Button } from './ui/button';
 
 /**
- * Le couple « compteur + sentinelle » des listes paginées.
+ * The "counter + sentinel" pair of paginated lists.
  *
- * Une liste tronquée en silence est un mensonge : l'écran affichait cent plans sur douze
- * cents sans que rien ne le dise. Le compteur annonce ce qui est chargé sur ce qui existe,
- * la sentinelle demande la suite quand elle approche du bas de la fenêtre — et le bouton
- * qu'elle porte reste la seule commande explicite, atteignable au clavier et sans
+ * A list silently truncated is a lie: the screen showed a hundred shots out of twelve
+ * hundred without saying so. The counter announces what is loaded out of what exists,
+ * the sentinel requests the rest when it approaches the bottom of the window, and the button
+ * it carries remains the only explicit command, reachable by keyboard and without
  * `IntersectionObserver`.
  */
 
 /**
- * Compteur d'une liste paginée. `label` est ce qu'on lit une fois tout chargé — le
- * décompte que la page affichait avant la pagination (« 1 247 media »).
+ * Counter of a paginated list. `label` is what is read once everything is loaded: the
+ * count the page displayed before pagination ("1,247 media").
  */
 export function ListCount({ loaded, total, label }: { loaded: number; total: number; label?: string }) {
   const t = useT();
@@ -35,9 +35,9 @@ export function ListCount({ loaded, total, label }: { loaded: number; total: num
 }
 
 /**
- * Sentinelle de défilement : posée sous la liste, elle réclame la page suivante dès
- * qu'elle entre dans le champ (400 px d'avance, pour que le chargement soit fini avant
- * qu'on atteigne le bas).
+ * Scroll sentinel: placed below the list, it requests the next page as soon as
+ * it enters the viewport (400 px ahead, so that loading is finished before
+ * the bottom is reached).
  */
 export default function ListSentinel({
   hasMore,
@@ -50,8 +50,8 @@ export default function ListSentinel({
 }) {
   const t = useT();
   const anchor = useRef<HTMLDivElement | null>(null);
-  // Le gestionnaire vit dans une ref : l'observateur ne se reconstruit pas à chaque
-  // rendu de la liste, il ne dépend que de « reste-t-il des pages ».
+  // The handler lives in a ref: the observer is not rebuilt at each render of the list,
+  // it only depends on "are there pages left?".
   const handler = useRef(onLoadMore);
   useEffect(() => {
     handler.current = onLoadMore;

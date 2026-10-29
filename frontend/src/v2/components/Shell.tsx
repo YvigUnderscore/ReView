@@ -35,39 +35,39 @@ import { useSocketInvalidation } from '../lib/socketBridge';
 const COLLAPSE_KEY = 'sidebar-collapsed';
 
 /**
- * Coquille de l'application (A1) : **route layout**, montée une seule fois pour toutes les
- * pages authentifiées, qui vivent dans son `<Outlet/>`.
+ * Application shell (A1): **route layout**, mounted only once for all the
+ * authenticated pages, which live in its `<Outlet/>`.
  *
- * Auparavant chaque page rendait son propre `<Shell>` : changer de route démontait tout —
- * sidebar, messagerie, abonnements socket, palette — et rejouait les requêtes de favoris et
- * de présence à chaque clic. Les pages projettent désormais leur titre par portail
+ * Previously each page rendered its own `<Shell>`: changing route unmounted everything,
+ * sidebar, messaging, socket subscriptions, palette, and replayed the favorites and
+ * presence requests at each click. Pages now project their title via a portal
  * (`PageShell` → `ShellHeaderContext`).
  */
 export default function Shell() {
   const { pathname } = useLocation();
   const params = useParams();
-  // La liste entière, plus les huit derniers modifiés (C1) : le sélecteur doit pouvoir
-  // montrer le projet courant, fût-il ancien — il n'apparaissait nulle part auparavant,
-  // pas même quand on était en train de le regarder.
-  // `all` : la barre latérale liste les projets d'un bloc, elle n'a pas de sentinelle de
-  // défilement — sans cela un studio de plus de cent projets en verrait cent.
+  // The whole list, plus the eight most recently modified (C1): the selector must be able to
+  // show the current project, however old it is: it used to appear nowhere, not even
+  // when one was looking at it.
+  // `all`: the sidebar lists the projects in one block; it has no scroll sentinel, so without
+  // this a studio of more than a hundred projects would see only a hundred.
   const { data } = useProjectsQuery({ all: true });
   const projects = useMemo(() => data ?? [], [data]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
   const narrow = useIsNarrowViewport();
   const t = useT();
 
-  // Deux situations imposent le repli sans toucher à la préférence globale : la review
-  // (46.O — le viewer prend l'espace) et la fenêtre étroite (A1 — 240 px de rail sur
-  // 1000 px ne laissent pas de quoi lire). Dépliér reste possible, le temps de la visite.
+  // Two situations force the fallback without touching the global preference: the review
+  // (46.O, the viewer takes the space) and the narrow window (A1, 240 px of rail on
+  // 1000 px leaves nothing to read). Unfolding remains possible for the duration of the visit.
   const onReview = pathname.startsWith('/review/');
   const forced = onReview || narrow;
   const forceKey = `${String(onReview)}|${String(narrow)}`;
   const [tempExpanded, setTempExpanded] = useState(false);
   const [lastForceKey, setLastForceKey] = useState(forceKey);
   if (lastForceKey !== forceKey) {
-    // Ajusté pendant le rendu (même motif que useChromeState) : pas d'effet, pas de rendu
-    // intermédiaire avec la sidebar dans le mauvais état.
+    // Adjusted during render (same pattern as useChromeState): no effect, no intermediate render
+    // with the sidebar in the wrong state.
     setLastForceKey(forceKey);
     setTempExpanded(false);
   }
@@ -76,8 +76,8 @@ export default function Shell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
-  // Ref stable : une callback ref recréée à chaque rendu serait rappelée (null puis nœud)
-  // et relancerait le rendu en boucle.
+  // Stable ref: a callback ref recreated at each render would be called back (null then node)
+  // and would re-run the render in a loop.
   const headerRef = useCallback((node: HTMLDivElement | null) => setHeaderEl(node), []);
   const loadFavorites = useFavorites((s) => s.load);
 
@@ -96,22 +96,22 @@ export default function Shell() {
     });
   };
 
-  // Projet courant : depuis la route (/projects/:id…) ou, sur les pages d'entité, depuis le
-  // contexte résolu par le breadcrumb. La règle vit dans `lib/currentProject`, testée — elle
-  // décide à la fois du temps réel (`join_project`) et des raccourcis `g k` / `g b`.
+  // Current project: from the route (/projects/:id…) or, on entity pages, from the
+  // context resolved by the breadcrumb. The rule lives in `lib/currentProject`, tested: it
+  // decides both real-time (`join_project`) and the `g k` / `g b` shortcuts.
   const ctxProjectId = useProjectContext((s) => s.projectId);
   const routeId = parseIdParam(params.id);
   const routeProjectId = pathname.startsWith('/projects/') && !Number.isNaN(routeId) ? routeId : null;
   const currentProjectId = resolveCurrentProjectId(pathname, routeProjectId, ctxProjectId);
-  // La barre garde le projet ouvert même sur l'accueil, la liste des projets ou les
-  // reviews : sans cela ses sections disparaissaient dès qu'on quittait le projet.
+  // The bar keeps the open project even on the home page, the project list or the
+  // reviews: otherwise its sections would disappear as soon as one left the project.
   const sidebarProjectId = useStickyProjectId(currentProjectId);
 
   const openHelp = useCallback(() => setHelpOpen(true), []);
-  // Raccourcis globaux reconfigurables (42.A2) : touches résolues depuis les préférences.
+  // Reconfigurable global shortcuts (42.A2): keys resolved from the preferences.
   const prefsQ = usePreferences();
-  // Langue du compte : suivie sur un appareil qui n'a pas encore fait de choix explicite
-  // (nouveau poste, session invitée). Un choix local, lui, reste prioritaire.
+  // Account language: followed on a device that has not yet made an explicit choice
+  // (new workstation, guest session). A local choice, for its part, keeps priority.
   const accountLocale = prefsQ.data?.locale;
   const accountDensity = prefsQ.data?.density;
   useEffect(() => {
@@ -120,9 +120,9 @@ export default function Shell() {
   useEffect(() => {
     syncAccountDensity(accountDensity);
   }, [accountDensity]);
-  // Vue des listes : le compte fait foi, le miroir localStorage ne sert qu'au premier
-  // rendu. `setPersist` referme la boucle — chaque bascule repart vers le serveur, sinon
-  // le réglage ne suivrait pas d'un poste à l'autre.
+  // List view: the account is authoritative, the localStorage mirror only serves the first
+  // render. `setPersist` closes the loop: each switch goes back to the server, otherwise
+  // the setting would not follow from one workstation to another.
   const accountViewMode = prefsQ.data?.viewMode;
   const accountViewModes = prefsQ.data?.viewModes;
   const updatePrefs = useUpdatePreferences();
@@ -134,7 +134,7 @@ export default function Shell() {
   }, [updatePrefs]);
   const bindings = useMemo(() => resolveBindings(prefsQ.data?.shortcuts), [prefsQ.data?.shortcuts]);
   useGlobalShortcuts({ projectId: currentProjectId, onHelp: openHelp, bindings });
-  // Temps réel : room du projet courant → invalidations de cache ciblées (10.E3)
+  // Real time: room of the current project, then targeted cache invalidations (10.E3)
   useSocketInvalidation(currentProjectId);
 
   return (

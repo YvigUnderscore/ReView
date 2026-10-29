@@ -7,8 +7,8 @@ import { sha256OfFile } from './hashFile';
 import { isAbortError, putWithProgress, runPool, throwIfAborted, withRetry } from './uploadTransfer';
 import type { MediaKind } from '../v2/types/api';
 
-// `.usd` (conteneur générique, binaire ou ASCII) manquait : il n'arrivait en MODEL_3D que par
-// le repli de `inferMediaKind`, donc jamais depuis un filtre de sélecteur de fichiers (45.F).
+// `.usd` (generic container, binary or ASCII) was missing: it only arrived as MODEL_3D through
+// the fallback of `inferMediaKind`, hence never from a file picker filter (45.F).
 const MODEL_EXT = [
   '.glb',
   '.gltf',
@@ -22,20 +22,20 @@ const MODEL_EXT = [
   '.stl',
   '.zip',
 ];
-// Gaussian Splat (viewer Spark/SparkJS) — cf. detectSplat côté backend.
+// Gaussian Splat (Spark/SparkJS viewer): see detectSplat on the backend.
 const SPLAT_EXT = ['.ply', '.splat', '.spz', '.ksplat', '.sog', '.sogs'];
 
-/** Au-delà de ce seuil : multipart résumable (37.A). La taille de part vient du serveur. */
+/** Above this threshold: resumable multipart (37.A). The part size comes from the server. */
 const MULTIPART_THRESHOLD = 16 * 1024 * 1024;
-/** URLs de parts demandées par lots (bornées côté serveur à 64). */
+/** Part URLs requested in batches (capped server-side at 64). */
 const PART_URL_BATCH = 32;
 /**
- * Parts envoyées de front. S3 en accepte davantage, mais quatre connexions saturent déjà
- * un lien de studio tout en laissant l'interface (et les autres onglets) respirer.
+ * Parts sent at once. S3 accepts more, but four connections already saturate
+ * a studio link while leaving the interface (and the other tabs) room to breathe.
  */
 const PART_CONCURRENCY = 4;
 
-/** Déduit le MediaKind d'un fichier à partir de son type MIME / extension. */
+/** Infers the MediaKind of a file from its MIME type / extension. */
 export function inferMediaKind(file: File): MediaKind {
   const name = file.name.toLowerCase();
   const ext = name.slice(name.lastIndexOf('.'));
@@ -49,9 +49,9 @@ export function inferMediaKind(file: File): MediaKind {
 export interface UploadResult {
   mediaObjectId: number;
   status: string;
-  /** Contenu identique déjà présent : aucun octet transféré (37.B). */
+  /** Identical content already present: no byte transferred (37.B). */
   deduplicated?: boolean;
-  /** Nom non conforme à la nomenclature du projet en mode « avertir » (38.C). */
+  /** Name not compliant with the project nomenclature in "warn" mode (38.C). */
   namingWarning?: boolean;
 }
 
@@ -67,20 +67,20 @@ interface MultipartInit {
 export interface UploadOptions {
   kind?: MediaKind;
   onProgress?: (pct: number) => void;
-  /** Annulation : coupe les requêtes en vol et abandonne le multipart côté serveur. */
+  /** Cancellation: cuts in-flight requests and abandons the multipart on the server. */
   signal?: AbortSignal;
   /**
-   * Consigne exigée par le projet (`reviewRequest.requireNote`), collectée AVANT l'envoi
-   * depuis la Phase 50 — un média est publié dès son dépôt, il n'y a plus d'étape de
-   * publication où la demander.
+   * Instruction required by the project (`reviewRequest.requireNote`), collected BEFORE the upload
+   * since Phase 50: a media is published as soon as it is dropped, there is no longer a
+   * publishing step where it could be requested.
    *
-   * **Point de raccord unique** : elle ne part qu'au `finalize`, sous le champ `note`. Si le
-   * serveur attend un autre nom de champ ou un autre appel, c'est la seule ligne à changer.
+   * **Single connection point**: it is only sent at `finalize`, under the `note` field. If the
+   * server expects another field name or another call, this is the only line to change.
    */
   note?: string | null;
 }
 
-/** N'appelle l'appelant que lorsque le pourcentage change vraiment (4 parts = 4× d'événements). */
+/** Calls back the caller only when the percentage really changes (4 parts = 4x the events). */
 function throttlePercent(onProgress?: (pct: number) => void): (pct: number) => void {
   let last = -1;
   return (pct) => {
@@ -91,15 +91,15 @@ function throttlePercent(onProgress?: (pct: number) => void): (pct: number) => v
 }
 
 /**
- * Flux d'upload v2 (37.A/37.B) :
- *  1) sha256 du fichier (checksum bout-en-bout + dédup), calculé dans un worker ;
- *  2) petits fichiers → PUT présigné direct ; gros → multipart résumable, parts envoyées
- *     en parallèle avec réessai (la reprise saute les parts déjà reçues, connues du
- *     serveur via ListParts) ;
- *  3) finalize : validation magic bytes + traitement.
+ * v2 upload flow (37.A/37.B):
+ *  1) sha256 of the file (end-to-end checksum + dedup), computed in a worker;
+ *  2) small files go to a direct presigned PUT; large ones to resumable multipart, parts sent
+ *     in parallel with retry (the resume skips the parts already received, known from the
+ *     server via ListParts);
+ *  3) finalize: magic-byte validation and processing.
  *
- * `opts.signal` annule à toute étape : la requête en vol est coupée, et l'upload
- * multipart laissé derrière est explicitement abandonné côté serveur.
+ * `opts.signal` cancels at any step: the in-flight request is cut, and the upload
+ * left-over multipart is explicitly abandoned on the server side.
  */
 export async function uploadMedia(
   file: File,
@@ -116,8 +116,8 @@ export async function uploadMedia(
   throwIfAborted(signal);
   const base = { versionId, filename: file.name, contentType, kind, size: file.size, contentHash };
 
-  // Retenu dès la création côté serveur : un abandon survenu *pendant* l'envoi doit
-  // encore savoir quel média libérer.
+  // Recorded as soon as the server creates it: an abort *during* the upload must
+  // still know which media to free.
   let mediaObjectId: number | undefined;
   const remember = (id: number): void => {
     mediaObjectId = id;
@@ -130,14 +130,14 @@ export async function uploadMedia(
     report(100);
     throwIfAborted(signal);
     const finalize = `/api/media/${mediaObjectId!}/finalize`;
-    // Sans consigne, la requête reste nue : c'est le corps qu'attendent les instances qui
-    // n'exigent rien, et celui que le contrat d'API décrit depuis toujours.
+    // Without an instruction, the request stays bare: it is the body that instances requiring
+    // nothing expect, and the one the API contract has described since forever.
     const { media } = await (opts.note == null
       ? api.post<{ media: { status: string } }>(finalize)
       : api.post<{ media: { status: string } }>(finalize, { note: opts.note }));
     return { mediaObjectId: mediaObjectId!, status: media.status, namingWarning };
   } catch (err) {
-    // Abandon : libérer les parts déjà déposées plutôt que de les laisser facturées.
+    // Abort: free the parts already dropped rather than leaving them billed.
     if (mediaObjectId !== undefined && (isAbortError(err) || signal?.aborted)) {
       void api.post(`/api/media/multipart/${mediaObjectId}/abort`).catch(() => undefined);
     }
@@ -147,7 +147,7 @@ export async function uploadMedia(
 
 type InitBody = Record<string, unknown>;
 
-/** Petit fichier : un seul PUT présigné, rien à reprendre. */
+/** Small file: a single presigned PUT, nothing to resume. */
 async function uploadSmall(
   file: File,
   base: InitBody,
@@ -176,7 +176,7 @@ async function uploadSmall(
   return created.namingWarning ?? false;
 }
 
-/** Gros fichier : multipart résumable, parts parallélisées. */
+/** Large file: resumable multipart, parts parallelized. */
 async function uploadLarge(
   file: File,
   base: InitBody,
@@ -196,12 +196,12 @@ async function uploadLarge(
   return init.namingWarning ?? false;
 }
 
-/** Contexte partagé par les parts d'un même fichier (progression, annulation). */
+/** Context shared by the parts of the same file (progress, cancellation). */
 interface PartContext {
   file: File;
   mediaObjectId: number;
   partSize: number;
-  /** Octets déjà comptés pour chaque part en vol — la somme donne l'avancement réel. */
+  /** Bytes already counted for each part in flight: the sum gives the real progress. */
   inFlight: Map<number, number>;
   emit: () => void;
   signal?: AbortSignal;
@@ -215,18 +215,18 @@ async function partUrls(mediaObjectId: number, partNumbers: number[]): Promise<M
   return new Map(urls.map((u) => [u.partNumber, u.url]));
 }
 
-/** Envoie une part, avec réessai : chaque nouvelle tentative repart d'une URL fraîche. */
+/** Sends a part, with retry: each new attempt starts from a fresh URL. */
 async function sendPart(ctx: PartContext, partNumber: number, url: string): Promise<string> {
   const start = (partNumber - 1) * ctx.partSize;
   const blob = ctx.file.slice(start, Math.min(start + ctx.partSize, ctx.file.size));
   try {
     return await withRetry(async (tryIndex) => {
-      // Une part qui a échoué a pu le faire sur une signature périmée (elles vivent une
-      // heure) : la re-signer coûte un aller-retour et rend le réessai utile.
+      // A part that failed may have done so on an expired signature (they live one
+      // hour): re-signing it costs a round trip and makes the retry useful.
       const target =
         tryIndex === 0 ? url : ((await partUrls(ctx.mediaObjectId, [partNumber])).get(partNumber) ?? url);
       ctx.inFlight.set(partNumber, 0);
-      // Pas de Content-Type sur les parts (la signature S3 ne le couvre pas).
+      // No Content-Type on the parts (the S3 signature does not cover it).
       const etag = await putWithProgress(
         target,
         blob,
@@ -245,7 +245,7 @@ async function sendPart(ctx: PartContext, partNumber: number, url: string): Prom
   }
 }
 
-/** Envoie les parts manquantes (les déjà reçues comptent dans la progression). */
+/** Sends the missing parts (those already received count toward progress). */
 async function uploadParts(
   file: File,
   init: MultipartInit,
@@ -278,8 +278,8 @@ async function uploadParts(
       emit();
     });
   }
-  // Trié : le parallélisme et les réessais terminent les parts dans le désordre, et un
-  // `complete` lisible dans l'ordre du fichier vaut cher le jour où il faut le relire.
+  // Sorted: parallelism and retries finish parts out of order, and a `complete`
+  // that reads in file order is worth a lot the day it has to be reread.
   init.uploadedParts = [...done.entries()]
     .map(([partNumber, etag]) => ({ partNumber, etag }))
     .sort((a, b) => a.partNumber - b.partNumber);

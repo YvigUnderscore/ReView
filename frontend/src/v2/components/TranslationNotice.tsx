@@ -4,17 +4,17 @@
 import { coverage, localeInfo, useLocale, useT } from '../i18n';
 import { useBranding } from '../lib/branding';
 
-/** Repli si le branding n'est pas encore chargé (ou si l'API est injoignable). */
+/** Fallback if the branding is not yet loaded (or if the API is unreachable). */
 const UPSTREAM_SOURCE_URL = 'https://github.com/YvigUnderscore/ReView';
 
 /**
- * Avertissement affiché partout où une langue se choisit : les traductions sont produites
- * par une machine, personne ne les a relues. Le dire franchement évite qu'un studio
- * prenne une formulation bancale pour une décision de produit — et ouvre la porte aux
- * corrections, qui sont le seul moyen que ces catalogues s'améliorent.
+ * Warning displayed wherever a language is chosen: translations are produced
+ * by a machine, and nobody has proofread them. Saying so frankly prevents a studio
+ * from taking an awkward wording for a product decision, and opens the door to
+ * corrections, which are the only way these catalogs improve.
  *
- * Le lien pointe vers le code source de l'instance (réglage `studio_source_url`), qui est
- * l'endroit où une correction se propose.
+ * The link points to the instance's source code (`studio_source_url` setting), which is
+ * where a correction is proposed.
  */
 export default function TranslationNotice({ className = '' }: { className?: string }) {
   const t = useT();

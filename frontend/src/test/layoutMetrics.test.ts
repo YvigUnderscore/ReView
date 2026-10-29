@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { STUB_LINE_HEIGHT, stubLayoutMetrics } from './layoutMetrics';
 
 /**
- * Cinq fichiers de test s'appuient sur ce bouchon pour vérifier un repliage MESURÉ : s'il
- * mentait, ils vérifieraient son mensonge. On contrôle donc qu'il rend bien ce qu'il annonce —
- * et qu'il laisse le document tel qu'il l'a trouvé.
+ * Five test files rely on this double to check a MEASURED clamp: if it
+ * lied, they would be checking its lie. So we verify that it does return what it announces
+ * and that it leaves the document as it found it.
  */
 
 let restore: (() => void) | null = null;
@@ -25,14 +25,14 @@ const div = (className: string, text: string): HTMLDivElement => {
 };
 
 describe('stubLayoutMetrics', () => {
-  it('compte les lignes à la largeur demandée', () => {
+  it('counts the lines at the requested width', () => {
     restore = stubLayoutMetrics({ charsPerLine: 20 });
     expect(div('', 'x'.repeat(20)).scrollHeight).toBe(STUB_LINE_HEIGHT);
     expect(div('', 'x'.repeat(21)).scrollHeight).toBe(2 * STUB_LINE_HEIGHT);
     expect(div('', 'a\nb\nc').scrollHeight).toBe(3 * STUB_LINE_HEIGHT);
   });
 
-  it('ne plafonne la hauteur visible que sur un élément replié', () => {
+  it('caps the visible height only on a clamped element', () => {
     restore = stubLayoutMetrics({ charsPerLine: 20 });
     const wall = 'x'.repeat(200);
     expect(div('', wall).clientHeight).toBe(10 * STUB_LINE_HEIGHT);
@@ -40,13 +40,13 @@ describe('stubLayoutMetrics', () => {
     expect(div('max-h-32 overflow-hidden', wall).clientHeight).toBe(128);
   });
 
-  it('ne plafonne pas en dessous du contenu : un texte court ne déborde jamais', () => {
+  it('does not cap below the content: a short text never overflows', () => {
     restore = stubLayoutMetrics({ charsPerLine: 20 });
     const short = div('line-clamp-3', 'la soudure');
     expect(short.clientHeight).toBe(short.scrollHeight);
   });
 
-  it('la même remarque déborde à 22 caractères par ligne et tient à 40', () => {
+  it('the same remark overflows at 22 characters per line and fits at 40', () => {
     const note = 'x'.repeat(90);
     restore = stubLayoutMetrics({ charsPerLine: 22 });
     const narrow = div('line-clamp-3', note);
@@ -57,7 +57,7 @@ describe('stubLayoutMetrics', () => {
     expect(wide.scrollHeight).toBe(wide.clientHeight);
   });
 
-  it('rend le document intact', () => {
+  it('leaves the document intact', () => {
     const before = document.createElement('div').scrollHeight;
     restore = stubLayoutMetrics({ charsPerLine: 20 });
     restore();

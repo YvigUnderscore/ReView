@@ -5,16 +5,16 @@ import { useEffect } from 'react';
 import { shouldBlockNativeMenu, situationOf } from '../lib/contextTarget';
 
 /**
- * Gardien du clic droit (A3) — remplace l'ancien menu global.
+ * Right-click guard (A3): replaces the former global menu.
  *
- * Ce composant ne rend rien : il empêche seulement le menu du navigateur d'apparaître là
- * où l'application n'a rien de pertinent à proposer. Le menu générique qui s'ouvrait
- * partout a été retiré : il servait les mêmes entrées sur une carte de plan, sur un titre
- * et sur du vide, ce qui n'aidait personne. Les actions qu'il portait encore (copier le
- * lien de la page, rafraîchir, thème, raccourcis) ont rejoint la palette Ctrl+K, où elles
- * sont cherchables et accessibles au clavier.
+ * This component renders nothing: it only prevents the browser menu from appearing where
+ * the application has nothing relevant to offer. The generic menu that opened
+ * everywhere was removed: it served the same entries on a shot card, on a title
+ * and on empty space, which helped nobody. The actions it still carried (copy the
+ * page link, refresh, theme, shortcuts) joined the Ctrl+K palette, where they
+ * are searchable and keyboard-accessible.
  *
- * La politique elle-même vit dans `lib/contextTarget.ts`, testée isolément.
+ * The policy itself lives in `lib/contextTarget.ts`, tested in isolation.
  */
 export default function ContextMenuGuard() {
   useEffect(() => {

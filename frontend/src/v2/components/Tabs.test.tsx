@@ -6,13 +6,13 @@ import { render } from '@testing-library/react';
 import Tabs from './Tabs';
 
 /**
- * Le soulignement suit l'onglet actif — sans framer-motion.
+ * The underline follows the active tab, without framer-motion.
  *
- * L'animation de layout (`layoutId`) faisait glisser le trait d'un onglet à l'autre ; elle
- * coûtait 38,5 ko gzip de premier chargement (F3). Le trait est maintenant un nœud unique,
- * positionné depuis la mesure du DOM et déplacé par une transition CSS. Ce qui peut casser
- * silencieusement, c'est la mesure : le trait resterait collé à gauche, ou disparaîtrait.
- * Ces cas-là la vérifient en largeurs et en décalages.
+ * The layout animation (`layoutId`) made the bar slide from one tab to the next; it
+ * cost 38.5 kB gzipped on first load (F3). The bar is now a single node,
+ * positioned from a DOM measurement and moved by a CSS transition. What can break
+ * silently is the measurement: the bar would stay stuck on the left, or disappear.
+ * These cases check it in widths and offsets.
  */
 
 const TABS = [
@@ -21,7 +21,7 @@ const TABS = [
   { key: 'assets', label: 'Assets' },
 ];
 
-/** Largeur simulée : happy-dom ne fait aucune mise en page, tout y vaut zéro. */
+/** Simulated width: happy-dom does no layout at all, so everything is zero there. */
 const widthOf = (el: Element) => (el.textContent ?? '').length * 10;
 
 function stubLayout() {
@@ -52,28 +52,28 @@ const underlineOf = (root: HTMLElement) =>
   root.querySelector<HTMLElement>('[role="tablist"] > span[aria-hidden]');
 
 describe('Tabs', () => {
-  it('place le trait sous l’onglet actif', () => {
+  it('places the underline under the active tab', () => {
     stubLayout();
     const { container } = render(<Tabs tabs={TABS} active="overview" onChange={() => {}} />);
     const line = underlineOf(container);
     expect(line).not.toBeNull();
-    // « Overview » : 8 caractères × 10, premier de la barre.
+    // "Overview": 8 characters × 10, first in the bar.
     expect(line?.style.width).toBe('80px');
     expect(line?.style.transform).toBe('translateX(0px)');
     expect(line?.style.opacity).toBe('1');
   });
 
-  it('le déplace quand l’onglet actif change', () => {
+  it('moves it when the active tab changes', () => {
     stubLayout();
     const { container, rerender } = render(<Tabs tabs={TABS} active="overview" onChange={() => {}} />);
     rerender(<Tabs tabs={TABS} active="assets" onChange={() => {}} />);
     const line = underlineOf(container);
-    // « Overview » (80) + gouttière (4) + « Shots » (50) + gouttière (4) = 138.
+    // "Overview" (80) + gutter (4) + "Shots" (50) + gutter (4) = 138.
     expect(line?.style.transform).toBe('translateX(138px)');
     expect(line?.style.width).toBe('60px');
   });
 
-  it('s’efface si l’onglet actif n’est pas dans la barre', () => {
+  it('disappears if the active tab is not in the bar', () => {
     stubLayout();
     const { container } = render(<Tabs tabs={TABS} active="inconnu" onChange={() => {}} />);
     expect(underlineOf(container)?.style.opacity).toBe('0');

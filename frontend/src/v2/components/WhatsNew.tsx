@@ -11,58 +11,58 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { useT } from '../i18n';
 
 /**
- * « Nouveautés » in-app (42.B — №68) : changelog alimenté par `DOCUMENTATION/CHANGELOG.md`
- * (servi statiquement sur /docs/CHANGELOG.md). Une pastille signale une entrée non lue ;
- * l'ouverture marque la dernière entrée comme vue (localStorage).
+ * "What's new" in-app (42.B, №68): changelog fed by `DOCUMENTATION/CHANGELOG.md`
+ * (served statically at /docs/CHANGELOG.md). A dot flags an unread entry;
+ * opening the panel marks the latest entry as seen (localStorage).
  */
 const SEEN_KEY = 'review:changelog-seen';
 const CHANGELOG_URL = '/docs/CHANGELOG.md';
 
 /**
- * Rendu du markdown, chargé à l'ouverture du dialogue et pas avant (F6).
+ * Markdown rendering, loaded when the dialog opens and not before (F6).
  *
- * `docsRender` tire `marked` : importé en tête, il entrait dans le **premier chargement**
- * par la chaîne App → Shell → SidebarFooter → WhatsNew, soit 13,5 ko gzip payés par tout le
- * monde, sur toutes les pages, pour un panneau ouvert une fois par trimestre. `parseChangelog`
- * suffit à décider de la pastille et n'a besoin de rien.
+ * `docsRender` pulls in `marked`: imported at the top, it entered the **first load**
+ * through the chain App → Shell → SidebarFooter → WhatsNew, i.e. 13.5 kB gzipped paid by everyone,
+ * on every page, for a panel opened once a quarter. `parseChangelog`
+ * is enough to decide the dot and needs nothing else.
  */
 type RenderDocHtml = typeof import('../pages/docs/docsRender').renderDocHtml;
 
 /**
- * Octets lus pour décider de la pastille (F6, second geste).
+ * Bytes read to decide the dot (F6, second move).
  *
- * Le panneau est monté par la coquille, donc sur **toute** page authentifiée, et il n'a
- * besoin avant ouverture que d'une seule information : le titre de l'entrée la plus récente,
- * c'est-à-dire le premier `## ` du fichier. Il téléchargeait pourtant les 24 568 octets du
- * changelog — non compressés de surcroît, nginx servant ce `.md` en
- * `application/octet-stream`, type absent de ses `gzip_types`.
+ * The panel is mounted by the shell, so on **every** authenticated page, and before opening it needs
+ * only one piece of information: the title of the latest entry,
+ * that is the first `## ` of the file. Yet it downloaded the 24,568 bytes of the
+ * changelog, uncompressed to boot, nginx serving this `.md` as
+ * `application/octet-stream`, a type absent from its `gzip_types`.
  *
- * Le titre commence au 190e octet du fichier servi ; 2 ko laissent dix fois la marge.
+ * The title starts at byte 190 of the served file; 2 kB leaves ten times the margin.
  */
 const HEAD_BYTES = 2048;
 const HEADING_RE = /^##\s+(.+?)\s*$/;
 
 /**
- * Clé dérivée de `qk.changelog` : la sonde et le document entier sont deux vues du même
- * fichier, elles se rangent côte à côte dans le cache et s'invalident ensemble.
+ * Key derived from `qk.changelog`: the probe and the whole document are two views of the same
+ * file, they sit side by side in the cache and are invalidated together.
  */
 const CHANGELOG_HEAD_KEY = [...qk.changelog, 'head'] as const;
 
 interface ChangelogHead {
-  /** Titre de l'entrée la plus récente (= son identifiant), null si le fichier n'en porte pas. */
+  /** Title of the latest entry (= its identifier), null if the file carries none. */
   latestId: string | null;
   /**
-   * Document entier, quand le serveur a ignoré `Range` et a tout envoyé : inutile alors de
-   * le redemander à l'ouverture. Null quand la réponse était bien partielle.
+   * Whole document, when the server ignored `Range` and sent everything: no need then to
+   * request it again on opening. Null when the response was indeed partial.
    */
   full: string | null;
 }
 
 /**
- * Identifiant de l'entrée la plus récente, lu sur un début de fichier.
+ * Identifier of the latest entry, read from the start of a file.
  *
- * `partial` : le serveur a tronqué la réponse, sa dernière ligne est donc coupée au milieu —
- * on la jette plutôt que de risquer un titre amputé (« ## 2026-09 — Bande de mon »).
+ * `partial`: the server truncated the response, so its last line is cut in the middle:
+ * we discard it rather than risk a truncated title (e.g. a heading cut to "## 2026-09 — Bande de mon").
  */
 function parseChangelogHead(text: string, partial: boolean): string | null {
   const lines = text.split('\n');
@@ -89,9 +89,9 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
   });
 
   /**
-   * La sonde ne décide que d'une pastille : elle n'a rien à faire dans la rafale du premier
-   * écran, où elle disputait la bande passante aux requêtes de la page (F6). Elle part quand
-   * le navigateur n'a plus rien d'urgent à faire.
+   * The probe only decides a dot: it has nothing to do in the burst of the first screen,
+   * where it competed for bandwidth with the page's requests (F6). It leaves when
+   * the browser has nothing urgent left to do.
    */
   useEffect(() => {
     if (typeof window.requestIdleCallback !== 'function') {
@@ -102,7 +102,7 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     return () => window.cancelIdleCallback?.(handle);
   }, []);
 
-  // Sonde : les premiers octets suffisent à connaître la dernière entrée.
+  // Probe: the first bytes are enough to know the latest entry.
   const { data: head } = useQuery({
     enabled: idle,
     queryKey: CHANGELOG_HEAD_KEY,
@@ -110,9 +110,9 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
       const res = await fetch(CHANGELOG_URL, { headers: { Range: `bytes=0-${HEAD_BYTES - 1}` } });
       if (!res.ok) throw new Error(t('whatsNew.unavailable', { status: res.status }));
       const text = await res.text();
-      // 206 : le serveur a honoré `Range`. 200 : il l'a ignoré (compression à la volée,
-      // cache intermédiaire) et a tout envoyé — on garde alors le document plutôt que de le
-      // retélécharger à l'ouverture.
+      // 206: the server honoured `Range`. 200: it ignored it (on-the-fly compression,
+      // intermediate cache) and sent everything, so we keep the document rather than
+      // downloading it again on opening.
       const partial = res.status === 206;
       return { latestId: parseChangelogHead(text, partial), full: partial ? null : text };
     },
@@ -120,8 +120,8 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     retry: false,
   });
 
-  // Document entier : à l'ouverture réelle du panneau, et seulement si la sonde ne l'a pas
-  // déjà ramené.
+  // Whole document: on actual opening of the panel, and only if the probe has not
+  // already fetched it.
   const { data: fetched, error: fullError } = useQuery({
     enabled: open && head != null && head.full === null,
     queryKey: qk.changelog,
@@ -139,10 +139,10 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
   const latestId = head?.latestId ?? null;
   const hasUnseen = latestId !== null && latestId !== seen;
 
-  // Ouverture : marque la dernière entrée comme vue (le bouton n'existe que si on la connaît).
+  // Opening: marks the latest entry as seen (the button only exists if we know it).
   const openPanel = () => {
     setOpen(true);
-    // `setState(() => fn)` : la forme fonctionnelle, sinon React appellerait le rendu.
+    // `setState(() => fn)`: the functional form, otherwise React would call the render.
     void import('../pages/docs/docsRender').then((m) => setRenderDocHtml(() => m.renderDocHtml));
     if (!latestId) return;
     try {
@@ -153,8 +153,8 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
     setSeen(latestId);
   };
 
-  // Pas de bouton tant qu'aucune entrée n'est connue : c'était déjà le cas, mais cela se
-  // décidait sur les 24 ko du fichier.
+  // No button while no entry is known: that was already the case, but it used to be
+  // decided on the file's 24 kB.
   if (latestId === null) return null;
 
   return (
@@ -187,7 +187,7 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
                   <p className="mb-2 text-xs font-semibold section-label text-primary">{e.id}</p>
                   <article
                     className="prose-doc max-w-none text-sm text-card-foreground"
-                    // Markdown du repo (CHANGELOG.md) ; le HTML brut est échappé par renderDocHtml.
+                    // Repo markdown (CHANGELOG.md); raw HTML is escaped by renderDocHtml.
                     dangerouslySetInnerHTML={{ __html: renderDocHtml(e.body, 'CHANGELOG.md', calloutLabels) }}
                   />
                 </div>

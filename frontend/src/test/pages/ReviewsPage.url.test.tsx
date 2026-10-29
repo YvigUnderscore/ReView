@@ -9,15 +9,15 @@ import { t } from '../../v2/i18n';
 import { page, renderWithProviders } from '../renderWithProviders';
 
 /**
- * Synchronisation URL ↔ filtres de la page Reviews.
+ * URL ↔ filter synchronization of the Reviews page.
  *
- * La page ignorait complètement la query-string : ses filtres vivaient dans un `useState`.
- * Aucune carte de l'Accueil ne pouvait donc ouvrir une vue filtrée — le seul lien possible
- * était « tout » —, un état de recherche ne se partageait pas, et le retour arrière du
- * navigateur quittait la page au lieu de défaire le dernier filtre.
+ * The page completely ignored the query string: its filters lived in a `useState`.
+ * No card on the Home page could therefore open a filtered view: the only possible link
+ * was "everything". A search state could not be shared, and the browser's back button left the page
+ * instead of undoing the last filter.
  */
 
-/** Retour arrière du navigateur, dans le routeur mémoire du test. */
+/** Browser back navigation, in the test's memory router. */
 function BackButton() {
   const navigate = useNavigate();
   return (
@@ -46,9 +46,9 @@ const mount = (route: string) =>
 
 const kindSelect = () => screen.getByRole('combobox', { name: t('reviews.filter.allTypes') });
 
-describe('ReviewsPage — filtres et URL', () => {
-  it('lit les filtres dans l’adresse et les envoie au serveur', async () => {
-    // C'est ce qui permet à un compteur de l'Accueil d'ouvrir SA vue.
+describe('ReviewsPage — filters and URL', () => {
+  it('reads the filters from the address and sends them to the server', async () => {
+    // This is what lets a counter on the Home page open ITS view.
     const { api } = mount('/reviews?assigned=me&decision=none');
     await waitFor(() => expect(api.called('GET /api/media/reviews').length).toBeGreaterThan(0));
     const asked = api.called('GET /api/media/reviews').at(-1)!.url;
@@ -56,19 +56,19 @@ describe('ReviewsPage — filtres et URL', () => {
     expect(asked.searchParams.get('decision')).toBe('none');
   });
 
-  it('montre le filtre lu dans l’adresse, et non un sélecteur vide', async () => {
+  it('shows the filter read from the address, not an empty selector', async () => {
     mount('/reviews?kind=IMAGE');
     await waitFor(() => expect(kindSelect()).toHaveValue('IMAGE'));
   });
 
-  it('écrit dans l’adresse le filtre qu’on pose', async () => {
+  it('writes to the address the filter that is set', async () => {
     const { user, currentPath } = mount('/reviews');
     await waitFor(() => expect(kindSelect()).toBeInTheDocument());
     await user.selectOptions(kindSelect(), 'VIDEO');
     await waitFor(() => expect(currentPath()).toBe('/reviews?kind=VIDEO'));
   });
 
-  it('défait le dernier filtre au retour arrière, au lieu de quitter la page', async () => {
+  it('undoes the last filter on back navigation, instead of leaving the page', async () => {
     const { user, currentPath } = mount('/reviews');
     await waitFor(() => expect(kindSelect()).toBeInTheDocument());
     await user.selectOptions(kindSelect(), 'VIDEO');

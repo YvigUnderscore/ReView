@@ -7,11 +7,11 @@ import { useT } from '../i18n';
 import { filesFromDataTransfer } from '../../lib/dropEntries';
 
 /**
- * Drop-zone plein-écran (10.C7) : un overlay apparaît dès qu'on glisse des fichiers
- * n'importe où sur la page ; relâcher lance l'upload. Écoute les événements de drag
- * au niveau `window` (dépôt possible partout). Une drop-zone locale qui a déjà traité
- * le dépôt (`e.preventDefault()`) est respectée : on ne double pas l'upload. Un dossier
- * déposé est déplié (séquence d'images livrée en un répertoire).
+ * Full-screen drop zone (10.C7): an overlay appears as soon as files are dragged
+ * anywhere on the page; releasing starts the upload. Listens to drag events
+ * at the `window` level (drop possible everywhere). A local drop zone that has already handled
+ * the drop (`e.preventDefault()`) is respected: we do not double the upload. A dropped folder
+ * is unfolded (image sequence delivered as a directory).
  */
 export default function FullPageDropzone({
   onDrop,

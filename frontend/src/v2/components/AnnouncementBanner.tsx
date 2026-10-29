@@ -16,9 +16,9 @@ const STYLE: Record<AnnouncementType, { cls: string; Icon: typeof Info }> = {
 };
 
 /**
- * Bannières d'annonces studio actives pour l'utilisateur (Phase 22). Le backend filtre déjà
- * par période / rôle / fréquence ; la fermeture pose un accusé de lecture (masque selon la
- * fréquence : permanent → réapparaît, 1re connexion/du jour → masquée durablement).
+ * Active studio announcement banners for the user (Phase 22). The backend already filters
+ * by period / role / frequency; closing posts a read receipt (hidden depending on the
+ * frequency: permanent → reappears, first sign-in / of the day → hidden durably).
  */
 export default function AnnouncementBanner() {
   const t = useT();

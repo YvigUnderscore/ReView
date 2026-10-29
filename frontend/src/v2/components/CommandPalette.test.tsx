@@ -8,13 +8,13 @@ import { EMPTY_SEARCH, type SearchResults } from '../lib/searchApi';
 import CommandPalette from './CommandPalette';
 
 /**
- * Palette Ctrl+K — ce qu'un superviseur doit y trouver.
+ * Ctrl+K palette: what a supervisor must find in it.
  *
- * La recherche ne couvrait que cinq types d'entités : la chaîne la plus tapée du studio
- * (`SH0120_comp_v012`) et la phrase dite en review (« enlever le reflet ») ne rendaient
- * rien. Ce test monte la palette avec les dix familles servies par `GET /api/search` et
- * vérifie qu'elles s'affichent, qu'elles mènent quelque part, et que la frappe n'inonde pas
- * le serveur.
+ * The search only covered five kinds of entities: the most typed string in the studio
+ * (`SH0120_comp_v012`) and the phrase said in review ("remove the reflection") returned
+ * nothing. This test mounts the palette with the ten families served by `GET /api/search` and
+ * checks that they display, that they lead somewhere, and that typing does not flood
+ * the server.
  */
 
 const RESULTS: SearchResults = {
@@ -56,56 +56,56 @@ function mount(results: SearchResults = RESULTS) {
   return { ...view, onOpenChange };
 }
 
-/** Le champ de la palette (cmdk le marque d'un attribut stable). */
+/** The palette's field (cmdk marks it with a stable attribute). */
 const input = (): HTMLInputElement => {
   const el = document.querySelector('[cmdk-input]');
   if (!(el instanceof HTMLInputElement)) throw new Error('palette input not found');
   return el;
 };
 
-/** Laisse passer le debounce sans rien attendre de précis. */
+/** Lets the debounce pass without waiting for anything specific. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 400));
 
-describe('CommandPalette — ce que l’on cherche vraiment', () => {
-  it('trouve un média par son nom de fichier', async () => {
+describe('CommandPalette — what one really searches for', () => {
+  it('finds a media by its file name', async () => {
     const { user } = mount();
     await user.type(input(), 'SH0120');
     expect(await screen.findByText('SH0120_comp_v012.mov')).toBeInTheDocument();
     expect(screen.getByText('SH0120 · comp · v012')).toBeInTheDocument();
   });
 
-  it('trouve une version par son numéro', async () => {
+  it('finds a version by its number', async () => {
     const { user } = mount();
     await user.type(input(), 'v012');
     expect(await screen.findByText('v012')).toBeInTheDocument();
   });
 
-  it('trouve un plan par le texte d’une note de review', async () => {
+  it('finds a shot by the text of a review note', async () => {
     const { user } = mount();
     await user.type(input(), 'reflet');
     expect(await screen.findByText('Enlever le reflet sur le casque')).toBeInTheDocument();
     expect(screen.getByText('ana · SH0120 · SH0120_comp_v012.mov')).toBeInTheDocument();
   });
 
-  it('trouve aussi les playlists et les personnes', async () => {
+  it('also finds playlists and people', async () => {
     const { user } = mount();
     await user.type(input(), 'ana');
     expect(await screen.findByText('Dailies jeudi')).toBeInTheDocument();
     expect(screen.getByText('Compositing')).toBeInTheDocument();
   });
 
-  it('affiche un repli lisible pour un compte sans nom', async () => {
+  it('shows a readable fallback for an account without a name', async () => {
     const { user } = mount();
     await user.type(input(), 'ana');
     await screen.findByText('Compositing');
-    // La clé est posée par `logs/i18n-lots/lot-recherche.json` ; c'est sa présence qui
-    // compte ici, pas sa traduction.
+    // The key is set by `logs/i18n-lots/lot-recherche.json`; what counts here is
+    // its presence, not its translation.
     expect(screen.getAllByText(/palette\.person\.unnamed|Account without a name/)).not.toHaveLength(0);
   });
 });
 
 describe('CommandPalette — navigation', () => {
-  it('ouvre la review du média choisi', async () => {
+  it('opens the review of the chosen media', async () => {
     const { user, currentPath, onOpenChange } = mount();
     await user.type(input(), 'SH0120');
     await user.click(await screen.findByText('SH0120_comp_v012.mov'));
@@ -113,28 +113,28 @@ describe('CommandPalette — navigation', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('ouvre la review à la note choisie', async () => {
+  it('opens the review at the chosen note', async () => {
     const { user, currentPath } = mount();
     await user.type(input(), 'reflet');
     await user.click(await screen.findByText('Enlever le reflet sur le casque'));
     expect(currentPath()).toBe('/review/88?comment=51');
   });
 
-  it('envoie une version sur son média le plus récent', async () => {
+  it('sends a version to its most recent media', async () => {
     const { user, currentPath } = mount();
     await user.type(input(), 'v012');
     await user.click(await screen.findByText('v012'));
     expect(currentPath()).toBe('/review/88');
   });
 
-  it('désactive une version dont aucun média n’est visible plutôt que de mener nulle part', async () => {
+  it('disables a version none of whose media is visible, rather than leading nowhere', async () => {
     const { user } = mount();
     await user.type(input(), 'v013');
     const item = (await screen.findByText('v013')).closest('[cmdk-item]');
     expect(item).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('ouvre la fiche d’une personne', async () => {
+  it('opens a person profile', async () => {
     const { user, currentPath } = mount();
     await user.type(input(), 'ana');
     await user.click(await screen.findByText('Compositing'));
@@ -142,15 +142,15 @@ describe('CommandPalette — navigation', () => {
   });
 });
 
-describe('CommandPalette — la frappe n’inonde pas le serveur', () => {
-  it('n’interroge pas le serveur sur un seul caractère', async () => {
+describe('CommandPalette — typing does not flood the server', () => {
+  it('does not query the server on a single character', async () => {
     const { user, api } = mount();
     await user.type(input(), 'S');
     await settle();
     expect(api.called('GET /api/search')).toHaveLength(0);
   });
 
-  it('ne lance qu’une requête pour une chaîne tapée d’un trait', async () => {
+  it('launches only one request for a string typed in one go', async () => {
     const { user, api } = mount();
     await user.type(input(), 'SH0120');
     await screen.findByText('SH0120_comp_v012.mov');
@@ -160,7 +160,7 @@ describe('CommandPalette — la frappe n’inonde pas le serveur', () => {
     expect(calls[0].url.searchParams.get('q')).toBe('SH0120');
   });
 
-  it('annonce l’absence de résultat sans effacer la saisie', async () => {
+  it('announces the absence of results without erasing the input', async () => {
     const { user } = mount(EMPTY_SEARCH);
     await user.type(input(), 'zzzz');
     await settle();
@@ -170,39 +170,39 @@ describe('CommandPalette — la frappe n’inonde pas le serveur', () => {
 });
 
 /**
- * Le clavier de la palette.
+ * The palette's keyboard handling.
  *
- * HONNÊTETÉ SUR LA PORTÉE : la défaillance d'origine — aucun item actif après la frappe, donc
- * une première Entrée perdue — n'a été reproduite qu'au NAVIGATEUR. Sous jsdom, cmdk
- * resélectionne de lui-même et ces assertions passaient déjà avant le correctif. Elles tiennent
- * donc l'invariant (« un et un seul item actif dès que les résultats sont là »), pas le
- * scénario exact ; un futur changement qui laisserait la liste sans sélection les ferait tomber.
+ * HONESTY ABOUT SCOPE: the original failure (no active item after typing, so
+ * a first Enter lost) was only reproduced in the BROWSER. Under jsdom, cmdk
+ * reselects by itself, and these assertions already passed before the fix. They therefore hold
+ * the invariant ("one and only one active item as soon as results are there"), not the
+ * exact scenario; a future change that left the list without a selection would make them fail.
  */
-describe('CommandPalette — le clavier', () => {
-  /** L'item que cmdk tient pour actif, ou null si la liste n'en désigne aucun. */
+describe('CommandPalette — the keyboard', () => {
+  /** The item cmdk considers active, or null if the list designates none. */
   const activeItem = () => document.querySelector('[cmdk-item][aria-selected="true"]');
 
-  it('désigne le premier résultat dès qu’il arrive', async () => {
+  it('designates the first result as soon as it arrives', async () => {
     const { user } = mount();
     await user.type(input(), 'SH0120');
     await screen.findByText('SH0120_comp_v012.mov');
-    // Aucun élément n'était sélectionné : `shouldFilter={false}` prive cmdk de la passe qui
-    // resélectionne le premier item, et la valeur active restait celle d'une action rapide
-    // démontée entre-temps.
+    // No element was selected: `shouldFilter={false}` deprives cmdk of the pass that
+    // reselects the first item, and the active value remained that of a quick action
+    // unmounted in the meantime.
     expect(activeItem()).not.toBeNull();
   });
 
-  it('ouvre le résultat sur une SEULE frappe d’Entrée', async () => {
+  it('opens the result on a SINGLE press of Enter', async () => {
     const { user, currentPath, onOpenChange } = mount();
     await user.type(input(), 'SH0120');
     await screen.findByText('SH0120_comp_v012.mov');
-    // Sans flèche préalable : c'est précisément ce qui ne marchait pas.
+    // Without a prior arrow key: that is precisely what did not work.
     await user.keyboard('{Enter}');
     expect(currentPath()).not.toBe('/');
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('redésigne le premier item quand la requête change', async () => {
+  it('redesignates the first item when the query changes', async () => {
     const { user } = mount();
     await user.type(input(), 'SH0120');
     await screen.findByText('SH0120_comp_v012.mov');

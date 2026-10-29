@@ -25,8 +25,8 @@ const options = {
 const summaryLine = (over: Record<string, unknown> = {}) =>
   `${OCIO_BAKE_MARKER} ${JSON.stringify({ display: options.display, view: options.view, size: 33, ocio: '2.4.1', ...over })}`;
 
-describe('bakeRunner — ligne de commande', () => {
-  it('passe chaque paramètre en argument séparé (aucun shell, aucun échappement)', () => {
+describe('bakeRunner — command line', () => {
+  it('passes each parameter as a separate argument (no shell, no escaping)', () => {
     const args = pythonBakeArgs('/app/bake_lut.py', options);
     expect(args[0]).toBe('/app/bake_lut.py');
     expect(args).toContain('--display');
@@ -36,45 +36,45 @@ describe('bakeRunner — ligne de commande', () => {
     expect(args[args.indexOf('--out') + 1]).toBe('/tmp/out.cube');
   });
 
-  it('résout un chemin de script se terminant par bake_lut.py', () => {
+  it('resolves a script path ending in bake_lut.py', () => {
     expect(resolveOcioScript()).toMatch(/bake_lut\.py$/);
   });
 });
 
-describe('bakeRunner — résumé du script', () => {
-  it('lit la dernière ligne marquée, au milieu du bruit', () => {
+describe('bakeRunner — script summary', () => {
+  it('reads the last marked line, amid the noise', () => {
     const out = `warning: some OCIO noise\n${summaryLine()}\n`;
     expect(parseBakeSummary(out)).toMatchObject({ display: options.display, size: 33 });
   });
 
-  it('rend null sans marqueur, ou sur du JSON cassé', () => {
+  it('returns null without a marker, or on broken JSON', () => {
     expect(parseBakeSummary('nothing here')).toBeNull();
     expect(parseBakeSummary(`${OCIO_BAKE_MARKER} {oops`)).toBeNull();
     expect(parseBakeSummary(`${OCIO_BAKE_MARKER} {"size":33}`)).toBeNull();
   });
 });
 
-describe('bakeRunner — sonde et exécution', () => {
+describe('bakeRunner — probe and execution', () => {
   beforeEach(() => resetOcioProbe());
 
-  it('la sonde est mise en cache et ne relance pas Python', async () => {
+  it('the probe is cached and does not relaunch Python', async () => {
     const runner = vi.fn().mockResolvedValue({ stdout: '', stderr: '' }) as unknown as ExecRunner;
     expect(await probePyOcio(runner)).toBe(true);
     expect(await probePyOcio(runner)).toBe(true);
     expect(runner).toHaveBeenCalledTimes(1);
   });
 
-  it('la sonde répond false quand PyOpenColorIO manque', async () => {
+  it('the probe answers false when PyOpenColorIO is missing', async () => {
     const runner = (() => Promise.reject(new Error('ModuleNotFoundError'))) as unknown as ExecRunner;
     expect(await probePyOcio(runner)).toBe(false);
   });
 
-  it('cuit un couple et rend le résumé', async () => {
+  it('bakes a pair and returns the summary', async () => {
     const runner = (() => Promise.resolve({ stdout: summaryLine(), stderr: '' })) as ExecRunner;
     await expect(bakeWithPython(options, runner)).resolves.toMatchObject({ size: 33, ocio: '2.4.1' });
   });
 
-  it('refuse une sortie sans résumé ou de taille inattendue', async () => {
+  it('refuses an output without summary or of unexpected size', async () => {
     const mute = (() => Promise.resolve({ stdout: '', stderr: '' })) as ExecRunner;
     await expect(bakeWithPython(options, mute)).rejects.toThrow(/no summary/);
     const wrong = (() => Promise.resolve({ stdout: summaryLine({ size: 17 }), stderr: '' })) as ExecRunner;

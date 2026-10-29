@@ -20,28 +20,28 @@ import { useT } from '../i18n';
 import { notificationText } from '../lib/notificationText';
 
 /**
- * Espace des notifications — ancré dans la barre d'en-tête, **à gauche de la recherche**.
+ * Notifications area: anchored in the header bar, **to the left of the search**.
  *
- * Il vivait en bas à droite, et pas seulement la cloche : chaque notification reçue y
- * levait un toast. Trois surfaces s'y disputaient le même coin — le `Toaster` (z-index très
- * élevé), le widget d'upload (`fixed bottom-4 right-4`, plusieurs centaines de pixels de
- * haut pendant l'envoi d'une sequence) et ce flux — de sorte qu'une notification recouvrait
- * l'avancement d'un envoi, ou l'inverse, au hasard de l'ordre d'arrivée.
+ * It used to live at the bottom right, and not only the bell: each notification received
+ * raised a toast. Three surfaces competed for the same corner: the `Toaster` (very high z-index),
+ * the upload widget (`fixed bottom-4 right-4`, several hundred pixels high
+ * while a sequence is being sent) and this stream, so that a notification covered
+ * the progress of a send, or vice versa, depending on the arrival order.
  *
- * Deux règles tiennent désormais l'emplacement :
+ * Two rules now hold the location:
  *
- * 1. **Rien ne recouvre rien.** Ce qui est visible en permanence — la cloche, et l'aperçu
- *    de la dernière notification — vit DANS le flux de l'en-tête : il pousse, il ne
- *    superpose pas. Le fil d'Ariane, à sa gauche, absorbe la place prise (`flex-1`).
- * 2. **Le détail se déplie.** La liste complète reste un panneau qui ne s'ouvre que sur un
- *    clic — un survol, une arrivée, une navigation ne l'ouvrent jamais.
+ * 1. **Nothing covers anything.** What is permanently visible (the bell, and the preview
+ *    of the last notification) lives INSIDE the header flow: it pushes, it does not
+ *    overlap. The breadcrumb, on its left, absorbs the space taken (`flex-1`).
+ * 2. **The detail unfolds.** The full list remains a panel that opens only on a
+ *    click: a hover, an arrival or a navigation never opens it.
  *
- * L'aperçu remplace le toast : il dit la même chose, au même moment, sans rien masquer, et
- * il disparaît seul. Il est masqué en fenêtre étroite, où il ne resterait pas de quoi lire
- * le fil d'Ariane.
+ * The preview replaces the toast: it says the same thing, at the same moment, without hiding anything, and
+ * it disappears on its own. It is hidden in a narrow window, where there would be no room left to read
+ * the breadcrumb.
  */
 
-/** Durée d'affichage de l'aperçu d'une notification qui vient d'arriver. */
+/** Display duration of the preview of a notification that has just arrived. */
 const PEEK_MS = 6000;
 
 export default function NotificationBell() {
@@ -55,8 +55,8 @@ export default function NotificationBell() {
   const notifications = data?.notifications ?? [];
   const unread = data?.unread ?? 0;
 
-  // Temps réel : le serveur émet `notification:new` dans la room de l'utilisateur
-  // (jointe automatiquement à la connexion) → on préfixe le cache + aperçu (10.C5/10.E3).
+  // Real time: the server emits `notification:new` in the user's room
+  // (joined automatically at connection), so we prepend the cache and the preview (10.C5/10.E3).
   useEffect(() => {
     const socket = getSocket();
     const onNew = (n: Notification) => {
@@ -74,8 +74,8 @@ export default function NotificationBell() {
     };
   }, [qc]);
 
-  // L'aperçu s'efface seul. Le minuteur est relancé à chaque nouvelle notification :
-  // deux arrivées rapprochées laissent la seconde le temps d'être lue.
+  // The preview clears itself. The timer is restarted at each new notification:
+  // two close arrivals leave the second one time to be read.
   useEffect(() => {
     if (!peek) return;
     const timer = setTimeout(() => setPeek(null), PEEK_MS);

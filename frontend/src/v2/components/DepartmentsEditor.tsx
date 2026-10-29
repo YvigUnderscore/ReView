@@ -6,14 +6,14 @@ import type { DepartmentSummary } from '../types/api';
 import { useT } from '../i18n';
 
 /**
- * Édition des départements — la liste ORDONNÉE du pipeline (Phase 45).
+ * Editing departments: the ORDERED list of the pipeline (Phase 45).
  *
- * L'ordre n'est pas cosmétique : c'est lui qui définit l'amont et l'aval, donc ce que
- * l'application appelle « la dernière version » d'un asset ou d'un plan, et ce qu'un
- * montage automatique va chercher. D'où les flèches, et la mention explicite au-dessus.
+ * The order is not cosmetic: it defines upstream and downstream, and therefore what
+ * the application calls "the latest version" of an asset or a shot, and what an
+ * automatic edit fetches. Hence the arrows, and the explicit note above.
  *
- * Partagé par les réglages d'un projet et les défauts du studio : deux écrans qui
- * éditaient la même donnée avec deux formulaires différents.
+ * Shared by a project's settings and the studio defaults: two screens that
+ * edited the same data with two different forms.
  */
 export default function DepartmentsEditor({
   value,

@@ -9,12 +9,12 @@ import { logger } from '../lib/logger';
 import { registerWorkerShutdown } from './shutdown';
 
 /**
- * Worker de nettoyage storage (retry des orphelins MinIO).
+ * Storage cleanup worker (retries orphaned MinIO objects).
  *
- * Alimenté par `enqueueStorageCleanup` (lib/trash) quand une suppression d'objet
- * échoue APRÈS le commit DB : la base est déjà cohérente, il ne reste qu'à retirer
- * l'objet orphelin. Toute erreur est propagée → BullMQ retente (attempts + backoff).
- * La suppression est idempotente (retirer une clé déjà absente n'échoue pas).
+ * Fed by `enqueueStorageCleanup` (lib/trash) when an object deletion
+ * fails AFTER the DB commit: the database is already consistent, all that remains is to remove
+ * the orphaned object. Any error is propagated, so BullMQ retries (attempts + backoff).
+ * Deletion is idempotent (removing a key that is already absent does not fail).
  */
 export const storageCleanupWorker = new Worker<StorageCleanupJobData, void, string>(
   QUEUE_NAMES.STORAGE_CLEANUP,
@@ -38,9 +38,9 @@ storageCleanupWorker.on('failed', (_job, err) =>
   logger.warn({ err }, '[storageCleanup.worker] ✗ (sera retenté)'),
 );
 
-/** Démarre le worker (appelé depuis le process worker principal). */
+/** Starts the worker (called from the main worker process). */
 export function startStorageCleanupWorker(): void {
-  // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
+  // The worker loop lives as long as the process: nothing to wait for here.
   void storageCleanupWorker.run();
   registerWorkerShutdown('storageCleanup.worker', storageCleanupWorker);
   logger.info('[storageCleanup.worker] démarré.');

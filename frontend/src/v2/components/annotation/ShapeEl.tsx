@@ -4,10 +4,10 @@
 import { arrowHead, textFontSize, type Shape } from './geometry';
 
 /**
- * Rendu SVG d'une forme d'annotation. `size` = dimensions px du canvas (correction
- * d'aspect des éléments dessinés en espace écran : tête de flèche, texte).
- * `highlight` : prévisualisation au survol (outils déplacement/gomme) — halo sous
- * la forme, teinté destructive pour la gomme.
+ * SVG rendering of an annotation shape. `size` = canvas px dimensions (aspect correction
+ * of elements drawn in screen space: arrow head, text).
+ * `highlight`: hover preview (move/erase tools): halo under
+ * the shape, tinted destructive for the eraser.
  */
 export default function ShapeEl({
   s,
@@ -28,7 +28,7 @@ export default function ShapeEl({
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
   };
-  // Halo de survol : même géométrie, plus large et semi-transparent, sous la forme.
+  // Hover halo: same geometry, wider and semi-transparent, under the shape.
   const halo = highlight
     ? {
         ...common,
@@ -48,7 +48,7 @@ export default function ShapeEl({
     );
   }
   if (s.type === 'polygon') {
-    // En cours de tracé (< 3 sommets) : polyligne ouverte ; sinon polygone fermé.
+    // Being drawn (< 3 vertices): open polyline; otherwise closed polygon.
     const points = (s.pts ?? []).map((p) => p.join(',')).join(' ');
     const El = (s.pts?.length ?? 0) >= 3 ? 'polygon' : 'polyline';
     return (
@@ -73,7 +73,7 @@ export default function ShapeEl({
       </>
     );
   if (s.type === 'text')
-    // Contre-échelle X autour de l'ancre : glyphes non déformés malgré le viewBox étiré.
+    // X counter-scale around the anchor: glyphs not distorted despite the stretched viewBox.
     return (
       <text
         transform={`translate(${s.x ?? 0} ${s.y ?? 0}) scale(${aspect > 0 ? 1 / aspect : 1} 1)`}
@@ -91,9 +91,9 @@ export default function ShapeEl({
       </text>
     );
 
-  // Flèche : fût + tête triangulaire calculée en espace écran (jamais déformée).
-  // La tête est remplie ET contourée du même trait à joints ronds : pointes adoucies,
-  // taille visuelle cohérente avec l'épaisseur du fût.
+  // Arrow: shaft + triangular head computed in screen space (never distorted).
+  // The head is filled AND outlined with the same stroke, with round joins: softened tips,
+  // a visual size consistent with the shaft's thickness.
   const head = arrowHead(s.x1 ?? 0, s.y1 ?? 0, s.x2 ?? 0, s.y2 ?? 0, size, s.width);
   const shaftEnd: [number, number] = head ? head.shaftEnd : [s.x2 ?? 0, s.y2 ?? 0];
   const headPath = head

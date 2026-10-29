@@ -8,22 +8,22 @@ import { promisify } from 'node:util';
 import { env } from '../../config/env';
 
 /**
- * Voie **exacte** de cuisson d'une LUT d'affichage : OpenColorIO lui-même, appelé depuis le
+ * **Exact** path for baking a display LUT: OpenColorIO itself, called from the
  * worker via `workers/ocio/bake_lut.py`.
  *
- * Pourquoi Python et pas `ociobakelut` : l'image du worker ne contient **aucun** binaire OCIO
- * (`backend/Dockerfile` installe ffmpeg, assimp, Blender et un venv `usd-core` — rien d'autre).
- * Le venv `/opt/usdenv` existe déjà pour l'USD ; y ajouter la roue `opencolorio` (BSD-3-Clause)
- * suffit, et le script maîtrise alors la grille **et** l'écriture du `.cube` — là où la ligne de
- * commande de `ociobakelut` et le nom de ses formats varient d'une version d'OCIO à l'autre.
+ * Why Python rather than `ociobakelut`: the worker image contains **no** OCIO binary
+ * (`backend/Dockerfile` installs ffmpeg, assimp, Blender and a `usd-core` venv, nothing else).
+ * The `/opt/usdenv` venv already exists for USD; adding the `opencolorio` wheel (BSD-3-Clause)
+ * is enough, and the script then controls both the grid **and** the `.cube` writing, whereas the command
+ * line of `ociobakelut` and its format names vary from one OCIO version to another.
  *
- * Sans cette roue, `probePyOcio()` répond `false` et l'appelant se rabat sur `lib/ocioBake.ts`
- * (exact mais limité aux vues colorimétriques). Voir DOCUMENTATION/admin-guide/color-management.md.
+ * Without this wheel, `probePyOcio()` returns `false` and the caller falls back to `lib/ocioBake.ts`
+ * (exact, but limited to colorimetric views). See DOCUMENTATION/admin-guide/color-management.md.
  */
 
 const execFileAsync = promisify(execFile);
 
-/** Exécuteur injectable (tests). */
+/** Injectable executor (tests). */
 export type ExecRunner = (
   file: string,
   args: string[],
@@ -33,15 +33,15 @@ export type ExecRunner = (
 const defaultRunner: ExecRunner = (file, args, opts) =>
   execFileAsync(file, args, { ...opts, windowsHide: true });
 
-/** Marqueur du résumé imprimé par `bake_lut.py` — doit rester identique côté Python. */
+/** Summary marker printed by `bake_lut.py`; must stay identical on the Python side. */
 export const OCIO_BAKE_MARKER = 'REVIEW_OCIO_JSON';
 
-/** Délai maximal d'une cuisson (une grille 33³ prend moins d'une seconde). */
+/** Maximum duration of a bake (a 33³ grid takes under a second). */
 export const BAKE_TIMEOUT_MS = 120_000;
 
 /**
- * Localise un script Python du worker. Les `.py` ne passent pas par `tsc` : ils restent dans
- * `src/workers/ocio/` (présent dans l'image via `COPY . .`) alors que le code tourne dans `dist/`.
+ * Locates a worker Python script. The `.py` files do not go through `tsc`: they stay in
+ * `src/workers/ocio/` (present in the image via `COPY . .`) while the code runs from `dist/`.
  */
 export function resolveOcioScript(name = 'bake_lut.py'): string {
   const packaged = join(__dirname, '..', '..', '..', 'src', 'workers', 'ocio', name);
@@ -62,7 +62,7 @@ export interface PythonBakeOptions {
   outPath: string;
 }
 
-/** Ligne de commande du script de cuisson (pure — testée telle quelle). */
+/** Command line of the bake script (pure, tested as is). */
 export function pythonBakeArgs(script: string, o: PythonBakeOptions): string[] {
   return [
     script,
@@ -81,7 +81,7 @@ export function pythonBakeArgs(script: string, o: PythonBakeOptions): string[] {
   ];
 }
 
-/** Résumé imprimé par le script (une ligne préfixée du marqueur, au milieu du bruit). */
+/** Summary printed by the script (one line prefixed with the marker, amid the noise). */
 export interface BakeSummary {
   display: string;
   view: string;
@@ -89,7 +89,7 @@ export interface BakeSummary {
   ocio: string;
 }
 
-/** Lit le résumé JSON dans la sortie du script ; `null` si le marqueur est absent. */
+/** Reads the JSON summary from the script's output; `null` if the marker is absent. */
 export function parseBakeSummary(stdout: string): BakeSummary | null {
   const line = stdout
     .split(/\r?\n/)
@@ -112,12 +112,12 @@ export function parseBakeSummary(stdout: string): BakeSummary | null {
 
 let pyOcioProbe: Promise<boolean> | null = null;
 
-/** Réinitialise la sonde d'outillage (tests, et changement d'image du worker). */
+/** Resets the tooling probe (tests, and worker image change). */
 export function resetOcioProbe(): void {
   pyOcioProbe = null;
 }
 
-/** Vrai si le Python du worker sait importer PyOpenColorIO (sonde mise en cache). */
+/** True if the worker's Python can import PyOpenColorIO (probe cached). */
 export function probePyOcio(runner: ExecRunner = defaultRunner): Promise<boolean> {
   pyOcioProbe ??= runner(env.USD_PYTHON_BIN, ['-c', 'import PyOpenColorIO'], { timeout: 30_000 })
     .then(() => true)
@@ -126,8 +126,8 @@ export function probePyOcio(runner: ExecRunner = defaultRunner): Promise<boolean
 }
 
 /**
- * Cuit un couple display/view avec OCIO. Lève une erreur nommée si le script échoue —
- * l'appelant décide alors de se rabattre sur la cuisson intégrée.
+ * Bakes a display/view pair with OCIO. Throws a named error if the script fails;
+ * the caller then decides whether to fall back to built-in baking.
  */
 export async function bakeWithPython(
   o: PythonBakeOptions,

@@ -20,25 +20,25 @@ type Draft = Pick<Media, 'id' | 'originalName' | 'kind' | 'status'> & {
   versionName: string;
   location: string;
   createdAt: string;
-  /** La version porteuse : c'est elle qu'on confie en publiant. */
+  /** The carrying version: it is the one entrusted when publishing. */
   versionId: number;
-  /** Projet porteur — `null` sur un brouillon dont la version a perdu son rattachement. */
+  /** Carrying project: `null` for a draft whose version has lost its attachment. */
   projectId: number | null;
-  /** Règle de consigne du projet, servie avec la ligne pour éviter un appel par brouillon. */
+  /** Project review rule, served with the row to avoid one call per draft. */
   reviewRequest: ReviewRequestRule | null;
 };
 
-/** Une version fraîchement livrée n'a encore été confiée à personne. */
+/** A freshly delivered version has not yet been entrusted to anyone. */
 const NO_REVIEWERS: ReviewAssignee[] = [];
 
 /**
- * Pastille « Brouillons en attente » posée dans la barre du haut, à gauche de la
- * recherche. Liste les médias non publiés de l'utilisateur courant ; permet de les
- * publier ou supprimer rapidement depuis un panneau ancré sous la pastille.
+ * "Pending drafts" badge placed in the top bar, to the left of the
+ * search. Lists the unpublished media of the current user; allows publishing them or
+ * deleting them quickly from a panel anchored under the badge.
  *
- * Elle n'existe que dans un studio qui a gardé le parcours en deux temps (`draftMode`,
- * Phase 50). Ailleurs un média naît publié : la pastille n'aurait jamais rien à montrer, et
- * sa requête serait un aller-retour payé par chaque page de chaque compte.
+ * It only exists in a studio that kept the two-step workflow (`draftMode`,
+ * Phase 50). Elsewhere a media is born published: the badge would never have anything to show, and
+ * its request would be a round trip paid by every page of every account.
  */
 export default function PendingDrafts() {
   const t = useT();
@@ -46,7 +46,7 @@ export default function PendingDrafts() {
   const draftMode = useDraftMode();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
-  // Le brouillon dont on est en train de composer la liste de ReViewers, s'il y en a un.
+  // The draft whose ReViewers list is being composed, if there is one.
   const [handingOver, setHandingOver] = useState<Draft | null>(null);
   const uploads = useUploadStore((s) => s.uploads);
 
@@ -57,13 +57,13 @@ export default function PendingDrafts() {
   });
   const drafts = data ?? [];
 
-  // Recharge dès qu'un upload se termine (un nouveau brouillon peut apparaître)
+  // Reloads as soon as an upload ends (a new draft may appear).
   useEffect(() => {
     if (draftMode && uploads.some((u) => u.status === 'done'))
       void qc.invalidateQueries({ queryKey: qk.drafts });
   }, [draftMode, uploads, qc]);
 
-  // Publier/supprimer un brouillon affecte aussi les listes de versions et de médias
+  // Publishing or deleting a draft also affects the version and media lists
   const refresh = () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: qk.drafts }),
@@ -71,12 +71,12 @@ export default function PendingDrafts() {
       qc.invalidateQueries({ queryKey: ['media'] }),
     ]);
   /**
-   * Publie, avec ou sans ReViewers.
+   * Publishes, with or without ReViewers.
    *
-   * C'est le second endroit d'où l'on publie (l'autre étant la review elle-même), et donc
-   * le second moment où dire à qui l'on confie, et quoi regarder. Le bouton direct reste :
-   * livrer sans désigner personne est un cas parfaitement normal, et celui qui doit rester
-   * à un clic.
+   * This is the second place from which one publishes (the other being the review itself), and therefore
+   * the second moment to say to whom one entrusts it, and what to look at. The direct button remains:
+   * delivering without designating anyone is a perfectly normal case, and it must remain
+   * one click away.
    */
   const publish = async (id: number, reviewers?: { userId: number; note: string | null }[]) => {
     setBusy(id);

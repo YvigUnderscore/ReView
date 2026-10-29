@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Petit client API v2 (fetch) avec en-tête d'auth JWT.
+ * Small API v2 client (fetch) with a JWT auth header.
  *
- * Les jetons sont stockés dans localStorage sous les clés `token` (accès) et
- * `refreshToken` (renouvellement) — ce module en est le seul propriétaire.
+ * Tokens are stored in localStorage under the keys `token` (access) and
+ * `refreshToken` (renewal). This module is their sole owner.
  *
- * Un 401 reçu alors qu'une session existe n'est pas une erreur métier : le jeton d'accès a
- * expiré (7 jours) ou la session a été révoquée. Le client tente alors **une** fois
- * `/api/auth/refresh` — les requêtes concurrentes attendent la même promesse — puis rejoue
- * la requête d'origine. Si le renouvellement échoue, la session est purgée et le handler
- * de session morte (branché par le store d'auth) ramène l'utilisateur à la connexion.
+ * A 401 received while a session exists is not a business error: the access token has
+ * expired (7 days) or the session was revoked. The client then tries **once**
+ * `/api/auth/refresh`: concurrent requests wait on the same promise, then replay
+ * the original request. If the renewal fails, the session is purged and the handler
+ * for a dead session (wired by the auth store) brings the user back to sign-in.
  */
 
 import { hasMessage, t, type TParams } from '../v2/i18n';
@@ -21,13 +21,13 @@ const REFRESH_KEY = 'refreshToken';
 
 export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
 
-/** Enregistre les jetons de session (connexion, 2FA, SSO, renouvellement). */
+/** Records the session tokens (sign-in, 2FA, SSO, renewal). */
 export function setTokens(token: string, refreshToken?: string): void {
   localStorage.setItem(TOKEN_KEY, token);
   if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
 }
 
-/** Efface la session locale — sans effet de bord applicatif. */
+/** Clears the local session, without any application side effect. */
 export function clearTokens(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_KEY);
@@ -39,9 +39,9 @@ const authHeaders = (): Record<string, string> => {
 };
 
 /**
- * Réaction applicative à une session morte : purge du store et retour à la connexion.
- * Branchée par `v2/stores/useAuth` — passer par un handler plutôt que par un import évite
- * le cycle apiClient ↔ store.
+ * Application reaction to a dead session: purges the store and returns to sign-in.
+ * Wired by `v2/stores/useAuth`. Going through a handler rather than an import avoids
+ * the apiClient ↔ store cycle.
  */
 type SessionExpiredHandler = () => void;
 let onSessionExpired: SessionExpiredHandler | null = null;
@@ -51,19 +51,19 @@ export function setSessionExpiredHandler(handler: SessionExpiredHandler | null):
 }
 
 /**
- * Chemins dont un 401 est une réponse métier et non une session expirée. Les rejouer n'a
- * pas de sens, et déconnecter dessus bouclerait : `/api/auth/logout` répond justement 401
- * quand le jeton est déjà mort, et c'est `logout()` qui l'appelle.
+ * Paths for which a 401 is a business response rather than an expired session. Replaying them makes
+ * no sense, and logging out on them would loop: `/api/auth/logout` indeed responds 401
+ * when the token is already dead, and it is `logout()` that calls it.
  */
 const NO_RETRY_PATHS = ['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/api/auth/2fa/verify'];
 const isNoRetry = (path: string): boolean => NO_RETRY_PATHS.some((p) => path.startsWith(p));
 
-/** Issue d'une tentative de renouvellement. `unavailable` = serveur ou réseau en défaut. */
+/** Outcome of a renewal attempt. `unavailable` = server or network failure. */
 type RefreshOutcome = 'refreshed' | 'expired' | 'unavailable';
 
 let refreshing: Promise<RefreshOutcome> | null = null;
 
-/** Un seul renouvellement à la fois : les requêtes concurrentes partagent la promesse. */
+/** Only one renewal at a time: concurrent requests share the promise. */
 function refreshSession(): Promise<RefreshOutcome> {
   refreshing ??= runRefresh().finally(() => {
     refreshing = null;
@@ -76,15 +76,15 @@ async function runRefresh(): Promise<RefreshOutcome> {
   if (refreshToken) {
     let res: Response;
     try {
-      // `fetch` direct plutôt que `request()` : un 401 sur le renouvellement lui-même ne
-      // doit surtout pas relancer un renouvellement.
+      // A direct `fetch` rather than `request()`: a 401 on the renewal itself must
+      // above all not trigger another renewal.
       res = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
     } catch {
-      // Réseau coupé : la session n'est pas prouvée morte, on ne déconnecte pas.
+      // Network down: the session is not proven dead, so we do not log out.
       return 'unavailable';
     }
     if (res.ok) {
@@ -97,8 +97,8 @@ async function runRefresh(): Promise<RefreshOutcome> {
       return 'unavailable';
     }
   }
-  // Plus rien à renouveler : la session est morte. Notifié une seule fois, puisque les
-  // appelants concurrents partagent cette promesse.
+  // Nothing left to renew: the session is dead. Notified only once, since the
+  // concurrent callers share this promise.
   clearTokens();
   onSessionExpired?.();
   return 'expired';
@@ -111,12 +111,12 @@ const send = (method: string, path: string, body?: unknown): Promise<Response> =
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-/** Corps d'erreur normalisé par `middleware/error` côté backend. */
+/** Normalized error body produced by `middleware/error` on the backend. */
 type ErrorBody = { error?: string; code?: string } & Record<string, unknown>;
 
 /**
- * Erreur d'API : le message est déjà dans la langue du lecteur, le code reste la forme
- * stable de la faute — c'est lui qu'un appelant doit tester, jamais le texte.
+ * API error: the message is already in the reader's language, the code remains the
+ * stable form of the failure: it is the code a caller must test, never the text.
  */
 export class ApiError extends Error {
   readonly status: number;
@@ -131,15 +131,15 @@ export class ApiError extends Error {
 }
 
 /**
- * Message d'erreur dans la langue du lecteur.
+ * Error message in the reader's language.
  *
- * Le serveur répond `{ error, code }` : `error` est un texte **anglais** de trace, `code`
- * est l'identifiant stable de la faute (`PROJECT_ARCHIVED`, `CODE_TAKEN`…). L'interface
- * est traduite en quatorze langues ; laisser passer le texte du serveur, c'est écrire en
- * anglais dans une page japonaise — jusque sur le partage client, où le lecteur n'est même
- * pas salarié du studio. On traduit donc par le code (`error.<CODE>` au catalogue) et l'on
- * ne retombe sur le texte anglais que pour un code absent du catalogue ou de la réponse :
- * une erreur non traduite reste lisible, elle n'est jamais remplacée par sa clé.
+ * The server responds `{ error, code }`: `error` is an **English** trace text, `code`
+ * is the stable identifier of the failure (`PROJECT_ARCHIVED`, `CODE_TAKEN`…). The interface
+ * is translated into fourteen languages; letting the server's text through means writing in
+ * English on a Japanese page, even on the client share, where the reader is not even
+ * a studio employee. So we translate by code (`error.<CODE>` in the catalog) and fall back
+ * to the English text only for a code absent from the catalog or the response:
+ * an untranslated error stays readable; it is never replaced by its key.
  */
 export function apiErrorMessage(body: ErrorBody, status: number): string {
   const key = `error.${body.code ?? ''}`;
@@ -148,14 +148,14 @@ export function apiErrorMessage(body: ErrorBody, status: number): string {
 }
 
 /**
- * Détails joints à la faute — les `details` d'une `AppError`, que le middleware d'erreur
- * rend à plat — offerts au message traduit comme variables.
+ * Details attached to the failure: the `details` of an `AppError`, which the error middleware
+ * flattens, offered to the translated message as variables.
  *
- * Sans eux, traduire par le code effaçait ce que le message anglais disait de précis :
- * « ShotGrid refused the credentials: … because the account is locked » redevenait un
- * « refus d'authentification » générique, et le lecteur repartait dans les journaux du
- * serveur. La raison vient d'un service distant : elle n'a pas de traduction, mais elle a
- * sa place dans la phrase traduite.
+ * Without them, translating by code erased what the English message said precisely:
+ * "ShotGrid refused the credentials: … because the account is locked" became a generic
+ * "authentication refused" again, and the reader went back to the server logs.
+ * The reason comes from a remote service: it has no translation, but it has its place in
+ * the translated sentence.
  */
 function messageParams(body: ErrorBody): TParams {
   const params: TParams = {};
@@ -171,7 +171,7 @@ async function parse<T>(res: Response): Promise<T> {
     const data = (await res.json().catch(() => ({}))) as ErrorBody;
     throw new ApiError(apiErrorMessage(data, res.status), res.status, data.code);
   }
-  // Réponses sans corps (204 No Content, DELETE…) : pas de JSON à parser.
+  // Bodiless responses (204 No Content, DELETE…): no JSON to parse.
   if (res.status === 204 || res.headers.get('content-length') === '0') {
     return undefined as T;
   }
@@ -183,8 +183,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const sentWith = getToken();
   let res = await send(method, path, body);
   if (res.status === 401 && sentWith !== null && !isNoRetry(path)) {
-    // Un autre appel a pu renouveler le jeton pendant que la requête était en vol : il
-    // suffit alors de rejouer.
+    // Another call may have renewed the token while the request was in flight: it
+    // so replaying the request is enough.
     const outcome = getToken() === sentWith ? await refreshSession() : 'refreshed';
     if (outcome === 'refreshed') res = await send(method, path, body);
     else if (outcome === 'expired')

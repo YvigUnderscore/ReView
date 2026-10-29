@@ -5,8 +5,8 @@ import { t } from '../v2/i18n';
 import { api } from './apiClient';
 
 /**
- * Pièce jointe telle qu'elle s'AFFICHE. La clé MinIO n'en fait pas partie : le portail
- * client reçoit l'URL présignée, le nom et le type, et rien de plus.
+ * Attachment as it is DISPLAYED. The MinIO key is not part of it: the client portal
+ * receives the presigned URL, the name and the type, and nothing more.
  */
 export interface DisplayAttachment {
   name?: string;
@@ -14,15 +14,15 @@ export interface DisplayAttachment {
   url?: string | null;
 }
 
-/** Pièce jointe côté studio : la clé s'y ajoute, elle seule sert à réécrire la liste. */
+/** Studio-side attachment: the key is added to it, and it alone serves to rewrite the list. */
 export interface CommentAttachment extends DisplayAttachment {
   key: string;
 }
 
-/** Types acceptés en pièce jointe (miroir du Zod backend) : images + PDF/zip/texte. */
+/** Types accepted as attachments (mirror of the backend Zod): images + PDF/zip/text. */
 export const ATTACHMENT_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,.pdf,.zip,.txt';
 
-/** Nombre maximal de pièces jointes par commentaire (miroir du Zod backend). */
+/** Maximum number of attachments per comment (mirror of the backend Zod). */
 export const MAX_COMMENT_ATTACHMENTS = 8;
 
 export function isAllowedAttachment(contentType: string): boolean {
@@ -31,19 +31,19 @@ export function isAllowedAttachment(contentType: string): boolean {
   );
 }
 
-/** Pièce jointe affichable en vignette (les autres = chip fichier téléchargeable). */
+/** Attachment displayed as a thumbnail (the others are downloadable file chips). */
 export function isImageAttachment(contentType?: string): boolean {
   return !!contentType && contentType.startsWith('image/');
 }
 
-/** Note vocale (32.F) : lue inline dans le fil via un lecteur audio. */
+/** Voice note (32.F): played inline in the thread via an audio player. */
 export function isAudioAttachment(contentType?: string): boolean {
   return !!contentType && contentType.startsWith('audio/');
 }
 
 /**
- * Upload des pièces jointes d'un commentaire : présignature → PUT direct MinIO.
- * Renvoie les descripteurs (clé/nom/type) à joindre au commentaire.
+ * Uploads the attachments of a comment: presigning, then direct PUT to MinIO.
+ * Returns the descriptors (key/name/type) to attach to the comment.
  */
 export async function uploadCommentAttachments(files: File[]): Promise<CommentAttachment[]> {
   const allowed = files.filter((f) => isAllowedAttachment(f.type)).slice(0, MAX_COMMENT_ATTACHMENTS);

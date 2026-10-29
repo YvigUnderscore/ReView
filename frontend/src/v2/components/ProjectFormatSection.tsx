@@ -10,12 +10,12 @@ import { SettingsCard } from './settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
- * Format & cadence du projet : résolution de livraison + framerate. Ce sont les défauts
- * hérités par les séquences et les plans (sans colorspace, réglé au niveau studio).
+ * Project format and frame rate: delivery resolution + framerate. These are the defaults
+ * inherited by sequences and shots (without colorspace, which is set at studio level).
  *
- * Édite le brouillon de réglages ; enregistré avec lui. `value` peut être nul le temps que
- * les réglages effectifs arrivent : la carte reste en place avec son squelette, plutôt que
- * d'apparaître d'un coup au milieu de la colonne.
+ * Edits the settings draft; saved with it. `value` may be null while the
+ * effective settings arrive: the card stays in place with its skeleton, rather than
+ * appearing all at once in the middle of the column.
  */
 export default function ProjectFormatSection({
   value,
@@ -26,8 +26,8 @@ export default function ProjectFormatSection({
 }) {
   const t = useT();
 
-  // On ne rend QUE les deux champs du pipeline : l'appelant nous passe les réglages
-  // effectifs, dont ceux des autres sections — les réémettre en bloc les ferait remonter.
+  // We render ONLY the two pipeline fields: the caller passes us the effective settings,
+  // including those of the other sections; re-emitting them in bulk would make them come back.
   const setRes = (k: keyof Resolution, raw: string) => {
     if (!value) return;
     onChange({

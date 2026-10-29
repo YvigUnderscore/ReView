@@ -18,16 +18,16 @@ import { useT } from '../i18n';
 import { titleCase } from '../lib/entityTypeLabels';
 
 /**
- * Barre de filtres partagée des listes de projet (C4) : kanban, Shots, Assets.
+ * Shared filter bar for project lists (C4): kanban, Shots, Assets.
  *
- * Les deux dernières n'avaient ni filtre ni recherche — sur deux mille plans, il fallait
- * faire défiler. Et le kanban avait ses trois filtres à lui, avec un mécanisme de vues
- * sauvegardées séparé de celui du reste de l'application. Ici tout passe par
- * `useSavedViews`, donc les présélections nommées sont persistées côté serveur, par
- * compte et par portée.
+ * The last two had neither filter nor search: on two thousand shots, one had to
+ * scroll. And the kanban had its three filters of its own, with a saved-views mechanism
+ * separate from that of the rest of the application. Here everything goes through
+ * `useSavedViews`, so named presets are persisted server-side, per
+ * account and per scope.
  *
- * Chaque liste ne déclare que les critères qu'elle possède : un asset n'appartient pas
- * à une séquence, une liste de plans n'a pas d'assigné.
+ * Each list only declares the criteria it has: an asset does not belong
+ * to a sequence, a shot list has no assignee.
  */
 
 export interface FilterOption {
@@ -47,7 +47,7 @@ export default function EntityFilters({
   typeLabel,
   searchPlaceholder,
 }: {
-  /** Portée des vues sauvegardées, ex. `kanban:12` — par projet et par compte. */
+  /** Scope of the saved views, e.g. `kanban:12`: per project and per account. */
   scope: string;
   value: EntityFilterState;
   onChange: (next: EntityFilterState) => void;
@@ -56,7 +56,7 @@ export default function EntityFilters({
   sequences?: FilterOption[];
   departments?: FilterOption[];
   types?: readonly string[];
-  /** Libellé lisible d'un type — sans lui, l'enum s'affichait brut (`CHARACTER`, `LOOKDEV`). */
+  /** Readable label of a type: without it, the enum was shown raw (`CHARACTER`, `LOOKDEV`). */
   typeLabel?: (value: string) => string;
   searchPlaceholder?: string;
 }) {

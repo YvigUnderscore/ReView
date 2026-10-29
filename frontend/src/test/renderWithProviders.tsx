@@ -15,17 +15,17 @@ import { mockApi, type ApiMock, type MockResolver } from './apiMock';
 import { LocationSpy } from './LocationSpy';
 
 /**
- * Monter un écran comme l'application le monte.
+ * Mount a screen the way the application mounts it.
  *
- * Un test de rendu n'a d'intérêt que s'il traverse les mêmes couches que la production :
- * le routeur (les pages lisent `useParams`, naviguent, écrivent dans la query-string), le
- * client de requêtes (cache, invalidations, états de chargement), la session (le rôle
- * décide de la moitié de ce qui s'affiche) et le réseau (bouché au niveau `fetch`, pas au
- * niveau des modules). Tout ce qui reste bouchonné le reste **volontairement** et se dit
- * dans la signature.
+ * A rendering test is only worth something if it goes through the same layers as production:
+ * the router (pages read `useParams`, navigate, write into the query string), the
+ * query client (cache, invalidations, loading states), the session (the role
+ * decides half of what is displayed), and the network (blocked at the `fetch` level, not at the
+ * module level). Everything that stays mocked remains mocked **deliberately**, and is stated
+ * in the signature.
  *
- * Chaque appel repart d'un `QueryClient` neuf : deux tests d'un même fichier ne peuvent
- * pas se transmettre un cache, et un test qui passe seul passe aussi en suite.
+ * Each call starts from a fresh `QueryClient`: two tests of the same file cannot
+ * pass each other a cache, and a test that passes alone also passes in the suite.
  *
  * ```tsx
  * const { api, user } = renderWithProviders(<ProjectsPage />, {
@@ -35,7 +35,7 @@ import { LocationSpy } from './LocationSpy';
  * ```
  */
 
-/** Session par défaut : un administrateur, le rôle qui ouvre le plus d'écrans. */
+/** Default session: an administrator, the role that opens the most screens. */
 const DEFAULT_USER: AuthUser = {
   id: 1,
   email: 'admin@review.local',
@@ -48,10 +48,10 @@ const DEFAULT_USER: AuthUser = {
 };
 
 /**
- * Réponses posées d'office : les points d'API que la coquille interroge sur presque tout
- * écran (identité visuelle, cloche, favoris, préférences, filigrane). Sans elles, chaque
- * test devrait les redéclarer pour ne rien en faire. Une route homonyme passée en option
- * les remplace — c'est le mécanisme normal quand un test s'y intéresse.
+ * Answers set by default: the API endpoints that the shell queries on almost every
+ * screen (visual identity, bell, favorites, preferences, watermark). Without them, each
+ * test would have to redeclare them in order to do nothing with them. A route of the same name passed as an option
+ * replaces them: this is the normal mechanism when a test is interested in them.
  */
 const DEFAULT_API: Record<string, MockResolver> = {
   'GET /api/setup/status': { needsSetup: false },
@@ -70,31 +70,31 @@ const DEFAULT_API: Record<string, MockResolver> = {
 };
 
 export interface RenderWithProvidersOptions {
-  /** URL de départ (`/projects/12?tab=shots`). */
+  /** Starting URL (`/projects/12?tab=shots`). */
   route?: string;
-  /** Motif de route sous lequel monter l'écran — c'est lui qui alimente `useParams`. */
+  /** Route pattern under which to mount the screen: it is what feeds `useParams`. */
   path?: string;
-  /** Réponses du serveur, clé `'MÉTHODE /chemin'` (cf. `apiMock`). */
+  /** Server responses, key `'METHOD /path'` (cf. `apiMock`). */
   api?: Record<string, MockResolver>;
   /**
-   * Session : `undefined` = administrateur par défaut, `null` = déconnecté, un objet
-   * partiel pour ne changer que ce qui compte (`{ role: 'ARTIST' }`).
+   * Session: `undefined` = default administrator, `null` = signed out, a partial object
+   * to change only what matters (`{ role: 'ARTIST' }`).
    */
   user?: Partial<AuthUser> | null;
-  /** Destinations supplémentaires, pour observer une navigation. */
+  /** Additional destinations, to observe a navigation. */
   extraRoutes?: ReactNode;
 }
 
 export interface RenderWithProvidersResult extends RenderResult {
   api: ApiMock;
   queryClient: QueryClient;
-  /** `userEvent` déjà configuré (pointeur, clavier). */
+  /** `userEvent` already configured (pointer, keyboard). */
   user: UserEvent;
-  /** URL courante du routeur mémoire — `expect(currentPath()).toBe('/')`. */
+  /** Current URL of the memory router: `expect(currentPath()).toBe('/')`. */
   currentPath: () => string;
 }
 
-/** Client de requêtes de test : pas de relance, pas de cache entre deux tests. */
+/** Test query client: no retry, no cache between two tests. */
 export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
@@ -141,8 +141,8 @@ export function renderWithProviders(
     api.restore();
     queryClient.clear();
     useAuth.setState({ user: null, ready: false });
-    // Les stores persistés (vue liste/grille, langue, thème) sont des singletons de
-    // module : sans ce nettoyage, un test en teinte le suivant.
+    // The persisted stores (list/grid view, language, theme) are module
+    // singletons: without this cleanup, one test tints the next.
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -150,7 +150,7 @@ export function renderWithProviders(
   return { ...result, api, queryClient, user: userEvent.setup(), currentPath };
 }
 
-/** Enveloppe de liste paginée du backend — `page([...], { total: 42 })`. */
+/** Paginated list envelope from the backend: `page([...], { total: 42 })`. */
 export function page<T>(
   items: T[],
   extra: { total?: number; hasMore?: boolean; nextCursor?: string | null } = {},

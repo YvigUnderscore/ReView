@@ -5,30 +5,30 @@ import { describe, it, expect } from 'vitest';
 import { formatBytes } from './formatBytes';
 
 /**
- * Une séquence 4K EXR se compte en dizaines de gigaoctets : le chiffre doit être juste
- * (base 1024, comme l'explorateur de fichiers et la console MinIO) et lisible dans la
- * langue du lecteur — les formateurs déjà présents dans l'application écrivent « Mo » en
- * dur, ce qu'un lecteur japonais ne lit pas.
+ * A 4K EXR sequence adds up to tens of gigabytes: the figure must be right
+ * (base 1024, like the file explorer and the MinIO console) and readable in the
+ * reader's language. The formatters already present in the application write "Mo" in
+ * hard-coded form, which a Japanese reader cannot read.
  */
 
 describe('formatBytes', () => {
-  it('choisit l’unité selon l’ordre de grandeur, en base 1024', () => {
+  it('chooses the unit by order of magnitude, in base 1024', () => {
     expect(formatBytes(512)).toMatch(/512/);
     expect(formatBytes(1024)).toMatch(/^1[^0-9]/);
     expect(formatBytes(1024 ** 3 * 12.5)).toMatch(/12[.,]5/);
   });
 
-  it('ne montre pas de décimale sur des octets', () => {
+  it('shows no decimal for bytes', () => {
     expect(formatBytes(999)).not.toMatch(/[.,]/);
   });
 
-  it('encaisse le zéro, le négatif et l’infini sans produire « NaN »', () => {
+  it('handles zero, negative and infinity without producing "NaN"', () => {
     for (const value of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(formatBytes(value)).toMatch(/0/);
     }
   });
 
-  it('reste borné au téraoctet plutôt que d’inventer une unité', () => {
+  it('stays capped at the terabyte rather than inventing a unit', () => {
     expect(formatBytes(1024 ** 6)).toMatch(/TB|To|TO/i);
   });
 });

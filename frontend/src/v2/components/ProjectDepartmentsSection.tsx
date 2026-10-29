@@ -10,14 +10,14 @@ import { SettingsCard } from './settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
- * Départements du projet (B1) : des entités à part entière, éditables même sur un projet
- * relié. L'éditeur était verrouillé avec la mention « hérité de ShotGrid », alors qu'aucun
- * code ne les synchronisait : le studio se retrouvait devant un champ mort. Les étapes
- * importées du site sont désormais créées à la volée à l'import ; le studio reste libre de
- * les nommer, de les ordonner et d'en ajouter.
+ * Project departments (B1): entities in their own right, editable even on a linked project.
+ * The editor was locked with the note "inherited from ShotGrid", although no
+ * code synchronized them: the studio was left facing a dead field. The steps
+ * imported from the site are now created on the fly at import; the studio remains free to
+ * name them, order them and add more.
  *
- * Les clés et les noms vivent dans le brouillon de réglages ; les images, non — elles
- * s'enregistrent seules, département par département.
+ * The keys and names live in the settings draft; the images do not: they
+ * are saved on their own, department by department.
  */
 export default function ProjectDepartmentsSection({
   projectId,

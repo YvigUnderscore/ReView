@@ -19,13 +19,13 @@ import {
 import { useT } from '../i18n';
 
 /**
- * Les deux rendus « visuels » de l'export des notes : un sous-menu de clic droit, et une
- * rangée de boutons pour un panneau de dock qui a déjà son titre de groupe. La liste des
- * formats et la mutation viennent de `lib/useNotesExportMenu`, que partage aussi la
- * variante déclarative (`EntityContextMenu`).
+ * The two "visual" renderings of the notes export: a right-click submenu, and a
+ * row of buttons for a dock panel that already has its group title. The list of
+ * formats and the mutation come from `lib/useNotesExportMenu`, which the
+ * declarative variant (`EntityContextMenu`) also shares.
  */
 
-/** Sous-menu pour un menu contextuel écrit à la main (primitives Radix). */
+/** Submenu for a hand-written context menu (Radix primitives). */
 export function NotesExportSubmenu({ scope, id }: NotesExportTarget) {
   const t = useT();
   const labels = useNotesFormatLabels();
@@ -48,8 +48,8 @@ export function NotesExportSubmenu({ scope, id }: NotesExportTarget) {
 }
 
 /**
- * Rangée de boutons. Le format en cours porte le rouet : une planche imprimable compose
- * une image par note et prend plusieurs secondes.
+ * Row of buttons. The format in progress carries the spinner: a printable sheet composes
+ * one image per note and takes several seconds.
  */
 export function NotesExportButtons({ scope, id }: NotesExportTarget) {
   const labels = useNotesFormatLabels();

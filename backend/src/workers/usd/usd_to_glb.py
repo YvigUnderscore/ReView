@@ -2,24 +2,24 @@
 # SPDX-FileCopyrightText: 2026 Yvig Bidon
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Conversion USD -> GLB via Blender headless (Phase 45, 45.C).
+"""USD -> GLB conversion via headless Blender (Phase 45, 45.C).
 
-Invoque par le worker :
+Invoked by the worker:
 
     blender -b --factory-startup --python usd_to_glb.py -- \\
         --input scene.usda --output model.glb [--purpose render] \\
         [--frame-start 1 --frame-end 96 --fps 24]
 
-Pourquoi Blender : il embarque OpenUSD complet. Il compose donc references, payloads,
-sublayers et variantes, traduit UsdPreviewSurface en materiaux PBR, importe UsdSkel
-(squelettes + animation) et les cameras, puis reexporte tout en glTF binaire — le seul
-format que lit le viewer Three.js de la review.
+Why Blender: it embeds the full OpenUSD. It therefore composes references, payloads,
+sublayers and variants, translates UsdPreviewSurface into PBR materials, imports UsdSkel
+(skeletons and animation) and cameras, then re-exports everything as binary glTF: the
+only format read by the review's Three.js viewer.
 
-Le fichier d'origine n'est jamais modifie : Blender lit, exporte ailleurs, et le worker
-ne repousse que le GLB derive.
+The original file is never modified: Blender reads, exports elsewhere, and the worker
+only pushes the derived GLB.
 
-Sortie : une ligne `REVIEW_USD_JSON {...}` sur stdout (Blender bavarde beaucoup, le marqueur
-permet au worker de retrouver le resume sans ambiguite).
+Output: a `REVIEW_USD_JSON {...}` line on stdout (Blender is very chatty; the marker
+lets the worker find the summary without ambiguity).
 """
 
 import json
@@ -30,13 +30,13 @@ import sys
 import bpy  # fourni par Blender
 
 MARKER = "REVIEW_USD_JSON"
-# Purposes USD : ce qui est rendu (render), le proxy d'affichage rapide (proxy) et les
-# aides de mise en scene (guide, jamais souhaitables en review).
+# USD purposes: what is rendered (render), the fast display proxy (proxy), and the
+# staging aids (guide, never desirable in review).
 PURPOSES = ("render", "proxy", "guide")
 
 
 def parse_args(argv):
-    """Arguments situes apres le `--` de la ligne de commande Blender."""
+    """Arguments located after the `--` of the Blender command line."""
     if "--" in argv:
         argv = argv[argv.index("--") + 1 :]
     else:
@@ -54,18 +54,18 @@ def parse_args(argv):
     parser.add_argument("--no-animation", action="store_true")
     parser.add_argument("--variant-layers", help="manifeste JSON des options de variantes a cuire")
     parser.add_argument("--variant-vertex-budget", type=int, default=8_000_000)
-    # Budget de TEMPS de cuisson en secondes (0 = illimite) : sur une scene a beaucoup de
-    # variantes, mieux vaut livrer un GLB avec une partie des options cuites que de faire
-    # expirer le timeout du worker et perdre toute la conversion.
+    # TIME budget for baking in seconds (0 = unlimited): on a scene with many
+    # variants, it is better to deliver a GLB with some of the options baked than to
+    # let the worker's timeout expire and lose the whole conversion.
     parser.add_argument("--variant-time-budget", type=float, default=0)
     return parser.parse_args(argv)
 
 
 def supported(operator, wanted):
-    """Ne garde que les options reellement exposees par cette version de Blender.
+    """Keeps only the options actually exposed by this version of Blender.
 
-    Les noms d'options de `wm.usd_import` et `export_scene.gltf` bougent d'une version a
-    l'autre ; filtrer sur le RNA evite qu'une montee de version casse la conversion.
+    The option names of `wm.usd_import` and `export_scene.gltf` shift from one version to
+    the next; filtering on the RNA prevents a version upgrade from breaking the conversion.
     """
     try:
         available = set(operator.get_rna_type().properties.keys())
@@ -85,7 +85,7 @@ def ensure_gltf_exporter():
 
 
 def reset_scene():
-    """Scene vide : sans cela, le cube/camera/lampe par defaut finissent dans le GLB."""
+    """Empty scene: without this, the default cube, camera and lamp end up in the GLB."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
@@ -118,19 +118,19 @@ def import_usd(path, purpose):
 
 
 def tag_usd_paths():
-    """Inscrit sur chaque objet le chemin du prim USD dont il provient (Phase 46, 46.A).
+    """Writes onto each object the path of the USD prim it comes from (Phase 46, 46.A).
 
-    L'importeur USD de Blender n'expose pas ce chemin, mais il **reproduit fidelement la
-    hierarchie** des prims dans celle des objets : `World > Asset > Geo > Suzanne` vient de
-    `/World/Asset/Geo/Suzanne`. On la remonte donc parent par parent.
+    Blender's USD importer does not expose this path, but it **faithfully reproduces the
+    hierarchy** of prims in that of the objects: `World > Asset > Geo > Suzanne` comes from
+    `/World/Asset/Geo/Suzanne`. We therefore walk it up parent by parent.
 
-    Blender desambiguise les noms en collision avec un suffixe `.001` : il faut le retirer,
-    sinon le chemin reconstruit ne correspondrait a aucun prim. C'est fait juste apres
-    l'import, avant toute autre manipulation de la scene.
+    Blender disambiguates colliding names with a `.001` suffix: it must be stripped,
+    otherwise the rebuilt path would match no prim. This is done right after the import,
+    before any other manipulation of the scene.
 
-    Le chemin part ensuite dans les `extras` du noeud glTF (`export_extras`), ce qui donne au
-    viewer la correspondance noeud rendu -> prim USD : sans elle, ni scenegraph ni override
-    par prim ne sont possibles.
+    The path then goes into the `extras` of the glTF node (`export_extras`), which gives the
+    viewer the rendered node -> USD prim match: without it, neither the scenegraph nor the
+    per-prim override is possible.
     """
     tagged = 0
     for obj in bpy.data.objects:
@@ -140,7 +140,7 @@ def tag_usd_paths():
 
 
 def usd_path_of(obj):
-    """Chemin de prim d'un objet, reconstruit depuis sa lignee (suffixes .NNN retires)."""
+    """Prim path of an object, rebuilt from its lineage (.NNN suffixes removed)."""
     names = []
     node = obj
     while node is not None:
@@ -150,13 +150,13 @@ def usd_path_of(obj):
 
 
 def tag_variant_membership(objects, prim, selections):
-    """Marque les objets d'un sous-arbre comme appartenant a des options de variantes.
+    """Mark the objects of a subtree as belonging to variant options.
 
-    `selections` est un dict set -> option, fusionne avec l'existant : un prim peut porter
-    **plusieurs** jeux (Kitchen_set : les assiettes ont modelingVariant ET shadingVariant).
-    L'ancien marquage a cle unique s'ecrasait d'un jeu a l'autre — changer un jeu laissait la
-    geometrie de base visible a cote de l'option cuite, d'ou des doublons a l'ecran (46.R).
-    Encode en chaine `set=option;set=option` : les extras glTF ne portent que des scalaires.
+    `selections` is a dict set -> option, merged with the existing one: a prim can carry
+    **several** sets (Kitchen_set: the plates have modelingVariant AND shadingVariant).
+    The old single-key marking was overwritten from one set to the other: changing one set
+    left the base geometry visible next to the baked option, hence duplicates on screen (46.R).
+    Encoded as a `set=option;set=option` string: glTF extras only carry scalars.
     """
     count = 0
     for obj in objects:
@@ -177,26 +177,26 @@ def scene_vertex_count():
 
 
 def bake_variant_layers(manifest, vertex_budget, time_budget):
-    """Importe une passe par option de variante et ne garde que le sous-arbre concerne.
+    """Imports one pass per variant option and keeps only the subtree concerned.
 
-    Cuire les variantes dans le GLB est ce qui rend leur bascule **instantanee et disponible
-    apres publication** : le viewer n'a plus qu'a montrer le sous-arbre choisi et masquer les
-    autres, sans reconversion. Le cout est additif (somme des options), pas combinatoire :
-    chaque option est importee avec les autres jeux de variantes a leur valeur par defaut.
+    Baking the variants into the GLB is what makes their switching **instant and available
+    after publication**: the viewer only has to show the chosen subtree and hide the
+    others, without reconversion. The cost is additive (sum of the options), not
+    combinatorial: each option is imported with the other variant sets at their default value.
 
-    Chaque passe est **masquee au prim porteur** (`prim_path_mask`, 46.P) : Blender ne
-    convertit que le sous-arbre qui varie — sans le masque, chaque option reimportait la
-    scene entiere et une scene de production (200 jeux) rendait la cuisson impraticable.
-    L'importeur recree la lignee d'ancetres avec ses transformations locales, le
-    rebranchement sur le prim d'origine reste donc identique.
+    Each pass is **masked at the carrier prim** (`prim_path_mask`, 46.P): Blender only
+    converts the subtree that varies. Without the mask, each option re-imported the whole
+    scene, and a production scene (200 sets) made the baking impracticable.
+    The importer recreates the ancestor lineage with its local transforms, so the
+    re-attachment to the original prim stays identical.
 
-    Le masque est un masque de **peuplement** USD : hors masque, le prim n'existe plus sur le
-    stage, materiau lie compris. Le manifeste y ajoute donc les materiaux ranges ailleurs
-    (`buildVariantMask`), faute de quoi les objets cuits ressortaient sans materiau — donc en
-    metal blanc miroir dans le viewer, la spec glTF imposant le materiau par defaut.
+    The mask is a USD **population** mask: outside the mask, the prim no longer exists on the
+    stage, bound material included. The manifest therefore adds the materials stored
+    elsewhere (`buildVariantMask`), failing which the baked objects came out without material:
+    white mirror metal in the viewer, since the glTF spec imposes the default material.
 
-    Deux budgets bornent la casse : sommets (poids du GLB) et temps (timeout du worker).
-    Au-dela, les options restantes ne sont pas cuites et le resume le signale.
+    Two budgets bound the breakage: vertices (GLB weight) and time (worker timeout).
+    Beyond that, the remaining options are not baked and the summary reports it.
     """
     import time
 
@@ -227,10 +227,10 @@ def bake_variant_layers(manifest, vertex_budget, time_budget):
             continue
         fresh = [o for o in bpy.data.objects if o not in before]
 
-        # Seul le contenu SOUS le prim porteur differe : tout le reste de cette passe est un
-        # doublon de la scene de base. On garde donc la descendance stricte et on la rebranche
-        # sur le prim d'origine — sinon, le parent de la passe etant supprime, le sous-arbre
-        # se retrouverait a la racine et perdrait les transformations de ses ancetres.
+        # Only the content UNDER the carrier prim differs: all the rest of this pass is a
+        # duplicate of the base scene. So we keep the strict descendants and re-attach them
+        # to the original prim, otherwise, since the pass's parent is deleted, the subtree
+        # would end up at the root and lose the transforms of its ancestors.
         host = next((o for o in before if o.get("usdPath") == prim), None)
         keep, drop = [], []
         for obj in fresh:
@@ -244,9 +244,9 @@ def bake_variant_layers(manifest, vertex_budget, time_budget):
 
         for obj in keep:
             obj["usdPath"] = usd_path_of(obj)
-        # Le sous-arbre de cette option est compose avec les AUTRES jeux du prim a leur valeur
-        # par defaut : il porte donc toutes ces appartenances, pas seulement la sienne — sinon
-        # il resterait visible quand un autre jeu du meme prim change (doublons, 46.R).
+        # The subtree of this option is composed with the OTHER sets of the prim at their
+        # default value: it therefore carries all these memberships, not only its own, otherwise
+        # it would stay visible when another set of the same prim changes (duplicates, 46.R).
         selections = dict(defaults.get(prim, {}))
         selections[set_name] = option
         tag_variant_membership(keep, prim, selections)
@@ -255,7 +255,7 @@ def bake_variant_layers(manifest, vertex_budget, time_budget):
 
 
 def defaults_by_prim(manifest):
-    """Options par defaut de chaque jeu, regroupees par prim porteur."""
+    """Default options of each set, grouped by carrier prim."""
     defaults = {}
     for entry in manifest:
         defaults.setdefault(entry["prim"], {}).setdefault(entry["set"], entry["default"])
@@ -263,16 +263,16 @@ def defaults_by_prim(manifest):
 
 
 def tag_default_variants(manifest):
-    """Etiquette le sous-arbre deja present comme etant l'option **par defaut** de ses jeux.
+    """Labels the subtree already present as the **default** option of its sets.
 
-    Sans cela, le viewer saurait montrer les options cuites mais pas masquer celle d'origine.
-    Tous les jeux du prim sont poses en une fois : la scene de base est composee avec chacun
-    a sa valeur par defaut.
+    Without this, the viewer would know how to show the baked options but not how to hide
+    the original one. All the sets of the prim are set at once: the base scene is composed
+    with each one at its default value.
     """
     for prim, selections in defaults_by_prim(manifest).items():
-        # Descendance **stricte** : le prim porteur lui-meme reste hors variante, sinon le
-        # masquer pour afficher une autre option masquerait aussi cette autre option, qui est
-        # rebranchee sous lui.
+        # STRICT descendants: the carrier prim itself stays out of the variant, otherwise
+        # hiding it to show another option would also hide that other option, which is
+        # re-attached under it.
         members = [o for o in bpy.data.objects if o.get("usdPath", "").startswith(prim + "/")]
         tag_variant_membership(members, prim, selections)
 
@@ -282,9 +282,9 @@ def apply_timing(args):
     if args.fps and args.fps > 0:
         scene.render.fps = max(1, int(round(args.fps)))
         scene.render.fps_base = scene.render.fps / args.fps
-    # L'importeur pose deja la plage via set_frame_range ; on ne la force que si l'analyseur
-    # a fourni des timeCodes, sinon l'export retombe sur la plage par defaut (1-250) et
-    # tronque l'animation.
+    # The importer already sets the range via set_frame_range; we only force it if the analyzer
+    # provided timeCodes, otherwise the export falls back to the default range (1-250) and
+    # truncates the animation.
     if args.frame_start is not None and args.frame_end is not None:
         start = int(round(args.frame_start))
         end = int(round(args.frame_end))
@@ -302,7 +302,7 @@ def export_glb(path, animate):
         "export_cameras": True,
         "export_lights": True,
         "export_yup": True,
-        # Phase 46 : porte `usdPath` jusqu'au noeud glTF (correspondance prim <-> objet rendu).
+        # Phase 46: carries `usdPath` through to the glTF node (prim <-> rendered object match).
         "export_extras": True,
         "export_skins": True,
         "export_morph": True,
@@ -339,8 +339,8 @@ def summarize(scene, animate, tagged, baked, skipped):
 
 def main():
     args = parse_args(sys.argv)
-    # Blender resout les chemins relatifs a sa maniere (fichier .blend courant) : on lui
-    # passe systematiquement de l'absolu.
+    # Blender resolves relative paths its own way (current .blend file), so we always
+    # pass it an absolute one.
     args.input = os.path.abspath(args.input)
     args.output = os.path.abspath(args.output)
     if not os.path.exists(args.input):
@@ -357,7 +357,7 @@ def main():
             manifest = json.load(handle)
         tag_default_variants(manifest)
         baked, skipped = bake_variant_layers(manifest, args.variant_vertex_budget, args.variant_time_budget)
-        # Les passes de variantes ont ajoute des objets : on re-etiquette (idempotent).
+        # The variant passes added objects: we re-tag them (idempotent).
         tagged = tag_usd_paths()
     scene = apply_timing(args)
 
@@ -378,8 +378,8 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as error:
-        # Message court sur stderr (pas de traceback) : le worker le remonte tel quel dans
-        # `metadata.processingError`, donc en review.
+        # Short message on stderr (no traceback): the worker relays it as is in
+        # `metadata.processingError`, so it shows up in review.
         print("%s: %s" % (type(error).__name__, error), file=sys.stderr)
         sys.stderr.flush()
         sys.exit(1)

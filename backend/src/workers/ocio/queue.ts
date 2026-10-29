@@ -8,12 +8,12 @@ import { registerShutdownTask, SHUTDOWN_PHASE } from '../../lib/gracefulShutdown
 import type { BakeRequest } from './bakeJob';
 
 /**
- * File de cuisson des LUT d'affichage. Elle est **à part** de `media-processing` pour la même
- * raison que la vignette spatiale : c'est un travail de studio, rare (installation d'une config,
- * changement d'outillage OCIO), qui ne doit ni retarder un transcodage ni faire échouer un média.
+ * Queue for display LUT baking. It is **separate** from `media-processing` for the same
+ * reason as the spatial thumbnail: it is studio work, rare (installing a config,
+ * changing OCIO tooling), which must neither delay a transcode nor make a media fail.
  *
- * La file vit ici plutôt que dans `services/JobService.ts` parce que ce lot n'a pas la main sur
- * ce fichier ; l'entrée `OCIO_BAKE: 'ocio-bake'` a vocation à rejoindre `QUEUE_NAMES`.
+ * The queue lives here rather than in `services/JobService.ts` because this batch does not own
+ * that file; the `OCIO_BAKE: 'ocio-bake'` entry is meant to join `QUEUE_NAMES`.
  */
 export const OCIO_BAKE_QUEUE = 'ocio-bake';
 
@@ -28,9 +28,9 @@ export const ocioBakeQueue = new Queue<BakeRequest, void, string>(OCIO_BAKE_QUEU
 });
 
 /**
- * La file tient une connexion Redis : sans fermeture, le process API ne rend pas la main
- * après `server.close()`. `closeQueues()` (JobService) ne connaît pas celle-ci — elle
- * s'enregistre donc elle-même, dans la même phase que les autres files.
+ * The queue holds a Redis connection: without closing it, the API process does not return
+ * after `server.close()`. `closeQueues()` (JobService) does not know about this one, so it
+ * registers itself, in the same phase as the other queues.
  */
 registerShutdownTask({
   name: 'ocio-bake-queue',
@@ -39,8 +39,8 @@ registerShutdownTask({
 });
 
 /**
- * Demande une cuisson. **Ne jette jamais** : une config s'installe même sans Redis joignable,
- * et le viewer sait cuire à la demande le repli colorimétrique.
+ * Requests a bake. **Never throws**: a config installs even without a reachable Redis,
+ * and the viewer can fall back to the colorimetric bake on demand.
  */
 export async function enqueueOcioBake(req: BakeRequest): Promise<void> {
   try {

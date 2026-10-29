@@ -8,10 +8,10 @@ import { AnnotationCanvas, type Shape } from './AnnotationCanvas';
 
 /**
  * Deux contrats :
- * - l'outil `ref` rend le canvas transparent au pointeur, sinon le calque des références
- *   collées ne reçoit jamais le geste et la référence reste clouée ;
- * - un glisser de forme porte **une seule** clé de geste : sans elle, l'annulation ne
- *   défaisait qu'un mouvement de souris sur les cent d'un déplacement.
+ * - the `ref` tool makes the canvas transparent to the pointer, otherwise the layer of pasted references
+ *   never receives the gesture and the reference stays pinned;
+ * - a shape drag carries **a single** gesture key: without it, undo would only
+ *   revert one mouse movement out of the hundred of a move.
  */
 const rect = (x: number): Shape => ({
   id: 'r1',
@@ -56,15 +56,15 @@ const canvas = (tool: 'draw' | 'ref') =>
   ).container.querySelector('svg')!;
 
 describe('AnnotationCanvas', () => {
-  it('capte le pointeur avec un outil de tracé', () => {
+  it('captures the pointer with a drawing tool', () => {
     expect(canvas('draw').style.pointerEvents).toBe('auto');
   });
 
-  it('laisse passer le pointeur en mode pose de référence', () => {
+  it('lets the pointer through in reference-placement mode', () => {
     expect(canvas('ref').style.pointerEvents).toBe('none');
   });
 
-  it('ne dessine rien en mode pose de référence', () => {
+  it('draws nothing in reference-placement mode', () => {
     const svg = canvas('ref');
     anchor(svg);
     fireEvent.pointerDown(svg, { clientX: 50, clientY: 50, button: 0 });
@@ -73,7 +73,7 @@ describe('AnnotationCanvas', () => {
     expect(svg.querySelectorAll('rect')).toHaveLength(1);
   });
 
-  it('marque tout un glisser d’une seule clé de geste', () => {
+  it('marks a whole drag with a single gesture key', () => {
     steps.length = 0;
     const { container } = render(<MoveHost />);
     const svg = container.querySelector('svg')!;

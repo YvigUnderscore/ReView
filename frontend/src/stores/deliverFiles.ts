@@ -5,16 +5,16 @@ import { planDrop, sendPlan } from './useSequenceUploadStore';
 import { withUploadNote } from './useUploadNoteStore';
 
 /**
- * Point d'entrée unique de tout dépôt de fichiers destiné à une version.
+ * The single entry point of every file drop intended for a version.
  *
- * Les quatre endroits d'où l'on livre (fiche d'asset, de plan, de tâche, timeline de
- * versions) passent par ici et nulle part ailleurs : c'est ce qui garantit qu'un plan livré
- * en mille frames EXR devient UN média et non mille, et qu'aucun dépôt n'échappe à la
- * consigne exigée par le projet.
+ * The four places from which one delivers (asset sheet, shot sheet, task sheet, version
+ * timeline) all go through here and nowhere else: that is what guarantees that a shot delivered
+ * as a thousand EXR frames becomes ONE media and not a thousand, and that no drop escapes the
+ * instruction required by the project.
  *
- * L'ordre est délibéré : regroupement, puis consigne, puis seulement la cible. `target`
- * reçoit l'envoi tout prêt et décide de la version — en la créant au besoin. Renoncer à
- * l'un ou l'autre dialogue ne crée donc rien, pas même une version vide.
+ * The order is deliberate: grouping, then instruction, then only the target. `target`
+ * receives the ready-made upload and decides the version, creating it if needed. Giving up on
+ * either dialog therefore creates nothing, not even an empty version.
  */
 export async function deliverFiles(
   projectId: number | null | undefined,

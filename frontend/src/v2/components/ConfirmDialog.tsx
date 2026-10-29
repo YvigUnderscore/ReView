@@ -14,8 +14,8 @@ import { Button } from './ui/button';
 import { useT } from '../i18n';
 
 /**
- * Dialogue de confirmation modal réutilisable (suppression, purge…).
- * Rendu conditionnel via `open` ; appelle `onConfirm`/`onCancel`.
+ * Reusable modal confirmation dialog (deletion, purge…).
+ * Conditional rendering via `open`; calls `onConfirm`/`onCancel`.
  */
 export default function ConfirmDialog({
   open,

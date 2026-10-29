@@ -19,12 +19,12 @@ import type { FileSequence } from '../../lib/imageSequence';
 import { useSequenceUploadStore, type SequenceProposal } from '../../stores/useSequenceUploadStore';
 
 /**
- * Proposition de regroupement d'un dépôt.
+ * Grouping proposal for a drop.
  *
- * Le regroupement n'est jamais imposé : ce dialogue est le seul endroit où il se décide.
- * Une séquence cochée deviendra UN média qui se review comme une vidéo ; décochée, ses
- * frames repartent en fichiers séparés — c'est encore un usage légitime (livrer trois
- * plaques de référence numérotées, par exemple).
+ * Grouping is never imposed: this dialog is the only place where it is decided.
+ * A checked sequence will become ONE media reviewed like a video; unchecked, its
+ * frames go out as separate files: that is still a legitimate use (delivering three
+ * numbered reference plates, for example).
  */
 
 function SequenceRow({
@@ -66,8 +66,8 @@ function ProposalBody({ proposal }: { proposal: SequenceProposal }) {
   const t = useT();
   const accept = useSequenceUploadStore((s) => s.acceptProposal);
   const cancel = useSequenceUploadStore((s) => s.cancelProposal);
-  // Tout est regroupé par défaut : c'est le cas de très loin le plus fréquent, et l'écart
-  // se corrige d'un clic dans le sens le moins destructeur (dégrouper).
+  // Everything is grouped by default: that is by far the most frequent case, and the difference
+  // is corrected with one click in the least destructive direction (ungrouping).
   const [kept, setKept] = useState<string[]>(() => proposal.sequences.map((s) => s.pattern));
 
   const toggle = (pattern: string, on: boolean): void =>
@@ -117,9 +117,9 @@ function ProposalBody({ proposal }: { proposal: SequenceProposal }) {
 }
 
 /**
- * Monté une fois, avec le widget d'envoi : le dépôt peut venir de n'importe quelle page.
- * La clé sur le corps évite de garder la sélection d'un dépôt précédent — un effet de
- * remise à zéro aurait fait la même chose, en moins lisible.
+ * Mounted once, with the upload widget: the drop can come from any page.
+ * The key on the body avoids keeping the selection of a previous drop: a reset
+ * effect would have done the same, less readably.
  */
 export default function SequenceGroupDialog() {
   const proposal = useSequenceUploadStore((s) => s.proposal);

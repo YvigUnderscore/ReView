@@ -4,16 +4,16 @@
 import { intlLocale } from '../v2/i18n';
 
 /**
- * Taille de fichier lisible, dans la langue du lecteur.
+ * Readable file size, in the reader's language.
  *
- * Les deux formateurs déjà présents dans l'application écrivent « Mo » et « Go » en dur :
- * ils affichent du français à un lecteur japonais, et le séparateur décimal est celui de
- * l'auteur. `Intl.NumberFormat` connaît les deux — unité et séparateur — pour les quatorze
- * langues, sans table à tenir.
+ * The two formatters already present in the application write "Mo" and "Go" hard-coded:
+ * they display French to a Japanese reader, and the decimal separator is the author's.
+ * `Intl.NumberFormat` knows both (unit and separator) for the fourteen
+ * languages, without a table to maintain.
  *
- * Base 1024, celle qu'annoncent les systèmes de fichiers et la console MinIO : afficher des
- * gigaoctets décimaux à côté d'un explorateur qui compte en binaire sème le doute sur le
- * chiffre plutôt que sur l'unité.
+ * Base 1024, the one announced by file systems and the MinIO console: showing decimal
+ * gigabytes next to an explorer that counts in binary casts doubt on the
+ * figure rather than on the unit.
  */
 const UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte'] as const;
 

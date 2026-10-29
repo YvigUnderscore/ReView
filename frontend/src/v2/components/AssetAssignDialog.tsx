@@ -17,12 +17,12 @@ import type { ShotSummary } from '../types/api';
 import { useT } from '../i18n';
 
 /**
- * Dialog d'assignation d'un asset à des shots et/ou séquences (N-N).
- * Piloté côté asset : PATCH /api/assets/:id { shotIds, sequenceIds }.
+ * Dialog to assign an asset to shots and/or sequences (N-N).
+ * Driven from the asset side: PATCH /api/assets/:id { shotIds, sequenceIds }.
  *
- * Les shots sont regroupés par séquence pour distinguer deux shots de même code
- * provenant de séquences différentes : l'affichage est « code séquence · code shot »
- * (le code prime ; le nom n'est qu'un repère secondaire).
+ * Shots are grouped by sequence to tell apart two shots with the same code
+ * coming from different sequences: the display is "sequence code · shot code"
+ * (the code takes precedence; the name is only a secondary landmark).
  */
 export default function AssetAssignDialog({
   assetId,
@@ -39,7 +39,7 @@ export default function AssetAssignDialog({
 }) {
   const t = useT();
   const qc = useQueryClient();
-  // Sélecteur : toutes les pages, sinon on ne peut pas rattacher un asset au 101e plan.
+  // Selector: all pages, otherwise an asset cannot be attached to the 101st shot.
   const shotsQ = useShotsQuery(projectId, true, { all: true });
   const seqsQ = useSequencesQuery(projectId);
   const assetQ = useQuery({
@@ -49,20 +49,20 @@ export default function AssetAssignDialog({
   });
   const shots = useMemo(() => shotsQ.data ?? [], [shotsQ.data]);
   const sequences = useMemo(() => seqsQ.data?.sequences ?? [], [seqsQ.data]);
-  // `isComplete` et non `isPending` : la première page arrive en un aller-retour, la
-  // dernière en quatre. Entre les deux, la grille afficherait une partie des plans et le
-  // filtre répondrait « aucun résultat » pour un plan qui existe — on préfère le squelette.
+  // `isComplete` rather than `isPending`: the first page arrives in one round trip, the
+  // last in four. In between, the grid would show some of the shots and the filter would answer "no result"
+  // for a shot that exists, so we prefer the skeleton.
   const loading = !shotsQ.isComplete || seqsQ.isPending || assetQ.isPending;
   const loadError = shotsQ.error ?? seqsQ.error ?? assetQ.error;
 
-  // Sélection : dérivée des assignations actuelles de l'asset tant que
-  // l'utilisateur n'a pas touché aux cases (pas d'effet d'initialisation).
+  // Selection: derived from the asset's current assignments as long as the
+  // user has not touched the checkboxes (no initialization effect).
   const [edits, setEdits] = useState<{ shotIds: Set<number>; sequenceIds: Set<number> } | null>(null);
   const shotIds = edits?.shotIds ?? new Set(assetQ.data?.asset.shots.map((s) => s.id) ?? []);
   const sequenceIds = edits?.sequenceIds ?? new Set(assetQ.data?.asset.sequences.map((s) => s.id) ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Un long-métrage porte deux mille plans : sans filtre, la grille est un mur d'images.
+  // A feature film holds two thousand shots: without a filter, the grid is a wall of images.
   const [query, setQuery] = useState('');
   const needle = query.trim().toLocaleLowerCase();
   const matches = (...values: (string | null | undefined)[]) =>
@@ -94,12 +94,12 @@ export default function AssetAssignDialog({
 
   const visibleSequences = useMemo(
     () => sequences.filter((s) => matches(s.code, s.name)),
-    // `matches` se reconstruit à chaque rendu : c'est `needle` qui décide du résultat.
+    // `matches` is rebuilt at each render: it is `needle` that decides the result.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sequences, needle],
   );
 
-  // Regroupe les shots par séquence (codes triés numériquement), « Sans séquence » en dernier.
+  // Groups the shots by sequence (codes sorted numerically), "No sequence" last.
   const groups = useMemo(() => {
     const sortedSeq = [...sequences].sort((a, b) =>
       a.code.localeCompare(b.code, undefined, { numeric: true }),

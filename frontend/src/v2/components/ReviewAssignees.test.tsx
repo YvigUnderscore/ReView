@@ -8,16 +8,16 @@ import ReviewAssignees from './ReviewAssignees';
 import { t } from '../i18n';
 
 /**
- * Confier la review d'une version à quelqu'un, et lui dire quoi regarder.
+ * Entrust a version's review to someone, and tell them what to look at.
  *
- * Ce qui se vérifie : la liste se lit par tout le monde mais ne s'écrit que par un
- * gestionnaire, un clic sur un nom l'ajoute d'un geste (pas de bouton « Enregistrer »
- * qu'on peut quitter sans l'avoir vu), et recliquer le retire — le même bouton doit faire
- * les deux, sinon retirer quelqu'un demande de chercher où.
+ * What is verified: the list can be read by everyone but only written by a
+ * manager. A click on a name adds it in one gesture (no "Save" button
+ * that one can leave without having seen), and clicking again removes it: the same button must do
+ * both, otherwise removing someone would mean searching for where.
  *
- * Et, depuis la consigne : la personne part avec la sienne, et quand le projet EXIGE une
- * consigne, cliquer un nom ne l'assigne PAS tout de suite — il la met en attente le temps
- * qu'on écrive. L'assigner d'abord pour se faire refuser ensuite serait une fausse promesse.
+ * As for the instruction: the person leaves with theirs, and when the project REQUIRES an
+ * instruction, clicking a name does NOT assign them straight away: it puts them on hold while
+ * it is written. Assigning first, only to be refused afterwards, would be a false promise.
  */
 
 const PROJECT = {
@@ -41,13 +41,13 @@ const reviewer = (id: number, name: string, note: string | null = null) => ({
   note,
 });
 
-/** Réglages du projet : par défaut, aucune consigne exigée. */
+/** Project settings: by default, no instruction is required. */
 const settings = (requireNote = false) => ({
   settings: { reviewRequest: { requireNote, minNoteLength: 5 } },
 });
 
 describe('ReviewAssignees', () => {
-  it('dit que personne n’est chargé de la review, et propose d’en charger un', async () => {
+  it('says that nobody is in charge of the review, and offers to load one', async () => {
     renderWithProviders(<ReviewAssignees versionId={42} projectId={7} canAssign />, {
       api: {
         'GET /api/projects/:id': PROJECT,
@@ -59,7 +59,7 @@ describe('ReviewAssignees', () => {
     expect(screen.getByRole('button', { name: t('reviewers.assign') })).toBeTruthy();
   });
 
-  it('sans le droit d’assigner : la liste se lit, le bouton n’existe pas', async () => {
+  it('without the right to assign: the list can be read, the button does not exist', async () => {
     renderWithProviders(<ReviewAssignees versionId={42} projectId={7} canAssign={false} />, {
       api: {
         'GET /api/projects/:id': PROJECT,
@@ -71,7 +71,7 @@ describe('ReviewAssignees', () => {
     expect(screen.queryByRole('button', { name: t('reviewers.assign') })).toBeNull();
   });
 
-  it('un clic sur un nom l’ajoute à la liste envoyée', async () => {
+  it('a click on a name adds it to the list sent', async () => {
     const { user, api } = renderWithProviders(<ReviewAssignees versionId={42} projectId={7} canAssign />, {
       api: {
         'GET /api/projects/:id': PROJECT,
@@ -88,7 +88,7 @@ describe('ReviewAssignees', () => {
     });
   });
 
-  it('recliquer une personne déjà chargée la retire — sa consigne part avec elle', async () => {
+  it('clicking an already loaded person again removes them: their instruction leaves with them', async () => {
     const { user, api } = renderWithProviders(<ReviewAssignees versionId={42} projectId={7} canAssign />, {
       api: {
         'GET /api/projects/:id': PROJECT,
@@ -100,17 +100,17 @@ describe('ReviewAssignees', () => {
       },
     });
     await user.click(await screen.findByRole('button', { name: t('reviewers.assign') }));
-    // Par le RÔLE : « Alice » apparaît aussi dans sa ligne de consigne, qui n'est pas un
-    // bouton — c'est celui de l'annuaire qu'on veut recliquer.
+    // By ROLE: "Alice" also appears in her instruction row, which is not a
+    // button: it is the directory's one we want to click again.
     await user.click(await screen.findByRole('button', { name: /Alice/ }));
     await waitFor(() => expect(api.called('PUT /api/versions/:id/reviewers').length).toBe(1));
-    // Bruno reste, AVEC sa consigne : un remplacement qui l'oublierait l'effacerait.
+    // Bruno stays, WITH his instruction: a replacement that forgot it would erase it.
     expect(api.called('PUT /api/versions/:id/reviewers')[0].body).toEqual({
       reviewers: [{ userId: 5, note: 'le raccord' }],
     });
   });
 
-  it('consigne obligatoire : cliquer un nom met la personne en attente, sans rien écrire', async () => {
+  it('mandatory instruction: clicking a name puts the person on hold, without writing anything', async () => {
     const { user, api } = renderWithProviders(<ReviewAssignees versionId={42} projectId={7} canAssign />, {
       api: {
         'GET /api/projects/:id': PROJECT,
@@ -121,7 +121,7 @@ describe('ReviewAssignees', () => {
     });
     await user.click(await screen.findByRole('button', { name: t('reviewers.assign') }));
     await user.click(await screen.findByText('Bruno'));
-    // Rien n'est parti : le serveur aurait refusé, et l'écran l'aurait appris trop tard.
+    // Nothing left: the server would have refused, and the screen would have learned too late.
     expect(api.called('PUT /api/versions/:id/reviewers').length).toBe(0);
     expect(screen.getByText(t('reviewers.noteRequired'))).toBeTruthy();
 

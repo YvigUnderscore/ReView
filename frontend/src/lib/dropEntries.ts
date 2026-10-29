@@ -2,39 +2,39 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Lecture d'un dépôt (drag & drop) **dossiers compris**.
+ * Reading a drop (drag & drop), **folders included**.
  *
- * `DataTransfer.files` ignore les répertoires : déposer un dossier de plans ne produisait
- * rien, sans message. L'API d'entrées (`webkitGetAsEntry`, supportée par tous les
- * navigateurs cibles) donne accès à l'arborescence ; on la parcourt et on rend une liste
- * plate de `File`, ce que la file d'upload sait déjà consommer.
+ * `DataTransfer.files` ignores directories: dropping a folder of shots produced
+ * nothing, without any message. The entries API (`webkitGetAsEntry`, supported by all the
+ * target browsers) gives access to the tree; we walk it and return a flat list
+ * of `File`, which the upload queue already knows how to consume.
  *
- * Contrainte de l'API : `dataTransfer.items` n'est valide que **pendant** l'événement
- * `drop`. Les entrées sont donc récupérées de façon synchrone, et seule leur lecture est
+ * API constraint: `dataTransfer.items` is only valid **during** the `drop` event.
+ * The entries are therefore retrieved synchronously, and only their reading is
  * asynchrone.
  */
 
-/** Profondeur maximale explorée — une arborescence de plans est plate, pas un dépôt git. */
+/** Maximum explored depth: a shot tree is flat, not a git repository. */
 const MAX_DEPTH = 8;
 /**
- * Garde-fou de volume.
+ * Volume safeguard.
  *
- * Le plafond était de 500 fichiers, et il coupait en silence : déposer un plan de 1 200
- * frames EXR — la livraison la plus banale du métier — en aurait perdu 700 sans un mot.
- * Il est aligné sur ce que le serveur accepte pour une séquence
- * (`MAX_SEQUENCE_FRAMES`, backend/src/lib/imageSequence.ts) : au-delà, c'est un dépôt
- * d'arborescence entière, pas une livraison.
+ * The cap was 500 files, and it cut silently: dropping a shot of 1,200
+ * EXR frames, the most ordinary delivery in the trade, would have lost 700 without a word.
+ * It is aligned with what the server accepts for a sequence
+ * (`MAX_SEQUENCE_FRAMES`, backend/src/lib/imageSequence.ts): beyond that, it is a drop
+ * of a whole tree, not a delivery.
  */
 const MAX_FILES = 10_000;
 
-/** Ignore les fichiers de service des systèmes de fichiers (.DS_Store, .gitkeep…). */
+/** Ignores filesystem service files (.DS_Store, .gitkeep…). */
 const isHidden = (name: string): boolean => name.startsWith('.');
 
 function fileOf(entry: FileSystemFileEntry): Promise<File> {
   return new Promise((resolve, reject) => entry.file(resolve, reject));
 }
 
-/** `readEntries` ne rend qu'un lot à la fois (100 sous Chrome) : on relit jusqu'au vide. */
+/** `readEntries` returns only one batch at a time (100 under Chrome): we read until empty. */
 function readAll(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
   return new Promise((resolve) => {
     const all: FileSystemEntry[] = [];
@@ -65,8 +65,8 @@ async function collect(entry: FileSystemEntry, out: File[], depth: number): Prom
 }
 
 /**
- * Fichiers d'un dépôt, dossiers dépliés. Repli sur `dataTransfer.files` quand l'API
- * d'entrées est absente (dépôt depuis une autre application, navigateur ancien).
+ * Files of a drop, folders unfolded. Falls back to `dataTransfer.files` when the entries
+ * API is absent (drop from another application, old browser).
  */
 export async function filesFromDataTransfer(dt: DataTransfer | null | undefined): Promise<File[]> {
   if (!dt) return [];
@@ -80,6 +80,6 @@ export async function filesFromDataTransfer(dt: DataTransfer | null | undefined)
   for (const entry of entries) {
     if (entry) await collect(entry, out, 0);
   }
-  // Une arborescence illisible ne doit pas être pire que l'ancien comportement.
+  // An unreadable tree must not be worse than the previous behaviour.
   return out.length > 0 ? out.slice(0, MAX_FILES) : plain;
 }

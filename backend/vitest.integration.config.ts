@@ -5,16 +5,16 @@ import { defineConfig } from 'vitest/config';
 import { loadItestDatabaseUrl } from './src/integration/itestEnv';
 
 /**
- * Tests d'intégration : nécessitent Postgres/Redis/MinIO (voir job CI dédié).
+ * Integration tests: require Postgres/Redis/MinIO (see the dedicated CI job).
  *
- * La suite ne tourne plus sur la base de développement. `globalSetup` crée puis remet à
- * neuf une base dédiée (`review_itest`, cf. `src/integration/itestEnv.ts`) en rejouant les
- * migrations versionnées, et `DATABASE_URL` est réécrite pour les processus de test —
- * `config/env.ts` charge `.env` par `dotenv`, qui n'écrase jamais une variable déjà posée.
+ * The suite no longer runs on the development database. `globalSetup` creates, then resets to
+ * a clean state a dedicated database (`review_itest`, cf. `src/integration/itestEnv.ts`) by replaying the
+ * versioned migrations, and `DATABASE_URL` is rewritten for the test processes:
+ * `config/env.ts` loads `.env` via `dotenv`, which never overwrites a variable already set.
  *
- * `fileParallelism: false` : trois fichiers de test écrivent dans la même base et le
- * premier d'entre eux exécute l'installation initiale du studio. En parallèle, l'ordre de
- * ces écritures serait un tirage au sort.
+ * `fileParallelism: false`: three test files write to the same database and the
+ * first of them runs the studio's initial setup. In parallel, the order of
+ * those writes would be a lottery.
  */
 export default defineConfig({
   test: {

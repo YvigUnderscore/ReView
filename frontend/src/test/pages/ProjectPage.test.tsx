@@ -9,10 +9,10 @@ import type { MockResolver } from '../apiMock';
 import { page, renderWithProviders } from '../renderWithProviders';
 
 /**
- * La page projet est une barre d'onglets et un routeur déguisé : l'onglet vit dans l'URL
- * (partage de lien, retour navigateur), et la moitié des onglets n'existe que pour qui
- * administre le projet. Ce sont ces deux règles qu'on tient ici — pas le contenu de chaque
- * onglet, qui a ses propres écrans.
+ * The project page is a tab bar and a disguised router: the tab lives in the URL
+ * (link sharing, browser back), and half of the tabs only exist for whoever
+ * administers the project. These are the two rules held here, not the content of each
+ * tab, which has its own screens.
  */
 
 const PROJECT_ID = 3;
@@ -40,50 +40,50 @@ const mount = (role: 'ADMIN' | 'ARTIST' = 'ADMIN', route = `/projects/${PROJECT_
     api: baseApi,
   });
 
-// Les onglets portent désormais `role="tab"` et `aria-selected` : sans eux, la synthèse
-// vocale n'annonçait que des boutons interchangeables, sans dire lequel était actif.
+// The tabs now carry `role="tab"` and `aria-selected`: without them, the screen reader
+// only announced interchangeable buttons, without saying which one was active.
 describe('ProjectPage', () => {
-  it('ouvre l’aperçu par défaut et sort le nom du projet du serveur', async () => {
+  it('opens the preview by default and takes the project name from the server', async () => {
     mount();
 
     expect(await screen.findByRole('heading', { name: 'Alpha', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: new RegExp(t('project.tab.overview')) })).toBeInTheDocument();
   });
 
-  it('compte les plans et les assets d’après le total du serveur, pas la page chargée', async () => {
+  it('counts shots and assets from the server total, not the loaded page', async () => {
     mount();
 
-    // 42 plans existent, aucun n'est encore descendu : le badge doit dire 42.
+    // 42 shots exist, none has been processed yet: the badge must say 42.
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: new RegExp(`^${t('shots.title')}`) })).toHaveTextContent('42'),
     );
     expect(screen.getByRole('tab', { name: /^Assets/ })).toHaveTextContent('7');
   });
 
-  it('écrit l’onglet actif dans l’URL pour qu’un lien s’ouvre au bon endroit', async () => {
+  it('writes the active tab into the URL so that a link opens in the right place', async () => {
     const { user, currentPath } = mount();
 
     await user.click(await screen.findByRole('tab', { name: new RegExp(`^${t('shots.title')}`) }));
 
-    // On attend le PANNEAU avant l'URL, et non l'inverse : depuis que les douze onglets sont
-    // chargés par `lazy()`, le clic franchit une frontière Suspense. Attendre d'abord l'URL
-    // revenait à se donner une seconde pour un import dynamique — le test passait seul et
-    // tombait dès que la machine était chargée. Le délai est explicite pour la même raison.
+    // Wait for the PANEL before the URL, and not the other way round: since the twelve tabs are
+    // loaded by `lazy()`, the click crosses a Suspense boundary. Waiting for the URL first
+    // amounted to giving a second to a dynamic import: the test passed alone and
+    // failed as soon as the machine was loaded. The delay is explicit for the same reason.
     expect(
       await screen.findByRole('heading', { name: t('shots.title'), level: 2 }, { timeout: 10_000 }),
     ).toBeInTheDocument();
     await waitFor(() => expect(currentPath()).toContain('tab=shots'));
   });
 
-  it('monte directement l’onglet demandé par l’URL', async () => {
+  it('mounts the tab requested by the URL directly', async () => {
     mount('ADMIN', `/projects/${PROJECT_ID}?tab=members`);
 
     expect(await screen.findByRole('tab', { name: new RegExp(t('nav.members')) })).toBeInTheDocument();
-    // L'aperçu n'est pas monté : un seul panneau à la fois.
+    // The preview is not mounted: one panel at a time.
     expect(screen.queryByRole('heading', { name: t('shots.title'), level: 2 })).not.toBeInTheDocument();
   });
 
-  it('cache les onglets de gestion à un compte qui n’administre pas', async () => {
+  it('hides the management tabs from an account that does not administer', async () => {
     mount('ARTIST');
 
     await screen.findByRole('heading', { name: 'Alpha', level: 1 });
@@ -95,11 +95,11 @@ describe('ProjectPage', () => {
     ]) {
       expect(screen.queryByRole('tab', { name: new RegExp(label) })).not.toBeInTheDocument();
     }
-    // Les onglets de consultation, eux, restent là.
+    // The read-only tabs, on the other hand, stay there.
     expect(screen.getByRole('tab', { name: new RegExp(`^${t('shots.title')}`) })).toBeInTheDocument();
   });
 
-  it('n’affiche l’onglet ShotGrid que sur un projet réellement relié', async () => {
+  it('shows the ShotGrid tab only on a project that is really linked', async () => {
     const { unmount } = mount();
     await screen.findByRole('heading', { name: 'Alpha', level: 1 });
     expect(screen.queryByRole('tab', { name: new RegExp(t('shotgrid.tab.label')) })).not.toBeInTheDocument();

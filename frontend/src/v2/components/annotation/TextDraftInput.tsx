@@ -3,8 +3,8 @@
 
 import { useT } from '../../i18n';
 
-/** Saisie de l'outil texte : HTML positionné en % du média (le viewBox du SVG la déformerait).
- *  Entrée valide, Échap annule. */
+/** Input of the text tool: HTML positioned in % of the media (the SVG viewBox would distort it).
+ *  Valid entry, Escape cancels. */
 export default function TextDraftInput({
   draft,
   onChangeValue,
@@ -19,7 +19,7 @@ export default function TextDraftInput({
   const t = useT();
   return (
     <input
-      // Focus différé : le focus par défaut du mousedown d'origine le volerait (blur → fermé).
+      // Deferred focus: the default focus of the original mousedown would steal it (blur → closed).
       ref={(el) => {
         if (el) setTimeout(() => el.focus(), 0);
       }}

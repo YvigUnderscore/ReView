@@ -5,8 +5,8 @@ import { MediaKind, MediaStatus } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeFile } from 'node:fs/promises';
 
-// Aucune connexion Redis ni boucle BullMQ dans un test unitaire : seules les décisions du
-// worker nous intéressent.
+// No Redis connection nor BullMQ loop in a unit test: only the worker's decisions
+// are of interest.
 vi.mock('bullmq', () => ({
   Worker: class {
     constructor(
@@ -58,7 +58,7 @@ import { storage } from '../services/StorageService';
 import { renderModelThumbnail } from '../services/ModelConvertService';
 import { logger } from '../lib/logger';
 
-/** Média minimal tel que le lit le worker (les champs non utilisés sont sans importance). */
+/** Minimal media as read by the worker (unused fields do not matter). */
 function media(over: Record<string, unknown> = {}) {
   return {
     id: 42,
@@ -72,7 +72,7 @@ function media(over: Record<string, unknown> = {}) {
   };
 }
 
-/** PLY gaussien binaire minimal : deux points visibles, suffisant pour une vignette. */
+/** Minimal binary Gaussian PLY: two visible points, enough for a thumbnail. */
 function gaussianPly(): Buffer {
   const props = ['x', 'y', 'z', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'];
   const rows = [
@@ -100,14 +100,14 @@ beforeEach(() => {
   vi.mocked(storage.downloadToFile).mockResolvedValue(undefined);
 });
 
-describe('renderSpatialThumb — ce qu’il refuse de faire', () => {
-  it('ne fait rien pour un média disparu', async () => {
+describe('renderSpatialThumb — what it refuses to do', () => {
+  it('does nothing for a vanished media', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(null);
     await expect(renderSpatialThumb(42)).resolves.toBe('missing');
     expect(renderModelThumbnail).not.toHaveBeenCalled();
   });
 
-  it('n’écrase jamais une vignette déjà posée (capture manuelle ou client)', async () => {
+  it('never overwrites a thumbnail already in place (manual or client capture)', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(
       media({ thumbnailKey: 'derived/42/thumbnail.jpg' }) as never,
     );
@@ -115,14 +115,14 @@ describe('renderSpatialThumb — ce qu’il refuse de faire', () => {
     expect(storage.uploadFile).not.toHaveBeenCalled();
   });
 
-  it('ignore les médias non spatiaux, déjà pourvus par le worker FFmpeg', async () => {
+  it('ignores non-spatial media, already handled by the FFmpeg worker', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(
       media({ kind: MediaKind.VIDEO, originalName: 'plan.mp4' }) as never,
     );
     await expect(renderSpatialThumb(42)).resolves.toBe('unsupported');
   });
 
-  it('attend le GLB tant que la conversion tourne, et renonce si elle a échoué', async () => {
+  it('waits for the GLB while the conversion runs, and gives up if it failed', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(
       media({ originalName: 'set.usdz', status: MediaStatus.PROCESSING }) as never,
     );
@@ -136,14 +136,14 @@ describe('renderSpatialThumb — ce qu’il refuse de faire', () => {
 });
 
 describe('renderSpatialThumb — rendu 3D', () => {
-  it('rend le GLB natif et pose la clé sans toucher au statut du média', async () => {
+  it('renders the native GLB and sets the key without touching the media status', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media() as never);
     await expect(renderSpatialThumb(42)).resolves.toBe('rendered');
 
     expect(vi.mocked(storage.downloadToFile).mock.calls[0]![0]).toBe('projects/p/hero.glb');
     expect(vi.mocked(storage.uploadFile).mock.calls[0]!.slice(0, 1)).toEqual(['derived/42/thumbnail.png']);
     expect(vi.mocked(storage.uploadFile).mock.calls[0]![2]).toBe('image/png');
-    // Écriture conditionnelle : jamais d'écrasement, jamais de changement de statut.
+    // Conditional write: never overwrite, never change the status.
     expect(vi.mocked(prisma.mediaObject.updateMany).mock.calls[0]![0]).toEqual({
       where: { id: 42, thumbnailKey: null },
       data: { thumbnailKey: 'derived/42/thumbnail.png' },
@@ -151,7 +151,7 @@ describe('renderSpatialThumb — rendu 3D', () => {
     expect(prisma.mediaObject.update).not.toHaveBeenCalled();
   });
 
-  it('rend le GLB dérivé quand le média a été converti', async () => {
+  it('renders the derived GLB when the media has been converted', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(
       media({ originalName: 'set.usdz', metadata: { glbKey: 'derived/42/model.glb' } }) as never,
     );
@@ -159,7 +159,7 @@ describe('renderSpatialThumb — rendu 3D', () => {
     expect(vi.mocked(storage.downloadToFile).mock.calls[0]![0]).toBe('derived/42/model.glb');
   });
 
-  it('Blender absent de l’image : échec propre, journalisé, sans média coincé', async () => {
+  it('Blender missing from the image: clean failure, logged, no stuck media', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media() as never);
     vi.mocked(renderModelThumbnail).mockResolvedValue({ rendered: false, reason: 'blender-missing' });
 
@@ -178,7 +178,7 @@ describe('renderSpatialThumb — rendu splat', () => {
     );
   });
 
-  it('rasterise le nuage et téléverse un PNG (aucun rendu Blender)', async () => {
+  it('rasterizes the cloud and uploads a PNG (no Blender render)', async () => {
     const ply = gaussianPly();
     vi.mocked(storage.downloadToFile).mockImplementation(async (_key: string, dest: string) => {
       await writeFile(dest, ply);
@@ -189,7 +189,7 @@ describe('renderSpatialThumb — rendu splat', () => {
     expect(vi.mocked(storage.uploadFile).mock.calls[0]![0]).toBe('derived/42/thumbnail.png');
   });
 
-  it('conteneur illisible : motif journalisé, aucune vignette, aucun échec', async () => {
+  it('unreadable container: pattern logged, no thumbnail, no failure', async () => {
     vi.mocked(storage.downloadToFile).mockImplementation(async (_key: string, dest: string) => {
       await writeFile(dest, Buffer.from('definitely not a ply'));
     });
@@ -199,7 +199,7 @@ describe('renderSpatialThumb — rendu splat', () => {
     expect(vi.mocked(logger.warn).mock.calls[0]![0]).toContain('not-a-ply');
   });
 
-  it('capture client concurrente gagnante : l’objet téléversé est retiré', async () => {
+  it('winning concurrent client capture: the uploaded object is removed', async () => {
     vi.mocked(storage.downloadToFile).mockImplementation(async (_key: string, dest: string) => {
       await writeFile(dest, gaussianPly());
     });
@@ -211,7 +211,7 @@ describe('renderSpatialThumb — rendu splat', () => {
 });
 
 describe('SpatialThumbPendingError', () => {
-  it('porte le média concerné pour que BullMQ replanifie sans ambiguïté', () => {
+  it('carries the relevant media so that BullMQ reschedules unambiguously', () => {
     const err = new SpatialThumbPendingError(7);
     expect(err.mediaObjectId).toBe(7);
     expect(err.name).toBe('SpatialThumbPendingError');

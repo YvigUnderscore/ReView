@@ -70,8 +70,8 @@ class PublishFlow(unittest.TestCase):
         self.assertEqual(result.created, ["shot", "task"])
         self.assertTrue(result.published)
 
-    # Rejouer après un timeout ne doit pas ouvrir une seconde version : c'est la clé qui
-    # permet au serveur de reconnaître l'appel, et les deux appels la portent.
+    # Replaying after a timeout must not open a second version: the key is what
+    # lets the server recognize the call, and both calls carry it.
     def test_the_same_idempotency_key_covers_both_api_calls(self) -> None:
         result = publish_file(self.client, "PROJ/SQ010/SH0100/anim", self.render)
         opened = self.opener.requests[0].headers["Idempotency-key"]
