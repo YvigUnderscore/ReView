@@ -14,7 +14,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'e2e',
   /**
-   * `npm run test:e2e` only runs the smoke test.
+   * `npm run test:e2e` runs the specs of `e2e/` (smoke, sign-in, projects, review comment).
    *
    * `docs-capture.spec.ts` shares this folder but is not a test: it is the generator
    * of the screenshots in `DOCUMENTATION/assets/`. Picked up by the same command, it rewrote
@@ -25,6 +25,12 @@ export default defineConfig({
    *   E2E_DOCS=1 npx playwright test e2e/docs-capture.spec.ts
    */
   testIgnore: process.env.E2E_DOCS === '1' ? [] : ['**/docs-capture.spec.ts'],
+  /**
+   * One worker, files in order. The specs share one database: on a blank instance the first one
+   * goes through the studio setup, which two parallel workers would race for.
+   */
+  workers: 1,
+  fullyParallel: false,
   timeout: 90_000,
   expect: { timeout: 15_000 },
   reporter: [['list']],

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { apiCall } from './support';
 
 /**
  * Smoke E2E of the critical path:
@@ -31,29 +32,6 @@ const PASSWORD = process.env.E2E_PASSWORD ?? 'admin1234';
 
 // Fake GLB: the "glTF" magic bytes are enough for finalize (server validation) → READY.
 const GLB_FIXTURE = Buffer.concat([Buffer.from('glTF', 'ascii'), Buffer.alloc(120)]);
-
-/** Calls the API with the browser session's token (setup and cleanup). */
-async function apiCall(
-  page: Page,
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<{ status: number; json: unknown }> {
-  return page.evaluate(
-    async ({ method, path, body }) => {
-      const res = await fetch(path, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      return { status: res.status, json: (await res.json().catch(() => null)) as unknown };
-    },
-    { method, path, body },
-  );
-}
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('locale', 'en'));

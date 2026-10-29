@@ -241,7 +241,7 @@ step "Frontend — budget du bundle d'entrée"
 node "$ROOT/scripts/check-bundle-budget.mjs"
 
 if [[ "$WITH_E2E" == "1" ]]; then
-  step "E2E — smoke Playwright (parcours critique, lance backend+frontend)"
+  step "E2E — Playwright (smoke + connexion, projets, commentaire de revue ; lance backend+frontend)"
   ( cd "$ROOT/frontend" && npm run test:e2e )
 fi
 
