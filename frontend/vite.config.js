@@ -233,6 +233,9 @@ export default defineConfig({
     },
   },
   server: {
+    // Loopback by default: the dev server must not be offered to the whole network. Docker
+    // (or a LAN demo) sets VITE_DEV_HOST=0.0.0.0.
+    host: process.env.VITE_DEV_HOST || '127.0.0.1',
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
