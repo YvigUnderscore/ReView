@@ -103,6 +103,13 @@ describe('looksFrench', () => {
     expect(looksFrench('Path is too deep')).toBe(false);
   });
 
+  it('counts an elision as a French function word', () => {
+    expect(looksFrench("[socket] fermeture imparfaite d'une connexion d'adapter")).toBe(true);
+    expect(looksFrench("Ce média n'a pas de piste")).toBe(true);
+    // English contractions and possessives are not elisions.
+    expect(looksFrench("The site's token doesn't match")).toBe(false);
+  });
+
   it('recognises plural forms of the strong words', () => {
     expect(looksFrench('Scopes inconnus: read2')).toBe(true);
     expect(looksFrench('Fichiers introuvables')).toBe(true);

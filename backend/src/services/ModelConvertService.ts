@@ -380,7 +380,7 @@ async function convertUsd(
 
   if (await hasUsdTools()) {
     info = await inspectUsdStage(input, usdToolConfig()).catch((err) => {
-      logger.warn({ err }, '[ModelConvert] analyse USD indisponible, conversion sans fiche technique');
+      logger.warn({ err }, '[ModelConvert] USD analysis unavailable, converting without a technical sheet');
       return null;
     });
 
@@ -515,7 +515,7 @@ export async function extractArchive(input: string, extractDir: string): Promise
     zip = new AdmZip(input);
   } catch (err) {
     const e = err as { message?: string };
-    throw new Error(`Archive illisible : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
+    throw new Error(`Unreadable archive: ${(e.message || 'unknown error').slice(0, 300)}`, {
       cause: err,
     });
   }
@@ -603,7 +603,7 @@ async function resolveUsdRoot(
   let deps;
   if (await hasUsdTools()) {
     deps = await scanUsdDirectory(extractDir, usdToolConfig()).catch((err) => {
-      logger.warn({ err }, '[ModelConvert] graphe de couches USD indisponible, heuristique seule');
+      logger.warn({ err }, '[ModelConvert] USD layer graph unavailable, heuristic only');
       return undefined;
     });
   }

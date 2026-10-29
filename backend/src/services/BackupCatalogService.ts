@@ -116,7 +116,7 @@ export async function list(): Promise<BackupCatalog> {
       .reverse()
       .slice(0, MAX_ENTRIES);
   } catch (err) {
-    logger.warn({ err, dir }, '[Backups] dossier illisible');
+    logger.warn({ err, dir }, '[Backups] unreadable folder');
     return { available: false, dir, entries: [] };
   }
 

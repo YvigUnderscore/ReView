@@ -50,7 +50,7 @@ export async function ensure(projectId: number, sequenceId: number | null) {
   } catch {
     // Two tabs open at the same time: the loser picks up the winner's timeline.
     const winner = await prisma.timeline.findFirst({ where: { projectId, sequenceId } });
-    if (!winner) throw badRequest('Montage indisponible', 'TIMELINE_UNAVAILABLE');
+    if (!winner) throw badRequest('Edit unavailable', 'TIMELINE_UNAVAILABLE');
     return winner;
   }
 }

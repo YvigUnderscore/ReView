@@ -367,7 +367,7 @@ export class ShotgridClient {
       if (options.maxRecords && out.length >= options.maxRecords) break;
       page += 1;
       if (page > 200) {
-        logger.warn({ entity, count: out.length }, 'Pagination ShotGrid interrompue au plafond');
+        logger.warn({ entity, count: out.length }, 'ShotGrid pagination stopped at the ceiling');
         break;
       }
     }

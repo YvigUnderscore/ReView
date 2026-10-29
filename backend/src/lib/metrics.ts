@@ -96,7 +96,7 @@ async function refreshQueueGauges(): Promise<void> {
 /** Starts the periodic refresh of the queue gauges (server only). */
 export function startQueueMetrics(): void {
   const tick = () =>
-    void refreshQueueGauges().catch((err) => logger.warn({ err }, '[metrics] files illisibles'));
+    void refreshQueueGauges().catch((err) => logger.warn({ err }, '[metrics] unreadable queues'));
   tick();
   setInterval(tick, 15_000).unref();
 }

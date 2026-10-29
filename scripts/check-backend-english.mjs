@@ -139,7 +139,7 @@ export function messagesOf(source) {
  * conclude.
  */
 const FRENCH_STRONG =
-  /\b(introuvables?|invalides?|réservée?s?|impossibles?|déjà|aucune?s?|inconnue?s?|échouée?s?|volumineux|volumineuses?|corbeilles?|séquences?|tâches?|fichiers?|attendue?s?|requise?s?|vides?|trop)\b/i;
+  /\b(introuvables?|invalides?|réservée?s?|impossibles?|déjà|aucune?s?|inconnue?s?|échouée?s?|volumineux|volumineuses?|corbeilles?|séquences?|tâches?|fichiers?|attendue?s?|requise?s?|vides?|trop|illisibles?|indisponibles?|interrompue?s?|imparfaite?s?|fermeture|plafond|planches?|attente)\b/i;
 
 /**
  * French function words. On their own they also turn up in technical English — "non-HTTP",
@@ -149,12 +149,17 @@ const FRENCH_STRONG =
 const FRENCH_WEAK =
   /\b(le|la|les|un|une|des|du|de|au|aux|ce|cet|cette|ces|est|sont|pas|non|pour|avec|sans|sur|dans|par|vers|votre|vos|ne|se|qui|que|encore|doit|doivent|peut|peuvent)\b/gi;
 
+/** Elided article or pronoun before a word: `d'une`, `l'entrée`, `n'est`, `qu'un`. */
+const FRENCH_ELISION = /\b(?:d|l|n|qu|j|s|c)['’][a-zàâäçéèêëîïôöùûü]/i;
+
 /** What the message contains regardless: accents typical of French. */
 const FRENCH_LETTERS = /[àâäçéèêëîïôöùûüœ]/i;
 
 /** Is this message written in French? */
 export function looksFrench(text) {
   const weak = new Set((text.match(FRENCH_WEAK) ?? []).map((w) => w.toLowerCase()));
+  // An elision (`d'une`, `l'archive`, `qu'il`) is a French function word of its own.
+  if (FRENCH_ELISION.test(text)) weak.add("'");
   return FRENCH_STRONG.test(text) || FRENCH_LETTERS.test(text) || weak.size >= 2;
 }
 

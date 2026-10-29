@@ -111,7 +111,7 @@ export async function closeWorkerEvents(): Promise<void> {
   await Promise.all(
     clients.map((c) =>
       c.quit().catch((err: unknown) => {
-        logger.warn({ err }, '[workerEvents] fermeture redis imparfaite');
+        logger.warn({ err }, '[workerEvents] unclean redis shutdown');
         c.disconnect();
       }),
     ),

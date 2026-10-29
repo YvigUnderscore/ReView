@@ -218,7 +218,7 @@ async function quit(client: Redis): Promise<void> {
   try {
     await client.quit();
   } catch (err) {
-    logger.warn({ err }, '[redis] fermeture imparfaite');
+    logger.warn({ err }, '[redis] unclean shutdown');
     client.disconnect();
   }
 }

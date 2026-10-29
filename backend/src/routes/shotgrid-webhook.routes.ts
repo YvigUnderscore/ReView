@@ -66,7 +66,7 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
   try {
     secret = webhookSecretOf(connection);
   } catch (err) {
-    logger.error({ err, connectionId: connection.id }, 'Webhook ShotGrid : secret illisible');
+    logger.error({ err, connectionId: connection.id }, 'ShotGrid webhook: unreadable secret');
     return res.status(404).json({ error: 'not_found' });
   }
   if (secret && !signatureMatches(secret, body, req.header('x-sg-signature') ?? undefined)) {

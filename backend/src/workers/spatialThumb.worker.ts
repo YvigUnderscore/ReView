@@ -94,7 +94,7 @@ export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbO
       const { size } = await stat(src);
       const read = await readSplatCloud(src, ext, size, SPLAT_THUMB_MAX_POINTS);
       if (!read.ok) {
-        logger.warn(`[spatialThumb.worker] splat ${mediaId} illisible (${read.reason})`);
+        logger.warn(`[spatialThumb.worker] splat ${mediaId} unreadable (${read.reason})`);
         return 'no-render';
       }
       const buf = renderPointCloudPng(read.cloud);
@@ -137,7 +137,7 @@ export const spatialThumbWorker = new Worker<SpatialThumbJobData, void, string>(
 
 spatialThumbWorker.on('failed', (job, err) =>
   err instanceof SpatialThumbPendingError
-    ? logger.debug(`[spatialThumb.worker] media=${job?.data.mediaObjectId} en attente du GLB`)
+    ? logger.debug(`[spatialThumb.worker] media=${job?.data.mediaObjectId} waiting for the GLB`)
     : logger.warn({ err }, `[spatialThumb.worker] ✗ media=${job?.data.mediaObjectId}`),
 );
 

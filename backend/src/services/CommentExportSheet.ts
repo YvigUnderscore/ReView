@@ -75,7 +75,7 @@ export function createSheetImages(): (clip: ClipContext, at: number | null) => P
       }
     } catch (err) {
       // A missing thumbnail must not sink the sheet: the note is output without an image.
-      logger.warn({ err, key }, 'Image de planche de notes illisible');
+      logger.warn({ err, key }, 'Notes sheet image unreadable');
     }
     cache.set(cacheKey, uri);
     return uri;

@@ -174,7 +174,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     ctx = await openConnection(projectId);
   } catch (err) {
     runningProjects.delete(projectId);
-    logger.warn({ projectId, err }, 'Connexion ShotGrid indisponible');
+    logger.warn({ projectId, err }, 'ShotGrid connection unavailable');
     throw err;
   }
 
