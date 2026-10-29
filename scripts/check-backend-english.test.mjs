@@ -103,6 +103,11 @@ describe('looksFrench', () => {
     expect(looksFrench('Path is too deep')).toBe(false);
   });
 
+  it('recognises plural forms of the strong words', () => {
+    expect(looksFrench('Scopes inconnus: read2')).toBe(true);
+    expect(looksFrench('Fichiers introuvables')).toBe(true);
+  });
+
   it('concludes on two French function words, even without accents', () => {
     expect(looksFrench('Le shot est dans la corbeille')).toBe(true);
   });

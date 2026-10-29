@@ -139,7 +139,7 @@ export function messagesOf(source) {
  * conclude.
  */
 const FRENCH_STRONG =
-  /\b(introuvable|invalide|réservé|réservée|impossible|déjà|aucun|aucune|inconnu|inconnue|échoué|échouée|volumineux|volumineuse|corbeille|séquence|tâche|fichier|attendu|attendue|requis|requise|vide|trop)\b/i;
+  /\b(introuvables?|invalides?|réservée?s?|impossibles?|déjà|aucune?s?|inconnue?s?|échouée?s?|volumineux|volumineuses?|corbeilles?|séquences?|tâches?|fichiers?|attendue?s?|requise?s?|vides?|trop)\b/i;
 
 /**
  * French function words. On their own they also turn up in technical English — "non-HTTP",
