@@ -89,7 +89,7 @@ def add_knobs(node):
 
 
 def _after_render():
-    """afterRender hook — silent unless the artist asked for the publish."""
+    """Run as Nuke's ``afterRender`` hook — silent unless the artist asked for the publish."""
     node = nuke.thisNode()
     knob = node.knob(AUTO_KNOB)
     if knob and knob.value():

@@ -72,6 +72,7 @@ workstation is not configured. `--json` prints the raw answer for a wrapper scri
 | Safety | writes are replayed **only** when they carry an `Idempotency-Key` (publish does) |
 | Idempotency | one key per publish, reused by both API calls — a replay never opens a second version |
 | Large files | hashing and uploading stream in 1 MB chunks; a 40 GB plate never sits in memory |
+| Downloads | retried like reads, written to a hidden `.part` file then renamed: never half a plate on disk |
 | Object storage | presigned URLs are opened **without** the `Authorization` header |
 | Errors | `ReviewApiError.code` is stable; `message` is human and may be localised — never branch on it |
 
@@ -84,6 +85,9 @@ suite must run inside a DCC interpreter, where installing `pytest` is not an opt
 cd clients/python
 python -m unittest discover -s . -t .
 ```
+
+`python -m pytest` runs the same suite where pytest is available, and `ruff check .` is
+the lint gate (its configuration lives in `pyproject.toml`; `clients/dcc/ruff.toml` extends it).
 
 No socket is opened: the tests inject a fake `urllib` opener (`tests/support.py`) and a
 fake clock, so retries and backoff are asserted without waiting.

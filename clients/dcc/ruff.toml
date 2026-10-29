@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Yvig Bidon
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# The DCC scripts follow the client's rules, with the two exceptions their hosts impose.
+extend = "../python/pyproject.toml"
+
+[lint.per-file-ignores]
+# Blender reads bl_info before the imports, and requires its CATEGORY_OT_name class names.
+"blender_review_publish.py" = ["E402", "N801"]
+
+[lint.isort]
+known-first-party = ["review"]
+known-third-party = ["bpy", "nuke"]

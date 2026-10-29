@@ -16,18 +16,18 @@ Standard library only: it runs from a Maya shelf, a Nuke callback, a Houdini ROP
 farm node without installing anything.
 """
 
-from .client import ReviewClient, RetryPolicy
+from .client import RetryPolicy, ReviewClient
 from .errors import ReviewApiError, ReviewConfigError, ReviewError, ReviewTransportError
 from .publish import PublishResult, publish_file, sha256_of
 
 __all__ = [
     "PublishResult",
+    "RetryPolicy",
     "ReviewApiError",
     "ReviewClient",
     "ReviewConfigError",
     "ReviewError",
     "ReviewTransportError",
-    "RetryPolicy",
     "publish_file",
     "sha256_of",
 ]

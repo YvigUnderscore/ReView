@@ -42,7 +42,7 @@ class FakeClient:
             media_id=128,
             media={"status": "PROCESSING"},
             version=VERSION,
-            published=not options.get("publish") is False,
+            published=options.get("publish") is not False,
             idempotency_key="key",
             created=["shot"],
         )
@@ -115,6 +115,17 @@ class Reads(unittest.TestCase):
             self.assertFalse(client.calls[0][2]["urls"])
             self.assertEqual(client.calls[1][0], "download")
 
+    def test_download_never_writes_outside_the_chosen_folder(self) -> None:
+        client = FakeClient()
+        hostile = dict(VERSION, media=[{"id": 128, "filename": "../../escape.mov"}])
+        client.latest = lambda path, **options: {"version": hostile}  # type: ignore[method-assign]
+        with tempfile.TemporaryDirectory() as root:
+            folder = os.path.join(root, "a", "b")
+            code, _out, _err, _client = run(["latest", "PROJ/SQ010/SH0100", "--download", folder], client)
+            self.assertEqual(code, 0)
+            self.assertTrue(os.path.exists(os.path.join(folder, "escape.mov")))
+            self.assertFalse(os.path.exists(os.path.join(root, "escape.mov")))
+
     def test_urls_are_only_requested_when_asked(self) -> None:
         _code, out, _err, _client = run(["--json", "latest", "PROJ/SQ010/SH0100", "--urls"])
         self.assertIn("https://minio/x", out)
@@ -137,7 +148,7 @@ class ConsoleEncoding(unittest.TestCase):
         encoding = "cp1252"
 
         def write(self, text: str) -> int:
-            text.encode(self.encoding)  # lève UnicodeEncodeError comme la vraie console
+            text.encode(self.encoding)  # raises UnicodeEncodeError like the real console
             return super().write(text)
 
     def test_replaces_what_the_console_cannot_spell(self) -> None:

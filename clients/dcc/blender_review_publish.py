@@ -44,12 +44,12 @@ def _rendered_movie(scene: "bpy.types.Scene") -> str:
 
 
 class REVIEW_OT_publish(bpy.types.Operator):
-    """Send the rendered movie to ReView"""
+    """Send the rendered movie to ReView."""
 
     bl_idname = "review.publish"
     bl_label = "Publish to ReView"
 
-    def execute(self, context):  # noqa: D102 - Blender's own contract
+    def execute(self, context):
         scene = context.scene
         pipeline_path = scene.review_path or _default_path()
         movie = bpy.path.abspath(scene.review_file) if scene.review_file else _rendered_movie(scene)
@@ -82,7 +82,7 @@ class REVIEW_PT_panel(bpy.types.Panel):
     bl_region_type = "WINDOW"
     bl_context = "output"
 
-    def draw(self, context):  # noqa: D102 - Blender's own contract
+    def draw(self, context):
         layout = self.layout
         scene = context.scene
         column = layout.column()

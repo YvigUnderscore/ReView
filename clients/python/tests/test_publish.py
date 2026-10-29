@@ -10,7 +10,7 @@ import os
 import tempfile
 import unittest
 
-from review import ReviewClient, publish_file, sha256_of
+from review import ReviewApiError, ReviewClient, publish_file, sha256_of
 from tests.support import FakeOpener, Recorder, http_error, json_response
 
 OPENED = {
@@ -50,7 +50,9 @@ class PublishFlow(unittest.TestCase):
         self.folder.cleanup()
 
     def test_opens_uploads_and_closes(self) -> None:
-        result = publish_file(self.client, "PROJ/SQ010/SH0100/anim", self.render, start_frame=1001, end_frame=1096)
+        result = publish_file(
+            self.client, "PROJ/SQ010/SH0100/anim", self.render, start_frame=1001, end_frame=1096
+        )
 
         self.assertEqual(self.opener.methods, ["POST", "PUT", "POST"])
         self.assertEqual(self.opener.urls[0], "https://review.test/api/v1/publish")
@@ -90,7 +92,9 @@ class PublishFlow(unittest.TestCase):
         self.assertNotIn("contentHash", self.opener.body_of(0))
 
     def test_holds_the_media_back_when_asked(self) -> None:
-        publish_file(self.client, "PROJ/SQ010/SH0100/anim", self.render, publish=False, submit_for_review=True)
+        publish_file(
+            self.client, "PROJ/SQ010/SH0100/anim", self.render, publish=False, submit_for_review=True
+        )
         self.assertEqual(self.opener.body_of(2), {"publish": False, "submitForReview": True})
 
     def test_passes_the_usd_selection_and_the_strict_path_flag(self) -> None:
@@ -109,8 +113,9 @@ class PublishFlow(unittest.TestCase):
 
     def test_a_refused_opening_never_uploads(self) -> None:
         self.opener.answers = [http_error(403, {"code": "PROJECT_QUOTA", "error": "quota"})]
-        with self.assertRaises(Exception):
+        with self.assertRaises(ReviewApiError) as caught:
             publish_file(self.client, "PROJ/SQ010/SH0100/anim", self.render)
+        self.assertEqual(caught.exception.code, "PROJECT_QUOTA")
         self.assertEqual(self.opener.methods, ["POST"])
 
 

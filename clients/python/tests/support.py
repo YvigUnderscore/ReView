@@ -19,14 +19,15 @@ from typing import Any
 class FakeResponse:
     """Minimal stand-in for an ``http.client.HTTPResponse``."""
 
-    def __init__(self, body: bytes = b"{}", status: int = 200) -> None:
+    def __init__(self, body: bytes = b"{}", status: int = 200, headers: dict[str, str] | None = None) -> None:
         self._stream = io.BytesIO(body)
         self.status = status
+        self.headers = headers or {}
 
     def read(self, size: int = -1) -> bytes:
         return self._stream.read() if size == -1 else self._stream.read(size)
 
-    def __enter__(self) -> "FakeResponse":
+    def __enter__(self) -> FakeResponse:
         return self
 
     def __exit__(self, *_exc: object) -> bool:
@@ -40,7 +41,10 @@ def json_response(payload: Any, status: int = 200) -> FakeResponse:
 def http_error(status: int, payload: Any = None, *, retry_after: str | None = None) -> urllib.error.HTTPError:
     """An error answer. ``payload`` may be a mapping (JSON) or raw bytes (HTML page…)."""
     headers = {"Retry-After": retry_after} if retry_after else {}
-    body = payload if isinstance(payload, bytes) else json.dumps(payload if payload is not None else {}).encode()
+    if isinstance(payload, bytes):
+        body = payload
+    else:
+        body = json.dumps(payload if payload is not None else {}).encode()
     return urllib.error.HTTPError("https://review.test", status, "boom", headers, io.BytesIO(body))
 
 
@@ -51,7 +55,7 @@ class FakeOpener:
         self.answers = list(answers)
         self.requests: list[Any] = []
 
-    def open(self, request: Any, timeout: float | None = None) -> Any:  # noqa: A003 - urllib's name
+    def open(self, request: Any, timeout: float | None = None) -> Any:
         self.requests.append(request)
         self.timeouts = getattr(self, "timeouts", [])
         self.timeouts.append(timeout)

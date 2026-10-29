@@ -18,7 +18,8 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from .client import ReviewClient
 from .errors import ReviewApiError, ReviewConfigError, ReviewError
@@ -79,8 +80,11 @@ def _latest(client: ReviewClient, args: argparse.Namespace) -> None:
     )
     version = answer["version"]
     if args.download:
+        os.makedirs(args.download, exist_ok=True)
         for media in version.get("media", []):
-            target = os.path.join(args.download, str(media["filename"]))
+            # The filename comes from the server: keep only its last component, so a name
+            # such as "../../.bashrc" cannot write outside the folder the artist chose.
+            target = os.path.join(args.download, os.path.basename(str(media["filename"])))
             client.download(int(media["id"]), target)
             _say(target)
         return
@@ -150,6 +154,9 @@ def main(argv: Sequence[str] | None = None, *, factory: Callable[..., ReviewClie
         return 1
     except ReviewError as exc:
         _say(str(exc), stream=sys.stderr)
+        return 1
+    except OSError as exc:  # local disk: missing folder, permissions, disk full
+        _say(f"{exc.__class__.__name__}: {exc}", stream=sys.stderr)
         return 1
     return 0
 

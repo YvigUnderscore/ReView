@@ -20,6 +20,8 @@ What it adds over a bare ``urlopen``:
 
 from __future__ import annotations
 
+import contextlib
+import http.client
 import json
 import os
 import random
@@ -27,8 +29,10 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, BinaryIO
 
 from .errors import ReviewApiError, ReviewConfigError, ReviewTransportError
 
@@ -40,6 +44,13 @@ CHUNK = 1 << 20
 
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 USER_AGENT = "review-python-client/1.0"
+
+_TRANSPORT_ERRORS = (urllib.error.URLError, http.client.HTTPException, OSError)
+"""What "nothing usable answered" looks like: DNS, TLS, reset, timeout, truncated body.
+
+``http.client.HTTPException`` is not an ``OSError``: without it, an ``IncompleteRead``
+would escape the retry loop as a raw standard-library exception.
+"""
 
 
 @dataclass(frozen=True)
@@ -149,7 +160,7 @@ class ReviewClient:
                 if not retryable or exc.code not in RETRYABLE_STATUS:
                     raise last from exc
                 wait = self.retry.delay(attempt, _retry_after(exc), self._rand)
-            except (urllib.error.URLError, OSError) as exc:
+            except _TRANSPORT_ERRORS as exc:
                 last = ReviewTransportError(f"{method} {url} failed: {exc}", url=url, cause=exc)
                 if not retryable:
                     raise last from exc
@@ -249,16 +260,94 @@ class ReviewClient:
     # ── object storage (presigned, unauthenticated) ─────────────────────────
 
     def download(self, media_id: int, destination: str, *, variant: str = "source") -> str:
-        """Fetch a media to ``destination``. Streams: a 40 GB plate never sits in memory."""
-        url = self.media_url(media_id, variant=variant)
+        """Fetch a media to ``destination``, atomically.
+
+        Streams in chunks — a 40 GB plate never sits in memory — into a hidden temporary
+        file next to ``destination``, then renames it into place. A reader therefore sees
+        either the previous file or the complete new one, never half a plate; a failed
+        attempt removes its temporary file.
+
+        Transient failures (429, 5xx, reset, timeout, truncated body) are retried with the
+        client's :class:`RetryPolicy`. Every attempt asks for a fresh presigned URL: after a
+        long stall, the previous signature may have expired.
+
+        Args:
+            media_id: Id of the media to fetch.
+            destination: Path of the file to write. Its folder must exist.
+            variant: ``source``, ``proxy`` or ``thumbnail``.
+
+        Returns:
+            ``destination``, once the file is complete.
+
+        Raises:
+            ReviewApiError: The API or the object storage refused the request.
+            ReviewTransportError: Nothing usable answered, after every retry.
+            OSError: The local file could not be written (disk full, permissions). Never
+                retried: trying again would not free the disk.
+        """
+        target = os.path.abspath(destination)
+        folder, name = os.path.split(target)
+        for attempt in range(1, self.retry.attempts + 1):
+            url = self.media_url(media_id, variant=variant)
+            try:
+                self._fetch_atomically(url, target, folder, name)
+            except _LocalWriteError as exc:
+                raise exc.error from None
+            except urllib.error.HTTPError as exc:
+                error = _api_error(exc, url)
+                if exc.code not in RETRYABLE_STATUS or attempt == self.retry.attempts:
+                    raise error from exc
+                wait = self.retry.delay(attempt, _retry_after(exc), self._rand)
+            except _TRANSPORT_ERRORS as exc:
+                if attempt == self.retry.attempts:
+                    raise ReviewTransportError(f"download failed: {exc}", url=url, cause=exc) from exc
+                wait = self.retry.delay(attempt, None, self._rand)
+            else:
+                return destination
+            self._sleep(wait)
+        raise ReviewTransportError("No attempt was made", url=self.base_url)
+
+    def _fetch_atomically(self, url: str, target: str, folder: str, name: str) -> None:
+        """One download attempt: stream to a sibling temporary file, then rename it."""
+        partial = os.path.join(folder, f".{name}.{uuid.uuid4().hex}.part")
+        # os.open with 0o666 lets the umask decide the final mode, as a plain open() would;
+        # mkstemp would leave the plate readable by its owner only.
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+        with _local_io():
+            out = os.fdopen(os.open(partial, flags, 0o666), "wb")
+        try:
+            self._stream(url, out)
+            with _local_io():
+                out.flush()
+                os.fsync(out.fileno())
+                out.close()
+                os.replace(partial, target)  # atomic on POSIX and on Windows (same volume)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                out.close()
+            with contextlib.suppress(OSError):
+                os.remove(partial)
+            raise
+
+    def _stream(self, url: str, out: BinaryIO) -> None:
+        """Copy a presigned URL into ``out``; a failed local write raises ``_LocalWriteError``.
+
+        No ``Authorization`` header: the URL carries its own signature, and object storage
+        refuses a request with two authentication mechanisms.
+        """
         request = urllib.request.Request(url, method="GET", headers={"User-Agent": USER_AGENT})
-        with self._opener.open(request, timeout=UPLOAD_TIMEOUT) as response, open(destination, "wb") as out:
+        received = 0
+        with self._opener.open(request, timeout=UPLOAD_TIMEOUT) as response:
+            expected = _content_length(response)
             while True:
                 chunk = response.read(CHUNK)
                 if not chunk:
                     break
-                out.write(chunk)
-        return destination
+                with _local_io():
+                    out.write(chunk)
+                received += len(chunk)
+        if expected is not None and received != expected:
+            raise http.client.IncompleteRead(b"", expected - received)
 
     def upload(self, url: str, filepath: str, content_type: str, *, size: int | None = None) -> None:
         """PUT a file straight to object storage — the API never sees the bytes.
@@ -279,7 +368,7 @@ class ReviewClient:
                 if exc.code not in RETRYABLE_STATUS or attempt == self.retry.attempts:
                     raise error from exc
                 self._sleep(self.retry.delay(attempt, _retry_after(exc), self._rand))
-            except (urllib.error.URLError, OSError) as exc:
+            except _TRANSPORT_ERRORS as exc:
                 if attempt == self.retry.attempts:
                     raise ReviewTransportError(f"upload failed: {exc}", url=url, cause=exc) from exc
                 self._sleep(self.retry.delay(attempt, None, self._rand))
@@ -298,7 +387,7 @@ def _retry_after(exc: urllib.error.HTTPError) -> float | None:
     try:
         return float(raw) if raw is not None else None
     except (TypeError, ValueError):
-        return None  # forme HTTP-date : on retombe sur le backoff exponentiel
+        return None  # HTTP-date form: fall back to the exponential backoff
 
 
 def _api_error(exc: urllib.error.HTTPError, url: str) -> ReviewApiError:
@@ -315,3 +404,29 @@ def _api_error(exc: urllib.error.HTTPError, url: str) -> ReviewApiError:
         url=url,
         payload=payload,
     )
+
+
+class _LocalWriteError(Exception):
+    """Carries an ``OSError`` raised by the *local* disk past the transport retry loop."""
+
+    def __init__(self, error: OSError) -> None:
+        super().__init__(str(error))
+        self.error = error
+
+
+@contextlib.contextmanager
+def _local_io() -> Iterator[None]:
+    """Tag ``OSError`` raised inside as local (disk), not network: it must not be retried."""
+    try:
+        yield
+    except OSError as exc:
+        raise _LocalWriteError(exc) from exc
+
+
+def _content_length(response: Any) -> int | None:
+    headers = getattr(response, "headers", None)
+    raw = headers.get("Content-Length") if headers is not None else None
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
