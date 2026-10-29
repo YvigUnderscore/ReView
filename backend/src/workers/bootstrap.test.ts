@@ -6,33 +6,27 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Contrôle statique : chaque démarreur déclaré dans `workers/` est effectivement appelé au
- * bootstrap du process worker.
+ * Static check: every starter declared in `workers/` is actually called at the bootstrap of the worker process.
  *
- * Deux files tournaient à vide en production — `spatial-thumb` et la cuisson OCIO : leur
- * `start…Worker()` existait, était exporté, et couvert par un test unitaire… mais n'était
- * appelé nulle part. Un test de fonction pure ne prouve pas le branchement ; celui-ci si.
+ * Two queues ran empty in production — `spatial-thumb` and the OCIO baking: their `start…Worker()` existed, was exported, and covered by a unit test... but was called nowhere.
+ * A pure-function test does not prove the wiring; this one does.
  *
- * Il lit le source plutôt que d'importer les modules : importer un worker ouvrirait une
- * connexion Redis, ce qu'un test unitaire ne doit pas faire.
+ * It reads the source rather than importing the modules: importing a worker would open a Redis connection, which a unit test must not do.
  */
 
 const WORKERS_DIR = path.join(__dirname);
 const BOOTSTRAP = path.join(WORKERS_DIR, 'ffmpeg.worker.ts');
 
 /**
- * Motif de déclaration d'un démarreur.
+ * Pattern of a starter declaration.
  *
- * Il exigeait « Worker » juste avant la parenthèse. `startWorkerMetricsServer` — le point de
- * collecte que Prometheus scrute sur `worker:9101` — porte le mot au milieu du nom : il
- * passait donc à travers le contrôle, exporté, documenté, couvert par son propre test
- * unitaire… et appelé nulle part, si bien que les trois panneaux Grafana du worker sont
- * vides depuis leur création. Un contrôle qui rate le cas qu'il existe pour attraper est
- * pire qu'aucun contrôle : « Server » compte désormais autant que « Worker ».
+ * It required "Worker" right before the parenthesis. `startWorkerMetricsServer` — the collection point that Prometheus scrapes on `worker:9101` — carries the word in the
+ * middle of its name: it therefore passed through the check, exported, documented, covered by its own unit test... and called nowhere, so the three Grafana panels of the worker
+ * have been empty since their creation. A check that misses the very case it exists to catch is worse than no check: "Server" now counts as much as "Worker".
  */
 const STARTER_DECLARATION = /export function (start\w*(?:Worker|Server))\s*\(/g;
 
-/** Tous les `.ts` de `workers/`, sous-dossiers compris, hors tests. */
+/** All the `.ts` files of `workers/`, subfolders included, excluding tests. */
 function workerSources(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
@@ -43,7 +37,7 @@ function workerSources(dir: string): string[] {
   return out;
 }
 
-describe('bootstrap du process worker', () => {
+describe('worker process bootstrap', () => {
   const bootstrap = readFileSync(BOOTSTRAP, 'utf8');
 
   const declared = workerSources(WORKERS_DIR).flatMap((file) => {
@@ -53,13 +47,13 @@ describe('bootstrap du process worker', () => {
     );
   });
 
-  it('déclare au moins les sept consommateurs connus et le point de collecte', () => {
+  it('declares at least the seven known consumers and the collection point', () => {
     expect(declared.length).toBeGreaterThanOrEqual(8);
   });
 
   for (const { name, file } of declared) {
-    it(`${name} (${file}) est appelé par ffmpeg.worker.ts`, () => {
-      // Appel réel, pas une simple mention en commentaire.
+    it(`${name} (${file}) is called by ffmpeg.worker.ts`, () => {
+            // A real call, not a mere mention in a comment.
       expect(
         bootstrap,
         `${name} est exporté mais jamais démarré — ajouter un appel \`${name}(…);\` dans le bloc \`require.main === module\` de ffmpeg.worker.ts`,

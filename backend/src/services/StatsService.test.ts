@@ -24,7 +24,7 @@ import { prisma } from '../lib/prisma';
 
 const d = (iso: string) => new Date(iso);
 
-/** Une ligne d'agrégat de plan, tout à zéro sauf ce que le cas de test précise. */
+/** A shot aggregate row, all zeros except what the test case specifies. */
 const agg = (over: Partial<ShotAggregateRow> & Pick<ShotAggregateRow, 'shotId'>): ShotAggregateRow => ({
   code: `SH${String(over.shotId).padStart(3, '0')}`,
   name: 'plan',
@@ -41,16 +41,16 @@ const agg = (over: Partial<ShotAggregateRow> & Pick<ShotAggregateRow, 'shotId'>)
   ...over,
 });
 
-describe('StatsService — daysBetween', () => {
-  it('arrondit à l’entier et borne à 0', () => {
+describe('StatsService: daysBetween', () => {
+  it('rounds to an integer and floors at 0', () => {
     expect(daysBetween(d('2026-07-01T00:00:00Z'), d('2026-07-04T00:00:00Z'))).toBe(3);
     expect(daysBetween(d('2026-07-04T00:00:00Z'), d('2026-07-01T00:00:00Z'))).toBe(0);
   });
 });
 
-describe('StatsService — computeShotStats', () => {
-  // Mêmes plans qu'avant le passage aux agrégats SQL, comptés par la base :
-  // SH010 → 2 versions (la dernière approuvée), 1 retake, 1 note ouverte, approuvé le 06.
+describe('StatsService: computeShotStats', () => {
+    // Same shots as before the move to SQL aggregates, counted by the database:
+    // SH010 -> 2 versions (the last one approved), 1 retake, 1 open note, approved on the 6th.
   const stats = computeShotStats([
     agg({
       shotId: 1,
@@ -79,17 +79,17 @@ describe('StatsService — computeShotStats', () => {
     agg({ shotId: 3, code: 'SH030', name: 'plan C' }),
   ]);
 
-  it('calcule statut, versions, retakes, notes ouvertes et délai', () => {
+  it('computes status, versions, retakes, open notes and delay', () => {
     const sh1 = stats.find((s) => s.shotId === 1)!;
     expect(sh1.status).toBe('approved');
     expect(sh1.versions).toBe(2);
     expect(sh1.retakes).toBe(1);
     expect(sh1.openNotes).toBe(1);
-    // 1ʳᵉ version 2026-07-01 → 1ʳᵉ approbation 2026-07-06 = 5 jours.
+        // 1st version 2026-07-01 -> 1st approval 2026-07-06 = 5 days.
     expect(sh1.reviewDays).toBe(5);
   });
 
-  it('marque en review sans approbation et sans version', () => {
+  it('marks in review without approval and without a version', () => {
     expect(stats.find((s) => s.shotId === 2)!.status).toBe('inReview');
     expect(stats.find((s) => s.shotId === 2)!.reviewDays).toBeNull();
     const sh3 = stats.find((s) => s.shotId === 3)!;
@@ -97,14 +97,14 @@ describe('StatsService — computeShotStats', () => {
     expect(sh3.versions).toBe(0);
   });
 
-  it('marque « retake » quand la dernière version est à refaire', () => {
+  it('marks "retake" when the last version must be redone', () => {
     const [only] = computeShotStats([agg({ shotId: 4, versions: 3, lastIsRetake: true })]);
     expect(only!.status).toBe('retake');
   });
 });
 
-describe('StatsService — convergence par séquence', () => {
-  it('groupe par séquence, ajoute le groupe hors séquence et omet les vides', () => {
+describe('StatsService: convergence per sequence', () => {
+  it('groups by sequence, adds the out-of-sequence group and omits empty ones', () => {
     const sequences: SequenceRow[] = [
       { id: 10, code: 'SQ010', name: 'ouverture' },
       { id: 20, code: 'SQ020', name: 'vide' },
@@ -115,8 +115,8 @@ describe('StatsService — convergence par séquence', () => {
       agg({ shotId: 3, sequenceId: null }),
     ]);
     const conv = computeSequenceConvergence(sequences, shotStats);
-    // Le groupe hors séquence sort SANS libellé : le serveur ne nomme rien, il se
-    // contente d'un `sequenceId` nul — « Sans séquence » était du français en dur.
+        // The out-of-sequence group comes out WITHOUT a label: the server names nothing, it only
+        // uses a null `sequenceId` ("No sequence" was hard-coded French).
     expect(conv.map((c) => c.code)).toEqual(['SQ010', '']);
     expect(conv.find((c) => c.sequenceId === null)!.name).toBe('');
     const sq010 = conv.find((c) => c.sequenceId === 10)!;
@@ -125,7 +125,7 @@ describe('StatsService — convergence par séquence', () => {
   });
 });
 
-describe('StatsService — totaux & classement', () => {
+describe('StatsService: totals & ranking', () => {
   const shotStats = computeShotStats([
     agg({
       shotId: 1,
@@ -149,27 +149,25 @@ describe('StatsService — totaux & classement', () => {
     agg({ shotId: 3, sequenceId: 10 }),
   ]);
 
-  it('taux d’approbation sur les shots démarrés, moyennes et notes ouvertes', () => {
+  it('approval rate over started shots, averages and open notes', () => {
     const totals = computeTotals(shotStats, 2, 2, 1);
     expect(totals.shots).toBe(3);
-    // 2 shots démarrés (1 & 2), 1 approuvé → 50 %.
+        // 2 shots started (1 & 2), 1 approved -> 50%.
     expect(totals.approvalRate).toBe(50);
     expect(totals.openNotes).toBe(1);
     expect(totals.avgNotesPerVersion).toBe(0.5);
     expect(totals.avgReviewDays).toBe(2); // shot 1 : 2 jours
   });
 
-  it('classe les shots par délai puis retakes', () => {
+  it('ranks shots by delay, then retakes', () => {
     const ranked = rankSlowestShots(shotStats);
-    // shot 1 (2 j) devant shot 2 (retake, notes) ; shot 3 (rien) exclu.
+        // shot 1 (2 days) ahead of shot 2 (retake, notes); shot 3 (nothing) excluded.
     expect(ranked.map((s) => s.shotId)).toEqual([1, 2]);
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Équivalence : la version d'origine, qui comptait tout en mémoire, sert d'oracle.
-// Les chiffres affichés doivent être identiques ligne à ligne.
-// ─────────────────────────────────────────────────────────────────────────────
+// Equivalence: the original version, which counted everything in memory, serves as the oracle.
+// The displayed figures must be identical line by line.
 
 interface RawShot {
   id: number;
@@ -189,7 +187,7 @@ interface RawNote {
   isResolved: boolean;
 }
 
-/** Implémentation historique, reprise telle quelle : l'oracle du refactoring. */
+/** Historical implementation, kept as is: the oracle of the refactoring. */
 function legacyShotStats(
   shots: RawShot[],
   versions: RawVersion[],
@@ -228,7 +226,7 @@ function legacyShotStats(
   });
 }
 
-/** Ce que la requête d'agrégation rend, calculé ici en TypeScript sur les mêmes données. */
+/** What the aggregation query returns, computed here in TypeScript on the same data. */
 function aggregatesFromRaw(
   shots: RawShot[],
   versions: RawVersion[],
@@ -264,20 +262,20 @@ function aggregatesFromRaw(
   });
 }
 
-describe('StatsService — équivalence avec le calcul en mémoire d’origine', () => {
+describe('StatsService: equivalence with the original in-memory computation', () => {
   const shots: RawShot[] = Array.from({ length: 12 }, (_, i) => ({
     id: i + 1,
     code: `SH${String((i + 1) * 10).padStart(3, '0')}`,
     name: `plan ${i + 1}`,
     sequenceId: i % 3 === 2 ? null : 10 + (i % 2),
   }));
-  // Jeu volontairement biscornu : plans sans version, retakes multiples, approbation
-  // avant retake, notes résolues et ouvertes, versions du même jour.
+    // Deliberately tangled dataset: shots without versions, multiple retakes, approval before
+    // retake, resolved and open notes, versions on the same day.
   const versions: RawVersion[] = [];
   const decisions: RawDecision[] = [];
   const notes: RawNote[] = [];
   for (const shot of shots) {
-    const n = shot.id % 4; // 0 à 3 versions
+    const n = shot.id % 4; // 0 to 3 versions
     for (let k = 0; k < n; k++) {
       versions.push({
         shotId: shot.id,
@@ -299,11 +297,11 @@ describe('StatsService — équivalence avec le calcul en mémoire d’origine',
 
   const rows = aggregatesFromRaw(shots, versions, decisions, notes);
 
-  it('rend exactement les mêmes lignes par plan', () => {
+  it('returns exactly the same rows per shot', () => {
     expect(computeShotStats(rows)).toEqual(legacyShotStats(shots, versions, decisions, notes));
   });
 
-  it('rend exactement les mêmes totaux, convergences et classement', () => {
+  it('returns exactly the same totals, convergences and ranking', () => {
     const sequences: SequenceRow[] = [
       { id: 10, code: 'SQ010', name: 'a' },
       { id: 11, code: 'SQ020', name: 'b' },
@@ -319,7 +317,7 @@ describe('StatsService — équivalence avec le calcul en mémoire d’origine',
     expect(rankSlowestShots(actual)).toEqual(rankSlowestShots(oracle));
   });
 
-  it('les totaux se déduisent des lignes agrégées, sans recompter les entités', () => {
+  it('totals are derived from the aggregated rows, without recounting entities', () => {
     const sum = (pick: (r: ShotAggregateRow) => number) => rows.reduce((n, r) => n + pick(r), 0);
     expect(sum((r) => r.versions)).toBe(versions.length);
     expect(sum((r) => r.decisions)).toBe(decisions.length);
@@ -327,10 +325,10 @@ describe('StatsService — équivalence avec le calcul en mémoire d’origine',
   });
 });
 
-describe('StatsService — getProjectStats', () => {
+describe('StatsService: getProjectStats', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('ne pose que deux requêtes : l’agrégat des plans et la liste des séquences', async () => {
+  it('issues only two queries: the shot aggregate and the sequence list', async () => {
     vi.mocked(prisma.$queryRaw).mockResolvedValue([
       agg({
         shotId: 1,
@@ -366,7 +364,7 @@ describe('StatsService — getProjectStats', () => {
       avgRetakesPerShot: 0.5,
       avgReviewRoundsPerShot: 1.5,
       avgNotesPerVersion: 2,
-      // Le seul plan approuvé a coûté un retake : aucun n'est passé du premier coup.
+            // The only approved shot cost a retake: none passed on the first try.
       firstTimeRightRate: 0,
     });
     expect(stats.sequences).toEqual([
@@ -384,22 +382,22 @@ describe('StatsService — getProjectStats', () => {
     expect(stats.slowestShots.map((s) => s.shotId)).toEqual([1]);
   });
 
-  it('borne l’agrégat au projet demandé (paramètre substitué, jamais concaténé)', async () => {
+  it('bounds the aggregate to the requested project (parameter substituted, never concatenated)', async () => {
     vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([] as never);
     await getProjectStats(42);
     const call = vi.mocked(prisma.$queryRaw).mock.calls[0]!;
-    // Appel en template balisé : [strings, ...valeurs] — l'id voyage en paramètre.
+        // Tagged template call: [strings, ...values]; the id travels as a parameter.
     expect(call.slice(1)).toContain(42);
     expect(vi.mocked(prisma.sequence.findMany).mock.calls[0]![0]!.where).toEqual({
       projectId: 42,
       deletedAt: null,
-      // Une séquence masquée ne compte pas dans les statistiques du projet.
+            // A hidden sequence does not count in the project's statistics.
       hiddenAt: null,
     });
   });
 
-  it('rend des totaux neutres sur un projet vide', async () => {
+  it('returns neutral totals for an empty project', async () => {
     vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([] as never);
     const stats = await getProjectStats(1);
@@ -418,8 +416,8 @@ describe('StatsService — getProjectStats', () => {
     expect(stats.sequences).toEqual([]);
     expect(stats.slowestShots).toEqual([]);
     expect(stats.mostRetakenShots).toEqual([]);
-    // Les barres restent, toutes à zéro : un histogramme vide ne se distingue pas d'un
-    // histogramme absent, et l'écran n'a alors rien à dessiner.
+        // The bars remain, all at zero: an empty histogram is indistinguishable from a missing one,
+        // and the screen then has nothing to draw.
     expect(stats.retakeBuckets).toEqual([
       { min: 0, max: 0, shots: 0 },
       { min: 1, max: 1, shots: 0 },
@@ -429,12 +427,10 @@ describe('StatsService — getProjectStats', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Panneau « retakes & tours de review » (Phase 50, lot 2)
-// ─────────────────────────────────────────────────────────────────────────────
+// Panel "retakes & review rounds" (Phase 50, batch 2)
 
-describe('StatsService — retakes & tours de review', () => {
-  /** Quatre plans livrés, du meilleur au pire, et un jamais livré. */
+describe('StatsService: retakes & review rounds', () => {
+    /** Four delivered shots, from best to worst, and one never delivered. */
   const shotStats = computeShotStats([
     agg({ shotId: 1, versions: 1, lastIsApproval: true, decisions: 1, retakes: 0 }),
     agg({ shotId: 2, versions: 2, lastIsApproval: true, decisions: 2, retakes: 1 }),
@@ -443,13 +439,13 @@ describe('StatsService — retakes & tours de review', () => {
     agg({ shotId: 5 }),
   ]);
 
-  it('compte les tours de review par plan — un verdict, un tour', () => {
+  it('counts review rounds per shot: one verdict, one round', () => {
     expect(shotStats.map((s) => s.reviewRounds)).toEqual([1, 2, 3, 6, 0]);
   });
 
-  it('distribue les retakes en barres, plans jamais livrés exclus', () => {
-    // Le plan 5 n'a rien coûté faute d'avoir été livré : le compter en « 0 retake »
-    // flatterait la production d'autant de plans qu'elle n'a pas commencés.
+  it('distributes retakes into bars, never-delivered shots excluded', () => {
+        // Shot 5 cost nothing because it was never delivered: counting it as "0 retakes" would flatter
+        // production by as many shots as it has not started.
     expect(computeRetakeBuckets(shotStats)).toEqual([
       { min: 0, max: 0, shots: 1 },
       { min: 1, max: 1, shots: 1 },
@@ -458,22 +454,22 @@ describe('StatsService — retakes & tours de review', () => {
     ]);
   });
 
-  it('classe les plans les plus repris, et ignore ceux qui n’ont jamais été reprise', () => {
+  it('ranks the most retaken shots, and ignores those never retaken', () => {
     expect(rankMostRetakenShots(shotStats).map((s) => s.shotId)).toEqual([4, 3, 2]);
   });
 
-  it('respecte le plafond du classement', () => {
+  it('respects the ranking cap', () => {
     expect(rankMostRetakenShots(shotStats, 2).map((s) => s.shotId)).toEqual([4, 3]);
   });
 
-  it('taux du premier coup : rapporté aux plans APPROUVÉS, pas à tous', () => {
-    // Trois approuvés (1, 2, 3), un seul sans retake → 33 %. Le plan 4, encore en retake,
-    // n'a pas fini de consommer ses tours : l'inclure ferait baisser le taux avec le temps.
+  it('first-time rate: relative to APPROVED shots, not all of them', () => {
+        // Three approved (1, 2, 3), only one without a retake -> 33%. Shot 4, still in retake, has not
+        // finished consuming its rounds: including it would make the rate fall over time.
     expect(computeTotals(shotStats, 12, 12, 5).firstTimeRightRate).toBe(33);
   });
 
-  it('moyenne les tours sur TOUS les plans, y compris ceux à zéro', () => {
-    // 1 + 2 + 3 + 6 + 0 = 12 sur 5 plans.
+  it('averages rounds over ALL shots, including those at zero', () => {
+        // 1 + 2 + 3 + 6 + 0 = 12 over 5 shots.
     expect(computeTotals(shotStats, 12, 12, 5).avgReviewRoundsPerShot).toBe(2.4);
   });
 });

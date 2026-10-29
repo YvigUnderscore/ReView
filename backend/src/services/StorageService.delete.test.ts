@@ -4,8 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Faux client S3 : on compte les commandes envoyées et on relit leur `input`. La
- * suppression multiple se juge au NOMBRE d'allers-retours, pas au chronomètre.
+ * Fake S3 client: we count the commands sent and re-read their `input`. A bulk delete is judged by the
+ * NUMBER of round trips, not by a stopwatch.
  */
 const { send, signed } = vi.hoisted(() => ({ send: vi.fn(), signed: vi.fn() }));
 
@@ -61,8 +61,8 @@ beforeEach(() => {
   signed.mockResolvedValue('https://signed.example/x');
 });
 
-describe('StorageService.deleteObjects — un appel pour mille clés', () => {
-  it('400 clés : UN seul aller-retour, dans l’ordre reçu', async () => {
+describe('StorageService.deleteObjects: one call for a thousand keys', () => {
+  it('400 keys: ONE single round trip, in the order received', async () => {
     const keys = Array.from({ length: 400 }, (_, index) => `derived/${index}/proxy.mp4`);
 
     await expect(storage.deleteObjects(keys)).resolves.toEqual([]);
@@ -73,7 +73,7 @@ describe('StorageService.deleteObjects — un appel pour mille clés', () => {
     expect(first!.Delete.Objects.map((o) => o.Key)).toEqual(keys);
   });
 
-  it('découpe au plafond du protocole (1 000 clés par commande)', async () => {
+  it('splits at the protocol cap (1,000 keys per command)', async () => {
     const keys = Array.from({ length: DELETE_OBJECTS_BATCH + 1 }, (_, index) => `k/${index}`);
 
     await storage.deleteObjects(keys);
@@ -90,27 +90,27 @@ describe('StorageService.deleteObjects — un appel pour mille clés', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  /**
-   * Une suppression partielle est un fait normal côté S3 : elle revient dans `Errors`, pas
-   * en exception. L'appelant a besoin de la liste EXACTE pour n'enfiler que ces clés-là.
-   */
-  it('rend les clés refusées par le stockage, sans lever', async () => {
+    /**
+     * A partial deletion is a normal event on the S3 side: it comes back in `Errors`, not as an exception.
+     * The caller needs the EXACT list in order to re-queue only those keys.
+     */
+  it('returns the keys refused by the storage, without throwing', async () => {
     send.mockResolvedValue({ Errors: [{ Key: 'k/2', Code: 'AccessDenied' }, { Code: 'NoKey' }] });
 
     await expect(storage.deleteObjects(['k/1', 'k/2'])).resolves.toEqual(['k/2']);
   });
 
-  it('propage une panne de transport, comme deleteObject', async () => {
+  it('propagates a transport failure, like deleteObject', async () => {
     send.mockRejectedValue(new Error('MinIO down'));
     await expect(storage.deleteObjects(['k/1'])).rejects.toThrow('MinIO down');
   });
 
-  /**
-   * Les URL présignées sont mémorisées par tranche de dix minutes. Une clé supprimée doit
-   * sortir du cache, sinon une clé réécrite plus tard resservirait l'ancienne signature.
-   * Le balayage est GROUPÉ : une passe pour tout le lot, pas une passe par clé.
-   */
-  it('oublie les URL présignées des clés supprimées', async () => {
+    /**
+     * Presigned URLs are memoized per ten-minute slice. A deleted key must leave the cache, otherwise a key
+     * rewritten later would serve the old signature again. The sweep is GROUPED: one pass for the whole batch,
+     * not one pass per key.
+     */
+  it('forgets the presigned URLs of deleted keys', async () => {
     signed.mockResolvedValueOnce('https://signed.example/avant');
     const before = await storage.getPresignedGetUrl('derived/9/thumbnail.webp');
     expect(before).toBe('https://signed.example/avant');

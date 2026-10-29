@@ -16,7 +16,7 @@ import { decodeCursor, encodeCursor } from '../lib/pagination';
 
 const page = { page: 1, pageSize: 100, order: 'desc' as const };
 
-/** Une ligne de tâche telle que `listForBoard` la projette. */
+/** A task row as `listForBoard` projects it. */
 const row = (id: number, order = 0) => ({
   id,
   order,
@@ -43,17 +43,17 @@ beforeEach(() => {
   db.task.count.mockResolvedValue(0);
 });
 
-describe('TaskService.list (tâches d’un plan)', () => {
-  it('départage le tri par id', async () => {
-    // Les tâches d'un plan importé partagent toutes order = 0 : sans départage, deux
-    // pages successives se recouvrent.
+describe('TaskService.list (tasks of a shot)', () => {
+  it('breaks sort ties by id', async () => {
+        // Tasks of an imported shot all share order = 0: without a tie-break, two successive
+        // pages overlap.
     await list(page, 12);
     expect(db.task.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: [{ order: 'asc' }, { id: 'asc' }] }),
     );
   });
 
-  it('reprend après le curseur sans cumuler le décalage', async () => {
+  it('resumes after the cursor without accumulating the offset', async () => {
     await list({ ...page, page: 5, cursor: encodeCursor(2, 40) }, 12);
     const args = db.task.findMany.mock.calls[0]![0] as { skip: number; where: { AND: unknown[] } };
     expect(args.skip).toBe(0);
@@ -62,7 +62,7 @@ describe('TaskService.list (tâches d’un plan)', () => {
     ]);
   });
 
-  it('rend le curseur de la dernière ligne sur une page pleine', async () => {
+  it('returns the cursor of the last row on a full page', async () => {
     db.task.findMany.mockResolvedValue([row(1), row(2, 3)]);
     db.task.count.mockResolvedValue(9000);
     const res = await list({ ...page, pageSize: 2 }, 12);
@@ -71,10 +71,10 @@ describe('TaskService.list (tâches d’un plan)', () => {
   });
 });
 
-describe('TaskService.listForProject (destinations d’upload)', () => {
-  it('borne par défaut et dit ce qui n’a pas été servi', async () => {
-    // La liste coupait à 500 sans rien renvoyer qui permette de le savoir : à dix mille
-    // tâches, l'écran en montrait cinq cents et se taisait.
+describe('TaskService.listForProject (upload destinations)', () => {
+  it('caps by default and says what was not served', async () => {
+        // The list was cut at 500 without returning anything that let the caller know: at ten thousand
+        // tasks, the screen showed five hundred and said nothing.
     db.task.findMany.mockResolvedValue(new Array(500).fill(null).map((_, i) => row(i + 1)));
     db.task.count.mockResolvedValue(10000);
     const res = await listForProject(7);
@@ -84,7 +84,7 @@ describe('TaskService.listForProject (destinations d’upload)', () => {
     expect(res.nextCursor).not.toBeNull();
   });
 
-  it('ne se déclare pas tronquée quand tout tient', async () => {
+  it('does not declare itself truncated when everything fits', async () => {
     db.task.findMany.mockResolvedValue([row(1), row(2)]);
     db.task.count.mockResolvedValue(2);
     const res = await listForProject(7);
@@ -92,13 +92,13 @@ describe('TaskService.listForProject (destinations d’upload)', () => {
     expect(res.nextCursor).toBeNull();
   });
 
-  it('compte le projet entier, pas la page', async () => {
+  it('counts the whole project, not the page', async () => {
     await listForProject(7, { ...page, pageSize: 50, cursor: encodeCursor(0, 3) });
     expect(db.task.count).toHaveBeenCalledWith({ where: projectWhere });
     expect(db.task.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 50 }));
   });
 
-  it('conserve la forme de ligne attendue par l’écran d’upload', async () => {
+  it('keeps the row shape expected by the upload screen', async () => {
     db.task.findMany.mockResolvedValue([{ ...row(1), _count: { versions: 4 } }]);
     db.task.count.mockResolvedValue(1);
     const { items } = await listForProject(7);
@@ -115,9 +115,9 @@ describe('TaskService.listForProject (destinations d’upload)', () => {
 });
 
 describe('TaskService.listForBoard (kanban)', () => {
-  it('n’écrase pas le OR shot/asset avec la condition de curseur', async () => {
-    // Étaler le curseur à la racine du `where` supprimerait le filtre de projet : le
-    // kanban afficherait les tâches de tout le studio.
+  it('does not overwrite the shot/asset OR with the cursor condition', async () => {
+        // Spreading the cursor at the root of the `where` would drop the project filter: the kanban
+        // would show the tasks of the whole studio.
     await listForBoard(7, 2000, encodeCursor(0, 55));
     const args = db.task.findMany.mock.calls[0]![0] as { where: { OR: unknown[]; AND: unknown[] } };
     expect(args.where.OR).toEqual(projectWhere.OR);
@@ -126,14 +126,14 @@ describe('TaskService.listForBoard (kanban)', () => {
     ]);
   });
 
-  it('départage le tri par id', async () => {
+  it('breaks sort ties by id', async () => {
     await listForBoard(7);
     expect(db.task.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: [{ order: 'asc' }, { name: 'asc' }, { id: 'asc' }] }),
     );
   });
 
-  it('garde le sens historique de `truncated` sans curseur', async () => {
+  it('keeps the historical meaning of `truncated` without a cursor', async () => {
     db.task.findMany.mockResolvedValue([row(1), row(2)]);
     db.task.count.mockResolvedValue(2);
     expect((await listForBoard(7)).truncated).toBe(false);
@@ -141,7 +141,7 @@ describe('TaskService.listForBoard (kanban)', () => {
     expect((await listForBoard(7)).truncated).toBe(true);
   });
 
-  it('avec un curseur, `truncated` répond « reste-t-il une page »', async () => {
+  it('with a cursor, `truncated` answers "is there another page left?"', async () => {
     db.task.findMany.mockResolvedValue([row(1), row(2)]);
     db.task.count.mockResolvedValue(4000);
     const res = await listForBoard(7, 2, encodeCursor(0, 1));
@@ -149,7 +149,7 @@ describe('TaskService.listForBoard (kanban)', () => {
     expect(decodeCursor(res.nextCursor ?? undefined)).toEqual({ value: 0, id: 2 });
   });
 
-  it('écarte toujours les tâches dont le parent est en corbeille', async () => {
+  it('always excludes tasks whose parent is in the trash', async () => {
     db.task.findMany.mockResolvedValue([row(1), { ...row(2), shot: null, asset: null }]);
     db.task.count.mockResolvedValue(2);
     const { items } = await listForBoard(7);

@@ -4,8 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Rattachement d'une séquence à un épisode au moment de sa création en lot. Le niveau
- * est facultatif : sans épisode, la création doit rester exactement celle d'avant.
+ * Attaches a sequence to an episode when it is created in bulk. The level is optional: without an
+ * episode, creation must stay exactly as before.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 describe('SequenceService.createBulk', () => {
-  it('crée hors épisode quand aucun n’est donné — le cas du long-métrage', async () => {
+  it('creates outside an episode when none is given: the feature-film case', async () => {
     await createBulk(7, [{ name: 'SQ010', code: 'SQ010' }]);
     expect(db.episode.count).not.toHaveBeenCalled();
     expect(db.sequence.create).toHaveBeenCalledWith({
@@ -43,8 +43,8 @@ describe('SequenceService.createBulk', () => {
     });
   });
 
-  it('refuse un épisode emprunté à un autre projet — rien n’est créé', async () => {
-    // Le rattachement ne se voit depuis aucune des deux pages : il faut le refuser avant.
+  it('refuses an episode borrowed from another project: nothing is created', async () => {
+        // The attachment is visible from neither page: it must be refused up front.
     db.episode.count.mockResolvedValue(0);
     await expect(createBulk(7, [{ name: 'SQ010', code: 'SQ010', episodeId: 42 }])).rejects.toMatchObject({
       code: 'BAD_EPISODE',
@@ -52,7 +52,7 @@ describe('SequenceService.createBulk', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it('ne vérifie chaque épisode qu’une fois, quel que soit le nombre de séquences', async () => {
+  it('checks each episode only once, whatever the number of sequences', async () => {
     db.episode.count.mockResolvedValue(1);
     await createBulk(7, [
       { name: 'SQ010', code: 'SQ010', episodeId: 4 },
@@ -75,19 +75,19 @@ describe('SequenceService.getDetail', () => {
     project: { episodesEnabled },
   });
 
-  it('rend l’épisode quand le niveau est activé', async () => {
+  it('returns the episode when the level is enabled', async () => {
     db.sequence.findUnique.mockResolvedValue(sequence(true));
     await expect(getDetail(3)).resolves.toMatchObject({ episode: { code: 'EP101' } });
   });
 
-  it('le tait quand le niveau est éteint — le rattachement survit, la trace non', async () => {
-    // Éteindre ne détruit rien : `episodeId` reste en base. Mais l'écran d'un projet qui
-    // ne connaît pas le niveau ne doit pas se mettre à afficher un lien vers un épisode.
+  it('hides it when the level is off: the attachment survives, the trace does not', async () => {
+        // Switching the level off destroys nothing: `episodeId` stays in the database. But the screen of a
+        // project that does not know the level must not start showing a link to an episode.
     db.sequence.findUnique.mockResolvedValue(sequence(false));
     await expect(getDetail(3)).resolves.toMatchObject({ episode: null });
   });
 
-  it('ne laisse pas fuir le réglage du projet dans la réponse', async () => {
+  it('does not leak the project setting into the response', async () => {
     db.sequence.findUnique.mockResolvedValue(sequence(false));
     expect(await getDetail(3)).not.toHaveProperty('project');
   });

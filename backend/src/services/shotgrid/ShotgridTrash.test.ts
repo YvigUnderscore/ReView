@@ -48,13 +48,13 @@ beforeEach(() => {
   logs.length = 0;
   db.shot.update.mockResolvedValue({});
   db.task.delete.mockResolvedValue({});
-  // Par défaut la cible existe : c'est le cas courant.
+    // By default the target exists: this is the common case.
   for (const t of [db.shot, db.sequence, db.asset, db.task])
     t.findUnique.mockImplementation(async (a: { where: { id: number } }) => ({ id: a.where.id }));
 });
 
 describe('trashRemoved', () => {
-  it('met à la corbeille ce que le site ne renvoie plus', async () => {
+  it('puts into the trash what the site no longer returns', async () => {
     linkMap.mapSgToLocal.mockResolvedValue(
       new Map([
         [100, { localId: 10 }],
@@ -64,20 +64,20 @@ describe('trashRemoved', () => {
 
     await trashRemoved(context(), 'Shot', new Set([100]));
 
-    // 100 est toujours là-bas ; 200 en est parti.
+        // 100 is still there; 200 has left.
     expect(db.shot.update).toHaveBeenCalledTimes(1);
     expect(db.shot.update.mock.calls[0]![0].where).toEqual({ id: 20 });
     expect(db.shot.update.mock.calls[0]![0].data.deletedAt).toBeInstanceOf(Date);
   });
 
-  it('ne touche à rien quand tout est encore là', async () => {
+  it('touches nothing when everything is still there', async () => {
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[100, { localId: 10 }]]));
     await trashRemoved(context(), 'Sequence', new Set([100]));
     expect(db.sequence.update).not.toHaveBeenCalled();
   });
 
-  it('nettoie un lien dont la cible locale a disparu', async () => {
-    // Sinon le retrait — et son message — rejouent à chaque synchronisation, sans fin.
+  it('cleans up a link whose local target has disappeared', async () => {
+        // Otherwise the removal — and its message — would replay at every synchronization, endlessly.
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[400, { localId: 40 }]]));
     db.sequence.findUnique.mockResolvedValue(null);
 
@@ -88,7 +88,7 @@ describe('trashRemoved', () => {
     expect(logs).toHaveLength(0);
   });
 
-  it('garde le lien d’une entité mise à la corbeille : elle peut revenir', async () => {
+  it('keeps the link of an entity put in the trash: it can come back', async () => {
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[100, { localId: 10 }]]));
 
     await trashRemoved(context(), 'Shot', new Set());
@@ -97,7 +97,7 @@ describe('trashRemoved', () => {
     expect(linkMap.removeLink).not.toHaveBeenCalled();
   });
 
-  it('retire une tâche vide supprimée côté ShotGrid', async () => {
+  it('removes an empty task deleted on the ShotGrid side', async () => {
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[300, { localId: 30 }]]));
     db.version.count.mockResolvedValue(0);
 
@@ -107,14 +107,12 @@ describe('trashRemoved', () => {
     expect(logs.map((l) => l.key)).toContain('shotgrid.log.trashedRemotely');
   });
 
-  /**
-   * Le périmètre est ce qui rend la fonction utilisable sur un événement de retrait.
-   * Sans lui, elle ne pouvait tourner qu'en passe complète, et un `Shotgun_Shot_Retirement`
-   * traversait toute la chaîne — accepté, mis en file, exécuté — sans rien mettre à la
-   * corbeille. Le journal enregistrait « ok », statistiques vides.
-   */
-  describe('périmètre restreint (passe ciblée)', () => {
-    it('ne met à la corbeille que l’identifiant nommé par l’événement', async () => {
+    /**
+     * The scope is what makes the function usable on a removal event. Without it, it could only run on a complete pass, and a `Shotgun_Shot_Retirement`
+     * went through the whole chain — accepted, queued, executed — without putting anything in the trash. The journal recorded "ok", with empty statistics.
+     */
+  describe('restricted scope (targeted pass)', () => {
+    it('only puts into the trash the identifier named by the event', async () => {
       linkMap.mapSgToLocal.mockResolvedValue(
         new Map([
           [100, { localId: 10 }],
@@ -122,15 +120,14 @@ describe('trashRemoved', () => {
         ]),
       );
 
-      // Le site vient de dire « 200 est retiré ». Il n'a rien dit de 100, absent du lot
-      // ciblé pour la seule raison qu'on ne l'a pas demandé.
+            // The site has just said "200 is removed". It said nothing about 100, absent from the targeted batch for the sole reason that we did not ask for it.
       await trashRemoved(context(), 'Shot', new Set(), [200]);
 
       expect(db.shot.update).toHaveBeenCalledTimes(1);
       expect(db.shot.update.mock.calls[0]![0].where).toEqual({ id: 20 });
     });
 
-    it('ne touche à rien quand l’entité visée est revenue de la lecture', async () => {
+    it('touches nothing when the targeted entity came back from the read', async () => {
       linkMap.mapSgToLocal.mockResolvedValue(new Map([[200, { localId: 20 }]]));
 
       await trashRemoved(context(), 'Shot', new Set([200]), [200]);
@@ -138,7 +135,7 @@ describe('trashRemoved', () => {
       expect(db.shot.update).not.toHaveBeenCalled();
     });
 
-    it('ignore un identifiant visé qui n’a jamais été importé', async () => {
+    it('ignores a targeted identifier that was never imported', async () => {
       linkMap.mapSgToLocal.mockResolvedValue(new Map());
 
       await trashRemoved(context(), 'Shot', new Set(), [999]);
@@ -149,36 +146,32 @@ describe('trashRemoved', () => {
     });
   });
 
-  /**
-   * Une entité peut manquer à une lecture ciblée pour deux raisons opposées : le site
-   * l'a retirée, ou elle en revient encore mais appartient désormais à un autre projet et
-   * `keepInProject` l'a écartée. Confondre les deux mettrait à la corbeille, sous le
-   * message « retirée dans ShotGrid », une entité bien vivante ailleurs.
-   */
+    /**
+     * An entity may be missing from a targeted read for two opposite reasons: the site removed it, or it still exists but belongs to another project now, and
+     * `keepInProject` discarded it. Confusing the two would put a perfectly living entity elsewhere in the trash, under the message "removed in ShotGrid".
+     */
   describe('confirmGone', () => {
-    it('retient ce que le site ne rend plus du tout', async () => {
+    it('keeps what the site no longer returns at all', async () => {
       findById.mockResolvedValue(null);
 
       await expect(confirmGone(context(), 'Shot', [200], new Set())).resolves.toEqual([200]);
     });
 
-    it('écarte ce que le site rend encore, fût-ce hors du projet', async () => {
-      // Réponse du site : l'entité existe. Son projet est l'affaire de la garde, pas de
-      // la corbeille.
+    it('discards what the site still returns, even outside the project', async () => {
+            // The site's answer: the entity exists. Its project is the guard's business, not the trash's.
       findById.mockResolvedValue({ id: 200, type: 'Shot' });
 
       await expect(confirmGone(context(), 'Shot', [200], new Set())).resolves.toEqual([]);
     });
 
-    it('n’interroge pas le site pour ce que la lecture a déjà rendu', async () => {
+    it('does not query the site for what the read has already returned', async () => {
       await expect(confirmGone(context(), 'Shot', [200], new Set([200]))).resolves.toEqual([]);
       expect(findById).not.toHaveBeenCalled();
     });
   });
 
-  it('garde une tâche qui porte des versions : la supprimer emporterait la review', async () => {
-    // La cascade Prisma détruirait les versions et leurs annotations. ShotGrid fait foi
-    // sur la structure, pas sur le droit d'effacer du travail déjà fait.
+  it('keeps a task that carries versions: deleting it would take the review with it', async () => {
+        // The Prisma cascade would destroy the versions and their annotations. ShotGrid is authoritative on structure, not on the right to erase work already done.
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[300, { localId: 30 }]]));
     db.version.count.mockResolvedValue(2);
 

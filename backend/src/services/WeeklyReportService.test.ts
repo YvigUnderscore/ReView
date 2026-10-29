@@ -21,11 +21,11 @@ const projects: ProjectWeekly[] = [
   },
 ];
 
-describe('WeeklyReportService — rendu HTML', () => {
+describe('WeeklyReportService: HTML rendering', () => {
   const weekStart = new Date('2026-07-13T07:00:00');
   const weekEnd = new Date('2026-07-20T07:00:00');
 
-  it('liste les projets, échappe le HTML et lie via APP_URL', () => {
+  it('lists the projects, escapes the HTML and links via APP_URL', () => {
     const html = renderWeeklyReportHtml('en', 'Yvig', projects, weekStart, weekEnd);
     expect(html).toContain('Hello Yvig');
     expect(html).toContain('Projet &lt;Démo&gt;');
@@ -35,12 +35,12 @@ describe('WeeklyReportService — rendu HTML', () => {
     expect(html).toContain('Open notes');
   });
 
-  it('affiche un message quand aucune activité', () => {
+  it('shows a message when there is no activity', () => {
     const html = renderWeeklyReportHtml('en', 'Yvig', [], new Date(), new Date());
     expect(html).toContain('No activity this week');
   });
 
-  it('rend le rapport dans la langue du destinataire, dates comprises', () => {
+  it('renders the report in the recipient\'s language, dates included', () => {
     const html = renderWeeklyReportHtml('fr', 'Yvig', projects, weekStart, weekEnd);
     expect(html).toContain('lang="fr"');
     expect(html).toContain('Rapport hebdomadaire de production');
@@ -48,16 +48,16 @@ describe('WeeklyReportService — rendu HTML', () => {
     expect(html).toContain('13 juillet');
   });
 
-  // « Retakes » est du vocabulaire de production : il reste en anglais partout.
-  it('garde « Retakes » intact dans toutes les langues', () => {
+    // "Retakes" is production vocabulary: it stays in English everywhere.
+  it('keeps "Retakes" intact in all languages', () => {
     for (const locale of ['en', 'fr', 'ja', 'br'] as const) {
       expect(renderWeeklyReportHtml(locale, 'Yvig', projects, weekStart, weekEnd)).toContain('Retakes');
     }
   });
 });
 
-describe('WeeklyReportService — envoi', () => {
-  it('saute proprement quand SMTP n’est pas configuré', async () => {
+describe('WeeklyReportService: sending', () => {
+  it('skips cleanly when SMTP is not configured', async () => {
     await expect(sendWeeklyReports()).resolves.toBe(0);
   });
 });

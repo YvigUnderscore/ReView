@@ -4,20 +4,20 @@
 import { AssetType, TaskStatus, TaskType } from '@prisma/client';
 
 /**
- * Conversions ShotGrid ↔ ReView — fonctions pures, sans accès réseau ni base.
- * Tout ce qui interprète une valeur ShotGrid vit ici pour être testable isolément :
- * les formats de ShotGrid réservent assez de surprises (couleurs en RGB décimal,
- * durées en minutes ouvrées) pour ne pas les disperser dans les services.
+ * ShotGrid <-> ReView conversions: pure functions, with no network or database access.
+ * Everything that interprets a ShotGrid value lives here so that it is testable in isolation:
+ * ShotGrid's formats hold enough surprises (colours in decimal RGB, durations in working minutes)
+ * not to scatter them across the services.
  */
 
-/** Entité ShotGrid telle que la renvoie l'API REST, aplatie par le client. */
+/** ShotGrid entity as the REST API returns it, flattened by the client. */
 export interface SgRecord {
   id: number;
   type: string;
   [field: string]: unknown;
 }
 
-/** Référence d'entité ShotGrid (champ `entity`, `project`, `sg_sequence`…). */
+/** ShotGrid entity reference (`entity`, `project`, `sg_sequence` field...). */
 export interface SgEntityRef {
   id: number;
   type: string;
@@ -44,23 +44,23 @@ export function asNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-/** Date ShotGrid (`YYYY-MM-DD` ou ISO complet) → Date, `null` si absente/illisible. */
+/** ShotGrid date (`YYYY-MM-DD` or full ISO) -> Date, `null` if absent or unreadable. */
 export function asDate(value: unknown): Date | null {
   if (typeof value !== 'string' || value.trim() === '') return null;
   const d = new Date(value.length === 10 ? `${value}T00:00:00.000Z` : value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** Date → `YYYY-MM-DD`, le format qu'attend ShotGrid pour start_date / due_date. */
+/** Date -> `YYYY-MM-DD`, the format ShotGrid expects for start_date / due_date. */
 export function toSgDate(date: Date | null | undefined): string | null {
   if (!date) return null;
   return date.toISOString().slice(0, 10);
 }
 
 /**
- * Couleur d'un statut ShotGrid : `bg_color` vaut "202,225,202" (RGB décimal), pas du hex.
- * Une valeur absente ou illisible retombe sur un gris neutre plutôt que d'échouer —
- * un statut sans couleur reste un statut utilisable.
+ * Colour of a ShotGrid status: `bg_color` holds "202,225,202" (decimal RGB), not hex.
+ * An absent or unreadable value falls back to a neutral grey rather than failing —
+ * a status without a colour remains a usable status.
  */
 export function rgbToHex(raw: unknown, fallback = '#6B7280'): string {
   if (typeof raw !== 'string') return fallback;
@@ -72,10 +72,8 @@ export function rgbToHex(raw: unknown, fallback = '#6B7280'): string {
 }
 
 /**
- * Statut ShotGrid → enum figé de ReView (le kanban et les statistiques historiques
- * s'appuient dessus). Le rapprochement se fait sur le code : ceux de ShotGrid sont
- * stables d'un site à l'autre pour les valeurs standard, et un code inconnu retombe
- * sur TODO plutôt que de faire échouer l'import.
+ * ShotGrid status -> ReView's frozen enum (the kanban and the historical statistics rely on it). The match is made on the code: ShotGrid's codes are
+ * stable from one site to another for the standard values, and an unknown code falls back to TODO rather than failing the import.
  */
 const SG_STATUS_TO_ENUM: Record<string, TaskStatus> = {
   wtg: TaskStatus.TODO, // Waiting to Start
@@ -92,9 +90,9 @@ const SG_STATUS_TO_ENUM: Record<string, TaskStatus> = {
   cmpt: TaskStatus.APPROVED, // Complete
   cbb: TaskStatus.RETAKE, // Cbb / to redo
   rrq: TaskStatus.RETAKE, // Revision requested
-  rtk: TaskStatus.RETAKE, // Retake — code le plus répandu, absent des listes « standard »
+  rtk: TaskStatus.RETAKE, // Retake — most widespread code, absent from the "standard" lists
   rej: TaskStatus.REJECTED,
-  pass: TaskStatus.APPROVED, // relu sans réserve
+  pass: TaskStatus.APPROVED, // reviewed without reservation
   suprev: TaskStatus.PENDING_REVIEW, // en attente de supervision
   ign: TaskStatus.TODO,
   omt: TaskStatus.REJECTED, // Omit
@@ -106,24 +104,23 @@ export function sgStatusToEnum(code: string | null | undefined): TaskStatus {
   return SG_STATUS_TO_ENUM[code.toLowerCase()] ?? TaskStatus.TODO;
 }
 
-/** Un statut ShotGrid marque-t-il la fin du travail ? (jauges, statistiques) */
+/** Does a ShotGrid status mark the end of the work? (gauges, statistics) */
 export function sgStatusIsDone(code: string | null | undefined): boolean {
   const mapped = sgStatusToEnum(code);
   return mapped === TaskStatus.APPROVED;
 }
 
 /**
- * Statut qui ne représente ni du travail à faire, ni du travail fait.
+ * Status that represents neither work to do nor work done.
  *
- * Un plan omis, sans objet ou désactivé n'attend rien de personne : le compter comme du
- * reste-à-faire gonfle indéfiniment les jauges d'avancement d'une production, et
- * l'annoncer comme terminé la flatterait. Ces statuts s'affichent, mais ne comptent pas.
+ * A shot that is omitted, not applicable or deactivated waits for no one: counting it as remaining work inflates a production's progress gauges indefinitely, and
+ * announcing it as finished would flatter it. These statuses are displayed, but do not count.
  */
 export function sgStatusIsInactive(code: string | null | undefined): boolean {
   return ['omt', 'dis', 'ign', 'na', 'dcl'].includes((code ?? '').toLowerCase());
 }
 
-/** Un statut de Version vaut-il approbation ? (alimente `ReviewStatus.isApproval`) */
+/** Does a Version status mean approval? (feeds `ReviewStatus.isApproval`) */
 export function sgStatusIsApproval(code: string | null | undefined): boolean {
   return ['apr', 'fin', 'cmpt', 'cfrm'].includes((code ?? '').toLowerCase());
 }
@@ -133,9 +130,8 @@ export function sgStatusIsRetake(code: string | null | undefined): boolean {
 }
 
 /**
- * Type d'asset ShotGrid (liste libre par site) → enum ReView.
- * Le libellé exact du site est conservé à part (`ShotgridLink.data.sgAssetType`) :
- * l'enum sert aux filtres, pas à restituer le vocabulaire du studio.
+ * ShotGrid asset type (free list per site) -> ReView enum.
+ * The site's exact label is kept separately (`ShotgridLink.data.sgAssetType`): the enum serves the filters, not to restore the studio's vocabulary.
  */
 export function sgAssetType(raw: unknown): AssetType {
   const v = (asString(raw) ?? '').toLowerCase();
@@ -147,7 +143,7 @@ export function sgAssetType(raw: unknown): AssetType {
   return AssetType.OTHER;
 }
 
-/** Pipeline Step ShotGrid → type de tâche ReView (l'étape exacte va dans `department`). */
+/** ShotGrid Pipeline Step -> ReView task type (the exact step goes into `department`). */
 export function sgStepToTaskType(step: string | null | undefined): TaskType {
   const v = (step ?? '').toLowerCase();
   if (v.includes('model')) return TaskType.MODELING;
@@ -162,8 +158,8 @@ export function sgStepToTaskType(step: string | null | undefined): TaskType {
 }
 
 /**
- * Durée ShotGrid → jours ouvrés. `duration` est exprimée en minutes de travail
- * (2400 = 5 jours de 8 h) : l'afficher telle quelle donnerait des nombres absurdes.
+ * ShotGrid duration -> working days. `duration` is expressed in working minutes (2400 = 5 days of 8 h):
+ * displaying it as is would give absurd numbers.
  */
 export function minutesToWorkdays(minutes: number | null | undefined, hoursPerDay = 8): number | null {
   if (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes <= 0) return null;
@@ -175,13 +171,13 @@ export function workdaysToMinutes(days: number | null | undefined, hoursPerDay =
   return Math.round(days * hoursPerDay * 60);
 }
 
-/** Durée d'un plan en images, à partir des bornes de cut (inclusives des deux côtés). */
+/** Duration of a shot in frames, from the cut bounds (inclusive at both ends). */
 export function cutDuration(cutIn: number | null, cutOut: number | null): number | null {
   if (cutIn === null || cutOut === null || cutOut < cutIn) return null;
   return cutOut - cutIn + 1;
 }
 
-/** Code lisible d'une entité ShotGrid (`code` sur la plupart, `content` sur Task). */
+/** Readable code of a ShotGrid entity (`code` on most, `content` on Task). */
 export function sgDisplayName(record: SgRecord): string {
   return (
     asString(record.code) ??
@@ -191,7 +187,7 @@ export function sgDisplayName(record: SgRecord): string {
   );
 }
 
-/** Champ « media » d'une Version : URL exploitable selon la source demandée. */
+/** "media" field of a Version: a usable URL depending on the requested source. */
 export function pickVersionMediaField(
   record: SgRecord,
   source: 'transcoded' | 'original',
@@ -208,32 +204,28 @@ export function pickVersionMediaField(
 }
 
 /**
- * Adresse directe portée par un champ fichier.
+ * Direct address carried by a file field.
  *
- * ShotGrid place souvent l'URL dans le champ lui-même, à côté du nom : quand
- * l'endpoint de téléchargement dédié ne répond pas, c'est un repli utilisable tel quel.
+ * ShotGrid often places the URL in the field itself, next to the name: when the dedicated download endpoint does not answer, this is a usable fallback as is.
  */
 export function attachmentUrl(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null;
   const v = value as Record<string, unknown>;
   const url = asString(v.url);
   if (url) return url;
-  // Certains champs imbriquent l'attachment (`{ attachment: { url } }`).
+    // Some fields nest the attachment (`{ attachment: { url } }`).
   const nested = v.attachment;
   return nested && typeof nested === 'object' ? asString((nested as Record<string, unknown>).url) : null;
 }
 
 /**
- * Identifiant de l'`Attachment` porté par un champ fichier.
+ * Identifier of the `Attachment` carried by a file field.
  *
- * ShotGrid décrit un champ fichier par l'entité `Attachment` qui le stocke :
- * `{ id, type: 'Attachment', name, url, link_type }`. C'est CET identifiant qui désigne
- * le fichier — pas celui de la Version qui l'expose. Les confondre produisait une
- * correspondance dont le type et l'identifiant parlaient de deux entités différentes.
+ * ShotGrid describes a file field by the `Attachment` entity that stores it: `{ id, type: 'Attachment', name, url, link_type }`. It is THAT identifier which designates
+ * the file — not the one of the Version exposing it. Confusing them produced a match whose type and identifier spoke of two different entities.
  *
- * Certains champs imbriquent l'attachment (`{ attachment: { id, type } }`), et certains
- * sites ne renvoient qu'une URL sans identifiant : dans ce dernier cas on ne rend rien
- * plutôt que d'inventer un numéro.
+ * Some fields nest the attachment (`{ attachment: { id, type } }`), and some sites return only a URL with no identifier: in that last case we return nothing
+ * rather than make up a number.
  */
 export function attachmentId(value: unknown): number | null {
   if (!value || typeof value !== 'object') return null;
@@ -244,7 +236,7 @@ export function attachmentId(value: unknown): number | null {
   return nested?.type === 'Attachment' ? nested.id : null;
 }
 
-/** Nom de fichier d'un attachment ShotGrid, ou un repli stable. */
+/** File name of a ShotGrid attachment, or a stable fallback. */
 export function attachmentName(value: unknown, fallback: string): string {
   if (value && typeof value === 'object') {
     const v = value as Record<string, unknown>;
@@ -254,18 +246,16 @@ export function attachmentName(value: unknown, fallback: string): string {
 }
 
 /**
- * Nom local d'une entité dont le code est déjà porté par une autre entité du site.
+ * Local name of an entity whose code is already carried by another entity of the site.
  *
- * Un site héberge sans peine quatre séquences nommées « DO_NOT_USE_ » : la contrainte
- * d'unicité locale, elle, n'en accepte qu'une. Le suffixe est l'identifiant ShotGrid,
- * donc stable : re-synchroniser retombe sur le même nom, sans jamais empiler les
- * suffixes ni fabriquer un doublon de plus.
+ * A site easily hosts four sequences named "DO_NOT_USE_": the local uniqueness constraint, for its part, accepts only one. The suffix is the ShotGrid identifier,
+ * hence stable: re-synchronizing falls back on the same name, without ever piling up suffixes or manufacturing one duplicate more.
  */
 export function disambiguatedName(name: string, sgId: number): string {
   return `${name} (${sgId})`;
 }
 
-/** Le nom du site derrière un nom local éventuellement désambiguïsé. */
+/** The site's name behind a local name that may have been disambiguated. */
 export function plainName(name: string | null | undefined, sgId: number): string | null {
   if (!name) return null;
   const suffix = ` (${sgId})`;

@@ -8,34 +8,30 @@ import { findByKey } from '../DepartmentService';
 import type { Department } from '@prisma/client';
 
 /**
- * Le département d'une personne, tel que le site le déclare (lot 10).
+ * A person's department, as the site declares it (batch 10).
  *
- * Un site ShotGrid range ses artistes par département, et c'est l'information qui manquait
- * à l'import d'équipe : les comptes arrivaient, mais il fallait ensuite dire à la main qui
- * fait du compositing et qui fait du lighting.
+ * A ShotGrid site sorts its artists by department, and that is the information missing from the team import: accounts arrived,
+ * but one then had to say by hand who does compositing and who does lighting.
  *
- * Deux précautions gouvernent ce module.
+ * Two precautions govern this module.
  *
- * 1. **On sonde le schéma avant de demander quoi que ce soit.** Un champ inconnu ne renvoie
- *    pas « vide » : la requête entière échoue, et l'équipe ne se charge plus du tout. Or le
- *    champ n'a pas le même nom partout — `department` est le champ standard (lien vers
- *    l'entité `Department`), `sg_department` la variante maison qu'on trouve sur les sites
- *    anciens. On ne demande donc que ce que `/schema/HumanUser/fields` déclare.
- * 2. **On ne crée jamais de département.** Un département ShotGrid est une unité
- *    d'organisation — « 2D », « Production », « Pipeline » — pas nécessairement une étape
- *    du pipe. Le rapprochement se fait sur ce que le studio a déjà déclaré ; ce qui ne
- *    correspond à rien reste affiché tel quel, à titre indicatif, et n'enrichit rien.
+ * 1. **The schema is probed before asking for anything.** An unknown field does not return "empty": the whole request fails, and the
+ *    team is no longer loaded at all. Yet the field does not have the same name everywhere: `department` is the standard field (link to
+ *    the `Department` entity), `sg_department` the in-house variant found on older sites. We therefore only ask for what
+ *    `/schema/HumanUser/fields` declares.
+ * 2. **A department is never created.** A ShotGrid department is an organizational unit ("2D", "Production", "Pipeline"), not necessarily
+ *    a step of the pipe. Matching is done against what the studio has already declared; what matches nothing stays displayed as is, for
+ *    information, and enriches nothing.
  */
 
-/** Les deux noms sous lesquels un site range le département d'un `HumanUser`. */
+/** The two names under which a site sorts the department of a `HumanUser`. */
 export const DEPARTMENT_FIELDS = ['department', 'sg_department'] as const;
 
 /**
- * Ceux de ces champs que le site déclare vraiment.
+ * Those of these fields that the site really declares.
  *
- * Le schéma ne se lit pas toujours — un script sans droit dessus répond 403. L'échec vaut
- * alors « pas de département » : c'est une information de confort, elle n'a pas à faire
- * tomber le chargement de l'équipe.
+ * The schema is not always readable: a script without rights on it gets a 403. The failure then means "no department": it is a
+ * convenience information, and must not bring down the loading of the team.
  */
 export async function departmentFields(client: ShotgridClient): Promise<string[]> {
   try {
@@ -48,9 +44,8 @@ export async function departmentFields(client: ShotgridClient): Promise<string[]
 }
 
 /**
- * Le libellé porté par un enregistrement, quelle que soit la forme du champ : lien
- * d'entité (le cas standard), liste de liens (site qui autorise plusieurs départements),
- * ou simple texte (champ maison).
+ * The label carried by a record, whatever the shape of the field: entity link (the standard case), list of links (a site that allows
+ * several departments), or plain text (in-house field).
  */
 export function departmentLabel(record: SgRecord, fields: readonly string[]): string | null {
   for (const field of fields) {
@@ -68,8 +63,7 @@ export function departmentLabel(record: SgRecord, fields: readonly string[]): st
 }
 
 /**
- * Le département ReView correspondant, **s'il existe déjà**. Une seule recherche par
- * libellé distinct : une équipe de soixante personnes tient en cinq ou six départements.
+ * The matching ReView department, **if it already exists**. A single lookup per distinct label: a team of sixty people fits in five or six departments.
  */
 export async function matchDepartments(
   projectId: number,

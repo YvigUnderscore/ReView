@@ -13,20 +13,15 @@ import { can } from './shotgridSettings';
 import { resolveForTask } from '../DepartmentService';
 
 /**
- * Étapes de pipeline (« Pipeline Steps ») d'un site ShotGrid.
+ * Pipeline steps ("Pipeline Steps") of a ShotGrid site.
  *
- * Un asset qui n'a encore aucune tâche n'en est pas moins prêt à en recevoir : le site
- * connaît les étapes qu'il traverse — art, modeling, rigging, groom, lookdev — bien avant
- * qu'une tâche existe pour chacune. Les proposer permet de déposer un rendu sous la bonne
- * étape sans quitter ReView, là où il fallait auparavant aller créer la tâche à la main
- * dans ShotGrid, puis revenir et resynchroniser.
+ * An asset that has no task yet is nonetheless ready to receive one: the site knows the steps it goes through — art, modeling, rigging, groom, lookdev — long before a
+ * task exists for each. Offering them makes it possible to drop a render under the right step without leaving ReView, where one previously had to go and create the task
+ * by hand in ShotGrid, then come back and resynchronize.
  *
- * `Step` est global au site — il ne porte aucun champ qui le relie à un projet, et
- * `task_templates` est vide chez ce studio. Mais une étape « du projet » se lit ailleurs :
- * dans les tasks qui y existent déjà. Ce sont elles qui font foi, et pour une raison
- * concrète : un site accumule des homonymes, et l'étape « modeling » employée par ce
- * projet porte l'identifiant 14 quand le catalogue en propose une autre sous le 1584.
- * Choisir la mauvaise range la task ailleurs que là où l'équipe la cherche.
+ * `Step` is global to the site — it carries no field linking it to a project, and `task_templates` is empty at this studio. But a "project" step is read elsewhere:
+ * in the tasks that already exist there. They are authoritative, for a concrete reason: a site accumulates homonyms, and the "modeling" step used by this project carries
+ * identifier 14 when the catalogue offers another under 1584. Choosing the wrong one files the task somewhere other than where the team looks for it.
  */
 
 export interface PipelineStep {
@@ -36,11 +31,11 @@ export interface PipelineStep {
   entityType: 'Asset' | 'Shot';
   color: string | null;
   order: number;
-  /** Une tâche du projet porte-t-elle déjà cette étape ? */
+    /** Does a task of the project already carry this step? */
   used: boolean;
 }
 
-/** `25,118,27` (RGB décimal ShotGrid) → `#19761B`. */
+/** `25,118,27` (ShotGrid decimal RGB) -> `#19761B`. */
 function hexColor(value: unknown): string | null {
   const raw = asString(value);
   if (!raw) return null;
@@ -57,11 +52,10 @@ export async function listSteps(
   const ctx = await openConnection(projectId);
   if (!can(ctx.settings, 'tasks', 'read')) return [];
 
-  // Ce que le studio a déclaré pour ce projet : la seule liste qui fasse autorité, faute
-  // que le site publie sa propre visibilité. Elle l'emporte sur toute déduction.
+    // What the studio declared for this project: the only list that is authoritative, since the site does not publish its own visibility. It takes precedence over any deduction.
   const declared = ctx.settings.steps?.[entityType === 'Asset' ? 'asset' : 'shot'] ?? [];
 
-  // Ce que le projet emploie : les étapes portées par ses tasks, avec LEURS identifiants.
+    // What the project uses: the steps carried by its tasks, with THEIR identifiers.
   const projectTasks = await ctx.client.search('Task', {
     fields: ['step', 'entity'],
     filters: [projectFilter(ctx.connection.sgProjectId)],
@@ -71,7 +65,7 @@ export async function listSteps(
   for (const task of projectTasks) {
     const ref = asEntityRef(task.step);
     const parent = asEntityRef(task.entity);
-    // Une étape d'asset ne se propose pas sur un plan, et réciproquement.
+        // An asset step is not offered on a shot, and vice versa.
     if (ref && parent?.type === entityType) inProject.set(ref.id, ref.name ?? `step-${ref.id}`);
   }
 
@@ -99,31 +93,25 @@ export async function listSteps(
     }))
     .sort((a, b) => Number(b.used) - Number(a.used) || a.order - b.order || a.code.localeCompare(b.code));
 
-  // Le catalogue complet ne se déduplique jamais : c'est la liste où le studio choisit,
-  // et les homonymes y sont précisément ce qu'il vient départager. ArtFX a huit étapes
-  // d'asset dont le nom contient « model », et celle que ce projet emploie — « modeling »,
-  // code court « model » — arrive après son homonyme dans l'ordre du site. L'écarter la
-  // rendait impossible à cocher.
+    // The full catalogue is never de-duplicated: it is the list from which the studio chooses, and homonyms are precisely what it must tell apart. ArtFX has eight asset
+    // steps whose name contains "model", and the one this project uses — "modeling", short code "model" — comes after its homonym in the site's order. Excluding it made it
+    // impossible to tick.
   if (options.all) return steps;
 
-  // Une liste déclarée est un choix, pas une devinette : on la rend telle quelle.
+    // A declared list is a choice, not a guess: we return it as is.
   return declared.length > 0 ? steps : dedupeSteps(steps);
 }
 
 /**
- * Une étape par nom, une étape par code court.
+ * One step per name, one step per short code.
  *
- * ShotGrid restreint les étapes proposées à celles dont la visibilité est activée dans le
- * projet, mais ne l'expose nulle part : ni entité (`StepVisibility` n'existe pas), ni
- * champ de projet sur `Step`, ni liste de valeurs dans le schéma contextualisé — vérifié
- * contre le site. À défaut, on écarte les homonymes, qui sont exactement ce que ce
- * réglage masque : un site accumule les étapes au fil des années, et ArtFX en a deux
- * nommées « art », deux « modeling ». Deux lignes qui se lisent pareil ne sont pas un
- * choix, c'est une devinette.
+ * ShotGrid restricts the proposed steps to those whose visibility is enabled in the project, but exposes it nowhere: neither entity (`StepVisibility` does not exist),
+ * nor a project field on `Step`, nor a value list in the contextual schema — verified against the site. Failing that, we discard the homonyms, which are exactly what this
+ * setting masks in practice on a site that accumulates steps over the years: ArtFX has two named "art" and two "modeling". Two lines that read the same are not a choice,
+ * they are a guess.
  *
- * Le nom ET le code court départagent : « lookdev/ldv » et « Look Development/ldv »
- * désignent la même étape pour qui la lit. La première l'emporte, et l'ordre a placé en
- * tête celles que le projet emploie déjà — donc celles qui sont sûrement les bonnes.
+ * The name AND the short code break ties: "lookdev/ldv" and "Look Development/ldv" designate the same step for whoever reads it. The first wins, and the order has
+ * placed at the head those the project already uses — hence those that are surely the right ones.
  */
 export function dedupeSteps(steps: PipelineStep[]): PipelineStep[] {
   const seenCode = new Set<string>();
@@ -142,15 +130,14 @@ export interface ProjectMember {
   sgId: number;
   name: string;
   email: string | null;
-  /** Identifiant local, quand cette personne a un compte ReView (rapprochement par e-mail). */
+    /** Local identifier, when this person has a ReView account (matching by e-mail). */
   userId: number | null;
 }
 
 /**
- * Personnes affectées à ce projet sur le site.
+ * People assigned to this project on the site.
  *
- * Le studio en compte des centaines ; le projet, quelques-unes. Proposer l'annuaire
- * entier pour assigner une tâche revient à ne rien proposer du tout.
+ * The studio counts hundreds of them; the project, a few. Offering the whole directory to assign a task amounts to offering nothing at all.
  */
 export async function listProjectMembers(projectId: number): Promise<ProjectMember[]> {
   const ctx = await openConnection(projectId);
@@ -165,7 +152,7 @@ export async function listProjectMembers(projectId: number): Promise<ProjectMemb
     sort: 'name',
   });
 
-  // Le compte local, quand il existe : assigner dans ShotGrid ET dans ReView d'un geste.
+    // The local account, when it exists: assign in ShotGrid AND in ReView in one gesture.
   const emails = people.map((p) => (asString(p.email) ?? '').toLowerCase()).filter(Boolean);
   const locals = emails.length
     ? await prisma.user.findMany({ where: { email: { in: emails } }, select: { id: true, email: true } })
@@ -184,12 +171,10 @@ export async function listProjectMembers(projectId: number): Promise<ProjectMemb
 }
 
 /**
- * Crée la tâche manquante, d'abord sur ShotGrid puis ici.
+ * Creates the missing task, first on ShotGrid then here.
  *
- * L'ordre n'est pas indifférent : le site fait foi, et une tâche créée localement d'abord
- * serait orpheline — `pullTasks` ne la reprendrait jamais faute de lien, et la corbeille
- * distante ne l'atteindrait pas davantage. On écrit donc là-bas, puis on rapatrie la
- * tâche avec son identifiant, comme n'importe quelle tâche importée.
+ * The order matters: the site is authoritative, and a task created locally first would be an orphan — `pullTasks` would never take it back for lack of a link, and the
+ * remote trash would not reach it either. We therefore write there, then fetch the task back with its identifier, like any imported task.
  */
 export async function createTaskFromStep(
   projectId: number,
@@ -198,7 +183,7 @@ export async function createTaskFromStep(
     parentType: 'asset' | 'shot';
     parentId: number;
     name?: string;
-    /** Personne à qui confier la tâche, choisie parmi les membres du projet. */
+        /** Person to whom the task is entrusted, chosen among the project's members. */
     assigneeSgId?: number | null;
   },
   actorEmail: string | null,
@@ -217,8 +202,7 @@ export async function createTaskFromStep(
 
   const name = params.name?.trim() || asString(step.code) || `step-${params.stepSgId}`;
 
-  // L'assignation n'accepte qu'une personne du projet : proposer l'annuaire du studio
-  // permettrait de confier une tâche à quelqu'un qui n'y travaille pas.
+    // The assignment only accepts a person from the project: offering the studio's directory would allow entrusting a task to someone who does not work there.
   let assignee: ProjectMember | null = null;
   if (params.assigneeSgId) {
     const members = await listProjectMembers(projectId);
@@ -226,8 +210,7 @@ export async function createTaskFromStep(
     if (!assignee) throw badRequest('This person is not a member of the project');
   }
 
-  // Le projet et sa relecture sont l'affaire de `ShotgridWriter` : il pose l'un, verifie
-  // l'autre, et refuse un projet modele. Rien a redire ici.
+    // The project and its re-reading are the business of `ShotgridWriter`: it sets the one, checks the other, and refuses a template project. Nothing to add here.
   const created = await ctx.writer.create('Task', {
     content: name,
     step: { type: 'Step', id: params.stepSgId },
@@ -235,9 +218,8 @@ export async function createTaskFromStep(
     ...(assignee ? { task_assignees: [{ type: 'HumanUser', id: assignee.sgId }] } : {}),
   });
 
-  // Ceinture et bretelles : on relit ce que le site a écrit et on vérifie qu'il s'agit
-  // bien du projet visé, et pas d'un projet modèle. Une tâche mal placée ne se rattrape
-  // pas — elle apparaît dans la production de quelqu'un d'autre.
+    // Belt and braces: we re-read what the site wrote and check that it is indeed the intended project, and not a template project. A misplaced task cannot be undone:
+    // it appears in someone else's production.
   const check = await ctx.client.findById('Task', created.id, ['content', 'step', 'entity', 'project']);
   const scope = {
     sgProjectId: ctx.connection.sgProjectId,
@@ -249,10 +231,8 @@ export async function createTaskFromStep(
   }
   if (check && !writeAllowedOn(check)) throw forbidden('ShotGrid template project — writing is refused');
 
-  // L'étape du site devient un département du projet — relation comprise. N'écrire que la
-  // chaîne rendait la tâche invisible à l'assignation par département, qui interroge la
-  // relation : elle répondait « créez la tâche dans ShotGrid d'abord » alors qu'elle
-  // venait d'y être créée.
+    // The site's step becomes a department of the project — relation included. Writing only the string made the task invisible to assignment by department, which queries
+    // the relation: it answered "create the task in ShotGrid first" although it had just been created there.
   const stepCode = asString(step.code) ?? null;
   const { department, departmentId } = await resolveForTask(projectId, stepCode);
   const task = await prisma.task.create({
@@ -273,8 +253,7 @@ export async function createTaskFromStep(
     sgType: 'Task',
     sgId: created.id,
     data: {
-      // Le lien décrit le côté distant : il garde le nom d'étape tel que le site l'écrit,
-      // pas la clé normalisée du département local.
+            // The link describes the remote side: it keeps the step name as the site writes it, not the normalized key of the local department.
       stepName: stepCode,
       sgAssignees: assignee ? [{ id: assignee.sgId, name: assignee.name, email: assignee.email }] : [],
       sgStatusCode: null,

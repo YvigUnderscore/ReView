@@ -2,26 +2,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Rangement de ce qu'un lien de partage ouvre : « review / sequences / shots / assets ».
+ * Tidying of what a share link opens: "review / sequences / shots / assets".
  *
- * Module **pur** — aucune requête, aucun accès disque. Il reçoit les lignes que
- * `ClientShareService` a déjà filtrées par la portée (`shareMediaWhere`) et les range. C'est
- * la seule façon de garantir qu'un lien de portée MEDIA ne nomme pas le plan voisin : on ne
- * peut ranger que ce qui est déjà passé par le filtre, et jamais interroger la table des
- * plans du projet.
+ * **Pure** module: no query, no disk access. It receives the rows that `ClientShareService` has already filtered by scope
+ * (`shareMediaWhere`) and tidies them. This is the only way to guarantee that a MEDIA-scope link does not name the neighbouring
+ * shot: one can only tidy what has already gone through the filter, and never query the project's shot table.
  *
- * Deuxième invariant : **une tuile de média n'existe qu'une fois**, dans le tableau `media`
- * de la réponse. Les nœuds ne portent que des identifiants — y compris leur vignette de
- * couverture (`coverMediaId`). Une URL présignée de plus par nœud ferait passer l'ouverture
- * d'une page de 201 signatures à plusieurs centaines.
+ * Second invariant: **a media tile exists only once**, in the `media` array of the response. The nodes carry only identifiers,
+ * including their cover thumbnail (`coverMediaId`). One more presigned URL per node would take the opening of a page from 201
+ * signatures to several hundred.
  */
 
-/** Ce qu'il faut savoir d'un média pour le ranger — forme structurelle du `select` Prisma. */
+/** What needs to be known about a media to tidy it: structural shape of the Prisma `select`. */
 export interface ShareTreeRow {
   id: number;
   thumbnailKey: string | null;
   version: {
-    /** Version posée directement sur un asset, sans passer par une tâche. */
+        /** Version set directly on an asset, without going through a task. */
     asset: ShareAssetSource | null;
     task: {
       asset: ShareAssetSource | null;
@@ -42,7 +39,7 @@ interface ShareShotSource {
   code: string;
   name: string;
   order: number;
-  /** Nullable : un plan sans séquence est un cas normal, pas une anomalie. */
+    /** Nullable: a shot without a sequence is a normal case, not an anomaly. */
   sequence: {
     id: number;
     code: string;
@@ -67,7 +64,7 @@ export interface ShareSequenceNode {
   order: number;
   episodeId: number | null;
   shotIds: number[];
-  /** Tous les médias de la séquence, plans confondus, dans l'ordre du tableau `media`. */
+    /** All the media of the sequence, shots combined, in the order of the `media` array. */
   mediaIds: number[];
   coverMediaId: number | null;
 }
@@ -86,23 +83,23 @@ export interface ShareAssetNode {
   id: number;
   name: string;
   type: string;
-  /** Libellé du studio quand il en a défini un (`Asset.typeLabel`). */
+    /** Studio label when one has been defined (`Asset.typeLabel`). */
   typeLabel: string | null;
   mediaIds: number[];
   coverMediaId: number | null;
 }
 
-/** L'arborescence telle que la page publique la consomme. */
+/** The tree as the public page consumes it. */
 export interface ShareBrowse {
   episodes: ShareEpisodeNode[];
   sequences: ShareSequenceNode[];
   shots: ShareShotNode[];
   assets: ShareAssetNode[];
-  /** Médias qu'aucun parent ne réclame : jamais perdus de l'écran, jamais nommés. */
+    /** Media that no parent claims: never lost from the screen, never named. */
   looseMediaIds: number[];
 }
 
-/** Récupère l'entrée d'une carte, ou l'y crée. */
+/** Retrieves a card's entry, or creates it there. */
 function ensure<T>(map: Map<number, T>, key: number, make: () => T): T {
   const found = map.get(key);
   if (found) return found;
@@ -111,7 +108,7 @@ function ensure<T>(map: Map<number, T>, key: number, make: () => T): T {
   return made;
 }
 
-/** Ordre de production : le rang du studio d'abord, le code pour départager. */
+/** Production order: the studio rank first, the code to break ties. */
 const byOrder = (a: { order: number; code: string }, b: { order: number; code: string }): number =>
   a.order - b.order || a.code.localeCompare(b.code);
 
@@ -124,8 +121,8 @@ export function buildShareBrowse(rows: readonly ShareTreeRow[]): ShareBrowse {
 
   for (const row of rows) {
     const shot = row.version.task?.shot ?? null;
-    // Une version peut pendre à un asset par sa tâche OU directement : les deux chemins
-    // mènent au MÊME nœud, sans quoi un asset apparaîtrait deux fois dans l'onglet.
+        // A version may hang from an asset either through its task OR directly: both paths lead to the SAME node,
+        // otherwise an asset would appear twice in the tab.
     const asset = row.version.asset ?? row.version.task?.asset ?? null;
 
     if (shot) {
@@ -139,8 +136,8 @@ export function buildShareBrowse(rows: readonly ShareTreeRow[]): ShareBrowse {
         coverMediaId: null,
       }));
       shotNode.mediaIds.push(row.id);
-      // `??=` : la couverture est le premier média QUI A une miniature. Un média sans
-      // vignette ne confisque pas la place et ne laisse pas la carte grise.
+            // `??=`: the cover is the first media THAT HAS a thumbnail. A media without a thumbnail does not take the
+            // place nor leave the card grey.
       if (shotNode.coverMediaId === null && row.thumbnailKey) shotNode.coverMediaId = row.id;
 
       const sequence = shot.sequence;
@@ -183,8 +180,8 @@ export function buildShareBrowse(rows: readonly ShareTreeRow[]): ShareBrowse {
       assetNode.mediaIds.push(row.id);
       if (assetNode.coverMediaId === null && row.thumbnailKey) assetNode.coverMediaId = row.id;
     } else {
-      // Interdit par les contraintes `Task_parent_xor` / `Version_parent_xor` — mais une
-      // donnée dégradée ne doit pas faire disparaître un média de l'écran du client.
+            // Forbidden by the `Task_parent_xor` / `Version_parent_xor` constraints, but degraded data must not make a
+            // media disappear from the client's screen.
       looseMediaIds.push(row.id);
     }
   }

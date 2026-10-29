@@ -4,9 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Les invariants de sûreté du connecteur, appliqués à l'entité Episode : le filtre de
- * projet part avec la requête, et l'entité reçue est revérifiée à l'arrivée. Un site
- * héberge tous les projets du studio — écrire dans le mauvais ne se rattrape pas.
+ * The connector's safety invariants, applied to the Episode entity: the project filter goes with the request, and the entity received
+ * is rechecked on arrival. A site hosts all the studio's projects: writing into the wrong one cannot be undone.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -70,19 +69,19 @@ beforeEach(() => {
 });
 
 describe('episodeCode', () => {
-  it('retombe sur un code stable quand le site n’en donne pas', () => {
+  it('falls back to a stable code when the site gives none', () => {
     expect(episodeCode({ id: 42, type: 'Episode' })).toBe('EP42');
     expect(episodeCode({ id: 42, type: 'Episode', code: 'EP101' })).toBe('EP101');
   });
 });
 
 describe('assertEpisodeCreationAllowed', () => {
-  it('laisse créer quand le projet n’est relié à aucun site', async () => {
+  it('allows creation when the project is linked to no site', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue(null);
     await expect(assertEpisodeCreationAllowed(7)).resolves.toBeUndefined();
   });
 
-  it('renvoie vers le formulaire Episode du site, pas vers celui d’une Sequence', async () => {
+  it('points to the site\'s Episode form, not to that of a Sequence', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue({
       active: true,
       settings: {},
@@ -99,9 +98,9 @@ describe('assertEpisodeCreationAllowed', () => {
 });
 
 describe('pullEpisodes', () => {
-  it('ne lit rien tant que le niveau est éteint côté ReView', async () => {
-    // Importer dans un projet qui ne montre pas le niveau créerait des lignes que
-    // personne ne peut ni voir ni corriger.
+  it('reads nothing while the level is off on the ReView side', async () => {
+        // Importing into a project that does not show the level would create rows that
+        // nobody can see or correct.
     db.project.findUnique.mockResolvedValue({ episodesEnabled: false });
     const ctx = makeCtx([inProject()]);
     await pullEpisodes(ctx);
@@ -109,7 +108,7 @@ describe('pullEpisodes', () => {
     expect(db.episode.create).not.toHaveBeenCalled();
   });
 
-  it('ne lit rien quand le domaine hierarchy est fermé en lecture', async () => {
+  it('reads nothing when the hierarchy domain is closed for reading', async () => {
     const ctx = makeCtx([]);
     (ctx.settings as unknown as { domains: Record<string, unknown> }).domains = {
       hierarchy: { read: false, write: false },
@@ -118,7 +117,7 @@ describe('pullEpisodes', () => {
     expect(ctx.client.search).not.toHaveBeenCalled();
   });
 
-  it('joint le filtre de projet à la requête', async () => {
+  it('attaches the project filter to the query', async () => {
     const ctx = makeCtx([]);
     await pullEpisodes(ctx);
     expect(ctx.client.search).toHaveBeenCalledWith(
@@ -129,7 +128,7 @@ describe('pullEpisodes', () => {
     );
   });
 
-  it('écarte une entité d’un autre projet et le crie au journal', async () => {
+  it('discards an entity from another project and shouts it to the log', async () => {
     const ctx = makeCtx([inProject({ project: { id: 1234, type: 'Project' } })]);
     await pullEpisodes(ctx);
     expect(db.episode.create).not.toHaveBeenCalled();
@@ -142,7 +141,7 @@ describe('pullEpisodes', () => {
     );
   });
 
-  it('crée l’épisode et pose la correspondance', async () => {
+  it('creates the episode and sets the match', async () => {
     const ctx = makeCtx([inProject({ updated_at: '2026-08-01T10:00:00Z' })]);
     await pullEpisodes(ctx);
     expect(db.episode.create).toHaveBeenCalledWith({
@@ -156,8 +155,8 @@ describe('pullEpisodes', () => {
     expect(journal.count).toHaveBeenCalledWith('episodes', 'created');
   });
 
-  it('ne renumérote pas l’ordre sur une relecture ciblée', async () => {
-    // Sinon le traitement d'un seul événement remonterait l'épisode en tête de liste.
+  it('does not renumber the order on a targeted re-read', async () => {
+        // Otherwise processing a single event would bring the episode to the top of the list.
     const ctx = makeCtx([]);
     (ctx.client.findById as ReturnType<typeof vi.fn>).mockResolvedValue(inProject());
     await pullEpisodes(ctx, new Map(), { onlySgIds: [{ sgType: 'Episode', sgId: 500 }] });
@@ -169,7 +168,7 @@ describe('pullEpisodes', () => {
 describe('linkSequencesToEpisodes', () => {
   const sequenceLinks = new Map([[300, { localId: 30 } as never]]);
 
-  it('laisse la séquence détachée quand son épisode distant n’est pas lié', async () => {
+  it('leaves the sequence detached when its remote episode is not linked', async () => {
     db.sequence.updateMany.mockResolvedValue({ count: 1 });
     const ctx = makeCtx([]);
     await linkSequencesToEpisodes(
@@ -183,7 +182,7 @@ describe('linkSequencesToEpisodes', () => {
     });
   });
 
-  it('rattache quand les deux côtés sont liés, en bornant au projet', async () => {
+  it('attaches when both sides are linked, bounding to the project', async () => {
     db.shotgridLink.findMany.mockResolvedValue([
       { sgId: 777, localId: 11, localType: 'episode', sgType: 'Episode' },
     ]);
@@ -201,7 +200,7 @@ describe('linkSequencesToEpisodes', () => {
     });
   });
 
-  it('ignore une séquence qui n’a pas de contrepartie locale', async () => {
+  it('ignores a sequence that has no local counterpart', async () => {
     const ctx = makeCtx([]);
     await linkSequencesToEpisodes(ctx, [{ id: 999, type: 'Sequence' }], sequenceLinks);
     expect(db.sequence.updateMany).not.toHaveBeenCalled();
@@ -209,16 +208,16 @@ describe('linkSequencesToEpisodes', () => {
 });
 
 describe('pullSequenceEpisodes', () => {
-  it('ne demande pas `sg_episode` au site tant que le niveau est éteint', async () => {
-    // Un studio sans série n'a pas forcément ce champ : le réclamer ferait échouer la
-    // synchronisation de tout le monde pour un niveau que personne n'a activé.
+  it('does not ask the site for `sg_episode` while the level is off', async () => {
+        // A studio without a series does not necessarily have this field: claiming it would make the synchronization
+        // fail for everyone, for a level nobody has enabled.
     db.project.findUnique.mockResolvedValue({ episodesEnabled: false });
     const ctx = makeCtx([]);
     expect(await pullSequenceEpisodes(ctx)).toBe(0);
     expect(ctx.client.search).not.toHaveBeenCalled();
   });
 
-  it('interroge les séquences du projet lié sur le seul champ d’épisode', async () => {
+  it('queries the linked project\'s sequences on the episode field alone', async () => {
     const ctx = makeCtx([]);
     await pullSequenceEpisodes(ctx);
     expect(ctx.client.search).toHaveBeenCalledWith(
@@ -230,7 +229,7 @@ describe('pullSequenceEpisodes', () => {
     );
   });
 
-  it('écarte une séquence d’un autre projet avant toute écriture', async () => {
+  it('discards a sequence from another project before any write', async () => {
     const ctx = makeCtx([
       { id: 300, type: 'Sequence', project: { id: 1234, type: 'Project' }, sg_episode: null },
     ]);

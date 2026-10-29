@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est remonté en tête de fichier : les doublures doivent l'être aussi.
+// `vi.mock` is hoisted to the top of the file: the doubles must be too.
 const { playlist, links } = vi.hoisted(() => ({
   playlist: { findUnique: vi.fn() },
   links: { findByLocal: vi.fn(), upsertLink: vi.fn(), mapLocalToSg: vi.fn() },
@@ -33,8 +33,7 @@ function contextWith(
     sgProjectName: 'ALPHA',
     asUserLogin: 'lea@studio.fr',
     client: { findById: vi.fn(async () => remote) },
-    // Le cloisonnement n'est plus l'affaire de ce module : `ShotgridWriter` l'applique,
-    // et il a sa propre suite. On ne double ici que l'écriture elle-même.
+        // Segregation is no longer this module's business: `ShotgridWriter` applies it, and it has its own suite. Only the write itself is doubled here.
     writer: {
       create: vi.fn(async () => ({ id: 900, type: 'Playlist' })),
       update: vi.fn(async () => ({ id: 900, type: 'Playlist' })),
@@ -44,7 +43,7 @@ function contextWith(
 
 const version = (id: number) => ({ type: 'Version', id });
 
-/** Playlist telle que le site la renvoie avant écriture. */
+/** Playlist as the site returns it before writing. */
 const sgRemote = (
   versions: Array<{ type: string; id: number }>,
   over: Record<string, unknown> = {},
@@ -57,11 +56,11 @@ const sgRemote = (
   ...over,
 });
 
-/** Correspondances version locale → version ShotGrid, telles que `mapLocalToSg` les rend. */
+/** Local version -> ShotGrid version matches, as `mapLocalToSg` returns them. */
 const versionLinks = (pairs: Array<[number, number]>) =>
   new Map(pairs.map(([localId, sgId]) => [localId, { localId, sgId, sgType: 'Version' }]));
 
-/** Playlist locale liée à la playlist distante 777. */
+/** Local playlist linked to the remote playlist 777. */
 function localPlaylist(versionIds: number[]) {
   playlist.findUnique.mockResolvedValue({
     id: 5,
@@ -76,7 +75,7 @@ function localPlaylist(versionIds: number[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   links.upsertLink.mockResolvedValue(undefined);
-  // 11, 12, 13 sont importées de ShotGrid ; 99 n'y existe pas.
+    // 11, 12, 13 are imported from ShotGrid; 99 does not exist there.
   links.mapLocalToSg.mockResolvedValue(
     versionLinks([
       [11, 111],
@@ -86,9 +85,9 @@ beforeEach(() => {
   );
 });
 
-describe('pushPlaylist — création', () => {
-  it("envoie les versions dans l'ordre de la séance", async () => {
-    // Une playlist est un déroulé : l'ordre compte autant que le contenu.
+describe('pushPlaylist: creation', () => {
+  it("sends the versions in the session's order", async () => {
+        // A playlist is a sequence of events: order matters as much as content.
     playlist.findUnique.mockResolvedValue({
       id: 5,
       name: 'Dailies 12/06',
@@ -100,16 +99,15 @@ describe('pushPlaylist — création', () => {
     const sgId = await pushPlaylist(ctx, 5);
 
     expect(sgId).toBe(900);
-    // Pas de `project` dans la charge utile : `ShotgridWriter` le pose, et sa propre
-    // suite vérifie qu'il refuse d'en viser un autre.
+        // No `project` in the payload: `ShotgridWriter` sets it, and its own suite checks that it refuses to target another one.
     expect(ctx.writer.create).toHaveBeenCalledWith('Playlist', {
       code: 'Dailies 12/06',
       versions: [version(111), version(112), version(113)],
     });
   });
 
-  it('ignore les versions que ShotGrid ne connaît pas', async () => {
-    // Les inventer fabriquerait des entrées qui ne mènent nulle part.
+  it('ignores the versions ShotGrid does not know', async () => {
+        // Inventing them would create entries leading nowhere.
     playlist.findUnique.mockResolvedValue({
       id: 5,
       name: 'Dailies',
@@ -123,7 +121,7 @@ describe('pushPlaylist — création', () => {
     expect(ctx.writer.create.mock.calls[0]![1]).toMatchObject({ versions: [version(111)] });
   });
 
-  it('ne touche à rien quand la playlist locale a disparu', async () => {
+  it('touches nothing when the local playlist has disappeared', async () => {
     playlist.findUnique.mockResolvedValue(null);
 
     const ctx = contextWith();
@@ -134,14 +132,12 @@ describe('pushPlaylist — création', () => {
 });
 
 /**
- * Le contenu distant était reconstruit à partir du seul état ReView puis écrasé : toute
- * version posée sur le site et non importée ici disparaissait de la séance du studio.
- * Une écriture destructive sur un système tiers de production ne se rattrape pas — d'où
- * la relecture préalable et la fusion.
+ * The remote content was rebuilt from the ReView state alone and then overwritten: any version set on the site and not imported here disappeared from the studio's
+ * session. A destructive write on a third-party production system cannot be undone — hence the prior read and the merge.
  */
-describe('pushPlaylist — mise à jour non destructive', () => {
-  it('met à jour la playlist déjà liée au lieu d’en créer une seconde', async () => {
-    // Sans cela, chaque réordonnancement laisserait une séance de plus dans le studio.
+describe('pushPlaylist: non-destructive update', () => {
+  it('updates the already linked playlist instead of creating a second one', async () => {
+        // Without this, every reordering would leave one more session in the studio.
     localPlaylist([11]);
 
     const ctx = contextWith(sgRemote([version(112)]));
@@ -157,20 +153,20 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     );
   });
 
-  it('préserve une version distante que ReView ne connaît pas, à sa place', async () => {
+  it('preserves a remote version that ReView does not know, in its place', async () => {
     localPlaylist([11, 13]);
 
     const ctx = contextWith(sgRemote([version(500), version(111), version(112)]));
     await pushPlaylist(ctx, 5);
 
-    // 500 reste en tête ; l'emplacement de 112, connue et retirée ici, revient à 113.
+        // 500 stays at the head; the slot of 112, known and removed here, moves to 113.
     expect(ctx.writer.update.mock.calls[0]![2]).toEqual({
       code: 'Dailies',
       versions: [version(500), version(111), version(113)],
     });
   });
 
-  it('ajoute la version ajoutée côté ReView', async () => {
+  it('adds the version added on the ReView side', async () => {
     localPlaylist([11, 12]);
 
     const ctx = contextWith(sgRemote([version(111)]));
@@ -181,7 +177,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     });
   });
 
-  it('retire la version que ReView connaissait et a retirée', async () => {
+  it('removes the version that ReView knew and has removed', async () => {
     localPlaylist([11]);
 
     const ctx = contextWith(sgRemote([version(111), version(112)]));
@@ -190,9 +186,8 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({ versions: [version(111)] });
   });
 
-  it('ne retire ni ne déplace une version d’un autre projet du site', async () => {
-    // Aucune correspondance pour cette connexion : elle n'est pas de ce projet, ReView
-    // n'a rien à en dire — même quand la séance locale se vide.
+  it('neither removes nor moves a version from another project of the site', async () => {
+        // No match for this connection: it is not of this project, so ReView has nothing to say about it, even when the local session empties.
     localPlaylist([]);
 
     const ctx = contextWith(sgRemote([version(111), version(600), version(112)]));
@@ -201,19 +196,19 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({ versions: [version(600)] });
   });
 
-  it('propage l’ordre de la séance sans bouger les versions inconnues', async () => {
+  it('propagates the session order without moving the unknown versions', async () => {
     localPlaylist([12, 11]);
 
     const ctx = contextWith(sgRemote([version(111), version(700), version(112)]));
     await pushPlaylist(ctx, 5);
 
-    // 700 garde son rang ; les deux emplacements gouvernés par ReView sont recomposés.
+        // 700 keeps its rank; the two slots governed by ReView are recomposed.
     expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({
       versions: [version(112), version(700), version(111)],
     });
   });
 
-  it('n’écrit rien quand le distant dit déjà la même chose', async () => {
+  it('writes nothing when the remote already says the same thing', async () => {
     localPlaylist([11]);
 
     const ctx = contextWith(sgRemote([version(500), version(111)]));
@@ -223,7 +218,7 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     expect(ctx.writer.update).not.toHaveBeenCalled();
   });
 
-  it('écrit quand seul le nom a changé', async () => {
+  it('writes when only the name has changed', async () => {
     localPlaylist([11]);
 
     const ctx = contextWith(sgRemote([version(111)], { code: 'Ancien nom' }));
@@ -232,16 +227,14 @@ describe('pushPlaylist — mise à jour non destructive', () => {
     expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({ code: 'Dailies' });
   });
 
-  /**
-   * Le cloisonnement projet et le refus des projets modèles étaient vérifiés ici, sur une
-   * copie locale des trois contrôles. Cette copie a disparu : `ShotgridWriter` les applique
-   * pour **toutes** les écritures du dossier, et `ShotgridWriter.test.ts` les éprouve —
-   * cible passée à un autre projet, projet modèle, cible disparue. Les rejouer ici ne
-   * testerait plus que la doublure.
-   */
+    /**
+     * Project segregation and the refusal of template projects were checked here, on a local copy of the three controls. That copy has disappeared: `ShotgridWriter`
+     * applies them to **all** the file's writes, and `ShotgridWriter.test.ts` tests them: target passed to another project, template project, vanished target. Replaying
+     * them here would only test the double.
+     */
 
-  it('abandonne sans rien recréer quand la playlist distante a disparu', async () => {
-    // La recréer remettrait dans le studio une séance supprimée à la main.
+  it('gives up without recreating anything when the remote playlist has disappeared', async () => {
+        // Recreating it would put back into the studio a session deleted by hand.
     localPlaylist([11]);
 
     const ctx = contextWith(null);
@@ -254,8 +247,8 @@ describe('pushPlaylist — mise à jour non destructive', () => {
 describe('mergePlaylistVersions', () => {
   const known = new Set([111, 112, 113]);
 
-  it('préserve une entrée qui n’est pas une version', () => {
-    // Un site peut poser autre chose dans le champ : on ne l'interprète pas, on le garde.
+  it('preserves an entry that is not a version', () => {
+        // A site may set something else in the field: we do not interpret it, we keep it.
     const merged = mergePlaylistVersions({
       remote: [
         { type: 'Shot', id: 42 },
@@ -270,12 +263,12 @@ describe('mergePlaylistVersions', () => {
     ]);
   });
 
-  it('ne duplique pas une version déjà présente à distance', () => {
+  it('does not duplicate a version already present remotely', () => {
     const merged = mergePlaylistVersions({ remote: [{ type: 'Version', id: 111 }], local: [111], known });
     expect(merged).toEqual([{ type: 'Version', id: 111 }]);
   });
 
-  it('laisse le distant intact quand ReView n’a rien à dire', () => {
+  it('leaves the remote intact when ReView has nothing to say', () => {
     const remote = [
       { type: 'Version', id: 500 },
       { type: 'Version', id: 501 },

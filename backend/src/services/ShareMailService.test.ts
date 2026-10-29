@@ -3,8 +3,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est hissé : la fabrique ne peut pas capturer une variable du module. On la
-// crée donc DANS la fabrique, puis on la récupère par l'import.
+// `vi.mock` is hoisted: the factory cannot capture a module variable. So it is created INSIDE the
+// factory, then retrieved through the import.
 vi.mock('../config/env', () => ({ env: { APP_URL: 'https://review.example' } }));
 vi.mock('../lib/prisma', () => ({
   prisma: { shareLink: { findUnique: vi.fn() }, user: { findUnique: vi.fn() } },
@@ -25,9 +25,9 @@ import { isMailerConfigured, sendMail } from '../lib/mailer';
 const envMock = env as unknown as { APP_URL: string | undefined };
 
 /**
- * Le lien n'était que copié dans le presse-papier : le client recevait une URL nue, sans
- * savoir ce qu'elle ouvrait ni quand elle périmait. Ces tests portent sur ce que le message
- * dit et sur ce qu'il ne fait pas — révéler les autres destinataires.
+ * The link used to be merely copied to the clipboard: the client received a bare URL, without knowing
+ * what it opened or when it expired. These tests cover what the message says and what it does not do:
+ * reveal the other recipients.
  */
 const ctx = {
   projectName: 'Nuit blanche',
@@ -49,24 +49,24 @@ beforeEach(() => {
 });
 
 describe('renderShareMailHtml', () => {
-  // Deux `href` (le bouton et le repli) plus l'URL en toutes lettres : beaucoup de clients
-  // mail bloquent les boutons, et certains destinataires recopient l'adresse à la main.
-  it('porte le lien dans le bouton et en clair dans le repli', () => {
+    // Two `href`s (the button and the fallback) plus the URL spelled out: many mail clients block
+    // buttons, and some recipients copy the address by hand.
+  it('carries the link in the button and in plain text as the fallback', () => {
     const html = renderShareMailHtml('en', ctx);
     expect(html.split(`href="${ctx.url}"`).length - 1).toBe(2);
     expect(html).toContain(`>${ctx.url}</a>`);
   });
 
-  // La note vient d'un champ libre du superviseur : elle est réinjectée dans du HTML.
-  it('échappe la note au lieu de la rendre', () => {
+    // The note comes from a free-text field of the supervisor: it is injected into HTML.
+  it('escapes the note instead of rendering it', () => {
     const html = renderShareMailHtml('en', { ...ctx, note: '<img src=x onerror=alert(1)>' });
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
-  // Le nom du projet est repris dans le titre du message, que `mailLayout` compose.
-  // Un superviseur peut le renommer : c'est une donnée d'utilisateur, pas du balisage.
-  it('échappe le nom du projet jusque dans le titre en gras', () => {
+    // The project name is repeated in the message title, which `mailLayout` composes.
+    // A supervisor can rename it: it is user data, not markup.
+  it('escapes the project name all the way into the bold title', () => {
     const html = renderShareMailHtml('en', {
       ...ctx,
       projectName: 'Réf. <a href="https://faux.example">Ouvrir la review</a>',
@@ -75,26 +75,26 @@ describe('renderShareMailHtml', () => {
     expect(html).toContain('&lt;a href=&quot;https://faux.example&quot;&gt;');
   });
 
-  // La copie locale de l'échappement oubliait les guillemets : la seule qui compte
-  // dès qu'une donnée atterrit dans un attribut.
-  it('échappe aussi les guillemets, pas seulement les chevrons', () => {
+    // The local copy of the escaping forgot quotes: the one that matters as soon as data
+    // lands in an attribute.
+  it('escapes quotes too, not only angle brackets', () => {
     const html = renderShareMailHtml('en', { ...ctx, note: 'x" onmouseover="alert(1)' });
     expect(html).not.toContain('onmouseover="');
     expect(html).toContain('&quot;');
   });
 
-  it('omet le bloc de note quand il n’y en a pas', () => {
+  it('omits the note block when there is none', () => {
     expect(renderShareMailHtml('en', ctx)).not.toContain('padding-left:12px');
   });
 
-  // Deux clés distinctes : le message dit toujours ce qu'il en est de la péremption,
-  // et ne dit jamais la même chose dans les deux cas.
-  it('distingue un lien qui expire d’un lien qui n’expire pas', () => {
+    // Two distinct keys: the message always states the expiry situation, and never says
+    // the same thing in both cases.
+  it('distinguishes a link that expires from one that does not', () => {
     const withDate = renderShareMailHtml('en', { ...ctx, expiresAt: new Date('2026-09-01T00:00:00Z') });
     expect(withDate).not.toBe(renderShareMailHtml('en', ctx));
   });
 
-  it('mentionne la limite de vues et le mot de passe seulement s’ils existent', () => {
+  it('mentions the view limit and the password only if they exist', () => {
     const plain = renderShareMailHtml('en', ctx);
     expect(renderShareMailHtml('en', { ...ctx, maxViews: 3 })).not.toBe(plain);
     expect(renderShareMailHtml('en', { ...ctx, hasPassword: true })).not.toBe(plain);
@@ -102,7 +102,7 @@ describe('renderShareMailHtml', () => {
 });
 
 describe('scopeLine', () => {
-  it('dit une chose différente pour chaque portée', () => {
+  it('says something different for each scope', () => {
     const lines = [ShareScope.PROJECT, ShareScope.PLAYLIST, ShareScope.VERSION, ShareScope.MEDIA].map((s) =>
       scopeLine('en', { scope: s, scopeTarget: 'Reel 1' }),
     );
@@ -111,7 +111,7 @@ describe('scopeLine', () => {
 });
 
 describe('shareUrl', () => {
-  it('compose l’URL publique depuis APP_URL', () => {
+  it('builds the public URL from APP_URL', () => {
     expect(shareUrl('abc')).toBe('https://review.example/client/abc');
   });
 });
@@ -136,14 +136,14 @@ describe('sendShareMail', () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: 2, email: 'a@b.c', name: 'Alice' } as never);
   });
 
-  // Une liste en clair dans `To:` révèle à chaque client l'adresse des autres.
-  it('envoie un message par destinataire', async () => {
+    // A plain list in `To:` reveals every other recipient's address to each client.
+  it('sends one message per recipient', async () => {
     await expect(sendShareMail(2, 4, ['x@studio.fr', 'y@client.com'], null)).resolves.toEqual({ sent: 2 });
     expect(sendMail).toHaveBeenCalledTimes(2);
     expect(vi.mocked(sendMail).mock.calls.map((c) => c[0])).toEqual(['x@studio.fr', 'y@client.com']);
   });
 
-  it('refuse tôt sans URL publique', async () => {
+  it('refuses early without a public URL', async () => {
     envMock.APP_URL = undefined;
     await expect(sendShareMail(2, 4, ['x@studio.fr'], null)).rejects.toMatchObject({
       code: 'APP_URL_MISSING',
@@ -151,14 +151,14 @@ describe('sendShareMail', () => {
     expect(sendMail).not.toHaveBeenCalled();
   });
 
-  it('refuse tôt sans relais SMTP', async () => {
+  it('refuses early without an SMTP relay', async () => {
     vi.mocked(isMailerConfigured).mockResolvedValue(false);
     await expect(sendShareMail(2, 4, ['x@studio.fr'], null)).rejects.toMatchObject({
       code: 'SMTP_NOT_CONFIGURED',
     });
   });
 
-  it('refuse d’envoyer un lien révoqué', async () => {
+  it('refuses to send a revoked link', async () => {
     vi.mocked(prisma.shareLink.findUnique).mockResolvedValue({ ...link, revoked: true } as never);
     await expect(sendShareMail(2, 4, ['x@studio.fr'], null)).rejects.toMatchObject({
       code: 'SHARE_REVOKED',
@@ -166,7 +166,7 @@ describe('sendShareMail', () => {
     expect(sendMail).not.toHaveBeenCalled();
   });
 
-  it('signale l’échec quand aucun message n’est parti', async () => {
+  it('reports the failure when no message was sent', async () => {
     vi.mocked(sendMail).mockResolvedValue(false);
     await expect(sendShareMail(2, 4, ['x@studio.fr'], null)).rejects.toMatchObject({
       code: 'SMTP_SEND_FAILED',

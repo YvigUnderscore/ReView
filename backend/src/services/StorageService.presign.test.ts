@@ -4,14 +4,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
- * Mémoïsation des URL présignées de lecture.
+ * Memoization of presigned read URLs.
  *
- * L'invariant tenu ici est celui du cache navigateur : à clé, type imposé et durée
- * identiques, deux appels rendent la MÊME chaîne pendant toute une tranche — sinon le
- * navigateur voit une URL neuve et retélécharge une vignette qu'il possède déjà. Le
- * corollaire, tout aussi important, est qu'une réécriture de l'objet casse cette stabilité :
- * une URL figée sur un contenu périmé serait une régression fonctionnelle, pas une
- * optimisation.
+ * The invariant held here is the one of the browser cache: with the same key, forced type and duration,
+ * two calls return the SAME string for the whole slice. Otherwise the browser sees a new URL and re-downloads
+ * a thumbnail it already has. The corollary, just as important, is that rewriting the object breaks this
+ * stability: a URL frozen on stale content would be a functional regression, not an optimization.
  */
 const { send, signed } = vi.hoisted(() => ({ send: vi.fn(), signed: vi.fn() }));
 
@@ -58,7 +56,7 @@ vi.mock('../config/env', () => ({
 
 import { storage, PRESIGN_WINDOW_SECONDS, PRESIGN_CACHE_MAX } from './StorageService';
 
-/** Options passées au presigner lors du dernier appel réellement signé. */
+/** Options passed to the presigner on the last call that actually signed. */
 const lastSigningOptions = () => signed.mock.calls.at(-1)![2] as { expiresIn: number; signingDate: Date };
 
 const THUMB = 'derived/42/thumbnail.jpg';
@@ -67,29 +65,29 @@ let counter = 0;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  // Un instant arbitraire, volontairement décalé du début d'une tranche.
+    // An arbitrary instant, deliberately offset from the start of a slice.
   vi.setSystemTime(new Date('2026-08-21T10:03:20.000Z'));
   vi.clearAllMocks();
   counter = 0;
   send.mockResolvedValue({});
-  // Chaque signature rend une chaîne distincte : deux appels qui rendent la même valeur
-  // prouvent donc la mémoïsation, et non un hasard de mock.
+    // Each signature returns a distinct string: two calls returning the same value therefore prove
+    // the memoization, not a mock coincidence.
   signed.mockImplementation(() => Promise.resolve(`https://minio/signed/${++counter}`));
-  // La tranche courante est repartie de zéro pour chaque test.
+    // The current slice starts afresh for each test.
   storage.forgetPresignedUrl(THUMB);
 });
 
 afterEach(() => vi.useRealTimers());
 
-describe('getPresignedGetUrl — stabilité de l’URL', () => {
-  it('rend la même URL pour la même vignette dans la même tranche', async () => {
+describe('getPresignedGetUrl: URL stability', () => {
+  it('returns the same URL for the same thumbnail within the same slice', async () => {
     const first = await storage.getPresignedGetUrl(THUMB);
     const second = await storage.getPresignedGetUrl(THUMB);
     expect(second).toBe(first);
     expect(signed).toHaveBeenCalledTimes(1);
   });
 
-  it('mutualise deux demandes concurrentes de la même vignette', async () => {
+  it('shares one signing between two concurrent requests for the same thumbnail', async () => {
     const [a, b] = await Promise.all([
       storage.getPresignedGetUrl('derived/7/thumbnail.jpg'),
       storage.getPresignedGetUrl('derived/7/thumbnail.jpg'),
@@ -98,18 +96,17 @@ describe('getPresignedGetUrl — stabilité de l’URL', () => {
     expect(signed).toHaveBeenCalledTimes(1);
   });
 
-  it('épingle la date de signature au début de la tranche', async () => {
-    // Deux processus (API et worker) qui signent au cours de la même tranche produisent
-    // ainsi la même URL : le cache navigateur survit à un changement de backend.
+  it('pins the signing date to the start of the slice', async () => {
+        // Two processes (API and worker) signing during the same slice thus produce the same URL: the
+        // browser cache survives a change of backend.
     await storage.getPresignedGetUrl('derived/8/thumbnail.jpg');
     const { signingDate } = lastSigningOptions();
     expect(signingDate.getTime() % (PRESIGN_WINDOW_SECONDS * 1000)).toBe(0);
     expect(Date.now() - signingDate.getTime()).toBeLessThan(PRESIGN_WINDOW_SECONDS * 1000);
   });
 
-  it('majore la validité de la largeur de tranche, pour ne jamais raccourcir un lien', async () => {
-    // Une URL rendue à la toute fin d'une tranche doit rester valable aussi longtemps que
-    // ce que l'appelant a demandé.
+  it('extends the validity by the slice width, so a link is never shortened', async () => {
+        // A URL returned at the very end of a slice must stay valid for as long as the caller asked.
     await storage.getPresignedGetUrl('derived/9/thumbnail.jpg', 3600);
     const { expiresIn, signingDate } = lastSigningOptions();
     expect(expiresIn).toBe(3600 + PRESIGN_WINDOW_SECONDS);
@@ -117,7 +114,7 @@ describe('getPresignedGetUrl — stabilité de l’URL', () => {
     expect(signingDate.getTime() + expiresIn * 1000 - endOfSlot).toBeGreaterThanOrEqual(3600 * 1000);
   });
 
-  it('resigne à la tranche suivante', async () => {
+  it('re-signs in the next slice', async () => {
     const before = await storage.getPresignedGetUrl(THUMB);
     vi.advanceTimersByTime(PRESIGN_WINDOW_SECONDS * 1000);
     const after = await storage.getPresignedGetUrl(THUMB);
@@ -125,7 +122,7 @@ describe('getPresignedGetUrl — stabilité de l’URL', () => {
     expect(signed).toHaveBeenCalledTimes(2);
   });
 
-  it('ne confond pas deux demandes qui ne portent pas le même contrat', async () => {
+  it('does not confuse two requests that do not carry the same contract', async () => {
     const plain = await storage.getPresignedGetUrl('avatars/3.png');
     const typed = await storage.getPresignedGetUrl('avatars/3.png', 3600, 'image/png');
     const shortLived = await storage.getPresignedGetUrl('avatars/3.png', 60);
@@ -133,25 +130,25 @@ describe('getPresignedGetUrl — stabilité de l’URL', () => {
     expect(new Set([plain, typed, shortLived, other]).size).toBe(4);
   });
 
-  it('conserve la normalisation du type imposé', async () => {
+  it('keeps the normalization of the forced type', async () => {
     await storage.getPresignedGetUrl('a/b.svg', 3600, 'image/svg+xml');
     const cmd = signed.mock.calls.at(-1)![1] as { input: { ResponseContentType?: string } };
     expect(cmd.input.ResponseContentType).toBe('application/octet-stream');
   });
 
-  it('ne mémorise pas une signature en échec', async () => {
+  it('does not memoize a failed signature', async () => {
     signed.mockRejectedValueOnce(new Error('minio down'));
     await expect(storage.getPresignedGetUrl('derived/11/thumbnail.jpg')).rejects.toThrow('minio down');
     signed.mockImplementation(() => Promise.resolve('https://minio/ok'));
     await expect(storage.getPresignedGetUrl('derived/11/thumbnail.jpg')).resolves.toBe('https://minio/ok');
   });
 
-  it('borne le nombre d’URL mémorisées', async () => {
+  it('bounds the number of memoized URLs', async () => {
     for (let i = 0; i < PRESIGN_CACHE_MAX + 1; i++) {
       await storage.getPresignedGetUrl(`derived/cap-${i}/thumbnail.jpg`);
     }
     const calls = signed.mock.calls.length;
-    // La plus ancienne a été évincée (elle se resigne), la plus récente est toujours là.
+        // The oldest was evicted (it is re-signed), the most recent is still there.
     await storage.getPresignedGetUrl('derived/cap-0/thumbnail.jpg');
     expect(signed.mock.calls.length).toBe(calls + 1);
     await storage.getPresignedGetUrl(`derived/cap-${PRESIGN_CACHE_MAX}/thumbnail.jpg`);
@@ -159,14 +156,14 @@ describe('getPresignedGetUrl — stabilité de l’URL', () => {
   });
 });
 
-describe('getPresignedGetUrl — fraîcheur après réécriture', () => {
-  it('oublie l’URL quand l’objet est réécrit sous la même clé', async () => {
+describe('getPresignedGetUrl: freshness after rewrite', () => {
+  it('forgets the URL when the object is rewritten under the same key', async () => {
     const before = await storage.getPresignedGetUrl(THUMB);
     await storage.putObject(THUMB, Buffer.from('x'), 'image/jpeg');
     expect(await storage.getPresignedGetUrl(THUMB)).not.toBe(before);
   });
 
-  it('oublie aussi après uploadFile, copyObject et setObjectContentType', async () => {
+  it('also forgets after uploadFile, copyObject and setObjectContentType', async () => {
     const uploaded = await storage.getPresignedGetUrl('derived/1/model.glb');
     await storage.uploadFile('derived/1/model.glb', '/tmp/model.glb', 'model/gltf-binary');
     expect(await storage.getPresignedGetUrl('derived/1/model.glb')).not.toBe(uploaded);
@@ -180,7 +177,7 @@ describe('getPresignedGetUrl — fraîcheur après réécriture', () => {
     expect(await storage.getPresignedGetUrl('projects/p/v/3/f.mov')).not.toBe(typed);
   });
 
-  it('oublie toutes les variantes d’une clé, quel que soit le type imposé', async () => {
+  it('forgets all variants of a key, whatever the forced type', async () => {
     const plain = await storage.getPresignedGetUrl('avatars/5.png');
     const typed = await storage.getPresignedGetUrl('avatars/5.png', 3600, 'image/png');
     storage.forgetPresignedUrl('avatars/5.png');
@@ -188,7 +185,7 @@ describe('getPresignedGetUrl — fraîcheur après réécriture', () => {
     expect(await storage.getPresignedGetUrl('avatars/5.png', 3600, 'image/png')).not.toBe(typed);
   });
 
-  it('oublie tout un préfixe à la suppression d’un média', async () => {
+  it('forgets a whole prefix when a media is deleted', async () => {
     const thumb = await storage.getPresignedGetUrl('derived/77/thumbnail.jpg');
     const mask = await storage.getPresignedGetUrl('derived/77/splat-mask.bin');
     const other = await storage.getPresignedGetUrl('derived/78/thumbnail.jpg');
@@ -196,11 +193,11 @@ describe('getPresignedGetUrl — fraîcheur après réécriture', () => {
     await storage.deletePrefix('derived/77/');
     expect(await storage.getPresignedGetUrl('derived/77/thumbnail.jpg')).not.toBe(thumb);
     expect(await storage.getPresignedGetUrl('derived/77/splat-mask.bin')).not.toBe(mask);
-    // Le voisin, lui, n'a pas bougé.
+        // The neighbour, for its part, did not move.
     expect(await storage.getPresignedGetUrl('derived/78/thumbnail.jpg')).toBe(other);
   });
 
-  it('oublie l’URL après un dépôt multipart terminé', async () => {
+  it('forgets the URL after a completed multipart upload', async () => {
     const before = await storage.getPresignedGetUrl('projects/p/v/4/big.mov');
     await storage.completeMultipartUpload('projects/p/v/4/big.mov', 'upload-1', [
       { partNumber: 1, etag: 'e1' },
@@ -208,7 +205,7 @@ describe('getPresignedGetUrl — fraîcheur après réécriture', () => {
     expect(await storage.getPresignedGetUrl('projects/p/v/4/big.mov')).not.toBe(before);
   });
 
-  it('oublie l’URL à la suppression d’un objet isolé', async () => {
+  it('forgets the URL when a single object is deleted', async () => {
     const before = await storage.getPresignedGetUrl('avatars/9.png');
     await storage.deleteObject('avatars/9.png');
     expect(await storage.getPresignedGetUrl('avatars/9.png')).not.toBe(before);

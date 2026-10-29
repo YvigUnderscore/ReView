@@ -7,12 +7,12 @@ import { type MessageKey, type TParams } from '../i18n';
 import { notify } from './NotificationService';
 
 /**
- * Suivi de notifications (32.G) : watch/unwatch par shot, asset ou version.
- * Les suiveurs de toute la chaîne d'un média (version + shot/asset porteurs)
- * sont notifiés des commentaires racine, publications et décisions de review.
+ * Notification follow (32.G): watch/unwatch per shot, asset or version.
+ * The followers of a media's whole chain (version + carrying shot/asset) are notified of root comments,
+ * publications and review decisions.
  */
 
-/** Tous les suivis de l'utilisateur (léger : sert l'état des menus côté front). */
+/** All of the user's follows (lightweight: serves the menu state on the front end). */
 export async function listForUser(userId: number) {
   return prisma.watch.findMany({
     where: { userId },
@@ -21,7 +21,7 @@ export async function listForUser(userId: number) {
   });
 }
 
-/** Active/désactive un suivi (idempotent). */
+/** Enables/disables a follow (idempotent). */
 export async function setWatch(
   userId: number,
   targetType: WatchTargetType,
@@ -40,7 +40,7 @@ export async function setWatch(
   return watching;
 }
 
-/** Ids des suiveurs (dédoublonnés) d'une chaîne version/shot/asset. */
+/** Ids of the followers (deduplicated) of a version/shot/asset chain. */
 async function watchersForChain(
   versionId: number | null,
   shotId: number | null,
@@ -56,7 +56,7 @@ async function watchersForChain(
   return [...new Set(rows.map((r) => r.userId))];
 }
 
-/** Chaîne (version, shot, asset) d'un média ; tout à null si média inconnu. */
+/** Chain (version, shot, asset) of a media; all null if the media is unknown. */
 async function chainForMedia(mediaObjectId: number) {
   const media = await prisma.mediaObject.findUnique({
     where: { id: mediaObjectId },
@@ -75,7 +75,7 @@ async function chainForMedia(mediaObjectId: number) {
   };
 }
 
-/** Chaîne (version, shot, asset) d'une version ; tout à null si inconnue. */
+/** Chain (version, shot, asset) of a version; all null if unknown. */
 async function chainForVersion(versionId: number) {
   const version = await prisma.version.findUnique({
     where: { id: versionId },
@@ -90,15 +90,15 @@ async function chainForVersion(versionId: number) {
 }
 
 /**
- * Notifie les suiveurs de la chaîne d'un média ou d'une version (type WATCH,
- * referenceId = média navigable vers la review). `exclude` = acteurs et
- * utilisateurs déjà notifiés autrement (mention, décision…).
+ * Notifies the followers of a media's or a version's chain (type WATCH,
+ * referenceId = media navigable to the review). `exclude` = actors and
+ * users already notified another way (mention, decision...).
  */
 export async function notifyWatchers(opts: {
   mediaObjectId?: number;
   versionId?: number;
   projectId: number;
-  /** Clé traduisible et ses paramètres (D2) — jamais une phrase toute faite. */
+    /** Translatable key and its parameters (D2): never a ready-made sentence. */
   messageKey: MessageKey;
   params?: TParams;
   referenceId?: number | null;

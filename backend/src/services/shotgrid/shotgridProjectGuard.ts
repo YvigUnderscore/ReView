@@ -4,20 +4,16 @@
 import { asEntityRef, type SgRecord } from './shotgridMapper';
 
 /**
- * Garde-fou de cloisonnement des projets.
+ * Project scope guard.
  *
- * Un site ShotGrid héberge tous les projets du studio. Une requête mal filtrée, un
- * identifiant réutilisé après suppression, un webhook mal configuré côté ShotGrid :
- * il suffit de peu pour lire — ou pire, écrire — dans le projet du voisin. Toute donnée
- * entrante passe donc par `belongsToProject`, et toute requête sortante par
- * `projectFilter`. La ceinture (filtre) et les bretelles (vérification) : le filtre
- * peut être oublié dans un appel, la vérification est le dernier rempart.
+ * A ShotGrid site hosts all the studio's projects. A badly filtered query, an identifier reused after deletion, a webhook misconfigured on the ShotGrid side:
+ * it takes little to read — or worse, write — into the neighbour's project. Every incoming datum therefore goes through `belongsToProject`, and every outgoing query
+ * through `projectFilter`. The belt (the filter) and the braces (the check): the filter can be forgotten in one call, the check is the last line of defence.
  *
- * Les entités hors projet (HumanUser, Status, Step) n'ont pas de champ `project` :
- * elles sont explicitement listées ici, plutôt que d'accepter toute entité sans projet.
+ * Entities outside any project (HumanUser, Status, Step) have no `project` field: they are explicitly listed here, rather than accepting any entity without a project.
  */
 
-/** Entités globales d'un site, légitimement sans rattachement projet. */
+/** Global entities of a site, legitimately without a project attachment. */
 export const PROJECT_LESS_ENTITIES = new Set([
   'HumanUser',
   'ApiUser',
@@ -33,7 +29,7 @@ export interface ProjectScope {
   sgProjectName: string;
 }
 
-/** Filtre à joindre à toute recherche portant sur une entité de projet. */
+/** Filter to attach to any search on a project entity. */
 export function projectFilter(sgProjectId: number): [string, string, { type: string; id: number }] {
   return ['project', 'is', { type: 'Project', id: sgProjectId }];
 }
@@ -42,12 +38,12 @@ export type BelongsResult =
   { ok: true } | { ok: false; reason: 'wrong_project'; foundProjectId: number | null };
 
 /**
- * L'entité appartient-elle bien au projet lié ? Une entité globale connue passe ;
- * une entité de projet sans champ `project` lisible est refusée (on ne devine pas).
+ * Does the entity indeed belong to the linked project? A known global entity passes;
+ * a project entity without a readable `project` field is refused (we do not guess).
  */
 export function belongsToProject(record: SgRecord, scope: ProjectScope): BelongsResult {
   if (PROJECT_LESS_ENTITIES.has(record.type)) return { ok: true };
-  // Le projet lui-même : c'est son propre identifiant qui doit correspondre.
+    // The project itself: it is its own identifier that must match.
   if (record.type === 'Project')
     return record.id === scope.sgProjectId
       ? { ok: true }
@@ -61,26 +57,24 @@ export function belongsToProject(record: SgRecord, scope: ProjectScope): Belongs
 }
 
 /**
- * Le projet distant est-il toujours celui qu'on croit ?
+ * Is the remote project still the one we think it is?
  *
- * Vérifié avant chaque synchronisation : si le nom ne correspond plus, on ne sait pas
- * si le projet a simplement été renommé ou si l'identifiant désigne désormais autre
- * chose. Dans le doute on s'arrête — écrire dans le mauvais projet ne se rattrape pas.
- * La comparaison ignore la casse et les espaces de bord, pas le reste.
+ * Checked before each synchronization: if the name no longer matches, we do not know whether the project has merely been renamed or whether the identifier now designates
+ * something else. In doubt we stop — writing into the wrong project cannot be undone. The comparison ignores case and edge spaces, not the rest.
  */
 export function projectNameMatches(remoteName: string | null | undefined, expected: string): boolean {
   if (typeof remoteName !== 'string') return false;
   return remoteName.trim().toLocaleLowerCase() === expected.trim().toLocaleLowerCase();
 }
 
-/** Événement de webhook : concerne-t-il bien le projet de cette connexion ? */
+/** Webhook event: does it indeed concern this connection's project? */
 export function eventBelongsToProject(
   payload: { project?: unknown; entity?: unknown },
   scope: ProjectScope,
 ): boolean {
   const ref = asEntityRef(payload.project);
   if (ref) return ref.id === scope.sgProjectId;
-  // Sans projet dans l'enveloppe, l'entité est peut-être globale (Status, HumanUser).
+    // Without a project in the envelope, the entity may be global (Status, HumanUser).
   const entity = asEntityRef(payload.entity);
   return entity !== null && PROJECT_LESS_ENTITIES.has(entity.type);
 }

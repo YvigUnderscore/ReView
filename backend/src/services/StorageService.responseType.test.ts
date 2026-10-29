@@ -4,12 +4,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
- * Type servi et durée de vie d'une lecture présignée (A4-05, A3-05).
+ * Served type and lifetime of a presigned read (A4-05, A3-05).
  *
- * Deux invariants, tous deux tenus au seul endroit qui signe : le type de la réponse ne
- * vient JAMAIS du déposant (il se déduit de la clé, que le serveur a composée), et la durée
- * de vie par défaut n'est plus d'une heure pour tout le monde — elle vaut quinze minutes
- * pour un contenu consommé d'un bloc, l'heure historique pour un flux lu dans la durée.
+ * Two invariants, both held in the only place that signs: the response type NEVER comes from the uploader
+ * (it is derived from the key, which the server composes), and the default lifetime is no longer one hour for
+ * everyone: it is fifteen minutes for content consumed in one block, the historical hour for a stream read over time.
  */
 const { send, signed } = vi.hoisted(() => ({ send: vi.fn(), signed: vi.fn() }));
 
@@ -63,11 +62,11 @@ import {
   PRESIGN_WINDOW_SECONDS,
 } from './StorageService';
 
-/** Type imposé à la réponse par la dernière signature réellement calculée. */
+/** Type forced on the response by the last signature actually computed. */
 const lastImposedType = () =>
   (signed.mock.calls.at(-1)![1] as { input: { ResponseContentType?: string } }).input.ResponseContentType;
 
-/** Validité demandée au presigner lors de la dernière signature. */
+/** Validity requested from the presigner on the last signature. */
 const lastExpiresIn = () => (signed.mock.calls.at(-1)![2] as { expiresIn: number }).expiresIn;
 
 let counter = 0;
@@ -84,55 +83,55 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('responseTypeFromKey', () => {
-  it('déduit le type des images que le serveur range lui-même', () => {
+  it('derives the type of the images the server files itself', () => {
     expect(responseTypeFromKey('note-images/shot/12/1700-plan.png')).toBe('image/png');
     expect(responseTypeFromKey('entity-thumbs/shot/3.JPEG')).toBe('image/jpeg');
     expect(responseTypeFromKey('derived/42/thumbnail.webp')).toBe('image/webp');
   });
 
-  it('rend opaque tout ce qui pourrait être interprété par le navigateur', () => {
-    // Les trois formes que prend une XSS servie depuis l'origine de l'application.
+  it('makes opaque anything the browser could interpret', () => {
+        // The three forms an XSS takes when served from the application's origin.
     expect(responseTypeFromKey('entity-thumbs/department/7.svg')).toBe('application/octet-stream');
     expect(responseTypeFromKey('note-images/asset/1/x.html')).toBe('application/octet-stream');
     expect(responseTypeFromKey('note-images/asset/1/x.xml')).toBe('application/octet-stream');
   });
 
-  it('rend opaque les formats VFX et les clés sans extension', () => {
+  it('makes VFX formats and keys without extension opaque', () => {
     expect(responseTypeFromKey('hdri/studio.hdr')).toBe('application/octet-stream');
     expect(responseTypeFromKey('derived/1/model.glb')).toBe('application/octet-stream');
     expect(responseTypeFromKey('derived/1/splat-mask.bin')).toBe('application/octet-stream');
     expect(responseTypeFromKey('studio/ocio/abc.cube')).toBe('application/octet-stream');
     expect(responseTypeFromKey('projects/p/v/1/rush')).toBe('application/octet-stream');
-    // Un point dans un dossier n'est pas une extension.
+        // A dot in a folder is not an extension.
     expect(responseTypeFromKey('projects/p.v1/v/1/rush')).toBe('application/octet-stream');
   });
 
-  it('conserve les types de flux réellement lus par le lecteur', () => {
+  it('keeps the stream types the player actually reads', () => {
     expect(responseTypeFromKey('derived/9/proxy.mp4')).toBe('video/mp4');
     expect(responseTypeFromKey('projects/p/v/1/plan.mov')).toBe('video/quicktime');
     expect(responseTypeFromKey('derived/9/hls/720p_003.ts')).toBe('video/mp2t');
   });
 });
 
-describe('getPresignedGetUrl — type imposé par défaut', () => {
-  it('impose le type déduit de la clé pour une image de fiche déposée par PUT présigné', async () => {
-    // Sans type imposé, l'objet était servi avec le `Content-Type` choisi par le déposant :
-    // un PUT en `text/html` sur une clé `.png` sortait en `text/html`.
+describe('getPresignedGetUrl: forced type by default', () => {
+  it('forces the type derived from the key for a sheet image uploaded by presigned PUT', async () => {
+        // Without a forced type, the object was served with the `Content-Type` chosen by the uploader:
+        // a PUT as `text/html` on a `.png` key came out as `text/html`.
     await storage.getPresignedGetUrl('note-images/shot/12/1700-plan.png');
     expect(lastImposedType()).toBe('image/png');
   });
 
-  it('impose un type opaque pour un HDRI, qu’aucun navigateur ne rend', async () => {
+  it('forces an opaque type for an HDRI, which no browser renders', async () => {
     await storage.getPresignedGetUrl('hdri/studio.hdr');
     expect(lastImposedType()).toBe('application/octet-stream');
   });
 
-  it('impose un type opaque pour une vignette d’entité déposée en .svg', async () => {
+  it('forces an opaque type for an entity thumbnail uploaded as .svg', async () => {
     await storage.getPresignedGetUrl('entity-thumbs/shot/3.svg');
     expect(lastImposedType()).toBe('application/octet-stream');
   });
 
-  it('laisse le type explicite de l’appelant prendre le pas, liste blanche comprise', async () => {
+  it('lets the caller\'s explicit type take precedence, allowlist included', async () => {
     await storage.getPresignedGetUrl('comments/1/piece.bin', 3600, 'application/pdf');
     expect(lastImposedType()).toBe('application/pdf');
     await storage.getPresignedGetUrl('comments/1/piece.bin', 3600, 'image/svg+xml');
@@ -140,28 +139,28 @@ describe('getPresignedGetUrl — type imposé par défaut', () => {
   });
 });
 
-describe('getPresignedGetUrl — durée de vie par défaut', () => {
-  it('donne un quart d’heure à un contenu consommé d’un bloc', async () => {
+describe('getPresignedGetUrl: default lifetime', () => {
+  it('gives a quarter of an hour to content consumed in one block', async () => {
     await storage.getPresignedGetUrl('derived/42/thumbnail.jpg');
     expect(DEFAULT_GET_TTL_SECONDS).toBe(900);
     expect(lastExpiresIn()).toBe(DEFAULT_GET_TTL_SECONDS + PRESIGN_WINDOW_SECONDS);
   });
 
-  it('garde l’heure historique pour un flux lu dans la durée', async () => {
-    // Un `<video src>` présigné redemande des tranches d'octets pendant toute la lecture :
-    // raccourcir ici couperait la projection, pas la fuite.
+  it('keeps the historical hour for a stream read over time', async () => {
+        // A presigned `<video src>` keeps requesting byte ranges for the whole playback: shortening it here
+        // would cut the projection, not the leak.
     await storage.getPresignedGetUrl('derived/9/proxy.mp4');
     expect(lastExpiresIn()).toBe(STREAMED_GET_TTL_SECONDS + PRESIGN_WINDOW_SECONDS);
     expect(defaultGetTtl('derived/9/audio.mp3')).toBe(STREAMED_GET_TTL_SECONDS);
     expect(defaultGetTtl('derived/9/splat.spz')).toBe(DEFAULT_GET_TTL_SECONDS);
   });
 
-  it('respecte toujours une durée explicitement demandée', async () => {
+  it('always honours an explicitly requested duration', async () => {
     await storage.getPresignedGetUrl('derived/9/thumbnail.jpg', 60);
     expect(lastExpiresIn()).toBe(60 + PRESIGN_WINDOW_SECONDS);
   });
 
-  it('ne signe qu’une fois quand le défaut est redemandé explicitement', async () => {
+  it('signs only once when the default is explicitly requested again', async () => {
     const implicite = await storage.getPresignedGetUrl('derived/43/thumbnail.jpg');
     const explicite = await storage.getPresignedGetUrl(
       'derived/43/thumbnail.jpg',

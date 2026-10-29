@@ -5,8 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { buildShareBrowse, type ShareTreeRow } from './shareBrowse';
 
 /**
- * Le rangement ne peut nommer que ce que la portée a laissé passer : ces tests lui donnent
- * exactement les lignes qu'un lien rendrait, et vérifient qu'il n'en invente aucune autre.
+ * Tidying can only name what the scope let through: these tests give it exactly the rows a link would render, and check
+ * that it invents none other.
  */
 
 type Task = NonNullable<ShareTreeRow['version']['task']>;
@@ -38,14 +38,14 @@ const shot = (id: number, code: string, order: number, seq: SequenceSource = nul
   sequence: seq,
 });
 
-/** Un média porté par un plan. */
+/** A media carried by a shot. */
 const onShot = (id: number, sh: ShotSource, thumbnailKey: string | null = 'thumb.jpg'): ShareTreeRow => ({
   id,
   thumbnailKey,
   version: { asset: null, task: { asset: null, shot: sh } },
 });
 
-/** Un média porté par un asset — par sa tâche, ou par une version posée directement. */
+/** A media carried by an asset: through its task, or through a version set directly. */
 const onAsset = (id: number, asset: AssetSource, through: 'task' | 'version' = 'task'): ShareTreeRow => ({
   id,
   thumbnailKey: 'thumb.jpg',
@@ -55,8 +55,8 @@ const onAsset = (id: number, asset: AssetSource, through: 'task' | 'version' = '
 const FOX: AssetSource = { id: 90, name: 'Fox', type: 'CHARACTER', typeLabel: null };
 const ZEBRA: AssetSource = { id: 91, name: 'Zebra', type: 'PROP', typeLabel: null };
 
-describe('buildShareBrowse — ce que le client voit rangé', () => {
-  it('range un plan sous sa séquence, et la séquence sous son épisode', () => {
+describe('buildShareBrowse: what the client sees, tidied', () => {
+  it('files a shot under its sequence, and the sequence under its episode', () => {
     const sq = sequence(10, 'SQ010', 1, episode(5, 'EP01', 1));
     const browse = buildShareBrowse([onShot(1, shot(20, 'SH020', 2, sq))]);
 
@@ -67,12 +67,11 @@ describe('buildShareBrowse — ce que le client voit rangé', () => {
     expect(browse.episodes[0]?.sequenceIds).toEqual([10]);
   });
 
-  /**
-   * Le cœur de la portée : on ne range QUE les lignes reçues. Un lien qui n'ouvre qu'un plan
-   * ne doit pas révéler le code du plan voisin — ce que l'ancienne liste plate ne pouvait pas
-   * trahir, et que l'arborescence pourrait.
-   */
-  it('ne nomme aucune entité que les lignes reçues ne portent pas', () => {
+    /**
+     * The heart of the scope: we tidy ONLY the rows received. A link that opens only one shot must not reveal the code of the
+     * neighbouring shot, which the former flat list could not give away and the tree could.
+     */
+  it('names no entity that the received rows do not carry', () => {
     const browse = buildShareBrowse([onShot(1, shot(20, 'SH020', 2, sequence(10, 'SQ010', 1)))]);
 
     expect(JSON.stringify(browse)).not.toContain('SH030');
@@ -81,31 +80,31 @@ describe('buildShareBrowse — ce que le client voit rangé', () => {
     expect(browse.assets).toHaveLength(0);
   });
 
-  it('n’invente pas de séquence pour un plan qui n’en a pas', () => {
+  it('does not invent a sequence for a shot that has none', () => {
     const browse = buildShareBrowse([onShot(1, shot(20, 'SH020', 2))]);
     expect(browse.sequences).toEqual([]);
     expect(browse.shots[0]?.sequenceId).toBeNull();
   });
 
-  // Une version pend à un asset par sa tâche OU directement : deux chemins, un seul nœud.
-  it('réunit sur un seul asset les deux façons d’y être rattaché', () => {
+    // A version hangs from an asset either through its task OR directly: two paths, one node.
+  it('brings together on a single asset the two ways of being attached to it', () => {
     const browse = buildShareBrowse([onAsset(1, FOX, 'task'), onAsset(2, FOX, 'version')]);
     expect(browse.assets).toHaveLength(1);
     expect(browse.assets[0]?.mediaIds).toEqual([1, 2]);
   });
 
-  it('choisit pour couverture le premier média qui a une miniature', () => {
+  it('picks as cover the first media that has a thumbnail', () => {
     const sh = shot(20, 'SH020', 2);
     const browse = buildShareBrowse([onShot(1, sh, null), onShot(2, sh, 'thumb.jpg')]);
     expect(browse.shots[0]?.coverMediaId).toBe(2);
   });
 
-  it('laisse la couverture nulle quand aucun média n’a de miniature', () => {
+  it('leaves the cover null when no media has a thumbnail', () => {
     expect(buildShareBrowse([onShot(1, shot(20, 'SH020', 2), null)]).shots[0]?.coverMediaId).toBeNull();
   });
 
-  // Donnée dégradée : le média reste atteignable, mais aucun nom n'est inventé pour lui.
-  it('garde un média sans parent au lieu de le perdre', () => {
+    // Degraded data: the media stays reachable, but no name is invented for it.
+  it('keeps a media without a parent instead of losing it', () => {
     const orphan: ShareTreeRow = { id: 7, thumbnailKey: null, version: { asset: null, task: null } };
     const browse = buildShareBrowse([orphan]);
     expect(browse.looseMediaIds).toEqual([7]);
@@ -113,7 +112,7 @@ describe('buildShareBrowse — ce que le client voit rangé', () => {
     expect(browse.assets).toEqual([]);
   });
 
-  it('trie les plans et les séquences dans l’ordre de production, les assets par nom', () => {
+  it('sorts shots and sequences in production order, assets by name', () => {
     const sqA = sequence(10, 'SQ010', 1);
     const sqB = sequence(11, 'SQ020', 2);
     const browse = buildShareBrowse([
@@ -127,7 +126,7 @@ describe('buildShareBrowse — ce que le client voit rangé', () => {
     expect(browse.assets.map((a) => a.name)).toEqual(['Fox', 'Zebra']);
   });
 
-  it('remonte les médias d’une séquence, plans confondus, dans l’ordre reçu', () => {
+  it('brings up the media of a sequence, shots combined, in received order', () => {
     const sq = sequence(10, 'SQ010', 1);
     const browse = buildShareBrowse([
       onShot(1, shot(20, 'SH010', 1, sq)),

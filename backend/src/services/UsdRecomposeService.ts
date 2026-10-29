@@ -13,36 +13,31 @@ import { logAudit } from './AuditService';
 import type { UsdModelInfo, UsdRequest } from './ModelConvertService';
 
 /**
- * Recomposition d'une scène USD (Phase 45, 45.E) : rejouer la conversion avec une autre
- * **sélection de variantes** ou un autre **purpose** (render/proxy/guide).
+ * Recomposition of a USD scene (Phase 45, 45.E): replays the conversion with another **variant selection** or another **purpose** (render/proxy/guide).
  *
- * Le fichier source n'est jamais modifié : la sélection est appliquée par une couche d'overlay
- * USD au moment de la conversion (cf. `workers/usd/analyze_usd.py`). Elle est mémorisée dans
- * `metadata.usdRequest` plutôt que dans les données du job BullMQ, pour survivre aux retries
- * comme aux `reprocess` ultérieurs.
+ * The source file is never modified: the selection is applied by a USD overlay layer at conversion time (see `workers/usd/analyze_usd.py`). It is recorded in
+ * `metadata.usdRequest` rather than in the BullMQ job data, to survive retries as well as later `reprocess` runs.
  *
- * Verrou de publication (Phase 11) : recomposer change le contenu rendu, donc c'est refusé sur
- * un média publié — on corrige en publiant une nouvelle version.
+ * Publication lock (Phase 11): recomposing changes the rendered content, so it is refused on a published media — one corrects it by publishing a new version.
  */
 
 type SessionUser = { id: number; role: Role };
 
 export interface RecomposeInput {
-  /** `{ "/World/Asset": { "modelingVariant": "hero" } }` */
+    /** `{ "/World/Asset": { "modelingVariant": "hero" } }` */
   variants: Record<string, Record<string, string>>;
   purpose: UsdPurpose;
 }
 
-/** Description USD posée par le worker à la conversion précédente, ou null. */
+/** USD description recorded by the worker at the previous conversion, or null. */
 function readUsdInfo(metadata: unknown): UsdModelInfo | null {
   const model = (metadata as { model?: { usd?: UsdModelInfo } } | null)?.model;
   return model?.usd ?? null;
 }
 
 /**
- * Enfile une nouvelle conversion du média avec la sélection demandée. La sélection est
- * **filtrée contre les variantSets réellement présents** dans la scène : une valeur inventée
- * par le client n'atteint jamais le pipeline.
+ * Queues a new conversion of the media with the requested selection. The selection is **filtered against the variantSets actually present** in the scene: a value
+ * invented by the client never reaches the pipeline.
  */
 export async function recomposeUsd(user: SessionUser, id: number, input: RecomposeInput) {
   await assertMediaManage(id, user);
@@ -53,8 +48,7 @@ export async function recomposeUsd(user: SessionUser, id: number, input: Recompo
   if (!media) throw notFound('Media not found');
   if (media.kind !== MediaKind.MODEL_3D) throw badRequest('Recomposing is for 3D media only', 'NOT_3D');
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
-  // Recomposer ne remplace pas le fichier livré : cela en dérive une représentation lisible.
-  // L'écriture reste donc permise après publication (table de `lib/publishLock`).
+    // Recomposing does not replace the delivered file: it derives a readable representation from it. Writing therefore remains allowed after publication (table in `lib/publishLock`).
   assertWritable(media, 'usdRecompose');
 
   const usd = readUsdInfo(media.metadata);

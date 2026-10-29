@@ -5,27 +5,22 @@ import { emitToProject, isWorkerProcess } from '../SocketService';
 import { publishWorkerEvent } from '../../lib/workerEvents';
 
 /**
- * Ce qu'une passe de synchronisation a réellement touché.
+ * What a synchronization pass really touched.
  *
- * Chaque entité réalignée émettait son propre événement socket. Sur une passe complète
- * d'un long métrage, cela fait douze mille émissions — et côté navigateur, cinq
- * invalidations de requête par émission. L'écran ne s'en trouve pas plus juste : il
- * passe la durée de la passe à se recharger.
+ * Each realigned entity used to emit its own socket event. On a full pass of a feature film, that makes twelve thousand emissions — and on the browser side, five query
+ * invalidations per emission. The screen is no more accurate for it: it spends the duration of the pass reloading itself.
  *
- * On accumule donc, et on décide à la fin :
- * - passe restée petite (relecture d'un webhook, réalignement d'une carte) : les
- *   événements fins sont rejoués tels quels, l'écran se met à jour au bon endroit ;
- * - passe large : un seul résumé, avec le décompte par famille — au client de recharger
- *   ce qu'il affiche, une fois.
+ * So we accumulate, and decide at the end:
+ * - a pass that stayed small (re-reading a webhook, realigning a card): the fine events are replayed as they are, and the screen updates in the right place;
+ * - a wide pass: a single summary, with the count per family — it is up to the client to reload what it displays, once.
  *
- * Le collecteur est volontairement sans dépendance : il ne connaît ni socket ni base,
- * ce qui le rend vérifiable seul.
+ * The collector is deliberately dependency-free: it knows neither socket nor database, which makes it verifiable on its own.
  */
 
-/** Familles pour lesquelles un événement fin existe déjà côté client. */
+/** Families for which a fine-grained event already exists on the client side. */
 export type ReplayableKind = 'sequence' | 'shot' | 'asset' | 'task' | 'version';
 
-/** Les notes et les playlists n'ont pas d'événement fin : elles ne voyagent qu'en décompte. */
+/** Notes and playlists have no fine-grained event: they only travel as a count. */
 export type TouchedKind = ReplayableKind | 'comment' | 'playlist';
 
 export const TOUCHED_EVENT_NAME: Record<ReplayableKind, string> = {
@@ -41,25 +36,24 @@ export function isReplayable(kind: TouchedKind): kind is ReplayableKind {
 }
 
 /**
- * Au-delà de ce nombre d'entités distinctes, la passe ne rejoue plus le détail.
+ * Beyond this number of distinct entities, the pass no longer replays the detail.
  *
- * Vingt-cinq couvre très largement le cas courant — un webhook porte sur une entité, un
- * réalignement manuel sur une — tout en restant sous le seuil où l'invalidation groupée
- * du client coûte moins cher que les invalidations unitaires.
+ * Twenty-five amply covers the common case — a webhook concerns one entity, a manual realignment one as well — while staying below the threshold where the client's grouped
+ * invalidation costs less than unit invalidations.
  */
 export const DETAIL_LIMIT = 25;
 
 export interface TouchedEvent {
   kind: ReplayableKind;
   id: number;
-  /** Champs supplémentaires attendus par le client (rattachements d'une tâche, p. ex.). */
+    /** Additional fields expected by the client (a task's links, for example). */
   extra?: Record<string, unknown>;
 }
 
 export interface TouchedSummary {
   counts: Partial<Record<TouchedKind, number>>;
   total: number;
-  /** `true` : les événements fins ont été rejoués, le client n'a rien à recharger en gros. */
+    /** `true`: the fine-grained events have been replayed, the client has nothing to reload wholesale. */
   detailed: boolean;
 }
 
@@ -68,11 +62,10 @@ export class TouchedEntities {
   private readonly seen = new Set<string>();
   private readonly tally = new Map<TouchedKind, number>();
 
-  /**
-   * Note une entité touchée. Une même entité vue deux fois dans la passe ne compte
-   * qu'une fois : le décompte dit « combien d'objets ont bougé », pas « combien
-   * d'écritures ont eu lieu ».
-   */
+    /**
+     * Notes a touched entity. The same entity seen twice in the pass counts only once: the count says "how many objects moved", not "how many
+     * writes took place".
+     */
   add(kind: TouchedKind, id: number, extra?: Record<string, unknown>): void {
     const key = `${kind}:${id}`;
     if (this.seen.has(key)) return;
@@ -80,8 +73,7 @@ export class TouchedEntities {
     this.tally.set(kind, (this.tally.get(kind) ?? 0) + 1);
 
     if (!isReplayable(kind)) return;
-    // Passé le seuil, le détail ne servira plus : le retenir ferait porter à une passe
-    // complète le poids de douze mille objets pour ne rien en émettre.
+        // Past the threshold, the detail will no longer be used: retaining it would make a full pass bear the weight of twelve thousand objects to emit nothing.
     if (this.seen.size > DETAIL_LIMIT) {
       this.events.length = 0;
       return;
@@ -97,7 +89,7 @@ export class TouchedEntities {
     return this.seen.size <= DETAIL_LIMIT;
   }
 
-  /** Événements fins à rejouer — vide dès que la passe a dépassé le seuil. */
+    /** Fine-grained events to replay — empty as soon as the pass has exceeded the threshold. */
   detail(): TouchedEvent[] {
     return this.detailed ? [...this.events] : [];
   }
@@ -112,15 +104,12 @@ export class TouchedEntities {
 }
 
 /**
- * Fin de passe : on émet, une fois.
+ * End of pass: we emit, once.
  *
- * Petite passe, les événements fins sont rejoués — l'écran se met à jour exactement là
- * où il faut. Grande passe, un seul `shotgrid:sync` porte le décompte par famille et
- * `detailed: false` : au client de recharger ce qu'il affiche, une fois, au lieu de
- * subir douze mille invalidations.
+ * Small pass: the fine-grained events are replayed — the screen updates exactly where it needs to. Large pass: a single `shotgrid:sync` carries the count per family and
+ * `detailed: false`: it is up to the client to reload what it displays, once, instead of suffering twelve thousand invalidations.
  *
- * Le résumé part dans tous les cas, y compris quand la passe a échoué en cours de route :
- * ce qu'elle a déjà réaligné est réel et doit atteindre les écrans ouverts.
+ * The summary goes out in every case, including when the pass failed along the way: what it has already realigned is real and must reach the open screens.
  */
 export function flushTouched(
   projectId: number,
@@ -139,12 +128,10 @@ export function flushTouched(
 }
 
 /**
- * Émission vers la room d'un projet, quel que soit le process d'où l'on parle.
+ * Emission to a project's room, whichever process it is spoken from.
  *
- * La synchronisation ShotGrid tourne dans le process **worker**, où `emitToProject` fait
- * `io?.to(...)` sur un `io` qui vaut `undefined` : l'émission était un no-op silencieux, et
- * aucun écran ne se rafraîchissait après une passe. Le worker passe donc par le canal
- * Redis, que le serveur relaie ; le process web, lui, émet directement.
+ * The ShotGrid synchronization runs in the **worker** process, where `emitToProject` does `io?.to(...)` on an `io` that is `undefined`: the emission was a silent no-op, and
+ * no screen refreshed after a pass. The worker therefore goes through the Redis channel, which the server relays; the web process, for its part, emits directly.
  */
 function emitProject(projectId: number, event: string, payload: unknown): void {
   if (isWorkerProcess()) {

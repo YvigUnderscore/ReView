@@ -10,25 +10,24 @@ import { shouldImportMedia } from './shotgridLinks';
 const base = { withMedia: true, autoImport: true };
 
 describe('shouldImportMedia', () => {
-  it('rapatrie le média d’une version venue du site', () => {
+  it('fetches the media of a version coming from the site', () => {
     expect(shouldImportMedia({ ...base, link: {} })).toBe(true);
   });
 
-  it('ne rapatrie pas deux fois le même média', () => {
+  it('does not fetch the same media twice', () => {
     expect(shouldImportMedia({ ...base, link: { mediaImported: true } })).toBe(false);
   });
 
-  it('ne rapatrie jamais le média d’une version publiée depuis ReView', () => {
-    // Le cas rapporté : publier ici, pousser vers ShotGrid, synchroniser — et se
-    // retrouver avec une seconde copie dans la même version.
+  it('never fetches the media of a version published from ReView', () => {
+        // The reported case: publish here, push to ShotGrid, synchronize — and end up with a second copy in the same version.
     expect(shouldImportMedia({ ...base, link: { createdFromReview: true } })).toBe(false);
   });
 
-  it('respecte le réglage d’import automatique', () => {
+  it('respects the automatic import setting', () => {
     expect(shouldImportMedia({ ...base, autoImport: false, link: {} })).toBe(false);
   });
 
-  it('ne fait rien quand la passe ne porte pas sur les médias', () => {
+  it('does nothing when the pass does not concern the media', () => {
     expect(shouldImportMedia({ ...base, withMedia: false, link: {} })).toBe(false);
   });
 });

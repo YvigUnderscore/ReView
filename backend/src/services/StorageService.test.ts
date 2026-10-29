@@ -4,8 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Faux client S3 : chaque commande garde son `input`, ce qui suffit à vérifier l'en-tête
- * réellement envoyé à MinIO — le seul objet de cette suite.
+ * Fake S3 client: each command keeps its `input`, which is enough to verify the header actually sent to
+ * MinIO: the only object of this suite.
  */
 const { send, signed } = vi.hoisted(() => ({ send: vi.fn(), signed: vi.fn() }));
 
@@ -64,13 +64,12 @@ beforeEach(() => {
 });
 
 /**
- * Aucun chemin d'écriture ne stocke un type actif : les objets sont servis depuis l'origine
- * de l'application, un `text/html` y exécuterait du script avec la session de l'utilisateur.
- * `putObject` était le seul à ne pas passer par la liste blanche — et c'est par lui que
- * transitent les pièces jointes et les médias rapatriés d'un site ShotGrid.
+ * No write path stores an active type: objects are served from the application's origin, where a `text/html`
+ * would run script with the user's session. `putObject` was the only one bypassing the allowlist, and it is
+ * through it that attachments and media fetched from a ShotGrid site transit.
  */
-describe('StorageService — Content-Type des écritures serveur', () => {
-  it('ramène un type actif sur application/octet-stream', async () => {
+describe('StorageService: Content-Type of server writes', () => {
+  it('brings an active type back to application/octet-stream', async () => {
     await storage.putObject('comments/attachments/shotgrid/1/2-note.html', Buffer.from('x'), 'text/html');
     expect(lastInput().ContentType).toBe('application/octet-stream');
 
@@ -78,7 +77,7 @@ describe('StorageService — Content-Type des écritures serveur', () => {
     expect(lastInput().ContentType).toBe('application/octet-stream');
   });
 
-  it('conserve les types de la liste blanche et retire les paramètres', async () => {
+  it('keeps the allowlisted types and strips the parameters', async () => {
     await storage.putObject('derived/1/thumbnail.webp', Buffer.from('x'), 'image/webp');
     expect(lastInput().ContentType).toBe('image/webp');
 
@@ -86,13 +85,13 @@ describe('StorageService — Content-Type des écritures serveur', () => {
     expect(lastInput().ContentType).toBe('text/plain');
   });
 
-  it('couvre uploadFile, qui délègue à putObject', async () => {
+  it('covers uploadFile, which delegates to putObject', async () => {
     await storage.uploadFile('derived/1/model.glb', '/tmp/model.glb', 'text/html');
     expect(lastInput().Body).toBe('flux-local');
     expect(lastInput().ContentType).toBe('application/octet-stream');
   });
 
-  it('normalise aussi la présignature d’upload et le multipart', async () => {
+  it('also normalizes the upload presign and multipart', async () => {
     await storage.getPresignedPutUrl('a/b.html', 'text/html');
     expect((signed.mock.calls.at(-1)![1] as { input: { ContentType: string } }).input.ContentType).toBe(
       'application/octet-stream',
@@ -102,7 +101,7 @@ describe('StorageService — Content-Type des écritures serveur', () => {
     expect(lastInput().ContentType).toBe('application/octet-stream');
   });
 
-  it('normalise le type imposé à la lecture', async () => {
+  it('normalizes the forced type on read', async () => {
     await storage.getPresignedGetUrl('a/b.svg', 60, 'image/svg+xml');
     const cmd = signed.mock.calls.at(-1)![1] as { input: { ResponseContentType?: string } };
     expect(cmd.input.ResponseContentType).toBe('application/octet-stream');

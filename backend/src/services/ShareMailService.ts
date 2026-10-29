@@ -7,8 +7,8 @@ import { env } from '../config/env';
 import { logger } from '../lib/logger';
 import { isMailerConfigured, sendMail } from '../lib/mailer';
 import { mailLayout, mailButton, MAIL_ACCENT, MAIL_MUTED } from '../lib/mailTemplate';
-// Un seul échappement, partagé : la copie locale oubliait les guillemets — celle qui
-// compte dans un attribut, donc la seule dont l'absence se paie.
+// A single, shared escaping: the local copy forgot quotes, which is the one that matters
+// in an attribute, so the one whose absence is costly.
 import { escapeHtml as esc } from '../lib/html';
 import { displayName } from '../lib/userView';
 import { logAudit } from './AuditService';
@@ -16,23 +16,21 @@ import { badRequest, notFound } from '../lib/errors';
 import { t, type Locale } from '../i18n';
 
 /**
- * Envoi du lien de partage par courriel, depuis l'onglet Partages.
+ * Sends the share link by email, from the Shares tab.
  *
- * Le lien était créé puis copié dans le presse-papier : à charge du superviseur de le
- * coller quelque part, sans mention de sa date d'expiration ni de sa limite de vues. Le
- * client recevait donc une URL nue dans un fil de discussion, et découvrait la péremption
- * en cliquant dessus.
+ * The link used to be created and then copied to the clipboard: it was up to the supervisor to paste it
+ * somewhere, without mention of its expiry date or its view limit. The client therefore received a bare
+ * URL in a discussion thread, and discovered the expiry by clicking it.
  *
- * L'email part en anglais, comme les invitations : le destinataire n'a pas de compte, donc
- * aucune préférence de langue connue, et l'anglais est la langue de référence des
- * catalogues.
+ * The email goes out in English, like the invitations: the recipient has no account, so no language
+ * preference is known, and English is the reference language of the catalogs.
  */
 const SHARE_MAIL_LOCALE: Locale = 'en';
 
-/** Un envoi ne s'adresse pas à une liste de diffusion : au-delà, c'est une newsletter. */
+/** A send is not meant for a mailing list: beyond this it is a newsletter. */
 export const SHARE_MAIL_MAX_RECIPIENTS = 10;
 
-/** URL publique du lien, telle qu'elle est ouverte dans un navigateur. */
+/** Public URL of the link, as it is opened in a browser. */
 export function shareUrl(token: string): string {
   return `${env.APP_URL ?? ''}/client/${token}`;
 }
@@ -40,7 +38,7 @@ export function shareUrl(token: string): string {
 export interface ShareMailContext {
   projectName: string;
   senderName: string;
-  /** Ce que le lien ouvre, déjà résolu en nom lisible (playlist, version) le cas échéant. */
+    /** What the link opens, already resolved to a readable name (playlist, version) where applicable. */
   scope: ShareScope;
   scopeTarget: string | null;
   expiresAt: Date | null;
@@ -50,7 +48,7 @@ export interface ShareMailContext {
   url: string;
 }
 
-/** Phrase qui dit au destinataire ce qu'il va voir — la portée n'est utile que si elle se lit. */
+/** Sentence telling the recipient what they will see: the scope is only useful if it can be read. */
 export function scopeLine(locale: Locale, ctx: Pick<ShareMailContext, 'scope' | 'scopeTarget'>): string {
   const target = ctx.scopeTarget ?? '';
   switch (ctx.scope) {
@@ -66,7 +64,7 @@ export function scopeLine(locale: Locale, ctx: Pick<ShareMailContext, 'scope' | 
   }
 }
 
-/** HTML de l'email de partage (pur — testé unitairement). */
+/** HTML of the share email (pure: unit-tested). */
 export function renderShareMailHtml(locale: Locale, ctx: ShareMailContext): string {
   const date = ctx.expiresAt
     ? new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(ctx.expiresAt)
@@ -95,9 +93,8 @@ ${mailButton(ctx.url, t(locale, 'share.mail.cta'))}
 }
 
 /**
- * Envoie le lien à un ou plusieurs destinataires. Refuse tôt ce qui ne peut pas aboutir
- * (pas d'URL publique, pas de relais SMTP, lien révoqué) : mieux vaut un message d'erreur
- * qu'un client qui attend un email jamais parti.
+ * Sends the link to one or more recipients. Rejects early what cannot succeed (no public URL, no SMTP relay,
+ * revoked link): better an error message than a client waiting for an email that was never sent.
  */
 export async function sendShareMail(
   senderId: number,
@@ -146,9 +143,8 @@ export async function sendShareMail(
   });
   const subject = t(SHARE_MAIL_LOCALE, 'share.mail.subject', { project: link.project.name });
 
-  // Un destinataire par message : une liste en clair dans `To:` révèle à chaque client
-  // l'adresse des autres — et le partage sert souvent à montrer la même chose à des
-  // interlocuteurs qui ne doivent pas savoir qu'ils sont plusieurs.
+    // One recipient per message: a plain list in `To:` reveals every other recipient's address to each
+    // client, and sharing often shows the same thing to people who must not know they are several.
   const results = await Promise.all(recipients.map((to) => sendMail(to, subject, html)));
   const sent = results.filter(Boolean).length;
   logAudit({

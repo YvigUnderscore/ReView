@@ -5,16 +5,13 @@ import { createHmac } from 'node:crypto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Le secret de signature du webhook : ce que ReView montre doit être ce que ReView vérifie.
+ * The webhook signing secret: what ReView shows must be what ReView verifies.
  *
- * La connexion naissait avec un secret aléatoire qu'aucune surface n'exposait — ni la vue
- * d'API, ni l'écran. Personne ne pouvait donc le poser dans le webhook du site, ShotGrid
- * signait avec autre chose, et toutes les livraisons repartaient en 404. Ces tests gardent
- * le chemin qui rend l'intégration réglable : lecture en clair, rotation, et le fait que la
- * valeur rendue valide bien une signature ShotGrid.
+ * The connection was born with a random secret that no surface exposed: neither the API view nor the screen. Nobody could therefore
+ * set it in the site's webhook, ShotGrid signed with something else, and every delivery came back 404. These tests guard the path that
+ * makes the integration configurable: clear-text reading, rotation, and the fact that the value returned validly signs a ShotGrid delivery.
  *
- * Le chiffrement n'est **pas** doublé : c'est le vrai `encryptSecret`/`decryptSecret` qui
- * tourne ici. Un test qui doublerait la crypto vérifierait sa propre doublure.
+ * Encryption is **not** mocked: the real `encryptSecret`/`decryptSecret` run here. A test that mocked the crypto would only check its own mock.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -36,25 +33,24 @@ beforeEach(() => {
   db.shotgridConnection.update.mockResolvedValue({});
 });
 
-describe('secret de webhook', () => {
-  it('rend en clair le secret enregistré', async () => {
+describe('webhook secret', () => {
+  it('returns the stored secret in clear', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue(connection(encryptSecret('le-secret-du-site')));
 
     await expect(revealWebhookSecret(7)).resolves.toBe('le-secret-du-site');
   });
 
-  it('rend null quand la connexion n’exige aucune signature', async () => {
+  it('returns null when the connection requires no signature', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue(connection(null));
 
     await expect(revealWebhookSecret(7)).resolves.toBeNull();
   });
 
-  /**
-   * L'invariant qui manquait : la valeur donnée à l'administrateur est exactement celle
-   * que la route du webhook relira. Si la rotation enregistrait autre chose que ce qu'elle
-   * rend, on aurait recréé la panne d'origine — en plus discret.
-   */
-  it('enregistre exactement le secret qu’elle rend', async () => {
+    /**
+     * The missing invariant: the value given to the administrator is exactly the one the webhook route will read back. If rotation stored
+     * something other than what it returns, we would have recreated the original failure, only more discreetly.
+     */
+  it('stores exactly the secret it returns', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue(connection(encryptSecret('ancien')));
 
     const secret = await rotateWebhookSecret(7);
@@ -62,23 +58,22 @@ describe('secret de webhook', () => {
 
     expect(secret).not.toBe('ancien');
     expect(secret.length).toBeGreaterThan(20);
-    // Chiffré en base, jamais en clair.
+        // Encrypted in the database, never in clear.
     expect(stored).not.toContain(secret);
     expect(webhookSecretOf(connection(stored))).toBe(secret);
   });
 
-  it('ne rend jamais deux fois le même secret', async () => {
+  it('never returns the same secret twice', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue(connection(null));
 
     expect(await rotateWebhookSecret(7)).not.toBe(await rotateWebhookSecret(7));
   });
 
-  /**
-   * Bout en bout : la valeur affichée signe une livraison à la manière de ShotGrid
-   * (HMAC-SHA1 des octets du corps), et la signature obtenue est celle que la route
-   * recalcule à partir du secret déchiffré.
-   */
-  it('valide une signature ShotGrid calculée avec la valeur affichée', async () => {
+    /**
+     * End to end: the displayed value signs a delivery the way ShotGrid does (HMAC-SHA1 of the body bytes), and the signature obtained
+     * is the one the route recomputes from the decrypted secret.
+     */
+  it('validates a ShotGrid signature computed with the displayed value', async () => {
     const stored = encryptSecret('secret-partage-avec-le-site');
     db.shotgridConnection.findUnique.mockResolvedValue(connection(stored));
     const shown = await revealWebhookSecret(7);

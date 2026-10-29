@@ -4,13 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * A2-04 — `PATCH /api/users/me/preferences` validait `z.record(z.string().max(64),
- * z.unknown())` : la CLÉ était bornée, la VALEUR non. N'importe quel compte ordinaire
- * écrivait donc du JSON de forme et de profondeur libres dans sa colonne `preferences`, et
- * la fusion étant superficielle, chaque appel AJOUTAIT une clé sans jamais en reprendre.
+ * A2-04: `PATCH /api/users/me/preferences` validated `z.record(z.string().max(64), z.unknown())`: the KEY was bounded,
+ * the VALUE was not. Any ordinary account therefore wrote JSON of free shape and depth into its `preferences` column,
+ * and since the merge was shallow, each call ADDED a key without ever removing one.
  *
- * Deux moitiés se répondent ici : le schéma borne ce qu'une valeur a le droit d'être, la
- * fusion borne ce que le sac a le droit de devenir.
+ * Two halves answer each other here: the schema bounds what a value may be, the merge bounds what the bag may become.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -33,7 +31,7 @@ import { preferencesPatchSchema, updatePreferences } from './UserService';
 
 const accepts = (value: unknown) => preferencesPatchSchema.safeParse({ k: value }).success;
 
-/** Sac déjà en base pour ce compte. */
+/** Bag already stored for this account. */
 const stored = (preferences: Record<string, unknown>) =>
   db.user.findUnique.mockResolvedValue({ preferences });
 
@@ -45,8 +43,8 @@ beforeEach(() => {
   db.user.update.mockResolvedValue({});
 });
 
-describe('preferencesPatchSchema — ce que l’interface enregistre réellement passe', () => {
-  it('accepte les préférences existantes, imbriquées comprises', () => {
+describe('preferencesPatchSchema: what the interface actually saves passes', () => {
+  it('accepts existing preferences, nested ones included', () => {
     const real = {
       emailDigest: true,
       annotationColor: '#ef4444',
@@ -60,29 +58,29 @@ describe('preferencesPatchSchema — ce que l’interface enregistre réellement
     expect(preferencesPatchSchema.safeParse(real).success).toBe(true);
   });
 
-  it('refuse une chaîne démesurée — un champ ne peut pas manger tout le budget', () => {
+  it('refuses an oversized string: one field cannot eat the whole budget', () => {
     expect(accepts('x'.repeat(4_000))).toBe(true);
     expect(accepts('x'.repeat(4_001))).toBe(false);
   });
 
-  it('refuse une imbrication sans fond', () => {
+  it('refuses unbounded nesting', () => {
     const nest = (depth: number): unknown => (depth === 0 ? 1 : { a: nest(depth - 1) });
     expect(accepts(nest(5))).toBe(true);
     expect(accepts(nest(7))).toBe(false);
   });
 
-  it('refuse un tableau ou un sous-objet démesuré', () => {
+  it('refuses an oversized array or sub-object', () => {
     expect(accepts(Array.from({ length: 501 }, () => 1))).toBe(false);
     expect(accepts(manyKeys(201, 'n'))).toBe(false);
   });
 
-  it('refuse une clé de premier niveau trop longue', () => {
+  it('refuses an overlong top-level key', () => {
     expect(preferencesPatchSchema.safeParse({ ['k'.repeat(65)]: true }).success).toBe(false);
   });
 });
 
-describe('updatePreferences — le sac ne grossit pas indéfiniment', () => {
-  it('refuse d’ajouter une clé de plus au-delà du plafond, sans rien écrire', async () => {
+describe('updatePreferences: the bag does not grow indefinitely', () => {
+  it('refuses adding one more key beyond the cap, without writing anything', async () => {
     stored(manyKeys(200));
     await expect(updatePreferences(7, { unDeTrop: true })).rejects.toMatchObject({
       code: 'PREFERENCES_TOO_MANY_KEYS',
@@ -90,13 +88,13 @@ describe('updatePreferences — le sac ne grossit pas indéfiniment', () => {
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('laisse remplacer une clé existante à plafond atteint', async () => {
+  it('lets an existing key be replaced when the cap is reached', async () => {
     stored(manyKeys(200));
     await expect(updatePreferences(7, { k0: false })).resolves.toMatchObject({ k0: false });
   });
 
-  /** Un sac antérieur au plafond doit rester réductible, sinon le refus enferme. */
-  it('laisse reprendre des clés à un sac déjà trop garni', async () => {
+    /** A bag predating the cap must remain reducible, otherwise the refusal would lock it in. */
+  it('lets keys be taken over in a bag already too full', async () => {
     stored(manyKeys(260));
     await expect(updatePreferences(7, { k0: null })).resolves.toBeTruthy();
     expect(db.user.update).toHaveBeenCalledTimes(1);
@@ -104,13 +102,13 @@ describe('updatePreferences — le sac ne grossit pas indéfiniment', () => {
 });
 
 /**
- * La disposition de la vue d'ensemble (lot 10) a, comme les réglages de notification, une
- * FORME arrêtée dans le sac : ce qui s'y écrit doit citer des blocs que l'écran sait rendre.
+ * The overview layout (batch 10) has, like the notification settings, a FIXED shape in the bag: what is written there
+ * must cite blocks the screen knows how to render.
  */
-describe('preferencesPatchSchema — disposition de la vue d’ensemble', () => {
+describe('preferencesPatchSchema: overview layout', () => {
   const layout = (value: unknown) => preferencesPatchSchema.safeParse({ projectOverview: value }).success;
 
-  it('accepte ce que compose réellement la page', () => {
+  it('accepts what the page actually composes', () => {
     expect(
       layout({
         hidden: ['counts'],
@@ -120,28 +118,28 @@ describe('preferencesPatchSchema — disposition de la vue d’ensemble', () => 
     ).toBe(true);
   });
 
-  it('accepte l’effacement — c’est le retour au défaut du rôle', () => {
+  it('accepts clearing: it is the return to the role default', () => {
     expect(layout(null)).toBe(true);
   });
 
-  it('refuse un bloc que l’écran ne saurait pas rendre', () => {
+  it('refuses a block the screen could not render', () => {
     expect(layout({ order: ['fantome'] })).toBe(false);
   });
 
-  it('laisse passer les autres clés du sac sans les regarder', () => {
+  it('lets the other keys of the bag through without looking at them', () => {
     expect(preferencesPatchSchema.safeParse({ density: 'compact' }).success).toBe(true);
   });
 });
 
-describe('updatePreferences — la disposition est bien persistée', () => {
-  it('écrit la clé sans toucher au reste du sac', async () => {
+describe('updatePreferences: the layout is indeed persisted', () => {
+  it('writes the key without touching the rest of the bag', async () => {
     stored({ density: 'compact' });
     const next = await updatePreferences(7, { projectOverview: { hidden: ['counts'] } });
     expect(next).toEqual({ density: 'compact', projectOverview: { hidden: ['counts'] } });
     expect(db.user.update).toHaveBeenCalledTimes(1);
   });
 
-  it('supprime la clé quand la personne revient au défaut de son rôle', async () => {
+  it('removes the key when the person returns to their role default', async () => {
     stored({ density: 'compact', projectOverview: { hidden: ['counts'] } });
     const next = await updatePreferences(7, { projectOverview: null });
     expect(next).toEqual({ density: 'compact' });

@@ -24,7 +24,7 @@ function writer() {
   });
 }
 
-/** Entité du projet lié, telle que la relecture la rend. */
+/** Entity of the linked project, as the re-read returns it. */
 const inProject = { id: 7, type: 'Shot', project: { type: 'Project', id: 42, name: 'ALPHA' } };
 
 beforeEach(() => {
@@ -36,25 +36,24 @@ beforeEach(() => {
 });
 
 describe('update', () => {
-  it('écrit quand la cible est bien dans le projet lié', async () => {
+  it('writes when the target is indeed in the linked project', async () => {
     await writer().update('Shot', 7, { sg_status_list: 'ip' });
 
     expect(unsafeUpdate).toHaveBeenCalledWith('Shot', 7, { sg_status_list: 'ip' }, {});
   });
 
-  /**
-   * Le cas qui coûte cher : un lien pointe une entité supprimée puis recréée sous le même
-   * identifiant dans un autre projet. Sans relecture, on écrit dans la production de
-   * quelqu'un d'autre.
-   */
-  it("n'écrit pas dans une entité passée à un autre projet", async () => {
+    /**
+     * The costly case: a link points to an entity that was deleted then recreated under the same identifier in another project. Without a re-read, we write into
+     * someone else's production.
+     */
+  it("doesn't write into an entity moved to another project", async () => {
     findById.mockResolvedValue({ ...inProject, project: { type: 'Project', id: 99, name: 'BETA' } });
 
     await expect(writer().update('Shot', 7, { sg_status_list: 'ip' })).resolves.toBeNull();
     expect(unsafeUpdate).not.toHaveBeenCalled();
   });
 
-  it("n'écrit pas dans un projet modèle", async () => {
+  it("doesn't write into a template project", async () => {
     findById.mockResolvedValue({
       ...inProject,
       project: { type: 'Project', id: 42, name: 'Template Project' },
@@ -64,7 +63,7 @@ describe('update', () => {
     expect(unsafeUpdate).not.toHaveBeenCalled();
   });
 
-  it("n'écrit pas dans une cible que le site ne rend plus", async () => {
+  it("doesn't write into a target the site no longer returns", async () => {
     findById.mockResolvedValue(null);
 
     await expect(writer().update('Shot', 7, {})).resolves.toBeNull();
@@ -73,7 +72,7 @@ describe('update', () => {
 });
 
 describe('create', () => {
-  it('pose le projet lié lui-même', async () => {
+  it('sets the linked project itself', async () => {
     await writer().create('Note', { subject: 'bonjour' });
 
     expect(unsafeCreate).toHaveBeenCalledWith(
@@ -83,23 +82,22 @@ describe('create', () => {
     );
   });
 
-  /**
-   * Un appelant ne choisit pas le projet : c'est une erreur de programmation, pas une
-   * donnée à arbitrer. On refuse avant que la moindre requête ne parte.
-   */
-  it('refuse une charge utile qui vise un autre projet', async () => {
+    /**
+     * A caller does not choose the project: it is a programming error, not data to arbitrate. We refuse before any request goes out.
+     */
+  it('refuses a payload targeting another project', async () => {
     await expect(writer().create('Note', { project: { type: 'Project', id: 99 } })).rejects.toThrow();
     expect(unsafeCreate).not.toHaveBeenCalled();
   });
 
-  it('accepte une charge utile qui répète le bon projet', async () => {
+  it('accepts a payload that repeats the right project', async () => {
     await writer().create('Note', { project: { type: 'Project', id: 42 } });
 
     expect(unsafeCreate).toHaveBeenCalled();
   });
 
-  /** C'est le site qui décide de ce qu'il a écrit — on le relit avant de s'en réjouir. */
-  it('lève quand le site a déposé l’entité ailleurs', async () => {
+    /** It is the site that decides what it has written — we re-read it before rejoicing. */
+  it('throws when the site has deposited the entity elsewhere', async () => {
     findById.mockResolvedValue({
       id: 900,
       type: 'Note',
@@ -109,7 +107,7 @@ describe('create', () => {
     await expect(writer().create('Note', {})).rejects.toThrow();
   });
 
-  it('transmet le compte au nom duquel écrire', async () => {
+  it('passes on the account in whose name to write', async () => {
     await writer().create('Note', {}, { asUserLogin: 'lea@studio.fr' });
 
     expect(unsafeCreate).toHaveBeenCalledWith('Note', expect.anything(), 'lea@studio.fr');
@@ -117,14 +115,14 @@ describe('create', () => {
 });
 
 describe('upload', () => {
-  it('dépose le fichier après la même relecture que update', async () => {
+  it('deposits the file after the same re-read as update', async () => {
     await expect(
       writer().upload('Version', 7, 'image', Buffer.from('x'), 'a.webp', 'image/webp'),
     ).resolves.toBe(true);
     expect(unsafeUploadFile).toHaveBeenCalled();
   });
 
-  it('ne dépose rien sur une entité d’un autre projet', async () => {
+  it('deposits nothing on an entity of another project', async () => {
     findById.mockResolvedValue({ ...inProject, project: { type: 'Project', id: 99 } });
 
     await expect(

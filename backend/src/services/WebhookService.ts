@@ -10,74 +10,67 @@ import { safeFetch } from '../lib/safeFetch';
 import { enqueueWebhookDelivery } from './JobService';
 
 /**
- * Webhooks sortants (36.D) : `emitWebhookEvent` (fire-and-forget, appelé par les
- * services métier) enfile un job BullMQ par webhook actif abonné ; `deliver` (worker)
- * fait le POST signé HMAC et journalise le dernier statut sur le webhook.
+ * Outgoing webhooks (36.D): `emitWebhookEvent` (fire-and-forget, called by the business services) enqueues a BullMQ job
+ * per active subscribed webhook; `deliver` (worker) makes the HMAC-signed POST and logs the last status on the webhook.
  *
- * Deux propriétés se sont ajoutées et changent ce que le studio peut promettre :
- *  - **portée** : un webhook rattaché à un projet ne reçoit que ce projet, ce qui rend
- *    enfin donnable un webhook à un client sans lui ouvrir le catalogue du studio ;
- *  - **trace** : chaque livraison laisse une ligne (`WebhookDelivery`) avec son
- *    identifiant, ses tentatives, le statut HTTP et un extrait de la réponse. C'est cet
- *    identifiant que porte l'en-tête `X-ReView-Delivery` et le champ `id` du corps signé —
- *    de quoi dédupliquer une reprise côté consommateur, et rejouer côté administration.
+ * Two properties were added, changing what the studio can promise:
+ *  - **scope**: a webhook attached to a project only receives that project's events, which finally makes it possible to
+ *    hand a webhook to a client without opening the studio's catalogue to them;
+ *  - **trace**: each delivery leaves a row (`WebhookDelivery`) with its identifier, its attempts, the HTTP status and an
+ *    excerpt of the response. This identifier is carried by the `X-ReView-Delivery` header and the `id` field of the signed
+ *    body: enough to deduplicate a retry on the consumer side, and to replay from administration.
  */
 
-/** Extrait de réponse conservé : de quoi lire un message d'erreur, pas de quoi stocker une page. */
+/** Kept response excerpt: enough to read an error message, not enough to store a page. */
 export const RESPONSE_BODY_MAX = 1000;
 
 /**
- * Plafond de lecture de la réponse. On ne lisait pas le corps auparavant ; le journaliser
- * suppose de borner ce qu'un destinataire hostile peut nous faire télécharger. Au-delà,
- * `safeFetch` coupe et l'extrait est simplement absent — le statut, lui, reste enregistré.
+ * Read cap on the response. The body used not to be read; logging it requires bounding what a hostile recipient can make us
+ * download. Beyond it, `safeFetch` cuts off and the excerpt is simply absent: the status, for its part, is still recorded.
  */
 const RESPONSE_READ_MAX_BYTES = 64 * 1024;
 
-/** Livraisons définitivement perdues, d'affilée, avant désactivation automatique. */
+/** Permanently lost deliveries, in a row, before automatic deactivation. */
 export const FAILURE_STREAK_LIMIT = 5;
 
 /**
- * Miroir de `webhookQueue.defaultJobOptions.attempts` (JobService). La valeur est répétée
- * ici parce que le worker ne transmet pas le compteur BullMQ : c'est la tentative
- * numéro `MAX_ATTEMPTS` qui fait passer une livraison de « en cours de reprise » à
- * « perdue », et donc qui alimente la série d'échecs du webhook.
+ * Mirror of `webhookQueue.defaultJobOptions.attempts` (JobService). The value is repeated here because the worker does not
+ * pass the BullMQ counter: it is attempt number `MAX_ATTEMPTS` that moves a delivery from "being retried" to "lost", and
+ * therefore feeds the webhook's failure streak.
  */
 const MAX_ATTEMPTS = 5;
 
 const DELIVERY_TIMEOUT_MS = 10_000;
 
 /**
- * Motif consigné quand le secret du webhook ne se déchiffre plus (`lastError`, visible
- * dans l'écran d'administration). Il ne décrit pas une panne du destinataire : c'est la
- * clé de chiffrement de l'instance qui a changé — cf. `lib/crypto`.
+ * Reason recorded when the webhook's secret can no longer be decrypted (`lastError`, visible in the administration screen).
+ * It does not describe a recipient outage: it is the instance's encryption key that has changed; see `lib/crypto`.
  */
 export const SECRET_UNREADABLE_ERROR = 'WEBHOOK_SECRET_UNREADABLE';
 
 /**
- * Clé d'enveloppe portant l'identifiant de livraison à travers la file.
+ * Envelope key carrying the delivery identifier through the queue.
  *
- * `WebhookJobData` (services/JobService) ne transporte que `{ webhookId, event, payload }`
- * et `workers/webhook.worker` ne passe que ces trois champs : l'identifiant voyage donc
- * dans la charge, sous une clé réservée que `deliver` retire avant de signer. Le corps
- * envoyé au destinataire n'en porte aucune trace — il reçoit l'identifiant à sa place
- * normale, `id` à la racine et en-tête `X-ReView-Delivery`.
+ * `WebhookJobData` (services/JobService) only carries `{ webhookId, event, payload }`, and `workers/webhook.worker` only
+ * passes those three fields: the identifier therefore travels in the payload, under a reserved key that `deliver` removes
+ * before signing. The body sent to the recipient carries no trace of it: the recipient receives the identifier in its normal
+ * place, `id` at the root and the `X-ReView-Delivery` header.
  */
 const DELIVERY_ENVELOPE_KEY = '_reviewDeliveryId';
 
 export interface EmitOptions {
-  /** Projet concerné — `null` pour un fait de studio (aucun webhook de projet ne le reçoit). */
+    /** Project concerned: `null` for a studio fact (no project webhook receives it). */
   projectId?: number | null;
-  /** Ligne du journal v1 à l'origine de l'émission, si elle a pu être écrite. */
+    /** Row of the v1 journal that originated the emission, if it could be written. */
   apiEventId?: number | null;
 }
 
 /**
- * Abonnés à servir pour un événement donné.
+ * Subscribers to serve for a given event.
  *
- * Un webhook sans projet est un webhook de studio : il reçoit tout, comme avant. Un
- * webhook rattaché à un projet ne reçoit que les événements de CE projet — et un événement
- * qui n'appartient à aucun projet ne lui parvient pas, faute de pouvoir affirmer qu'il le
- * concerne.
+ * A webhook without a project is a studio webhook: it receives everything, as before. A webhook attached to a project only
+ * receives the events of THAT project, and an event belonging to no project never reaches it, since it cannot be asserted to
+ * concern it.
  */
 export function subscriberFilter(event: string, projectId: number | null): Prisma.WebhookWhereInput {
   return {
@@ -105,11 +98,10 @@ export function emitWebhookEvent(
 }
 
 /**
- * Ouvre une ligne de journal puis enfile le job qui la portera.
+ * Opens a journal line, then enqueues the job that will carry it.
  *
- * L'ordre compte : la ligne existe avant la première tentative, si bien qu'une livraison
- * qui échouera cinq fois est visible dès la première seconde au lieu d'apparaître — ou
- * pas — à la fin.
+ * The order matters: the line exists before the first attempt, so a delivery that will fail five times is visible from the
+ * first second instead of appearing, or not, at the end.
  */
 export async function queueDelivery(
   webhookId: number,
@@ -135,7 +127,7 @@ export async function queueDelivery(
   return delivery.id;
 }
 
-/** Sépare l'identifiant de livraison de la charge réellement envoyée au destinataire. */
+/** Separates the delivery identifier from the payload actually sent to the recipient. */
 export function unpackDelivery(payload: Record<string, unknown>): {
   deliveryId: number | null;
   data: Record<string, unknown>;
@@ -144,29 +136,26 @@ export function unpackDelivery(payload: Record<string, unknown>): {
   return { deliveryId: typeof raw === 'number' ? raw : null, data };
 }
 
-/** Livraison effective (worker) — lève en cas d'échec pour déclencher le retry BullMQ. */
+/** Effective delivery (worker): throws on failure to trigger the BullMQ retry. */
 export async function deliver(
   webhookId: number,
   event: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
   const hook = await prisma.webhook.findUnique({ where: { id: webhookId } });
-  if (!hook || !hook.active) return; // désactivé/supprimé entre-temps : rien à faire
+  if (!hook || !hook.active) return; // deactivated/deleted in the meantime: nothing to do
   const { deliveryId, data } = unpackDelivery(payload);
   const secret = decryptSecret(hook.secret);
-  /**
-   * Échec FERMÉ sur l'authenticité.
-   *
-   * Le `?? ''` d'avant signait avec une clé HMAC VIDE : Node l'accepte, la livraison
-   * partait avec un `X-ReView-Signature` parfaitement formé — et recalculable par
-   * quiconque connaît l'URL. C'est pire que pas de signature du tout, puisque le
-   * destinataire croit vérifier. On n'émet donc rien, et la panne devient lisible.
-   *
-   * Pas de `throw` : une reprise ne réparera pas une clé de chiffrement changée, elle
-   * ne ferait que rejouer cinq fois la même impasse. Le webhook reste actif — la panne
-   * est de configuration, pas d'endpoint ; le réparer ne doit pas exiger de le
-   * réactiver à la main.
-   */
+    /**
+     * Fail CLOSED on authenticity.
+     *
+     * The earlier `?? ''` signed with an EMPTY HMAC key: Node accepts it, and the delivery left with a perfectly well-formed
+     * `X-ReView-Signature`, recomputable by anyone who knows the URL. That is worse than no signature at all, since the recipient
+     * believes it verifies. So nothing is emitted, and the failure becomes readable.
+     *
+     * No `throw`: a retry will not repair a changed encryption key; it would only replay the same dead end five times. The webhook
+     * stays active: the failure is one of configuration, not of the endpoint; repairing it must not require reactivating it by hand.
+     */
   if (secret === null) {
     logger.error({ webhookId, deliveryId }, '[webhooks] secret illisible — livraison refusée');
     await recordFailure(webhookId, deliveryId, null, null, SECRET_UNREADABLE_ERROR);
@@ -175,11 +164,10 @@ export async function deliver(
   const timestamp = String(Date.now());
   const body = JSON.stringify({ id: deliveryId, event, timestamp: Number(timestamp), data });
 
-  // Anti-SSRF : le worker tourne DANS le réseau interne (MinIO, Redis, Postgres y sont
-  // joignables sans authentification réseau). Une URL de webhook est saisie par un admin de
-  // l'app — ce qui ne lui donne pas pour autant la main sur ce réseau. `safeFetch` résout le
-  // nom AVANT la requête (un nom public peut pointer vers 127.0.0.1 ou 169.254.169.254) et
-  // ne suit aucune redirection (elle rejouerait le POST signé vers une cible non vérifiée).
+    // Anti-SSRF: the worker runs INSIDE the internal network (MinIO, Redis, Postgres are reachable there without network
+    // authentication). A webhook URL is entered by an app admin, which does not give them control of that network. `safeFetch`
+    // resolves the name BEFORE the request (a public name may point to 127.0.0.1 or 169.254.169.254) and follows no redirect
+    // (it would replay the signed POST to an unverified target).
   try {
     const res = await safeFetch(
       hook.url,
@@ -197,8 +185,8 @@ export async function deliver(
       },
       { timeoutMs: DELIVERY_TIMEOUT_MS, maxBytes: RESPONSE_READ_MAX_BYTES },
     );
-    // La réponse est lue même en cas de succès : un « 200 OK » accompagné d'un corps
-    // d'erreur est le symptôme le plus courant d'un relais mal configuré.
+        // The response is read even on success: a "200 OK" accompanied by an error body is the most common symptom of a
+        // misconfigured relay.
     const responseBody = await readBodyExcerpt(res);
     if (res.ok) {
       await recordSuccess(webhookId, deliveryId, res.status, responseBody);
@@ -216,7 +204,7 @@ export async function deliver(
 
 const errorText = (err: unknown) => (err as Error)?.message?.slice(0, 300) ?? 'erreur réseau';
 
-/** Lit au plus `RESPONSE_BODY_MAX` caractères — une réponse illisible ne fait pas échouer. */
+/** Reads at most `RESPONSE_BODY_MAX` characters: an unreadable response does not make the delivery fail. */
 async function readBodyExcerpt(res: Response): Promise<string | null> {
   try {
     const text = await res.text();
@@ -246,7 +234,7 @@ async function recordSuccess(
         },
       })
       .catch(() => undefined);
-  // Le premier succès efface la série : un endpoint qui repart n'a pas à traîner son passé.
+    // The first success clears the streak: a recovering endpoint need not drag its past along.
   await prisma.webhook
     .update({
       where: { id: webhookId },
@@ -291,8 +279,8 @@ async function recordFailure(
       select: { failureStreak: true },
     })
     .catch(() => null);
-  // Reprises épuisées à répétition : le webhook est mort, on cesse de lui écrire. Il reste
-  // en base, réactivable d'une case à cocher une fois l'endpoint réparé.
+    // Repeatedly exhausted retries: the webhook is dead, so we stop writing to it. It stays in the database, reactivatable
+    // with a checkbox once the endpoint is repaired.
   if (exhausted && (hook?.failureStreak ?? 0) >= FAILURE_STREAK_LIMIT) {
     await prisma.webhook.update({ where: { id: webhookId }, data: { active: false } }).catch(() => undefined);
     logger.warn(`[webhooks] webhook ${webhookId} désactivé après ${FAILURE_STREAK_LIMIT} livraisons perdues`);
@@ -313,7 +301,7 @@ export const deliverySelect = {
   deliveredAt: true,
 } as const;
 
-/** Journal d'un webhook, les plus récentes d'abord, par curseur décroissant sur l'id. */
+/** A webhook's journal, most recent first, by descending cursor on the id. */
 export async function listDeliveries(webhookId: number, limit: number, before?: number) {
   const rows = await prisma.webhookDelivery.findMany({
     where: { webhookId, ...(before !== undefined ? { id: { lt: before } } : {}) },
@@ -328,9 +316,8 @@ export async function listDeliveries(webhookId: number, limit: number, before?: 
 }
 
 /**
- * Rejoue une livraison : nouvelle ligne, nouvel identifiant, même événement et même
- * charge. On ne réutilise pas la ligne d'origine — ce qui a été perdu doit rester lisible
- * à côté de ce qui l'a remplacé, sinon le journal réécrit l'histoire.
+ * Replays a delivery: new row, new identifier, same event and same payload. The original row is not reused: what was lost must
+ * stay readable next to what replaced it, otherwise the journal would rewrite history.
  */
 export async function replayDelivery(webhookId: number, deliveryId: number): Promise<number | null> {
   const original = await prisma.webhookDelivery.findFirst({

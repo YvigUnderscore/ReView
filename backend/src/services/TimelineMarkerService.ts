@@ -11,11 +11,9 @@ import { displayName } from '../lib/userView';
 import { emitToReview } from './SocketService';
 
 /**
- * Marqueurs de timeline nommés/colorés partagés (Phase 34.C) : posés par clic droit sur
- * la timeline vidéo, visibles par tous les membres du projet. Écriture réservée aux
- * contributeurs du projet (rôle EFFECTIF, cf. `lib/projectRoles`) ; modification et
- * suppression par l'auteur ou un superviseur DE CE PROJET. Chaque mutation notifie la
- * room de review (`markers:changed`) pour invalidation temps réel.
+ * Shared named and coloured timeline markers (Phase 34.C): placed by right-click on the video timeline, visible to all project members. Writing is reserved to
+ * project contributors (EFFECTIVE role, see `lib/projectRoles`); modification and deletion by the author or a supervisor OF THIS PROJECT. Each mutation notifies the
+ * review room (`markers:changed`) for real-time invalidation.
  */
 
 type SessionUser = { id: number; role: Role };
@@ -62,7 +60,7 @@ const toView = (m: {
   createdAt: m.createdAt,
 });
 
-/** Accès lecture au média (membre du projet) — renvoie le projectId. */
+/** Read access to the media (project member) — returns the projectId. */
 async function assertMediaRead(mediaId: number, user: SessionUser): Promise<number> {
   const projectId = await resolveProjectIdForMedia(mediaId);
   if (!projectId) throw notFound('Media not found');
@@ -87,9 +85,8 @@ export async function create(
   data: { frame: number; name: string; color: string },
 ): Promise<TimelineMarkerView> {
   const projectId = await assertMediaRead(mediaId, user);
-  // 38.E : c'est le rôle EFFECTIF sur CE projet qui décide, pas le rôle global. Un ARTIST
-  // rétrogradé CLIENT garde son membership (checkProjectAccess dit toujours oui) mais ne
-  // pose plus de marqueur partagé.
+    // 38.E: it is the EFFECTIVE role on THIS project that decides, not the global role. An ARTIST demoted to CLIENT keeps their membership (checkProjectAccess still says yes)
+    // but no longer places a shared marker.
   await assertCanContribute(user.id, user.role, projectId);
   if (!COLOR_RE.test(data.color)) throw badRequest('Invalid colour (expected hex #rrggbb)');
   const count = await prisma.timelineMarker.count({ where: { mediaObjectId: mediaId } });
@@ -108,13 +105,12 @@ export async function create(
   return toView(marker);
 }
 
-/** L'auteur ou un superviseur/admin peut modifier/supprimer un marqueur. */
+/** The author or a supervisor/admin may modify/delete a marker. */
 async function assertMarkerManage(user: SessionUser, mediaId: number, markerId: number) {
   const projectId = await assertMediaRead(mediaId, user);
   const marker = await prisma.timelineMarker.findUnique({ where: { id: markerId } });
   if (!marker || marker.mediaObjectId !== mediaId) throw notFound('Marker not found');
-  // Même règle qu'à la création : sans droit de contribution sur ce projet, on ne touche
-  // plus aux marqueurs partagés — fût-on leur auteur d'avant la rétrogradation.
+    // Same rule as at creation: without contribution rights on this project, shared markers are no longer touched — even by their author from before the demotion.
   await assertCanContribute(user.id, user.role, projectId);
   const manager = await isProjectManager(user.id, user.role, projectId);
   if (!manager && marker.authorId !== user.id)

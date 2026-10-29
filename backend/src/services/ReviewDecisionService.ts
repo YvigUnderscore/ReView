@@ -15,28 +15,27 @@ import { assertProjectManage } from '../lib/projectRoles';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
- * Circuit d'approbation (Phase 31) : statuts de review personnalisables (studio)
- * et décisions par version (posées par SUPERVISOR+, historisées). La décision
- * courante est dénormalisée sur Version.reviewStatusId ; l'historique complet
- * vit dans ReviewDecision. RBAC asserté dans les routes.
+ * Approval circuit (Phase 31): customizable review statuses (per studio) and
+ * per-version decisions (recorded by SUPERVISOR+, with history). The current
+ * decision is denormalized on Version.reviewStatusId; the full history lives in
+ * ReviewDecision. RBAC is asserted in the routes.
  */
 
 type SessionUser = { id: number; role: Role };
 
 /**
- * Pastille d'une décision pour le canal d'équipe. Elle reste **hors du catalogue** :
- * un emoji n'est pas du texte à traduire, mais il précède la phrase dans les quatorze
- * langues — il voyage donc en paramètre `{icon}`.
+ * Badge for a decision in the team channel. It stays **outside the catalog**: an emoji is not text
+ * to translate, but it precedes the sentence in all fourteen languages, so it travels as the `{icon}` parameter.
  */
 const decisionIcon = (s: { isApproval: boolean; isRetake: boolean }): string =>
   s.isApproval ? '✅' : s.isRetake ? '🔁' : '🟠';
 
-/** Statuts classiques créés au premier accès (idempotent, instances existantes incluses). */
+/** Standard statuses created on first access (idempotent, existing instances included). */
 const DEFAULT_STATUSES = [
   { name: 'Pending', color: '#F5A623', order: 0, isDefault: true },
   { name: 'Approved', color: '#2ECC71', order: 1, isApproval: true },
   { name: 'Retake', color: '#E74C3C', order: 2, isRetake: true },
-  { name: 'CBB', color: '#3498DB', order: 3 }, // Could Be Better — validé avec réserves
+  { name: 'CBB', color: '#3498DB', order: 3 }, // Could Be Better: approved with reservations
 ];
 
 export async function ensureDefaultStatuses(): Promise<void> {
@@ -51,13 +50,12 @@ export async function listStatuses() {
 }
 
 /**
- * Statuts proposés pour un projet donné.
+ * Statuses offered for a given project.
  *
- * Sur un projet relié à ShotGrid, seuls les statuts qui existent réellement là-bas ont
- * un sens : poser une décision que le site ne connaît pas ne remonterait nulle part, et
- * l'écran se retrouvait à mélanger le vocabulaire d'origine de ReView avec celui du
- * studio — deux fois « approuvé », trois fois « à refaire ». On restreint donc à la
- * correspondance établie. Un projet autonome garde la liste complète.
+ * On a project linked to ShotGrid, only the statuses that really exist there make sense: recording a
+ * decision the site does not know would surface nowhere, and the screen ended up mixing ReView's original
+ * vocabulary with the studio's: "approved" twice, "redo" three times. So we restrict to the established
+ * mapping. A standalone project keeps the full list.
  */
 export async function listStatusesForProject(projectId: number) {
   const all = await listStatuses();
@@ -79,7 +77,7 @@ export interface StatusInput {
   isDefault?: boolean;
 }
 
-/** Un seul statut par défaut à la fois : poser isDefault le retire des autres. */
+/** Only one default status at a time: setting isDefault removes it from the others. */
 async function clearDefaultIfNeeded(tx: Prisma.TransactionClient, isDefault?: boolean) {
   if (isDefault) await tx.reviewStatus.updateMany({ data: { isDefault: false } });
 }
@@ -120,7 +118,7 @@ export async function deleteStatus(user: SessionUser, id: number) {
   logAudit({ userId: user.id, action: 'review_status.delete', entityType: 'ReviewStatus', entityId: id });
 }
 
-/** Pose une décision sur une version (historisée) et met à jour la décision courante. */
+/** Records a decision on a version (with history) and updates the current decision. */
 export async function decide(
   user: SessionUser,
   projectId: number,
@@ -159,19 +157,18 @@ export async function decide(
     taskId: version.taskId,
     assetId: version.assetId,
   });
-  // 48 : la décision remonte au registre de production. Mise en file — l'artiste ne
-  // doit pas attendre ShotGrid, et une panne du site ne fait pas échouer la review.
+    // 48: the decision is propagated to the production registry. Queued, so the artist does not
+    // wait for ShotGrid, and a site outage does not fail the review.
   await enqueuePush(projectId, { type: 'version-status', versionId, actorId: user.id });
-  // Référence commune à TOUS les destinataires : le premier média de la version, seul id
-  // que le front sait ouvrir. L'auteur recevait auparavant l'id de la VERSION et les
-  // suiveurs celui du MÉDIA, pour le même événement — l'un des deux liens était donc faux
-  // par construction, et c'était celui de la personne la plus concernée.
+    // Common reference for ALL recipients: the version's first media, the only id the front end
+    // can open. The author used to receive the VERSION id and followers the MEDIA id for the same event,
+    // so one of the two links was wrong by construction, and it was the one of the person most concerned.
   const firstMedia = await prisma.mediaObject.findFirst({
     where: { versionId },
     orderBy: { id: 'asc' },
     select: { id: true },
   });
-  // Notifie l'auteur de la version (sauf s'il pose lui-même la décision).
+    // Notifies the author of the version (unless they set the decision themselves).
   if (version.authorId && version.authorId !== user.id) {
     await notify({
       userId: version.authorId,
@@ -182,7 +179,7 @@ export async function decide(
       referenceId: firstMedia?.id ?? null,
     });
   }
-  // Suiveurs (32.G) : décision posée sur la chaîne version/shot/asset.
+    // Followers (32.G): decision set on the version/shot/asset chain.
   await notifyWatchers({
     versionId,
     projectId,
@@ -191,7 +188,7 @@ export async function decide(
     referenceId: firstMedia?.id ?? null,
     exclude: [user.id, ...(version.authorId ? [version.authorId] : [])],
   });
-  // Webhooks sortants (36.D).
+    // Outgoing webhooks (36.D).
   publishApiEvent('review.decision', {
     projectId,
     entityType: 'version',
@@ -208,9 +205,9 @@ export async function decide(
       decidedBy: user.id,
     },
   });
-  // Messagerie d'équipe (42.B — №67) : signal studio-wide des décisions. Un lot le tait
-  // version par version et n'annonce qu'une ligne : trente messages pour une session de
-  // review rendraient le canal inutilisable.
+    // Team messaging (42.B, issue #67): studio-wide signal of decisions. A batch stays silent
+    // version by version and announces only one line: thirty messages for a review session would
+    // make the channel unusable.
   if (options.chat !== false) {
     const icon = decisionIcon(status);
     void notifyChat('chat.decision', { icon, status: status.name, version: version.name });
@@ -219,12 +216,12 @@ export async function decide(
 }
 
 /**
- * Même décision sur une sélection de versions (page Reviews).
+ * Same decision on a selection of versions (Reviews page).
  *
- * La sélection traverse volontiers plusieurs projets — la page les mélange par défaut.
- * Chaque projet est donc revérifié : droit de supervision **effectif** (38.E) et
- * appartenance du statut au vocabulaire offert là-bas. Une version refusée est comptée,
- * pas jetée : sur quarante plans, tout perdre pour un seul serait absurde.
+ * The selection often spans several projects, since the page mixes them by default. Each project is
+ * therefore rechecked: the **effective** supervision right (38.E) and the status belonging to the
+ * vocabulary offered there. A refused version is counted, not discarded: on forty shots, losing everything
+ * for one would be absurd.
  */
 export async function decideMany(
   user: SessionUser,
@@ -235,8 +232,8 @@ export async function decideMany(
   const status = await prisma.reviewStatus.findUnique({ where: { id: statusId } });
   if (!status) throw badRequest('Unknown review status');
 
-  // Un contrôle par projet, pas par version : la même sélection porte souvent cent
-  // versions pour deux projets. Le verdict est mémorisé, refus compris.
+    // One check per project, not per version: the same selection often holds a hundred
+    // versions for two projects. The verdict is memoized, refusals included.
   const allowed = new Map<number, boolean>();
   const allowsProject = async (projectId: number): Promise<boolean> => {
     const known = allowed.get(projectId);
@@ -282,7 +279,7 @@ export async function decideMany(
   return { updated, failed };
 }
 
-/** Historique des décisions d'une version (récent → ancien). */
+/** Decision history of a version (newest to oldest). */
 export async function history(versionId: number) {
   return prisma.reviewDecision.findMany({
     where: { versionId },
@@ -291,19 +288,18 @@ export async function history(versionId: number) {
   });
 }
 
-/** Les deux réponses qu'on demande à un client : « c'est bon » et « à revoir ». */
+/** The two answers asked of a client: "approved" and "needs revision". */
 export interface GuestDecisionStatuses {
   approval: { id: number; name: string; color: string } | null;
   retake: { id: number; name: string; color: string } | null;
 }
 
 /**
- * Le vocabulaire offert à un invité, dérivé des drapeaux du studio.
+ * The vocabulary offered to a guest, derived from the studio's flags.
  *
- * Un client n'a pas à arbitrer entre « Pending », « CBB » et « Retake » : ce sont des états
- * de pipeline, pas des réponses. On ne lui propose que les deux statuts que le studio a
- * lui-même marqués comme validation et comme retake — son vocabulaire, donc, sans lui
- * imposer le nôtre, et sans lui exposer le reste de sa liste.
+ * A client has no need to choose between "Pending", "CBB" and "Retake": these are pipeline states, not
+ * answers. We offer only the two statuses the studio itself marked as approval and as retake: its own
+ * vocabulary, without imposing ours, and without exposing the rest of its list.
  */
 export async function guestStatuses(projectId: number): Promise<GuestDecisionStatuses> {
   const all = await listStatusesForProject(projectId);
@@ -315,15 +311,15 @@ export async function guestStatuses(projectId: number): Promise<GuestDecisionSta
 }
 
 /**
- * Avis d'un invité sur une version — **un avis, pas un verdict**.
+ * A guest's opinion on a version: **an opinion, not a verdict**.
  *
- * La différence avec `decide` tient en une ligne absente : `Version.reviewStatusId` n'est
- * pas touché. L'avis s'inscrit dans l'historique, attribué au client et au lien par lequel
- * il est arrivé, et le superviseur tranche. Quelqu'un d'extérieur au studio ne fait pas
- * bouger l'état d'un plan pour toute l'équipe — surtout pas en cliquant à côté.
+ * The difference from `decide` rests on a missing row: `Version.reviewStatusId` is not touched. The
+ * opinion is recorded in the history, attributed to the client and to the link they came through, and the
+ * supervisor decides. Someone outside the studio does not move a shot's state for the whole team, least of
+ * all by clicking the wrong thing.
  *
- * Il n'y a pas non plus de remontée ShotGrid : le registre de production reçoit les
- * décisions du studio, pas les avis de ses clients.
+ * There is no ShotGrid propagation either: the production registry receives the studio's decisions, not its
+ * clients' opinions.
  */
 export async function decideAsGuest(
   guest: { name: string; shareLinkId: number },
@@ -338,8 +334,8 @@ export async function decideAsGuest(
   });
   if (!version) throw notFound('Version not found');
 
-  // Le statut doit être l'un des DEUX que l'on propose : accepter un identifiant quelconque
-  // laisserait un invité poser « Pending » ou n'importe quel statut interne.
+    // The status must be one of the TWO we offer: accepting any identifier would let a guest
+    // set "Pending" or any internal status.
   const offered = await guestStatuses(projectId);
   const status = [offered.approval, offered.retake].find((s) => s?.id === statusId);
   if (!status) throw badRequest('This status is not offered to share links');
@@ -367,8 +363,8 @@ export async function decideAsGuest(
     orderBy: { id: 'asc' },
     select: { id: true },
   });
-  // L'auteur de la livraison et les suiveurs apprennent l'avis comme ils apprendraient une
-  // décision : c'est le même événement pour eux, seule l'autorité derrière change.
+    // The author of the delivery and the followers learn of the opinion as they would of a
+    // decision: it is the same event for them, only the authority behind it differs.
   if (version.authorId) {
     await notify({
       userId: version.authorId,
@@ -401,8 +397,8 @@ export async function decideAsGuest(
       guestName: guest.name,
       shareLinkId: guest.shareLinkId,
       comment: comment ?? null,
-      // Le consommateur d'un webhook doit pouvoir distinguer un avis d'une décision : sans
-      // ce drapeau, une intégration prendrait l'avis d'un client pour un état de pipeline.
+            // A webhook consumer must be able to tell an opinion from a decision: without this
+            // flag, an integration would take a client's opinion for a pipeline state.
       advisory: true,
     },
   });

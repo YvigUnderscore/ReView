@@ -7,12 +7,11 @@ import { env } from '../../config/env';
 import { logger } from '../../lib/logger';
 
 /**
- * Réglages d'une connexion ShotGrid — schéma unique, validé à l'écriture comme à la
- * lecture. Une connexion créée avant l'ajout d'un réglage se lit avec sa valeur par
- * défaut : `parseSettings` complète toujours, ne rejette jamais un ancien objet.
+ * Settings of a ShotGrid connection: a single schema, validated on write as on read. A connection created before a setting was added reads with its default
+ * value: `parseSettings` always completes, and never rejects an old object.
  */
 
-/** Domaines d'échange : chacun s'ouvre indépendamment en lecture et en écriture. */
+/** Exchange domains: each opens independently for reading and for writing. */
 export const SG_DOMAINS = [
   'hierarchy', // sequences / shots / assets
   'tasks',
@@ -29,44 +28,39 @@ const access = z.object({ read: z.boolean(), write: z.boolean() });
 const domainsSchema = z.object({
   hierarchy: access.prefault({ read: true, write: true }),
   tasks: access.prefault({ read: true, write: true }),
-  // Les statuts sont un référentiel : ReView les reçoit, ne les redéfinit pas côté SG.
+    // Statuses are a reference: ReView receives them, it does not redefine them on the SG side.
   statuses: access.prefault({ read: true, write: false }),
   versions: access.prefault({ read: true, write: true }),
   notes: access.prefault({ read: true, write: true }),
   playlists: access.prefault({ read: true, write: true }),
-  // Les comptes ne se créent jamais depuis la synchronisation (correspondance par email).
+    // Accounts are never created by the synchronization (matching by e-mail).
   users: access.prefault({ read: true, write: false }),
 });
 
 export const shotgridSettingsSchema = z.object({
   domains: domainsSchema.prefault({}),
-  /** Création locale de sequences/shots/assets interdite tant que ShotGrid mène. */
+    /** Local creation of sequences/shots/assets forbidden while ShotGrid leads. */
   lockLocalCreation: z.boolean().default(true),
-  /**
-   * Étapes de pipeline retenues pour ce projet, par identifiant ShotGrid.
-   *
-   * ShotGrid restreint les étapes proposées à celles dont la visibilité est activée dans
-   * le projet, mais ne l'expose par aucun endpoint de son API REST. Le studio déclare
-   * donc ici ce que son site sait sans le dire. Liste vide = on déduit des tasks
-   * existantes, et à défaut on propose le catalogue.
-   */
+    /**
+     * Pipeline steps retained for this project, by ShotGrid identifier.
+     *
+     * ShotGrid restricts the proposed steps to those whose visibility is enabled in the project, but exposes it through no endpoint of its REST API. The studio therefore
+     * declares here what its site knows without saying it. Empty list = deduce from the existing tasks, and failing that, offer the catalogue.
+     */
   steps: z
     .object({
       asset: z.array(z.number().int().positive()).max(200).default([]),
       shot: z.array(z.number().int().positive()).max(200).default([]),
     })
     .prefault({}),
-  /**
-   * Statuts retenus pour ce projet, par périmètre et par code ShotGrid.
-   *
-   * Un site de studio propose vingt et un statuts de plan ; une production donnée n'en
-   * emploie que six. Les vingt et un s'affichaient partout — menus contextuels, colonnes,
-   * filtres — et il fallait les lire tous pour trouver celui du jour. Le studio déclare
-   * donc ici ceux qu'il veut voir. Liste vide = tous, comme avant.
-   *
-   * Masquer n'efface rien : la synchronisation continue d'importer le statut réel d'une
-   * entité, et le badge d'un plan déjà « on hold » reste juste. Seul le choix est réduit.
-   */
+    /**
+     * Statuses retained for this project, by scope and by ShotGrid code.
+     *
+     * A studio site offers twenty-one shot statuses; a given production uses only six. All twenty-one were displayed everywhere — context menus, columns, filters —
+     * and one had to read them all to find the one of the day. The studio therefore declares here the ones it wants to see. Empty list = all, as before.
+     *
+     * Hiding erases nothing: the synchronization keeps importing the real status of an entity, and the badge of a shot already "on hold" stays correct. Only the choice is reduced.
+     */
   visibleStatuses: z
     .object({
       task: z.array(z.string()).max(200).default([]),
@@ -77,20 +71,20 @@ export const shotgridSettingsSchema = z.object({
     .prefault({}),
   eventMode: z.enum(['webhook', 'polling', 'manual']).default('webhook'),
   pollingIntervalSec: z.number().int().min(15).max(3600).default(60),
-  /** Réconciliation périodique : rattrape ce qu'un webhook perdu ou une coupure a manqué. */
+    /** Periodic reconciliation: catches up what a lost webhook or an outage missed. */
   reconcile: z
     .object({
       enabled: z.boolean().default(true),
-      /** Heure locale du serveur (0-23) du passage complet. */
+            /** Server local time (0-23) of the full pass. */
       hour: z.number().int().min(0).max(23).default(3),
-      /** Fenêtre de re-lecture en heures : couvre une coupure plus longue qu'une nuit. */
+            /** Re-reading window in hours: covers an outage longer than one night. */
       lookbackHours: z
         .number()
         .int()
         .min(1)
         .max(24 * 30)
         .default(72),
-      /** Rattrapage immédiat au démarrage de l'instance (retour de coupure). */
+            /** Immediate catch-up at instance startup (return from an outage). */
       onBoot: z.boolean().default(true),
     })
     .prefault({}),
@@ -98,83 +92,71 @@ export const shotgridSettingsSchema = z.object({
     .object({
       source: z.enum(['transcoded', 'original']).default('transcoded'),
       autoImport: z.boolean().default(true),
-      /** Codes de statut SG à importer ; vide = tous les publishes. */
+            /** ShotGrid status codes to import; empty = all publishes. */
       statusFilter: z.array(z.string()).default([]),
       maxSizeMo: z.number().int().min(1).max(200_000).nullable().default(null),
-      /**
-       * Comment nommer le média importé.
-       *
-       * `sgCode` : le code de la Version ShotGrid — le nom que la production lit dans ses
-       * playlists et prononce en dailies. `filename` : le nom du fichier livré, utile aux
-       * studios dont la convention de fichier porte l'information (espace colorimétrique,
-       * encodage) que le code ne reprend pas.
-       */
+            /**
+             * How to name the imported media.
+             *
+             * `sgCode`: the code of the ShotGrid Version — the name the production reads in its playlists and says during dailies. `filename`: the name of the delivered file,
+             * useful to studios whose file convention carries information (colour space, encoding) that the code does not reproduce.
+             */
       naming: z.enum(['sgCode', 'filename']).default('sgCode'),
-      /**
-       * Rapatrier la vignette portée par une séquence, un plan ou un asset du site.
-       *
-       * C'est l'image que la production reconnaît : elle est choisie dans ShotGrid, elle
-       * illustre le plan dans toutes ses listes, et ReView affichait jusqu'ici une carte
-       * vide en attendant qu'un média publié lui en donne une. Le transfert est une
-       * image de quelques kilo-octets par entité, et il ne part que lorsque la vignette
-       * a réellement changé côté site.
-       */
+            /**
+             * Fetch the thumbnail carried by a sequence, a shot or an asset from the site.
+             *
+             * It is the picture that production recognizes: it is chosen in ShotGrid, it illustrates the shot in all its lists, and ReView used to display an empty card
+             * until a published media eventually provided one. The transfer is an image of a few kilobytes per entity, and it only goes when the thumbnail has really changed on the site side.
+             */
       thumbnails: z.boolean().default(true),
     })
     .prefault({}),
   push: z
     .object({
-      /** Ce qu'une publication ReView crée côté ShotGrid. */
+            /** What a ReView publication creates on the ShotGrid side. */
       publishMode: z.enum(['link', 'upload', 'off']).default('link'),
-      /** Écrire au nom de l'utilisateur ReView (correspondance email) quand c'est possible. */
+            /** Write in the name of the ReView user (e-mail match) when possible. */
       attributeToUser: z.boolean().default(true),
-      /** Joindre l'image annotée aux Notes poussées. */
+            /** Attach the annotated image to the pushed Notes. */
       attachAnnotations: z.boolean().default(true),
     })
     .prefault({}),
-  /**
-   * Qui écrit la description d'une séquence, d'un plan ou d'un asset.
-   *
-   * Par défaut, ShotGrid : c'est le registre de production, la description y est saisie et
-   * ReView la recopie. Elle est alors **en lecture seule ici** — laisser un artiste la
-   * modifier dans ReView produirait une divergence qu'aucune synchronisation ne saurait
-   * arbitrer, et que la passe suivante écraserait sans le dire.
-   *
-   * `writeBack` ouvre l'aller-retour : ReView redevient éditable, et la description
-   * modifiée remonte au site. C'est un choix explicite du studio, pas un défaut — écrire
-   * dans un site de production ne se décide pas à sa place.
-   */
+    /**
+     * Who writes the description of a sequence, a shot or an asset.
+     *
+     * By default, ShotGrid: it is the production registry, the description is entered there and ReView copies it. It is then **read-only here** — letting an artist edit it
+     * in ReView would produce a divergence that no synchronization could arbitrate, and that the next pass would overwrite without saying so.
+     *
+     * `writeBack` opens the round trip: ReView becomes editable again, and the modified description goes back up to the site. It is an explicit choice of the studio, not a default — writing
+     * into a production site is not decided on its behalf.
+     */
   descriptions: z
     .object({
-      /** `shotgrid` = le site fait foi (lecture seule ici) ; `review` = ReView fait foi. */
+            /** `shotgrid` = the site is authoritative (read-only here); `review` = ReView is authoritative. */
       source: z.enum(['shotgrid', 'review']).default('shotgrid'),
-      /** Renvoyer vers le site la description modifiée dans ReView. */
+            /** Send the description modified in ReView back to the site. */
       writeBack: z.boolean().default(false),
     })
     .prefault({}),
-  /** Correspondance code de statut SG (Version) → id de ReviewStatus ReView. */
+    /** SG Version status code -> ReView ReviewStatus identifier match. */
   versionStatusMap: z.record(z.string(), z.number().int()).prefault({}),
-  /**
-   * Qui gagne quand les deux côtés ont bougé depuis la dernière synchronisation.
-   * ShotGrid par défaut : c'est le registre de production de référence.
-   */
+    /**
+     * Who wins when both sides have moved since the last synchronization.
+     * ShotGrid by default: it is the reference production registry.
+     */
   conflictPolicy: z.enum(['sg_wins', 'review_wins', 'manual']).default('sg_wins'),
 });
 
 export type ShotgridSettings = z.infer<typeof shotgridSettingsSchema>;
 
 /**
- * Réglages complets depuis la colonne JSON (tolère `{}` et les versions antérieures).
+ * Complete settings from the JSON column (tolerates `{}` and earlier versions).
  *
- * Le repli est **fermé en écriture**, jamais ouvert. Il retombait sur les défauts du
- * schéma, où tous les domaines valent `{ read: true, write: true }` : des réglages
- * illisibles (schéma changé, JSON corrompu, champ inconnu) rendaient donc à l'appelant
- * une autorisation d'écrire dans un site de production que personne n'avait donnée —
- * l'exact inverse de `readOnlySettings()`, qui ferme tout au moment de relier le projet.
+ * The fallback is **closed for writing**, never open. It used to fall back on the schema defaults, where every domain is `{ read: true, write: true }`: unreadable settings
+ * (changed schema, corrupt JSON, unknown field) therefore returned to the caller an authorization to write into a production site that nobody had given — exactly the opposite of
+ * `readOnlySettings()`, which closes everything at the moment a project is linked.
  *
- * On sauve tout de même les sections lisibles une à une : jeter `versionStatusMap` ou
- * `steps` parce qu'une autre section est invalide couperait des correspondances que le
- * studio a réellement configurées.
+ * We still save the readable sections one by one: discarding `versionStatusMap` or `steps` because another section is invalid would cut matches the studio had actually configured.
  */
 export function parseSettings(raw: unknown): ShotgridSettings {
   const parsed = shotgridSettingsSchema.safeParse(raw ?? {});
@@ -185,7 +167,7 @@ export function parseSettings(raw: unknown): ShotgridSettings {
   );
   const safe = readOnlySettings();
   if (raw && typeof raw === 'object') {
-    // Section par section : ce qui se valide seul est conservé, le reste garde le repli.
+        // Section by section: what validates on its own is kept, the rest keeps the fallback.
     const source = raw as Record<string, unknown>;
     for (const key of [
       'media',
@@ -201,11 +183,9 @@ export function parseSettings(raw: unknown): ShotgridSettings {
     }
     const policy = shotgridSettingsSchema.shape.conflictPolicy.safeParse(source.conflictPolicy);
     if (policy.success) safe.conflictPolicy = policy.data;
-    // Le repli est fermé en écriture, sans exception : la section `descriptions` peut être
-    // récupérée pour sa `source`, jamais pour rouvrir le renvoi vers le site.
+        // The fallback is closed for writing, without exception: the `descriptions` section may be recovered for its `source`, never to reopen the send-back to the site.
     safe.descriptions = { ...safe.descriptions, writeBack: false };
-    // `domains` est réintégré domaine par domaine, et jamais au-delà de ce que le repli
-    // autorise : une section douteuse ne doit pas rouvrir une écriture.
+        // `domains` is reintegrated domain by domain, and never beyond what the fallback allows: a doubtful section must not reopen a write.
     const domains = source.domains;
     if (domains && typeof domains === 'object') {
       for (const [name, value] of Object.entries(domains as Record<string, unknown>)) {
@@ -223,13 +203,11 @@ export function parseSettings(raw: unknown): ShotgridSettings {
 }
 
 /**
- * Réglages d'une connexion neuve : tout en lecture, rien en écriture.
+ * Settings of a new connection: everything in reading, nothing in writing.
  *
- * Le schéma ouvre l'écriture par défaut parce que c'est l'usage visé une fois
- * l'intégration en confiance. Mais au moment précis où l'on relie un projet, personne
- * n'a encore vérifié que la cible est la bonne — et un site ShotGrid de production ne
- * pardonne pas une première synchronisation qui écrit. On ouvre donc les écritures
- * après coup, explicitement.
+ * The schema opens writing by default because that is the intended use once the integration is trusted. But at the very moment a project is linked, nobody has yet
+ * verified that the target is the right one — and a production ShotGrid site does not forgive a first synchronization that writes. Writes are therefore opened afterwards,
+ * explicitly.
  */
 export function readOnlySettings(): ShotgridSettings {
   const base = shotgridSettingsSchema.parse({});
@@ -239,24 +217,22 @@ export function readOnlySettings(): ShotgridSettings {
   return { ...base, domains, push: { ...base.push, publishMode: 'off' } };
 }
 
-/** Le domaine est-il ouvert dans ce sens ? Toute lecture/écriture passe par là. */
+/** Is the domain open in this direction? Every read/write goes through here. */
 export function can(settings: ShotgridSettings, domain: SgDomain, direction: 'read' | 'write'): boolean {
   return settings.domains[domain][direction];
 }
 
 /**
- * Validation de l'URL d'un site ShotGrid.
+ * Validation of a ShotGrid site's URL.
  *
- * Le serveur ira chercher cette adresse lui-même : sans garde-fou, un utilisateur
- * autorisé à configurer un site pourrait faire interroger le réseau interne
- * (métadonnées cloud, services d'administration). D'où l'exigence HTTPS et le rejet
- * des adresses littérales non routables. Les noms d'hôtes restent acceptés tels quels :
- * les résoudre ici n'empêcherait pas une réponse DNS différente au moment de l'appel.
+ * The server will fetch this address itself: without a safeguard, a user authorized to configure a site could have the internal network queried
+ * (cloud metadata, administration services). Hence the HTTPS requirement and the rejection of non-routable literal addresses. Host names remain accepted as they are:
+ * resolving them here would not prevent a different DNS answer at the time of the call.
  */
 const PRIVATE_V4 =
   /^(0\.|10\.|127\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/;
 
-/** Hôtes explicitement autorisés hors HTTPS public (simulateur de développement). */
+/** Hosts explicitly allowed outside public HTTPS (development simulator). */
 function allowedInsecureHosts(): Set<string> {
   return new Set(
     (env.SHOTGRID_INSECURE_HOSTS ?? '')
@@ -279,22 +255,22 @@ export function assertSafeBaseUrl(raw: string): string {
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local'))
     throw badRequest('A ShotGrid site cannot be a local host');
   if (PRIVATE_V4.test(host)) throw badRequest('A ShotGrid site cannot be a private IP address');
-  // IPv6 littérale : bouclage (::1) et adresses locales uniques (fc00::/7, fe80::/10).
+    // Literal IPv6: loopback (::1) and unique local addresses (fc00::/7, fe80::/10).
   if (host.startsWith('[')) {
     const v6 = host.slice(1, -1);
     if (v6 === '::1' || /^(f[cd]|fe8|fe9|fea|feb)/i.test(v6))
       throw badRequest('A ShotGrid site cannot be a local IPv6 address');
   }
-  // Normalisation : pas de chemin, pas de barre finale — tout le reste est construit dessus.
+    // Normalization: no path, no trailing slash — everything else is built on top of it.
   return `${url.protocol}//${url.host}`;
 }
 
-/** Lien profond vers la fiche d'une entité ShotGrid. */
+/** Deep link to the record of a ShotGrid entity. */
 export function sgDeepLink(baseUrl: string, sgType: string, sgId: number): string {
   return `${baseUrl.replace(/\/$/, '')}/detail/${sgType}/${sgId}`;
 }
 
-/** Lien de création pré-remplie côté ShotGrid (proposé quand la création locale est verrouillée). */
+/** Creation link pre-filled on the ShotGrid side (offered when local creation is locked). */
 export function sgCreateLink(baseUrl: string, sgType: string, sgProjectId: number): string {
   return `${baseUrl.replace(/\/$/, '')}/new/${sgType}?project=${sgProjectId}`;
 }

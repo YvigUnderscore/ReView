@@ -4,18 +4,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Traçabilité du scan antivirus (A4-04).
+ * Traceability of the antivirus scan (A4-04).
  *
- * Un job `kind: 'scan'` porte sur un média déjà READY et déjà téléchargeable : son échec ne
- * change rien au média, c'est le seul chemin où l'antivirus ne conditionne rien. Il doit donc
- * laisser une trace dans les deux sens — sans quoi un fichier jamais scanné (clamd redémarré
- * pendant la fenêtre de dépôt) est rigoureusement indiscernable d'un fichier scanné et sain.
+ * A `kind: 'scan'` job concerns a media already READY and already downloadable: its failure changes nothing for the media, it is the only path where the antivirus conditions nothing. It must therefore
+ * leave a trace in both directions — otherwise a file never scanned (clamd restarted during the upload window) is strictly indistinguishable from a scanned and clean file.
  */
 
 /**
- * Processeurs passés à BullMQ au chargement du module, par file. Le module en enregistre
- * plusieurs (nettoyage storage, webhooks, ShotGrid…) : on ne garde que celui de la file
- * média, c'est lui qu'on exerce.
+ * Processors handed to BullMQ when the module loads, per queue. The module registers several (storage cleanup, webhooks, ShotGrid...): we keep only the one of the
+ * media queue, it is the one we exercise.
  */
 const { processors } = vi.hoisted(() => ({
   processors: new Map<string, (job: unknown) => Promise<unknown>>(),
@@ -80,7 +77,7 @@ vi.mock('../lib/workerEvents', () => ({
   closeWorkerEvents: vi.fn(),
 }));
 
-// Mock partiel : d'autres modules chargés au passage lisent les constantes de rétention.
+// Partial mock: other modules loaded along the way read the retention constants.
 vi.mock('../services/AuditService', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   logAudit: vi.fn(),
@@ -96,7 +93,7 @@ import { scanFile } from '../lib/clamav';
 
 const MEDIA_ID = 77;
 
-/** Média sans job de traitement (GLB, splat) : READY dès la finalisation. */
+/** Media without a processing job (GLB, splat): READY as soon as it is finalized. */
 function media(metadata: Record<string, unknown> = {}) {
   return {
     id: MEDIA_ID,
@@ -109,17 +106,17 @@ function media(metadata: Record<string, unknown> = {}) {
   };
 }
 
-/** Métadonnées écrites par le dernier `update` sur le média. */
+/** Metadata written by the last `update` on the media. */
 function lastWrittenMetadata(): Record<string, unknown> {
   const calls = vi.mocked(prisma.mediaObject.update).mock.calls;
   return (calls.at(-1)![0] as { data: { metadata: Record<string, unknown> } }).data.metadata;
 }
 
-/** Le processeur de la file média, enregistré à l'import du module. */
+/** The processor of the media queue, registered when the module is imported. */
 const runJob = (): Promise<unknown> =>
   processors.get('media-processing')!({
     data: { mediaObjectId: MEDIA_ID, kind: 'scan' },
-    // Le rapporteur de progression chaîne un `.catch` sur ce retour.
+        // The progress reporter chains a `.catch` on this return value.
     updateProgress: () => Promise.resolve(),
   });
 
@@ -129,14 +126,14 @@ beforeEach(() => {
   vi.mocked(prisma.mediaObject.update).mockResolvedValue({} as never);
 });
 
-describe('job « scan » — le verdict est écrit sur le média', () => {
-  it('marque la date de scan quand clamd rend un verdict propre', async () => {
+describe('"scan" job: the verdict is written on the media', () => {
+  it('records the scan date when clamd returns a clean verdict', async () => {
     vi.mocked(scanFile).mockResolvedValue({ clean: true, virus: null });
     await runJob();
     expect(typeof lastWrittenMetadata().scannedAt).toBe('string');
   });
 
-  it('efface une marque d’échec que la tentative réussie vient de rattraper', async () => {
+  it('clears a failure mark that the successful attempt has just caught up with', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(
       media({ scanFailed: 'clamd: connection closed', scanFailedAt: '2026-09-16T09:00:00.000Z' }) as never,
     );
@@ -147,9 +144,8 @@ describe('job « scan » — le verdict est écrit sur le média', () => {
     expect(written.scanFailedAt).toBeUndefined();
   });
 
-  it('inscrit la raison sur le média quand clamd est injoignable', async () => {
-    // Le cas qui laissait le média READY, téléchargeable et muet : le job épuisait ses
-    // tentatives en trente-cinq secondes et disparaissait sans écrire une ligne.
+  it('records the reason on the media when clamd is unreachable', async () => {
+        // The case that left the media READY, downloadable and silent: the job exhausted its attempts in thirty-five seconds and vanished without writing a line.
     vi.mocked(scanFile).mockRejectedValue(new Error('connect ECONNREFUSED clamav:3310'));
     await expect(runJob()).rejects.toThrow('ECONNREFUSED');
     const written = lastWrittenMetadata();
@@ -158,8 +154,8 @@ describe('job « scan » — le verdict est écrit sur le média', () => {
     expect(written.scannedAt).toBeUndefined();
   });
 
-  it('ne passe jamais le média en FAILED sur un scan en erreur', async () => {
-    // Le fichier est sain jusqu'à preuve du contraire : seule une DÉTECTION met FAILED.
+  it('never sets the media to FAILED on a scan in error', async () => {
+        // The file is clean until proven otherwise: only a DETECTION sets FAILED.
     vi.mocked(scanFile).mockRejectedValue(new Error('clamd: scan timed out'));
     await expect(runJob()).rejects.toThrow();
     const calls = vi.mocked(prisma.mediaObject.update).mock.calls;

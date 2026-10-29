@@ -13,12 +13,11 @@ import { resolveProjectIdForMedia } from '../lib/pipeline';
 import { assertMediaManage } from './MediaService';
 
 /**
- * Images de référence d'une review 2D (Phase 24, remaniées) : **liées à un commentaire**
- * — elles ne s'affichent que lorsque leur commentaire est sélectionné (fin de l'affichage
- * permanent), et ne sont **plus déplaçables une fois apposées** (position figée à l'envoi
- * du commentaire). Épinglées au canvas en fractions de l'image de base, débordement
- * autorisé. Aide de review → non soumises au verrou de publication. Ajout par l'auteur
- * du commentaire ; suppression par l'auteur ou un gestionnaire du média.
+ * 2D review reference images (Phase 24, reworked): **linked to a comment**. They are shown only
+ * while their comment is selected (ending the permanent display), and are **no longer movable once
+ * placed** (position frozen when the comment is sent). Pinned to the canvas as fractions of the base
+ * image, overflow allowed. Review aid: not subject to the publish lock. Added by the comment's author;
+ * removed by the author or by a media manager.
  */
 
 type SessionUser = { id: number; role: Role };
@@ -26,9 +25,8 @@ type SessionUser = { id: number; role: Role };
 const MAX_BYTES = 6_000_000;
 const MAX_REFS = 12;
 /**
- * Bornes du canvas : une référence se pose autour de l'image de base (bandes du letterbox),
- * pas seulement dessus. Même plafond que le schéma du routeur (`POS_LIMIT`) — le service
- * reborne parce qu'il sert aussi ses propres valeurs par défaut.
+ * Canvas bounds: a reference can be placed around the base image (the letterbox bands), not only on it.
+ * Same ceiling as the router schema (`POS_LIMIT`): the service clamps again because it also serves its own defaults.
  */
 const POS_LIMIT = 3;
 
@@ -74,13 +72,12 @@ async function serialize(ref: {
 }
 
 /**
- * Accès en écriture au média porteur (membre du projet, projet ni retiré ni archivé).
+ * Write access to the carrier media (project member, project neither removed nor archived).
  *
- * La propriété d'un commentaire ne vaut pas autorisation : elle raisonne sur un état
- * passé. Le commentaire survit au retrait du membership, à l'archivage du projet et à sa
- * mise à la corbeille — un prestataire sorti d'un projet terminé rejouait l'un de ses
- * anciens `commentId` et déposait encore jusqu'à 6 Mo sous le préfixe `derived/` du
- * studio. L'accès se revérifie donc au moment du geste, comme sur le routeur voisin
+ * Ownership of a comment is not authorization: it reasons about a past state. The comment survives removal
+ * of the membership, archiving of the project and its move to the trash: a contractor who left a finished
+ * project replayed one of their old `commentId` values and could still store up to 6 MB under the studio's
+ * `derived/` prefix. Access is therefore rechecked at the moment of the action, as in the neighbouring router
  * (`TimelineMarkerService.assertMediaRead`).
  */
 async function assertMediaWrite(mediaId: number, user: SessionUser): Promise<void> {
@@ -92,9 +89,8 @@ async function assertMediaWrite(mediaId: number, user: SessionUser): Promise<voi
 }
 
 /**
- * Ajoute une image de référence (data URL) liée à un commentaire du média. Réservé à
- * l'**auteur du commentaire**, et seulement tant qu'il a accès au projet. La position est
- * figée à la création.
+ * Adds a reference image (data URL) linked to a comment on the media. Reserved for the **comment's author**,
+ * and only while they still have access to the project. The position is frozen at creation.
  */
 export async function add(
   user: SessionUser,
@@ -124,9 +120,9 @@ export async function add(
       commentId,
       storageKey: key,
       createdById: user.id,
-      // Sans position (client hors écran de review) : juste à droite du cadre, là où le
-      // letterbox laisse d'ordinaire de la place. Faute de bande chez le lecteur, l'affichage
-      // la ramènera contre le bord droit du média.
+            // Without a position (client outside the review screen): just right of the frame, where the
+            // letterbox usually leaves room. If the player has no band, the display will pull it back
+            // against the media's right edge.
       x: clampPos(pos?.x ?? 1.02 + count * 0.03),
       y: clampPos(pos?.y ?? 0.02 + count * 0.03),
       width: clampWidth(pos?.width ?? 0.3),
@@ -135,7 +131,7 @@ export async function add(
   return serialize(ref);
 }
 
-/** Supprime une image de référence (DB + MinIO). Auteur du commentaire ou gestionnaire. */
+/** Removes a reference image (DB and MinIO). Comment author or manager only. */
 export async function remove(user: SessionUser, mediaId: number, refId: number) {
   const ref = await prisma.reviewReference.findUnique({
     where: { id: refId },
@@ -147,7 +143,7 @@ export async function remove(user: SessionUser, mediaId: number, refId: number) 
   await storage.deleteObject(ref.storageKey).catch(() => undefined);
 }
 
-/** Purge MinIO des références d'un commentaire (avant sa suppression — cascade DB). */
+/** Purges the MinIO objects of a comment's references (before deletion; the DB cascades). */
 export async function purgeForComment(commentId: number) {
   const refs = await prisma.reviewReference.findMany({ where: { commentId }, select: { storageKey: true } });
   await Promise.all(refs.map((r) => storage.deleteObject(r.storageKey).catch(() => undefined)));

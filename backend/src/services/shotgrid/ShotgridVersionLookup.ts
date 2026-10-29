@@ -6,16 +6,13 @@ import type { ShotgridClient } from './ShotgridClient';
 import { logger } from '../../lib/logger';
 
 /**
- * Une Version portant déjà ce code existe-t-elle sur le site ?
+ * Does a Version already carrying this code exist on the site?
  *
- * Publier depuis ReView créait une Version sans jamais regarder s'il y en avait une du
- * même nom. Le cas est courant : un artiste publie dans ReView un travail dont la Version
- * a déjà été créée sur le site par son outil de rendu. Le site se retrouvait alors avec
- * deux entrées identiques, et la production ne savait plus laquelle regarder — un doublon
- * ne se rattrape pas depuis ici, il faut le supprimer à la main là-bas.
+ * Publishing from ReView used to create a Version without ever looking for one of the same name. The case is common: an artist publishes in ReView a piece of work whose
+ * Version has already been created on the site by their render tool. The site then ended up with two identical entries, and production no longer knew which to look at —
+ * a duplicate cannot be undone from here, it has to be deleted by hand over there.
  *
- * Deux homonymes : on n'en choisit aucun. Se tromper de rattachement coûte plus cher que
- * de créer une Version de plus, qu'un humain verra.
+ * Two homonyms: we choose neither. Getting the attachment wrong costs more than creating one Version too many, which a human will see.
  */
 export async function findVersionByCode(
   ctx: { client: ShotgridClient; scope: ProjectScope },
@@ -25,13 +22,11 @@ export async function findVersionByCode(
   if (!trimmed) return null;
   const records = await ctx.client.search('Version', {
     fields: ['id', 'code', 'project'],
-    // Le filtre de projet est obligatoire : un site héberge tous les projets du studio,
-    // et un code de version se répète volontiers d'un projet à l'autre.
+        // The project filter is mandatory: a site hosts all the studio's projects, and a version code readily repeats from one project to another.
     filters: [projectFilter(ctx.scope.sgProjectId), ['code', 'is', trimmed]],
     maxRecords: 5,
   });
-  // Chaque enregistrement est revérifié : le filtre peut être contourné par une
-  // configuration de site inattendue, et écrire dans le projet voisin ne se rattrape pas.
+    // Each record is rechecked: the filter may be bypassed by an unexpected site configuration, and writing into the neighbouring project cannot be undone.
   const mine = records.filter((r) => belongsToProject(r, ctx.scope).ok);
   if (mine.length !== 1) {
     if (mine.length > 1) {

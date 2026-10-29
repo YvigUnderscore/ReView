@@ -7,8 +7,8 @@ vi.mock('../lib/prisma', () => ({
   prisma: {
     version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
-    // Le droit de publier se lit sur le rôle EFFECTIF du projet (38.E) : l'auteur y est
-    // membre sans rôle local, donc jugé sur son rôle global — comme auparavant.
+        // The right to publish is read from the project's EFFECTIVE role (38.E): the author is there a member
+        // without a local role, hence judged on their global role, as before.
     projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
   },
 }));
@@ -36,28 +36,27 @@ beforeEach(() => {
 });
 
 /**
- * Le verrou de publication (Phase 11) n'avait qu'un sens : seul le passage À l'état publié
- * était réservé aux superviseurs. L'auteur pouvait donc dépublier sa propre version — la
- * retirant du lien de partage client, décisions de review comprises — puis la modifier
- * librement, `assertNotPublished` ne voyant plus qu'un brouillon.
+ * The publication lock (Phase 11) only made sense if the transition TO the published state was reserved to supervisors.
+ * The author could therefore unpublish their own version, removing it from the client share link, review decisions included,
+ * and then edit it freely, since `assertNotPublished` now only saw a draft.
  */
-describe('VersionService.update — verrou de publication bidirectionnel', () => {
-  it('refuse à l’auteur de publier sa version', async () => {
+describe('VersionService.update: two-way publication lock', () => {
+  it('refuses the author publishing their version', async () => {
     findUnique.mockResolvedValue({ authorId: author.id, published: false } as never);
     await expect(update(author, 7, 1, { status: VersionStatus.PUBLISHED })).rejects.toThrow(/supervisor/i);
   });
 
-  it('refuse à l’auteur de DÉpublier sa version', async () => {
+  it('refuses the author UNpublishing their version', async () => {
     findUnique.mockResolvedValue({ authorId: author.id, published: true } as never);
     await expect(update(author, 7, 1, { status: VersionStatus.DRAFT })).rejects.toThrow(/unpublish/i);
   });
 
-  it('autorise un superviseur à dépublier', async () => {
+  it('allows a supervisor to unpublish', async () => {
     findUnique.mockResolvedValue({ authorId: author.id, published: true } as never);
     await expect(update(supervisor, 7, 1, { status: VersionStatus.DRAFT })).resolves.toBeDefined();
   });
 
-  it('laisse l’auteur renommer une version non publiée', async () => {
+  it('lets the author rename an unpublished version', async () => {
     findUnique.mockResolvedValue({ authorId: author.id, published: false } as never);
     await expect(update(author, 7, 1, { name: 'V02' })).resolves.toBeDefined();
   });

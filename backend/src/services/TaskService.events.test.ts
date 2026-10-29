@@ -4,17 +4,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Le flux de changements ne partait que de l'API v1 : un statut posé au clic droit, une
- * assignation par lot ou une tâche créée à l'écran ne produisaient ni ligne de journal ni
- * webhook. Ces tests figent l'inverse — l'origine du changement n'a plus d'importance — et
- * la distinction qui compte pour un consommateur : un changement de statut est un
- * événement à lui, pas une « mise à jour » à comparer soi-même.
+ * The change stream only came from the v1 API: a status set by right-click, a batch assignment or a task created on
+ * screen produced neither a journal line nor a webhook. These tests pin the opposite: the origin of the change no longer
+ * matters, and the distinction that matters to a consumer: a status change is an event of its own, not an "update" to
+ * compare oneself.
  */
 vi.mock('../lib/prisma', () => ({
   prisma: {
     task: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     comment: { findUnique: vi.fn() },
-    // Politique de département (réglage studio) : absente = « open », la règle historique.
+        // Department policy (studio setting): absent = "open", the historical rule.
     setting: { findUnique: vi.fn().mockResolvedValue(null) },
     user: { findUnique: vi.fn().mockResolvedValue({ departments: [] }) },
   },
@@ -28,8 +27,8 @@ vi.mock('./PipelineStatusService', () => ({
   resolveByLegacy: vi.fn(() => Promise.resolve(null)),
 }));
 vi.mock('./shotgrid/ShotgridPushService', () => ({ enqueuePush: vi.fn() }));
-// Garde d'assignation (A1-05) : son contenu se teste dans `TaskService.assignable.test.ts`,
-// ici on ne veut que laisser passer les assignations de ces scénarios d'événements.
+// Assignment guard (A1-05): its content is tested in `TaskService.assignable.test.ts`; here we only want to let
+// the assignments of these event scenarios through.
 vi.mock('./EntityAssigneeService', () => ({ assertAssignable: vi.fn() }));
 vi.mock('../lib/projectGuard', () => ({ assertProjectWritable: vi.fn() }));
 vi.mock('../lib/projectRoles', () => ({
@@ -45,7 +44,7 @@ import { Role, TaskStatus, TaskType } from '@prisma/client';
 
 const supervisor = { id: 2, role: Role.SUPERVISOR };
 
-/** Ligne au format `taskSelect` : `toTask` a besoin du parent pour composer le chemin. */
+/** Row in `taskSelect` format: `toTask` needs the parent to build the path. */
 const taskRow = {
   id: 1,
   name: 'comp',
@@ -77,8 +76,8 @@ beforeEach(() => {
   } as never);
 });
 
-describe('TaskService.update — flux de changements', () => {
-  it('distingue le changement de statut de la mise à jour', async () => {
+describe('TaskService.update: change stream', () => {
+  it('distinguishes a status change from an update', async () => {
     vi.mocked(prisma.task.findUnique)
       .mockResolvedValueOnce({ assigneeId: null, status: TaskStatus.TODO, pipelineStatusId: null } as never)
       .mockResolvedValueOnce(taskRow as never);
@@ -95,7 +94,7 @@ describe('TaskService.update — flux de changements', () => {
     });
   });
 
-  it('n’annonce pas un changement de statut quand rien n’a bougé', async () => {
+  it('does not announce a status change when nothing moved', async () => {
     vi.mocked(prisma.task.findUnique)
       .mockResolvedValueOnce({
         assigneeId: null,
@@ -109,7 +108,7 @@ describe('TaskService.update — flux de changements', () => {
     expect(eventsSent()).toEqual(['task.updated']);
   });
 
-  it('annonce l’assignation quand elle change réellement', async () => {
+  it('announces the assignment when it really changes', async () => {
     vi.mocked(prisma.task.update).mockResolvedValue({
       id: 1,
       name: 'comp',
@@ -135,7 +134,7 @@ describe('TaskService.update — flux de changements', () => {
     });
   });
 
-  it('porte la représentation d’API dans la charge — la même que pour un appel v1', async () => {
+  it('carries the API representation in the payload: the same as for a v1 call', async () => {
     vi.mocked(prisma.task.findUnique)
       .mockResolvedValueOnce({
         assigneeId: null,
@@ -151,7 +150,7 @@ describe('TaskService.update — flux de changements', () => {
   });
 });
 
-describe('TaskService.setAssignee — assignation (y compris par lot)', () => {
+describe('TaskService.setAssignee: assignment (including batch)', () => {
   beforeEach(() => {
     vi.mocked(prisma.task.update).mockResolvedValue({
       id: 1,
@@ -161,7 +160,7 @@ describe('TaskService.setAssignee — assignation (y compris par lot)', () => {
     } as never);
   });
 
-  it('publie l’assignation et la mise à jour', async () => {
+  it('publishes the assignment and the update', async () => {
     vi.mocked(prisma.task.findUnique)
       .mockResolvedValueOnce({ assigneeId: null } as never)
       .mockResolvedValueOnce(taskRow as never);
@@ -171,14 +170,14 @@ describe('TaskService.setAssignee — assignation (y compris par lot)', () => {
     expect(eventsSent()).toEqual(['task.assigned', 'task.updated']);
   });
 
-  it('reste muet quand l’assigné ne change pas', async () => {
+  it('stays silent when the assignee does not change', async () => {
     vi.mocked(prisma.task.findUnique).mockResolvedValueOnce({ assigneeId: 9 } as never);
     await setAssignee(supervisor, 3, 1, 9);
     expect(publish).not.toHaveBeenCalled();
   });
 });
 
-describe('TaskService.create — création à l’écran', () => {
+describe('TaskService.create: creation on screen', () => {
   it('publie task.created', async () => {
     vi.mocked(prisma.task.create).mockResolvedValue({
       id: 1,

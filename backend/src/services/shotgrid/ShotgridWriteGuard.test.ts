@@ -6,28 +6,21 @@ import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 /**
- * Personne n'écrit dans ShotGrid en dehors de `ShotgridWriter`.
+ * Nobody writes to ShotGrid outside `ShotgridWriter`.
  *
- * Les gardes de cloisonnement existaient déjà avant ce test, et elles étaient correctes.
- * Ce qui manquait, c'est qu'elles soient **obligatoires** : rien n'empêchait un nouvel
- * appel de parler au client directement, et l'histoire du dossier montre que ça glisse —
- * `ShotgridPlaylistSync` avait recopié les trois vérifications à la main plutôt que de
- * réutiliser le chemin commun, et une copie finit toujours par diverger de l'original.
+ * The partitioning guards existed before this test, and they were correct. What was missing was for them to be **mandatory**: nothing prevented a new call from talking to the client
+ * directly, and the history of the file shows it slips — `ShotgridPlaylistSync` had copied the three checks by hand instead of reusing the common path, and a copy always ends up diverging from the original.
  *
- * Le contrôle est volontairement bête et textuel : il cherche les méthodes `unsafe*` du
- * client dans tout le backend. Une écriture ajoutée ailleurs qu'ici fait rougir la suite
- * avant d'atteindre un site de production. C'est le même idiome que
- * `shotgridLinkPurge.test.ts`, qui confronte la liste des types liés aux déclencheurs SQL.
+ * The check is deliberately dumb and textual: it looks for the client's `unsafe*` methods throughout the backend. A write added anywhere other than here makes the suite fail
+ * before it reaches a production site. It is the same idiom as `shotgridLinkPurge.test.ts`, which confronts the list of linked types with the SQL triggers.
  */
 
-/** Méthodes d'écriture brutes du client — leur nom dit déjà qu'elles ne s'appellent pas. */
+/** The client's raw write methods — their name already says that they are not to be called. */
 const UNSAFE_METHODS = ['unsafeCreate', 'unsafeUpdate', 'unsafeRemove', 'unsafeUploadFile'];
 
 /**
- * Les seuls fichiers qui ont le droit de les nommer : le client qui les déclare, le
- * writer qui les appelle, et les deux suites qui les éprouvent. Un test n'atteint aucun
- * site de production — mais la liste reste nominative, pour qu'exempter un fichier soit
- * un geste visible dans le diff plutôt qu'un effet de bord d'une règle trop large.
+ * The only files entitled to name them: the client that declares them, the writer that calls them, and the two suites that test them. A test reaches no production site —
+ * but the list stays nominative, so that exempting a file is a visible gesture in the diff rather than a side effect of an overly broad rule.
  */
 const ALLOWED = [
   'services/shotgrid/ShotgridClient.ts',
@@ -51,21 +44,21 @@ function sourceFiles(dir: string): string[] {
   return out;
 }
 
-/** Chemin relatif à `src`, en séparateurs POSIX — lisible dans le message d'échec. */
+/** Path relative to `src`, in POSIX separators — readable in the failure message. */
 const relative = (file: string) =>
   file
     .slice(SRC.length + 1)
     .split('\\')
     .join('/');
 
-describe('écritures ShotGrid', () => {
-  it('ne partent que de ShotgridWriter', () => {
+describe('ShotGrid writes', () => {
+  it('only leave from ShotgridWriter', () => {
     const offenders: string[] = [];
 
     for (const file of sourceFiles(SRC)) {
       const rel = relative(file);
       if (ALLOWED.includes(rel)) continue;
-      // Ce fichier-ci cite forcément les noms qu'il interdit.
+            // This file necessarily cites the names it forbids.
       if (rel.endsWith('ShotgridWriteGuard.test.ts')) continue;
 
       const source = readFileSync(file, 'utf8');
@@ -81,9 +74,8 @@ describe('écritures ShotGrid', () => {
     ).toEqual([]);
   });
 
-  it('garde la liste des méthodes brutes alignée sur le client', () => {
-    // Si une méthode d'écriture est ajoutée au client sans être listée ici, elle
-    // échapperait au contrôle ci-dessus sans que personne ne le remarque.
+  it('keeps the list of raw methods aligned with the client', () => {
+        // If a write method is added to the client without being listed here, it would slip past the check above without anyone noticing.
     const client = readFileSync(join(SRC, 'services/shotgrid/ShotgridClient.ts'), 'utf8');
     const declared = Array.from(client.matchAll(/async (unsafe[A-Za-z]+)\(/g), (m) => m[1]);
 

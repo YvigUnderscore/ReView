@@ -13,30 +13,26 @@ import { emitToProject } from './SocketService';
 import { enqueueTimelineExport, timelineExportJobId, timelineExportQueue } from './JobService';
 
 /**
- * Montage automatique d'une séquence ou d'un projet (Phase 45).
+ * Automatic timeline (montage) of a sequence or a project (Phase 45).
  *
- * Le contenu n'est JAMAIS stocké : il est recalculé à chaque lecture depuis l'état réel
- * de la production. C'est tout l'intérêt — une liste figée serait périmée à la
- * publication suivante, et il faudrait la rafraîchir à la main, ce qui est exactement le
- * travail que ce montage supprime.
+ * The content is NEVER stored: it is recomputed on every read from the real state of the production. That is the whole point — a frozen list would be stale at the
+ * next publication, and would have to be refreshed by hand, which is exactly the work this timeline removes.
  *
- * Ce qui se persiste, c'est ce qu'un humain a décidé : le nom, le département visé, et
- * les révisions figées (`snapshot`) — les seules choses qu'un recalcul ne peut pas
- * retrouver.
+ * What is persisted is what a human has decided: the name, the targeted department, and the frozen revisions (`snapshot`) — the only things a recomputation
+ * cannot recover.
  */
 
 type SessionUser = { id: number; role: Role };
 
 const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
-/** Renommer, cibler une étape ou figer une révision engage la production : superviseur+. */
+/** Renaming, targeting a step or freezing a revision commits the production: supervisor+. */
 function assertCanManage(user: SessionUser): void {
   if (!isManager(user.role)) throw forbidden('Supervisors and administrators only');
 }
 
 /**
- * Le montage d'une séquence (ou du projet entier si `sequenceId` est null), créé au
- * premier accès. Personne n'a à « créer un montage » : il existe dès qu'il y a des plans.
+ * The timeline of a sequence (or of the whole project if `sequenceId` is null), created on first access. Nobody has to "create a timeline": it exists as soon as there are shots.
  */
 export async function ensure(projectId: number, sequenceId: number | null) {
   const existing = await prisma.timeline.findFirst({ where: { projectId, sequenceId } });
@@ -52,7 +48,7 @@ export async function ensure(projectId: number, sequenceId: number | null) {
   try {
     return await prisma.timeline.create({ data: { projectId, sequenceId } });
   } catch {
-    // Deux onglets ouverts en même temps : le perdant récupère le montage du gagnant.
+        // Two tabs open at the same time: the loser picks up the winner's timeline.
     const winner = await prisma.timeline.findFirst({ where: { projectId, sequenceId } });
     if (!winner) throw badRequest('Montage indisponible', 'TIMELINE_UNAVAILABLE');
     return winner;
@@ -71,25 +67,21 @@ const shotSelect = {
 } satisfies Prisma.ShotSelect;
 
 /**
- * Plafond du montage. Un long-métrage tient sous les deux mille plans ; au-delà, on est
- * dans l'anomalie d'import, et charger la table entière pour la trier en mémoire ferait
- * tomber le serveur plutôt que d'afficher quelque chose d'utile.
+ * Cap of the timeline. A feature film fits under two thousand shots; beyond that, we are in import anomaly territory, and loading the whole table to sort it in memory
+ * would bring the server down rather than display anything useful.
  */
 const TIMELINE_SHOT_LIMIT = 5000;
 
-/** Révisions listées dans le sélecteur d'un montage (les plus récentes d'abord). */
+/** Revisions listed in a timeline's selector (most recent first). */
 const SNAPSHOT_LIST_LIMIT = 200;
 
 /**
- * Les plans du montage, dans l'ordre de la production : séquence par séquence, puis
- * l'ordre du plan, le code servant d'ultime départage — un plan sans ordre explicite ne
- * doit pas se retrouver placé au hasard.
+ * The shots of the timeline, in production order: sequence by sequence, then shot order, the code serving as the final tie-break — a shot without an explicit order
+ * must not end up placed at random.
  *
- * La requête est bornée ET triée côté base : sans `orderBy`, le plafond aurait coupé
- * dans un ensemble arbitraire, et le montage d'un même projet aurait changé d'un
- * rafraîchissement à l'autre. Le tri finit en mémoire parce que le départage par code
- * est **naturel** (`SH2` avant `SH10`), ce qu'aucune collation SQL ne fait — l'ordre
- * affiché est donc exactement celui d'avant, sur un ensemble désormais déterministe.
+ * The query is bounded AND sorted on the database side: without `orderBy`, the cap would have cut into an arbitrary set, and the timeline of one project would have changed
+ * from one refresh to the next. The sort ends in memory because the code tie-break is **natural** (`SH2` before `SH10`), which no SQL collation does — the displayed order is therefore
+ * exactly the same as before, over a set that is now deterministic.
  */
 async function orderedShots(
   projectId: number,
@@ -100,18 +92,14 @@ async function orderedShots(
       projectId,
       deletedAt: null,
       omitted: false,
-      // Un plan masqué ne monte pas au cut. Distinct d'`omitted`, qui est une décision
-      // éditoriale visible de tous : le masquage, lui, retire l'élément de partout.
+            // A hidden shot does not go into the cut. Distinct from `omitted`, which is a visible editorial decision shared by all: hiding, for its part, removes the item everywhere.
       hiddenAt: null,
-      // Une séquence masquée emporte ses plans : sans cette condition, le montage du film
-      // entier rejouerait les plans d'une séquence qui n'apparaît plus nulle part. La
-      // branche `sequenceId: null` est indispensable — un filtre de relation seul écarte
-      // les plans qui n'ont pas de séquence du tout, qui sont pourtant au montage.
+            // A hidden sequence takes its shots with it: without this condition, the timeline of the whole film would replay the shots of a sequence that appears nowhere any more.
+            // The `sequenceId: null` branch is indispensable — a relation filter alone would discard the shots that have no sequence at all, yet which belong in the timeline.
       OR: [{ sequenceId: null }, { sequence: { hiddenAt: null } }],
       ...(sequenceId !== null ? { sequenceId } : {}),
     },
-    // Les plans hors séquence partent en fin de liste : Postgres range les NULL en
-    // dernier sur un tri ascendant, comme le faisait le rang `MAX_SAFE_INTEGER`.
+        // Shots outside any sequence go to the end of the list: Postgres puts NULLs last on an ascending sort, as the `MAX_SAFE_INTEGER` rank did.
     orderBy: [
       { sequence: { order: 'asc' } },
       { sequence: { code: 'asc' } },
@@ -145,7 +133,7 @@ async function orderedShots(
   };
 }
 
-/** Traduit les versions élues en entrées de montage (durée lue dans les métadonnées). */
+/** Translates the elected versions into timeline entries (duration read from the metadata). */
 function toPickRows(picks: Map<number, LatestPick>): Map<number, PickRow> {
   const out = new Map<number, PickRow>();
   for (const [shotId, pick] of picks) {
@@ -176,12 +164,10 @@ export interface TimelineClip {
   departmentName: string | null;
   mediaId: number | null;
   mediaName: string | null;
-  /**
-   * Nature du média retenu. Le montage privilégie la vidéo (`preferPlayable`), mais un plan
-   * dont la seule version publiée est une image atterrit bel et bien ici — et le lecteur doit
-   * le savoir : servi à une balise `<video>`, un JPEG ne se démultiplexe pas et la lecture
-   * reste bloquée sur le plan sans le moindre message.
-   */
+    /**
+     * Nature of the retained media. The timeline favours video (`preferPlayable`), but a shot whose only published version is an image does land here — and the player must
+     * know it: served to a `<video>` tag, a JPEG does not demultiplex and playback stays stuck on the shot without any message.
+     */
   mediaKind: MediaKind | null;
   thumbnailUrl: string | null;
   placeholder: boolean;
@@ -193,7 +179,7 @@ export interface TimelineView {
   projectId: number;
   sequenceId: number | null;
   sequenceCode: string | null;
-  /** Null = jamais renommé : l'interface affiche son libellé traduit. */
+    /** Null = never renamed: the interface displays its translated label. */
   name: string | null;
   department: string | null;
   departments: Department[];
@@ -203,11 +189,11 @@ export interface TimelineView {
   gapCount: number;
   updatedAt: Date;
   latestRevision: number | null;
-  /** Le plafond de plans a mordu : le montage montré n'est pas le montage entier. */
+    /** The shot cap has bitten: the timeline shown is not the whole timeline. */
   truncated: boolean;
 }
 
-/** Calcule le montage courant : ordre des plans × version la plus avancée × durées. */
+/** Computes the current timeline: shot order × most advanced version × durations. */
 export async function resolve(timelineId: number): Promise<TimelineView> {
   const timeline = await prisma.timeline.findUnique({
     where: { id: timelineId },
@@ -270,11 +256,11 @@ export async function resolve(timelineId: number): Promise<TimelineView> {
   };
 }
 
-/** Un segment tel que l'export l'attend : la source à encoder, ou un carton à fabriquer. */
+/** A segment as the export expects it: the source to encode, or a title card to build. */
 export interface ExportSegment {
   shotCode: string;
   duration: number;
-  /** Clé de stockage à encoder — null pour un carton. */
+    /** Storage key to encode — null for a title card. */
   storageKey: string | null;
 }
 
@@ -286,10 +272,8 @@ export interface ExportPlan {
 }
 
 /**
- * Le montage tel que le worker doit l'encoder : clés de stockage plutôt qu'URLs signées,
- * et le proxy MP4 de préférence à la source. Le proxy est déjà normalisé pour le web —
- * réencoder un EXR ou un ProRes de 4 Go pour en tirer trente secondes de montage serait
- * du gâchis, et parfois un échec sur des formats que le concat ne digère pas.
+ * The timeline as the worker must encode it: storage keys rather than signed URLs, and the MP4 proxy in preference to the source. The proxy is already normalized for the web —
+ * re-encoding a 4 GB EXR or ProRes to extract thirty seconds of timeline would be wasteful, and sometimes a failure on formats the concat cannot digest.
  */
 export async function exportPlan(timelineId: number): Promise<ExportPlan> {
   const view = await resolve(timelineId);
@@ -317,7 +301,7 @@ export async function exportPlan(timelineId: number): Promise<ExportPlan> {
   };
 }
 
-/** Cadence effective : l'override de la séquence prime sur celle du projet (Phase 18). */
+/** Effective frame rate: the sequence's override takes precedence over the project's (Phase 18). */
 function sequenceFramerate(raw: unknown, fallback: number): number {
   const o = (raw ?? {}) as { framerate?: unknown };
   return typeof o.framerate === 'number' && o.framerate > 0 ? o.framerate : fallback;
@@ -328,7 +312,7 @@ export interface UpdateTimelineInput {
   department?: string | null;
 }
 
-/** Renomme le montage ou change l'étape visée (superviseur+). */
+/** Renames the timeline or changes the targeted step (supervisor+). */
 export async function update(user: SessionUser, timelineId: number, body: UpdateTimelineInput) {
   assertCanManage(user);
   const timeline = await prisma.timeline.findUnique({ where: { id: timelineId } });
@@ -348,9 +332,8 @@ export async function update(user: SessionUser, timelineId: number, body: Update
 }
 
 /**
- * Fige la révision courante. Les libellés sont recopiés dans les lignes : une révision
- * doit rester lisible quand un plan est renommé, omis ou mis à la corbeille — c'est un
- * compte rendu de ce qui a été montré, pas une vue sur l'état actuel.
+ * Freezes the current revision. The labels are copied into the rows: a revision must remain readable when a shot is renamed, omitted or put in the trash — it is an account
+ * of what was shown, not a view on the current state.
  */
 export async function snapshot(user: SessionUser, timelineId: number, note?: string) {
   assertCanManage(user);
@@ -387,18 +370,17 @@ export async function snapshot(user: SessionUser, timelineId: number, note?: str
 }
 
 export interface ExportState {
-  /** Un master est disponible au téléchargement. */
+    /** A master is available for download. */
   ready: boolean;
   url: string | null;
   size: number | null;
-  /** État du job en cours, s'il y en a un (`waiting`, `active`, `failed`…). */
+    /** State of the job in progress, if any (`waiting`, `active`, `failed`...). */
   state: string | null;
 }
 
 /**
- * État de l'export d'un montage. Le master vit à une clé déterministe : son existence
- * suffit à savoir qu'il y a quelque chose à télécharger, sans table de suivi. Le job en
- * cours n'est consulté que pour dire « ça travaille » plutôt que « rien ».
+ * State of a timeline's export. The master lives at a deterministic key: its existence suffices to know there is something to download, without a tracking table. The job in
+ * progress is only consulted to say "it's working" rather than "nothing".
  */
 export async function exportState(timelineId: number): Promise<ExportState> {
   const key = masterKey(timelineId);
@@ -408,27 +390,26 @@ export async function exportState(timelineId: number): Promise<ExportState> {
     const stat = await storage.statObject(key);
     return { ready: true, url: await storage.getPresignedGetUrl(key), size: stat.size, state };
   } catch {
-    // Objet absent : aucun export n'a encore abouti pour ce montage.
+        // Object absent: no export has yet succeeded for this timeline.
     return { ready: false, url: null, size: null, state };
   }
 }
 
-/** Lance (ou relance) l'export du montage — superviseur+, un job à la fois. */
+/** Launches (or relaunches) the timeline's export — supervisor+, one job at a time. */
 export async function requestExport(user: SessionUser, timelineId: number): Promise<ExportState> {
   assertCanManage(user);
   const previous = await timelineExportQueue.getJob(timelineExportJobId(timelineId));
-  // Un job terminé ou échoué garde son identifiant : sans purge, le relancer serait ignoré.
+    // A completed or failed job keeps its identifier: without a purge, relaunching it would be ignored.
   if (previous && ['completed', 'failed'].includes(await previous.getState())) await previous.remove();
   await enqueueTimelineExport({ timelineId, requestedById: user.id });
   return exportState(timelineId);
 }
 
 /**
- * Révisions figées d'un montage, de la plus récente à la plus ancienne.
+ * Frozen revisions of a timeline, from most recent to oldest.
  *
- * Bornée : une projection quotidienne pendant deux ans fait sept cents révisions, et la
- * liste est un menu déroulant. Le tri décroissant garantit que ce sont les plus anciennes
- * qui sortent du cadre, jamais celles qu'on consulte.
+ * Bounded: a daily projection over two years makes seven hundred revisions, and the list is a dropdown. Descending order guarantees that it is the oldest that leave the frame,
+ * never those being consulted.
  */
 export function listSnapshots(timelineId: number) {
   return prisma.timelineSnapshot.findMany({
@@ -443,8 +424,7 @@ export function listSnapshots(timelineId: number) {
 }
 
 /**
- * Une révision et ce qui la sépare de la précédente. La comparaison est le vrai usage :
- * « qu'est-ce qui a bougé depuis la projection de mardi ? ».
+ * A revision and what separates it from the previous one. The comparison is the real use: "what has moved since Tuesday's projection?"
  */
 export async function getSnapshot(timelineId: number, revision: number) {
   const snap = await prisma.timelineSnapshot.findFirst({

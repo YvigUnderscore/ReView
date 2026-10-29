@@ -4,10 +4,9 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 /**
- * La livraison d'un webhook part du worker, DANS le réseau applicatif. L'URL est saisie par
- * un admin de ReView — ce qui ne lui donne pas la main sur ce réseau. Ces tests figent le
- * refus (adresse interne, nom qui résout en privé, redirection) et le chemin nominal, y
- * compris la trace laissée sur le webhook.
+ * A webhook delivery leaves from the worker, INSIDE the application network. The URL is entered by a ReView admin, which
+ * does not give them control of that network. These tests pin the refusal (internal address, name resolving privately,
+ * redirect) and the nominal path, including the trace left on the webhook.
  */
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
 vi.mock('../lib/prisma', () => ({
@@ -42,8 +41,8 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 
-describe('WebhookService.deliver — garde anti-SSRF', () => {
-  it('refuse une adresse interne et laisse le motif sur le webhook', async () => {
+describe('WebhookService.deliver: anti-SSRF guard', () => {
+  it('refuses an internal address and leaves the reason on the webhook', async () => {
     hookAt('http://169.254.169.254/latest/meta-data/');
     await expect(deliver(1, 'media.created', {})).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -57,14 +56,14 @@ describe('WebhookService.deliver — garde anti-SSRF', () => {
     );
   });
 
-  it('refuse un nom public qui résout vers une adresse interne', async () => {
+  it('refuses a public name that resolves to an internal address', async () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '127.0.0.1', family: 4 }] as never);
     hookAt('https://hooks.exemple.com/x');
     await expect(deliver(1, 'media.created', {})).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('ne rejoue jamais le POST signé derrière une redirection', async () => {
+  it('never replays the signed POST behind a redirect', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(null, { status: 302, headers: { location: 'http://10.0.0.5/' } }),
     );
@@ -74,8 +73,8 @@ describe('WebhookService.deliver — garde anti-SSRF', () => {
   });
 });
 
-describe('WebhookService.deliver — livraison', () => {
-  it('poste la charge signée et enregistre le statut', async () => {
+describe('WebhookService.deliver: delivery', () => {
+  it('posts the signed payload and records the status', async () => {
     hookAt('https://hooks.exemple.com/x');
     await deliver(1, 'media.created', { id: 3 });
 
@@ -92,7 +91,7 @@ describe('WebhookService.deliver — livraison', () => {
     );
   });
 
-  it('remonte l’échec du destinataire pour déclencher la reprise BullMQ', async () => {
+  it('surfaces the recipient failure to trigger the BullMQ retry', async () => {
     fetchMock.mockResolvedValueOnce(new Response('', { status: 500 }));
     hookAt('https://hooks.exemple.com/x');
     await expect(deliver(1, 'media.created', {})).rejects.toThrow(/HTTP 500/);
@@ -103,7 +102,7 @@ describe('WebhookService.deliver — livraison', () => {
     );
   });
 
-  it('ne fait rien pour un webhook désactivé entre-temps', async () => {
+  it('does nothing for a webhook deactivated in the meantime', async () => {
     vi.mocked(prisma.webhook.findUnique).mockResolvedValue({
       id: 1,
       url: 'https://hooks.exemple.com/x',

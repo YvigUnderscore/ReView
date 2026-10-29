@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Quelles passes exécuter, et sur quelles entités.
+ * Which passes to run, and on which entities.
  *
- * Une synchronisation ShotGrid est une suite de passes (référentiel de statuts, comptes,
- * séquences, plans, assets, tâches, versions, publishes, notes, playlists). Les
- * déclencher toutes à chaque fois avait deux conséquences opposées, toutes deux fausses :
+ * A ShotGrid synchronization is a sequence of passes (status reference, accounts,
+ * sequences, shots, assets, tasks, versions, publishes, notes, playlists). Triggering
+ * all of them every time had two opposite consequences, both wrong:
  *
- * - un événement portant sur UNE version rejouait le projet entier — des milliers de
- *   requêtes pour une entité qui a bougé ;
- * - un événement Note ou Playlist ne déclenchait RIEN, parce que le seul interrupteur
- *   disponible (`withMedia`) valait `entity === 'Version'`, donc faux. Le sens sortant
- *   fonctionnait, le sens entrant était mort.
+ * - an event concerning ONE version replayed the whole project — thousands of requests
+ *   for an entity that had moved;
+ * - a Note or Playlist event triggered NOTHING, because the only available switch
+ *   (`withMedia`) was `entity === 'Version'`, hence false. The outbound direction
+ *   worked, the inbound one was dead.
  *
- * Ce module tranche : à chaque type d'événement sa liste de passes, et rien d'autre.
- * Il est volontairement pur — aucune base, aucun client — pour être vérifiable seul.
+ * This module decides: each event type gets its own list of passes, and nothing else.
+ * It is deliberately pure — no database, no client — so that it can be verified on its own.
  */
 
 export type SyncPass =
@@ -34,7 +34,7 @@ export type SyncPass =
 export const ALL_PASSES: readonly SyncPass[] = [
   'statuses',
   'users',
-  // Avant les séquences : le rattachement lit la correspondance des épisodes.
+    // Before the sequences: the attachment reads the episodes' match.
   'episodes',
   'sequences',
   'shots',
@@ -47,8 +47,8 @@ export const ALL_PASSES: readonly SyncPass[] = [
 ];
 
 /**
- * Passe « structure seule » — ce que demandait historiquement `withMedia: false`.
- * Notes et playlists en sont exclues parce qu'elles s'appuient sur les versions.
+ * "Structure only" pass: what `withMedia: false` historically requested.
+ * Notes and playlists are excluded because they rely on versions.
  */
 export const STRUCTURE_PASSES: readonly SyncPass[] = [
   'statuses',
@@ -61,15 +61,13 @@ export const STRUCTURE_PASSES: readonly SyncPass[] = [
 ];
 
 /**
- * Passes déclenchées par chaque type d'événement du site.
+ * Passes triggered by each type of event from the site.
  *
- * Le référentiel de statuts accompagne toute passe qui lit un `sg_status_list` : sans
- * lui, `statusPatch` ne reconnaît aucun code et le journal se remplit de « statut
- * inconnu ». Les assets n'en portent pas côté ReView, ils s'en passent.
+ * The status reference accompanies any pass that reads a `sg_status_list`: without it, `statusPatch` recognises no code and the journal fills with "unknown status".
+ * Assets carry none on the ReView side, so they do without it.
  */
 const PASSES_BY_ENTITY: Readonly<Record<string, readonly SyncPass[]>> = {
-  // Une séquence peut avoir changé d'épisode : la passe « episodes » l'accompagne. Sur un
-  // projet sans le niveau, elle ne fait rien du tout.
+    // A sequence may have changed episode: the "episodes" pass accompanies it. On a project without the level, it does nothing at all.
   Sequence: ['statuses', 'episodes', 'sequences'],
   Episode: ['statuses', 'episodes'],
   Shot: ['statuses', 'shots'],
@@ -78,24 +76,21 @@ const PASSES_BY_ENTITY: Readonly<Record<string, readonly SyncPass[]>> = {
   Version: ['versions'],
   Note: ['notes'],
   Playlist: ['playlists'],
-  // Un statut renommé ou retiré touche toute la hiérarchie : elle est relue en entier,
-  // mais sans les médias, qui n'ont pas pu changer.
+    // A renamed or removed status touches the whole hierarchy: it is re-read in full, but without the media, which cannot have changed.
   Status: ['statuses', 'episodes', 'sequences', 'shots', 'assets', 'tasks'],
-  // Un compte modifié change les assignations : seules les tâches les portent.
+    // A modified account changes the assignments: only tasks carry them.
   HumanUser: ['statuses', 'users', 'tasks'],
 };
 
 /**
- * Entités dont l'événement porte sur tout le projet plutôt que sur une ligne précise :
- * les cibler par identifiant n'aurait pas de sens (un statut n'est pas une entité de
- * production, il en qualifie des milliers).
+ * Entities whose event concerns the whole project rather than a precise line: targeting them by identifier would make no sense (a status is not a production entity;
+ * it qualifies thousands of them).
  */
 const GLOBAL_ENTITIES = new Set(['Status', 'HumanUser']);
 
 /**
- * Entités que ReView sait traiter — le reste est ignoré sans bruit. La liste se déduit
- * de la table des passes : accepter un événement qu'aucune passe ne traite était
- * exactement le défaut des notes et des playlists.
+ * Entities ReView knows how to handle — the rest is ignored silently. The list is deduced from the passes table: accepting an event that no pass handles was
+ * exactly the default of notes and playlists.
  */
 export const HANDLED_ENTITIES: ReadonlySet<string> = new Set(Object.keys(PASSES_BY_ENTITY));
 
@@ -108,12 +103,11 @@ export function eventIsGlobal(entity: string): boolean {
 }
 
 /**
- * Passes déduites d'une demande ciblée qui ne les a pas nommées.
+ * Passes deduced from a targeted request that did not name them.
  *
- * Réaligner une carte de plan ou arbitrer un conflit de tâche passe `onlySgIds` sans rien
- * dire des passes : la demande balayait alors les notes, les playlists et les cinq mille
- * `PublishedFile` du projet pour une entité. Le type ciblé suffit à savoir quoi relire.
- * Un type inconnu ne se devine pas : on rend `undefined` et tout est exécuté.
+ * Realigning a shot's card or arbitrating a task conflict passes `onlySgIds` without saying anything about the passes: the request then swept the notes, the playlists
+ * and the project's five thousand `PublishedFile` for a single entity. The targeted type is enough to know what to re-read.
+ * An unknown type cannot be guessed: we return `undefined` and everything runs.
  */
 export function impliedPasses(
   onlySgIds: readonly { sgType: string; sgId: number }[] | undefined,
@@ -129,12 +123,10 @@ export function impliedPasses(
 }
 
 /**
- * Passes effectivement demandées.
+ * Passes actually requested.
  *
- * `passes` explicite l'emporte, puis la déduction depuis les entités ciblées, puis tout.
- * `withMedia: false` reste un veto : il retire versions, publishes, notes et playlists
- * quelle que soit la façon dont la liste a été obtenue — un appelant qui a dit « structure
- * seule » ne doit pas se retrouver à rapatrier des médias par déduction.
+ * An explicit `passes` takes precedence, then the deduction from the targeted entities, then everything. `withMedia: false` remains a veto: it removes versions, publishes,
+ * notes and playlists however the list was obtained — a caller who said "structure only" must not end up fetching media by deduction.
  */
 export function resolvePasses(options: {
   passes?: readonly SyncPass[];
@@ -147,8 +139,8 @@ export function resolvePasses(options: {
 }
 
 /**
- * Fusion de deux demandes : l'union, et `undefined` (= tout) absorbe le reste.
- * Comme pour `onlySgIds`, on peut rattraper trop, jamais trop peu.
+ * Merge of two requests: the union, and `undefined` (= everything) absorbs the rest.
+ * As with `onlySgIds`, one may over-catch, never under-catch.
  */
 export function mergePasses(
   a: readonly SyncPass[] | undefined,
@@ -156,11 +148,11 @@ export function mergePasses(
 ): SyncPass[] | undefined {
   if (!a || !b) return undefined;
   const union = new Set<SyncPass>([...a, ...b]);
-  // Ordre canonique : la liste sert aussi de trace lisible dans le journal.
+    // Canonical order: the list also serves as a readable trace in the journal.
   return ALL_PASSES.filter((p) => union.has(p));
 }
 
-/** Identifiants distants d'un type donné dans une demande ciblée. */
+/** Remote identifiers of a given type in a targeted request. */
 export function sgIdsOfType(
   onlySgIds: readonly { sgType: string; sgId: number }[] | undefined,
   sgType: string,

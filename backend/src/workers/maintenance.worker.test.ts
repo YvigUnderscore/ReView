@@ -4,12 +4,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Entretien périodique — ce qui est enchaîné, et dans quel ordre.
+ * Periodic maintenance — what is chained, and in which order.
  *
- * Le worker n'exporte rien de pur : on capture le processeur qu'il confie à BullMQ et on
- * l'appelle directement, toutes les purges doublées. Ce qui est vérifié est le **branchement**
- * — la réconciliation des médias figés ne vivait que dans le démarrage du process API, alors
- * que le process qui se fait tuer est le worker : elle ne repassait donc jamais.
+ * The worker exports nothing pure: we capture the processor it hands to BullMQ and call it directly, all the purges mocked. What is verified is the **wiring** —
+ * the reconciliation of frozen media lived only in the startup of the API process, whereas the process that gets killed is the worker: it therefore never ran again.
  */
 
 type Processor = (job: { data: { kind: string } }) => Promise<void>;
@@ -85,14 +83,14 @@ beforeEach(() => {
   purges.weekly.mockImplementation(step('weekly', 0));
 });
 
-describe('maintenance.worker — passe de purge', () => {
-  it('réconcilie les médias figés à chaque passe, après les purges', async () => {
+describe('maintenance.worker: purge pass', () => {
+  it('reconciles frozen media on every pass, after the purges', async () => {
     await captured.processor?.({ data: { kind: 'purge' } });
     expect(purges.reconcile).toHaveBeenCalledTimes(1);
     expect(steps.order).toEqual(['trash', 'derived', 'uploads', 'idempotency', 'retention', 'reconcile']);
   });
 
-  it('ne réconcilie pas depuis les rendez-vous d’envoi', async () => {
+  it('does not reconcile from the send appointments', async () => {
     await captured.processor?.({ data: { kind: 'daily-digest' } });
     await captured.processor?.({ data: { kind: 'weekly-report' } });
     expect(purges.reconcile).not.toHaveBeenCalled();

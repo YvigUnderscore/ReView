@@ -14,45 +14,38 @@ import { mapSgToLocal, upsertLink } from './shotgridLinks';
 import { localTarget, statusPatch } from './ShotgridPullService';
 
 /**
- * L'entité Episode de ShotGrid.
+ * The ShotGrid Episode entity.
  *
- * ShotGrid connaît un niveau `Episode` au-dessus de `Sequence` (champ `sg_episode` sur
- * la séquence). ReView vient de l'acquérir : ce module fait la correspondance.
+ * ShotGrid knows an `Episode` level above `Sequence` (field `sg_episode` on the sequence). ReView has just acquired it: this module does the matching.
  *
- * **Les invariants de sûreté du connecteur s'appliquent sans exception** : un site
- * héberge tous les projets du studio, donc toute requête porte le filtre de projet
- * (`projectFilter`) ET toute entité reçue est revérifiée (`belongsToProject`). Écrire
- * dans le mauvais projet ne se rattrape pas — la ceinture (le filtre) peut être oubliée
- * dans un appel, les bretelles (la vérification) sont le dernier rempart.
+ * **The connector's safety invariants apply without exception**: a site hosts all the studio's projects, so every request carries the project filter
+ * (`projectFilter`) AND every entity received is rechecked (`belongsToProject`). Writing into the wrong project cannot be undone: the belt (the filter)
+ * can be forgotten in one call, the braces (the check) are the last line of defence.
  *
- * L'import ne s'exécute que si le niveau est activé sur le projet ReView : rapatrier des
- * épisodes dans un projet qui n'en montre aucun créerait des lignes invisibles, que
- * personne ne pourrait ni voir ni corriger.
+ * The import only runs if the level is enabled on the ReView project: bringing episodes back into a project that shows none would create invisible rows
+ * that nobody could see or correct.
  *
- * La correspondance passe par `ShotgridLink` avec `localType = 'episode'`, posée par les
- * assistants partagés de `shotgridLinks.ts` comme pour toutes les autres entités.
+ * Matching goes through `ShotgridLink` with `localType = 'episode'`, set by the shared helpers of `shotgridLinks.ts` as for all other entities.
  */
 
 const LOCAL_TYPE = 'episode';
 const SG_TYPE = 'Episode';
 
-/** Champs lus sur l'entité distante — jamais `*` : on ne rapatrie que ce qu'on écrit. */
+/** Fields read from the remote entity: never `*`, we only fetch what we write. */
 export const EPISODE_FIELDS = ['code', 'description', 'sg_status_list', 'project', 'updated_at'];
 
-/** Champ de la Sequence ShotGrid qui porte son épisode. */
+/** ShotGrid Sequence field that carries its episode. */
 export const SG_SEQUENCE_EPISODE_FIELD = 'sg_episode';
 
 /**
- * Champs lus sur la Sequence distante pour le seul rattachement.
+ * Fields read from the remote Sequence for the attachment alone.
  *
- * `sg_episode` n'est demandé QUE par cette passe, et cette passe ne tourne que sur un
- * projet où le niveau est activé : un site qui ne connaît pas le champ — un studio sans
- * série — n'est jamais interrogé dessus, et l'import ordinaire des séquences reste
- * exactement ce qu'il était.
+ * `sg_episode` is requested ONLY by this pass, and this pass only runs on a project where the level is enabled: a site that does not know the field,
+ * a studio without a series, is never queried on it, and the ordinary import of sequences stays exactly what it was.
  */
 const SEQUENCE_EPISODE_FIELDS = ['project', 'updated_at', SG_SEQUENCE_EPISODE_FIELD];
 
-/** Le niveau Épisode est-il activé côté ReView sur le projet lié ? */
+/** Is the Episode level enabled on ReView's side for the linked project? */
 async function episodesEnabled(projectId: number): Promise<boolean> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -61,9 +54,9 @@ async function episodesEnabled(projectId: number): Promise<boolean> {
   return project?.episodesEnabled ?? false;
 }
 
-// ───────────────────────────── Verrou de création ─────────────────────────────
+// ───────────────────────────── Creation lock ─────────────────────────────
 
-/** Erreur porteuse du lien de création distant — le client en fait un bouton. */
+/** Error carrying the remote creation link: the client turns it into a button. */
 export class ShotgridEpisodeLockedError extends AppError {
   constructor(
     message: string,
@@ -76,11 +69,10 @@ export class ShotgridEpisodeLockedError extends AppError {
 }
 
 /**
- * Refuse la création locale d'un épisode quand le projet est piloté depuis ShotGrid.
+ * Refuses the local creation of an episode when the project is driven from ShotGrid.
  *
- * Même règle que pour une séquence ou un plan, mais avec le bon formulaire distant :
- * `CreatableKind` de `ShotgridGuardService` ne connaît pas encore « episode », et
- * emprunter son entrée « sequence » renverrait le studio vers le mauvais écran.
+ * Same rule as for a sequence or a shot, but with the right remote form: `CreatableKind` in `ShotgridGuardService` does not yet know "episode",
+ * and borrowing its "sequence" entry would send the studio to the wrong screen.
  */
 export async function assertEpisodeCreationAllowed(projectId: number): Promise<void> {
   const conn = await prisma.shotgridConnection.findUnique({
@@ -99,8 +91,7 @@ export async function assertEpisodeCreationAllowed(projectId: number): Promise<v
 // ───────────────────────────── Correspondance ─────────────────────────────
 
 /**
- * Code local d'un épisode ShotGrid. Le site laisse `code` vide plus souvent qu'on ne
- * croit ; le repli est stable et unique, donc rejouable sans créer de doublon.
+ * Local code of a ShotGrid episode. The site leaves `code` empty more often than one thinks; the fallback is stable and unique, so it can be replayed without creating a duplicate.
  */
 export function episodeCode(record: SgRecord): string {
   return asString(record.code) ?? `EP${record.id}`;
@@ -108,7 +99,7 @@ export function episodeCode(record: SgRecord): string {
 
 // ───────────────────────────── Import ─────────────────────────────
 
-/** Ce dont l'import a besoin — sous-ensemble structurel du contexte de `pullSequences`. */
+/** What the import needs: structural subset of the `pullSequences` context. */
 export interface EpisodePullContext extends ConnectionContext {
   journal: SyncJournal;
   scope: ProjectScope;
@@ -120,10 +111,9 @@ export interface EpisodePullOptions {
 }
 
 /**
- * Écarte toute entité qui n'appartient pas au projet lié.
+ * Discards any entity that does not belong to the linked project.
  *
- * Ce contrôle ne devrait jamais rien attraper puisque la requête est filtrée — c'est
- * précisément pourquoi il est là.
+ * This check should never catch anything since the request is filtered: that is precisely why it is there.
  */
 async function keepInProject(records: SgRecord[], ctx: EpisodePullContext): Promise<SgRecord[]> {
   const kept: SgRecord[] = [];
@@ -171,11 +161,10 @@ async function fetchEpisodes(ctx: EpisodePullContext, options: EpisodePullOption
 }
 
 /**
- * Importe les épisodes du projet lié.
+ * Imports the episodes of the linked project.
  *
- * Deux verrous avant la moindre écriture : le domaine `hierarchy` doit être ouvert en
- * lecture, et le niveau Épisode doit être activé côté ReView. Sans le second, la
- * synchronisation créerait des lignes qu'aucun écran ne montre.
+ * Two locks before any write: the `hierarchy` domain must be open for reading, and the Episode level must be enabled on the ReView side. Without the second,
+ * the synchronization would create rows that no screen shows.
  */
 export async function pullEpisodes(
   ctx: EpisodePullContext,
@@ -187,8 +176,8 @@ export async function pullEpisodes(
   if (!(await episodesEnabled(projectId))) return;
 
   const records = await fetchEpisodes(ctx, options);
-  // `order` se déduit du rang dans le lot : il n'a de sens qu'en passe complète, sinon
-  // une relecture ciblée remonterait l'épisode en tête de liste pour tout le monde.
+    // `order` is deduced from the rank within the batch: it only makes sense in a full pass, otherwise a targeted re-read
+    // would bring the episode to the top of the list for everyone.
   const fullPass = !options.since && !options.onlySgIds;
   const links = await mapSgToLocal(ctx.connection.id, LOCAL_TYPE);
 
@@ -231,12 +220,10 @@ export async function pullEpisodes(
 }
 
 /**
- * Rattache les séquences déjà importées à leur épisode.
+ * Attaches the already imported sequences to their episode.
  *
- * À appeler APRÈS `pullEpisodes` et l'import des séquences : le rattachement lit la
- * correspondance des deux côtés. Une séquence dont l'épisode distant n'est pas lié — il
- * n'a pas été importé, ou il appartient à un autre projet — est laissée détachée plutôt
- * que rattachée au hasard.
+ * To be called AFTER `pullEpisodes` and the import of sequences: the attachment reads the match on both sides. A sequence whose remote episode is not linked
+ * (it was not imported, or belongs to another project) is left detached rather than attached at random.
  */
 export async function linkSequencesToEpisodes(
   ctx: EpisodePullContext,
@@ -250,8 +237,7 @@ export async function linkSequencesToEpisodes(
     if (localSequenceId === undefined) continue;
     const ref = asEntityRef(record[SG_SEQUENCE_EPISODE_FIELD]);
     const episodeId = ref ? (episodeLinks.get(ref.id)?.localId ?? null) : null;
-    // La séquence doit appartenir au projet lié : la carte des liens vient de la
-    // connexion, mais l'écriture, elle, se fait par identifiant local — on le borne.
+        // The sequence must belong to the linked project: the map of links comes from the connection, but the write is by local identifier, so we bound it.
     const { count } = await prisma.sequence.updateMany({
       where: { id: localSequenceId, projectId: ctx.connection.projectId },
       data: { episodeId },
@@ -262,13 +248,10 @@ export async function linkSequencesToEpisodes(
 }
 
 /**
- * La passe complète du rattachement : relire les séquences distantes pour le seul champ
- * `sg_episode`, puis les rattacher.
+ * The full attachment pass: re-reads the remote sequences for the sole `sg_episode` field, then attaches them.
  *
- * Elle est séparée de `pullSequences` à dessein. L'import ordinaire des séquences ne
- * demande pas `sg_episode` — un site sans série n'a pas forcément ce champ, et le
- * réclamer ferait échouer la synchronisation de tout le monde pour un niveau que
- * personne n'a activé. Ici, la requête ne part que si le projet a allumé le niveau.
+ * It is separated from `pullSequences` on purpose. The ordinary import of sequences does not request `sg_episode`: a site without a series does not necessarily
+ * have that field, and claiming it would make the synchronization fail for everyone, for a level nobody has enabled. Here, the request only goes out if the project has switched the level on.
  */
 export async function pullSequenceEpisodes(
   ctx: EpisodePullContext,
@@ -284,8 +267,7 @@ export async function pullSequenceEpisodes(
     filters,
     sort: 'id',
   });
-  // Même ceinture et mêmes bretelles que pour les épisodes : la requête porte le filtre
-  // de projet, et chaque entité reçue est revérifiée avant la moindre écriture.
+    // Same belt and braces as for episodes: the request carries the project filter, and each entity received is rechecked before any write.
   const records = await keepInProject(fetched, ctx);
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
   return linkSequencesToEpisodes(ctx, records, sequenceLinks);

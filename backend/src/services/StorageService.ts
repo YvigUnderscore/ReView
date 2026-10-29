@@ -28,46 +28,43 @@ import { logger } from '../lib/logger';
 import { OPAQUE_CONTENT_TYPE, safeUploadContentType } from '../lib/uploadContentType';
 
 /**
- * Largeur de la tranche pendant laquelle une URL présignée de lecture ne bouge pas.
+ * Width of the slice during which a presigned read URL does not change.
  *
- * Sans elle, chaque réponse portait une signature neuve : le navigateur voyait une URL
- * différente et retéléchargeait la vignette ou l'avatar qu'il avait déjà en cache. Une
- * page de cent plans rechargeait donc cent JPEG à chaque navigation.
+ * Without it, every response carried a fresh signature: the browser saw a different URL and re-downloaded
+ * the thumbnail or avatar it already had cached. A page of a hundred shots therefore reloaded a hundred JPEGs
+ * on every navigation.
  */
 export const PRESIGN_WINDOW_SECONDS = 600;
 
 /**
- * Plafond d'URL mémorisées (éviction FIFO). Borne la mémoire d'un pic de listes : au-delà,
- * on perd le bénéfice de cache sur les plus anciennes, jamais la justesse.
+ * Cap on memoized URLs (FIFO eviction). Bounds the memory of a burst of lists: beyond it, the oldest entries
+ * lose their cache benefit, never their correctness.
  */
 export const PRESIGN_CACHE_MAX = 5000;
 
 /**
- * Nombre maximal de clés qu'un appel `DeleteObjects` accepte (plafond du protocole S3,
- * respecté par MinIO). Au-delà, la liste est découpée en tranches de cette taille.
+ * Maximum number of keys a `DeleteObjects` call accepts (S3 protocol cap, enforced by MinIO). Beyond it, the
+ * list is split into slices of this size.
  */
 export const DELETE_OBJECTS_BATCH = 1000;
 
 /**
- * Type de réponse déduit de l'EXTENSION de la clé de stockage.
+ * Response type derived from the EXTENSION of the storage key.
  *
- * Le `Content-Type` **stocké** ne vaut rien quand l'objet est arrivé par PUT présigné : le
- * presigner ne signe que `host` (`X-Amz-SignedHeaders=host`), le déposant envoie donc
- * l'en-tête qu'il veut. Seul le chemin média corrigeait ce type à la finalisation
- * (`setObjectContentType`) ; les autres dépôts présignés — image de fiche, vignette
- * d'entité, image de département, HDRI — rendaient l'objet SANS type imposé, c'est-à-dire
- * avec celui du déposant. La clé, elle, est composée par le serveur à partir d'un type déjà
- * validé : c'est la seule source sûre, comme le dit `lib/uploadContentType`.
+ * The **stored** `Content-Type` is worthless when the object arrived through a presigned PUT: the presigner
+ * only signs `host` (`X-Amz-SignedHeaders=host`), so the uploader sends whatever header it wants. Only the media
+ * path corrected this type at finalization (`setObjectContentType`); the other presigned uploads (sheet image,
+ * entity thumbnail, department image, HDRI) served the object WITHOUT a forced type, that is, with the uploader's
+ * own. The key, for its part, is composed by the server from an already validated type: it is the only safe
+ * source, as `lib/uploadContentType` says.
  *
- * D'où la règle, appliquée ici une fois pour toutes plutôt que surface par surface :
- * l'extension de la clé décide du type servi, et **tout ce qui n'est pas reconnu est rendu
- * opaque**. Aucun format que le navigateur rend activement (HTML, SVG, XML, JS) n'est
- * atteignable par cette table — c'est ce qui la rend sûre par construction.
+ * Hence the rule, applied here once and for all rather than surface by surface: the key's extension decides the
+ * type served, and **anything not recognized is rendered opaque**. No format the browser actively renders (HTML,
+ * SVG, XML, JS) is reachable through this table: that is what makes it safe by construction.
  *
- * Les formats VFX (EXR, GLB, PLY, SPZ, USD, DPX, masques binaires, LUT `.cube`) tombent sur
- * `application/octet-stream` : aucun n'est rendu par le navigateur, tous sont lus par
- * `arrayBuffer()`/`text()` côté viewer, qui ne regarde pas le type. C'est déjà leur type
- * stocké aujourd'hui, `safeUploadContentType` les y ramenant à l'écriture.
+ * VFX formats (EXR, GLB, PLY, SPZ, USD, DPX, binary masks, `.cube` LUT) fall to `application/octet-stream`: none is
+ * rendered by the browser, all are read by `arrayBuffer()`/`text()` on the viewer side, which does not look at the
+ * type. It is already their stored type today, since `safeUploadContentType` brings them back to it on write.
  */
 const KEY_CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.png': 'image/png',
@@ -93,45 +90,41 @@ const KEY_CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.pdf': 'application/pdf',
 };
 
-/** Type imposé à la lecture d'une clé, à défaut d'un type explicitement fourni. */
+/** Type forced on reading a key, when no explicit type is supplied. */
 export function responseTypeFromKey(key: string): string {
   const slash = key.lastIndexOf('/');
   const dot = key.lastIndexOf('.');
-  // Un point dans un nom de dossier n'est pas une extension ; une clé sans extension non plus.
+    // A dot in a folder name is not an extension; nor is a key without an extension.
   if (dot <= slash + 1) return OPAQUE_CONTENT_TYPE;
   return KEY_CONTENT_TYPES[key.slice(dot).toLowerCase()] ?? OPAQUE_CONTENT_TYPE;
 }
 
 /**
- * Durée de vie par défaut d'une lecture présignée — contenu consommé d'un bloc.
+ * Default lifetime of a presigned read: content consumed in one block.
  *
- * Une URL présignée n'est liée à personne : la signature couvre le bucket, la clé et la
- * date, rien qui la rattache au compte, au lien de partage ou à l'état du média. Révoquer un
- * partage, dépublier ou mettre à la corbeille ne coupe donc PAS un lien déjà remis — seule
- * son expiration le fait. La durée est la révocation, et elle était d'une heure.
+ * A presigned URL is bound to no one: the signature covers the bucket, the key and the date, nothing that ties it
+ * to the account, the share link or the state of the media. Revoking a share, unpublishing or trashing therefore
+ * does NOT cut a link already handed out: only its expiry does. The lifetime is the revocation, and it used to be one hour.
  *
- * Or l'écrasante majorité de ces URL est consommée dans la seconde qui suit son émission
- * (vignettes, images, GLB, splats, masques, HDRI, LUT, sprites) et réémise à chaque montage
- * de page (`staleTime` de 30 s côté TanStack Query). Quinze minutes couvrent très largement
- * l'écart entre l'émission et l'usage, y compris un téléchargement déclenché longtemps après
- * l'affichage — S3 n'évalue l'expiration qu'au DÉBUT de la requête, un transfert commencé à
- * temps va à son terme.
+ * Yet the overwhelming majority of these URLs are consumed within seconds of being issued (thumbnails, images, GLB,
+ * splats, masks, HDRI, LUT, sprites) and reissued on every page mount (`staleTime` of 30 s on the TanStack Query side).
+ * Fifteen minutes comfortably cover the gap between issuing and use, including a download triggered long after the
+ * display: S3 only evaluates expiry at the START of the request, and a transfer started in time runs to completion.
  */
 export const DEFAULT_GET_TTL_SECONDS = 900;
 
 /**
- * Durée de vie d'une lecture **diffusée dans la durée** (vidéo, audio).
+ * Lifetime of a read **streamed over time** (video, audio).
  *
- * Un `<video src>` présigné redemande des tranches d'octets pendant toute la lecture : une
- * URL courte couperait la projection en son milieu, exactement au moment où personne ne peut
- * la relancer. Ce contenu garde donc l'heure historique — c'est la part de A3-05 que ce lot
- * ne ferme pas, et il faut le dire : un lien de vidéo qui fuit reste lisible jusqu'à 70 min.
- * La fermer suppose de servir la vidéo derrière une route qui revérifie l'accès à chaque
- * requête (cf. `lib/mediaToken`), pas de raccourcir davantage.
+ * A presigned `<video src>` keeps requesting byte ranges for the whole playback: a short URL would cut the
+ * projection in the middle, exactly when nobody can restart it. This content therefore keeps the historical hour.
+ * This is the part of A3-05 that this batch does not close, and it must be said: a leaked video link stays readable
+ * for up to 70 minutes. Closing it requires serving video behind a route that rechecks access on every request
+ * (see `lib/mediaToken`), not shortening further.
  */
 export const STREAMED_GET_TTL_SECONDS = 3600;
 
-/** Durée par défaut choisie sur la nature du contenu (cf. les deux constantes ci-dessus). */
+/** Default lifetime chosen from the nature of the content (see the two constants above). */
 export function defaultGetTtl(key: string): number {
   const type = responseTypeFromKey(key);
   return type.startsWith('video/') || type.startsWith('audio/')
@@ -140,23 +133,23 @@ export function defaultGetTtl(key: string): number {
 }
 
 /**
- * Abstraction du stockage objet (MinIO, S3-compatible).
+ * Object storage abstraction (MinIO, S3-compatible).
  *
- * Principe v2 : aucun fichier ne touche le filesystem du serveur applicatif.
- *  - Upload : URL présignée PUT → le navigateur écrit directement dans MinIO (non-bloquant).
- *  - Serving : URL présignée GET → le navigateur lit directement depuis MinIO.
- * Le backend ne manipule que des en-têtes (validation magic bytes à la finalisation).
+ * v2 principle: no file touches the filesystem of the application server.
+ *  - Upload: presigned PUT URL: the browser writes directly to MinIO (non-blocking).
+ *  - Serving: presigned GET URL: the browser reads directly from MinIO.
+ * The backend only handles headers (magic-byte validation at finalization).
  */
 class StorageService {
   private client: S3Client;
-  // Client séparé signant avec l'endpoint public (vu par le navigateur), souvent ≠ endpoint interne.
+    // Separate client signing with the public endpoint (as seen by the browser), often different from the internal endpoint.
   private publicClient: S3Client;
   private bucket: string;
-  /**
-   * URL présignées de lecture déjà calculées pour la tranche en cours.
-   * On mémorise la promesse : deux listes concurrentes qui demandent la même vignette
-   * partagent la même signature au lieu d'en calculer deux.
-   */
+    /**
+     * Presigned read URLs already computed for the current slice.
+     * The promise is memoized: two concurrent lists requesting the same thumbnail
+     * share one signature instead of computing two.
+     */
   private presignCache = new Map<string, { objectKey: string; url: Promise<string> }>();
   private presignSlot = -1;
 
@@ -182,7 +175,7 @@ class StorageService {
     });
   }
 
-  /** Vérifie l'accès au bucket (santé MinIO pour l'admin). */
+    /** Checks access to the bucket (MinIO health for the admin). */
   async ping(): Promise<boolean> {
     try {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
@@ -192,7 +185,7 @@ class StorageService {
     }
   }
 
-  /** Création idempotente du bucket au démarrage + configuration CORS. */
+    /** Idempotent bucket creation at startup, plus CORS configuration. */
   async ensureBucket(): Promise<void> {
     try {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
@@ -203,12 +196,12 @@ class StorageService {
     await this.ensureCors();
   }
 
-  /**
-   * Configure le CORS du bucket : indispensable pour les accès navigateur directs
-   *  - uploads présignés PUT (avatars, pièces jointes, documents PDF) ;
-   *  - fetch cross-origin des assets (model-viewer charge les GLB via fetch/XHR).
-   * Les origines autorisées suivent CORS_ORIGIN (frontend). Échec non bloquant.
-   */
+    /**
+     * Configures the bucket's CORS: required for direct browser access
+     *  - presigned PUT uploads (avatars, attachments, PDF documents);
+     *  - cross-origin fetch of assets (model-viewer loads GLBs via fetch/XHR).
+     * Allowed origins follow CORS_ORIGIN (frontend). Non-blocking on failure.
+     */
   private async ensureCors(): Promise<void> {
     const origins =
       env.CORS_ORIGIN === '*'
@@ -239,17 +232,16 @@ class StorageService {
     }
   }
 
-  /**
-   * URL présignée pour l'upload direct navigateur → MinIO.
-   *
-   * Le `Content-Type` vient du client : il est ramené à une valeur inoffensive
-   * (cf. `lib/uploadContentType`) car les objets sont servis depuis l'origine de l'app.
-   * ⚠ Ce type n'est **pas** contraignant : le presigner S3 ne signe que `host`
-   * (`X-Amz-SignedHeaders=host`), le navigateur reste libre d'envoyer un autre en-tête.
-   * Le type définitif est arrêté côté serveur par `setObjectContentType` (appelé à la
-   * finalisation), et le rendu actif est de toute façon neutralisé par la CSP `sandbox`
-   * posée sur le chemin de stockage (cf. `nginx/nginx.conf`).
-   */
+    /**
+     * Presigned URL for direct browser to MinIO upload.
+     *
+     * The `Content-Type` comes from the client: it is brought back to a harmless value (see
+     * `lib/uploadContentType`) because objects are served from the app's origin.
+     * ⚠ This type is **not** binding: the S3 presigner only signs `host` (`X-Amz-SignedHeaders=host`), so the
+     * browser remains free to send another header. The definitive type is fixed server-side by
+     * `setObjectContentType` (called at finalization), and active rendering is in any case neutralized by the
+     * `sandbox` CSP set on the storage path (see `nginx/nginx.conf`).
+     */
   async getPresignedPutUrl(key: string, contentType: string, ttlSeconds = 900): Promise<string> {
     const cmd = new PutObjectCommand({
       Bucket: this.bucket,
@@ -259,9 +251,9 @@ class StorageService {
     return getSignedUrl(this.publicClient, cmd, { expiresIn: ttlSeconds });
   }
 
-  // ── Upload résumable multipart (37.A) ─────────────────────────────────────
+    // ── Resumable multipart upload (37.A) ─────────────────────────────────────
 
-  /** Démarre un upload multipart S3 et renvoie son UploadId. */
+    /** Starts an S3 multipart upload and returns its UploadId. */
   async createMultipartUpload(key: string, contentType: string): Promise<string> {
     const res = await this.client.send(
       new CreateMultipartUploadCommand({
@@ -273,7 +265,7 @@ class StorageService {
     return res.UploadId!;
   }
 
-  /** URLs présignées PUT pour un lot de parts (navigateur → MinIO). */
+    /** Presigned PUT URLs for a batch of parts (browser to MinIO). */
   async getPresignedPartUrls(
     key: string,
     uploadId: string,
@@ -297,7 +289,7 @@ class StorageService {
     );
   }
 
-  /** Parts déjà reçues (source de vérité de la reprise après coupure). */
+    /** Parts already received (source of truth for resuming after a cut). */
   async listUploadedParts(key: string, uploadId: string): Promise<{ partNumber: number; etag: string }[]> {
     const out: { partNumber: number; etag: string }[] = [];
     let marker: string | undefined;
@@ -343,7 +335,7 @@ class StorageService {
     );
   }
 
-  /** Copie serveur → serveur (dédup 37.B : « upload instantané » d'un contenu déjà présent). */
+    /** Server-to-server copy (dedup 37.B: "instant upload" of content already present). */
   async copyObject(srcKey: string, destKey: string): Promise<void> {
     await this.client.send(
       new CopyObjectCommand({
@@ -355,16 +347,15 @@ class StorageService {
     this.forgetPresignedUrl(destKey);
   }
 
-  /**
-   * Réécrit le `Content-Type` d'un objet déjà stocké, sans recopier les octets côté client
-   * (`CopyObject` sur lui-même + `MetadataDirective: REPLACE`).
-   *
-   * Indispensable pour l'upload par PUT présigné : le `ContentType` passé à la signature
-   * **ne fait pas partie des en-têtes signés** (`X-Amz-SignedHeaders=host`), le navigateur
-   * peut donc envoyer le type qu'il veut. C'est ici, côté serveur, que le type réellement
-   * stocké est arrêté. Sans objet pour l'upload multipart, dont le type est fixé par
-   * `CreateMultipartUpload` — un appel serveur, lui, autoritatif.
-   */
+    /**
+     * Rewrites the `Content-Type` of an already stored object, without copying the bytes on the client side
+     * (`CopyObject` onto itself + `MetadataDirective: REPLACE`).
+     *
+     * Essential for upload by presigned PUT: the `ContentType` passed to the signature is **not part of the signed
+     * headers** (`X-Amz-SignedHeaders=host`), so the browser may send any type it wants. It is here, server-side,
+     * that the type actually stored is fixed. Not needed for multipart upload, whose type is set by
+     * `CreateMultipartUpload`: a server call there is authoritative.
+     */
   async setObjectContentType(key: string, contentType: string): Promise<void> {
     await this.client.send(
       new CopyObjectCommand({
@@ -378,48 +369,44 @@ class StorageService {
     this.forgetPresignedUrl(key);
   }
 
-  /**
-   * URL présignée pour le serving direct (lecture) d'un média.
-   *
-   * `contentTypeOverride` impose le `Content-Type` de la RÉPONSE, quel que soit le type
-   * stocké. Indispensable partout où l'objet n'a pas de passage serveur après l'upload
-   * (pièces jointes, avatars, logo, PDF de documentation) : le type déposé y vient du
-   * navigateur et n'est donc pas fiable. Le paramètre voyage dans la signature — le client
-   * ne peut ni le retirer ni le changer sans invalider l'URL.
-   *
-   * **À défaut de type explicite, le type est déduit de la clé** (`responseTypeFromKey`) :
-   * ne rien imposer revenait à servir l'objet avec le type que son déposant avait choisi,
-   * et les quatre surfaces qui n'ont pas de passage serveur après le dépôt le faisaient.
-   * De même, `ttlSeconds` omis retient la durée qui va à la nature du contenu
-   * (`defaultGetTtl`), et non une heure pour tout le monde.
-   *
-   * L'URL est **stable pendant une tranche de `PRESIGN_WINDOW_SECONDS`** : à clé, type
-   * imposé et durée identiques, deux appels rendent la même chaîne, donc le navigateur
-   * réutilise son cache au lieu de retélécharger. La stabilité vaut aussi entre processus
-   * (API et worker) parce que la date de signature est épinglée au début de la tranche et
-   * non prise à l'instant de l'appel.
-   */
+    /**
+     * Presigned URL for direct serving (read) of a media.
+     *
+     * `contentTypeOverride` forces the `Content-Type` of the RESPONSE, whatever the stored type. Essential wherever the
+     * object has no server pass after upload (attachments, avatars, logo, documentation PDFs): the type uploaded there
+     * comes from the browser and is therefore not reliable. The parameter travels in the signature: the client can
+     * neither remove nor change it without invalidating the URL.
+     *
+     * **Without an explicit type, the type is derived from the key** (`responseTypeFromKey`): forcing nothing meant
+     * serving the object with the type its uploader had chosen, and the four surfaces that have no server pass after
+     * upload did just that. Likewise, an omitted `ttlSeconds` takes the duration that suits the nature of the content
+     * (`defaultGetTtl`), not one hour for everyone.
+     *
+     * The URL is **stable for a slice of `PRESIGN_WINDOW_SECONDS`**: with the same key, forced type and duration, two
+     * calls return the same string, so the browser reuses its cache instead of re-downloading. Stability also holds
+     * across processes (API and worker) because the signing date is pinned to the start of the slice and not taken at
+     * the moment of the call.
+     */
   async getPresignedGetUrl(key: string, ttlSeconds?: number, contentTypeOverride?: string): Promise<string> {
     const ttl = ttlSeconds ?? defaultGetTtl(key);
     const imposed = contentTypeOverride ?? responseTypeFromKey(key);
     const slot = Math.floor(Date.now() / 1000 / PRESIGN_WINDOW_SECONDS);
-    // Changement de tranche : plus aucune de ces URL ne sera reproduite, on repart à vide.
+        // Slice change: none of these URLs will be reproduced again, so we start empty.
     if (slot !== this.presignSlot) {
       this.presignCache.clear();
       this.presignSlot = slot;
     }
-    // Clé non ambiguë : un type imposé ou un nom de fichier peut contenir n'importe quel
-    // caractère, on sérialise donc les trois champs plutôt que de les coller bout à bout.
-    // Les valeurs RÉSOLUES : demander le défaut ou le redemander explicitement, c'est la
-    // même URL, elle ne doit pas être signée deux fois.
+        // Unambiguous key: a forced type or a file name may contain any character, so the three fields are
+        // serialized rather than concatenated. The RESOLVED values: asking for the default or asking for it
+        // explicitly is the same URL, which must not be signed twice.
     const cacheKey = JSON.stringify([ttl, imposed, key]);
     const hit = this.presignCache.get(cacheKey);
     if (hit) return hit.url;
 
     const url = this.signGetUrl(key, ttl, slot, imposed);
     this.presignCache.set(cacheKey, { objectKey: key, url });
-    // Une signature en échec ne doit pas rester mémorisée — et l'attente de ce rejet ici
-    // évite un « unhandled rejection » si l'appelant, lui, a déjà traité l'erreur.
+        // A failed signature must not stay memoized, and waiting for the rejection here avoids an
+        // "unhandled rejection" if the caller has already handled the error.
     void url.catch(() => {
       if (this.presignCache.get(cacheKey)?.url === url) this.presignCache.delete(cacheKey);
     });
@@ -431,19 +418,18 @@ class StorageService {
     return url;
   }
 
-  /**
-   * Signature d'une lecture, datée du début de la tranche `slot`.
-   *
-   * La validité demandée est majorée de la largeur de la tranche : une URL rendue à la
-   * toute fin d'une tranche reste valable au moins aussi longtemps que ce que l'appelant
-   * a demandé — la mémoïsation ne raccourcit donc jamais la durée de vie d'un lien.
-   */
+    /**
+     * Signs a read, dated at the start of slice `slot`.
+     *
+     * The requested validity is extended by the slice width: a URL returned at the very end of a slice stays valid at
+     * least as long as the caller asked for, so memoization never shortens the lifetime of a link.
+     */
   private signGetUrl(key: string, ttlSeconds: number, slot: number, contentType: string): Promise<string> {
     const cmd = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
-      // Second filtre : même un type explicitement passé par un appelant peut venir du
-      // client (pièce jointe, fichier de board), il repasse donc par la liste blanche.
+            // Second filter: even a type explicitly passed by a caller may come from the client (attachment,
+            // board file), so it goes through the allowlist again.
       ResponseContentType: safeUploadContentType(contentType),
     });
     return getSignedUrl(this.publicClient, cmd, {
@@ -452,40 +438,37 @@ class StorageService {
     });
   }
 
-  /**
-   * Oublie l'URL mémorisée d'un objet.
-   *
-   * À appeler après toute réécriture d'un objet **sous la même clé** faite hors de ce
-   * service — typiquement un dépôt navigateur par URL présignée (avatar, vignette
-   * d'entité). Sans cela, l'URL rendue resterait identique jusqu'à la fin de la tranche,
-   * donc le navigateur continuerait d'afficher l'ancienne image depuis son cache.
-   * Les écritures qui passent par ce service (`putObject`, `copyObject`,
-   * `setObjectContentType`, suppressions) s'oublient toutes seules.
-   */
+    /**
+     * Forgets the memoized URL of an object.
+     *
+     * To be called after any rewrite of an object **under the same key** done outside this service: typically a browser
+     * upload via presigned URL (avatar, entity thumbnail). Without it, the returned URL would stay identical until the
+     * end of the slice, so the browser would keep displaying the old image from its cache.
+     * Writes that go through this service (`putObject`, `copyObject`, `setObjectContentType`, deletions) forget
+     * automatically.
+     */
   forgetPresignedUrl(key: string): void {
     for (const [cacheKey, entry] of this.presignCache) {
       if (entry.objectKey === key) this.presignCache.delete(cacheKey);
     }
   }
 
-  /** Variante préfixe, pour les suppressions en masse (tout un média, toute une version). */
+    /** Prefix variant, for bulk deletions (a whole media, a whole version). */
   private forgetPresignedPrefix(prefix: string): void {
     for (const [cacheKey, entry] of this.presignCache) {
       if (entry.objectKey.startsWith(prefix)) this.presignCache.delete(cacheKey);
     }
   }
 
-  /**
-   * Écriture serveur → MinIO (avatars, dérivés générés par les workers).
-   *
-   * Le type passe par la même liste blanche que les autres chemins d'écriture : « serveur »
-   * ne veut pas dire « de confiance ». Une pièce jointe ou un média rapatriés d'un site
-   * ShotGrid arrivent ici avec le `Content-Type` annoncé par ce site — `text/html` ou
-   * `image/svg+xml` y sont donc possibles, et l'objet est servi depuis l'origine de
-   * l'application. Les types réellement produits par les workers (mp4, jpeg, playlists HLS)
-   * sont dans la liste ; les formats binaires (GLB, masques splat) tombent, comme il se
-   * doit, sur `application/octet-stream`.
-   */
+    /**
+     * Server write to MinIO (avatars, derivatives generated by the workers).
+     *
+     * The type goes through the same allowlist as the other write paths: "server" does not mean "trusted". An attachment
+     * or a media fetched from a ShotGrid site arrives here with the `Content-Type` announced by that site: `text/html` or
+     * `image/svg+xml` are therefore possible, and the object is served from the application's origin. The types actually
+     * produced by the workers (mp4, jpeg, HLS playlists) are in the list; binary formats (GLB, splat masks) fall, as they
+     * should, to `application/octet-stream`.
+     */
   async putObject(key: string, body: Buffer | Readable, contentType: string): Promise<void> {
     await this.client.send(
       new PutObjectCommand({
@@ -495,22 +478,21 @@ class StorageService {
         ContentType: safeUploadContentType(contentType),
       }),
     );
-    // Le worker réécrit une miniature sous la même clé : sans cet oubli, la carte
-    // continuerait d'afficher l'ancienne image jusqu'à la fin de la tranche.
+        // The worker rewrites a thumbnail under the same key: without this forgetting, the card would keep
+        // displaying the old image until the end of the slice.
     this.forgetPresignedUrl(key);
   }
 
-  /** Lecture d'un objet en flux. */
+    /** Streamed read of an object. */
   async getObjectStream(key: string): Promise<Readable> {
     const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
     return res.Body as Readable;
   }
 
-  /**
-   * Objet complet en mémoire. Réservé aux contenus dont la taille est maîtrisée
-   * (vignettes, envois vers une API tierce qui exige un corps unique) : pour tout ce
-   * qui peut peser lourd, préférer `getObjectStream` ou `downloadToFile`.
-   */
+    /**
+     * Whole object in memory. Reserved for contents whose size is under control (thumbnails, sends to a third-party API
+     * that requires a single body): for anything that may be heavy, prefer `getObjectStream` or `downloadToFile`.
+     */
   async getObjectBuffer(key: string): Promise<Buffer> {
     const stream = await this.getObjectStream(key);
     const chunks: Buffer[] = [];
@@ -518,7 +500,7 @@ class StorageService {
     return Buffer.concat(chunks);
   }
 
-  /** Lit les `length` premiers octets d'un objet (validation magic bytes). */
+    /** Reads the first `length` bytes of an object (magic-byte validation). */
   async getObjectHeader(key: string, length = 32): Promise<Buffer> {
     const res = await this.client.send(
       new GetObjectCommand({ Bucket: this.bucket, Key: key, Range: `bytes=0-${length - 1}` }),
@@ -529,18 +511,18 @@ class StorageService {
     return Buffer.concat(chunks);
   }
 
-  /** Télécharge un objet MinIO vers un fichier local (utilisé par les workers). */
+    /** Downloads a MinIO object to a local file (used by the workers). */
   async downloadToFile(key: string, destPath: string): Promise<void> {
     const stream = await this.getObjectStream(key);
     await pipeline(stream, createWriteStream(destPath));
   }
 
-  /** Envoie un fichier local vers MinIO (dérivés générés par les workers). */
+    /** Sends a local file to MinIO (derivatives generated by the workers). */
   async uploadFile(key: string, srcPath: string, contentType: string): Promise<void> {
     await this.putObject(key, createReadStream(srcPath), contentType);
   }
 
-  /** Métadonnées d'un objet (taille, contentType). */
+    /** Object metadata (size, contentType). */
   async statObject(key: string): Promise<{ size: number; contentType?: string }> {
     const res = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
     return { size: res.ContentLength ?? 0, contentType: res.ContentType };
@@ -551,18 +533,16 @@ class StorageService {
     this.forgetPresignedUrl(key);
   }
 
-  /**
-   * Suppression multiple (`DeleteObjects`), jusqu'à `DELETE_OBJECTS_BATCH` clés par appel.
-   *
-   * Vider la corbeille de deux cents médias supprimait jusqu'ici les objets un par un, en
-   * série, dans le fil de la requête HTTP : quatre cents allers-retours MinIO là où le
-   * protocole en propose un seul. S3 borne l'appel à 1 000 clés, d'où le découpage.
-   *
-   * Renvoie les clés que le stockage a REFUSÉES (élément `Errors` de la réponse) plutôt que
-   * de lever : une suppression partielle est un fait normal ici, et l'appelant a besoin de
-   * la liste exacte pour enfiler un retry. Une panne de transport, elle, est propagée —
-   * c'est la même règle que `deleteObject`.
-   */
+    /**
+     * Bulk deletion (`DeleteObjects`), up to `DELETE_OBJECTS_BATCH` keys per call.
+     *
+     * Emptying the trash of two hundred media used to delete the objects one by one, in series, within the HTTP request:
+     * four hundred MinIO round trips where the protocol offers one. S3 caps the call at 1,000 keys, hence the splitting.
+     *
+     * Returns the keys the storage REFUSED (the `Errors` element of the response) rather than throwing: a partial deletion
+     * is a normal event here, and the caller needs the exact list to queue a retry. A transport failure, on the other hand,
+     * is propagated: it is the same rule as `deleteObject`.
+     */
   async deleteObjects(keys: string[]): Promise<string[]> {
     if (keys.length === 0) return [];
     const refused: string[] = [];
@@ -576,13 +556,13 @@ class StorageService {
       );
       for (const err of res.Errors ?? []) if (err.Key) refused.push(err.Key);
     }
-    // Un seul balayage du cache pour tout le lot : `forgetPresignedUrl` par clé coûterait
-    // ici mille parcours d'une table de cinq mille entrées.
+        // A single sweep of the cache for the whole batch: `forgetPresignedUrl` per key would cost here a
+        // thousand traversals of a five-thousand-entry table.
     this.forgetPresignedKeys(new Set(keys));
     return refused;
   }
 
-  /** Oubli groupé : un seul parcours du cache pour un lot de clés supprimées. */
+    /** Grouped forgetting: a single traversal of the cache for a batch of deleted keys. */
   private forgetPresignedKeys(keys: Set<string>): void {
     if (keys.size === 0) return;
     for (const [cacheKey, entry] of this.presignCache) {
@@ -590,7 +570,7 @@ class StorageService {
     }
   }
 
-  /** Itère tous les objets du bucket (clé + taille) — cartographie stockage (admin). */
+    /** Iterates all objects of the bucket (key + size): storage mapping (admin). */
   async *iterateObjects(prefix?: string): AsyncGenerator<{ key: string; size: number }> {
     let continuationToken: string | undefined;
     do {
@@ -606,7 +586,7 @@ class StorageService {
     } while (continuationToken);
   }
 
-  /** Supprime tous les objets sous un préfixe (ex. tout un MediaObject ou une Version). */
+    /** Deletes all objects under a prefix (e.g. a whole MediaObject or a Version). */
   async deletePrefix(prefix: string): Promise<void> {
     let continuationToken: string | undefined;
     do {
@@ -628,12 +608,12 @@ class StorageService {
     this.forgetPresignedPrefix(prefix);
   }
 
-  // ── Conventions de clés ────────────────────────────────────────────────────
-  /**
-   * Clé média lisible (slugs hiérarchiques) :
-   *   projects/{projectSlug}/{parentSegment}/{versionName}/{mediaId}/{filenameSain}
-   * Le `mediaId` reste comme dossier pour garantir l'unicité même en cas de noms identiques.
-   */
+    // ── Key conventions ────────────────────────────────────────────────────
+    /**
+     * Readable media key (hierarchical slugs):
+     *   projects/{projectSlug}/{parentSegment}/{versionName}/{mediaId}/{filenameSain}
+     * The `mediaId` stays as a folder to guarantee uniqueness even with identical names.
+     */
   static mediaKey(args: {
     projectSlug: string;
     parentSegment: string;
@@ -647,31 +627,29 @@ class StorageService {
   static thumbnailKey(mediaId: number, ext = 'webp'): string {
     return `derived/${mediaId}/thumbnail.${ext}`;
   }
-  /** Masque de suppression non-destructif d'un splat (bitset binaire) — 10.G. */
+    /** Non-destructive deletion mask of a splat (binary bitset): 10.G. */
   static splatMaskKey(mediaId: number): string {
     return `derived/${mediaId}/splat-mask.bin`;
   }
-  /** Transformations de sous-ensembles de splats (ops binaires delta+indices) — Phase 28. */
+    /** Subset transforms of splats (delta + index binary ops): Phase 28. */
   static splatSubsetKey(mediaId: number): string {
     return `derived/${mediaId}/splat-subset.bin`;
   }
   static avatarKey(userId: number, ext: string): string {
     return `avatars/${userId}${ext}`;
   }
-  /**
-   * Vignette choisie à la main pour une séquence, un plan ou un asset (C3). La colonne
-   * `thumbnailKey` et le PATCH existaient depuis longtemps, mais rien ne savait produire
-   * la clé : aucune entité n'a jamais pu porter d'image.
-   */
+    /**
+     * Thumbnail chosen by hand for a sequence, a shot or an asset (C3). The `thumbnailKey` column and the PATCH had existed
+     * for a long time, but nothing could produce the key: no entity had ever been able to carry an image.
+     */
   static entityThumbnailKey(holder: 'sequence' | 'shot' | 'asset', id: number, ext: string): string {
     return `entity-thumbs/${holder}/${id}${ext}`;
   }
 
-  /**
-   * Image d'un département. Même forme de clé, même préfixe réservé : elle ne dépend
-   * que de l'identifiant et de l'extension, donc remplacer l'image réécrit le même
-   * objet — et le client ne peut pas faire pointer un département ailleurs.
-   */
+    /**
+     * Image of a department. Same key shape, same reserved prefix: it depends only on the identifier and the extension,
+     * so replacing the image rewrites the same object, and the client cannot point a department elsewhere.
+     */
   static departmentImageKey(id: number, ext: string): string {
     return `entity-thumbs/department/${id}${ext}`;
   }

@@ -21,13 +21,12 @@ const step = (over: Partial<PipelineStep>): PipelineStep => ({
 });
 
 /**
- * ShotGrid masque les étapes dont la visibilité n'est pas activée dans le projet, mais ne
- * l'expose par aucun endpoint. À défaut, on écarte les homonymes — ce que ce réglage
- * masque en pratique sur un site qui accumule les étapes depuis des années.
+ * ShotGrid hides the steps whose visibility is not enabled in the project, but exposes it through no endpoint. Failing that, we discard the homonyms — what this
+ * setting masks in practice on a site that has accumulated steps for years.
  */
 describe('dedupeSteps', () => {
-  it('garde une seule étape par nom', () => {
-    // ArtFX a deux « art » et deux « modeling » pour les assets.
+  it('keeps a single step per name', () => {
+        // ArtFX has two "art" and two "modeling" for assets.
     const r = dedupeSteps([
       step({ sgId: 13, code: 'art', shortName: 'art' }),
       step({ sgId: 999, code: 'art', shortName: 'ART2' }),
@@ -35,8 +34,8 @@ describe('dedupeSteps', () => {
     expect(r.map((s) => s.sgId)).toEqual([13]);
   });
 
-  it('garde une seule étape par code court', () => {
-    // « lookdev/ldv » et « Look Development/ldv » se lisent pareil dans une liste.
+  it('keeps a single step per short code', () => {
+        // "lookdev/ldv" and "Look Development/ldv" read the same in a list.
     const r = dedupeSteps([
       step({ sgId: 20, code: 'lookdev', shortName: 'ldv' }),
       step({ sgId: 21, code: 'Look Development', shortName: 'ldv' }),
@@ -44,7 +43,7 @@ describe('dedupeSteps', () => {
     expect(r.map((s) => s.sgId)).toEqual([20]);
   });
 
-  it('ne confond pas deux étapes distinctes', () => {
+  it('does not confuse two distinct steps', () => {
     const r = dedupeSteps([
       step({ sgId: 13, code: 'art', shortName: 'art' }),
       step({ sgId: 14, code: 'modeling', shortName: 'mod' }),
@@ -53,7 +52,7 @@ describe('dedupeSteps', () => {
     expect(r).toHaveLength(3);
   });
 
-  it('ignore la casse et les espaces, comme le fait l’œil', () => {
+  it('ignores case and spaces, as the eye does', () => {
     const r = dedupeSteps([
       step({ sgId: 14, code: 'modeling', shortName: 'mod' }),
       step({ sgId: 1584, code: ' Modeling ', shortName: 'MOD' }),
@@ -61,9 +60,8 @@ describe('dedupeSteps', () => {
     expect(r.map((s) => s.sgId)).toEqual([14]);
   });
 
-  it('garde celle que le projet emploie : c’est elle qui porte le bon identifiant', () => {
-    // Le cas qui rangeait la task ailleurs : l'étape « modeling » de ce projet porte
-    // l'identifiant 14, le catalogue en offre une autre sous le 1584.
+  it('keeps the one the project uses: it is the one carrying the right identifier', () => {
+        // The case that filed the task elsewhere: this project's "modeling" step carries identifier 14, the catalogue offers another under 1584.
     const r = dedupeSteps([
       step({ sgId: 14, code: 'modeling', shortName: 'mod', used: true }),
       step({ sgId: 1584, code: 'modeling', shortName: 'modeling' }),
@@ -71,20 +69,19 @@ describe('dedupeSteps', () => {
     expect(r.map((s) => s.sgId)).toEqual([14]);
   });
 
-  it('garde une étape que seul son code court distingue, si on la demande', () => {
-    // Le cas signalé : ArtFX a « modeling / modeling » et « modeling / model », et c'est
-    // la seconde que ce projet emploie. Le catalogue de choix ne doit écarter ni l'une ni
-    // l'autre — c'est là qu'on les départage.
+  it('keeps a step that only its short code distinguishes, if requested', () => {
+        // The reported case: ArtFX has "modeling / modeling" and "modeling / model", and it is the second that this project uses. The choice catalogue must discard neither
+        // of them — that is where they are told apart.
     const catalogue = [
       step({ sgId: 1584, code: 'modeling', shortName: 'modeling', order: 19 }),
       step({ sgId: 14, code: 'modeling', shortName: 'model', order: 43 }),
     ];
     expect(dedupeSteps(catalogue).map((s) => s.sgId)).toEqual([1584]);
-    // …mais la liste brute, elle, les porte toutes les deux.
+        // ...but the raw list carries both of them.
     expect(catalogue.map((s) => s.sgId)).toEqual([1584, 14]);
   });
 
-  it('tolère une étape sans code court', () => {
+  it('tolerates a step without a short code', () => {
     const r = dedupeSteps([
       step({ sgId: 30, code: 'groom', shortName: '' }),
       step({ sgId: 31, code: 'cloth', shortName: '' }),

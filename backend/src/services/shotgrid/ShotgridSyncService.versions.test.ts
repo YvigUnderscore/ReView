@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est remonté en tête de fichier : les doublures doivent l'être aussi.
+// `vi.mock` is hoisted to the top of the file: the doubles must be too.
 const { findBySg } = vi.hoisted(() => ({ findBySg: vi.fn() }));
 
 vi.mock('../../lib/prisma', () => ({ prisma: {} }));
@@ -39,43 +39,39 @@ beforeEach(() => {
 });
 
 /**
- * Transmettre les identifiants ciblés à `pullVersions` fait sauter le filtre de statuts
- * du studio — le service y voit le signe d'une sélection manuelle. Sur un webhook, ce
- * serait rapatrier les médias de tous les WIP d'un site dont le studio ne suit que les
- * versions en review. Le filtre est donc rejoué ici, avec le cloisonnement projet.
+ * Passing the targeted identifiers to `pullVersions` makes the studio's status filter fall away — the service reads it as the sign of a manual selection. On a webhook,
+ * that would fetch the media of all the WIPs of a site where the studio only follows the versions in review. The filter is therefore replayed here, with the project isolation.
  */
 describe('importableVersionIds', () => {
-  it('écarte une version neuve hors du filtre de statuts', async () => {
+  it('discards a new version outside the status filter', async () => {
     const { ctx, journal } = contextWith(['rev'], { 9: version(9, 'wip') });
 
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([]);
     expect(journal.count).toHaveBeenCalledWith('versions', 'skipped');
   });
 
-  it('retient une version neuve dans le filtre', async () => {
+  it('keeps a new version within the filter', async () => {
     const { ctx } = contextWith(['rev'], { 9: version(9, 'rev') });
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([9]);
   });
 
-  it('retient une version déjà liée quel que soit son statut', async () => {
-    // Le filtre décide de ce qu'on importe, pas de ce qu'on continue de suivre : une
-    // version passée d'« en review » à « approuvé » doit voir son statut avancer.
+  it('keeps an already linked version whatever its status', async () => {
+        // The filter decides what we import, not what we keep following: a version moved from "in review" to "approved" must see its status advance.
     findBySg.mockResolvedValue({ localId: 3, sgId: 9 });
     const { ctx, findById } = contextWith(['rev'], {});
 
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([9]);
-    // Déjà liée : inutile d'aller la relire pour décider.
+        // Already linked: no need to re-read it to decide.
     expect(findById).not.toHaveBeenCalled();
   });
 
-  it('retient tout quand le studio n’a posé aucun filtre', async () => {
+  it('keeps everything when the studio has set no filter', async () => {
     const { ctx } = contextWith([], { 9: version(9, 'wip') });
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([9]);
   });
 
-  it('refuse une version appartenant à un autre projet du site', async () => {
-    // Un identifiant reçu par webhook ne prouve rien : écrire dans le mauvais projet ne
-    // se rattrape pas.
+  it('refuses a version belonging to another project of the site', async () => {
+        // An identifier received by webhook proves nothing: writing into the wrong project cannot be undone.
     const { ctx, journal } = contextWith([], { 9: version(9, 'rev', 78) });
 
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([]);
@@ -88,12 +84,12 @@ describe('importableVersionIds', () => {
     );
   });
 
-  it('ignore une version disparue du site', async () => {
+  it('ignores a version that has disappeared from the site', async () => {
     const { ctx } = contextWith([], {});
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([]);
   });
 
-  it('ne regarde que les identifiants de type Version', async () => {
+  it('only looks at identifiers of type Version', async () => {
     const { ctx, findById } = contextWith([], { 9: version(9, 'rev') });
     const kept = await importableVersionIds(ctx, [
       { sgType: 'Shot', sgId: 4 },

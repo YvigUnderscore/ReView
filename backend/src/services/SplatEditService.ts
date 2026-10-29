@@ -9,14 +9,12 @@ import { assertWritable } from '../lib/publishLock';
 import { assertMediaManage } from './MediaService';
 
 /**
- * Éditions non-destructives d'un splat (10.G) : transformation TRS + volumes de crop SDF
- * (JSON `metadata.splatEdits`) et masque de suppression par splat (bitset binaire dans MinIO,
- * référencé par `metadata.splatMaskKey`). Le fichier splat original n'est jamais modifié ;
- * les éditions sont ré-appliquées au chargement du viewer. Écriture réservée aux gestionnaires,
- * **splat non publié uniquement** (verrou Phase 11, refermé en Phase 50 lot 14) — seule la
- * présentation (mise en scène) reste modifiable après publication. Après publication, une
- * édition de nuage ne s'exprime plus que **dans un commentaire** (part `splat-edit`), rejouée
- * à la lecture de ce commentaire et jamais écrite ici.
+ * Non-destructive edits of a splat (10.G): TRS transform + SDF crop volumes (JSON `metadata.splatEdits`)
+ * and a per-splat deletion mask (binary bitset in MinIO, referenced by `metadata.splatMaskKey`). The original
+ * splat file is never modified; the edits are re-applied when the viewer loads. Writing is reserved to
+ * managers, **unpublished splats only** (Phase 11 lock, closed again in Phase 50 batch 14): only the
+ * presentation (staging) remains editable after publication. After publication, a cloud edit can only be
+ * expressed **in a comment** (part `splat-edit`), replayed when that comment is read and never written here.
  */
 
 type SessionUser = { id: number; role: import('@prisma/client').Role };
@@ -38,19 +36,18 @@ export interface SdfVolumeInput {
 export interface SplatEditsInput {
   transform: SplatTransformInput | null;
   volumes: SdfVolumeInput[];
-  /** Flip d'orientation à l'import (11.E) : true/absent = convention Y-down redressée. */
+    /** Orientation flip at import (11.E): true/absent = Y-down convention, straightened. */
   baseFlip?: boolean;
 }
 
 const MAX_MASK_BYTES = 4_000_000;
 
 /**
- * Gestionnaire + média splat, et publication non encore faite.
+ * Manager and splat media, and publication not yet done.
  *
- * L'écriture « pour tout le monde » s'arrête à la publication, exactement comme la
- * transformation d'une version : au-delà, ce que voient ceux qui commentent ne se réécrit plus
- * sous leurs yeux. Le geste d'édition reste offert au reviewer, mais dans un commentaire.
- * Le verrou reste l'autorité : la table de `lib/publishLock` porte la raison.
+ * Writing "for everyone" stops at publication, exactly like a version's transform: beyond it, what those who
+ * comment see is no longer rewritten under their eyes. The editing gesture remains offered to the reviewer,
+ * but in a comment. The lock remains the authority: the `lib/publishLock` table carries the reason.
  */
 async function assertEditableSplat(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
@@ -65,10 +62,9 @@ async function assertEditableSplat(user: SessionUser, id: number) {
 }
 
 /**
- * Enregistre (ou efface si null) la présentation persistée du splat (10.G-V5) : caméra de
- * base, profondeur de champ, reveal, LOD par défaut, animation caméra keyframe. Écrite par un
- * gestionnaire et **rejouée pour tous** à l'ouverture ; contrairement aux éditions, elle reste
- * modifiable après publication (mise en scène de la review, le média n'est pas altéré).
+ * Saves (or clears if null) the persisted presentation of the splat (10.G-V5): base camera, depth of field,
+ * reveal, default LOD, keyframed camera animation. Written by a manager and **replayed for everyone** on opening;
+ * unlike the edits, it remains editable after publication (review staging: the media itself is not altered).
  */
 export async function setSplatPresentation(user: SessionUser, id: number, presentation: object | null) {
   await assertMediaManage(id, user);
@@ -77,8 +73,8 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
     select: { metadata: true, kind: true },
   });
   if (!media) throw notFound('Media not found');
-  // Présentation caméra générique (rejouée pour tous) : splat ET modèle 3D Three (Phase 15).
-  // Le champ garde le nom `splatPresentation` (réutilisé) ; DoF/reveal/LOD restent propres au splat.
+    // Generic camera presentation (replayed for everyone): splat AND 3D model Three (Phase 15).
+    // The field keeps the name `splatPresentation` (reused); DoF/reveal/LOD remain specific to splats.
   if (media.kind !== MediaKind.SPLAT && media.kind !== MediaKind.MODEL_3D)
     throw badRequest('Staging is for 3D and splat media only', 'NOT_3D');
   const metadata = {
@@ -89,10 +85,10 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
   return { splatPresentation: presentation };
 }
 
-/** Enregistre (ou efface si null/vide) les éditions JSON — transformation TRS + volumes. */
+/** Saves (or clears if null/empty) the JSON edits: TRS transform + volumes. */
 export async function setSplatEdits(user: SessionUser, id: number, edits: SplatEditsInput | null) {
   const media = await assertEditableSplat(user, id);
-  // Ne persiste que s'il y a quelque chose à retenir (baseFlip false = override d'orientation).
+    // Only persist if there is something to keep (baseFlip false = orientation override).
   const value =
     edits && (edits.transform || edits.volumes.length > 0 || edits.baseFlip === false) ? edits : null;
   const metadata = {
@@ -103,7 +99,7 @@ export async function setSplatEdits(user: SessionUser, id: number, edits: SplatE
   return { splatEdits: value };
 }
 
-/** Enregistre le masque de suppression (bitset base64 → MinIO) et référence sa clé. */
+/** Saves the deletion mask (base64 bitset to MinIO) and references its key. */
 export async function setSplatMask(user: SessionUser, id: number, dataBase64: string, count: number) {
   const media = await assertEditableSplat(user, id);
   const buf = Buffer.from(dataBase64, 'base64');
@@ -121,8 +117,8 @@ export async function setSplatMask(user: SessionUser, id: number, dataBase64: st
 }
 
 /**
- * Enregistre les transformations de sous-ensembles de splats (ops binaires delta+indices,
- * base64 → MinIO) et référence leur clé (Phase 28) — rejouées au chargement pour tous.
+ * Saves the transforms of splat subsets (delta + index binary ops, base64 to MinIO) and references their
+ * key (Phase 28): replayed on load for everyone.
  */
 export async function setSplatSubsetOps(user: SessionUser, id: number, dataBase64: string, count: number) {
   const media = await assertEditableSplat(user, id);
@@ -140,7 +136,7 @@ export async function setSplatSubsetOps(user: SessionUser, id: number, dataBase6
   return { splatSubsetUrl: await storage.getPresignedGetUrl(key), splatSubsetCount: count };
 }
 
-/** Efface les transformations de sous-ensembles (métadonnées d'abord, MinIO en best-effort). */
+/** Clears the subset transforms (metadata first, MinIO on a best-effort basis). */
 export async function clearSplatSubsetOps(user: SessionUser, id: number) {
   const media = await assertEditableSplat(user, id);
   const meta: Record<string, unknown> = {
@@ -157,7 +153,7 @@ export async function clearSplatSubsetOps(user: SessionUser, id: number) {
   return { splatSubsetUrl: null };
 }
 
-/** Efface le masque de suppression (métadonnées d'abord, objet MinIO en best-effort). */
+/** Clears the deletion mask (metadata first, MinIO object on a best-effort basis). */
 export async function clearSplatMask(user: SessionUser, id: number) {
   const media = await assertEditableSplat(user, id);
   const meta: Record<string, unknown> = {

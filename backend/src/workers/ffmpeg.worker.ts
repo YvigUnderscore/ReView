@@ -95,37 +95,34 @@ import { closeWorkerEvents } from '../lib/workerEvents';
 import { startWorkerMetricsServer, attachWorkerMetrics } from './metricsServer';
 
 /**
- * Worker de traitement média (FFmpeg) — BullMQ.
+ * Media processing worker (FFmpeg) — BullMQ.
  *
- * Flux : télécharge l'objet depuis MinIO vers un répertoire temporaire, traite avec
- * FFmpeg, repousse les dérivés vers MinIO, met à jour MediaObject (status, thumbnailKey,
- * metadata), puis nettoie le temporaire. Aucun fichier ne persiste sur le serveur app.
+ * Flow: downloads the object from MinIO to a temporary directory, processes it with FFmpeg, pushes the derivatives back to MinIO, updates MediaObject (status, thumbnailKey,
+ * metadata), then cleans up the temporary directory. No file persists on the app server.
  *
- *  - thumbnail : miniature JPEG (redimensionnement pour l'image ; la vidéo capture au centre)
- *  - transcode : sonde (ffprobe) + proxy MP4 (h264/aac, faststart) + miniature
- *  - convert3d : conversion FBX/OBJ/USD… → GLB (cf. services/ModelConvertService, 9.A1 puis 45.C)
+ *  - thumbnail: JPEG thumbnail (resizing for images; video captures the middle frame)
+ *  - transcode: probe (ffprobe) + MP4 proxy (h264/aac, faststart) + thumbnail
+ *  - convert3d: conversion of FBX/OBJ/USD... to GLB (see services/ModelConvertService, 9.A1 then 45.C)
  *
- * Lancer en process séparé : `node dist/workers/ffmpeg.worker.js` (service `worker` du compose).
+ * Run as a separate process: `node dist/workers/ffmpeg.worker.js` (the `worker` service of the compose file).
  */
 
-/** Sonde un fichier média et renvoie durée / dimensions / fps (délai borné, cf. lib/ffprobe). */
+/** Probes a media file and returns duration / dimensions / fps (bounded delay, see lib/ffprobe). */
 const probe = (path: string) => probeFile(path, FFPROBE_TIMEOUT_MS);
 
 /**
- * Encadrement d'une invocation ffmpeg : délai maximal, mise à mort du processus, et
- * remontée de progression.
+ * Framing of an ffmpeg invocation: maximum delay, killing of the process, and progress reporting.
  *
- * Sans délai, un fichier pathologique (conteneur exotique, flux corrompu, filtre qui
- * n'avance plus) immobilise **définitivement** l'un des deux emplacements de la file :
- * deux fichiers de ce genre arrêtent tout le transcodage du studio, et rien ne le signale.
+ * Without a delay, a pathological file (exotic container, corrupt stream, filter that no longer advances) would **permanently** tie up one of the queue's two slots:
+ * two such files would stop all the studio's transcoding, and nothing would signal it.
  */
 interface FfmpegRun {
-  /** Étiquette de l'étape, reprise telle quelle dans le message d'échec. */
+    /** Step label, carried over as is into the failure message. */
   label: string;
   timeoutMs: number;
-  /** Durée du média, pour interpoler quand ffmpeg ne rapporte pas de pourcentage. */
+    /** Media duration, to interpolate when ffmpeg reports no percentage. */
   durationSec?: number;
-  /** Avancement 0→1 à l'intérieur de l'étape. */
+    /** Progress 0→1 within the step. */
   onFraction?: (fraction: number) => void;
 }
 
@@ -135,11 +132,11 @@ function runFfmpeg(cmd: ffmpeg.FfmpegCommand, run: FfmpegRun): Promise<void> {
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      // `kill` transmet le signal au processus enfant : c'est ce qui libère l'emplacement.
+            // `kill` passes the signal to the child process: that is what frees the slot.
       try {
         cmd.kill('SIGKILL');
       } catch {
-        // Le processus est peut-être déjà mort : l'échec du signal ne change rien.
+                // The process may already be dead: the failure of the signal changes nothing.
       }
       reject(new FfmpegTimeoutError(run.label, run.timeoutMs));
     }, run.timeoutMs);
@@ -169,12 +166,10 @@ function runFfmpeg(cmd: ffmpeg.FfmpegCommand, run: FfmpegRun): Promise<void> {
 }
 
 /**
- * Génère une miniature JPEG. Pour la vidéo, on capture la frame au **centre** (`seekSec`,
- * typiquement durée/2 — plus représentatif qu'une frame de début souvent noire) ; pour
- * l'image, pas de seek (redimensionnement direct).
+ * Generates a JPEG thumbnail. For video, the frame is captured at the **middle** (`seekSec`, typically duration/2 — more representative than a starting frame, often black);
+ * for an image, no seek (direct resizing).
  *
- * `inputOptions` porte les réglages de décodage propres au format source — la courbe de
- * transfert d'un EXR, notamment : sans elle, la vignette d'un rendu linéaire est noire.
+ * `inputOptions` carries the decoding settings specific to the source format — the transfer curve of an EXR, in particular: without it, the thumbnail of a linear render is black.
  */
 function makeThumbnail(
   input: string,
@@ -191,9 +186,8 @@ function makeThumbnail(
 }
 
 /**
- * Proxy web pleine résolution d'une image que le navigateur ne sait pas décoder
- * (EXR, DPX, TIFF, TGA). C'est ce dérivé — et non l'original — que la review affiche :
- * sans lui, la page de review d'un EXR est un cadre vide (cf. `lib/imageProxy`).
+ * Full-resolution web proxy of an image the browser cannot decode (EXR, DPX, TIFF, TGA). It is this derivative — and not the original — that the review displays:
+ * without it, the review page of an EXR is an empty frame (see `lib/imageProxy`).
  */
 function makeWebProxy(
   input: string,
@@ -212,8 +206,8 @@ function makeWebProxy(
 }
 
 /**
- * Extrait la première piste audio en PCM mono 8 kHz — matière première de la forme d'onde.
- * Le fichier ne quitte pas le répertoire temporaire : seules les crêtes sont conservées.
+ * Extracts the first audio track as 8 kHz mono PCM — the raw material of the waveform.
+ * The file does not leave the temporary directory: only the peaks are kept.
  */
 function extractAudioPcm(input: string, output: string, run: FfmpegRun): Promise<void> {
   const cmd = ffmpeg(input)
@@ -222,7 +216,7 @@ function extractAudioPcm(input: string, output: string, run: FfmpegRun): Promise
   return runFfmpeg(cmd, run);
 }
 
-/** Tuile les vignettes de timeline (1 frame / intervalle) dans un unique JPEG léger. */
+/** Tiles the timeline thumbnails (1 frame per interval) into a single light JPEG. */
 function makeTimelineSprite(
   input: string,
   output: string,
@@ -243,12 +237,10 @@ function makeTimelineSprite(
 }
 
 /**
- * Publication de la progression sur le job BullMQ.
+ * Publishes the progress on the BullMQ job.
  *
- * Sans elle, l'administration ne voit qu'un job « actif » : un encodage de six heures et
- * un ffmpeg bloqué depuis six heures se ressemblent trait pour trait. On publie donc
- * l'étape en cours (sonde, proxy, rendition n/N, sprite, miniature…) et son avancement.
- * L'écriture ne part que si le pourcentage a bougé : au plus une centaine par job.
+ * Without it, administration sees only an "active" job: a six-hour encoding and an ffmpeg blocked for six hours look exactly alike. We therefore publish the current step
+ * (probe, proxy, rendition n/N, sprite, thumbnail...) and its advancement. The write only goes out if the percentage has moved: at most a hundred per job.
  */
 type ProgressReporter = (
   step: MediaJobStep,
@@ -261,15 +253,14 @@ function progressReporter(job: Job<MediaJobData>): ProgressReporter {
     const progress: MediaJobProgress = mediaJobProgress(job.data.kind, step, opts);
     if (progress.percent === last) return;
     last = progress.percent;
-    // Best effort : une écriture de progression perdue ne doit jamais faire échouer
-    // le transcodage qu'elle décrit.
+        // Best effort: a lost progress write must never make the transcoding it describes fail.
     void job.updateProgress(progress).catch((err: unknown) => {
       logger.debug({ err }, '[ffmpeg.worker] progression non publiée');
     });
   };
 }
 
-/** Burn-ins résolus pour un média : config effective + contexte + logo local éventuel. */
+/** Burn-ins resolved for a media: effective configuration + context + possible local logo. */
 interface BurninJob {
   cfg: BurninConfig;
   ctx: BurninContext;
@@ -278,9 +269,8 @@ interface BurninJob {
 }
 
 /**
- * Applique la chaîne vidéo (scale + burn-ins éventuels) à une commande fluent-ffmpeg.
- * Sans logo : simple `-vf`. Avec logo : `filter_complex` à deux entrées (le logo est
- * ajouté comme input et incrusté en bas droite), sortie mappée `[vout]` + audio optionnel.
+ * Applies the video chain (scale + any burn-ins) to a fluent-ffmpeg command.
+ * Without a logo: a simple `-vf`. With a logo: a two-input `filter_complex` (the logo is added as an input and burnt in at the bottom right), output mapped to `[vout]` plus optional audio.
  */
 function applyVideoChain(
   cmd: ffmpeg.FfmpegCommand,
@@ -305,15 +295,13 @@ function applyVideoChain(
 }
 
 /**
- * Exécute un encodage avec l'encodeur configuré (37.D) ; si NVENC échoue (pas de GPU,
- * drivers absents), retombe automatiquement sur libx264.
+ * Runs an encoding with the configured encoder (37.D); if NVENC fails (no GPU, missing drivers), automatically falls back to libx264.
  */
 async function withEncoderFallback(run: (encoder: VideoEncoder) => Promise<void>): Promise<void> {
   try {
     await run(env.VIDEO_ENCODER);
   } catch (err) {
-    // Un dépassement de délai n'est pas un encodeur absent : rejouer en libx264
-    // consommerait une seconde fois le délai pour échouer de la même façon.
+        // A timeout is not an absent encoder: replaying in libx264 would consume the delay a second time to fail in the same way.
     if (env.VIDEO_ENCODER === 'libx264' || isFfmpegTimeout(err)) throw err;
     logger.warn({ err }, `[ffmpeg.worker] ${env.VIDEO_ENCODER} indisponible — repli libx264`);
     await run('libx264');
@@ -321,20 +309,18 @@ async function withEncoderFallback(run: (encoder: VideoEncoder) => Promise<void>
 }
 
 /**
- * Réglages du proxy. Un **objet** plutôt qu'une suite d'arguments positionnels : la fenêtre
- * de découpe occupait le quatrième rang et l'appelant normal y passait `undefined`. La
- * retirer aurait décalé quatre arguments voisins de types compatibles — un décalage que le
- * typecheck n'aurait pas vu.
+ * Proxy settings. An **object** rather than a series of positional arguments: the cut window occupied the fourth rank and the usual caller passed `undefined` there.
+ * Removing it would have shifted four neighbouring arguments of compatible types — a shift that the typecheck would not have seen.
  */
 interface ProxyOptions {
   burnin?: BurninJob | null;
-  /** Hauteur de la source : le proxy ne dépasse jamais 1080 p, ni la source elle-même. */
+    /** Source height: the proxy never exceeds 1080 p, nor the source itself. */
   srcHeight?: number;
   encoder?: VideoEncoder;
   traits?: SourceTraits;
 }
 
-/** Transcode une vidéo en proxy MP4 web (h264 + aac, faststart). */
+/** Transcodes a video into a web MP4 proxy (h264 + aac, faststart). */
 function transcodeProxy(
   input: string,
   output: string,
@@ -364,10 +350,9 @@ function transcodeProxy(
 }
 
 /**
- * Génère une rendition HLS (VOD, segments .ts + sous-playlist) dans `hlsDir` (Phase 23).
- * GOP **fixe** calé sur le fps (une keyframe par segment, scene-cut désactivé) : sans lui,
- * libx264 espace les keyframes jusqu'à ~10 s → segments énormes, switch de qualité très
- * lent et image figée pendant que l'audio continue.
+ * Generates an HLS rendition (VOD, .ts segments + sub-playlist) in `hlsDir` (Phase 23).
+ * A **fixed** GOP aligned on the fps (one keyframe per segment, scene-cut disabled): without it, libx264 spaces keyframes up to ~10 s apart → huge segments,
+ * very slow quality switching, and a frozen image while the audio carries on.
  */
 function transcodeHlsRendition(
   input: string,
@@ -418,8 +403,7 @@ function transcodeHlsRendition(
 }
 
 /**
- * Passe de scene detection (34.H, opt-in admin) : frames retenues par `select(scene)`,
- * listées par showinfo sur stderr. Best effort — un échec renvoie une liste vide.
+ * Scene detection pass (34.H, admin opt-in): frames retained by `select(scene)`, listed by showinfo on stderr. Best effort — a failure returns an empty list.
  */
 async function detectScenes(input: string, run: FfmpegRun): Promise<number[]> {
   let err = '';
@@ -432,21 +416,20 @@ async function detectScenes(input: string, run: FfmpegRun): Promise<number[]> {
   try {
     await runFfmpeg(cmd, run);
   } catch {
-    // Best effort, délai compris : une détection qui échoue ou s'éternise ne coûte que
-    // des marqueurs automatiques, elle ne condamne pas le transcodage.
+        // Best effort, delay included: a detection that fails or drags on costs only automatic markers; it does not condemn the transcoding.
     return [];
   }
   return parseSceneTimes(err);
 }
 
-/** Pose les marqueurs « Plan n » (remplace les précédents marqueurs auto du média). */
+/** Places the "Shot n" markers (replaces the previous automatic markers of the media). */
 async function writeSceneMarkers(mediaId: number, frames: number[]): Promise<void> {
   await prisma.timelineMarker.deleteMany({
     where: { mediaObjectId: mediaId, authorId: null, name: { startsWith: 'Plan ' } },
   });
   if (frames.length === 0) return;
   await prisma.timelineMarker.createMany({
-    // La coupe i ouvre le plan i+2 (le plan 1 commence à la frame 0, sans marqueur).
+        // Cut i opens shot i+2 (shot 1 starts at frame 0, with no marker).
     data: frames.map((frame, i) => ({
       mediaObjectId: mediaId,
       frame,
@@ -458,12 +441,12 @@ async function writeSceneMarkers(mediaId: number, frames: number[]): Promise<voi
   await publishWorkerEvent({ type: 'markers', mediaId });
 }
 
-/** Durée du slate d'identification en tête du dérivé client (35.A). */
+/** Duration of the identification slate at the head of the client derivative (35.A). */
 const SLATE_SEC = 3;
 
 /**
- * Résout la config burn-in effective du projet du média + le contexte d'incrustation
- * (shot/version) et télécharge le logo studio si nécessaire. `null` si tout est inactif.
+ * Resolves the effective burn-in configuration of the media's project + the overlay context (shot/version) and downloads the studio logo if needed.
+ * `null` if everything is inactive.
  */
 async function loadBurninSetup(
   mediaId: number,
@@ -532,7 +515,7 @@ async function loadBurninSetup(
   return { cfg, ctx, logoPath, slateInfo };
 }
 
-/** Rend l'image du slate (fond sombre + lignes centrées) aux dimensions du proxy. */
+/** Renders the slate image (dark background + centred lines) at the proxy's dimensions. */
 function makeSlateImage(
   output: string,
   width: number,
@@ -549,9 +532,8 @@ function makeSlateImage(
 }
 
 /**
- * Dérivé client (35.A) : slate de `SLATE_SEC` s concaténé en tête du proxy — servi
- * uniquement par les partages clients (le proxy de review reste intact : un slate en
- * tête décalerait toutes les annotations frame-par-frame).
+ * Client derivative (35.A): a slate of `SLATE_SEC` s concatenated at the head of the proxy — served only through client shares (the review proxy stays intact: a slate at
+ * the head would shift every frame-by-frame annotation).
  */
 function buildClientDerivative(
   slatePng: string,
@@ -593,11 +575,9 @@ function buildClientDerivative(
 type HlsRenditionMeta = { height: number; width: number; videoBitrateK: number };
 
 /**
- * Produit l'échelle HLS adaptative (renditions + master.m3u8) et la pousse dans MinIO sous
- * `derived/{id}/hls/`. **Progressif (34.F)** : `selectRenditions` renvoie la plus basse en
- * premier — chaque rendition est uploadée dès qu'elle est prête, le master est régénéré à
- * chaque fois, et `onRendition` permet à l'appelant d'ouvrir la lecture dès la première.
- * Renvoie les renditions produites (métadonnées) ou `[]` si désactivé.
+ * Produces the adaptive HLS ladder (renditions + master.m3u8) and pushes it into MinIO under `derived/{id}/hls/`. **Progressive (34.F)**: `selectRenditions` returns the
+ * lowest first — each rendition is uploaded as soon as it is ready, the master is regenerated each time, and `onRendition` lets the caller open playback at the first one.
+ * Returns the renditions produced (metadata) or `[]` if disabled.
  */
 async function buildHls(
   input: string,
@@ -652,8 +632,7 @@ async function buildHls(
       audioBitrateK: cfg.audioBitrateK,
       playlist: `${name}.m3u8`,
     });
-    // Upload de la rendition (segments + sous-playlist) puis master régénéré : le master
-    // en ligne ne référence jamais une rendition absente.
+        // Upload of the rendition (segments + sub-playlist), then the master regenerated: the online master never references a missing rendition.
     await writeFile(join(hlsDir, 'master.m3u8'), buildMasterPlaylist(built));
     for (const f of (await readdir(hlsDir)).filter((f) => f === `${name}.m3u8` || f.startsWith(`${name}_`))) {
       await storage.uploadFile(`derived/${mediaId}/hls/${f}`, join(hlsDir, f), hlsContentType(f));
@@ -668,12 +647,12 @@ async function buildHls(
   return metas();
 }
 
-/* ── Séquences d'images : N frames → un master, puis la chaîne vidéo ordinaire ────── */
+/* ── Image sequences: N frames → one master, then the ordinary video chain ────── */
 
-/** Frames rapatriées de front. Au-delà, MinIO et le disque du worker se gênent. */
+/** Frames fetched in parallel. Beyond this, MinIO and the worker's disk get in each other's way. */
 const FRAME_DOWNLOAD_CONCURRENCY = 4;
 
-/** Applique `task` avec au plus `limit` tâches simultanées, index conservé. */
+/** Applies `task` with at most `limit` simultaneous tasks, index preserved. */
 async function withConcurrency<T>(
   items: T[],
   limit: number,
@@ -687,12 +666,10 @@ async function withConcurrency<T>(
 }
 
 /**
- * Scan antivirus d'une séquence : **toutes** les frames, une par une.
+ * Antivirus scan of a sequence: **all** the frames, one by one.
  *
- * Le contrôle est opt-in (`CLAMAV_HOST`) : un studio qui l'active demande que rien
- * n'entre sans être scanné, et n'échantillonner que trois frames sur mille serait un
- * théâtre. Une détection fait échouer le job avec le nom de la menace, et les frames
- * restent sous leur préfixe — la décision de les détruire appartient à l'administration.
+ * The check is opt-in (`CLAMAV_HOST`): a studio that enables it asks that nothing enter unscanned, and sampling only three frames out of a thousand would be theatre.
+ * A detection fails the job with the name of the threat, and the frames stay under their prefix — the decision to destroy them belongs to administration.
  */
 async function scanSequenceFrames(framesDir: string, count: number, extension: string): Promise<void> {
   for (let i = 0; i < count; i++) {
@@ -702,18 +679,14 @@ async function scanSequenceFrames(framesDir: string, count: number, extension: s
 }
 
 /**
- * Assemble la séquence en un master unique, entrée de tout l'aval.
+ * Assembles the sequence into a single master, the input of everything downstream.
  *
- * Deux décisions portent ce code. La première : **renuméroter localement** les frames en
- * 0, 1, 2… Le démultiplexeur `image2` de FFmpeg s'arrête à la première frame absente ;
- * une livraison à trous — un rendu relancé sur quelques frames, cas quotidien — sortirait
- * un plan tronqué sans un mot. La numérotation d'origine, elle, est conservée dans le
- * manifeste et dans `metadata.startFrame`, qui est ce que le lecteur affiche.
+ * Two decisions underpin this code. The first: **renumber the frames locally** as 0, 1, 2... FFmpeg's `image2` demuxer stops at the first missing frame; a delivery with
+ * holes — a render relaunched on a few frames, a daily occurrence — would output a truncated shot without a word. The original numbering is kept in the manifest and in
+ * `metadata.startFrame`, which is what the player displays.
  *
- * La seconde : produire un master plutôt que d'attaquer la séquence à chaque passe. Le
- * proxy, chaque rendition HLS, le sprite et la miniature relisent la source ; décoder cinq
- * fois deux mille EXR 4K coûterait des heures de CPU par plan. Le master est décodé une
- * fois, à CRF 12 — largement au-dessus de ce que les dérivés en tireront.
+ * The second: produce a master rather than attacking the sequence on every pass. The proxy, each HLS rendition, the sprite and the thumbnail all re-read the source;
+ * decoding two thousand 4K EXRs five times would cost hours of CPU per shot. The master is decoded once, at CRF 12 — well above what the derivatives will draw from it.
  */
 async function buildSequenceMaster(
   mediaId: number,
@@ -736,9 +709,8 @@ async function buildSequenceMaster(
     throw new Error(`No frame found under ${sequence.storagePrefix} (media=${String(mediaId)})`);
   frames.sort((a, b) => a.frame - b.frame);
 
-  // Le rapatriement occupe la première moitié de l'étape « download », l'assemblage la
-  // seconde : `lib/mediaProgress` n'a pas d'étape propre à la séquence, et lui en inventer
-  // une décalerait le barème de tous les autres travaux.
+    // Fetching occupies the first half of the "download" step, the assembly the second: `lib/mediaProgress` has no step of its own for the sequence, and inventing one
+    // would shift the scale of all the other jobs.
   let downloaded = 0;
   await withConcurrency(frames, FRAME_DOWNLOAD_CONCURRENCY, async (entry, index) => {
     await storage.downloadToFile(
@@ -761,8 +733,7 @@ async function buildSequenceMaster(
       .output(output);
     return runFfmpeg(cmd, {
       label: 'sequence master',
-      // Décoder de l'EXR est très loin du temps réel : le facteur habituel (×20) couperait
-      // un assemblage parfaitement sain sur un plan un peu long.
+            // Decoding EXR is far from real time: the usual factor (×20) would cut a perfectly healthy assembly on a slightly long shot.
       timeoutMs: ffmpegTimeoutMs(durationSec, { factor: 60 }),
       durationSec,
       onFraction: (fraction) => report('download', { fraction: 0.5 + fraction * 0.5 }),
@@ -781,23 +752,19 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
   try {
     report('download');
     const metadata: Record<string, unknown> = { ...(media.metadata as object) };
-    // Séquence d'images (vague 5) : la « source » n'est pas un objet mais N frames sous un
-    // préfixe. Elles sont rapatriées, scannées puis assemblées en un master — tout l'aval
-    // travaille ensuite sur une vidéo ordinaire, sans savoir d'où elle vient. Un
-    // `reprocess` repart toujours des frames, jamais du proxy : contrairement à une vidéo,
-    // le livrable d'origine est toujours là.
+        // Image sequence (wave 5): the "source" is not an object but N frames under a prefix. They are fetched, scanned, then assembled into a master — all downstream
+        // works then on an ordinary video, without knowing where it came from. A `reprocess` always starts again from the frames, never from the proxy: unlike a video, the
+        // original deliverable is always there.
     const sequence = media.imageSequence;
-    // Source vidéo supprimée après transcodage (gain de place) : un `reprocess` repart du
-    // proxy MP4 — seul fichier « source » restant.
+        // Source video deleted after transcoding (space saving): a `reprocess` starts again from the MP4 proxy — the only "source" file remaining.
     const sourceGone = !sequence && metadata.sourceDeleted === true && typeof metadata.proxyKey === 'string';
-    // Conserver l'extension d'origine (assimp/ffmpeg détectent le format par extension)
+        // Keep the original extension (assimp/ffmpeg detect the format by extension)
     const ext = sourceGone ? '.mp4' : extname(media.originalName) || '.bin';
     const src = sequence ? join(dir, SEQUENCE_MASTER_FILENAME) : join(dir, `src${ext}`);
     if (sequence) await buildSequenceMaster(mediaId, sequence, dir, src, report);
     else await storage.downloadToFile(sourceGone ? (metadata.proxyKey as string) : media.storageKey, src);
 
-    // Checksum bout-en-bout (37.B) : le sha256 annoncé par le client doit correspondre
-    // au fichier téléchargé (corruption réseau/storage → FAILED, jamais de dérivés faux).
+        // End-to-end checksum (37.B): the sha256 announced by the client must match the downloaded file (network/storage corruption → FAILED, never false derivatives).
     if (!sequence && !sourceGone && typeof metadata.contentHash === 'string') {
       const actual = await sha256File(src);
       if (actual !== metadata.contentHash) {
@@ -807,17 +774,13 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       }
     }
 
-    // Date du verdict antivirus, quand il y en a eu un : elle sert plus bas à marquer le
-    // média, et son absence à ne PAS le marquer.
+        // The date of the antivirus verdict, when there has been one: it serves further down to mark the media, and its absence to NOT mark it.
     let scannedAt: string | undefined;
-    // Scan antivirus opt-in (37.E) : fichier infecté → objet déplacé en quarantaine,
-    // média FAILED. clamd injoignable = erreur (retry BullMQ) — on ne publie pas sans scan.
-    // Une séquence a déjà été scannée frame par frame pendant son assemblage : le master
-    // qu'on tient ici est notre propre sortie, le scanner ne prouverait rien.
+        // Opt-in antivirus scan (37.E): infected file → object moved to quarantine, media FAILED. clamd unreachable = error (BullMQ retry) — we do not publish without a scan.
+        // A sequence has already been scanned frame by frame during its assembly: the master we hold here is our own output, the scanner would prove nothing.
     if (isClamavEnabled() && !sourceGone && !sequence) {
       const scan = await scanFile(src);
-      // Un média non scanné ne doit pas se faire passer pour un média scanné et sain :
-      // la marque est portée par le média lui-même, pas par l'existence d'un job.
+            // An unscanned media must not pass itself off as a scanned and clean one: the mark is carried by the media itself, not by the existence of a job.
       if (scan.clean) {
         scannedAt = new Date().toISOString();
         metadata.scannedAt = scannedAt;
@@ -845,25 +808,21 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
     }
 
     if (kind === 'scan') {
-      // Antivirus seul (37.E) : le préambule ci-dessus a déjà scanné/quarantainé.
+            // Antivirus alone (37.E): the preamble above has already scanned/quarantined.
       report('scan', { fraction: 1 });
-      // Ce média est READY et téléchargeable DEPUIS la finalisation : c'est le seul chemin
-      // où le scan ne conditionne rien. Sans trace écrite, un GLB ou un splat jamais scanné
-      // (clamd redémarré pendant la fenêtre de dépôt) est indiscernable d'un média scanné et
-      // sain — pour l'exploitant comme pour la requête SQL. On écrit donc le verdict, et on
-      // efface l'échec d'une tentative précédente que celle-ci vient de rattraper. Rien à
-      // écrire si l'antivirus a été coupé entre l'enfilement et le traitement : ce média
-      // n'est pas scanné, et le prétendre serait pire que le silence.
+            // This media is READY and downloadable SINCE finalization: this is the only path where the scan conditions nothing. Without a written trace, a GLB or a splat never
+            // scanned (clamd restarted during the upload window) is indistinguishable from a scanned and clean media — for the operator as for the SQL query. We therefore write the
+            // verdict, and clear the failure of a previous attempt that this one has just caught up with. Nothing to write if the antivirus was switched off between enqueuing and
+            // processing: this media is not scanned, and claiming otherwise would be worse than silence.
       if (scannedAt) await recordScanOutcome(mediaId, { scannedAt });
       return;
     }
 
     if (kind === 'convert3d') {
       report('convert');
-      // Conversion → GLB pour le viewer Three.js (corrige l'erreur DataView sur FBX/OBJ bruts)
+            // Conversion → GLB for the Three.js viewer (fixes the DataView error on raw FBX/OBJ)
       const glbPath = join(dir, 'model.glb');
-      // Recomposition USD demandée par l'utilisateur (45.E) : elle vit dans les métadonnées, donc
-      // elle survit aux retries BullMQ et aux `reprocess` ultérieurs.
+            // USD recomposition requested by the user (45.E): it lives in the metadata, so it survives BullMQ retries and later `reprocess` runs.
       const request = (metadata.usdRequest as UsdRequest | undefined) ?? DEFAULT_USD_REQUEST;
       const result = await convertToGlb(src, glbPath, ext, {
         archiveName: media.originalName,
@@ -872,8 +831,8 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       const glbKey = `derived/${mediaId}/model.glb`;
       await storage.uploadFile(glbKey, glbPath, 'model/gltf-binary');
       metadata.glbKey = glbKey;
-      // Provenance de conversion (39.A, étendue 45.C) : format source, convertisseur, et pour
-      // l'USD la description de scène (couche racine, variantes, assets manquants).
+      // Conversion provenance (39.A, extended 45.C): source format, converter and, for
+      // USD, the scene description (root layer, variants, missing assets).
       metadata.model = {
         sourceFormat: sourceFormatLabel(ext),
         converter: result.converter,
@@ -887,20 +846,20 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         data: { status: MediaStatus.READY, metadata: metadata as Prisma.InputJsonObject },
       });
     } else if (kind === 'transcode') {
-      // Sonde + proxy + miniature pour la vidéo.
+      // Probe + proxy + thumbnail for the video.
       //
-      // La sonde dépose désormais **deux** formes de la cadence : `fps`, arrondi au centième
-      // (valeur historique, relue par tout ce qui existe déjà), et `fpsNum`/`fpsDen`, la
-      // fraction exacte du conteneur. 23.98 dérive d'une frame entière au bout de quatre
-      // minutes ; 24000/1001 ne dérive jamais. Les médias déjà en base gardent leur seul
-      // `fps` : le lecteur sait en retrouver la cadence de diffusion (cf. `frameRate.ts`).
+      // The probe now records **two** forms of the frame rate: `fps`, rounded to the hundredth
+      // (historical value, still read by everything that already exists), and `fpsNum`/`fpsDen`, the
+      // exact fraction of the container. 23.98 drifts by a whole frame after four
+      // minutes; 24000/1001 never drifts. Media already in the database keep their only
+      // `fps`: the player can recover the broadcast rate from it (see `frameRate.ts`).
       report('probe');
       Object.assign(metadata, await probe(src));
       if (sequence) {
-        // La numérotation d'origine (1001 → 1200) est ce que l'artiste et le superviseur
-        // citent dans un retour : le lecteur doit la retrouver, pas la base de frames du
-        // projet. `metadata.sequence` décrit la livraison — motif, bornes, trous — pour
-        // que la review puisse dire d'où vient l'image qu'elle affiche.
+        // The original numbering (1001 → 1200) is what the artist and the supervisor
+        // cite in a review: the player must find it again, not the project's frame base.
+        // `metadata.sequence` describes the delivery — pattern, bounds, gaps — so that
+        // the review can say where the image it displays comes from.
         metadata.startFrame = sequence.startFrame;
         metadata.sequence = {
           pattern: sequence.pattern,
@@ -912,16 +871,14 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           framerate: sequence.framerate,
         };
       }
-      // Toutes les commandes de ce job sont bornées par la durée sondée du média : une
-      // passe qui la dépasse largement ne progresse plus, elle boucle.
+            // Every command of this job is bounded by the probed duration of the media: a pass that greatly exceeds it no longer progresses, it loops.
       const durationSec = typeof metadata.duration === 'number' ? metadata.duration : undefined;
       const timeoutMs = ffmpegTimeoutMs(durationSec);
-      // Masters de post-production (MXF, AVI, ProRes en MOV) : désentrelacement et downmix
-      // décidés ici, une fois, et appliqués identiquement au proxy et à l'échelle HLS.
+            // Post-production masters (MXF, AVI, ProRes in MOV): deinterlacing and downmix decided here, once, and applied identically to the proxy and to the HLS ladder.
       const traits = sourceTraits(metadata);
 
-      // Burn-ins configurables (35.A) : config effective du projet + contexte shot/version.
-      // Best effort — un échec de résolution ne condamne pas le transcodage.
+            // Configurable burn-ins (35.A): the project's effective configuration + shot/version context.
+            // Best effort — a resolution failure does not condemn the transcoding.
       const burnin = await loadBurninSetup(mediaId, media.versionId, media.originalName, dir).catch((err) => {
         logger.warn({ err }, `[ffmpeg.worker] burn-ins non résolus media=${mediaId}`);
         return null;
@@ -953,7 +910,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       metadata.proxyKey = proxyKey;
 
       const thumbPath = join(dir, 'thumb.jpg');
-      // Frame au centre de la vidéo (durée/2) — repli à 1 s si la durée est inconnue.
+            // Frame at the middle of the video (duration/2) — falls back to 1 s if the duration is unknown.
       const midSec =
         typeof metadata.duration === 'number' && metadata.duration > 0 ? metadata.duration / 2 : 1;
       report('thumbnail');
@@ -961,10 +918,9 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
       const thumbKey = StorageService.thumbnailKey(mediaId, 'jpg');
       await storage.uploadFile(thumbKey, thumbPath, 'image/jpeg');
 
-      // HLS adaptatif (Phase 23) : échelle multi-rendition + master, si activé et hauteur connue.
-      // Progressif (34.F) : le média passe READY dès la PREMIÈRE rendition (lecture possible
-      // pendant que les qualités supérieures se transcodent) ; chaque rendition met à jour
-      // metadata.hls (flag `building`) et publie un événement relayé en socket à la review.
+            // Adaptive HLS (Phase 23): multi-rendition ladder + master, if enabled and the height is known.
+            // Progressive (34.F): the media becomes READY as soon as the FIRST rendition is out (playback possible
+            // while the higher qualities transcode); each rendition updates metadata.hls (`building` flag) and publishes an event relayed over the socket to the review.
       const tcfg = await getTranscodeConfig();
       const srcHeight = typeof metadata.height === 'number' ? metadata.height : 0;
       const srcWidth = typeof metadata.width === 'number' ? metadata.width : 0;
@@ -1009,8 +965,7 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         metadata.hls = { renditions };
       }
 
-      // Slate + dérivé client (35.A, best effort) : slate d'identification concaténé en
-      // tête du proxy → `derived/{id}/client.mp4`, servi uniquement par les partages.
+            // Slate + client derivative (35.A, best effort): identification slate concatenated at the head of the proxy → `derived/{id}/client.mp4`, served only through shares.
       if (burnin?.slateInfo) {
         report('client');
         try {
@@ -1054,8 +1009,8 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         }
       }
 
-      // Scene detection (34.H, opt-in admin) : marqueurs auto « Plan n » aux coupes —
-      // best effort, après l'ouverture de la lecture (READY déjà posé par la 1re rendition).
+            // Scene detection (34.H, admin opt-in): automatic "Shot n" markers at the cuts —
+            // best effort, after playback has been opened (READY already set by the first rendition).
       if (tcfg.sceneDetection) {
         report('scenes');
         try {
@@ -1072,8 +1027,8 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         }
       }
 
-      // Sprite de timeline (vignette ~toutes les 3 s, un seul JPEG) — best effort :
-      // un échec de sprite ne condamne pas le transcodage.
+            // Timeline sprite (a thumbnail about every 3 s, a single JPEG) — best effort:
+            // a sprite failure does not condemn the transcoding.
       const plan = planTimelineSprite(
         typeof metadata.duration === 'number' ? metadata.duration : undefined,
         srcWidth,
@@ -1097,10 +1052,8 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
         }
       }
 
-      // Forme d'onde audio : une crête par barre (~8/s), rangée dans les métadonnées.
-      // Pas une image — quelques centaines d'octets, ni dérivé à stocker ni URL à
-      // présigner. Best effort : un média muet ou une piste illisible ne condamne pas le
-      // transcodage, le lecteur se contente alors de ne rien afficher sous la timeline.
+            // Audio waveform: one peak per bar (~8/s), stored in the metadata. Not an image — a few hundred bytes, neither a derivative to store nor a URL to presign. Best effort:
+            // a silent media or an unreadable track does not condemn the transcoding; the player then simply displays nothing under the timeline.
       const waveformBins = metadata.hasAudio === true ? planWaveformBins(durationSec) : null;
       if (waveformBins) {
         try {
@@ -1108,23 +1061,19 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
           await extractAudioPcm(src, pcmPath, { label: 'audio waveform', timeoutMs, durationSec });
           const waveform = await waveformFromPcmFile(pcmPath, waveformBins);
           if (waveform) metadata.waveform = waveform;
-          // Le PCM pèse deux octets par échantillon : rendu au disque sans attendre la
-          // purge du répertoire temporaire (une heure de son = 57 Mo).
+                    // PCM weighs two bytes per sample: released to disk without waiting for the temporary directory's purge (an hour of sound = 57 MB).
           await rm(pcmPath, { force: true });
         } catch (err) {
           logger.warn({ err }, `[ffmpeg.worker] forme d'onde audio échouée media=${mediaId}`);
         }
       }
 
-      // Tous les dérivés sont produits : la source originale ne sert plus — supprimée
-      // pour libérer l'espace (le flag est posé AVANT le delete : en cas d'échec du
-      // delete, seul l'espace n'est pas récupéré, les URLs pointent déjà le proxy).
-      //
-      // Séquence d'images : le flag dit « la clé source n'est plus ce qu'on sert » —
-      // `mediaSourceKey` renvoie donc le proxy, et la review, le partage client et l'A/B
-      // reçoivent une vidéo. Mais RIEN n'est supprimé : le manifeste et les frames
-      // d'origine restent sous leur préfixe, seuls livrables de référence, servis par
-      // `GET /api/media/sequence/:id/frames`.
+            // All the derivatives are produced: the original source is no longer used — deleted to free up space (the flag is set BEFORE the delete: if the delete fails,
+            // only the space is not recovered, the URLs already point to the proxy).
+            //
+            // Image sequence: the flag says "the source key is no longer what we serve" — `mediaSourceKey` therefore returns the proxy, and the review, the client share and A/B
+            // receive a video. But NOTHING is deleted: the manifest and the original frames stay under their prefix, the only reference deliverables, served by
+            // `GET /api/media/sequence/:id/frames`.
       metadata.sourceDeleted = true;
       await prisma.mediaObject.update({
         where: { id: mediaId },
@@ -1141,18 +1090,16 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
             logger.warn({ err }, `[ffmpeg.worker] suppression source échouée media=${mediaId}`),
           );
     } else if (kind === 'thumbnail') {
-      // Image : sonde dimensions + miniature (+ proxy web si le navigateur ne sait pas lire).
+            // Image: probes dimensions + thumbnail (+ web proxy if the browser cannot read it).
       report('probe');
       Object.assign(metadata, await probe(src));
-      // Une image fixe n'a pas de durée : le forfait de `ffmpegTimeoutMs` s'applique.
+            // A still image has no duration: the flat rate of `ffmpegTimeoutMs` applies.
       const imageTimeoutMs = ffmpegTimeoutMs();
       const decodeOptions = imageDecodeInputOptions(ext);
 
-      // Proxy web AVANT la miniature : c'est lui qui rend l'image consultable. Produit en
-      // premier, un échec de vignette (rare) laisse au moins la review fonctionnelle.
-      // (La progression reste sur l'étape « probe » : le barème du job `thumbnail`
-      // — lib/mediaProgress — n'a pas de plage `proxy`, et en inventer une ici ferait
-      // reculer le pourcentage à 0.)
+            // Web proxy BEFORE the thumbnail: it is what makes the image viewable. Produced first, a thumbnail failure (rare) at least leaves the review functional.
+            // (Progress stays on the "probe" step: the scale of the `thumbnail` job — lib/mediaProgress — has no `proxy` range, and inventing one here would make the
+            // percentage go back to 0.)
       if (needsWebProxy(ext)) {
         const proxyPath = join(dir, 'proxy.jpg');
         await makeWebProxy(
@@ -1198,24 +1145,18 @@ async function handle(mediaId: number, kind: MediaJobData['kind'], report: Progr
 }
 
 /**
- * Écrit sur le média ce que l'antivirus a donné — verdict OU échec (37.E, A4-04).
+ * Writes to the media what the antivirus gave — verdict OR failure (37.E, A4-04).
  *
- * Un job `scan` est le seul dont l'échec ne change rien au média : il porte sur un fichier
- * déjà READY et déjà téléchargeable (GLB, splats — `jobKindFor` ne leur donne pas de job de
- * traitement). Jusqu'ici, un scan qui mourait — clamd redémarré pour une mise à jour de base
- * virale, une à deux minutes d'indisponibilité — épuisait ses trois tentatives en une
- * trentaine de secondes et disparaissait sans laisser une ligne : ni statut, ni métadonnée,
- * ni audit. L'exploitant croyait son instance couverte, et rien ne distinguait le fichier
- * jamais scanné du fichier scanné et sain.
+ * A `scan` job is the only one whose failure changes nothing for the media: it concerns a file already READY and already downloadable (GLB, splats — `jobKindFor` gives
+ * them no processing job). Until now, a scan that died — clamd restarted for a viral database update, one to two minutes of unavailability — exhausted its three attempts in
+ * some thirty seconds and vanished without leaving a line: no status, no metadata, no audit. The operator believed their instance covered, and nothing distinguished the
+ * never-scanned file from the scanned and clean one.
  *
- * On écrit donc les deux faces, et on les écrit à CHAQUE tentative plutôt qu'à la dernière :
- * compter les tentatives suppose de savoir si `attemptsMade` est déjà incrémenté quand le
- * gestionnaire tourne, ce qui dépend de la version de BullMQ. Une marque d'échec posée trop
- * tôt est effacée par la tentative qui réussit — l'inverse (ne jamais rien écrire) est le
- * défaut que l'on corrige.
+ * We therefore write both faces, and write them at EACH attempt rather than at the last: counting attempts presupposes knowing whether `attemptsMade` is already incremented
+ * when the handler runs, which depends on the BullMQ version. A failure mark set too early is erased by the attempt that succeeds — the opposite (never writing anything) is the
+ * defect we are correcting.
  *
- * La relecture des métadonnées est volontaire : le job a pu démarrer bien avant, et écraser
- * ici l'état courant ferait disparaître des champs écrits entre-temps.
+ * The re-reading of the metadata is deliberate: the job may have started long before, and overwriting the current state here would make fields written in the meantime disappear.
  */
 async function recordScanOutcome(
   mediaId: number,
@@ -1239,15 +1180,14 @@ async function recordScanOutcome(
       data: { metadata: metadata as Prisma.InputJsonObject },
     });
   } catch (err) {
-    // Le marquage ne doit jamais masquer l'erreur d'origine, relancée par l'appelant.
+        // Marking must never mask the original error, which the caller re-throws.
     logger.warn({ err, mediaId }, '[ffmpeg.worker] verdict de scan non consigné');
   }
 }
 
 /**
- * Passe un média en échec **en conservant la raison** (45.C) : sans cela, la review n'affiche
- * qu'un statut `FAILED` muet — insuffisant pour l'USD, où l'échec vient le plus souvent de
- * quelque chose que l'utilisateur peut corriger (asset manquant dans le zip, outillage absent).
+ * Puts a media into failure **while keeping the reason** (45.C): without it, the review displays only a silent `FAILED` status — insufficient for USD, where the failure most often
+ * comes from something the user can correct (missing asset in the zip, absent tooling).
  */
 async function markFailed(mediaId: number, err: unknown): Promise<void> {
   const message = (err instanceof Error ? err.message : String(err)).trim().slice(0, 500);
@@ -1260,7 +1200,7 @@ async function markFailed(mediaId: number, err: unknown): Promise<void> {
       data: { status: MediaStatus.FAILED, metadata: metadata as Prisma.InputJsonObject },
     });
   } catch {
-    // La mise à jour de statut ne doit jamais masquer l'erreur d'origine (relancée par l'appelant).
+        // The status update must never mask the original error (re-thrown by the caller).
   }
 }
 
@@ -1271,10 +1211,8 @@ export const ffmpegWorker = new Worker<MediaJobData>(
       await handle(job.data.mediaObjectId, job.data.kind, progressReporter(job));
       await job.updateProgress(mediaJobProgress(job.data.kind, 'done')).catch(() => undefined);
     } catch (err) {
-      // Un scan en erreur (clamd injoignable) ne condamne pas le média — BullMQ retente,
-      // seule une détection met FAILED. Mais il laisse un média servi SANS avoir été
-      // scanné : il le dit désormais sur le média, faute de quoi l'absence de scan était
-      // indistinguable d'un scan propre (cf. `recordScanOutcome`).
+            // A scan in error (clamd unreachable) does not condemn the media — BullMQ retries; only a detection sets FAILED. But it leaves a media served WITHOUT having been
+            // scanned: it now says so on the media, failing which the absence of a scan was indistinguishable from a clean scan (see `recordScanOutcome`).
       if (job.data.kind === 'scan') {
         await recordScanOutcome(job.data.mediaObjectId, {
           failed: err instanceof Error ? err.message : String(err),
@@ -1296,40 +1234,32 @@ ffmpegWorker.on('failed', (job, err) =>
 );
 
 if (require.main === module) {
-  // Point de collecte AVANT les consommateurs : c'est le composant dont on a le plus besoin
-  // de savoir s'il tient, et un worker qui meurt au démarrage doit pouvoir être constaté.
-  // Le module enregistre lui-même son extinction, et un port déjà pris ne le fait pas tomber.
+    // The collection point BEFORE the consumers: it is the component whose holding up one most needs to know, and a worker that dies at startup must be detectable.
+    // The module registers its own shutdown, and a port already taken does not bring it down.
   startWorkerMetricsServer();
-  // Sans ce branchement, /metrics ne rend que l'état du process — jamais son travail.
-  // La file média porte l'essentiel du coût (transcodage, HLS, vignettes, conversions 3D) ;
-  // les six autres consommateurs démarrent via des fonctions qui ne rendent pas leur worker,
-  // les y brancher demande de changer leur signature (laissé à un lot dédié).
+    // Without this wiring, /metrics only renders the state of the process — never its work.
+    // The media queue carries most of the cost (transcoding, HLS, thumbnails, 3D conversions); the six other consumers start through functions that do not return their worker,
+    // wiring them in would require changing their signature (left to a dedicated batch).
   attachWorkerMetrics('media', ffmpegWorker);
-  // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
+    // The worker loop lives as long as the process: nothing to await here.
   void ffmpegWorker.run();
   registerWorkerShutdown('ffmpeg.worker', ffmpegWorker);
   logger.info('[ffmpeg.worker] démarré.');
-  // Même process worker : traite aussi la file de nettoyage storage (retry des orphelins)
-  // et la livraison des webhooks (36.D — les POST sortants ne partent pas du serveur web).
+    // Same worker process: also processes the storage cleanup queue (retry of orphans) and the delivery of webhooks (36.D — outgoing POSTs do not leave from the web server).
   startStorageCleanupWorker();
   startWebhookWorker();
-  // Export des montages automatiques (45) : même process, file dédiée à concurrence 1.
+    // Export of automatic timelines (45): same process, dedicated queue at concurrency 1.
   startTimelineExportWorker();
-  // Intégration ShotGrid (48) : événements, relevé périodique, réconciliation et
-  // écritures sortantes — avec rattrapage au démarrage après une coupure.
+    // ShotGrid integration (48): events, periodic polling, reconciliation and outgoing writes — with catch-up at startup after an outage.
   startShotgridWorker();
-  // Entretien périodique (digest, rapport hebdomadaire, purges) : planifié par l'API,
-  // exécuté ici — c'était trois `setInterval` du process web.
+    // Periodic maintenance (digest, weekly report, purges): scheduled by the API, executed here — it used to be three `setInterval`s of the web process.
   startMaintenanceWorker();
-  // Vignettes des médias spatiaux (3D, splat) : `MediaService.requestSpatialThumb` enfilait
-  // depuis trois endroits une file que personne ne consommait.
+    // Spatial media thumbnails (3D, splat): `MediaService.requestSpatialThumb` enqueued, from three places, a queue that nobody consumed.
   startSpatialThumbWorker();
-  // Cuisson des LUT OCIO : la route admin répondait `202 { queued: true }` sur une file
-  // sans consommateur, et le viewer retombait indéfiniment sur la LUT interne.
+    // OCIO LUT baking: the admin route answered `202 { queued: true }` on a queue without a consumer, and the viewer fell back indefinitely on the internal LUT.
   startOcioBakeWorker();
 
-  // Arrêt propre : les consommateurs de file d'abord (phase « cesser d'accepter »),
-  // puis les connexions Redis du canal d'événements et la base.
+    // Clean shutdown: the queue consumers first ("stop accepting" phase), then the Redis connections of the event channel and the database.
   registerShutdownTask({
     name: 'worker-events',
     phase: SHUTDOWN_PHASE.DISCONNECT,

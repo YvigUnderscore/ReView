@@ -13,7 +13,7 @@ import {
 } from './shotgridSettings';
 
 describe('parseSettings', () => {
-  it('complète un objet vide avec des réglages utilisables', () => {
+  it('fills an empty object with usable settings', () => {
     const s = parseSettings({});
     expect(s.lockLocalCreation).toBe(true);
     expect(s.eventMode).toBe('webhook');
@@ -25,26 +25,25 @@ describe('parseSettings', () => {
     expect(s.reconcile.onBoot).toBe(true);
   });
 
-  /**
-   * Une connexion enregistrée avant l'arrivée des vignettes ShotGrid n'a pas la clé :
-   * elle doit se lire avec le défaut, sans migration ni réglage à ressaisir.
-   */
-  it('donne les vignettes ShotGrid à une connexion antérieure au réglage', () => {
+    /**
+     * A connection saved before ShotGrid thumbnails arrived does not have the key: it must read with the default, without migration or a setting to re-enter.
+     */
+  it('gives ShotGrid thumbnails to a connection predating the setting', () => {
     const s = parseSettings({ media: { source: 'original', autoImport: false } });
     expect(s.media.thumbnails).toBe(true);
     expect(s.media.autoImport).toBe(false);
   });
 
-  it('ouvre la lecture et l’écriture par défaut, sauf statuts et comptes', () => {
+  it('opens reading and writing by default, except statuses and accounts', () => {
     const s = parseSettings({});
     expect(s.domains.tasks).toEqual({ read: true, write: true });
     expect(s.domains.versions).toEqual({ read: true, write: true });
-    // Les statuts sont un référentiel reçu, les comptes ne se créent jamais d'ici.
+        // Statuses are a reference received; accounts are never created from here.
     expect(s.domains.statuses.write).toBe(false);
     expect(s.domains.users.write).toBe(false);
   });
 
-  it('conserve les valeurs explicites', () => {
+  it('keeps the explicit values', () => {
     const s = parseSettings({
       lockLocalCreation: false,
       conflictPolicy: 'manual',
@@ -56,26 +55,25 @@ describe('parseSettings', () => {
     expect(s.domains.tasks.write).toBe(false);
     expect(s.media.source).toBe('original');
     expect(s.media.maxSizeMo).toBe(500);
-    // Les domaines non cités gardent leur défaut plutôt que de disparaître.
+        // Domains not mentioned keep their default rather than disappearing.
     expect(s.domains.versions.read).toBe(true);
   });
 
-  it('retombe sur les défauts devant une valeur corrompue plutôt que d’échouer', () => {
-    // Une connexion dont les réglages seraient illisibles doit rester exploitable :
-    // la synchronisation s'arrêterait sinon sur une erreur impossible à corriger via l'UI.
+  it('falls back to the defaults in front of a corrupt value rather than failing', () => {
+        // A connection whose settings would be unreadable must remain usable: otherwise the synchronization would stop on an error that cannot be fixed through the UI.
     expect(parseSettings({ eventMode: 'carrier-pigeon' }).eventMode).toBe('webhook');
     expect(parseSettings(null).lockLocalCreation).toBe(true);
     expect(parseSettings('cassé').conflictPolicy).toBe('sg_wins');
   });
 
-  it('borne les valeurs numériques dangereuses', () => {
+  it('bounds dangerous numeric values', () => {
     expect(parseSettings({ pollingIntervalSec: 1 }).pollingIntervalSec).toBe(60);
     expect(parseSettings({ pollingIntervalSec: 120 }).pollingIntervalSec).toBe(120);
   });
 });
 
 describe('can', () => {
-  it('répond selon la matrice du projet', () => {
+  it('answers according to the project matrix', () => {
     const s = parseSettings({ domains: { notes: { read: true, write: false } } });
     expect(can(s, 'notes', 'read')).toBe(true);
     expect(can(s, 'notes', 'write')).toBe(false);
@@ -84,26 +82,25 @@ describe('can', () => {
 });
 
 describe('assertSafeBaseUrl', () => {
-  it('accepte un site ShotGrid hébergé', () => {
+  it('accepts a hosted ShotGrid site', () => {
     expect(assertSafeBaseUrl('https://studio.shotgrid.autodesk.com')).toBe(
       'https://studio.shotgrid.autodesk.com',
     );
     expect(assertSafeBaseUrl('https://studio.shotgunstudio.com/')).toBe('https://studio.shotgunstudio.com');
   });
 
-  it('normalise en retirant chemin et paramètres', () => {
+  it('normalizes by removing path and parameters', () => {
     expect(assertSafeBaseUrl('https://studio.shotgrid.autodesk.com/page/projects?x=1')).toBe(
       'https://studio.shotgrid.autodesk.com',
     );
   });
 
-  it('refuse le HTTP en clair', () => {
+  it('refuses plaintext HTTP', () => {
     expect(() => assertSafeBaseUrl('http://studio.shotgrid.autodesk.com')).toThrow();
   });
 
-  it('refuse ce qui viserait le réseau interne', () => {
-    // Sans ce garde-fou, un administrateur pourrait faire interroger par le serveur
-    // des services que lui-même n'atteint pas (métadonnées cloud, administration).
+  it('refuses anything that would target the internal network', () => {
+        // Without this safeguard, an administrator could have the server query services that they themselves cannot reach (cloud metadata, administration).
     expect(() => assertSafeBaseUrl('https://localhost')).toThrow();
     expect(() => assertSafeBaseUrl('https://127.0.0.1')).toThrow();
     expect(() => assertSafeBaseUrl('https://10.0.0.5')).toThrow();
@@ -114,14 +111,14 @@ describe('assertSafeBaseUrl', () => {
     expect(() => assertSafeBaseUrl('https://minio.local')).toThrow();
   });
 
-  it('refuse une URL illisible', () => {
+  it('refuses an unreadable URL', () => {
     expect(() => assertSafeBaseUrl('pas une url')).toThrow();
     expect(() => assertSafeBaseUrl('')).toThrow();
   });
 });
 
 describe('liens profonds', () => {
-  it('pointe la fiche exacte de l’entité', () => {
+  it('points to the exact record of the entity', () => {
     expect(sgDeepLink('https://studio.shotgrid.autodesk.com', 'Shot', 2011)).toBe(
       'https://studio.shotgrid.autodesk.com/detail/Shot/2011',
     );
@@ -130,7 +127,7 @@ describe('liens profonds', () => {
     );
   });
 
-  it('ouvre un formulaire de création pré-rempli sur le bon projet', () => {
+  it('opens a creation form pre-filled on the right project', () => {
     expect(sgCreateLink('https://studio.shotgrid.autodesk.com', 'Shot', 70)).toBe(
       'https://studio.shotgrid.autodesk.com/new/Shot?project=70',
     );
@@ -138,26 +135,26 @@ describe('liens profonds', () => {
 });
 
 describe('readOnlySettings', () => {
-  it('ferme toutes les écritures d’une connexion neuve', () => {
+  it('closes all writes of a new connection', () => {
     const s = readOnlySettings();
     for (const domain of SG_DOMAINS) {
       expect(can(s, domain, 'write')).toBe(false);
     }
   });
 
-  it('laisse la lecture ouverte — c’est l’intérêt de relier', () => {
+  it('leaves reading open: that is the point of linking', () => {
     const s = readOnlySettings();
     expect(can(s, 'hierarchy', 'read')).toBe(true);
     expect(can(s, 'tasks', 'read')).toBe(true);
     expect(can(s, 'versions', 'read')).toBe(true);
   });
 
-  it('n’envoie rien vers ShotGrid à la publication', () => {
-    // Une première synchronisation ne doit rien créer sur un site de production.
+  it('sends nothing to ShotGrid on publication', () => {
+        // A first synchronization must create nothing on a production site.
     expect(readOnlySettings().push.publishMode).toBe('off');
   });
 
-  it('conserve les autres réglages du schéma', () => {
+  it('keeps the other settings of the schema', () => {
     const s = readOnlySettings();
     expect(s.lockLocalCreation).toBe(true);
     expect(s.conflictPolicy).toBe('sg_wins');
@@ -166,23 +163,22 @@ describe('readOnlySettings', () => {
 });
 
 /**
- * Statuts retenus par le projet : un réglage d'affichage, mais qui se perdrait aussi
- * facilement que les correspondances de statuts si le repli le jetait.
+ * Statuses retained by the project: a display setting, but one that would be as easily lost as the status matches if the fallback discarded it.
  */
 describe('visibleStatuses', () => {
-  it('vaut « tous » par défaut, périmètre par périmètre', () => {
+  it('is "all" by default, scope by scope', () => {
     const s = parseSettings({});
     expect(s.visibleStatuses).toEqual({ task: [], shot: [], sequence: [], asset: [] });
   });
 
-  it('garde les codes cochés et complète les périmètres absents', () => {
+  it('keeps the ticked codes and completes the absent scopes', () => {
     const s = parseSettings({ visibleStatuses: { shot: ['ip', 'fin'] } });
     expect(s.visibleStatuses.shot).toEqual(['ip', 'fin']);
     expect(s.visibleStatuses.task).toEqual([]);
   });
 
-  it('survit au repli de lecture seule quand une autre section est illisible', () => {
-    // Le repli ferme les écritures ; il ne doit pas effacer un tri que le studio a fait.
+  it('survives the read-only fallback when another section is unreadable', () => {
+        // The fallback closes the writes; it must not erase a sort the studio has made.
     const s = parseSettings({ eventMode: 'carrier-pigeon', visibleStatuses: { task: ['wtg'] } });
     expect(s.visibleStatuses.task).toEqual(['wtg']);
   });

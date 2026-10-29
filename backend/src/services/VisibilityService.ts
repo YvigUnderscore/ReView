@@ -16,19 +16,18 @@ import {
 } from '../lib/visibility';
 
 /**
- * Masquage d'éléments (admin).
+ * Hiding of items (admin).
  *
- * Le masquage est **matérialisé**, pas évalué à la lecture : chaque entité couverte porte
- * `hiddenAt`, et toutes les listes filtrent sur cette seule colonne. C'est la seule façon
- * de tenir la promesse « masqué partout, sans oubli » — une évaluation d'expression à
- * chaque requête ne se pousse pas en SQL, fausserait tous les décomptes paginés, et aurait
- * laissé passer les écrans qu'on aurait oublié de convertir.
+ * Hiding is **materialized**, not evaluated at read time: each covered entity carries `hiddenAt`, and every list filters
+ * on this single column. It is the only way to keep the promise "hidden everywhere, without omission": evaluating an
+ * expression on every query cannot be pushed down into SQL, would skew all paginated counts, and would have let through
+ * the screens that had been forgotten to convert.
  *
- * Le recalcul est donc le point de passage obligé. Il tourne au changement d'une règle et
- * après chaque import ShotGrid — c'est là que naissent les éléments qu'on veut masquer.
+ * Recalculation is therefore the mandatory checkpoint. It runs when a rule changes and after each ShotGrid import, which is
+ * where the items to hide come into being.
  */
 
-/** Les quatre tables qui portent un masquage, et le champ qui les identifie. */
+/** The four tables that carry hiding, and the field that identifies them. */
 const TABLES = {
   episode: 'episode',
   sequence: 'sequence',
@@ -46,7 +45,7 @@ export interface RuleInput {
   enabled?: boolean;
 }
 
-/** Résultat d'un recalcul : de quoi dire à l'admin ce que sa règle a fait. */
+/** Outcome of a recalculation: enough to tell the admin what their rule did. */
 export interface ApplyResult {
   hidden: number;
   revealed: number;
@@ -57,19 +56,19 @@ function assertShape(input: RuleInput): void {
     throw badRequest('Unknown entity type for a visibility rule', 'BAD_ENTITY_TYPE');
   if (!MATCH_TYPES.includes(input.matchType))
     throw badRequest('Unknown match type for a visibility rule', 'BAD_MATCH_TYPE');
-  // Compile pour rejeter tout de suite une expression invalide ou trop lente : c'est le
-  // seul instant où l'admin est là pour la corriger.
+    // Compiles to reject an invalid or too slow expression right away: this is the only moment the admin
+    // is there to fix it.
   compileRule({ ...input, ignoreCase: input.ignoreCase ?? true });
 }
 
-// ───────────────────────────── Règles ─────────────────────────────
+// ───────────────────────────── Rules ─────────────────────────────
 
 export async function listRules(studioId: number, projectId?: number | null): Promise<VisibilityRule[]> {
   return prisma.visibilityRule.findMany({
     where: {
       studioId,
-      // Une règle de studio vaut pour tous ses projets : la liste d'un projet montre donc
-      // les deux niveaux, sinon l'admin ne comprendrait pas pourquoi un plan reste masqué.
+            // A studio rule applies to all its projects: a project's list therefore shows both levels, otherwise
+            // the admin would not understand why a shot stays hidden.
       ...(projectId === undefined ? {} : { OR: [{ projectId: null }, { projectId }] }),
     },
     orderBy: [{ projectId: 'asc' }, { entityType: 'asc' }, { pattern: 'asc' }],
@@ -133,8 +132,8 @@ export async function deleteRule(studioId: number, id: number): Promise<ApplyRes
   const existing = await prisma.visibilityRule.findFirst({ where: { id, studioId } });
   if (!existing) throw notFound('Visibility rule not found');
   await prisma.visibilityRule.delete({ where: { id } });
-  // Le recalcul lève le masquage de ce que plus aucune règle ne revendique : c'est lui,
-  // et non la suppression, qui fait réapparaître les éléments.
+    // Recalculation lifts the hiding of whatever no rule claims any more: it is that, and not the deletion,
+    // that makes items reappear.
   return applyRules(studioId);
 }
 
@@ -144,13 +143,13 @@ async function assertProjectOfStudio(studioId: number, projectId: number): Promi
     throw badRequest('This project does not belong to this studio', 'BAD_PROJECT');
 }
 
-// ───────────────────────────── Masquage manuel ─────────────────────────────
+// ───────────────────────────── Manual hiding ─────────────────────────────
 
 /**
- * « Masque cet élément-ci ».
+ * "Hide this item".
  *
- * Sans règle : `hiddenRuleId` reste nul, et aucun recalcul ne lèvera ce masquage. C'est ce
- * qui distingue la décision d'un admin sur un élément précis de l'effet d'une convention.
+ * Without a rule: `hiddenRuleId` stays null, and no recalculation will lift this hiding. This is what distinguishes an
+ * admin's decision on a specific item from the effect of a convention.
  */
 export async function setHidden(
   type: VisibilityType,
@@ -165,14 +164,14 @@ export async function setHidden(
   await writeVisibility(type, [id], data);
 }
 
-/** Ce qu'une écriture de visibilité pose — les trois colonnes vont toujours ensemble. */
+/** What a visibility write sets: the three columns always travel together. */
 interface VisibilityPatch {
   hiddenAt: Date | null;
   hiddenReason: string | null;
   hiddenRuleId: number | null;
 }
 
-/** Écrit l'état de visibilité sur un lot d'entités d'un même type. */
+/** Writes the visibility state onto a batch of entities of the same type. */
 async function writeVisibility(
   type: Exclude<VisibilityType, 'all'>,
   ids: number[],
@@ -196,7 +195,7 @@ async function writeVisibility(
   }
 }
 
-// ───────────────────────────── Recalcul ─────────────────────────────
+// ───────────────────────────── Recalculation ─────────────────────────────
 
 interface Candidate {
   id: number;
@@ -206,19 +205,17 @@ interface Candidate {
 }
 
 /**
- * Les lignes susceptibles de changer d'état : les visibles (candidates au masquage) et
- * celles qu'une règle tient (candidates à la levée). Ce qui est masqué à la main
- * (`hiddenAt` posé, `hiddenRuleId` nul) n'entre jamais dans le lot.
+ * The rows liable to change state: the visible ones (candidates for hiding) and those a rule holds (candidates for lifting).
+ * What is hidden by hand (`hiddenAt` set, `hiddenRuleId` null) never enters the batch.
  *
- * Les quatre délégués Prisma ont la même forme, mais aucun type commun ne les réunit : le
- * `switch` est le prix à payer pour rester typé de bout en bout. Un asset n'a pas de code —
- * son nom en tient lieu, comme partout ailleurs.
+ * The four Prisma delegates have the same shape, but no common type unites them: the `switch` is the price to pay for staying
+ * typed end to end. An asset has no code: its name takes its place, as everywhere else.
  */
 async function candidatesOf(projectId: number, type: Exclude<VisibilityType, 'all'>): Promise<Candidate[]> {
   const where = {
     projectId,
-    // Ce qui est en corbeille ne s'affiche déjà plus : le masquer ne changerait rien, et
-    // le relire à chaque passe coûterait sur les projets anciens.
+        // What is in the trash is already no longer displayed: hiding it would change nothing, and
+        // re-reading it on every pass would cost on old projects.
     deletedAt: null,
     OR: [{ hiddenAt: null }, { hiddenRuleId: { not: null } }],
   };
@@ -241,12 +238,12 @@ async function candidatesOf(projectId: number, type: Exclude<VisibilityType, 'al
 }
 
 /**
- * Rejoue les règles d'un studio (ou d'un seul projet) sur les quatre types d'entités.
+ * Replays a studio's rules (or those of a single project) across the four entity types.
  *
- * Deux invariants tiennent l'ensemble :
- *   - un élément masqué **à la main** (`hiddenRuleId` nul) n'est jamais touché ;
- *   - un élément masqué **par une règle** est démasqué dès que plus aucune règle ne le
- *     couvre — sinon supprimer une règle ne rendrait jamais ses éléments.
+ * Two invariants hold the whole together:
+ *   - an item hidden **by hand** (`hiddenRuleId` null) is never touched;
+ *   - an item hidden **by a rule** is unhidden as soon as no rule covers it any more: otherwise deleting a rule would never
+ *     restore its items.
  */
 export async function applyRules(studioId: number, projectId?: number): Promise<ApplyResult> {
   const rules = await prisma.visibilityRule.findMany({
@@ -264,7 +261,7 @@ export async function applyRules(studioId: number, projectId?: number): Promise<
   let hidden = 0;
   let revealed = 0;
   for (const project of projects) {
-    // Une règle de studio vaut partout ; une règle de projet ne vaut que chez elle.
+        // A studio rule applies everywhere; a project rule applies only in its own project.
     const scoped = rules.filter((r) => r.projectId === null || r.projectId === project.id);
     for (const type of Object.keys(TABLES) as Exclude<VisibilityType, 'all'>[]) {
       const applicable = scoped.filter((r) => coversType(r.entityType, type));
@@ -281,8 +278,8 @@ async function applyToType(
   type: Exclude<VisibilityType, 'all'>,
   rules: VisibilityRule[],
 ): Promise<ApplyResult> {
-  // Rien à masquer, mais peut-être à démasquer : les éléments qu'une règle disparue tient
-  // encore. Ne pas lire la table dans ce cas laisserait un masquage orphelin à vie.
+    // Nothing to hide, but perhaps something to unhide: the items a vanished rule still holds. Not reading the table in
+    // this case would leave an orphaned hiding for life.
   const compiled = rules.map((rule) => ({ id: rule.id, test: safeCompile(rule) }));
 
   const rows = await candidatesOf(projectId, type);
@@ -293,16 +290,16 @@ async function applyToType(
     const candidates = matchCandidates(row);
     const matching = compiled.find((rule) => candidates.some(rule.test));
     if (matching) {
-      // Déjà masqué par la même règle : ne rien réécrire, sinon chaque passe toucherait
-      // `updatedAt` et ferait croire à la synchronisation ShotGrid que ReView a bougé.
+            // Already hidden by the same rule: rewrite nothing, otherwise every pass would touch `updatedAt` and
+            // make ShotGrid synchronization believe ReView had changed.
       if (row.hiddenRuleId !== matching.id) toHide.set(row.id, matching.id);
     } else if (row.hiddenRuleId !== null) {
       toReveal.push(row.id);
     }
   }
 
-  // Groupé par règle : masquer deux mille plans un par un tenait la base occupée le temps
-  // qu'un import ShotGrid entier se termine.
+    // Grouped by rule: hiding two thousand shots one by one kept the database busy until an entire ShotGrid
+    // import finished.
   const byRule = new Map<number, number[]>();
   for (const [id, ruleId] of toHide) byRule.set(ruleId, [...(byRule.get(ruleId) ?? []), id]);
   const now = new Date();
@@ -314,11 +311,10 @@ async function applyToType(
 }
 
 /**
- * Compile une règle déjà enregistrée sans faire échouer le lot.
+ * Compiles an already registered rule without failing the batch.
  *
- * Une règle est validée à l'écriture, mais rien ne garantit qu'elle le reste : une base
- * restaurée, une écriture directe, un changement de moteur. Une seule règle illisible ne
- * doit pas empêcher les autres de s'appliquer — elle est signalée et ne masque rien.
+ * A rule is validated on write, but nothing guarantees it stays valid: a restored database, a direct write, a change of engine.
+ * A single unreadable rule must not prevent the others from applying: it is flagged and hides nothing.
  */
 function safeCompile(rule: VisibilityRule): (candidate: string) => boolean {
   try {
@@ -333,19 +329,19 @@ function safeCompile(rule: VisibilityRule): (candidate: string) => boolean {
   }
 }
 
-// ───────────────────────────── Lecture ─────────────────────────────
+// ───────────────────────────── Read ─────────────────────────────
 
 /**
- * Le filtre à poser sur toute liste d'entités de pipeline.
+ * The filter to apply to every list of pipeline entities.
  *
- * Un admin voit ce qu'il a masqué — sinon il n'aurait aucun moyen de le démasquer, et le
- * geste serait sans retour. Tout le monde d'autre ne le voit nulle part.
+ * An admin sees what they have hidden: otherwise they would have no way to unhide it, and the gesture would have no feedback.
+ * Everyone else sees it nowhere.
  */
 export function visibleWhere(includeHidden: boolean): { hiddenAt?: null } {
   return includeHidden ? {} : { hiddenAt: null };
 }
 
-/** Même filtre, pour une relation imbriquée (`sequence: { ... }`). */
+/** Same filter, for a nested relation (`sequence: { ... }`). */
 export function visibleNested(includeHidden: boolean): Prisma.SequenceWhereInput {
   return includeHidden ? {} : { hiddenAt: null };
 }

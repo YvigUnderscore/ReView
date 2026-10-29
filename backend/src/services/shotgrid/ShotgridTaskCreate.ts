@@ -9,21 +9,17 @@ import type { ShotgridWriter } from './ShotgridWriter';
 import type { ShotgridClient } from './ShotgridClient';
 
 /**
- * Une tâche née dans ReView remonte sur le site (Phase 50).
+ * A task created in ReView goes up to the site (Phase 50).
  *
- * Une tâche créée depuis un retour de review n'existait QUE chez nous : elle n'apparaissait
- * ni dans la production du studio, ni dans le My Tasks de l'artiste côté site, et la
- * réconciliation ne pouvait pas la reprendre — faute de lien, `pullTasks` ne la voyait
- * jamais et la corbeille distante ne l'atteignait pas davantage.
+ * A task created from a review note existed ONLY on our side: it appeared neither in the studio's production nor in the artist's My Tasks on the site side, and
+ * reconciliation could not take it back — for lack of a link, `pullTasks` never saw it and the remote trash did not reach it either.
  *
- * `ShotgridSteps.createTaskFromStep` écrit d'abord sur le site puis ici, parce que c'est
- * l'utilisateur qui attend derrière un formulaire. Ici, c'est l'inverse : la tâche locale
- * existe déjà — un retour de review ne peut pas dépendre de la joignabilité du site — et
- * l'écriture distante passe par la file, comme tous les autres `push`. Le lien est posé au
- * retour du site ; tant qu'il manque, la tâche est simplement une tâche locale de plus.
+ * `ShotgridSteps.createTaskFromStep` writes to the site first and then here, because the user waits behind a form. Here, it is the reverse: the local task already
+ * exists — a review note cannot depend on the site being reachable — and the remote write goes through the queue, like all other `push`es. The link is set on the site's
+ * return; until it is, the task is simply one more local task.
  */
 
-/** Ce qu'il faut pour écrire : la connexion, le writer, et au nom de qui l'on écrit. */
+/** What is needed to write: the connection, the writer, and in whose name we write. */
 export interface TaskCreateContext {
   connectionId: number;
   client: ShotgridClient;
@@ -32,11 +28,10 @@ export interface TaskCreateContext {
 }
 
 /**
- * Crée sur le site la Task locale `taskId`, et la relie.
+ * Creates on the site the local Task `taskId`, and links it.
  *
- * Idempotent : un job rejoué sur une tâche déjà reliée ne crée pas de doublon. Rien ne
- * lève — une écriture ShotGrid en échec ne doit pas défaire une action locale déjà
- * acquise ; le journal en garde la trace.
+ * Idempotent: a job replayed on an already linked task creates no duplicate. Nothing throws — a failed ShotGrid write must not undo a local action already acquired;
+ * the journal keeps the trace of it.
  */
 export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): Promise<void> {
   const existing = await findByLocal(ctx.connectionId, 'task', taskId);
@@ -53,8 +48,7 @@ export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): 
   if (!parentId) return;
   const parent = await findByLocal(ctx.connectionId, parentKind, parentId);
   if (!parent) {
-    // Le plan ou l'asset porteur n'existe pas sur le site : il n'y a rien à quoi accrocher
-    // la tâche. C'est le cas d'un projet mi-ShotGrid mi-local, et ce n'est pas une panne.
+        // The carrying shot or asset does not exist on the site: there is nothing to hang the task on. This is the case of a project half on ShotGrid, half local, and it is not an outage.
     logger.info({ taskId, parentKind, parentId }, 'Task non poussée : parent absent du site');
     return;
   }
@@ -80,8 +74,7 @@ export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): 
     sgType: 'Task',
     sgId: created.id,
     data: {
-      // Le lien décrit le côté distant : le nom d'étape tel que le site l'écrit, et non la
-      // clé normalisée du département local (même forme que `createTaskFromStep`).
+            // The link describes the remote side: the step name as the site writes it, not the normalized key of the local department (same shape as `createTaskFromStep`).
       stepName: step?.name ?? null,
       sgAssignees: [],
       sgStatusCode: null,
@@ -92,13 +85,11 @@ export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): 
 }
 
 /**
- * L'étape distante à donner à la tâche : celle qu'emploient déjà ses voisines.
+ * The remote step to give the task: the one its neighbours already use.
  *
- * Le catalogue `Step` d'un site accumule les homonymes — ArtFX en a deux nommées
- * « modeling », et seule l'une des deux est celle du projet. On ne devine donc pas : on lit
- * l'étape d'une tâche voisine du MÊME parent et du même département, déjà reliée au site.
- * Sans voisine reliée, la tâche part sans étape plutôt qu'avec la mauvaise — la
- * réconciliation la rangera quand un humain l'aura placée.
+ * A site's `Step` catalogue accumulates homonyms — ArtFX has two named "modeling", and only one of them is the project's. So we do not guess: we read the step of a
+ * neighbouring task of the SAME parent and the same department, already linked to the site. Without a linked neighbour, the task goes out without a step rather than with the
+ * wrong one — reconciliation will file it once a human has placed it.
  */
 async function resolveStep(
   ctx: TaskCreateContext,

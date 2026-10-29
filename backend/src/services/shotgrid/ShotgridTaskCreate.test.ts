@@ -19,7 +19,7 @@ vi.mock('./shotgridLinks', () => ({
 
 import { pushTaskCreation } from './ShotgridTaskCreate';
 
-/** Le writer et le client, réduits à ce que cette écriture-là leur demande. */
+/** The writer and the client, reduced to what that write asks of them. */
 function context() {
   const create = vi.fn(async () => ({ id: 909, type: 'Task' }));
   const findById = vi.fn(async () => null as Record<string, unknown> | null);
@@ -50,7 +50,7 @@ beforeEach(() => {
 });
 
 describe('pushTaskCreation (Phase 50)', () => {
-  it('crée la Task sur le site, la rattache au parent distant et pose le lien', async () => {
+  it('creates the Task on the site, attaches it to the remote parent and sets the link', async () => {
     const { ctx, create } = context();
     links.findByLocal.mockImplementation(async (_c: number, type: string) =>
       type === 'shot' ? { sgType: 'Shot', sgId: 300 } : null,
@@ -66,8 +66,8 @@ describe('pushTaskCreation (Phase 50)', () => {
     );
   });
 
-  /** Le job peut être rejoué : une tâche déjà reliée ne doit pas produire de doublon. */
-  it('ne fait rien si la tâche est déjà reliée', async () => {
+    /** The job may be replayed: an already linked task must not produce a duplicate. */
+  it('does nothing if the task is already linked', async () => {
     const { ctx, create } = context();
     links.findByLocal.mockImplementation(async (_c: number, type: string) =>
       type === 'task' ? { sgType: 'Task', sgId: 909 } : { sgType: 'Shot', sgId: 300 },
@@ -76,18 +76,18 @@ describe('pushTaskCreation (Phase 50)', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('ne crée rien quand le plan porteur n’existe pas sur le site', async () => {
+  it('creates nothing when the carrying shot does not exist on the site', async () => {
     const { ctx, create } = context();
     await pushTaskCreation(ctx, 50);
     expect(create).not.toHaveBeenCalled();
     expect(links.upsertLink).not.toHaveBeenCalled();
   });
 
-  /**
-   * Le catalogue `Step` d'un site accumule les homonymes : l'étape se lit sur une tâche
-   * voisine déjà reliée, jamais devinée par son nom.
-   */
-  it('reprend l’étape d’une tâche voisine du même département', async () => {
+    /**
+     * The `Step` catalogue of a site accumulates homonyms: the step is read from a neighbouring
+     * task already linked, never guessed from its name.
+     */
+  it('takes over the step of a neighbouring task in the same department', async () => {
     const { ctx, create, findById } = context();
     task.findUnique.mockResolvedValue({
       id: 50,
@@ -119,7 +119,7 @@ describe('pushTaskCreation (Phase 50)', () => {
     );
   });
 
-  it('part sans étape plutôt qu’avec la mauvaise quand aucune voisine n’est reliée', async () => {
+  it('goes out without a step rather than with the wrong one when no neighbour is linked', async () => {
     const { ctx, create } = context();
     task.findUnique.mockResolvedValue({
       id: 50,

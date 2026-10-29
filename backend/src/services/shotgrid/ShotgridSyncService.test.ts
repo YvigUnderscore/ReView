@@ -5,12 +5,10 @@ import { describe, it, expect } from 'vitest';
 import { mergeSyncOptions } from './ShotgridSyncService';
 
 /**
- * Fusion des demandes de synchronisation arrivées pendant qu'une passe tournait.
+ * Merging of synchronization requests that arrived while a pass was running.
  *
- * Ces demandes étaient purement jetées, et déclarées réussies : sur un site où chaque
- * webhook devient un job, la moitié des changements de statut simultanés ne remontait
- * jamais. La règle de fusion est donc conservatrice — on peut rattraper trop, jamais
- * trop peu.
+ * These requests were simply dropped, and declared successful: on a site where each webhook becomes a job, half of the simultaneous status changes never came back up.
+ * The merge rule is therefore conservative — one may over-catch, never under-catch.
  */
 describe('mergeSyncOptions', () => {
   const targeted = (sgId: number) => ({
@@ -18,7 +16,7 @@ describe('mergeSyncOptions', () => {
     onlySgIds: [{ sgType: 'Shot', sgId }],
   });
 
-  it('additionne deux demandes ciblées', () => {
+  it('adds up two targeted requests', () => {
     const merged = mergeSyncOptions(targeted(1), targeted(2));
     expect(merged.onlySgIds).toEqual([
       { sgType: 'Shot', sgId: 1 },
@@ -26,41 +24,40 @@ describe('mergeSyncOptions', () => {
     ]);
   });
 
-  it('ne duplique pas une entité demandée deux fois', () => {
+  it('does not duplicate an entity requested twice', () => {
     expect(mergeSyncOptions(targeted(1), targeted(1)).onlySgIds).toHaveLength(1);
   });
 
-  it('élargit à tout le projet dès qu’une demande est globale', () => {
-    // Une passe complète absorbe les demandes ciblées : elle les couvre toutes.
+  it('widens to the whole project as soon as one request is global', () => {
+        // A full pass absorbs the targeted requests: it covers them all.
     expect(mergeSyncOptions(targeted(1), { kind: 'incremental' }).onlySgIds).toBeUndefined();
     expect(mergeSyncOptions({ kind: 'incremental' }, targeted(1)).onlySgIds).toBeUndefined();
   });
 
-  it('garde le mode complet s’il est demandé par l’une des deux', () => {
+  it('keeps the full mode if either of the two requests it', () => {
     expect(mergeSyncOptions({ kind: 'incremental' }, { kind: 'full' }).kind).toBe('full');
     expect(mergeSyncOptions({ kind: 'full' }, { kind: 'incremental' }).kind).toBe('full');
   });
 
-  it('retient la fenêtre la plus large', () => {
+  it('keeps the widest window', () => {
     const vieux = new Date('2026-08-01T00:00:00Z');
     const recent = new Date('2026-08-19T00:00:00Z');
     expect(mergeSyncOptions({ since: recent }, { since: vieux }).since).toEqual(vieux);
-    // Une demande sans fenêtre porte sur tout : elle ne doit pas être bornée.
+        // A request without a window concerns everything: it must not be bounded.
     expect(mergeSyncOptions({ since: recent }, {}).since).toBeNull();
   });
 
-  it('conserve le média dès qu’une des deux le demande', () => {
+  it('keeps the media as soon as either of the two asks for it', () => {
     expect(mergeSyncOptions({ withMedia: false }, { withMedia: true }).withMedia).toBe(true);
   });
 
-  it('unit les passes de deux demandes ciblées', () => {
-    // Une note et une version arrivées coup sur coup doivent être relues toutes les
-    // deux : ne garder que la dernière perdrait l'autre en silence.
+  it('unites the passes of two targeted requests', () => {
+        // A note and a version arriving one after the other must both be re-read: keeping only the last would silently lose the other.
     const merged = mergeSyncOptions({ passes: ['notes'] }, { passes: ['versions'] });
     expect(merged.passes).toEqual(['versions', 'notes']);
   });
 
-  it('élargit à toutes les passes dès qu’une demande n’en nomme aucune', () => {
+  it('widens to all passes as soon as one request names none', () => {
     expect(mergeSyncOptions({ passes: ['notes'] }, {}).passes).toBeUndefined();
     expect(mergeSyncOptions({}, { passes: ['notes'] }).passes).toBeUndefined();
   });

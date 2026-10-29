@@ -8,34 +8,28 @@ import { asString } from './shotgridMapper';
 import type { PullContext } from './ShotgridPullService';
 
 /**
- * Vignettes ShotGrid des séquences, plans et assets.
+ * ShotGrid thumbnails of sequences, shots and assets.
  *
- * Le champ `image` d'une entité ShotGrid est l'image que la production a choisie et
- * reconnaît : elle illustre le plan dans toutes les listes du site. ReView savait déjà
- * porter une vignette d'entité (`thumbnailKey`, déposée à la main), mais la
- * synchronisation ne demandait jamais le champ — les cartes restaient vides jusqu'à ce
- * qu'un média publié finisse par en fournir une, ou pour toujours sur un plan sans média.
+ * The `image` field of a ShotGrid entity is the picture the production chose and recognizes: it illustrates the shot in every list of the site. ReView already knew how to
+ * carry an entity thumbnail (`thumbnailKey`, dropped by hand), but the synchronization never asked for the field — the cards stayed empty until a published media eventually
+ * provided one, or forever on a shot without media.
  *
- * **L'image est recopiée, pas pointée.** ShotGrid ne sert pas une adresse stable : le
- * champ rend une URL S3 signée qui expire en quinze minutes et change à chaque lecture.
- * L'afficher directement aurait produit des cartes cassées au bout d'un quart d'heure.
+ * **The image is copied, not pointed to.** ShotGrid does not serve a stable address: the field returns a signed S3 URL that expires in fifteen minutes and changes at every read.
+ * Displaying it directly would have produced broken cards after a quarter of an hour.
  *
- * **Ce qui sert de témoin de changement** est le chemin de cette URL, signature retirée :
- * `…/<empreinte du site>/<empreinte du contenu>/<nom>_t.jpg`. Il est adressé par contenu,
- * donc stable tant que la vignette ne change pas, et différent dès qu'elle change. Il est
- * conservé sur la correspondance (`sgThumbSrc`), ce qui rend la passe idempotente : une
- * réconciliation nocturne sur un projet inchangé ne télécharge rien du tout.
+ * **What serves as the change marker** is the path of this URL, signature removed: `…/<site fingerprint>/<content fingerprint>/<name>_t.jpg`. It is addressed by content,
+ * so it is stable as long as the thumbnail does not change, and different as soon as it does. It is kept on the match (`sgThumbSrc`), which makes the pass idempotent: a nightly
+ * reconciliation on an unchanged project downloads nothing at all.
  */
 
-/** Une vignette pèse quelques kilo-octets ; au-delà, ce n'en est pas une. */
+/** A thumbnail weighs a few kilobytes; beyond that, it is not one. */
 const MAX_BYTES = 10 * 1024 * 1024;
 
 /**
- * Types d'image acceptés, et l'extension sous laquelle ils sont rangés.
+ * Accepted image types, and the extension under which they are filed.
  *
- * La liste est fermée à dessein : le type vient de la réponse d'un service distant, et
- * la clé de stockage sert ensuite à signer une URL de lecture servie par l'application.
- * Un `image/svg+xml` ou un `text/html` n'ont rien à y faire.
+ * The list is closed on purpose: the type comes from the response of a remote service, and the storage key is then used to sign a read URL served by the application.
+ * An `image/svg+xml` or a `text/html` has no business there.
  */
 const EXTENSIONS: Record<string, { ext: string; contentType: string }> = {
   'image/jpeg': { ext: '.jpg', contentType: 'image/jpeg' },
@@ -45,11 +39,10 @@ const EXTENSIONS: Record<string, { ext: string; contentType: string }> = {
 };
 
 /**
- * Témoin de changement d'une vignette : l'adresse privée de sa signature.
+ * Change marker of a thumbnail: the private address of its signature.
  *
- * `null` veut dire « pas de vignette sur le site » — ce qui est une information, pas une
- * absence d'information : c'est ce qui permet de retirer chez nous celle qu'on y avait
- * posée quand la production l'enlève là-bas.
+ * `null` means "no thumbnail on the site" — which is information, not an absence of information: it is what allows us to remove on our side the one we had set when the
+ * production removes it over there.
  */
 export function thumbnailIdentity(value: unknown): string | null {
   const url = asString(value);
@@ -63,25 +56,23 @@ export interface ThumbnailSyncParams {
   localId: number;
   sgType: string;
   sgId: number;
-  /** Nom lisible de l'entité — n'apparaît que dans le journal. */
+    /** Readable name of the entity — appears only in the journal. */
   name: string;
-  /** Valeur brute du champ `image` telle que rendue par le site. */
+    /** Raw value of the `image` field as returned by the site. */
   image: unknown;
-  /** Témoin enregistré à la passe précédente, s'il y en a eu une. */
+    /** Marker recorded at the previous pass, if there was one. */
   previous: string | null | undefined;
-  /** Vignette actuellement portée par l'entité côté ReView. */
+    /** Thumbnail currently carried by the entity on the ReView side. */
   currentKey: string | null;
 }
 
 /**
- * Aligne la vignette d'une entité sur celle du site.
+ * Aligns an entity's thumbnail with that of the site.
  *
- * Rend le témoin à conserver sur la correspondance. **Toujours une valeur exploitable** :
- * un échec rend le témoin précédent plutôt que `null`, pour que la passe suivante
- * retente au lieu de considérer l'entité comme dépourvue de vignette.
+ * Returns the marker to keep on the match. **Always a usable value**: a failure returns the previous marker rather than `null`, so that the next pass retries instead of
+ * considering the entity as having no thumbnail.
  *
- * Une vignette manquante n'a jamais fait échouer un import : c'est un appauvrissement de
- * l'affichage, pas une perte de production.
+ * A missing thumbnail has never made an import fail: it is an impoverishment of the display, not a loss of production.
  */
 export async function syncThumbnail(ctx: PullContext, params: ThumbnailSyncParams): Promise<string | null> {
   const previous = params.previous ?? null;
@@ -89,22 +80,19 @@ export async function syncThumbnail(ctx: PullContext, params: ThumbnailSyncParam
 
   const identity = thumbnailIdentity(params.image);
 
-  /**
-   * Vignette déposée à la main dans ReView : on n'y touche pas.
-   *
-   * `thumbnailKey` n'est écrit que par le dépôt manuel (C3) — la miniature de repli d'une
-   * carte, elle, se calcule et ne s'enregistre pas. Une clé présente **sans témoin** ne
-   * peut donc venir que d'un humain qui a choisi cette image. La recouvrir de celle du
-   * site au premier passage aurait effacé sa décision sans conflit ni trace, et sur tout
-   * un projet d'un coup. Le site reprend la main dès que quelqu'un retire cette image ici.
-   */
+    /**
+     * Thumbnail placed by hand in ReView: we do not touch it.
+     *
+     * `thumbnailKey` is only written by the manual upload (C3) — the fallback thumbnail of a card, for its part, is computed and is not recorded. A key present **without a marker**
+     * can therefore only come from a human who chose this image. Covering it with the site's on the first pass would have erased their decision without conflict or trace, and across
+     * a whole project at once. The site takes over again as soon as someone removes this image here.
+     */
   if (params.currentKey && previous === null) return null;
 
   if (identity === null) {
-    /**
-     * Vignette retirée du site. On ne retire QUE celle qui venait de là — la garde
-     * ci-dessus a déjà écarté les autres.
-     */
+        /**
+         * Thumbnail removed from the site. We remove ONLY the one that came from there — the guard above has already set the others aside.
+         */
     if (previous && params.currentKey) {
       await storage.deleteObject(params.currentKey).catch(() => undefined);
       await EntityThumbnailService.set(params.holder, params.localId, null);
@@ -113,8 +101,7 @@ export async function syncThumbnail(ctx: PullContext, params: ThumbnailSyncParam
     return null;
   }
 
-  // Témoin identique ET image toujours en place : rien à faire, et surtout rien à
-  // télécharger. C'est le cas de la quasi-totalité des entités à chaque passe.
+    // Identical marker AND image still in place: nothing to do, and above all nothing to download. This is the case of almost all entities at every pass.
   if (identity === previous && params.currentKey) return previous;
 
   try {
@@ -142,7 +129,7 @@ export async function syncThumbnail(ctx: PullContext, params: ThumbnailSyncParam
   }
 }
 
-/** Téléchargement, contrôle du type, dépôt, enregistrement. `false` si rien n'est retenu. */
+/** Download, type check, deposit, recording. `false` if nothing is retained. */
 async function fetchAndStore(ctx: PullContext, params: ThumbnailSyncParams, url: string): Promise<boolean> {
   const { stream, size, type } = await ctx.client.openStream(url);
   if (size !== null && size > MAX_BYTES) {
@@ -154,7 +141,7 @@ async function fetchAndStore(ctx: PullContext, params: ThumbnailSyncParams, url:
   let total = 0;
   for await (const chunk of stream) {
     total += (chunk as Buffer).length;
-    // Le `content-length` peut mentir ou manquer : on recompte en lisant.
+        // The `content-length` may lie or be missing: we recount while reading.
     if (total > MAX_BYTES) {
       stream.destroy();
       return false;
@@ -168,11 +155,10 @@ async function fetchAndStore(ctx: PullContext, params: ThumbnailSyncParams, url:
 
   const key = StorageService.entityThumbnailKey(params.holder, params.localId, kind.ext);
   await storage.putObject(key, Buffer.concat(chunks), kind.contentType);
-  /**
-   * La clé ne dépend que de l'entité et de l'extension : remplacer un JPEG par un JPEG
-   * réécrit le même objet. Un changement d'extension, lui, laisserait l'ancien fichier
-   * dans le seau sans que plus rien ne le désigne.
-   */
+    /**
+     * The key depends only on the entity and the extension: replacing a JPEG with a JPEG rewrites the same object. A change of extension, on the other hand, would leave the old
+     * file in the bucket with nothing designating it any more.
+     */
   if (params.currentKey && params.currentKey !== key) {
     await storage.deleteObject(params.currentKey).catch(() => undefined);
   }

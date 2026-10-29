@@ -9,15 +9,15 @@ import { assertPublicHttpTarget } from '../lib/ssrfGuard';
 import { env } from '../config/env';
 
 /**
- * Web Push (42.B — №66) : abonnements par navigateur + envoi de notifications push.
- * Les clés VAPID viennent de l'env (prod) ou sont générées et persistées en base (dev).
- * `sendToUser` est fire-and-forget et purge les abonnements expirés (404/410).
+ * Web Push (42.B, issue #66): per-browser subscriptions and push notification delivery.
+ * VAPID keys come from the environment (prod) or are generated and persisted in the database (dev).
+ * `sendToUser` is fire-and-forget and purges expired subscriptions (404/410).
  *
- * L'endpoint d'abonnement est une URL choisie par le client : `web-push` y émettra un POST
- * depuis le réseau applicatif, où MinIO, Redis, Postgres et 169.254.169.254 répondent sans
- * authentification réseau. Il passe donc par la garde anti-SSRF — à l'enregistrement (refus
- * net, l'utilisateur en est informé) ET à l'envoi, parce que les lignes déjà en base sont
- * antérieures à ce contrôle et qu'un nom public peut se mettre à résoudre en interne.
+ * The subscription endpoint is a URL chosen by the client: `web-push` will POST to it from the
+ * application network, where MinIO, Redis, Postgres and 169.254.169.254 answer without network
+ * authentication. It therefore goes through the anti-SSRF guard, both at registration (hard refusal,
+ * the user is informed) AND at send time, because rows already stored predate this check and a
+ * public name may later resolve to an internal address.
  */
 export interface PushJson {
   endpoint: string;
@@ -49,7 +49,7 @@ async function configure(): Promise<boolean> {
   return true;
 }
 
-/** Configure web-push une seule fois (mémoïsé). */
+/** Configures web-push once (memoized). */
 function ensureConfigured(): Promise<boolean> {
   if (!ready)
     ready = configure().catch((err) => {
@@ -60,16 +60,16 @@ function ensureConfigured(): Promise<boolean> {
   return ready;
 }
 
-/** Clé publique VAPID (base64url) pour l'abonnement côté navigateur, ou null si indisponible. */
+/** Returns the VAPID public key (base64url) for browser subscription, or null if unavailable. */
 export async function getPublicKey(): Promise<string | null> {
   await ensureConfigured();
   return publicKey;
 }
 
 /**
- * L'endpoint désigne-t-il un service de push public ? Rend le motif de refus, ou `null`.
- * Le contrôle porte sur l'ADRESSE RÉSOLUE : `https://push.exemple.com` peut pointer sur
- * 127.0.0.1 tout comme `http://10.0.0.5/`.
+ * Tells whether the endpoint points to a public push service. Returns the refusal reason, or `null`.
+ * The check applies to the RESOLVED ADDRESS: `https://push.example.com` can point to
+ * 127.0.0.1 just as `http://10.0.0.5/` can.
  */
 async function refuseReason(endpoint: string): Promise<string | null> {
   const verdict = await assertPublicHttpTarget(endpoint);
@@ -95,15 +95,15 @@ export async function removeSubscription(endpoint: string, userId?: number): Pro
   });
 }
 
-/** Envoie une notification push à tous les appareils d'un utilisateur (sans bloquer). */
+/** Sends a push notification to all devices of a user (non-blocking). */
 export function sendToUser(userId: number, payload: { title: string; body: string; url?: string }): void {
   void (async () => {
     if (!(await ensureConfigured())) return;
     const subs = await prisma.pushSubscription.findMany({ where: { userId } });
     await Promise.all(
       subs.map(async (s) => {
-        // Second contrôle, à l'instant de l'envoi : la ligne peut dater d'avant la garde,
-        // ou le nom avoir changé de résolution depuis l'abonnement.
+        // Second check, at send time: the row may predate the guard, or the name may have
+        // resolved differently since the subscription was made.
         const reason = await refuseReason(s.endpoint);
         if (reason) {
           logger.warn({ subscriptionId: s.id, reason }, '[push] envoi refusé (cible non publique)');

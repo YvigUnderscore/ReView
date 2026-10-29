@@ -20,12 +20,11 @@ import {
 } from './shotgridSettings';
 
 /**
- * Configuration des sites ShotGrid et des connexions projet.
+ * Configuration of ShotGrid sites and project connections.
  *
- * Un site porte les identifiants (partagés par tous les projets du studio) ; une
- * connexion relie UN projet ReView à UN projet ShotGrid. Le nom du projet distant est
- * enregistré à la connexion et revérifié avant chaque synchronisation : c'est ce
- * contrôle qui empêche d'écrire dans le projet voisin si un identifiant change de main.
+ * A site holds the credentials (shared by all the studio's projects); a connection links ONE ReView project to ONE ShotGrid
+ * project. The remote project's name is recorded at connection time and rechecked before each synchronization: this check is
+ * what prevents writing into the neighbouring project if a credential changes hands.
  */
 
 export interface SiteInput {
@@ -38,7 +37,7 @@ export interface SiteInput {
   password?: string | null;
 }
 
-/** Vue d'un site sans aucun secret — c'est elle qui sort de l'API. */
+/** View of a site without any secret: this is what leaves the API. */
 export function siteView(site: ShotgridSite) {
   return {
     id: site.id,
@@ -91,7 +90,7 @@ export async function updateSite(id: number, input: Partial<SiteInput>) {
       ...(baseUrl !== undefined ? { baseUrl } : {}),
       ...(input.authMode !== undefined ? { authMode: input.authMode } : {}),
       ...(input.scriptName !== undefined ? { scriptName: input.scriptName } : {}),
-      // Une chaîne vide veut dire « efface » ; l'absence de champ veut dire « ne touche pas ».
+            // An empty string means "clear"; an absent field means "do not touch".
       ...(input.scriptKey !== undefined
         ? { scriptKey: input.scriptKey ? encryptSecret(input.scriptKey) : null }
         : {}),
@@ -121,7 +120,7 @@ function assertCredentials(input: Partial<SiteInput>) {
     throw badRequest('The legacy ShotGrid login and password are required');
 }
 
-/** Client prêt à l'emploi pour un site (secrets déchiffrés au dernier moment). */
+/** Ready-to-use client for a site (secrets decrypted at the last moment). */
 export async function clientForSite(siteId: number): Promise<ShotgridClient> {
   const site = await prisma.shotgridSite.findUnique({ where: { id: siteId } });
   if (!site) throw notFound('ShotGrid site not found');
@@ -139,7 +138,7 @@ export function clientForSiteRecord(site: ShotgridSite): ShotgridClient {
   });
 }
 
-/** Test de connexion : authentification réelle + nombre de projets visibles. */
+/** Connection test: real authentication + number of visible projects. */
 export async function testSite(siteId: number) {
   const client = await clientForSite(siteId);
   const info = await client.serverInfo();
@@ -155,7 +154,7 @@ export async function testSite(siteId: number) {
   };
 }
 
-/** Projets du site, pour que l'utilisateur choisisse le bon par son nom. */
+/** Projects of the site, so the user can choose the right one by its name. */
 export async function listRemoteProjects(siteId: number, query?: string) {
   const client = await clientForSite(siteId);
   const projects = await client.search('Project', {
@@ -177,20 +176,18 @@ export async function listRemoteProjects(siteId: number, query?: string) {
 export interface ConnectionInput {
   siteId: number;
   sgProjectId: number;
-  /**
-   * Nom attendu du projet ShotGrid. Fourni par le client (celui qu'a vu l'utilisateur)
-   * et confronté au nom réel avant l'enregistrement : si les deux divergent, l'écran
-   * affichait autre chose que ce que l'identifiant désigne, et on refuse.
-   */
+    /**
+     * Expected name of the ShotGrid project. Supplied by the client (the one the user saw) and checked against the real name before
+     * recording: if the two diverge, the screen showed something other than what the credential designates, and we refuse.
+     */
   sgProjectName: string;
 }
 
 /**
- * Relie un projet ReView à un projet ShotGrid.
+ * Links a ReView project to a ShotGrid project.
  *
- * La double vérification (identifiant ET nom) n'est pas de la ceinture-bretelles
- * gratuite : c'est le seul moment où un humain confirme la cible, et tout le reste
- * de l'intégration écrira dans ce projet sans lui redemander.
+ * The double check (identifier AND name) is not free belt-and-braces: it is the only moment a human confirms the target, and
+ * everything else in the integration will write to that project without asking again.
  */
 export async function createConnection(projectId: number, input: ConnectionInput) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
@@ -202,7 +199,7 @@ export async function createConnection(projectId: number, input: ConnectionInput
   const remote = await client.findById('Project', input.sgProjectId, ['name', 'sg_status', 'archived']);
   if (!remote) throw badRequest("Ce projet n'existe pas sur le site ShotGrid");
   const remoteName = asString(remote.name);
-  // Un gabarit ne se relie pas : l'abîmer abîmerait tous les projets à venir.
+    // A template is not linked: damaging it would damage every future project.
   assertNotTemplateProject(remoteName, input.sgProjectId);
   if (!projectNameMatches(remoteName, input.sgProjectName))
     throw badRequest(
@@ -222,11 +219,9 @@ export async function createConnection(projectId: number, input: ConnectionInput
       sgProjectName: remoteName ?? input.sgProjectName,
       webhookToken: randomBytes(24).toString('base64url'),
       webhookSecret: encryptSecret(randomBytes(24).toString('base64url')),
-      // Une connexion naît en LECTURE SEULE, quels que soient les défauts du schéma.
-      // Relier un projet, c'est vérifier que la bonne cible remonte les bonnes données ;
-      // écrire dans un site de production tant que personne n'a rien vérifié serait un
-      // effet de bord qu'aucun clic n'a demandé. Les écritures s'ouvrent ensuite dans
-      // la matrice, domaine par domaine, en connaissance de cause.
+            // A connection is born READ-ONLY, whatever the schema defaults. Linking a project means checking that the right target
+            // returns the right data; writing into a production site before anyone has verified anything would be a side effect no click
+            // asked for. Writes are opened afterwards in the matrix, domain by domain, knowingly.
       settings: readOnlySettings() as never,
     },
     include: { site: true },
@@ -251,20 +246,17 @@ export async function getConnectionOrThrow(projectId: number) {
   return conn;
 }
 
-/** Sections dont un envoi partiel doit se fondre dans l'existant plutôt que le remplacer. */
+/** Sections for which a partial submission must merge into the existing values rather than replace them. */
 const MERGED_SECTIONS = ['domains', 'media', 'push', 'reconcile', 'steps'] as const;
 
 /**
- * Fusion d'un cran de profondeur des réglages.
+ * Merge of one depth level of the settings.
  *
- * La fusion était plate : `shotgridSettingsSchema.partial()` ne rend optionnelles que les
- * clés de premier niveau, si bien qu'envoyer un seul domaine faisait reparser toute la
- * section `domains` avec ses défauts — les six autres domaines repassaient à
- * « lecture + écriture ». Un client qui ne modifiait qu'une case rouvrait des écritures
- * vers un site de production.
+ * The merge was flat: `shotgridSettingsSchema.partial()` only makes the top-level keys optional, so sending a single domain
+ * re-parsed the whole `domains` section with its defaults: the other six domains went back to "read + write". A client that
+ * changed a single checkbox reopened writes to a production site.
  *
- * `versionStatusMap` reste remplacée en bloc : une correspondance retirée de la carte
- * doit disparaître, pas survivre à la fusion.
+ * `versionStatusMap` is still replaced as a whole: a mapping removed from the map must disappear, not survive the merge.
  */
 export function mergeSettings(
   current: ShotgridSettings,
@@ -278,7 +270,7 @@ export function mergeSettings(
   return out;
 }
 
-/** Retire de la trace des refus les domaines dont l'écriture vient d'être rouverte. */
+/** Removes from the refusal trace the domains whose writes have just been reopened. */
 export function clearedBlocks(
   current: unknown,
   settings: Record<string, unknown>,
@@ -301,7 +293,7 @@ export async function updateConnection(
     settings?: unknown;
     active?: boolean;
     webhookSecret?: string | null;
-    /** Trace des écritures refusées, purgée des domaines qu'on vient de rouvrir. */
+        /** Trace of refused writes, purged of the domains just reopened. */
     pushBlocked?: Record<string, unknown>;
   },
 ) {
@@ -328,7 +320,7 @@ export async function deleteConnection(projectId: number) {
   logger.info({ projectId, sgProjectId: conn.sgProjectId }, 'Connexion ShotGrid retirée');
 }
 
-/** Régénère le jeton d'URL du webhook (rotation après fuite d'une URL). */
+/** Regenerates the webhook's URL token (rotation after a URL leak). */
 export async function rotateWebhookToken(projectId: number) {
   const conn = await getConnectionOrThrow(projectId);
   return prisma.shotgridConnection.update({
@@ -343,18 +335,15 @@ export function webhookSecretOf(conn: ShotgridConnection): string | null {
 }
 
 /**
- * Le secret du webhook, en clair, pour qu'un administrateur puisse le recopier.
+ * The webhook secret, in clear, so that an administrator can copy it.
  *
- * Sans cette lecture, l'intégration ne pouvait tout simplement pas fonctionner : la
- * connexion naissait avec un secret aléatoire que **personne** ne pouvait connaître, la
- * vue d'API n'en disait que l'existence, et l'écran ne montrait que l'adresse. ShotGrid
- * signait donc chaque livraison avec un autre secret, la signature ne concordait jamais,
- * et toutes les livraisons repartaient en 404 — jusqu'à ce que le site désactive le
- * point d'entrée au bout de cent échecs.
+ * Without this read, the integration simply could not work: the connection was born with a random secret that **nobody** could
+ * know, the API view only stated its existence, and the screen only showed the address. ShotGrid therefore signed each delivery
+ * with another secret, the signature never matched, and every delivery came back 404 until the site disabled the entry point after
+ * a hundred failures.
  *
- * Il n'entre pas dans `connectionView` pour autant : un secret ne se promène pas dans
- * chaque lecture d'une connexion. Il se demande, explicitement, et la route qui le sert
- * exige les droits de gestion du projet.
+ * It does not go into `connectionView` for all that: a secret does not wander through every read of a connection. It is requested
+ * explicitly, and the route that serves it requires the project's management rights.
  */
 export async function revealWebhookSecret(projectId: number): Promise<string | null> {
   const conn = await getConnectionOrThrow(projectId);
@@ -362,11 +351,10 @@ export async function revealWebhookSecret(projectId: number): Promise<string | n
 }
 
 /**
- * Régénère le secret de signature.
+ * Regenerates the signing secret.
  *
- * L'ancien cesse d'être accepté à l'instant même : tant que le nouveau n'est pas reporté
- * dans le webhook du site, les livraisons repartiront en 404. C'est voulu — un secret
- * qui a fuité ne doit pas survivre le temps d'une manipulation.
+ * The old one stops being accepted at once: until the new one is copied into the site's webhook, deliveries will come back 404.
+ * This is intended: a leaked secret must not survive the time it takes to do the change.
  */
 export async function rotateWebhookSecret(projectId: number): Promise<string> {
   const conn = await getConnectionOrThrow(projectId);
@@ -383,20 +371,19 @@ export interface ConnectionContext {
   connection: ShotgridConnection & { site: ShotgridSite };
   client: ShotgridClient;
   settings: ShotgridSettings;
-  /**
-   * Le seul objet par lequel on écrit sur le site. Il est posé ici, à l'ouverture de la
-   * connexion, pour qu'aucune passe n'ait à se demander où le trouver — ni à s'en passer.
-   */
+    /**
+     * The only object through which we write to the site. It is set here, at connection opening, so that no pass has to wonder where
+     * to find it, nor do without it.
+     */
   writer: ShotgridWriter;
 }
 
 /**
- * Contexte de travail d'une connexion, avec la vérification d'identité du projet.
+ * Working context of a connection, with the project identity check.
  *
- * Toute opération de synchronisation démarre ici. Si le projet distant a disparu ou
- * changé de nom, la connexion bascule en `project_mismatch` et l'opération s'arrête :
- * mieux vaut une synchronisation en panne, visible et réparable, qu'une écriture
- * silencieuse dans un projet qui n'est pas le bon.
+ * Every synchronization operation starts here. If the remote project has disappeared or been renamed, the connection switches to
+ * `project_mismatch` and the operation stops: better a visible, repairable synchronization failure than a silent write into a
+ * project that is not the right one.
  */
 export async function openConnection(
   projectId: number,
@@ -458,11 +445,10 @@ export async function markStatus(id: number, status: string, message: string | n
 }
 
 /**
- * Vue d'une connexion pour l'API (aucun secret, adresse de webhook complète).
+ * View of a connection for the API (no secret, full webhook address).
  *
- * L'adresse doit être copiable telle quelle dans ShotGrid. `APP_URL` la fournit quand
- * l'instance la déclare ; sinon on retombe sur l'origine de la requête courante, ce qui
- * reste juste dans la quasi-totalité des déploiements et évite d'afficher un chemin nu.
+ * The address must be copyable as is into ShotGrid. `APP_URL` provides it when the instance declares it; otherwise we fall back on
+ * the origin of the current request, which remains correct in nearly all deployments and avoids displaying a bare path.
  */
 export function connectionView(
   conn: ShotgridConnection & { site: ShotgridSite },
@@ -482,8 +468,8 @@ export function connectionView(
     settings,
     lastSyncAt: conn.lastSyncAt,
     lastEventAt: conn.lastEventAt,
-    // Domaines dont des écritures ont été refusées par la matrice, pour que l'écran
-    // puisse le dire au lieu de laisser croire que tout est parti.
+        // Domains for which writes were refused by the matrix, so that the screen can say so instead of letting it be believed
+        // that everything went out.
     pushBlocked: (conn.pushBlocked ?? {}) as Record<string, { count: number; at: string }>,
     webhookUrl: `${(appUrl ?? '').replace(/\/$/, '')}/api/shotgrid/webhook/${conn.webhookToken}`,
     hasWebhookSecret: Boolean(conn.webhookSecret),

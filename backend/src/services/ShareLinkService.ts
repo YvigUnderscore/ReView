@@ -10,16 +10,14 @@ import { publishedMediaWhere } from './ClientShareService';
 import { badRequest, notFound } from '../lib/errors';
 
 /**
- * Côté studio du partage : créer, lister et révoquer les liens, et proposer de quoi
- * choisir leur portée.
+ * The studio side of sharing: create, list and revoke links, and offer what is needed to choose their scope.
  *
- * La portée est la raison d'être de ce service. Un lien ne connaissait que son projet ;
- * il fallait donc, pour montrer un plan à un client, lui ouvrir le film entier. La cible
- * est vérifiée ICI (elle appartient bien au projet) et jamais reprise du corps de la
- * requête telle quelle : une playlist d'un autre projet ferait fuiter ce projet-là.
+ * The scope is the reason this service exists. A link used to know only its project; so to show a shot
+ * to a client, one had to open the whole film to them. The target is verified HERE (it does belong to the
+ * project) and never taken as is from the request body: a playlist from another project would leak that project.
  */
 
-/** Champs renvoyés à l'admin — jamais le hash du mot de passe, un booléen suffit. */
+/** Fields returned to the admin: never the password hash, a boolean is enough. */
 const linkSelect = {
   id: true,
   token: true,
@@ -41,10 +39,10 @@ const linkSelect = {
   createdBy: { select: { id: true, name: true } },
 } as const;
 
-/** Au-delà, ce n'est plus une sélection : c'est un partage de projet qui s'ignore. */
+/** Beyond this, it is no longer a selection: it is an unacknowledged project share. */
 export const SHARE_SELECTION_LIMIT = 200;
 
-/** Vue admin d'un lien : la sélection est aplatie, le mot de passe réduit à un booléen. */
+/** Admin view of a link: the selection is flattened, the password reduced to a boolean. */
 function toView<T extends { media: { mediaObjectId: number }[] }>(link: T, hasPassword: boolean) {
   const { media, ...rest } = link;
   return { ...rest, mediaIds: media.map((m) => m.mediaObjectId), hasPassword };
@@ -73,16 +71,15 @@ export interface ResolvedShareScope {
   mediaIds: number[];
 }
 
-/** Version du projet, quel que soit son rattachement (tâche de plan, tâche d'asset, asset). */
+/** Version of the project, whatever its attachment (shot task, asset task, asset). */
 const versionOfProject = (projectId: number) => ({
   deletedAt: null,
   OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
 });
 
 /**
- * Valide la portée demandée et la ramène à sa forme canonique. Toute cible est confrontée
- * au projet du lien : c'est le seul endroit où l'on peut encore empêcher un lien de
- * pointer hors de son projet.
+ * Validates the requested scope and brings it back to its canonical form. Every target is checked against
+ * the link's project: this is the only place where a link can still be prevented from pointing outside its project.
  */
 export async function resolveScope(projectId: number, input: ShareScopeInput): Promise<ResolvedShareScope> {
   const scope = input.scope ?? ShareScope.PROJECT;
@@ -116,8 +113,8 @@ export async function resolveScope(projectId: number, input: ShareScopeInput): P
       throw badRequest('Select at least one media for this scope', 'SCOPE_TARGET_MISSING');
     if (asked.length > SHARE_SELECTION_LIMIT)
       throw badRequest('Too many media for a single link', 'SCOPE_SELECTION_TOO_LARGE');
-    // On ne garde que ce qui est réellement partageable : un média non publié dans la
-    // sélection deviendrait visible le jour de sa publication, sans nouvelle décision.
+        // We keep only what is really shareable: an unpublished media in the selection would become
+        // visible on the day it is published, without a new decision.
     const rows = await prisma.mediaObject.findMany({
       where: { AND: [{ id: { in: asked } }, publishedMediaWhere(projectId)] },
       select: { id: true },
@@ -181,7 +178,7 @@ export async function create(userId: number, body: CreateShareInput) {
   return toView(link, passwordHash != null);
 }
 
-/** Révoque un lien. Renvoie le projet concerné, pour l'assertion RBAC de la route. */
+/** Revokes a link. Returns the project concerned, for the route's RBAC assertion. */
 export async function projectOf(id: number): Promise<number> {
   const link = await prisma.shareLink.findUnique({ where: { id }, select: { projectId: true } });
   if (!link) throw notFound('Link not found');
@@ -199,14 +196,14 @@ export async function revoke(userId: number, id: number, projectId: number): Pro
   });
 }
 
-/** Une ligne du sélecteur de médias, à la création d'un lien. */
+/** One row of the media picker, when a link is created. */
 export interface ShareCandidate {
   id: number;
   originalName: string;
   kind: MediaKind;
   versionId: number;
   versionName: string;
-  /** Où le média vit, à l'œil : « SQ010 · SH020 › comp ». */
+    /** Where the media lives, at a glance: "SQ010 · SH020 › comp". */
   location: string;
   createdAt: string;
 }
@@ -217,7 +214,7 @@ type CandidateRow = {
   asset: { name: string } | null;
 };
 
-/** Chemin lisible d'une version — pure, testée : c'est tout ce qui distingue deux tuiles. */
+/** Readable path of a version: pure, tested. It is all that tells two tiles apart. */
 export function candidateLocation(version: CandidateRow): string {
   const parent = version.task?.shot?.code ?? version.task?.asset?.name ?? version.asset?.name ?? null;
   const step = version.task?.name ?? null;
@@ -225,7 +222,7 @@ export function candidateLocation(version: CandidateRow): string {
   return parent ?? step ?? version.name;
 }
 
-/** Médias publiés du projet, bornés : la matière du sélecteur « sélection de médias ». */
+/** Published media of the project, bounded: the material of the "media selection" picker. */
 export async function candidates(projectId: number): Promise<ShareCandidate[]> {
   const rows = await prisma.mediaObject.findMany({
     where: publishedMediaWhere(projectId),

@@ -6,40 +6,37 @@ import { prisma } from '../lib/prisma';
 import { familyOf, type FamilyOrInactive } from '../lib/statusFamily';
 
 /**
- * Planning projet (43.C — №125/№128) : tâches datées (échéance et/ou début) pour la vue
- * calendrier et le Gantt par séquence. Lecture seule ; l'édition des dates passe par le
- * PATCH /api/tasks/:id existant (superviseurs).
+ * Project schedule (43.C, issues #125/#128): dated tasks (due and/or start date) for the calendar
+ * view and the per-sequence Gantt. Read-only; date edits go through the existing
+ * PATCH /api/tasks/:id (supervisors).
  *
- * **Bornage.** La lecture était sans plafond : sur un long-métrage (deux mille plans, dix
- * mille tâches — la volumétrie que le dépôt se donne pour cible), ouvrir l'onglet
- * rapatriait l'intégralité du projet daté en un seul JSON. Un calendrier n'est pas une
- * liste : le paginer par rang n'aurait aucun sens. La borne juste est la **fenêtre de
- * temps** effectivement affichée (`from`/`to`, facultatifs — absents, on rend tout comme
- * avant), doublée d'un **plafond de sécurité** : au-delà, on sert les premières tâches et
- * on dit au lecteur que la période demandée est trop large (`truncated`).
+ * **Bounding.** The read used to have no cap: on a feature film (two thousand shots, ten thousand
+ * tasks, the volume the repository targets), opening the tab fetched the entire dated project in one
+ * JSON response. A calendar is not a list: paginating it by rank would make no sense. The right bound is
+ * the **time window** actually displayed (`from`/`to`, optional: when absent, everything is returned as
+ * before), doubled by a **safety cap**: beyond it, the first tasks are served and the reader is told that
+ * the requested period is too wide (`truncated`).
  */
 
 /**
- * Plafond de sécurité, en tâches. Ce n'est pas une page : c'est le point au-delà duquel
- * la réponse cesse d'être servable (≈ 500 Ko de JSON) et où la bonne réponse est de
- * resserrer la fenêtre, pas d'en demander la suite.
+ * Safety cap, in tasks. This is not a page: it is the point beyond which the response stops being
+ * servable (about 500 KB of JSON) and where the right answer is to narrow the window, not to ask for more.
  */
 export const SCHEDULE_MAX_TASKS = 2000;
 
 /**
- * Le statut du studio, tel qu'une barre de Gantt le colore.
+ * The studio's status, as a Gantt bar colours it.
  *
- * Le planning peignait ses barres d'après l'enum figé `TaskStatus` : six couleurs codées
- * en dur, dont aucune n'est le vocabulaire d'un studio relié à ShotGrid — un plan « fin »
- * ou « awaiting client » s'affichait sous la teinte d'un statut qu'il ne porte pas. La
- * teinte vient donc du référentiel quand il existe, et `family` dit à quel bloc le statut
- * appartient pour les regroupements.
+ * The schedule used to paint its bars from the fixed `TaskStatus` enum: six hard-coded colours, none of
+ * which is the vocabulary of a studio linked to ShotGrid. A "final" or "awaiting client" task was shown in
+ * the tint of a status it does not carry. The tint therefore comes from the reference list when it exists,
+ * and `family` says which block the status belongs to, for grouping.
  */
 export interface SchedulePipelineStatus {
   id: number;
   code: string;
   name: string;
-  /** Hex #RRGGBB tel que le studio l'a réglé. */
+    /** Hex #RRGGBB as set by the studio. */
   color: string;
 }
 
@@ -48,9 +45,9 @@ export interface ScheduleTask {
   name: string;
   type: TaskType;
   status: TaskStatus;
-  /** Statut personnalisable, `null` pour un studio qui n'en a pas posé. */
+    /** Customizable status, `null` for a studio that has not set one. */
   pipelineStatus: SchedulePipelineStatus | null;
-  /** Famille du statut — `todo|progress|review|done|blocked|inactive`. */
+    /** Status family: `todo|progress|review|done|blocked|inactive`. */
   family: FamilyOrInactive;
   startDate: string | null;
   dueDate: string | null;
@@ -62,19 +59,19 @@ export interface ScheduleTask {
 
 export interface ProjectSchedule {
   tasks: ScheduleTask[];
-  /** Le plafond a été atteint : la fenêtre demandée est trop large, des tâches manquent. */
+    /** The cap was reached: the requested window is too wide, tasks are missing. */
   truncated: boolean;
-  /** Plafond appliqué, pour que le lecteur sache de quelle borne on parle. */
+    /** Cap applied, so the reader knows which bound is meant. */
   limit: number;
 }
 
-/** Fenêtre de temps demandée. Les deux bornes sont indépendantes et facultatives. */
+/** Requested time window. Both bounds are independent and optional. */
 export interface ScheduleWindow {
   from?: Date;
   to?: Date;
 }
 
-/** Ligne brute (sortie du select Prisma) → tâche de planning (fonction pure, testée). */
+/** Raw row (Prisma select output) to schedule task (pure function, tested). */
 export interface ScheduleRow {
   id: number;
   name: string;
@@ -117,17 +114,16 @@ export function toScheduleTask(t: ScheduleRow): ScheduleTask {
 }
 
 /**
- * Clauses de fenêtre, en intervalles et non en dates ponctuelles.
+ * Window clauses, as intervals rather than point dates.
  *
- * Une tâche occupe `[début effectif, fin effective]`, où la borne manquante est tenue par
- * l'autre — c'est exactement la règle que le Gantt applique déjà côté écran (`spanOf`).
- * Elle est dans la fenêtre si les deux intervalles se chevauchent : fin effective ≥ `from`
- * **et** début effectif ≤ `to`. Filtrer sur la seule échéance ferait disparaître une tâche
- * commencée avant la fenêtre et due après, c'est-à-dire précisément celles qui sont en
- * cours au moment qu'on regarde.
+ * A task occupies `[effective start, effective end]`, where a missing bound is taken from the other one:
+ * this is exactly the rule the Gantt already applies on screen (`spanOf`). It falls within the window if
+ * the two intervals overlap: effective end >= `from` **and** effective start <= `to`. Filtering on the due
+ * date alone would drop a task that started before the window and is due after it, that is, precisely the
+ * tasks in progress at the moment being viewed.
  *
- * `{ dueDate: null, startDate: … }` se lit en ET (champs frères d'un même objet Prisma) ;
- * une comparaison SQL sur NULL étant fausse, les deux branches sont bien disjointes.
+ * `{ dueDate: null, startDate: ... }` reads as AND (sibling fields of the same Prisma object); since an SQL
+ * comparison with NULL is false, the two branches are indeed disjoint.
  */
 export function scheduleWindowFilter(window: ScheduleWindow): Prisma.TaskWhereInput[] {
   const clauses: Prisma.TaskWhereInput[] = [];
@@ -144,7 +140,7 @@ export function scheduleWindowFilter(window: ScheduleWindow): Prisma.TaskWhereIn
   return clauses;
 }
 
-/** Tâches datées du projet dans la fenêtre demandée, triées par échéance. */
+/** Dated project tasks within the requested window, sorted by due date. */
 export async function getProjectSchedule(
   projectId: number,
   window: ScheduleWindow = {},
@@ -181,17 +177,15 @@ export async function getProjectSchedule(
         },
       },
     },
-    // `id` ferme le tri : sans départage, deux tâches de mêmes dates sortent dans un ordre
-    // que PostgreSQL ne garantit pas — et ce qui tombe sous le plafond changerait d'un
-    // appel à l'autre. Une troncature doit être reproductible.
-    //
-    // Ce tri décide aussi de ce qu'une troncature laisse de côté : PostgreSQL range les
-    // NULL en fin de tri ascendant, donc les tâches sans échéance — celles que seul le
-    // Gantt affiche — partent les premières. C'est le moindre mal : le calendrier, lui,
-    // ne lit que `dueDate`.
+        // `id` closes the sort: without a tie-break, two tasks with the same dates come out in an order
+        // that PostgreSQL does not guarantee, and what falls under the cap would change from one call to
+        // the next. A truncation must be reproducible.
+        //
+        // This sort also decides what a truncation leaves out: PostgreSQL puts NULLs last in an ascending sort,
+        // so tasks without a due date (the ones only the Gantt displays) come first. That is the lesser evil:
+        // the calendar only reads `dueDate`.
     orderBy: [{ dueDate: 'asc' }, { startDate: 'asc' }, { id: 'asc' }],
-    // Une ligne de plus que le plafond : elle ne sert qu'à savoir qu'il y en avait d'autres,
-    // ce qui évite le `count` supplémentaire.
+        // One row more than the cap: it only tells whether there were others, which avoids an extra `count`.
     take: SCHEDULE_MAX_TASKS + 1,
   });
 

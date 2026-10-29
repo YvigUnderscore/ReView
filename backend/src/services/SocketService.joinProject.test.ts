@@ -18,8 +18,8 @@ const { fakeIo, getAuthUser, isSessionActive, checkProjectAccess } = vi.hoisted(
   checkProjectAccess: vi.fn(),
 }));
 
-// `new SocketServer(...)` : le double doit être appelable avec `new`, d'où la fonction
-// classique qui rend l'objet plutôt qu'une flèche.
+// `new SocketServer(...)`: the double must be callable with `new`, hence the classic function
+// that returns the object rather than an arrow function.
 vi.mock('socket.io', () => ({
   Server: vi.fn(function FakeServer() {
     return fakeIo;
@@ -29,8 +29,8 @@ vi.mock('@socket.io/redis-adapter', () => ({ createAdapter: vi.fn(() => vi.fn())
 vi.mock('../lib/redis', () => ({
   createRedisClient: vi.fn(() => ({ quit: vi.fn(async () => undefined), disconnect: vi.fn() })),
   enableRedisTransport: vi.fn(),
-  // Canal de révocation immédiate (A3-02) : ce fichier ne l'exerce pas, mais `initSocket`
-  // s'y abonne — sans le double, la connexion ne s'ouvrirait même pas.
+    // Immediate revocation channel (A3-02): this file does not exercise it, but `initSocket`
+    // subscribes to it; without the double the connection would not even open.
   subscribeRedis: vi.fn(),
 }));
 vi.mock('../lib/workerEvents', () => ({ subscribeWorkerEvents: vi.fn() }));
@@ -82,7 +82,7 @@ import { initSocket } from './SocketService';
 
 type Listener = (...args: unknown[]) => unknown;
 
-/** Socket de test : on n'en retient que ce que le serveur lui demande. */
+/** Test socket: only what the server asks of it is kept. */
 const fakeSocket = () => {
   const listeners = new Map<string, Listener>();
   return {
@@ -93,8 +93,8 @@ const fakeSocket = () => {
     leave: vi.fn(async () => undefined),
     to: vi.fn(() => ({ emit: vi.fn() })),
     disconnect: vi.fn(),
-    // Garde de débit (A5-05) : posée en tête de `io.on('connection')`. Ce fichier ne
-    // l'exerce pas — le middleware capturé n'est jamais rejoué, donc rien n'est filtré ici.
+        // Rate guard (A5-05): set at the head of `io.on('connection')`. This file does not
+        // exercise it: the captured middleware is never replayed, so nothing is filtered here.
     use: vi.fn(),
     on: vi.fn((event: string, handler: Listener) => {
       listeners.set(event, handler);
@@ -103,7 +103,7 @@ const fakeSocket = () => {
   };
 };
 
-/** Branche le serveur, ouvre une connexion et rend le socket prêt à recevoir des événements. */
+/** Wires up the server, opens a connection and returns the socket ready to receive events. */
 const connect = () => {
   fakeIo.on.mockImplementation((event: string, handler: (socket: unknown) => void) => {
     if (event === 'connection') fakeIo.connection = handler;
@@ -127,24 +127,23 @@ beforeEach(() => {
 });
 
 /**
- * A3-02, le scénario de l'audit : un superviseur quitte le studio, l'admin le rétrograde en
- * CLIENT puis révoque ses sessions. Ses requêtes HTTP tombent en 401 sous trente secondes.
- * Son onglet resté ouvert, lui, gardait sa websocket — et `join_project` lui accordait
- * n'importe quel projet, parce que le contrôle lisait le rôle FIGÉ au handshake et que
- * `resolveProjectAccess` accorde un accès global à ADMIN comme à SUPERVISOR.
+ * A3-02, the audit's scenario: a supervisor leaves the studio, the admin demotes them to CLIENT and then
+ * revokes their sessions. Their HTTP requests fall to 401 within thirty seconds. Their tab left open,
+ * however, kept its websocket, and `join_project` granted it any project, because the check read the role
+ * FROZEN at handshake and `resolveProjectAccess` grants global access to ADMIN as well as SUPERVISOR.
  */
-describe('join_project — le rôle n’est plus celui du handshake', () => {
+describe('join_project: the role is no longer the one from the handshake', () => {
   const joinProject = async (socket: ReturnType<typeof fakeSocket>, projectId: number) => {
     await socket.listeners.get('join_project')!(projectId);
   };
 
-  it('rejoint la salle d’un projet accessible', async () => {
+  it('joins the room of an accessible project', async () => {
     const socket = connect();
     await joinProject(socket, 42);
     expect(socket.join).toHaveBeenCalledWith('project_42');
   });
 
-  it('contrôle l’accès avec le rôle COURANT, pas celui du jeton', async () => {
+  it('checks access with the CURRENT role, not the token\'s', async () => {
     const socket = connect();
     getAuthUser.mockResolvedValue({
       id: 7,
@@ -156,18 +155,18 @@ describe('join_project — le rôle n’est plus celui du handshake', () => {
     expect(checkProjectAccess).toHaveBeenCalledWith(7, Role.CLIENT, 42);
   });
 
-  it('ferme la connexion quand la session a été révoquée', async () => {
+  it('closes the connection when the session has been revoked', async () => {
     const socket = connect();
     isSessionActive.mockResolvedValue(false);
     await joinProject(socket, 42);
     expect(socket.disconnect).toHaveBeenCalledWith(true);
-    // `socket.join('user_7')` a lieu à la connexion : c'est la salle du projet qui ne doit
-    // pas être rejointe.
+        // `socket.join('user_7')` happens at connection: it is the project room that must not
+        // be joined.
     expect(socket.join).not.toHaveBeenCalledWith('project_42');
     expect(checkProjectAccess).not.toHaveBeenCalled();
   });
 
-  it('ferme la connexion d’un compte désactivé', async () => {
+  it('closes the connection of a deactivated account', async () => {
     const socket = connect();
     getAuthUser.mockResolvedValue({
       id: 7,

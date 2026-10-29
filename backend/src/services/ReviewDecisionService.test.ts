@@ -46,7 +46,7 @@ beforeEach(() => {
 });
 
 describe('ensureDefaultStatuses', () => {
-  it('crée les 4 statuts classiques quand la table est vide', async () => {
+  it('creates the 4 standard statuses when the table is empty', async () => {
     vi.mocked(prisma.reviewStatus.count).mockResolvedValue(0);
     await ensureDefaultStatuses();
     expect(prisma.reviewStatus.createMany).toHaveBeenCalledWith(
@@ -61,7 +61,7 @@ describe('ensureDefaultStatuses', () => {
     );
   });
 
-  it('ne recrée rien si des statuts existent', async () => {
+  it('recreates nothing if statuses exist', async () => {
     vi.mocked(prisma.reviewStatus.count).mockResolvedValue(2);
     await ensureDefaultStatuses();
     expect(prisma.reviewStatus.createMany).not.toHaveBeenCalled();
@@ -69,7 +69,7 @@ describe('ensureDefaultStatuses', () => {
 });
 
 describe('listStatuses', () => {
-  it('bootstrape puis liste ordonnée', async () => {
+  it('bootstraps then lists in order', async () => {
     vi.mocked(prisma.reviewStatus.count).mockResolvedValue(4);
     vi.mocked(prisma.reviewStatus.findMany).mockResolvedValue([{ id: 1 }] as never);
     const out = await listStatuses();
@@ -81,13 +81,13 @@ describe('listStatuses', () => {
 });
 
 describe('deleteStatus', () => {
-  it('refuse (409) la suppression d’un statut utilisé', async () => {
+  it('refuses (409) deleting a status in use', async () => {
     vi.mocked(prisma.reviewDecision.count).mockResolvedValue(3);
     await expect(deleteStatus(admin, 5)).rejects.toMatchObject({ statusCode: 409 });
     expect(prisma.reviewStatus.delete).not.toHaveBeenCalled();
   });
 
-  it('supprime un statut inutilisé et audite', async () => {
+  it('deletes an unused status and audits it', async () => {
     vi.mocked(prisma.reviewDecision.count).mockResolvedValue(0);
     vi.mocked(prisma.reviewStatus.delete).mockResolvedValue({} as never);
     await deleteStatus(admin, 5);
@@ -112,7 +112,7 @@ describe('decide', () => {
     vi.mocked(prisma.mediaObject.findFirst).mockResolvedValue({ id: 128 } as never);
   });
 
-  it('historise, dénormalise, audite, émet et notifie l’auteur', async () => {
+  it('records history, denormalizes, audits, emits and notifies the author', async () => {
     const out = await decide(supervisor, 3, 42, 2, 'ok pour livraison');
     expect(out).toBe(decisionRow);
     expect(prisma.$transaction).toHaveBeenCalled();
@@ -120,9 +120,9 @@ describe('decide', () => {
       expect.objectContaining({ action: 'VERSION_DECISION', entityId: 42 }),
     );
     expect(emitToProject).toHaveBeenCalledWith(3, 'version:update', expect.objectContaining({ id: 42 }));
-    // `referenceId` est le PREMIER MÉDIA de la version, pas la version : l'auteur recevait
-    // un id de version et les suiveurs un id de média pour le même événement, si bien que le
-    // lien de l'auteur — le plus concerné — ne menait nulle part.
+        // `referenceId` is the version's FIRST MEDIA, not the version: the author received
+        // a version id and followers a media id for the same event, so the author's link,
+        // the one most concerned, led nowhere.
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 9,
@@ -133,7 +133,7 @@ describe('decide', () => {
     );
   });
 
-  it('ne se notifie pas soi-même', async () => {
+  it('does not notify oneself', async () => {
     vi.mocked(prisma.version.findFirst).mockResolvedValue({
       id: 42,
       name: 'V02',
@@ -145,7 +145,7 @@ describe('decide', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('404 sur version inconnue, 400 sur statut inconnu', async () => {
+  it('404 on unknown version, 400 on unknown status', async () => {
     vi.mocked(prisma.version.findFirst).mockResolvedValue(null);
     await expect(decide(supervisor, 3, 999, 2)).rejects.toMatchObject({ statusCode: 404 });
     vi.mocked(prisma.version.findFirst).mockResolvedValue({ id: 42, authorId: null } as never);
@@ -155,15 +155,14 @@ describe('decide', () => {
 });
 
 /**
- * L'avis d'un client, qui n'est PAS une décision.
+ * A guest's opinion, which is NOT a decision.
  *
- * Toute la différence tient dans une ligne absente : `Version.reviewStatusId` n'est pas
- * touché. Quelqu'un d'extérieur au studio ne fait pas bouger l'état d'un plan pour toute
- * l'équipe — surtout pas en cliquant à côté. Ces tests tiennent cette frontière, parce
- * qu'elle ne se voit pas à la lecture : le code qui la franchirait ressemblerait à du code
- * correct.
+ * The whole difference rests on a missing row: `Version.reviewStatusId` is not touched. Someone outside
+ * the studio does not move a shot's state for the whole team, least of all by clicking the wrong thing.
+ * These tests hold that boundary, because it is not visible on reading: code that crossed it would look
+ * like correct code.
  */
-describe('decideAsGuest — un avis, pas un verdict', () => {
+describe('decideAsGuest: an opinion, not a verdict', () => {
   const STATUSES = [
     { id: 1, name: 'Pending', color: '#F5A623', isApproval: false, isRetake: false, isDefault: true },
     { id: 2, name: 'Approved', color: '#2ECC71', isApproval: true, isRetake: false, isDefault: false },
@@ -184,41 +183,41 @@ describe('decideAsGuest — un avis, pas un verdict', () => {
     vi.mocked(prisma.reviewDecision.create).mockResolvedValue({ id: 5, status: STATUSES[1] } as never);
   });
 
-  it('n’offre au client que la validation et la retake, pas les états de pipeline', async () => {
+  it('offers the client only approval and retake, not pipeline states', async () => {
     const offered = await guestStatuses(1);
     expect(offered.approval).toMatchObject({ id: 2, name: 'Approved' });
     expect(offered.retake).toMatchObject({ id: 3, name: 'Retake' });
     expect(JSON.stringify(offered)).not.toContain('Pending');
   });
 
-  /** Le cœur du lot : l'avis s'inscrit, le statut de la version ne bouge pas. */
-  it('écrit l’avis sans jamais toucher au statut courant de la version', async () => {
+    /** The core of the batch: the opinion is recorded, the version's status does not move. */
+  it('records the opinion without ever touching the version\'s current status', async () => {
     await decideAsGuest(guest, 1, 42, 2);
     expect(prisma.reviewDecision.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ versionId: 42, statusId: 2, guestName: 'Claire', shareLinkId: 7 }),
       }),
     );
-    // `version.update` n'existe même pas sur le mock : l'appeler ferait échouer le test.
+        // `version.update` does not even exist on the mock: calling it would fail the test.
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  // Un invité qui poserait « Pending » écrirait un état de pipeline depuis l'extérieur.
-  it('refuse un statut qui n’est pas l’un des deux offerts', async () => {
+    // A guest who sets "Pending" would write a pipeline state from outside.
+  it('refuses a status that is not one of the two offered', async () => {
     await expect(decideAsGuest(guest, 1, 42, 1)).rejects.toThrowError(
       expect.objectContaining({ statusCode: 400 }),
     );
     expect(prisma.reviewDecision.create).not.toHaveBeenCalled();
   });
 
-  it('refuse une version inconnue avant de regarder le statut', async () => {
+  it('refuses an unknown version before checking the status', async () => {
     vi.mocked(prisma.version.findFirst).mockResolvedValue(null);
     await expect(decideAsGuest(guest, 1, 999, 2)).rejects.toThrowError(
       expect.objectContaining({ statusCode: 404 }),
     );
   });
 
-  it('journalise le lien et le nom, et prévient l’auteur de la livraison', async () => {
+  it('logs the link and the name, and notifies the author of the delivery', async () => {
     await decideAsGuest(guest, 1, 42, 3);
     expect(logAudit).toHaveBeenCalledWith(
       expect.objectContaining({

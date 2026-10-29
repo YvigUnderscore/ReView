@@ -3,7 +3,7 @@
 
 import type { ApiTokenKind, Role } from '@prisma/client';
 
-/** Augmentation du type Request d'Express pour porter l'utilisateur authentifié. */
+/** Augmentation of Express's Request type to carry the authenticated user. */
 declare global {
   namespace Express {
     interface Request {
@@ -12,12 +12,11 @@ declare global {
         email: string;
         role: Role;
       };
-      /** Session de connexion (36.B) — présent quand le JWT porte un sid. */
+            /** Connection session (36.B): present when the JWT carries a sid. */
       sessionId?: string;
-      /**
-       * Authentification par token d'API (36.C) — scopes stockés (fins ou hérités),
-       * nature du token et projet auquel il est éventuellement cantonné (API v1).
-       */
+            /**
+             * Authentication by API token (36.C): stored scopes (fine-grained or inherited), the nature of the token and the project it is possibly confined to (API v1).
+             */
       apiToken?: { id: number; scopes: string[]; projectId?: number; kind?: ApiTokenKind };
     }
   }

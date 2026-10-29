@@ -29,10 +29,10 @@ beforeEach(() => {
   db.shot.update.mockResolvedValue({ id: 7, code: 'SH010' });
 });
 
-describe('ShotService.update — écriture vers ShotGrid', () => {
-  it('met le statut en file quand il change', async () => {
-    // Il ne partait nulle part : le plan changeait d'état dans ReView, le site gardait
-    // l'ancien, et la synchronisation suivante ramenait celui du site.
+describe('ShotService.update: write to ShotGrid', () => {
+  it('queues the status when it changes', async () => {
+        // It went nowhere: the shot changed state in ReView, the site kept the old one, and the
+        // next synchronisation brought the site's value back.
     await update(7, 461, { pipelineStatusId: 42 }, 3);
     expect(push.enqueuePush).toHaveBeenCalledWith(461, {
       type: 'shot-status',
@@ -41,21 +41,21 @@ describe('ShotService.update — écriture vers ShotGrid', () => {
     });
   });
 
-  it('met aussi l’effacement du statut en file', async () => {
+  it('also queues clearing the status', async () => {
     await update(7, 461, { pipelineStatusId: null }, 3);
     expect(push.enqueuePush).toHaveBeenCalledTimes(1);
   });
 
-  it('n’écrit rien vers le site quand le statut n’est pas touché', async () => {
-    // Renommer un plan ne doit pas provoquer d'écriture de statut : le site n'a rien
-    // demandé, et une écriture inutile fait diverger les horodatages.
+  it('writes nothing to the site when the status is untouched', async () => {
+        // Renaming a shot must not trigger a status write: the site asked for nothing, and a useless
+        // write makes the timestamps diverge.
     db.shot.findUnique.mockResolvedValue({ code: 'SH010', sequenceId: 1 });
     db.shot.findFirst.mockResolvedValue(null);
     await update(7, 461, { name: 'Rooftop' }, 3);
     expect(push.enqueuePush).not.toHaveBeenCalled();
   });
 
-  it('accepte de ne pas connaître l’auteur — l’écriture part quand même', async () => {
+  it('accepts not knowing the author: the write goes out anyway', async () => {
     await update(7, 461, { pipelineStatusId: 42 });
     expect(push.enqueuePush).toHaveBeenCalledWith(461, {
       type: 'shot-status',

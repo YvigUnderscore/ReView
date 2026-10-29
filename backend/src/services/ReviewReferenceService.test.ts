@@ -4,12 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * A1-06 — l'accès au projet se revérifie au moment du geste.
+ * A1-06: project access is rechecked at the moment of the action.
  *
- * `add` ne vérifiait que la propriété du commentaire : un prestataire retiré d'un projet
- * terminé rejouait l'un de ses anciens `commentId` et déposait encore une image dans le
- * bucket du studio. La propriété d'un commentaire dit ce qui s'est passé, pas ce qui est
- * permis maintenant.
+ * `add` only checked ownership of the comment: a contractor removed from a finished project replayed
+ * one of their old `commentId` values and still stored an image in the studio bucket. Ownership of a
+ * comment says what happened, not what is allowed now.
  */
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -40,7 +39,7 @@ import { Role } from '@prisma/client';
 import { forbidden } from '../lib/errors';
 
 const author = { id: 12, role: Role.ARTIST };
-// 1×1 PNG : de quoi passer la reconnaissance de signature.
+// 1x1 PNG: enough to pass the signature check.
 const PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
@@ -62,27 +61,27 @@ beforeEach(() => {
   } as never);
 });
 
-describe('ReviewReferenceService.add — accès projet (A1-06)', () => {
-  it("refuse l'auteur du commentaire qui n'est plus membre du projet, sans rien déposer", async () => {
+describe('ReviewReferenceService.add: project access (A1-06)', () => {
+  it("refuses the comment author who is no longer a project member, without storing anything", async () => {
     access.mockResolvedValue(false);
     await expect(add(author, 5, PNG, 9)).rejects.toThrow(/No access/);
     expect(putObject).not.toHaveBeenCalled();
     expect(prisma.reviewReference.create).not.toHaveBeenCalled();
   });
 
-  it('refuse sur un projet archivé ou à la corbeille, sans rien déposer', async () => {
+  it('refuses on an archived or trashed project, without storing anything', async () => {
     writable.mockRejectedValue(forbidden('Archived project — read only', 'PROJECT_ARCHIVED'));
     await expect(add(author, 5, PNG, 9)).rejects.toThrow(/Archived/);
     expect(putObject).not.toHaveBeenCalled();
   });
 
-  it('refuse un média introuvable avant toute lecture du commentaire', async () => {
+  it('refuses an unknown media before reading the comment', async () => {
     resolveMedia.mockResolvedValue(null);
     await expect(add(author, 5, PNG, 9)).rejects.toThrow(/Media not found/);
     expect(prisma.comment.findUnique).not.toHaveBeenCalled();
   });
 
-  it('laisse passer un membre auteur du commentaire', async () => {
+  it('lets through a member who authored the comment', async () => {
     const ref = await add(author, 5, PNG, 9);
     expect(access).toHaveBeenCalledWith(author.id, author.role, 3);
     expect(putObject).toHaveBeenCalled();

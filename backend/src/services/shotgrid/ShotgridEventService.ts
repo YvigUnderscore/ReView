@@ -11,12 +11,11 @@ import { eventIsGlobal, HANDLED_ENTITIES, passesForEvent } from './ShotgridSyncP
 import { runSync } from './ShotgridSyncService';
 
 /**
- * Traitement des événements ShotGrid (webhooks ou relevé du journal d'événements).
+ * ShotGrid event processing (webhooks or polling of the event log).
  *
- * Un événement ne dit pas tout : sa charge utile est plafonnée à un mégaoctet et se
- * fait amputer au-delà. Plutôt que de lui faire confiance, on s'en sert comme d'une
- * sonnette — il indique QUOI relire, et la lecture fait autorité. C'est aussi ce qui
- * rend le traitement identique en mode webhook et en mode relevé périodique.
+ * An event does not say everything: its payload is capped at one megabyte and is truncated beyond that. Rather than trusting it, we use it
+ * as a doorbell: it indicates WHAT to re-read, and the re-read is authoritative. This is also what makes processing identical in webhook mode
+ * and in periodic polling mode.
  */
 
 export interface ShotgridEventPayload {
@@ -30,22 +29,18 @@ export interface ShotgridEventPayload {
 
 const ENTITY_FROM_EVENT = /^Shotgun_([A-Za-z]+)_(New|Change|Retirement|Revival)$/;
 
-/** Fenêtre de regroupement des événements portant sur une même entité. */
+/** Coalescing window for events concerning the same entity. */
 const COALESCE_MS = 5_000;
 
 /**
- * Sur quoi regrouper les événements d'une même tranche de temps.
+ * What to group events of the same time slice on.
  *
- * Une entité de production se regroupe par identifiant : deux plans modifiés ensemble
- * sont deux relectures, chacune ciblée. Une entité **globale** (statut, compte), elle,
- * déclenche exactement le même travail quel que soit son identifiant — une relecture de
- * toute la hiérarchie du projet. L'y faire entrer coûtait cher pour rien : renommer
- * cinquante comptes d'un coup fabriquait cinquante passes complètes là où une seule dit
- * la même chose.
+ * A production entity is grouped by identifier: two shots modified together are two re-reads, each targeted. A **global** entity (status, account),
+ * on the other hand, triggers exactly the same work whatever its identifier: a re-read of the whole project hierarchy. Putting it in there cost a lot
+ * for nothing: renaming fifty accounts at once produced fifty full passes where a single one says the same thing.
  *
- * Cela devient un vrai risque dès qu'un second webhook, sans filtre de projet, apporte
- * les `Person` et les `Status` de tout le site — seule façon de les recevoir, ShotGrid
- * ne les proposant pas dans un webhook filtré sur un projet.
+ * It becomes a real risk as soon as a second webhook, without a project filter, brings the site's `Person` and `Status` records: the only way to receive them,
+ * since ShotGrid does not offer them in a webhook filtered on a project.
  */
 export function coalesceKey(entity: string, sgId: number): string {
   return eventIsGlobal(entity) ? entity : `${entity}-${sgId}`;
@@ -59,11 +54,10 @@ export function parseEventType(eventType: string | undefined): { entity: string;
 }
 
 /**
- * Empile un événement.
+ * Pushes an event onto the queue.
  *
- * L'identifiant de tâche est déterministe (connexion + entité) et le déclenchement
- * différé de quelques secondes : changer le statut de cent tâches d'un coup dans
- * ShotGrid produit cent événements, mais une seule relecture par entité concernée.
+ * The task identifier is deterministic (connection + entity) and the triggering is deferred by a few seconds: changing the status of a hundred tasks at once
+ * in ShotGrid produces a hundred events, but a single re-read per entity concerned.
  */
 export async function enqueueShotgridEvent(
   connectionId: number,
@@ -82,12 +76,9 @@ export async function enqueueShotgridEvent(
       'event',
       { kind: 'event', connectionId, event: data, deliveryId: meta.deliveryId ?? null },
       {
-        // L'identifiant regroupe les événements d'une même entité par tranche de
-        // COALESCE_MS : une modification en lot n'entraîne qu'une relecture, mais un
-        // changement survenu plus tard n'est pas confondu avec le précédent. Sans la
-        // tranche, l'identifiant resterait pris par le travail déjà terminé et tout
-        // événement ultérieur serait silencieusement ignoré. Pas de deux-points :
-        // BullMQ les réserve à ses propres clés et rejette l'identifiant.
+                // The identifier groups the events of the same entity per COALESCE_MS slice: a batch modification triggers only one re-read, but a
+                // change occurring later is not confused with the previous one. Without the slice, the identifier would stay taken by the work already done
+                // and every later event would be silently ignored. No colons: BullMQ reserves them for its own keys and rejects the identifier.
         jobId: `sgevt-${connectionId}-${coalesceKey(parsed.entity, entityRef.id)}-${Math.floor(Date.now() / COALESCE_MS)}`,
         delay: 2000,
         removeOnComplete: 200,
@@ -102,23 +93,18 @@ export async function enqueueShotgridEvent(
 }
 
 /**
- * Pas de garde-fou d'écho — c'est délibéré.
+ * No echo guard, deliberately.
  *
- * Une carte en mémoire retenait les valeurs que ReView venait d'écrire, pour ignorer
- * l'événement que le site nous renvoyait ensuite. Elle coûtait plus qu'elle ne rapportait :
- * l'entrée n'était jamais consommée et vivait deux minutes, si bien qu'un vrai changement
- * ramenant la même valeur dans cet intervalle était avalé, et que la coalescence des jobs
- * (même `jobId` sur cinq secondes) pouvait faire abandonner le seul job qui aurait relu
- * l'entité. Un statut perdu en silence — exactement ce qu'on cherche à éviter.
+ * An in-memory map used to retain the values ReView had just written, to ignore the event the site sent back afterwards. It cost more than it returned:
+ * the entry was never consumed and lived two minutes, so a real change bringing back the same value within that interval was swallowed, and the coalescing of
+ * jobs (same `jobId` over five seconds) could make the only job that would have re-read the entity give up. A status lost in silence: exactly what we are trying to avoid.
  *
- * Ce qu'elle économisait est une relecture ciblée d'une entité : une requête, idempotente.
- * On la paie volontiers.
+ * What it saved is a targeted re-read of one entity: one request, idempotent. We gladly pay for it.
  */
 
 /**
- * Applique un événement : relecture ciblée de l'entité concernée.
- * Le cloisonnement projet est vérifié AVANT tout travail — un webhook mal configuré
- * côté ShotGrid peut parfaitement livrer les événements de tout le studio.
+ * Applies an event: targeted re-read of the entity concerned.
+ * The project isolation is checked BEFORE any work: a webhook misconfigured on the ShotGrid side can perfectly well deliver the events of the whole studio.
  */
 export async function handleEvent(connectionId: number, event: ShotgridEventPayload): Promise<void> {
   const connection = await prisma.shotgridConnection.findUnique({ where: { id: connectionId } });
@@ -144,16 +130,13 @@ export async function handleEvent(connectionId: number, event: ShotgridEventPayl
   const settings = parseSettings(connection.settings);
   if (settings.eventMode === 'manual') return;
 
-  /**
-   * À chaque type d'événement ses passes.
-   *
-   * L'ancien code n'avait qu'un interrupteur, `withMedia`, calé sur
-   * `entity === 'Version'`. Conséquence : un événement Note ou Playlist était accepté,
-   * mis en file, traité — et ne déclenchait aucun import, puisque les deux seules passes
-   * capables de les lire étaient derrière ce `false`. Le sens sortant marchait, le sens
-   * entrant était mort. Une entité globale (statut, compte) reste une relecture de toute
-   * la hiérarchie ; les autres ne relisent qu'elles-mêmes.
-   */
+    /**
+     * Each event type has its passes.
+     *
+     * The old code had only one switch, `withMedia`, tied to `entity === 'Version'`. Consequence: a Note or Playlist event was accepted, queued, processed,
+     * and triggered no import, since the only two passes able to read them were behind that `false`. The outbound direction worked, the inbound one was dead.
+     * A global entity (status, account) remains a re-read of the whole hierarchy; the others only re-read themselves.
+     */
   const passes = passesForEvent(parsed.entity);
   if (!passes) return;
   await runSync(connection.projectId, {
@@ -164,9 +147,8 @@ export async function handleEvent(connectionId: number, event: ShotgridEventPayl
 }
 
 /**
- * Relevé du journal d'événements — repli quand l'instance n'est pas joignable depuis
- * Internet (studio derrière un réseau privé). Le curseur avance uniquement sur les
- * événements traités : une coupure reprend là où elle s'est arrêtée.
+ * Polling of the event log: fallback when the instance is not reachable from the Internet (studio behind a private network). The cursor only advances over
+ * processed events: an outage resumes where it stopped.
  */
 export async function pollEvents(connectionId: number): Promise<number> {
   const connection = await prisma.shotgridConnection.findUnique({

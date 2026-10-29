@@ -28,12 +28,10 @@ import { mergePasses, resolvePasses, sgIdsOfType, type SyncPass } from './Shotgr
 import { flushTouched, TouchedEntities } from './ShotgridTouched';
 
 /**
- * Orchestration des synchronisations ShotGrid.
+ * Orchestration of ShotGrid synchronizations.
  *
- * Trois entrées pour un seul chemin de traitement : la synchronisation complète (à la
- * demande), la réconciliation (fenêtre temporelle, rattrape ce qu'une coupure a fait
- * manquer) et le traitement ciblé d'un événement. Les trois passent par le même
- * import, ce qui évite d'avoir un chemin « rapide » moins sûr que l'autre.
+ * Three entry points for a single processing path: the full synchronization (on demand), the reconciliation (time window, catches what an outage made it miss),
+ * and the targeted processing of an event. All three go through the same import, which avoids having a "fast" path less safe than the other.
  */
 
 export interface SyncOptions {
@@ -41,87 +39,76 @@ export interface SyncOptions {
   since?: Date | null;
   triggeredById?: number | null;
   onlySgIds?: { sgType: string; sgId: number }[];
-  /** Import des médias (coûteux) — désactivable pour une passe de structure seule. */
+    /** Media import (costly) — can be disabled for a structure-only pass. */
   withMedia?: boolean;
-  /**
-   * Passes à exécuter. Absente, la liste se déduit des entités ciblées, sinon tout est
-   * exécuté. C'est ce qui permet à un événement Note de ne relire que les notes — et
-   * d'être relu tout court.
-   */
+    /**
+     * Passes to run. When absent, the list is deduced from the targeted entities, otherwise everything runs. This is what lets a Note event re-read only the notes —
+     * and be re-read at all.
+     */
   passes?: SyncPass[];
 }
 
 export interface SyncResult {
   runId: number;
-  /**
-   * `deferred` : la demande n'a pas été exécutée tout de suite, elle est en attente
-   * derrière la synchronisation en cours. Elle n'est pas perdue — c'est justement ce
-   * que l'ancien `ok` laissait croire.
-   */
+    /**
+     * `deferred`: the request was not executed right away, it is waiting behind the synchronization in progress. It is not lost — which is precisely what the former
+     * `ok` let one believe.
+     */
   status: 'ok' | 'partial' | 'error' | 'deferred';
   stats: Record<string, unknown>;
 }
 
-/** Une seule synchronisation à la fois par connexion : deux passes concurrentes se marcheraient dessus. */
+/** Only one synchronization at a time per connection: two concurrent passes would trample each other. */
 const running = new Set<number>();
 
 /**
- * Le même verrou, mais posé par projet et AVANT l'ouverture de la connexion.
+ * The same lock, but set per project and BEFORE the connection is opened.
  *
- * `running` est indexé par connexion, et l'identifiant de connexion n'est connu qu'après un
- * `await` : c'est cette fenêtre qui laissait passer une rafale entière. Ce second verrou la
- * ferme ; celui par connexion reste, il garde le cas de deux projets partageant une même
- * connexion.
+ * `running` is indexed by connection, and the connection identifier is only known after an `await`: it is this window that let a whole burst through. This second lock
+ * closes it; the per-connection one stays, covering the case of two projects sharing one connection.
  */
 const runningProjects = new Set<number>();
 const pendingProjects = new Map<number, SyncOptions>();
 
 /**
- * Demandes arrivées pendant qu'une synchronisation tournait (D-ShotGrid).
+ * Requests that arrived while a synchronization was running (D-ShotGrid).
  *
- * Elles étaient **jetées** : `runSync` rendait `{ status: 'ok', skipped: 'already_running' }`
- * avant même d'ouvrir un journal. Chaque webhook devenant un job distinct et le worker
- * tournant à deux, dix changements de statut simultanés sur le site en perdaient environ
- * la moitié — sans erreur, sans trace, et sans que BullMQ rejoue quoi que ce soit. C'est
- * très exactement « une partie des statuts ne remonte pas ».
+ * They used to be **dropped**: `runSync` returned `{ status: 'ok', skipped: 'already_running' }` before even opening a journal. Each webhook becoming a distinct job and the
+ * worker running two at a time, ten simultaneous status changes on the site lost roughly half of them — without error, without trace, and without BullMQ replaying anything.
+ * That is exactly "some of the statuses do not come back up".
  *
- * On les fusionne donc et on les rejoue à la fin de la passe en cours. La fusion est
- * conservatrice : deux demandes ciblées s'additionnent, et dès qu'une demande porte sur
- * tout le projet, la passe rejouée porte sur tout le projet.
+ * They are therefore merged and replayed at the end of the current pass. The merge is conservative: two targeted requests add up, and as soon as one request concerns the whole
+ * project, the replayed pass concerns the whole project.
  */
 const pending = new Map<number, SyncOptions>();
 
-/** Fusionne deux demandes en une seule, sans jamais rétrécir la portée. */
+/** Merges two requests into one, never narrowing the scope. */
 export function mergeSyncOptions(a: SyncOptions, b: SyncOptions): SyncOptions {
-  // Une demande sans `onlySgIds` balaie tout : elle absorbe les demandes ciblées.
+    // A request without `onlySgIds` sweeps everything: it absorbs the targeted requests.
   const targeted = a.onlySgIds && b.onlySgIds ? [...a.onlySgIds, ...b.onlySgIds] : undefined;
   const unique = targeted
     ? targeted.filter((t, i) => targeted.findIndex((o) => o.sgType === t.sgType && o.sgId === t.sgId) === i)
     : undefined;
   return {
     kind: a.kind === 'full' || b.kind === 'full' ? 'full' : (b.kind ?? a.kind),
-    // La fenêtre la plus large l'emporte : rattraper trop est sans danger, trop peu perd.
+        // The widest window wins: over-catching is harmless, under-catching loses data.
     since: a.since && b.since ? new Date(Math.min(a.since.getTime(), b.since.getTime())) : null,
     triggeredById: b.triggeredById ?? a.triggeredById,
     onlySgIds: unique,
     withMedia: a.withMedia || b.withMedia,
-    // Même règle que pour les entités : l'union, et une demande sans liste (donc « tout »)
-    // absorbe l'autre. Fusionner deux événements Note et Version doit relire les deux.
+        // Same rule as for entities: the union, and a request without a list (hence "everything") absorbs the other. Merging a Note and a Version event must re-read both.
     passes: mergePasses(a.passes, b.passes),
   };
 }
 
 /**
- * Versions à relire parmi celles qu'un événement désigne.
+ * Versions to re-read among those an event designates.
  *
- * Transmettre les identifiants à `pullVersions` fait sauter le filtre de statuts du
- * studio — il y est traité comme le signe d'une sélection manuelle. Ce serait rapatrier
- * les médias de tous les WIP d'un site dont le studio a précisément choisi de ne suivre
- * que les versions en review. On rejoue donc le filtre ici, et on en profite pour
- * revérifier le projet : un identifiant reçu par webhook ne prouve rien.
+ * Passing the identifiers to `pullVersions` makes the studio's status filter fall away — it is treated there as the sign of a manual selection. That would fetch the media of
+ * all the WIPs of a site where the studio has precisely chosen to follow only the versions in review. The filter is therefore replayed here, and we take the opportunity to
+ * recheck the project: an identifier received by webhook proves nothing.
  *
- * Une version déjà liée passe toujours : le filtre décide de ce qu'on importe, pas de ce
- * qu'on continue de suivre.
+ * A version already linked always passes: the filter decides what we import, not what we keep following.
  */
 export async function importableVersionIds(
   ctx: PullContext,
@@ -167,18 +154,14 @@ export async function importableVersionIds(
 export async function runSync(projectId: number, options: SyncOptions = {}): Promise<SyncResult> {
   const kind = options.kind ?? 'full';
 
-  /*
-   * Verrou pris AVANT toute attente.
-   *
-   * `openConnection` est asynchrone : quand il précédait le test `running.has`, une rafale
-   * d'événements ShotGrid entrait tout entière dans la fonction, attendait la connexion, et
-   * trouvait le verrou encore libre — chacun le posait ensuite à son tour. Le journal du
-   * studio le montrait sans ambiguïté : quinze synchronisations en onze secondes, chacune
-   * mettant à jour les mêmes 47 entités.
-   *
-   * Le verrou par projet suffit ici : une connexion ne dessert qu'un projet, et deux
-   * projets d'un même site peuvent se synchroniser en parallèle sans se gêner.
-   */
+    /*
+     * Lock taken BEFORE any wait.
+     *
+     * `openConnection` is asynchronous: when it preceded the `running.has` test, a burst of ShotGrid events entered the function in full, waited for the connection, and
+     * found the lock still free — each then set it in turn. The studio's journal showed it unambiguously: fifteen synchronizations in eleven seconds, each updating the same 47 entities.
+     *
+     * The per-project lock suffices here: a connection serves only one project, and two projects of the same site may synchronize in parallel without getting in each other's way.
+     */
   if (runningProjects.has(projectId)) {
     const existing = pendingProjects.get(projectId);
     pendingProjects.set(projectId, existing ? mergeSyncOptions(existing, options) : options);
@@ -201,8 +184,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
   }
   if (running.has(ctx.connection.id)) {
     runningProjects.delete(projectId);
-    // La demande attend son tour au lieu d'être jetée. Le statut le dit : l'appelant
-    // HTTP ne doit pas afficher « synchronisé » pour un travail qui n'a pas eu lieu.
+        // The request waits its turn instead of being dropped. The status says so: the HTTP caller must not display "synchronized" for work that did not take place.
     const existing = pending.get(ctx.connection.id);
     pending.set(ctx.connection.id, existing ? mergeSyncOptions(existing, options) : options);
     return { runId: 0, status: 'deferred', stats: { deferred: 'already_running' } };
@@ -213,8 +195,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
   await markStatus(ctx.connection.id, 'syncing', null);
   const startedAt = new Date();
 
-  // Un événement ne doit toucher que ce qu'il désigne : le collecteur retient les
-  // entités réalignées et la décision d'émettre est prise en fin de passe.
+    // An event must only touch what it designates: the collector retains the realigned entities, and the decision to emit is taken at the end of the pass.
   const touched = new TouchedEntities();
   const pullCtx: PullContext = {
     ...ctx,
@@ -225,8 +206,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
   const pullOptions: PullOptions = { since: options.since ?? null, onlySgIds: options.onlySgIds };
   const passes = resolvePasses(options);
   const wants = (pass: SyncPass): boolean => passes.has(pass);
-  // Demande ciblée : une passe dont aucun identifiant n'est cité n'a rien à faire — la
-  // laisser partir sans filtre, c'est rejouer le projet entier pour une entité.
+    // Targeted request: a pass none of whose identifiers is cited has nothing to do — letting it go without a filter means replaying the whole project for one entity.
   const targeted = (options.onlySgIds?.length ?? 0) > 0;
 
   try {
@@ -236,21 +216,19 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       sgProjectId: ctx.connection.sgProjectId,
     });
 
-    // 1. Référentiels de statuts — tout le reste s'y réfère.
+        // 1. Status references — everything else refers to them.
     let taskStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let shotStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let sequenceStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let assetStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
-    // Une passe qui ne lit aucun `sg_status_list` (notes, playlists, versions) se passe
-    // du référentiel : ni lecture distante, ni repli en base.
+        // A pass that reads no `sg_status_list` (notes, playlists, versions) does without the reference: neither remote read nor database fallback.
     const readStatuses = wants('statuses');
     if (readStatuses && can(ctx.settings, 'statuses', 'read')) {
       const siteStatuses = await fetchSiteStatuses(ctx.client);
       taskStatuses = await syncPipelineStatuses(ctx.client, 'task', siteStatuses, journal);
       shotStatuses = await syncPipelineStatuses(ctx.client, 'shot', siteStatuses, journal);
       sequenceStatuses = await syncPipelineStatuses(ctx.client, 'sequence', siteStatuses, journal);
-      // L'asset a sa propre liste côté site : il empruntait celle des tâches, donc il
-      // affichait des états qu'aucun asset ne peut porter.
+            // The asset has its own list on the site side: it borrowed the tasks' one, so it displayed states no asset can carry.
       assetStatuses = await syncPipelineStatuses(ctx.client, 'asset', siteStatuses, journal);
       const versionMap = await syncVersionStatuses(
         ctx.client,
@@ -259,10 +237,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         journal,
       );
       if (JSON.stringify(versionMap) !== JSON.stringify(ctx.settings.versionStatusMap)) {
-        // Les réglages sont relus juste avant d'écrire, et seul le champ concerné est
-        // remplacé. Repartir de la copie prise au début de la synchronisation annulait
-        // tout ce qu'un humain avait réglé pendant qu'elle tournait — sans trace, et sans
-        // que rien ne l'en avertisse.
+                // The settings are re-read just before writing, and only the concerned field is replaced. Starting again from the copy taken at the start of the synchronization
+                // cancelled everything a human had set while it was running — without a trace, and without anything warning of it.
         await prisma.$transaction(async (tx) => {
           const fresh = await tx.shotgridConnection.findUnique({
             where: { id: ctx.connection.id },
@@ -279,10 +255,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         pullCtx.settings.versionStatusMap = versionMap;
       }
     } else if (readStatuses) {
-      // Lecture du référentiel fermée : on se rabat sur les statuts DÉJÀ importés du site
-      // (`projectId: null`, `origin: 'shotgrid'`). Sans ces deux filtres, le repli
-      // ramenait aussi le vocabulaire local du studio et celui des autres projets : un
-      // code commun comme « ip » suffisait à coller à un plan le statut d'un voisin.
+            // Reference read closed: we fall back on the statuses ALREADY imported from the site (`projectId: null`, `origin: 'shotgrid'`). Without these two filters, the
+            // fallback also picked up the studio's local vocabulary and that of other projects: a common code such as "ip" was enough to stick a neighbour's status onto a shot.
       const importedFromSite = { projectId: null, origin: 'shotgrid' } as const;
       const [t, s, q, a] = await Promise.all([
         prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'task' } }),
@@ -296,13 +270,11 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       assetStatuses = new Map(a.map((x) => [x.code, x]));
     }
 
-    // 2. Comptes (correspondance par courriel, aucune création).
+        // 2. Accounts (matching by e-mail, no creation).
     const userMap = wants('users') ? await buildUserMap(pullCtx) : new Map<number, number>();
 
-    // 3. Hiérarchie, dans l'ordre des dépendances. Les épisodes viennent en tête : le
-    // rattachement des séquences lit leur correspondance. Sur un projet où le niveau est
-    // éteint — le cas par défaut — les deux appels rendent la main sans rien demander au
-    // site.
+        // 3. Hierarchy, in dependency order. Episodes come first: the attachment of sequences reads their match. On a project where the level is off — the default case — the
+        // two calls return control without asking the site for anything.
     if (wants('episodes')) await pullEpisodes(pullCtx, sequenceStatuses, pullOptions);
     if (wants('sequences')) await pullSequences(pullCtx, sequenceStatuses, pullOptions);
     if (wants('episodes')) await pullSequenceEpisodes(pullCtx, pullOptions);
@@ -310,12 +282,10 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     if (wants('assets')) await pullAssets(pullCtx, assetStatuses, pullOptions);
     if (wants('tasks')) await pullTasks(pullCtx, taskStatuses, userMap, pullOptions);
 
-    // 4. Versions. Une demande ciblée transmet enfin ses identifiants : sans eux, un seul
-    // événement Version relisait toutes les versions du projet.
+        // 4. Versions. A targeted request finally passes its identifiers: without them, a single Version event re-read every version of the project.
     if (wants('versions')) {
       const versionIds = targeted ? await importableVersionIds(pullCtx, options.onlySgIds ?? []) : [];
-      // Ciblée sans version retenue : rien à relire. Appeler `pullVersions` avec une
-      // liste vide relancerait le balayage complet — l'inverse de ce qu'on cherche.
+            // Targeted with no version retained: nothing to re-read. Calling `pullVersions` with an empty list would restart the full sweep — the opposite of what we seek.
       if (!targeted || versionIds.length > 0) {
         await pullVersions(pullCtx, {
           since: options.since ?? null,
@@ -323,11 +293,11 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         });
       }
     }
-    // `PublishedFile` n'a pas de lecture ciblée : c'est un balayage de cinq mille
-    // enregistrements. Il n'a sa place que sur une passe non ciblée.
+            // `PublishedFile` has no targeted read: it is a sweep of five thousand records.
+            // It only belongs in a non-targeted pass.
     if (wants('publishedFiles') && !targeted) await pullPublishedFiles(pullCtx);
 
-    // 5. Notes et playlists : après les versions, dont les unes et les autres dépendent.
+    // 5. Notes and playlists: after the versions, on which both depend.
     const noteIds = sgIdsOfType(options.onlySgIds, 'Note');
     if (wants('notes') && (!targeted || noteIds.length > 0)) {
       await pullNotes(pullCtx, targeted ? { onlySgIds: noteIds } : {});
@@ -357,8 +327,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       err instanceof ShotgridApiError && err.isAuth ? 'auth_error' : 'error',
       message,
     );
-    // Une passe interrompue a tout de même réaligné une partie du projet : le résumé
-    // part quand même, sans quoi les écrans resteraient sur l'état d'avant.
+        // An interrupted pass still realigned part of the project: the summary goes out anyway, otherwise the screens would stay on the previous state.
     flushTouched(projectId, journal.runId, 'error', touched);
     return { runId: journal.runId, status: 'error', stats: { error: message } };
   } finally {
@@ -371,9 +340,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         logger.warn({ projectId, err }, 'Synchronisation différée en échec');
       });
     }
-    // Rejouer ce qui est arrivé pendant la passe. Sans `await` : l'appelant courant a
-    // fini son travail, et le rattrapage ne doit ni allonger sa réponse ni faire échouer
-    // son job s'il échoue à son tour.
+        // Replays what arrived during the pass. Without `await`: the current caller has finished its work, and the catch-up must neither lengthen its response
+        // nor make its job fail if it fails in turn.
     const deferred = pending.get(ctx.connection.id);
     if (deferred) {
       pending.delete(ctx.connection.id);
@@ -385,27 +353,24 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
 }
 
 /**
- * Rattrapage après coupure.
+ * Catch-up after an outage.
  *
- * ReView peut avoir été arrêté, isolé du réseau, ou avoir manqué des webhooks (ShotGrid
- * abandonne un point de livraison après cent échecs et n'en garde la trace que sept
- * jours). La réconciliation relit tout ce qui a bougé sur une fenêtre large — par
- * défaut trois jours, réglable — et réaligne sans rien demander à personne.
- * ShotGrid fait foi : c'est le registre de production, ReView en est le miroir.
+ * ReView may have been stopped, isolated from the network, or missed webhooks (ShotGrid gives up on a delivery endpoint after a hundred failures and keeps the trace of it
+ * for seven days only). Reconciliation re-reads everything that has moved over a wide window — three days by default, adjustable — and realigns without asking anyone.
+ * ShotGrid is authoritative: it is the production registry, ReView is its mirror.
  */
 export async function runReconcile(projectId: number, options: { lookbackHours?: number } = {}) {
   const conn = await prisma.shotgridConnection.findUnique({ where: { projectId } });
   if (!conn) return null;
   const settings = parseSettings(conn.settings);
   const hours = options.lookbackHours ?? settings.reconcile.lookbackHours;
-  // On repart de la dernière synchronisation réussie, jamais de « maintenant » : si
-  // l'instance est restée arrêtée une semaine, la fenêtre doit couvrir cette semaine.
+    // We restart from the last successful synchronization, never from "now": if the instance stayed stopped for a week, the window must cover that week.
   const from = conn.lastSyncAt ?? new Date(Date.now() - hours * 3600_000);
   const since = new Date(Math.min(from.getTime(), Date.now() - hours * 3600_000));
   return runSync(projectId, { kind: 'reconcile', since });
 }
 
-/** Connexions actives — utilisé par les tâches périodiques et le rattrapage au démarrage. */
+/** Active connections — used by the periodic tasks and the catch-up at startup. */
 export async function listActiveConnections() {
   return prisma.shotgridConnection.findMany({
     where: { active: true },
@@ -414,8 +379,8 @@ export async function listActiveConnections() {
 }
 
 /**
- * Inventaire distant, sans rien écrire — base de la page de comparaison.
- * Compté par entité pour repérer d'un coup d'œil ce qui manque d'un côté ou de l'autre.
+ * Remote inventory, writing nothing — the basis of the comparison page.
+ * Counted per entity so as to spot at a glance what is missing on one side or the other.
  */
 export async function remoteCounts(ctx: ConnectionContext): Promise<Record<string, number>> {
   const filters = [projectFilter(ctx.connection.sgProjectId)];
@@ -428,7 +393,7 @@ export async function remoteCounts(ctx: ConnectionContext): Promise<Record<strin
   return out;
 }
 
-/** Nom du projet distant, pour l'affichage de l'état de connexion. */
+/** Name of the remote project, for displaying the connection status. */
 export async function remoteProjectName(ctx: ConnectionContext): Promise<string | null> {
   const remote = await ctx.client.findById('Project', ctx.connection.sgProjectId, ['name']);
   return asString(remote?.name);

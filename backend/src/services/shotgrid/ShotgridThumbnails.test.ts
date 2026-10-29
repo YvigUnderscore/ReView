@@ -28,7 +28,7 @@ vi.mock('../EntityThumbnailService', () => ({
 import { syncThumbnail, thumbnailIdentity } from './ShotgridThumbnails';
 import type { PullContext } from './ShotgridPullService';
 
-/** URL telle que le site la rend : chemin adressé par contenu, signature volatile. */
+/** URL as the site returns it: a content-addressed path, volatile signature. */
 const URL_V1 =
   'https://sg-media-usor-01.s3-accelerate.amazonaws.com/a700/4352/sh010_t.jpg?X-Amz-Expires=900&X-Amz-Signature=aaa';
 const URL_V1_RESIGNED =
@@ -65,34 +65,32 @@ const respond = (bytes: Buffer, type: string | null = 'image/jpeg', size: number
 beforeEach(() => {
   vi.clearAllMocks();
   openStream.mockReset();
-  // Ces trois-là sont attendus par `await` : une doublure qui rend `undefined` ferait
-  // échouer le code pour une raison qui n'a rien à voir avec ce qu'on vérifie.
+    // These three are awaited: a double returning `undefined` would make the code fail for a reason unrelated to what is being checked.
   putObject.mockResolvedValue(undefined);
   deleteObject.mockResolvedValue(undefined);
   setThumbnail.mockResolvedValue(undefined);
 });
 
 /**
- * Le champ `image` rend une URL signée qui change à chaque lecture : s'en servir telle
- * quelle comme témoin de changement ferait retélécharger toutes les vignettes du projet
- * à chaque passe. Seul le chemin, adressé par contenu, dit si l'image a bougé.
+ * The `image` field returns a signed URL that changes at every read: using it as is as a change marker would re-download all the project's thumbnails at every pass.
+ * Only the path, addressed by content, says whether the image has moved.
  */
 describe('thumbnailIdentity', () => {
-  it('retire la signature et garde le chemin', () => {
+  it('removes the signature and keeps the path', () => {
     expect(thumbnailIdentity(URL_V1)).toBe(
       'https://sg-media-usor-01.s3-accelerate.amazonaws.com/a700/4352/sh010_t.jpg',
     );
   });
 
-  it('rend le même témoin pour deux signatures de la même image', () => {
+  it('returns the same marker for two signatures of the same image', () => {
     expect(thumbnailIdentity(URL_V1)).toBe(thumbnailIdentity(URL_V1_RESIGNED));
   });
 
-  it('distingue deux images différentes', () => {
+  it('tells two different images apart', () => {
     expect(thumbnailIdentity(URL_V1)).not.toBe(thumbnailIdentity(URL_V2));
   });
 
-  it('lit « pas de vignette » là où le site ne rend rien', () => {
+  it('reads "no thumbnail" where the site returns nothing', () => {
     expect(thumbnailIdentity(null)).toBeNull();
     expect(thumbnailIdentity(undefined)).toBeNull();
     expect(thumbnailIdentity('')).toBeNull();
@@ -101,7 +99,7 @@ describe('thumbnailIdentity', () => {
 });
 
 describe('syncThumbnail', () => {
-  it('rapatrie la vignette et la pose sur l’entité', async () => {
+  it('fetches the thumbnail and sets it on the entity', async () => {
     respond(Buffer.from('jpeg'));
     const identity = await syncThumbnail(context(), params());
 
@@ -111,12 +109,11 @@ describe('syncThumbnail', () => {
     expect(identity).toBe(thumbnailIdentity(URL_V1));
   });
 
-  /**
-   * Le cas de très loin le plus fréquent : une réconciliation nocturne relit tout le
-   * projet alors que rien n'a changé. Retélécharger douze mille images pour rien ferait
-   * de la passe de rattrapage la passe la plus coûteuse de l'intégration.
-   */
-  it('ne retélécharge rien quand la signature seule a changé', async () => {
+    /**
+     * By far the most frequent case: a nightly reconciliation re-reads the whole project while nothing has changed. Re-downloading twelve thousand images for nothing would
+     * make the catch-up pass the most costly pass of the integration.
+     */
+  it('re-downloads nothing when only the signature has changed', async () => {
     const identity = await syncThumbnail(
       context(),
       params({
@@ -131,7 +128,7 @@ describe('syncThumbnail', () => {
     expect(identity).toBe(thumbnailIdentity(URL_V1));
   });
 
-  it('rapatrie à nouveau quand l’image a réellement changé', async () => {
+  it('fetches again when the image has really changed', async () => {
     respond(Buffer.from('jpeg2'));
     const identity = await syncThumbnail(
       context(),
@@ -146,15 +143,15 @@ describe('syncThumbnail', () => {
     expect(identity).toBe(thumbnailIdentity(URL_V2));
   });
 
-  /** Le témoin est là mais l'objet a disparu du stockage : on repart le chercher. */
-  it('rapatrie quand l’entité a perdu sa vignette malgré un témoin identique', async () => {
+    /** The marker is there but the object has vanished from storage: we go and fetch it again. */
+  it('fetches back when the entity lost its thumbnail despite an identical marker', async () => {
     respond(Buffer.from('jpeg'));
     await syncThumbnail(context(), params({ previous: thumbnailIdentity(URL_V1), currentKey: null }));
 
     expect(openStream).toHaveBeenCalled();
   });
 
-  it('retire la vignette quand la production l’enlève du site', async () => {
+  it('removes the thumbnail when production removes it from the site', async () => {
     const identity = await syncThumbnail(
       context(),
       params({
@@ -169,13 +166,11 @@ describe('syncThumbnail', () => {
     expect(identity).toBeNull();
   });
 
-  /**
-   * Une vignette déposée à la main dans ReView n'a jamais eu de témoin : elle ne vient pas
-   * du site. Ni l'effacer quand ShotGrid n'illustre pas le shot, ni la recouvrir quand il
-   * l'illustre — c'est une décision humaine, et la recouvrir au premier passage l'aurait
-   * effacée sur tout un projet d'un coup.
-   */
-  it('n’efface pas une vignette posée à la main quand le site n’en a pas', async () => {
+    /**
+     * A thumbnail placed by hand in ReView never had a marker: it does not come from the site. Neither erasing it when ShotGrid does not illustrate the shot, nor covering it
+     * when it does — it is a human decision, and covering it on the first pass would have erased it across a whole project at once.
+     */
+  it('does not erase a thumbnail placed by hand when the site has none', async () => {
     await syncThumbnail(
       context(),
       params({ image: null, previous: null, currentKey: 'entity-thumbs/shot/12.jpg' }),
@@ -185,7 +180,7 @@ describe('syncThumbnail', () => {
     expect(setThumbnail).not.toHaveBeenCalled();
   });
 
-  it('ne recouvre pas une vignette posée à la main quand le site en a une', async () => {
+  it('does not cover a thumbnail placed by hand when the site has one', async () => {
     respond(Buffer.from('jpeg'));
     const identity = await syncThumbnail(
       context(),
@@ -194,23 +189,21 @@ describe('syncThumbnail', () => {
 
     expect(openStream).not.toHaveBeenCalled();
     expect(setThumbnail).not.toHaveBeenCalled();
-    // Pas de témoin non plus : l'entité reste hors du champ de la synchronisation tant
-    // que personne n'a retiré l'image choisie ici.
+        // No marker either: the entity stays outside the synchronization's scope until someone removes the image chosen here.
     expect(identity).toBeNull();
   });
 
-  it('ne rapatrie rien quand le studio a coupé le réglage', async () => {
+  it('fetches nothing when the studio has switched the setting off', async () => {
     const identity = await syncThumbnail(context(false), params({ previous: 'témoin-précédent' }));
 
     expect(openStream).not.toHaveBeenCalled();
     expect(identity).toBe('témoin-précédent');
   });
 
-  /**
-   * Le type vient de la réponse d'un service distant, et la clé sert ensuite à signer une
-   * URL servie depuis l'origine de l'application : rien d'actif n'y entre.
-   */
-  it('refuse un type que le stockage ne doit pas servir', async () => {
+    /**
+     * The type comes from the response of a remote service, and the key is then used to sign a URL served from the application's origin: nothing active enters there.
+     */
+  it('refuses a type that storage must not serve', async () => {
     respond(Buffer.from('<svg/>'), 'image/svg+xml');
     const identity = await syncThumbnail(context(), params());
 
@@ -218,18 +211,17 @@ describe('syncThumbnail', () => {
     expect(identity).toBeNull();
   });
 
-  it('refuse une image annoncée au-delà du plafond', async () => {
+  it('refuses an image announced beyond the cap', async () => {
     respond(Buffer.from('jpeg'), 'image/jpeg', 11 * 1024 * 1024);
     await syncThumbnail(context(), params());
 
     expect(putObject).not.toHaveBeenCalled();
   });
 
-  /**
-   * Une vignette manquante appauvrit l'affichage ; elle ne fait pas échouer l'import de
-   * l'entité. Le témoin précédent est conservé pour que la passe suivante retente.
-   */
-  it('garde le témoin précédent quand le téléchargement échoue', async () => {
+    /**
+     * A missing thumbnail impoverishes the display; it does not make the entity's import fail. The previous marker is kept so that the next pass retries.
+     */
+  it('keeps the previous marker when the download fails', async () => {
     openStream.mockRejectedValue(new Error('502'));
     const ctx = context();
     const identity = await syncThumbnail(
@@ -250,8 +242,8 @@ describe('syncThumbnail', () => {
     );
   });
 
-  /** Un JPEG remplacé par un PNG change de clé : l'ancien objet n'a plus rien qui le désigne. */
-  it('supprime l’ancien objet quand l’extension change', async () => {
+    /** A JPEG replaced by a PNG changes key: the old object is no longer designated by anything. */
+  it('deletes the old object when the extension changes', async () => {
     respond(Buffer.from('png'), 'image/png');
     const identity = await syncThumbnail(
       context(),
@@ -264,7 +256,7 @@ describe('syncThumbnail', () => {
 
     expect(putObject).toHaveBeenCalledWith('entity-thumbs/shot/12.png', expect.any(Buffer), 'image/png');
     expect(deleteObject).toHaveBeenCalledWith('entity-thumbs/shot/12.jpg');
-    // Le témoin n'avance que si toute la chaîne est allée au bout.
+        // The marker only advances if the whole chain went through to the end.
     expect(identity).toBe(thumbnailIdentity(URL_V2));
   });
 });

@@ -28,64 +28,61 @@ import {
 } from './EntityAssigneeService';
 
 /**
- * Qui doit regarder cette version (Phase 49), et **ce qu'il doit y regarder**.
+ * Who must review this version (Phase 49), and **what they must look at**.
  *
- * La décision de review existait déjà (`ReviewDecisionService`) : elle dit ce qu'on a
- * conclu d'une livraison. Ce qui manquait, c'est le geste d'avant — **confier** cette
- * livraison à quelqu'un. Il se disait de vive voix ou dans un fil de discussion, donc il
- * se perdait : personne ne pouvait ouvrir ReView et répondre à « qu'est-ce qu'on attend de
- * moi ? ». L'encart « Assigned to me » de la page Reviews lit exactement cette liste-là.
+ * The review decision already existed (`ReviewDecisionService`): it records what was concluded
+ * about a delivery. What was missing was the step before it: **assigning** the delivery to someone.
+ * That used to be said out loud or in a discussion thread, so it got lost: nobody could open ReView
+ * and answer "what is expected of me?". The "Assigned to me" panel on the Reviews page reads exactly that list.
  *
- * Il y manquait encore la moitié utile. Savoir qu'on est attendu sans savoir SUR QUOI ne
- * fait gagner du temps qu'à celui qui assigne : le destinataire ouvrait quatre minutes de
- * playblast sans savoir si on lui demandait la lumière, le timing ou le raccord. Chaque
- * assignation porte donc une **consigne**, et c'est elle qui fait la différence entre
- * « regarde ça » et « regarde le raccord au 1042, le reste est validé ».
+ * The useful half was still missing. Knowing you are expected without knowing WHAT to look at only
+ * saves time for the person assigning: the recipient would open four minutes of playblast without
+ * knowing whether they were asked about the lighting, the timing or the match. Every assignment
+ * therefore carries an **instruction**, and it is what makes the difference between "look at this"
+ * and "check the match at 1042, the rest is approved".
  *
- * Deux règles de projet l'encadrent (`settings.reviewRequest`) : l'exiger, et lui donner
- * une longueur minimale. Elles sont vérifiées **ici**, pas dans la route : la même
- * assignation arrive de l'écran de décision, de la publication d'un brouillon et de l'API
- * d'intégration — trois portes d'entrée pour une règle métier en font trois occasions de
- * l'oublier.
+ * Two project rules govern it (`settings.reviewRequest`): whether it is required, and a minimum
+ * length. They are enforced **here**, not in the route: the same assignment arrives from the decision
+ * screen, from publishing a draft, and from the integration API. Three entry points for one business
+ * rule would be three chances to forget it.
  *
- * Assigner n'ouvre aucun droit et n'en retire aucun : c'est une attente, pas une
- * délégation. La décision reste réservée au superviseur du projet, et un artiste à qui on
- * confie une version la regarde et la commente — comme il pouvait déjà le faire.
+ * Assigning grants and removes no rights: it is an expectation, not a delegation. The decision stays
+ * reserved to the project supervisor, and an artist assigned to a version reviews and comments on it,
+ * as they could already do.
  */
 
-/** Au-delà, ce n'est plus une assignation mais une diffusion : c'est à quoi sert la playlist. */
+/** Beyond this, it is no longer an assignment but a broadcast: this is what the playlist is for. */
 export const MAX_REVIEWERS = 20;
 
 /**
- * Une attente de review, telle que l'API la rend : la personne — même forme que partout
- * ailleurs — et la consigne écrite POUR ELLE.
+ * A review expectation, as the API returns it: the person (same shape as everywhere else) and the
+ * instruction written FOR THEM.
  *
- * La consigne est posée à plat sur la personne plutôt que dans un objet englobant : les
- * écrans qui affichaient déjà la liste (`AssigneeStack`, l'encart « Assigned to me ») la
- * lisent inchangés, et ceux qui veulent la consigne la trouvent au même endroit.
+ * The instruction sits flat on the person rather than in a wrapping object: the screens that already
+ * displayed the list (`AssigneeStack`, the "Assigned to me" panel) read it unchanged, and those that
+ * want the instruction find it in the same place.
  */
 export type ReviewerView = AssigneeView & { note: string | null };
 
-/** Ce qu'un appelant fournit pour confier une version à quelqu'un. */
+/** What a caller provides to assign a version to someone. */
 export interface ReviewerInput {
   userId: number;
   note?: string | null;
 }
 
 /**
- * La liste telle que les TROIS portes d'écriture l'acceptent : l'écran de décision, la
- * publication d'un brouillon, et l'API d'intégration. Un seul schéma pour les trois — trois
- * copies auraient divergé à la première borne changée, et la porte oubliée aurait accepté
- * ce que les deux autres refusent.
+ * The list as the THREE write entry points accept it: the decision screen, publishing a draft, and
+ * the integration API. One schema for all three: three copies would have diverged at the first
+ * changed bound, and the forgotten entry point would have accepted what the other two refuse.
  *
- * Il vit ici et non dans `lib/projectSettings` parce que c'est `MAX_REVIEWERS` qui le
- * borne, et que cette borne est une règle de l'assignation, pas du réglage de consigne.
+ * It lives here and not in `lib/projectSettings` because `MAX_REVIEWERS` bounds it, and that bound
+ * is a rule of assignment, not of the instruction setting.
  */
 export const reviewersSchema = z
   .array(z.object({ userId: z.number().int().positive(), note: reviewNoteSchema }))
   .max(MAX_REVIEWERS);
 
-/** La version, son projet, son auteur, et de quoi écrire la notification. */
+/** The version, its project, its author, and what is needed to write the notification. */
 async function loadVersion(versionId: number) {
   const version = await prisma.version.findFirst({
     where: { id: versionId, deletedAt: null },
@@ -97,7 +94,7 @@ async function loadVersion(versionId: number) {
 
 const SELECT = { note: true, reviewer: { select: ASSIGNEE_SELECT } } as const;
 
-/** Les personnes confiées à cette version, photos signées — ordre stable (par id). */
+/** The people assigned to this version, with signed photos. Stable order (by id). */
 export async function listReviewers(versionId: number): Promise<ReviewerView[]> {
   const rows = await prisma.reviewAssignment.findMany({
     where: { versionId },
@@ -108,16 +105,14 @@ export async function listReviewers(versionId: number): Promise<ReviewerView[]> 
 }
 
 /**
- * Qui peut confier une review, et donc écrire la consigne.
+ * Who may assign a review, and therefore write the instruction.
  *
- * Le gestionnaire du projet, évidemment : répartir les reviews est son métier. Mais aussi
- * **l'auteur de la version** — c'est lui qui vient de livrer, lui qui sait ce qu'il y a à
- * regarder, et c'est au moment de l'upload que la consigne a le plus de valeur. Le lui
- * refuser aurait fait du réglage « consigne obligatoire à l'upload » une règle que
- * l'uploader ne pouvait pas satisfaire.
+ * The project manager, obviously: distributing reviews is their job. But also
+ * **the version's author**: they just delivered it, they know what there is to look at, and the
+ * instruction is worth the most at upload time. Refusing it to them would have turned "instruction
+ * required at upload" into a rule the uploader could not satisfy.
  *
- * Cela n'élargit aucun droit de décision : l'artiste désigne qui regarde, il ne conclut
- * pas la review (38.E).
+ * This grants no decision right: the artist chooses who looks, but does not conclude the review (38.E).
  */
 async function assertCanAssign(
   actor: SessionUser,
@@ -131,11 +126,11 @@ async function assertCanAssign(
 }
 
 /**
- * Normalise une consigne et la confronte à la règle du projet.
+ * Normalizes an instruction and checks it against the project rule.
  *
- * L'espace seul ne fait pas une consigne : elle est mesurée après `trim`, et une consigne
- * vide est stockée `null` plutôt qu'en chaîne vide — deux représentations du même rien
- * auraient donné deux affichages différents selon la porte d'entrée.
+ * Whitespace alone does not make an instruction: it is measured after `trim`, and an empty instruction
+ * is stored as `null` rather than as an empty string. Two representations of the same nothing would
+ * have produced two different displays depending on the entry point.
  */
 export function normalizeNote(note: string | null | undefined, rule: ReviewRequestRule): string | null {
   const verdict = checkReviewNote(note, rule);
@@ -151,17 +146,14 @@ export function normalizeNote(note: string | null | undefined, rule: ReviewReque
 }
 
 /**
- * Remplace la liste des personnes chargées de la review d'une version, consignes comprises.
+ * Replaces the list of people in charge of a version's review, instructions included.
  *
- * Remplacement et non ajout : l'appelant envoie la liste qu'il veut voir, et deux
- * enregistrements concurrents ne peuvent pas laisser un assigné fantôme que personne n'a
- * choisi. Même arbitrage que `EntityAssigneeService.setAssignees`, et même garde-fou sur
- * qui peut recevoir du travail — sinon l'un des deux chemins devient la porte de service
- * de l'autre.
+ * Replacement, not addition: the caller sends the list it wants to see, and two concurrent saves cannot
+ * leave a ghost assignee that nobody chose. Same trade-off as `EntityAssigneeService.setAssignees`, and
+ * same guard on who may receive work, otherwise one of the two paths would become the back door of the other.
  *
- * Une personne déjà confiée voit sa consigne mise à jour au lieu d'être retirée puis
- * remise : sans quoi elle serait prévenue à chaque enregistrement, et réabonnée à une
- * version dont elle s'était peut-être désabonnée.
+ * A person already assigned has their instruction updated instead of being removed and re-added: otherwise
+ * they would be notified on every save, and resubscribed to a version they may have unsubscribed from.
  */
 export async function setReviewers(
   actor: SessionUser,
@@ -172,8 +164,8 @@ export async function setReviewers(
   const version = await loadVersion(versionId);
   await assertCanAssign(actor, projectId, version.authorId);
 
-  // Une même personne citée deux fois n'est pas une erreur à refuser : la dernière consigne
-  // gagne, comme à l'écran où la seconde ligne écrase la première.
+    // The same person listed twice is not an error to reject: the last instruction wins,
+    // as on screen where the second row overwrites the first.
   const rule = (await resolveProjectSettingsById(projectId)).reviewRequest;
   const wanted = new Map<number, string | null>();
   for (const entry of entries) wanted.set(entry.userId, normalizeNote(entry.note, rule));
@@ -196,8 +188,8 @@ export async function setReviewers(
     ),
   ]);
 
-  // Prévenir seulement ce qui a changé POUR LA PERSONNE : une assignation neuve, ou une
-  // consigne réécrite. Réenregistrer la même liste sans rien y toucher ne réveille personne.
+    // Only notify what changed FOR THE PERSON: a new assignment, or a rewritten instruction.
+    // Saving the same list again without touching it wakes nobody.
   const added: number[] = [];
   const rewritten: number[] = [];
   for (const [reviewerId, note] of wanted) {
@@ -212,11 +204,11 @@ export async function setReviewers(
 }
 
 /**
- * Réécrit la consigne d'une personne déjà confiée, sans toucher au reste de la liste.
+ * Rewrites the instruction of a person already assigned, without touching the rest of the list.
  *
- * C'est le geste courant d'après-coup — « ajoute-lui ce qu'il faut regarder ». Passer par
- * `setReviewers` aurait exigé de renvoyer la liste entière, donc de la relire, et deux
- * écrans ouverts se seraient effacés l'un l'autre.
+ * This is the common after-the-fact step ("add what they need to look at"). Going through `setReviewers`
+ * would have required sending the whole list back, hence re-reading it, and two open screens would have
+ * overwritten each other.
  */
 export async function updateNote(
   actor: SessionUser,
@@ -244,15 +236,15 @@ export async function updateNote(
   return afterWrite(actor, projectId, version, null);
 }
 
-/** La version telle que les écritures se la passent entre elles. */
+/** The version as the write operations pass it between themselves. */
 type LoadedVersion = Awaited<ReturnType<typeof loadVersion>>;
 
 /**
- * Ce que toute écriture fait ensuite : tracer, réveiller les écrans ouverts sur la version,
- * informer les intégrations, et rendre la liste à jour.
+ * What every write does next: record the audit trail, wake the screens open on the version, inform
+ * integrations, and return an up-to-date list.
  *
- * `userIds` n'est tracé que lorsque la liste elle-même a changé — une consigne réécrite ne
- * modifie pas qui est attendu, et le faire croire au journal d'audit serait faux.
+ * `userIds` is recorded only when the list itself changed: a rewritten instruction does not change who
+ * is expected, and letting the audit log believe otherwise would be wrong.
  */
 async function afterWrite(
   actor: SessionUser,
@@ -288,16 +280,16 @@ async function afterWrite(
 }
 
 /**
- * Prévient les personnes concernées — et abonne les nouvelles à la version.
+ * Notifies the people concerned, and subscribes the newcomers to the version.
  *
- * La notification d'assignation seule aurait laissé le reviewer dans le noir jusqu'à ce
- * qu'il pense à rouvrir l'écran : les retours et la décision qui suivent sont précisément
- * ce qu'il attend. Le suivi (32.G) les lui fait parvenir, et il reste le sien — le retirer
- * de la liste ne le désabonne pas, puisqu'il a pu le poser lui-même entre-temps. Une
- * consigne réécrite ne réabonne personne : la décision d'arrêter de suivre lui appartient.
+ * The assignment notification alone would have left the reviewer in the dark until they thought to reopen
+ * the screen: the feedback and the decision that follow are exactly what they are waiting for. Follow-up
+ * (32.G) delivers them, and the subscription stays theirs: removing them from the list does not unsubscribe
+ * them, since they may have subscribed themselves in the meantime. A rewritten instruction does not
+ * resubscribe anyone: the decision to stop following belongs to them.
  *
- * La référence pointe le premier média de la version : c'est ce qui rend la notification
- * navigable jusqu'à l'écran de review (même choix que la décision).
+ * The reference points to the version's first media: this is what keeps the notification navigable
+ * to the review screen (same choice as for the decision).
  */
 async function announce(
   userIds: number[],

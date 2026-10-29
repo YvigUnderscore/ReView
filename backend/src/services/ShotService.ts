@@ -19,18 +19,18 @@ import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot, signAssignees } from '../li
 import { unseenByShot } from './EntityVisitService';
 
 /**
- * Logique métier des shots (liste + miniatures, création simple/lot avec unicité de
- * code par séquence, rattachement d'assets, corbeille). L'accès projet (RBAC) est
- * asserté dans la route ; ces fonctions reçoivent des paramètres validés (10.D8).
+ * Business logic for shots (list + thumbnails, single/batch creation with code uniqueness per
+ * sequence, asset attachment, trash). Project access (RBAC) is asserted in the route; these functions
+ * receive validated parameters (10.D8).
  */
 
 /**
- * Filtre d'épisode d'une liste de plans (niveau facultatif, cf. `EpisodeService`).
+ * Episode filter for a list of shots (optional level, see `EpisodeService`).
  *
- * Un plan n'appartient pas à un épisode : c'est sa séquence qui en porte un. Le filtre
- * traverse donc la relation, et `none` désigne les plans dont la séquence est hors
- * épisode — ainsi que ceux qui n'ont pas de séquence du tout, qui sont hors épisode par
- * construction. Undefined : aucune restriction, exactement le comportement d'avant.
+ * A shot does not belong to an episode directly: its sequence carries one. The filter therefore goes
+ * through the relation, and `none` designates the shots whose sequence is outside any episode, as well
+ * as those with no sequence at all, which are outside any episode by construction. Undefined: no
+ * restriction, exactly the previous behaviour.
  */
 export function episodeWhere(episode: number | 'none' | undefined): Prisma.ShotWhereInput {
   if (episode === undefined) return {};
@@ -39,32 +39,31 @@ export function episodeWhere(episode: number | 'none' | undefined): Prisma.ShotW
 }
 
 /**
- * Shots paginés d'un projet (filtre séquence : id, `none` = hors séquence, ou tous ;
- * filtre épisode : id, `none` = hors épisode, ou tous) + miniatures.
+ * Paginated shots of a project (sequence filter: id, `none` = outside any sequence, or all;
+ * episode filter: id, `none` = outside any episode, or all) plus thumbnails.
  *
- * Le tri se départage sur `id` : un import ShotGrid incrémental laisse tous les plans
- * créés à `order = 0`, et sans départage Postgres est libre de rendre ces ex æquo dans
- * un ordre différent d'une page à l'autre — la page 2 réaffiche alors des plans de la
- * page 1 et en saute autant. Le curseur (`p.cursor`) suit le même couple `(order, id)`.
+ * Sorting is tie-broken on `id`: an incremental ShotGrid import leaves every shot created with
+ * `order = 0`, and without a tie-break Postgres is free to return these ties in a different order from
+ * one page to the next, so page 2 shows shots of page 1 again and skips as many. The cursor (`p.cursor`)
+ * follows the same `(order, id)` pair.
  */
 export async function list(
   projectId: number,
   seq: number | 'none' | undefined,
   p: PaginationParams,
   episode?: number | 'none',
-  /**
-   * Qui regarde — pour l'état « non consulté » (lot 9). Absent (surface de partage, qui
-   * n'a pas de compte), aucune carte ne s'allume : la lueur est une notion personnelle.
-   */
+    /**
+     * Who is looking, for the "unseen" state (batch 9). Absent (share surface, which has no account), no
+     * card lights up: the glow is a personal notion.
+     */
   userId?: number,
 ) {
   const seqFilter =
     seq === 'none' ? { sequenceId: null } : seq !== undefined ? { sequenceId: Number(seq) } : {};
-  // `hiddenAt` : un plan masqué (VisibilityService) n'apparaît dans aucune liste, pour
-  // personne. Le filtre est inconditionnel — y compris pour un admin, qui gère les
-  // éléments masqués depuis l'écran d'administration prévu pour ça et nulle part ailleurs.
-  // Le laisser paraître « seulement pour l'admin » aurait rendu tous les décomptes faux
-  // selon qui regarde.
+    // `hiddenAt`: a hidden shot (VisibilityService) appears in no list, for anyone. The filter is
+    // unconditional, including for an admin, who manages hidden items from the administration screen
+    // provided for that and nowhere else. Letting it show "for admins only" would have made every count
+    // wrong depending on who is looking.
   const where = { projectId, deletedAt: null, hiddenAt: null, ...seqFilter, ...episodeWhere(episode) };
   const [shots, total] = await Promise.all([
     prisma.shot.findMany({
@@ -74,17 +73,16 @@ export async function list(
       include: {
         _count: { select: { tasks: true } },
         assets: { where: { deletedAt: null, hiddenAt: null }, select: { id: true, name: true, type: true } },
-        // Étapes traversées (B1) : le filtre par département de l'onglet Shots s'appuie
-        // dessus. La fiche d'un plan les renvoyait, la liste non — choisir un département
-        // vidait donc l'écran, faute d'étape à comparer sur chaque carte.
+                // Steps traversed (B1): the department filter of the Shots tab relies on them. The shot sheet
+                // returned them, the list did not: choosing a department therefore emptied the screen, with no
+                // step to compare on each card.
         departments: {
           select: { id: true, key: true, name: true, color: true },
           orderBy: { order: 'asc' },
         },
-        // Étapes et assignés, comme `AssetService.list` : le sous-menu « Assigner » du clic
-        // droit lit `hasTask` par département. Sans eux il s'affichait entièrement grisé sur
-        // un projet piloté depuis ShotGrid — les deux onglets divergeaient pour cette
-        // seule raison.
+                // Steps and assignees, as in `AssetService.list`: the "Assign" submenu of the right-click
+                // reads `hasTask` per department. Without them it showed fully greyed out on a project driven
+                // from ShotGrid: the two tabs diverged for that reason alone.
         tasks: {
           select: {
             id: true,
@@ -93,23 +91,21 @@ export async function list(
             assignee: { select: { id: true, name: true } },
           },
         },
-        // Personnes responsables du plan : la carte les montre en photos. Sans elles
-        // ici, chaque carte aurait demandé sa propre requête.
+                // The people responsible for the shot: the card shows them as photos. Without them here,
+                // each card would have issued its own query.
         assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
       },
     }),
     prisma.shot.count({ where }),
   ]);
-  // Une requête groupée pour toute la page (B3) : la variante unitaire dans un `.map`
-  // envoyait une requête et une signature MinIO par plan, soit deux cents allers-retours
-  // pour une page de cent.
+    // One grouped query for the whole page (B3): the per-item variant inside a `.map` sent one query
+    // and one MinIO signature per shot, that is two hundred round trips for a page of a hundred.
   const ids = shots.map((s) => s.id);
   const [fallbacks, awaiting, unseen] = await Promise.all([
     firstMediaThumbKeysForShots(ids),
     awaitingReviewByShot(ids),
-    // « Non consulté » : l'activité du plan — la sienne, celle de ses tâches, de ses
-    // livraisons et de leurs médias — confrontée à ma dernière visite. Le calcul est
-    // groupé comme les deux précédents, pour la même raison.
+        // "Unseen": the shot's activity (its own, its tasks', its deliveries' and their media) compared
+        // with my last visit. The computation is grouped like the two previous ones, for the same reason.
     userId ? unseenByShot(userId, shots) : Promise.resolve(new Map<number, boolean>()),
   ]);
   const signed = await signAssignees(shots);
@@ -124,7 +120,7 @@ export async function list(
   return paginateCursor(items, total, p, (s) => s.order);
 }
 
-/** Vérifie que la séquence (si fournie) appartient bien au projet. */
+/** Checks that the sequence (if given) does belong to the project. */
 async function assertSequenceInProject(sequenceId: number | null | undefined, projectId: number) {
   if (!sequenceId) return;
   const seq = await prisma.sequence.findUnique({ where: { id: sequenceId }, select: { projectId: true } });
@@ -144,9 +140,9 @@ export interface CreateShotInput {
 }
 
 export async function create(input: CreateShotInput) {
-  await assertProjectWritable(input.projectId); // 38.B : projet archivé = lecture seule
+  await assertProjectWritable(input.projectId); // 38.B: archived project is read-only
   await assertSequenceInProject(input.sequenceId, input.projectId);
-  // Unicité du code par séquence (les shots sans séquence sont un groupe à part).
+    // Code uniqueness per sequence (shots without a sequence form a group of their own).
   const clash = await prisma.shot.findFirst({
     where: {
       projectId: input.projectId,
@@ -175,19 +171,19 @@ export type BulkShotItem = Omit<CreateShotInput, 'projectId'>;
 
 export async function createBulk(projectId: number, items: BulkShotItem[]) {
   await assertProjectWritable(projectId); // 38.B
-  // Les séquences référencées doivent appartenir au projet.
+    // Referenced sequences must belong to the project.
   const seqIds = [...new Set(items.map((i) => i.sequenceId).filter((v): v is number => !!v))];
   if (seqIds.length > 0) {
     const ok = await prisma.sequence.count({ where: { id: { in: seqIds }, projectId } });
     if (ok !== seqIds.length)
       throw badRequest('This sequence does not belong to this project', 'BAD_SEQUENCE');
   }
-  // Doublons (code, séquence) dans le lot.
+    // Duplicates (code, sequence) within the batch.
   const key = (sid: number | null | undefined, code: string) => `${sid ?? 'none'}::${code}`;
   const keys = items.map((i) => key(i.sequenceId, i.code));
   const dup = keys.find((k, i) => keys.indexOf(k) !== i);
   if (dup) throw badRequest(`Duplicate code in the batch : ${dup.split('::')[1]}`, 'CODE_DUP');
-  // Conflits avec l'existant.
+    // Conflicts with existing data.
   const existing = await prisma.shot.findMany({
     where: { projectId, deletedAt: null, code: { in: items.map((i) => i.code) } },
     select: { code: true, sequenceId: true },
@@ -213,25 +209,25 @@ export async function createBulk(projectId: number, items: BulkShotItem[]) {
   );
 }
 
-/** Détail d'un shot (séquence, tâches, assets). Renvoie aussi projectId pour l'assertion d'accès. */
+/** Shot detail (sequence, tasks, assets). Also returns projectId for the access assertion. */
 export async function get(id: number) {
   const shot = await prisma.shot.findUnique({
     where: { id },
     include: {
       sequence: true,
-      // Départage sur `id` : deux tâches créées par le même import partagent `order = 0`.
+            // Tie-break on `id`: two tasks created by the same import share `order = 0`.
       tasks: {
         orderBy: [{ order: 'asc' }, { id: 'asc' }],
         include: { assignee: { select: { id: true, name: true } } },
       },
       assets: { where: { deletedAt: null }, select: { id: true, name: true, type: true } },
-      // Départements traversés (B1) : le panneau de réglages les coche (C3).
+            // Departments traversed (B1): the settings panel ticks them (C3).
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });
   if (!shot) throw notFound('Shot not found');
-  // La miniature n'était calculée que dans la liste : une page de plan n'a pas de liste
-  // derrière elle, et affichait donc un en-tête vide.
+    // The thumbnail was only computed in the list: a shot page has no list behind it, and so
+    // displayed an empty header.
   return {
     ...shot,
     thumbnailUrl: await effectiveThumbnailUrl(shot.thumbnailKey, await firstMediaThumbKeyForShot(shot.id)),
@@ -248,45 +244,43 @@ export interface UpdateShotInput {
   description?: string | null;
   thumbnailKey?: string | null;
   settings?: Prisma.InputJsonValue;
-  /** Statut du plan (C3) — jusqu'ici écrit par la seule synchronisation ShotGrid. */
+    /** Shot status (C3): until now written only by the ShotGrid synchronisation. */
   pipelineStatusId?: number | null;
-  /** Omis du montage (Phase 45) : le plan reste en base, les timelines le sautent. */
+    /** Left out of the edit (Phase 45): the shot stays in the database, timelines skip it. */
   omitted?: boolean;
 }
 
 export interface UpdateShotOptions {
-  /**
-   * Retient les événements temps réel : l'appelant les émettra lui-même, une fois, pour
-   * le lot entier (cf. `emitShotsUpdated`). Réservé aux boucles ; le chemin unitaire,
-   * lui, émet comme avant.
-   */
+    /**
+     * Holds back real-time events: the caller emits them itself, once, for the whole batch
+     * (see `emitShotsUpdated`). Reserved for loops; the single-item path emits as before.
+     */
   deferEvents?: boolean;
 }
 
 /**
- * Événements temps réel d'une modification de plan : `shot:update` + `timeline:update`.
+ * Real-time events for a shot modification: `shot:update` + `timeline:update`.
  *
- * Exporté pour que les actions EN LOT n'émettent qu'un couple d'événements au lieu de N.
- * Trente plans passés en retake d'un clic — le geste quotidien d'une production — c'était
- * trente `shot:update`, donc trente rechargements COMPLETS du kanban chez chacune des
- * personnes qui l'avaient ouvert : la lecture la plus lourde de l'application, répétée
- * pour rien puisque seule la dernière réponse survivait.
+ * Exported so that BATCH actions emit one pair of events instead of N. Thirty shots set to retake with one
+ * click (the daily gesture of a production) used to mean thirty `shot:update`, hence thirty FULL reloads of
+ * the kanban on the screen of each person who had it open: the heaviest read in the application, repeated
+ * for nothing since only the last response survived.
  *
- * `ids` porte le lot. Le payload du SINGULIER reste exactement celui d'avant — pas de
- * champ `ids` quand il n'y a qu'un plan — et `id`/`shotId` valent toujours le premier
- * identifiant : un consommateur qui ignore `ids` continue de fonctionner tel quel.
+ * `ids` carries the batch. The payload of the SINGULAR stays exactly what it was: no `ids` field when there
+ * is only one shot, and `id`/`shotId` always hold the first identifier: a consumer that ignores `ids` keeps
+ * working as is.
  */
 export function emitShotsUpdated(projectId: number, ids: readonly number[]): void {
   const first = ids[0];
   if (first === undefined) return;
   const batch = ids.length > 1 ? { ids: [...ids] } : {};
-  // Le plan lui-même a changé : statut, code, nom, description, omission. Sans cet
-  // événement, un écran ouvert sur ce plan — ou sur la liste des plans du projet — gardait
-  // l'ancienne valeur jusqu'au rechargement, et l'auteur du changement croyait qu'il
-  // n'était pas passé. Le front écoute `shot:update` depuis toujours (`socketBridge`).
+    // The shot itself changed: status, code, name, description, omission. Without this event, a screen
+    // open on this shot, or on the project's shot list, kept the old value until reload, and the author of
+    // the change believed it had not gone through. The front end has always listened to `shot:update`
+    // (`socketBridge`).
   emitToProject(projectId, 'shot:update', { projectId, id: first, ...batch });
-  // Ordre, plage de frames, omission, séquence : tout cela déplace les plans dans les
-  // montages automatiques, qui doivent se remettre à jour sans rechargement (Phase 45).
+    // Order, frame range, omission, sequence: all of these move shots within the automatic timelines,
+    // which must update without a reload (Phase 45).
   emitToProject(projectId, 'timeline:update', { projectId, shotId: first, ...batch });
 }
 
@@ -299,15 +293,15 @@ export async function update(
 ) {
   await assertProjectWritable(projectId); // 38.B
   await assertSequenceInProject(body.sequenceId, projectId);
-  // Le statut doit venir du vocabulaire de CE projet : poser l'identifiant d'un statut
-  // importé du site d'un autre projet passerait sans bruit et fausserait la lecture.
+    // The status must come from THIS project's vocabulary: setting the identifier of a status
+    // imported from another project's site would pass silently and skew the reading.
   if (body.pipelineStatusId !== undefined) {
     await PipelineStatusService.assertBelongsToProject(projectId, 'shot', body.pipelineStatusId);
   }
-  // La description peut être tenue par ShotGrid : l'écrire ici la ferait diverger
-  // jusqu'à ce que la synchronisation suivante l'écrase, sans rien dire à personne.
+    // The description may be owned by ShotGrid: writing it here would make them diverge until the
+    // next synchronisation overwrites it, without telling anyone.
   if (body.description !== undefined) await assertDescriptionWritable(projectId);
-  // Si le code ou la séquence change, vérifier l'unicité (code unique par séquence).
+    // If the code or the sequence changes, check uniqueness (code unique per sequence).
   if (body.code !== undefined || body.sequenceId !== undefined) {
     const current = await prisma.shot.findUnique({ where: { id }, select: { code: true, sequenceId: true } });
     const nextCode = body.code ?? current!.code;
@@ -319,18 +313,18 @@ export async function update(
     if (conflict) throw badRequest('A shot with this code already exists in this sequence', 'CODE_TAKEN');
   }
   const shot = await prisma.shot.update({ where: { id }, data: body });
-  // Émissions au singulier, sauf quand un appelant en lot les regroupe lui-même. Seuls
-  // `PipelineEnsureService` et la synchronisation ShotGrid émettaient `shot:update`,
-  // c'est-à-dire aucun des chemins empruntés par un humain qui édite un plan.
+    // Singular emissions, except when a batch caller groups them itself. Only `PipelineEnsureService`
+    // and the ShotGrid synchronisation emitted `shot:update`, that is, none of the paths a human editing a
+    // shot takes.
   if (!options?.deferEvents) emitShotsUpdated(projectId, [id]);
-  // Le statut repart vers ShotGrid. Il ne partait nulle part : le plan changeait d'état
-  // dans ReView, le site gardait l'ancien, et la synchronisation suivante ramenait
-  // celui du site. L'artiste voyait son changement s'annuler tout seul.
+    // The status goes back to ShotGrid. It used to go nowhere: the shot changed state in ReView, the site
+    // kept the old one, and the next synchronisation brought the site's value back. The artist saw their
+    // change cancel itself out.
   if (body.pipelineStatusId !== undefined) {
     await enqueuePush(projectId, { type: 'shot-status', shotId: id, actorId });
   }
-  // Aller-retour de description, quand le studio l'a ouvert : sans cet envoi, la
-  // modification locale serait effacée par la synchronisation suivante.
+    // Description round trip, when the studio has opened it: without this push, the local change would be
+    // erased by the next synchronisation.
   if (body.description !== undefined) {
     await enqueuePush(projectId, { type: 'description', kind: 'shot', id, actorId });
   }
@@ -343,7 +337,7 @@ export interface AttachAssetInput {
   type?: AssetType;
 }
 
-/** Rattache un asset existant OU en crée un et le rattache au shot. */
+/** Attaches an existing asset OR creates one and attaches it to the shot. */
 export async function attachAsset(shotId: number, projectId: number, body: AttachAssetInput) {
   await assertProjectWritable(projectId); // 38.B
   let assetId = body.assetId;

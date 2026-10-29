@@ -4,15 +4,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Le verrou « une synchronisation à la fois » était posé APRÈS `await openConnection(...)`.
+ * The "one sync at a time" lock was set AFTER `await openConnection(...)`.
  *
- * Node ne préempte pas, mais il rend la main sur chaque `await` : une rafale d'événements
- * ShotGrid entrait tout entière dans `runSync`, attendait la connexion, puis trouvait le
- * verrou encore libre — et chacun le posait à son tour. Le journal du studio en portait la
- * trace : quinze synchronisations en onze secondes, toutes sur les mêmes 47 entités.
+ * Node does not preempt, but it yields on every `await`: a burst of ShotGrid events entered `runSync` in full, waited for the connection, then found the lock still free
+ * — and each set it in turn. The studio's journal bore the trace: fifteen synchronizations in eleven seconds, all on the same 47 entities.
  *
- * Ce test rejoue exactement cette rafale : plusieurs appels lancés sans attendre entre eux,
- * sur une connexion volontairement lente à ouvrir.
+ * This test replays exactly that burst: several calls launched without waiting for one another, on a deliberately slow connection to open.
  */
 
 const { openConnection } = vi.hoisted(() => ({ openConnection: vi.fn() }));
@@ -37,7 +34,7 @@ vi.mock('../../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), err
 
 import { runSync } from './ShotgridSyncService';
 
-/** Connexion inactive : la passe s'arrête juste après le verrou, sans toucher au réseau. */
+/** Inactive connection: the pass stops right after the lock, without touching the network. */
 const slowInactiveConnection = (delayMs: number) =>
   openConnection.mockImplementation(
     async () =>
@@ -46,18 +43,18 @@ const slowInactiveConnection = (delayMs: number) =>
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('runSync — verrou pris avant toute attente', () => {
-  it('une rafale de cinq demandes n’ouvre la connexion qu’une fois', async () => {
+describe('runSync: lock taken before any wait', () => {
+  it('a burst of five requests opens the connection only once', async () => {
     slowInactiveConnection(20);
 
-    // Lancées sans `await` entre elles : c'est la rafale de webhooks.
+        // Launched without `await` between them: this is the burst of webhooks.
     const results = await Promise.all([runSync(461), runSync(461), runSync(461), runSync(461), runSync(461)]);
 
     expect(openConnection).toHaveBeenCalledTimes(1);
     expect(results.filter((r) => r.status === 'deferred')).toHaveLength(4);
   });
 
-  it('deux projets différents ne se bloquent pas l’un l’autre', async () => {
+  it('two different projects do not block each other', async () => {
     slowInactiveConnection(10);
 
     const [a, b] = await Promise.all([runSync(461), runSync(462)]);
@@ -67,11 +64,11 @@ describe('runSync — verrou pris avant toute attente', () => {
     expect(b.status).not.toBe('deferred');
   });
 
-  it('libère le verrou quand la connexion est injoignable', async () => {
+  it('releases the lock when the connection is unreachable', async () => {
     openConnection.mockRejectedValueOnce(new Error('site injoignable'));
     await expect(runSync(461)).rejects.toThrow('site injoignable');
 
-    // Sans libération, le projet restait verrouillé jusqu'au redémarrage du worker.
+        // Without release, the project stayed locked until the worker restarted.
     slowInactiveConnection(0);
     await expect(runSync(461)).resolves.toMatchObject({ status: 'ok' });
   });

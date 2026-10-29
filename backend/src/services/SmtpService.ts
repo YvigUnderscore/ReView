@@ -7,9 +7,9 @@ import { encryptSecret, decryptSecret } from '../lib/crypto';
 import { logger } from '../lib/logger';
 
 /**
- * Configuration SMTP stockée en base (Phase 22) : host/port/secure/user/from + mot de passe
- * **chiffré au repos** (`lib/crypto`), **jamais renvoyé** par l'API (write-only). L'environnement
- * (`SMTP_*`) reste prioritaire (override ops) — cf. `getEffectiveConfig`.
+ * SMTP configuration stored in the database (Phase 22): host/port/secure/user/from plus a password
+ * **encrypted at rest** (`lib/crypto`), **never returned** by the API (write-only). The environment
+ * (`SMTP_*`) keeps priority (ops override): see `getEffectiveConfig`.
  */
 
 const SMTP_KEY = 'smtp_config';
@@ -40,46 +40,45 @@ export interface SmtpPublicConfig {
   secure: boolean;
   user: string;
   from: string;
-  /** Un mot de passe est enregistré (jamais sa valeur). */
+    /** A password is stored (its value is never returned). */
   hasPassword: boolean;
-  /**
-   * Autorise le dialogue SMTP EN CLAIR avec ce relais (échappatoire, cf. `lib/mailer`).
-   *
-   * Par défaut `false` : le transport exige STARTTLS. Un relais interne sans certificat
-   * est le seul cas légitime de la poser — c'est un choix qui doit se voir, pas un défaut
-   * silencieux, puisqu'il remet les identifiants SMTP et les liens d'invitation sur le
-   * réseau en clair.
-   */
+    /**
+     * Allows plaintext SMTP dialogue with this relay (escape hatch, see `lib/mailer`).
+     *
+     * Defaults to `false`: the transport requires STARTTLS. An internal relay without a certificate is the
+     * only legitimate case for setting it. It must be a visible choice, not a silent default, since it puts
+     * SMTP credentials and invitation links on the network in clear text.
+     */
   allowInsecure: boolean;
-  /**
-   * Un mot de passe est enregistré mais ne se déchiffre plus (clé de chiffrement changée).
-   *
-   * Aucun mail ne part alors — `getEffectiveConfig` refuse la configuration. Sans ce
-   * drapeau, l'administrateur voit une configuration en apparence complète et des envois
-   * qui échouent sans motif : il faut lire les journaux du serveur pour comprendre.
-   * Le dire ici met la cause sous les yeux de qui peut la corriger (ressaisir le secret).
-   */
+    /**
+     * A password is stored but can no longer be decrypted (encryption key changed).
+     *
+     * No mail goes out then: `getEffectiveConfig` refuses the configuration. Without this flag, the
+     * administrator would see an apparently complete configuration and sends failing for no visible reason:
+     * the server logs would have to be read to understand. Saying it here puts the cause in front of whoever
+     * can fix it (re-entering the secret).
+     */
   passwordUnreadable: boolean;
-  /** `true` si l'environnement (`SMTP_HOST`) prend le pas sur la configuration en base. */
+    /** `true` if the environment (`SMTP_HOST`) takes precedence over the database configuration. */
   envOverride: boolean;
 }
 
 /**
- * Mot de passe effectif du relais, et le cas où il est devenu illisible.
+ * Effective password of the relay, and the case where it has become unreadable.
  *
- * Partagé par `getPublicConfig` (ce que l'admin voit) et `getEffectiveConfig` (ce que le
- * transport reçoit) : les deux doivent dire la même chose du même état, sinon l'écran
- * annonce un relais sain pendant que les envois échouent.
+ * Shared by `getPublicConfig` (what the admin sees) and `getEffectiveConfig` (what the transport receives):
+ * both must say the same thing about the same state, otherwise the screen reports a healthy relay while
+ * sends fail.
  */
 function resolvePassword(s: StoredSmtp): { pass?: string; unreadable: boolean } {
-  // L'environnement prime : le secret en base n'est alors même pas lu.
+    // The environment wins: the stored secret is then not even read.
   if (env.SMTP_PASS !== undefined) return { pass: env.SMTP_PASS, unreadable: false };
   if (!s.passwordEnc) return { unreadable: false };
   const decrypted = decryptSecret(s.passwordEnc);
   return decrypted === null ? { unreadable: true } : { pass: decrypted, unreadable: false };
 }
 
-/** Config affichée à l'admin (valeurs en base, sans le mot de passe). */
+/** Configuration shown to the admin (database values, without the password). */
 export async function getPublicConfig(): Promise<SmtpPublicConfig> {
   const s = await read();
   return {
@@ -102,20 +101,19 @@ export interface SmtpEffectiveConfig {
   user?: string;
   pass?: string;
   from: string;
-  /** Dialogue en clair explicitement autorisé (relais interne sans TLS). */
+    /** Plaintext dialogue explicitly allowed (internal relay without TLS). */
   allowInsecure: boolean;
 }
 
-/** Config effective pour l'envoi : l'environnement écrase la base champ par champ. */
+/** Effective configuration for sending: the environment overrides the database field by field. */
 export async function getEffectiveConfig(): Promise<SmtpEffectiveConfig | null> {
   const s = await read();
   const host = env.SMTP_HOST ?? s.host;
   if (!host) return null;
-  // Échec FERMÉ, pas dégradé. Un mot de passe illisible (clé de chiffrement changée)
-  // partait jusqu'ici en `undefined` : le transport tentait alors un AUTH sans mot de
-  // passe, le relais refusait, et rien ne disait pourquoi. On refuse la configuration —
-  // `lib/crypto` a déjà journalisé le geste à faire, et `getPublicConfig` le montre à
-  // l'écran d'administration (`passwordUnreadable`).
+    // Fail CLOSED, not degraded. An unreadable password (encryption key changed) used to go out as
+    // `undefined`: the transport then attempted an AUTH without a password, the relay refused, and nothing
+    // said why. The configuration is refused: `lib/crypto` has already logged the action to take, and
+    // `getPublicConfig` shows it on the administration screen (`passwordUnreadable`).
   const { pass, unreadable } = resolvePassword(s);
   if (unreadable) {
     logger.error(
@@ -141,13 +139,13 @@ export interface SmtpInput {
   secure?: boolean;
   user?: string;
   from?: string;
-  /** Nouveau mot de passe (write-only). Vide/omis = conserver l'existant. */
+    /** New password (write-only). Empty/omitted = keep the existing one. */
   password?: string;
-  /** Voir `SmtpPublicConfig.allowInsecure` — omis = conserver le réglage en place. */
+    /** See `SmtpPublicConfig.allowInsecure`. Omitted = keep the current setting in place. */
   allowInsecure?: boolean;
 }
 
-/** Enregistre la config SMTP. Le mot de passe n'est réécrit que s'il est fourni non vide. */
+/** Saves the SMTP configuration. The password is rewritten only if a non-empty value is given. */
 export async function setConfig(input: SmtpInput): Promise<SmtpPublicConfig> {
   const current = await read();
   const next: StoredSmtp = {

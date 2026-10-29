@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 describe('setSceneOverride (46.D)', () => {
-  it('enregistre l’override sans toucher aux autres métadonnées', async () => {
+  it('records the override without touching the other metadata', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media() as never);
 
     const res = await setSceneOverride(USER, 1, override);
@@ -48,7 +48,7 @@ describe('setSceneOverride (46.D)', () => {
     expect(data.metadata.model).toEqual({ converter: 'blender' });
   });
 
-  it('stocke un override sans effet comme absent', async () => {
+  it('stores an override with no effect as absent', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media() as never);
 
     const res = await setSceneOverride(USER, 1, { version: 1, prims: {} });
@@ -56,28 +56,26 @@ describe('setSceneOverride (46.D)', () => {
     expect(res.usdOverride).toBeNull();
   });
 
-  it('efface l’override sur null', async () => {
+  it('clears the override on null', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(
       media({ metadata: { usdOverride: override } }) as never,
     );
     expect((await setSceneOverride(USER, 1, null)).usdOverride).toBeNull();
   });
 
-  /**
-   * Ce test attendait un 403 : l'override était figé par la publication (Phase 11). La règle
-   * a changé sciemment (Phase 50, table de `lib/publishLock`) — l'override est une mise en
-   * scène rejouée au chargement, de la même nature que `splatPresentation`, qui était déjà
-   * exceptée. Le média étant publié dès son upload, la garder figée aurait interdit de mettre
-   * une scène en état d'être regardée. Le test vérifie donc l'inverse, explicitement.
-   */
-  it('accepte un média publié : l’override est une mise en scène, pas la livraison', async () => {
+    /**
+     * This test expected a 403: the override was frozen by publication (Phase 11). The rule has changed deliberately (Phase 50, table in `lib/publishLock`) — the override is a
+     * staging replayed at load time, of the same nature as `splatPresentation`, which was already exempted. The media being published from its upload, keeping it frozen would have
+     * forbidden putting a scene in a state to be watched. The test therefore checks the opposite, explicitly.
+     */
+  it('accepts a published media: the override is a staging, not the delivery', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media({ published: true }) as never);
 
     expect((await setSceneOverride(USER, 1, override)).usdOverride).toEqual(override);
     expect(prisma.mediaObject.update).toHaveBeenCalled();
   });
 
-  it('refuse un média non 3D et un upload non finalisé', async () => {
+  it('refuses a non-3D media and an unfinalized upload', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media({ kind: 'VIDEO' }) as never);
     await expect(setSceneOverride(USER, 1, override)).rejects.toMatchObject({ code: 'NOT_3D' });
 

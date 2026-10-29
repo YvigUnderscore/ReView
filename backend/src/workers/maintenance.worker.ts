@@ -17,49 +17,42 @@ import { sendWeeklyReports } from '../services/WeeklyReportService';
 import { registerWorkerShutdown } from './shutdown';
 
 /**
- * Entretien périodique — digest quotidien, rapport hebdomadaire, purges.
+ * Periodic maintenance — daily digest, weekly report, purges.
  *
- * Ces trois rendez-vous vivaient dans des `setInterval` du process API (server.ts). Ils
- * sont désormais posés en file répétable par l'API (`lib/maintenanceSchedule`) et
- * exécutés ici : mêmes heures, mêmes actions, mais avec l'historique, les reprises et la
- * visibilité des autres travaux — et sans risque de double envoi sur deux répliques.
+ * These three appointments used to live in `setInterval`s of the API process (server.ts). They are now posted to a repeatable queue by the API (`lib/maintenanceSchedule`)
+ * and executed here: same hours, same actions, but with the history, the retries and the visibility of the other jobs — and without the risk of a double send across two replicas.
  */
 
 /**
- * Purge des tampons : corbeille expirée, dérivés obsolètes, clés d'idempotence, puis
- * balayage de rétention des neuf tables de journal (`lib/retention`). Ce sont des tampons,
- * pas des archives : sans purge, ils grossissent indéfiniment au rythme du studio.
+ * Buffer purge: expired trash, obsolete derivatives, idempotency keys, then the retention sweep of the nine journal tables (`lib/retention`). These are buffers, not
+ * archives: without a purge, they grow indefinitely at the studio's pace.
  *
- * La passe se termine par la réconciliation des médias figés en `PROCESSING` : c'est le
- * seul rendez-vous périodique du studio, et donc le seul endroit d'où elle peut rattraper
- * un worker tué en plein transcodage sans attendre un redémarrage de l'API.
+ * The pass ends with the reconciliation of media frozen in `PROCESSING`: it is the only periodic appointment of the studio, and therefore the only place from which it can
+ * recover a worker killed in the middle of a transcode without waiting for an API restart.
  *
- * Tout est plafonné par passe — corbeille comme journaux. Un studio qui active la rétention
- * après un an d'exploitation rattrape son retard en plusieurs nuits, sans jamais bloquer la
- * base sur une suppression de plusieurs millions de lignes.
+ * Everything is capped per pass — trash as well as logs. A studio that enables retention after a year of operation catches up its backlog over several nights, without ever
+ * blocking the database on the deletion of several million rows.
  */
 async function runPurge(): Promise<void> {
   const days = await getNumericSetting(SETTING_KEYS.TRASH_RETENTION_DAYS);
   const purged = await purgeExpiredTrash(days);
   if (purged > 0) logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
-  // Purge des dérivés obsolètes (37.H) — no-op si désactivée dans l'admin.
+    // Purge of obsolete derivatives (37.H) — no-op if disabled in the admin.
   await purgeObsoleteDerived();
-  // Envois abandonnés : sans ce passage, cinq accidents suffisaient à bloquer un compte.
+    // Abandoned uploads: without this pass, five accidents were enough to block an account.
   const uploads = await purgeStaleUploads();
   if (uploads.purged > 0)
     logger.info(`[Uploads] purge automatique : ${uploads.purged} envoi(s) abandonné(s) nettoyé(s).`);
   const keys = await purgeIdempotencyRecords();
   if (keys > 0) logger.info(`[API v1] purge : ${keys} clé(s) d'idempotence.`);
-  // Journalise lui-même son résultat (et le consigne dans l'audit quand il a supprimé).
+    // Logs its own result (and records it in the audit when it has deleted).
   await sweepRetention();
-  // Médias figés en PROCESSING par un worker tué : le balayage vivait dans le démarrage du
-  // process API, alors que le process qui meurt est le worker — `restart: always` le relance
-  // seul, sans toucher à l'API, et le média gardait son spinner indéfiniment. Placé en fin
-  // de passe : une réconciliation en erreur ne doit pas emporter les purges déjà faites.
+    // Media frozen in PROCESSING by a killed worker: the sweep lived in the startup of the API process, whereas the process that dies is the worker — `restart: always`
+    // relaunches it alone, without touching the API, and the media kept its spinner indefinitely. Placed at the end of the pass: a reconciliation in error must not take
+    // down the purges already done.
   const reconciled = await reconcileStuckMedia();
   if (reconciled > 0)
-    // Le décompte passe en champ de contexte plutôt qu'en gabarit : un journal se filtre
-    // sur un champ, et `check-untranslated` compte les fragments de gabarit.
+        // The count goes into a context field rather than into a template: a log is filtered on a field, and `check-untranslated` counts the template fragments.
     logger.info({ reconciled }, '[reconcile] médias figés en PROCESSING passés en échec');
 }
 
@@ -84,8 +77,7 @@ export const maintenanceWorker = new Worker<MaintenanceJobData, void, string>(
         logger.warn({ data: job.data }, '[maintenance.worker] type de travail inconnu');
     }
   },
-  // Un seul entretien à la fois : ces travaux balayent la base, les paralléliser ne
-  // gagnerait rien et concurrencerait les transcodages.
+    // A single appointment at a time: these jobs sweep the database, parallelizing them would gain nothing and would compete with the transcodes.
   { connection: redisConnectionOptions, autorun: false, concurrency: 1 },
 );
 

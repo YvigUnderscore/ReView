@@ -10,25 +10,22 @@ import { assertMediaManage } from './MediaService';
 import { logAudit } from './AuditService';
 
 /**
- * Override de base d'une scène 3D (Phase 46, 46.D) — `metadata.usdOverride`.
+ * Base override of a 3D scene (Phase 46, 46.D) — `metadata.usdOverride`.
  *
- * Réglé pendant le prépublish par un gestionnaire, il est **figé à la publication** puis
- * rejoué à l'ouverture pour tous les spectateurs : c'est la mise en scène de référence de
- * l'asset. Après publication, personne ne le modifie plus — les reviewers proposent leurs
- * changements dans un commentaire (partie d'annotation `scene-override`), ce qui garde la
- * scène commune stable tout en laissant chacun explorer librement de son côté.
+ * Set during the pre-publish by a manager, it is **frozen at publication** then replayed on opening for all viewers: it is the asset's reference staging. After publication,
+ * nobody modifies it any more — reviewers propose their changes in a comment (annotation part `scene-override`), which keeps the common scene stable while letting each person
+ * explore freely on their own side.
  *
- * Aucun job worker : l'override est un delta appliqué au chargement, pas une reconversion.
+ * No worker job: the override is a delta applied at load time, not a reconversion.
  */
 
 type SessionUser = { id: number; role: Role };
 
 /**
- * Gestionnaire + média 3D : mêmes règles que les éditions splat.
+ * Manager + 3D media: same rules as the splat edits.
  *
- * L'override est une mise en scène rejouée au chargement du viewer, de la même nature que
- * `splatPresentation` — déjà exceptée depuis la Phase 11. Il reste donc écrivable après
- * publication (table de `lib/publishLock`).
+ * The override is a staging replayed when the viewer loads, of the same nature as `splatPresentation` — already exempted since Phase 11. It therefore remains writable
+ * after publication (table in `lib/publishLock`).
  */
 async function assertEditableScene(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
@@ -43,7 +40,7 @@ async function assertEditableScene(user: SessionUser, id: number) {
   return media;
 }
 
-/** Enregistre (ou efface) l'override de base. Un override vide est stocké comme absent. */
+/** Saves (or clears) the base override. An empty override is stored as absent. */
 export async function setSceneOverride(user: SessionUser, id: number, override: SceneOverride | null) {
   const media = await assertEditableScene(user, id);
   const value = override && !isEmptySceneOverride(override) ? override : null;

@@ -54,41 +54,39 @@ import { subscribeWorkerEvents } from '../lib/workerEvents';
 
 let io: SocketServer | undefined;
 
-// La vérification du handshake vit dans `socketAuth` : c'est une frontière de sécurité,
-// elle a ses propres tests plutôt que d'être une closure inaccessible.
+// The handshake check lives in `socketAuth`: it is a security boundary, and it has its own tests
+// rather than being an inaccessible closure.
 export type { AuthedSocket };
 
 /**
- * Cadence de revalidation des connexions établies (A3-02).
+ * Revalidation cadence for established connections (A3-02).
  *
- * `authenticateSocket` ne s'exécute qu'au handshake : ensuite `socket.user` est figé et la
- * connexion vit tant que le transport tient — des jours. Révoquer une session ou rétrograder
- * un rôle coupait donc l'API en trente secondes sans rien changer au canal temps réel :
- * l'onglet resté ouvert continuait de recevoir les commentaires internes du projet (y compris
- * ceux cachés aux clients, avec les URL présignées de leurs pièces jointes), et son ancien
- * rôle lui rouvrait `join_project`.
+ * `authenticateSocket` only runs at handshake: afterwards `socket.user` is frozen and the connection lives
+ * as long as the transport holds, that is, for days. Revoking a session or demoting a role therefore cut the
+ * API within thirty seconds without changing anything on the real-time channel: the tab left open kept
+ * receiving the project's internal comments (including those hidden from clients, with the presigned URLs of
+ * their attachments), and its former role reopened `join_project` for it.
  *
- * Une minute est un compromis assumé : plus court ne gagnerait rien (session et identité sont
- * mises en cache trente secondes de part et d'autre), plus long laisserait un partant écouter.
+ * One minute is a deliberate trade-off: shorter would gain nothing (session and identity are each cached for
+ * thirty seconds on either side), longer would let a departing user keep listening.
  */
 const REVALIDATE_INTERVAL_MS = 60_000;
 
 /**
- * Rejoue sur un socket établi les contrôles de la porte : session vivante, compte existant
- * et actif, rôle courant. Rend `false` quand la connexion n'a plus lieu d'être.
+ * Replays the gate checks on an established socket: live session, existing and active account, current role.
+ * Returns `false` when the connection should no longer exist.
  *
- * Le rôle est **relu et réécrit**, pas seulement vérifié : c'est `socket.user.role` que
- * consultent `join_review`, `live:join` et `join_project`, et `resolveProjectAccess` accorde
- * un accès global à ADMIN comme à SUPERVISOR. Le laisser figé revenait à donner à une
- * rétrogradation la durée de vie d'un onglet ouvert.
+ * The role is **re-read and rewritten**, not merely checked: `join_review`, `live:join` and `join_project`
+ * consult `socket.user.role`, and `resolveProjectAccess` grants global access to ADMIN as well as SUPERVISOR.
+ * Leaving it frozen would have given a demotion the lifetime of an open tab.
  *
- * Coût : aucune requête par message. `isSessionActive` et `getAuthUser` ont chacun leur cache
- * de trente secondes, donc au pire une lecture par compte et par balayage.
+ * Cost: no query per message. `isSessionActive` and `getAuthUser` each have a thirty-second cache, so at worst
+ * one read per account per sweep.
  */
 export async function revalidateSocket(socket: AuthedSocket): Promise<boolean> {
   const current = socket.user;
-  // Un invité de partage n'a ni session ni rôle : son accès tient au ShareLink, revérifié
-  // à chaque lecture côté API. Rien à rejouer ici.
+    // A share guest has neither session nor role: their access rests on the ShareLink, rechecked
+    // on the API side at every read. Nothing to replay here.
   if (!current) return true;
   if (!socket.authSid || !(await isSessionActive(socket.authSid))) return false;
   const fresh = await getAuthUser(current.id);
@@ -98,12 +96,10 @@ export async function revalidateSocket(socket: AuthedSocket): Promise<boolean> {
 }
 
 /**
- * Balaye les sockets de CETTE réplique — chacune tient les siennes, l'adapter Redis ne sert
- * qu'aux émissions.
+ * Sweeps the sockets of THIS replica: each one holds its own; the Redis adapter is only used for emissions.
  *
- * Une panne de base ou de Redis ne doit pas déconnecter tout le studio : l'échec du contrôle
- * garde la connexion (l'API, elle, échoue fermé de son côté). C'est le choix d'exploitation,
- * pas un oubli.
+ * A database or Redis outage must not disconnect the whole studio: a failed check keeps the connection (the
+ * API, for its part, fails closed). That is the operational choice, not an oversight.
  */
 export async function sweepSockets(server: SocketServer): Promise<void> {
   for (const socket of server.sockets.sockets.values()) {
@@ -117,16 +113,14 @@ export async function sweepSockets(server: SocketServer): Promise<void> {
 }
 
 /**
- * Ferme, sans attendre le balayage, les connexions portées par une session révoquée
- * (A3-02, volet immédiat). Rend le nombre de connexions fermées.
+ * Closes, without waiting for the sweep, the connections carried by a revoked session
+ * (A3-02, immediate part). Returns the number of connections closed.
  *
- * Le rapprochement se fait sur le `sid` exact et non sur l'utilisateur : c'est ce qui fait
- * que « révoquer toutes mes sessions sauf celle-ci » ne déconnecte pas l'auteur de l'action
- * — la session épargnée n'est simplement pas dans la liste publiée.
+ * Matching is done on the exact `sid`, not on the user: this is why "revoke all my sessions except this one"
+ * does not disconnect the author of the action, since the spared session is simply not in the published list.
  *
- * Bornée à CETTE réplique, comme `sweepSockets` : chaque process tient ses propres sockets,
- * l'adapter Redis ne sert qu'aux émissions. C'est la publication sur le canal qui porte
- * l'ordre jusqu'aux autres.
+ * Bounded to THIS replica, like `sweepSockets`: each process holds its own sockets, and the Redis adapter is
+ * only used for emissions. Publication on the channel carries the order to the others.
  */
 export function disconnectRevokedSockets(server: SocketServer, sids: readonly string[]): number {
   const revoked = new Set(sids);
@@ -141,21 +135,20 @@ export function disconnectRevokedSockets(server: SocketServer, sids: readonly st
 }
 
 /**
- * Initialise Socket.io avec auth JWT (utilisateur) ou token de partage (ShareLink → invité).
+ * Initializes Socket.io with JWT auth (user) or share token (ShareLink, becomes a guest).
  */
 export const initSocket = (server: HttpServer): SocketServer => {
   io = new SocketServer(server, {
-    // Même résolution qu'en HTTP (cf. app.ts) : une liste séparée par des virgules doit
-    // donner N origines, pas une seule chaîne qui ne matcherait jamais.
+        // Same resolution as over HTTP (see app.ts): a comma-separated list must yield N origins,
+        // not a single string that would never match.
     cors: {
       origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
       methods: ['GET', 'POST'],
     },
   });
 
-  // Adapter Redis : sans lui, une émission ne sort pas du process qui l'a produite. Deux
-  // répliques, et la moitié d'une salle de dailies ne reçoit rien — la mise à l'échelle
-  // horizontale était impossible, pas seulement dégradée.
+    // Redis adapter: without it, an emission never leaves the process that produced it. With two replicas,
+    // half of a dailies room receives nothing: horizontal scaling would be impossible, not merely degraded.
   const pub = createRedisClient('socket-pub');
   const sub = createRedisClient('socket-sub');
   io.adapter(createAdapter(pub, sub));
@@ -175,27 +168,26 @@ export const initSocket = (server: HttpServer): SocketServer => {
     },
   });
 
-  // Miroirs de l'état volatil : à amorcer au démarrage, sinon une réplique sans socket
-  // local annoncerait « personne en ligne » et « aucune salle live » à ceux qu'elle sert.
+    // Mirrors of the volatile state: to be seeded at startup, otherwise a replica without a local socket
+    // would announce "nobody online" and "no live room" to those it serves.
   startPresenceSync();
   startLiveSync();
 
-  // Diffusion de la liste des utilisateurs en ligne. `local` est essentiel : chaque
-  // réplique tient son propre miroir de présence et diffuse le sien. Sans `local`,
-  // l'adapter ferait relayer N fois la même liste par les N répliques.
+    // Broadcast of the list of online users. `local` is essential: each replica holds its own presence
+    // mirror and broadcasts it. Without `local`, the adapter would relay the same list N times through the N replicas.
   setPresenceBroadcaster((onlineUserIds) => io?.local.emit('presence:update', { onlineUserIds }));
 
-  // Événements du worker FFmpeg (34.F, redis pub/sub) : échelle HLS progressive —
-  // la review recharge son master (nouvelles qualités), le projet rafraîchit ses cartes.
+    // Events from the FFmpeg worker (34.F, Redis pub/sub): progressive HLS scaling. The review reloads its
+    // master (new qualities), the project refreshes its cards.
   subscribeWorkerEvents((e) => {
     if (e.type === 'project') {
-      // Relais des émissions du worker vers la room d'un projet : lui n'a pas de serveur
-      // socket, ses `emitToProject` directs ne partaient nulle part.
+            // Relays the worker's emissions to a project's room: it has no socket server, so its direct
+            // `emitToProject` calls went nowhere.
       emitToProject(e.projectId, e.event, e.payload);
       return;
     }
     if (e.type === 'markers') {
-      // Scene detection (34.H) : marqueurs « Plan n » posés → la review recharge sa liste.
+            // Scene detection (34.H): "Shot n" markers set, so the review reloads its list.
       emitToReview(e.mediaId, 'markers:changed', { mediaId: e.mediaId });
       return;
     }
@@ -208,18 +200,17 @@ export const initSocket = (server: HttpServer): SocketServer => {
       });
   });
 
-  // socket.io attend un middleware synchrone : on détache la vérification asynchrone,
-  // `next` étant appelé dans tous les chemins. Le `catch` ferme la porte si la
-  // vérification échoue elle-même — sans lui, le socket resterait suspendu.
+    // socket.io expects a synchronous middleware: the asynchronous check is detached, `next` being called on
+    // every path. The `catch` closes the door if the check itself fails; without it, the socket would hang.
   io.use((socket: AuthedSocket, next) => {
     void authenticateSocket(socket, next).catch(() => next(new Error('Authentication error')));
   });
 
-  // Le handshake ne vaut que pour l'instant où il a lieu : ensuite, seule cette horloge
-  // rapproche la connexion de l'état réel du compte (A3-02).
+      // The handshake is only valid for the instant it takes place: afterwards, only this clock brings the
+      // connection closer to the real state of the account (A3-02).
   const revalidation = setInterval(() => void sweepSockets(io!), REVALIDATE_INTERVAL_MS);
-  // Cette horloge ne doit pas, à elle seule, retenir le process en vie : c'est le serveur
-  // HTTP qui le fait, et l'extinction la coupe proprement juste en dessous.
+      // This clock must not, on its own, keep the process alive: the HTTP server does that, and shutdown
+      // clears it cleanly just below.
   revalidation.unref();
   registerShutdownTask({
     name: 'socket-revalidation',
@@ -230,15 +221,15 @@ export const initSocket = (server: HttpServer): SocketServer => {
     },
   });
 
-  // Volet immédiat de la révocation : l'abonnement vit ici parce que la réplique qui a servi
-  // le `DELETE /sessions` n'est pas forcément celle qui héberge la websocket du révoqué.
-  // Le balayage d'une minute au-dessus reste en place — c'est le filet quand ce message
-  // se perd (publication best-effort, Redis en panne, réplique qui démarre).
+    // Immediate part of revocation: the subscription lives here because the replica that served the
+    // `DELETE /sessions` is not necessarily the one hosting the revoked user's websocket. The one-minute sweep
+    // above stays in place: it is the safety net when this message is lost (best-effort publication, Redis down,
+    // replica starting up).
   subscribeRedis(SESSION_REVOCATION_CHANNEL, (raw) => {
     const sids = decodeSessionRevocation(raw);
     if (sids.length === 0) return;
-    // Le cache de validité de CETTE réplique croit encore la session vivante (TTL 30 s) :
-    // sans cette écriture, fermer le socket ne servirait à rien, l'API le rouvrirait.
+        // This replica's validity cache still believes the session alive (30 s TTL): without this write,
+        // closing the socket would be pointless, since the API would reopen it.
     markSessionsRevoked(sids);
     if (!io) return;
     const closed = disconnectRevokedSockets(io, sids);
@@ -246,25 +237,25 @@ export const initSocket = (server: HttpServer): SocketServer => {
   });
 
   io.on('connection', (socket: AuthedSocket) => {
-    // Première instruction du corps : la garde de débit doit être posée avant que le moindre
-    // gestionnaire ne soit joignable. C'est elle qui refuse le paquet AVANT le `socket.on`,
-    // donc avant la requête Postgres que `join_review` émettrait pour le refuser.
+        // First statement of the body: the rate guard must be set before any handler becomes reachable. It is
+        // what refuses the packet BEFORE `socket.on`, hence before the Postgres query that `join_review` would
+        // issue to refuse it.
     attachSocketRateLimit(socket);
 
     if (socket.user) {
-      // `join`/`leave` rendent une promesse avec les adapters distribués ; l'adapter en
-      // mémoire résout de façon synchrone — d'où le `void` sur les appels hors contexte async.
+            // `join`/`leave` return a promise with distributed adapters; the in-memory adapter resolves
+            // synchronously, hence the `void` on calls made outside an async context.
       void socket.join(`user_${socket.user.id}`);
       const uid = socket.user.id;
-      // La présence est comptée **par connexion** : l'identifiant du socket distingue les
-      // onglets, et permet à une entrée orpheline (réplique tuée) d'expirer toute seule.
+            // Presence is counted **per connection**: the socket identifier tells tabs apart, and lets an
+            // orphaned entry (killed replica) expire on its own.
       const conn = socket.id;
       void markOnline(uid, conn);
-      // Activité : le client émet `activity` (interactions) → rafraîchit lastSeenAt.
+            // Activity: the client emits `activity` (interactions), which refreshes lastSeenAt.
       socket.on('activity', () => void touch(uid));
 
-      // Présence par review : avatars « en train de regarder » (backlog P2 10.G).
-      // RBAC revérifié au join ; identité publique résolue une fois par entrée.
+            // Per-review presence: "watching now" avatars (backlog P2 10.G).
+            // RBAC rechecked at join; public identity resolved once per entry.
       const joinedReviews = new Set<number>();
       const emitViewers = async (mediaId: number): Promise<void> => {
         const viewers = await getReviewViewers(mediaId);
@@ -274,7 +265,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
         const mid = Number(mediaId);
         if (!Number.isInteger(mid)) return;
         if (joinedReviews.has(mid)) return emitViewers(mid);
-        // Rôle et session relus avant d'accorder : `socket.user.role` date du handshake.
+                // Role and session re-read before granting: `socket.user.role` dates from the handshake.
         if (!(await revalidateSocket(socket))) return socket.disconnect(true);
         const projectId = await resolveProjectIdForMedia(mid);
         if (!projectId || !(await checkProjectAccess(uid, socket.user!.role, projectId))) return;
@@ -315,9 +306,9 @@ export const initSocket = (server: HttpServer): SocketServer => {
         });
       });
 
-      // ── Salle de review live (33.B) : rooms `live_<key>`, pilote + spectateurs. ──
-      // RBAC revérifié au join (média ou playlist → projet) ; `live:sync` n'est relayé
-      // que depuis le pilote, payload opaque (playhead/pause/média courant/caméra).
+            // ── Live review room (33.B): rooms `live_<key>`, driver + viewers. ──
+            // RBAC rechecked at join (media or playlist to project); `live:sync` is relayed only from the driver,
+            // opaque payload (playhead/pause/current media/camera).
       const joinedLives = new Set<string>();
       const emitLiveState = (key: string, state: LiveState | null) =>
         io?.to(`live_${key}`).emit('live:state', { key, state });
@@ -332,11 +323,11 @@ export const initSocket = (server: HttpServer): SocketServer => {
         return playlist?.projectId ?? null;
       };
       socket.on('live:join', async (key: string) => {
-        // Reprise après F5 : annule le départ en grâce, le rôle (pilote…) est conservé.
+                // Resume after F5: cancels the pending grace departure; the role (driver...) is kept.
         cancelLiveLeave(key, uid);
-        // Re-join idempotent (navigation interne) : ré-émet simplement l'état courant.
+                // Idempotent re-join (internal navigation): simply re-emits the current state.
         if (joinedLives.has(key)) return emitLiveState(key, getLiveState(key));
-        // Rôle et session relus avant d'accorder : `socket.user.role` date du handshake.
+                // Role and session re-read before granting: `socket.user.role` dates from the handshake.
         if (!(await revalidateSocket(socket))) return socket.disconnect(true);
         const target = parseLiveKey(key);
         const projectId = await resolveLiveProject(key);
@@ -361,10 +352,10 @@ export const initSocket = (server: HttpServer): SocketServer => {
           initials: pub.initials,
           avatarUrl: pub.avatarUrl,
         };
-        // Méta résolue à la création (badges LIVE par projet) + notification dailies :
-        // un live démarré sur une playlist notifie les membres du projet (une fois).
-        // Le miroir sert à décider s'il faut résoudre la version ; la création, elle, est
-        // tranchée sous verrou par `joinLive` — sinon deux répliques notifieraient deux fois.
+                // Metadata resolved at creation (per-project LIVE badges) + dailies notification:
+                // a live started on a playlist notifies the project's members (once).
+                // The mirror decides whether the version must be resolved; the creation itself is settled under a lock
+                // by `joinLive`, otherwise two replicas would notify twice.
         const meta: LiveSessionMeta =
           target.type === 'media' ? { projectId, mediaId: target.id } : { projectId, playlistId: target.id };
         if (!getLiveState(key) && target.type === 'media') {
@@ -394,11 +385,11 @@ export const initSocket = (server: HttpServer): SocketServer => {
       });
       socket.on('live:sync', (key: string, payload: unknown) => {
         if (!joinedLives.has(key) || !canDriveLive(key, uid)) return;
-        // Interaction (`action: true`) d'un pilote/co-pilote → il devient le driver ;
-        // la diffusion périodique (sans action) n'est relayée que du driver courant.
+                // An interaction (`action: true`) from a driver/co-driver makes them the driver;
+                // periodic broadcast (without action) is relayed only from the current driver.
         const isAction = !!(payload as { action?: boolean } | null)?.action;
-        // La prise de main est écrite dans Redis, mais le relais ne l'attend pas : un
-        // aller-retour par trame de synchronisation (jusqu'à 30 Hz) saccaderait la lecture.
+                // Taking control is written to Redis, but the relay does not wait for it: a round trip per sync
+                // frame (up to 30 Hz) would make playback stutter.
         if (isAction) {
           void claimDrive(key, uid).then((state) => {
             if (state) emitLiveState(key, state);
@@ -427,7 +418,7 @@ export const initSocket = (server: HttpServer): SocketServer => {
           });
         }
         joinedReviews.clear();
-        // Départ live différé (grâce) : un F5 re-join avant l'échéance et garde son rôle.
+                // Deferred live departure (grace): a F5 re-join before the deadline keeps its role.
         for (const key of joinedLives) {
           const pid = getLiveProjectId(key);
           scheduleLiveLeave(key, uid, (state) => {
@@ -438,31 +429,29 @@ export const initSocket = (server: HttpServer): SocketServer => {
         joinedLives.clear();
       });
     }
-    // ⚠ Un invité par lien de partage ne rejoint PAS `project_<id>` : c'est le canal
-    // interne de l'équipe. On y diffuse `comment:new` avec le commentaire enrichi —
-    // y compris ceux marqués `isVisibleToClient: false`, l'identité des auteurs et les
-    // URLs présignées des pièces jointes. La page de partage n'écoute rien sur ce canal ;
-    // l'y abonner ne servait qu'à faire fuiter la review interne en temps réel.
+        // ⚠ A guest coming through a share link does NOT join `project_<id>`: that is the team's internal
+        // channel. Emitting `comment:new` there with the enriched comment would reach everyone, including those
+        // marked `isVisibleToClient: false`, the authors' identities and the presigned attachment URLs. The share
+        // page listens to nothing on this channel; subscribing it would only leak the internal review in real time.
     socket.on('join_project', async (projectId: number) => {
       const pid = Number(projectId);
       if (!Number.isInteger(pid)) return;
       if (socket.shareProjectId) return;
-      // C'est ici que la rétrogradation se jouait : le contrôle lisait le rôle du handshake,
-      // et `resolveProjectAccess` accorde un accès global à ADMIN comme à SUPERVISOR. Un
-      // ancien superviseur rejoignait donc n'importe quel projet depuis un onglet ouvert.
+            // This is where the demotion was playing out: the check read the role from the handshake, and
+            // `resolveProjectAccess` grants global access to ADMIN as well as SUPERVISOR. A former supervisor could
+            // therefore join any project from an open tab.
       if (!(await revalidateSocket(socket))) return socket.disconnect(true);
       if (socket.user && (await checkProjectAccess(socket.user.id, socket.user.role, pid))) {
         await socket.join(`project_${pid}`);
       }
     });
 
-    /**
-     * Quitter la salle d'un projet (D3).
-     *
-     * Elle n'était jamais quittée : après une journée de navigation, un onglet recevait
-     * les événements de tous les projets ouverts depuis le matin, et invalidait des caches
-     * qui ne le concernaient plus.
-     */
+        /**
+         * Leaves a project's room (D3).
+         *
+         * It was never left: after a day of browsing, a tab kept receiving the events of every project opened since
+         * the morning, and invalidated caches that no longer concerned it.
+         */
     socket.on('leave_project', async (projectId: number) => {
       const pid = Number(projectId);
       if (!Number.isInteger(pid)) return;
@@ -473,18 +462,17 @@ export const initSocket = (server: HttpServer): SocketServer => {
   return io;
 };
 
-// Émissions tolérantes : no-op si Socket.io n'est pas initialisé (tests, scripts).
+// Tolerant emissions: no-op if Socket.io is not initialized (tests, scripts).
 export const emitToUser = (userId: number, event: string, data: unknown): void => {
   io?.to(`user_${userId}`).emit(event, data);
 };
 
 /**
- * Sommes-nous dans un process sans serveur socket ?
+ * Are we in a process without a socket server?
  *
- * `io` n'est renseigné que par `initSocket`, appelé au démarrage du serveur HTTP. Dans le
- * process worker il reste `undefined`, et toute émission y est un no-op silencieux : c'est
- * ce qui rendait le temps réel muet après une synchronisation ShotGrid. Les appelants qui
- * peuvent tourner des deux côtés s'en servent pour passer par le canal Redis.
+ * `io` is only set by `initSocket`, called at HTTP server startup. In the worker process it stays `undefined`,
+ * and any emission there is a silent no-op: this is what made real time mute after a ShotGrid synchronization.
+ * Callers that may run on either side use it to go through the Redis channel instead.
  */
 export const isWorkerProcess = (): boolean => io === undefined;
 
@@ -492,7 +480,7 @@ export const emitToProject = (projectId: number, event: string, data: unknown): 
   io?.to(`project_${projectId}`).emit(event, data);
 };
 
-/** Room des spectateurs d'une review (jointe via `join_review`). */
+/** Viewers' room of a review (joined via `join_review`). */
 export const emitToReview = (mediaId: number, event: string, data: unknown): void => {
   io?.to(`review_${mediaId}`).emit(event, data);
 };
