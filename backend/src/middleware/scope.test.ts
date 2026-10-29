@@ -107,7 +107,7 @@ describe('assertTokenProject', () => {
     ).not.toThrow();
   });
 
-  it('refuses a project other than the token's', () => {
+  it("refuses a project other than the token's", () => {
     const req = requestOf({ user: sessionUser, apiToken: { id: 1, scopes: [], projectId: 3 } });
     expect(() => assertTokenProject(req, 3)).not.toThrow();
     expect(() => assertTokenProject(req, 4)).toThrow(/scoped to another project/);

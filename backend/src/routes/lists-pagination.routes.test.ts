@@ -171,7 +171,7 @@ describe('GET /api/sequences — bounded list', () => {
 });
 
 describe('GET /api/tasks — page, project and board', () => {
-  it('serves a shot's list with the standard envelope', async () => {
+  it("serves a shot's list with the standard envelope", async () => {
     const res = await request(app).get('/api/tasks?shotId=9&pageSize=250');
     expect(res.status).toBe(200);
     expect(tasks.list).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 250 }), 9, undefined);

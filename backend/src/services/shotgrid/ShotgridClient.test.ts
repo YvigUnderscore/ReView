@@ -102,7 +102,7 @@ describe('ShotgridClient', () => {
 
     const authCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('access_token'));
     expect(authCalls).toHaveLength(1);
-        // Script credentials go through the "client_credentials" flow.
+    // Script credentials go through the "client_credentials" flow.
     expect(String(authCalls[0]![1]!.body)).toContain('grant_type=client_credentials');
   });
 
@@ -113,12 +113,12 @@ describe('ShotgridClient', () => {
     await expect(client.search('Shot')).rejects.toMatchObject({ status: 401 });
   });
 
-    /**
-     * An authentication refusal arrives under a code the documentation does not promise: a real site answers **400** with
-     * `code: 102`. Deducing it from the HTTP code left the connection as a mere "error", and the generic label erased what the
-     * site said: "locked account" and "wrong password" call for different actions.
-     */
-  it('recognizes a refusal returned as 400 and carries the site\'s words', async () => {
+  /**
+   * An authentication refusal arrives under a code the documentation does not promise: a real site answers **400** with
+   * `code: 102`. Deducing it from the HTTP code left the connection as a mere "error", and the generic label erased what the
+   * site said: "locked account" and "wrong password" call for different actions.
+   */
+  it("recognizes a refusal returned as 400 and carries the site's words", async () => {
     const title = "Can't authenticate user 'demo' because the account is locked.";
     fetchMock.mockImplementation(async () => json({ errors: [{ code: 102, title, detail: null }] }, 400));
 
@@ -130,16 +130,16 @@ describe('ShotgridClient', () => {
     expect(sgError.message).toContain(title);
     expect(sgError.code).toBe('SHOTGRID_AUTH_REFUSED');
     expect(sgError.details).toEqual({ reason: title });
-        // The code returned to ReView's client is that of the gateway, not that of the site.
+    // The code returned to ReView's client is that of the gateway, not that of the site.
     expect(sgError.statusCode).toBe(502);
     expect(sgError.status).toBe(400);
   });
 
-    /**
-     * The reason for the refusal must be readable in the logs, without replaying the call by hand. It was not: only the replay
-     * from the cache wrote a line, and it said "already refused" without the reason. A locked account on the site was therefore
-     * indistinguishable from a wrong password for anyone who only has `docker logs`.
-     */
+  /**
+   * The reason for the refusal must be readable in the logs, without replaying the call by hand. It was not: only the replay
+   * from the cache wrote a line, and it said "already refused" without the reason. A locked account on the site was therefore
+   * indistinguishable from a wrong password for anyone who only has `docker logs`.
+   */
   it('writes the reason for the refusal to the logs, from the first call', async () => {
     const title = "Can't authenticate user 'demo' because the account is locked.";
     fetchMock.mockImplementation(async () => json({ errors: [{ code: 102, title }] }, 400));
@@ -152,10 +152,10 @@ describe('ShotgridClient', () => {
     );
   });
 
-    /**
-     * The site locks the account after a few failures: retrying refused credentials does not make them good, and turns a typo
-     * into a locked account.
-     */
+  /**
+   * The site locks the account after a few failures: retrying refused credentials does not make them good, and turns a typo
+   * into a locked account.
+   */
   it('no longer calls the site after a refusal, until the credentials are fixed', async () => {
     fetchMock.mockImplementation(async () =>
       json({ errors: [{ title: "Can't authenticate user 'demo'." }] }, 400),
@@ -164,14 +164,14 @@ describe('ShotgridClient', () => {
     await expect(new ShotgridClient(creds).serverInfo()).rejects.toBeInstanceOf(ShotgridApiError);
     const emitted = fetchMock.mock.calls.length;
 
-        // Two more screens, two more clients: no extra request.
+    // Two more screens, two more clients: no extra request.
     await expect(new ShotgridClient(creds).serverInfo()).rejects.toMatchObject({
       code: 'SHOTGRID_AUTH_REFUSED',
     });
     await expect(new ShotgridClient(creds).search('Shot')).rejects.toBeInstanceOf(ShotgridApiError);
     expect(fetchMock.mock.calls).toHaveLength(emitted);
 
-        // Fixing the site empties the token cache: the gate reopens at the same moment.
+    // Fixing the site empties the token cache: the gate reopens at the same moment.
     clearTokenCache(creds.baseUrl);
     fetchMock.mockImplementation(async (input) =>
       String(input).includes('access_token') ? authOk() : json({ data: { shotgun_version: '8.88' } }),
@@ -251,8 +251,8 @@ describe('ShotgridClient', () => {
   });
 
   it('sends no Content-Type on a request without a body', async () => {
-        // A real ShotGrid site answers "Unsupported Content-Type" to a GET carrying this header;
-        // the default was not visible against a permissive server.
+    // A real ShotGrid site answers "Unsupported Content-Type" to a GET carrying this header;
+    // the default was not visible against a permissive server.
     fetchMock.mockResolvedValueOnce(authOk());
     fetchMock.mockImplementation(async () => json({ data: { shotgun_version: '8.60' } }));
     const client = new ShotgridClient(creds);
@@ -265,8 +265,8 @@ describe('ShotgridClient', () => {
   });
 
   it('declares the shape of the filters in the search Content-Type', async () => {
-        // ShotGrid refuses `application/json` on `_search` and requires knowing whether the filters arrive as an array of
-        // conditions or as an object with a logical operator.
+    // ShotGrid refuses `application/json` on `_search` and requires knowing whether the filters arrive as an array of
+    // conditions or as an object with a logical operator.
     fetchMock.mockResolvedValueOnce(authOk());
     fetchMock.mockImplementation(async () => json({ data: [] }));
     const client = new ShotgridClient(creds);
@@ -290,7 +290,7 @@ describe('ShotgridClient', () => {
     expect((hashCall![1]!.headers as Record<string, string>)['Content-Type']).toBe(
       'application/vnd+shotgun.api3_hash+json',
     );
-        // In object form, the conditions are nested under the operator.
+    // In object form, the conditions are nested under the operator.
     expect(JSON.parse(String(hashCall![1]!.body)).filters).toEqual({
       logical_operator: 'or',
       conditions: [['code', 'contains', 'SH']],
@@ -322,8 +322,8 @@ describe('uploadFile', () => {
   });
 
   it('reads the upload address under "links", not under "data"', async () => {
-        // ShotGrid describes the upload in `data` and places the signed address in `links.upload`: looking it up in
-        // `data.upload_url` always returned empty, hence a "no upload URL" when the site did provide one.
+    // ShotGrid describes the upload in `data` and places the signed address in `links.upload`: looking it up in
+    // `data.upload_url` always returned empty, hence a "no upload URL" when the site did provide one.
     fetchMock.mockResolvedValueOnce(authOk());
     fetchMock.mockResolvedValueOnce(
       json({
@@ -339,7 +339,7 @@ describe('uploadFile', () => {
 
     const put = fetchMock.mock.calls.find((c) => c[1]?.method === 'PUT');
     expect(String(put![0])).toBe('https://s3.example/signed');
-        // The confirmation makes the file visible: without it, it stays orphaned.
+    // The confirmation makes the file visible: without it, it stays orphaned.
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/complete'))).toBe(true);
   });
 
@@ -421,7 +421,7 @@ describe('ShotgridClient: outgoing requests under guard', () => {
     await expect(
       client.unsafeUploadFile('Note', 42, 'attachments', Buffer.from('x'), 'a.png'),
     ).rejects.toBeInstanceOf(OutboundBlockedError);
-        // No PUT was issued.
+    // No PUT was issued.
     expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'PUT')).toBe(false);
   });
 
@@ -432,8 +432,8 @@ describe('ShotgridClient: outgoing requests under guard', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-    // SHOTGRID_INSECURE_HOSTS: without this exemption, the development simulator
-    // (host.docker.internal:8890, a private plaintext address) would become unreachable.
+  // SHOTGRID_INSECURE_HOSTS: without this exemption, the development simulator
+  // (host.docker.internal:8890, a private plaintext address) would become unreachable.
   it('lets through a host declared in SHOTGRID_INSECURE_HOSTS', async () => {
     fetchMock.mockResolvedValueOnce(authOk());
     fetchMock.mockResolvedValueOnce(json({ data: { shotgun_version: '8.60' } }));
@@ -442,7 +442,7 @@ describe('ShotgridClient: outgoing requests under guard', () => {
     expect(lookup).not.toHaveBeenCalled();
   });
 
-  it('applies the exemption to the simulator\'s media stream', async () => {
+  it("applies the exemption to the simulator's media stream", async () => {
     fetchMock.mockResolvedValueOnce(new Response('média', { status: 200 }));
     const client = new ShotgridClient({ ...creds, baseUrl: 'http://sim.local:8890' });
     await expect(client.openStream('http://sim.local:8890/_media/Version/1/x')).resolves.toBeTruthy();

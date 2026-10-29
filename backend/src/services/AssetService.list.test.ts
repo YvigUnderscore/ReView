@@ -46,7 +46,7 @@ describe('AssetService.list', () => {
     );
   });
 
-  it('keeps the steps and tasks that the cards\' context menu consumes', async () => {
+  it("keeps the steps and tasks that the cards' context menu consumes", async () => {
     await list(3, page);
     const args = db.asset.findMany.mock.calls[0]![0] as { include: Record<string, unknown> };
     expect(args.include.departments).toBeDefined();

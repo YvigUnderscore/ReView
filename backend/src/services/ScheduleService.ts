@@ -36,7 +36,7 @@ export interface SchedulePipelineStatus {
   id: number;
   code: string;
   name: string;
-    /** Hex #RRGGBB as set by the studio. */
+  /** Hex #RRGGBB as set by the studio. */
   color: string;
 }
 
@@ -45,9 +45,9 @@ export interface ScheduleTask {
   name: string;
   type: TaskType;
   status: TaskStatus;
-    /** Customizable status, `null` for a studio that has not set one. */
+  /** Customizable status, `null` for a studio that has not set one. */
   pipelineStatus: SchedulePipelineStatus | null;
-    /** Status family: `todo|progress|review|done|blocked|inactive`. */
+  /** Status family: `todo|progress|review|done|blocked|inactive`. */
   family: FamilyOrInactive;
   startDate: string | null;
   dueDate: string | null;
@@ -59,9 +59,9 @@ export interface ScheduleTask {
 
 export interface ProjectSchedule {
   tasks: ScheduleTask[];
-    /** The cap was reached: the requested window is too wide, tasks are missing. */
+  /** The cap was reached: the requested window is too wide, tasks are missing. */
   truncated: boolean;
-    /** Cap applied, so the reader knows which bound is meant. */
+  /** Cap applied, so the reader knows which bound is meant. */
   limit: number;
 }
 
@@ -177,15 +177,15 @@ export async function getProjectSchedule(
         },
       },
     },
-        // `id` closes the sort: without a tie-break, two tasks with the same dates come out in an order
-        // that PostgreSQL does not guarantee, and what falls under the cap would change from one call to
-        // the next. A truncation must be reproducible.
-        //
-        // This sort also decides what a truncation leaves out: PostgreSQL puts NULLs last in an ascending sort,
-        // so tasks without a due date (the ones only the Gantt displays) come first. That is the lesser evil:
-        // the calendar only reads `dueDate`.
+    // `id` closes the sort: without a tie-break, two tasks with the same dates come out in an order
+    // that PostgreSQL does not guarantee, and what falls under the cap would change from one call to
+    // the next. A truncation must be reproducible.
+    //
+    // This sort also decides what a truncation leaves out: PostgreSQL puts NULLs last in an ascending sort,
+    // so tasks without a due date (the ones only the Gantt displays) come first. That is the lesser evil:
+    // the calendar only reads `dueDate`.
     orderBy: [{ dueDate: 'asc' }, { startDate: 'asc' }, { id: 'asc' }],
-        // One row more than the cap: it only tells whether there were others, which avoids an extra `count`.
+    // One row more than the cap: it only tells whether there were others, which avoids an extra `count`.
     take: SCHEDULE_MAX_TASKS + 1,
   });
 

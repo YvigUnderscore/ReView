@@ -144,7 +144,7 @@ describe('API — auth & RBAC', () => {
     expect(after.status).toBe(401);
   });
 
-  it("API tokens (36.C): read scope → GET ok, write 403; immediate revocation", async () => {
+  it('API tokens (36.C): read scope → GET ok, write 403; immediate revocation', async () => {
     // Creating a `rvk_` requires re-entering the password: a stolen access token is not enough
     // to grant itself a 3650-day access that "log out everywhere" ignores.
     const noPassword = await request(app)
@@ -1056,7 +1056,7 @@ describe('API — breadcrumb context (/api/context)', () => {
 });
 
 describe('API — notifications (task assignment)', () => {
-  it("notifies the assignee, exposes the unread counter, marks read / all read, scoped per user", async () => {
+  it('notifies the assignee, exposes the unread counter, marks read / all read, scoped per user', async () => {
     const suffix = Date.now();
     const auth = { Authorization: `Bearer ${token}` };
     const artistAuth = { Authorization: `Bearer ${artistToken}` };

@@ -33,8 +33,8 @@ const NOTE_FIELDS = [
   'note_links',
   'tasks',
   'user',
-    // Without this field, the API does not return the attachments and the supervisor's annotated image never reaches the review: the feedback arrives
-    // stripped of its subject.
+  // Without this field, the API does not return the attachments and the supervisor's annotated image never reaches the review: the feedback arrives
+  // stripped of its subject.
   'attachments',
   'created_at',
   'updated_at',
@@ -49,9 +49,9 @@ export function isFromReview(content: string | null | undefined): boolean {
 }
 
 export interface NotePullOptions {
-    /**
-     * Precise notes to re-read (processing an event). The project filter stays in place: an identifier received by webhook proves nothing about its membership.
-     */
+  /**
+   * Precise notes to re-read (processing an event). The project filter stays in place: an identifier received by webhook proves nothing about its membership.
+   */
   onlySgIds?: number[];
 }
 
@@ -64,8 +64,8 @@ export interface NotePullOptions {
 export async function pullNotes(ctx: PullContext, options: NotePullOptions = {}): Promise<void> {
   if (!can(ctx.settings, 'notes', 'read')) return;
 
-    // The project filter always comes first and is never replaced by the restriction on identifiers: the two add up, and each record received
-    // then goes through `belongsToProject` again.
+  // The project filter always comes first and is never replaced by the restriction on identifiers: the two add up, and each record received
+  // then goes through `belongsToProject` again.
   const filters: Array<[string, string, unknown]> = [projectFilter(ctx.scope.sgProjectId)];
   if (options.onlySgIds?.length) filters.push(['id', 'in', options.onlySgIds]);
 
@@ -79,15 +79,15 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
   const versionLinks = await mapSgToLocal(ctx.connection.id, 'version');
   const commentLinks = await mapSgToLocal(ctx.connection.id, 'comment');
 
-    /**
-     * Notes deleted on the site: **flagged, not applied**.
-     *
-     * A ReView comment has no trash: the table has no `deletedAt`. Honouring the removal would therefore erase for good a review feedback, its replies and
-     * its annotation, on the strength of a clean-up done in ShotGrid. The rest of the integration moves to the trash and never deletes; we do not do the
-     * opposite here in silence.
-     *
-     * The journal therefore says so, and a human decides. Without this line, the removal event left no trace at all, and the gap between the two tools stayed invisible.
-     */
+  /**
+   * Notes deleted on the site: **flagged, not applied**.
+   *
+   * A ReView comment has no trash: the table has no `deletedAt`. Honouring the removal would therefore erase for good a review feedback, its replies and
+   * its annotation, on the strength of a clean-up done in ShotGrid. The rest of the integration moves to the trash and never deletes; we do not do the
+   * opposite here in silence.
+   *
+   * The journal therefore says so, and a human decides. Without this line, the removal event left no trace at all, and the gap between the two tools stayed invisible.
+   */
   if (options.onlySgIds?.length) {
     const alive = new Set(records.map((r) => r.id));
     for (const sgId of await confirmGone(ctx, 'Note', options.onlySgIds, alive)) {
@@ -113,8 +113,8 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
 
     const known = commentLinks.get(record.id);
     if (known) {
-            // Note already imported. We still go back for its attachments as long as we have not: notes received before this path existed never
-            // got their annotated image, and nothing else would come and fetch it.
+      // Note already imported. We still go back for its attachments as long as we have not: notes received before this path existed never
+      // got their annotated image, and nothing else would come and fetch it.
       if (!linkSaysAttachmentsDone(known.data)) await catchUpNote(ctx, record, known.localId);
       continue;
     }
@@ -126,7 +126,7 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
       continue;
     }
 
-        // The comment is placed on the version's media: that is what the review displays.
+    // The comment is placed on the version's media: that is what the review displays.
     const media = await prisma.mediaObject.findFirst({
       where: { versionId: localVersionId, deletedAt: null },
       orderBy: { id: 'asc' },
@@ -155,11 +155,11 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
       data: {
         mediaObjectId: media.id,
         userId: authorLink?.localId ?? null,
-                // Who wrote, when the person has no account here. This is the ordinary case: matching is done on the e-mail, and a studio has no reason to
-                // have the same addresses on both sides. Without this field, the API could only offer an absent author, which the interface displays as "deleted account",
-                // which is both wrong and hurtful to the person who made the remark.
+        // Who wrote, when the person has no account here. This is the ordinary case: matching is done on the e-mail, and a studio has no reason to
+        // have the same addresses on both sides. Without this field, the API could only offer an absent author, which the interface displays as "deleted account",
+        // which is both wrong and hurtful to the person who made the remark.
         guestName: authorRef?.name ?? null,
-                // The provenance is carried by the content: it survives export, copy and reading by someone who does not know the integration.
+        // The provenance is carried by the content: it survives export, copy and reading by someone who does not know the integration.
         content: `<p><em>ShotGrid</em></p>${
           subject ? `<p><strong>${escapeLines(subject)}</strong></p>` : ''
         }<p>${escapeLines(content)}</p>`,
@@ -207,8 +207,8 @@ async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number
       where: { id: commentId },
       data: {
         guestName: authorName,
-                // The name stops being written twice: once as the author, once in the text. This prefix is of our making, not someone's prose: normalizing it
-                // rewrites no one's remarks.
+        // The name stops being written twice: once as the author, once in the text. This prefix is of our making, not someone's prose: normalizing it
+        // rewrites no one's remarks.
         content: comment.content.replace(/^<p><em>ShotGrid[^<]*<\/em><\/p>/, '<p><em>ShotGrid</em></p>'),
       },
     });
@@ -232,7 +232,7 @@ async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number
 export interface PushNoteContext {
   connectionId: number;
   sgProjectId: number;
-    /** Every write goes through here: the linked project is set by the writer, not here. */
+  /** Every write goes through here: the linked project is set by the writer, not here. */
   writer: Pick<ShotgridWriter, 'create' | 'upload'>;
   attachAnnotations: boolean;
   asUserLogin: string | null;
@@ -257,8 +257,8 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   const versionLink = await findByLocal(ctx.connectionId, 'version', comment.media.versionId);
   if (!versionLink) return null;
 
-    // A comment already carried by a note must not generate a second one: a synchronization retry, a catch-up or a simple double click would
-    // otherwise pass through here twice.
+  // A comment already carried by a note must not generate a second one: a synchronization retry, a catch-up or a simple double click would
+  // otherwise pass through here twice.
   const existing = await findByLocal(ctx.connectionId, 'comment', comment.id);
   if (existing) {
     logger.debug({ commentId, sgNoteId: existing.sgId }, 'Commentaire déjà présent en note ShotGrid');
@@ -266,14 +266,14 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   }
 
   const author = comment.author?.name ?? comment.author?.email ?? 'ReView';
-    // Version name: when attaching is not possible, it is what places the feedback.
+  // Version name: when attaching is not possible, it is what places the feedback.
   const versionName = (
     await prisma.version.findUnique({
       where: { id: comment.media.versionId },
       select: { name: true },
     })
   )?.name;
-    // Time reference: the frame when the media's rate makes it computable, the timestamp otherwise. A remark without a reference is unusable in review.
+  // Time reference: the frame when the media's rate makes it computable, the timestamp otherwise. A remark without a reference is unusable in review.
   const fps = mediaFrameRate(comment.media.metadata);
   const timecode = frameLabel(comment.timestamp, fps);
   const reviewUrl = env.APP_URL
@@ -290,13 +290,13 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
     .filter((line) => line !== null)
     .join('\n');
 
-    /**
-     * Attaching to the version is attempted, not required.
-     *
-     * Some sites refuse to write `note_links`: a permissions restriction, or a schema specific to the studio. Losing the feedback because of it would be absurd:
-     * we fall back on a free note whose subject and body carry the context, and the return link to ReView stays clickable.
-     */
-    // No `project` here: it is `ShotgridWriter` that sets it, and it alone.
+  /**
+   * Attaching to the version is attempted, not required.
+   *
+   * Some sites refuse to write `note_links`: a permissions restriction, or a schema specific to the studio. Losing the feedback because of it would be absurd:
+   * we fall back on a free note whose subject and body carry the context, and the return link to ReView stays clickable.
+   */
+  // No `project` here: it is `ShotgridWriter` that sets it, and it alone.
   const base = {
     subject: timecode ? `ReView — ${timecode}` : 'ReView',
     content: body,
@@ -438,7 +438,7 @@ async function renderAnnotatedFrame(comment: {
     const source = join(dir, 'source');
     const overlay = join(dir, 'overlay.svg');
     const output = join(dir, 'out.png');
-        // After transcoding, the original is deleted and the proxy is authoritative: `mediaSourceKey` designates the file actually served.
+    // After transcoding, the original is deleted and the proxy is authoritative: `mediaSourceKey` designates the file actually served.
     await storage.downloadToFile(mediaSourceKey(comment.media), source);
     await writeFile(overlay, svg, 'utf8');
 

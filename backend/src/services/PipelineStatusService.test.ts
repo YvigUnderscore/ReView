@@ -41,7 +41,7 @@ beforeEach(() => vi.clearAllMocks());
  * that mean nothing.
  */
 describe('listForProject', () => {
-  it('serves the project\'s own vocabulary first', async () => {
+  it("serves the project's own vocabulary first", async () => {
     answers(own);
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['brief']);
@@ -51,7 +51,7 @@ describe('listForProject', () => {
     expect(db.pipelineStatus.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('offers only the site\'s vocabulary on a linked project', async () => {
+  it("offers only the site's vocabulary on a linked project", async () => {
     answers([], site);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true });
     const r = await listForProject(461, 'task');
@@ -85,7 +85,7 @@ describe('listForProject', () => {
     expect(r.map((s) => s.code)).toEqual(['todo', 'approved']);
   });
 
-  it('NEVER serves a site\'s vocabulary to an unlinked project', async () => {
+  it("NEVER serves a site's vocabulary to an unlinked project", async () => {
     // The default corrected in B2: the fallback returned "the whole reference", site included, to a project
     // that is not linked to it.
     answers([], []);
@@ -109,7 +109,7 @@ describe('listForProject', () => {
 });
 
 describe('resolveByLegacy', () => {
-  it('looks for the match in the project\'s vocabulary, not in the whole reference', async () => {
+  it("looks for the match in the project's vocabulary, not in the whole reference", async () => {
     answers([], site);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true });
     const match = await resolveByLegacy(461, 'task', TaskStatus.PENDING_REVIEW);
@@ -138,7 +138,7 @@ describe('assertBelongsToProject', () => {
     await expect(assertBelongsToProject(461, 'task', 20)).resolves.toBe(20);
   });
 
-  it('refuses a status coming from another project\'s site', async () => {
+  it("refuses a status coming from another project's site", async () => {
     // The case that matters: an identifier valid in the database, but foreign to this project.
     answers([], local);
     db.shotgridConnection.findUnique.mockResolvedValue(null);

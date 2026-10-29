@@ -47,7 +47,7 @@ describe('runSync: lock taken before any wait', () => {
   it('a burst of five requests opens the connection only once', async () => {
     slowInactiveConnection(20);
 
-        // Launched without `await` between them: this is the burst of webhooks.
+    // Launched without `await` between them: this is the burst of webhooks.
     const results = await Promise.all([runSync(461), runSync(461), runSync(461), runSync(461), runSync(461)]);
 
     expect(openConnection).toHaveBeenCalledTimes(1);
@@ -68,7 +68,7 @@ describe('runSync: lock taken before any wait', () => {
     openConnection.mockRejectedValueOnce(new Error('site injoignable'));
     await expect(runSync(461)).rejects.toThrow('site injoignable');
 
-        // Without release, the project stayed locked until the worker restarted.
+    // Without release, the project stayed locked until the worker restarted.
     slowInactiveConnection(0);
     await expect(runSync(461)).resolves.toMatchObject({ status: 'ok' });
   });

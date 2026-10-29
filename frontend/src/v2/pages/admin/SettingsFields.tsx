@@ -61,7 +61,7 @@ export default function SettingsFields({
                   value={fieldUnit(field, stored, units)}
                   onChange={(e) => onUnit(field, e.target.value as SizeUnit)}
                 >
-                   {/* International symbols: "Mo"/"Go" exist only in French, and
+                  {/* International symbols: "Mo"/"Go" exist only in French, and
                        the "New user" modal already said "Quota (GB)" two screens later. */}
                   <option value="MB">MB</option>
                   <option value="GB">GB</option>

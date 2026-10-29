@@ -102,7 +102,7 @@ describe('TaskPickerDialog — destinations', () => {
     expect(screen.queryByText(/SH010/)).toBeNull();
   });
 
-  it('returns the chosen task, the entity\'s own', async () => {
+  it("returns the chosen task, the entity's own", async () => {
     const user = userEvent.setup();
     const onPick = mount();
     await user.click(screen.getByRole('button', { name: /Lookdev/ }));

@@ -59,10 +59,10 @@ export class SyncJournal {
     this.counter(domain)[key] += by;
   }
 
-    /**
-     * Adds a line to the journal. The cap prevents a repeatedly failing synchronization from writing tens of thousands of lines: beyond it, only the counters
-     * keep advancing, and a final message says so.
-     */
+  /**
+   * Adds a line to the journal. The cap prevents a repeatedly failing synchronization from writing tens of thousands of lines: beyond it, only the counters
+   * keep advancing, and a final message says so.
+   */
   async log(
     level: 'info' | 'warn' | 'error' | 'conflict',
     messageKey: string,
@@ -94,10 +94,10 @@ export class SyncJournal {
     });
   }
 
-    /**
-     * Conflict detected: both sides have changed since the last synchronization.
-     * Under the manual policy, the row stays unresolved and awaits human arbitration.
-     */
+  /**
+   * Conflict detected: both sides have changed since the last synchronization.
+   * Under the manual policy, the row stays unresolved and awaits human arbitration.
+   */
   async conflict(
     messageKey: string,
     vars: Record<string, unknown>,

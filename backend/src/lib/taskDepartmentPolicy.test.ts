@@ -50,7 +50,7 @@ describe('canWriteTask', () => {
     expect(canWriteTask(artist({ isManager: true, taskDepartmentId: 9 }))).toBe(true);
   });
 
-  it("widens nothing in open mode: the historical rule, the assignee and only them", () => {
+  it('widens nothing in open mode: the historical rule, the assignee and only them', () => {
     // Opening it here would give every artist control over all tasks of the project.
     expect(canWriteTask(artist({ policy: 'open', taskDepartmentId: 9 }))).toBe(false);
     expect(canWriteTask(artist({ policy: 'open', taskDepartmentId: 9, isAssignee: true }))).toBe(true);
@@ -64,7 +64,7 @@ describe('canWriteTask', () => {
 describe('writableDepartments', () => {
   const pipe = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
-  it('narrows the list to the person's steps: the promised readability', () => {
+  it("narrows the list to the person's steps: the promised readability", () => {
     expect(
       writableDepartments(pipe, { policy: 'department', isManager: false, userDepartmentIds: [2] }),
     ).toEqual([2]);

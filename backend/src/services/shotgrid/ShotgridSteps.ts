@@ -31,7 +31,7 @@ export interface PipelineStep {
   entityType: 'Asset' | 'Shot';
   color: string | null;
   order: number;
-    /** Does a task of the project already carry this step? */
+  /** Does a task of the project already carry this step? */
   used: boolean;
 }
 
@@ -52,10 +52,10 @@ export async function listSteps(
   const ctx = await openConnection(projectId);
   if (!can(ctx.settings, 'tasks', 'read')) return [];
 
-    // What the studio declared for this project: the only list that is authoritative, since the site does not publish its own visibility. It takes precedence over any deduction.
+  // What the studio declared for this project: the only list that is authoritative, since the site does not publish its own visibility. It takes precedence over any deduction.
   const declared = ctx.settings.steps?.[entityType === 'Asset' ? 'asset' : 'shot'] ?? [];
 
-    // What the project uses: the steps carried by its tasks, with THEIR identifiers.
+  // What the project uses: the steps carried by its tasks, with THEIR identifiers.
   const projectTasks = await ctx.client.search('Task', {
     fields: ['step', 'entity'],
     filters: [projectFilter(ctx.connection.sgProjectId)],
@@ -65,7 +65,7 @@ export async function listSteps(
   for (const task of projectTasks) {
     const ref = asEntityRef(task.step);
     const parent = asEntityRef(task.entity);
-        // An asset step is not offered on a shot, and vice versa.
+    // An asset step is not offered on a shot, and vice versa.
     if (ref && parent?.type === entityType) inProject.set(ref.id, ref.name ?? `step-${ref.id}`);
   }
 
@@ -93,12 +93,12 @@ export async function listSteps(
     }))
     .sort((a, b) => Number(b.used) - Number(a.used) || a.order - b.order || a.code.localeCompare(b.code));
 
-    // The full catalogue is never de-duplicated: it is the list from which the studio chooses, and homonyms are precisely what it must tell apart. ArtFX has eight asset
-    // steps whose name contains "model", and the one this project uses — "modeling", short code "model" — comes after its homonym in the site's order. Excluding it made it
-    // impossible to tick.
+  // The full catalogue is never de-duplicated: it is the list from which the studio chooses, and homonyms are precisely what it must tell apart. ArtFX has eight asset
+  // steps whose name contains "model", and the one this project uses — "modeling", short code "model" — comes after its homonym in the site's order. Excluding it made it
+  // impossible to tick.
   if (options.all) return steps;
 
-    // A declared list is a choice, not a guess: we return it as is.
+  // A declared list is a choice, not a guess: we return it as is.
   return declared.length > 0 ? steps : dedupeSteps(steps);
 }
 
@@ -130,7 +130,7 @@ export interface ProjectMember {
   sgId: number;
   name: string;
   email: string | null;
-    /** Local identifier, when this person has a ReView account (matching by e-mail). */
+  /** Local identifier, when this person has a ReView account (matching by e-mail). */
   userId: number | null;
 }
 
@@ -152,7 +152,7 @@ export async function listProjectMembers(projectId: number): Promise<ProjectMemb
     sort: 'name',
   });
 
-    // The local account, when it exists: assign in ShotGrid AND in ReView in one gesture.
+  // The local account, when it exists: assign in ShotGrid AND in ReView in one gesture.
   const emails = people.map((p) => (asString(p.email) ?? '').toLowerCase()).filter(Boolean);
   const locals = emails.length
     ? await prisma.user.findMany({ where: { email: { in: emails } }, select: { id: true, email: true } })
@@ -183,7 +183,7 @@ export async function createTaskFromStep(
     parentType: 'asset' | 'shot';
     parentId: number;
     name?: string;
-        /** Person to whom the task is entrusted, chosen among the project's members. */
+    /** Person to whom the task is entrusted, chosen among the project's members. */
     assigneeSgId?: number | null;
   },
   actorEmail: string | null,
@@ -202,7 +202,7 @@ export async function createTaskFromStep(
 
   const name = params.name?.trim() || asString(step.code) || `step-${params.stepSgId}`;
 
-    // The assignment only accepts a person from the project: offering the studio's directory would allow entrusting a task to someone who does not work there.
+  // The assignment only accepts a person from the project: offering the studio's directory would allow entrusting a task to someone who does not work there.
   let assignee: ProjectMember | null = null;
   if (params.assigneeSgId) {
     const members = await listProjectMembers(projectId);
@@ -210,7 +210,7 @@ export async function createTaskFromStep(
     if (!assignee) throw badRequest('This person is not a member of the project');
   }
 
-    // The project and its re-reading are the business of `ShotgridWriter`: it sets the one, checks the other, and refuses a template project. Nothing to add here.
+  // The project and its re-reading are the business of `ShotgridWriter`: it sets the one, checks the other, and refuses a template project. Nothing to add here.
   const created = await ctx.writer.create('Task', {
     content: name,
     step: { type: 'Step', id: params.stepSgId },
@@ -218,8 +218,8 @@ export async function createTaskFromStep(
     ...(assignee ? { task_assignees: [{ type: 'HumanUser', id: assignee.sgId }] } : {}),
   });
 
-    // Belt and braces: we re-read what the site wrote and check that it is indeed the intended project, and not a template project. A misplaced task cannot be undone:
-    // it appears in someone else's production.
+  // Belt and braces: we re-read what the site wrote and check that it is indeed the intended project, and not a template project. A misplaced task cannot be undone:
+  // it appears in someone else's production.
   const check = await ctx.client.findById('Task', created.id, ['content', 'step', 'entity', 'project']);
   const scope = {
     sgProjectId: ctx.connection.sgProjectId,
@@ -231,8 +231,8 @@ export async function createTaskFromStep(
   }
   if (check && !writeAllowedOn(check)) throw forbidden('ShotGrid template project — writing is refused');
 
-    // The site's step becomes a department of the project — relation included. Writing only the string made the task invisible to assignment by department, which queries
-    // the relation: it answered "create the task in ShotGrid first" although it had just been created there.
+  // The site's step becomes a department of the project — relation included. Writing only the string made the task invisible to assignment by department, which queries
+  // the relation: it answered "create the task in ShotGrid first" although it had just been created there.
   const stepCode = asString(step.code) ?? null;
   const { department, departmentId } = await resolveForTask(projectId, stepCode);
   const task = await prisma.task.create({
@@ -253,7 +253,7 @@ export async function createTaskFromStep(
     sgType: 'Task',
     sgId: created.id,
     data: {
-            // The link describes the remote side: it keeps the step name as the site writes it, not the normalized key of the local department.
+      // The link describes the remote side: it keeps the step name as the site writes it, not the normalized key of the local department.
       stepName: stepCode,
       sgAssignees: assignee ? [{ id: assignee.sgId, name: assignee.name, email: assignee.email }] : [],
       sgStatusCode: null,

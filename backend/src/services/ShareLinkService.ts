@@ -113,8 +113,8 @@ export async function resolveScope(projectId: number, input: ShareScopeInput): P
       throw badRequest('Select at least one media for this scope', 'SCOPE_TARGET_MISSING');
     if (asked.length > SHARE_SELECTION_LIMIT)
       throw badRequest('Too many media for a single link', 'SCOPE_SELECTION_TOO_LARGE');
-        // We keep only what is really shareable: an unpublished media in the selection would become
-        // visible on the day it is published, without a new decision.
+    // We keep only what is really shareable: an unpublished media in the selection would become
+    // visible on the day it is published, without a new decision.
     const rows = await prisma.mediaObject.findMany({
       where: { AND: [{ id: { in: asked } }, publishedMediaWhere(projectId)] },
       select: { id: true },
@@ -203,7 +203,7 @@ export interface ShareCandidate {
   kind: MediaKind;
   versionId: number;
   versionName: string;
-    /** Where the media lives, at a glance: "SQ010 · SH020 › comp". */
+  /** Where the media lives, at a glance: "SQ010 · SH020 › comp". */
   location: string;
   createdAt: string;
 }

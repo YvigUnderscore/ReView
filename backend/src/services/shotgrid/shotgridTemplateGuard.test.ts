@@ -19,7 +19,7 @@ describe('looksLikeTemplate', () => {
   it('lets a production project through, even if the word appears elsewhere', () => {
     expect(looksLikeTemplate('M4_2027_DO_I_END_TOO')).toBe(false);
     expect(looksLikeTemplate('Demo Project')).toBe(false);
-        // "templating" is a production subject, not a template.
+    // "templating" is a production subject, not a template.
     expect(looksLikeTemplate('Templating Research')).toBe(false);
     expect(looksLikeTemplate(null)).toBe(false);
   });

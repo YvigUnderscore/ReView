@@ -71,7 +71,7 @@ export async function syncPipelineStatuses(
   siteStatuses: Map<string, SgStatusInfo>,
   journal?: SyncJournal,
 ): Promise<Map<string, PipelineStatus>> {
-    // Each entity has ITS list: four statuses on a sequence, fifteen on a shot. Confusing them would offer states the site would refuse on writing.
+  // Each entity has ITS list: four statuses on a sequence, fifteen on a shot. Confusing them would offer states the site would refuse on writing.
   const entity =
     scope === 'task' ? 'Task' : scope === 'shot' ? 'Shot' : scope === 'asset' ? 'Asset' : 'Sequence';
   const codes = await fetchValidStatusCodes(client, entity);
@@ -79,8 +79,8 @@ export async function syncPipelineStatuses(
 
   if (codes.length === 0) {
     await journal?.log('warn', 'shotgrid.log.noStatusSchema', { entity });
-        // Same filter as the nominal path: without `projectId: null` or `origin: 'shotgrid'`, this fallback picked up the studio's local statuses — and those of other
-        // projects — then stuck them onto the site's entities. A shot could receive the status of a neighbouring project carrying the same code. A blank map is better than a wrong one.
+    // Same filter as the nominal path: without `projectId: null` or `origin: 'shotgrid'`, this fallback picked up the studio's local statuses — and those of other
+    // projects — then stuck them onto the site's entities. A shot could receive the status of a neighbouring project carrying the same code. A blank map is better than a wrong one.
     const existing = await prisma.pipelineStatus.findMany({
       where: { projectId: null, scope, origin: 'shotgrid' },
     });
@@ -94,8 +94,8 @@ export async function syncPipelineStatuses(
       color: '#6B7280',
       order: index,
     };
-        // Imported statuses live at studio level (`projectId: null`) and are told apart from local statuses by their origin (B2): one and the same code, "wtg" for
-        // example, exists on both sides. Without the origin filter, the synchronization would overwrite the studio's local vocabulary with the site's.
+    // Imported statuses live at studio level (`projectId: null`) and are told apart from local statuses by their origin (B2): one and the same code, "wtg" for
+    // example, exists on both sides. Without the origin filter, the synchronization would overwrite the studio's local vocabulary with the site's.
     const existing = await prisma.pipelineStatus.findFirst({
       where: { projectId: null, scope, code, origin: 'shotgrid' },
     });
@@ -105,7 +105,7 @@ export async function syncPipelineStatuses(
       order: info.order || index,
       isDone: sgStatusIsDone(code),
       isInactive: sgStatusIsInactive(code),
-            // This status comes from the site: it will only be offered on the projects linked to it. Setting it here avoids having to guess the origin afterwards.
+      // This status comes from the site: it will only be offered on the projects linked to it. Setting it here avoids having to guess the origin afterwards.
       origin: 'shotgrid',
       legacyStatus: sgStatusToEnum(code),
     };
@@ -118,7 +118,7 @@ export async function syncPipelineStatuses(
     journal?.count(`statuses.${scope}`, existing ? 'updated' : 'created');
   }
 
-    // Imported statuses absent from the site: kept, but flagged once. Purely local vocabulary is not concerned — it does not claim to reflect the site.
+  // Imported statuses absent from the site: kept, but flagged once. Purely local vocabulary is not concerned — it does not claim to reflect the site.
   const orphans = await prisma.pipelineStatus.findMany({
     where: { projectId: null, scope, origin: 'shotgrid', code: { notIn: codes } },
   });
@@ -154,7 +154,7 @@ export async function syncVersionStatuses(
   const unmapped: string[] = [];
 
   for (const [index, code] of codes.entries()) {
-        // A match already set by hand takes precedence over any deduction.
+    // A match already set by hand takes precedence over any deduction.
     const configured = existingMap[code];
     if (configured && byId.has(configured)) {
       map[code] = configured;
@@ -166,17 +166,17 @@ export async function syncVersionStatuses(
       map[code] = sameName.id;
       continue;
     }
-        /*
-         * No automatic creation.
-         *
-         * `fetchValidStatusCodes(client, 'Version')` returns the `valid_values` of the Version status field — on a studio site, this is the status list of the WHOLE site,
-         * shared with Task and Shot. Creating one `ReviewStatus` per code filled the review-decision table with task statuses: the demo studio counted twenty-two of them,
-         * including "Waiting to Start", "In Progress" and "Complete", with five approval duplicates and "Omit" next to "Omitted". The "All decisions" filter of the
-         * Reviews page became unusable as a result.
-         *
-         * A review decision is a studio choice, not an import: the unknown code is flagged in the journal, and the administrator attaches it themselves from
-         * Admin > Review statuses. A match already set by hand, for its part, continues to be respected (see above) — that is the normal path.
-         */
+    /*
+     * No automatic creation.
+     *
+     * `fetchValidStatusCodes(client, 'Version')` returns the `valid_values` of the Version status field — on a studio site, this is the status list of the WHOLE site,
+     * shared with Task and Shot. Creating one `ReviewStatus` per code filled the review-decision table with task statuses: the demo studio counted twenty-two of them,
+     * including "Waiting to Start", "In Progress" and "Complete", with five approval duplicates and "Omit" next to "Omitted". The "All decisions" filter of the
+     * Reviews page became unusable as a result.
+     *
+     * A review decision is a studio choice, not an import: the unknown code is flagged in the journal, and the administrator attaches it themselves from
+     * Admin > Review statuses. A match already set by hand, for its part, continues to be respected (see above) — that is the normal path.
+     */
     unmapped.push(code);
     journal?.count('statuses.version', 'skipped');
     await journal?.log('warn', 'shotgrid.log.reviewStatusUnmapped', { code, name: info.name });

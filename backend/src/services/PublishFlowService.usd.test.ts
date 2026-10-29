@@ -60,7 +60,7 @@ describe('PublishFlowService.start: USD selection', () => {
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it("lets through a selection whose variantSets may not exist", async () => {
+  it('lets through a selection whose variantSets may not exist', async () => {
     // At publication, the scene has not yet been analysed: filtering here is impossible. Filtering takes
     // place at conversion (`sanitizeVariantSelection`), not before.
     const usd = { variants: { '/Nowhere': { inventé: 'jamais' } }, purpose: 'render' as const };

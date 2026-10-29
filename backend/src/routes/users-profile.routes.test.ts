@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 describe('PUT /api/users/me/avatar — key ownership', () => {
-  it("refuses the key of an account whose identifier begins with its own", async () => {
+  it('refuses the key of an account whose identifier begins with its own', async () => {
     const res = await request(app).put('/api/users/me/avatar').send({ key: 'avatars/91.png' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('BAD_KEY');

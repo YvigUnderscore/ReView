@@ -7,8 +7,8 @@ const { comment, version, links, storage, annotationToSvg } = vi.hoisted(() => (
   comment: { findUnique: vi.fn() },
   version: { findUnique: vi.fn() },
   links: { mapSgToLocal: vi.fn(), upsertLink: vi.fn(), findByLocal: vi.fn() },
-    // The storage is the double that matters here: it is what the dead branch (`Comment.screenshotKey`) queried.
-    // It must stay silent.
+  // The storage is the double that matters here: it is what the dead branch (`Comment.screenshotKey`) queried.
+  // It must stay silent.
   storage: { getObjectBuffer: vi.fn(), downloadToFile: vi.fn() },
   annotationToSvg: vi.fn(() => null),
 }));
@@ -73,16 +73,16 @@ beforeEach(() => {
 
 describe('pushComment: attachment of the annotated frame', () => {
   it('attaches nothing when the annotation yields no image', async () => {
-        // `Comment.screenshotKey` used to be read first to attach an already computed capture, but nothing in the repository ever wrote this column:
-        // the branch was dead and the fallback the only path. The column and its reading left together; so composing the frame is the ONLY possible source.
-        // Without an SVG to burn in, there is no image, hence no attachment.
+    // `Comment.screenshotKey` used to be read first to attach an already computed capture, but nothing in the repository ever wrote this column:
+    // the branch was dead and the fallback the only path. The column and its reading left together; so composing the frame is the ONLY possible source.
+    // Without an SVG to burn in, there is no image, hence no attachment.
     const { ctx, uploadFile } = context(true);
     annotationToSvg.mockReturnValue(null);
 
     await expect(pushComment(ctx as never, 12)).resolves.toBe(4242);
 
     expect(uploadFile).not.toHaveBeenCalled();
-        // No capture is looked up in MinIO: nobody reads a capture key any more.
+    // No capture is looked up in MinIO: nobody reads a capture key any more.
     expect(storage.getObjectBuffer).not.toHaveBeenCalled();
     expect(storage.downloadToFile).not.toHaveBeenCalled();
   });

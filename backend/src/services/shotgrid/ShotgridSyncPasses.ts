@@ -34,7 +34,7 @@ export type SyncPass =
 export const ALL_PASSES: readonly SyncPass[] = [
   'statuses',
   'users',
-    // Before the sequences: the attachment reads the episodes' match.
+  // Before the sequences: the attachment reads the episodes' match.
   'episodes',
   'sequences',
   'shots',
@@ -67,7 +67,7 @@ export const STRUCTURE_PASSES: readonly SyncPass[] = [
  * Assets carry none on the ReView side, so they do without it.
  */
 const PASSES_BY_ENTITY: Readonly<Record<string, readonly SyncPass[]>> = {
-    // A sequence may have changed episode: the "episodes" pass accompanies it. On a project without the level, it does nothing at all.
+  // A sequence may have changed episode: the "episodes" pass accompanies it. On a project without the level, it does nothing at all.
   Sequence: ['statuses', 'episodes', 'sequences'],
   Episode: ['statuses', 'episodes'],
   Shot: ['statuses', 'shots'],
@@ -76,9 +76,9 @@ const PASSES_BY_ENTITY: Readonly<Record<string, readonly SyncPass[]>> = {
   Version: ['versions'],
   Note: ['notes'],
   Playlist: ['playlists'],
-    // A renamed or removed status touches the whole hierarchy: it is re-read in full, but without the media, which cannot have changed.
+  // A renamed or removed status touches the whole hierarchy: it is re-read in full, but without the media, which cannot have changed.
   Status: ['statuses', 'episodes', 'sequences', 'shots', 'assets', 'tasks'],
-    // A modified account changes the assignments: only tasks carry them.
+  // A modified account changes the assignments: only tasks carry them.
   HumanUser: ['statuses', 'users', 'tasks'],
 };
 
@@ -148,7 +148,7 @@ export function mergePasses(
 ): SyncPass[] | undefined {
   if (!a || !b) return undefined;
   const union = new Set<SyncPass>([...a, ...b]);
-    // Canonical order: the list also serves as a readable trace in the journal.
+  // Canonical order: the list also serves as a readable trace in the journal.
   return ALL_PASSES.filter((p) => union.has(p));
 }
 

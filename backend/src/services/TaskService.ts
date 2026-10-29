@@ -164,8 +164,8 @@ export async function listForProject(
   const [tasks, total] = await Promise.all([
     prisma.task.findMany({
       where: p ? withCursor(where, p, 'order', 'asc') : where,
-            // `id` as the final tie-break: two same-named tasks on two shots ("comp") must not swap places
-            // between two pages.
+      // `id` as the final tie-break: two same-named tasks on two shots ("comp") must not swap places
+      // between two pages.
       orderBy: [{ order: 'asc' }, { name: 'asc' }, { id: 'asc' }],
       take,
       select: {
@@ -269,7 +269,7 @@ export async function listForBoard(
       : t.asset
         ? { kind: 'asset' as const, id: t.asset.id, label: t.asset.name, sequenceId: null }
         : null;
-        // A task without a living parent cannot be displayed: its shot is in the trash.
+    // A task without a living parent cannot be displayed: its shot is in the trash.
     if (!parent) return [];
     return [
       {
@@ -291,8 +291,8 @@ export async function listForBoard(
     ];
   });
 
-    // Without a cursor, `truncated` keeps its original meaning: the board shows a warning. With a cursor, the
-    // question is no longer "do I have everything?" but "is there another page left?", and a full page answers it.
+  // Without a cursor, `truncated` keeps its original meaning: the board shows a warning. With a cursor, the
+  // question is no longer "do I have everything?" but "is there another page left?", and a full page answers it.
   return {
     items,
     total,
@@ -304,9 +304,9 @@ export async function listForBoard(
 export interface CreateTaskInput {
   name: string;
   type: TaskType;
-    /** Department of the pipe (key of the project settings): carries the upstream-to-downstream order. */
+  /** Department of the pipe (key of the project settings): carries the upstream-to-downstream order. */
   department?: string | null;
-    /** Brief: what there is to do, as production writes it (Phase 50). */
+  /** Brief: what there is to do, as production writes it (Phase 50). */
   description?: string | null;
   shotId?: number;
   assetId?: number;
@@ -317,12 +317,12 @@ export interface CreateTaskInput {
 export async function create(user: SessionUser, projectId: number, body: CreateTaskInput) {
   await assertCanContribute(user.id, user.role, projectId); // 38.E: CLIENT = no task
   await assertProjectWritable(projectId); // 38.B
-    // Without an explicit department, the type serves as the step: it carries the same keys as the default
-    // departments, and a task without a step would fall into a catch-all bucket.
+  // Without an explicit department, the type serves as the step: it carries the same keys as the default
+  // departments, and a task without a step would fall into a catch-all bucket.
   const key = body.department ?? (body.type === TaskType.OTHER ? null : body.type);
   const department = await resolveDepartment(projectId, key);
-    // Department policy (studio setting): an artist creates within their steps, and nowhere else. Without it,
-    // the list offered on screen was only a promise, but nothing prevented a direct call from bypassing it.
+  // Department policy (studio setting): an artist creates within their steps, and nowhere else. Without it,
+  // the list offered on screen was only a promise, but nothing prevented a direct call from bypassing it.
   const ctx = await taskWriteContext(user, projectId);
   if (department.departmentId !== null) {
     const allowed = writableDepartments([{ id: department.departmentId }], ctx);
@@ -367,7 +367,7 @@ export function taskNameFromComment(html: string): string {
 
 /** What the creation dialog (Phase 50) adds to the original comment. */
 export interface CommentTaskInput {
-    /** Name chosen by the person; if absent, the comment text is the fallback. */
+  /** Name chosen by the person; if absent, the comment text is the fallback. */
   name?: string;
   description?: string | null;
 }
@@ -416,11 +416,11 @@ export async function createFromComment(
   const assetId = source?.assetId ?? version.assetId ?? null;
   if (!shotId && !assetId) throw badRequest('This media has no shot or asset attached');
 
-    // The step of the task carrying the reviewed version: a note on a comp render is comp work. It decides the
-    // place in the pipe and who may write to the task; without it, the note went into the catch-all bucket.
+  // The step of the task carrying the reviewed version: a note on a comp render is comp work. It decides the
+  // place in the pipe and who may write to the task; without it, the note went into the catch-all bucket.
   const department = await resolveDepartment(projectId, source?.department ?? null);
-    // The project's entry status, in ITS vocabulary: `resolveStatusPair` aligns the enumeration and the reference
-    // list, exactly as for a task modified on screen.
+  // The project's entry status, in ITS vocabulary: `resolveStatusPair` aligns the enumeration and the reference
+  // list, exactly as for a task modified on screen.
   const statusPair = await resolveStatusPair(projectId, { status: TaskStatus.TODO });
   const name = body.name?.trim() || taskNameFromComment(comment.content);
 
@@ -441,12 +441,12 @@ export async function createFromComment(
       include: { assignee: { select: { id: true, name: true } } },
     });
   } catch (err) {
-        // A shot carries only one task per step and name. The name used to come from the text of the note, never
-        // the same twice in practice; it is now chosen, so two notes named alike on the same step collide. The fault lies
-        // with whoever wrote it, with what is needed to fix it: the dialog is still there.
+    // A shot carries only one task per step and name. The name used to come from the text of the note, never
+    // the same twice in practice; it is now chosen, so two notes named alike on the same step collide. The fault lies
+    // with whoever wrote it, with what is needed to fix it: the dialog is still there.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002')
-            // The name travels in the details, not in the message: the client translates by code, and a sentence assembled
-            // here would in any case be read by nobody.
+      // The name travels in the details, not in the message: the client translates by code, and a sentence assembled
+      // here would in any case be read by nobody.
       throw new AppError('A task with this name already exists at this step', 409, 'TASK_NAME_TAKEN', {
         name,
       });
@@ -467,8 +467,8 @@ export async function getDetail(id: number) {
     where: { id },
     include: {
       assignee: { select: { id: true, name: true, email: true } },
-            // Bounded history: a comp task reworked two hundred times must not make the sheet grow indefinitely.
-            // `_count` gives the real number of versions.
+      // Bounded history: a comp task reworked two hundred times must not make the sheet grow indefinitely.
+      // `_count` gives the real number of versions.
       versions: { orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: DETAIL_VERSIONS_LIMIT },
       _count: { select: { versions: true } },
       shot: {
@@ -481,7 +481,7 @@ export async function getDetail(id: number) {
         },
       },
       asset: { select: { id: true, name: true, type: true, project: { select: { id: true, name: true } } } },
-            // Original comment (32.D): link back to the review at the frame/annotation.
+      // Original comment (32.D): link back to the review at the frame/annotation.
       sourceComment: { select: { id: true, mediaObjectId: true } },
     },
   });
@@ -498,15 +498,15 @@ export interface UpdateTaskInput {
   name?: string;
   type?: TaskType;
   department?: string | null;
-    /**
-     * Task brief (Phase 50): what there is to do.
-     *
-     * Reserved to managers, like the name or the schedule: it is production that assigns the work. The assignee reads it;
-     * they do not rewrite it: the list of fields they may touch (status, checklist) is unchanged.
-     */
+  /**
+   * Task brief (Phase 50): what there is to do.
+   *
+   * Reserved to managers, like the name or the schedule: it is production that assigns the work. The assignee reads it;
+   * they do not rewrite it: the list of fields they may touch (status, checklist) is unchanged.
+   */
   description?: string | null;
   status?: TaskStatus;
-    /** Customizable status (Phase 48): written in parallel with `status`. */
+  /** Customizable status (Phase 48): written in parallel with `status`. */
   pipelineStatusId?: number | null;
   assigneeId?: number | null;
   order?: number;
@@ -568,17 +568,17 @@ async function resolveStatusPair(
 ): Promise<{ status?: TaskStatus; pipelineStatusId?: number | null }> {
   if (body.pipelineStatusId !== undefined) {
     if (body.pipelineStatusId === null) return { pipelineStatusId: null };
-        // The status must belong to THIS project's vocabulary: until now nothing prevented setting on a task a status
-        // imported from another project's site.
+    // The status must belong to THIS project's vocabulary: until now nothing prevented setting on a task a status
+    // imported from another project's site.
     const offered = await PipelineStatusService.listForProject(projectId, 'task');
     const status = offered.find((s) => s.id === body.pipelineStatusId);
     if (!status) throw badRequest('Unknown pipeline status for this project');
     return { pipelineStatusId: status.id, status: status.legacyStatus ?? TaskStatus.TODO };
   }
   if (body.status !== undefined) {
-        // The kanban still sends the six-value enumeration. The match is looked up in the project's vocabulary and
-        // nowhere else: re-deriving it from the whole reference list would have replaced "On Hold" with "Waiting to Start",
-        // and written that to the studio's ShotGrid site.
+    // The kanban still sends the six-value enumeration. The match is looked up in the project's vocabulary and
+    // nowhere else: re-deriving it from the whole reference list would have replaced "On Hold" with "Waiting to Start",
+    // and written that to the studio's ShotGrid site.
     const match = await PipelineStatusService.resolveByLegacy(projectId, 'task', body.status);
     return { status: body.status, ...(match ? { pipelineStatusId: match.id } : {}) };
   }
@@ -608,8 +608,8 @@ export async function setAssignee(
   });
   if (opts.notify !== false) await notifyAssignee(assigneeId, user.id, projectId, taskId, updated.name);
   emitTaskUpdate(projectId, updated);
-    // Batch assignment goes through here: it is the gesture production follows most closely, and it left no trace
-    // outside the screen.
+  // Batch assignment goes through here: it is the gesture production follows most closely, and it left no trace
+  // outside the screen.
   if (before?.assigneeId !== assigneeId)
     await publishTaskEvents(projectId, taskId, user.id, [
       { event: 'task.assigned', extra: { assigneeId, from: before?.assigneeId ?? null } },
@@ -628,9 +628,9 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   const ctx = await taskWriteContext(user, projectId);
   const manager = ctx.isManager;
   if (!manager) {
-        // Which tasks the person can access: always their assignments, and, under the department policy, the members
-        // of the step. What they can *change* remains limited to the status and the checklist: responsibility for a
-        // step is not that of the schedule.
+    // Which tasks the person can access: always their assignments, and, under the department policy, the members
+    // of the step. What they can *change* remains limited to the status and the checklist: responsibility for a
+    // step is not that of the schedule.
     const reachable = canWriteTask({
       ...ctx,
       taskDepartmentId: task.departmentId,
@@ -643,10 +643,10 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   }
   await assertTaskAssignee(projectId, body.assigneeId);
   const { checklist, department, ...rest } = body;
-    // Department: the key and the relation move together, as the status does below.
+  // Department: the key and the relation move together, as the status does below.
   const departmentPair = department !== undefined ? await resolveDepartment(projectId, department) : {};
-    // Status: the customizable reference list and the enumeration move together, whichever of the two the caller
-    // provided. Letting them diverge would show one state on the kanban and another on the sheet.
+  // Status: the customizable reference list and the enumeration move together, whichever of the two the caller
+  // provided. Letting them diverge would show one state on the kanban and another on the sheet.
   const statusPair = await resolveStatusPair(projectId, body);
   const updated = await prisma.task.update({
     where: { id },
@@ -660,8 +660,8 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   });
   await notifyAssignee(body.assigneeId, user.id, projectId, id, updated.name);
   emitTaskUpdate(projectId, updated);
-    // Change stream: a status change is distinguished from any other modification: it is what production boards
-    // follow, and without a dedicated event every consumer would have to compare states itself to find it.
+  // Change stream: a status change is distinguished from any other modification: it is what production boards
+  // follow, and without a dedicated event every consumer would have to compare states itself to find it.
   const statusChanged = updated.status !== task.status || updated.pipelineStatusId !== task.pipelineStatusId;
   await publishTaskEvents(projectId, id, user.id, [
     ...(statusChanged
@@ -682,8 +682,8 @@ export async function update(user: SessionUser, projectId: number, id: number, b
       : []),
     { event: 'task.updated' },
   ]);
-    // 48: what changed goes up to ShotGrid, domain by domain. Dates travel together: ShotGrid recalculates
-    // the duration from both.
+  // 48: what changed goes up to ShotGrid, domain by domain. Dates travel together: ShotGrid recalculates
+  // the duration from both.
   if (body.status !== undefined || body.pipelineStatusId !== undefined)
     await enqueuePush(projectId, { type: 'task-status', taskId: id, actorId: user.id });
   if (body.startDate !== undefined || body.dueDate !== undefined)
@@ -709,9 +709,9 @@ export interface ApiPatchInput {
 export async function applyApiPatch(actorId: number, projectId: number, id: number, body: ApiPatchInput) {
   await assertTaskAssignee(projectId, body.assigneeId);
   const before = await prisma.task.findUnique({ where: { id }, select: { status: true } });
-    // Same resolution as the interface: the API used to write only the historical enumeration, so that a
-    // `PATCH {status}` from a DCC left `pipelineStatusId` on the old value. The sheet showed one state, the kanban
-    // another, and nothing went to ShotGrid: the status set by the pipeline existed only for the API.
+  // Same resolution as the interface: the API used to write only the historical enumeration, so that a
+  // `PATCH {status}` from a DCC left `pipelineStatusId` on the old value. The sheet showed one state, the kanban
+  // another, and nothing went to ShotGrid: the status set by the pipeline existed only for the API.
   const statusPair = await resolveStatusPair(projectId, body);
   const task = await prisma.task.update({
     where: { id },
@@ -740,8 +740,8 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
     event('task.assigned', { task: view, assigneeId: body.assigneeId });
   }
   event('task.updated', { task: view });
-    // Open screens and the remote site learn of the change as they would of a manual edit: the v1 API emitted
-    // neither one.
+  // Open screens and the remote site learn of the change as they would of a manual edit: the v1 API emitted
+  // neither one.
   emitTaskUpdate(projectId, { id, shotId: task.shot?.id ?? null, assetId: task.asset?.id ?? null });
   if (body.status !== undefined) await enqueuePush(projectId, { type: 'task-status', taskId: id, actorId });
   if (body.dueDate !== undefined) await enqueuePush(projectId, { type: 'task-dates', taskId: id, actorId });

@@ -39,7 +39,7 @@ const projectOfVersion: Record<number, number> = { 100: 5, 101: 5, 102: 9 };
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(prisma.reviewStatus.findUnique).mockResolvedValue(approved as never);
-    // Studio vocabulary: `listStatusesForProject` falls back to a standalone project here.
+  // Studio vocabulary: `listStatusesForProject` falls back to a standalone project here.
   vi.mocked(prisma.reviewStatus.count).mockResolvedValue(4);
   vi.mocked(prisma.reviewStatus.findMany).mockResolvedValue([approved] as never);
   vi.mocked(prisma.shotgridConnection.findUnique).mockResolvedValue(null);
@@ -63,7 +63,7 @@ describe('decideMany', () => {
   it('sets the decision on each version and checks only once per project', async () => {
     const r = await decideMany(supervisor, [100, 101, 102], 7, 'ok pour moi');
     expect(r).toEqual({ updated: 3, failed: 0 });
-        // Three versions, two projects: two supervision checks, not three.
+    // Three versions, two projects: two supervision checks, not three.
     expect(vi.mocked(assertProjectManage).mock.calls.map((c) => c[2])).toEqual([5, 9]);
     expect(prisma.$transaction).toHaveBeenCalledTimes(3);
   });
@@ -82,7 +82,7 @@ describe('decideMany', () => {
   });
 
   it('counts as failed a status missing from the project vocabulary', async () => {
-        // The status exists in the studio, but the linked project does not offer its id.
+    // The status exists in the studio, but the linked project does not offer its id.
     vi.mocked(prisma.shotgridConnection.findUnique).mockResolvedValue({
       active: true,
       settings: { versionStatusMap: { app: 99 } },

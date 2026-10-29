@@ -46,7 +46,7 @@ beforeEach(() => {
 });
 
 describe('addMember', () => {
-  it("logs the arrival of a member with its actor and its target", async () => {
+  it('logs the arrival of a member with its actor and its target', async () => {
     await addMember(7, 42, undefined, SUPERVISOR);
     expect(audited).toHaveBeenCalledWith({
       userId: 5,
@@ -74,14 +74,14 @@ describe('addMember', () => {
     expect(audited).toHaveBeenCalledWith(expect.objectContaining({ userId: null }));
   });
 
-  it("returns the membership as usual, the prior read does not change the return value", async () => {
+  it('returns the membership as usual, the prior read does not change the return value', async () => {
     vi.mocked(prisma.projectMembership.upsert).mockResolvedValue({ id: 99 } as never);
     await expect(addMember(7, 42, undefined, SUPERVISOR)).resolves.toEqual({ id: 99 });
   });
 });
 
 describe('removeMember', () => {
-  it("logs the removal of access with the role that was lost", async () => {
+  it('logs the removal of access with the role that was lost', async () => {
     vi.mocked(prisma.projectMembership.delete).mockResolvedValue({ role: 'SUPERVISOR' } as never);
     await removeMember(7, 42, SUPERVISOR);
     expect(audited).toHaveBeenCalledWith({

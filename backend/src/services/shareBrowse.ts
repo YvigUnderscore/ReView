@@ -18,7 +18,7 @@ export interface ShareTreeRow {
   id: number;
   thumbnailKey: string | null;
   version: {
-        /** Version set directly on an asset, without going through a task. */
+    /** Version set directly on an asset, without going through a task. */
     asset: ShareAssetSource | null;
     task: {
       asset: ShareAssetSource | null;
@@ -39,7 +39,7 @@ interface ShareShotSource {
   code: string;
   name: string;
   order: number;
-    /** Nullable: a shot without a sequence is a normal case, not an anomaly. */
+  /** Nullable: a shot without a sequence is a normal case, not an anomaly. */
   sequence: {
     id: number;
     code: string;
@@ -64,7 +64,7 @@ export interface ShareSequenceNode {
   order: number;
   episodeId: number | null;
   shotIds: number[];
-    /** All the media of the sequence, shots combined, in the order of the `media` array. */
+  /** All the media of the sequence, shots combined, in the order of the `media` array. */
   mediaIds: number[];
   coverMediaId: number | null;
 }
@@ -83,7 +83,7 @@ export interface ShareAssetNode {
   id: number;
   name: string;
   type: string;
-    /** Studio label when one has been defined (`Asset.typeLabel`). */
+  /** Studio label when one has been defined (`Asset.typeLabel`). */
   typeLabel: string | null;
   mediaIds: number[];
   coverMediaId: number | null;
@@ -95,7 +95,7 @@ export interface ShareBrowse {
   sequences: ShareSequenceNode[];
   shots: ShareShotNode[];
   assets: ShareAssetNode[];
-    /** Media that no parent claims: never lost from the screen, never named. */
+  /** Media that no parent claims: never lost from the screen, never named. */
   looseMediaIds: number[];
 }
 
@@ -121,8 +121,8 @@ export function buildShareBrowse(rows: readonly ShareTreeRow[]): ShareBrowse {
 
   for (const row of rows) {
     const shot = row.version.task?.shot ?? null;
-        // A version may hang from an asset either through its task OR directly: both paths lead to the SAME node,
-        // otherwise an asset would appear twice in the tab.
+    // A version may hang from an asset either through its task OR directly: both paths lead to the SAME node,
+    // otherwise an asset would appear twice in the tab.
     const asset = row.version.asset ?? row.version.task?.asset ?? null;
 
     if (shot) {
@@ -136,8 +136,8 @@ export function buildShareBrowse(rows: readonly ShareTreeRow[]): ShareBrowse {
         coverMediaId: null,
       }));
       shotNode.mediaIds.push(row.id);
-            // `??=`: the cover is the first media THAT HAS a thumbnail. A media without a thumbnail does not take the
-            // place nor leave the card grey.
+      // `??=`: the cover is the first media THAT HAS a thumbnail. A media without a thumbnail does not take the
+      // place nor leave the card grey.
       if (shotNode.coverMediaId === null && row.thumbnailKey) shotNode.coverMediaId = row.id;
 
       const sequence = shot.sequence;
@@ -180,8 +180,8 @@ export function buildShareBrowse(rows: readonly ShareTreeRow[]): ShareBrowse {
       assetNode.mediaIds.push(row.id);
       if (assetNode.coverMediaId === null && row.thumbnailKey) assetNode.coverMediaId = row.id;
     } else {
-            // Forbidden by the `Task_parent_xor` / `Version_parent_xor` constraints, but degraded data must not make a
-            // media disappear from the client's screen.
+      // Forbidden by the `Task_parent_xor` / `Version_parent_xor` constraints, but degraded data must not make a
+      // media disappear from the client's screen.
       looseMediaIds.push(row.id);
     }
   }

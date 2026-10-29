@@ -22,11 +22,11 @@ export async function findVersionByCode(
   if (!trimmed) return null;
   const records = await ctx.client.search('Version', {
     fields: ['id', 'code', 'project'],
-        // The project filter is mandatory: a site hosts all the studio's projects, and a version code readily repeats from one project to another.
+    // The project filter is mandatory: a site hosts all the studio's projects, and a version code readily repeats from one project to another.
     filters: [projectFilter(ctx.scope.sgProjectId), ['code', 'is', trimmed]],
     maxRecords: 5,
   });
-    // Each record is rechecked: the filter may be bypassed by an unexpected site configuration, and writing into the neighbouring project cannot be undone.
+  // Each record is rechecked: the filter may be bypassed by an unexpected site configuration, and writing into the neighbouring project cannot be undone.
   const mine = records.filter((r) => belongsToProject(r, ctx.scope).ok);
   if (mine.length !== 1) {
     if (mine.length > 1) {

@@ -85,14 +85,14 @@ describe('poseToBase / seedAnimBase', () => {
     expect(seedAnimBase(emptyAnim(), undefined).base).toBeUndefined();
   });
 
-  it('animBase arbitrates: the animation\'s base, otherwise the lent fallback', () => {
+  it("animBase arbitrates: the animation's base, otherwise the lent fallback", () => {
     expect(animBase(gizmoAnim(), other)).toEqual(poseToBase(view));
     expect(animBase(legacyAnim(), other)).toBe(other);
   });
 });
 
 describe('sampleAnimV2 — a single base for both samplers', () => {
-  it('the unkeyed channel follows the animation\'s base, not the caller\'s view', () => {
+  it("the unkeyed channel follows the animation's base, not the caller's view", () => {
     const anim = gizmoAnim();
     // The keyframe player (whose fallback pose had never been captured) and the scene rig
     // (which starts from the activation view) now render the same pose.
@@ -118,7 +118,7 @@ describe('sampleAnimV2 — a single base for both samplers', () => {
     expect(pose.roll).toBeUndefined();
   });
 
-  it('the glTF export bakes the animation\'s base, not the exporter\'s view', () => {
+  it("the glTF export bakes the animation's base, not the exporter's view", () => {
     const baked = bakeToKeyframes(gizmoAnim(), ORIGIN, 4);
     for (const kf of baked) expect(kf.pose.target).toEqual(view.target);
   });
@@ -144,7 +144,7 @@ describe('sampleAnimV2 — legacy animation unchanged', () => {
     });
   });
 
-  it('follows each caller\'s fallback, divergence included — behavior at the time', () => {
+  it("follows each caller's fallback, divergence included — behavior at the time", () => {
     const legacy = legacyAnim();
     expect(sampleAnimV2(legacy, 500, ORIGIN).target).toEqual(ORIGIN.target);
     expect(sampleAnimV2(legacy, 500, other).target).toEqual(other.target);

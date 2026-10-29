@@ -29,7 +29,7 @@ describe('belongsToProject', () => {
   });
 
   it('refuses an entity from another project, even with the same code', () => {
-        // The simulator deliberately gives the same code to two projects: this is the scenario where a filter error would overwrite the neighbouring project's work.
+    // The simulator deliberately gives the same code to two projects: this is the scenario where a filter error would overwrite the neighbouring project's work.
     const jumeau = { id: 3011, type: 'Shot', code: 'SH010', project: { type: 'Project', id: 71 } };
     expect(belongsToProject(jumeau, scope)).toEqual({
       ok: false,
@@ -44,7 +44,7 @@ describe('belongsToProject', () => {
     expect(belongsToProject({ id: 1, type: 'Shot', project: 'Demo Project' }, scope).ok).toBe(false);
   });
 
-  it('lets the site\'s global entities through', () => {
+  it("lets the site's global entities through", () => {
     expect(belongsToProject({ id: 3, type: 'Status', code: 'ip' }, scope).ok).toBe(true);
     expect(belongsToProject({ id: 500, type: 'HumanUser' }, scope).ok).toBe(true);
     expect(belongsToProject({ id: 301, type: 'Step' }, scope).ok).toBe(true);
@@ -67,7 +67,7 @@ describe('projectNameMatches', () => {
   });
 
   it('refuses a neighbouring name: that is the whole point of the check', () => {
-        // "Demo Project 2" exists on the same site: the confusion is plausible.
+    // "Demo Project 2" exists on the same site: the confusion is plausible.
     expect(projectNameMatches('Demo Project 2', 'Demo Project')).toBe(false);
     expect(projectNameMatches('DemoProject', 'Demo Project')).toBe(false);
     expect(projectNameMatches(null, 'Demo Project')).toBe(false);

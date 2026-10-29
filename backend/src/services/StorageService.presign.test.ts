@@ -65,15 +65,15 @@ let counter = 0;
 
 beforeEach(() => {
   vi.useFakeTimers();
-    // An arbitrary instant, deliberately offset from the start of a slice.
+  // An arbitrary instant, deliberately offset from the start of a slice.
   vi.setSystemTime(new Date('2026-08-21T10:03:20.000Z'));
   vi.clearAllMocks();
   counter = 0;
   send.mockResolvedValue({});
-    // Each signature returns a distinct string: two calls returning the same value therefore prove
-    // the memoization, not a mock coincidence.
+  // Each signature returns a distinct string: two calls returning the same value therefore prove
+  // the memoization, not a mock coincidence.
   signed.mockImplementation(() => Promise.resolve(`https://minio/signed/${++counter}`));
-    // The current slice starts afresh for each test.
+  // The current slice starts afresh for each test.
   storage.forgetPresignedUrl(THUMB);
 });
 
@@ -97,8 +97,8 @@ describe('getPresignedGetUrl: URL stability', () => {
   });
 
   it('pins the signing date to the start of the slice', async () => {
-        // Two processes (API and worker) signing during the same slice thus produce the same URL: the
-        // browser cache survives a change of backend.
+    // Two processes (API and worker) signing during the same slice thus produce the same URL: the
+    // browser cache survives a change of backend.
     await storage.getPresignedGetUrl('derived/8/thumbnail.jpg');
     const { signingDate } = lastSigningOptions();
     expect(signingDate.getTime() % (PRESIGN_WINDOW_SECONDS * 1000)).toBe(0);
@@ -106,7 +106,7 @@ describe('getPresignedGetUrl: URL stability', () => {
   });
 
   it('extends the validity by the slice width, so a link is never shortened', async () => {
-        // A URL returned at the very end of a slice must stay valid for as long as the caller asked.
+    // A URL returned at the very end of a slice must stay valid for as long as the caller asked.
     await storage.getPresignedGetUrl('derived/9/thumbnail.jpg', 3600);
     const { expiresIn, signingDate } = lastSigningOptions();
     expect(expiresIn).toBe(3600 + PRESIGN_WINDOW_SECONDS);
@@ -148,7 +148,7 @@ describe('getPresignedGetUrl: URL stability', () => {
       await storage.getPresignedGetUrl(`derived/cap-${i}/thumbnail.jpg`);
     }
     const calls = signed.mock.calls.length;
-        // The oldest was evicted (it is re-signed), the most recent is still there.
+    // The oldest was evicted (it is re-signed), the most recent is still there.
     await storage.getPresignedGetUrl('derived/cap-0/thumbnail.jpg');
     expect(signed.mock.calls.length).toBe(calls + 1);
     await storage.getPresignedGetUrl(`derived/cap-${PRESIGN_CACHE_MAX}/thumbnail.jpg`);
@@ -193,7 +193,7 @@ describe('getPresignedGetUrl: freshness after rewrite', () => {
     await storage.deletePrefix('derived/77/');
     expect(await storage.getPresignedGetUrl('derived/77/thumbnail.jpg')).not.toBe(thumb);
     expect(await storage.getPresignedGetUrl('derived/77/splat-mask.bin')).not.toBe(mask);
-        // The neighbour, for its part, did not move.
+    // The neighbour, for its part, did not move.
     expect(await storage.getPresignedGetUrl('derived/78/thumbnail.jpg')).toBe(other);
   });
 

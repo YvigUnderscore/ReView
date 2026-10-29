@@ -79,9 +79,9 @@ export async function assertLocalCreationAllowed(projectId: number, kind: Creata
  */
 export interface DescriptionPolicy {
   editable: boolean;
-    /** Where to edit it when it is locked: the direct link to the site's record. */
+  /** Where to edit it when it is locked: the direct link to the site's record. */
   sgProjectName?: string;
-    /** `true` when a local change is pushed back to the site. */
+  /** `true` when a local change is pushed back to the site. */
   writeBack: boolean;
 }
 

@@ -32,7 +32,7 @@ describe('headerActions', () => {
       );
   });
 
-  it("keeps the header A/B selector only for video", () => {
+  it('keeps the header A/B selector only for video', () => {
     // It alone ticks two or three versions at once (2×2 grid). The image chooses A and B in the
     // options bar of the "Compare" mode: a single visible place, instead of a header menu and a
     // dock tab that contradicted each other about where to choose B.
@@ -42,7 +42,7 @@ describe('headerActions', () => {
     expect(headerActions(base({ kind: 'SPLAT' }))).not.toContain('compare');
   });
 
-  it("reserves the detachable player for video, and only if the page exposes it", () => {
+  it('reserves the detachable player for video, and only if the page exposes it', () => {
     expect(headerActions(base({ kind: 'VIDEO', canPictureInPicture: true }))).toContain('pip');
     expect(headerActions(base({ kind: 'VIDEO', canPictureInPicture: false }))).not.toContain('pip');
     expect(headerActions(base({ kind: 'IMAGE', canPictureInPicture: true }))).not.toContain('pip');

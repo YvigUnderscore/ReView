@@ -31,7 +31,7 @@ const ctx = {
     findById: vi.fn(),
     search: vi.fn(),
   },
-    // Creation goes through the writer: it is the one that sets the linked project and re-reads what the site wrote. Its own suite tests it; here we only double the write.
+  // Creation goes through the writer: it is the one that sets the linked project and re-reads what the site wrote. Its own suite tests it; here we only double the write.
   writer: { create: vi.fn() },
 };
 
@@ -61,7 +61,7 @@ describe('createTaskFromStep', () => {
   });
 
   it('keeps in the link the step name as the site writes it', async () => {
-        // The link describes the remote side: the normalized key would no longer designate anything there.
+    // The link describes the remote side: the normalized key would no longer designate anything there.
     await createTaskFromStep(7, { stepSgId: 14, parentType: 'shot', parentId: 4 }, null);
     const call = vi.mocked(upsertLink).mock.calls[0]![0];
     expect(call.data).toMatchObject({ stepName: 'Look Development' });

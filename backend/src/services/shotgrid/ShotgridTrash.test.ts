@@ -48,7 +48,7 @@ beforeEach(() => {
   logs.length = 0;
   db.shot.update.mockResolvedValue({});
   db.task.delete.mockResolvedValue({});
-    // By default the target exists: this is the common case.
+  // By default the target exists: this is the common case.
   for (const t of [db.shot, db.sequence, db.asset, db.task])
     t.findUnique.mockImplementation(async (a: { where: { id: number } }) => ({ id: a.where.id }));
 });
@@ -64,7 +64,7 @@ describe('trashRemoved', () => {
 
     await trashRemoved(context(), 'Shot', new Set([100]));
 
-        // 100 is still there; 200 has left.
+    // 100 is still there; 200 has left.
     expect(db.shot.update).toHaveBeenCalledTimes(1);
     expect(db.shot.update.mock.calls[0]![0].where).toEqual({ id: 20 });
     expect(db.shot.update.mock.calls[0]![0].data.deletedAt).toBeInstanceOf(Date);
@@ -77,7 +77,7 @@ describe('trashRemoved', () => {
   });
 
   it('cleans up a link whose local target has disappeared', async () => {
-        // Otherwise the removal — and its message — would replay at every synchronization, endlessly.
+    // Otherwise the removal — and its message — would replay at every synchronization, endlessly.
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[400, { localId: 40 }]]));
     db.sequence.findUnique.mockResolvedValue(null);
 
@@ -107,10 +107,10 @@ describe('trashRemoved', () => {
     expect(logs.map((l) => l.key)).toContain('shotgrid.log.trashedRemotely');
   });
 
-    /**
-     * The scope is what makes the function usable on a removal event. Without it, it could only run on a complete pass, and a `Shotgun_Shot_Retirement`
-     * went through the whole chain — accepted, queued, executed — without putting anything in the trash. The journal recorded "ok", with empty statistics.
-     */
+  /**
+   * The scope is what makes the function usable on a removal event. Without it, it could only run on a complete pass, and a `Shotgun_Shot_Retirement`
+   * went through the whole chain — accepted, queued, executed — without putting anything in the trash. The journal recorded "ok", with empty statistics.
+   */
   describe('restricted scope (targeted pass)', () => {
     it('only puts into the trash the identifier named by the event', async () => {
       linkMap.mapSgToLocal.mockResolvedValue(
@@ -120,7 +120,7 @@ describe('trashRemoved', () => {
         ]),
       );
 
-            // The site has just said "200 is removed". It said nothing about 100, absent from the targeted batch for the sole reason that we did not ask for it.
+      // The site has just said "200 is removed". It said nothing about 100, absent from the targeted batch for the sole reason that we did not ask for it.
       await trashRemoved(context(), 'Shot', new Set(), [200]);
 
       expect(db.shot.update).toHaveBeenCalledTimes(1);
@@ -146,10 +146,10 @@ describe('trashRemoved', () => {
     });
   });
 
-    /**
-     * An entity may be missing from a targeted read for two opposite reasons: the site removed it, or it still exists but belongs to another project now, and
-     * `keepInProject` discarded it. Confusing the two would put a perfectly living entity elsewhere in the trash, under the message "removed in ShotGrid".
-     */
+  /**
+   * An entity may be missing from a targeted read for two opposite reasons: the site removed it, or it still exists but belongs to another project now, and
+   * `keepInProject` discarded it. Confusing the two would put a perfectly living entity elsewhere in the trash, under the message "removed in ShotGrid".
+   */
   describe('confirmGone', () => {
     it('keeps what the site no longer returns at all', async () => {
       findById.mockResolvedValue(null);
@@ -158,7 +158,7 @@ describe('trashRemoved', () => {
     });
 
     it('discards what the site still returns, even outside the project', async () => {
-            // The site's answer: the entity exists. Its project is the guard's business, not the trash's.
+      // The site's answer: the entity exists. Its project is the guard's business, not the trash's.
       findById.mockResolvedValue({ id: 200, type: 'Shot' });
 
       await expect(confirmGone(context(), 'Shot', [200], new Set())).resolves.toEqual([]);
@@ -171,7 +171,7 @@ describe('trashRemoved', () => {
   });
 
   it('keeps a task that carries versions: deleting it would take the review with it', async () => {
-        // The Prisma cascade would destroy the versions and their annotations. ShotGrid is authoritative on structure, not on the right to erase work already done.
+    // The Prisma cascade would destroy the versions and their annotations. ShotGrid is authoritative on structure, not on the right to erase work already done.
     linkMap.mapSgToLocal.mockResolvedValue(new Map([[300, { localId: 30 }]]));
     db.version.count.mockResolvedValue(2);
 

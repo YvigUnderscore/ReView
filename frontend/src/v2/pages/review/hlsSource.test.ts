@@ -9,7 +9,7 @@ const fakeXhr = () => ({ setRequestHeader: vi.fn() }) as unknown as XMLHttpReque
 const APP = 'https://review.studio.test/review/9';
 
 describe('hlsSource — scope of the session token', () => {
-  it("recognizes API URLs, relative as well as absolute", () => {
+  it('recognizes API URLs, relative as well as absolute', () => {
     expect(isApiUrl('/api/media/9/hls/master.m3u8', APP)).toBe(true);
     // hls.js normalizes the source against location.href: xhrSetup receives absolute URLs.
     expect(isApiUrl('https://review.studio.test/api/media/9/hls/720p.m3u8?pt=abc', APP)).toBe(true);
@@ -21,7 +21,7 @@ describe('hlsSource — scope of the session token', () => {
     expect(isApiUrl('https://elsewhere.test/api/media/9/hls/master.m3u8', APP)).toBe(false);
   });
 
-  it("sets the authentication header on a manifest served by the API", () => {
+  it('sets the authentication header on a manifest served by the API', () => {
     const xhr = fakeXhr();
     applyHlsAuth(xhr, 'https://review.studio.test/api/media/9/hls/720p.m3u8?pt=abc', 'jeton', APP);
     expect(xhr.setRequestHeader).toHaveBeenCalledWith('Authorization', 'Bearer jeton');
@@ -39,7 +39,7 @@ describe('hlsSource — scope of the session token', () => {
     expect(xhr.setRequestHeader).not.toHaveBeenCalled();
   });
 
-  it("relies on the document origin when no base is provided", () => {
+  it('relies on the document origin when no base is provided', () => {
     const xhr = fakeXhr();
     applyHlsAuth(xhr, '/api/media/9/hls/master.m3u8', 'jeton');
     expect(xhr.setRequestHeader).toHaveBeenCalledWith('Authorization', 'Bearer jeton');

@@ -176,7 +176,7 @@ describe('buildWorkload', () => {
     ).toEqual([]);
   });
 
-  it('counts each person\'s delays', () => {
+  it("counts each person's delays", () => {
     const late = new Date('2026-08-01T12:00:00Z');
     const rows = buildWorkload([task({ assigneeId: 7, assigneeName: 'Ada', dueDate: late })], NOW);
     expect(rows[0]?.overdue).toBe(1);

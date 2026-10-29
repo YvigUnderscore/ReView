@@ -110,7 +110,7 @@ export function Gauge({ label, pct }: { label: string; pct: number }) {
         <span>{pct}%</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-secondary">
-         {/* Only the width stays in `style`: it is computed, the colour is not. */}
+        {/* Only the width stays in `style`: it is computed, the colour is not. */}
         <div className={`h-full rounded-full ${gaugeTone(pct)}`} style={{ width: `${pct}%` }} />
       </div>
     </div>

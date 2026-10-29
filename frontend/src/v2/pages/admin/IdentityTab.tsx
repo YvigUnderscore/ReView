@@ -159,7 +159,7 @@ export default function IdentityTab() {
             // is not complete, and a wrongly ticked box would suggest the opposite.
             onChange={(e) => void save({ passwordLoginDisabled: e.target.checked })}
           />
-           {/* Text directly under the span: the a11y rule does not look any deeper. */}
+          {/* Text directly under the span: the a11y rule does not look any deeper. */}
           <span className="font-medium">
             {t('sso.passwordDisable')}
             <span className="block text-xs font-normal text-muted-foreground">

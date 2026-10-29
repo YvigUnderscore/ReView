@@ -26,7 +26,7 @@ describe('markerSections — marker separators in the thread (feedback round 34)
     expect(sections.map((s) => s.marker?.id ?? null)).toEqual([null, 1, 2]);
   });
 
-  it('a comment exactly on a marker frame belongs to that marker\'s section', () => {
+  it("a comment exactly on a marker frame belongs to that marker's section", () => {
     const c = comment(1, 1); // frame 24
     const sections = markerSections([c], [marker(1, 24)], 24);
     expect(sections[1].comments).toEqual([c]);

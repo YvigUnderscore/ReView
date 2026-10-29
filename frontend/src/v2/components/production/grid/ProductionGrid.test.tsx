@@ -221,7 +221,7 @@ describe('ProductionGrid', () => {
     expect(screen.getByRole('button', { name: /Approved/ }).style.width).toBe(`${width - 1}px`);
   });
 
-  it('takes not one pixel more than before when all the names are short', () => {
+  it('takes not one pixel more than before when all the names are short', async () => {
     const short = (over: Partial<GridCell>): GridCell => ({
       ...cell('anim', over),
       status: { id: 9, code: 'fin', name: 'Final', color: null, family: 'done' },

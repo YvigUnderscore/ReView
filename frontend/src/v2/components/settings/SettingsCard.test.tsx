@@ -53,14 +53,14 @@ describe('SettingsCard', () => {
     expect(screen.getByText('corps isolé')).toBeTruthy();
   });
 
-  it('is found by a keyword that the title does not carry', () => {
+  it('is found by a keyword that the title does not carry', async () => {
     render(<Page />);
     await chercher('filigrane');
     expect(screen.getByText('Burn-ins')).toBeTruthy();
     expect(screen.queryByText('Stockage')).toBeNull();
   });
 
-  it('is also found through its help and its note', () => {
+  it('is also found through its help and its note', async () => {
     render(<Page />);
     await chercher('template');
     expect(screen.getByText('Burn-ins')).toBeTruthy();
@@ -69,7 +69,7 @@ describe('SettingsCard', () => {
     expect(screen.queryByText('Burn-ins')).toBeNull();
   });
 
-  it('says "no settings" only when really nothing remains', () => {
+  it('says "no settings" only when really nothing remains', async () => {
     render(<Page />);
     expect(screen.queryByText(t('admin.search.empty'))).toBeNull();
     await chercher('quota');
@@ -78,7 +78,7 @@ describe('SettingsCard', () => {
     expect(screen.getByText(t('admin.search.empty'))).toBeTruthy();
   });
 
-  it('renders everything again when the search is cleared', () => {
+  it('renders everything again when the search is cleared', async () => {
     render(<Page />);
     await chercher('quota');
     expect(screen.queryByText('Burn-ins')).toBeNull();

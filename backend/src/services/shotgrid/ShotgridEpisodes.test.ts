@@ -81,7 +81,7 @@ describe('assertEpisodeCreationAllowed', () => {
     await expect(assertEpisodeCreationAllowed(7)).resolves.toBeUndefined();
   });
 
-  it('points to the site\'s Episode form, not to that of a Sequence', async () => {
+  it("points to the site's Episode form, not to that of a Sequence", async () => {
     db.shotgridConnection.findUnique.mockResolvedValue({
       active: true,
       settings: {},
@@ -99,8 +99,8 @@ describe('assertEpisodeCreationAllowed', () => {
 
 describe('pullEpisodes', () => {
   it('reads nothing while the level is off on the ReView side', async () => {
-        // Importing into a project that does not show the level would create rows that
-        // nobody can see or correct.
+    // Importing into a project that does not show the level would create rows that
+    // nobody can see or correct.
     db.project.findUnique.mockResolvedValue({ episodesEnabled: false });
     const ctx = makeCtx([inProject()]);
     await pullEpisodes(ctx);
@@ -156,7 +156,7 @@ describe('pullEpisodes', () => {
   });
 
   it('does not renumber the order on a targeted re-read', async () => {
-        // Otherwise processing a single event would bring the episode to the top of the list.
+    // Otherwise processing a single event would bring the episode to the top of the list.
     const ctx = makeCtx([]);
     (ctx.client.findById as ReturnType<typeof vi.fn>).mockResolvedValue(inProject());
     await pullEpisodes(ctx, new Map(), { onlySgIds: [{ sgType: 'Episode', sgId: 500 }] });
@@ -209,15 +209,15 @@ describe('linkSequencesToEpisodes', () => {
 
 describe('pullSequenceEpisodes', () => {
   it('does not ask the site for `sg_episode` while the level is off', async () => {
-        // A studio without a series does not necessarily have this field: claiming it would make the synchronization
-        // fail for everyone, for a level nobody has enabled.
+    // A studio without a series does not necessarily have this field: claiming it would make the synchronization
+    // fail for everyone, for a level nobody has enabled.
     db.project.findUnique.mockResolvedValue({ episodesEnabled: false });
     const ctx = makeCtx([]);
     expect(await pullSequenceEpisodes(ctx)).toBe(0);
     expect(ctx.client.search).not.toHaveBeenCalled();
   });
 
-  it('queries the linked project\'s sequences on the episode field alone', async () => {
+  it("queries the linked project's sequences on the episode field alone", async () => {
     const ctx = makeCtx([]);
     await pullSequenceEpisodes(ctx);
     expect(ctx.client.search).toHaveBeenCalledWith(

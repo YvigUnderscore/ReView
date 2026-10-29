@@ -138,7 +138,7 @@ describe('shouldAutoLoad', () => {
 });
 
 describe('formatListCount', () => {
-  it('follows the reader\'s language', () => {
+  it("follows the reader's language", () => {
     expect(formatListCount(1247, 'en-US')).toBe('1,247');
     expect(formatListCount(1247, 'de-DE')).toBe('1.247');
   });

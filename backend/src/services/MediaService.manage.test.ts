@@ -69,12 +69,12 @@ describe('assertMediaManage: effective role per project (38.E)', () => {
     });
   });
 
-  it('refuses someone else\'s media to a simple contributor', async () => {
+  it("refuses someone else's media to a simple contributor", async () => {
     db.mediaObject.findUnique.mockResolvedValue(OTHER_MEDIA);
     await expect(assertMediaManage(1, artist)).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('conversely: an ARTIST promoted to SUPERVISOR locally manages someone else\'s media', async () => {
+  it("conversely: an ARTIST promoted to SUPERVISOR locally manages someone else's media", async () => {
     db.mediaObject.findUnique.mockResolvedValue(OTHER_MEDIA);
     db.projectMembership.findUnique.mockResolvedValue(membership(Role.SUPERVISOR));
     await expect(assertMediaManage(1, artist)).resolves.toEqual({ projectId: PROJECT, versionId: 3 });

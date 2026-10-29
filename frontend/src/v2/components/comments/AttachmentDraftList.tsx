@@ -23,7 +23,7 @@ export default function AttachmentDraftList({
   const t = useT();
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const images = imageDrafts(drafts);
-    // An internal click must neither submit the form nor select the comment card.
+  // An internal click must neither submit the form nor select the comment card.
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (

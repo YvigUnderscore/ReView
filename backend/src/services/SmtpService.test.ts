@@ -103,7 +103,7 @@ describe('unreadable password visible to the administrator (A3-03)', () => {
     vi.mocked(decryptSecret).mockReturnValue(null);
     const pub = await getPublicConfig();
     expect(pub.passwordUnreadable).toBe(true);
-        // A password is indeed stored: it is its reading that fails, not its absence.
+    // A password is indeed stored: it is its reading that fails, not its absence.
     expect(pub.hasPassword).toBe(true);
   });
 

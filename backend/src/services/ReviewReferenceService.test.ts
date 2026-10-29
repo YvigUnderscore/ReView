@@ -62,7 +62,7 @@ beforeEach(() => {
 });
 
 describe('ReviewReferenceService.add: project access (A1-06)', () => {
-  it("refuses the comment author who is no longer a project member, without storing anything", async () => {
+  it('refuses the comment author who is no longer a project member, without storing anything', async () => {
     access.mockResolvedValue(false);
     await expect(add(author, 5, PNG, 9)).rejects.toThrow(/No access/);
     expect(putObject).not.toHaveBeenCalled();

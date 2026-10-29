@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('assignEntity', () => {
-  it('sets the person on the asset\'s existing tasks', async () => {
+  it("sets the person on the asset's existing tasks", async () => {
     db.task.findMany.mockResolvedValue([
       { id: 11, assigneeId: null, departmentId: 3 },
       { id: 12, assigneeId: null, departmentId: 4 },

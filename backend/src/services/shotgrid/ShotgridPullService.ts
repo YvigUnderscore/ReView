@@ -72,7 +72,7 @@ const ASSET_FIELDS = [
   'sg_asset_type',
   'sg_status_list',
   'image',
-    // Asset-side links held in ShotGrid: this is where the "which assets for this shot" lists come from, and reading them avoids re-entering them here.
+  // Asset-side links held in ShotGrid: this is where the "which assets for this shot" lists come from, and reading them avoids re-entering them here.
   'shots',
   'sequences',
   'project',
@@ -92,19 +92,19 @@ const TASK_FIELDS = [
 ];
 
 export interface PullOptions {
-    /** Only take over what has changed since this date (reconciliation, incremental). */
+  /** Only take over what has changed since this date (reconciliation, incremental). */
   since?: Date | null;
-    /** Restrict to a few remote entities (processing an event). */
+  /** Restrict to a few remote entities (processing an event). */
   onlySgIds?: { sgType: string; sgId: number }[];
 }
 
 interface PullContext extends ConnectionContext {
   journal: SyncJournal;
   scope: ProjectScope;
-    /**
-     * Accumulator of the realigned entities. When absent, each entity emits its event at once: this is the expected behaviour of callers that orchestrate only an
-     * isolated pass (manual import of versions).
-     */
+  /**
+   * Accumulator of the realigned entities. When absent, each entity emits its event at once: this is the expected behaviour of callers that orchestrate only an
+   * isolated pass (manual import of versions).
+   */
   touched?: TouchedEntities;
 }
 
@@ -289,7 +289,7 @@ export async function localTarget<T extends { id: number }>(params: {
   connectionId: number;
   localType: LocalType;
   sgId: number;
-    /** Name carried by the entity on the ShotGrid side. */
+  /** Name carried by the entity on the ShotGrid side. */
   sgName: string;
   linkedId: number | null;
   findById: (id: number) => Promise<T | null>;
@@ -304,7 +304,7 @@ export async function localTarget<T extends { id: number }>(params: {
     else if (sameName) existing = await params.findByName(disambiguatedName(sgName, sgId));
   }
 
-    // The site's name if it is free or already ours; otherwise ours, suffixed.
+  // The site's name if it is free or already ours; otherwise ours, suffixed.
   const holder = await params.findByName(sgName);
   const name = !holder || holder.id === existing?.id ? sgName : disambiguatedName(sgName, sgId);
   return { existing, name };
@@ -327,10 +327,10 @@ export function isRealConflict(params: {
 }): boolean {
   const { localUpdatedAt, linkSyncedAt } = params;
   if (!localUpdatedAt || !linkSyncedAt) return false;
-    // One second of tolerance: the local write and the link's timestamp are never simultaneous to the millisecond.
+  // One second of tolerance: the local write and the link's timestamp are never simultaneous to the millisecond.
   if (localUpdatedAt.getTime() <= linkSyncedAt.getTime() + 1000) return false;
-    // Known and identical values: the site and ReView say the same thing, there is nothing to arbitrate. Unknown values (a caller that supplies none): we stick
-    // to the date, as before.
+  // Known and identical values: the site and ReView say the same thing, there is nothing to arbitrate. Unknown values (a caller that supplies none): we stick
+  // to the date, as before.
   if (params.reviewValue !== undefined && params.remoteValue !== undefined) {
     return (params.reviewValue ?? null) !== (params.remoteValue ?? null);
   }
@@ -379,10 +379,10 @@ async function arbitrateConflict(
     sgType: string;
     sgId: number;
     name: string;
-        /**
-         * Field concerned and the values at stake: what the arbiter must see.
-         * `field` is a stable identifier (`status`...), not a label: it is the reader who decides the language, not the server that wrote the row.
-         */
+    /**
+     * Field concerned and the values at stake: what the arbiter must see.
+     * `field` is a stable identifier (`status`...), not a label: it is the reader who decides the language, not the server that wrote the row.
+     */
     field?: string;
     reviewValue?: string | null;
     remoteValue?: string | null;
@@ -392,8 +392,8 @@ async function arbitrateConflict(
   if (!isRealConflict(params)) return 'overwrite';
   const verdict = arbitrate(ctx.settings.conflictPolicy);
   ctx.journal.count('conflicts', 'updated');
-    // One key per outcome: the message is written after arbitration, not before. The former text announced an overwrite by interpolating the policy: it could
-    // therefore say "review_wins" at the very moment it was overwriting.
+  // One key per outcome: the message is written after arbitration, not before. The former text announced an overwrite by interpolating the policy: it could
+  // therefore say "review_wins" at the very moment it was overwriting.
   const key =
     verdict === 'keep'
       ? 'shotgrid.log.conflictKept'
@@ -405,11 +405,11 @@ async function arbitrateConflict(
     {
       name: params.name,
       policy: ctx.settings.conflictPolicy,
-            // Without these markers, the conflict row does not say what diverged or when: impossible to arbitrate knowingly.
+      // Without these markers, the conflict row does not say what diverged or when: impossible to arbitrate knowingly.
       ...(params.field ? { field: params.field } : {}),
       review: params.reviewValue ?? '—',
       shotgrid: params.remoteValue ?? '—',
-            // `isRealConflict` has already discarded the case without a date: it is necessarily there.
+      // `isRealConflict` has already discarded the case without a date: it is necessarily there.
       localAt: localUpdatedAt?.toISOString() ?? '—',
     },
     {
@@ -492,12 +492,12 @@ export async function pullSequences(
 ) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Sequence', SEQUENCE_FIELDS, options);
-    /**
-     * `order` is deduced from the rank within the batch received. It only makes sense if the batch is the whole project: on a targeted re-read (a status webhook) the batch
-     * is one element, and the entity restarted at `order: 0` — the status change of a shot brought the sequence to the top of the list for everyone.
-     */
+  /**
+   * `order` is deduced from the rank within the batch received. It only makes sense if the batch is the whole project: on a targeted re-read (a status webhook) the batch
+   * is one element, and the entity restarted at `order: 0` — the status change of a shot brought the sequence to the top of the list for everyone.
+   */
   const fullPass = !options.since && !options.onlySgIds;
-    // What the site no longer returns has been put in the trash there — see `trashMissing`.
+  // What the site no longer returns has been put in the trash there — see `trashMissing`.
   await trashMissing(ctx, 'Sequence', records, options);
   const links = await mapSgToLocal(ctx.connection.id, 'sequence');
 
@@ -536,7 +536,7 @@ export async function pullSequences(
         ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
           null)
         : null;
-            // The sequence was not arbitrated at all: it was overwritten without detection or trace, whatever the studio's policy.
+      // The sequence was not arbitrated at all: it was overwritten without detection or trace, whatever the studio's policy.
       const verdict = await arbitrateConflict(ctx, {
         localUpdatedAt: existing.updatedAt,
         linkSyncedAt: link?.syncedAt,
@@ -562,10 +562,10 @@ export async function pullSequences(
     } else {
       saved = await prisma.sequence.create({ data });
     }
-        /**
-         * The thumbnail is aligned BEFORE the signal: `touch` is the only notification of the loop, and emitting it first let the screen refresh on the card still
-         * empty, with nothing behind it to announce the image.
-         */
+    /**
+     * The thumbnail is aligned BEFORE the signal: `touch` is the only notification of the loop, and emitting it first let the screen refresh on the card still
+     * empty, with nothing behind it to announce the image.
+     */
     const sgThumbSrc = await syncThumbnail(ctx, {
       holder: 'sequence',
       localId: saved.id,
@@ -576,7 +576,7 @@ export async function pullSequences(
       previous: (link?.data as SequenceLinkData | undefined)?.sgThumbSrc,
       currentKey: saved.thumbnailKey,
     });
-        // Without this signal, a status read from the site never reaches an open screen: one had to reload the page to see it appear.
+    // Without this signal, a status read from the site never reaches an open screen: one had to reload the page to see it appear.
     touch(ctx, 'sequence', saved.id);
 
     await upsertLink({
@@ -601,7 +601,7 @@ export async function pullShots(
 ) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Shot', SHOT_FIELDS, options);
-    // Same reason as for sequences: `order` only makes sense in a complete pass.
+  // Same reason as for sequences: `order` only makes sense in a complete pass.
   const fullPass = !options.since && !options.onlySgIds;
   await trashMissing(ctx, 'Shot', records, options);
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
@@ -664,7 +664,7 @@ export async function pullShots(
       ctx.journal.count('shots', 'created');
     }
     const savedId = saved.id;
-        // Before `touch`, for the same reason as for sequences: a single signal goes out.
+    // Before `touch`, for the same reason as for sequences: a single signal goes out.
     const sgThumbSrc = await syncThumbnail(ctx, {
       holder: 'shot',
       localId: savedId,
@@ -705,7 +705,7 @@ export async function pullAssets(
   const records = await fetchScoped(ctx, 'Asset', ASSET_FIELDS, options);
   await trashMissing(ctx, 'Asset', records, options);
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
-    // The shots and sequences were imported just before: their matches exist, so we can attach without creating anything along the way.
+  // The shots and sequences were imported just before: their matches exist, so we can attach without creating anything along the way.
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
 
@@ -732,7 +732,7 @@ export async function pullAssets(
     const data = {
       projectId: ctx.connection.projectId,
       name: localName,
-            // The enumeration serves the filters; the studio's exact label is what is displayed.
+      // The enumeration serves the filters; the studio's exact label is what is displayed.
       type: sgAssetType(sgType),
       typeLabel: sgType,
       ...descriptionPatch(ctx, record.description),
@@ -743,8 +743,8 @@ export async function pullAssets(
       ? await prisma.asset.update({ where: { id: existing.id }, data })
       : await prisma.asset.create({ data });
 
-        // Attachments: `set` replaces the whole list rather than adding — this is what prevents duplicates when a synchronization runs again. Only entities already
-        // linked are cited: a shot unknown to ReView has nothing to attach.
+    // Attachments: `set` replaces the whole list rather than adding — this is what prevents duplicates when a synchronization runs again. Only entities already
+    // linked are cited: a shot unknown to ReView has nothing to attach.
     const shotIds = asEntityRefs(record.shots)
       .map((r) => shotLinks.get(r.id)?.localId)
       .filter((id): id is number => typeof id === 'number');
@@ -783,7 +783,7 @@ export async function pullAssets(
       sgUpdatedAt: asDate(record.updated_at),
       data: linkData,
     });
-        // The asset emitted nothing: an asset created or renamed from the site did not reach an open screen, although the client knows how to handle `asset:update`.
+    // The asset emitted nothing: an asset created or renamed from the site did not reach an open screen, although the client knows how to handle `asset:update`.
     touch(ctx, 'asset', saved.id);
     ctx.journal.count('assets', existing ? 'updated' : 'created');
   }
@@ -863,7 +863,7 @@ export async function pullTasks(
 ) {
   if (!can(ctx.settings, 'tasks', 'read')) return;
   const records = await fetchScoped(ctx, 'Task', TASK_FIELDS, options);
-    // A task the site no longer returns has been put in the trash there.
+  // A task the site no longer returns has been put in the trash there.
   await trashMissing(ctx, 'Task', records, options);
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
@@ -900,8 +900,8 @@ export async function pullTasks(
     const link = taskLinks.get(record.id);
     const existing = link ? await prisma.task.findUnique({ where: { id: link.localId } }) : null;
 
-        // The site's step becomes a local department, relation included: writing only the string left `departmentId` empty on ALL the tasks of a project driven
-        // from ShotGrid, and the assignment by department — which queries the relation — refused tasks that do exist.
+    // The site's step becomes a local department, relation included: writing only the string left `departmentId` empty on ALL the tasks of a project driven
+    // from ShotGrid, and the assignment by department — which queries the relation — refused tasks that do exist.
     const department = await departmentOf(stepName);
 
     const data = {
@@ -914,7 +914,7 @@ export async function pullTasks(
       startDate: asDate(record.start_date),
       dueDate: asDate(record.due_date),
       ...taskStatus.patch,
-            // The historical enum follows the pipeline status for as long as it exists (`legacyStatus`).
+      // The historical enum follows the pipeline status for as long as it exists (`legacyStatus`).
       ...(status?.legacyStatus ? { status: status.legacyStatus } : {}),
     };
 
@@ -985,7 +985,7 @@ export async function trashRemoved(
   const links = await mapSgToLocal(ctx.connection.id, localType);
   for (const sgId of scope ?? links.keys()) {
     const link = links.get(sgId);
-        // Targeted identifier that was never imported: nothing to put in the trash.
+    // Targeted identifier that was never imported: nothing to put in the trash.
     if (!link || aliveSgIds.has(sgId)) continue;
 
     const table =
@@ -1000,7 +1000,7 @@ export async function trashRemoved(
       where: { id: link.localId },
     })) as { id: number } | null;
 
-        // Target already gone: the link designates nothing any more. Keeping it would replay this removal — and its message — at every synchronization, indefinitely.
+    // Target already gone: the link designates nothing any more. Keeping it would replay this removal — and its message — at every synchronization, indefinitely.
     if (!target) {
       await removeLink(ctx.connection.id, sgType, sgId);
       continue;
@@ -1008,10 +1008,10 @@ export async function trashRemoved(
 
     if (sgType === 'Task') {
       if (!(await retireTask(ctx, link.localId, sgId))) continue;
-            // The task has gone for good: nothing left to attach.
+      // The task has gone for good: nothing left to attach.
       await removeLink(ctx.connection.id, sgType, sgId);
     } else {
-            // The link survives the trashing: restoring on the ShotGrid side must bring back the entity as it was, with its history, not manufacture a copy.
+      // The link survives the trashing: restoring on the ShotGrid side must bring back the entity as it was, with its history, not manufacture a copy.
       await (table as { update: (a: unknown) => Promise<unknown> })
         .update({ where: { id: link.localId }, data: { deletedAt: new Date() } })
         .catch(() => undefined);

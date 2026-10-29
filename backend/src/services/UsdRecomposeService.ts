@@ -24,7 +24,7 @@ import type { UsdModelInfo, UsdRequest } from './ModelConvertService';
 type SessionUser = { id: number; role: Role };
 
 export interface RecomposeInput {
-    /** `{ "/World/Asset": { "modelingVariant": "hero" } }` */
+  /** `{ "/World/Asset": { "modelingVariant": "hero" } }` */
   variants: Record<string, Record<string, string>>;
   purpose: UsdPurpose;
 }
@@ -48,7 +48,7 @@ export async function recomposeUsd(user: SessionUser, id: number, input: Recompo
   if (!media) throw notFound('Media not found');
   if (media.kind !== MediaKind.MODEL_3D) throw badRequest('Recomposing is for 3D media only', 'NOT_3D');
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
-    // Recomposing does not replace the delivered file: it derives a readable representation from it. Writing therefore remains allowed after publication (table in `lib/publishLock`).
+  // Recomposing does not replace the delivered file: it derives a readable representation from it. Writing therefore remains allowed after publication (table in `lib/publishLock`).
   assertWritable(media, 'usdRecompose');
 
   const usd = readUsdInfo(media.metadata);

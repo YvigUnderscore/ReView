@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { syncOutcome } from './syncOutcome';
 
 describe('syncOutcome', () => {
-  it("does not announce a finished pass when it is only queued", () => {
+  it('does not announce a finished pass when it is only queued', () => {
     // The original bug: "Sync complete" in green for a request that was waiting behind
     // a running pass. Neither the tone nor the message may say that.
     const outcome = syncOutcome('deferred');

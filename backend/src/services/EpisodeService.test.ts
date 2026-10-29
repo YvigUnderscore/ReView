@@ -192,7 +192,7 @@ describe('createBulk', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it('numbers the order within the batch\'s rank', async () => {
+  it("numbers the order within the batch's rank", async () => {
     enabled(true);
     db.episode.findMany.mockResolvedValue([]);
     await EpisodeService.createBulk(7, [

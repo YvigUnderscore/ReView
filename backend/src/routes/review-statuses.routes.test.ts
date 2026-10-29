@@ -86,20 +86,20 @@ beforeEach(() => {
 
 for (const path of ['/api/review-statuses', '/api/v1/review-statuses']) {
   describe(`GET ${path}?projectId= — filtering by membership`, () => {
-    it("rejects a project the caller is not a member of", async () => {
+    it('rejects a project the caller is not a member of', async () => {
       const res = await request(app).get(`${path}?projectId=3`);
       expect(res.status).toBe(403);
       expect(listStatusesForProject).not.toHaveBeenCalled();
     });
 
-    it("returns 404 for a project that does not exist or is in the trash", async () => {
+    it('returns 404 for a project that does not exist or is in the trash', async () => {
       db.project.count.mockResolvedValue(0);
       const res = await request(app).get(`${path}?projectId=999`);
       expect(res.status).toBe(404);
       expect(listStatusesForProject).not.toHaveBeenCalled();
     });
 
-    it('serves the project's vocabulary to a member', async () => {
+    it("serves the project's vocabulary to a member", async () => {
       db.projectMembership.findUnique.mockResolvedValue({ role: null });
       const res = await request(app).get(`${path}?projectId=3`);
       expect(res.status).toBe(200);

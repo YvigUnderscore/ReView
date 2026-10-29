@@ -22,7 +22,7 @@ describe('clampStrokeWidth', () => {
 });
 
 describe('decodeStrokes', () => {
-  it("extracts the valid strokes from a mixed annotation array (hotspot + 2D + strokes)", () => {
+  it('extracts the valid strokes from a mixed annotation array (hotspot + 2D + strokes)', () => {
     const annotation = [
       { type: 'hotspot', position: '0 0 0', normal: '0 0 1' },
       { type: 'pen', points: [[0, 0]] },

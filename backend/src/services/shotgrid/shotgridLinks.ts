@@ -132,7 +132,7 @@ export async function upsertLink(params: {
 
   const crossType = conflicting.find((c) => c.localType !== localType);
   if (crossType) {
-        // Without an error code: none of this reaches a screen — the synchronization runs as a job, and it is the pass journal that will carry the message.
+    // Without an error code: none of this reaches a screen — the synchronization runs as a job, and it is the pass journal that will carry the message.
     throw conflict(
       `ShotGrid ${sgType}#${sgId} is already linked to ${crossType.localType}#${crossType.localId}, not to ${localType}#${localId}`,
     );
@@ -188,7 +188,7 @@ export function linkData<T extends LinkData>(link: ShotgridLink | null | undefin
 export interface TaskLinkData extends LinkData {
   durationMinutes?: number | null;
   stepName?: string | null;
-    /** ShotGrid assignees without a ReView account: displayed greyed out, never invented. */
+  /** ShotGrid assignees without a ReView account: displayed greyed out, never invented. */
   sgAssignees?: Array<{ id: number; name: string; email: string | null }>;
   sgStatusCode?: string | null;
 }
@@ -222,9 +222,9 @@ export interface VersionLinkData extends LinkData {
   sgFirstFrame?: number | null;
   sgLastFrame?: number | null;
   mediaImported?: boolean;
-    /** Version born in ReView then pushed: its media comes from here, not from the site. */
+  /** Version born in ReView then pushed: its media comes from here, not from the site. */
   createdFromReview?: boolean;
-    /** Attached pipeline publishes (file paths, read-only). */
+  /** Attached pipeline publishes (file paths, read-only). */
   publishedFiles?: Array<{
     id: number;
     name: string;
@@ -269,7 +269,7 @@ export async function listForUi(
     select: { localType: true, localId: true, sgId: true, sgType: true, syncedAt: true },
   });
   if (links.length >= limit) {
-        // A missing badge reads as "this entity is not linked": one must be able to trace back to the truncation rather than to an imagined desynchronization.
+    // A missing badge reads as "this entity is not linked": one must be able to trace back to the truncation rather than to an imagined desynchronization.
     logger.warn({ connectionId, limit }, 'shotgrid links truncated for UI');
   }
   return links;
@@ -288,7 +288,7 @@ export function shouldImportMedia(params: {
 }): boolean {
   if (!params.withMedia || !params.autoImport) return false;
   if (params.link.mediaImported) return false;
-    // What we would read on the site is the file we sent there.
+  // What we would read on the site is the file we sent there.
   if (params.link.createdFromReview) return false;
   return true;
 }

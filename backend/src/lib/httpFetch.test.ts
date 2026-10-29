@@ -49,7 +49,7 @@ describe('fetchAllowlisted — allow-list at the start', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("refuses an internal address even if the allow-list says yes", async () => {
+  it('refuses an internal address even if the allow-list says yes', async () => {
     await expect(
       fetchAllowlisted('http://169.254.169.254/latest/meta-data/', {}, { isAllowedHost: () => true }),
     ).rejects.toBeInstanceOf(OutboundBlockedError);

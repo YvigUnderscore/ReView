@@ -61,7 +61,7 @@ describe('transport — encryption required (A3-04)', () => {
 });
 
 describe('sendMail', () => {
-  it("sends nothing without a configured relay", async () => {
+  it('sends nothing without a configured relay', async () => {
     smtp.getEffectiveConfig.mockResolvedValue(null);
     expect(await sendMail('a@b.c', 'Sujet', '<p>Bonjour</p>')).toBe(false);
     expect(transport.sendMail).not.toHaveBeenCalled();

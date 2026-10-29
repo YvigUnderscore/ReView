@@ -66,9 +66,9 @@ const IMPORT_TASK_NAME = 'ShotGrid';
 
 export interface ImportVersionsOptions {
   since?: Date | null;
-    /** Specific versions to import (manual selection from the tab). */
+  /** Specific versions to import (manual selection from the tab). */
   onlySgIds?: number[];
-    /** Import of the media file (disabled for a simple inventory). */
+  /** Import of the media file (disabled for a simple inventory). */
   withMedia?: boolean;
 }
 
@@ -81,18 +81,18 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
 
   const records = await ctx.client.search('Version', { fields: VERSION_FIELDS, filters, sort: 'id' });
   const statusFilter = ctx.settings.media.statusFilter;
-    // A single read of the link table for the whole batch: it serves to distinguish the version already known (which we update) from the new version (which the filter may discard).
+  // A single read of the link table for the whole batch: it serves to distinguish the version already known (which we update) from the new version (which the filter may discard).
   const knownVersions = await mapSgToLocal(ctx.connection.id, 'version');
 
-    /**
-     * Versions removed from the site.
-     *
-     * Only on a targeted request — that is, a removal event, which names the deleted version. A version absent from an incremental batch has not been deleted, it has
-     * not changed; and a complete sweep is not entrusted with this power here, since it would put in the trash, all at once and without anyone having asked, everything
-     * deleted from the site since the connection was put into service.
-     */
+  /**
+   * Versions removed from the site.
+   *
+   * Only on a targeted request — that is, a removal event, which names the deleted version. A version absent from an incremental batch has not been deleted, it has
+   * not changed; and a complete sweep is not entrusted with this power here, since it would put in the trash, all at once and without anyone having asked, everything
+   * deleted from the site since the connection was put into service.
+   */
   if (options.onlySgIds?.length) {
-        // `confirmGone` distinguishes "the site no longer has it" from "the project guard discarded it": only the first is a removal.
+    // `confirmGone` distinguishes "the site no longer has it" from "the project guard discarded it": only the first is a removal.
     const alive = new Set(records.map((r) => r.id));
     const gone = await confirmGone(ctx, 'Version', options.onlySgIds, alive);
     await trashRemovedVersions(ctx, gone, knownVersions);
@@ -117,14 +117,14 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
     }
 
     const statusCode = asString(record.sg_status_list);
-        /**
-         * The status filter decides what we **import**, not what we **follow**.
-         *
-         * It applied to everyone: an already imported version whose status moved outside the filter (for example from "in review" to "approved") was purely skipped, and
-         * its review status stayed frozen forever on the ReView side. Yet it is already there — it is precisely the version whose status we want to see advance.
-         *
-         * A manual selection (`onlySgIds`) overrides it: it is an explicit decision.
-         */
+    /**
+     * The status filter decides what we **import**, not what we **follow**.
+     *
+     * It applied to everyone: an already imported version whose status moved outside the filter (for example from "in review" to "approved") was purely skipped, and
+     * its review status stayed frozen forever on the ReView side. Yet it is already there — it is precisely the version whose status we want to see advance.
+     *
+     * A manual selection (`onlySgIds`) overrides it: it is an explicit decision.
+     */
     const alreadyImported = knownVersions.has(record.id);
     if (
       !alreadyImported &&
@@ -138,7 +138,7 @@ export async function pullVersions(ctx: PullContext, options: ImportVersionsOpti
     }
 
     try {
-            // Known version but outside the filter: we refresh its metadata and its status, without fetching any media — the filter keeps all its meaning on that point.
+      // Known version but outside the filter: we refresh its metadata and its status, without fetching any media — the filter keeps all its meaning on that point.
       const withMedia =
         options.withMedia !== false &&
         (!alreadyImported || statusFilter.length === 0 || !statusCode || statusFilter.includes(statusCode));
@@ -176,7 +176,7 @@ async function trashRemovedVersions(
     if (!link) continue;
 
     const version = await prisma.version.findUnique({ where: { id: link.localId } });
-        // Target already gone: the link no longer designates anything, and keeping it would replay this removal at every pass.
+    // Target already gone: the link no longer designates anything, and keeping it would replay this removal at every pass.
     if (!version) {
       await removeLink(ctx.connection.id, 'Version', sgId);
       continue;
@@ -267,14 +267,14 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
   }
 
   const statusCode = asString(record.sg_status_list);
-    /**
-     * Review status: ReView is authoritative outside an explicit match.
-     *
-     * `reviewStatusId` used to be written unconditionally — `null` as soon as a code was not in `versionStatusMap`, a map often empty or partial. Each pass therefore erased the
-     * human decision (approved, retake) taken in ReView, without conflict or trace. It is the datum whose overwriting costs the most of the whole integration.
-     *
-     * We therefore write only if the studio has explicitly translated the code. A version with no status on the site side says nothing about the review decision: it does not erase it.
-     */
+  /**
+   * Review status: ReView is authoritative outside an explicit match.
+   *
+   * `reviewStatusId` used to be written unconditionally — `null` as soon as a code was not in `versionStatusMap`, a map often empty or partial. Each pass therefore erased the
+   * human decision (approved, retake) taken in ReView, without conflict or trace. It is the datum whose overwriting costs the most of the whole integration.
+   *
+   * We therefore write only if the studio has explicitly translated the code. A version with no status on the site side says nothing about the review decision: it does not erase it.
+   */
   const mapped = statusCode ? ctx.settings.versionStatusMap[statusCode] : undefined;
   const reviewPatch = mapped ? { reviewStatusId: mapped } : {};
   if (statusCode && !mapped) await noteUnknownStatus(ctx, 'version', statusCode, name);
@@ -312,11 +312,11 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     ? await prisma.version.update({ where: { id: existing.id }, data })
     : await prisma.version.create({ data });
   ctx.journal.count('versions', existing ? 'updated' : 'created');
-    // Same reason as for the hierarchy: the open review must see the version and its decision arrive without being asked to reload.
-    // Re-alignment of media imported before the names were aligned: idempotent, and without
-    // migration — the version's code is only known here.
+  // Same reason as for the hierarchy: the open review must see the version and its decision arrive without being asked to reload.
+  // Re-alignment of media imported before the names were aligned: idempotent, and without
+  // migration — the version's code is only known here.
   await realignMediaNames(ctx, version.id, name);
-    // Goes through the collector: a complete pass aligned twelve thousand versions, hence twelve thousand emissions. `touch` emits at once when nobody accumulates.
+  // Goes through the collector: a complete pass aligned twelve thousand versions, hence twelve thousand emissions. `touch` emits at once when nobody accumulates.
   touch(ctx, 'version', version.id, { taskId: version.taskId, assetId: version.assetId });
 
   const previous = existingLink?.data as VersionLinkData | undefined;
@@ -326,15 +326,15 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     sgFirstFrame: asNumber(record.sg_first_frame),
     sgLastFrame: asNumber(record.sg_last_frame),
     mediaImported: Boolean(previous?.mediaImported),
-        // The origin is not rediscovered: `upsertLink` replaces `data`, and forgetting it here would make a version born in ReView pass for a site version at the next
-        // pass — with its media fetched back in duplicate.
+    // The origin is not rediscovered: `upsertLink` replaces `data`, and forgetting it here would make a version born in ReView pass for a site version at the next
+    // pass — with its media fetched back in duplicate.
     ...(previous?.createdFromReview ? { createdFromReview: true } : {}),
   };
 
-    /**
-     * The link is set BEFORE any attempt on the media, and this is essential: it says "this ShotGrid Version is already in ReView", which is true from now on. Setting the link
-     * after the transfer left the version orphaned at the slightest download failure — and the next synchronization, finding nothing, would recreate one. One per pass, indefinitely.
-     */
+  /**
+   * The link is set BEFORE any attempt on the media, and this is essential: it says "this ShotGrid Version is already in ReView", which is true from now on. Setting the link
+   * after the transfer left the version orphaned at the slightest download failure — and the next synchronization, finding nothing, would recreate one. One per pass, indefinitely.
+   */
   await upsertLink({
     connectionId: ctx.connection.id,
     localType: 'version',
@@ -345,7 +345,7 @@ export async function importVersion(ctx: PullContext, record: SgRecord, withMedi
     data: linkData,
   });
 
-    // The media is an add-on: its failure invalidates neither the version nor its status.
+  // The media is an add-on: its failure invalidates neither the version nor its status.
   if (shouldImportMedia({ withMedia, autoImport: ctx.settings.media.autoImport, link: linkData })) {
     try {
       if (await importVersionMedia(ctx, record, version.id, name)) {
@@ -394,7 +394,7 @@ export async function importVersionMedia(
     return false;
   }
 
-    // The dedicated endpoint first, the address carried by the field next: depending on the site and the field, one or the other answers.
+  // The dedicated endpoint first, the address carried by the field next: depending on the site and the field, one or the other answers.
   const url =
     (await ctx.client.downloadUrl('Version', record.id, picked.field)) ?? attachmentUrl(picked.value);
   if (!url) {
@@ -430,7 +430,7 @@ export async function importVersionMedia(
   }
 
   const contentType = type ?? 'video/mp4';
-    // The media carries the Version's code, not the attached file's name: it is that name which the production reads in its playlists and says during dailies.
+  // The media carries the Version's code, not the attached file's name: it is that name which the production reads in its playlists and says during dailies.
   const filename =
     ctx.settings.media.naming === 'filename'
       ? sourceFilename
@@ -448,7 +448,7 @@ export async function importVersionMedia(
         importedFromShotgrid: true,
         sgVersionId: record.id,
         sgField: picked.field,
-                // The real name of the file stays readable in the technical sheet: a studio's naming convention often carries information that the code does not reproduce.
+        // The real name of the file stays readable in the technical sheet: a studio's naming convention often carries information that the code does not reproduce.
         sourceFilename,
       },
     },
@@ -461,8 +461,8 @@ export async function importVersionMedia(
     filename: filename.replace(/[^\w.-]+/g, '_'),
   });
 
-    // Going through a temporary file rather than a direct streaming of the network flow: object storage requires the size of the content in advance, which ShotGrid
-    // does not guarantee in its responses. The disk also avoids holding a master in memory.
+  // Going through a temporary file rather than a direct streaming of the network flow: object storage requires the size of the content in advance, which ShotGrid
+  // does not guarantee in its responses. The disk also avoids holding a master in memory.
   const tmpPath = join(tmpdir(), `sg-${media.id}-${Date.now()}`);
   let bytes: number | undefined;
   try {
@@ -489,15 +489,15 @@ export async function importVersionMedia(
     data: { storageKey, size: BigInt(bytes || size || 0), status: MediaStatus.PROCESSING },
   });
 
-    /**
-     * The media's link — set only if the site names its `Attachment`.
-     *
-     * It carried `sgType: 'Attachment'` with the identifier of the **Version**: the type and the identifier spoke of two different entities. The link was wrong, and harmful:
-     * `upsertLink` removing any conflict, a real `Attachment` that happened to carry the same number as a Version saw its link erased in favour of the liar.
-     *
-     * The file is described by the `Attachment` that the field exposes; its identifier is authoritative. When the site returns none (some fields deliver only a URL), we write no link:
-     * the media stays traceable through its metadata (`sgVersionId`, `sgField`), which are, for their part, what they say.
-     */
+  /**
+   * The media's link — set only if the site names its `Attachment`.
+   *
+   * It carried `sgType: 'Attachment'` with the identifier of the **Version**: the type and the identifier spoke of two different entities. The link was wrong, and harmful:
+   * `upsertLink` removing any conflict, a real `Attachment` that happened to carry the same number as a Version saw its link erased in favour of the liar.
+   *
+   * The file is described by the `Attachment` that the field exposes; its identifier is authoritative. When the site returns none (some fields deliver only a URL), we write no link:
+   * the media stays traceable through its metadata (`sgVersionId`, `sgField`), which are, for their part, what they say.
+   */
   const sgAttachmentId = attachmentId(picked.value);
   if (sgAttachmentId !== null) {
     await upsertLink({

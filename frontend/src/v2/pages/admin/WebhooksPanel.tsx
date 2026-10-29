@@ -130,7 +130,7 @@ export default function WebhooksPanel() {
           maxLength={500}
         />
         <div className="flex flex-wrap items-center gap-3">
-           {/* Scope: the whole studio by default, as before. Attaching to a project is what
+          {/* Scope: the whole studio by default, as before. Attaching to a project is what
                makes a webhook grantable to a client without opening the other films to them. */}
           <label className="flex items-center gap-1.5 text-xs">
             {t('webhooks.scope')}

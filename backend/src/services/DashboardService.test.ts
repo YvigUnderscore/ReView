@@ -109,7 +109,7 @@ describe('DashboardService.getDashboard', () => {
     stubEmpty();
   });
 
-  it('bounds the queries to the member\'s projects (membership filter for an ARTIST)', async () => {
+  it("bounds the queries to the member's projects (membership filter for an ARTIST)", async () => {
     await getDashboard(artist);
     const projectWhere = vi.mocked(prisma.project.count).mock.calls[0]![0]!.where;
     expect(projectWhere).toEqual({ deletedAt: null, memberships: { some: { userId: 3 } } });
@@ -185,7 +185,7 @@ describe('DashboardService.getDashboard', () => {
     expect(queryRaw).not.toHaveBeenCalled();
   });
 
-  it('reads the studio\'s reference: terminal counts as done, inactive does not count', async () => {
+  it("reads the studio's reference: terminal counts as done, inactive does not count", async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([
       { id: 7, name: 'Dock', thumbnailKey: null },
     ] as never);

@@ -20,7 +20,7 @@ describe('resolveQueryPhase — deciding query states (admin)', () => {
     expect(resolveQueryPhase(snap({ hasData: true }))).toBe('ready');
   });
 
-  it("shows the failure when the server refused and there is nothing to display", () => {
+  it('shows the failure when the server refused and there is nothing to display', () => {
     // The corrected default: this case rendered a skeleton that pulsed forever.
     expect(resolveQueryPhase(snap({ isError: true }))).toBe('error');
   });

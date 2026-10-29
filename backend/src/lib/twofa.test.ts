@@ -80,7 +80,7 @@ describe('twofa', () => {
     await expect(verifyTotp(secret, 'abc')).resolves.toBe(false);
   });
 
-  it("the otpauth URI contains the issuer and the account", () => {
+  it('the otpauth URI contains the issuer and the account', () => {
     const uri = otpauthUri('a@b.c', 'ReView Studio', generateTotpSecret());
     expect(uri.startsWith('otpauth://totp/')).toBe(true);
     expect(uri).toContain('ReView%20Studio');

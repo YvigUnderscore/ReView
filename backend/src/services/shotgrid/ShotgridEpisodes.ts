@@ -176,8 +176,8 @@ export async function pullEpisodes(
   if (!(await episodesEnabled(projectId))) return;
 
   const records = await fetchEpisodes(ctx, options);
-    // `order` is deduced from the rank within the batch: it only makes sense in a full pass, otherwise a targeted re-read
-    // would bring the episode to the top of the list for everyone.
+  // `order` is deduced from the rank within the batch: it only makes sense in a full pass, otherwise a targeted re-read
+  // would bring the episode to the top of the list for everyone.
   const fullPass = !options.since && !options.onlySgIds;
   const links = await mapSgToLocal(ctx.connection.id, LOCAL_TYPE);
 
@@ -237,7 +237,7 @@ export async function linkSequencesToEpisodes(
     if (localSequenceId === undefined) continue;
     const ref = asEntityRef(record[SG_SEQUENCE_EPISODE_FIELD]);
     const episodeId = ref ? (episodeLinks.get(ref.id)?.localId ?? null) : null;
-        // The sequence must belong to the linked project: the map of links comes from the connection, but the write is by local identifier, so we bound it.
+    // The sequence must belong to the linked project: the map of links comes from the connection, but the write is by local identifier, so we bound it.
     const { count } = await prisma.sequence.updateMany({
       where: { id: localSequenceId, projectId: ctx.connection.projectId },
       data: { episodeId },
@@ -267,7 +267,7 @@ export async function pullSequenceEpisodes(
     filters,
     sort: 'id',
   });
-    // Same belt and braces as for episodes: the request carries the project filter, and each entity received is rechecked before any write.
+  // Same belt and braces as for episodes: the request carries the project filter, and each entity received is rechecked before any write.
   const records = await keepInProject(fetched, ctx);
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
   return linkSequencesToEpisodes(ctx, records, sequenceLinks);

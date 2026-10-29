@@ -51,7 +51,7 @@ describe('readPagination', () => {
     expect(readPagination({ page: '3', pageSize: '25' })).toMatchObject({ page: 3, pageSize: 25 });
   });
 
-  it('applies the route\'s own default when nothing is requested', () => {
+  it("applies the route's own default when nothing is requested", () => {
     expect(readPagination({}, { defaultPageSize: 500 }).pageSize).toBe(500);
   });
 

@@ -48,7 +48,7 @@ export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): 
   if (!parentId) return;
   const parent = await findByLocal(ctx.connectionId, parentKind, parentId);
   if (!parent) {
-        // The carrying shot or asset does not exist on the site: there is nothing to hang the task on. This is the case of a project half on ShotGrid, half local, and it is not an outage.
+    // The carrying shot or asset does not exist on the site: there is nothing to hang the task on. This is the case of a project half on ShotGrid, half local, and it is not an outage.
     logger.info({ taskId, parentKind, parentId }, 'Task non poussée : parent absent du site');
     return;
   }
@@ -74,7 +74,7 @@ export async function pushTaskCreation(ctx: TaskCreateContext, taskId: number): 
     sgType: 'Task',
     sgId: created.id,
     data: {
-            // The link describes the remote side: the step name as the site writes it, not the normalized key of the local department (same shape as `createTaskFromStep`).
+      // The link describes the remote side: the step name as the site writes it, not the normalized key of the local department (same shape as `createTaskFromStep`).
       stepName: step?.name ?? null,
       sgAssignees: [],
       sgStatusCode: null,

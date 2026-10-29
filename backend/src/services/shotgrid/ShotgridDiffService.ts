@@ -31,7 +31,7 @@ export interface DiffEntry {
   sgId: number | null;
   localId: number | null;
   sgUrl: string | null;
-    /** Field-by-field gaps, in values already readable. */
+  /** Field-by-field gaps, in values already readable. */
   fields?: Array<{ field: string; review: string | null; shotgrid: string | null }>;
 }
 
@@ -39,7 +39,7 @@ export interface DiffReport {
   generatedAt: string;
   sgProjectId: number;
   sgProjectName: string;
-    /** Does the remote project still carry the expected name? */
+  /** Does the remote project still carry the expected name? */
   projectNameOk: boolean;
   remoteProjectName: string | null;
   counts: Record<string, { review: number; shotgrid: number }>;
@@ -89,8 +89,8 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
   const keep = (records: SgRecord[]) => records.filter((r) => belongsToProject(r, scope).ok);
 
   const [sgSequences, sgShots, sgAssets, sgTasks, sgVersions] = await Promise.all([
-        // `sg_status_list` requested: the comparison screen only looked at the code, so a diverging sequence status
-        // stayed invisible: the only entity whose gap was visible nowhere.
+    // `sg_status_list` requested: the comparison screen only looked at the code, so a diverging sequence status
+    // stayed invisible: the only entity whose gap was visible nowhere.
     ctx.client
       .search('Sequence', { fields: ['code', 'sg_status_list', 'updated_at', 'project'], filters })
       .then(keep),
@@ -141,7 +141,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
 
   const url = (type: string, id: number) => sgDeepLink(ctx.connection.site.baseUrl, type, id);
 
-    // ── Sequences
+  // ── Sequences
   for (const sg of sgSequences) {
     const link = seqLinks.get(sg.id);
     const local = link ? sequences.find((s) => s.id === link.localId) : undefined;
@@ -185,7 +185,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
   }
 
-    // ── Shots
+  // ── Shots
   for (const sg of sgShots) {
     const link = shotLinks.get(sg.id);
     const local = link ? shots.find((s) => s.id === link.localId) : undefined;
@@ -244,7 +244,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
   }
 
-    // ── Assets
+  // ── Assets
   for (const sg of sgAssets) {
     const link = assetLinks.get(sg.id);
     const local = link ? assets.find((a) => a.id === link.localId) : undefined;
@@ -260,7 +260,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
   }
 
-    // ── Tasks
+  // ── Tasks
   for (const sg of sgTasks) {
     const link = taskLinks.get(sg.id);
     const local = link ? tasks.find((t) => t.id === link.localId) : undefined;
@@ -294,7 +294,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
   }
 
-    // ── Versions
+  // ── Versions
   for (const sg of sgVersions) {
     const link = versionLinks.get(sg.id);
     const local = link ? versions.find((v) => v.id === link.localId) : undefined;

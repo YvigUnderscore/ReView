@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { pickStickyProject, readStoredProject } from './stickyProject';
 
 describe('pickStickyProject', () => {
-  it('always prefers the route\'s project', () => {
+  it("always prefers the route's project", () => {
     expect(pickStickyProject(12, 7)).toBe(12);
   });
 

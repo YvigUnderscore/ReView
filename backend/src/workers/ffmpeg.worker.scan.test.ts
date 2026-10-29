@@ -116,7 +116,7 @@ function lastWrittenMetadata(): Record<string, unknown> {
 const runJob = (): Promise<unknown> =>
   processors.get('media-processing')!({
     data: { mediaObjectId: MEDIA_ID, kind: 'scan' },
-        // The progress reporter chains a `.catch` on this return value.
+    // The progress reporter chains a `.catch` on this return value.
     updateProgress: () => Promise.resolve(),
   });
 
@@ -145,7 +145,7 @@ describe('"scan" job: the verdict is written on the media', () => {
   });
 
   it('records the reason on the media when clamd is unreachable', async () => {
-        // The case that left the media READY, downloadable and silent: the job exhausted its attempts in thirty-five seconds and vanished without writing a line.
+    // The case that left the media READY, downloadable and silent: the job exhausted its attempts in thirty-five seconds and vanished without writing a line.
     vi.mocked(scanFile).mockRejectedValue(new Error('connect ECONNREFUSED clamav:3310'));
     await expect(runJob()).rejects.toThrow('ECONNREFUSED');
     const written = lastWrittenMetadata();
@@ -155,7 +155,7 @@ describe('"scan" job: the verdict is written on the media', () => {
   });
 
   it('never sets the media to FAILED on a scan in error', async () => {
-        // The file is clean until proven otherwise: only a DETECTION sets FAILED.
+    // The file is clean until proven otherwise: only a DETECTION sets FAILED.
     vi.mocked(scanFile).mockRejectedValue(new Error('clamd: scan timed out'));
     await expect(runJob()).rejects.toThrow();
     const calls = vi.mocked(prisma.mediaObject.update).mock.calls;

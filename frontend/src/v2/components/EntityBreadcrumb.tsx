@@ -106,7 +106,7 @@ export default function EntityBreadcrumb({
 
   // Deliberate side effect: each resolved context feeds "Recents" and the
   // current project of the sidebar (10.A4): the exact URL is stored so as to
-    // to return in one click.
+  // to return in one click.
   useEffect(() => {
     if (!ctx) return;
     useProjectContext.getState().setProjectId(ctx.project.id);

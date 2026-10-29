@@ -78,13 +78,13 @@ beforeEach(() => {
 });
 
 describe('GET /api/projects/:projectId/departments', () => {
-  it("refuses the pipe of a project the caller is not a member of", async () => {
+  it('refuses the pipe of a project the caller is not a member of', async () => {
     const res = await request(app).get('/api/projects/3/departments');
     expect(res.status).toBe(403);
     expect(listForProjectWithRights).not.toHaveBeenCalled();
   });
 
-  it("returns 404 for a project that does not exist or is in the trash", async () => {
+  it('returns 404 for a project that does not exist or is in the trash', async () => {
     db.project.count.mockResolvedValue(0);
     const res = await request(app).get('/api/projects/999/departments');
     expect(res.status).toBe(404);
@@ -117,7 +117,7 @@ describe('GET /api/projects/:projectId/departments', () => {
  * The audit log cannot name anyone if the route keeps `req.user` to itself; yet renumbering a pipe
  * decides the "latest version" of all its shots.
  */
-describe("pipe writes: the actor follows through to the service", () => {
+describe('pipe writes: the actor follows through to the service', () => {
   const supervisor = { id: 2, email: 'sup@studio.com', role: 'SUPERVISOR' as const };
 
   it('PATCH /departments/:id', async () => {

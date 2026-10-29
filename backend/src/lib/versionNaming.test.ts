@@ -106,7 +106,7 @@ describe('mimicking the site naming', () => {
     ).toBe('SH010_comp_V08');
   });
 
-  it("does not mimic a local V01, which is not a site code", () => {
+  it('does not mimic a local V01, which is not a site code', () => {
     expect(nextVersionName({ existing: ['V01'], parentCode: 'SH010', step: 'anim', linked: true })).toBe(
       'SH010_anim_v002',
     );

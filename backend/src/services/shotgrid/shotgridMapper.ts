@@ -213,7 +213,7 @@ export function attachmentUrl(value: unknown): string | null {
   const v = value as Record<string, unknown>;
   const url = asString(v.url);
   if (url) return url;
-    // Some fields nest the attachment (`{ attachment: { url } }`).
+  // Some fields nest the attachment (`{ attachment: { url } }`).
   const nested = v.attachment;
   return nested && typeof nested === 'object' ? asString((nested as Record<string, unknown>).url) : null;
 }

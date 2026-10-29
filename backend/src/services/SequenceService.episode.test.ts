@@ -44,7 +44,7 @@ describe('SequenceService.createBulk', () => {
   });
 
   it('refuses an episode borrowed from another project: nothing is created', async () => {
-        // The attachment is visible from neither page: it must be refused up front.
+    // The attachment is visible from neither page: it must be refused up front.
     db.episode.count.mockResolvedValue(0);
     await expect(createBulk(7, [{ name: 'SQ010', code: 'SQ010', episodeId: 42 }])).rejects.toMatchObject({
       code: 'BAD_EPISODE',
@@ -81,8 +81,8 @@ describe('SequenceService.getDetail', () => {
   });
 
   it('hides it when the level is off: the attachment survives, the trace does not', async () => {
-        // Switching the level off destroys nothing: `episodeId` stays in the database. But the screen of a
-        // project that does not know the level must not start showing a link to an episode.
+    // Switching the level off destroys nothing: `episodeId` stays in the database. But the screen of a
+    // project that does not know the level must not start showing a link to an episode.
     db.sequence.findUnique.mockResolvedValue(sequence(false));
     await expect(getDetail(3)).resolves.toMatchObject({ episode: null });
   });

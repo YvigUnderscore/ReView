@@ -40,7 +40,7 @@ describe('Integration — disabled rate limiters (createApp({ rateLimit: false }
     expect([...codes]).not.toContain(429);
   });
 
-  it("a rate limiter built at router import time no longer counts (/api/unsubscribe, ceiling 60 / 15 min)", async () => {
+  it('a rate limiter built at router import time no longer counts (/api/unsubscribe, ceiling 60 / 15 min)', async () => {
     const codes = new Set<number>();
     for (let i = 0; i < 70; i += 1) {
       codes.add((await request(app).get('/api/unsubscribe/not-a-valid-token')).status);
@@ -48,7 +48,7 @@ describe('Integration — disabled rate limiters (createApp({ rateLimit: false }
     expect([...codes]).not.toContain(429);
   });
 
-  it("the option is refused outside NODE_ENV=test: no instance can end up without a rate limiter", () => {
+  it('the option is refused outside NODE_ENV=test: no instance can end up without a rate limiter', () => {
     const mutable = env as { NODE_ENV: string };
     const saved = mutable.NODE_ENV;
     mutable.NODE_ENV = 'production';

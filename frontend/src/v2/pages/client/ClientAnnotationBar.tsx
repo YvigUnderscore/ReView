@@ -57,11 +57,11 @@ export default function ClientAnnotationBar({ ann }: { ann: Annotations }) {
 
       <div className="rv-rule" />
 
-       {/* Ink: the application's dedicated palette, plus a free choice. These are
+      {/* Ink: the application's dedicated palette, plus a free choice. These are
            data values (hexadecimal), not styling — the styling itself stays in
            theme tokens. */}
       <div className="flex items-center gap-1" role="group" aria-label={t('draw.ink')}>
-         {/* Six inks, not twelve: the full palette made the bar wrap, and
+        {/* Six inks, not twelve: the full palette made the bar wrap, and
              the free choice stays alongside for anyone who wants their own colour. */}
         {USER_COLORS.slice(0, 6).map((color) => (
           <button

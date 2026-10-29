@@ -193,7 +193,7 @@ describe('dropSplatEditBlobs: what a public link does not presign', () => {
     expect(dropSplatEditBlobs([mask, pdf], [{ type: 'poi', points: [] }])).toEqual([mask, pdf]);
   });
 
-  it('keeps a same-named file that is not the proposal\'s', () => {
+  it("keeps a same-named file that is not the proposal's", () => {
     const other = { key: 'comments/attachments/2/mask.bin', name: 'splat-mask.bin' };
     expect(dropSplatEditBlobs([other], annotation)).toEqual([other]);
   });

@@ -82,7 +82,7 @@ describe('fromEditorBlocks — saving', () => {
     );
   });
 
-  it('writes a board\'s options only if it has any', () => {
+  it("writes a board's options only if it has any", () => {
     const carousel: GalleryBlock = {
       id: 'g',
       kind: 'gallery',
@@ -97,7 +97,7 @@ describe('fromEditorBlocks — saving', () => {
     );
   });
 
-  it('writes an image\'s layout only if it departs from the usual case', () => {
+  it("writes an image's layout only if it departs from the usual case", () => {
     const image: ImageEditBlock = {
       id: 'i',
       kind: 'image',

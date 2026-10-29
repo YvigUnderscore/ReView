@@ -6,7 +6,7 @@ import { useDensity } from './useDensity';
 
 const attr = () => document.documentElement.getAttribute('data-density');
 
-describe("useDensity — display density (42.A1)", () => {
+describe('useDensity — display density (42.A1)', () => {
   afterEach(() => useDensity.getState().setDensity('comfortable'));
 
   it('applique data-density sur <html>', () => {

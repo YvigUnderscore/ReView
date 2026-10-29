@@ -38,7 +38,7 @@ export function shareUrl(token: string): string {
 export interface ShareMailContext {
   projectName: string;
   senderName: string;
-    /** What the link opens, already resolved to a readable name (playlist, version) where applicable. */
+  /** What the link opens, already resolved to a readable name (playlist, version) where applicable. */
   scope: ShareScope;
   scopeTarget: string | null;
   expiresAt: Date | null;
@@ -143,8 +143,8 @@ export async function sendShareMail(
   });
   const subject = t(SHARE_MAIL_LOCALE, 'share.mail.subject', { project: link.project.name });
 
-    // One recipient per message: a plain list in `To:` reveals every other recipient's address to each
-    // client, and sharing often shows the same thing to people who must not know they are several.
+  // One recipient per message: a plain list in `To:` reveals every other recipient's address to each
+  // client, and sharing often shows the same thing to people who must not know they are several.
   const results = await Promise.all(recipients.map((to) => sendMail(to, subject, html)));
   const sent = results.filter(Boolean).length;
   logAudit({

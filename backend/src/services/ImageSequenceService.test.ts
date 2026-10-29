@@ -137,7 +137,7 @@ describe('initSequence: refuse before the transfer', () => {
     ).rejects.toMatchObject({ code: 'BAD_FRAME_NAME' });
   });
 
-  it('refuses a batch exceeding the studio\'s size ceiling, creating nothing', async () => {
+  it("refuses a batch exceeding the studio's size ceiling, creating nothing", async () => {
     await expect(
       initSequence(user, { ...base, frames: frames(1001, 1010, 900 * 1024 * 1024 * 1024) }),
     ).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });

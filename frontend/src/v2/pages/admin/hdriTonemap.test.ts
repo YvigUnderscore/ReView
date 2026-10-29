@@ -9,7 +9,7 @@ describe('tonemapToRgba — admin HDRI preview', () => {
     const src = new Float32Array(4 * 4 * 4).fill(1);
     const out = tonemapToRgba(src, 4, 4, 2, 2);
     expect(out.length).toBe(2 * 2 * 4);
-     expect(out[3]).toBe(255); // opaque alpha
+    expect(out[3]).toBe(255); // opaque alpha
   });
 
   it('applies Reinhard + gamma (0 → 0, very bright → close to 255)', () => {

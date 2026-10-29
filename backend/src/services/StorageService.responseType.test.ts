@@ -90,7 +90,7 @@ describe('responseTypeFromKey', () => {
   });
 
   it('makes opaque anything the browser could interpret', () => {
-        // The three forms an XSS takes when served from the application's origin.
+    // The three forms an XSS takes when served from the application's origin.
     expect(responseTypeFromKey('entity-thumbs/department/7.svg')).toBe('application/octet-stream');
     expect(responseTypeFromKey('note-images/asset/1/x.html')).toBe('application/octet-stream');
     expect(responseTypeFromKey('note-images/asset/1/x.xml')).toBe('application/octet-stream');
@@ -102,7 +102,7 @@ describe('responseTypeFromKey', () => {
     expect(responseTypeFromKey('derived/1/splat-mask.bin')).toBe('application/octet-stream');
     expect(responseTypeFromKey('studio/ocio/abc.cube')).toBe('application/octet-stream');
     expect(responseTypeFromKey('projects/p/v/1/rush')).toBe('application/octet-stream');
-        // A dot in a folder is not an extension.
+    // A dot in a folder is not an extension.
     expect(responseTypeFromKey('projects/p.v1/v/1/rush')).toBe('application/octet-stream');
   });
 
@@ -115,8 +115,8 @@ describe('responseTypeFromKey', () => {
 
 describe('getPresignedGetUrl: forced type by default', () => {
   it('forces the type derived from the key for a sheet image uploaded by presigned PUT', async () => {
-        // Without a forced type, the object was served with the `Content-Type` chosen by the uploader:
-        // a PUT as `text/html` on a `.png` key came out as `text/html`.
+    // Without a forced type, the object was served with the `Content-Type` chosen by the uploader:
+    // a PUT as `text/html` on a `.png` key came out as `text/html`.
     await storage.getPresignedGetUrl('note-images/shot/12/1700-plan.png');
     expect(lastImposedType()).toBe('image/png');
   });
@@ -131,7 +131,7 @@ describe('getPresignedGetUrl: forced type by default', () => {
     expect(lastImposedType()).toBe('application/octet-stream');
   });
 
-  it('lets the caller\'s explicit type take precedence, allowlist included', async () => {
+  it("lets the caller's explicit type take precedence, allowlist included", async () => {
     await storage.getPresignedGetUrl('comments/1/piece.bin', 3600, 'application/pdf');
     expect(lastImposedType()).toBe('application/pdf');
     await storage.getPresignedGetUrl('comments/1/piece.bin', 3600, 'image/svg+xml');
@@ -147,8 +147,8 @@ describe('getPresignedGetUrl: default lifetime', () => {
   });
 
   it('keeps the historical hour for a stream read over time', async () => {
-        // A presigned `<video src>` keeps requesting byte ranges for the whole playback: shortening it here
-        // would cut the projection, not the leak.
+    // A presigned `<video src>` keeps requesting byte ranges for the whole playback: shortening it here
+    // would cut the projection, not the leak.
     await storage.getPresignedGetUrl('derived/9/proxy.mp4');
     expect(lastExpiresIn()).toBe(STREAMED_GET_TTL_SECONDS + PRESIGN_WINDOW_SECONDS);
     expect(defaultGetTtl('derived/9/audio.mp3')).toBe(STREAMED_GET_TTL_SECONDS);

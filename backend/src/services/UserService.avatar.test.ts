@@ -48,7 +48,7 @@ describe('UserService.setAvatar: the key must designate EXACTLY its own avatar',
   });
 
   it('refuses the key of an account whose identifier starts with its own', async () => {
-        // The exact edge case: 9 -> 91, 1 -> 12, 1 -> 100.
+    // The exact edge case: 9 -> 91, 1 -> 12, 1 -> 100.
     await expect(setAvatar(9, 'avatars/91.png')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(1, 'avatars/12.png')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(1, 'avatars/100.webp')).rejects.toMatchObject({ code: 'BAD_KEY' });
@@ -56,8 +56,8 @@ describe('UserService.setAvatar: the key must designate EXACTLY its own avatar',
   });
 
   it('refuses a key outside the avatars folder, or without a known extension', async () => {
-        // `avatars/` is only a prefix of the bucket: nothing will prevent tomorrow another key from sharing it.
-        // The guard therefore names the whole shape, not its beginning.
+    // `avatars/` is only a prefix of the bucket: nothing will prevent tomorrow another key from sharing it.
+    // The guard therefore names the whole shape, not its beginning.
     await expect(setAvatar(9, 'derived/9/source.mp4')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(9, 'avatars/9/../12.png')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(9, 'avatars/9.exe')).rejects.toMatchObject({ code: 'BAD_KEY' });

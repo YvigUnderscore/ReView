@@ -206,7 +206,7 @@ describe('authenticate — session and account existence', () => {
 
   // The role is re-read from the database: a token issued before a demotion must not
   // keep carrying the old role.
-  it('reloads the current role rather than the token's', async () => {
+  it("reloads the current role rather than the token's", async () => {
     const stale = signAccessToken({ id: 7, email: dbUser.email, role: 'ADMIN', sid: 'abc' });
     const { req } = await run(stale);
     expect(req.user?.role).toBe('ARTIST');

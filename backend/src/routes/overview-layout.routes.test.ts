@@ -72,7 +72,7 @@ describe('GET /api/studio/overview-layout', () => {
 });
 
 describe('PUT /api/studio/overview-layout', () => {
-  it('saves a role's default without touching the others', async () => {
+  it("saves a role's default without touching the others", async () => {
     stored(JSON.stringify({ SUPERVISOR: { hidden: ['counts'] } }));
     const res = await request(app)
       .put('/api/studio/overview-layout')
@@ -86,7 +86,7 @@ describe('PUT /api/studio/overview-layout', () => {
     expect(JSON.parse(upsert?.update.value ?? '{}')).toEqual(res.body.defaults);
   });
 
-  it('removes a role's default with a null layout', async () => {
+  it("removes a role's default with a null layout", async () => {
     stored(JSON.stringify({ ARTIST: { hidden: ['counts'] }, CLIENT: { hidden: ['tasks'] } }));
     const res = await request(app).put('/api/studio/overview-layout').send({ role: 'ARTIST', layout: null });
     expect(res.body.defaults).toEqual({ CLIENT: { hidden: ['tasks'] } });

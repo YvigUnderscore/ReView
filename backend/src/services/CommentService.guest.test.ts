@@ -54,8 +54,8 @@ beforeEach(() => {
   vi.mocked(notifyWatchers).mockResolvedValue([]);
 });
 
-describe('createGuest: a client\'s feedback reaches someone', () => {
-  it('alerts the followers of the shot with the guest\'s name', async () => {
+describe("createGuest: a client's feedback reaches someone", () => {
+  it("alerts the followers of the shot with the guest's name", async () => {
     await createGuest(guest, 7, body);
     expect(notifyWatchers).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -141,7 +141,7 @@ describe('createGuest: what a guest cannot do', () => {
  * link could therefore pour megabytes of arbitrary JSON into it, request after request, without any account.
  * The service now reads it back.
  */
-describe('createGuest: a guest\'s camera pose is bounded (A2-02)', () => {
+describe("createGuest: a guest's camera pose is bounded (A2-02)", () => {
   it('refuses a free-form blob', async () => {
     await expect(
       createGuest(guest, 7, { ...body, cameraState: { p: 'A'.repeat(4_000) } }),

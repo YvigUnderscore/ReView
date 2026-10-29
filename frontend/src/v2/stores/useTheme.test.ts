@@ -24,7 +24,7 @@ describe('useTheme — system/light/dark theme (42.A1)', () => {
     expect(hasDark()).toBe(true);
   });
 
-  it("system mode: effective theme derived from the OS", () => {
+  it('system mode: effective theme derived from the OS', () => {
     useTheme.getState().setMode('system');
     expect(useTheme.getState().mode).toBe('system');
     expect(['dark', 'light']).toContain(useTheme.getState().theme);

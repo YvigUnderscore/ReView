@@ -74,8 +74,8 @@ describe('applyRules', () => {
   });
 
   it('does not rewrite a shot that the same rule already hides', async () => {
-        // Rewriting would touch `updatedAt` on every pass, and ShotGrid synchronization would conclude that
-        // ReView had changed: a false conflict on every import.
+    // Rewriting would touch `updatedAt` on every pass, and ShotGrid synchronization would conclude that
+    // ReView had changed: a false conflict on every import.
     vi.mocked(prisma.visibilityRule.findMany).mockResolvedValue([rule()] as never);
     vi.mocked(prisma.shot.findMany).mockResolvedValue([
       { id: 10, code: 'SH010_TMP', name: 'SH010_TMP', hiddenRuleId: 1 },
@@ -87,7 +87,7 @@ describe('applyRules', () => {
     expect(prisma.shot.updateMany).not.toHaveBeenCalled();
   });
 
-  it("unhides what no rule claims any more", async () => {
+  it('unhides what no rule claims any more', async () => {
     vi.mocked(prisma.visibilityRule.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.shot.findMany).mockResolvedValue([
       { id: 10, code: 'SH010', name: 'SH010', hiddenRuleId: 4 },
@@ -114,11 +114,11 @@ describe('applyRules', () => {
     );
   });
 
-  it("a project rule does not apply to other projects", async () => {
+  it('a project rule does not apply to other projects', async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([{ id: 7 }, { id: 8 }] as never);
     vi.mocked(prisma.visibilityRule.findMany).mockResolvedValue([rule({ projectId: 8 })] as never);
     vi.mocked(prisma.shot.findMany)
-            // Project 7: the rule does not concern it, its shot stays visible.
+      // Project 7: the rule does not concern it, its shot stays visible.
       .mockResolvedValueOnce([{ id: 70, code: 'SH_TMP', name: 'SH_TMP', hiddenRuleId: null }] as never)
       .mockResolvedValueOnce([{ id: 80, code: 'SH_TMP', name: 'SH_TMP', hiddenRuleId: null }] as never);
 
@@ -158,7 +158,7 @@ describe('createRule', () => {
 
   it('refuses an unknown type', async () => {
     await expect(
-            // @ts-expect-error: a caller bypassing the route's Zod schema.
+      // @ts-expect-error: a caller bypassing the route's Zod schema.
       createRule(1, 3, { entityType: 'version', matchType: 'exact', pattern: 'x' }),
     ).rejects.toThrow();
     expect(prisma.visibilityRule.create).not.toHaveBeenCalled();
@@ -166,7 +166,7 @@ describe('createRule', () => {
 });
 
 describe('setHidden', () => {
-  it("hides by hand without assigning a rule: this is what protects the decision", async () => {
+  it('hides by hand without assigning a rule: this is what protects the decision', async () => {
     await setHidden('shot', 42, true, 'plan de recette');
     expect(prisma.shot.updateMany).toHaveBeenCalledWith({
       where: { id: { in: [42] } },

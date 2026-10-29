@@ -74,7 +74,7 @@ describe('GET /api/comments/export', () => {
     expect(res.headers['x-notes-truncated']).toBe('1');
   });
 
-  it('asserts access to the scope's project before producing anything', async () => {
+  it("asserts access to the scope's project before producing anything", async () => {
     rbac.assertProjectAccess.mockRejectedValue(forbidden('No access to this project'));
     const res = await request(app).get('/api/comments/export?scope=playlist&id=3&format=edl');
     expect(res.status).toBe(403);

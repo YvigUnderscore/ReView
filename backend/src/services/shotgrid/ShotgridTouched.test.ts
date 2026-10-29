@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // `vi.mock` is hoisted to the top of the file: the double must be too.
 const { emitToProject, isWorkerProcess, publishWorkerEvent } = vi.hoisted(() => ({
   emitToProject: vi.fn(),
-    // By default we sit in the web process: that is the path these cases describe.
+  // By default we sit in the web process: that is the path these cases describe.
   isWorkerProcess: vi.fn(() => false),
   publishWorkerEvent: vi.fn(),
 }));
@@ -62,13 +62,13 @@ describe('TouchedEntities', () => {
 
     expect(touched.total).toBe(DETAIL_LIMIT + 1);
     expect(touched.detailed).toBe(false);
-        // Nothing to replay: this is precisely the burst we are removing.
+    // Nothing to replay: this is precisely the burst we are removing.
     expect(touched.detail()).toEqual([]);
     expect(touched.summary().counts).toEqual({ shot: DETAIL_LIMIT + 1 });
   });
 
   it('counts notes and playlists without inventing a fine-grained event for them', () => {
-        // The client listens to nothing for these two families: they only travel as a count, and it is that count which tells it to reload comments and sessions.
+    // The client listens to nothing for these two families: they only travel as a count, and it is that count which tells it to reload comments and sessions.
     const touched = new TouchedEntities();
     touched.add('comment', 3);
     touched.add('playlist', 4);
@@ -117,7 +117,7 @@ describe('flushTouched', () => {
   });
 
   it('emits only a summary when the pass overflowed', () => {
-        // This is the fix: a full pass no longer sends twelve thousand events.
+    // This is the fix: a full pass no longer sends twelve thousand events.
     const touched = new TouchedEntities();
     for (let i = 0; i <= DETAIL_LIMIT; i += 1) touched.add('shot', i);
 

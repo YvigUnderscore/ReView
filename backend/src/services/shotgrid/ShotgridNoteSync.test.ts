@@ -6,7 +6,7 @@ import { frameLabel, isFromReview, mediaFrameRate, stripHtml } from './ShotgridN
 
 describe('frameLabel', () => {
   it('gives the frame when the rate is known', () => {
-        // A review feedback is discussed in frames, not in seconds.
+    // A review feedback is discussed in frames, not in seconds.
     expect(frameLabel(4, 25)).toBe('frame 100');
     expect(frameLabel(2.5, 24)).toBe('frame 60');
   });
@@ -48,7 +48,7 @@ describe('stripHtml', () => {
 
 describe('isFromReview', () => {
   it('recognizes a note born in ReView', () => {
-        // Without this mark, the note would come back as a duplicate of its own comment.
+    // Without this mark, the note would come back as a duplicate of its own comment.
     expect(isFromReview('Retour\n[ReView] Admin')).toBe(true);
     expect(isFromReview('Note écrite dans ShotGrid')).toBe(false);
     expect(isFromReview(null)).toBe(false);

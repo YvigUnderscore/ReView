@@ -21,7 +21,7 @@ vi.mock('../StorageService', () => ({ storage: {} }));
 vi.mock('./ShotgridNoteAttachments', () => ({ importNoteAttachments: vi.fn(async () => 0) }));
 vi.mock('./ShotgridPullService', () => ({
   touch: (...args: unknown[]) => touch(...args),
-    // Nothing is removed from the site in these scenarios: the confirmation returns an empty list.
+  // Nothing is removed from the site in these scenarios: the confirmation returns an empty list.
   confirmGone: vi.fn(async () => []),
 }));
 vi.mock('./shotgridSettings', () => ({ can: () => true }));
@@ -97,7 +97,7 @@ describe('pullNotes', () => {
   });
 
   it('discards a note coming from another project of the site', async () => {
-        // The filter goes with the request, but it is the recheck that acts as the bulwark.
+    // The filter goes with the request, but it is the recheck that acts as the bulwark.
     const { ctx, journal } = contextWith([note(501, 78)]);
     await pullNotes(ctx, { onlySgIds: [501] });
 
@@ -117,7 +117,7 @@ describe('pullNotes', () => {
   });
 
   it('ignores a note born in ReView', async () => {
-        // It would come back as a duplicate of its own comment.
+    // It would come back as a duplicate of its own comment.
     const { ctx } = contextWith([{ ...note(501), content: 'Retour\n[ReView] Admin' }]);
     await pullNotes(ctx, { onlySgIds: [501] });
     expect(comment.create).not.toHaveBeenCalled();

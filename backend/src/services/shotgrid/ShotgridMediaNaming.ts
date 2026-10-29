@@ -32,8 +32,8 @@ export async function realignMediaNames(
   for (const item of media) {
     const meta = (item.metadata ?? {}) as Record<string, unknown>;
     if (meta.importedFromShotgrid !== true) continue;
-        // The name of the delivered file, if it was kept; otherwise the current name is authoritative for the
-        // extension: it is the one that comes from the site.
+    // The name of the delivered file, if it was kept; otherwise the current name is authoritative for the
+    // extension: it is the one that comes from the site.
     const sourceFilename = typeof meta.sourceFilename === 'string' ? meta.sourceFilename : item.originalName;
     const wanted = sgMediaName({ code, sourceFilename, mimeType: item.mimeType });
     if (wanted === item.originalName) continue;
@@ -41,7 +41,7 @@ export async function realignMediaNames(
       where: { id: item.id },
       data: {
         originalName: wanted,
-                // The first rename records the original name, otherwise it would be lost.
+        // The first rename records the original name, otherwise it would be lost.
         metadata: { ...meta, sourceFilename } as never,
       },
     });

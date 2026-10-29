@@ -48,7 +48,7 @@ export async function ensure(projectId: number, sequenceId: number | null) {
   try {
     return await prisma.timeline.create({ data: { projectId, sequenceId } });
   } catch {
-        // Two tabs open at the same time: the loser picks up the winner's timeline.
+    // Two tabs open at the same time: the loser picks up the winner's timeline.
     const winner = await prisma.timeline.findFirst({ where: { projectId, sequenceId } });
     if (!winner) throw badRequest('Montage indisponible', 'TIMELINE_UNAVAILABLE');
     return winner;
@@ -92,14 +92,14 @@ async function orderedShots(
       projectId,
       deletedAt: null,
       omitted: false,
-            // A hidden shot does not go into the cut. Distinct from `omitted`, which is a visible editorial decision shared by all: hiding, for its part, removes the item everywhere.
+      // A hidden shot does not go into the cut. Distinct from `omitted`, which is a visible editorial decision shared by all: hiding, for its part, removes the item everywhere.
       hiddenAt: null,
-            // A hidden sequence takes its shots with it: without this condition, the timeline of the whole film would replay the shots of a sequence that appears nowhere any more.
-            // The `sequenceId: null` branch is indispensable — a relation filter alone would discard the shots that have no sequence at all, yet which belong in the timeline.
+      // A hidden sequence takes its shots with it: without this condition, the timeline of the whole film would replay the shots of a sequence that appears nowhere any more.
+      // The `sequenceId: null` branch is indispensable — a relation filter alone would discard the shots that have no sequence at all, yet which belong in the timeline.
       OR: [{ sequenceId: null }, { sequence: { hiddenAt: null } }],
       ...(sequenceId !== null ? { sequenceId } : {}),
     },
-        // Shots outside any sequence go to the end of the list: Postgres puts NULLs last on an ascending sort, as the `MAX_SAFE_INTEGER` rank did.
+    // Shots outside any sequence go to the end of the list: Postgres puts NULLs last on an ascending sort, as the `MAX_SAFE_INTEGER` rank did.
     orderBy: [
       { sequence: { order: 'asc' } },
       { sequence: { code: 'asc' } },
@@ -164,10 +164,10 @@ export interface TimelineClip {
   departmentName: string | null;
   mediaId: number | null;
   mediaName: string | null;
-    /**
-     * Nature of the retained media. The timeline favours video (`preferPlayable`), but a shot whose only published version is an image does land here — and the player must
-     * know it: served to a `<video>` tag, a JPEG does not demultiplex and playback stays stuck on the shot without any message.
-     */
+  /**
+   * Nature of the retained media. The timeline favours video (`preferPlayable`), but a shot whose only published version is an image does land here — and the player must
+   * know it: served to a `<video>` tag, a JPEG does not demultiplex and playback stays stuck on the shot without any message.
+   */
   mediaKind: MediaKind | null;
   thumbnailUrl: string | null;
   placeholder: boolean;
@@ -179,7 +179,7 @@ export interface TimelineView {
   projectId: number;
   sequenceId: number | null;
   sequenceCode: string | null;
-    /** Null = never renamed: the interface displays its translated label. */
+  /** Null = never renamed: the interface displays its translated label. */
   name: string | null;
   department: string | null;
   departments: Department[];
@@ -189,7 +189,7 @@ export interface TimelineView {
   gapCount: number;
   updatedAt: Date;
   latestRevision: number | null;
-    /** The shot cap has bitten: the timeline shown is not the whole timeline. */
+  /** The shot cap has bitten: the timeline shown is not the whole timeline. */
   truncated: boolean;
 }
 
@@ -260,7 +260,7 @@ export async function resolve(timelineId: number): Promise<TimelineView> {
 export interface ExportSegment {
   shotCode: string;
   duration: number;
-    /** Storage key to encode — null for a title card. */
+  /** Storage key to encode — null for a title card. */
   storageKey: string | null;
 }
 
@@ -370,11 +370,11 @@ export async function snapshot(user: SessionUser, timelineId: number, note?: str
 }
 
 export interface ExportState {
-    /** A master is available for download. */
+  /** A master is available for download. */
   ready: boolean;
   url: string | null;
   size: number | null;
-    /** State of the job in progress, if any (`waiting`, `active`, `failed`...). */
+  /** State of the job in progress, if any (`waiting`, `active`, `failed`...). */
   state: string | null;
 }
 
@@ -390,7 +390,7 @@ export async function exportState(timelineId: number): Promise<ExportState> {
     const stat = await storage.statObject(key);
     return { ready: true, url: await storage.getPresignedGetUrl(key), size: stat.size, state };
   } catch {
-        // Object absent: no export has yet succeeded for this timeline.
+    // Object absent: no export has yet succeeded for this timeline.
     return { ready: false, url: null, size: null, state };
   }
 }
@@ -399,7 +399,7 @@ export async function exportState(timelineId: number): Promise<ExportState> {
 export async function requestExport(user: SessionUser, timelineId: number): Promise<ExportState> {
   assertCanManage(user);
   const previous = await timelineExportQueue.getJob(timelineExportJobId(timelineId));
-    // A completed or failed job keeps its identifier: without a purge, relaunching it would be ignored.
+  // A completed or failed job keeps its identifier: without a purge, relaunching it would be ignored.
   if (previous && ['completed', 'failed'].includes(await previous.getState())) await previous.remove();
   await enqueueTimelineExport({ timelineId, requestedById: user.id });
   return exportState(timelineId);

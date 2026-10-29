@@ -56,8 +56,8 @@ function assertShape(input: RuleInput): void {
     throw badRequest('Unknown entity type for a visibility rule', 'BAD_ENTITY_TYPE');
   if (!MATCH_TYPES.includes(input.matchType))
     throw badRequest('Unknown match type for a visibility rule', 'BAD_MATCH_TYPE');
-    // Compiles to reject an invalid or too slow expression right away: this is the only moment the admin
-    // is there to fix it.
+  // Compiles to reject an invalid or too slow expression right away: this is the only moment the admin
+  // is there to fix it.
   compileRule({ ...input, ignoreCase: input.ignoreCase ?? true });
 }
 
@@ -67,8 +67,8 @@ export async function listRules(studioId: number, projectId?: number | null): Pr
   return prisma.visibilityRule.findMany({
     where: {
       studioId,
-            // A studio rule applies to all its projects: a project's list therefore shows both levels, otherwise
-            // the admin would not understand why a shot stays hidden.
+      // A studio rule applies to all its projects: a project's list therefore shows both levels, otherwise
+      // the admin would not understand why a shot stays hidden.
       ...(projectId === undefined ? {} : { OR: [{ projectId: null }, { projectId }] }),
     },
     orderBy: [{ projectId: 'asc' }, { entityType: 'asc' }, { pattern: 'asc' }],
@@ -132,8 +132,8 @@ export async function deleteRule(studioId: number, id: number): Promise<ApplyRes
   const existing = await prisma.visibilityRule.findFirst({ where: { id, studioId } });
   if (!existing) throw notFound('Visibility rule not found');
   await prisma.visibilityRule.delete({ where: { id } });
-    // Recalculation lifts the hiding of whatever no rule claims any more: it is that, and not the deletion,
-    // that makes items reappear.
+  // Recalculation lifts the hiding of whatever no rule claims any more: it is that, and not the deletion,
+  // that makes items reappear.
   return applyRules(studioId);
 }
 
@@ -214,8 +214,8 @@ interface Candidate {
 async function candidatesOf(projectId: number, type: Exclude<VisibilityType, 'all'>): Promise<Candidate[]> {
   const where = {
     projectId,
-        // What is in the trash is already no longer displayed: hiding it would change nothing, and
-        // re-reading it on every pass would cost on old projects.
+    // What is in the trash is already no longer displayed: hiding it would change nothing, and
+    // re-reading it on every pass would cost on old projects.
     deletedAt: null,
     OR: [{ hiddenAt: null }, { hiddenRuleId: { not: null } }],
   };
@@ -261,7 +261,7 @@ export async function applyRules(studioId: number, projectId?: number): Promise<
   let hidden = 0;
   let revealed = 0;
   for (const project of projects) {
-        // A studio rule applies everywhere; a project rule applies only in its own project.
+    // A studio rule applies everywhere; a project rule applies only in its own project.
     const scoped = rules.filter((r) => r.projectId === null || r.projectId === project.id);
     for (const type of Object.keys(TABLES) as Exclude<VisibilityType, 'all'>[]) {
       const applicable = scoped.filter((r) => coversType(r.entityType, type));
@@ -278,8 +278,8 @@ async function applyToType(
   type: Exclude<VisibilityType, 'all'>,
   rules: VisibilityRule[],
 ): Promise<ApplyResult> {
-    // Nothing to hide, but perhaps something to unhide: the items a vanished rule still holds. Not reading the table in
-    // this case would leave an orphaned hiding for life.
+  // Nothing to hide, but perhaps something to unhide: the items a vanished rule still holds. Not reading the table in
+  // this case would leave an orphaned hiding for life.
   const compiled = rules.map((rule) => ({ id: rule.id, test: safeCompile(rule) }));
 
   const rows = await candidatesOf(projectId, type);
@@ -290,16 +290,16 @@ async function applyToType(
     const candidates = matchCandidates(row);
     const matching = compiled.find((rule) => candidates.some(rule.test));
     if (matching) {
-            // Already hidden by the same rule: rewrite nothing, otherwise every pass would touch `updatedAt` and
-            // make ShotGrid synchronization believe ReView had changed.
+      // Already hidden by the same rule: rewrite nothing, otherwise every pass would touch `updatedAt` and
+      // make ShotGrid synchronization believe ReView had changed.
       if (row.hiddenRuleId !== matching.id) toHide.set(row.id, matching.id);
     } else if (row.hiddenRuleId !== null) {
       toReveal.push(row.id);
     }
   }
 
-    // Grouped by rule: hiding two thousand shots one by one kept the database busy until an entire ShotGrid
-    // import finished.
+  // Grouped by rule: hiding two thousand shots one by one kept the database busy until an entire ShotGrid
+  // import finished.
   const byRule = new Map<number, number[]>();
   for (const [id, ruleId] of toHide) byRule.set(ruleId, [...(byRule.get(ruleId) ?? []), id]);
   const now = new Date();

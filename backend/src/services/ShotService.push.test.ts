@@ -31,8 +31,8 @@ beforeEach(() => {
 
 describe('ShotService.update: write to ShotGrid', () => {
   it('queues the status when it changes', async () => {
-        // It went nowhere: the shot changed state in ReView, the site kept the old one, and the
-        // next synchronisation brought the site's value back.
+    // It went nowhere: the shot changed state in ReView, the site kept the old one, and the
+    // next synchronisation brought the site's value back.
     await update(7, 461, { pipelineStatusId: 42 }, 3);
     expect(push.enqueuePush).toHaveBeenCalledWith(461, {
       type: 'shot-status',
@@ -47,8 +47,8 @@ describe('ShotService.update: write to ShotGrid', () => {
   });
 
   it('writes nothing to the site when the status is untouched', async () => {
-        // Renaming a shot must not trigger a status write: the site asked for nothing, and a useless
-        // write makes the timestamps diverge.
+    // Renaming a shot must not trigger a status write: the site asked for nothing, and a useless
+    // write makes the timestamps diverge.
     db.shot.findUnique.mockResolvedValue({ code: 'SH010', sequenceId: 1 });
     db.shot.findFirst.mockResolvedValue(null);
     await update(7, 461, { name: 'Rooftop' }, 3);

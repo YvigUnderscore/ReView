@@ -76,7 +76,7 @@ describe('matches', () => {
     expect(matches(filters({ department: '3' }), item({ departmentIds: [], departmentId: 3 }))).toBe(true);
   });
 
-  it('keeps the kanban\'s single department, where the filtered row is a task', () => {
+  it("keeps the kanban's single department, where the filtered row is a task", () => {
     // A task indeed belongs to *one* step: the kanban only fills this field, and the list of
     // steps traversed makes no sense for it.
     expect(matches(filters({ department: '3' }), item({ departmentId: 3 }))).toBe(true);

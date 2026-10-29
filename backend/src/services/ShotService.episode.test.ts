@@ -40,12 +40,12 @@ describe('episodeWhere', () => {
   });
 
   it('goes through the sequence for a given episode', () => {
-        // A shot does not belong to an episode directly: its sequence carries one.
+    // A shot does not belong to an episode directly: its sequence carries one.
     expect(episodeWhere(4)).toEqual({ sequence: { episodeId: 4 } });
   });
 
   it('"outside any episode" includes shots with no sequence at all', () => {
-        // They are outside any episode by construction: leaving them out would make them unreachable.
+    // They are outside any episode by construction: leaving them out would make them unreachable.
     expect(episodeWhere('none')).toEqual({
       OR: [{ sequenceId: null }, { sequence: { episodeId: null } }],
     });

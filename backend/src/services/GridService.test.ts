@@ -108,7 +108,7 @@ describe('GridService: buildGridRows', () => {
     expect(row!.cells[1]).toMatchObject({ taskId: null, status: null, versionCount: 0 });
   });
 
-  it('carries up the sequence, the episode and the shot\'s own status', () => {
+  it("carries up the sequence, the episode and the shot's own status", () => {
     const [row] = buildGridRows([shot()], [], [], departments);
     expect(row).toMatchObject({
       shotId: 10,
@@ -202,7 +202,7 @@ describe('GridService: cell status', () => {
     });
   });
 
-  it('with a reference, returns the studio\'s vocabulary and tint', () => {
+  it("with a reference, returns the studio's vocabulary and tint", () => {
     const status = cellStatusOf(
       task({
         status: TaskStatus.IN_PROGRESS,

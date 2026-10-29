@@ -23,7 +23,7 @@ const ATTACHMENT_FIELDS = [
   'this_file',
   'filename',
   'display_name',
-    // Mandatory: `belongsToProject` refuses any entity whose project it cannot read, and an Attachment is not an out-of-project entity.
+  // Mandatory: `belongsToProject` refuses any entity whose project it cannot read, and an Attachment is not an out-of-project entity.
   'project',
 ];
 
@@ -120,13 +120,13 @@ async function fetchOne(
   const rec = await ctx.client.findById('Attachment', sgId, ATTACHMENT_FIELDS);
   if (!rec) return null;
 
-    // The same requirement as everywhere else: nothing enters without its project being verified.
+  // The same requirement as everywhere else: nothing enters without its project being verified.
   if (!belongsToProject(rec, ctx.scope).ok) {
     ctx.journal.count('guard', 'skipped');
     return null;
   }
 
-    // The dedicated endpoint first, the address carried by the field next: depending on the site and the field, one or the other answers.
+  // The dedicated endpoint first, the address carried by the field next: depending on the site and the field, one or the other answers.
   const url = (await ctx.client.downloadUrl('Attachment', sgId, 'this_file')) ?? attachmentUrl(rec.this_file);
   if (!url) return null;
 
@@ -152,8 +152,8 @@ async function fetchOne(
 
   const contentType = storedContentType(type, name);
 
-    // The path cannot follow the `comments/attachments/{userId}` convention: an imported note has no local author. It is filed under the original note,
-    // which stays classified by `AdminStorageService` and says where the file came from.
+  // The path cannot follow the `comments/attachments/{userId}` convention: an imported note has no local author. It is filed under the original note,
+  // which stays classified by `AdminStorageService` and says where the file came from.
   const key = `comments/attachments/shotgrid/${commentId}/${sgId}-${sanitize(name)}`;
   await storage.putObject(key, Buffer.concat(chunks), contentType);
   return { key, name, contentType };

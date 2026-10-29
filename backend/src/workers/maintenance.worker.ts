@@ -37,22 +37,22 @@ async function runPurge(): Promise<void> {
   const days = await getNumericSetting(SETTING_KEYS.TRASH_RETENTION_DAYS);
   const purged = await purgeExpiredTrash(days);
   if (purged > 0) logger.info(`[Trash] purge automatique : ${purged} élément(s) supprimé(s) définitivement.`);
-    // Purge of obsolete derivatives (37.H) — no-op if disabled in the admin.
+  // Purge of obsolete derivatives (37.H) — no-op if disabled in the admin.
   await purgeObsoleteDerived();
-    // Abandoned uploads: without this pass, five accidents were enough to block an account.
+  // Abandoned uploads: without this pass, five accidents were enough to block an account.
   const uploads = await purgeStaleUploads();
   if (uploads.purged > 0)
     logger.info(`[Uploads] purge automatique : ${uploads.purged} envoi(s) abandonné(s) nettoyé(s).`);
   const keys = await purgeIdempotencyRecords();
   if (keys > 0) logger.info(`[API v1] purge : ${keys} clé(s) d'idempotence.`);
-    // Logs its own result (and records it in the audit when it has deleted).
+  // Logs its own result (and records it in the audit when it has deleted).
   await sweepRetention();
-    // Media frozen in PROCESSING by a killed worker: the sweep lived in the startup of the API process, whereas the process that dies is the worker — `restart: always`
-    // relaunches it alone, without touching the API, and the media kept its spinner indefinitely. Placed at the end of the pass: a reconciliation in error must not take
-    // down the purges already done.
+  // Media frozen in PROCESSING by a killed worker: the sweep lived in the startup of the API process, whereas the process that dies is the worker — `restart: always`
+  // relaunches it alone, without touching the API, and the media kept its spinner indefinitely. Placed at the end of the pass: a reconciliation in error must not take
+  // down the purges already done.
   const reconciled = await reconcileStuckMedia();
   if (reconciled > 0)
-        // The count goes into a context field rather than into a template: a log is filtered on a field, and `check-untranslated` counts the template fragments.
+    // The count goes into a context field rather than into a template: a log is filtered on a field, and `check-untranslated` counts the template fragments.
     logger.info({ reconciled }, '[reconcile] médias figés en PROCESSING passés en échec');
 }
 
@@ -77,7 +77,7 @@ export const maintenanceWorker = new Worker<MaintenanceJobData, void, string>(
         logger.warn({ data: job.data }, '[maintenance.worker] type de travail inconnu');
     }
   },
-    // A single appointment at a time: these jobs sweep the database, parallelizing them would gain nothing and would compete with the transcodes.
+  // A single appointment at a time: these jobs sweep the database, parallelizing them would gain nothing and would compete with the transcodes.
   { connection: redisConnectionOptions, autorun: false, concurrency: 1 },
 );
 

@@ -85,7 +85,7 @@ describe('POST /api/shotgrid/webhook/:token', () => {
    * The connection test is the very first exchange: it is what said "Failed" in the site's console while
    * nothing explained why.
    */
-  it('accepts the connection test signed with the connection's secret', async () => {
+  it("accepts the connection test signed with the connection's secret", async () => {
     const res = await post(TEST_CONNECTION, sign(TEST_CONNECTION));
 
     expect(res.status).toBe(202);

@@ -21,7 +21,7 @@ const person = (over: Partial<CrewPerson> & { sgId: number }): CrewPerson => ({
   linkedByHand: false,
   projectRole: null,
   userRole: null,
-    // Department coming from the site (batch 10): the factory follows the shape of `CrewPerson`.
+  // Department coming from the site (batch 10): the factory follows the shape of `CrewPerson`.
   sgDepartment: null,
   department: null,
   ...over,
@@ -29,12 +29,12 @@ const person = (over: Partial<CrewPerson> & { sgId: number }): CrewPerson => ({
 
 describe('eligibility', () => {
   it('refuses a person without an address', () => {
-        // There is nothing to send the invitation to.
+    // There is nothing to send the invitation to.
     expect(eligibility({ email: null, sgStatus: 'act' })).toBe(false);
   });
 
   it('refuses a person deactivated on the site', () => {
-        // They left the studio: opening access would say the opposite of the site.
+    // They left the studio: opening access would say the opposite of the site.
     expect(eligibility({ email: 'a@b.c', sgStatus: 'dis' })).toBe(false);
   });
 
@@ -88,7 +88,7 @@ describe('planInvites', () => {
   });
 
   it('refuses the whole batch when the actor cannot create accounts', () => {
-        // Refuse up front rather than create three and fail on the fourth.
+    // Refuse up front rather than create three and fail on the fourth.
     expect(() => planInvites(crew, [1, 2], { canCreateAccounts: false })).toThrow();
   });
 

@@ -29,8 +29,8 @@ vi.mock('@socket.io/redis-adapter', () => ({ createAdapter: vi.fn(() => vi.fn())
 vi.mock('../lib/redis', () => ({
   createRedisClient: vi.fn(() => ({ quit: vi.fn(async () => undefined), disconnect: vi.fn() })),
   enableRedisTransport: vi.fn(),
-    // Immediate revocation channel (A3-02): this file does not exercise it, but `initSocket`
-    // subscribes to it; without the double the connection would not even open.
+  // Immediate revocation channel (A3-02): this file does not exercise it, but `initSocket`
+  // subscribes to it; without the double the connection would not even open.
   subscribeRedis: vi.fn(),
 }));
 vi.mock('../lib/workerEvents', () => ({ subscribeWorkerEvents: vi.fn() }));
@@ -93,8 +93,8 @@ const fakeSocket = () => {
     leave: vi.fn(async () => undefined),
     to: vi.fn(() => ({ emit: vi.fn() })),
     disconnect: vi.fn(),
-        // Rate guard (A5-05): set at the head of `io.on('connection')`. This file does not
-        // exercise it: the captured middleware is never replayed, so nothing is filtered here.
+    // Rate guard (A5-05): set at the head of `io.on('connection')`. This file does not
+    // exercise it: the captured middleware is never replayed, so nothing is filtered here.
     use: vi.fn(),
     on: vi.fn((event: string, handler: Listener) => {
       listeners.set(event, handler);
@@ -143,7 +143,7 @@ describe('join_project: the role is no longer the one from the handshake', () =>
     expect(socket.join).toHaveBeenCalledWith('project_42');
   });
 
-  it('checks access with the CURRENT role, not the token\'s', async () => {
+  it("checks access with the CURRENT role, not the token's", async () => {
     const socket = connect();
     getAuthUser.mockResolvedValue({
       id: 7,
@@ -160,8 +160,8 @@ describe('join_project: the role is no longer the one from the handshake', () =>
     isSessionActive.mockResolvedValue(false);
     await joinProject(socket, 42);
     expect(socket.disconnect).toHaveBeenCalledWith(true);
-        // `socket.join('user_7')` happens at connection: it is the project room that must not
-        // be joined.
+    // `socket.join('user_7')` happens at connection: it is the project room that must not
+    // be joined.
     expect(socket.join).not.toHaveBeenCalledWith('project_42');
     expect(checkProjectAccess).not.toHaveBeenCalled();
   });

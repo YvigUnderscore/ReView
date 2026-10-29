@@ -20,7 +20,7 @@ import type { ShotgridWriter } from './ShotgridWriter';
 const PLAYLIST_FIELDS = ['code', 'description', 'versions', 'created_at', 'updated_at', 'project'];
 
 export interface PlaylistPullOptions {
-    /** Specific playlists to re-read (processing an event). */
+  /** Specific playlists to re-read (processing an event). */
   onlySgIds?: number[];
 }
 
@@ -33,7 +33,7 @@ export interface PlaylistPullOptions {
 export async function pullPlaylists(ctx: PullContext, options: PlaylistPullOptions = {}): Promise<void> {
   if (!can(ctx.settings, 'playlists', 'read')) return;
 
-    // Cumulative restriction: the project filter stays in place even when re-reading only a playlist designated by an event, and each record is rechecked.
+  // Cumulative restriction: the project filter stays in place even when re-reading only a playlist designated by an event, and each record is rechecked.
   const filters: Array<[string, string, unknown]> = [projectFilter(ctx.scope.sgProjectId)];
   if (options.onlySgIds?.length) filters.push(['id', 'in', options.onlySgIds]);
 
@@ -59,12 +59,12 @@ export async function pullPlaylists(ctx: PullContext, options: PlaylistPullOptio
       .map((r) => versionLinks.get(r.id)?.localId)
       .filter((id): id is number => typeof id === 'number');
 
-        /*
-         * Find the local playlist, in this order: the link, then the name.
-         *
-         * The fallback on the name ALSO applies when the link exists: it may designate a playlist since deleted, and a blind creation would then hit the
-         * `(projectId, name)` constraint: the whole synchronization stopped for a playlist erased by hand months earlier.
-         */
+    /*
+     * Find the local playlist, in this order: the link, then the name.
+     *
+     * The fallback on the name ALSO applies when the link exists: it may designate a playlist since deleted, and a blind creation would then hit the
+     * `(projectId, name)` constraint: the whole synchronization stopped for a playlist erased by hand months earlier.
+     */
     const link = playlistLinks.get(record.id);
     const linked = link ? await prisma.playlist.findUnique({ where: { id: link.localId } }) : null;
     const byName = await prisma.playlist.findUnique({
@@ -72,10 +72,10 @@ export async function pullPlaylists(ctx: PullContext, options: PlaylistPullOptio
     });
     const existing = linked ?? byName;
 
-        /*
-         * Rename on the ShotGrid side to a name already held by ANOTHER local playlist: we keep the current name rather than fail the batch. Merging two
-         * sessions or overwriting one is not a decision a synchronization takes on its own; the conflict is visible in the journal and is settled by hand.
-         */
+    /*
+     * Rename on the ShotGrid side to a name already held by ANOTHER local playlist: we keep the current name rather than fail the batch. Merging two
+     * sessions or overwriting one is not a decision a synchronization takes on its own; the conflict is visible in the journal and is settled by hand.
+     */
     const renameCollides = Boolean(linked && byName && byName.id !== linked.id);
     if (renameCollides) {
       ctx.journal.count('playlists', 'skipped');
@@ -94,7 +94,7 @@ export async function pullPlaylists(ctx: PullContext, options: PlaylistPullOptio
         })
       : await prisma.playlist.create({ data: { projectId: ctx.connection.projectId, name } });
 
-        // The content is replaced, not completed: a version removed on the ShotGrid side must disappear from the session, and running twice must duplicate nothing.
+    // The content is replaced, not completed: a version removed on the ShotGrid side must disappear from the session, and running twice must duplicate nothing.
     await prisma.playlistItem.deleteMany({ where: { playlistId: playlist.id } });
     if (versionIds.length > 0) {
       await prisma.playlistItem.createMany({
@@ -123,16 +123,16 @@ const PLAYLIST_PUSH_FIELDS = ['id', 'code', 'project', 'versions'];
 export interface PlaylistPushContext {
   connectionId: number;
   sgProjectId: number;
-    /**
-     * Name of the linked project, when the caller has it at hand. It does not enter the membership decision (`belongsToProject` only rules on the identifier),
-     * and only serves to complete the scope shared with the rest of the file.
-     */
+  /**
+   * Name of the linked project, when the caller has it at hand. It does not enter the membership decision (`belongsToProject` only rules on the identifier),
+   * and only serves to complete the scope shared with the rest of the file.
+   */
   sgProjectName?: string | null;
-    /** Read-only: the remote playlist is re-read before its versions are merged. */
+  /** Read-only: the remote playlist is re-read before its versions are merged. */
   client: {
     findById: (entity: string, id: number, fields: string[]) => Promise<SgRecord | null>;
   };
-    /** Every write goes through here: segregation and template project included. */
+  /** Every write goes through here: segregation and template project included. */
   writer: Pick<ShotgridWriter, 'create' | 'update'>;
   asUserLogin: string | null;
 }
@@ -167,12 +167,12 @@ export function mergePlaylistVersions(params: {
   const merged: SgRef[] = [];
 
   for (const entry of remote) {
-        // Unknown to ReView (or of a type other than Version): untouchable, at its place.
+    // Unknown to ReView (or of a type other than Version): untouchable, at its place.
     if (entry.type !== 'Version' || !known.has(entry.id)) {
       merged.push({ type: entry.type, id: entry.id });
       continue;
     }
-        // A slot governed by ReView: it receives the session's next version, or disappears if the session has no more of them (removal done in ReView).
+    // A slot governed by ReView: it receives the session's next version, or disappears if the session has no more of them (removal done in ReView).
     const next = pending.shift();
     if (next !== undefined) merged.push({ type: 'Version', id: next });
   }
@@ -199,11 +199,11 @@ export async function pushPlaylist(ctx: PlaylistPushContext, playlistId: number)
   });
   if (!playlist) return null;
 
-    /*
-     * A single read of the correspondence table serves two needs: translating the session's versions, and knowing which ones ReView knows. The links are carried by
-     * the connection, itself attached to a single project: this set therefore contains only versions of the linked project, which makes it the right boundary for
-     * deciding what ReView is entitled to remove over there.
-     */
+  /*
+   * A single read of the correspondence table serves two needs: translating the session's versions, and knowing which ones ReView knows. The links are carried by
+   * the connection, itself attached to a single project: this set therefore contains only versions of the linked project, which makes it the right boundary for
+   * deciding what ReView is entitled to remove over there.
+   */
   const versionLinks = await mapLocalToSg(ctx.connectionId, 'version');
   const known = new Set<number>();
   for (const link of versionLinks.values()) {
@@ -227,7 +227,7 @@ export async function pushPlaylist(ctx: PlaylistPushContext, playlistId: number)
     );
   }
 
-    // No `project` here: `ShotgridWriter` sets it and re-reads what the site wrote.
+  // No `project` here: `ShotgridWriter` sets it and re-reads what the site wrote.
   const created = await ctx.writer.create('Playlist', {
     code: playlist.name,
     versions: localSgIds.map((id) => ({ type: 'Version', id })),
@@ -260,18 +260,18 @@ async function updateRemotePlaylist(
 ): Promise<number | null> {
   const remote = await ctx.client.findById('Playlist', sgId, PLAYLIST_PUSH_FIELDS);
   if (!remote) {
-        // The link survives the playlist it designates. Recreating it would put back into the studio a session someone deleted: we stop and say so.
+    // The link survives the playlist it designates. Recreating it would put back into the studio a session someone deleted: we stop and say so.
     logger.warn({ playlistId: playlist.id, sgId }, 'Playlist ShotGrid introuvable — écriture abandonnée');
     return null;
   }
 
-    // Segregation and the refusal of template projects are no longer copied here: it is `ShotgridWriter` that applies them, just before writing, for all the
-    // file's writes. Two copies of one rule end up diverging: this one was one of them.
+  // Segregation and the refusal of template projects are no longer copied here: it is `ShotgridWriter` that applies them, just before writing, for all the
+  // file's writes. Two copies of one rule end up diverging: this one was one of them.
   const remoteRefs = asEntityRefs(remote.versions);
   const merged = mergePlaylistVersions({ remote: remoteRefs, local: localSgIds, known });
   const preserved = merged.filter((ref) => ref.type !== 'Version' || !known.has(ref.id)).length;
 
-    // Nothing new to say: not writing avoids a round trip of events with the site, and a modification trace in the studio's history for an empty pass.
+  // Nothing new to say: not writing avoids a round trip of events with the site, and a modification trace in the studio's history for an empty pass.
   if (asString(remote.code) === playlist.name && sameRefs(remoteRefs, merged)) {
     logger.info({ playlistId: playlist.id, sgId }, 'Playlist ShotGrid déjà à jour — aucune écriture');
     return sgId;

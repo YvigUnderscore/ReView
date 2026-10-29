@@ -32,15 +32,15 @@ describe('storedContentType', () => {
   });
 
   it('is not fooled by an active extension', () => {
-        // Misleading extension and silent transport: `guessType` does not know `.svg`, but the allowlist remains the last word.
+    // Misleading extension and silent transport: `guessType` does not know `.svg`, but the allowlist remains the last word.
     expect(storedContentType(undefined, 'annot.svg')).toBe('application/octet-stream');
   });
 });
 
 describe('guessType', () => {
-  it("gives an image type, otherwise the attachment has no thumbnail", () => {
-        // The thread only shows the preview if the type starts with `image/`: an image filed as `application/octet-stream` becomes a file line to download,
-        // and the annotation coming from ShotGrid becomes invisible again.
+  it('gives an image type, otherwise the attachment has no thumbnail', () => {
+    // The thread only shows the preview if the type starts with `image/`: an image filed as `application/octet-stream` becomes a file line to download,
+    // and the annotation coming from ShotGrid becomes invisible again.
     expect(guessType('annot.png')).toBe('image/png');
     expect(guessType('ANNOT.PNG')).toBe('image/png');
     expect(guessType('frame.jpeg')).toBe('image/jpeg');
@@ -52,7 +52,7 @@ describe('guessType', () => {
     expect(guessType('brief.pdf')).toBe('application/pdf');
   });
 
-  it("does not invent a type for what it does not know", () => {
+  it('does not invent a type for what it does not know', () => {
     expect(guessType('rendu.exr')).toBe('application/octet-stream');
     expect(guessType('sans-extension')).toBe('application/octet-stream');
   });
@@ -68,8 +68,8 @@ describe('asRefs', () => {
     ).toHaveLength(2);
   });
 
-  it("discards what is not an attachment", () => {
-        // `attachments` may hold something else depending on the site; looking up a Version through the Attachment endpoint would return nothing useful.
+  it('discards what is not an attachment', () => {
+    // `attachments` may hold something else depending on the site; looking up a Version through the Attachment endpoint would return nothing useful.
     expect(asRefs([{ id: 1, type: 'Version' }, { id: 2, type: 'Attachment' }, null])).toEqual([
       { id: 2, type: 'Attachment' },
     ]);
@@ -88,7 +88,7 @@ describe('sanitize', () => {
   });
 
   it('prevents any path traversal', () => {
-        // The key is then used to sign a read URL: letting "../" through there would designate another project's media.
+    // The key is then used to sign a read URL: letting "../" through there would designate another project's media.
     const sale = sanitize('../../media/42/source.exr');
     expect(sale).not.toContain('..');
     expect(sale).not.toContain('/');

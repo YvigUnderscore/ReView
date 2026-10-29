@@ -6,14 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: {
     version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
-        // Project writable by default (38.B): the archive lock queries project.findFirst.
+    // Project writable by default (38.B): the archive lock queries project.findFirst.
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
-        // A version's name now depends on the project: linked or not, and under which parent.
+    // A version's name now depends on the project: linked or not, and under which parent.
     shotgridConnection: { findUnique: vi.fn() },
     task: { findUnique: vi.fn() },
     asset: { findUnique: vi.fn() },
-        // Rights are read from the EFFECTIVE role (38.E): by default, a member without a local role
-        // (hence a contributor on the global role), which the cases below already tested.
+    // Rights are read from the EFFECTIVE role (38.E): by default, a member without a local role
+    // (hence a contributor on the global role), which the cases below already tested.
     projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
   },
 }));
@@ -64,7 +64,7 @@ describe('VersionService.create: automatic version naming', () => {
   });
 
   it('continues above the highest number, never at the version count', async () => {
-        // Counting regressed as soon as a version was deleted: two V03 ended up naming two different pieces of work.
+    // Counting regressed as soon as a version was deleted: two V03 ended up naming two different pieces of work.
     siblings.mockResolvedValue([{ name: 'V01' }, { name: 'V09' }] as never);
     await create(user, 7, { assetId: 5 });
     expect(createVersion).toHaveBeenCalledWith(
@@ -161,7 +161,7 @@ describe('VersionService: effective project role (38.E)', () => {
     );
   });
 
-  it('an ARTIST without local elevation does not publish someone else\'s version (403)', async () => {
+  it("an ARTIST without local elevation does not publish someone else's version (403)", async () => {
     findUnique.mockResolvedValue({ authorId: 99, published: false } as never);
     await expect(update(artist, 7, 1, { status: VersionStatus.PUBLISHED })).rejects.toMatchObject({
       statusCode: 403,
@@ -207,12 +207,12 @@ describe('VersionService: effective project role (38.E)', () => {
 describe('VersionService.list: counting aligned with real visibility (10.C2)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-    /*
-     * This filter used to be guarded by the integration scenario "project flow -> ... -> media", which dropped a draft and
-     * checked that another member did not count it. Since Phase 50 a media is born PUBLISHED (draft mode off by default): that
-     * scenario can no longer produce a draft, and the filter would have no guard there. Here we do not go through the upload:
-     * we check the query emitted, hence the filter itself. It is indeed the clause that is locked, not the database behaviour.
-     */
+  /*
+   * This filter used to be guarded by the integration scenario "project flow -> ... -> media", which dropped a draft and
+   * checked that another member did not count it. Since Phase 50 a media is born PUBLISHED (draft mode off by default): that
+   * scenario can no longer produce a draft, and the filter would have no guard there. Here we do not go through the upload:
+   * we check the query emitted, hence the filter itself. It is indeed the clause that is locked, not the database behaviour.
+   */
   it('counts an unpublished media only for its uploader', async () => {
     siblings.mockResolvedValue([] as never);
 
@@ -227,7 +227,7 @@ describe('VersionService.list: counting aligned with real visibility (10.C2)', (
     });
   });
 
-  it('never returns other people\'s drafts in `draftCount`', async () => {
+  it("never returns other people's drafts in `draftCount`", async () => {
     siblings.mockResolvedValue([{ id: 1, media: [{ id: 9 }] }] as never);
 
     const versions = await list(42, 7);

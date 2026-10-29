@@ -98,7 +98,7 @@ describe('assertNotLastAdmin', () => {
     expect(db.user.count).not.toHaveBeenCalled();
   });
 
-  it('stays silent on a nonexistent account (the 404 is the caller\'s job)', async () => {
+  it("stays silent on a nonexistent account (the 404 is the caller's job)", async () => {
     db.user.findUnique.mockResolvedValue(null);
     await expect(assertNotLastAdmin(404)).resolves.toBeUndefined();
   });
@@ -154,7 +154,7 @@ describe('updateUser: last administrator and deactivation', () => {
     await updateUser(1, 2, { disabled: false });
     expect(updateData()).toEqual({ disabledAt: null });
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'USER_ENABLE' }));
-        // Reactivating cuts nothing: the tokens were already revoked at deactivation.
+    // Reactivating cuts nothing: the tokens were already revoked at deactivation.
     expect(revokeAllCredentials).not.toHaveBeenCalled();
   });
 

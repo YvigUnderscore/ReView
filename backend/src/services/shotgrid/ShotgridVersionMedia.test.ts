@@ -19,7 +19,7 @@ describe('shouldImportMedia', () => {
   });
 
   it('never fetches the media of a version published from ReView', () => {
-        // The reported case: publish here, push to ShotGrid, synchronize — and end up with a second copy in the same version.
+    // The reported case: publish here, push to ShotGrid, synchronize — and end up with a second copy in the same version.
     expect(shouldImportMedia({ ...base, link: { createdFromReview: true } })).toBe(false);
   });
 

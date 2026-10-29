@@ -102,7 +102,7 @@ describe('NotificationService.sendDiscord: timeout (A2-07)', () => {
     expect(loggerMock.warn).toHaveBeenCalledWith({ status: 404 }, expect.any(String));
   });
 
-  it("emits nothing when no valid webhook is configured", async () => {
+  it('emits nothing when no valid webhook is configured', async () => {
     prismaMock.studio.findFirst.mockResolvedValue({ discordWebhookUrl: 'https://evil.test/hook' });
     await sendDiscord('chat.newComment', { project: 4 });
     expect(fetchMock).not.toHaveBeenCalled();

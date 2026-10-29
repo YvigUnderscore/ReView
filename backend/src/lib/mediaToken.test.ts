@@ -49,7 +49,7 @@ describe('mediaToken — expiry', () => {
 });
 
 describe('mediaToken — scope', () => {
-  it("is only valid for the media it names", () => {
+  it('is only valid for the media it names', () => {
     const token = signMediaPlaybackToken(42, 7);
     expect(verifyMediaPlaybackToken(token, 43, 7)).toBe(false);
   });
@@ -59,13 +59,13 @@ describe('mediaToken — scope', () => {
     expect(verifyMediaPlaybackToken(token, 42, 8)).toBe(false);
   });
 
-  it("accepts no other application token, even a well-signed one", () => {
+  it('accepts no other application token, even a well-signed one', () => {
     const access = signAccessToken({ id: 7, email: 'artist@studio.com', role: Role.ARTIST, sid: 'sid-test' });
     expect(verifyMediaPlaybackToken(access, 42, 7)).toBe(false);
     expect(verifyMediaPlaybackToken(signShareSession(42), 42, 7)).toBe(false);
   });
 
-  it("is not accepted as an access token by the authentication middleware", async () => {
+  it('is not accepted as an access token by the authentication middleware', async () => {
     // `authenticate` only admits a payload WITHOUT `kind`: the playback token carries one.
     const { verifyToken } = await import('./jwt');
     const payload = verifyToken(signMediaPlaybackToken(42, 7));

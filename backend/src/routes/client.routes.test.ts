@@ -82,7 +82,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/client/:token/media/:id/url', () => {
-  it('returns the constructor's payload, without rewriting it', async () => {
+  it("returns the constructor's payload, without rewriting it", async () => {
     const res = await request(app).get(`/api/client/${token}/media/128/url`).expect(200);
     expect(res.body).toEqual({ url: 'https://minio/plate?sig' });
   });
@@ -108,7 +108,7 @@ describe('GET /api/client/:token — what the home page lets out', () => {
     });
   });
 
-  it('returns the service's tree and playlists, without rewriting them', async () => {
+  it("returns the service's tree and playlists, without rewriting them", async () => {
     const { listShareMedia, listSharePlaylists } = await import('../services/ClientShareService');
     vi.mocked(listShareMedia).mockResolvedValueOnce({
       media: [{ id: 7 }],
@@ -156,7 +156,7 @@ describe('GET /api/client/:token — what the home page lets out', () => {
   });
 });
 
-describe('POST /api/client/:token/media/:id/comments — the guest's drawing', () => {
+describe("POST /api/client/:token/media/:id/comments — the guest's drawing", () => {
   const post = (body: Record<string, unknown>) =>
     request(app).post(`/api/client/${token}/media/128/comments`).send(body);
   const base = { guestName: 'Client', content: 'Trop sombre' };

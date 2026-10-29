@@ -40,12 +40,12 @@ export class ShotgridWriter {
     return { sgProjectId: this.scope.sgProjectId, sgProjectName: this.scope.sgProjectName };
   }
 
-    /**
-     * Is the target writable? Re-read, segregation, template.
-     *
-     * Returns `false` rather than throwing: a refused write is logged and the synchronization carries on. This is the behaviour that `resolveTarget` and the guard copied
-     * into the playlists already had.
-     */
+  /**
+   * Is the target writable? Re-read, segregation, template.
+   *
+   * Returns `false` rather than throwing: a refused write is logged and the synchronization carries on. This is the behaviour that `resolveTarget` and the guard copied
+   * into the playlists already had.
+   */
   private async targetWritable(sgType: string, sgId: number): Promise<boolean> {
     const remote = await this.scope.client.findById(sgType, sgId, GUARD_FIELDS);
     if (!remote) {
@@ -67,9 +67,9 @@ export class ShotgridWriter {
     return true;
   }
 
-    /**
-     * Modifies an existing entity. `null` when the write was refused — the caller has nothing more to do, the refusal is already logged.
-     */
+  /**
+   * Modifies an existing entity. `null` when the write was refused — the caller has nothing more to do, the refusal is already logged.
+   */
   async update(
     sgType: string,
     sgId: number,
@@ -80,14 +80,14 @@ export class ShotgridWriter {
     return this.scope.client.unsafeUpdate(sgType, sgId, data, options);
   }
 
-    /**
-     * Creates an entity **in the linked project**.
-     *
-     * The `project` is set here and nowhere else: a caller can neither forget it nor target another one. A payload carrying a different one is a programming error,
-     * not data to arbitrate — we throw.
-     *
-     * The re-read that follows is not superstition: it is the site that decides what it actually wrote, and an entity deposited in someone else's production cannot be undone by itself.
-     */
+  /**
+   * Creates an entity **in the linked project**.
+   *
+   * The `project` is set here and nowhere else: a caller can neither forget it nor target another one. A payload carrying a different one is a programming error,
+   * not data to arbitrate — we throw.
+   *
+   * The re-read that follows is not superstition: it is the site that decides what it actually wrote, and an entity deposited in someone else's production cannot be undone by itself.
+   */
   async create(
     sgType: string,
     data: Record<string, unknown>,
@@ -122,7 +122,7 @@ export class ShotgridWriter {
     return created;
   }
 
-    /** Deposits a file on an entity — same re-read as `update`. */
+  /** Deposits a file on an entity — same re-read as `update`. */
   async upload(
     sgType: string,
     sgId: number,

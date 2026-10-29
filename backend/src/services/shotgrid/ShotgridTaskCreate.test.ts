@@ -66,7 +66,7 @@ describe('pushTaskCreation (Phase 50)', () => {
     );
   });
 
-    /** The job may be replayed: an already linked task must not produce a duplicate. */
+  /** The job may be replayed: an already linked task must not produce a duplicate. */
   it('does nothing if the task is already linked', async () => {
     const { ctx, create } = context();
     links.findByLocal.mockImplementation(async (_c: number, type: string) =>
@@ -83,10 +83,10 @@ describe('pushTaskCreation (Phase 50)', () => {
     expect(links.upsertLink).not.toHaveBeenCalled();
   });
 
-    /**
-     * The `Step` catalogue of a site accumulates homonyms: the step is read from a neighbouring
-     * task already linked, never guessed from its name.
-     */
+  /**
+   * The `Step` catalogue of a site accumulates homonyms: the step is read from a neighbouring
+   * task already linked, never guessed from its name.
+   */
   it('takes over the step of a neighbouring task in the same department', async () => {
     const { ctx, create, findById } = context();
     task.findUnique.mockResolvedValue({

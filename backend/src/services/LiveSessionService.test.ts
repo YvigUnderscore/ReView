@@ -160,7 +160,7 @@ describe('co-pilots & driver (CP-HUMAIN 33 feedback)', () => {
     expect((await claimDrive('media:1', 10))?.driverId).toBe(10);
   });
 
-  it('removing the driver\'s co-piloting → control returns to the pilot', async () => {
+  it("removing the driver's co-piloting → control returns to the pilot", async () => {
     await setCoHost('media:1', 10, 20, true);
     await claimDrive('media:1', 20);
     const s = await setCoHost('media:1', 10, 20, false);
@@ -288,7 +288,7 @@ describe('shared state: restart, second replica, leases', () => {
     expect(state.pilotId).toBe(20);
   });
 
-  it('the heartbeat renews the lease of this process\'s participants', async () => {
+  it("the heartbeat renews the lease of this process's participants", async () => {
     await joinLive('media:7', p(10));
     advance(LIVE_PARTICIPANT_TTL_MS - 1_000);
     await __redisTesting.runHeartbeat();

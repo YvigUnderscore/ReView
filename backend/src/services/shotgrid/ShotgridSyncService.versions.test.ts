@@ -56,12 +56,12 @@ describe('importableVersionIds', () => {
   });
 
   it('keeps an already linked version whatever its status', async () => {
-        // The filter decides what we import, not what we keep following: a version moved from "in review" to "approved" must see its status advance.
+    // The filter decides what we import, not what we keep following: a version moved from "in review" to "approved" must see its status advance.
     findBySg.mockResolvedValue({ localId: 3, sgId: 9 });
     const { ctx, findById } = contextWith(['rev'], {});
 
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([9]);
-        // Already linked: no need to re-read it to decide.
+    // Already linked: no need to re-read it to decide.
     expect(findById).not.toHaveBeenCalled();
   });
 
@@ -71,7 +71,7 @@ describe('importableVersionIds', () => {
   });
 
   it('refuses a version belonging to another project of the site', async () => {
-        // An identifier received by webhook proves nothing: writing into the wrong project cannot be undone.
+    // An identifier received by webhook proves nothing: writing into the wrong project cannot be undone.
     const { ctx, journal } = contextWith([], { 9: version(9, 'rev', 78) });
 
     expect(await importableVersionIds(ctx, [{ sgType: 'Version', sgId: 9 }])).toEqual([]);

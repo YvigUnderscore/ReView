@@ -70,7 +70,7 @@ describe('purge: invariant 10.D7 (DB first, storage after, orphans retried)', ()
    * a media therefore freed almost nothing: the demo bucket showed 801 KB of originals for
    * 3.56 GB of derivatives.
    */
-  it('purgeMedia: also frees the media's derivatives', async () => {
+  it("purgeMedia: also frees the media's derivatives", async () => {
     findUnique.mockResolvedValue({ id: 42, storageKey: 'k/c.mp4', thumbnailKey: null } as never);
     deleteMedia.mockResolvedValue({} as never);
     deleteObjects.mockResolvedValue([]);

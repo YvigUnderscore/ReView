@@ -50,23 +50,23 @@ export interface ShotStat {
   sequenceId: number | null;
   versions: number;
   retakes: number;
-    /** Verdicts given on this shot: the number of review ROUNDS it has cost. */
+  /** Verdicts given on this shot: the number of review ROUNDS it has cost. */
   reviewRounds: number;
   openNotes: number;
-    /** Delay (days) between the 1st version and the 1st approval decision. */
+  /** Delay (days) between the 1st version and the 1st approval decision. */
   reviewDays: number | null;
   status: ShotStatus;
 }
 
 export interface SequenceConvergence {
   sequenceId: number | null;
-    /**
-     * Sequence code. **Empty when `sequenceId` is null** (the "outside any sequence" group):
-     * the server writes no screen text; it is up to the reader to name this group in their language.
-     * Until now it carried a dash and a hard-coded French label.
-     */
+  /**
+   * Sequence code. **Empty when `sequenceId` is null** (the "outside any sequence" group):
+   * the server writes no screen text; it is up to the reader to name this group in their language.
+   * Until now it carried a dash and a hard-coded French label.
+   */
   code: string;
-    /** Sequence name, empty for the "outside any sequence" group (see `code`). */
+  /** Sequence name, empty for the "outside any sequence" group (see `code`). */
   name: string;
   total: number;
   approved: number;
@@ -91,15 +91,15 @@ export interface ProjectStatsTotals {
   shots: number;
   versions: number;
   decisions: number;
-    /** % of approved shots among those with at least one version. */
+  /** % of approved shots among those with at least one version. */
   approvalRate: number;
   openNotes: number;
   avgReviewDays: number | null;
   avgRetakesPerShot: number;
-    /** Average review rounds per shot: a shot that is "right the first time" costs one. */
+  /** Average review rounds per shot: a shot that is "right the first time" costs one. */
   avgReviewRoundsPerShot: number;
   avgNotesPerVersion: number;
-    /** Share (%) of approved shots WITHOUT any retake, among those that were approved. */
+  /** Share (%) of approved shots WITHOUT any retake, among those that were approved. */
   firstTimeRightRate: number;
 }
 
@@ -107,9 +107,9 @@ export interface ProjectStats {
   totals: ProjectStatsTotals;
   sequences: SequenceConvergence[];
   slowestShots: ShotStat[];
-    /** The shots that cost the most retakes: the ranking of the retakes panel. */
+  /** The shots that cost the most retakes: the ranking of the retakes panel. */
   mostRetakenShots: ShotStat[];
-    /** Distribution of retakes per shot, from best to worst. */
+  /** Distribution of retakes per shot, from best to worst. */
   retakeBuckets: RetakeBucket[];
 }
 
@@ -133,7 +133,7 @@ export function computeShotStats(rows: ShotAggregateRow[]): ShotStat[] {
     openNotes: row.openNotes,
     reviewDays:
       row.firstVersionAt && row.firstApprovalAt ? daysBetween(row.firstVersionAt, row.firstApprovalAt) : null,
-        // Current status = the denormalized review status of the last version.
+    // Current status = the denormalized review status of the last version.
     status:
       row.versions === 0
         ? 'notStarted'
@@ -236,8 +236,8 @@ export function computeTotals(
       ? round1(shotStats.reduce((a, s) => a + s.reviewRounds, 0) / shotStats.length)
       : 0,
     avgNotesPerVersion: totalVersions ? round1(totalNotes / totalVersions) : 0,
-        // Reported over APPROVED shots only: a shot still in review has not finished consuming its retakes,
-        // and including it would make the rate fall as production goes on.
+    // Reported over APPROVED shots only: a shot still in review has not finished consuming its retakes,
+    // and including it would make the rate fall as production goes on.
     firstTimeRightRate: approved
       ? Math.round(
           (shotStats.filter((s) => s.status === 'approved' && s.retakes === 0).length / approved) * 100,

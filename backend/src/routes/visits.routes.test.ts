@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 describe('POST /api/visits', () => {
-  it('acknowledges a member\'s visit and returns the date', async () => {
+  it("acknowledges a member's visit and returns the date", async () => {
     const res = await request(app).post('/api/visits').send({ targetType: 'SHOT', targetId: 4 });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ visitedAt: '2026-09-20T10:00:00.000Z' });

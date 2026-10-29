@@ -200,7 +200,7 @@ describe('finalize: mandatory brief moved to the upload', () => {
     expect(db.mediaObject.update).not.toHaveBeenCalled();
   });
 
-  it('refuses a brief shorter than the project\'s floor', async () => {
+  it("refuses a brief shorter than the project's floor", async () => {
     vi.mocked(resolveProjectSettingsById).mockResolvedValue(settings(true, 10));
 
     await expect(finalize(USER, 1, 'ok')).rejects.toMatchObject({

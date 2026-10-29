@@ -117,7 +117,7 @@ describe('catalogue chunk table', () => {
     });
   });
 
-  it('ignores the dependencies\' locales and the assets', () => {
+  it("ignores the dependencies' locales and the assets", () => {
     expect(Object.values(catalogChunkMap(bundle))).not.toContain('/assets/fr-FR-XYZ-d.js');
   });
 

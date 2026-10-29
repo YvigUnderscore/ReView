@@ -77,8 +77,8 @@ describe('saveSubscription: anti-SSRF guard (E1)', () => {
     });
   });
 
-    // The check applies to the resolved address: a perfectly public name can point to
-    // the loopback interface.
+  // The check applies to the resolved address: a perfectly public name can point to
+  // the loopback interface.
   it('refuses a public name that resolves to an internal address', async () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '127.0.0.1', family: 4 }] as never);
     await expect(
@@ -97,8 +97,8 @@ describe('saveSubscription: anti-SSRF guard (E1)', () => {
 
 describe('sendToUser: second check at send time', () => {
   it('does not send to a row that became internal, and serves the others', async () => {
-        // Rows created before the guard are still in the database: the refusal must also
-        // hold at send time.
+    // Rows created before the guard are still in the database: the refusal must also
+    // hold at send time.
     vi.mocked(prisma.pushSubscription.findMany).mockResolvedValue([
       { id: 1, endpoint: 'http://192.168.1.20:9001/', p256dh: 'p', auth: 'a' },
       { id: 2, endpoint: 'https://fcm.googleapis.com/fcm/send/xyz', p256dh: 'p', auth: 'a' },

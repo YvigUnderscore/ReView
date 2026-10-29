@@ -157,18 +157,18 @@ export async function decide(
     taskId: version.taskId,
     assetId: version.assetId,
   });
-    // 48: the decision is propagated to the production registry. Queued, so the artist does not
-    // wait for ShotGrid, and a site outage does not fail the review.
+  // 48: the decision is propagated to the production registry. Queued, so the artist does not
+  // wait for ShotGrid, and a site outage does not fail the review.
   await enqueuePush(projectId, { type: 'version-status', versionId, actorId: user.id });
-    // Common reference for ALL recipients: the version's first media, the only id the front end
-    // can open. The author used to receive the VERSION id and followers the MEDIA id for the same event,
-    // so one of the two links was wrong by construction, and it was the one of the person most concerned.
+  // Common reference for ALL recipients: the version's first media, the only id the front end
+  // can open. The author used to receive the VERSION id and followers the MEDIA id for the same event,
+  // so one of the two links was wrong by construction, and it was the one of the person most concerned.
   const firstMedia = await prisma.mediaObject.findFirst({
     where: { versionId },
     orderBy: { id: 'asc' },
     select: { id: true },
   });
-    // Notifies the author of the version (unless they set the decision themselves).
+  // Notifies the author of the version (unless they set the decision themselves).
   if (version.authorId && version.authorId !== user.id) {
     await notify({
       userId: version.authorId,
@@ -179,7 +179,7 @@ export async function decide(
       referenceId: firstMedia?.id ?? null,
     });
   }
-    // Followers (32.G): decision set on the version/shot/asset chain.
+  // Followers (32.G): decision set on the version/shot/asset chain.
   await notifyWatchers({
     versionId,
     projectId,
@@ -188,7 +188,7 @@ export async function decide(
     referenceId: firstMedia?.id ?? null,
     exclude: [user.id, ...(version.authorId ? [version.authorId] : [])],
   });
-    // Outgoing webhooks (36.D).
+  // Outgoing webhooks (36.D).
   publishApiEvent('review.decision', {
     projectId,
     entityType: 'version',
@@ -205,9 +205,9 @@ export async function decide(
       decidedBy: user.id,
     },
   });
-    // Team messaging (42.B, issue #67): studio-wide signal of decisions. A batch stays silent
-    // version by version and announces only one line: thirty messages for a review session would
-    // make the channel unusable.
+  // Team messaging (42.B, issue #67): studio-wide signal of decisions. A batch stays silent
+  // version by version and announces only one line: thirty messages for a review session would
+  // make the channel unusable.
   if (options.chat !== false) {
     const icon = decisionIcon(status);
     void notifyChat('chat.decision', { icon, status: status.name, version: version.name });
@@ -232,8 +232,8 @@ export async function decideMany(
   const status = await prisma.reviewStatus.findUnique({ where: { id: statusId } });
   if (!status) throw badRequest('Unknown review status');
 
-    // One check per project, not per version: the same selection often holds a hundred
-    // versions for two projects. The verdict is memoized, refusals included.
+  // One check per project, not per version: the same selection often holds a hundred
+  // versions for two projects. The verdict is memoized, refusals included.
   const allowed = new Map<number, boolean>();
   const allowsProject = async (projectId: number): Promise<boolean> => {
     const known = allowed.get(projectId);
@@ -334,8 +334,8 @@ export async function decideAsGuest(
   });
   if (!version) throw notFound('Version not found');
 
-    // The status must be one of the TWO we offer: accepting any identifier would let a guest
-    // set "Pending" or any internal status.
+  // The status must be one of the TWO we offer: accepting any identifier would let a guest
+  // set "Pending" or any internal status.
   const offered = await guestStatuses(projectId);
   const status = [offered.approval, offered.retake].find((s) => s?.id === statusId);
   if (!status) throw badRequest('This status is not offered to share links');
@@ -363,8 +363,8 @@ export async function decideAsGuest(
     orderBy: { id: 'asc' },
     select: { id: true },
   });
-    // The author of the delivery and the followers learn of the opinion as they would of a
-    // decision: it is the same event for them, only the authority behind it differs.
+  // The author of the delivery and the followers learn of the opinion as they would of a
+  // decision: it is the same event for them, only the authority behind it differs.
   if (version.authorId) {
     await notify({
       userId: version.authorId,
@@ -397,8 +397,8 @@ export async function decideAsGuest(
       guestName: guest.name,
       shareLinkId: guest.shareLinkId,
       comment: comment ?? null,
-            // A webhook consumer must be able to tell an opinion from a decision: without this
-            // flag, an integration would take a client's opinion for a pipeline state.
+      // A webhook consumer must be able to tell an opinion from a decision: without this
+      // flag, an integration would take a client's opinion for a pipeline state.
       advisory: true,
     },
   });

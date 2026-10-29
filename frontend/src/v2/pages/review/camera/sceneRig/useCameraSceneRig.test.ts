@@ -18,7 +18,7 @@ describe('strokeTime — where a gizmo gesture writes', () => {
     expect(strokeTime({ selection: [], anim, timeMs: 1234.6 })).toBe(1235);
   });
 
-  it('with a key taken over: at that key\'s time, not at the playhead', () => {
+  it("with a key taken over: at that key's time, not at the playhead", () => {
     const t = strokeTime({ selection: [{ channel: 'px', index: 0 }], anim, timeMs: 1800 });
     expect(t).toBe(0);
     expect(t).not.toBe(1800); // this gap is what made the gesture invisible

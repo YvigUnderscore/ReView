@@ -53,7 +53,7 @@ describe('worker process bootstrap', () => {
 
   for (const { name, file } of declared) {
     it(`${name} (${file}) is called by ffmpeg.worker.ts`, () => {
-            // A real call, not a mere mention in a comment.
+      // A real call, not a mere mention in a comment.
       expect(
         bootstrap,
         `${name} est exporté mais jamais démarré — ajouter un appel \`${name}(…);\` dans le bloc \`require.main === module\` de ffmpeg.worker.ts`,

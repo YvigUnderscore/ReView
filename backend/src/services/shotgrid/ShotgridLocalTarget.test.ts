@@ -51,8 +51,8 @@ describe('localTarget', () => {
   });
 
   it('adopts an entity created before the link', async () => {
-        // A studio entered its sequences by hand, then linked the project: we take the existing ones
-        // rather than making a duplicate.
+    // A studio entered its sequences by hand, then linked the project: we take the existing ones
+    // rather than making a duplicate.
     const rows = [{ id: 7, name: 'sq010' }];
     const r = await call(rows, 4685, 'sq010', null);
     expect(r.existing?.id).toBe(7);
@@ -85,8 +85,8 @@ describe('localTarget', () => {
   });
 
   it('keeps its suffix on the next pass, once linked', async () => {
-        // The case that broke in production: the entity is linked, hence found by its id, and we renamed it to the site's name,
-        // which its twin still carries.
+    // The case that broke in production: the entity is linked, hence found by its id, and we renamed it to the site's name,
+    // which its twin still carries.
     const rows = [
       { id: 7, name: 'DO_NOT_USE_' },
       { id: 8, name: 'DO_NOT_USE_ (4686)' },
@@ -111,7 +111,7 @@ describe('localTarget', () => {
   });
 
   it('returns a renamed entity to its site name when it becomes free', async () => {
-        // The twin was deleted on the site side: nothing justifies the suffix any more.
+    // The twin was deleted on the site side: nothing justifies the suffix any more.
     const rows = [{ id: 8, name: 'DO_NOT_USE_ (4686)' }];
 
     const r = await call(rows, 4686, 'DO_NOT_USE_', 8);

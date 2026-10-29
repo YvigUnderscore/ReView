@@ -41,7 +41,7 @@ beforeEach(() => {
 });
 
 describe('getNote', () => {
-  it("returns an empty sheet rather than none: the panel always exists on screen", async () => {
+  it('returns an empty sheet rather than none: the panel always exists on screen', async () => {
     vi.mocked(prisma.entityNote.findFirst).mockResolvedValue(null);
     expect(await getNote('shot', 42)).toEqual({ body: '', updatedAt: null, updatedBy: null });
   });
@@ -105,7 +105,7 @@ describe('setNote', () => {
     await expect(setNote(actor, 'shot', 42, 'x'.repeat(100_001))).rejects.toThrow(/too long/i);
   });
 
-  it("refuses an entity that does not exist", async () => {
+  it('refuses an entity that does not exist', async () => {
     vi.mocked(prisma.shot.findFirst).mockResolvedValue(null);
     await expect(setNote(actor, 'shot', 999, 'texte')).rejects.toThrow(/not found/i);
   });

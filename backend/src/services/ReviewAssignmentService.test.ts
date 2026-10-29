@@ -26,7 +26,7 @@ vi.mock('../lib/projectRoles', () => ({
   effectiveProjectRole: vi.fn(async (_id: number, role: Role) => role),
 }));
 vi.mock('../lib/projectSettings', async (importOriginal) => ({
-    // `checkReviewNote` IS the rule: mocking it would only test the mock.
+  // `checkReviewNote` IS the rule: mocking it would only test the mock.
   ...(await importOriginal<typeof import('../lib/projectSettings')>()),
   resolveProjectSettingsById: vi.fn(),
 }));
@@ -147,7 +147,7 @@ describe('setReviewers', () => {
       expect.objectContaining({ action: 'version.reviewers', entityId: 42 }),
     );
     expect(emitToProject).toHaveBeenCalledWith(3, 'version:update', expect.objectContaining({ id: 42 }));
-        // Only the newcomer is notified: Alice was already assigned and nothing changed for her.
+    // Only the newcomer is notified: Alice was already assigned and nothing changed for her.
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -156,7 +156,7 @@ describe('setReviewers', () => {
         messageKey: 'notification.reviewAssigned',
         params: { version: 'V03' },
         projectId: 3,
-                // The version's first media: this is what makes the notification navigable.
+        // The version's first media: this is what makes the notification navigable.
         referenceId: 500,
       }),
     );
@@ -179,7 +179,7 @@ describe('setReviewers', () => {
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 4, messageKey: 'notification.reviewNoteUpdated' }),
     );
-        // Unsubscribing belongs to the reviewer: a rewritten instruction does not take it back.
+    // Unsubscribing belongs to the reviewer: a rewritten instruction does not take it back.
     expect(setWatch).not.toHaveBeenCalled();
   });
 
@@ -325,7 +325,7 @@ describe('updateNote', () => {
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 4, messageKey: 'notification.reviewNoteUpdated' }),
     );
-        // The list did not change: the audit must not suggest otherwise.
+    // The list did not change: the audit must not suggest otherwise.
     expect(logAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'version.reviewer_note', entityId: 42 }),
     );

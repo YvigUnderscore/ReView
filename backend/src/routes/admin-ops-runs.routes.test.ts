@@ -100,7 +100,7 @@ describe('POST /api/admin/ops/runs', () => {
     expect(calls).toEqual(['audit', 'enqueue']);
   });
 
-  it('requires the admin's password', async () => {
+  it("requires the admin's password", async () => {
     tokens.assertActorPassword.mockRejectedValue(forbidden('Invalid password'));
     const res = await request(app).post('/api/admin/ops/runs').send(UPDATE);
     expect(res.status).toBe(403);

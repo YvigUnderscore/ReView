@@ -63,8 +63,8 @@ export function noteAsBrief(html: string): string {
   const espace = html.replace(/<br\s*\/?>/gi, '\n').replace(BLOCS, '\n');
   const texte = new DOMParser().parseFromString(espace, 'text/html').body.textContent ?? '';
   return texte
-     .replace(/[^\S\n]+/g, ' ') // collapse runs of spaces, keep line breaks
-     .replace(/ *\n\s*/g, '\n') // a single break per block boundary, whatever the HTML formatting
+    .replace(/[^\S\n]+/g, ' ') // collapse runs of spaces, keep line breaks
+    .replace(/ *\n\s*/g, '\n') // a single break per block boundary, whatever the HTML formatting
     .trim()
     .slice(0, DESCRIPTION_MAX);
 }

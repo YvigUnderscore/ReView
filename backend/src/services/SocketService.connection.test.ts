@@ -45,7 +45,7 @@ vi.mock('../lib/userCache', () => ({ getAuthUser }));
 // `socketRateLimit` is NOT mocked: wiring the real module is precisely what we want to verify.
 // A double here would make the test pass without any limiter.
 vi.mock('../lib/sessions', async (importOriginal) => {
-    // The decoder is the production one (channel contract); only the side effects are mocked.
+  // The decoder is the production one (channel contract); only the side effects are mocked.
   const real = await importOriginal<typeof import('../lib/sessions')>();
   return {
     SESSION_REVOCATION_CHANNEL: real.SESSION_REVOCATION_CHANNEL,
@@ -113,10 +113,10 @@ const fakeSocket = (id = 'sock-1', authSid = 'sid-1') => {
     }),
     listeners,
     middlewares,
-        /**
-         * Replays an incoming packet through the middleware chain. Returns true if the packet reached the end,
-         * that is, if the `socket.on` handler would have been called.
-         */
+    /**
+     * Replays an incoming packet through the middleware chain. Returns true if the packet reached the end,
+     * that is, if the `socket.on` handler would have been called.
+     */
     emit(event: string, ...args: unknown[]): boolean {
       for (const mw of middlewares) {
         let passed = false;
@@ -168,7 +168,7 @@ describe('io.on(connection): the rate guard is really wired up', () => {
 
   it('stops a `join_review` loop BEFORE the handler (so before Postgres)', () => {
     const socket = connect();
-        // 240 tokens / 12 per join = 20 passes, then nothing until the bucket refills.
+    // 240 tokens / 12 per join = 20 passes, then nothing until the bucket refills.
     for (let i = 0; i < 20; i += 1) expect(socket.emit('join_review', i)).toBe(true);
     expect(socket.emit('join_review', 21)).toBe(false);
   });
@@ -179,30 +179,30 @@ describe('io.on(connection): the rate guard is really wired up', () => {
     expect(socket.disconnect).toHaveBeenCalledWith(true);
   });
 
-    /**
-     * The counter-test that matters: a limit that cuts off a client-side projection driver would be
-     * disarmed at the first complaint. We replay ten seconds of the chattiest regime measured on the front end:
-     * periodic broadcast at 30 Hz, cursor at about 20 Hz, sustained typing, and nothing must be dropped.
-     */
+  /**
+   * The counter-test that matters: a limit that cuts off a client-side projection driver would be
+   * disarmed at the first complaint. We replay ten seconds of the chattiest regime measured on the front end:
+   * periodic broadcast at 30 Hz, cursor at about 20 Hz, sustained typing, and nothing must be dropped.
+   */
   it('lets ten seconds of dailies driver traffic through (30 Hz + cursor + typing)', () => {
-        // Only the clock is faked: `initSocket` sets a `setInterval(...).unref()`, which a fake timer
-        // would replace with an identifier lacking `unref`.
+    // Only the clock is faked: `initSocket` sets a `setInterval(...).unref()`, which a fake timer
+    // would replace with an identifier lacking `unref`.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(0);
     const socket = connect();
     let dropped = 0;
     for (let ms = 0; ms < 10_000; ms += 1) {
       vi.setSystemTime(ms);
-            // About 30 Hz: periodic broadcast of the driver (`syncHz` capped at 30 on the front end).
+      // About 30 Hz: periodic broadcast of the driver (`syncHz` capped at 30 on the front end).
       if (ms % 33 === 0 && !socket.emit('live:sync', 'k', { mediaId: 1, t: 12.5, playing: true }))
         dropped += 1;
-            // 20 Hz: shared cursor (`POINTER_INTERVAL_MS = 50`), on the same channel.
+      // 20 Hz: shared cursor (`POINTER_INTERVAL_MS = 50`), on the same channel.
       if (
         ms % 50 === 0 &&
         !socket.emit('live:sync', 'k', { mediaId: 1, pointer: { userId: 7, x: 0.4, y: 0.6 } })
       )
         dropped += 1;
-            // 10 Hz: `activity` is emitted on every keystroke, without client-side throttling.
+      // 10 Hz: `activity` is emitted on every keystroke, without client-side throttling.
       if (ms % 100 === 0 && !socket.emit('activity')) dropped += 1;
     }
     expect(dropped).toBe(0);
@@ -241,11 +241,11 @@ describe('immediate revocation: the channel is subscribed and cuts the right con
     expect(kept.disconnect).not.toHaveBeenCalled();
   });
 
-    /**
-     * Closing the socket without dropping the cache would be cosmetic: `isSessionActive` would still answer
-     * "alive" for thirty seconds and the API would reopen the door.
-     */
-  it('also invalidates this replica\'s validity cache', () => {
+  /**
+   * Closing the socket without dropping the cache would be cosmetic: `isSessionActive` would still answer
+   * "alive" for thirty seconds and the API would reopen the door.
+   */
+  it("also invalidates this replica's validity cache", () => {
     connect();
     deliver(['sid-morte']);
     expect(markSessionsRevoked).toHaveBeenCalledWith(['sid-morte']);
@@ -270,8 +270,8 @@ describe('disconnectRevokedSockets', () => {
     ({ sockets: { sockets: new Map(sockets.map((s, i) => [String(i), s])) } }) as never;
 
   it('matches on the sid, not on the user (the spared session stays open)', () => {
-        // Same account, two tabs: "revoke my other sessions" must not disconnect the author of the
-        // action: their session is not in the published list.
+    // Same account, two tabs: "revoke my other sessions" must not disconnect the author of the
+    // action: their session is not in the published list.
     const autre = fakeSocket('sock-a', 'sid-autre');
     const courante = fakeSocket('sock-b', 'sid-courante');
 
@@ -280,7 +280,7 @@ describe('disconnectRevokedSockets', () => {
     expect(courante.disconnect).not.toHaveBeenCalled();
   });
 
-    // A share guest has no session: nothing to match, and above all nothing to cut.
+  // A share guest has no session: nothing to match, and above all nothing to cut.
   it('leaves a connection without a session alone', () => {
     const invite = { ...fakeSocket('sock-c'), authSid: undefined } as unknown as AuthedSocket;
     expect(disconnectRevokedSockets(serverOf(invite), ['sid-morte'])).toBe(0);

@@ -50,7 +50,7 @@ describe('DigestService: HTML rendering', () => {
     expect(html).toContain('Comments (1)');
   });
 
-  it('renders the digest in the recipient\'s language, footer included', () => {
+  it("renders the digest in the recipient's language, footer included", () => {
     const html = renderDigestHtml('fr', 'Yvig', [digest], new Date('2026-07-11T07:00:00'));
     expect(html).toContain('lang="fr"');
     expect(html).toContain('Bonjour Yvig');
@@ -58,7 +58,7 @@ describe('DigestService: HTML rendering', () => {
     expect(html).toContain('plateforme de review collaborative');
   });
 
-  it('dates the digest in the recipient\'s language', () => {
+  it("dates the digest in the recipient's language", () => {
     const day = new Date('2026-07-11T07:00:00');
     expect(renderDigestHtml('en', 'Yvig', [digest], day)).toContain('July');
     expect(renderDigestHtml('fr', 'Yvig', [digest], day)).toContain('juillet');

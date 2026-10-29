@@ -68,12 +68,12 @@ export async function list(userId: number, taskId?: number, assetId?: number) {
     include: {
       author: { select: { id: true, name: true } },
       reviewStatus: true, // current review decision (Phase 31)
-            // Trash excluded; drafts visible only to their uploader (does not reveal other people's).
+      // Trash excluded; drafts visible only to their uploader (does not reveal other people's).
       _count: {
         select: { media: { where: { deletedAt: null, OR: [{ published: true }, { uploaderId: userId }] } } },
       },
-            // The caller's own drafts: these are the only ones they can publish in one gesture, and
-            // the interface need not offer a button that would do nothing (Phase 46).
+      // The caller's own drafts: these are the only ones they can publish in one gesture, and
+      // the interface need not offer a button that would do nothing (Phase 46).
       media: {
         where: { deletedAt: null, published: false, uploaderId: userId, status: { not: 'UPLOADING' } },
         select: { id: true },
@@ -119,8 +119,8 @@ async function autoName(projectId: number, body: CreateVersionInput): Promise<st
 
   return nextVersionName({
     existing: siblings.map((v) => v.name),
-        // A paused connection is still a linked project: the studio's nomenclature need not change shape because
-        // synchronization was suspended one afternoon.
+    // A paused connection is still a linked project: the studio's nomenclature need not change shape because
+    // synchronization was suspended one afternoon.
     linked: Boolean(connection),
     parentCode: task?.shot?.code ?? task?.asset?.name ?? asset?.name ?? null,
     step: task?.department ?? null,
@@ -167,7 +167,7 @@ export async function getDetail(userId: number, id: number) {
     },
   });
   if (!version) throw notFound('Version not found');
-    // Presigns the thumbnail of each media (Phase 20: real thumbnails on the timeline).
+  // Presigns the thumbnail of each media (Phase 20: real thumbnails on the timeline).
   const media = await Promise.all(
     version.media.map(async ({ thumbnailKey, ...m }) => ({
       ...m,
@@ -194,17 +194,17 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (!manager && !isAuthor) throw forbidden('Only the author or a supervisor can modify a version');
   if (body.status === VersionStatus.PUBLISHED && !manager)
     throw forbidden('Only a supervisor or administrator can publish a version');
-    // ...and leaving the published state is just as reserved. Without this, the lock would only make sense if the
-    // author unpublished their version, removing it from the client share link along the way, review decisions included,
-    // and then edited it freely, since `assertNotPublished` now only sees a draft.
+  // ...and leaving the published state is just as reserved. Without this, the lock would only make sense if the
+  // author unpublished their version, removing it from the client share link along the way, review decisions included,
+  // and then edited it freely, since `assertNotPublished` now only sees a draft.
   if (version.published && body.status !== undefined && body.status !== VersionStatus.PUBLISHED && !manager)
     throw forbidden('Only a supervisor or administrator can unpublish a version');
-    // Publication lock: the 3D transform of a published version stays frozen. It is the foundation of the A/B and of
-    // annotations anchored to the frame: moving it afterwards would skew everything that refers to it (table in `lib/publishLock`).
-    //
-    // The conjunction of THIS lock and of the author/manager guard above is what `lib/versionPermissions.canEditVersionTransform`
-    // returns to the interface (`permissions` of the media detail): touching either guard requires revisiting it, otherwise the
-    // screen would start offering a button that this service refuses.
+  // Publication lock: the 3D transform of a published version stays frozen. It is the foundation of the A/B and of
+  // annotations anchored to the frame: moving it afterwards would skew everything that refers to it (table in `lib/publishLock`).
+  //
+  // The conjunction of THIS lock and of the author/manager guard above is what `lib/versionPermissions.canEditVersionTransform`
+  // returns to the interface (`permissions` of the media detail): touching either guard requires revisiting it, otherwise the
+  // screen would start offering a button that this service refuses.
   if (body.transform !== undefined) assertWritable(version, 'versionTransform');
 
   const updated = await prisma.version.update({
@@ -220,8 +220,8 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   if (body.status === VersionStatus.PUBLISHED)
     logAudit({ userId: user.id, action: 'VERSION_PUBLISH', entityType: 'Version', entityId: id });
   emitVersionUpdate(projectId, updated);
-    // Only the transition counts: setting PUBLISHED again on an already published version is not a publication,
-    // and need not wake the subscribers a second time.
+  // Only the transition counts: setting PUBLISHED again on an already published version is not a publication,
+  // and need not wake the subscribers a second time.
   if (body.status === VersionStatus.PUBLISHED && !version.published)
     await publishVersionEvent('version.published', projectId, id, user.id);
   return updated;
@@ -250,21 +250,21 @@ export async function publishAll(user: SessionUser, projectId: number, id: numbe
       deletedAt: null,
       published: false,
       uploaderId: user.id,
-            // An upload in progress has not been validated yet (magic bytes, antivirus, quotas): it will be
-            // published at its finalization if the version already is.
+      // An upload in progress has not been validated yet (magic bytes, antivirus, quotas): it will be
+      // published at its finalization if the version already is.
       status: { not: MediaStatus.UPLOADING },
     },
     select: { id: true },
   });
   for (const draft of drafts) await MediaService.publish(user, draft.id);
 
-    // Also catches a version left as a draft although all its media were already published: the case of versions
-    // created before this rule.
+  // Also catches a version left as a draft although all its media were already published: the case of versions
+  // created before this rule.
   await MediaService.syncVersionPublication(id, user.id);
   const updated = await prisma.version.findUniqueOrThrow({ where: { id } });
   emitVersionUpdate(projectId, updated);
-    // "Publish all" switches the version without going through `update`: without this line, the most common gesture
-    // of the review stayed silent for subscribers.
+  // "Publish all" switches the version without going through `update`: without this line, the most common gesture
+  // of the review stayed silent for subscribers.
   if (updated.published && !version.published)
     await publishVersionEvent('version.published', projectId, id, user.id);
   return { version: updated, publishedCount: drafts.length };

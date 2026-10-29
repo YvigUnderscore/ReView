@@ -64,7 +64,7 @@ export function AuthLayout({
           </div>
           {children}
         </div>
-         {/* AGPL §13: source offer visible even before any authentication. */}
+        {/* AGPL §13: source offer visible even before any authentication. */}
         <SourceNotice className="absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center" />
       </div>
     );
@@ -92,7 +92,7 @@ export function AuthLayout({
           <LanguagePicker className="py-1 text-xs" />
         </div>
         <div className={`w-full max-w-sm ${appear}`}>{children}</div>
-         {/* AGPL §13: source offer visible even before any authentication. */}
+        {/* AGPL §13: source offer visible even before any authentication. */}
         <SourceNotice className="absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center" />
       </main>
     </div>

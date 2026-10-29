@@ -41,7 +41,7 @@ describe('purge of ShotGrid correspondences (triggers)', () => {
   });
 
   it('targets the table of the corresponding model', () => {
-        // A trigger set on the wrong table would erase the links of entities that are homonyms by their identifier alone: more destructive than the orphan it corrects.
+    // A trigger set on the wrong table would erase the links of entities that are homonyms by their identifier alone: more destructive than the orphan it corrects.
     expect(Object.fromEntries(triggeredTypes())).toEqual({
       episode: 'Episode',
       sequence: 'Sequence',
@@ -59,7 +59,7 @@ describe('purge of ShotGrid correspondences (triggers)', () => {
   });
 
   it('cleans up the existing rows of the same types', () => {
-        // The migration also corrects the past: links already orphaned at the time of the finding (10 out of 14) would not repair themselves.
+    // The migration also corrects the past: links already orphaned at the time of the finding (10 out of 14) would not repair themselves.
     const sql = readFileSync(
       join(MIGRATIONS, '20260908090000_shotgrid_liens_fiables', 'migration.sql'),
       'utf8',

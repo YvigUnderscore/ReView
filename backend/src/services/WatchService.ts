@@ -98,7 +98,7 @@ export async function notifyWatchers(opts: {
   mediaObjectId?: number;
   versionId?: number;
   projectId: number;
-    /** Translatable key and its parameters (D2): never a ready-made sentence. */
+  /** Translatable key and its parameters (D2): never a ready-made sentence. */
   messageKey: MessageKey;
   params?: TParams;
   referenceId?: number | null;

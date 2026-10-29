@@ -120,9 +120,9 @@ export async function add(
       commentId,
       storageKey: key,
       createdById: user.id,
-            // Without a position (client outside the review screen): just right of the frame, where the
-            // letterbox usually leaves room. If the player has no band, the display will pull it back
-            // against the media's right edge.
+      // Without a position (client outside the review screen): just right of the frame, where the
+      // letterbox usually leaves room. If the player has no band, the display will pull it back
+      // against the media's right edge.
       x: clampPos(pos?.x ?? 1.02 + count * 0.03),
       y: clampPos(pos?.y ?? 0.02 + count * 0.03),
       width: clampWidth(pos?.width ?? 0.3),

@@ -86,7 +86,7 @@ export default function SequencePage() {
       canManage={canManage}
       menuExtras={menuExtras}
     >
-       {/* Link back up to the episode — the level being optional, this link only exists on a
+      {/* Link back up to the episode — the level being optional, this link only exists on a
            project that has enabled it and a sequence attached to it. */}
       {data?.episode && (
         <Link

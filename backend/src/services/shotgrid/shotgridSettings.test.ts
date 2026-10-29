@@ -25,9 +25,9 @@ describe('parseSettings', () => {
     expect(s.reconcile.onBoot).toBe(true);
   });
 
-    /**
-     * A connection saved before ShotGrid thumbnails arrived does not have the key: it must read with the default, without migration or a setting to re-enter.
-     */
+  /**
+   * A connection saved before ShotGrid thumbnails arrived does not have the key: it must read with the default, without migration or a setting to re-enter.
+   */
   it('gives ShotGrid thumbnails to a connection predating the setting', () => {
     const s = parseSettings({ media: { source: 'original', autoImport: false } });
     expect(s.media.thumbnails).toBe(true);
@@ -38,7 +38,7 @@ describe('parseSettings', () => {
     const s = parseSettings({});
     expect(s.domains.tasks).toEqual({ read: true, write: true });
     expect(s.domains.versions).toEqual({ read: true, write: true });
-        // Statuses are a reference received; accounts are never created from here.
+    // Statuses are a reference received; accounts are never created from here.
     expect(s.domains.statuses.write).toBe(false);
     expect(s.domains.users.write).toBe(false);
   });
@@ -55,12 +55,12 @@ describe('parseSettings', () => {
     expect(s.domains.tasks.write).toBe(false);
     expect(s.media.source).toBe('original');
     expect(s.media.maxSizeMo).toBe(500);
-        // Domains not mentioned keep their default rather than disappearing.
+    // Domains not mentioned keep their default rather than disappearing.
     expect(s.domains.versions.read).toBe(true);
   });
 
   it('falls back to the defaults in front of a corrupt value rather than failing', () => {
-        // A connection whose settings would be unreadable must remain usable: otherwise the synchronization would stop on an error that cannot be fixed through the UI.
+    // A connection whose settings would be unreadable must remain usable: otherwise the synchronization would stop on an error that cannot be fixed through the UI.
     expect(parseSettings({ eventMode: 'carrier-pigeon' }).eventMode).toBe('webhook');
     expect(parseSettings(null).lockLocalCreation).toBe(true);
     expect(parseSettings('cassé').conflictPolicy).toBe('sg_wins');
@@ -100,7 +100,7 @@ describe('assertSafeBaseUrl', () => {
   });
 
   it('refuses anything that would target the internal network', () => {
-        // Without this safeguard, an administrator could have the server query services that they themselves cannot reach (cloud metadata, administration).
+    // Without this safeguard, an administrator could have the server query services that they themselves cannot reach (cloud metadata, administration).
     expect(() => assertSafeBaseUrl('https://localhost')).toThrow();
     expect(() => assertSafeBaseUrl('https://127.0.0.1')).toThrow();
     expect(() => assertSafeBaseUrl('https://10.0.0.5')).toThrow();
@@ -150,7 +150,7 @@ describe('readOnlySettings', () => {
   });
 
   it('sends nothing to ShotGrid on publication', () => {
-        // A first synchronization must create nothing on a production site.
+    // A first synchronization must create nothing on a production site.
     expect(readOnlySettings().push.publishMode).toBe('off');
   });
 
@@ -178,7 +178,7 @@ describe('visibleStatuses', () => {
   });
 
   it('survives the read-only fallback when another section is unreadable', () => {
-        // The fallback closes the writes; it must not erase a sort the studio has made.
+    // The fallback closes the writes; it must not erase a sort the studio has made.
     const s = parseSettings({ eventMode: 'carrier-pigeon', visibleStatuses: { task: ['wtg'] } });
     expect(s.visibleStatuses.task).toEqual(['wtg']);
   });

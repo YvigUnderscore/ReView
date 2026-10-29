@@ -36,11 +36,11 @@ export interface ShotgridCredentials {
 }
 
 export interface ShotgridErrorOptions {
-    /** Confirmed authentication refusal: set by `token()`, never inferred from the HTTP code. */
+  /** Confirmed authentication refusal: set by `token()`, never inferred from the HTTP code. */
   auth?: boolean;
-    /** Stable code that the interface translates (`error.<CODE>` in the front-end catalog). */
+  /** Stable code that the interface translates (`error.<CODE>` in the front-end catalog). */
   code?: string;
-    /** Data returned to the client: notably `reason`, the site's own words. */
+  /** Data returned to the client: notably `reason`, the site's own words. */
   details?: Record<string, unknown>;
 }
 
@@ -67,11 +67,11 @@ export class ShotgridApiError extends AppError {
     this.authRefused = options.auth ?? false;
   }
 
-    /**
-     * Credentials refused: the connection must switch to `auth_error`, not retry in a loop. The HTTP code is not enough to say
-     * so: a real site answers **400** with `code: 102` ("Can't authenticate user ...") where the documentation leads one to
-     * expect a 401. Hence the flag, set at the source by `token()`.
-     */
+  /**
+   * Credentials refused: the connection must switch to `auth_error`, not retry in a loop. The HTTP code is not enough to say
+   * so: a real site answers **400** with `code: 102` ("Can't authenticate user ...") where the documentation leads one to
+   * expect a 401. Hence the flag, set at the source by `token()`.
+   */
   get isAuth(): boolean {
     return this.authRefused || this.status === 401 || this.status === 403;
   }
@@ -82,11 +82,11 @@ export type SgFilter = [string, string, unknown];
 export interface SearchOptions {
   fields?: string[];
   filters?: SgFilter[];
-    /** Combination of the filters: ShotGrid accepts "and" (default) or "or". */
+  /** Combination of the filters: ShotGrid accepts "and" (default) or "or". */
   logicalOperator?: 'and' | 'or';
   sort?: string;
   pageSize?: number;
-    /** Safety cap: prevents a huge project from blocking a synchronization. */
+  /** Safety cap: prevents a huge project from blocking a synchronization. */
   maxRecords?: number;
 }
 
@@ -154,15 +154,15 @@ export class ShotgridClient {
     return this.creds.baseUrl.replace(/\/$/, '');
   }
 
-    // ───────────────────────────── Authentication ─────────────────────────────
+  // ───────────────────────────── Authentication ─────────────────────────────
 
-    /**
-     * Access token (Bearer). The refresh chain is not followed: ShotGrid's refresh_token values are single-use and are lost on the
-     * slightest concurrent call; re-authenticating costs one request and cannot diverge.
-     *
-     * A refusal, for its part, is not retried: it is remembered for the site (`authBlocks`) and replayed as is for a few minutes.
-     * Retrying refused credentials does not make them good, and the site counts failures to lock the account.
-     */
+  /**
+   * Access token (Bearer). The refresh chain is not followed: ShotGrid's refresh_token values are single-use and are lost on the
+   * slightest concurrent call; re-authenticating costs one request and cannot diverge.
+   *
+   * A refusal, for its part, is not retried: it is remembered for the site (`authBlocks`) and replayed as is for a few minutes.
+   * Retrying refused credentials does not make them good, and the site counts failures to lock the account.
+   */
   private async token(): Promise<string> {
     const cached = tokenCache.get(this.baseUrl);
     if (cached && cached.expiresAt > Date.now() + 30_000) return cached.accessToken;
@@ -174,8 +174,8 @@ export class ShotgridClient {
           { baseUrl: this.baseUrl, retryInMs: blocked.until - Date.now() },
           'Authentification ShotGrid déjà refusée pour ce site — requête non émise',
         );
-                // A new instance rather than the same: the stack points at the call that failed here,
-                // not at the one from three minutes ago.
+        // A new instance rather than the same: the stack points at the call that failed here,
+        // not at the one from three minutes ago.
         throw new ShotgridApiError(blocked.error.message, blocked.error.status, blocked.error.body, {
           auth: true,
           code: blocked.error.code,
@@ -216,10 +216,10 @@ export class ShotgridClient {
     });
     if (!res.ok) {
       const detail = await safeJson(res);
-            /**
-             * The site's words, not ours: "Can't authenticate user 'x'" and "... because the account is locked" call for two different
-             * actions, and the generic label confused them. The reason therefore goes up to the screen (`details.reason`).
-             */
+      /**
+       * The site's words, not ours: "Can't authenticate user 'x'" and "... because the account is locked" call for two different
+       * actions, and the generic label confused them. The reason therefore goes up to the screen (`details.reason`).
+       */
       const reason = sgErrorMessage(detail, res.status);
       const hint =
         this.creds.authMode === 'user'
@@ -231,11 +231,11 @@ export class ShotgridClient {
         detail,
         { auth: true, code: 'SHOTGRID_AUTH_REFUSED', details: { reason } },
       );
-            /**
-             * The refusal is logged here, at the moment the site pronounces it: this is the only occasion. The replay from `authBlocks`
-             * can only say "already refused"; the reason (locked account, expired token, wrong login) lived only in the response rendered
-             * to the browser, hence invisible from the logs. Diagnosing a connection that does not go through required replaying the call by hand.
-             */
+      /**
+       * The refusal is logged here, at the moment the site pronounces it: this is the only occasion. The replay from `authBlocks`
+       * can only say "already refused"; the reason (locked account, expired token, wrong login) lived only in the response rendered
+       * to the browser, hence invisible from the logs. Diagnosing a connection that does not go through required replaying the call by hand.
+       */
       logger.warn(
         { baseUrl: this.baseUrl, status: res.status, authMode: this.creds.authMode, reason },
         'Authentification ShotGrid refusée par le site',
@@ -252,16 +252,16 @@ export class ShotgridClient {
     return json.access_token;
   }
 
-    // ───────────────────────────── Transport ─────────────────────────────
+  // ───────────────────────────── Transport ─────────────────────────────
 
-    /**
-     * Every outgoing request from the client goes through `safeFetch`: the site is configured by an admin, but the address it
-     * carries is not thereby trustworthy (a public name may resolve to 169.254.169.254), and some targets (the upload address,
-     * the download address) are dictated outright by the remote site.
-     *
-     * `path` is normally relative to the site's root; ShotGrid does however sometimes return an ABSOLUTE address (`links.complete_upload`).
-     * Concatenating it produced an unusable URL: we recognize it and use it as is, under guard.
-     */
+  /**
+   * Every outgoing request from the client goes through `safeFetch`: the site is configured by an admin, but the address it
+   * carries is not thereby trustworthy (a public name may resolve to 169.254.169.254), and some targets (the upload address,
+   * the download address) are dictated outright by the remote site.
+   *
+   * `path` is normally relative to the site's root; ShotGrid does however sometimes return an ABSOLUTE address (`links.complete_upload`).
+   * Concatenating it produced an unusable URL: we recognize it and use it as is, under guard.
+   */
   private async raw(path: string, init: RequestInit): Promise<Response> {
     const url = /^https?:\/\//i.test(path) ? path : `${this.baseUrl}${path}`;
     return safeFetch(url, init, {
@@ -271,10 +271,10 @@ export class ShotgridClient {
     });
   }
 
-    /**
-     * Authenticated request with retry. ShotGrid does not document a firm quota but degrades the site under load: we back off on
-     * 429 and on transient errors, and never retry a refused authentication.
-     */
+  /**
+   * Authenticated request with retry. ShotGrid does not document a firm quota but degrades the site under load: we back off on
+   * 429 and on transient errors, and never retry a refused authentication.
+   */
   private async request<T>(path: string, init: RequestInit & { retries?: number } = {}): Promise<T> {
     const { retries = 3, ...rest } = init;
     let lastError: unknown;
@@ -284,8 +284,8 @@ export class ShotgridClient {
         ...rest,
         headers: {
           Accept: 'application/json',
-                    // Content-Type only when there is a body: a real ShotGrid site refuses the header on a request without a payload
-                    // ("Unsupported Content-Type"), where a permissive server ignores it.
+          // Content-Type only when there is a body: a real ShotGrid site refuses the header on a request without a payload
+          // ("Unsupported Content-Type"), where a permissive server ignores it.
           ...(rest.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
           ...(rest.headers ?? {}),
           Authorization: `Bearer ${token}`,
@@ -295,7 +295,7 @@ export class ShotgridClient {
 
       const body = await safeJson(res);
       if (res.status === 401) {
-                // Token expired server-side: discard it and retry once.
+        // Token expired server-side: discard it and retry once.
         tokenCache.delete(this.baseUrl);
         if (attempt === 0) continue;
       }
@@ -317,17 +317,17 @@ export class ShotgridClient {
       : new ShotgridApiError('ShotGrid injoignable', 503, lastError);
   }
 
-    // ───────────────────────────── Read ─────────────────────────────
+  // ───────────────────────────── Read ─────────────────────────────
 
-    /** Server information: used for the connection test. */
+  /** Server information: used for the connection test. */
   async serverInfo(): Promise<Record<string, unknown>> {
     const json = await this.request<{ data?: Record<string, unknown> }>(`${SG_API_PATH}/`);
     return json.data ?? {};
   }
 
-    /**
-     * Paginated search. Returns all pages up to `maxRecords`: callers work on complete lists, pagination is a transport detail.
-     */
+  /**
+   * Paginated search. Returns all pages up to `maxRecords`: callers work on complete lists, pagination is a transport detail.
+   */
   async search(entity: string, options: SearchOptions = {}): Promise<SgRecord[]> {
     const pageSize = Math.min(options.pageSize ?? MAX_PAGE_SIZE, MAX_PAGE_SIZE);
     const out: SgRecord[] = [];
@@ -337,10 +337,10 @@ export class ShotgridClient {
       if (options.fields?.length) payload.fields = options.fields;
       if (options.sort) payload.sort = options.sort;
 
-            /**
-             * The search requires a proprietary content type that declares the SHAPE of the filters, and refuses `application/json`:
-             * the array of conditions and the object with a logical operator each have their own. ShotGrid does not guess.
-             */
+      /**
+       * The search requires a proprietary content type that declares the SHAPE of the filters, and refuses `application/json`:
+       * the array of conditions and the object with a logical operator each have their own. ShotGrid does not guess.
+       */
       const useHash = Boolean(options.logicalOperator);
       if (useHash) {
         payload.filters = {
@@ -386,7 +386,7 @@ export class ShotgridClient {
     }
   }
 
-    /** Schema of a field: used to read the possible values of `sg_status_list`. */
+  /** Schema of a field: used to read the possible values of `sg_status_list`. */
   async schemaField(entity: string, field: string): Promise<Record<string, unknown> | null> {
     try {
       const json = await this.request<{ data?: Record<string, unknown> }>(
@@ -394,13 +394,13 @@ export class ShotgridClient {
       );
       return json.data ?? null;
     } catch (err) {
-            // A field absent from the site is not an error: the site simply does not have that field.
+      // A field absent from the site is not an error: the site simply does not have that field.
       if (err instanceof ShotgridApiError && err.status === 404) return null;
       throw err;
     }
   }
 
-    /** Existing fields of an entity: allows asking only for what the site knows. */
+  /** Existing fields of an entity: allows asking only for what the site knows. */
   async schemaFields(entity: string): Promise<Set<string>> {
     const json = await this.request<{ data?: Record<string, unknown> }>(
       `${SG_API_PATH}/schema/${encodeURIComponent(entity)}/fields`,
@@ -408,12 +408,12 @@ export class ShotgridClient {
     return new Set(Object.keys(json.data ?? {}));
   }
 
-    // ───────────────────────────── Write ─────────────────────────────
+  // ───────────────────────────── Write ─────────────────────────────
 
-    /**
-     * ⚠ Raw write. **Do not call directly**: go through `ShotgridWriter`, which sets the linked project and re-reads what the site wrote.
-     * `ShotgridWriteGuard.test.ts` makes the suite fail if an `unsafe*` reappears outside this writer.
-     */
+  /**
+   * ⚠ Raw write. **Do not call directly**: go through `ShotgridWriter`, which sets the linked project and re-reads what the site wrote.
+   * `ShotgridWriteGuard.test.ts` makes the suite fail if an `unsafe*` reappears outside this writer.
+   */
   async unsafeCreate(
     entity: string,
     data: Record<string, unknown>,
@@ -427,7 +427,7 @@ export class ShotgridClient {
     return flattenRecord(json.data);
   }
 
-    /** ⚠ Raw write: see `unsafeCreate`. */
+  /** ⚠ Raw write: see `unsafeCreate`. */
   async unsafeUpdate(
     entity: string,
     id: number,
@@ -442,7 +442,7 @@ export class ShotgridClient {
     return flattenRecord(json.data);
   }
 
-    /** ⚠ Raw write: see `unsafeCreate`. Removes an entity from the site. */
+  /** ⚠ Raw write: see `unsafeCreate`. Removes an entity from the site. */
   async unsafeRemove(entity: string, id: number): Promise<void> {
     await this.request(`${SG_API_PATH}/entity/${encodeURIComponent(entity)}/${id}`, {
       method: 'DELETE',
@@ -450,19 +450,19 @@ export class ShotgridClient {
     });
   }
 
-    // ───────────────────────────── Files ─────────────────────────────
+  // ───────────────────────────── Files ─────────────────────────────
 
-    /**
-     * Download stream of a media. The URLs returned by ShotGrid are signed S3 links with a very short lifetime: they are consumed
-     * immediately, and never held in memory: a dailies master does not fit in a worker's heap.
-     */
-    /**
-     * Download address of a file field.
-     *
-     * The dedicated endpoint is not served by every site nor for every field: a 404 means "no content at this address", not
-     * "the synchronization failed". We then return `null` and the caller falls back to the address that ShotGrid has often already
-     * placed in the field itself.
-     */
+  /**
+   * Download stream of a media. The URLs returned by ShotGrid are signed S3 links with a very short lifetime: they are consumed
+   * immediately, and never held in memory: a dailies master does not fit in a worker's heap.
+   */
+  /**
+   * Download address of a file field.
+   *
+   * The dedicated endpoint is not served by every site nor for every field: a 404 means "no content at this address", not
+   * "the synchronization failed". We then return `null` and the caller falls back to the address that ShotGrid has often already
+   * placed in the field itself.
+   */
   async downloadUrl(entity: string, id: number, field: string): Promise<string | null> {
     try {
       const json = await this.request<{ data?: { url?: string } }>(
@@ -476,12 +476,12 @@ export class ShotgridClient {
     }
   }
 
-    /**
-     * The address comes from the site's RESPONSE (`downloadUrl`, or the raw value of the field): it is an untrusted input, which a
-     * compromised site could point at the metadata service or the MinIO console. Hence the guard, the timeout, and counted redirects:
-     * signed S3 links emit one, and each hop is rechecked. No size cap here: a dailies master weighs what it weighs, and the stream
-     * is consumed on the fly by the caller.
-     */
+  /**
+   * The address comes from the site's RESPONSE (`downloadUrl`, or the raw value of the field): it is an untrusted input, which a
+   * compromised site could point at the metadata service or the MinIO console. Hence the guard, the timeout, and counted redirects:
+   * signed S3 links emit one, and each hop is rechecked. No size cap here: a dailies master weighs what it weighs, and the stream
+   * is consumed on the fly by the caller.
+   */
   async openStream(url: string): Promise<{ stream: Readable; size: number | null; type: string | null }> {
     const res = await safeFetch(
       url,
@@ -498,10 +498,10 @@ export class ShotgridClient {
     };
   }
 
-    /**
-     * Sends a file into a field (Version.sg_uploaded_movie, Note.attachments): ShotGrid issues a signed URL, the content is deposited
-     * there, then the upload is confirmed.
-     */
+  /**
+   * Sends a file into a field (Version.sg_uploaded_movie, Note.attachments): ShotGrid issues a signed URL, the content is deposited
+   * there, then the upload is confirmed.
+   */
   async unsafeUploadFile(
     entity: string,
     id: number,
@@ -510,9 +510,9 @@ export class ShotgridClient {
     filename: string,
     contentType = 'application/octet-stream',
   ): Promise<void> {
-        // ShotGrid describes the upload in `links`, not in `data`: `data` only carries the description of the upload (type,
-        // storage service), and the signed S3 address lives under `links.upload`. Looking up `data.upload_url` always returned empty,
-        // hence "no upload URL" when the site had indeed provided one.
+    // ShotGrid describes the upload in `links`, not in `data`: `data` only carries the description of the upload (type,
+    // storage service), and the signed S3 address lives under `links.upload`. Looking up `data.upload_url` always returned empty,
+    // hence "no upload URL" when the site had indeed provided one.
     const init = await this.request<{
       data?: Record<string, unknown>;
       links?: { upload?: string; complete_upload?: string };
@@ -522,12 +522,12 @@ export class ShotgridClient {
     const uploadUrl = init.links?.upload;
     if (!uploadUrl) throw new ShotgridApiError("ShotGrid n'a pas fourni d'URL de dépôt", 502, init);
 
-        // The upload address is chosen by the site: under guard too, and without following any redirect: replaying a PUT elsewhere
-        // would amount to entrusting the file to that target.
-        //
-        // The response to a PUT only arrives once the whole body has been transmitted: the timeout therefore cannot be that of an API
-        // call. It is set from a minimum throughput (100 KiB/s) plus a minute of margin: a dailies master thus has the time it needs,
-        // without a blocked upload being able to hold the worker indefinitely.
+    // The upload address is chosen by the site: under guard too, and without following any redirect: replaying a PUT elsewhere
+    // would amount to entrusting the file to that target.
+    //
+    // The response to a PUT only arrives once the whole body has been transmitted: the timeout therefore cannot be that of an API
+    // call. It is set from a minimum throughput (100 KiB/s) plus a minute of margin: a dailies master thus has the time it needs,
+    // without a blocked upload being able to hold the worker indefinitely.
     const put = await safeFetch(
       uploadUrl,
       {
@@ -542,8 +542,8 @@ export class ShotgridClient {
     );
     if (!put.ok) throw new ShotgridApiError('Dépôt du fichier vers ShotGrid refusé', put.status);
 
-        // The confirmation makes the file visible in the interface: without it, the object stays on storage without
-        // being attached to the entity.
+    // The confirmation makes the file visible in the interface: without it, the object stays on storage without
+    // being attached to the entity.
     const complete = init.links?.complete_upload;
     if (complete) {
       await this.request(complete, {
@@ -573,7 +573,7 @@ export function flattenRecord(raw: unknown): SgRecord {
     const data = (value as { data?: unknown } | null)?.data;
     if (data !== undefined) out[name] = data;
   }
-    // Some sites already return flat fields: we do not overwrite them.
+  // Some sites already return flat fields: we do not overwrite them.
   for (const [name, value] of Object.entries(rec)) {
     if (name !== 'attributes' && name !== 'relationships' && !(name in out)) out[name] = value;
   }

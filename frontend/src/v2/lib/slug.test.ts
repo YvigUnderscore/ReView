@@ -26,7 +26,7 @@ describe('entitySlug', () => {
 });
 
 describe('mediaSlug', () => {
-  it("removes the file extension", () => {
+  it('removes the file extension', () => {
     expect(mediaSlug('perso_principal_v01.mp4', 219)).toBe('perso-principal-v01-219');
     expect(mediaSlug('scene.final.glb', 5)).toBe('scene-final-5');
   });

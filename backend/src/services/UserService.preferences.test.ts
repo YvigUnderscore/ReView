@@ -93,7 +93,7 @@ describe('updatePreferences: the bag does not grow indefinitely', () => {
     await expect(updatePreferences(7, { k0: false })).resolves.toMatchObject({ k0: false });
   });
 
-    /** A bag predating the cap must remain reducible, otherwise the refusal would lock it in. */
+  /** A bag predating the cap must remain reducible, otherwise the refusal would lock it in. */
   it('lets keys be taken over in a bag already too full', async () => {
     stored(manyKeys(260));
     await expect(updatePreferences(7, { k0: null })).resolves.toBeTruthy();

@@ -84,7 +84,7 @@ describe('normaliseKey', () => {
 });
 
 describe('listForProject', () => {
-  it('returns the project\'s departments when it has any', async () => {
+  it("returns the project's departments when it has any", async () => {
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept({ projectId: 7 })] as never);
     const list = await listForProject(7);
     expect(list).toHaveLength(1);
@@ -398,7 +398,7 @@ describe('attachments', () => {
     vi.mocked(prisma.department.findMany).mockResolvedValue(ids.map((id) => ({ id })) as never);
   };
 
-  it('replaces an entity\'s list, without delta', async () => {
+  it("replaces an entity's list, without delta", async () => {
     inProject([1, 2]);
     await setHolderDepartments('asset', 5, [1, 2]);
     expect(prisma.asset.update).toHaveBeenCalledWith({

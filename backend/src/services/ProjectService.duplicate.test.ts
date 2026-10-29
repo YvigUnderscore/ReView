@@ -129,7 +129,7 @@ describe('ProjectService.duplicateProject (38.A)', () => {
     expect(tx.shot.createManyAndReturn).toHaveBeenCalledTimes(1);
   });
 
-  it('gives an explicit deadline to the transaction (Prisma\'s default 5 s is not enough)', async () => {
+  it("gives an explicit deadline to the transaction (Prisma's default 5 s is not enough)", async () => {
     findFirst.mockResolvedValue({
       studioId: 1,
       description: null,
@@ -149,7 +149,7 @@ describe('ProjectService.duplicateProject (38.A)', () => {
     expect(options?.timeout).toBeGreaterThan(5_000);
   });
 
-  it('copies the shots\' tasks when includeTasks=true (default status, no assignee)', async () => {
+  it("copies the shots' tasks when includeTasks=true (default status, no assignee)", async () => {
     findFirst.mockResolvedValue({
       studioId: 1,
       description: null,

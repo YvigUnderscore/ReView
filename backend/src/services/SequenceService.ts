@@ -44,10 +44,10 @@ export interface BulkSequenceItem {
   name: string;
   code: string;
   order?: number;
-    /**
-     * Host episode (optional level, see `EpisodeService`). Absent or `null`: the sequence stays outside
-     * any episode, the normal state of a feature film and of a project where the level is not enabled.
-     */
+  /**
+   * Host episode (optional level, see `EpisodeService`). Absent or `null`: the sequence stays outside
+   * any episode, the normal state of a feature film and of a project where the level is not enabled.
+   */
   episodeId?: number | null;
 }
 
@@ -119,16 +119,16 @@ export async function update(
   actorId?: number | null,
 ) {
   await assertProjectWritable(projectId); // 38.B: archived project is read-only
-    // The description may be owned by ShotGrid: writing it here would make them diverge until the
-    // next synchronisation overwrites it, without telling anyone.
+  // The description may be owned by ShotGrid: writing it here would make them diverge until the
+  // next synchronisation overwrites it, without telling anyone.
   if (body.description !== undefined) await assertDescriptionWritable(projectId);
-    // The status must come from THIS project's vocabulary, as for a task.
+  // The status must come from THIS project's vocabulary, as for a task.
   if (body.pipelineStatusId !== undefined) {
     await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
   }
   const sequence = await prisma.sequence.update({ where: { id }, data: body });
-    // Same reason as for a shot: the front end listens to `sequence:update`, but nobody emitted it
-    // on the ordinary edit path, so a changed status stayed invisible on a screen already open.
+  // Same reason as for a shot: the front end listens to `sequence:update`, but nobody emitted it
+  // on the ordinary edit path, so a changed status stayed invisible on a screen already open.
   emitToProject(projectId, 'sequence:update', { projectId, id });
   if (body.pipelineStatusId !== undefined) {
     await enqueuePush(projectId, { type: 'sequence-status', sequenceId: id, actorId });
@@ -142,7 +142,7 @@ export async function update(
 /** Full sheet of a sequence: its shots, its assets, its thumbnail, its departments. */
 export async function getDetail(
   id: number,
-    /** Who is looking: the "unseen" state of the sheet's shot cards (batch 9). */
+  /** Who is looking: the "unseen" state of the sheet's shot cards (batch 9). */
   userId?: number,
 ) {
   const sequence = await prisma.sequence.findUnique({
@@ -150,8 +150,8 @@ export async function getDetail(
     include: {
       shots: {
         where: { deletedAt: null, hiddenAt: null },
-                // `id` as the final tie-break: shots from an import share `order = 0`, and the code is
-                // not enough when two merged sequences carry the same numbering.
+        // `id` as the final tie-break: shots from an import share `order = 0`, and the code is
+        // not enough when two merged sequences carry the same numbering.
         orderBy: [{ order: 'asc' }, { code: 'asc' }, { id: 'asc' }],
         take: DETAIL_LIMIT,
         include: {
@@ -160,8 +160,8 @@ export async function getDetail(
             where: { deletedAt: null, hiddenAt: null },
             select: { id: true, name: true, type: true },
           },
-                    // The sequence page shows its shots with the Shots-tab card: so it needs the same
-                    // faces.
+          // The sequence page shows its shots with the Shots-tab card: so it needs the same
+          // faces.
           assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
         },
       },
@@ -174,11 +174,11 @@ export async function getDetail(
       _count: { select: { shots: { where: { deletedAt: null, hiddenAt: null } } } },
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
       assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
-            // Host episode (optional level): the sequence page turns it into a link back up. `null` on a
-            // feature film, in which case the sheet shows nothing more.
+      // Host episode (optional level): the sequence page turns it into a link back up. `null` on a
+      // feature film, in which case the sheet shows nothing more.
       episode: { select: { id: true, code: true, name: true } },
-            // The project setting, to hide the episode when the level is off: the attachment survives
-            // switching off (nothing is destroyed), but it must then leave no trace on screen.
+      // The project setting, to hide the episode when the level is off: the attachment survives
+      // switching off (nothing is destroyed), but it must then leave no trace on screen.
       project: { select: { episodesEnabled: true } },
     },
   });
@@ -189,8 +189,8 @@ export async function getDetail(
     firstMediaThumbKeysForShots(shotIds),
     awaitingReviewByShot(shotIds),
     signAssignees(sequence.shots),
-        // The sheet's shots carry the same card as the Shots tab: they light up under the same
-        // rule, otherwise the same shot would glow differently from one screen to the next.
+    // The sheet's shots carry the same card as the Shots tab: they light up under the same
+    // rule, otherwise the same shot would glow differently from one screen to the next.
     userId ? unseenByShot(userId, sequence.shots) : Promise.resolve(new Map<number, boolean>()),
   ]);
   const shots = await Promise.all(
@@ -201,8 +201,8 @@ export async function getDetail(
       unseen: unseen.get(s.id) ?? false,
     })),
   );
-    // The sheet's assets were only entitled to their chosen thumbnail: they appeared empty while
-    // their versions carried images. Same rule as everywhere else.
+  // The sheet's assets were only entitled to their chosen thumbnail: they appeared empty while
+  // their versions carried images. Same rule as everywhere else.
   const assetFallbacks = await firstMediaThumbKeysForAssets(sequence.assets.map((a) => a.id));
   const assets = await Promise.all(
     sequence.assets.map(async (a) => ({

@@ -259,7 +259,7 @@ describe('ChatService: service messages', () => {
     });
   });
 
-  it('pushes the browser notification in each recipient\'s language', async () => {
+  it("pushes the browser notification in each recipient's language", async () => {
     // Web Push leaves the application: it escapes the browser catalogue. Without this resolution, everyone
     // received the server's sentence.
     db.user.findMany.mockResolvedValue([

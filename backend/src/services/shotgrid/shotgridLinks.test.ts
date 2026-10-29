@@ -29,13 +29,13 @@ beforeEach(() => {
 
 describe('listForUi', () => {
   it('bounds the correspondence table served to the interface', async () => {
-        // The query was not bounded: at 2,000 shots, 10,000 tasks and 20,000 versions, it returned several megabytes of JSON per project opening.
+    // The query was not bounded: at 2,000 shots, 10,000 tasks and 20,000 versions, it returned several megabytes of JSON per project opening.
     await listForUi(12);
     expect(db.shotgridLink.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: UI_LINKS_LIMIT }));
   });
 
   it('sorts by type then local id: the truncation trims the versions first', async () => {
-        // `version` is the last type in alphabetical order — the degradation thus touches what is displayed the least, never the shots or the tasks.
+    // `version` is the last type in alphabetical order — the degradation thus touches what is displayed the least, never the shots or the tasks.
     await listForUi(12);
     const args = db.shotgridLink.findMany.mock.calls[0]![0] as { orderBy: unknown };
     expect(args.orderBy).toEqual([{ localType: 'asc' }, { localId: 'asc' }]);
@@ -102,8 +102,8 @@ describe('upsertLink: conflicts', () => {
   });
 
   it('refuses to overwrite the link of a DIFFERENT local type', async () => {
-        // The lying-link scenario: `('Attachment', 412)` designating in fact Version 412 came and erased the correspondence of the real Attachment 412. A ShotGrid
-        // identifier designates only one local type — replacing was corruption, not rewiring.
+    // The lying-link scenario: `('Attachment', 412)` designating in fact Version 412 came and erased the correspondence of the real Attachment 412. A ShotGrid
+    // identifier designates only one local type — replacing was corruption, not rewiring.
     db.shotgridLink.findMany.mockResolvedValue([
       { id: 9, localType: 'comment', localId: 77, sgType: 'Attachment', sgId: 412 },
     ]);
@@ -113,8 +113,8 @@ describe('upsertLink: conflicts', () => {
   });
 
   it('accepts a rewiring of the same type but logs it', async () => {
-        // Legitimate case: the remote entity has been recreated on the site with a new identifier. The previous link goes — the abandoned entity becomes "never
-        // imported" and will be recreated at the client: it is traced.
+    // Legitimate case: the remote entity has been recreated on the site with a new identifier. The previous link goes — the abandoned entity becomes "never
+    // imported" and will be recreated at the client: it is traced.
     db.shotgridLink.findMany.mockResolvedValue([
       { id: 9, localType: 'media', localId: 4, sgType: 'Attachment', sgId: 99 },
     ]);
@@ -125,7 +125,7 @@ describe('upsertLink: conflicts', () => {
   });
 
   it('removes ALL conflicts, not only the first', async () => {
-        // A link can clash with both uniques at once, on two distinct rows: removing only one would leave the upsert stumbling on the other constraint.
+    // A link can clash with both uniques at once, on two distinct rows: removing only one would leave the upsert stumbling on the other constraint.
     db.shotgridLink.findMany.mockResolvedValue([
       { id: 9, localType: 'media', localId: 4, sgType: 'Attachment', sgId: 99 },
       { id: 10, localType: 'media', localId: 5, sgType: 'Attachment', sgId: 412 },

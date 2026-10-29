@@ -109,7 +109,7 @@ describe('visitableIdsOfProject', () => {
 });
 
 describe('unseenBy*: activity × visit composition', () => {
-  it('compares the shot\'s activity with my visit', async () => {
+  it("compares the shot's activity with my visit", async () => {
     vi.mocked(activityByShot).mockResolvedValue(
       new Map([
         [1, d('2026-02-01T00:00:00Z')],

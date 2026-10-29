@@ -44,7 +44,7 @@ describe('resolveScope: the target belongs to the project, or nothing', () => {
     });
   });
 
-  it("refuses a playlist of another project", async () => {
+  it('refuses a playlist of another project', async () => {
     vi.mocked(prisma.playlist.findFirst).mockResolvedValue(null);
     await expect(resolveScope(7, { scope: ShareScope.PLAYLIST, playlistId: 3 })).rejects.toMatchObject({
       code: 'SCOPE_TARGET_FOREIGN',
@@ -80,8 +80,8 @@ describe('resolveScope: the target belongs to the project, or nothing', () => {
     );
   });
 
-    // A requested but unpublished media would become visible on the day it is published, without
-    // anyone having decided so: we refuse the creation rather than silently ignoring it.
+  // A requested but unpublished media would become visible on the day it is published, without
+  // anyone having decided so: we refuse the creation rather than silently ignoring it.
   it('refuses the selection if a media is not shareable', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([{ id: 11 }] as never);
     await expect(resolveScope(7, { scope: ShareScope.MEDIA, mediaIds: [11, 99] })).rejects.toMatchObject({
@@ -109,7 +109,7 @@ describe('candidateLocation: recognizing a media at a glance in the picker', () 
     ).toBe('SH020 › comp');
   });
 
-  it("falls back to the asset carrying the task", () => {
+  it('falls back to the asset carrying the task', () => {
     expect(
       candidateLocation({
         name: 'V01',
@@ -119,7 +119,7 @@ describe('candidateLocation: recognizing a media at a glance in the picker', () 
     ).toBe('Robot › lookdev');
   });
 
-  it("names the asset when the version hangs directly from it", () => {
+  it('names the asset when the version hangs directly from it', () => {
     expect(candidateLocation({ name: 'V01', task: null, asset: { name: 'Robot' } })).toBe('Robot');
   });
 

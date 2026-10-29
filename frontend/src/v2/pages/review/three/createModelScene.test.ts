@@ -149,7 +149,7 @@ describe('createModelScene.dispose — complete cleanup of the viewer (F9)', () 
     expect(scene.renderer.domElement.isConnected).toBe(false);
   });
 
-  it("does not take away the HDRI environment, which belongs to the lighting hook", () => {
+  it('does not take away the HDRI environment, which belongs to the lighting hook', () => {
     const { scene } = makeScene();
     const env = new REAL.Texture();
     const suivi = countDisposals([env]);

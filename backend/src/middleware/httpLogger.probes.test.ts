@@ -88,7 +88,7 @@ describe('isProbeRequest — boundary between probe and traffic', () => {
     expect(isProbeRequest('/metrics?token=s3cr3t')).toBe(true);
   });
 
-  it("silences no application route", () => {
+  it('silences no application route', () => {
     for (const url of [
       '/api/media/1',
       '/api/health-checks',
@@ -103,12 +103,12 @@ describe('isProbeRequest — boundary between probe and traffic', () => {
 });
 
 describe('httpLogger — log volume of automatic probes', () => {
-  it("writes no line for thirty healthcheck passes", async () => {
+  it('writes no line for thirty healthcheck passes', async () => {
     // Thirty passes = five minutes of docker probing. Without the fix: 30 lines.
     expect(await countLines('/health', 30)).toBe(0);
   });
 
-  it("writes no line for twenty Prometheus scrapes, token included", async () => {
+  it('writes no line for twenty Prometheus scrapes, token included', async () => {
     expect(await countLines('/metrics?token=s3cr3t', 20)).toBe(0);
   });
 

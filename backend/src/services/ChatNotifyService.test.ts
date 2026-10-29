@@ -65,7 +65,7 @@ describe('ChatNotifyService.notifyChat (42.B #67)', () => {
     expect(postedBodies()).toContainEqual({ text: expected });
   });
 
-  it('follows the studio language, not the server\'s', async () => {
+  it("follows the studio language, not the server's", async () => {
     studioFind.mockResolvedValue({ discordWebhookUrl: DISCORD } as never);
     settingFind.mockResolvedValue(null);
     vi.mocked(getDefaultLocale).mockResolvedValue('fr');

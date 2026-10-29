@@ -49,7 +49,7 @@ describe('compileRule — regular expressions', () => {
     );
   });
 
-  it("is not tripped up by the global flag from one call to the next", () => {
+  it('is not tripped up by the global flag from one call to the next', () => {
     // A compiled expression is reused for each entity of the pass: with `g`,
     // `lastIndex` would persist and one candidate in two would escape masking.
     const test = compileRule({ matchType: 'regex', pattern: 'TMP', ignoreCase: true });

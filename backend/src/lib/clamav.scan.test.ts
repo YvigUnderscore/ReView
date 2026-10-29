@@ -142,7 +142,7 @@ describe('scanFile — clamd refusal', () => {
 });
 
 describe('scanFile — verdicts', () => {
-  it('returns clamd\'s verdict after sending the whole file', async () => {
+  it("returns clamd's verdict after sending the whole file", async () => {
     await startFakeClamd('ok-after-eof');
     const path = fileOf('plan.png', 1024);
 
@@ -156,7 +156,7 @@ describe('scanFile — verdicts', () => {
    * (`MaxFileSize 1M`), a 3 MiB file with EICAR at its head is reported `OK`.
    * Silence is indistinguishable from a verdict; at least it is made audible.
    */
-  it('signals that an OK proves nothing beyond clamd\'s default MaxFileSize', async () => {
+  it("signals that an OK proves nothing beyond clamd's default MaxFileSize", async () => {
     await startFakeClamd('ok');
     const path = fileOf('master.exr', 101 * 1024 * 1024, true);
 

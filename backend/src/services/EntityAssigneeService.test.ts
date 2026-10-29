@@ -105,7 +105,7 @@ describe('setAssignees', () => {
     expect(prisma.user.findMany).not.toHaveBeenCalled();
   });
 
-  it("refuses an entity that does not exist", async () => {
+  it('refuses an entity that does not exist', async () => {
     vi.mocked(prisma.shot.findFirst).mockResolvedValue(null);
     await expect(setAssignees(actor, 'shot', 999, [2])).rejects.toThrow(/not found/i);
   });
@@ -132,7 +132,7 @@ describe('scopeAssignees', () => {
     expect(list[1]!.count).toBe(2);
   });
 
-  it("does not attribute the same origin twice to one person", async () => {
+  it('does not attribute the same origin twice to one person', async () => {
     vi.mocked(prisma.shot.findUnique).mockResolvedValue({ assignees: [person(2, 'alice')] } as never);
     vi.mocked(prisma.task.findMany).mockResolvedValue([
       { assignee: person(2, 'alice') },

@@ -46,7 +46,7 @@ describe('crypto — key rotation (A3-08)', () => {
     expect(contexte.remedy).toContain('APP_ENCRYPTION_KEY');
   });
 
-  it("does not flood the log when all secrets become unreadable", () => {
+  it('does not flood the log when all secrets become unreadable', () => {
     const encs = [encryptSecret('a'), encryptSecret('b'), encryptSecret('c')];
     env.APP_ENCRYPTION_KEY = 'une-toute-autre-cle-9876543210abc';
     __cryptoTesting.resetLogState();

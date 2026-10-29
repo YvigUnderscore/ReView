@@ -112,7 +112,7 @@ describe('notify: settings per event type', () => {
 });
 
 describe('notify: push language', () => {
-  it('resolves the language from the recipient\'s PREFERENCES, not from their identifier', async () => {
+  it("resolves the language from the recipient's PREFERENCES, not from their identifier", async () => {
     const preferences = { locale: 'ja' };
     prismaMock.user.findUnique.mockResolvedValue({ preferences });
     await notify(decision);

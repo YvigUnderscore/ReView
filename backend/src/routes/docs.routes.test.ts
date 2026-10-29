@@ -35,7 +35,7 @@ describe('GET /api/docs — public surface', () => {
     expect(res.text).toContain('href="https://git.studio.tld/review"');
   });
 
-  it('renders the legal notice in the reader's language', async () => {
+  it("renders the legal notice in the reader's language", async () => {
     findUnique.mockResolvedValue(null);
     const fr = await request(app).get('/api/docs').set('Accept-Language', 'fr');
     expect(fr.text).toContain('Logiciel libre');

@@ -117,7 +117,7 @@ describe('BulkService.bulkDelete: RBAC per domain', () => {
     expect(softDeleteVersions).toHaveBeenCalledWith([9]);
   });
 
-  it('refuses deleting someone else\'s version to a non-manager', async () => {
+  it("refuses deleting someone else's version to a non-manager", async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([versionRow(9, 99)] as never);
     await expect(bulkDelete(artist, 'versions', [9])).rejects.toMatchObject({ statusCode: 403 });
     expect(softDeleteVersions).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('BulkService.bulkDelete: RBAC per domain', () => {
     await expect(bulkDelete(artist, 'media', [4, 5])).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('lets a project manager delete someone else\'s media', async () => {
+  it("lets a project manager delete someone else's media", async () => {
     vi.mocked(effectiveProjectRole).mockResolvedValue(Role.SUPERVISOR);
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([mediaRow(4, 3), mediaRow(5, 99)] as never);
     await expect(bulkDelete(artist, 'media', [4, 5])).resolves.toBe(2);

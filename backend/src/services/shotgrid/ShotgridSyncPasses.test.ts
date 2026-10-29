@@ -27,7 +27,7 @@ describe('passesForEvent', () => {
   });
 
   it('re-reads only the versions for a Version event', () => {
-        // The status reference is not used here: the version reads its persisted match, and a full pass of the hierarchy would cost thousands of requests.
+    // The status reference is not used here: the version reads its persisted match, and a full pass of the hierarchy would cost thousands of requests.
     expect(passesForEvent('Version')).toEqual(['versions']);
   });
 
@@ -35,7 +35,7 @@ describe('passesForEvent', () => {
     for (const entity of ['Sequence', 'Shot', 'Task']) {
       expect(passesForEvent(entity)).toContain('statuses');
     }
-        // The asset carries no status on the ReView side: it does without one.
+    // The asset carries no status on the ReView side: it does without one.
     expect(passesForEvent('Asset')).toEqual(['assets']);
   });
 
@@ -60,7 +60,7 @@ describe('passesForEvent', () => {
   });
 
   it('accepts only the types actually handled', () => {
-        // The list of accepted entities is deduced from the passes table: they can no longer diverge, which was exactly the default of notes and playlists.
+    // The list of accepted entities is deduced from the passes table: they can no longer diverge, which was exactly the default of notes and playlists.
     for (const entity of HANDLED_ENTITIES) expect(passesForEvent(entity)).not.toBeNull();
   });
 });
@@ -97,8 +97,8 @@ describe('resolvePasses', () => {
   });
 
   it('spares notes, playlists and publishes when realigning a single card', () => {
-        // This is the heart of the fix: realigning a shot swept the project's five thousand
-        // `PublishedFile` and its five hundred notes.
+    // This is the heart of the fix: realigning a shot swept the project's five thousand
+    // `PublishedFile` and its five hundred notes.
     const passes = resolvePasses({ onlySgIds: [{ sgType: 'Shot', sgId: 12 }] });
     expect(passes.has('notes')).toBe(false);
     expect(passes.has('playlists')).toBe(false);
@@ -107,7 +107,7 @@ describe('resolvePasses', () => {
   });
 
   it('keeps "structure only" as a veto over the deduced list', () => {
-        // Arbitrating a version conflict requires `withMedia: false`: the deduction must not reopen the door to fetching media.
+    // Arbitrating a version conflict requires `withMedia: false`: the deduction must not reopen the door to fetching media.
     const passes = resolvePasses({ onlySgIds: [{ sgType: 'Version', sgId: 7 }], withMedia: false });
     expect(passes.has('versions')).toBe(false);
   });

@@ -33,7 +33,7 @@ function contextWith(
     sgProjectName: 'ALPHA',
     asUserLogin: 'lea@studio.fr',
     client: { findById: vi.fn(async () => remote) },
-        // Segregation is no longer this module's business: `ShotgridWriter` applies it, and it has its own suite. Only the write itself is doubled here.
+    // Segregation is no longer this module's business: `ShotgridWriter` applies it, and it has its own suite. Only the write itself is doubled here.
     writer: {
       create: vi.fn(async () => ({ id: 900, type: 'Playlist' })),
       update: vi.fn(async () => ({ id: 900, type: 'Playlist' })),
@@ -75,7 +75,7 @@ function localPlaylist(versionIds: number[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   links.upsertLink.mockResolvedValue(undefined);
-    // 11, 12, 13 are imported from ShotGrid; 99 does not exist there.
+  // 11, 12, 13 are imported from ShotGrid; 99 does not exist there.
   links.mapLocalToSg.mockResolvedValue(
     versionLinks([
       [11, 111],
@@ -87,7 +87,7 @@ beforeEach(() => {
 
 describe('pushPlaylist: creation', () => {
   it("sends the versions in the session's order", async () => {
-        // A playlist is a sequence of events: order matters as much as content.
+    // A playlist is a sequence of events: order matters as much as content.
     playlist.findUnique.mockResolvedValue({
       id: 5,
       name: 'Dailies 12/06',
@@ -99,7 +99,7 @@ describe('pushPlaylist: creation', () => {
     const sgId = await pushPlaylist(ctx, 5);
 
     expect(sgId).toBe(900);
-        // No `project` in the payload: `ShotgridWriter` sets it, and its own suite checks that it refuses to target another one.
+    // No `project` in the payload: `ShotgridWriter` sets it, and its own suite checks that it refuses to target another one.
     expect(ctx.writer.create).toHaveBeenCalledWith('Playlist', {
       code: 'Dailies 12/06',
       versions: [version(111), version(112), version(113)],
@@ -107,7 +107,7 @@ describe('pushPlaylist: creation', () => {
   });
 
   it('ignores the versions ShotGrid does not know', async () => {
-        // Inventing them would create entries leading nowhere.
+    // Inventing them would create entries leading nowhere.
     playlist.findUnique.mockResolvedValue({
       id: 5,
       name: 'Dailies',
@@ -137,7 +137,7 @@ describe('pushPlaylist: creation', () => {
  */
 describe('pushPlaylist: non-destructive update', () => {
   it('updates the already linked playlist instead of creating a second one', async () => {
-        // Without this, every reordering would leave one more session in the studio.
+    // Without this, every reordering would leave one more session in the studio.
     localPlaylist([11]);
 
     const ctx = contextWith(sgRemote([version(112)]));
@@ -159,7 +159,7 @@ describe('pushPlaylist: non-destructive update', () => {
     const ctx = contextWith(sgRemote([version(500), version(111), version(112)]));
     await pushPlaylist(ctx, 5);
 
-        // 500 stays at the head; the slot of 112, known and removed here, moves to 113.
+    // 500 stays at the head; the slot of 112, known and removed here, moves to 113.
     expect(ctx.writer.update.mock.calls[0]![2]).toEqual({
       code: 'Dailies',
       versions: [version(500), version(111), version(113)],
@@ -187,7 +187,7 @@ describe('pushPlaylist: non-destructive update', () => {
   });
 
   it('neither removes nor moves a version from another project of the site', async () => {
-        // No match for this connection: it is not of this project, so ReView has nothing to say about it, even when the local session empties.
+    // No match for this connection: it is not of this project, so ReView has nothing to say about it, even when the local session empties.
     localPlaylist([]);
 
     const ctx = contextWith(sgRemote([version(111), version(600), version(112)]));
@@ -202,7 +202,7 @@ describe('pushPlaylist: non-destructive update', () => {
     const ctx = contextWith(sgRemote([version(111), version(700), version(112)]));
     await pushPlaylist(ctx, 5);
 
-        // 700 keeps its rank; the two slots governed by ReView are recomposed.
+    // 700 keeps its rank; the two slots governed by ReView are recomposed.
     expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({
       versions: [version(112), version(700), version(111)],
     });
@@ -227,14 +227,14 @@ describe('pushPlaylist: non-destructive update', () => {
     expect(ctx.writer.update.mock.calls[0]![2]).toMatchObject({ code: 'Dailies' });
   });
 
-    /**
-     * Project segregation and the refusal of template projects were checked here, on a local copy of the three controls. That copy has disappeared: `ShotgridWriter`
-     * applies them to **all** the file's writes, and `ShotgridWriter.test.ts` tests them: target passed to another project, template project, vanished target. Replaying
-     * them here would only test the double.
-     */
+  /**
+   * Project segregation and the refusal of template projects were checked here, on a local copy of the three controls. That copy has disappeared: `ShotgridWriter`
+   * applies them to **all** the file's writes, and `ShotgridWriter.test.ts` tests them: target passed to another project, template project, vanished target. Replaying
+   * them here would only test the double.
+   */
 
   it('gives up without recreating anything when the remote playlist has disappeared', async () => {
-        // Recreating it would put back into the studio a session deleted by hand.
+    // Recreating it would put back into the studio a session deleted by hand.
     localPlaylist([11]);
 
     const ctx = contextWith(null);
@@ -248,7 +248,7 @@ describe('mergePlaylistVersions', () => {
   const known = new Set([111, 112, 113]);
 
   it('preserves an entry that is not a version', () => {
-        // A site may set something else in the field: we do not interpret it, we keep it.
+    // A site may set something else in the field: we do not interpret it, we keep it.
     const merged = mergePlaylistVersions({
       remote: [
         { type: 'Shot', id: 42 },

@@ -51,7 +51,7 @@ describe('authenticateSocket: access token', () => {
     expect(socket.user).toEqual(dbUser);
   });
 
-    // A1-01: a socket gives access to the same data as the API — internal comments, presigned URLs, notifications. It therefore closes under the same conditions.
+  // A1-01: a socket gives access to the same data as the API — internal comments, presigned URLs, notifications. It therefore closes under the same conditions.
   it('refuses a deactivated account', async () => {
     db.user.findUnique.mockResolvedValue({ ...dbUser, disabledAt: new Date() });
     const { socket, refuse } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
@@ -59,16 +59,16 @@ describe('authenticateSocket: access token', () => {
     expect(socket.user).toBeUndefined();
   });
 
-    // A3-02: without the `sid`, the session was only checked at handshake and a revocation left the websocket open for days. The periodic revalidation needs it.
+  // A3-02: without the `sid`, the session was only checked at handshake and a revocation left the websocket open for days. The periodic revalidation needs it.
   it('keeps the handshake session so that it can be replayed', async () => {
     const { socket } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
     expect(socket.authSid).toBe('abc');
   });
 
-    /**
-     * The heart of the fix: a socket gives access to the same data as an HTTP request. As long as it accepted an inherited token without `sid`, it remained the only door
-     * of the product that no logout, no password change and no offboarding could close — refusing only on the HTTP side closed nothing.
-     */
+  /**
+   * The heart of the fix: a socket gives access to the same data as an HTTP request. As long as it accepted an inherited token without `sid`, it remained the only door
+   * of the product that no logout, no password change and no offboarding could close — refusing only on the HTTP side closed nothing.
+   */
   it('refuses an inherited token without sid', async () => {
     const legacy = jwt.sign({ id: dbUser.id, email: dbUser.email, role: dbUser.role }, env.JWT_SECRET);
     const { socket, refuse } = await run({ token: legacy });
@@ -94,7 +94,7 @@ describe('authenticateSocket: access token', () => {
     expect(refuse).toBe(true);
   });
 
-    // All the app's tokens share the JWT_SECRET: only the `kind` distinguishes them.
+  // All the app's tokens share the JWT_SECRET: only the `kind` distinguishes them.
   it('refuses the other types of tokens signed with the same secret', async () => {
     expect((await run({ token: signRefreshToken({ ...dbUser, sid: 'abc' }) })).refuse).toBe(true);
     expect((await run({ token: signTwoFaToken(dbUser.id) })).refuse).toBe(true);
@@ -108,7 +108,7 @@ describe('authenticateSocket: access token', () => {
     expect((await run({ token: 42 })).refuse).toBe(true);
   });
 
-    // A tab opened before the switch to `auth` still reconnects through the query.
+  // A tab opened before the switch to `auth` still reconnects through the query.
   it('still accepts the token set in the query', async () => {
     const { socket, refuse } = await run({}, { token: signAccessToken({ ...dbUser, sid: 'abc' }) });
     expect(refuse).toBe(false);
@@ -131,7 +131,7 @@ describe('authenticateSocket: client share link', () => {
     expect((await run({ token: 'partage' })).refuse).toBe(true);
   });
 
-    // The link's token is in the URL: without this session, the password would be decorative.
+  // The link's token is in the URL: without this session, the password would be decorative.
   it('requires the share session when the link is password-protected', async () => {
     db.shareLink.findUnique.mockResolvedValue({ id: 3, token: 'partage', projectId: 12, passwordHash: 'h' });
     expect((await run({ token: 'partage' })).refuse).toBe(true);

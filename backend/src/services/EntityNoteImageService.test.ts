@@ -76,7 +76,7 @@ describe('presign', () => {
 });
 
 describe('resolveMany', () => {
-  it('returns the URL only if the entity\'s project is accessible', async () => {
+  it("returns the URL only if the entity's project is accessible", async () => {
     vi.mocked(resolveProject).mockResolvedValue(42);
     vi.mocked(checkProjectAccess).mockResolvedValue(false);
 

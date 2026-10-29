@@ -71,7 +71,7 @@ describe('detectProductionImage', () => {
 
   // TGA has no leading signature (its mark is a file footer): we validate the 18-byte header, field by
   // field, in addition to the extension.
-  it("recognises a TGA by the consistency of its header, never by the extension alone", () => {
+  it('recognises a TGA by the consistency of its header, never by the extension alone', () => {
     expect(detectProductionImage(tgaHeader(), '.tga', 6144)).toBe('.tga');
     // No extension: nothing distinguishes these bytes from an arbitrary binary any more.
     expect(detectProductionImage(tgaHeader(), null, 6144)).toBeNull();
@@ -113,7 +113,7 @@ describe('detectVideo', () => {
   });
 
   // SMPTE ST 377-1: key of the Header Partition Pack, first 11 bytes stable.
-  it("recognises an MXF by the key of its header partition", () => {
+  it('recognises an MXF by the key of its header partition', () => {
     const key = [
       0x06, 0x0e, 0x2b, 0x34, 0x02, 0x05, 0x01, 0x01, 0x0d, 0x01, 0x02, 0x01, 0x01, 0x02, 0x04, 0x00,
     ];
@@ -346,7 +346,7 @@ describe('headers recorded from real files', () => {
   ];
 
   for (const [kind, ext, dump] of real) {
-      it(`${ext}: the file written by FFmpeg is recognised`, () => {
+    it(`${ext}: the file written by FFmpeg is recognised`, () => {
       // 63,374 = actual size of the recorded TGA; the other formats do not depend on it.
       expect(validateMediaHeader(kind, bytes(dump), ext, 63_374)).toBe(ext);
     });
@@ -361,7 +361,7 @@ describe('headers recorded from real files', () => {
 });
 
 describe('getExtension', () => {
-  it("extracts the extension in lowercase", () => {
+  it('extracts the extension in lowercase', () => {
     expect(getExtension('Scene.GLB')).toBe('.glb');
     expect(getExtension('noext')).toBe('');
   });

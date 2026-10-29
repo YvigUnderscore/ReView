@@ -12,7 +12,7 @@ const payload = { id: 7, email: 'artist@studio.com', role: Role.ARTIST, sid: 'ab
 const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
 describe('jwt — round trip', () => {
-  it("returns the content of an access token", () => {
+  it('returns the content of an access token', () => {
     expect(verifyToken(signAccessToken(payload))).toMatchObject(payload);
   });
 
@@ -34,7 +34,7 @@ describe('jwt — round trip', () => {
  * A JWT header is written by whoever presents it: without an enforced algorithm list, it is the token that chooses
  * how its own signature is verified.
  */
-describe("jwt — the algorithm is enforced by the server", () => {
+describe('jwt — the algorithm is enforced by the server', () => {
   it('refuses a `alg: none` token (empty signature)', () => {
     const forged = `${b64({ alg: 'none', typ: 'JWT' })}.${b64(payload)}.`;
     expect(verifyToken(forged)).toBeNull();
@@ -48,7 +48,7 @@ describe("jwt — the algorithm is enforced by the server", () => {
     expect(verifyToken(other)).toBeNull();
   });
 
-  it("does sign with HS256 — which is what verification expects", () => {
+  it('does sign with HS256 — which is what verification expects', () => {
     const header = JSON.parse(
       Buffer.from(signAccessToken(payload).split('.')[0]!, 'base64url').toString('utf8'),
     ) as { alg: string };

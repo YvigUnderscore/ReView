@@ -65,7 +65,7 @@ describe('AuditService.list: metadata output (A5-03)', () => {
     expect(res.items[0]!.metadata).toEqual({ ids: [812, 813, 814] });
   });
 
-  it("exposes neither a webhook token nor a secret by name", async () => {
+  it('exposes neither a webhook token nor a secret by name', async () => {
     prismaMock.auditLog.findMany.mockResolvedValue([
       {
         id: 8,

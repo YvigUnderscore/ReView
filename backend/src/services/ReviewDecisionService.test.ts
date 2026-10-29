@@ -120,9 +120,9 @@ describe('decide', () => {
       expect.objectContaining({ action: 'VERSION_DECISION', entityId: 42 }),
     );
     expect(emitToProject).toHaveBeenCalledWith(3, 'version:update', expect.objectContaining({ id: 42 }));
-        // `referenceId` is the version's FIRST MEDIA, not the version: the author received
-        // a version id and followers a media id for the same event, so the author's link,
-        // the one most concerned, led nowhere.
+    // `referenceId` is the version's FIRST MEDIA, not the version: the author received
+    // a version id and followers a media id for the same event, so the author's link,
+    // the one most concerned, led nowhere.
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 9,
@@ -190,19 +190,19 @@ describe('decideAsGuest: an opinion, not a verdict', () => {
     expect(JSON.stringify(offered)).not.toContain('Pending');
   });
 
-    /** The core of the batch: the opinion is recorded, the version's status does not move. */
-  it('records the opinion without ever touching the version\'s current status', async () => {
+  /** The core of the batch: the opinion is recorded, the version's status does not move. */
+  it("records the opinion without ever touching the version's current status", async () => {
     await decideAsGuest(guest, 1, 42, 2);
     expect(prisma.reviewDecision.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ versionId: 42, statusId: 2, guestName: 'Claire', shareLinkId: 7 }),
       }),
     );
-        // `version.update` does not even exist on the mock: calling it would fail the test.
+    // `version.update` does not even exist on the mock: calling it would fail the test.
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-    // A guest who sets "Pending" would write a pipeline state from outside.
+  // A guest who sets "Pending" would write a pipeline state from outside.
   it('refuses a status that is not one of the two offered', async () => {
     await expect(decideAsGuest(guest, 1, 42, 1)).rejects.toThrowError(
       expect.objectContaining({ statusCode: 400 }),

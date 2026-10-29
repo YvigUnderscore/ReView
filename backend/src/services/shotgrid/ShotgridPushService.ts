@@ -27,7 +27,7 @@ import { pushPlaylist } from './ShotgridPlaylistSync';
  */
 
 export type PushJob =
-    // Task born in ReView (review feedback): it only existed on our side.
+  // Task born in ReView (review feedback): it only existed on our side.
   | { type: 'task-create'; taskId: number; actorId?: number | null }
   | { type: 'task-status'; taskId: number; actorId?: number | null }
   | { type: 'task-dates'; taskId: number; actorId?: number | null }
@@ -72,7 +72,7 @@ interface PushContext {
   sgProjectId: number;
   sgProjectName: string;
   client: ReturnType<typeof clientForSiteRecord>;
-    /** Every write goes through here: see `ShotgridWriter`. */
+  /** Every write goes through here: see `ShotgridWriter`. */
   writer: ShotgridWriter;
   settings: ReturnType<typeof parseSettings>;
   baseUrl: string;
@@ -163,7 +163,7 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
     baseUrl: connection.site.baseUrl,
   };
 
-    // The refusal is detected here, once for all types: each write function re-tests its domain afterwards (defence in depth), but none could say so.
+  // The refusal is detected here, once for all types: each write function re-tests its domain afterwards (defence in depth), but none could say so.
   const domain = JOB_DOMAIN[job.type];
   if (!can(ctx.settings, domain, 'write')) {
     await noteBlockedPush(connectionId, job, domain);
@@ -282,7 +282,7 @@ async function pushTaskAssignee(ctx: PushContext, job: Extract<PushJob, { type: 
   const sgId = await resolveTarget(ctx, 'task', task.id, 'Task');
   if (!sgId) return;
 
-    // Assigning presupposes a matching ShotGrid account: without one, writing nothing is better than emptying the assignees list on the ShotGrid side.
+  // Assigning presupposes a matching ShotGrid account: without one, writing nothing is better than emptying the assignees list on the ShotGrid side.
   if (!task.assigneeId) return;
   const link = await findByLocal(ctx.connectionId, 'user', task.assigneeId);
   if (!link) {
@@ -421,8 +421,8 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
   const sgId = await resolveTarget(ctx, 'version', version.id, 'Version');
   if (!sgId) return;
 
-    // The configured map first; failing that, a deduction by name, read-only.
-    // Without this second path, closing the read of the status reference was enough to cut every sending of review decisions.
+  // The configured map first; failing that, a deduction by name, read-only.
+  // Without this second path, closing the read of the status reference was enough to cut every sending of review decisions.
   const code =
     inverseVersionStatusMap(ctx.settings.versionStatusMap).get(version.reviewStatusId) ??
     (await resolveVersionStatusCode(ctx.client, version.reviewStatusId));
@@ -466,7 +466,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
 
   const already = await findByLocal(ctx.connectionId, 'version', version.id);
   if (already) {
-        // The version already exists over there: adding a media to a version in progress must enrich THAT version, not manufacture a second one bearing the same name.
+    // The version already exists over there: adding a media to a version in progress must enrich THAT version, not manufacture a second one bearing the same name.
     const media = version.media[0];
     if (media) {
       await uploadThumbnail(ctx, already.sgId, media);
@@ -481,10 +481,10 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     return;
   }
 
-    /**
-     * A Version of the same code may already exist there — created by the artist's render tool before they published here. Attaching to it rather than making a twin:
-     * the site has no way to tell two identical entries apart, and the duplicate is deleted by hand.
-     */
+  /**
+   * A Version of the same code may already exist there — created by the artist's render tool before they published here. Attaching to it rather than making a twin:
+   * the site has no way to tell two identical entries apart, and the duplicate is deleted by hand.
+   */
   const twin = await findVersionByCode(
     { client: ctx.client, scope: { sgProjectId: ctx.sgProjectId, sgProjectName: ctx.sgProjectName } },
     version.name,
@@ -496,7 +496,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
       localId: version.id,
       sgType: 'Version',
       sgId: twin,
-            // `mediaImported`: without it, the next synchronization would fetch back the media we have just sent, as a duplicate.
+      // `mediaImported`: without it, the next synchronization would fetch back the media we have just sent, as a duplicate.
       data: { publishMode: ctx.settings.push.publishMode, mediaImported: true },
     });
     const media = version.media[0];
@@ -545,8 +545,8 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     data: {
       createdFromReview: true,
       publishMode: ctx.settings.push.publishMode,
-            // This version's media is the one we have just sent: it is already here. Without this marker, the next synchronization would download it again from the site
-            // and add it to the same version — one more copy at every pass.
+      // This version's media is the one we have just sent: it is already here. Without this marker, the next synchronization would download it again from the site
+      // and add it to the same version — one more copy at every pass.
       mediaImported: true,
     },
   });
@@ -555,7 +555,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     'Version créée dans ShotGrid depuis une publication ReView',
   );
 
-    // Thumbnail first: light, it is enough to make the version recognizable in ShotGrid lists even when the file itself stays with us.
+  // Thumbnail first: light, it is enough to make the version recognizable in ShotGrid lists even when the file itself stays with us.
   const media = version.media[0];
   if (media) {
     await uploadThumbnail(ctx, created.id, media);
@@ -572,8 +572,8 @@ async function pushPlaylistJob(ctx: PushContext, job: Extract<PushJob, { type: '
     {
       connectionId: ctx.connectionId,
       sgProjectId: ctx.sgProjectId,
-            // The scope expects a project name; the caller has it at hand. Pass it rather than let the `?? ''` fallback settle in: `belongsToProject` only rules
-            // on the identifier today, but a scope half of which is an empty string is a trap for whoever extends it to the name.
+      // The scope expects a project name; the caller has it at hand. Pass it rather than let the `?? ''` fallback settle in: `belongsToProject` only rules
+      // on the identifier today, but a scope half of which is an empty string is a trap for whoever extends it to the name.
       sgProjectName: ctx.sgProjectName,
       client: ctx.client,
       writer: ctx.writer,
@@ -617,7 +617,7 @@ async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'a
   const sgId = await resolveTarget(ctx, 'asset', asset.id, 'Asset');
   if (!sgId) return;
 
-    // Only the links whose counterpart exists on the ShotGrid side are sent: a shot created locally and never synchronized has no remote identifier to cite.
+  // Only the links whose counterpart exists on the ShotGrid side are sent: a shot created locally and never synchronized has no remote identifier to cite.
   const shotRefs: Array<{ type: string; id: number }> = [];
   for (const shot of asset.shots) {
     const link = await findByLocal(ctx.connectionId, 'shot', shot.id);
@@ -682,7 +682,7 @@ async function uploadMasterMedia(
   }
   try {
     const buffer = await storage.getObjectBuffer(mediaSourceKey(media));
-        // `sg_uploaded_movie` accepts images and videos: it is what triggers ShotGrid's transcoding and feeds its player.
+    // `sg_uploaded_movie` accepts images and videos: it is what triggers ShotGrid's transcoding and feeds its player.
     await ctx.writer.upload(
       'Version',
       sgVersionId,

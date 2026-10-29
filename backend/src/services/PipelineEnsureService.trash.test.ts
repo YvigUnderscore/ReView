@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('ensureAsset: idempotent in the face of the trash and of concurrency', () => {
-  it("returns the existing asset without creating it (created: false)", async () => {
+  it('returns the existing asset without creating it (created: false)', async () => {
     const existing = { id: 59, name: 'crag' };
     vi.mocked(prisma.asset.findFirst).mockResolvedValue(existing as never);
     const out = await ensureAsset(admin, 7, { name: 'crag' });
@@ -58,7 +58,7 @@ describe('ensureAsset: idempotent in the face of the trash and of concurrency', 
     expect(emitToProject).not.toHaveBeenCalled();
   });
 
-  it("returns the asset created by a concurrent request (created: false)", async () => {
+  it('returns the asset created by a concurrent request (created: false)', async () => {
     const winner = { id: 96, name: 'crag' };
     vi.mocked(prisma.asset.findFirst)
       .mockResolvedValueOnce(null)
@@ -132,7 +132,7 @@ describe('ensureTask: idempotent in the face of concurrency', () => {
 describe('ensureVersion: idempotent in the face of the trash and of concurrency', () => {
   const parent = { taskId: 5 };
 
-  it('recomputes the number rather than returning a colleague\'s version', async () => {
+  it("recomputes the number rather than returning a colleague's version", async () => {
     // With no name requested, the caller wants THE NEXT ONE: returning the V02 that the other publication has
     // just created would attach their media to a colleague's work.
     vi.mocked(prisma.version.findMany)

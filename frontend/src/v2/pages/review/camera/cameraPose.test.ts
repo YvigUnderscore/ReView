@@ -24,7 +24,7 @@ describe('cameraPoseFromView', () => {
     expect('aspect' in pose).toBe(false);
   });
 
-  it('carries over the already-recorded aspect, whatever the view\'s own is', () => {
+  it("carries over the already-recorded aspect, whatever the view's own is", () => {
     const pose = cameraPoseFromView({ ...base, aspect: 16 / 9 }, 2.39);
     expect(pose.aspect).toBeCloseTo(2.39);
   });

@@ -29,7 +29,7 @@ describe('mergeSyncOptions', () => {
   });
 
   it('widens to the whole project as soon as one request is global', () => {
-        // A full pass absorbs the targeted requests: it covers them all.
+    // A full pass absorbs the targeted requests: it covers them all.
     expect(mergeSyncOptions(targeted(1), { kind: 'incremental' }).onlySgIds).toBeUndefined();
     expect(mergeSyncOptions({ kind: 'incremental' }, targeted(1)).onlySgIds).toBeUndefined();
   });
@@ -43,7 +43,7 @@ describe('mergeSyncOptions', () => {
     const vieux = new Date('2026-08-01T00:00:00Z');
     const recent = new Date('2026-08-19T00:00:00Z');
     expect(mergeSyncOptions({ since: recent }, { since: vieux }).since).toEqual(vieux);
-        // A request without a window concerns everything: it must not be bounded.
+    // A request without a window concerns everything: it must not be bounded.
     expect(mergeSyncOptions({ since: recent }, {}).since).toBeNull();
   });
 
@@ -52,7 +52,7 @@ describe('mergeSyncOptions', () => {
   });
 
   it('unites the passes of two targeted requests', () => {
-        // A note and a version arriving one after the other must both be re-read: keeping only the last would silently lose the other.
+    // A note and a version arriving one after the other must both be re-read: keeping only the last would silently lose the other.
     const merged = mergeSyncOptions({ passes: ['notes'] }, { passes: ['versions'] });
     expect(merged.passes).toEqual(['versions', 'notes']);
   });

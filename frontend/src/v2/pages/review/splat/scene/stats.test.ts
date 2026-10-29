@@ -18,7 +18,7 @@ describe('createStatsSampler', () => {
     expect(received[0]).toMatchObject(READ);
   });
 
-  it("neither emits nor measures without a subscriber, and restarts from a clean window", () => {
+  it('neither emits nor measures without a subscriber, and restarts from a clean window', () => {
     const read = vi.fn(() => READ);
     const sampler = createStatsSampler(read, 500);
     for (let t = 0; t <= 2000; t += 100) sampler.frame(t);

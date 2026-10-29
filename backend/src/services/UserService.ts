@@ -99,8 +99,8 @@ export async function listUsers() {
       select: publicUser,
       orderBy: { createdAt: 'asc' },
     }),
-        // A single query for the whole list: an account still awaiting activation is flagged in the directory,
-        // otherwise there is no way to tell "invited" from "never came".
+    // A single query for the whole list: an account still awaiting activation is flagged in the directory,
+    // otherwise there is no way to tell "invited" from "never came".
     prisma.invitation.findMany({
       where: { acceptedAt: null, expiresAt: { gt: new Date() } },
       select: { userId: true },
@@ -137,10 +137,10 @@ export async function listPresence(viewer?: { id: number; role: Role }) {
           },
         }
       : {};
-    // A deactivated account leaves the directory (A5-07), as it already leaves the global search (`lib/search.ts`).
-    // Two reasons, and the second is the more operational: a former employee's name stayed published to the whole studio,
-    // external CLIENT accounts included; and this directory feeds mentions and the choice of a recipient. Assigning work to
-    // someone who can no longer log in serves nobody.
+  // A deactivated account leaves the directory (A5-07), as it already leaves the global search (`lib/search.ts`).
+  // Two reasons, and the second is the more operational: a former employee's name stayed published to the whole studio,
+  // external CLIENT accounts included; and this directory feeds mentions and the choice of a recipient. Assigning work to
+  // someone who can no longer log in serves nobody.
   const users = await prisma.user.findMany({
     where: { isService: false, disabledAt: null, ...scope },
     select: {
@@ -181,8 +181,8 @@ export async function getProfile(viewerId: number, viewerRole: Role, id: number)
       ? []
       : await prisma.project.findMany({
           where: {
-                        // Two `memberships.some` cannot coexist in the same object (the second would overwrite the first):
-                        // the intersection goes through an explicit AND.
+            // Two `memberships.some` cannot coexist in the same object (the second would overwrite the first):
+            // the intersection goes through an explicit AND.
             AND: [
               { memberships: { some: { userId: id } } },
               ...(viewerRole === Role.ADMIN || viewerRole === Role.SUPERVISOR
@@ -201,7 +201,7 @@ export async function getProfile(viewerId: number, viewerRole: Role, id: number)
     ...view,
     email: isInternal ? view.email : undefined,
     phone: isInternal ? view.phone : undefined,
-        // The storage quota is administrative data, not a sheet element.
+    // The storage quota is administrative data, not a sheet element.
     storageUsed: undefined,
     storageLimit: undefined,
     online: getOnlineUserIds().includes(id),
@@ -255,8 +255,8 @@ export async function updateMe(userId: number, body: UpdateMeInput, keepSessionI
   if (email !== undefined) data.email = email;
   if (body.password !== undefined) data.password = await bcrypt.hash(body.password, 12);
   const user = await prisma.user.update({ where: { id: userId }, data, select: publicUser });
-    // Changing one's password (or e-mail, which is the login identifier) must cut the sessions open elsewhere: otherwise
-    // a stolen token survives the account being taken back. The current session is kept so as not to log out the author.
+  // Changing one's password (or e-mail, which is the login identifier) must cut the sessions open elsewhere: otherwise
+  // a stolen token survives the account being taken back. The current session is kept so as not to log out the author.
   if (body.password !== undefined || email !== undefined) {
     await revokeAllCredentials(userId, keepSessionId);
   }
@@ -284,9 +284,9 @@ export async function presignAvatar(userId: number, contentType: string) {
 const AVATAR_KEY_RE = /^avatars\/(\d+)\.(?:png|jpe?g|webp)$/;
 
 export async function setAvatar(userId: number, key: string | null) {
-    // Security: the key must designate EXACTLY the current user's avatar. The check lives here, in the service: the route
-    // is today its only caller, but it is the service that writes to the database; a guard placed only at the HTTP entry
-    // falls at the first second caller (worker, import, migration script).
+  // Security: the key must designate EXACTLY the current user's avatar. The check lives here, in the service: the route
+  // is today its only caller, but it is the service that writes to the database; a guard placed only at the HTTP entry
+  // falls at the first second caller (worker, import, migration script).
   if (key !== null && AVATAR_KEY_RE.exec(key)?.[1] !== String(userId))
     throw badRequest('Invalid avatar key', 'BAD_KEY');
   const user = await prisma.user.update({
@@ -299,7 +299,7 @@ export async function setAvatar(userId: number, key: string | null) {
 
 export interface CreateUserInput {
   email: string;
-    /** Absent in invitation mode: the person will choose their own from the link received. */
+  /** Absent in invitation mode: the person will choose their own from the link received. */
   password?: string;
   name?: string;
   firstName?: string;
@@ -319,8 +319,8 @@ export async function createUser(actorId: number, input: CreateUserInput) {
   if (input.username && (await prisma.user.findUnique({ where: { username: input.username } })))
     throw badRequest('Username already taken', 'USERNAME_TAKEN');
   const byInvitation = input.password === undefined;
-    // Relay and public URL are checked BEFORE creation: an account created and then deprived of its activation e-mail
-    // would be reachable by no one, and its address would remain taken.
+  // Relay and public URL are checked BEFORE creation: an account created and then deprived of its activation e-mail
+  // would be reachable by no one, and its address would remain taken.
   if (byInvitation) await InvitationService.assertCanInvite();
 
   const hash = await bcrypt.hash(input.password ?? randomBytes(32).toString('hex'), 12);
@@ -340,8 +340,8 @@ export async function createUser(actorId: number, input: CreateUserInput) {
     try {
       await InvitationService.sendInvitation(user.id, actorId);
     } catch (err) {
-            // The relay dropped between the check and the send: we do not leave behind a silent account that reserves the
-            // address. The administrator retries once it is repaired.
+      // The relay dropped between the check and the send: we do not leave behind a silent account that reserves the
+      // address. The administrator retries once it is repaired.
       await prisma.user.delete({ where: { id: user.id } });
       throw err;
     }
@@ -360,8 +360,8 @@ export async function changeRole(actorId: number, id: number, role: Role) {
   if (!(await prisma.user.findUnique({ where: { id } }))) throw notFound('User not found');
   if (role !== Role.ADMIN) await assertNotLastAdmin(id);
   const user = await prisma.user.update({ where: { id }, data: { role }, select: publicUser });
-    // The role is cached per request (lib/userCache): without this invalidation, a demoted account would keep its
-    // rights for half a minute.
+  // The role is cached per request (lib/userCache): without this invalidation, a demoted account would keep its
+  // rights for half a minute.
   invalidateAuthUser(id);
   logAudit({
     userId: actorId,
@@ -377,14 +377,14 @@ export interface AdminUpdateUserInput extends UpdateMeInput {
   name?: string | null;
   role?: Role;
   storageLimit?: number | null;
-    /** Deactivation (`true`) or reactivation (`false`) of the account: see `setDisabled`. */
+  /** Deactivation (`true`) or reactivation (`false`) of the account: see `setDisabled`. */
   disabled?: boolean;
 }
 
 export async function updateUser(actorId: number, id: number, body: AdminUpdateUserInput) {
   const target = await prisma.user.findUnique({ where: { id }, select: { disabledAt: true } });
   if (!target) throw notFound('User not found');
-    // Demoting or deactivating the sole administrator would make the studio unmanageable.
+  // Demoting or deactivating the sole administrator would make the studio unmanageable.
   if ((body.role !== undefined && body.role !== Role.ADMIN) || body.disabled === true)
     await assertNotLastAdmin(id);
   const email = body.email !== undefined ? normalizeEmail(body.email) : undefined;
@@ -399,15 +399,15 @@ export async function updateUser(actorId: number, id: number, body: AdminUpdateU
   if (body.role !== undefined) data.role = body.role;
   if (body.storageLimit !== undefined)
     data.storageLimit = body.storageLimit === null ? null : BigInt(body.storageLimit);
-    // Deactivating an already deactivated account again does not renew the date: it is the departure date.
+  // Deactivating an already deactivated account again does not renew the date: it is the departure date.
   if (body.disabled !== undefined) data.disabledAt = body.disabled ? (target.disabledAt ?? new Date()) : null;
   const user = await prisma.user.update({ where: { id }, data, select: publicUser });
   invalidateAuthUser(id);
-    // The audit names the notable event: a deactivation is not an edit of a record.
+  // The audit names the notable event: a deactivation is not an edit of a record.
   const action = body.disabled === undefined ? 'USER_UPDATE' : body.disabled ? 'USER_DISABLE' : 'USER_ENABLE';
   logAudit({ userId: actorId, action, entityType: 'User', entityId: id });
-    // An admin who resets a password, changes the login e-mail, demotes a role or deactivates an account is usually acting
-    // on a compromised account or a departure: the tokens already issued (which carry the old role) must not survive the operation.
+  // An admin who resets a password, changes the login e-mail, demotes a role or deactivates an account is usually acting
+  // on a compromised account or a departure: the tokens already issued (which carry the old role) must not survive the operation.
   if (
     body.password !== undefined ||
     email !== undefined ||
@@ -439,8 +439,8 @@ export async function setDisabled(actorId: number, id: number, disabled: boolean
 export async function deleteUser(actorId: number, id: number) {
   if (id === actorId) throw badRequest('You cannot delete your own account');
   await assertNotLastAdmin(id);
-    // Share links are `SetNull`: deleting the account used to leave them ALIVE, and now without an owner. A departure
-    // therefore did not cut the public access the person had opened, although that is exactly what an offboarding should do.
+  // Share links are `SetNull`: deleting the account used to leave them ALIVE, and now without an owner. A departure
+  // therefore did not cut the public access the person had opened, although that is exactly what an offboarding should do.
   const revoked = await prisma.shareLink.updateMany({
     where: { createdById: id, revoked: false },
     data: { revoked: true },
@@ -499,16 +499,16 @@ function preferenceValue(depth: number): z.ZodTypeAny {
  */
 export const preferencesPatchSchema = z
   .record(z.string().max(64), preferenceValue(5))
-    // A bag key now has a FIXED shape: the notification settings per event type. Without this check, a misspelt kind was
-    // written without a murmur and cut nothing: the setting seemed taken and the event kept arriving.
+  // A bag key now has a FIXED shape: the notification settings per event type. Without this check, a misspelt kind was
+  // written without a murmur and cut nothing: the setting seemed taken and the event kept arriving.
   .refine(
     (patch) =>
       !(NOTIFICATION_SETTINGS_KEY in patch) ||
       notificationSettingsSchema.nullable().safeParse(patch[NOTIFICATION_SETTINGS_KEY]).success,
     { message: 'Invalid notification settings', path: [NOTIFICATION_SETTINGS_KEY] },
   )
-    // Same reason for the overview layout: an invented block identifier was stored without a murmur and displayed nothing.
-    // The list of blocks lives in `lib/overviewWidgets`, copied on the front end, and it is that list which is authoritative on write.
+  // Same reason for the overview layout: an invented block identifier was stored without a murmur and displayed nothing.
+  // The list of blocks lives in `lib/overviewWidgets`, copied on the front end, and it is that list which is authoritative on write.
   .refine(
     (patch) =>
       !(OVERVIEW_PREFERENCE_KEY in patch) ||
@@ -533,11 +533,11 @@ export async function updatePreferences(
     if (v === null) delete next[k];
     else next[k] = v;
   }
-    // Both caps apply to the RESULT of the merge, not to the call: accumulation is the default (A2-04), and a single call
-    // is always tiny.
-    //
-    // The key cap only blocks what GROWS: a bag already too full (data written before the cap) must remain reducible,
-    // otherwise the refusal would lock its owner into the very state being reproached, `null` deletions included.
+  // Both caps apply to the RESULT of the merge, not to the call: accumulation is the default (A2-04), and a single call
+  // is always tiny.
+  //
+  // The key cap only blocks what GROWS: a bag already too full (data written before the cap) must remain reducible,
+  // otherwise the refusal would lock its owner into the very state being reproached, `null` deletions included.
   const keyCount = Object.keys(next).length;
   if (keyCount > PREFERENCES_MAX_KEYS && keyCount >= Object.keys(current).length)
     throw badRequest('Too many preference keys', 'PREFERENCES_TOO_MANY_KEYS');

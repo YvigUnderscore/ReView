@@ -45,12 +45,12 @@ describe('needsWebProxy', () => {
 });
 
 describe('imageDecodeInputOptions', () => {
-  it("applies the sRGB curve to the EXR, which is linear", () => {
+  it('applies the sRGB curve to the EXR, which is linear', () => {
     expect(imageDecodeInputOptions('.exr')).toEqual(['-apply_trc', 'iec61966_2_1']);
     expect(imageDecodeInputOptions('.EXR')).toEqual(['-apply_trc', 'iec61966_2_1']);
   });
 
-  it("sets nothing on the other decoders — the option would make the command fail", () => {
+  it('sets nothing on the other decoders — the option would make the command fail', () => {
     for (const ext of ['.dpx', '.tif', '.tga', '.png', '.mov']) {
       expect(imageDecodeInputOptions(ext), ext).toEqual([]);
     }

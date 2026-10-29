@@ -85,8 +85,8 @@ export async function create(
   data: { frame: number; name: string; color: string },
 ): Promise<TimelineMarkerView> {
   const projectId = await assertMediaRead(mediaId, user);
-    // 38.E: it is the EFFECTIVE role on THIS project that decides, not the global role. An ARTIST demoted to CLIENT keeps their membership (checkProjectAccess still says yes)
-    // but no longer places a shared marker.
+  // 38.E: it is the EFFECTIVE role on THIS project that decides, not the global role. An ARTIST demoted to CLIENT keeps their membership (checkProjectAccess still says yes)
+  // but no longer places a shared marker.
   await assertCanContribute(user.id, user.role, projectId);
   if (!COLOR_RE.test(data.color)) throw badRequest('Invalid colour (expected hex #rrggbb)');
   const count = await prisma.timelineMarker.count({ where: { mediaObjectId: mediaId } });
@@ -110,7 +110,7 @@ async function assertMarkerManage(user: SessionUser, mediaId: number, markerId: 
   const projectId = await assertMediaRead(mediaId, user);
   const marker = await prisma.timelineMarker.findUnique({ where: { id: markerId } });
   if (!marker || marker.mediaObjectId !== mediaId) throw notFound('Marker not found');
-    // Same rule as at creation: without contribution rights on this project, shared markers are no longer touched — even by their author from before the demotion.
+  // Same rule as at creation: without contribution rights on this project, shared markers are no longer touched — even by their author from before the demotion.
   await assertCanContribute(user.id, user.role, projectId);
   const manager = await isProjectManager(user.id, user.role, projectId);
   if (!manager && marker.authorId !== user.id)

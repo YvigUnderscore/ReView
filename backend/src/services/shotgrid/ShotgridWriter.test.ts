@@ -42,10 +42,10 @@ describe('update', () => {
     expect(unsafeUpdate).toHaveBeenCalledWith('Shot', 7, { sg_status_list: 'ip' }, {});
   });
 
-    /**
-     * The costly case: a link points to an entity that was deleted then recreated under the same identifier in another project. Without a re-read, we write into
-     * someone else's production.
-     */
+  /**
+   * The costly case: a link points to an entity that was deleted then recreated under the same identifier in another project. Without a re-read, we write into
+   * someone else's production.
+   */
   it("doesn't write into an entity moved to another project", async () => {
     findById.mockResolvedValue({ ...inProject, project: { type: 'Project', id: 99, name: 'BETA' } });
 
@@ -82,9 +82,9 @@ describe('create', () => {
     );
   });
 
-    /**
-     * A caller does not choose the project: it is a programming error, not data to arbitrate. We refuse before any request goes out.
-     */
+  /**
+   * A caller does not choose the project: it is a programming error, not data to arbitrate. We refuse before any request goes out.
+   */
   it('refuses a payload targeting another project', async () => {
     await expect(writer().create('Note', { project: { type: 'Project', id: 99 } })).rejects.toThrow();
     expect(unsafeCreate).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe('create', () => {
     expect(unsafeCreate).toHaveBeenCalled();
   });
 
-    /** It is the site that decides what it has written — we re-read it before rejoicing. */
+  /** It is the site that decides what it has written — we re-read it before rejoicing. */
   it('throws when the site has deposited the entity elsewhere', async () => {
     findById.mockResolvedValue({
       id: 900,

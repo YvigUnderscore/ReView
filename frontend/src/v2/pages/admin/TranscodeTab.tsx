@@ -65,7 +65,7 @@ export default function TranscodeTab() {
         <span className="text-xs text-muted-foreground">{t('transcode.singleProxy')}</span>
       </label>
 
-       {/* Scene detection (34.H): opt-in — one additional FFmpeg analysis pass per video. */}
+      {/* Scene detection (34.H): opt-in — one additional FFmpeg analysis pass per video. */}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

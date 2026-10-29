@@ -40,26 +40,26 @@ export interface SmtpPublicConfig {
   secure: boolean;
   user: string;
   from: string;
-    /** A password is stored (its value is never returned). */
+  /** A password is stored (its value is never returned). */
   hasPassword: boolean;
-    /**
-     * Allows plaintext SMTP dialogue with this relay (escape hatch, see `lib/mailer`).
-     *
-     * Defaults to `false`: the transport requires STARTTLS. An internal relay without a certificate is the
-     * only legitimate case for setting it. It must be a visible choice, not a silent default, since it puts
-     * SMTP credentials and invitation links on the network in clear text.
-     */
+  /**
+   * Allows plaintext SMTP dialogue with this relay (escape hatch, see `lib/mailer`).
+   *
+   * Defaults to `false`: the transport requires STARTTLS. An internal relay without a certificate is the
+   * only legitimate case for setting it. It must be a visible choice, not a silent default, since it puts
+   * SMTP credentials and invitation links on the network in clear text.
+   */
   allowInsecure: boolean;
-    /**
-     * A password is stored but can no longer be decrypted (encryption key changed).
-     *
-     * No mail goes out then: `getEffectiveConfig` refuses the configuration. Without this flag, the
-     * administrator would see an apparently complete configuration and sends failing for no visible reason:
-     * the server logs would have to be read to understand. Saying it here puts the cause in front of whoever
-     * can fix it (re-entering the secret).
-     */
+  /**
+   * A password is stored but can no longer be decrypted (encryption key changed).
+   *
+   * No mail goes out then: `getEffectiveConfig` refuses the configuration. Without this flag, the
+   * administrator would see an apparently complete configuration and sends failing for no visible reason:
+   * the server logs would have to be read to understand. Saying it here puts the cause in front of whoever
+   * can fix it (re-entering the secret).
+   */
   passwordUnreadable: boolean;
-    /** `true` if the environment (`SMTP_HOST`) takes precedence over the database configuration. */
+  /** `true` if the environment (`SMTP_HOST`) takes precedence over the database configuration. */
   envOverride: boolean;
 }
 
@@ -71,7 +71,7 @@ export interface SmtpPublicConfig {
  * sends fail.
  */
 function resolvePassword(s: StoredSmtp): { pass?: string; unreadable: boolean } {
-    // The environment wins: the stored secret is then not even read.
+  // The environment wins: the stored secret is then not even read.
   if (env.SMTP_PASS !== undefined) return { pass: env.SMTP_PASS, unreadable: false };
   if (!s.passwordEnc) return { unreadable: false };
   const decrypted = decryptSecret(s.passwordEnc);
@@ -101,7 +101,7 @@ export interface SmtpEffectiveConfig {
   user?: string;
   pass?: string;
   from: string;
-    /** Plaintext dialogue explicitly allowed (internal relay without TLS). */
+  /** Plaintext dialogue explicitly allowed (internal relay without TLS). */
   allowInsecure: boolean;
 }
 
@@ -110,10 +110,10 @@ export async function getEffectiveConfig(): Promise<SmtpEffectiveConfig | null> 
   const s = await read();
   const host = env.SMTP_HOST ?? s.host;
   if (!host) return null;
-    // Fail CLOSED, not degraded. An unreadable password (encryption key changed) used to go out as
-    // `undefined`: the transport then attempted an AUTH without a password, the relay refused, and nothing
-    // said why. The configuration is refused: `lib/crypto` has already logged the action to take, and
-    // `getPublicConfig` shows it on the administration screen (`passwordUnreadable`).
+  // Fail CLOSED, not degraded. An unreadable password (encryption key changed) used to go out as
+  // `undefined`: the transport then attempted an AUTH without a password, the relay refused, and nothing
+  // said why. The configuration is refused: `lib/crypto` has already logged the action to take, and
+  // `getPublicConfig` shows it on the administration screen (`passwordUnreadable`).
   const { pass, unreadable } = resolvePassword(s);
   if (unreadable) {
     logger.error(
@@ -139,9 +139,9 @@ export interface SmtpInput {
   secure?: boolean;
   user?: string;
   from?: string;
-    /** New password (write-only). Empty/omitted = keep the existing one. */
+  /** New password (write-only). Empty/omitted = keep the existing one. */
   password?: string;
-    /** See `SmtpPublicConfig.allowInsecure`. Omitted = keep the current setting in place. */
+  /** See `SmtpPublicConfig.allowInsecure`. Omitted = keep the current setting in place. */
   allowInsecure?: boolean;
 }
 

@@ -60,8 +60,8 @@ describe('realignMediaNames', () => {
   });
 
   it('never touches a file dropped by hand', async () => {
-        // An artist's file name carries information (_lin_, _acescg_, _h265_)
-        // that the site's code does not carry over.
+    // An artist's file name carries information (_lin_, _acescg_, _h265_)
+    // that the site's code does not carry over.
     db.mediaObject.findMany.mockResolvedValue([
       { id: 2, originalName: 'wip_acescg.exr', mimeType: 'image/x-exr', metadata: {} },
     ]);

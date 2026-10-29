@@ -55,6 +55,6 @@ describe('adminUsers — sortUsers', () => {
     expect(sortUsers(all, 'role').map((u) => u.role)).toEqual(['ADMIN', 'ARTIST', 'CLIENT']);
     expect(sortUsers(all, 'storage').map((u) => u.storageUsed)).toEqual([900, 50, 10]);
     expect(sortUsers(all, 'recent').map((u) => u.id)).toEqual([3, 2, 1]);
-     expect(all.map((u) => u.id)).toEqual([2, 3, 1]); // original list left intact
+    expect(all.map((u) => u.id)).toEqual([2, 3, 1]); // original list left intact
   });
 });

@@ -54,7 +54,7 @@ describe('recomposeUsd (45.E)', () => {
       variants: { '/World/Asset': { modelingVariant: 'lo' } },
       purpose: 'proxy',
     });
-        // The request lives in the metadata: it survives BullMQ retries and reprocess runs.
+    // The request lives in the metadata: it survives BullMQ retries and reprocess runs.
     const update = vi.mocked(prisma.mediaObject.update).mock.calls[0]![0];
     expect((update.data.metadata as Record<string, unknown>).usdRequest).toEqual(res.selection);
     expect(update.data.status).toBe('PROCESSING');
@@ -72,10 +72,10 @@ describe('recomposeUsd (45.E)', () => {
     expect(res.selection.variants).toEqual({});
   });
 
-    /**
-     * This test expected a 403 (Phase 11 lock). The rule changed deliberately in Phase 50: recomposition does not replace the delivered file, it derives a readable representation from it —
-     * and since the media is published from upload, refusing it after publication amounted to refusing it outright, whereas it is the gesture that makes a USD scene viewable.
-     */
+  /**
+   * This test expected a 403 (Phase 11 lock). The rule changed deliberately in Phase 50: recomposition does not replace the delivered file, it derives a readable representation from it —
+   * and since the media is published from upload, refusing it after publication amounted to refusing it outright, whereas it is the gesture that makes a USD scene viewable.
+   */
   it('accepts a published media: recomposing derives a representation, without touching the file', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(usdMedia({ published: true }) as never);
 

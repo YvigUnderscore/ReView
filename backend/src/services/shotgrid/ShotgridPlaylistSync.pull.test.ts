@@ -105,10 +105,10 @@ describe('pullPlaylists', () => {
     expect(journal.count).toHaveBeenCalledWith('playlists', 'created');
   });
 
-    /**
-     * The link survives the playlist it designates: someone deleted it here, ShotGrid returns it, and creation then hit the `(projectId, name)` constraint: the whole
-     * pass stopped on a session erased months earlier.
-     */
+  /**
+   * The link survives the playlist it designates: someone deleted it here, ShotGrid returns it, and creation then hit the `(projectId, name)` constraint: the whole
+   * pass stopped on a session erased months earlier.
+   */
   it('falls back to the name when the link designates a deleted session', async () => {
     links.mapSgToLocal.mockImplementation(async (_c: number, type: string) =>
       type === 'version' ? new Map([[900, { localId: 31 }]]) : new Map([[88, { localId: 55 }]]),
@@ -125,9 +125,9 @@ describe('pullPlaylists', () => {
     expect(playlist.update).toHaveBeenCalledWith({ where: { id: 61 }, data: { name: 'Dailies 12/06' } });
   });
 
-    /**
-     * Renaming to a name already taken locally: we keep the current name and flag the conflict. Merging two sessions or overwriting one is not decided on its own.
-     */
+  /**
+   * Renaming to a name already taken locally: we keep the current name and flag the conflict. Merging two sessions or overwriting one is not decided on its own.
+   */
   it('does not rename to a name already held by another session', async () => {
     links.mapSgToLocal.mockImplementation(async (_c: number, type: string) =>
       type === 'version' ? new Map([[900, { localId: 31 }]]) : new Map([[88, { localId: 55 }]]),

@@ -43,7 +43,7 @@ export type BelongsResult =
  */
 export function belongsToProject(record: SgRecord, scope: ProjectScope): BelongsResult {
   if (PROJECT_LESS_ENTITIES.has(record.type)) return { ok: true };
-    // The project itself: it is its own identifier that must match.
+  // The project itself: it is its own identifier that must match.
   if (record.type === 'Project')
     return record.id === scope.sgProjectId
       ? { ok: true }
@@ -74,7 +74,7 @@ export function eventBelongsToProject(
 ): boolean {
   const ref = asEntityRef(payload.project);
   if (ref) return ref.id === scope.sgProjectId;
-    // Without a project in the envelope, the entity may be global (Status, HumanUser).
+  // Without a project in the envelope, the entity may be global (Status, HumanUser).
   const entity = asEntityRef(payload.entity);
   return entity !== null && PROJECT_LESS_ENTITIES.has(entity.type);
 }

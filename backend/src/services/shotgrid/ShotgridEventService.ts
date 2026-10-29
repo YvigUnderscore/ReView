@@ -76,9 +76,9 @@ export async function enqueueShotgridEvent(
       'event',
       { kind: 'event', connectionId, event: data, deliveryId: meta.deliveryId ?? null },
       {
-                // The identifier groups the events of the same entity per COALESCE_MS slice: a batch modification triggers only one re-read, but a
-                // change occurring later is not confused with the previous one. Without the slice, the identifier would stay taken by the work already done
-                // and every later event would be silently ignored. No colons: BullMQ reserves them for its own keys and rejects the identifier.
+        // The identifier groups the events of the same entity per COALESCE_MS slice: a batch modification triggers only one re-read, but a
+        // change occurring later is not confused with the previous one. Without the slice, the identifier would stay taken by the work already done
+        // and every later event would be silently ignored. No colons: BullMQ reserves them for its own keys and rejects the identifier.
         jobId: `sgevt-${connectionId}-${coalesceKey(parsed.entity, entityRef.id)}-${Math.floor(Date.now() / COALESCE_MS)}`,
         delay: 2000,
         removeOnComplete: 200,
@@ -130,13 +130,13 @@ export async function handleEvent(connectionId: number, event: ShotgridEventPayl
   const settings = parseSettings(connection.settings);
   if (settings.eventMode === 'manual') return;
 
-    /**
-     * Each event type has its passes.
-     *
-     * The old code had only one switch, `withMedia`, tied to `entity === 'Version'`. Consequence: a Note or Playlist event was accepted, queued, processed,
-     * and triggered no import, since the only two passes able to read them were behind that `false`. The outbound direction worked, the inbound one was dead.
-     * A global entity (status, account) remains a re-read of the whole hierarchy; the others only re-read themselves.
-     */
+  /**
+   * Each event type has its passes.
+   *
+   * The old code had only one switch, `withMedia`, tied to `entity === 'Version'`. Consequence: a Note or Playlist event was accepted, queued, processed,
+   * and triggered no import, since the only two passes able to read them were behind that `false`. The outbound direction worked, the inbound one was dead.
+   * A global entity (status, account) remains a re-read of the whole hierarchy; the others only re-read themselves.
+   */
   const passes = passesForEvent(parsed.entity);
   if (!passes) return;
   await runSync(connection.projectId, {

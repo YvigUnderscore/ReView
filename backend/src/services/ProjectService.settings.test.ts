@@ -146,7 +146,7 @@ describe('patchSettings (PATCH): section-by-section write', () => {
     expect(departmentUpdateMany).not.toHaveBeenCalled();
   });
 
-  it('removes the project\'s own pipe when the departments return to inheritance', async () => {
+  it("removes the project's own pipe when the departments return to inheritance", async () => {
     await patchSettings(admin, 7, { departments: null });
     expect(DepartmentService.syncFromSettings).not.toHaveBeenCalled();
     expect(departmentUpdateMany).toHaveBeenCalledWith(

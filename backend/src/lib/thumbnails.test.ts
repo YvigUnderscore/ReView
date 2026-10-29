@@ -198,7 +198,7 @@ describe('sequence and episode thumbnails', () => {
     expect(values).toEqual([3]);
   });
 
-  it('walks up to the episode through the shot's sequence, excluding a deleted sequence', async () => {
+  it("walks up to the episode through the shot's sequence, excluding a deleted sequence", async () => {
     queryRaw.mockResolvedValue([{ parentId: 7, thumbnailKey: 'ep.jpg' }] as never);
     await expect(firstMediaThumbKeysForEpisodes([7])).resolves.toEqual(new Map([[7, 'ep.jpg']]));
     const { text, values } = sqlOf(0);

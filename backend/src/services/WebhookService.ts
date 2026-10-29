@@ -59,9 +59,9 @@ export const SECRET_UNREADABLE_ERROR = 'WEBHOOK_SECRET_UNREADABLE';
 const DELIVERY_ENVELOPE_KEY = '_reviewDeliveryId';
 
 export interface EmitOptions {
-    /** Project concerned: `null` for a studio fact (no project webhook receives it). */
+  /** Project concerned: `null` for a studio fact (no project webhook receives it). */
   projectId?: number | null;
-    /** Row of the v1 journal that originated the emission, if it could be written. */
+  /** Row of the v1 journal that originated the emission, if it could be written. */
   apiEventId?: number | null;
 }
 
@@ -146,16 +146,16 @@ export async function deliver(
   if (!hook || !hook.active) return; // deactivated/deleted in the meantime: nothing to do
   const { deliveryId, data } = unpackDelivery(payload);
   const secret = decryptSecret(hook.secret);
-    /**
-     * Fail CLOSED on authenticity.
-     *
-     * The earlier `?? ''` signed with an EMPTY HMAC key: Node accepts it, and the delivery left with a perfectly well-formed
-     * `X-ReView-Signature`, recomputable by anyone who knows the URL. That is worse than no signature at all, since the recipient
-     * believes it verifies. So nothing is emitted, and the failure becomes readable.
-     *
-     * No `throw`: a retry will not repair a changed encryption key; it would only replay the same dead end five times. The webhook
-     * stays active: the failure is one of configuration, not of the endpoint; repairing it must not require reactivating it by hand.
-     */
+  /**
+   * Fail CLOSED on authenticity.
+   *
+   * The earlier `?? ''` signed with an EMPTY HMAC key: Node accepts it, and the delivery left with a perfectly well-formed
+   * `X-ReView-Signature`, recomputable by anyone who knows the URL. That is worse than no signature at all, since the recipient
+   * believes it verifies. So nothing is emitted, and the failure becomes readable.
+   *
+   * No `throw`: a retry will not repair a changed encryption key; it would only replay the same dead end five times. The webhook
+   * stays active: the failure is one of configuration, not of the endpoint; repairing it must not require reactivating it by hand.
+   */
   if (secret === null) {
     logger.error({ webhookId, deliveryId }, '[webhooks] secret illisible — livraison refusée');
     await recordFailure(webhookId, deliveryId, null, null, SECRET_UNREADABLE_ERROR);
@@ -164,10 +164,10 @@ export async function deliver(
   const timestamp = String(Date.now());
   const body = JSON.stringify({ id: deliveryId, event, timestamp: Number(timestamp), data });
 
-    // Anti-SSRF: the worker runs INSIDE the internal network (MinIO, Redis, Postgres are reachable there without network
-    // authentication). A webhook URL is entered by an app admin, which does not give them control of that network. `safeFetch`
-    // resolves the name BEFORE the request (a public name may point to 127.0.0.1 or 169.254.169.254) and follows no redirect
-    // (it would replay the signed POST to an unverified target).
+  // Anti-SSRF: the worker runs INSIDE the internal network (MinIO, Redis, Postgres are reachable there without network
+  // authentication). A webhook URL is entered by an app admin, which does not give them control of that network. `safeFetch`
+  // resolves the name BEFORE the request (a public name may point to 127.0.0.1 or 169.254.169.254) and follows no redirect
+  // (it would replay the signed POST to an unverified target).
   try {
     const res = await safeFetch(
       hook.url,
@@ -185,8 +185,8 @@ export async function deliver(
       },
       { timeoutMs: DELIVERY_TIMEOUT_MS, maxBytes: RESPONSE_READ_MAX_BYTES },
     );
-        // The response is read even on success: a "200 OK" accompanied by an error body is the most common symptom of a
-        // misconfigured relay.
+    // The response is read even on success: a "200 OK" accompanied by an error body is the most common symptom of a
+    // misconfigured relay.
     const responseBody = await readBodyExcerpt(res);
     if (res.ok) {
       await recordSuccess(webhookId, deliveryId, res.status, responseBody);
@@ -234,7 +234,7 @@ async function recordSuccess(
         },
       })
       .catch(() => undefined);
-    // The first success clears the streak: a recovering endpoint need not drag its past along.
+  // The first success clears the streak: a recovering endpoint need not drag its past along.
   await prisma.webhook
     .update({
       where: { id: webhookId },
@@ -279,8 +279,8 @@ async function recordFailure(
       select: { failureStreak: true },
     })
     .catch(() => null);
-    // Repeatedly exhausted retries: the webhook is dead, so we stop writing to it. It stays in the database, reactivatable
-    // with a checkbox once the endpoint is repaired.
+  // Repeatedly exhausted retries: the webhook is dead, so we stop writing to it. It stays in the database, reactivatable
+  // with a checkbox once the endpoint is repaired.
   if (exhausted && (hook?.failureStreak ?? 0) >= FAILURE_STREAK_LIMIT) {
     await prisma.webhook.update({ where: { id: webhookId }, data: { active: false } }).catch(() => undefined);
     logger.warn(`[webhooks] webhook ${webhookId} désactivé après ${FAILURE_STREAK_LIMIT} livraisons perdues`);

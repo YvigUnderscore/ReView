@@ -99,7 +99,7 @@ describe('when the level is off', () => {
     expect(episodes.list).not.toHaveBeenCalled();
   });
 
-  it('an episode's record responds 409, even through a guessed URL', async () => {
+  it("an episode's record responds 409, even through a guessed URL", async () => {
     const res = await request(app).get('/api/episodes/4');
     expect(res.status).toBe(409);
     expect(episodes.getDetail).not.toHaveBeenCalled();

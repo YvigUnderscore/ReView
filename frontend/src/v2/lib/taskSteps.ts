@@ -51,7 +51,7 @@ export function useTaskSteps(
     () =>
       linked
         ? (sg.data ?? []).map((s) => ({ key: `sg-${s.sgId}`, code: s.code, color: s.color, sgId: s.sgId }))
-         : // Department policy: the list narrows to the steps where the person can
+        : // Department policy: the list narrows to the steps where the person can
           // write — two entries rather than twelve. `writable` absent = old server
           // response, so nothing is hidden.
           (local.data ?? [])

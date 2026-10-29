@@ -26,7 +26,7 @@ const step = (over: Partial<PipelineStep>): PipelineStep => ({
  */
 describe('dedupeSteps', () => {
   it('keeps a single step per name', () => {
-        // ArtFX has two "art" and two "modeling" for assets.
+    // ArtFX has two "art" and two "modeling" for assets.
     const r = dedupeSteps([
       step({ sgId: 13, code: 'art', shortName: 'art' }),
       step({ sgId: 999, code: 'art', shortName: 'ART2' }),
@@ -35,7 +35,7 @@ describe('dedupeSteps', () => {
   });
 
   it('keeps a single step per short code', () => {
-        // "lookdev/ldv" and "Look Development/ldv" read the same in a list.
+    // "lookdev/ldv" and "Look Development/ldv" read the same in a list.
     const r = dedupeSteps([
       step({ sgId: 20, code: 'lookdev', shortName: 'ldv' }),
       step({ sgId: 21, code: 'Look Development', shortName: 'ldv' }),
@@ -61,7 +61,7 @@ describe('dedupeSteps', () => {
   });
 
   it('keeps the one the project uses: it is the one carrying the right identifier', () => {
-        // The case that filed the task elsewhere: this project's "modeling" step carries identifier 14, the catalogue offers another under 1584.
+    // The case that filed the task elsewhere: this project's "modeling" step carries identifier 14, the catalogue offers another under 1584.
     const r = dedupeSteps([
       step({ sgId: 14, code: 'modeling', shortName: 'mod', used: true }),
       step({ sgId: 1584, code: 'modeling', shortName: 'modeling' }),
@@ -70,14 +70,14 @@ describe('dedupeSteps', () => {
   });
 
   it('keeps a step that only its short code distinguishes, if requested', () => {
-        // The reported case: ArtFX has "modeling / modeling" and "modeling / model", and it is the second that this project uses. The choice catalogue must discard neither
-        // of them — that is where they are told apart.
+    // The reported case: ArtFX has "modeling / modeling" and "modeling / model", and it is the second that this project uses. The choice catalogue must discard neither
+    // of them — that is where they are told apart.
     const catalogue = [
       step({ sgId: 1584, code: 'modeling', shortName: 'modeling', order: 19 }),
       step({ sgId: 14, code: 'modeling', shortName: 'model', order: 43 }),
     ];
     expect(dedupeSteps(catalogue).map((s) => s.sgId)).toEqual([1584]);
-        // ...but the raw list carries both of them.
+    // ...but the raw list carries both of them.
     expect(catalogue.map((s) => s.sgId)).toEqual([1584, 14]);
   });
 

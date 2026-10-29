@@ -89,7 +89,7 @@ describe('listMyTasks', () => {
     ]);
   });
 
-  it('adds the project as a RESTRICTION, without touching the counter\'s scope', async () => {
+  it("adds the project as a RESTRICTION, without touching the counter's scope", async () => {
     // The "my tasks" block of an overview shows the same list, seen through the hole of a project. Composing
     // with `AND` is what guarantees that a filter can never open what the scope closes.
     await listMyTasks(artist, 'all', p, 12);

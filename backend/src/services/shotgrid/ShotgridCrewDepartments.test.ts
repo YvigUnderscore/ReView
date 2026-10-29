@@ -21,8 +21,8 @@ const client = (schema: () => Promise<Set<string>>) =>
 
 describe('departmentFields', () => {
   it('keeps only the fields the site declares', async () => {
-        // Requesting an unknown field does not return "empty": the WHOLE request fails, and the
-        // team is no longer loaded at all. Hence the preliminary probe.
+    // Requesting an unknown field does not return "empty": the WHOLE request fails, and the
+    // team is no longer loaded at all. Hence the preliminary probe.
     const sg = client(() => Promise.resolve(new Set(['login', 'name', 'sg_department'])));
     expect(await departmentFields(sg)).toEqual(['sg_department']);
   });
@@ -38,7 +38,7 @@ describe('departmentFields', () => {
   });
 
   it('swallows an unreadable schema rather than failing the pass', async () => {
-        // A script without rights on the schema gets a 403: that is a convenience, not an outage.
+    // A script without rights on the schema gets a 403: that is a convenience, not an outage.
     const sg = client(() => Promise.reject(new Error('403')));
     await expect(departmentFields(sg)).resolves.toEqual([]);
   });
@@ -99,8 +99,8 @@ describe('departmentLabel', () => {
 
 describe('matchDepartments', () => {
   it('looks up only once per distinct label and creates nothing', async () => {
-        // A team of sixty people fits in five departments: as many round trips as people would be wasteful.
-        // And `findByKey` does not create: a ShotGrid department is an organizational unit, not necessarily a step of the pipe.
+    // A team of sixty people fits in five departments: as many round trips as people would be wasteful.
+    // And `findByKey` does not create: a ShotGrid department is an organizational unit, not necessarily a step of the pipe.
     findByKey.mockReset();
     findByKey.mockImplementation((_projectId: number, key: string) =>
       Promise.resolve(key === 'Compositing' ? { id: 3, name: 'Compositing' } : null),

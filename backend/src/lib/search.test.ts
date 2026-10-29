@@ -463,7 +463,7 @@ describe('searchEntities — formatting of the results', () => {
     });
   });
 
-  it('never returns a person\'s address, and tolerates an account without a name', async () => {
+  it("never returns a person's address, and tolerates an account without a name", async () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 2, username: null, name: null, firstName: null, lastName: null, jobTitle: null },
       { id: 3, username: null, name: null, firstName: 'Ana', lastName: 'Roy', jobTitle: 'Comp' },

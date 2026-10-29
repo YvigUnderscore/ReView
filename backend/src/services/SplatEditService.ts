@@ -36,7 +36,7 @@ export interface SdfVolumeInput {
 export interface SplatEditsInput {
   transform: SplatTransformInput | null;
   volumes: SdfVolumeInput[];
-    /** Orientation flip at import (11.E): true/absent = Y-down convention, straightened. */
+  /** Orientation flip at import (11.E): true/absent = Y-down convention, straightened. */
   baseFlip?: boolean;
 }
 
@@ -73,8 +73,8 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
     select: { metadata: true, kind: true },
   });
   if (!media) throw notFound('Media not found');
-    // Generic camera presentation (replayed for everyone): splat AND 3D model Three (Phase 15).
-    // The field keeps the name `splatPresentation` (reused); DoF/reveal/LOD remain specific to splats.
+  // Generic camera presentation (replayed for everyone): splat AND 3D model Three (Phase 15).
+  // The field keeps the name `splatPresentation` (reused); DoF/reveal/LOD remain specific to splats.
   if (media.kind !== MediaKind.SPLAT && media.kind !== MediaKind.MODEL_3D)
     throw badRequest('Staging is for 3D and splat media only', 'NOT_3D');
   const metadata = {
@@ -88,7 +88,7 @@ export async function setSplatPresentation(user: SessionUser, id: number, presen
 /** Saves (or clears if null/empty) the JSON edits: TRS transform + volumes. */
 export async function setSplatEdits(user: SessionUser, id: number, edits: SplatEditsInput | null) {
   const media = await assertEditableSplat(user, id);
-    // Only persist if there is something to keep (baseFlip false = orientation override).
+  // Only persist if there is something to keep (baseFlip false = orientation override).
   const value =
     edits && (edits.transform || edits.volumes.length > 0 || edits.baseFlip === false) ? edits : null;
   const metadata = {

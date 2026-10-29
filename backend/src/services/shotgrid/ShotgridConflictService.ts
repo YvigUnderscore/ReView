@@ -19,11 +19,11 @@ export type Resolution = 'sg' | 'review';
 
 export interface ResolutionOutcome {
   direction: Resolution;
-    /**
-     * What was actually triggered, for feedback to the user.
-     * `blocked`: writing to the site is closed in the settings: the row closes, but the gap will persist. Saying so is better than a
-     * "resolved" that is not.
-     */
+  /**
+   * What was actually triggered, for feedback to the user.
+   * `blocked`: writing to the site is closed in the settings: the row closes, but the gap will persist. Saying so is better than a
+   * "resolved" that is not.
+   */
   action: 'pulled' | 'pushed' | 'blocked' | 'nothing';
 }
 
@@ -83,7 +83,7 @@ export async function resolveConflict(
 ): Promise<ResolutionOutcome> {
   if (resolution === 'sg') {
     if (!log.sgType || !log.sgId) return { direction: 'sg', action: 'nothing' };
-        // Targeted re-read of the only entity at stake: ShotGrid overwrites the local value.
+    // Targeted re-read of the only entity at stake: ShotGrid overwrites the local value.
     await runSync(projectId, {
       kind: 'incremental',
       onlySgIds: [{ sgType: log.sgType, sgId: log.sgId }],
@@ -111,8 +111,8 @@ async function pushLocalValue(
 ): Promise<ResolutionOutcome['action']> {
   if (!log.localType || !log.localId) return 'nothing';
 
-    // Enqueuing a job whose domain is closed for writing produces nothing: the worker exits silently. Checking it here lets us tell
-    // the user instead of announcing a send that will not happen.
+  // Enqueuing a job whose domain is closed for writing produces nothing: the worker exits silently. Checking it here lets us tell
+  // the user instead of announcing a send that will not happen.
   const domain = WRITE_DOMAIN[log.localType];
   if (domain) {
     const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });

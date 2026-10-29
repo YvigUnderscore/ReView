@@ -14,7 +14,7 @@ describe('LivePointers', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('places each cursor as a fraction of the frame, with its author\'s name', () => {
+  it("places each cursor as a fraction of the frame, with its author's name", () => {
     const { container } = render(<LivePointers />);
     act(() => receivePointer({ userId: 3, x: 0.25, y: 0.5 }, 'Ada Lovelace'));
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();

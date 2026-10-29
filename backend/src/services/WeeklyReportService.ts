@@ -135,7 +135,7 @@ export async function sendWeeklyReports(now = new Date()): Promise<number> {
     return 0;
   }
   const recipients = await prisma.user.findMany({
-        // Service accounts excluded: non-routable address (see ApiTokenService).
+    // Service accounts excluded: non-routable address (see ApiTokenService).
     where: { role: { in: [Role.SUPERVISOR, Role.ADMIN] }, isService: false },
     select: {
       email: true,

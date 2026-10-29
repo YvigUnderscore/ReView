@@ -143,7 +143,7 @@ describe('create: attachments: keys bound to the author', () => {
     (vi.mocked(prisma.comment.create).mock.calls.at(-1)?.[0] as { data: { attachments?: unknown } }).data
       .attachments as { key: string }[] | undefined;
 
-  it('keeps the attachments from the author\'s own folder', async () => {
+  it("keeps the attachments from the author's own folder", async () => {
     await create(author, 3, {
       mediaObjectId: 9,
       content: 'planche',
@@ -154,7 +154,7 @@ describe('create: attachments: keys bound to the author', () => {
 
   // The key is supplied by the client and later used to sign a read URL: accepting another user's folder
   // would let them read their attachment, on another project.
-  it('discards a key located in another user\'s folder', async () => {
+  it("discards a key located in another user's folder", async () => {
     await create(author, 3, {
       mediaObjectId: 9,
       content: 'exfil',
@@ -327,7 +327,7 @@ describe('edit feedback (Phase 46)', () => {
 
   // The feedback is not yet in the shot's review: alerting its followers would send them to look for
   // something they would not find there.
-  it('does not alert the shot\'s followers while the feedback stays on the edit', async () => {
+  it("does not alert the shot's followers while the feedback stays on the edit", async () => {
     await create(author, 3, { mediaObjectId: 9, content: 'note de coupe', timelineId: 7, timelineTime: 3 });
     expect(notifyWatchers).not.toHaveBeenCalled();
   });
@@ -337,7 +337,7 @@ describe('edit feedback (Phase 46)', () => {
     expect(notifyWatchers).toHaveBeenCalled();
   });
 
-  it('the shot\'s thread hides edit feedback that has not been sent back', async () => {
+  it("the shot's thread hides edit feedback that has not been sent back", async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.count).mockResolvedValue(0);
     await listThread(9, { page: 1, pageSize: 20, order: 'desc' });
@@ -376,7 +376,7 @@ describe('edit feedback (Phase 46)', () => {
     expect(where.isVisibleToClient).toBeUndefined();
   });
 
-  it('the edit\'s thread is ordered by position within the film', async () => {
+  it("the edit's thread is ordered by position within the film", async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.count).mockResolvedValue(0);
     await listMontage(7, { page: 1, pageSize: 20, order: 'desc' });
@@ -478,7 +478,7 @@ describe('update: editable attachments (D5)', () => {
     expect(prisma.comment.update).not.toHaveBeenCalled();
   });
 
-  it('discards another user\'s key slipped into the edit', async () => {
+  it("discards another user's key slipped into the edit", async () => {
     await update(author, 3, 1, { attachments: [{ key: theirs }, { key: mine }] });
     expect(persisted()).toEqual([{ key: mine }]);
   });

@@ -39,21 +39,21 @@ export interface SyncOptions {
   since?: Date | null;
   triggeredById?: number | null;
   onlySgIds?: { sgType: string; sgId: number }[];
-    /** Media import (costly) — can be disabled for a structure-only pass. */
+  /** Media import (costly) — can be disabled for a structure-only pass. */
   withMedia?: boolean;
-    /**
-     * Passes to run. When absent, the list is deduced from the targeted entities, otherwise everything runs. This is what lets a Note event re-read only the notes —
-     * and be re-read at all.
-     */
+  /**
+   * Passes to run. When absent, the list is deduced from the targeted entities, otherwise everything runs. This is what lets a Note event re-read only the notes —
+   * and be re-read at all.
+   */
   passes?: SyncPass[];
 }
 
 export interface SyncResult {
   runId: number;
-    /**
-     * `deferred`: the request was not executed right away, it is waiting behind the synchronization in progress. It is not lost — which is precisely what the former
-     * `ok` let one believe.
-     */
+  /**
+   * `deferred`: the request was not executed right away, it is waiting behind the synchronization in progress. It is not lost — which is precisely what the former
+   * `ok` let one believe.
+   */
   status: 'ok' | 'partial' | 'error' | 'deferred';
   stats: Record<string, unknown>;
 }
@@ -84,19 +84,19 @@ const pending = new Map<number, SyncOptions>();
 
 /** Merges two requests into one, never narrowing the scope. */
 export function mergeSyncOptions(a: SyncOptions, b: SyncOptions): SyncOptions {
-    // A request without `onlySgIds` sweeps everything: it absorbs the targeted requests.
+  // A request without `onlySgIds` sweeps everything: it absorbs the targeted requests.
   const targeted = a.onlySgIds && b.onlySgIds ? [...a.onlySgIds, ...b.onlySgIds] : undefined;
   const unique = targeted
     ? targeted.filter((t, i) => targeted.findIndex((o) => o.sgType === t.sgType && o.sgId === t.sgId) === i)
     : undefined;
   return {
     kind: a.kind === 'full' || b.kind === 'full' ? 'full' : (b.kind ?? a.kind),
-        // The widest window wins: over-catching is harmless, under-catching loses data.
+    // The widest window wins: over-catching is harmless, under-catching loses data.
     since: a.since && b.since ? new Date(Math.min(a.since.getTime(), b.since.getTime())) : null,
     triggeredById: b.triggeredById ?? a.triggeredById,
     onlySgIds: unique,
     withMedia: a.withMedia || b.withMedia,
-        // Same rule as for entities: the union, and a request without a list (hence "everything") absorbs the other. Merging a Note and a Version event must re-read both.
+    // Same rule as for entities: the union, and a request without a list (hence "everything") absorbs the other. Merging a Note and a Version event must re-read both.
     passes: mergePasses(a.passes, b.passes),
   };
 }
@@ -154,14 +154,14 @@ export async function importableVersionIds(
 export async function runSync(projectId: number, options: SyncOptions = {}): Promise<SyncResult> {
   const kind = options.kind ?? 'full';
 
-    /*
-     * Lock taken BEFORE any wait.
-     *
-     * `openConnection` is asynchronous: when it preceded the `running.has` test, a burst of ShotGrid events entered the function in full, waited for the connection, and
-     * found the lock still free — each then set it in turn. The studio's journal showed it unambiguously: fifteen synchronizations in eleven seconds, each updating the same 47 entities.
-     *
-     * The per-project lock suffices here: a connection serves only one project, and two projects of the same site may synchronize in parallel without getting in each other's way.
-     */
+  /*
+   * Lock taken BEFORE any wait.
+   *
+   * `openConnection` is asynchronous: when it preceded the `running.has` test, a burst of ShotGrid events entered the function in full, waited for the connection, and
+   * found the lock still free — each then set it in turn. The studio's journal showed it unambiguously: fifteen synchronizations in eleven seconds, each updating the same 47 entities.
+   *
+   * The per-project lock suffices here: a connection serves only one project, and two projects of the same site may synchronize in parallel without getting in each other's way.
+   */
   if (runningProjects.has(projectId)) {
     const existing = pendingProjects.get(projectId);
     pendingProjects.set(projectId, existing ? mergeSyncOptions(existing, options) : options);
@@ -184,7 +184,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
   }
   if (running.has(ctx.connection.id)) {
     runningProjects.delete(projectId);
-        // The request waits its turn instead of being dropped. The status says so: the HTTP caller must not display "synchronized" for work that did not take place.
+    // The request waits its turn instead of being dropped. The status says so: the HTTP caller must not display "synchronized" for work that did not take place.
     const existing = pending.get(ctx.connection.id);
     pending.set(ctx.connection.id, existing ? mergeSyncOptions(existing, options) : options);
     return { runId: 0, status: 'deferred', stats: { deferred: 'already_running' } };
@@ -195,7 +195,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
   await markStatus(ctx.connection.id, 'syncing', null);
   const startedAt = new Date();
 
-    // An event must only touch what it designates: the collector retains the realigned entities, and the decision to emit is taken at the end of the pass.
+  // An event must only touch what it designates: the collector retains the realigned entities, and the decision to emit is taken at the end of the pass.
   const touched = new TouchedEntities();
   const pullCtx: PullContext = {
     ...ctx,
@@ -206,7 +206,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
   const pullOptions: PullOptions = { since: options.since ?? null, onlySgIds: options.onlySgIds };
   const passes = resolvePasses(options);
   const wants = (pass: SyncPass): boolean => passes.has(pass);
-    // Targeted request: a pass none of whose identifiers is cited has nothing to do — letting it go without a filter means replaying the whole project for one entity.
+  // Targeted request: a pass none of whose identifiers is cited has nothing to do — letting it go without a filter means replaying the whole project for one entity.
   const targeted = (options.onlySgIds?.length ?? 0) > 0;
 
   try {
@@ -216,19 +216,19 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       sgProjectId: ctx.connection.sgProjectId,
     });
 
-        // 1. Status references — everything else refers to them.
+    // 1. Status references — everything else refers to them.
     let taskStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let shotStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let sequenceStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
     let assetStatuses = new Map<string, import('@prisma/client').PipelineStatus>();
-        // A pass that reads no `sg_status_list` (notes, playlists, versions) does without the reference: neither remote read nor database fallback.
+    // A pass that reads no `sg_status_list` (notes, playlists, versions) does without the reference: neither remote read nor database fallback.
     const readStatuses = wants('statuses');
     if (readStatuses && can(ctx.settings, 'statuses', 'read')) {
       const siteStatuses = await fetchSiteStatuses(ctx.client);
       taskStatuses = await syncPipelineStatuses(ctx.client, 'task', siteStatuses, journal);
       shotStatuses = await syncPipelineStatuses(ctx.client, 'shot', siteStatuses, journal);
       sequenceStatuses = await syncPipelineStatuses(ctx.client, 'sequence', siteStatuses, journal);
-            // The asset has its own list on the site side: it borrowed the tasks' one, so it displayed states no asset can carry.
+      // The asset has its own list on the site side: it borrowed the tasks' one, so it displayed states no asset can carry.
       assetStatuses = await syncPipelineStatuses(ctx.client, 'asset', siteStatuses, journal);
       const versionMap = await syncVersionStatuses(
         ctx.client,
@@ -237,8 +237,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         journal,
       );
       if (JSON.stringify(versionMap) !== JSON.stringify(ctx.settings.versionStatusMap)) {
-                // The settings are re-read just before writing, and only the concerned field is replaced. Starting again from the copy taken at the start of the synchronization
-                // cancelled everything a human had set while it was running — without a trace, and without anything warning of it.
+        // The settings are re-read just before writing, and only the concerned field is replaced. Starting again from the copy taken at the start of the synchronization
+        // cancelled everything a human had set while it was running — without a trace, and without anything warning of it.
         await prisma.$transaction(async (tx) => {
           const fresh = await tx.shotgridConnection.findUnique({
             where: { id: ctx.connection.id },
@@ -255,8 +255,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         pullCtx.settings.versionStatusMap = versionMap;
       }
     } else if (readStatuses) {
-            // Reference read closed: we fall back on the statuses ALREADY imported from the site (`projectId: null`, `origin: 'shotgrid'`). Without these two filters, the
-            // fallback also picked up the studio's local vocabulary and that of other projects: a common code such as "ip" was enough to stick a neighbour's status onto a shot.
+      // Reference read closed: we fall back on the statuses ALREADY imported from the site (`projectId: null`, `origin: 'shotgrid'`). Without these two filters, the
+      // fallback also picked up the studio's local vocabulary and that of other projects: a common code such as "ip" was enough to stick a neighbour's status onto a shot.
       const importedFromSite = { projectId: null, origin: 'shotgrid' } as const;
       const [t, s, q, a] = await Promise.all([
         prisma.pipelineStatus.findMany({ where: { ...importedFromSite, scope: 'task' } }),
@@ -270,11 +270,11 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       assetStatuses = new Map(a.map((x) => [x.code, x]));
     }
 
-        // 2. Accounts (matching by e-mail, no creation).
+    // 2. Accounts (matching by e-mail, no creation).
     const userMap = wants('users') ? await buildUserMap(pullCtx) : new Map<number, number>();
 
-        // 3. Hierarchy, in dependency order. Episodes come first: the attachment of sequences reads their match. On a project where the level is off — the default case — the
-        // two calls return control without asking the site for anything.
+    // 3. Hierarchy, in dependency order. Episodes come first: the attachment of sequences reads their match. On a project where the level is off — the default case — the
+    // two calls return control without asking the site for anything.
     if (wants('episodes')) await pullEpisodes(pullCtx, sequenceStatuses, pullOptions);
     if (wants('sequences')) await pullSequences(pullCtx, sequenceStatuses, pullOptions);
     if (wants('episodes')) await pullSequenceEpisodes(pullCtx, pullOptions);
@@ -282,10 +282,10 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
     if (wants('assets')) await pullAssets(pullCtx, assetStatuses, pullOptions);
     if (wants('tasks')) await pullTasks(pullCtx, taskStatuses, userMap, pullOptions);
 
-        // 4. Versions. A targeted request finally passes its identifiers: without them, a single Version event re-read every version of the project.
+    // 4. Versions. A targeted request finally passes its identifiers: without them, a single Version event re-read every version of the project.
     if (wants('versions')) {
       const versionIds = targeted ? await importableVersionIds(pullCtx, options.onlySgIds ?? []) : [];
-            // Targeted with no version retained: nothing to re-read. Calling `pullVersions` with an empty list would restart the full sweep — the opposite of what we seek.
+      // Targeted with no version retained: nothing to re-read. Calling `pullVersions` with an empty list would restart the full sweep — the opposite of what we seek.
       if (!targeted || versionIds.length > 0) {
         await pullVersions(pullCtx, {
           since: options.since ?? null,
@@ -293,8 +293,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         });
       }
     }
-            // `PublishedFile` has no targeted read: it is a sweep of five thousand records.
-            // It only belongs in a non-targeted pass.
+    // `PublishedFile` has no targeted read: it is a sweep of five thousand records.
+    // It only belongs in a non-targeted pass.
     if (wants('publishedFiles') && !targeted) await pullPublishedFiles(pullCtx);
 
     // 5. Notes and playlists: after the versions, on which both depend.
@@ -327,7 +327,7 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
       err instanceof ShotgridApiError && err.isAuth ? 'auth_error' : 'error',
       message,
     );
-        // An interrupted pass still realigned part of the project: the summary goes out anyway, otherwise the screens would stay on the previous state.
+    // An interrupted pass still realigned part of the project: the summary goes out anyway, otherwise the screens would stay on the previous state.
     flushTouched(projectId, journal.runId, 'error', touched);
     return { runId: journal.runId, status: 'error', stats: { error: message } };
   } finally {
@@ -340,8 +340,8 @@ export async function runSync(projectId: number, options: SyncOptions = {}): Pro
         logger.warn({ projectId, err }, 'Synchronisation différée en échec');
       });
     }
-        // Replays what arrived during the pass. Without `await`: the current caller has finished its work, and the catch-up must neither lengthen its response
-        // nor make its job fail if it fails in turn.
+    // Replays what arrived during the pass. Without `await`: the current caller has finished its work, and the catch-up must neither lengthen its response
+    // nor make its job fail if it fails in turn.
     const deferred = pending.get(ctx.connection.id);
     if (deferred) {
       pending.delete(ctx.connection.id);
@@ -364,7 +364,7 @@ export async function runReconcile(projectId: number, options: { lookbackHours?:
   if (!conn) return null;
   const settings = parseSettings(conn.settings);
   const hours = options.lookbackHours ?? settings.reconcile.lookbackHours;
-    // We restart from the last successful synchronization, never from "now": if the instance stayed stopped for a week, the window must cover that week.
+  // We restart from the last successful synchronization, never from "now": if the instance stayed stopped for a week, the window must cover that week.
   const from = conn.lastSyncAt ?? new Date(Date.now() - hours * 3600_000);
   const since = new Date(Math.min(from.getTime(), Date.now() - hours * 3600_000));
   return runSync(projectId, { kind: 'reconcile', since });

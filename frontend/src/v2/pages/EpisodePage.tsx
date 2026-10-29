@@ -85,7 +85,7 @@ export default function EpisodePage() {
   return (
     <PageShell breadcrumb={breadcrumb}>
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
-       {/* The level was switched off while the page was open: say so, rather
+      {/* The level was switched off while the page was open: say so, rather
            than leaving a screen that will never reload. */}
       {settings.data?.enabled === false && (
         <p className="mb-4 text-sm text-muted-foreground">{t('episodes.disabledHere')}</p>
@@ -101,7 +101,7 @@ function EpisodeBody({ episode }: { episode: EpisodeDetail }) {
   return (
     <div>
       <header className="mb-5 flex flex-wrap items-start gap-4">
-         {/* Like the other sheets: the thumbnail, or the episode name in its place. */}
+        {/* Like the other sheets: the thumbnail, or the episode name in its place. */}
         <div className="h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-border">
           <EntityThumb url={episode.thumbnailUrl} name={episode.code} />
         </div>

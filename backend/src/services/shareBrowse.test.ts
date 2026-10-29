@@ -67,10 +67,10 @@ describe('buildShareBrowse: what the client sees, tidied', () => {
     expect(browse.episodes[0]?.sequenceIds).toEqual([10]);
   });
 
-    /**
-     * The heart of the scope: we tidy ONLY the rows received. A link that opens only one shot must not reveal the code of the
-     * neighbouring shot, which the former flat list could not give away and the tree could.
-     */
+  /**
+   * The heart of the scope: we tidy ONLY the rows received. A link that opens only one shot must not reveal the code of the
+   * neighbouring shot, which the former flat list could not give away and the tree could.
+   */
   it('names no entity that the received rows do not carry', () => {
     const browse = buildShareBrowse([onShot(1, shot(20, 'SH020', 2, sequence(10, 'SQ010', 1)))]);
 
@@ -86,7 +86,7 @@ describe('buildShareBrowse: what the client sees, tidied', () => {
     expect(browse.shots[0]?.sequenceId).toBeNull();
   });
 
-    // A version hangs from an asset either through its task OR directly: two paths, one node.
+  // A version hangs from an asset either through its task OR directly: two paths, one node.
   it('brings together on a single asset the two ways of being attached to it', () => {
     const browse = buildShareBrowse([onAsset(1, FOX, 'task'), onAsset(2, FOX, 'version')]);
     expect(browse.assets).toHaveLength(1);
@@ -103,7 +103,7 @@ describe('buildShareBrowse: what the client sees, tidied', () => {
     expect(buildShareBrowse([onShot(1, shot(20, 'SH020', 2), null)]).shots[0]?.coverMediaId).toBeNull();
   });
 
-    // Degraded data: the media stays reachable, but no name is invented for it.
+  // Degraded data: the media stays reachable, but no name is invented for it.
   it('keeps a media without a parent instead of losing it', () => {
     const orphan: ShareTreeRow = { id: 7, thumbnailKey: null, version: { asset: null, task: null } };
     const browse = buildShareBrowse([orphan]);

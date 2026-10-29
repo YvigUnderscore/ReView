@@ -45,8 +45,8 @@ beforeEach(() => {
 
 describe('TaskService.list (tasks of a shot)', () => {
   it('breaks sort ties by id', async () => {
-        // Tasks of an imported shot all share order = 0: without a tie-break, two successive
-        // pages overlap.
+    // Tasks of an imported shot all share order = 0: without a tie-break, two successive
+    // pages overlap.
     await list(page, 12);
     expect(db.task.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: [{ order: 'asc' }, { id: 'asc' }] }),
@@ -73,8 +73,8 @@ describe('TaskService.list (tasks of a shot)', () => {
 
 describe('TaskService.listForProject (upload destinations)', () => {
   it('caps by default and says what was not served', async () => {
-        // The list was cut at 500 without returning anything that let the caller know: at ten thousand
-        // tasks, the screen showed five hundred and said nothing.
+    // The list was cut at 500 without returning anything that let the caller know: at ten thousand
+    // tasks, the screen showed five hundred and said nothing.
     db.task.findMany.mockResolvedValue(new Array(500).fill(null).map((_, i) => row(i + 1)));
     db.task.count.mockResolvedValue(10000);
     const res = await listForProject(7);
@@ -116,8 +116,8 @@ describe('TaskService.listForProject (upload destinations)', () => {
 
 describe('TaskService.listForBoard (kanban)', () => {
   it('does not overwrite the shot/asset OR with the cursor condition', async () => {
-        // Spreading the cursor at the root of the `where` would drop the project filter: the kanban
-        // would show the tasks of the whole studio.
+    // Spreading the cursor at the root of the `where` would drop the project filter: the kanban
+    // would show the tasks of the whole studio.
     await listForBoard(7, 2000, encodeCursor(0, 55));
     const args = db.task.findMany.mock.calls[0]![0] as { where: { OR: unknown[]; AND: unknown[] } };
     expect(args.where.OR).toEqual(projectWhere.OR);

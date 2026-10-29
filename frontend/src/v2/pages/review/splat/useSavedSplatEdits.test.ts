@@ -56,7 +56,7 @@ describe('useSavedSplatEdits — what drives the cloud in reading', () => {
     expect(splat.setBaseFlip).toHaveBeenCalledWith(true);
   });
 
-  it('replays the selected comment\'s proposal instead', () => {
+  it("replays the selected comment's proposal instead", () => {
     const splat = viewer();
     renderHook(() => useSavedSplatEdits(splat, media(savedEdits), false, proposal));
     expect(splat.applyTransform).toHaveBeenCalledWith(proposal.transform);

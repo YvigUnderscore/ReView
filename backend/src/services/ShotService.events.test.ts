@@ -61,7 +61,7 @@ describe('emitShotsUpdated', () => {
     expect(socket.emitToProject).not.toHaveBeenCalled();
   });
 
-  it('the batch is copied: the caller\'s array may live its own life', () => {
+  it("the batch is copied: the caller's array may live its own life", () => {
     const ids = [4, 5];
     emitShotsUpdated(PROJECT, ids);
     ids.push(6);
@@ -73,10 +73,10 @@ describe('emitShotsUpdated', () => {
     });
   });
 
-    /**
-     * The contract that `BulkService` relies on: the loop emits nothing, the caller emits once.
-     * Without `deferEvents`, thirty passes produced sixty events.
-     */
+  /**
+   * The contract that `BulkService` relies on: the loop emits nothing, the caller emits once.
+   * Without `deferEvents`, thirty passes produced sixty events.
+   */
   it('deferEvents holds back the emissions of the single-item path', async () => {
     await update(21, PROJECT, { pipelineStatusId: 8 }, 5, { deferEvents: true });
 

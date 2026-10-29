@@ -38,7 +38,7 @@ describe('InvitationService: invitation email (Phase 47)', () => {
     expect(html).toContain(`expires in ${INVITATION_TTL_DAYS} days`);
   });
 
-  it('escapes the recipient\'s name — a name is not HTML', () => {
+  it("escapes the recipient's name — a name is not HTML", () => {
     const html = renderInvitationHtml('en', '<script>alert(1)</script>', null, URL);
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');

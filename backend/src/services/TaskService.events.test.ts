@@ -13,7 +13,7 @@ vi.mock('../lib/prisma', () => ({
   prisma: {
     task: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     comment: { findUnique: vi.fn() },
-        // Department policy (studio setting): absent = "open", the historical rule.
+    // Department policy (studio setting): absent = "open", the historical rule.
     setting: { findUnique: vi.fn().mockResolvedValue(null) },
     user: { findUnique: vi.fn().mockResolvedValue({ departments: [] }) },
   },

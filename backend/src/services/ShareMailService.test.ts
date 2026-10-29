@@ -49,23 +49,23 @@ beforeEach(() => {
 });
 
 describe('renderShareMailHtml', () => {
-    // Two `href`s (the button and the fallback) plus the URL spelled out: many mail clients block
-    // buttons, and some recipients copy the address by hand.
+  // Two `href`s (the button and the fallback) plus the URL spelled out: many mail clients block
+  // buttons, and some recipients copy the address by hand.
   it('carries the link in the button and in plain text as the fallback', () => {
     const html = renderShareMailHtml('en', ctx);
     expect(html.split(`href="${ctx.url}"`).length - 1).toBe(2);
     expect(html).toContain(`>${ctx.url}</a>`);
   });
 
-    // The note comes from a free-text field of the supervisor: it is injected into HTML.
+  // The note comes from a free-text field of the supervisor: it is injected into HTML.
   it('escapes the note instead of rendering it', () => {
     const html = renderShareMailHtml('en', { ...ctx, note: '<img src=x onerror=alert(1)>' });
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
-    // The project name is repeated in the message title, which `mailLayout` composes.
-    // A supervisor can rename it: it is user data, not markup.
+  // The project name is repeated in the message title, which `mailLayout` composes.
+  // A supervisor can rename it: it is user data, not markup.
   it('escapes the project name all the way into the bold title', () => {
     const html = renderShareMailHtml('en', {
       ...ctx,
@@ -75,8 +75,8 @@ describe('renderShareMailHtml', () => {
     expect(html).toContain('&lt;a href=&quot;https://faux.example&quot;&gt;');
   });
 
-    // The local copy of the escaping forgot quotes: the one that matters as soon as data
-    // lands in an attribute.
+  // The local copy of the escaping forgot quotes: the one that matters as soon as data
+  // lands in an attribute.
   it('escapes quotes too, not only angle brackets', () => {
     const html = renderShareMailHtml('en', { ...ctx, note: 'x" onmouseover="alert(1)' });
     expect(html).not.toContain('onmouseover="');
@@ -87,8 +87,8 @@ describe('renderShareMailHtml', () => {
     expect(renderShareMailHtml('en', ctx)).not.toContain('padding-left:12px');
   });
 
-    // Two distinct keys: the message always states the expiry situation, and never says
-    // the same thing in both cases.
+  // Two distinct keys: the message always states the expiry situation, and never says
+  // the same thing in both cases.
   it('distinguishes a link that expires from one that does not', () => {
     const withDate = renderShareMailHtml('en', { ...ctx, expiresAt: new Date('2026-09-01T00:00:00Z') });
     expect(withDate).not.toBe(renderShareMailHtml('en', ctx));
@@ -136,7 +136,7 @@ describe('sendShareMail', () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: 2, email: 'a@b.c', name: 'Alice' } as never);
   });
 
-    // A plain list in `To:` reveals every other recipient's address to each client.
+  // A plain list in `To:` reveals every other recipient's address to each client.
   it('sends one message per recipient', async () => {
     await expect(sendShareMail(2, 4, ['x@studio.fr', 'y@client.com'], null)).resolves.toEqual({ sent: 2 });
     expect(sendMail).toHaveBeenCalledTimes(2);

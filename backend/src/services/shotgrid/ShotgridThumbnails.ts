@@ -56,13 +56,13 @@ export interface ThumbnailSyncParams {
   localId: number;
   sgType: string;
   sgId: number;
-    /** Readable name of the entity — appears only in the journal. */
+  /** Readable name of the entity — appears only in the journal. */
   name: string;
-    /** Raw value of the `image` field as returned by the site. */
+  /** Raw value of the `image` field as returned by the site. */
   image: unknown;
-    /** Marker recorded at the previous pass, if there was one. */
+  /** Marker recorded at the previous pass, if there was one. */
   previous: string | null | undefined;
-    /** Thumbnail currently carried by the entity on the ReView side. */
+  /** Thumbnail currently carried by the entity on the ReView side. */
   currentKey: string | null;
 }
 
@@ -80,19 +80,19 @@ export async function syncThumbnail(ctx: PullContext, params: ThumbnailSyncParam
 
   const identity = thumbnailIdentity(params.image);
 
-    /**
-     * Thumbnail placed by hand in ReView: we do not touch it.
-     *
-     * `thumbnailKey` is only written by the manual upload (C3) — the fallback thumbnail of a card, for its part, is computed and is not recorded. A key present **without a marker**
-     * can therefore only come from a human who chose this image. Covering it with the site's on the first pass would have erased their decision without conflict or trace, and across
-     * a whole project at once. The site takes over again as soon as someone removes this image here.
-     */
+  /**
+   * Thumbnail placed by hand in ReView: we do not touch it.
+   *
+   * `thumbnailKey` is only written by the manual upload (C3) — the fallback thumbnail of a card, for its part, is computed and is not recorded. A key present **without a marker**
+   * can therefore only come from a human who chose this image. Covering it with the site's on the first pass would have erased their decision without conflict or trace, and across
+   * a whole project at once. The site takes over again as soon as someone removes this image here.
+   */
   if (params.currentKey && previous === null) return null;
 
   if (identity === null) {
-        /**
-         * Thumbnail removed from the site. We remove ONLY the one that came from there — the guard above has already set the others aside.
-         */
+    /**
+     * Thumbnail removed from the site. We remove ONLY the one that came from there — the guard above has already set the others aside.
+     */
     if (previous && params.currentKey) {
       await storage.deleteObject(params.currentKey).catch(() => undefined);
       await EntityThumbnailService.set(params.holder, params.localId, null);
@@ -101,7 +101,7 @@ export async function syncThumbnail(ctx: PullContext, params: ThumbnailSyncParam
     return null;
   }
 
-    // Identical marker AND image still in place: nothing to do, and above all nothing to download. This is the case of almost all entities at every pass.
+  // Identical marker AND image still in place: nothing to do, and above all nothing to download. This is the case of almost all entities at every pass.
   if (identity === previous && params.currentKey) return previous;
 
   try {
@@ -141,7 +141,7 @@ async function fetchAndStore(ctx: PullContext, params: ThumbnailSyncParams, url:
   let total = 0;
   for await (const chunk of stream) {
     total += (chunk as Buffer).length;
-        // The `content-length` may lie or be missing: we recount while reading.
+    // The `content-length` may lie or be missing: we recount while reading.
     if (total > MAX_BYTES) {
       stream.destroy();
       return false;
@@ -155,10 +155,10 @@ async function fetchAndStore(ctx: PullContext, params: ThumbnailSyncParams, url:
 
   const key = StorageService.entityThumbnailKey(params.holder, params.localId, kind.ext);
   await storage.putObject(key, Buffer.concat(chunks), kind.contentType);
-    /**
-     * The key depends only on the entity and the extension: replacing a JPEG with a JPEG rewrites the same object. A change of extension, on the other hand, would leave the old
-     * file in the bucket with nothing designating it any more.
-     */
+  /**
+   * The key depends only on the entity and the extension: replacing a JPEG with a JPEG rewrites the same object. A change of extension, on the other hand, would leave the old
+   * file in the bucket with nothing designating it any more.
+   */
   if (params.currentKey && params.currentKey !== key) {
     await storage.deleteObject(params.currentKey).catch(() => undefined);
   }

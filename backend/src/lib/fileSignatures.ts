@@ -190,7 +190,7 @@ export const detect3D = (buf: Buffer, hintExt: string | null, size: number): str
  * (like the text 3D formats).
  */
 export const detectSplat = (buf: Buffer, hintExt: string | null, size: number): string | null => {
-    // PLY (text or binary, including compressed-ply): ASCII magic 'ply' + line break.
+  // PLY (text or binary, including compressed-ply): ASCII magic 'ply' + line break.
   if (
     buf.length >= 4 &&
     buf[0] === 0x70 &&
@@ -199,11 +199,11 @@ export const detectSplat = (buf: Buffer, hintExt: string | null, size: number): 
     (buf[3] === 0x0a || buf[3] === 0x0d)
   )
     return '.ply';
-    // SPZ: gzip container (1F 8B) wrapping the NGSP header.
+  // SPZ: gzip container (1F 8B) wrapping the NGSP header.
   if (hintExt === '.spz' && buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b) return '.spz';
-    // SPLAT: raw binary, 32 bytes per splat → size multiple of 32.
+  // SPLAT: raw binary, 32 bytes per splat → size multiple of 32.
   if (hintExt === '.splat' && size > 0 && size % 32 === 0) return '.splat';
-    // KSPLAT / SOG / SOGS: containers without a stable magic → extension hint + size.
+  // KSPLAT / SOG / SOGS: containers without a stable magic → extension hint + size.
   const HINT_SPLAT = ['.ksplat', '.sog', '.sogs'];
   if (hintExt && HINT_SPLAT.includes(hintExt) && size > 0) return hintExt;
   return null;

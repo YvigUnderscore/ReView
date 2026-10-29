@@ -7,15 +7,15 @@ vi.mock('../lib/prisma', () => ({
   prisma: {
     task: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     comment: { findUnique: vi.fn() },
-        // Deletion guard (Phase 50): `Version.taskId` cascades, so a task carrying versions cannot be deleted.
-        // Empty by default.
+    // Deletion guard (Phase 50): `Version.taskId` cascades, so a task carrying versions cannot be deleted.
+    // Empty by default.
     version: { count: vi.fn().mockResolvedValue(0) },
-        // Archive lock (38.B): project open by default.
+    // Archive lock (38.B): project open by default.
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
-        // Rights are read from the EFFECTIVE role (38.E): by default, a member without a local role
-        // (hence judged on their global role), which the cases below already tested.
+    // Rights are read from the EFFECTIVE role (38.E): by default, a member without a local role
+    // (hence judged on their global role), which the cases below already tested.
     projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
-        // Department policy (studio setting): absent = "open", the historical rule.
+    // Department policy (studio setting): absent = "open", the historical rule.
     setting: { findUnique: vi.fn().mockResolvedValue(null) },
     user: { findUnique: vi.fn().mockResolvedValue({ departments: [] }) },
   },
@@ -66,7 +66,7 @@ describe('taskNameFromComment (32.D)', () => {
 });
 
 describe('createFromComment (32.D)', () => {
-  it('attaches the task to the version\'s shot and takes over the assignee', async () => {
+  it("attaches the task to the version's shot and takes over the assignee", async () => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({
       id: 9,
       content: 'corriger le reflet',
@@ -153,7 +153,7 @@ describe('createFromComment: guards and completeness (Phase 50)', () => {
     expect(prisma.task.create).not.toHaveBeenCalled();
   });
 
-  it('inherits the step and entry status from the project\'s reference list', async () => {
+  it("inherits the step and entry status from the project's reference list", async () => {
     vi.mocked(DepartmentService.resolveByKey).mockResolvedValue({ id: 6, key: 'comp' } as never);
     vi.mocked(PipelineStatusService.resolveByLegacy).mockResolvedValue({
       id: 31,

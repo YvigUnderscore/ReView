@@ -65,7 +65,7 @@ describe('create (33.A)', () => {
     );
   });
 
-  it('refuses a version outside the playlist\'s project', async () => {
+  it("refuses a version outside the playlist's project", async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([{ id: 5 }] as never);
     vi.mocked(prisma.playlist.findUnique).mockResolvedValue(null);
     await expect(create(artist, 2, 'X', [5, 6])).rejects.toThrow(/do not belong to the project/);

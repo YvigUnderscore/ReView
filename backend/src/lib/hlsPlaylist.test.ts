@@ -61,7 +61,7 @@ describe('hlsPlaylist — master carrying the token', () => {
     expect(withToken).toContain('720p.m3u8?pt=jeton.abc');
   });
 
-  it("alters neither the tags nor the order of the renditions", () => {
+  it('alters neither the tags nor the order of the renditions', () => {
     expect(withToken.split('\n').slice(0, 3)).toEqual(MASTER.split('\n').slice(0, 3));
     expect(playlistUris(withToken)).toHaveLength(2);
   });

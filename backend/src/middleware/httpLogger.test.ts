@@ -11,7 +11,7 @@ import { redactUrl } from './httpLogger';
  * no longer useful for diagnosis.
  */
 describe('redactUrl — tokens carried by the path', () => {
-  it("masks the invitation token, which sets a password and opens a session", () => {
+  it('masks the invitation token, which sets a password and opens a session', () => {
     expect(redactUrl('/api/auth/invitation/abc123def456')).toBe('/api/auth/invitation/[Redacted]');
   });
 
@@ -33,11 +33,11 @@ describe('redactUrl — tokens carried by the path', () => {
     );
   });
 
-  it("anchors the pattern only at the start of the URL (no masking on a path that imitates it)", () => {
+  it('anchors the pattern only at the start of the URL (no masking on a path that imitates it)', () => {
     expect(redactUrl('/api/media/1/api/client/x')).toBe('/api/media/1/api/client/x');
   });
 
-  it("leaves the numeric identifier of a share link intact", () => {
+  it('leaves the numeric identifier of a share link intact', () => {
     expect(redactUrl('/api/share/42')).toBe('/api/share/42');
   });
 });
@@ -53,7 +53,7 @@ describe('redactUrl — secrets carried by the query', () => {
     );
   });
 
-  it("masks the code and state of the OIDC callback", () => {
+  it('masks the code and state of the OIDC callback', () => {
     expect(redactUrl('/api/auth/oidc/callback?code=xyz&state=st')).toBe(
       '/api/auth/oidc/callback?code=[Redacted]&state=[Redacted]',
     );

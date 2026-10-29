@@ -90,10 +90,10 @@ describe('StorageService.deleteObjects: one call for a thousand keys', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-    /**
-     * A partial deletion is a normal event on the S3 side: it comes back in `Errors`, not as an exception.
-     * The caller needs the EXACT list in order to re-queue only those keys.
-     */
+  /**
+   * A partial deletion is a normal event on the S3 side: it comes back in `Errors`, not as an exception.
+   * The caller needs the EXACT list in order to re-queue only those keys.
+   */
   it('returns the keys refused by the storage, without throwing', async () => {
     send.mockResolvedValue({ Errors: [{ Key: 'k/2', Code: 'AccessDenied' }, { Code: 'NoKey' }] });
 
@@ -105,11 +105,11 @@ describe('StorageService.deleteObjects: one call for a thousand keys', () => {
     await expect(storage.deleteObjects(['k/1'])).rejects.toThrow('MinIO down');
   });
 
-    /**
-     * Presigned URLs are memoized per ten-minute slice. A deleted key must leave the cache, otherwise a key
-     * rewritten later would serve the old signature again. The sweep is GROUPED: one pass for the whole batch,
-     * not one pass per key.
-     */
+  /**
+   * Presigned URLs are memoized per ten-minute slice. A deleted key must leave the cache, otherwise a key
+   * rewritten later would serve the old signature again. The sweep is GROUPED: one pass for the whole batch,
+   * not one pass per key.
+   */
   it('forgets the presigned URLs of deleted keys', async () => {
     signed.mockResolvedValueOnce('https://signed.example/avant');
     const before = await storage.getPresignedGetUrl('derived/9/thumbnail.webp');

@@ -58,7 +58,7 @@ describe('ShotGrid writes', () => {
     for (const file of sourceFiles(SRC)) {
       const rel = relative(file);
       if (ALLOWED.includes(rel)) continue;
-            // This file necessarily cites the names it forbids.
+      // This file necessarily cites the names it forbids.
       if (rel.endsWith('ShotgridWriteGuard.test.ts')) continue;
 
       const source = readFileSync(file, 'utf8');
@@ -75,7 +75,7 @@ describe('ShotGrid writes', () => {
   });
 
   it('keeps the list of raw methods aligned with the client', () => {
-        // If a write method is added to the client without being listed here, it would slip past the check above without anyone noticing.
+    // If a write method is added to the client without being listed here, it would slip past the check above without anyone noticing.
     const client = readFileSync(join(SRC, 'services/shotgrid/ShotgridClient.ts'), 'utf8');
     const declared = Array.from(client.matchAll(/async (unsafe[A-Za-z]+)\(/g), (m) => m[1]);
 

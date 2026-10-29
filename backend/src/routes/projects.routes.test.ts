@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 describe('POST /api/projects/:projectId/members', () => {
-  it("passes the actor on to the service, with the target and the requested role", async () => {
+  it('passes the actor on to the service, with the target and the requested role', async () => {
     const res = await request(app).post('/api/projects/7/members').send({ userId: 42, role: 'CLIENT' });
     expect(res.status).toBe(201);
     expect(addMember).toHaveBeenCalledWith(7, 42, 'CLIENT', expect.objectContaining({ id: 5 }));
@@ -74,7 +74,7 @@ describe('POST /api/projects/:projectId/members', () => {
 });
 
 describe('DELETE /api/projects/:projectId/members/:userId', () => {
-  it("passes the actor on to the service", async () => {
+  it('passes the actor on to the service', async () => {
     const res = await request(app).delete('/api/projects/7/members/42');
     expect(res.status).toBe(204);
     expect(removeMember).toHaveBeenCalledWith(7, 42, expect.objectContaining({ id: 5 }));

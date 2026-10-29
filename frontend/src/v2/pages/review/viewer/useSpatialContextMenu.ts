@@ -27,6 +27,9 @@ import { isContextTap } from './contextGesture';
  *         targeted prim there and refuses empty space; the splat always accepts — its entries
  *         concern the view, not an object.
  */
+export function useSpatialContextMenu(
+  getDom: () => HTMLElement | null,
+  ready: boolean,
   prepare: (tap: { clientX: number; clientY: number; altKey: boolean }) => boolean,
 ): void {
   const down = useRef<{ x: number; y: number; at: number } | null>(null);

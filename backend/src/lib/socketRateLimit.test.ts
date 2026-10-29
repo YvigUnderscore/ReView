@@ -50,7 +50,7 @@ describe('socketRateLimit — legitimate traffic passes', () => {
     expect(dropped).toBe(0);
   });
 
-  it("absorbs the opening burst of a screen (several joins at once)", () => {
+  it('absorbs the opening burst of a screen (several joins at once)', () => {
     const budget = createBudget(0);
     expect(burst(budget, 'join_review', 12, 0)).toMatchObject({ allow: 12, drop: 0 });
   });
@@ -170,7 +170,7 @@ describe('attachSocketRateLimit — wiring onto a connection', () => {
     };
   }
 
-  it("does not call the handler of a refused packet", () => {
+  it('does not call the handler of a refused packet', () => {
     const clock = { t: 0 };
     const fake = fakeSocket();
     attachSocketRateLimit(fake.socket, { now: () => clock.t });

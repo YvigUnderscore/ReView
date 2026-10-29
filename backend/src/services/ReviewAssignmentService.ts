@@ -164,8 +164,8 @@ export async function setReviewers(
   const version = await loadVersion(versionId);
   await assertCanAssign(actor, projectId, version.authorId);
 
-    // The same person listed twice is not an error to reject: the last instruction wins,
-    // as on screen where the second row overwrites the first.
+  // The same person listed twice is not an error to reject: the last instruction wins,
+  // as on screen where the second row overwrites the first.
   const rule = (await resolveProjectSettingsById(projectId)).reviewRequest;
   const wanted = new Map<number, string | null>();
   for (const entry of entries) wanted.set(entry.userId, normalizeNote(entry.note, rule));
@@ -188,8 +188,8 @@ export async function setReviewers(
     ),
   ]);
 
-    // Only notify what changed FOR THE PERSON: a new assignment, or a rewritten instruction.
-    // Saving the same list again without touching it wakes nobody.
+  // Only notify what changed FOR THE PERSON: a new assignment, or a rewritten instruction.
+  // Saving the same list again without touching it wakes nobody.
   const added: number[] = [];
   const rewritten: number[] = [];
   for (const [reviewerId, note] of wanted) {

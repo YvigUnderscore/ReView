@@ -104,7 +104,7 @@ export function useInfiniteList<T>(
     getNextPageParam: (last: Page<T>, pages: Page<T>[]): SizedPageParam | undefined => {
       const next = nextPageParam(last, pages);
       if (!next) return undefined;
-       // Size is frozen to what the server has just served (see `SizedPageParam`).
+      // Size is frozen to what the server has just served (see `SizedPageParam`).
       const served = last.pageSize;
       return typeof served === 'number' && served > 0 ? { ...next, pageSize: served } : next;
     },

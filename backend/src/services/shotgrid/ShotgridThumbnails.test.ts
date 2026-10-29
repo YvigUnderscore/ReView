@@ -65,7 +65,7 @@ const respond = (bytes: Buffer, type: string | null = 'image/jpeg', size: number
 beforeEach(() => {
   vi.clearAllMocks();
   openStream.mockReset();
-    // These three are awaited: a double returning `undefined` would make the code fail for a reason unrelated to what is being checked.
+  // These three are awaited: a double returning `undefined` would make the code fail for a reason unrelated to what is being checked.
   putObject.mockResolvedValue(undefined);
   deleteObject.mockResolvedValue(undefined);
   setThumbnail.mockResolvedValue(undefined);
@@ -109,10 +109,10 @@ describe('syncThumbnail', () => {
     expect(identity).toBe(thumbnailIdentity(URL_V1));
   });
 
-    /**
-     * By far the most frequent case: a nightly reconciliation re-reads the whole project while nothing has changed. Re-downloading twelve thousand images for nothing would
-     * make the catch-up pass the most costly pass of the integration.
-     */
+  /**
+   * By far the most frequent case: a nightly reconciliation re-reads the whole project while nothing has changed. Re-downloading twelve thousand images for nothing would
+   * make the catch-up pass the most costly pass of the integration.
+   */
   it('re-downloads nothing when only the signature has changed', async () => {
     const identity = await syncThumbnail(
       context(),
@@ -143,7 +143,7 @@ describe('syncThumbnail', () => {
     expect(identity).toBe(thumbnailIdentity(URL_V2));
   });
 
-    /** The marker is there but the object has vanished from storage: we go and fetch it again. */
+  /** The marker is there but the object has vanished from storage: we go and fetch it again. */
   it('fetches back when the entity lost its thumbnail despite an identical marker', async () => {
     respond(Buffer.from('jpeg'));
     await syncThumbnail(context(), params({ previous: thumbnailIdentity(URL_V1), currentKey: null }));
@@ -166,10 +166,10 @@ describe('syncThumbnail', () => {
     expect(identity).toBeNull();
   });
 
-    /**
-     * A thumbnail placed by hand in ReView never had a marker: it does not come from the site. Neither erasing it when ShotGrid does not illustrate the shot, nor covering it
-     * when it does — it is a human decision, and covering it on the first pass would have erased it across a whole project at once.
-     */
+  /**
+   * A thumbnail placed by hand in ReView never had a marker: it does not come from the site. Neither erasing it when ShotGrid does not illustrate the shot, nor covering it
+   * when it does — it is a human decision, and covering it on the first pass would have erased it across a whole project at once.
+   */
   it('does not erase a thumbnail placed by hand when the site has none', async () => {
     await syncThumbnail(
       context(),
@@ -189,7 +189,7 @@ describe('syncThumbnail', () => {
 
     expect(openStream).not.toHaveBeenCalled();
     expect(setThumbnail).not.toHaveBeenCalled();
-        // No marker either: the entity stays outside the synchronization's scope until someone removes the image chosen here.
+    // No marker either: the entity stays outside the synchronization's scope until someone removes the image chosen here.
     expect(identity).toBeNull();
   });
 
@@ -200,9 +200,9 @@ describe('syncThumbnail', () => {
     expect(identity).toBe('témoin-précédent');
   });
 
-    /**
-     * The type comes from the response of a remote service, and the key is then used to sign a URL served from the application's origin: nothing active enters there.
-     */
+  /**
+   * The type comes from the response of a remote service, and the key is then used to sign a URL served from the application's origin: nothing active enters there.
+   */
   it('refuses a type that storage must not serve', async () => {
     respond(Buffer.from('<svg/>'), 'image/svg+xml');
     const identity = await syncThumbnail(context(), params());
@@ -218,9 +218,9 @@ describe('syncThumbnail', () => {
     expect(putObject).not.toHaveBeenCalled();
   });
 
-    /**
-     * A missing thumbnail impoverishes the display; it does not make the entity's import fail. The previous marker is kept so that the next pass retries.
-     */
+  /**
+   * A missing thumbnail impoverishes the display; it does not make the entity's import fail. The previous marker is kept so that the next pass retries.
+   */
   it('keeps the previous marker when the download fails', async () => {
     openStream.mockRejectedValue(new Error('502'));
     const ctx = context();
@@ -242,7 +242,7 @@ describe('syncThumbnail', () => {
     );
   });
 
-    /** A JPEG replaced by a PNG changes key: the old object is no longer designated by anything. */
+  /** A JPEG replaced by a PNG changes key: the old object is no longer designated by anything. */
   it('deletes the old object when the extension changes', async () => {
     respond(Buffer.from('png'), 'image/png');
     const identity = await syncThumbnail(
@@ -256,7 +256,7 @@ describe('syncThumbnail', () => {
 
     expect(putObject).toHaveBeenCalledWith('entity-thumbs/shot/12.png', expect.any(Buffer), 'image/png');
     expect(deleteObject).toHaveBeenCalledWith('entity-thumbs/shot/12.jpg');
-        // The marker only advances if the whole chain went through to the end.
+    // The marker only advances if the whole chain went through to the end.
     expect(identity).toBe(thumbnailIdentity(URL_V2));
   });
 });

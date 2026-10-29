@@ -27,13 +27,13 @@ import type { SessionUser } from '../../lib/shotgridAccess';
 
 /** What ReView already knows about this person. */
 export type CrewState =
-    /** Already a member of the project. */
+  /** Already a member of the project. */
   | 'member'
-    /** An account exists (same address), but it is not on this project. */
+  /** An account exists (same address), but it is not on this project. */
   | 'account'
-    /** No account: inviting will create one. */
+  /** No account: inviting will create one. */
   | 'none'
-    /** No address, or deactivated on the site: nothing to do. */
+  /** No address, or deactivated on the site: nothing to do. */
   | 'ineligible';
 
 export interface CrewPerson {
@@ -41,24 +41,24 @@ export interface CrewPerson {
   name: string;
   login: string | null;
   email: string | null;
-    /** `act`, `dis`... as the site declares it. */
+  /** `act`, `dis`... as the site declares it. */
   sgStatus: string | null;
   state: CrewState;
   userId: number | null;
-    /**
-     * True when the matching comes from a link **set by hand**, not from the address.
-     * The screen says so: a chosen match is not undone by accident.
-     */
+  /**
+   * True when the matching comes from a link **set by hand**, not from the address.
+   * The screen says so: a chosen match is not undone by accident.
+   */
   linkedByHand: boolean;
-    /** Role on this project, when the person is already on it. */
+  /** Role on this project, when the person is already on it. */
   projectRole: Role | null;
   userRole: Role | null;
-    /**
-     * Department as the site names it: displayed even without a local match: it tells who we are dealing with, which the address
-     * does not always say.
-     */
+  /**
+   * Department as the site names it: displayed even without a local match: it tells who we are dealing with, which the address
+   * does not always say.
+   */
   sgDepartment: string | null;
-    /** Matching ReView department, when the studio already has one under this name. */
+  /** Matching ReView department, when the studio already has one under this name. */
   department: { id: number; name: string } | null;
 }
 
@@ -109,8 +109,8 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
   const ids = refs.map((r) => Number(r.id)).filter((id) => Number.isFinite(id));
   if (ids.length === 0) return [];
 
-    // The department is only requested once the schema has been consulted: a field the site does not declare does not return
-    // "empty"; it makes the whole request fail.
+  // The department is only requested once the schema has been consulted: a field the site does not declare does not return
+  // "empty"; it makes the whole request fail.
   const deptFields = await departmentFields(ctx.client);
   const people = await ctx.client.search('HumanUser', {
     fields: ['name', 'email', 'login', 'sg_status_list', ...deptFields],
@@ -136,16 +136,16 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
   const emails = raw.map((p) => p.email?.toLowerCase()).filter((e): e is string => Boolean(e));
   const locals = emails.length
     ? await prisma.user.findMany({
-                // Case-insensitive: an account registered as "Alice@studio.com" would otherwise look nonexistent, and inviting
-                // her would run into the unique index.
+        // Case-insensitive: an account registered as "Alice@studio.com" would otherwise look nonexistent, and inviting
+        // her would run into the unique index.
         where: { email: { in: emails, mode: 'insensitive' } },
         select: { id: true, email: true, role: true },
       })
     : [];
   const byEmail = new Map(locals.map((u) => [u.email.toLowerCase(), u]));
 
-    // Explicit links: they take precedence over the address match, which is only a deduction. Without them, a person linked by
-    // hand reappeared as "no account" on every read, for lack of a common address.
+  // Explicit links: they take precedence over the address match, which is only a deduction. Without them, a person linked by
+  // hand reappeared as "no account" on every read, for lack of a common address.
   const links = await prisma.shotgridLink.findMany({
     where: { connection: { projectId }, localType: 'user', sgType: 'HumanUser' },
     select: { localId: true, sgId: true },
@@ -220,8 +220,8 @@ export async function linkCrewMember(projectId: number, sgId: number, userId: nu
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } });
   if (!user) throw notFound('User not found');
 
-    // A ReView account can only point to one site account, and vice versa: the two uniqueness constraints of `ShotgridLink` guarantee
-    // it, but a pre-existing link would make the write fail instead of replacing it. We therefore clean up both sides first.
+  // A ReView account can only point to one site account, and vice versa: the two uniqueness constraints of `ShotgridLink` guarantee
+  // it, but a pre-existing link would make the write fail instead of replacing it. We therefore clean up both sides first.
   await prisma.shotgridLink.deleteMany({
     where: {
       connectionId: connection.id,
@@ -298,13 +298,13 @@ export async function inviteCrew(
   });
   const results: InviteResult[] = [];
 
-    /**
-     * The department the site declares, set on the member: **added**, never substituted: the person may already carry others, and the site
-     * knows only one.
-     *
-     * A failure does not bring down the import: we have just granted access, and losing it over a label would be absurd. It is logged, and the
-     * screen allows correcting it by hand.
-     */
+  /**
+   * The department the site declares, set on the member: **added**, never substituted: the person may already carry others, and the site
+   * knows only one.
+   *
+   * A failure does not bring down the import: we have just granted access, and losing it over a label would be absurd. It is logged, and the
+   * screen allows correcting it by hand.
+   */
   const attachDepartment = async (person: CrewPerson, userId: number) => {
     if (!person.department) return;
     try {
@@ -316,7 +316,7 @@ export async function inviteCrew(
 
   const link = async (person: CrewPerson, userId: number) => {
     if (!connection) return;
-        // The link serves attribution: without it, a write made in this person's name goes back to the site as an anonymous "ReView".
+    // The link serves attribution: without it, a write made in this person's name goes back to the site as an anonymous "ReView".
     await upsertLink({
       connectionId: connection.id,
       localType: 'user',
@@ -332,8 +332,8 @@ export async function inviteCrew(
       const user = await UserService.createUser(actor.id, {
         email: person.email!,
         name: person.name,
-                // ARTIST by default: it is the role that gives access to the work without opening anything else. A supervisor is promoted
-                // afterwards, explicitly.
+        // ARTIST by default: it is the role that gives access to the work without opening anything else. A supervisor is promoted
+        // afterwards, explicitly.
         role: Role.ARTIST,
       });
       await ProjectService.addMember(projectId, user.id);
@@ -351,7 +351,7 @@ export async function inviteCrew(
   }
 
   for (const person of plan.add) {
-        // Existing account: we add it to the project without touching its global role.
+    // Existing account: we add it to the project without touching its global role.
     await ProjectService.addMember(projectId, person.userId!);
     await link(person, person.userId!);
     await attachDepartment(person, person.userId!);
@@ -359,7 +359,7 @@ export async function inviteCrew(
   }
 
   for (const person of plan.skip) {
-        // Already a member: we still set the link, which is often missing: it is what allows writing to the site in this person's name.
+    // Already a member: we still set the link, which is often missing: it is what allows writing to the site in this person's name.
     if (person.state === 'member' && person.userId) {
       await link(person, person.userId);
       await attachDepartment(person, person.userId);

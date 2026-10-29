@@ -14,8 +14,8 @@ function setup() {
   return { camera, controls };
 }
 
-describe("turntable — no camera orbit (39.D)", () => {
-  it("Y rotation by a quarter turn: +Z → +X, radius preserved", () => {
+describe('turntable — no camera orbit (39.D)', () => {
+  it('Y rotation by a quarter turn: +Z → +X, radius preserved', () => {
     const { camera, controls } = setup();
     turntableStep(THREE, camera, controls, 'y', Math.PI / 2);
     expect(camera.position.x).toBeCloseTo(5, 4);

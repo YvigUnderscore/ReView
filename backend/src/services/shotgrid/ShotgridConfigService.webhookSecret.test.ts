@@ -46,10 +46,10 @@ describe('webhook secret', () => {
     await expect(revealWebhookSecret(7)).resolves.toBeNull();
   });
 
-    /**
-     * The missing invariant: the value given to the administrator is exactly the one the webhook route will read back. If rotation stored
-     * something other than what it returns, we would have recreated the original failure, only more discreetly.
-     */
+  /**
+   * The missing invariant: the value given to the administrator is exactly the one the webhook route will read back. If rotation stored
+   * something other than what it returns, we would have recreated the original failure, only more discreetly.
+   */
   it('stores exactly the secret it returns', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue(connection(encryptSecret('ancien')));
 
@@ -58,7 +58,7 @@ describe('webhook secret', () => {
 
     expect(secret).not.toBe('ancien');
     expect(secret.length).toBeGreaterThan(20);
-        // Encrypted in the database, never in clear.
+    // Encrypted in the database, never in clear.
     expect(stored).not.toContain(secret);
     expect(webhookSecretOf(connection(stored))).toBe(secret);
   });
@@ -69,10 +69,10 @@ describe('webhook secret', () => {
     expect(await rotateWebhookSecret(7)).not.toBe(await rotateWebhookSecret(7));
   });
 
-    /**
-     * End to end: the displayed value signs a delivery the way ShotGrid does (HMAC-SHA1 of the body bytes), and the signature obtained
-     * is the one the route recomputes from the decrypted secret.
-     */
+  /**
+   * End to end: the displayed value signs a delivery the way ShotGrid does (HMAC-SHA1 of the body bytes), and the signature obtained
+   * is the one the route recomputes from the decrypted secret.
+   */
   it('validates a ShotGrid signature computed with the displayed value', async () => {
     const stored = encryptSecret('secret-partage-avec-le-site');
     db.shotgridConnection.findUnique.mockResolvedValue(connection(stored));

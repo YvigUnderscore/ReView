@@ -7,8 +7,8 @@ vi.mock('../lib/prisma', () => ({
   prisma: {
     version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
-        // The right to publish is read from the project's EFFECTIVE role (38.E): the author is there a member
-        // without a local role, hence judged on their global role, as before.
+    // The right to publish is read from the project's EFFECTIVE role (38.E): the author is there a member
+    // without a local role, hence judged on their global role, as before.
     projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
   },
 }));

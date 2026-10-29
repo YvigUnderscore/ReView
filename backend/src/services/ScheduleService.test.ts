@@ -119,8 +119,8 @@ describe('ScheduleService: time window', () => {
   });
 
   it('keeps a task that overflows the window on both sides (overlap, not due date)', () => {
-        // Two clauses: effective end >= from, effective start <= to. A task that started before
-        // the window and is due after it satisfies both: this is the case a filter on the due date alone would lose.
+    // Two clauses: effective end >= from, effective start <= to. A task that started before
+    // the window and is due after it satisfies both: this is the case a filter on the due date alone would lose.
     expect(scheduleWindowFilter({ from, to })).toEqual([
       { OR: [{ dueDate: { gte: from } }, { dueDate: null, startDate: { gte: from } }] },
       { OR: [{ startDate: { lte: to } }, { startDate: null, dueDate: { lte: to } }] },
@@ -146,8 +146,8 @@ describe('ScheduleService: time window', () => {
 
 describe('ScheduleService: safety cap', () => {
   it('bounds the read: never more than SCHEDULE_MAX_TASKS + 1 rows requested', async () => {
-        // The measure of the fix: the number of rows fetched. Without `take`, the query returned the
-        // whole dated project (eight thousand rows on a feature film).
+    // The measure of the fix: the number of rows fetched. Without `take`, the query returned the
+    // whole dated project (eight thousand rows on a feature film).
     await getProjectSchedule(7);
     expect(findMany.mock.calls[0]![0].take).toBe(SCHEDULE_MAX_TASKS + 1);
   });
@@ -174,7 +174,7 @@ describe('ScheduleService: safety cap', () => {
     const out = await getProjectSchedule(7);
     expect(out.tasks).toHaveLength(SCHEDULE_MAX_TASKS);
     expect(out.truncated).toBe(true);
-        // The probe row only serves to detect overflow: it is not returned.
+    // The probe row only serves to detect overflow: it is not returned.
     expect(out.tasks.at(-1)!.id).toBe(SCHEDULE_MAX_TASKS);
   });
 

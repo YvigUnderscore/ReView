@@ -182,9 +182,9 @@ describe('webhook mort', () => {
 
 describe('secret illisible', () => {
   it('emits nothing rather than sign with an empty key', async () => {
-        // decryptSecret returns null as soon as the encryption key has changed. The empty-string fallback then
-        // signed with an EMPTY HMAC key: the delivery left with a well-formed X-ReView-Signature header, yet one that anyone
-        // knowing the URL could recompute, enough to forge a ReView event and trigger the studio's downstream pipeline.
+    // decryptSecret returns null as soon as the encryption key has changed. The empty-string fallback then
+    // signed with an EMPTY HMAC key: the delivery left with a well-formed X-ReView-Signature header, yet one that anyone
+    // knowing the URL could recompute, enough to forge a ReView event and trigger the studio's downstream pipeline.
     vi.mocked(decryptSecret).mockReturnValueOnce(null);
     activeHook();
     await deliver(1, 'version.published', { versionId: 3, _reviewDeliveryId: 77 });

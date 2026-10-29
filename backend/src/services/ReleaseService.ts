@@ -27,11 +27,11 @@ import { appVersion, compareSemver } from '../lib/version';
 
 /** A published release, reduced to what the screen displays. */
 export interface ReleaseInfo {
-    /** Git tag, as published (`v2.4.0`). */
+  /** Git tag, as published (`v2.4.0`). */
   tag: string;
   name: string;
   publishedAt: string | null;
-    /** Release notes in markdown: the body of the GitHub release. */
+  /** Release notes in markdown: the body of the GitHub release. */
   notesMd: string;
   htmlUrl: string;
   prerelease: boolean;
@@ -42,7 +42,7 @@ export type ReleaseError = 'DISABLED' | 'UNREACHABLE' | 'RATE_LIMITED';
 
 export interface ReleaseCatalog {
   releases: ReleaseInfo[];
-    /** Timestamp of the last successful poll; `null` if none. */
+  /** Timestamp of the last successful poll; `null` if none. */
   checkedAt: string | null;
   error: ReleaseError | null;
 }
@@ -126,8 +126,8 @@ export async function catalog(options: { force?: boolean } = {}): Promise<Releas
   if (fresh && !options.force) return cache as ReleaseCatalog;
 
   const fetched = await fetchReleases();
-    // A transient failure must not erase a catalog already obtained: the screen keeps
-    // showing what it knows, noting that the last check did not succeed.
+  // A transient failure must not erase a catalog already obtained: the screen keeps
+  // showing what it knows, noting that the last check did not succeed.
   if (fetched.error !== null && cache !== null && cache.releases.length > 0) {
     cache = { ...cache, error: fetched.error };
     return cache;

@@ -28,7 +28,7 @@ describe('departmentResolver', () => {
   });
 
   it('resolves each step only once per pass', async () => {
-        // A project counts thousands of tasks for about ten steps: without memory, the synchronization would make one database round trip per task.
+    // A project counts thousands of tasks for about ten steps: without memory, the synchronization would make one database round trip per task.
     const resolve = departmentResolver(7);
     await resolve('Animation');
     await resolve('animation');

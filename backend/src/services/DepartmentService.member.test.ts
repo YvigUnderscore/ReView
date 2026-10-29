@@ -86,7 +86,7 @@ describe('setMemberDepartments', () => {
     expect(logAudit).not.toHaveBeenCalled();
   });
 
-  it('returns the member\'s list bounded to the project\'s vocabulary, and logs the gesture', async () => {
+  it("returns the member's list bounded to the project's vocabulary, and logs the gesture", async () => {
     const out = await setMemberDepartments(ACTOR, 7, 5, { add: [10] });
     expect(out).toEqual([{ id: 10, key: 'COMP', name: 'Compositing' }]);
     expect(db.user.findUnique).toHaveBeenCalledWith(

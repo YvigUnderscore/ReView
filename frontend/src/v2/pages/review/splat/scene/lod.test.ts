@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { applyLod, createAutoLod } from './lod';
 
 describe('createAutoLod (state machine 15 fps / 5 s + hysteresis)', () => {
-  it("engages after 5 s below 15 fps, not before", () => {
+  it('engages after 5 s below 15 fps, not before', () => {
     const auto = createAutoLod();
     for (let i = 0; i < 9; i++) expect(auto.step(10, 500)).toBe(false); // 4.5 s
     expect(auto.step(10, 500)).toBe(true); // 5 s
@@ -20,7 +20,7 @@ describe('createAutoLod (state machine 15 fps / 5 s + hysteresis)', () => {
     expect(auto.step(10, 500)).toBe(true);
   });
 
-  it("hysteresis: only disengages above 25 fps for 5 s (no flicker at 20 fps)", () => {
+  it('hysteresis: only disengages above 25 fps for 5 s (no flicker at 20 fps)', () => {
     const auto = createAutoLod();
     for (let i = 0; i < 10; i++) auto.step(10, 500);
     expect(auto.engaged).toBe(true);

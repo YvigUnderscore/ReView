@@ -49,8 +49,8 @@ describe('StatsService: daysBetween', () => {
 });
 
 describe('StatsService: computeShotStats', () => {
-    // Same shots as before the move to SQL aggregates, counted by the database:
-    // SH010 -> 2 versions (the last one approved), 1 retake, 1 open note, approved on the 6th.
+  // Same shots as before the move to SQL aggregates, counted by the database:
+  // SH010 -> 2 versions (the last one approved), 1 retake, 1 open note, approved on the 6th.
   const stats = computeShotStats([
     agg({
       shotId: 1,
@@ -85,7 +85,7 @@ describe('StatsService: computeShotStats', () => {
     expect(sh1.versions).toBe(2);
     expect(sh1.retakes).toBe(1);
     expect(sh1.openNotes).toBe(1);
-        // 1st version 2026-07-01 -> 1st approval 2026-07-06 = 5 days.
+    // 1st version 2026-07-01 -> 1st approval 2026-07-06 = 5 days.
     expect(sh1.reviewDays).toBe(5);
   });
 
@@ -115,8 +115,8 @@ describe('StatsService: convergence per sequence', () => {
       agg({ shotId: 3, sequenceId: null }),
     ]);
     const conv = computeSequenceConvergence(sequences, shotStats);
-        // The out-of-sequence group comes out WITHOUT a label: the server names nothing, it only
-        // uses a null `sequenceId` ("No sequence" was hard-coded French).
+    // The out-of-sequence group comes out WITHOUT a label: the server names nothing, it only
+    // uses a null `sequenceId` ("No sequence" was hard-coded French).
     expect(conv.map((c) => c.code)).toEqual(['SQ010', '']);
     expect(conv.find((c) => c.sequenceId === null)!.name).toBe('');
     const sq010 = conv.find((c) => c.sequenceId === 10)!;
@@ -152,7 +152,7 @@ describe('StatsService: totals & ranking', () => {
   it('approval rate over started shots, averages and open notes', () => {
     const totals = computeTotals(shotStats, 2, 2, 1);
     expect(totals.shots).toBe(3);
-        // 2 shots started (1 & 2), 1 approved -> 50%.
+    // 2 shots started (1 & 2), 1 approved -> 50%.
     expect(totals.approvalRate).toBe(50);
     expect(totals.openNotes).toBe(1);
     expect(totals.avgNotesPerVersion).toBe(0.5);
@@ -161,7 +161,7 @@ describe('StatsService: totals & ranking', () => {
 
   it('ranks shots by delay, then retakes', () => {
     const ranked = rankSlowestShots(shotStats);
-        // shot 1 (2 days) ahead of shot 2 (retake, notes); shot 3 (nothing) excluded.
+    // shot 1 (2 days) ahead of shot 2 (retake, notes); shot 3 (nothing) excluded.
     expect(ranked.map((s) => s.shotId)).toEqual([1, 2]);
   });
 });
@@ -269,8 +269,8 @@ describe('StatsService: equivalence with the original in-memory computation', ()
     name: `plan ${i + 1}`,
     sequenceId: i % 3 === 2 ? null : 10 + (i % 2),
   }));
-    // Deliberately tangled dataset: shots without versions, multiple retakes, approval before
-    // retake, resolved and open notes, versions on the same day.
+  // Deliberately tangled dataset: shots without versions, multiple retakes, approval before
+  // retake, resolved and open notes, versions on the same day.
   const versions: RawVersion[] = [];
   const decisions: RawDecision[] = [];
   const notes: RawNote[] = [];
@@ -364,7 +364,7 @@ describe('StatsService: getProjectStats', () => {
       avgRetakesPerShot: 0.5,
       avgReviewRoundsPerShot: 1.5,
       avgNotesPerVersion: 2,
-            // The only approved shot cost a retake: none passed on the first try.
+      // The only approved shot cost a retake: none passed on the first try.
       firstTimeRightRate: 0,
     });
     expect(stats.sequences).toEqual([
@@ -387,12 +387,12 @@ describe('StatsService: getProjectStats', () => {
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([] as never);
     await getProjectStats(42);
     const call = vi.mocked(prisma.$queryRaw).mock.calls[0]!;
-        // Tagged template call: [strings, ...values]; the id travels as a parameter.
+    // Tagged template call: [strings, ...values]; the id travels as a parameter.
     expect(call.slice(1)).toContain(42);
     expect(vi.mocked(prisma.sequence.findMany).mock.calls[0]![0]!.where).toEqual({
       projectId: 42,
       deletedAt: null,
-            // A hidden sequence does not count in the project's statistics.
+      // A hidden sequence does not count in the project's statistics.
       hiddenAt: null,
     });
   });
@@ -416,8 +416,8 @@ describe('StatsService: getProjectStats', () => {
     expect(stats.sequences).toEqual([]);
     expect(stats.slowestShots).toEqual([]);
     expect(stats.mostRetakenShots).toEqual([]);
-        // The bars remain, all at zero: an empty histogram is indistinguishable from a missing one,
-        // and the screen then has nothing to draw.
+    // The bars remain, all at zero: an empty histogram is indistinguishable from a missing one,
+    // and the screen then has nothing to draw.
     expect(stats.retakeBuckets).toEqual([
       { min: 0, max: 0, shots: 0 },
       { min: 1, max: 1, shots: 0 },
@@ -430,7 +430,7 @@ describe('StatsService: getProjectStats', () => {
 // Panel "retakes & review rounds" (Phase 50, batch 2)
 
 describe('StatsService: retakes & review rounds', () => {
-    /** Four delivered shots, from best to worst, and one never delivered. */
+  /** Four delivered shots, from best to worst, and one never delivered. */
   const shotStats = computeShotStats([
     agg({ shotId: 1, versions: 1, lastIsApproval: true, decisions: 1, retakes: 0 }),
     agg({ shotId: 2, versions: 2, lastIsApproval: true, decisions: 2, retakes: 1 }),
@@ -444,8 +444,8 @@ describe('StatsService: retakes & review rounds', () => {
   });
 
   it('distributes retakes into bars, never-delivered shots excluded', () => {
-        // Shot 5 cost nothing because it was never delivered: counting it as "0 retakes" would flatter
-        // production by as many shots as it has not started.
+    // Shot 5 cost nothing because it was never delivered: counting it as "0 retakes" would flatter
+    // production by as many shots as it has not started.
     expect(computeRetakeBuckets(shotStats)).toEqual([
       { min: 0, max: 0, shots: 1 },
       { min: 1, max: 1, shots: 1 },
@@ -463,13 +463,13 @@ describe('StatsService: retakes & review rounds', () => {
   });
 
   it('first-time rate: relative to APPROVED shots, not all of them', () => {
-        // Three approved (1, 2, 3), only one without a retake -> 33%. Shot 4, still in retake, has not
-        // finished consuming its rounds: including it would make the rate fall over time.
+    // Three approved (1, 2, 3), only one without a retake -> 33%. Shot 4, still in retake, has not
+    // finished consuming its rounds: including it would make the rate fall over time.
     expect(computeTotals(shotStats, 12, 12, 5).firstTimeRightRate).toBe(33);
   });
 
   it('averages rounds over ALL shots, including those at zero', () => {
-        // 1 + 2 + 3 + 6 + 0 = 12 over 5 shots.
+    // 1 + 2 + 3 + 6 + 0 = 12 over 5 shots.
     expect(computeTotals(shotStats, 12, 12, 5).avgReviewRoundsPerShot).toBe(2.4);
   });
 });

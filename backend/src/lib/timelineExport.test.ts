@@ -39,7 +39,7 @@ describe('concatEntry / concatList', () => {
     expect(concatEntry('/tmp/seg0.mp4')).toBe("file '/tmp/seg0.mp4'");
   });
 
-  it("escapes the apostrophe in a path", () => {
+  it('escapes the apostrophe in a path', () => {
     expect(concatEntry("/tmp/l'arrivée.mp4")).toBe("file '/tmp/l'\\''arrivée.mp4'");
   });
 

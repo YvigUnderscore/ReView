@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { db, thumbs } = vi.hoisted(() => ({
   db: {
     shot: { findMany: vi.fn(), count: vi.fn() },
-        // "Waiting for review" badge: a grouped SQL aggregate for the whole page.
+    // "Waiting for review" badge: a grouped SQL aggregate for the whole page.
     $queryRaw: vi.fn(),
   },
   thumbs: {
@@ -40,7 +40,7 @@ beforeEach(() => {
       code: 'SH010',
       thumbnailKey: null,
       departments: [{ id: 3, key: 'comp', name: 'Compositing', color: null }],
-            // `include.assignees`: Prisma always returns the relation requested.
+      // `include.assignees`: Prisma always returns the relation requested.
       assignees: [],
     },
   ]);
@@ -51,9 +51,9 @@ beforeEach(() => {
 
 describe('ShotService.list: steps traversed', () => {
   it('requests the departments of each shot', async () => {
-        // The department filter of the Shots tab compares the steps a shot goes through.
-        // The list did not return them, only the sheet did, and choosing a department emptied the screen:
-        // no card had a step to compare.
+    // The department filter of the Shots tab compares the steps a shot goes through.
+    // The list did not return them, only the sheet did, and choosing a department emptied the screen:
+    // no card had a step to compare.
     await list(461, undefined, page);
     expect(db.shot.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -75,9 +75,9 @@ describe('ShotService.list: steps traversed', () => {
 
 describe('ShotService.list: pagination of two thousand shots', () => {
   it('breaks sort ties by id', async () => {
-        // An incremental ShotGrid import leaves every shot created with order = 0: without a tie-break,
-        // Postgres is free to return ties in a different order from one page to the next, so page 2 shows
-        // shots of page 1 again and skips as many.
+    // An incremental ShotGrid import leaves every shot created with order = 0: without a tie-break,
+    // Postgres is free to return ties in a different order from one page to the next, so page 2 shows
+    // shots of page 1 again and skips as many.
     await list(461, undefined, page);
     expect(db.shot.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: [{ order: 'asc' }, { id: 'asc' }] }),
@@ -99,7 +99,7 @@ describe('ShotService.list: pagination of two thousand shots', () => {
     expect(args.where.AND).toEqual([
       { OR: [{ order: { gt: 0 } }, { AND: [{ order: 0 }, { id: { gt: 812 } }] }] },
     ]);
-        // The total stays that of the whole project: it is what "2,000 shots" displays.
+    // The total stays that of the whole project: it is what "2,000 shots" displays.
     expect(db.shot.count).toHaveBeenCalledWith({
       where: { projectId: 461, deletedAt: null, hiddenAt: null },
     });

@@ -62,11 +62,11 @@ describe('revalidateSocket: the gate is replayed', () => {
     expect(await revalidateSocket(socketOf())).toBe(false);
   });
 
-    /**
-     * The hard point: `join_project` reads `socket.user.role`, and `resolveProjectAccess` grants global access
-     * to ADMIN as well as SUPERVISOR. Checking without rewriting would have let the former supervisor join any
-     * project from their open tab.
-     */
+  /**
+   * The hard point: `join_project` reads `socket.user.role`, and `resolveProjectAccess` grants global access
+   * to ADMIN as well as SUPERVISOR. Checking without rewriting would have let the former supervisor join any
+   * project from their open tab.
+   */
   it('replaces the frozen role with the current role', async () => {
     getAuthUser.mockResolvedValue({ ...active, role: Role.CLIENT });
     const socket = socketOf();
@@ -74,13 +74,13 @@ describe('revalidateSocket: the gate is replayed', () => {
     expect(socket.user?.role).toBe(Role.CLIENT);
   });
 
-    // A token from before phase 36 has no session to check: nothing can revoke it.
+  // A token from before phase 36 has no session to check: nothing can revoke it.
   it('closes a connection with no identified session', async () => {
     expect(await revalidateSocket(socketOf({ authSid: undefined }))).toBe(false);
   });
 
-    // A share guest has neither session nor role: their access rests on the ShareLink, rechecked
-    // on the API side at every read. Nothing to replay, and above all nothing to cut.
+  // A share guest has neither session nor role: their access rests on the ShareLink, rechecked
+  // on the API side at every read. Nothing to replay, and above all nothing to cut.
   it('leaves alone a guest who arrived through a share link', async () => {
     const guest = socketOf({ user: undefined, shareProjectId: 3 });
     expect(await revalidateSocket(guest)).toBe(true);
@@ -103,8 +103,8 @@ describe('sweepSockets: sweep of the replica', () => {
     expect(kept.disconnect).not.toHaveBeenCalled();
   });
 
-    // A database or Redis outage must not disconnect the whole studio: the check that fails keeps the
-    // connection (the API, for its part, fails closed).
+  // A database or Redis outage must not disconnect the whole studio: the check that fails keeps the
+  // connection (the API, for its part, fails closed).
   it('keeps the connection when the check itself fails', async () => {
     isSessionActive.mockRejectedValue(new Error('redis down'));
     const socket = socketOf();

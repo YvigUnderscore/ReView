@@ -71,8 +71,8 @@ beforeEach(() => {
 
 describe('TimelineService.resolve: shots of the timeline', () => {
   it('bounds the query and sorts it on the database side', async () => {
-        // The query used to load ALL the project's shots before sorting in memory. Without
-        // `orderBy`, a cap would cut into an arbitrary set and the edit would change from one refresh to the next.
+    // The query used to load ALL the project's shots before sorting in memory. Without
+    // `orderBy`, a cap would cut into an arbitrary set and the edit would change from one refresh to the next.
     await resolve(5);
     expect(db.shot.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -95,7 +95,7 @@ describe('TimelineService.resolve: shots of the timeline', () => {
   });
 
   it('keeps the natural tie-break of codes, which SQL cannot do', async () => {
-        // "SH2" must stay before "SH10": it is the in-memory sort that ensures it, and it remains the final judge after the SQL sort.
+    // "SH2" must stay before "SH10": it is the in-memory sort that ensures it, and it remains the final judge after the SQL sort.
     db.shot.findMany.mockResolvedValue([shot(1, 'SH10'), shot(2, 'SH2')]);
     const view = await resolve(5);
     expect(view.items.map((i) => i.shotCode)).toEqual(['SH2', 'SH10']);

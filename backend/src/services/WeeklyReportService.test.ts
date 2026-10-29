@@ -40,7 +40,7 @@ describe('WeeklyReportService: HTML rendering', () => {
     expect(html).toContain('No activity this week');
   });
 
-  it('renders the report in the recipient\'s language, dates included', () => {
+  it("renders the report in the recipient's language, dates included", () => {
     const html = renderWeeklyReportHtml('fr', 'Yvig', projects, weekStart, weekEnd);
     expect(html).toContain('lang="fr"');
     expect(html).toContain('Rapport hebdomadaire de production');
@@ -48,7 +48,7 @@ describe('WeeklyReportService: HTML rendering', () => {
     expect(html).toContain('13 juillet');
   });
 
-    // "Retakes" is production vocabulary: it stays in English everywhere.
+  // "Retakes" is production vocabulary: it stays in English everywhere.
   it('keeps "Retakes" intact in all languages', () => {
     for (const locale of ['en', 'fr', 'ja', 'br'] as const) {
       expect(renderWeeklyReportHtml(locale, 'Yvig', projects, weekStart, weekEnd)).toContain('Retakes');

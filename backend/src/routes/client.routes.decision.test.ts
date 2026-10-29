@@ -79,7 +79,7 @@ beforeEach(() => {
  * what it lets through: a plausible status identifier, a name, and nothing else; restricting the status
  * to the two offered answers belongs to the service.
  */
-describe('POST /:token/media/:id/decision — the guest's opinion', () => {
+describe("POST /:token/media/:id/decision — the guest's opinion", () => {
   const post = (body: Record<string, unknown>) =>
     request(app).post(`/api/client/${token}/media/128/decision`).send(body);
 

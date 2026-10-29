@@ -46,14 +46,14 @@ export const DETAIL_LIMIT = 25;
 export interface TouchedEvent {
   kind: ReplayableKind;
   id: number;
-    /** Additional fields expected by the client (a task's links, for example). */
+  /** Additional fields expected by the client (a task's links, for example). */
   extra?: Record<string, unknown>;
 }
 
 export interface TouchedSummary {
   counts: Partial<Record<TouchedKind, number>>;
   total: number;
-    /** `true`: the fine-grained events have been replayed, the client has nothing to reload wholesale. */
+  /** `true`: the fine-grained events have been replayed, the client has nothing to reload wholesale. */
   detailed: boolean;
 }
 
@@ -62,10 +62,10 @@ export class TouchedEntities {
   private readonly seen = new Set<string>();
   private readonly tally = new Map<TouchedKind, number>();
 
-    /**
-     * Notes a touched entity. The same entity seen twice in the pass counts only once: the count says "how many objects moved", not "how many
-     * writes took place".
-     */
+  /**
+   * Notes a touched entity. The same entity seen twice in the pass counts only once: the count says "how many objects moved", not "how many
+   * writes took place".
+   */
   add(kind: TouchedKind, id: number, extra?: Record<string, unknown>): void {
     const key = `${kind}:${id}`;
     if (this.seen.has(key)) return;
@@ -73,7 +73,7 @@ export class TouchedEntities {
     this.tally.set(kind, (this.tally.get(kind) ?? 0) + 1);
 
     if (!isReplayable(kind)) return;
-        // Past the threshold, the detail will no longer be used: retaining it would make a full pass bear the weight of twelve thousand objects to emit nothing.
+    // Past the threshold, the detail will no longer be used: retaining it would make a full pass bear the weight of twelve thousand objects to emit nothing.
     if (this.seen.size > DETAIL_LIMIT) {
       this.events.length = 0;
       return;
@@ -89,7 +89,7 @@ export class TouchedEntities {
     return this.seen.size <= DETAIL_LIMIT;
   }
 
-    /** Fine-grained events to replay — empty as soon as the pass has exceeded the threshold. */
+  /** Fine-grained events to replay — empty as soon as the pass has exceeded the threshold. */
   detail(): TouchedEvent[] {
     return this.detailed ? [...this.events] : [];
   }

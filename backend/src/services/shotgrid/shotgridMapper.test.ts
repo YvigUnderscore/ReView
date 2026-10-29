@@ -54,7 +54,7 @@ describe('shotgridMapper: statuses', () => {
     expect(sgStatusToEnum('apr')).toBe(TaskStatus.APPROVED);
     expect(sgStatusToEnum('fin')).toBe(TaskStatus.APPROVED);
     expect(sgStatusToEnum('cbb')).toBe(TaskStatus.RETAKE);
-        // "rtk" is the most widespread retake code on real sites, although it appears in no standard list: forgetting it filed these tasks under "to do".
+    // "rtk" is the most widespread retake code on real sites, although it appears in no standard list: forgetting it filed these tasks under "to do".
     expect(sgStatusToEnum('rtk')).toBe(TaskStatus.RETAKE);
     expect(sgStatusToEnum('pass')).toBe(TaskStatus.APPROVED);
     expect(sgStatusToEnum('suprev')).toBe(TaskStatus.PENDING_REVIEW);
@@ -80,7 +80,7 @@ describe('shotgridMapper: statuses', () => {
 
 describe('shotgridMapper: durations', () => {
   it('converts ShotGrid working minutes to days', () => {
-        // 2400 minutes = 5 days of 8 h, the example from the official cookbook.
+    // 2400 minutes = 5 days of 8 h, the example from the official cookbook.
     expect(minutesToWorkdays(2400)).toBe(5);
     expect(minutesToWorkdays(480)).toBe(1);
     expect(minutesToWorkdays(240)).toBe(0.5);
@@ -208,7 +208,7 @@ describe('shotgridMapper: media and labels', () => {
 
 describe('attachmentUrl', () => {
   it('reads the address carried by the file field', () => {
-        // Fallback when the dedicated download endpoint does not answer.
+    // Fallback when the dedicated download endpoint does not answer.
     expect(attachmentUrl({ name: 'v001.mov', url: 'https://s3/signed' })).toBe('https://s3/signed');
   });
 
@@ -233,14 +233,14 @@ describe('attachmentId', () => {
   });
 
   it('refuses anything that is not an Attachment', () => {
-        // The corrected defect: the media field of a Version was recorded as "Attachment no. <Version id>". The type and the identifier must designate
-        // the same entity — a Version reference does not make a file.
+    // The corrected defect: the media field of a Version was recorded as "Attachment no. <Version id>". The type and the identifier must designate
+    // the same entity — a Version reference does not make a file.
     expect(attachmentId({ id: 412, type: 'Version' })).toBeNull();
     expect(attachmentId({ attachment: { id: 77, type: 'Version' } })).toBeNull();
   });
 
   it('does not invent an identifier when the site gives none', () => {
-        // Some fields deliver only a signed URL: no link, rather than a false one.
+    // Some fields deliver only a signed URL: no link, rather than a false one.
     expect(attachmentId({ name: 'v001.mov', url: 'https://s3/signed' })).toBeNull();
     expect(attachmentId(null)).toBeNull();
     expect(attachmentId('https://direct')).toBeNull();
@@ -249,7 +249,7 @@ describe('attachmentId', () => {
 
 describe('disambiguatedName / plainName', () => {
   it('separates two site entities carrying the same code', () => {
-        // A site accepts four sequences "DO_NOT_USE_"; the local database, one only.
+    // A site accepts four sequences "DO_NOT_USE_"; the local database, one only.
     expect(disambiguatedName('DO_NOT_USE_', 4686)).toBe('DO_NOT_USE_ (4686)');
   });
 
@@ -258,8 +258,8 @@ describe('disambiguatedName / plainName', () => {
     expect(plainName('sq010', 4685)).toBe('sq010');
   });
 
-  it("removes only the suffix of the compared entity", () => {
-        // A name ending with the parentheses of ANOTHER identifier stays intact.
+  it('removes only the suffix of the compared entity', () => {
+    // A name ending with the parentheses of ANOTHER identifier stays intact.
     expect(plainName('DO_NOT_USE_ (4686)', 4687)).toBe('DO_NOT_USE_ (4686)');
     expect(plainName(null, 1)).toBeNull();
   });

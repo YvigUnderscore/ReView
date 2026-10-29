@@ -75,7 +75,7 @@ describe('POST /api/media/:id/finalize — the upload note is optional', () => {
     expect(finalize).not.toHaveBeenCalled();
   });
 
-  it('surfaces the service's refusal: business code, not 500', async () => {
+  it("surfaces the service's refusal: business code, not 500", async () => {
     const { AppError } = await import('../lib/errors');
     finalize.mockRejectedValue(
       new AppError('This project requires a note with every upload', 400, 'UPLOAD_NOTE_REQUIRED'),

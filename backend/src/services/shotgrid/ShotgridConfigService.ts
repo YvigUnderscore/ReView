@@ -90,7 +90,7 @@ export async function updateSite(id: number, input: Partial<SiteInput>) {
       ...(baseUrl !== undefined ? { baseUrl } : {}),
       ...(input.authMode !== undefined ? { authMode: input.authMode } : {}),
       ...(input.scriptName !== undefined ? { scriptName: input.scriptName } : {}),
-            // An empty string means "clear"; an absent field means "do not touch".
+      // An empty string means "clear"; an absent field means "do not touch".
       ...(input.scriptKey !== undefined
         ? { scriptKey: input.scriptKey ? encryptSecret(input.scriptKey) : null }
         : {}),
@@ -176,10 +176,10 @@ export async function listRemoteProjects(siteId: number, query?: string) {
 export interface ConnectionInput {
   siteId: number;
   sgProjectId: number;
-    /**
-     * Expected name of the ShotGrid project. Supplied by the client (the one the user saw) and checked against the real name before
-     * recording: if the two diverge, the screen showed something other than what the credential designates, and we refuse.
-     */
+  /**
+   * Expected name of the ShotGrid project. Supplied by the client (the one the user saw) and checked against the real name before
+   * recording: if the two diverge, the screen showed something other than what the credential designates, and we refuse.
+   */
   sgProjectName: string;
 }
 
@@ -199,7 +199,7 @@ export async function createConnection(projectId: number, input: ConnectionInput
   const remote = await client.findById('Project', input.sgProjectId, ['name', 'sg_status', 'archived']);
   if (!remote) throw badRequest("Ce projet n'existe pas sur le site ShotGrid");
   const remoteName = asString(remote.name);
-    // A template is not linked: damaging it would damage every future project.
+  // A template is not linked: damaging it would damage every future project.
   assertNotTemplateProject(remoteName, input.sgProjectId);
   if (!projectNameMatches(remoteName, input.sgProjectName))
     throw badRequest(
@@ -219,9 +219,9 @@ export async function createConnection(projectId: number, input: ConnectionInput
       sgProjectName: remoteName ?? input.sgProjectName,
       webhookToken: randomBytes(24).toString('base64url'),
       webhookSecret: encryptSecret(randomBytes(24).toString('base64url')),
-            // A connection is born READ-ONLY, whatever the schema defaults. Linking a project means checking that the right target
-            // returns the right data; writing into a production site before anyone has verified anything would be a side effect no click
-            // asked for. Writes are opened afterwards in the matrix, domain by domain, knowingly.
+      // A connection is born READ-ONLY, whatever the schema defaults. Linking a project means checking that the right target
+      // returns the right data; writing into a production site before anyone has verified anything would be a side effect no click
+      // asked for. Writes are opened afterwards in the matrix, domain by domain, knowingly.
       settings: readOnlySettings() as never,
     },
     include: { site: true },
@@ -293,7 +293,7 @@ export async function updateConnection(
     settings?: unknown;
     active?: boolean;
     webhookSecret?: string | null;
-        /** Trace of refused writes, purged of the domains just reopened. */
+    /** Trace of refused writes, purged of the domains just reopened. */
     pushBlocked?: Record<string, unknown>;
   },
 ) {
@@ -371,10 +371,10 @@ export interface ConnectionContext {
   connection: ShotgridConnection & { site: ShotgridSite };
   client: ShotgridClient;
   settings: ShotgridSettings;
-    /**
-     * The only object through which we write to the site. It is set here, at connection opening, so that no pass has to wonder where
-     * to find it, nor do without it.
-     */
+  /**
+   * The only object through which we write to the site. It is set here, at connection opening, so that no pass has to wonder where
+   * to find it, nor do without it.
+   */
   writer: ShotgridWriter;
 }
 
@@ -468,8 +468,8 @@ export function connectionView(
     settings,
     lastSyncAt: conn.lastSyncAt,
     lastEventAt: conn.lastEventAt,
-        // Domains for which writes were refused by the matrix, so that the screen can say so instead of letting it be believed
-        // that everything went out.
+    // Domains for which writes were refused by the matrix, so that the screen can say so instead of letting it be believed
+    // that everything went out.
     pushBlocked: (conn.pushBlocked ?? {}) as Record<string, { count: number; at: string }>,
     webhookUrl: `${(appUrl ?? '').replace(/\/$/, '')}/api/shotgrid/webhook/${conn.webhookToken}`,
     hasWebhookSecret: Boolean(conn.webhookSecret),

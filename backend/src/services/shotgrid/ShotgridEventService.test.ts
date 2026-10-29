@@ -115,8 +115,8 @@ describe('handleEvent', () => {
   });
 
   it('refuses an event coming from another project of the site', async () => {
-        // A site hosts all the studio's projects: a misconfigured webhook delivers the neighbour's events, and writing into the
-        // wrong project cannot be undone.
+    // A site hosts all the studio's projects: a misconfigured webhook delivers the neighbour's events, and writing into the
+    // wrong project cannot be undone.
     await handleEvent(1, {
       event_type: 'Shotgun_Shot_Change',
       entity: { type: 'Shot', id: 5 },

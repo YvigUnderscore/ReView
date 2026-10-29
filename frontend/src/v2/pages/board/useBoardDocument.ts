@@ -142,7 +142,7 @@ export function useBoardDocument(scope: BoardScope, targetId: number): BoardEdit
     }
     pendingRef.current = { elements, files, sig };
     setSaved(false);
-     if (conflictRef.current) return; // the user must decide first
+    if (conflictRef.current) return; // the user must decide first
     schedule(SAVE_DEBOUNCE_MS);
   };
 

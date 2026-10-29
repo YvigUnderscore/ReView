@@ -63,11 +63,11 @@ describe('setSceneOverride (46.D)', () => {
     expect((await setSceneOverride(USER, 1, null)).usdOverride).toBeNull();
   });
 
-    /**
-     * This test expected a 403: the override was frozen by publication (Phase 11). The rule has changed deliberately (Phase 50, table in `lib/publishLock`) — the override is a
-     * staging replayed at load time, of the same nature as `splatPresentation`, which was already exempted. The media being published from its upload, keeping it frozen would have
-     * forbidden putting a scene in a state to be watched. The test therefore checks the opposite, explicitly.
-     */
+  /**
+   * This test expected a 403: the override was frozen by publication (Phase 11). The rule has changed deliberately (Phase 50, table in `lib/publishLock`) — the override is a
+   * staging replayed at load time, of the same nature as `splatPresentation`, which was already exempted. The media being published from its upload, keeping it frozen would have
+   * forbidden putting a scene in a state to be watched. The test therefore checks the opposite, explicitly.
+   */
   it('accepts a published media: the override is a staging, not the delivery', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(media({ published: true }) as never);
 

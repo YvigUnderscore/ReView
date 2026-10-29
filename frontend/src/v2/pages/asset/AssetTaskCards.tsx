@@ -226,7 +226,7 @@ function TaskCard({
           <span className="text-xs text-muted-foreground">
             {t('asset.tree.versionCount', { count: task.versions.length })}
           </span>
-           {/* The person at the end of the row: it is the question one asks a pipe before
+          {/* The person at the end of the row: it is the question one asks a pipe before
                all the others, and each task had to be opened to answer it. */}
           {task.assignee && (
             <span className="ml-auto flex items-center gap-1" title={assigneeName(task.assignee)}>
