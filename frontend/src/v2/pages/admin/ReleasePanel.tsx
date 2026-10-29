@@ -14,6 +14,7 @@ import { useT, intlLocale, type Tr } from '../../i18n';
 import { Panel, Row } from './AdminPrimitives';
 import { displayVersion, formatBuildDate } from './aboutInstance';
 import { releaseErrorLabel, type OpsOverview, type ReleaseInfo } from './ops';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
  * What this instance runs, what has been released since, and what that changes.
@@ -130,7 +131,7 @@ function ChangeList({ releases, t }: { releases: ReleaseInfo[]; t: Tr }) {
               className="prose-doc max-w-none text-sm text-card-foreground"
               // Markdown from a remote repository: `renderDocHtml` escapes raw HTML.
               dangerouslySetInnerHTML={{
-                __html: renderDocHtml(entry.notesMd, 'CHANGELOG.md', calloutLabels),
+                __html: sanitizeHtml(renderDocHtml(entry.notesMd, 'CHANGELOG.md', calloutLabels)),
               }}
             />
             <a

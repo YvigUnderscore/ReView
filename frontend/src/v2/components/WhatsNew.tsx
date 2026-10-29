@@ -9,6 +9,7 @@ import { parseChangelog } from '../lib/changelog';
 import { useCalloutLabels } from '../pages/docs/useCalloutLabels';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { useT } from '../i18n';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
  * "What's new" in-app (42.B, №68): changelog fed by `DOCUMENTATION/CHANGELOG.md`
@@ -188,7 +189,9 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
                   <article
                     className="prose-doc max-w-none text-sm text-card-foreground"
                     // Repo markdown (CHANGELOG.md); raw HTML is escaped by renderDocHtml.
-                    dangerouslySetInnerHTML={{ __html: renderDocHtml(e.body, 'CHANGELOG.md', calloutLabels) }}
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeHtml(renderDocHtml(e.body, 'CHANGELOG.md', calloutLabels)),
+                    }}
                   />
                 </div>
               ))

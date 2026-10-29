@@ -7,6 +7,7 @@ import { applyMark, type MarkKind } from '../noteEditorMarks';
 import { renderNoteHtml } from '../noteRender';
 import { isAcceptedNoteImage, useNoteImageResolver } from '../noteImages';
 import { useT } from '@/v2/i18n';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
  * A paragraph of the note.
@@ -91,7 +92,7 @@ export default function NoteTextBlock({
           <span
             className="prose-note block text-sm leading-relaxed"
             // Same rendering as the read note: escaped and sanitised by `renderNoteHtml`.
-            dangerouslySetInnerHTML={{ __html: renderNoteHtml(value, resolve) }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderNoteHtml(value, resolve)) }}
           />
         ) : (
           <span className="text-sm text-muted-foreground">{t('note.text.placeholder')}</span>

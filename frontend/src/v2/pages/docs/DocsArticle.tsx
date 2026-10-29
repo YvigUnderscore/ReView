@@ -5,6 +5,7 @@ import type { MouseEvent, RefObject } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Highlighter } from 'lucide-react';
 import { intlLocale, useT } from '../../i18n';
 import type { DocsPage } from './docsManifest';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
  * Reading column: page header (breadcrumb, title, subtitle, date), rendered markdown body, and
@@ -134,7 +135,7 @@ export default function DocsArticle({
           <article
             className="prose-doc doc-article text-foreground"
             // Repo markdown; raw HTML is escaped in renderDocHtml.
-            dangerouslySetInnerHTML={{ __html: html }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
           />
 
           {(previous ?? next) && (

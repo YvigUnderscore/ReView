@@ -95,6 +95,11 @@ export default defineConfig([
           selector: "CallExpression[callee.name='useEffect'] CallExpression[callee.name='fetch']",
           message: 'Pas de fetch dans un useEffect : le data-fetching passe par TanStack Query (lib/queries).',
         },
+        {
+          selector:
+            "JSXAttribute[name.name='dangerouslySetInnerHTML'] Property[key.name='__html']:not([value.callee.name='sanitizeHtml'])",
+          message: 'HTML injecté non assaini : passer par sanitizeHtml() (@/v2/lib/sanitizeHtml).',
+        },
       ],
     },
   },

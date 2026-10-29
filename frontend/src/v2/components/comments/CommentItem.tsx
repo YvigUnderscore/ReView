@@ -19,6 +19,7 @@ import PoiCommentPoints from '../../pages/review/poi/PoiCommentPoints';
 import { readPoiPoints, stripPoiBlock, type PoiPoint } from '../../pages/review/poi/poiPoints';
 import { splatEditBlobKeys } from '../../pages/review/splat/splatEditPart';
 import { useT } from '../../i18n';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 export interface CommentItemProps {
   comment: ReviewComment;
@@ -170,7 +171,7 @@ export default function CommentItem({
               <CollapsibleText text={body}>
                 <div
                   className="prose-doc mt-0.5 max-w-none whitespace-pre-wrap text-sm"
-                  dangerouslySetInnerHTML={{ __html: highlightMentions(body) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(highlightMentions(body)) }}
                 />
               </CollapsibleText>
             )}

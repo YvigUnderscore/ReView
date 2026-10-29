@@ -28891,7 +28891,7 @@ They are recovered from the build markers bundlers leave behind
 > no verbatim license text is available for these copies since they are not installed as
 > packages. Please report anything you find missing.
 
-126 copies, 60 of which with no license established.
+126 copies, 59 of which with no license established.
 
 | Component | Copied inside | License | Determined from |
 | --- | --- | --- | --- |
@@ -28947,7 +28947,7 @@ They are recovered from the build markers bundlers leave behind
 | `graceful-fs@4.2.10` | `@prisma/client`, `@prisma/fetch-engine`, `@prisma/get-platform`, `prisma` (backend) | **unverified** | not determined |
 | `has-flag@4.0.0` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | same version in a lockfile |
 | `hasha@5.2.2` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
-| `http-proxy-agent@7.0.2` | `@prisma/fetch-engine` (backend) | **unverified** | not determined |
+| `http-proxy-agent@7.0.2` | `@prisma/fetch-engine` (backend) | `MIT` | same version in a lockfile |
 | `https-proxy-agent@7.0.5` | `@prisma/fetch-engine` (backend) | `MIT` | other versions of the package, all agreeing |
 | `human-signals@2.1.0` | `@prisma/engines`, `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | **unverified** | not determined |
 | `ignore@5.2.4` | `@prisma/fetch-engine`, `@prisma/get-platform` (backend) | `MIT` | other versions of the package, all agreeing |

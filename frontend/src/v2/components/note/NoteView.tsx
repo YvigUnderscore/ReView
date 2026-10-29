@@ -7,6 +7,7 @@ import { parseNote, type NoteBlock } from './noteMarkdown';
 import { renderNoteHtml } from './noteRender';
 import { useNoteImageResolver } from './noteImages';
 import NoteRefs from './NoteRefs';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
  * The note as it is read.
@@ -63,7 +64,7 @@ function Markdown({ source }: { source: string }) {
     <div
       className="prose-note text-sm leading-relaxed"
       // Raw HTML is escaped and executable protocols are removed: see noteRender.
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
     />
   );
 }
