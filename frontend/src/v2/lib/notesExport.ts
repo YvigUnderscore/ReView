@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { getToken } from '../../lib/apiClient';
+import { apiFetch } from './apiFetch';
 import { t } from '../i18n';
 
 /**
@@ -59,10 +59,7 @@ function saveBlob(blob: Blob, filename: string): void {
 
 /** Downloads the notes for the requested scope. Throws a translated `Error` on failure. */
 export async function downloadNotes(req: NotesExportRequest): Promise<NotesExportResult> {
-  const token = getToken();
-  const res = await fetch(notesExportPath(req), {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await apiFetch(notesExportPath(req));
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(data.error ?? t('notesExport.failed'));

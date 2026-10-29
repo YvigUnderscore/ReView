@@ -6,11 +6,12 @@
  *
  * `lib/apiClient` only yields an `Error` carrying the message: the page could not
  * tell an editing conflict (409 `BOARD_CONFLICT`, which calls for a user choice) from an outage. The save
- * therefore goes through a direct `fetch` that keeps the status and error body — and falls back to `api.put` on a 401, to keep the
- * transparent token renewal that apiClient provides.
+ * therefore goes through `apiFetch`, which keeps the status and error body as well as apiClient's
+ * transparent token renewal.
  */
 
-import { api, getToken } from '@/lib/apiClient';
+import { api } from '@/lib/apiClient';
+import { apiFetch } from '@/v2/lib/apiFetch';
 import { t } from '../../i18n';
 import {
   dataURLToBlob,
@@ -95,21 +96,15 @@ type SaveBody = { document: BoardDocument; baseUpdatedAt: string | null };
  * following saves.
  */
 export async function saveBoard(base: string, body: SaveBody): Promise<string> {
-  const res = await fetch(base, {
+  // `apiFetch` rather than `api.put`: a 409 carries the `updatedAt` that won, which the
+  // conflict dialog needs and `ApiError` does not keep.
+  const res = await apiFetch(base, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(getToken() ? { Authorization: `Bearer ${getToken()!}` } : {}),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (res.ok) {
     const data = (await res.json()) as { board: { updatedAt: string } };
-    return data.board.updatedAt;
-  }
-  // Token expired: go back through the apiClient, the only one able to renew the session.
-  if (res.status === 401) {
-    const data = await api.put<{ board: { updatedAt: string } }>(base, body);
     return data.board.updatedAt;
   }
   const payload = (await res.json().catch(() => ({}))) as {

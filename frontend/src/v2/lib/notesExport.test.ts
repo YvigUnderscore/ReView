@@ -61,9 +61,12 @@ describe('downloadNotes', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
     const result = await downloadNotes({ scope: 'media', id: 7, format: 'csv' });
-    expect(fetchMock).toHaveBeenCalledWith('/api/comments/export?scope=media&id=7&format=csv', {
-      headers: { Authorization: 'Bearer jeton' },
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/comments/export?scope=media&id=7&format=csv',
+      expect.anything(),
+    );
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jeton');
     expect(result).toEqual({ filename: 'notes-media-7.csv', truncated: false });
     expect(clicks).toEqual([{ href: 'blob:1', download: 'notes-media-7.csv' }]);
   });

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api, getToken } from '@/lib/apiClient';
+import { api } from '@/lib/apiClient';
+import { apiFetch } from '@/v2/lib/apiFetch';
 import { t } from '@/v2/i18n';
 import type { ColumnOverride, ImportReport } from './types';
 
@@ -35,20 +36,14 @@ export function saveTextFile(filename: string, text: string, mime = 'text/csv;ch
  * or paste it into the input area.
  */
 export async function fetchTemplate(projectId: number): Promise<string> {
-  const token = getToken();
-  const res = await fetch(`/api/projects/${projectId}/import-csv/template`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await apiFetch(`/api/projects/${projectId}/import-csv/template`);
   if (!res.ok) throw new Error(t('csvImport.templateFailed'));
   return res.text();
 }
 
 /** CSV export of the project's shots (the return path of the import). */
 export async function downloadProjectCsv(projectId: number): Promise<void> {
-  const token = getToken();
-  const res = await fetch(`/api/projects/${projectId}/export-csv`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await apiFetch(`/api/projects/${projectId}/export-csv`);
   if (!res.ok) throw new Error(t('common.error.export'));
   saveTextFile(`project-${projectId}-shots.csv`, await res.text());
 }

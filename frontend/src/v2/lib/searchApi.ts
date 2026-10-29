@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api, getToken } from '../../lib/apiClient';
+import { apiFetch } from './apiFetch';
 import { t } from '../i18n';
 import type { AssetRef, MediaKind, ProjectRef, SequenceRef, ShotRef, Task } from '../types/api';
 
@@ -64,12 +64,7 @@ export const MIN_SEARCH_LENGTH = 2;
 
 export async function fetchSearch(q: string, signal?: AbortSignal): Promise<SearchResults> {
   const path = `/api/search?q=${encodeURIComponent(q)}`;
-  const token = getToken();
-  const res = await fetch(path, {
-    signal,
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (res.status === 401) return api.get<SearchResults>(path);
+  const res = await apiFetch(path, { signal });
   if (!res.ok) throw new Error(t('common.error.http', { status: res.status }));
   return (await res.json()) as SearchResults;
 }

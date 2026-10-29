@@ -77,11 +77,17 @@ describe('saveBoard', () => {
     expect((err as BoardConflictError).serverUpdatedAt).toBe('2026-08-22T12:00:00.000Z');
   });
 
-  it('goes back through the apiClient on 401: token renewal stays transparent', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(401, { error: 'expired' })) as never;
-    vi.mocked(api.put).mockResolvedValue({ board: { updatedAt: '2026-08-22T13:00:00.000Z' } });
+  it('renews the session through the apiClient on 401, then replays the save', async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'expired' }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { board: { updatedAt: '2026-08-22T13:00:00.000Z' } }),
+      ) as never;
+    vi.mocked(api.get).mockResolvedValue({ user: {} });
     await expect(saveBoard('/api/boards/project/1', body)).resolves.toBe('2026-08-22T13:00:00.000Z');
-    expect(api.put).toHaveBeenCalledWith('/api/boards/project/1', body);
+    expect(api.get).toHaveBeenCalledWith('/api/auth/me');
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 
   it('surfaces the server message for other errors', async () => {

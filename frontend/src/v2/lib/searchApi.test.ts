@@ -35,14 +35,14 @@ describe('fetchSearch', () => {
   it('carries the session token when there is one', async () => {
     localStorage.setItem('token', 'jwt-abc');
     await fetchSearch('v012');
-    const init = fetchMock.mock.calls[0][1] as { headers: Record<string, string> };
-    expect(init.headers.Authorization).toBe('Bearer jwt-abc');
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jwt-abc');
   });
 
   it('does not invent an authorization header without a session', async () => {
     await fetchSearch('v012');
-    const init = fetchMock.mock.calls[0][1] as { headers: Record<string, string> };
-    expect(init.headers.Authorization).toBeUndefined();
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(new Headers(init.headers).get('Authorization')).toBeNull();
   });
 
   it('passes the cancellation signal on to fetch', async () => {
