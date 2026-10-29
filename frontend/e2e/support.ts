@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type Response } from '@playwright/test';
 
 /**
  * Shared steps of the E2E specs (sign-in, API set-up/cleanup, seeding a reviewable media).
@@ -26,23 +26,53 @@ export async function submitLogin(page: Page, email: string, password: string): 
 }
 
 /**
+ * The authenticated shell is mounted: its "Log out" button only exists there. `main` is not a signal —
+ * the sign-in and setup pages have one too, so waiting for it returned before the sign-in request had
+ * answered, and the next `goto` aborted that request (no session cookie, back to sign-in).
+ */
+export async function expectSignedIn(page: Page): Promise<void> {
+  await expect(page.getByRole('button', { name: 'Log out', exact: true })).toBeVisible();
+}
+
+/**
  * Signs in as the E2E administrator. A fresh instance goes through the first-install setup instead
  * (studio, then admin account), so every spec runs on a blank database as well as a seeded one.
  */
 export async function signIn(page: Page): Promise<void> {
   await page.goto('/');
-  await page.waitForURL(/\/(login|setup)?(\?.*)?$/);
-  if (page.url().includes('/setup')) {
-    await page.fill('#studioName', 'E2E Studio');
+  // Wait for the form the app settles on: the URL is already "/" before the app redirects, so it
+  // cannot tell setup from sign-in.
+  const studioName = page.locator('#studioName');
+  await expect(studioName.or(page.locator('#email'))).toBeVisible();
+  // The shell loads the account's preferences once signed in: they say whether the first-run tour opens.
+  const preferences = page.waitForResponse(
+    (res) => res.url().endsWith('/api/users/me/preferences') && res.request().method() === 'GET',
+  );
+  if (await studioName.isVisible()) {
+    await studioName.fill('E2E Studio');
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await page.fill('#adminEmail', EMAIL);
     await page.fill('#adminPassword', PASSWORD);
     await page.getByRole('button', { name: 'Create studio' }).click();
-  } else if (page.url().includes('/login')) {
+  } else {
     await submitLogin(page, EMAIL, PASSWORD);
   }
-  // The authenticated shell is mounted: the most stable signal that we got in.
-  await expect(page.locator('main')).toBeVisible();
+  await dismissOnboarding(page, preferences);
+  await expectSignedIn(page);
+}
+
+/**
+ * A new account gets the first-run tour, a modal over the whole shell. Skip it the way a user would (it
+ * records `onboardingSeen`, so it does not come back on the next load).
+ */
+async function dismissOnboarding(page: Page, preferences: Promise<Response>): Promise<void> {
+  const body = (await (await preferences).json().catch(() => null)) as {
+    preferences?: { onboardingSeen?: boolean };
+  } | null;
+  if (body?.preferences?.onboardingSeen === true) return;
+  const tour = page.getByRole('dialog', { name: 'Welcome to ReView' });
+  await tour.getByRole('button', { name: 'Skip', exact: true }).click();
+  await expect(tour).toBeHidden();
 }
 
 /**
@@ -123,10 +153,9 @@ export async function openSeededReview(page: Page, project: string, mediaName: s
   expect([201, 409]).toContain(created.status);
 
   const prefix = `R${Date.now() % 100000}`;
-  await page
-    .getByRole('button', { name: /^Shots/ })
-    .first()
-    .click();
+  await page.getByRole('tab', { name: 'Shots', exact: true }).click();
+  // The "+" of the Shots tab opens the batch generator in a dialog.
+  await page.getByRole('button', { name: 'New shot', exact: true }).click();
   await page.getByLabel('Prefix').fill(prefix);
   await page.getByLabel('Start').fill('10');
   await page.getByLabel('Count').fill('1');

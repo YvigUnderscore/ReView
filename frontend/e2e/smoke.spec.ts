@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { test, expect } from '@playwright/test';
-import { apiCall } from './support';
+import { apiCall, signIn } from './support';
 
 /**
  * Smoke E2E of the critical path:
@@ -27,8 +27,6 @@ const SHOT_PREFIX = `E${stamp % 100000}`;
 const STEP_NAME = 'Compositing';
 const STEP_KEY = 'COMPOSITING';
 const MEDIA_NAME = 'smoke.glb';
-const EMAIL = process.env.E2E_EMAIL ?? 'admin@review.local';
-const PASSWORD = process.env.E2E_PASSWORD ?? 'admin1234';
 
 // Fake GLB: the "glTF" magic bytes are enough for finalize (server validation) → READY.
 const GLB_FIXTURE = Buffer.concat([Buffer.from('glTF', 'ascii'), Buffer.alloc(120)]);
@@ -39,23 +37,9 @@ test.beforeEach(async ({ page }) => {
 
 test('critical path: auth → project → shot → task → version → upload → review', async ({ page }) => {
   // ── 1) Authentication (first-install setup, otherwise login) ───────
-  await page.goto('/');
-  await page.waitForURL(/\/(login|setup)?(\?.*)?$/);
-  if (page.url().includes('/setup')) {
-    // The setup comes in two steps: the studio, then the admin account. Filling them
-    // in one go failed, because the fields of the second screen do not exist yet.
-    await page.fill('#studioName', 'E2E Studio');
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await page.fill('#adminEmail', EMAIL);
-    await page.fill('#adminPassword', PASSWORD);
-    await page.getByRole('button', { name: 'Create studio' }).click();
-  } else {
-    await page.fill('#email', EMAIL);
-    await page.fill('#password', PASSWORD);
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  }
-  // The authenticated shell is mounted: that is the most stable signal that we got in.
-  await expect(page.locator('main')).toBeVisible();
+  // Shared with the other specs: it waits for the authenticated shell itself, not for a `main` that the
+  // sign-in page has as well.
+  await signIn(page);
 
   // ── 2) Create a project and open it ──────────────────────────────────────
   await page.goto('/projects');
@@ -77,10 +61,9 @@ test('critical path: auth → project → shot → task → version → upload �
   expect([201, 409]).toContain(created.status);
 
   // ── 3) Create a shot from the Shots tab (batch generator) ───────────────
-  await page
-    .getByRole('button', { name: /^Shots/ })
-    .first()
-    .click();
+  await page.getByRole('tab', { name: 'Shots', exact: true }).click();
+  // The "+" of the Shots tab opens the batch generator in a dialog.
+  await page.getByRole('button', { name: 'New shot', exact: true }).click();
   await page.getByLabel('Prefix').fill(SHOT_PREFIX);
   await page.getByLabel('Start').fill('10');
   await page.getByLabel('Count').fill('1');
