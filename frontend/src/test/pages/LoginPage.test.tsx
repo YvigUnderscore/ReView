@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import { Route } from 'react-router-dom';
 import LoginPage from '../../v2/pages/LoginPage';
 import { useAuth } from '../../v2/stores/useAuth';
-import { getToken } from '../../lib/apiClient';
+import { clearTokens, getToken } from '../../lib/apiClient';
 import { t } from '../../v2/i18n';
 import { httpError } from '../apiMock';
 import { renderWithProviders } from '../renderWithProviders';
@@ -17,6 +17,9 @@ import { renderWithProviders } from '../renderWithProviders';
  * computed by `t()` rather than copied: a rewording of the catalog must not
  * break a test that talks about behaviour.
  */
+
+// The access token lives in the API client's memory: it must not leak from one test to the next.
+beforeEach(clearTokens);
 
 const CREDENTIALS = { email: 'ada@review.local', password: 'hunter2hunter2' };
 
@@ -66,7 +69,7 @@ describe('LoginPage', () => {
       path: '/login',
       user: null,
       api: {
-        'POST /api/auth/login': { token: 'access-token', refreshToken: 'renew-token', user: account },
+        'POST /api/auth/login': { token: 'access-token', user: account },
       },
       extraRoutes: <Route path="/" element={<div>{HOME_PROBE}</div>} />,
     });
@@ -76,10 +79,9 @@ describe('LoginPage', () => {
     expect(await screen.findByText(HOME_PROBE)).toBeInTheDocument();
     await waitFor(() => expect(currentPath()).toBe('/'));
     expect(useAuth.getState().user?.email).toBe(CREDENTIALS.email);
-    // Both tokens are set: without the renewal token, the session dies at the
-    // first 401 instead of being replayed.
+    // The access token is held in memory; the renewal token never reaches the page (httpOnly cookie).
     expect(getToken()).toBe('access-token');
-    expect(localStorage.getItem('refreshToken')).toBe('renew-token');
+    expect(localStorage.getItem('refreshToken')).toBeNull();
     // The password goes out as is in the body, not in the URL.
     const [call] = api.called('POST /api/auth/login');
     expect(call.body).toEqual(CREDENTIALS);

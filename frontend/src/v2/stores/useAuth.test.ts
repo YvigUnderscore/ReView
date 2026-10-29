@@ -12,8 +12,8 @@ vi.mock('../../lib/socket', () => ({
 }));
 
 import { disconnectSocket } from '../../lib/socket';
-import { api } from '../../lib/apiClient';
-import { useAuth, type AuthUser } from './useAuth';
+import { api, clearTokens, getToken, setTokens } from '../../lib/apiClient';
+import { SSO_COOKIE_MARKER, useAuth, type AuthUser } from './useAuth';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -31,18 +31,28 @@ const user: AuthUser = {
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+/** Server double by path; anything not listed answers 401. */
+function stubRoutes(routes: Record<string, () => Response>) {
+  mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+    const key = `${init?.method ?? 'GET'} ${url}`;
+    return Promise.resolve(routes[key]?.() ?? jsonResponse({ error: 'Not authenticated' }, 401));
+  });
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   vi.mocked(disconnectSocket).mockClear();
   localStorage.clear();
+  clearTokens();
   useAuth.setState({ user: null, ready: false });
 });
 
 describe('useAuth', () => {
-  it('login: stores the token and the user', async () => {
+  it('login: keeps the access token in memory and the user', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-1', user }));
     await useAuth.getState().login('a@b.c', 'pw');
-    expect(localStorage.getItem('token')).toBe('jwt-1');
+    expect(getToken()).toBe('jwt-1');
+    expect(localStorage.length).toBe(0);
     expect(useAuth.getState().user?.email).toBe('a@b.c');
   });
 
@@ -50,53 +60,86 @@ describe('useAuth', () => {
     mockFetch.mockResolvedValue(jsonResponse({ requires2fa: true, tmpToken: 'tmp-1' }));
     const r = await useAuth.getState().login('a@b.c', 'pw');
     expect(r.tmpToken).toBe('tmp-1');
-    expect(localStorage.getItem('token')).toBeNull();
+    expect(getToken()).toBeNull();
     expect(useAuth.getState().user).toBeNull();
   });
 
   it('verify2fa: exchanges the code for the session', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', refreshToken: 'r-2', user }));
+    mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', user }));
     await useAuth.getState().verify2fa('tmp-1', '123456');
-    expect(localStorage.getItem('token')).toBe('jwt-2');
-    expect(localStorage.getItem('refreshToken')).toBe('r-2');
+    expect(getToken()).toBe('jwt-2');
     expect(useAuth.getState().user?.id).toBe(1);
   });
 
-  it('ssoLogin: stores the tokens then restores the profile via /me', async () => {
+  it('ssoLogin with an access token (invitation): keeps it, then restores the profile via /me', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ user }));
-    await useAuth.getState().ssoLogin('jwt-sso', 'r-sso');
-    expect(localStorage.getItem('token')).toBe('jwt-sso');
-    expect(localStorage.getItem('refreshToken')).toBe('r-sso');
+    await useAuth.getState().ssoLogin('jwt-sso', 'ignored-legacy-refresh');
+    expect(getToken()).toBe('jwt-sso');
+    expect(localStorage.length).toBe(0);
     expect(useAuth.getState().user?.email).toBe('a@b.c');
   });
 
-  it('logout: purges token and user', () => {
-    localStorage.setItem('token', 'jwt-1');
-    useAuth.setState({ user });
-    useAuth.getState().logout();
-    expect(localStorage.getItem('token')).toBeNull();
+  it('ssoLogin from an SSO return: the access token comes from the refresh cookie', async () => {
+    stubRoutes({
+      'POST /api/auth/refresh': () => jsonResponse({ token: 'jwt-cookie' }),
+      'GET /api/auth/me': () => jsonResponse({ user }),
+    });
+    await useAuth.getState().ssoLogin(SSO_COOKIE_MARKER);
+    expect(getToken()).toBe('jwt-cookie');
+    expect(useAuth.getState().user?.id).toBe(1);
+  });
+
+  it('ssoLogin from an SSO return without a cookie: fails, no session', async () => {
+    stubRoutes({});
+    await expect(useAuth.getState().ssoLogin(SSO_COOKIE_MARKER)).rejects.toThrow();
+    expect(getToken()).toBeNull();
     expect(useAuth.getState().user).toBeNull();
   });
 
-  it('init without token: ready without a network call', async () => {
-    await useAuth.getState().init();
-    expect(useAuth.getState().ready).toBe(true);
-    expect(mockFetch).not.toHaveBeenCalled();
+  it('logout: revokes through the refresh cookie, purges token and user', () => {
+    setTokens('jwt-1');
+    mockFetch.mockResolvedValue(new Response(null, { status: 204 }));
+    useAuth.setState({ user });
+    useAuth.getState().logout();
+    expect(getToken()).toBeNull();
+    expect(useAuth.getState().user).toBeNull();
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/auth/refresh');
+    expect(init.method).toBe('DELETE');
   });
 
-  it('init with a valid token: restores the session', async () => {
-    localStorage.setItem('token', 'jwt-1');
-    mockFetch.mockResolvedValue(jsonResponse({ user }));
+  it('init without a session cookie: ready, no user', async () => {
+    stubRoutes({});
     await useAuth.getState().init();
+    expect(useAuth.getState().ready).toBe(true);
+    expect(useAuth.getState().user).toBeNull();
+    expect(mockFetch.mock.calls.map(([url]) => url)).toEqual(['/api/auth/refresh']);
+  });
+
+  it('init after a reload: restores the session from the refresh cookie', async () => {
+    stubRoutes({
+      'POST /api/auth/refresh': () => jsonResponse({ token: 'jwt-1' }),
+      'GET /api/auth/me': () => jsonResponse({ user }),
+    });
+    await useAuth.getState().init();
+    expect(getToken()).toBe('jwt-1');
     expect(useAuth.getState().user?.id).toBe(1);
     expect(useAuth.getState().ready).toBe(true);
   });
 
-  it('init with an invalid token: purges the token, still ready', async () => {
-    localStorage.setItem('token', 'périmé');
-    mockFetch.mockResolvedValue(jsonResponse({ error: 'Token invalide' }, 401));
+  it('init with a token already in memory: no renewal, profile only', async () => {
+    setTokens('jwt-1');
+    mockFetch.mockResolvedValue(jsonResponse({ user }));
     await useAuth.getState().init();
-    expect(localStorage.getItem('token')).toBeNull();
+    expect(mockFetch.mock.calls.map(([url]) => url)).toEqual(['/api/auth/me']);
+    expect(useAuth.getState().user?.id).toBe(1);
+  });
+
+  it('init with an invalid token: purges the token, still ready', async () => {
+    setTokens('périmé');
+    stubRoutes({});
+    await useAuth.getState().init();
+    expect(getToken()).toBeNull();
     expect(useAuth.getState().user).toBeNull();
     expect(useAuth.getState().ready).toBe(true);
   });
@@ -104,7 +147,7 @@ describe('useAuth', () => {
 
 describe('useAuth — canal temps réel', () => {
   it('logout: closes the socket of the account that leaves', () => {
-    localStorage.setItem('token', 'jwt-1');
+    setTokens('jwt-1');
     mockFetch.mockResolvedValue(jsonResponse({}));
     useAuth.setState({ user });
     useAuth.getState().logout();
@@ -112,32 +155,29 @@ describe('useAuth — canal temps réel', () => {
   });
 
   it('login: starts from a fresh socket (shared review-room workstation)', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', refreshToken: 'r-2', user }));
+    mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', user }));
     await useAuth.getState().login('a@b.c', 'pw');
     expect(disconnectSocket).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem('refreshToken')).toBe('r-2');
   });
 
   it('setAuth: also closes the previous socket', () => {
     useAuth.getState().setAuth('jwt-3', user);
-    expect(localStorage.getItem('token')).toBe('jwt-3');
+    expect(getToken()).toBe('jwt-3');
     expect(disconnectSocket).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('useAuth — session expirée', () => {
   it('unrecoverable 401: purges the session, clears the state and closes the socket', async () => {
-    localStorage.setItem('token', 'jwt-mort');
-    localStorage.setItem('refreshToken', 'r-mort');
+    setTokens('jwt-mort');
     useAuth.setState({ user, ready: true });
     // Everything answers 401, token renewal included: the session is dead.
-    mockFetch.mockResolvedValue(jsonResponse({ error: 'Non authentifié' }, 401));
+    mockFetch.mockResolvedValue(jsonResponse({ error: 'Not authenticated' }, 401));
 
     await expect(api.get('/api/projects')).rejects.toThrow(/session/i);
     expect(useAuth.getState().user).toBeNull();
     expect(useAuth.getState().ready).toBe(true);
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(localStorage.getItem('refreshToken')).toBeNull();
+    expect(getToken()).toBeNull();
     expect(disconnectSocket).toHaveBeenCalledTimes(1);
   });
 });

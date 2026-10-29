@@ -4,11 +4,17 @@
 /**
  * Small API v2 client (fetch) with a JWT auth header.
  *
- * Tokens are stored in localStorage under the keys `token` (access) and
- * `refreshToken` (renewal). This module is their sole owner.
+ * Session tokens, and where they live:
+ * - the **access token** is kept in this module's memory only — never in `localStorage`, where any script
+ *   running on the page (an XSS, a compromised CDN script) could read it. This module is its sole owner;
+ * - the **refresh token** never reaches the page: the server keeps it in an httpOnly, SameSite=Strict
+ *   cookie scoped to `/api/auth/refresh`. The page cannot read it, only ask the server to use it.
+ *
+ * A reload therefore starts without an access token: `restoreSession()` (called by the auth store at
+ * start-up) exchanges the cookie for a fresh one.
  *
  * A 401 received while a session exists is not a business error: the access token has
- * expired (7 days) or the session was revoked. The client then tries **once**
+ * expired or the session was revoked. The client then tries **once**
  * `/api/auth/refresh`: concurrent requests wait on the same promise, then replay
  * the original request. If the renewal fails, the session is purged and the handler
  * for a dead session (wired by the auth store) brings the user back to sign-in.
@@ -16,21 +22,44 @@
 
 import { hasMessage, t, type TParams } from '../v2/i18n';
 
-const TOKEN_KEY = 'token';
-const REFRESH_KEY = 'refreshToken';
+/** The renewal endpoint: the only path the refresh cookie is sent to. */
+const REFRESH_PATH = '/api/auth/refresh';
+/**
+ * Header the server requires on the refresh endpoint, on top of SameSite=Strict: a cross-site form
+ * cannot set it (CSRF).
+ */
+const CSRF_HEADERS = { 'X-Requested-With': 'ReView' };
 
-export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
+let accessToken: string | null = null;
 
-/** Records the session tokens (sign-in, 2FA, SSO, renewal). */
-export function setTokens(token: string, refreshToken?: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-  if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
+/**
+ * Keys under which earlier versions kept both tokens in `localStorage`. Purged at load: a refresh token
+ * left there would stay readable by any script long after this version stopped using it.
+ */
+const LEGACY_KEYS = ['token', 'refreshToken'];
+function purgeLegacyStorage(): void {
+  try {
+    for (const key of LEGACY_KEYS) localStorage.removeItem(key);
+  } catch {
+    // Storage unavailable (private mode, sandboxed frame): nothing was stored there either.
+  }
+}
+purgeLegacyStorage();
+
+export const getToken = (): string | null => accessToken;
+
+/**
+ * Records the access token of a new session (sign-in, 2FA, SSO, renewal). The refresh token is not a
+ * parameter any more: the server sets it in its cookie.
+ */
+export function setTokens(token: string): void {
+  accessToken = token;
 }
 
 /** Clears the local session, without any application side effect. */
 export function clearTokens(): void {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
+  accessToken = null;
+  purgeLegacyStorage();
 }
 
 const authHeaders = (): Record<string, string> => {
@@ -64,44 +93,75 @@ type RefreshOutcome = 'refreshed' | 'expired' | 'unavailable';
 let refreshing: Promise<RefreshOutcome> | null = null;
 
 /** Only one renewal at a time: concurrent requests share the promise. */
-function refreshSession(): Promise<RefreshOutcome> {
-  refreshing ??= runRefresh().finally(() => {
+function renew(): Promise<RefreshOutcome> {
+  refreshing ??= exchangeRefreshCookie().finally(() => {
     refreshing = null;
   });
   return refreshing;
 }
 
-async function runRefresh(): Promise<RefreshOutcome> {
-  const refreshToken = localStorage.getItem(REFRESH_KEY);
-  if (refreshToken) {
-    let res: Response;
-    try {
-      // A direct `fetch` rather than `request()`: a 401 on the renewal itself must
-      // above all not trigger another renewal.
-      res = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
-    } catch {
-      // Network down: the session is not proven dead, so we do not log out.
-      return 'unavailable';
-    }
-    if (res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { token?: string; refreshToken?: string };
-      if (data.token) {
-        setTokens(data.token, data.refreshToken);
-        return 'refreshed';
-      }
-    } else if (res.status >= 500) {
-      return 'unavailable';
-    }
+let renewingAfter401: Promise<RefreshOutcome> | null = null;
+
+/** Renewal after a 401: a dead session is notified once, concurrent callers sharing the promise. */
+function refreshSession(): Promise<RefreshOutcome> {
+  renewingAfter401 ??= renew()
+    .then((outcome) => {
+      if (outcome === 'expired') onSessionExpired?.();
+      return outcome;
+    })
+    .finally(() => {
+      renewingAfter401 = null;
+    });
+  return renewingAfter401;
+}
+
+/**
+ * Exchanges the refresh cookie for a new access token. The browser presents the cookie itself; this
+ * code never sees it.
+ */
+async function exchangeRefreshCookie(): Promise<RefreshOutcome> {
+  let res: Response;
+  try {
+    // A direct `fetch` rather than `request()`: a 401 on the renewal itself must
+    // above all not trigger another renewal.
+    res = await fetch(REFRESH_PATH, { method: 'POST', credentials: 'same-origin', headers: CSRF_HEADERS });
+  } catch {
+    // Network down: the session is not proven dead, so we do not log out.
+    return 'unavailable';
   }
-  // Nothing left to renew: the session is dead. Notified only once, since the
-  // concurrent callers share this promise.
+  if (res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { token?: string };
+    if (data.token) {
+      setTokens(data.token);
+      return 'refreshed';
+    }
+  } else if (res.status >= 500) {
+    return 'unavailable';
+  }
+  // Nothing left to renew: the session is dead.
   clearTokens();
-  onSessionExpired?.();
   return 'expired';
+}
+
+/**
+ * Start-up: obtains an access token from the refresh cookie, if the browser holds one. Returns whether a
+ * session was restored. No session is the normal case for a visitor: nothing is notified.
+ */
+export async function restoreSession(): Promise<boolean> {
+  return (await renew()) === 'refreshed';
+}
+
+/**
+ * Logout: the server revokes the session the refresh cookie belongs to and clears the cookie. Works even
+ * when the access token has already expired — otherwise the cookie would quietly reopen the session at
+ * the next load. Best effort: the local session is cleared by the caller regardless.
+ */
+export async function endServerSession(): Promise<void> {
+  try {
+    await fetch(REFRESH_PATH, { method: 'DELETE', credentials: 'same-origin', headers: CSRF_HEADERS });
+  } catch {
+    // Network down: the cookie expires on its own; the local session is gone anyway.
+  }
 }
 
 const send = (method: string, path: string, body?: unknown): Promise<Response> =>

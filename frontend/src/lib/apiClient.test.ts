@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { api, getToken, setSessionExpiredHandler } from './apiClient';
+import {
+  api,
+  clearTokens,
+  endServerSession,
+  getToken,
+  restoreSession,
+  setSessionExpiredHandler,
+  setTokens,
+} from './apiClient';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -20,9 +28,8 @@ const refreshCalls = () => mockFetch.mock.calls.filter(([url]) => url === '/api/
 function stubServer(valid: string, refresh: { token?: string; status?: number } = {}) {
   mockFetch.mockImplementation((url: string, init: RequestInit) => {
     if (url === '/api/auth/refresh') {
-      if (refresh.token)
-        return Promise.resolve(jsonResponse({ token: refresh.token, refreshToken: 'r-new' }));
-      return Promise.resolve(jsonResponse({ error: 'Refresh token invalide' }, refresh.status ?? 401));
+      if (refresh.token) return Promise.resolve(jsonResponse({ token: refresh.token }));
+      return Promise.resolve(jsonResponse({ error: 'Invalid refresh token' }, refresh.status ?? 401));
     }
     const auth = (init.headers as Record<string, string>).Authorization;
     return auth === `Bearer ${valid}`
@@ -34,20 +41,31 @@ function stubServer(valid: string, refresh: { token?: string; status?: number } 
 beforeEach(() => {
   mockFetch.mockReset();
   localStorage.clear();
+  clearTokens();
   setSessionExpiredHandler(null);
 });
 
-describe('getToken', () => {
-  it('reads the token from localStorage', () => {
+describe('token storage', () => {
+  it('keeps the access token in memory, never in localStorage', () => {
     expect(getToken()).toBeNull();
-    localStorage.setItem('token', 'abc');
+    setTokens('abc');
     expect(getToken()).toBe('abc');
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('a token left in localStorage by an older version is not a session, and is purged', () => {
+    localStorage.setItem('token', 'old');
+    localStorage.setItem('refreshToken', 'old-r');
+    expect(getToken()).toBeNull();
+    clearTokens();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('refreshToken')).toBeNull();
   });
 });
 
 describe('api', () => {
   it('GET: sends the Authorization header when a token exists', async () => {
-    localStorage.setItem('token', 'jwt-123');
+    setTokens('jwt-123');
     mockFetch.mockResolvedValue(jsonResponse({ ok: true }));
     await api.get('/api/projects');
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -89,34 +107,37 @@ describe('api', () => {
 
 describe('api — 401 and session renewal', () => {
   it('401: renews the token then replays the request', async () => {
-    localStorage.setItem('token', 'jwt-vieux');
-    localStorage.setItem('refreshToken', 'r-1');
+    setTokens('jwt-vieux');
     stubServer('jwt-neuf', { token: 'jwt-neuf' });
 
     await expect(api.get<{ ok: boolean }>('/api/projects')).resolves.toEqual({ ok: true });
     expect(refreshCalls()).toBe(1);
-    expect(localStorage.getItem('token')).toBe('jwt-neuf');
-    expect(localStorage.getItem('refreshToken')).toBe('r-new');
+    expect(getToken()).toBe('jwt-neuf');
+    // The renewal sends no token: the browser presents the httpOnly cookie, the header proves the origin.
+    const [, init] = mockFetch.mock.calls.find(([url]) => url === '/api/auth/refresh') as [
+      string,
+      RequestInit,
+    ];
+    expect(init.body).toBeUndefined();
+    expect(init.credentials).toBe('same-origin');
+    expect((init.headers as Record<string, string>)['X-Requested-With']).toBe('ReView');
     // Three requests: the original, the renewal, and the replay.
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
   it('renewal refused: purges the session and notifies only once', async () => {
-    localStorage.setItem('token', 'jwt-mort');
-    localStorage.setItem('refreshToken', 'r-mort');
+    setTokens('jwt-mort');
     const expired = vi.fn();
     setSessionExpiredHandler(expired);
     stubServer('jamais');
 
     await expect(api.get('/api/projects')).rejects.toThrow(/session/i);
     expect(expired).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(localStorage.getItem('refreshToken')).toBeNull();
+    expect(getToken()).toBeNull();
   });
 
   it('two concurrent requests trigger only one renewal', async () => {
-    localStorage.setItem('token', 'jwt-vieux');
-    localStorage.setItem('refreshToken', 'r-1');
+    setTokens('jwt-vieux');
     stubServer('jwt-neuf', { token: 'jwt-neuf' });
 
     const [a, b] = await Promise.all([api.get('/api/projects'), api.get('/api/shots')]);
@@ -136,33 +157,30 @@ describe('api — 401 and session renewal', () => {
   });
 
   it('401 on /api/auth/login: business response, neither renewal nor logout', async () => {
-    localStorage.setItem('token', 'jwt-1');
-    localStorage.setItem('refreshToken', 'r-1');
+    setTokens('jwt-1');
     const expired = vi.fn();
     setSessionExpiredHandler(expired);
-    mockFetch.mockResolvedValue(jsonResponse({ error: 'Identifiants invalides' }, 401));
+    mockFetch.mockResolvedValue(jsonResponse({ error: 'Invalid credentials' }, 401));
 
-    await expect(api.post('/api/auth/login', { email: 'a@b.c' })).rejects.toThrow('Identifiants invalides');
+    await expect(api.post('/api/auth/login', { email: 'a@b.c' })).rejects.toThrow('Invalid credentials');
     expect(refreshCalls()).toBe(0);
     expect(expired).not.toHaveBeenCalled();
-    expect(localStorage.getItem('token')).toBe('jwt-1');
+    expect(getToken()).toBe('jwt-1');
   });
 
   it('renewal unavailable (500): does not log out, surfaces the original error', async () => {
-    localStorage.setItem('token', 'jwt-1');
-    localStorage.setItem('refreshToken', 'r-1');
+    setTokens('jwt-1');
     const expired = vi.fn();
     setSessionExpiredHandler(expired);
     stubServer('jamais', { status: 503 });
 
     await expect(api.get('/api/projects')).rejects.toThrow('Not authenticated');
     expect(expired).not.toHaveBeenCalled();
-    expect(localStorage.getItem('token')).toBe('jwt-1');
+    expect(getToken()).toBe('jwt-1');
   });
 
   it('network lost during renewal: the session is kept', async () => {
-    localStorage.setItem('token', 'jwt-1');
-    localStorage.setItem('refreshToken', 'r-1');
+    setTokens('jwt-1');
     const expired = vi.fn();
     setSessionExpiredHandler(expired);
     mockFetch.mockImplementation((url: string) =>
@@ -173,6 +191,45 @@ describe('api — 401 and session renewal', () => {
 
     await expect(api.get('/api/projects')).rejects.toThrow('Not authenticated');
     expect(expired).not.toHaveBeenCalled();
-    expect(localStorage.getItem('token')).toBe('jwt-1');
+    expect(getToken()).toBe('jwt-1');
+  });
+});
+
+describe('restoreSession — start-up from the refresh cookie', () => {
+  it('obtains an access token when the browser holds a live refresh cookie', async () => {
+    stubServer('jwt-neuf', { token: 'jwt-neuf' });
+    await expect(restoreSession()).resolves.toBe(true);
+    expect(getToken()).toBe('jwt-neuf');
+  });
+
+  it('no cookie (visitor): no session, and no "session expired" notification', async () => {
+    const expired = vi.fn();
+    setSessionExpiredHandler(expired);
+    stubServer('jamais');
+    await expect(restoreSession()).resolves.toBe(false);
+    expect(getToken()).toBeNull();
+    expect(expired).not.toHaveBeenCalled();
+  });
+
+  it('network down: no session restored, nothing notified', async () => {
+    mockFetch.mockRejectedValue(new Error('Failed to fetch'));
+    await expect(restoreSession()).resolves.toBe(false);
+  });
+});
+
+describe('endServerSession — logout through the refresh cookie', () => {
+  it('asks the server to revoke the cookie session, without an access token', async () => {
+    mockFetch.mockResolvedValue(new Response(null, { status: 204 }));
+    await endServerSession();
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/auth/refresh');
+    expect(init.method).toBe('DELETE');
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+    expect((init.headers as Record<string, string>)['X-Requested-With']).toBe('ReView');
+  });
+
+  it('swallows a network failure: the local session is cleared regardless', async () => {
+    mockFetch.mockRejectedValue(new Error('Failed to fetch'));
+    await expect(endServerSession()).resolves.toBeUndefined();
   });
 });

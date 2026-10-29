@@ -46,9 +46,9 @@ export async function signIn(page: Page): Promise<void> {
 }
 
 /**
- * Calls the API from the browser, with the session the page holds. Sends the cookies (same origin)
- * and, while the access token still lives in localStorage, the bearer header too: the helper keeps
- * working whichever way the session is carried.
+ * Calls the API from the browser, with the session the page holds. The access token lives in the
+ * page's memory only, so the helper obtains its own from the refresh cookie (same origin), then sends
+ * it as the bearer header.
  */
 export async function apiCall(
   page: Page,
@@ -58,7 +58,16 @@ export async function apiCall(
 ): Promise<{ status: number; json: unknown }> {
   return page.evaluate(
     async ({ method, path, body }) => {
-      const token = window.localStorage.getItem('token');
+      // The access token lives in the page's memory only: ask for one through the refresh cookie.
+      const token = (
+        (await (
+          await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'ReView' },
+          })
+        ).json()) as { token?: string }
+      ).token;
       const res = await fetch(path, {
         method,
         credentials: 'same-origin',

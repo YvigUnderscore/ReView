@@ -3,6 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EMPTY_SEARCH, MIN_SEARCH_LENGTH, fetchSearch, hasSearchResults } from './searchApi';
+import { clearTokens, getToken, setTokens } from '../../lib/apiClient';
 
 /**
  * Client of the global search. What matters here: the request goes out authenticated, it is
@@ -18,6 +19,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   localStorage.clear();
+  clearTokens();
   fetchMock = vi.fn().mockResolvedValue(json(results));
   vi.stubGlobal('fetch', fetchMock);
 });
@@ -33,7 +35,7 @@ describe('fetchSearch', () => {
   });
 
   it('carries the session token when there is one', async () => {
-    localStorage.setItem('token', 'jwt-abc');
+    setTokens('jwt-abc');
     await fetchSearch('v012');
     const init = fetchMock.mock.calls[0][1] as RequestInit;
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jwt-abc');
@@ -62,14 +64,13 @@ describe('fetchSearch', () => {
   });
 
   it('goes back through the shared client on 401 — the token is renewed there', async () => {
-    localStorage.setItem('token', 'expiré');
-    localStorage.setItem('refreshToken', 'refresh-abc');
+    setTokens('expiré');
     fetchMock.mockResolvedValueOnce(json({ error: 'Unauthorized' }, 401));
     fetchMock.mockResolvedValueOnce(json({ error: 'Unauthorized' }, 401));
     fetchMock.mockResolvedValueOnce(json({ token: 'neuf' }, 200));
     fetchMock.mockResolvedValueOnce(json(results));
     expect(await fetchSearch('alpha')).toEqual(results);
-    expect(localStorage.getItem('token')).toBe('neuf');
+    expect(getToken()).toBe('neuf');
   });
 
   it('throws on a server error', async () => {

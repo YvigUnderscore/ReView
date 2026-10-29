@@ -127,7 +127,16 @@ async function signIn(page: Page) {
 /** Demo dataset, created only once and then reused. */
 async function ensureDemoData(page: Page): Promise<number> {
   return page.evaluate(async (demo) => {
-    const token = window.localStorage.getItem('token');
+    // The access token lives in the page's memory only: ask for one through the refresh cookie.
+    const token = (
+      (await (
+        await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'ReView' },
+        })
+      ).json()) as { token?: string }
+    ).token;
     const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
     const get = async (url: string) => (await fetch(url, { headers: h })).json();
     const post = async (url: string, body: unknown) =>
@@ -206,7 +215,16 @@ async function uploadDemoMedia(
 
   return page.evaluate(
     async ({ pid, base64, name, shotCode, kind, mime }) => {
-      const token = window.localStorage.getItem('token');
+      // The access token lives in the page's memory only: ask for one through the refresh cookie.
+      const token = (
+        (await (
+          await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'ReView' },
+          })
+        ).json()) as { token?: string }
+      ).token;
       const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       const json = async (url: string, init?: RequestInit) =>
         (await fetch(url, { headers: h, ...init })).json();
@@ -273,7 +291,16 @@ async function uploadDemoMedia(
 async function linkDemoToShotgrid(page: Page, projectId: number, siteId: number) {
   await page.evaluate(
     async ({ pid, site }) => {
-      const token = window.localStorage.getItem('token');
+      // The access token lives in the page's memory only: ask for one through the refresh cookie.
+      const token = (
+        (await (
+          await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'ReView' },
+          })
+        ).json()) as { token?: string }
+      ).token;
       const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       await fetch(`/api/shotgrid/projects/${pid}/connection`, {
         method: 'POST',
@@ -288,7 +315,16 @@ async function linkDemoToShotgrid(page: Page, projectId: number, siteId: number)
 
 async function unlinkDemoFromShotgrid(page: Page, projectId: number) {
   await page.evaluate(async (pid) => {
-    const token = window.localStorage.getItem('token');
+    // The access token lives in the page's memory only: ask for one through the refresh cookie.
+    const token = (
+      (await (
+        await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'ReView' },
+        })
+      ).json()) as { token?: string }
+    ).token;
     await fetch(`/api/shotgrid/projects/${pid}/connection`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },

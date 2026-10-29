@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { create } from 'zustand';
-import { api, clearTokens, getToken, setSessionExpiredHandler, setTokens } from '../../lib/apiClient';
+import {
+  api,
+  clearTokens,
+  endServerSession,
+  getToken,
+  restoreSession,
+  setSessionExpiredHandler,
+  setTokens,
+} from '../../lib/apiClient';
 import { disconnectSocket } from '../../lib/socket';
 import type { User } from '../types/api';
 
@@ -25,25 +33,32 @@ interface AuthState {
   login: (email: string, password: string) => Promise<{ tmpToken?: string }>;
   /** Exchanges the intermediate token + TOTP/backup code for the session (36.A). */
   verify2fa: (tmpToken: string, code: string) => Promise<void>;
-  /** Sign-in from an SSO return (#sso= fragment, 36.A). */
-  ssoLogin: (token: string, refreshToken?: string) => Promise<void>;
+  /**
+   * Sign-in from an SSO return (`#sso=cookie` fragment, 36.A) or an invitation activation. The SSO return
+   * carries no token: the server has set the refresh cookie, from which the access token is obtained.
+   * The second argument is accepted for older callers and ignored: no refresh token reaches the page.
+   */
+  ssoLogin: (token: string, _legacyRefreshToken?: string) => Promise<void>;
   logout: () => void;
   init: () => Promise<void>;
 }
 
+/** `#sso=` value of an SSO return whose session is in the refresh cookie rather than in the URL. */
+export const SSO_COOKIE_MARKER = 'cookie';
+
 /**
- * Opens a local session: tokens stored, real-time channel renewed.
+ * Opens a local session: access token kept in memory, real-time channel renewed.
  *
  * The previous account's socket must die with its session — the server only authenticates at the
  * handshake, so a surviving socket would keep serving the previous user's notifications and private
  * messages on a shared workstation.
  */
-function beginSession(token: string, refreshToken?: string): void {
-  setTokens(token, refreshToken);
+function beginSession(token: string): void {
+  setTokens(token);
   disconnectSocket();
 }
 
-/** Closes the local session: tokens, real-time channel, application state. */
+/** Closes the local session: access token, real-time channel, application state. */
 function endSession(): void {
   clearTokens();
   disconnectSocket();
@@ -64,40 +79,42 @@ export const useAuth = create<AuthState>((set) => ({
   login: async (email, password) => {
     const r = await api.post<{
       token?: string;
-      refreshToken?: string;
       user?: AuthUser;
       requires2fa?: boolean;
       tmpToken?: string;
     }>('/api/auth/login', { email, password });
     if (r.requires2fa && r.tmpToken) return { tmpToken: r.tmpToken };
-    beginSession(r.token!, r.refreshToken);
+    beginSession(r.token!);
     set({ user: r.user! });
     return {};
   },
 
   verify2fa: async (tmpToken, code) => {
-    const r = await api.post<{ token: string; refreshToken?: string; user: AuthUser }>(
-      '/api/auth/2fa/verify',
-      { tmpToken, code },
-    );
-    beginSession(r.token, r.refreshToken);
+    const r = await api.post<{ token: string; user: AuthUser }>('/api/auth/2fa/verify', { tmpToken, code });
+    beginSession(r.token);
     set({ user: r.user });
   },
 
-  ssoLogin: async (token, refreshToken) => {
-    beginSession(token, refreshToken);
+  ssoLogin: async (token) => {
+    if (token && token !== SSO_COOKIE_MARKER) beginSession(token);
+    else {
+      disconnectSocket();
+      if (!(await restoreSession())) throw new Error('SSO session missing');
+    }
     const { user } = await api.get<{ user: AuthUser }>('/api/auth/me');
     set({ user });
   },
 
   logout: () => {
-    // Revokes the server session (36.B) — best effort, before discarding the local token.
-    void api.post('/api/auth/logout').catch(() => undefined);
+    // Revokes the server session (36.B) and clears the refresh cookie — best effort, and without the
+    // access token: an expired one must not leave the cookie able to reopen the session at next load.
+    void endServerSession();
     endSession();
   },
 
   init: async () => {
-    if (!getToken()) {
+    // The access token lives in memory: after a reload, it comes back from the refresh cookie.
+    if (!getToken() && !(await restoreSession())) {
       set({ ready: true });
       return;
     }

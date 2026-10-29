@@ -28,6 +28,7 @@ vi.mock('socket.io-client', () => ({
 }));
 
 import { getSocket, disconnectSocket, emitActivity } from './socket';
+import { clearTokens, setTokens } from './apiClient';
 
 const created = state.created as FakeSocket[];
 
@@ -44,26 +45,27 @@ beforeEach(() => {
   disconnectSocket();
   created.length = 0;
   localStorage.clear();
+  clearTokens();
 });
 
 describe('getSocket', () => {
   it('reuses the same instance', () => {
-    localStorage.setItem('token', 'jwt-1');
+    setTokens('jwt-1');
     expect(getSocket()).toBe(getSocket());
     expect(created).toHaveLength(1);
   });
 
   it('passes the token in `auth` and never in the query string', () => {
-    localStorage.setItem('token', 'jwt-1');
+    setTokens('jwt-1');
     getSocket();
     expect(created[0].opts.query).toBeUndefined();
     expect(readAuth(created[0])).toEqual({ token: 'jwt-1' });
   });
 
   it('rereads the token on each connection (renewal taken into account)', () => {
-    localStorage.setItem('token', 'jwt-1');
+    setTokens('jwt-1');
     getSocket();
-    localStorage.setItem('token', 'jwt-2');
+    setTokens('jwt-2');
     expect(readAuth(created[0])).toEqual({ token: 'jwt-2' });
   });
 
@@ -75,12 +77,12 @@ describe('getSocket', () => {
 
 describe('disconnectSocket', () => {
   it('closes the channel and opens a new one for the next account', () => {
-    localStorage.setItem('token', 'jwt-1');
+    setTokens('jwt-1');
     const first = getSocket();
     disconnectSocket();
     expect(created[0].disconnect).toHaveBeenCalledTimes(1);
 
-    localStorage.setItem('token', 'jwt-2');
+    setTokens('jwt-2');
     const second = getSocket();
     expect(second).not.toBe(first);
     expect(created).toHaveLength(2);
