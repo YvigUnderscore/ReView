@@ -23,7 +23,7 @@ import { Hint } from '../../components/ui/hint';
 
 const PAGE_SIZE = 50;
 
-/** Commentaires de tout le studio : recherche, filtres, modération (résolution/suppression). */
+/** Comments from the whole studio: search, filters, moderation (resolve/delete). */
 export default function CommentsTab() {
   const t = useT();
   const qc = useQueryClient();

@@ -18,7 +18,7 @@ import type { UserProfile } from '../types/api';
 import { useT } from '../i18n';
 import { Card } from '../components/ui/card';
 
-/** Fiche publique d'un membre du studio : qui il est, ce qu'il fait, comment le joindre. */
+/** Public profile of a studio member: who they are, what they do, how to reach them. */
 export default function UserProfilePage() {
   const t = useT();
   const { id } = useParams();

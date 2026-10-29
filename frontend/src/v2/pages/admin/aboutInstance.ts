@@ -4,14 +4,14 @@
 import { intlLocale } from '../../i18n';
 
 /**
- * Identité de l'instance : forme de `GET /api/version` et mise en forme associée.
+ * Instance identity: the shape of `GET /api/version` and its associated formatting.
  *
- * Fonctions pures dans leur propre module (comme `adminShared`, `adminStorage`…) : le
- * composant ne doit exporter que lui-même, et ces deux règles d'affichage se testent sans
- * monter de React.
+ * Pure functions in their own module (like `adminShared`, `adminStorage`...): the
+ * component should export only itself, and these two display rules are tested without
+ * mounting React.
  */
 
-/** Réponse de `GET /api/version` (backend/src/routes/health.routes.ts). */
+/** Response of `GET /api/version` (backend/src/routes/health.routes.ts). */
 export interface InstanceVersion {
   version: string;
   commit: string | null;
@@ -20,7 +20,7 @@ export interface InstanceVersion {
   source: string;
 }
 
-/** Date de construction lisible ; l'ISO brute est illisible et la valeur peut manquer. */
+/** Readable build date; the raw ISO is unreadable and the value may be missing. */
 export function formatBuildDate(iso: string | null, locale: string = intlLocale()): string | null {
   if (!iso) return null;
   const date = new Date(iso);
@@ -28,7 +28,7 @@ export function formatBuildDate(iso: string | null, locale: string = intlLocale(
   return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-/** Version affichable : `2.3.0 (a1b2c3d4e5f6)` quand le commit est connu. */
+/** Displayable version: `2.3.0 (a1b2c3d4e5f6)` when the commit is known. */
 export function displayVersion(info: Pick<InstanceVersion, 'version' | 'commit'>): string {
   return info.commit ? `${info.version} (${info.commit})` : info.version;
 }

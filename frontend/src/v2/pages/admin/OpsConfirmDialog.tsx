@@ -16,15 +16,15 @@ import { Input } from '../../components/ui/input';
 import { useT } from '../../i18n';
 
 /**
- * Confirmation d'une opération d'exploitation, mot de passe à l'appui.
+ * Confirmation of an operations action, backed by a password.
  *
- * Le mot de passe n'est pas une barrière contre une session volée — qui tient une session
- * d'administration sait aussi créer un compte. Il arrête le clic accidentel et l'onglet
- * resté ouvert derrière quelqu'un, ce qui est déjà l'essentiel du risque réel pour un
- * geste qui coupe le studio pendant plusieurs minutes. La vraie seconde barrière est
- * `deploy/agent.conf`, hors de portée de l'application.
+ * The password is not a barrier against a stolen session — whoever holds an administration session
+ * can also create an account. It stops the accidental click and the tab
+ * left open behind someone, which is already the bulk of the real risk for a
+ * gesture that cuts the studio off for several minutes. The real second barrier is
+ * `deploy/agent.conf`, out of the application's reach.
  *
- * `ConfirmDialog` ne convient pas ici : il n'a pas de champ.
+ * `ConfirmDialog` does not fit here: it has no field.
  */
 export default function OpsConfirmDialog({
   open,
@@ -39,7 +39,7 @@ export default function OpsConfirmDialog({
   open: boolean;
   title: string;
   body: string;
-  /** Options propres à l'opération (case « sauvegarder d'abord », avertissements). */
+  /** Options specific to the operation (a "back up first" checkbox, warnings). */
   extra?: ReactNode;
   confirmLabel: string;
   busy: boolean;

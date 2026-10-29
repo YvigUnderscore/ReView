@@ -33,19 +33,19 @@ import {
 import { Hint } from '../../components/ui/hint';
 
 /**
- * « Mises à jour & sauvegardes » : ce que fait tourner l'instance, ce qui est paru depuis,
- * et — quand elle en est capable — les deux ou trois gestes qui la font avancer.
+ * "Updates & backups": what the instance runs, what has been released since,
+ * and — when it is able to — the two or three gestures that move it forward.
  *
- * ## La règle de cet écran : jamais un bouton mort
+ * ## The rule of this screen: never a dead button
  *
- * Une instance sans agent d'exploitation, en mode construction, ou dont l'agent est muet,
- * ne peut pas agir sur elle-même. L'écran n'y grise pas ses boutons — un bouton désactivé
- * fait croire à une panne et n'apprend rien — il ne les rend pas, et affiche à la place la
- * commande exacte, prête à coller dans le terminal de la machine qui héberge l'instance.
- * C'est la moitié la plus souvent utile de cette page : elle fonctionne partout.
+ * An instance without an operations agent, in build mode, or whose agent is silent,
+ * cannot act on itself. The screen does not grey out its buttons there — a disabled button
+ * suggests a fault and teaches nothing — it does not render them, and shows instead the
+ * exact command, ready to paste into the terminal of the machine hosting the instance.
+ * This is the half of this page most often useful: it works everywhere.
  */
 
-/** L'opération commandée dure au-delà de la vie de cet onglet : on retient laquelle. */
+/** The ordered operation lasts beyond this tab's life: we remember which one. */
 const RUN_KEY = 'review:ops-run';
 
 const rememberRun = (id: string | null) => {
@@ -53,7 +53,7 @@ const rememberRun = (id: string | null) => {
     if (id) localStorage.setItem(RUN_KEY, id);
     else localStorage.removeItem(RUN_KEY);
   } catch {
-    /* stockage indisponible : on perd le suivi au rechargement, rien de plus. */
+    /* storage unavailable: we only lose tracking on reload, nothing more. */
   }
 };
 
@@ -65,7 +65,7 @@ const rememberedRun = (): string | null => {
   }
 };
 
-/** Titre du dialogue de confirmation — un geste se nomme, il ne s'annonce pas « en cours ». */
+/** Title of the confirmation dialog — a gesture is named, not announced as "in progress". */
 function confirmTitle(t: Tr, kind: OpsKind | undefined): string {
   if (kind === 'update') return t('ops.update.confirmTitle');
   if (kind === 'verify') return t('ops.backups.check');
@@ -88,8 +88,8 @@ export default function UpdatesTab() {
   const overviewQ = useQuery({
     queryKey: qk.adminOps,
     queryFn: () => api.get<OpsOverview>('/api/admin/ops'),
-    // La version en service ne change qu'à une bascule ; le catalogue distant est déjà mis
-    // en cache une demi-heure côté serveur. Redemander à chaque montage n'apprend rien.
+    // The version in service only changes at a switchover; the remote catalogue is already
+    // cached for half an hour on the server side. Re-requesting on each mount teaches nothing.
     staleTime: 5 * 60_000,
   });
 
@@ -108,16 +108,16 @@ export default function UpdatesTab() {
       setPending(null);
       void qc.invalidateQueries({ queryKey: qk.adminOps });
     },
-    // Le message est déjà dans la langue du lecteur : `apiClient` traduit par le code.
+    // The message is already in the reader's language: `apiClient` translates it on the code side.
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : t('common.error.generic')),
   });
 
   if (!overviewQ.data) return <QueryState query={overviewQ} skeleton={<SkeletonRows count={4} />} />;
   const overview = overviewQ.data;
 
-  // Le run à suivre : celui que le serveur dit actif, sinon celui que cet onglet a lancé —
-  // c'est ce second cas qui survit à la coupure d'une mise à jour, quand l'API ne répond
-  // plus et ne peut donc plus rien dire d'actif.
+  // The run to follow: the one the server says is active, otherwise the one this tab launched —
+  // it is this second case that survives an update cut, when the API no longer answers and
+  // can therefore no longer say anything is active.
   const followed = overview.activeRun?.id ?? rememberedRun();
   const runId = followed && followed !== dismissed ? followed : null;
 
@@ -171,8 +171,8 @@ export default function UpdatesTab() {
         </Panel>
       )}
 
-      {/* Le mode construction n'a pas de bouton, mais il a une commande : sans elle, l'écran
-          se contenterait d'annoncer une version disponible sans dire comment y aller. */}
+      {/* Build mode has no button, but it has a command: without it, the screen
+          would merely announce an available version without saying how to get there. */}
       {overview.mode === 'build' && overview.commands.update && !notice && (
         <Panel title={t('ops.manual.title')}>
           <Hint>{t('ops.manual.body')}</Hint>
@@ -224,11 +224,11 @@ export default function UpdatesTab() {
 }
 
 /**
- * Les dernières opérations, en une ligne chacune.
+ * The latest operations, one line each.
  *
- * Ce n'est pas un journal d'audit — celui-là vit dans « Activité » — mais la mémoire courte
- * de l'écran : savoir qu'une sauvegarde a eu lieu ce matin, et qu'elle a abouti, évite d'en
- * relancer une avant de basculer.
+ * This is not an audit log — that one lives in "Activity" — but the short-term memory
+ * of the screen: knowing that a backup took place this morning, and that it succeeded, avoids
+ * launching another one before switching over.
  */
 function OpsHistory({ runs }: { runs: RunSummary[] }) {
   const t = useT();

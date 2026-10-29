@@ -18,31 +18,31 @@ const scope = (over: Partial<UndoScope>): UndoScope => ({
 });
 
 describe('undoIntent', () => {
-  it('lit les trois frappes attendues', () => {
+  it('reads the three expected keystrokes', () => {
     expect(undoIntent(key({ ctrlKey: true }))).toBe('undo');
     expect(undoIntent(key({ ctrlKey: true, shiftKey: true }))).toBe('redo');
     expect(undoIntent(key({ ctrlKey: true, key: 'y' }))).toBe('redo');
     expect(undoIntent(key({ metaKey: true, key: 'Z' }))).toBe('undo');
   });
 
-  it('ignore ce qui n’est pas un geste d’historique', () => {
+  it('ignores anything that is not a history gesture', () => {
     expect(undoIntent(key({}))).toBeNull();
     expect(undoIntent(key({ ctrlKey: true, altKey: true }))).toBeNull();
     expect(undoIntent(key({ ctrlKey: true, key: 'v' }))).toBeNull();
-    // Ctrl+Maj+Y n'est le raccourci de personne : ne pas le confondre avec un redo.
+    // Ctrl+Shift+Y is nobody's shortcut: do not mistake it for a redo.
     expect(undoIntent(key({ ctrlKey: true, shiftKey: true, key: 'y' }))).toBeNull();
   });
 });
 
 describe('pickScope', () => {
-  it('sert le périmètre le plus prioritaire', () => {
+  it('serves the highest-priority scope', () => {
     const low = scope({ priority: UNDO_PRIORITY.editor });
     const high = scope({ priority: UNDO_PRIORITY.composer });
     expect(pickScope([low, high], 'undo')).toBe(high);
     expect(pickScope([high, low], 'undo')).toBe(high);
   });
 
-  it('saute un périmètre qui n’a rien à défaire — la frappe retombe sur le suivant', () => {
+  it('skips a scope with nothing to undo — the keystroke falls to the next one', () => {
     const empty = scope({ priority: UNDO_PRIORITY.composer, canUndo: false });
     const editor = scope({ priority: UNDO_PRIORITY.editor });
     expect(pickScope([empty, editor], 'undo')).toBe(editor);
@@ -55,13 +55,13 @@ describe('pickScope', () => {
     expect(pickScope([noRedo, editor], 'redo')).toBe(editor);
   });
 
-  it('rend null quand aucun périmètre ne peut agir', () => {
+  it('returns null when no scope can act', () => {
     expect(pickScope([scope({ canUndo: false })], 'undo')).toBeNull();
     expect(pickScope([], 'redo')).toBeNull();
   });
 });
 
-/** Deux périmètres montés en même temps : la frappe n'en sert qu'UN. */
+/** Two scopes mounted at the same time: the keystroke serves only ONE of them. */
 function TwoScopes(props: { composer: UndoScope & { enabled: boolean }; editor: UndoScope }) {
   useUndoScope(props.composer);
   useUndoScope({ ...props.editor, enabled: true });
@@ -74,7 +74,7 @@ const press = (init: Partial<KeyboardEventInit> = {}) =>
   );
 
 describe('useUndoScope', () => {
-  it('une frappe ne défait qu’un seul historique (le plus prioritaire)', () => {
+  it('a keystroke only undoes one history (the highest priority)', () => {
     const composerUndo = vi.fn();
     const editorUndo = vi.fn();
     render(
@@ -101,7 +101,7 @@ describe('useUndoScope', () => {
     expect(editorUndo).not.toHaveBeenCalled();
   });
 
-  it('un périmètre désactivé laisse la frappe à l’éditeur', () => {
+  it('a disabled scope leaves the keystroke to the editor', () => {
     const composerUndo = vi.fn();
     const editorUndo = vi.fn();
     render(
@@ -128,7 +128,7 @@ describe('useUndoScope', () => {
     expect(editorUndo).toHaveBeenCalledTimes(1);
   });
 
-  it('se tait dans un champ de saisie — le navigateur y fait mieux', () => {
+  it('stays silent in an input field — the browser does better there', () => {
     const editorUndo = vi.fn();
     render(
       <TwoScopes
@@ -158,7 +158,7 @@ describe('useUndoScope', () => {
     input.remove();
   });
 
-  it('démonté, il n’écoute plus rien', () => {
+  it('once unmounted, it listens to nothing', () => {
     const editorUndo = vi.fn();
     const view = render(
       <TwoScopes

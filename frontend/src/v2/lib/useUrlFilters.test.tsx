@@ -8,10 +8,10 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { useUrlFilters } from './useUrlFilters';
 
 /**
- * Les filtres d'une liste vivaient en `useState` : appliquer « Waiting to Start » puis
- * partager le lien ouvrait la liste entière chez le destinataire, et un simple F5 effaçait
- * le tri qu'on venait de poser. La page projet avait pourtant déjà fait — et documenté —
- * le choix inverse pour son onglet courant.
+ * List filters used to live in `useState`: applying "Waiting to Start" then
+ * sharing the link opened the whole list for the recipient, and a simple F5 erased
+ * the sort just set. The project page had nevertheless already made — and documented —
+ * the opposite choice for its current tab.
  */
 function Harness({ prefix }: { prefix?: string }) {
   const [filters, setFilters] = useUrlFilters(prefix);
@@ -35,27 +35,27 @@ const mount = (initial = '/projects/1', prefix?: string) =>
   );
 
 describe('useUrlFilters', () => {
-  it('lit les filtres depuis l’URL au montage — un lien partagé rouvre le même écran', () => {
+  it('reads the filters from the URL on mount — a shared link reopens the same screen', () => {
     mount('/projects/1?status=wtg&text=sh010');
     expect(screen.getByTestId('status').textContent).toBe('wtg');
     expect(screen.getByTestId('text').textContent).toBe('sh010');
   });
 
-  it('écrit le filtre appliqué dans l’URL', async () => {
+  it('writes the applied filter into the URL', async () => {
     const user = userEvent.setup();
     mount();
     await user.click(screen.getByRole('button', { name: 'filtrer' }));
     expect(screen.getByTestId('search').textContent).toContain('status=wtg');
   });
 
-  it('retire le paramètre quand le filtre est vidé : pas d’URL encombrée', async () => {
+  it('removes the parameter when the filter is cleared: no cluttered URL', async () => {
     const user = userEvent.setup();
     mount('/projects/1?status=wtg');
     await user.click(screen.getByRole('button', { name: 'effacer' }));
     expect(screen.getByTestId('search').textContent).not.toContain('status');
   });
 
-  it('préserve les paramètres étrangers, dont l’onglet courant de la page projet', async () => {
+  it('preserves foreign parameters, including the project page’s current tab', async () => {
     const user = userEvent.setup();
     mount('/projects/1?tab=shots');
     await user.click(screen.getByRole('button', { name: 'filtrer' }));
@@ -64,14 +64,14 @@ describe('useUrlFilters', () => {
     expect(search).toContain('status=wtg');
   });
 
-  it('préfixe les paramètres : deux listes d’une même page ne s’écrasent pas', async () => {
+  it('prefixes parameters: two lists on the same page do not overwrite each other', async () => {
     const user = userEvent.setup();
     mount('/projects/1', 'assets');
     await user.click(screen.getByRole('button', { name: 'filtrer' }));
     expect(screen.getByTestId('search').textContent).toContain('assets_status=wtg');
   });
 
-  it('ignore un préfixe étranger', () => {
+  it('ignores a foreign prefix', () => {
     mount('/projects/1?shots_status=wtg', 'assets');
     expect(screen.getByTestId('status').textContent).toBe('');
   });

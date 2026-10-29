@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Watermark spectateur (35.B) : tuile SVG répétée en fond (data-URI) — bien plus léger
- * que des centaines de nœuds DOM, et insensible au zoom du média en dessous.
+ * Viewer watermark (35.B): repeated SVG tile as background (data-URI) — much lighter
+ * than hundreds of DOM nodes, and unaffected by the zoom of the media beneath.
  */
 
 export function escapeXml(s: string): string {
@@ -15,7 +15,7 @@ export function escapeXml(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
-/** Tuile SVG du filigrane (texte incliné) encodée pour `background-image`. */
+/** SVG tile of the watermark (slanted text) encoded for `background-image`. */
 export function watermarkTileUrl(text: string): string {
   const svg =
     `<svg xmlns='http://www.w3.org/2000/svg' width='420' height='260'>` +

@@ -30,11 +30,11 @@ interface OidcView {
 
 type Draft = OidcView & { clientSecret: string };
 
-/** Le serveur refuse de couper le mot de passe tant que le SSO n'est pas complet. */
+/** The server refuses to cut the password while SSO is not complete. */
 const ssoReady = (d: Draft) =>
   d.enabled && !!d.clientId.trim() && (d.hasSecret || !!d.clientSecret) && !!d.publicUrl.trim();
 
-/** Section « Identité (SSO) » (36.A) : connexion OIDC (Google par défaut). */
+/** "Identity (SSO)" section (36.A): OIDC sign-in (Google by default). */
 export default function IdentityTab() {
   const t = useT();
   const qc = useQueryClient();
@@ -62,7 +62,7 @@ export default function IdentityTab() {
         buttonLabel: draft.buttonLabel,
         passwordLoginDisabled: draft.passwordLoginDisabled,
         logoKey: draft.logoKey,
-        // Write-only : envoyé seulement si ressaisi.
+        // Write-only: sent only if re-entered.
         ...(draft.clientSecret ? { clientSecret: draft.clientSecret } : {}),
         ...patch,
       });
@@ -155,11 +155,11 @@ export default function IdentityTab() {
             className="mt-1 accent-primary"
             checked={draft.passwordLoginDisabled}
             disabled={busy || (!draft.passwordLoginDisabled && !ssoReady(draft))}
-            // Pas d'optimisme ici : le serveur refuse de couper le mot de passe si le SSO
-            // n'est pas complet, et une case cochée à tort ferait croire l'inverse.
+            // No optimism here: the server refuses to cut the password if SSO
+            // is not complete, and a wrongly ticked box would suggest the opposite.
             onChange={(e) => void save({ passwordLoginDisabled: e.target.checked })}
           />
-          {/* Texte directement sous le span : la règle a11y ne le cherche pas plus profond. */}
+           {/* Text directly under the span: the a11y rule does not look any deeper. */}
           <span className="font-medium">
             {t('sso.passwordDisable')}
             <span className="block text-xs font-normal text-muted-foreground">
@@ -179,7 +179,7 @@ export default function IdentityTab() {
   );
 }
 
-/** Logo affiché dans le bouton SSO de la page de connexion (dépôt MinIO + clé en config). */
+/** Logo shown on the SSO button of the login page (MinIO upload + key in config). */
 function LogoPanel({
   draft,
   busy,

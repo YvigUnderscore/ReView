@@ -6,17 +6,17 @@ import { api } from '../../lib/apiClient';
 import { qk } from './query';
 
 /**
- * Création d'une tâche, chemin natif (B2).
+ * Creating a task, native path (B2).
  *
- * `POST /api/tasks` existait depuis l'origine et n'a aucune dépendance à ShotGrid, mais
- * aucun écran ne l'appelait : le seul geste de création passait par le site distant. Sur
- * un projet autonome, « Nouvelle version » sur un plan sans tâche ouvrait donc un
- * dialogue vide, sans aucun moyen d'en sortir.
+ * `POST /api/tasks` has existed since the start and has no dependency on ShotGrid, but
+ * no screen called it: the only creation gesture went through the remote site. On
+ * a standalone project, "New version" on a shot with no task therefore opened an
+ * empty dialog, with no way out.
  */
 
 export interface CreateTaskInput {
   name: string;
-  /** Clé du département — l'étape du pipe. */
+  /** Department key — the step of the pipe. */
   department?: string | null;
   shotId?: number;
   assetId?: number;

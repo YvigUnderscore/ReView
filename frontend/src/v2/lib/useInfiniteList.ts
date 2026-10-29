@@ -17,69 +17,66 @@ import {
 } from './infiniteList';
 
 /**
- * Liste paginée branchée sur TanStack Query.
+ * Paginated list wired to TanStack Query.
  *
- * La forme rendue reste celle d'une query « plate » (`data` = le tableau, `error`,
- * `isPending`) pour que les appelants qui ne pagineront jamais — un sélecteur de plans,
- * le rail latéral — n'aient rien à changer ; s'y ajoutent de quoi afficher un compteur
- * honnête (`loaded` / `total`) et de quoi demander la suite (`hasMore`, `loadMore`).
+ * The returned shape stays that of a flat query (`data` is the array, `error`,
+ * `isPending`), so callers that never paginate (a plan selector, the side rail)
+ * need no change. It adds an honest counter (`loaded` / `total`) and a way to
+ * ask for more (`hasMore`, `loadMore`).
  *
- * La clé de cache est celle d'avant (`qk.shots(projectId)`…) : toutes les invalidations
- * déjà écrites — socket, ShotGrid, menus de statut — continuent de rafraîchir la liste,
- * pages chargées comprises.
+ * The cache key is unchanged (`qk.shots(projectId)`...): existing invalidations
+ * (socket, ShotGrid, status menus) keep refreshing the list, loaded pages included.
  */
 
 export interface InfiniteList<T> {
-  /** Les pages chargées, bout à bout. `undefined` tant que rien n'est arrivé. */
+  /** Loaded pages, end to end. `undefined` until something has arrived. */
   data: T[] | undefined;
   error: Error | null;
   isPending: boolean;
   isLoading: boolean;
-  /** Lignes affichables. */
+  /** Displayable rows. */
   loaded: number;
-  /** Lignes existantes côté serveur, filtres serveur appliqués. */
+  /** Existing rows on the server, with server-side filters applied. */
   total: number;
   hasMore: boolean;
   isFetchingMore: boolean;
   loadMore: () => void;
   /**
-   * Plus rien ne viendra : toutes les pages annoncées sont arrivées — ou la liste s'est
-   * arrêtée sur une erreur. Un sélecteur en mode `all` s'en sert pour n'apparaître que
-   * complet : proposer la moitié des plans rattachables est un défaut bien pire que
-   * l'attente qu'il évite.
+   * Nothing more will come: all announced pages have arrived, or the list stopped on an
+   * error. A selector in `all` mode relies on this to appear only when complete: offering
+   * half of the attachable shots is far worse than the wait it avoids.
    */
   isComplete: boolean;
 }
 
 /**
- * Taille de page demandée quand l'appelant veut la liste entière.
+ * Page size requested when the caller wants the full list.
  *
- * Miroir de `MAX_PAGE_SIZE` (`backend/src/lib/pagination.ts`) : c'est le plafond qu'acceptent
- * les schémas Zod des routes de liste — un de plus et la requête part en 400.
+ * Mirror of `MAX_PAGE_SIZE` (`backend/src/lib/pagination.ts`): the cap accepted by the
+ * Zod schemas of list routes; one more and the request fails with a 400.
  */
 const EAGER_PAGE_SIZE = 500;
 
 /**
- * `PageParam` augmenté de la taille de page à redemander.
+ * `PageParam` augmented with the page size to request again.
  *
- * Elle n'est pas prise de l'option de l'appelant mais de ce que le serveur a **servi** pour
- * la page précédente : plusieurs écrans partagent une clé de cache (le rail latéral et la
- * page des projets, la modale d'assignation et l'onglet des plans) sans partager l'option
- * `all`. Une page 1 déjà en cache, servie par 100, suivie d'une page 2 demandée par 500,
- * sauterait les lignes 101 à 500 en pagination par numéro de page.
+ * It is not taken from the caller's option but from what the server **served** for the
+ * previous page: several screens share a cache key (the side rail and the projects page,
+ * the assign modal and the plans tab) without sharing the `all` option. A cached page 1
+ * served at 100, followed by a page 2 requested at 500, would skip rows 101 to 500 when paginating by page number.
  */
 type SizedPageParam = PageParam & { pageSize?: number };
 
 export interface InfiniteListOptions {
   enabled?: boolean;
-  /** Taille de page demandée ; sans elle, le défaut du serveur s'applique. */
+  /** Page size requested; without it, the server default applies. */
   pageSize?: number;
   staleTime?: number;
-  /** Garde la liste précédente à l'écran pendant qu'un filtre se recharge. */
+  /** Keeps the previous list on screen while a filter reloads. */
   keepPrevious?: boolean;
   /**
-   * Enchaîne toutes les pages sans attendre le défilement — pour un sélecteur, ou quand
-   * un filtre client est posé (filtrer cent lignes sur deux mille ment sur le résultat).
+   * Chains all pages without waiting for scrolling, for a selector or when a client-side
+   * filter is set (filtering a hundred rows out of two thousand lies about the result).
    */
   all?: boolean;
 }
@@ -92,10 +89,10 @@ export function useInfiniteList<T>(
   const { enabled = true, pageSize, staleTime, keepPrevious = false, all = false } = options;
 
   /**
-   * Les pages d'un `all` s'enchaînent en série — le curseur de la page N vient de la
-   * réponse N-1, aucune parallélisation n'est possible. Le seul levier est donc leur
-   * nombre : demandées par 500 au lieu des 100 servis par défaut, deux mille plans
-   * tiennent en quatre allers-retours au lieu de vingt.
+   * Pages of an `all` are chained in series: the cursor of page N comes from the N-1
+   * response, so no parallelization is possible. The only lever is therefore their size:
+   * requested at 500 instead of the default 100, two thousand plans take four round trips
+   * instead of twenty.
    */
   const askedPageSize = pageSize ?? (all ? EAGER_PAGE_SIZE : undefined);
 
@@ -107,7 +104,7 @@ export function useInfiniteList<T>(
     getNextPageParam: (last: Page<T>, pages: Page<T>[]): SizedPageParam | undefined => {
       const next = nextPageParam(last, pages);
       if (!next) return undefined;
-      // La taille se fige sur celle que le serveur vient de servir (cf. `SizedPageParam`).
+       // Size is frozen to what the server has just served (see `SizedPageParam`).
       const served = last.pageSize;
       return typeof served === 'number' && served > 0 ? { ...next, pageSize: served } : next;
     },
@@ -122,16 +119,15 @@ export function useInfiniteList<T>(
   const total = useMemo(() => (pages ? totalCount(pages) : 0), [pages]);
   const loadedPages = pages?.length ?? 0;
 
-  // Chargement enchaîné : une modale ne défile pas jusqu'à la sentinelle, et un filtre
-  // posé sur une liste tronquée répondrait « aucun résultat » pour un plan qui existe.
+  // Chained loading: a modal does not scroll to the sentinel, and a filter set on a
+  // truncated list would answer "no results" for a shot that exists.
   //
-  // `loadedPages` fait partie des dépendances, et ce n'est pas une décoration : quand une
-  // réponse arrive dans le même tick que la demande — serveur local, cache HTTP chaud,
-  // page déjà en mémoire — React ne commit aucun rendu intermédiaire à `isFetchingMore`
-  // vrai. Les autres dépendances reprennent alors exactement la même valeur qu'au tour
-  // précédent, l'effet est sauté, et l'enchaînement s'arrête au milieu de la liste : le
-  // sélecteur se croit complet avec deux pages sur vingt. Le compte des pages, lui, change
-  // à chaque arrivée.
+  // `loadedPages` is part of the dependencies, and not a decoration: when a response
+  // arrives in the same tick as the request (local server, warm HTTP cache, page already
+  // in memory), React commits no intermediate render with `isFetchingMore` true. The other
+  // dependencies then keep exactly the same value as the previous pass, the effect is skipped,
+  // and the chain stops mid-list: the selector believes it is complete with two pages out of twenty.
+  // The page count, on the other hand, changes on each arrival.
   useEffect(() => {
     if (
       shouldAutoLoad({
@@ -158,11 +154,10 @@ export function useInfiniteList<T>(
     hasMore: hasNextPage,
     isFetchingMore: isFetchingNextPage,
     loadMore,
-    // Deux réserves derrière ce booléen. Tant que rien n'est arrivé, `hasNextPage` vaut
-    // faux faute de page à prolonger : « complet » exige donc une première page. Et une
-    // page en échec arrête l'enchaînement (`shouldAutoLoad`) sans faire tomber
-    // `hasNextPage` : sans le premier terme, un sélecteur gardé fermé tant que la liste
-    // n'est pas complète resterait en squelette pour toujours après un 500.
+    // Two safeguards behind this boolean. While nothing has arrived, `hasNextPage` is false
+    // for lack of a page to extend: "complete" therefore requires a first page. And a failed
+    // page stops the chain (`shouldAutoLoad`) without making `hasNextPage` fall: without the
+    // first term, a selector kept closed until the list is complete would stay a skeleton forever after a 500.
     isComplete: isError || (items !== undefined && !hasNextPage),
   };
 }

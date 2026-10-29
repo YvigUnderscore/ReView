@@ -18,62 +18,61 @@ import { Textarea } from '../components/ui/textarea';
 import { useT } from '../i18n';
 
 /**
- * « Créer une tâche depuis ce retour » — en passant par un nommage (Phase 50).
+ * "Create a task from this feedback": via naming (Phase 50).
  *
- * Le nom était d'abord imposé : le texte du retour, tronqué. C'est ce nom que la production
- * relit ensuite sur le kanban, dans le pipe et — sur un projet relié — sur le site ShotGrid,
- * où « le raccord saute de deux frames, voir la tête de Léa » ne veut plus rien dire.
+ * The name used to be imposed: the feedback text, truncated. This is the name that production
+ * later reads on the kanban, in the pipe and, on a linked project, on the ShotGrid site,
+ * where "the match cut jumps two frames, see Léa's head" no longer means anything.
  *
- * Le proposer en point de départ ne réglait rien (lot 13) : les deux champs étaient à
- * l'envers. Le retour n'est pas un titre, c'est la **consigne** — ce qu'il y a à faire, et il
- * doit y aller en entier, pas coupé à quatre-vingts signes. Le nom, lui, est justement ce
- * qu'on attend de la personne : il part vide, prend le focus, et rien ne s'envoie avant
- * qu'il soit écrit.
+ * Offering it as a starting point fixed nothing (batch 13): the two fields were the
+ * wrong way round. The feedback is not a title, it is the **instruction**: what is to be done, and it
+ * must go there in full, not cut at eighty characters. The name, on the other hand, is precisely
+ * what is expected from the person: it starts empty, takes the focus, and nothing is sent until
+ * it is written.
  *
- * Le dialogue vit ici plutôt que dans le fil de commentaires : le fil ne fait que
- * l'ouvrir, et la création (avec ses droits, son étape et son statut) est une affaire de
- * tâches.
+ * The dialog lives here rather than in the comment thread: the thread only opens
+ * it, and creation (with its rights, step and status) is a task matter.
  */
 
-/** Ce que le fil connaît du retour à transformer. */
+/** What the thread knows about the feedback to convert. */
 export interface CommentTaskSource {
   id: number;
   content: string;
 }
 
-/** Longueur maximale d'une consigne, telle que le serveur la borne (`lib/taskPayload.ts`). */
+/** Maximum length of an instruction, as the server bounds it (`lib/taskPayload.ts`). */
 const DESCRIPTION_MAX = 4000;
 
-/** Balises dont la fermeture termine une ligne à l'écran. */
+/** Tags whose closing ends a line on screen. */
 const BLOCS = /<\/(?:p|div|li|tr|h[1-6]|blockquote|pre)\s*>/gi;
 
 /**
- * Le retour tel qu'il s'écrit dans une consigne de tâche.
+ * Feedback as it is written into a task instruction.
  *
- * Le corps d'un commentaire est du HTML ; une consigne est du texte simple, rendu en
- * `whitespace-pre-wrap`. Les frontières de blocs deviennent donc des sauts de ligne — sans
- * quoi deux paragraphes se colleraient en une phrase — et c'est le parseur du navigateur qui
- * relit le document plutôt qu'une expression régulière : lui seul rend « &amp; » à l'endroit
- * et ne laisse pas filer une balise en toutes lettres.
+ * A comment body is HTML; an instruction is plain text, rendered with
+ * `whitespace-pre-wrap`. Block boundaries therefore become line breaks, otherwise two
+ * paragraphs would stick together into one sentence. The browser's parser, not a regular
+ * expression, reads the document: only it correctly decodes "&amp;" in place
+ * and does not let a tag through spelled out.
  *
- * Un retour peut faire dix mille signes là où la consigne s'arrête à quatre mille : le texte
- * est borné ici, au moment où il est encore lisible et modifiable, plutôt que refusé par
- * le serveur après l'envoi.
+ * Feedback can run to ten thousand characters where the instruction stops at four thousand: the text
+ * is bounded here, while it is still readable and editable, rather than rejected by
+ * the server after sending.
  */
 export function noteAsBrief(html: string): string {
   const espace = html.replace(/<br\s*\/?>/gi, '\n').replace(BLOCS, '\n');
   const texte = new DOMParser().parseFromString(espace, 'text/html').body.textContent ?? '';
   return texte
-    .replace(/[^\S\n]+/g, ' ') // espaces repliés, sauts de ligne préservés
-    .replace(/ *\n\s*/g, '\n') // un seul saut par frontière de bloc, quelle que soit la mise en forme du HTML
+     .replace(/[^\S\n]+/g, ' ') // collapse runs of spaces, keep line breaks
+     .replace(/ *\n\s*/g, '\n') // a single break per block boundary, whatever the HTML formatting
     .trim()
     .slice(0, DESCRIPTION_MAX);
 }
 
 export function useCommentTaskDialog(): {
-  /** Ouvre le dialogue pour ce retour. */
+  /** Opens the dialog for this feedback. */
   open: (comment: CommentTaskSource) => void;
-  /** À rendre une fois dans l'écran appelant. */
+  /** To be rendered once, in the calling screen. */
   dialog: ReactNode;
 } {
   const t = useT();
@@ -85,10 +84,10 @@ export function useCommentTaskDialog(): {
 
   const open = (comment: CommentTaskSource) => {
     setSource(comment);
-    // Le nom est ce qu'on vient chercher : il reste vide, et c'est lui qui prend le focus.
+    // The name is what we came for: it stays empty, and it is what takes the focus.
     setName('');
-    // La consigne, elle, est déjà écrite — c'est le retour lui-même. Modifiable, comme le
-    // reste : personne n'est obligé de garder la phrase telle qu'elle a été dictée.
+    // The instruction, however, is already written: it is the feedback itself. Editable, like the
+    // rest: nobody is obliged to keep the sentence as it was dictated.
     setDescription(noteAsBrief(comment.content));
   };
 
@@ -115,8 +114,8 @@ export function useCommentTaskDialog(): {
         },
       });
     } catch (err) {
-      // L'erreur la plus attendue est le nom déjà pris à cette étape : le dialogue reste
-      // ouvert, avec le nom saisi, pour qu'il suffise d'en changer.
+      // The most expected error is a name already taken at this step: the dialog stays
+      // open, with the name entered, so that changing it is enough.
       setBusy(false);
       toast.error(err instanceof Error ? err.message : t('version.createFailed'));
     }
@@ -143,8 +142,8 @@ export function useCommentTaskDialog(): {
         >
           <label className="block space-y-1">
             <span className="text-xs font-medium text-muted-foreground">{t('task.nameLabel')}</span>
-            {/* Le champ dit lui-même qu'il est attendu — `required` et son invite — plutôt
-                qu'un message d'erreur après un envoi qui, de toute façon, ne part pas. */}
+            {/* The field says for itself that it is required (`required` and its prompt), rather
+                than an error message after a submission that does not go through anyway. */}
             <input
               autoFocus
               required

@@ -13,15 +13,15 @@ import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Le logo du studio — **un seul**, et un seul endroit pour le déposer.
+ * The studio logo — **a single one**, and a single place to upload it.
  *
- * Il se réglait dans « Diffusion », alors que la page de connexion l'affiche aussi et que
- * les slates et burn-ins le reprennent : trois écrans montraient la même marque, et celui
- * qui la portait n'était pas celui qu'on ouvrait pour la changer. Il vit désormais avec le
- * nom et la couleur du studio ; les autres écrans y renvoient.
+ * It used to be set in "Distribution", although the login page shows it too and
+ * the slates and burn-ins reuse it: three screens showed the same brand, and the one
+ * holding it was not the one one opened to change it. It now lives with the
+ * studio's name and colour; the other screens point to it.
  *
- * Un dépôt de fichier s'enregistre de lui-même : c'est le seul geste de la page qui ne
- * passe pas par sa barre d'action.
+ * A file upload saves on its own: it is the only gesture on the page that does not
+ * go through its action bar.
  */
 export default function StudioLogoPanel() {
   const t = useT();

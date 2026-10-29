@@ -9,12 +9,12 @@ import SourceNotice from '../../components/SourceNotice';
 import { backdropStyle, overlayStyle } from './loginStyles';
 
 /**
- * Écran d'authentification scindé (10.B7) : panneau identité à gauche (logo, tagline,
- * dégradé subtil), formulaire à droite. Desktop-first ; le panneau gauche disparaît
- * sous `lg` pour ne garder que le formulaire centré.
+ * Split authentication screen (10.B7): identity panel on the left (logo, tagline,
+ * subtle gradient), form on the right. Desktop-first; the left panel disappears
+ * below `lg` to keep only the centred form.
  *
- * L'habillage (image de fond, voile, flou, disposition, accroche) est réglé par l'admin
- * dans Admin → Page de connexion et arrive avec le branding public.
+ * The styling (background image, veil, blur, layout, tagline) is set by the admin
+ * in Admin → Login page and comes with the public branding.
  */
 export function AuthLayout({
   title,
@@ -26,7 +26,7 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   const t = useT();
-  // Thème studio (42.B — №101) : applique l'accent et affiche le logo du studio s'il existe.
+  // Studio theme (42.B — №101): applies the accent and shows the studio logo if one exists.
   const { data: branding } = useBranding();
   const login = branding?.login ?? DEFAULT_LOGIN_APPEARANCE;
   const tagline = login.tagline || t('auth.tagline');
@@ -39,15 +39,15 @@ export function AuthLayout({
   ) : null;
 
   /**
-   * Apparition du formulaire en CSS (F3) : transcription littérale de `fadeInUp`
-   * (opacité 0→1, 8 px de montée, 200 ms, courbe `EASE_OUT`) — l'écran de connexion
-   * n'avait pas d'autre animation, et payait pour elle 38,5 ko gzip de framer-motion.
+   * Form entrance in CSS (F3): literal transcription of `fadeInUp`
+   * (opacity 0→1, 8 px rise, 200 ms, `EASE_OUT` curve) — the login screen
+   * had no other animation, and paid 38.5 KB gzip of framer-motion for it.
    */
   const appear =
     'animate-in fade-in slide-in-from-bottom-2 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:animate-none';
 
   if (login.layout === 'centered') {
-    // Formulaire centré sur un fond pleine page : la mise en page qui met l'image en avant.
+    // Form centred on a full-page background: the layout that puts the image forward.
     return (
       <div className="relative grid min-h-screen place-items-center bg-background p-6 text-foreground">
         <Backdrop login={login} />
@@ -64,7 +64,7 @@ export function AuthLayout({
           </div>
           {children}
         </div>
-        {/* AGPL §13 : offre de source visible avant même toute authentification. */}
+         {/* AGPL §13: source offer visible even before any authentication. */}
         <SourceNotice className="absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center" />
       </div>
     );
@@ -92,14 +92,14 @@ export function AuthLayout({
           <LanguagePicker className="py-1 text-xs" />
         </div>
         <div className={`w-full max-w-sm ${appear}`}>{children}</div>
-        {/* AGPL §13 : offre de source visible avant même toute authentification. */}
+         {/* AGPL §13: source offer visible even before any authentication. */}
         <SourceNotice className="absolute bottom-4 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center" />
       </main>
     </div>
   );
 }
 
-/** Image de fond + voile, en couches absolues sous le contenu. */
+/** Background image + veil, in absolute layers under the content. */
 export function Backdrop({ login }: { login: LoginAppearance }) {
   const bg = backdropStyle(login);
   if (!bg) return null;

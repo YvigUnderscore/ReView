@@ -3,7 +3,7 @@
 
 import type { MessageKey } from '../../i18n';
 
-/** Helpers purs du journal de livraison des webhooks (statuts, extraits, portée) — testés. */
+/** Pure helpers for the webhook delivery log (statuses, excerpts, scope) — tested. */
 
 export type WebhookDeliveryStatus = 'PENDING' | 'DELIVERED' | 'FAILED';
 
@@ -27,7 +27,7 @@ export interface WebhookScopeRow {
   failureStreak: number;
 }
 
-/** Doit rester aligné sur `WebhookService.FAILURE_STREAK_LIMIT` (backend). */
+/** Must stay aligned with `WebhookService.FAILURE_STREAK_LIMIT` (backend). */
 export const FAILURE_STREAK_LIMIT = 5;
 
 const STATUS_KEYS: Record<WebhookDeliveryStatus, MessageKey> = {
@@ -46,14 +46,14 @@ export const deliveryStatusKey = (status: WebhookDeliveryStatus): MessageKey => 
 export const deliveryTone = (status: WebhookDeliveryStatus) => STATUS_TONES[status];
 
 /**
- * Une livraison ne se rejoue que si elle a échoué. Rejouer une remise crée un doublon chez
- * le consommateur ; rejouer une livraison encore en cours de reprise en crée deux.
+ * A delivery is only replayed if it failed. Replaying a delivery that succeeded creates a duplicate on
+ * the consumer's side; replaying one still being retried creates two.
  */
 export const canReplay = (row: WebhookDeliveryRow): boolean => row.status === 'FAILED';
 
 /**
- * Ce qu'on montre du corps de réponse : une ligne, sans blancs superflus. La réponse est
- * déjà tronquée côté serveur ; ici il s'agit seulement de tenir sur une ligne de tableau.
+ * What we show of the response body: one line, without superfluous whitespace. The response is
+ * already truncated server-side; here it only has to fit on one table line.
  */
 export function responseExcerpt(row: WebhookDeliveryRow, max = 120): string {
   const raw = (row.error ?? row.responseBody ?? '').replace(/\s+/g, ' ').trim();
@@ -62,13 +62,13 @@ export function responseExcerpt(row: WebhookDeliveryRow, max = 120): string {
 }
 
 /**
- * Webhook éteint par le serveur après des pertes répétées. On le distingue d'un webhook
- * simplement décoché : le premier demande de réparer l'endpoint, le second pas.
+ * Webhook switched off by the server after repeated losses. It is told apart from a
+ * webhook simply unticked: the former asks for the endpoint to be repaired, the latter does not.
  */
 export const isSilencedByFailures = (hook: WebhookScopeRow): boolean =>
   !hook.active && hook.failureStreak >= FAILURE_STREAK_LIMIT;
 
-/** Nom de projet d'un webhook, ou `null` pour la portée « tout le studio ». */
+/** Project name of a webhook, or `null` for the "whole studio" scope. */
 export function scopeName(
   hook: Pick<WebhookScopeRow, 'projectId'>,
   projects: ReadonlyArray<{ id: number; name: string }>,

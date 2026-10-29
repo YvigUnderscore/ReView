@@ -18,7 +18,7 @@ import type { AdminProjectDetail } from '../../types/api';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
-/** Fiche d'administration d'un projet : membres, réglages résolus, hiérarchie, stats. */
+/** Admin sheet of a project: members, resolved settings, hierarchy, stats. */
 export default function ProjectAdminDetailTab() {
   const t = useT();
   const { id } = useParams();

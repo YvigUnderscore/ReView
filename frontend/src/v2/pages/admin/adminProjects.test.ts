@@ -22,7 +22,7 @@ describe('adminProjects — filterProjects', () => {
     row({ id: 1, name: 'Film Alpha', slug: 'film-alpha' }),
     row({ id: 2, name: 'Pub Beta', slug: 'pub-beta', status: 'ARCHIVED' }),
   ];
-  it('filtre par statut et par texte sur nom/slug', () => {
+  it('filters by status and by text on name/slug', () => {
     expect(filterProjects(all, '', 'ALL')).toHaveLength(2);
     expect(filterProjects(all, '', 'ARCHIVED').map((p) => p.id)).toEqual([2]);
     expect(filterProjects(all, 'ALPHA', 'ALL').map((p) => p.id)).toEqual([1]);
@@ -32,7 +32,7 @@ describe('adminProjects — filterProjects', () => {
 });
 
 describe('adminProjects — quotaPct', () => {
-  it('calcule le pourcentage borné, null sans quota', () => {
+  it('computes the clamped percentage, null without quota', () => {
     expect(quotaPct(50, 100)).toBe(50);
     expect(quotaPct(200, 100)).toBe(100);
     expect(quotaPct(0, 100)).toBe(0);
@@ -42,7 +42,7 @@ describe('adminProjects — quotaPct', () => {
 });
 
 describe('adminProjects — pipelineLabel', () => {
-  it('formate résolution et framerate', () => {
+  it('formats resolution and framerate', () => {
     expect(pipelineLabel({ resolution: { width: 1920, height: 1080 }, framerate: 24 })).toBe(
       '1920×1080 · 24 fps',
     );

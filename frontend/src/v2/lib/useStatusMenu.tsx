@@ -21,15 +21,15 @@ import {
 } from './statusMenu';
 
 /**
- * Sous-menu « Statut » pour n'importe quel menu contextuel.
+ * "Status" submenu for any context menu.
  *
- * Poser un statut demandait d'ouvrir la fiche de l'entité puis son panneau de réglages :
- * le geste le plus fréquent de la production était le plus long. Il tient maintenant en
- * un clic droit, sur une carte de plan, une ligne de séquence, une carte de kanban ou
- * une page d'entité — même vocabulaire partout, puisqu'il vient du référentiel du projet.
+ * Setting a status used to require opening the entity's page and then its settings panel:
+ * the most frequent gesture in production was the longest. It now fits in
+ * a right click, on a shot card, a sequence row, a kanban card or
+ * an entity page: same vocabulary everywhere, since it comes from the project's reference list.
  *
- * Les trois périmètres partagent une seule route (`PATCH /api/{scope}s/:id`), qui valide
- * l'appartenance du statut au projet et se charge de l'envoi vers ShotGrid.
+ * All three scopes share a single route (`PATCH /api/{scope}s/:id`), which validates that the
+ * status belongs to the project and takes care of sending to ShotGrid.
  */
 
 const ENDPOINT: Record<StatusScope, string> = {
@@ -39,19 +39,19 @@ const ENDPOINT: Record<StatusScope, string> = {
   asset: '/api/assets',
 };
 
-/** Ce qu'un appelant peut ajouter à l'écriture — au-delà du statut lui-même. */
+/** What a caller can add to the write, beyond the status itself. */
 export interface ApplyStatusOptions {
-  /** Écriture optimiste dans le cache de l'appelant ; rend le rollback. */
+  /** Optimistic write into the caller's cache; returns the rollback. */
   onOptimistic?: (choice: StatusChoice | null) => () => void;
   /**
-   * Valeur d'AVANT. Connue, elle fait apparaître « Annuler » dans le toast de confirmation.
+   * Value from BEFORE. When known, it shows "Undo" in the confirmation toast.
    *
-   * C'est un cran, jamais un historique : changer un statut part au serveur et peut être
-   * arbitré par ShotGrid derrière. Ctrl+Z laisserait croire à une pile locale qu'on ne tient
-   * pas ; le toast, lui, ne promet que le coup qu'on vient de faire, et disparaît avec lui.
+   * This is one step, never a history: changing a status goes to the server and may
+   * be arbitrated by ShotGrid behind it. Ctrl+Z would suggest a local stack we do not hold;
+   * the toast, for its part, only promises the move just made, and disappears with it.
    */
   undoTo?: string;
-  /** Rafraîchissement propre à l'appelant (la grille pagine par curseur : aucun cache partagé). */
+  /** Caller-specific refresh (the grid paginates by cursor: no shared cache). */
   after?: () => Promise<unknown>;
 }
 
@@ -63,10 +63,10 @@ export function useStatusMenu(projectId: number, scope: StatusScope) {
   const choices = statusChoices(statuses, scope, t);
 
   /**
-   * L'écriture nue : optimiste, et qui **laisse remonter** son échec.
+   * The bare write: optimistic, and it **lets its failure bubble up**.
    *
-   * Séparée d'`apply` parce que l'annulation la rejoue : un échec d'annulation doit parvenir
-   * au toast qui l'a proposée, pas se transformer en un second message de succès.
+   * Separated from `apply` because undo replays it: an undo failure must reach
+   * the toast that offered it, not turn into a second success message.
    */
   const write = async (id: number, value: string, options: ApplyStatusOptions): Promise<void> => {
     const body = bodyForChoice(choices, value);
@@ -79,8 +79,8 @@ export function useStatusMenu(projectId: number, scope: StatusScope) {
       rollback?.();
       throw err;
     } finally {
-      // Le serveur fait foi : il a pu déduire un `status` de famille différente, ou
-      // refuser au profit d'un arbitrage ShotGrid.
+      // The server is authoritative: it may have derived a `status` from a different family, or
+      // refused in favour of ShotGrid arbitration.
       void qc.invalidateQueries({ queryKey: qk.projectBoard(projectId) });
       if (scope === 'task') void qc.invalidateQueries({ queryKey: qk.task(id) });
       if (scope === 'shot') {
@@ -96,12 +96,12 @@ export function useStatusMenu(projectId: number, scope: StatusScope) {
   };
 
   /**
-   * Applique le choix, en montrant le résultat avant la réponse du serveur, puis en confirmant
-   * — avec « Annuler » quand la valeur d'avant est connue (`undoTo`).
+   * Applies the choice, showing the result before the server's reply, then confirming
+   * — with "Undo" when the value from before is known (`undoTo`).
    *
-   * `onOptimistic` est fourni par l'appelant : les caches n'ont pas tous la même forme
-   * (la page de plan garde le payload `{ shot }`, la liste garde un tableau), et une
-   * écriture « au jugé » casserait l'un ou l'autre en silence.
+   * `onOptimistic` is provided by the caller: caches do not all have the same shape
+   * (the shot page keeps the `{ shot }` payload, the list keeps an array), and a
+   * guessed write would silently break one or the other.
    */
   const apply = async (id: number, value: string, options: ApplyStatusOptions = {}) => {
     const choice = choices.find((c) => c.value === value) ?? null;
@@ -124,9 +124,9 @@ export function useStatusMenu(projectId: number, scope: StatusScope) {
   };
 
   /**
-   * L'entrée de menu. `allowClear` est faux quand le projet est relié à ShotGrid : le
-   * site ne sait pas recevoir un statut vide, et la synchronisation suivante ramènerait
-   * l'ancienne valeur — proposer le geste reviendrait à promettre ce qu'on ne tient pas.
+   * The menu entry. `allowClear` is false when the project is linked to ShotGrid: the
+   * site cannot receive an empty status, and the next sync would bring back the
+   * old value — offering the gesture would promise what we cannot keep.
    */
   const entry = (
     entity: StatusTarget,
@@ -166,12 +166,12 @@ export function useStatusMenu(projectId: number, scope: StatusScope) {
           kind: 'radiogroup',
           id: 'status-group',
           value,
-          // Radix rappelle le gestionnaire même quand on re-clique l'item déjà coché :
-          // sans cette sortie, chaque ouverture suivie d'un clic repartirait vers ShotGrid.
+          // Radix calls the handler even when the already-checked item is clicked again:
+          // without this exit, every opening followed by a click would go back to ShotGrid.
           onValueChange: (next) => {
             if (next === value) return;
-            // `value` est l'état d'avant, lu au moment où le menu s'est ouvert : c'est
-            // exactement ce que « Annuler » doit remettre.
+            // `value` is the state from before, read when the menu opened: this is
+            // exactly what "Undo" must restore.
             void apply(entity.id, next, { onOptimistic: options.onOptimistic, undoTo: value });
           },
           items,
@@ -190,10 +190,10 @@ export interface StatusTarget {
 }
 
 /**
- * Pastille de la couleur du référentiel — le statut se reconnaît d'abord à sa teinte.
+ * Colour swatch of the reference list: a status is first recognised by its hue.
  *
- * Un fragment produit à la demande, pas un composant : ce module exporte un hook, et y
- * déclarer un composant priverait tout le fichier du rechargement à chaud.
+ * A fragment produced on demand, not a component: this module exports a hook, and
+ * declaring a component there would deprive the whole file of hot reload.
  */
 function statusDot(color: string | null) {
   if (!color) return <span className="size-3 shrink-0" />;

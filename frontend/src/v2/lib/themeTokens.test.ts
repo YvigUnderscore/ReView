@@ -7,25 +7,25 @@ import { describe, expect, it } from 'vitest';
 import { AA_CONTRAST, contrastRatio, hslToRgb, mix, type Rgb } from './contrast';
 
 /**
- * Garde-fou de contraste sur le thème lui-même (A2).
+ * Contrast guard on the theme itself (A2).
  *
- * Les tokens vivent dans index.css, hors de portée de TypeScript : sans ce test, une
- * retouche de palette peut ramener un `--warning` à 2,7:1 sans que rien ne le signale.
- * On lit donc la feuille et on recalcule les ratios réellement rendus à l'écran.
+ * The tokens live in index.css, out of TypeScript's reach: without this test, a
+ * palette tweak can bring a `--warning` down to 2.7:1 without anything flagging it.
+ * So we read the stylesheet and recompute the ratios actually rendered on screen.
  */
 
-// Vitest s'exécute depuis `frontend/` (cf. vitest.config.ts).
+// Vitest runs from `frontend/` (see vitest.config.ts).
 const CSS = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
 
-/** Tokens de statut, tels qu'ils sont posés sur du texte (`text-X`) et sur `bg-X/15`. */
+/** Status tokens, as applied to text (`text-X`) and to `bg-X/15`. */
 const STATUS_TOKENS = ['primary', 'success', 'warning', 'info', 'destructive', 'accent-2'] as const;
 
-/** Alpha du fond teinté des badges (`components/ui/badge.tsx`). */
+/** Alpha of the tinted background of badges (`components/ui/badge.tsx`). */
 const BADGE_ALPHA = 0.15;
 
 function blockOf(selector: string): string {
   const start = CSS.indexOf(selector);
-  expect(start, `bloc ${selector} introuvable dans index.css`).toBeGreaterThan(-1);
+  expect(start, `block ${selector} not found in index.css`).toBeGreaterThan(-1);
   const open = CSS.indexOf('{', start);
   const end = CSS.indexOf('\n  }', open);
   return CSS.slice(open, end);
@@ -43,28 +43,28 @@ const THEMES = [
   { name: 'sombre', block: blockOf('.dark {') },
 ];
 
-describe.each(THEMES)('tokens de statut — thème $name', ({ block }) => {
+describe.each(THEMES)('status tokens — theme $name', ({ block }) => {
   const background = tokenRgb(block, 'background');
   const card = tokenRgb(block, 'card');
 
-  it.each(STATUS_TOKENS)('--%s tient AA sur le fond de page', (token) => {
+  it.each(STATUS_TOKENS)('--%s meets AA on the page background', (token) => {
     expect(contrastRatio(tokenRgb(block, token), background)).toBeGreaterThanOrEqual(AA_CONTRAST);
   });
 
-  it.each(STATUS_TOKENS)('--%s tient AA en badge posé sur une carte', (token) => {
+  it.each(STATUS_TOKENS)('--%s meets AA as a badge on a card', (token) => {
     const color = tokenRgb(block, token);
-    // Pire cas : le badge `bg-X/15` posé sur --card, la surface la plus proche de la teinte.
+    // Worst case: the `bg-X/15` badge placed on --card, the surface closest to the tint.
     expect(contrastRatio(color, mix(color, card, BADGE_ALPHA))).toBeGreaterThanOrEqual(AA_CONTRAST);
   });
 
-  it('le texte principal et le texte atténué tiennent AA', () => {
+  it('primary and muted text both meet AA', () => {
     expect(contrastRatio(tokenRgb(block, 'foreground'), background)).toBeGreaterThanOrEqual(AA_CONTRAST);
     expect(contrastRatio(tokenRgb(block, 'muted-foreground'), background)).toBeGreaterThanOrEqual(
       AA_CONTRAST,
     );
   });
 
-  // Aplats colorés : `bg-X text-X-foreground` (boutons, badges pleins).
+  // Solid fills: `bg-X text-X-foreground` (buttons, solid badges).
   it.each(['primary', 'destructive', 'accent-2', 'secondary', 'card'])(
     'l’aplat --%s reste lisible sous son encre',
     (token) => {

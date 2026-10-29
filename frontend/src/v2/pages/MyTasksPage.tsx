@@ -15,17 +15,17 @@ import type { MyTaskItem } from './mywork/myWorkTypes';
 import { useT } from '../i18n';
 
 /**
- * « Mes tâches », tous projets confondus — la page que déplient les deux compteurs
- * personnels de l'Accueil.
+ * "My tasks", across all projects — the page that the two personal counters
+ * on the Home page expand into.
  *
- * Ils pointaient l'ancre `#my-tasks` : elle disparaissait avec le bloc « mes tâches » dès
- * qu'on le retirait de son accueil, et le clic ne faisait plus rien. Une page a l'avantage
- * d'exister quelle que soit la disposition de l'accueil de chacun — et de pouvoir être
- * mise en favori, partagée, rouverte.
+ * They pointed to the `#my-tasks` anchor: it disappeared along with the "my tasks" block as soon
+ * as it was removed from one's home page, and the click then did nothing. A page has the advantage
+ * of existing whatever each person's home layout — and of being
+ * bookmarkable, shareable, reopenable.
  *
- * Le périmètre est celui du compteur (`lib/homeScope`) : projet accessible, hors corbeille,
- * parent non masqué. Le filtre vit dans l'URL, pas dans un état local : c'est ce qui permet
- * à la carte « my retakes » d'ouvrir directement sa vue.
+ * The scope is that of the counter (`lib/homeScope`): accessible project, outside the trash,
+ * parent not hidden. The filter lives in the URL, not in local state: this is what lets the
+ * "my retakes" card open its view directly.
  */
 export default function MyTasksPage() {
   const t = useT();

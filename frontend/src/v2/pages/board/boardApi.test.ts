@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 describe('loadBoard', () => {
-  it('rapatrie les images stockées et rend la scène telle qu’Excalidraw l’attend', async () => {
+  it('fetches back the stored images and returns the scene as Excalidraw expects it', async () => {
     vi.mocked(api.get).mockResolvedValue({
       board: {
         document: {
@@ -40,12 +40,12 @@ describe('loadBoard', () => {
 
     const loaded = await loadBoard('/api/boards/project/1');
     expect(loaded.updatedAt).toBe('2026-08-22T10:00:00.000Z');
-    // Calculé avant réhydratation : le fichier ne doit pas repartir vers MinIO à la sauvegarde.
+    // Computed before rehydration: the file must not be re-uploaded to MinIO on save.
     expect([...loaded.storedIds]).toEqual(['f1']);
     expect(loaded.files.f1?.dataURL).toMatch(/^data:image\/png;base64,/);
   });
 
-  it('ouvre un board legacy dont les images sont restées en base64', async () => {
+  it('opens a legacy board whose images are still base64', async () => {
     const files = { f1: { id: 'f1', mimeType: 'image/png', dataURL: 'data:image/png;base64,aGk=' } };
     vi.mocked(api.get).mockResolvedValue({ board: { document: { elements: [], files }, updatedAt: null } });
     const loaded = await loadBoard('/api/boards/project/1');
@@ -57,14 +57,14 @@ describe('loadBoard', () => {
 describe('saveBoard', () => {
   const body = { document: { elements: [], files: {} }, baseUpdatedAt: null };
 
-  it('rend le nouvel horodatage — base de la sauvegarde suivante', async () => {
+  it('returns the new timestamp — basis of the next save', async () => {
     globalThis.fetch = vi
       .fn()
       .mockResolvedValue(jsonResponse(200, { board: { updatedAt: '2026-08-22T11:00:00.000Z' } })) as never;
     await expect(saveBoard('/api/boards/project/1', body)).resolves.toBe('2026-08-22T11:00:00.000Z');
   });
 
-  it('signale le conflit d’édition avec l’horodatage du serveur', async () => {
+  it('reports the editing conflict with the server timestamp', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       jsonResponse(409, {
         error: 'Board changed',
@@ -77,14 +77,14 @@ describe('saveBoard', () => {
     expect((err as BoardConflictError).serverUpdatedAt).toBe('2026-08-22T12:00:00.000Z');
   });
 
-  it('repasse par l’apiClient sur 401 : le renouvellement de jeton reste transparent', async () => {
+  it('goes back through the apiClient on 401: token renewal stays transparent', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(401, { error: 'expired' })) as never;
     vi.mocked(api.put).mockResolvedValue({ board: { updatedAt: '2026-08-22T13:00:00.000Z' } });
     await expect(saveBoard('/api/boards/project/1', body)).resolves.toBe('2026-08-22T13:00:00.000Z');
     expect(api.put).toHaveBeenCalledWith('/api/boards/project/1', body);
   });
 
-  it('remonte le message du serveur sur les autres erreurs', async () => {
+  it('surfaces the server message for other errors', async () => {
     globalThis.fetch = vi
       .fn()
       .mockResolvedValue(jsonResponse(400, { error: 'Board document too large' })) as never;
@@ -93,7 +93,7 @@ describe('saveBoard', () => {
 });
 
 describe('presignBoardFiles', () => {
-  it('découpe la demande en lots de 20 — le plafond du serveur', async () => {
+  it('splits the request into batches of 20 — the server cap', async () => {
     vi.mocked(api.post).mockImplementation((_path: string, payload?: unknown) =>
       Promise.resolve({
         uploads: (payload as { files: { id: string }[] }).files.map((f) => ({
@@ -112,7 +112,7 @@ describe('presignBoardFiles', () => {
 describe('persistBoard', () => {
   const heavy = `data:image/png;base64,${'A'.repeat(MAX_INLINE_DATAURL)}`;
 
-  it('dépose l’image dans MinIO puis n’envoie que sa clé dans le document', async () => {
+  it('uploads the image to MinIO then only sends its key in the document', async () => {
     vi.mocked(api.post).mockResolvedValue({ uploads: [{ id: 'big', url: 'https://minio/put/big' }] });
     const put = vi.fn().mockResolvedValue({ ok: true });
     globalThis.fetch = vi.fn((url: string, init?: RequestInit) => {
@@ -134,7 +134,7 @@ describe('persistBoard', () => {
     expect(JSON.stringify(saved)).not.toContain('AAAA');
   });
 
-  it('ne redépose pas une image déjà stockée', async () => {
+  it('does not re-upload an already stored image', async () => {
     globalThis.fetch = vi
       .fn()
       .mockResolvedValue(jsonResponse(200, { board: { updatedAt: '2026-08-22T11:00:00.000Z' } })) as never;

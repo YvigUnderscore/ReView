@@ -15,7 +15,7 @@ import SettingsPointer from './SettingsPointer';
 import type { Role, User } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Création / édition d'un utilisateur (dialog). */
+/** Create / edit a user (dialog). */
 export default function UserModal({
   title,
   user,
@@ -30,9 +30,9 @@ export default function UserModal({
   const t = useT();
   const isEdit = !!user;
   /**
-   * À la création, deux façons d'ouvrir un compte : envoyer une invitation (la personne
-   * choisit son mot de passe depuis le lien reçu) ou en poser un soi-même. L'invitation est
-   * le défaut — un mot de passe transmis de la main à la main n'est jamais changé ensuite.
+   * On creation, two ways to open an account: send an invitation (the person
+   * chooses their password from the link received) or set one themselves. The invitation is
+   * the default — a password handed over by hand is never changed afterwards.
    */
   const [invite, setInvite] = useState(true);
   const [form, setForm] = useState({
@@ -59,8 +59,8 @@ export default function UserModal({
         username: form.username || null,
         role: form.role,
       };
-      // En mode invitation, aucun mot de passe ne part au serveur : c'est son absence qui
-      // déclenche l'envoi du lien.
+      // In invitation mode, no password is sent to the server: its absence is what
+      // triggers sending the link.
       if (form.password && (isEdit || !invite)) body.password = form.password;
       if (form.storageLimitGo) body.storageLimit = Math.round(Number(form.storageLimitGo) * 1e9);
       if (isEdit) {
@@ -173,9 +173,9 @@ export default function UserModal({
               onChange={(e) => setForm((f) => ({ ...f, storageLimitGo: e.target.value }))}
             />
           </div>
-          {/* Ce quota-ci ne vaut que pour ce compte : celui que reçoivent tous les autres se
-              règle dans « Stockage ». Le champ vide n'est pas « aucun quota », c'est « le
-              quota du studio ». */}
+          {/* This quota only applies to this account: the one all others receive is
+              set in "Storage". An empty field is not "no quota", it is "the
+              studio quota". */}
           <SettingsPointer section="storage" label={t('storage.title')} hint={t('storage.quotaLabel')} />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>

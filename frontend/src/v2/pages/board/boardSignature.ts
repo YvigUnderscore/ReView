@@ -4,29 +4,27 @@
 import type { BoardFiles } from './boardFiles';
 
 /**
- * Empreinte d'une scène de board — ce qui permet de savoir si elle a **réellement** changé.
+ * Fingerprint of a board scene: what tells whether it has **really** changed.
  *
- * Excalidraw rappelle `onChange` bien au-delà des vraies modifications : déplacement du
- * curseur, défilement, sélection, et tout rendu provoqué par le composant parent. L'autosave
- * comparait l'instantané en attente à celui qu'elle venait d'écrire **par identité d'objet**
- * (`pendingRef.current === snapshot`) ; or `onChange` reconstruit un objet neuf à chaque
- * appel, donc l'égalité n'était jamais vraie. L'instantané n'était jamais purgé, l'indicateur
- * « enregistrement… » ne s'éteignait jamais, et un board simplement **ouvert** réécrivait sa
- * ligne en base toutes les ~1,2 s — indéfiniment, et pour chaque onglet ouvert du studio.
+ * Excalidraw calls `onChange` well beyond real edits: cursor moves, scrolling, selection, and any
+ * render triggered by the parent component. The autosave compared the pending snapshot with the one it had just written **by object identity**
+ * (`pendingRef.current === snapshot`); but `onChange` builds a new object on each
+ * call, so equality was never true. The snapshot was never purged, the "saving…" indicator
+ * never went off, and a board merely **open** rewrote its row in the database every ~1.2 s — endlessly, and for each open studio tab.
  *
- * L'empreinte s'appuie sur le compteur `version` qu'Excalidraw incrémente à chaque mutation
- * réelle d'un élément : deux scènes identiques donnent la même chaîne, et la comparer coûte
- * infiniment moins qu'une sérialisation complète du document.
+ * The fingerprint relies on the `version` counter that Excalidraw increments on each
+ * real mutation of an element: two identical scenes give the same string, and comparing it costs
+ * far less than a full serialisation of the document.
  *
- * Les images sont réduites à leurs identifiants : le contenu d'un fichier ne change jamais
- * sous un identifiant donné, et la forme d'exécution (dataURL) diffère de la forme
- * enregistrée (déposée dans MinIO) — les comparer ferait diverger l'empreinte pour rien.
+ * Images are reduced to their identifiers: the content of a file never changes
+ * under a given identifier, and the runtime form (dataURL) differs from the stored
+ * form (uploaded to MinIO) — comparing them would make the fingerprint diverge for nothing.
  */
 export function sceneSignature(elements: readonly unknown[], files: BoardFiles): string {
   const parts: string[] = [];
   for (const element of elements) {
     if (!element || typeof element !== 'object') {
-      // Forme inattendue : on retombe sur le contenu, quitte à payer la sérialisation.
+      // Unexpected shape: fall back to the content, even at the cost of serialisation.
       parts.push(JSON.stringify(element));
       continue;
     }
@@ -40,12 +38,12 @@ export function sceneSignature(elements: readonly unknown[], files: BoardFiles):
       parts.push(JSON.stringify(element));
       continue;
     }
-    // `versionNonce` départage deux éditions concurrentes arrivées au même numéro de version.
+    // `versionNonce` breaks ties between two concurrent edits arriving at the same version number.
     parts.push(
       `${id}:${version}:${typeof versionNonce === 'number' ? versionNonce : 0}:${isDeleted ? 1 : 0}`,
     );
   }
-  // Les identifiants de fichiers sont triés : l'ordre des clés d'un objet ne fait pas sens.
+  // File identifiers are sorted: the order of an object's keys carries no meaning.
   const fileIds = Object.keys(files ?? {}).sort();
   return `${parts.join('|')}#${fileIds.join(',')}`;
 }

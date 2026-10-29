@@ -7,8 +7,8 @@ import { qk } from './query';
 import type { UserPreferences } from '../types/api';
 
 /**
- * Socle partagé des préférences UI par compte (42.A) : centralise l'accès à
- * `GET/PATCH /api/users/me/preferences` (jusqu'ici dupliqué inline dans plusieurs pages).
+ * Shared base of the per-account UI preferences (42.A): centralises access to
+ * `GET/PATCH /api/users/me/preferences` (until now duplicated inline in several pages).
  */
 export function usePreferences() {
   return useQuery({
@@ -19,8 +19,8 @@ export function usePreferences() {
 }
 
 /**
- * Met à jour les préférences (merge superficiel côté backend). Le cache est rafraîchi avec
- * la valeur renvoyée par le serveur — la source de vérité reste le backend.
+ * Updates the preferences (shallow merge on the backend side). The cache is refreshed with
+ * the value returned by the server — the source of truth remains the backend.
  */
 export function useUpdatePreferences() {
   const qc = useQueryClient();

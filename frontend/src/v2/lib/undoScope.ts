@@ -5,47 +5,47 @@ import { useEffect, useRef } from 'react';
 import { isEditable } from './shortcuts';
 
 /**
- * Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y : **un seul** gestionnaire pour toute l'application.
+ * Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y: **a single** handler for the whole application.
  *
- * Chaque écran qui tient un historique local s'y inscrit (`useUndoScope`) au lieu de poser son
- * propre `keydown`. C'était le défaut : trois gestionnaires écoutaient déjà les mêmes touches
- * sur un splat (le composer d'annotation, l'éditeur de splat, l'animation caméra), chacun
- * appelait `preventDefault()` sans dire aux autres qu'il avait pris la frappe, et une seule
- * pression défaisait **deux** choses dès que deux historiques avaient un cran à rendre. La
- * convention écrite « je ne capte que si j'ai vraiment un cran » ne suffisait pas : elle ne
- * départage rien quand les deux en ont un.
+ * Each screen that holds a local history registers with it (`useUndoScope`) instead of
+ * adding its own `keydown`. That was the defect: three handlers already listened to the same keys
+ * on a splat (the annotation composer, the splat editor, the camera animation), each
+ * called `preventDefault()` without telling the others it had taken the keystroke, and a single
+ * press undid **two** things as soon as two histories had a step to revert. The
+ * written convention "I only capture if I really have a step" was not enough: it
+ * settles nothing when both have one.
  *
- * Le départage est donc explicite, par PRIORITÉ (`UNDO_PRIORITY`) et non par ordre de montage :
- * la frappe va au périmètre le plus prioritaire qui a réellement un cran à défaire, et à lui
- * seul. Ordre de montage des effets = ordre des composants, c'est-à-dire un hasard de
- * composition : le geste que l'utilisateur a en main ne s'en déduit pas.
+ * The tie-break is therefore explicit, by PRIORITY (`UNDO_PRIORITY`) and not by mount order:
+ * the keystroke goes to the highest-priority scope that actually has a step to undo, and to it
+ * alone. Effect mount order = component order, that is to say a matter of chance in
+ * composition: the gesture the user has in hand does not follow from it.
  *
- * Deux gardes conservées de l'existant : jamais dans un champ de saisie (le Ctrl+Z du navigateur
- * y fait mieux notre travail), jamais quand un dialog est ouvert. Et un événement déjà traité
- * (`defaultPrevented`) est laissé tel quel — c'est ainsi que l'atelier layout garde la main
- * (`camera/useCameraShortcuts` écoute en phase de capture et coupe la propagation).
+ * Two guards kept from the existing code: never in an input field (the browser's Ctrl+Z
+ * does a better job there), never while a dialog is open. And an event already handled
+ * (`defaultPrevented`) is left alone: this is how the layout workshop keeps control
+ * (`camera/useCameraShortcuts` listens in the capture phase and stops propagation).
  */
 
-/** Ce qu'une frappe demande à l'historique. */
+/** What a keystroke asks of the history. */
 export type UndoAction = 'undo' | 'redo';
 
 /**
- * Priorités des périmètres. Plus haut = servi d'abord.
+ * Scope priorities. Higher = served first.
  *
- * L'ordre suit ce que l'utilisateur a dans les mains : un commentaire en cours de rédaction
- * passe avant l'éditeur du média, parce qu'on ne peut pas annoter et éditer dans le même geste,
- * et que le tracé est ce qui vient d'être fait. L'éditeur ferme la marche : c'est le repli.
+ * The order follows what the user has in hand: a comment being written comes before
+ * the media editor, because one cannot annotate and edit in the same gesture,
+ * and the stroke is what was just done. The editor brings up the rear: it is the fallback.
  */
 export const UNDO_PRIORITY = {
-  /** Annotation en préparation : formes 2D et références collées (review image/vidéo). */
+  /** Annotation in progress: 2D shapes and pasted references (image/video review). */
   composer: 30,
-  /** Traits de la brosse de surface 3D en préparation (splat). */
+  /** 3D surface brush strokes in progress (splat). */
   brush3d: 20,
-  /** Édition non destructive du média : masque, volumes, transformation. */
+  /** Non-destructive media editing: mask, volumes, transform. */
   editor: 10,
 } as const;
 
-/** Un historique candidat à la frappe. */
+/** A history candidate for the keystroke. */
 export interface UndoScope {
   priority: number;
   canUndo: boolean;
@@ -54,19 +54,19 @@ export interface UndoScope {
   redo: () => void;
 }
 
-/** Ce que la frappe demande, ou `null` si elle ne parle pas d'historique. Fonction pure. */
+/** What the keystroke asks, or `null` if it does not concern history. Pure function. */
 export function undoIntent(
   e: Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey' | 'key'>,
 ): UndoAction | null {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return null;
   const key = e.key.toLowerCase();
   if (key === 'z') return e.shiftKey ? 'redo' : 'undo';
-  // Ctrl+Y est le redo de Windows ; Ctrl+Maj+Y n'est le raccourci de personne.
+  // Ctrl+Y is Windows' redo; Ctrl+Shift+Y is nobody's shortcut.
   if (key === 'y' && !e.shiftKey) return 'redo';
   return null;
 }
 
-/** Le périmètre servi : le plus prioritaire qui a vraiment un cran à rendre. Fonction pure. */
+/** The scope served: the highest-priority one that really has a step to revert. Pure function. */
 export function pickScope(scopes: Iterable<UndoScope>, action: UndoAction): UndoScope | null {
   let best: UndoScope | null = null;
   for (const scope of scopes) {
@@ -76,11 +76,11 @@ export function pickScope(scopes: Iterable<UndoScope>, action: UndoAction): Undo
   return best;
 }
 
-/** Périmètres inscrits. Des réfs, pour que `canUndo` puisse changer sans réinscription. */
+/** Registered scopes. Refs, so that `canUndo` can change without re-registering. */
 const registered = new Set<{ current: UndoScope }>();
 let listening = false;
 
-/** Applique la frappe — exporté pour le test, qui n'a pas de DOM à écouter. */
+/** Applies the keystroke: exported for the test, which has no DOM to listen to. */
 export function dispatchUndoKey(e: KeyboardEvent): void {
   if (e.defaultPrevented) return;
   const action = undoIntent(e);
@@ -97,13 +97,13 @@ export function dispatchUndoKey(e: KeyboardEvent): void {
 }
 
 /**
- * Inscrit l'historique de cet écran. `enabled` dit si le geste est dans les mains du lecteur ;
- * `canUndo`/`canRedo` disent s'il reste un cran — un périmètre vide laisse passer la frappe au
- * suivant, exactement comme avant.
+ * Registers this screen's history. `enabled` says whether the gesture is in the reader's hands;
+ * `canUndo`/`canRedo` say whether a step remains: an empty scope lets the keystroke pass to the
+ * next one, exactly as before.
  */
 export function useUndoScope(scope: UndoScope & { enabled: boolean }): void {
   const ref = useRef(scope);
-  // Miroir remis à jour à chaque rendu, lu seulement depuis le gestionnaire clavier.
+  // Mirror updated on every render, read only from the keyboard handler.
   useEffect(() => {
     ref.current = scope;
   });

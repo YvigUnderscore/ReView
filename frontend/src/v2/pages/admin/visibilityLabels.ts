@@ -5,11 +5,11 @@ import type { MessageKey } from '../../i18n';
 import type { MatchType, VisibilityEntityType } from '../../lib/visibilityApi';
 
 /**
- * Clés de traduction des règles de masquage, écrites en toutes lettres.
+ * Translation keys for the hiding rules, written out in full.
  *
- * Une clé composée à la volée (`` `visibility.type.${value}` ``) échappe au typage — et au
- * contrôle de cohérence des catalogues, qui ne saurait pas dire qu'il en manque une. Ces
- * tables coûtent quelques lignes et rendent l'oubli impossible à compiler.
+ * A key built on the fly (`` `visibility.type.${value}` ``) escapes typing — and the
+ * catalogue consistency check, which could not tell that one is missing. These
+ * tables cost a few lines and make forgetting impossible to compile.
  */
 
 export const TYPE_LABEL: Record<VisibilityEntityType, MessageKey> = {
@@ -27,7 +27,7 @@ export const MATCH_LABEL: Record<MatchType, MessageKey> = {
   regex: 'visibility.match.regex',
 };
 
-/** L'exemple de motif de chaque forme, et ce qu'il masque. */
+/** The example pattern for each form, and what it hides. */
 export const MATCH_EXAMPLE: Record<MatchType, MessageKey> = {
   exact: 'visibility.help.exact.pattern',
   prefix: 'visibility.help.prefix.pattern',

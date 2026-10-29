@@ -38,15 +38,15 @@ import type { ReviewComment, TimelineView } from '../types/api';
 import { useT } from '../i18n';
 
 /**
- * Review d'un montage (Phase 46) — la page de review vidéo, appliquée au film entier.
+ * Review of an edit (Phase 46) — the video review page, applied to the whole film.
  *
- * Tout y est à sa place habituelle : bascule de mode, rail d'outils, barre d'options, dock
- * inspecteur, transport, espace commentaires. Seule la timeline change de nature — c'est
- * celle du montage, une seule échelle de zéro à la fin du film — et l'image est servie par
- * deux lecteurs qui se relaient, pour que le passage d'un plan à l'autre ne coupe rien.
+ * Everything sits in its usual place: mode switch, tool rail, options bar, inspector
+ * dock, transport, comment space. Only the timeline changes nature — it is
+ * the edit's, a single scale from zero to the end of the film — and the image is served by
+ * two players taking turns, so that the move from one shot to the next cuts nothing.
  *
- * Les retours appartiennent au montage. Chacun reste ancré au média du plan et à sa frame :
- * le clic droit « renvoyer sur la review du shot » l'y fait apparaître, sur cette image.
+ * The feedback belongs to the edit. Each item stays anchored to the shot's media and to its frame:
+ * the right click "send back to the shot's review" brings it up, on that image.
  */
 export default function TimelinePlayerPage() {
   const t = useT();
@@ -89,13 +89,13 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
   const stageRef = useRef<HTMLDivElement>(null);
   const playback = useContinuousPlayback(items, videoA, videoB, Number(params.get('t')) || 0);
   const { clip } = playback;
-  // Plan-image : il occupe sa place dans le montage, mais par une `<img>` — une image confiée
-  // à l'élément vidéo échoue au démultiplexage et bloquait la lecture de tout le montage.
+  // Shot image: it takes its place in the edit, but as an `<img>` — an image handed
+  // to the video element fails at demultiplexing and blocked playback of the whole edit.
   const stillUrl = useStillSource(clip);
 
-  // Le montage n'a qu'un mode et qu'un rail : le clavier suit les deux. Sans cela, la touche
-  // `2` armait un mode « Compare » que l'en-tête ne propose pas, et les lettres des outils de
-  // la review armaient des outils absents de ce rail.
+  // The edit has a single mode and a single rail: the keyboard follows both. Without this, the key
+  // `2` armed a "Compare" mode that the header does not offer, and the letters of the review's
+  // tools armed tools absent from this rail.
   const { state, update } = useChromeState('VIDEO', {
     modes: MONTAGE_MODES,
     tools: montageToolsFor,
@@ -129,7 +129,7 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
     ann.clearViewed();
   };
 
-  /** Ouvrir un retour : on s'arrête sur son image du film et son dessin réapparaît. */
+  /** Opening a feedback item: stops on its image in the film and its drawing reappears. */
   const selectComment = (c: ReviewComment) => {
     const m = c as MontageComment;
     setSelectedId(m.id);
@@ -149,8 +149,8 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
       await api.post('/api/comments', {
         mediaObjectId: clip.mediaId,
         content: content.trim() || t('comment.annotationAttached'),
-        // Les deux échelles ensemble : la frame DANS le plan (qui permettra le renvoi) et
-        // la position dans le film, seule échelle que porte la timeline du montage.
+        // Both scales together: the frame WITHIN the shot (which will allow the send-back) and
+        // the position in the film, the only scale the edit's timeline carries.
         timestamp: Math.max(0, Math.round(localTime * 1000) / 1000),
         timelineId: timeline.id,
         timelineTime: Math.max(0, Math.round(playback.time * 1000) / 1000),
@@ -238,8 +238,8 @@ function MontageReview({ timelineId, label }: { timelineId: number; label: strin
           comments={
             <CommentsPanel
               comments={commentsQ.isLoading ? null : comments}
-              // Clé de brouillon propre au montage : un id négatif ne peut croiser aucun
-              // média, et le texte en cours survit au changement de plan.
+              // Draft key specific to the edit: a negative id cannot cross any
+              // media, and the text in progress survives the change of shot.
               mediaObjectId={-timeline.id}
               currentUserId={userId}
               currentUserRole={role}

@@ -38,7 +38,7 @@ const QUEUE_LABEL_KEY: Record<string, MessageKey> = {
   webhooks: 'jobs.webhooks',
 };
 
-/** Dashboard BullMQ (37.C) : état des files, jobs échoués (retry), purge. */
+/** BullMQ dashboard (37.C): queue state, failed jobs (retry), purge. */
 export default function JobsTab() {
   const t = useT();
   const qc = useQueryClient();
@@ -144,7 +144,7 @@ interface PurgeConfig {
   keepVersions: number;
 }
 
-/** Purge des dérivés obsolètes (37.H) : config + exécution manuelle. */
+/** Purge of obsolete derivatives (37.H): configuration + manual run. */
 function DerivedPurgePanel() {
   const t = useT();
   const qc = useQueryClient();

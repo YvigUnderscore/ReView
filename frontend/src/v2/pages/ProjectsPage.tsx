@@ -44,8 +44,8 @@ export default function ProjectsPage() {
   const [tab, setTab] = useState<'active' | 'archived'>('active');
   const active = useProjectsQuery();
   const archived = useArchivedProjectsQuery(tab === 'archived');
-  // La liste ne descend plus qu'une page à la fois : le compteur dit ce qui reste et la
-  // sentinelle va le chercher. Un studio de deux cents projets n'en montrait que cent.
+  // The list only loads one page at a time: the counter says what remains and the
+  // sentinel fetches it. A studio of two hundred projects would only have shown a hundred.
   const list = tab === 'archived' ? archived : active;
   const { data: projects, error } = list;
   const [name, setName] = useState('');
@@ -55,7 +55,7 @@ export default function ProjectsPage() {
   const [deleting, setDeleting] = useState<Project | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const sel = useMultiSelect(projects?.map((p) => p.id) ?? []);
-  // Une (dés)archivage change les deux listes : on invalide les deux clés.
+  // An (un)archive changes both lists: both keys are invalidated.
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: qk.projects });
     void qc.invalidateQueries({ queryKey: qk.projectsArchived });

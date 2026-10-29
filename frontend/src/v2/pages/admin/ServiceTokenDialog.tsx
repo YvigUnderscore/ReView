@@ -24,10 +24,10 @@ import { buildTokenDraft, EXPIRY_CHOICES } from '../../components/tokens/tokenSc
 import { useT, type MessageKey } from '../../i18n';
 import type { AdminProjectRow } from '../../types/api';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
 
-/** ADMIN volontairement absent : le serveur le refuse — un robot n'administre pas le studio. */
+/** ADMIN deliberately absent: the server refuses it — a robot does not administer the studio. */
 const roleOptions = (t: Tr) => [
   { value: 'ARTIST', label: t('role.artist') },
   { value: 'SUPERVISOR', label: t('role.supervisor') },
@@ -48,12 +48,12 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /**
- * Émission d'un token de service : identité machine pour une ferme de rendu, un daemon de
- * pipeline ou un bot. Ce que l'écran expose et que le curl exposait seul jusqu'ici : rôle
- * effectif du porteur, cantonnement à un projet, expiration, scopes fins.
+ * Issuing a service token: a machine identity for a render farm, a pipeline daemon or a
+ * bot. What the screen exposes, and what only curl exposed until now: the holder's effective role,
+ * confinement to one project, expiry, fine-grained scopes.
  *
- * Le mot de passe de l'admin est exigé par le serveur : un token de service ne meurt pas
- * avec la session de son auteur, un jeton d'accès volé ne doit pas suffire à en forger un.
+ * The admin's password is required by the server: a service token does not die with
+ * its author's session, and a stolen access token must not be enough to forge one.
  */
 export default function ServiceTokenDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();

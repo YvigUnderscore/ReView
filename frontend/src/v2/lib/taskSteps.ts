@@ -8,30 +8,30 @@ import { useDepartments } from './departmentsApi';
 import { useCreateTask } from './tasksApi';
 
 /**
- * Les étapes sur lesquelles une tâche peut naître, et la façon de l'y créer.
+ * The steps a task can be born on, and how to create it there.
  *
- * Deux référentiels décrivent le même pipe : celui du site quand le projet y est relié,
- * celui des départements sinon. Les écrans n'ont pas à savoir lequel répond — ils
- * demandent des étapes et obtiennent des étapes. C'est ce qui permet à un projet
- * autonome d'avoir des tasks : jusqu'ici le seul geste de création passait par ShotGrid,
- * et un studio qui ne s'y relie pas n'en avait aucun.
+ * Two repositories describe the same pipe: the site's when the project is linked to it,
+ * the departments' otherwise. Screens do not need to know which one answers — they
+ * ask for steps and get steps. This is what lets a standalone project
+ * have tasks: until now the only creation gesture went through ShotGrid,
+ * and a studio not linked to it had none.
  *
- * Les deux chemins d'écriture vivent ici pour la même raison : ils étaient recopiés dans
- * le sélecteur de destination d'upload, et tout nouvel appelant les aurait recopiés une
- * fois de plus.
+ * Both write paths live here for the same reason: they were copied into
+ * the upload destination selector, and every new caller would have copied them
+ * once more.
  */
 
 export interface PickableStep {
-  /** Identité côté écran — jamais envoyée au serveur. */
+  /** Identity on the screen side — never sent to the server. */
   key: string;
   code: string;
   color?: string | null;
-  /** Renseigné seulement pour une étape venue du site. */
+  /** Filled in only for a step coming from the site. */
   sgId?: number;
 }
 
 export interface TaskStepsResult {
-  /** Vrai quand le pipe est celui du site : la tâche doit alors y naître. */
+  /** True when the pipe is the site's: the task must then be born there. */
   linked: boolean;
   steps: PickableStep[];
   isLoading: boolean;
@@ -51,9 +51,9 @@ export function useTaskSteps(
     () =>
       linked
         ? (sg.data ?? []).map((s) => ({ key: `sg-${s.sgId}`, code: s.code, color: s.color, sgId: s.sgId }))
-        : // Politique de département : la liste se réduit aux étapes où la personne peut
-          // écrire — deux entrées plutôt que douze. `writable` absent = ancienne réponse
-          // du serveur, on ne masque alors rien.
+         : // Department policy: the list narrows to the steps where the person can
+          // write — two entries rather than twelve. `writable` absent = old server
+          // response, so nothing is hidden.
           (local.data ?? [])
             .filter((d) => d.writable !== false)
             .map((d) => ({ key: `dept-${d.id}`, code: d.key, color: d.color })),
@@ -64,22 +64,22 @@ export function useTaskSteps(
 }
 
 export interface CreateStepTaskInput {
-  /** `null` = tâche sans étape — possible seulement hors projet relié. */
+  /** `null` = task without a step — possible only outside a linked project. */
   step: PickableStep | null;
   parent: { kind: 'asset' | 'shot'; id: number };
-  /** Proposé, jamais imposé : à défaut, le code de l'étape fait le nom. */
+  /** Proposed, never imposed: otherwise the step's code makes the name. */
   name?: string;
-  /** Identifiant du site, quand c'est lui qui tient les personnes. */
+  /** Identifier on the site, when it is the site that holds the people. */
   assigneeSgId?: number | null;
-  /** Identifiant ReView, sur un projet autonome. */
+  /** ReView identifier, on a standalone project. */
   assigneeId?: number | null;
 }
 
 /**
- * Crée la tâche là où elle doit naître.
+ * Creates the task where it must be born.
  *
- * Sur un projet relié, dans ShotGrid puis rapatriée : une tâche posée localement ferait
- * doublon à la synchronisation suivante. Sinon dans ReView, sur le département choisi.
+ * On a linked project, in ShotGrid then pulled back: a task set locally would
+ * duplicate at the next sync. Otherwise in ReView, on the chosen department.
  */
 export function useCreateStepTask(projectId: number) {
   const fromStep = useCreateTaskFromStep(projectId);

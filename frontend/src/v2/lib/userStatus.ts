@@ -4,7 +4,7 @@
 import type { Role, UserStatus } from '../types/api';
 import type { MessageKey } from '../i18n';
 
-/** Couleurs et libellés des statuts de présence utilisateur (Avatar, SidebarFooter). */
+/** Colours and labels of user presence statuses (Avatar, SidebarFooter). */
 
 export const STATUS_COLOR: Record<UserStatus, string> = {
   AVAILABLE: '#22c55e',
@@ -12,14 +12,14 @@ export const STATUS_COLOR: Record<UserStatus, string> = {
   DND: '#ef4444',
 };
 
-/** Clé de traduction du statut : le libellé se résout au rendu, pas au chargement. */
+/** Translation key of the status: the label is resolved at render time, not at load. */
 export const STATUS_LABEL_KEY: Record<UserStatus, MessageKey> = {
   AVAILABLE: 'presence.available',
   AWAY: 'presence.away',
   DND: 'presence.dnd',
 };
 
-/** Libellé du rôle global, tel qu'affiché sur la fiche d'un membre. */
+/** Label of the global role, as displayed on a member's sheet. */
 export const ROLE_LABEL_KEY: Record<Role, MessageKey> = {
   ADMIN: 'role.admin',
   SUPERVISOR: 'role.supervisor',

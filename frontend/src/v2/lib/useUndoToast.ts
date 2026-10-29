@@ -6,29 +6,28 @@ import { toast } from 'sonner';
 import { useT } from '../i18n';
 
 /**
- * « C'est fait — annuler ? » : la confirmation d'une écriture SERVEUR, avec le geste qui la
- * défait attaché au toast.
+ * "Done — undo?": the confirmation of a SERVER write, with the gesture that undoes it attached to the toast.
  *
- * Pourquoi pas Ctrl+Z. Changer un statut, assigner une tâche, réordonner une playlist, ce sont
- * des mutations partagées : parties au serveur, elles sont déjà chez les autres, et un moteur
- * ShotGrid a pu arbitrer derrière. Un Ctrl+Z laisserait croire à une pile locale qu'on ne tient
- * pas — on ne peut promettre que le coup **précédent**, et seulement parce qu'on en connaît la
- * valeur d'avant. C'est exactement ce que le toast offre : un cran, nommé, visible, à portée
- * immédiate, et qui disparaît avec lui plutôt que de laisser croire à un historique.
+ * Why not Ctrl+Z. Changing a status, assigning a task, reordering a playlist are
+ * shared mutations: sent to the server, they are already with everyone else, and a
+ * ShotGrid engine may have arbitrated behind them. A Ctrl+Z would suggest a local stack we do not
+ * hold — we can only promise the **previous** move, and only because we know its
+ * prior value. That is exactly what the toast offers: one step, named, visible, within
+ * immediate reach, and it disappears with it rather than suggesting a history.
  *
- * L'annulation est une écriture comme une autre : elle peut échouer (droits, arbitrage ShotGrid,
- * réseau). Elle le dit alors, au lieu de laisser l'écran mentir sur l'état réel.
+ * Undoing is a write like any other: it can fail (rights, ShotGrid arbitration,
+ * network). It then says so, instead of letting the screen lie about the real state.
  */
 
-/** Le toast reste plus longtemps que la normale : quatre secondes ne suffisent pas à se relire. */
+/** The toast stays longer than usual: four seconds are not enough to read it back. */
 const UNDO_TOAST_MS = 8000;
 
 export interface UndoToast {
   /**
-   * Annonce le succès, avec « Annuler » si l'inverse est connu.
+   * Announces success, with "Undo" if the inverse is known.
    *
-   * `undo` refait une écriture serveur et rend sa promesse : c'est elle qui décide du second
-   * message. Omis, le toast est un simple succès — c'est le cas des actions sans inverse tenu.
+   * `undo` redoes a server write and returns its promise: that decides the second
+   * message. If omitted, the toast is a plain success — the case for actions without a tracked inverse.
    */
   done: (message: string, undo?: () => Promise<unknown>) => void;
 }
@@ -42,8 +41,8 @@ export function useUndoToast(): UndoToast {
         toast.success(message);
         return;
       }
-      // Un seul passage : sonner ferme le toast au clic, mais un double-clic rapide sur
-      // l'action rejouerait l'inverse — ici, remettrait un statut déjà remis.
+      // Single pass: sonner closes the toast on click, but a quick double-click on
+      // the action would replay the inverse — here, it would reset a status already reset.
       let spent = false;
       const id = toast.success(message, {
         duration: UNDO_TOAST_MS,

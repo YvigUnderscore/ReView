@@ -30,12 +30,12 @@ import AssignedToMeSection from './reviews/AssignedToMeSection';
 import { useT } from '../i18n';
 
 /**
- * Page « Reviews » globale (12.C) : tous les médias publiés de mes projets + mes
- * brouillons, filtrables par projet/type/statut, tri récent, vignettes → /review/:id.
+ * Global "Reviews" page (12.C): all published media from my projects plus my
+ * drafts, filterable by project/type/status, recent sort, thumbnails → /review/:id.
  *
- * Les filtres vivent dans l'URL (`reviews/reviewsUrl`) et non dans un état local : c'est ce
- * qui permet à un compteur de l'Accueil d'ouvrir SA vue, à une recherche de se partager, et
- * au retour arrière du navigateur de défaire le dernier filtre au lieu de quitter la page.
+ * Filters live in the URL (`reviews/reviewsUrl`) rather than in local state: this is
+ * what lets a home-page counter open ITS view, a search be shared, and the browser's
+ * back button undo the last filter instead of leaving the page.
  */
 export default function ReviewsPage() {
   const t = useT();
@@ -43,17 +43,17 @@ export default function ReviewsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useSearchParams();
-  // L'URL est la seule source : rien à synchroniser, donc rien qui puisse diverger. Chaque
-  // changement pousse une entrée d'historique — c'est ce que défait le retour arrière.
+  // The URL is the only source: nothing to synchronise, so nothing that can diverge. Each
+  // change pushes a history entry — that is what back-navigation undoes.
   const filters = useMemo(() => filtersFromSearch(search), [search]);
   const setFilters = useCallback(
     (next: ReviewsFilterState) => setSearch(searchWithFilters(search, next)),
     [search, setSearch],
   );
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  // « Ajouter à la playlist » (Phase 33) : mediaIds ciblés (carte seule ou sélection).
+  // "Add to playlist" (Phase 33): targeted mediaIds (card only or selection).
   const [playlistTarget, setPlaylistTarget] = useState<number[] | null>(null);
-  // Décision de review en lot : mediaIds ciblés, convertis en versions à l'envoi.
+  // Batch review decision: targeted mediaIds, converted to versions on submit.
   const [decisionTarget, setDecisionTarget] = useState<number[] | null>(null);
   const role = useAuth((s) => s.user?.role);
   const canPlaylist = role === 'ADMIN' || role === 'SUPERVISOR' || role === 'ARTIST';
@@ -61,18 +61,18 @@ export default function ReviewsPage() {
 
   const qs = apiQuery(filters);
 
-  // La page annonçait fièrement « 1 247 media » au-dessus de cent cartes : le total venait
-  // du serveur, les cartes d'une seule page. Les deux se rejoignent enfin.
+  // The page proudly announced "1,247 media" above a hundred cards: the total came from
+  // the server, the cards from a single page. The two finally agree.
   const list = useInfiniteList<ReviewItem>(qk.reviews(qs), `/api/media/reviews${qs ? `?${qs}` : ''}`, {
     keepPrevious: true,
   });
   const { data: items, error } = list;
 
   const sel = useMultiSelect(items?.map((m) => m.id) ?? []);
-  // La sélection est lue **au moment du clic**, pas au rendu. Sans cette ref, chaque
-  // case cochée recréerait les rappels passés aux cartes, et les cent `ReviewCard`
-  // mémoïsées se re-rendraient quand même — la mémoïsation ne tient que par des rappels
-  // stables (écriture en effet : une ref ne s'écrit pas pendant le rendu).
+  // The selection is read **at click time**, not at render. Without this ref, each
+  // ticked box would recreate the callbacks passed to the cards, and the hundred
+  // memoised `ReviewCard`s would re-render anyway — memoisation only holds with
+  // stable callbacks (written in an effect: a ref is not written during render).
   const selRef = useRef(sel);
   useEffect(() => {
     selRef.current = sel;
@@ -91,21 +91,21 @@ export default function ReviewsPage() {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
   };
-  /** Les médias ciblés, retrouvés dans la page courante (l'ordre n'importe pas). */
+  /** The targeted media, found in the current page (order does not matter). */
   const targeted = (mediaIds: number[] | null) => {
     if (!mediaIds || !items) return [];
     const wanted = new Set(mediaIds);
     return items.filter((m) => wanted.has(m.id));
   };
-  /** Projet commun des médias ciblés (une playlist = un projet) ; null si mixte. */
+  /** Common project of the targeted media (a playlist = one project); null if mixed. */
   const commonProjectId = (mediaIds: number[] | null) => {
     const pids = new Set(targeted(mediaIds).map((m) => m.project?.id ?? 0));
     return pids.size === 1 ? ([...pids][0] ?? null) : null;
   };
-  // Deux médias d'une même version ne valent qu'une décision : la décision porte sur la
-  // version, la poser deux fois écrirait deux lignes d'historique pour un seul geste.
+  // Two media of the same version are worth only one decision: the decision bears on the
+  // version, posting it twice would write two history lines for a single gesture.
   const targetVersionIds = [...new Set(targeted(decisionTarget).map((m) => m.versionId))];
-  // Agit sur la sélection si la carte en fait partie, sinon sur la carte seule.
+  // Acts on the selection if the card is part of it, otherwise on the card alone.
   const scopeOf = useCallback((id: number) => {
     const current = selRef.current;
     return current.count > 0 && current.isSelected(id) ? current.ids : [id];
@@ -139,8 +139,8 @@ export default function ReviewsPage() {
         <ReviewsFilters value={filters} onChange={setFilters} />
       </div>
 
-      {/* La file personnelle passe avant le catalogue — et s'efface quand la liste entière
-          est déjà filtrée sur elle, où elle ne dirait rien de plus. */}
+      {/* The personal queue comes before the catalogue — and disappears when the whole list
+          is already filtered on it, where it would say nothing more. */}
       {!filters.assigned && (
         <AssignedToMeSection onSeeAll={() => setFilters({ ...filters, assigned: 'me' })} />
       )}

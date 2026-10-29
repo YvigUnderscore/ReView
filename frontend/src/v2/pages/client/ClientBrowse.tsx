@@ -24,25 +24,25 @@ import type { ClientMedia, ClientSharePayload } from '../../types/api';
 import { useT, type Tr } from '../../i18n';
 
 /**
- * Ce que l'invité parcourt : un accueil qui met en avant les playlists du lien et les
- * dernières livraisons, puis quatre onglets — Review à plat, Sequences, Shots, Assets.
+ * What the guest browses: a home that highlights the link's playlists and the
+ * latest deliveries, then four tabs — flat Review, Sequences, Shots, Assets.
  *
- * Aucun onglet vide n'est proposé : un lien qui n'ouvre qu'un asset ne doit pas nommer
- * « Sequences » pour rien. Et aucune tuile n'est fabriquée ici — les nœuds portent des
- * identifiants, `clientBrowseModel` les résout dans la page de médias déjà servie.
+ * No empty tab is offered: a link that opens only an asset must not name
+ * "Sequences" for nothing. And no tile is fabricated here — the nodes carry
+ * identifiers, `clientBrowseModel` resolves them in the media page already served.
  */
 
-/** Libellés d'onglet : une fonction, jamais une table de module — elle figerait la langue. */
+/** Tab labels: a function, never a module table — it would freeze the language. */
 const tabDefs = (t: Tr) => ({
   home: { label: t('nav.home'), icon: <LayoutDashboard size={16} /> },
-  // Vocabulaire de production : « Review » ne se traduit dans aucune langue (glossaire).
+  // Production vocabulary: "Review" is not translated in any language (glossary).
   review: { label: 'Review', icon: <ListVideo size={16} /> },
   sequences: { label: t('sequences.title'), icon: <Film size={16} /> },
   shots: { label: t('shots.title'), icon: <Clapperboard size={16} /> },
   assets: { label: 'Assets', icon: <Box size={16} /> },
 });
 
-/** Carte d'un nœud : une vignette empruntée à un média, un nom, un décompte. */
+/** A node's card: a thumbnail borrowed from a media item, a name, a count. */
 function NodeCard({
   cover,
   title,
@@ -91,7 +91,7 @@ export default function ClientBrowse({
   const t = useT();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<ClientSort>('recent');
-  // `layout` et non `view` : `view` est déjà la vue de NAVIGATION (accueil, onglet, nœud).
+  // `layout` rather than `view`: `view` is already the NAVIGATION view (home, tab, node).
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const media = payload.media ?? [];
   const browse = payload.browse;
@@ -101,7 +101,7 @@ export default function ClientBrowse({
   const canDecide = payload.permission === 'DECIDE';
   const pending = pendingMedia(media, canDecide);
 
-  /** Ce que la vue montre, une fois cherché et trié. Les vues de nœud en héritent aussi. */
+  /** What the view shows, once searched and sorted. Node views inherit it too. */
   const listed = (source: readonly ClientMedia[]) =>
     sortMedia(filterMedia(source, browse, query), browse, sort);
   const grid = (source: readonly ClientMedia[]) => (
@@ -123,8 +123,8 @@ export default function ClientBrowse({
     </>
   );
 
-  // L'onglet actif pour la barre : une vue de nœud reste sous son onglet de rattachement,
-  // pour que le fil d'Ariane ait un « retour » qui veuille dire quelque chose.
+  // The active tab for the bar: a node view stays under its attached tab,
+  // so that the breadcrumb has a "back" that means something.
   const activeTab =
     view.kind === 'tab'
       ? view.tab
@@ -149,8 +149,8 @@ export default function ClientBrowse({
     <div className="flex min-h-0 flex-1 flex-col">
       <Tabs tabs={tabList} active={activeTab} onChange={goToTab} />
 
-      {/* Le décompte annoncé par les nœuds décrit la page servie, pas le projet : un lien qui
-          montre trop doit être restreint, pas paginé devant un client. */}
+      {/* The count announced by the nodes describes the served page, not the project: a link that
+          shows too much must be narrowed, not paginated in front of a client. */}
       {payload.mediaHasMore && (
         <p className="mb-4 rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
           {t('client.partial', { value: media.length })}
@@ -173,8 +173,8 @@ export default function ClientBrowse({
       <div className="min-h-0 flex-1">
         {view.kind === 'home' ? (
           <div className="space-y-8">
-            {/* Ce que le lien contient, dit en une ligne : un client qui arrive doit savoir
-                s'il a reçu un plan ou tout un épisode avant de cliquer où que ce soit. */}
+            {/* What the link contains, stated in one line: a client arriving must know
+                whether they received a shot or a whole episode before clicking anywhere. */}
             <p className="text-xs text-muted-foreground">
               {[
                 browse?.sequences.length
@@ -188,9 +188,9 @@ export default function ClientBrowse({
                 .join(' · ')}
             </p>
 
-            {/* Ce qui attend une réponse passe devant tout : c'est la question qu'on se pose
-                en ouvrant un lien, et celle à laquelle une grille du plus récent au plus
-                ancien ne répond jamais. */}
+            {/* What awaits a reply comes first: it is the question one asks
+                when opening a link, and the one a grid from newest to oldest never
+                answers. */}
             {canDecide && (
               <section>
                 <h2 className="mb-3 text-sm font-semibold">{t('client.queue')}</h2>
@@ -270,8 +270,8 @@ export default function ClientBrowse({
             ))}
           </div>
         ) : sequence ? (
-          // Une séquence montre ses plans, pas ses médias en vrac : c'est le niveau auquel
-          // un client parle (« SH020 est trop sombre »).
+          // A sequence shows its shots, not its loose media: this is the level at which
+          // a client speaks ("SH020 is too dark").
           <div className={GRID_CLASS}>
             {shotsOfSequence(browse, sequence.id).map((s) => (
               <NodeCard

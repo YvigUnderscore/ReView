@@ -24,17 +24,17 @@ const ACCENT_FALLBACK = '#00b3c4';
 const ACCENT_RE = /^#[0-9a-f]{6}$/i;
 
 /**
- * « Identité du studio » — ce qui dit de quelle maison l'instance est le miroir : son nom,
- * sa couleur, sa langue par défaut, son logo, et l'adresse de ses sources (AGPL §13).
+ * "Studio identity": what says which house the instance mirrors: its name,
+ * colour, default language, logo, and the address of its sources (AGPL §13).
  *
- * C'était la section fourre-tout : quatorze réglages sans rapport et onze boutons
- * « Enregistrer ». Les quotas sont partis dans « Stockage », la rétention dans
- * « Rétention », les cadences dans « Salle live », Slack dans « Messagerie d'équipe » et la
- * frame de départ dans « Défauts de projet » — chacun là où on le cherche. Ne restent ici
- * que les réglages qu'on vient chercher **au nom du studio**, sous une barre unique.
+ * This was the catch-all section: fourteen unrelated settings and eleven
+ * "Save" buttons. Quotas moved to "Storage", retention to
+ * "Retention", cadences to "Live room", Slack to "Team messaging" and the
+ * start frame to "Project defaults" — each where one looks for it. Only the
+ * settings one comes looking for **on behalf of the studio** remain here, under a single bar.
  *
- * Le nom du studio n'avait aucun écran alors que l'API l'expose depuis toujours : il se
- * réglait à la main en base. Il ouvre désormais la page.
+ * The studio name had no screen although the API has always exposed it: it was
+ * set by hand in the database. It now has a place on this page.
  */
 export default function SettingsTab() {
   const t = useT();
@@ -42,15 +42,15 @@ export default function SettingsTab() {
   const settings = useStudioSettings('settings');
   const studioQ = useStudioRow();
 
-  // Le nom vit sur la ligne Studio (PATCH /api/studio), pas dans la table clé/valeur : il a
-  // son propre brouillon, mais partage la barre d'enregistrement de la page.
+  // The name lives on the Studio row (PATCH /api/studio), not in the key/value table: it has
+  // its own draft, but shares the page's save bar.
   const [name, setName] = useState<string | null>(null);
   const storedName = studioQ.data?.name ?? '';
   const nameDirty = name !== null && name !== storedName;
 
   const { busy, save } = useSaveAction(async () => {
-    // Le nom d'abord : c'est le seul champ que le serveur peut refuser (longueur), et un
-    // refus doit laisser la page intacte plutôt qu'à moitié enregistrée.
+    // The name first: it is the only field the server may refuse (length), and a
+    // refusal must leave the page intact rather than half-saved.
     if (nameDirty) {
       await api.patch('/api/studio', { name });
       await qc.invalidateQueries({ queryKey: qk.admin('studio') });
@@ -144,9 +144,9 @@ export default function SettingsTab() {
           <TranslationNotice />
         </Panel>
 
-        {/* Le logo est un dépôt de fichier : il s'enregistre de lui-même, la barre ne peut
-            rien pour lui. Il vit ici parce que c'est la marque du studio — les slates, les
-            burn-ins et la page de connexion la reprennent, aucun ne la possède. */}
+        {/* The logo is a file upload: it saves on its own, the bar can do
+            nothing for it. It lives here because it is the studio's brand — the slates, the
+            burn-ins and the login page reuse it, none of them owns it. */}
         <StudioLogoPanel />
       </div>
 

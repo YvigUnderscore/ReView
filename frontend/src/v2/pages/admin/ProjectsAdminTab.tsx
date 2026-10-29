@@ -17,7 +17,7 @@ import { filterProjects, PROJECT_STATUSES, projectStatusLabels, quotaPct } from 
 import type { AdminProjectRow, ProjectStatus } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Liste d'administration des projets : compteurs pipeline, stockage/quota, fiches. */
+/** Admin list of projects: pipeline counters, storage/quota, sheets. */
 export default function ProjectsAdminTab() {
   const t = useT();
   const projectsQ = useQuery({

@@ -18,14 +18,14 @@ import { useT } from '../i18n';
 import { intlLocale } from '../i18n';
 
 /**
- * Page client publique (35.D) : accès par lien de partage, habillage studio, lecture,
- * annotation et commentaire — zéro navigation vers l'app.
+ * Public client page (35.D): access via share link, studio styling, playback,
+ * annotation and comments — zero navigation to the app.
  *
- * L'arrivée est un **accueil** : les playlists que le lien ouvre, puis les dernières
- * livraisons ; le reste se parcourt par quatre onglets (Review, Sequences, Shots, Assets).
- * L'endroit où l'on se trouve vit dans l'URL, comme sur la page projet : le bouton Retour du
- * navigateur fonctionne, et un client peut envoyer à un collègue le lien du plan dont il
- * parle — sans lui donner plus que ce que la portée autorise, puisque c'est le même jeton.
+ * Arrival is a **home**: the playlists the link opens, then the latest
+ * deliveries; the rest is browsed through four tabs (Review, Sequences, Shots, Assets).
+ * Where one is lives in the URL, as on the project page: the browser's Back button
+ * works, and a client can send a colleague the link to the shot they are
+ * talking about — without giving more than the scope allows, since it is the same token.
  */
 export default function ClientSharePage() {
   const t = useT();
@@ -80,18 +80,18 @@ export default function ClientSharePage() {
 
   const media = p.media ?? [];
   const opened = openedId === null ? null : (media.find((m) => m.id === openedId) ?? null);
-  // Le repli du libellé s'affiche dans le filigrane : il passe par `t()` comme le reste
-  // (il était écrit en français en dur — le détecteur AST ne lit pas dans les gabarits).
+  // The label fallback is shown in the watermark: it goes through `t()` like the rest
+  // (it was hard-coded in French — the AST detector does not read inside templates).
   const watermarkText = p.watermark?.enabled
     ? `${p.label ?? t('client.review')} — ${p.studio.name} — ${new Date().toLocaleDateString(intlLocale())}`
     : null;
 
   return (
-    // `h-full` et non `min-h-screen` : `#root` est en `height: 100%; overflow: hidden`
-    // (index.css) — l'application interne gère son propre défilement. Une page qui grandit
-    // sous ce verrou dépasse sans que rien ne puisse défiler : tout ce qui passait sous la
-    // ligne de flottaison était simplement inatteignable. La coquille tient donc la hauteur
-    // de la fenêtre, en-tête et pied fixes, et c'est le CENTRE qui défile.
+    // `h-full` rather than `min-h-screen`: `#root` is `height: 100%; overflow: hidden`
+    // (index.css) — the internal application manages its own scrolling. A page that grows
+    // under this lock overflows with nothing able to scroll: everything that fell below the
+    // fold was simply unreachable. The shell therefore keeps the window's height,
+    // header and footer fixed, and it is the CENTRE that scrolls.
     <div className="flex h-full flex-col bg-background text-foreground">
       <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3">
         {p.studio.logoUrl ? (
@@ -103,8 +103,8 @@ export default function ClientSharePage() {
           <p className="truncate text-sm font-medium">{p.project?.name}</p>
           <p className="truncate text-xs text-muted-foreground">{p.label ?? t('client.review')}</p>
         </div>
-        {/* Le portail démarre en anglais (cf. `isSharePath`) — le sélecteur est ce qui rend
-            ce choix acceptable : il est offert d'emblée, et la langue retenue est gardée. */}
+        {/* The portal starts in English (see `isSharePath`) — the selector is what makes
+            that choice acceptable: it is offered straight away, and the language chosen is kept. */}
         <LanguagePicker className="ml-auto w-auto py-1 text-xs" />
       </header>
 
@@ -112,15 +112,15 @@ export default function ClientSharePage() {
         {media.length === 0 ? (
           <p className="m-auto text-sm text-muted-foreground">{t('client.noPublished')}</p>
         ) : opened ? (
-          // `key` : sans elle, React réutilise le viewer d'un média à l'autre, et le dessin
-          // en cours — comme l'annotation affichée de la note sélectionnée — survivait au
-          // changement de tuile. Constaté au tour navigateur du 2026-09-17.
+          // `key`: without it, React reuses a media's viewer from one media to the next, and the drawing
+          // in progress — like the annotation shown for the selected note — survived the
+          // tile change. Observed during the browser round on 2026-09-17.
           <ClientMediaViewer
             key={opened.id}
             token={token}
             media={opened}
-            // `DECIDE` inclut le droit de commenter : se prononcer sans pouvoir expliquer
-            // pourquoi n'aurait pas de sens.
+            // `DECIDE` includes the right to comment: giving a verdict without being able to explain
+            // why would make no sense.
             canComment={p.permission === 'COMMENT' || p.permission === 'DECIDE'}
             decisionStatuses={p.decisionStatuses}
             watermarkText={watermarkText}
@@ -137,7 +137,7 @@ export default function ClientSharePage() {
         )}
       </main>
 
-      {/* AGPL §13 : les invités interagissent à distance, l'offre de source leur est due. */}
+      {/* AGPL §13: guests interact remotely, so the source offer is due to them. */}
       <footer className="shrink-0 border-t border-border px-5 py-2 text-center">
         <SourceNotice />
       </footer>
@@ -145,7 +145,7 @@ export default function ClientSharePage() {
   );
 }
 
-/** Cadre centré (verrouillage / erreurs) avec l'habillage studio. */
+/** Centred frame (locking / errors) with the studio styling. */
 function ClientFrame({
   studio,
   children,

@@ -22,34 +22,34 @@ import {
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Une réponse 4xx est DÉFINITIVE : ce run n'existe pas, ou plus — purgé de l'historique,
- * ou commandé avant qu'on ne retire l'agent. Tout le reste — coupure réseau, 502 du frontal
- * qui reste debout, 503 — est la bascule en cours.
+ * A 4xx response is FINAL: this run no longer exists, either purged from the history,
+ * or ordered before the agent was removed. Everything else (network cut, 502 from the front
+ * proxy that stays up, 503) means the switchover is in progress.
  *
- * Confondre les deux, c'était afficher « l'instance redémarre » pour toujours devant un run
- * qui n'existait plus, sans aucun moyen d'en sortir : le panneau ne proposait « écarter »
- * qu'une fois l'opération TERMINÉE, et elle ne le serait jamais.
+ * Confusing the two meant showing "the instance is restarting" forever in front of a run
+ * that no longer existed, with no way out: the panel offered "dismiss" only once the
+ * operation was FINISHED, and it never would be.
  */
 const isGone = (error: unknown): boolean =>
   error instanceof ApiError && error.status >= 400 && error.status < 500;
 
 /**
- * Une opération, du dépôt de l'ordre au verdict.
+ * One operation, from submitting the order to the verdict.
  *
- * ## Pourquoi un sondage HTTP, et pas un socket
+ * ## Why HTTP polling, and not a socket
  *
- * Parce que l'opération la plus intéressante détruit le processus qui aurait tenu le
- * socket. Pendant une bascule, l'API disparaît une à trois minutes : un socket meurt avec
- * elle, et l'écran ne saurait plus rien de ce qu'il a lui-même déclenché. Le sondage, lui,
- * échoue puis reprend — et le backend qui répond ensuite, celui de la version NOUVELLE,
- * relit le même fichier d'état, écrit par un run lancé par la version précédente.
+ * Because the most interesting operation destroys the process that would have held the
+ * socket. During a switchover the API disappears for one to three minutes: a socket dies with
+ * it, and the screen would no longer know anything about what it triggered itself. Polling, on
+ * the other hand, fails and then resumes, and the backend that answers afterwards, the one of the
+ * NEW version, rereads the same state file, written by a run started by the previous version.
  *
- * ## La coupure n'est pas une panne
+ * ## The cut is not a failure
  *
- * Tant que l'opération n'est pas terminée, un échec de requête est le comportement ATTENDU :
- * ni toast, ni panneau d'erreur. On affiche « l'instance redémarre », on continue de
- * sonder, et on reprend le journal au curseur d'octets où on l'avait laissé — ce qui n'est
- * possible que parce que le fichier est écrit en ajout seul.
+ * As long as the operation is not finished, a request failure is the EXPECTED behaviour:
+ * neither toast nor error panel. We show "the instance is restarting", keep
+ * polling, and resume the log at the byte cursor where we left it, which is
+ * only possible because the file is written append-only.
  */
 export default function OpsRunPanel({
   runId,
@@ -57,14 +57,14 @@ export default function OpsRunPanel({
   onDismiss,
 }: {
   runId: string;
-  /** Le run n'existe plus : à oublier tout de suite, pour qu'un rechargement reparte propre. */
+  /** The run no longer exists: forget it right away, so that a reload starts clean. */
   onGone: () => void;
   onDismiss: () => void;
 }) {
   const t = useT();
   const qc = useQueryClient();
-  // Curseur d'octets et journal accumulé. Dans une réf, pas dans un état : la requête doit
-  // lire la valeur du moment, et chaque tranche reçue n'a pas à provoquer deux rendus.
+  // Byte cursor and accumulated log. In a ref, not state: the request must read the current
+  // value, and each received chunk must not cause two renders.
   const stream = useRef({ cursor: 0, text: '' });
   const logBox = useRef<HTMLPreElement>(null);
 
@@ -76,12 +76,12 @@ export default function OpsRunPanel({
       return { ...detail, log: { ...detail.log, text: stream.current.text } };
     },
     refetchInterval: (query) => {
-      // Sonder un run qui n'existe plus n'apprendra jamais rien : on arrête.
+      // Polling a run that no longer exists will never learn anything: stop.
       if (isGone(query.state.error)) return false;
       return query.state.data && isTerminalState(query.state.data.run.state) ? false : 2000;
     },
-    // Aucune tentative de reprise automatique : c'est le sondage qui fait ce travail, et
-    // une pile de reprises pendant une coupure de trois minutes n'apporterait rien.
+    // No automatic retry: polling does this work, and
+    // a stack of retries during a three-minute cut would bring nothing.
     retry: false,
     gcTime: 0,
   });
@@ -89,13 +89,13 @@ export default function OpsRunPanel({
   const run = q.data?.run ?? null;
   const finished = run !== null && isTerminalState(run.state);
 
-  // Le journal défile tout seul tant qu'on regarde une opération en cours.
+  // The log scrolls on its own while we watch an operation in progress.
   useEffect(() => {
     if (!finished && logBox.current) logBox.current.scrollTop = logBox.current.scrollHeight;
   }, [q.data?.log.text, finished]);
 
-  // Une opération terminée change la version en service, l'agent et le catalogue des
-  // sauvegardes : l'écran qui l'entoure est périmé au même instant.
+  // A finished operation changes the version in service, the agent and the backup
+  // catalogue: the screen around it is stale at the same moment.
   useEffect(() => {
     if (finished) void qc.invalidateQueries({ queryKey: qk.adminOps });
   }, [finished, qc]);
@@ -108,8 +108,8 @@ export default function OpsRunPanel({
   const gone = q.isError && isGone(q.error);
   const lost = q.isError && !gone && !finished;
 
-  // Oublié dès qu'on le sait, une seule fois : sans cela, un rechargement ferait revenir le
-  // fantôme, et l'écran repartirait pour un tour de « l'instance redémarre » sans fin.
+  // Forgotten as soon as we know it, once: otherwise a reload would bring back the
+  // ghost, and the screen would restart for another round of "the instance is restarting", endlessly.
   const forgotten = useRef(false);
   useEffect(() => {
     if (gone && !forgotten.current) {
@@ -118,10 +118,10 @@ export default function OpsRunPanel({
     }
   }, [gone, onGone]);
 
-  // Toujours une sortie. « Écarter » n'apparaissait qu'une fois l'opération terminée : devant
-  // un run qui ne se terminerait jamais, l'écran devenait un cul-de-sac. Écarter ne fait que
-  // masquer localement — une opération réellement en cours revient au prochain rafraîchissement
-  // de l'écran qui l'entoure, il n'y a donc rien à protéger ici.
+  // Always an exit. "Dismiss" only appeared once the operation was finished: in front of
+  // a run that would never finish, the screen became a dead end. Dismiss only hides
+  // locally: an operation really in progress comes back at the next refresh of
+  // the surrounding screen, so there is nothing to protect here.
   const canDismiss = finished || gone || (lost && run === null);
 
   return (
@@ -145,8 +145,8 @@ export default function OpsRunPanel({
             </span>
           )
         )}
-        {/* Chaque texte dans son propre élément : l'espacement d'une boîte flex ne sépare
-            que des ENFANTS, et deux nœuds de texte frères se rendaient collés l'un à l'autre. */}
+        {/* Each text in its own element: the spacing of a flex box only separates
+            CHILDREN, and two sibling text nodes rendered stuck together. */}
         <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           {run?.startedAt && <span>{t('ops.run.startedAt', { date: moment(run.startedAt) })}</span>}
           {run?.requestedBy && <span>{t('ops.run.requestedBy', { name: run.requestedBy.displayName })}</span>}
@@ -164,7 +164,7 @@ export default function OpsRunPanel({
           <p className="mb-1 text-xs font-semibold section-label text-muted-foreground">
             {t('ops.run.output')}
           </p>
-          {/* Sortie machine : hors i18n par construction, et c'est ce que dit le `<pre>`. */}
+          {/* Machine output: non-i18n by construction, and that is what the `<pre>` says. */}
           <pre
             ref={logBox}
             className="max-h-64 overflow-auto rounded-md bg-secondary p-2 font-mono text-2xs leading-relaxed"
@@ -186,8 +186,8 @@ export default function OpsRunPanel({
               {t('ops.run.dismiss')}
             </Button>
             {run?.kind === 'update' && run.state === 'succeeded' && (
-              // L'application servie au navigateur date de la version précédente : recharger
-              // n'est pas un confort, c'est ce qui met l'écran d'accord avec le serveur.
+              // The application served to the browser dates from the previous version: reloading
+              // is not a convenience, it is what brings the screen back in line with the server.
               <Button size="sm" onClick={() => window.location.reload()}>
                 <RotateCw size={13} /> {t('ops.result.reload')}
               </Button>
@@ -199,7 +199,7 @@ export default function OpsRunPanel({
   );
 }
 
-/** Ce qu'il faut retenir d'une opération jouée — et, quand il y a lieu, ce qu'il reste à faire. */
+/** What to keep from a played operation, and, where relevant, what remains to be done. */
 function Verdict({ run }: { run: NonNullable<RunDetail['run']> }) {
   const t = useT();
 
@@ -218,8 +218,8 @@ function Verdict({ run }: { run: NonNullable<RunDetail['run']> }) {
     return (
       <div className="space-y-2 rounded-md border border-warning/30 bg-warning/5 p-3">
         <p className="text-sm">{t('ops.result.rolledBack')}</p>
-        {/* Le code est revenu ; la base, elle, a pu être migrée. On donne la commande, on ne
-            la lance pas : une restauration perd tout ce qui a été écrit depuis. */}
+        {/* The code is back; the database, however, may have been migrated. We give the command, we do not
+            run it: a restore loses everything written since. */}
         <Hint>{t('ops.result.rolledBackHint')}</Hint>
         {run.restoreCommand && <CommandBlock command={run.restoreCommand} />}
       </div>
@@ -244,7 +244,7 @@ function Verdict({ run }: { run: NonNullable<RunDetail['run']> }) {
   return null;
 }
 
-/** Date lisible dans la langue du lecteur. */
+/** Readable date in the reader's language. */
 function moment(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;

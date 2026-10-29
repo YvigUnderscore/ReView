@@ -15,15 +15,15 @@ import {
 } from './studioSettings';
 
 /**
- * Les champs de réglages d'une section — **sans bouton**.
+ * The settings fields of a section — **without a button**.
  *
- * L'enregistrement appartient à la page (`SaveBar`), pas au groupe de champs : c'est la
- * règle qui a fait disparaître les onze boutons de l'ancienne section fourre-tout. Ce
- * composant ne sait donc que rendre et remonter les saisies.
+ * Saving belongs to the page (`SaveBar`), not to the group of fields: this is the
+ * rule that removed the eleven buttons of the old catch-all section. This
+ * component therefore only renders and passes inputs back up.
  *
- * La ligne est celle des trois familles d'écrans (`SettingsRow`) : libellé à gauche relié
- * par `htmlFor`, contrôle à droite. Le texte grisé du champ est un exemple, jamais un nom
- * accessible.
+ * The row is that of the three screen families (`SettingsRow`): label on the left linked
+ * by `htmlFor`, control on the right. The greyed text of the field is an example, never an
+ * accessible name.
  */
 export default function SettingsFields({
   fields,
@@ -61,8 +61,8 @@ export default function SettingsFields({
                   value={fieldUnit(field, stored, units)}
                   onChange={(e) => onUnit(field, e.target.value as SizeUnit)}
                 >
-                  {/* Symboles internationaux : « Mo »/« Go » n'existent qu'en français, et
-                      la modale « New user » disait déjà « Quota (GB) » deux écrans plus loin. */}
+                   {/* International symbols: "Mo"/"Go" exist only in French, and
+                       the "New user" modal already said "Quota (GB)" two screens later. */}
                   <option value="MB">MB</option>
                   <option value="GB">GB</option>
                 </Select>

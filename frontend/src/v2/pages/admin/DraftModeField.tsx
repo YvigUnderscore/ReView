@@ -7,21 +7,21 @@ import { isDraftModeOn } from '../../lib/draftMode';
 import { useT } from '../../i18n';
 
 /**
- * Le studio garde-t-il le parcours en deux temps ?
+ * Does the studio keep the two-step workflow?
  *
- * Depuis la Phase 50, un média est publié dès son dépôt : c'est le geste que les studios
- * attendaient, et le brouillon devient une option — éteinte par défaut. L'allumer rend à
- * l'interface toute la mécanique de brouillon (pastille des brouillons en attente, filtre
- * « Mes brouillons », action « Publier »).
+ * Since Phase 50, a media item is published as soon as it is uploaded: this is the gesture studios
+ * were waiting for, and the draft becomes an option — off by default. Turning it on gives
+ * the interface back the whole draft mechanism (draft badge for pending items, "My drafts"
+ * filter, "Publish" action).
  *
- * Le réglage vit dans les défauts de projet, à côté de la consigne exigée : les deux
- * décident de ce qui se passe quand un média arrive.
+ * The setting lives in the project defaults, next to the required instruction: the two
+ * decide what happens when a media item arrives.
  */
 export default function DraftModeField({
   value,
   onChange,
 }: {
-  /** Valeur enregistrée ou saisie — la table `Setting` ne stocke que du texte. */
+  /** Stored or entered value — the `Setting` table only stores text. */
   value: string;
   onChange: (value: string) => void;
 }) {

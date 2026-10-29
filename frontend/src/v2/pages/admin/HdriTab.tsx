@@ -23,8 +23,8 @@ interface HdriItem {
 }
 
 /**
- * Bibliothèque HDRI (Phase 15 V4) : upload présigné MinIO (.hdr/.exr) + liste + suppression.
- * Ces environnements seront proposés à l'éclairage du viewer 3D Three.js.
+ * HDRI library (Phase 15 V4): presigned MinIO upload (.hdr/.exr) + list + deletion.
+ * These environments will be offered for the lighting of the Three.js 3D viewer.
  */
 export default function HdriTab() {
   const t = useT();

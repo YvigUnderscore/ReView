@@ -4,12 +4,12 @@
 import { intlLocale } from '../i18n';
 
 /**
- * Temps relatif court, dans la langue courante.
+ * Short relative time, in the current language.
  *
- * `Intl.RelativeTimeFormat` s'en charge : il connaît les formes de chaque langue
- * (« il y a 3 j », « 3 days ago », « 3 日前 ») là où une table de suffixes maison
- * n'aurait couvert que le français. Au-delà d'une semaine, la date absolue se lit
- * mieux qu'un compte de jours.
+ * `Intl.RelativeTimeFormat` handles this: it knows each language's forms
+ * ("il y a 3 j", "3 days ago", "3 日前") where a home-made table of suffixes
+ * would only have covered French. Beyond a week, the absolute date reads
+ * better than a count of days.
  */
 export function timeAgo(iso: string): string {
   const locale = intlLocale();

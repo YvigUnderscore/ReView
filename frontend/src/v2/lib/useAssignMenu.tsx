@@ -14,11 +14,11 @@ import { assignBody, assignGroups, departmentsOf } from './assignMenu';
 import type { MenuEntry } from './menuSpec';
 
 /**
- * Sous-menus « Assigner » et « Départements » pour un asset ou un plan.
+ * "Assign" and "Departments" submenus for an asset or a shot.
  *
- * Confier un asset à quelqu'un demandait d'ouvrir chacune de ses tâches, une par une ;
- * déclarer les étapes qu'il traverse demandait d'ouvrir son panneau de réglages. Les deux
- * gestes tiennent maintenant dans le menu contextuel, là où l'entité est visible.
+ * Assigning an asset to someone used to mean opening each of its tasks one by one;
+ * declaring the steps it goes through meant opening its settings panel. Both
+ * gestures now fit in the context menu, where the entity is visible.
  */
 
 type Holder = 'asset' | 'shot';
@@ -26,9 +26,9 @@ const SEGMENT: Record<Holder, 'assets' | 'shots'> = { asset: 'assets', shot: 'sh
 
 export interface AssignTarget {
   id: number;
-  /** Étapes déclarées par l'entité. */
+  /** Steps declared by the entity. */
   departments?: { id: number; name: string }[];
-  /** Ses tâches, pour savoir qui est déjà dessus. */
+  /** Its tasks, to know who is already on it. */
   tasks?: {
     departmentId: number | null;
     departmentRef?: { id: number; name: string } | null;
@@ -57,13 +57,13 @@ export function useAssignMenu(projectId: number, holder: Holder) {
   };
 
   /**
-   * Sous-menu « Assigner » : un niveau par département, puis les personnes. Absent quand
-   * le projet n'a ni membre assignable ni étape — il n'y aurait rien à choisir.
+   * "Assign" submenu: one level per department, then the people. Absent when
+   * the project has neither an assignable member nor a step — there would be nothing to choose.
    */
   const assignEntry = (target: AssignTarget, canManage: boolean): MenuEntry | null => {
     if (!canManage || members.length === 0) return null;
-    // Une liste **vide** n'est pas une absence de liste : un asset qui ne déclare aucune
-    // étape doit se voir proposer le pipe du projet, pas un menu absent.
+    // An **empty** list is not the absence of a list: an asset that declares no
+    // step must be offered the project's pipe, not an absent menu.
     const declared = target.departments?.length ? target.departments : allDepartments;
     const departments = departmentsOf(declared, target.tasks ?? []);
     if (departments.length === 0) return null;
@@ -94,8 +94,8 @@ export function useAssignMenu(projectId: number, holder: Holder) {
                 }
               })();
             },
-            // Le département sans tâche sur un projet piloté depuis ShotGrid reste visible
-            // mais inerte : masquer l'étape ferait croire que le pipe ne la prévoit pas.
+            // A department without a task on a project driven from ShotGrid stays visible
+            // but inert: hiding the step would suggest the pipe does not plan for it.
             items: group.items.map((item) => ({ ...item, disabled: group.disabled })),
           },
         ],
@@ -107,9 +107,9 @@ export function useAssignMenu(projectId: number, holder: Holder) {
 }
 
 /**
- * Sous-menu « Départements » : cocher les étapes que l'entité traverse, sans ouvrir ses
- * réglages. La bascule est ciblée (ajout/retrait), pas un remplacement de la liste —
- * deux clics rapides s'annulaient autrement l'un l'autre.
+ * "Departments" submenu: tick the steps the entity goes through, without opening its
+ * settings. The toggle is targeted (add/remove), not a replacement of the list —
+ * two quick clicks would otherwise cancel each other out.
  */
 export function useDepartmentMenu(projectId: number, holder: Holder, id: number) {
   const t = useT();
@@ -127,8 +127,8 @@ export function useDepartmentMenu(projectId: number, holder: Holder, id: number)
       items: allDepartments.map((department) => ({
         id: `department-${department.id}`,
         label: department.name,
-        // Coche à l'emplacement de l'icône : l'écrire dans le libellé décalerait les noms
-        // les uns par rapport aux autres et mêlerait donnée et présentation.
+        // Tick at the icon's position: writing it into the label would shift the names
+        // relative to one another and mix data and presentation.
         icon: owned.has(department.id) ? <Check size={13} /> : <span className="size-3" />,
         onSelect: () => {
           void (async () => {

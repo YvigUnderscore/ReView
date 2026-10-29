@@ -26,14 +26,14 @@ import {
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Journal des livraisons d'un webhook.
+ * Log of a webhook's deliveries.
  *
- * Ce qui manquait n'était pas un tableau de plus : c'était de pouvoir répondre à « qu'a-t-on
- * perdu, et de quoi ». Chaque ligne porte l'identifiant annoncé au destinataire
- * (`X-ReView-Delivery`), ses tentatives et l'extrait de réponse qui explique l'échec.
+ * What was missing was not one more table: it was being able to answer "what did we
+ * lose, and what". Each row carries the identifier announced to the recipient
+ * (`X-ReView-Delivery`), its attempts and the response excerpt that explains the failure.
  *
- * Le rejeu se demande au clic droit, comme les autres actions de l'application, et n'est
- * offert que sur un échec — rejouer une remise créerait un doublon chez le consommateur.
+ * Replay is requested on right click, like the application's other actions, and is
+ * only offered on a failure — replaying a delivery would create a duplicate on the consumer's side.
  */
 
 const FIRST_PAGE = 25;
@@ -100,8 +100,8 @@ export default function WebhookDeliveries({ webhookId, active }: { webhookId: nu
               {row.replayOfId != null && (
                 <Badge variant="muted">{t('webhooks.delivery.replayOf', { value: row.replayOfId })}</Badge>
               )}
-              {/* Identifiant annoncé au destinataire dans `X-ReView-Delivery` : technique,
-                  donc jamais traduit — c'est ce que le consommateur cherchera dans ses logs. */}
+              {/* Identifier announced to the recipient in `X-ReView-Delivery`: technical,
+                  hence never translated — it is what the consumer will look for in its logs. */}
               <code className="shrink-0 text-muted-foreground">#{row.id}</code>
               <span className="shrink-0 text-muted-foreground">{when(row.createdAt)}</span>
             </div>

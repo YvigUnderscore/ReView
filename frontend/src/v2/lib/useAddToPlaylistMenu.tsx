@@ -11,16 +11,16 @@ import type { MenuEntry } from './menuSpec';
 import { useT } from '../i18n';
 
 /**
- * Entrée « Ajouter à la playlist » pour n'importe quel menu contextuel (C5).
+ * "Add to playlist" entry for any context menu (C5).
  *
- * L'ajout n'existait que depuis la review d'un média. Un superviseur qui parcourt ses
- * plans, ses assets ou son kanban veut pousser ce qu'il voit dans les dailies du soir
- * sans changer d'écran : le sous-menu liste les playlists du projet, et le serveur sait
- * résoudre un média comme une version.
+ * Adding existed only from a media item's review. A supervisor browsing their
+ * shots, assets or kanban wants to push what they see into the evening dailies
+ * without changing screens: the submenu lists the project's playlists, and the server knows
+ * how to resolve a media item as a version.
  *
- * La cible peut être différée : sur une séquence, « ajouter » signifie « la dernière
- * version publiée de chacun de ses plans », que l'on ne va chercher qu'au clic — pas à
- * l'ouverture de la page, pour une entrée de menu que personne n'utilisera peut-être.
+ * The target may be deferred: on a sequence, "add" means "the latest published
+ * version of each of its shots", which is only fetched on click — not when the
+ * page opens, for a menu entry that nobody may use.
  */
 
 export interface PlaylistTarget {

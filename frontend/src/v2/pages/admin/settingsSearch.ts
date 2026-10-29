@@ -6,33 +6,33 @@ import { fold, haystack, matchesQuery } from '../../components/settings/settings
 import type { MessageKey } from '../../i18n';
 
 /**
- * Recherche dans les réglages du studio.
+ * Search in the studio settings.
  *
- * Vingt-huit sections réparties en cinq groupes : pour trouver le watermark il fallait
- * savoir qu'il vit dans « Diffusion », et pour la rétention des journaux qu'elle n'est pas
- * au même endroit que celle de la corbeille. La recherche porte donc sur les **libellés de
- * réglages**, pas seulement sur les noms de sections.
+ * Twenty-eight sections spread across five groups: to find the watermark you had to
+ * know it lives in "Distribution", and for log retention that it is not
+ * in the same place as trash retention. The search therefore covers the **setting
+ * labels**, not only the section names.
  *
- * Deux index s'additionnent :
- *   1. `SECTION_KEYWORDS` — les mots qu'on emploie pour désigner une section ;
- *   2. `SECTION_SETTING_LABELS` — les réglages que la section rend **réellement**.
+ * Two indexes are added together:
+ *   1. `SECTION_KEYWORDS`: the words used to refer to a section;
+ *   2. `SECTION_SETTING_LABELS`: the settings the section **actually** renders.
  *
- * Le second manquait presque entièrement : seuls les douze réglages clé/valeur de
- * `studioSettings` étaient indexés, pour une soixantaine effectivement rendus. Chercher
- * « CRF », « slate », « STARTTLS », « taille de lot » ou « scopes » ne trouvait rien —
- * c'est-à-dire exactement les réglages qu'on ne retrouve pas de tête.
+ * The second was almost entirely missing: only the twelve key/value settings of
+ * `studioSettings` were indexed, out of some sixty actually rendered. Searching for
+ * "CRF", "slate", "STARTTLS", "batch size" or "scopes" found nothing:
+ * exactly the settings one never remembers.
  *
- * Le moteur (repli des accents, tous les mots exigés) est celui des trois familles
- * d'écrans : `components/settings/settingsFilter`.
+ * The engine (accent folding, all required words) is that of the three families
+ * of screens: `components/settings/settingsFilter`.
  */
 
 export { fold };
 
 /**
- * Mots-clés supplémentaires par section, en plus de son libellé traduit.
+ * Extra keywords per section, in addition to its translated label.
  *
- * Volontairement en anglais **et** en français : un studio francophone cherche « filigrane »
- * autant que « watermark », et les termes de production restent en anglais partout.
+ * Deliberately in English **and** in French: a French-speaking studio searches for "filigrane"
+ * as much as "watermark", and production terms stay in English everywhere.
  */
 export const SECTION_KEYWORDS: Record<string, string[]> = {
   overview: ['dashboard', 'tableau de bord', 'statistiques', 'stats'],
@@ -167,12 +167,12 @@ export const SECTION_KEYWORDS: Record<string, string[]> = {
 };
 
 /**
- * Les réglages que chaque section rend, par leur clé de libellé.
+ * The settings each section renders, by their label key.
  *
- * Relevé sur les écrans eux-mêmes : c'est la liste que la recherche indexe en plus des
- * mots-clés, et le seul moyen que « clé HMAC », « débit audio » ou « taille de lot »
- * mènent quelque part. Une section absente d'ici n'expose pas de réglage nommé (listes,
- * journaux) et se trouve par ses mots-clés.
+ * Taken from the screens themselves: this is the list the search indexes in addition to
+ * the keywords, and the only way "HMAC key", "audio bitrate" or "batch size"
+ * lead anywhere. A section absent from here exposes no named setting (lists,
+ * logs) and is found through its keywords.
  */
 export const SECTION_SETTING_LABELS: Partial<Record<string, MessageKey[]>> = {
   settings: ['settings.studioName', 'settings.accentColour', 'reviewStatus.defaultLang', 'burnin.studioLogo'],
@@ -289,23 +289,23 @@ export const SECTION_SETTING_LABELS: Partial<Record<string, MessageKey[]>> = {
 };
 
 /**
- * Index de recherche d'une section : son libellé, son identifiant, ses mots-clés, et les
- * libellés des réglages qu'elle rend.
+ * Search index of a section: its label, its identifier, its keywords, and the
+ * labels of the settings it renders.
  */
 export function sectionHaystack(key: string, label: string, t: (k: MessageKey) => string): string {
   const parts: (string | undefined)[] = [label, key, ...(SECTION_KEYWORDS[key] ?? [])];
-  // Les réglages clé/valeur sont indexés dans la section qui les rend : « uploads
-  // simultanés » mène à « Stockage », « rétention corbeille » à « Rétention ».
+  // Key/value settings are indexed in the section that renders them: "simultaneous
+  // uploads" leads to "Storage", "trash retention" to "Retention".
   if (isSettingsHome(key)) parts.push(...fieldsFor(key).map((f) => t(f.labelKey)));
   parts.push(...(SECTION_SETTING_LABELS[key] ?? []).map((labelKey) => t(labelKey)));
   return haystack(parts);
 }
 
-/** La section rend-elle des réglages clé/valeur ? */
+/** Does the section render key/value settings? */
 const isSettingsHome = (key: string): key is SettingsHome =>
   (SETTINGS_HOMES as readonly string[]).includes(key);
 
-/** La section répond-elle à la recherche ? Une recherche vide laisse tout passer. */
+/** Does the section match the search? An empty search lets everything through. */
 export function sectionMatches(hay: string, query: string): boolean {
   return matchesQuery(hay, query);
 }

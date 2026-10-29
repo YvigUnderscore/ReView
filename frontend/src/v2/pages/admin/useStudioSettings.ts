@@ -21,11 +21,11 @@ import {
 } from './studioSettings';
 
 /**
- * La ligne du studio (`/api/studio`) : son nom et son webhook Discord.
+ * The studio row (`/api/studio`): its name and its Discord webhook.
  *
- * Ni l'un ni l'autre n'avait d'écran ; ils en ont désormais deux, distincts. Une seule
- * requête et une seule clé de cache les servent — deux `useQuery` sur la même route avec
- * des types différents auraient fini par diverger.
+ * Neither had a screen; they now have two, separate. A single
+ * request and a single cache key serve them — two `useQuery` calls on the same route with
+ * different types would eventually have diverged.
  */
 export function useStudioRow() {
   return useQuery({
@@ -35,15 +35,15 @@ export function useStudioRow() {
 }
 
 /**
- * Le brouillon des réglages clé/valeur d'un écran d'administration.
+ * The draft of the key/value settings of an admin screen.
  *
- * Onze boutons « Enregistrer » sur un même écran, c'étaient onze occasions d'oublier celui
- * qu'on n'avait pas pressé. Un écran tient désormais **un** brouillon, et sa barre d'action
- * unique n'envoie que les clés réellement touchées — deux administrateurs qui règlent deux
- * champs voisins ne s'écrasent donc pas l'un l'autre.
+ * Eleven "Save" buttons on one screen were eleven chances to forget the one
+ * not pressed. A screen now holds **one** draft, and its single action bar
+ * only sends the keys actually touched — two administrators setting two neighbouring
+ * fields therefore do not overwrite each other.
  *
- * Les champs sur mesure (langue, accent, politique de tâches, nom du studio) déposent leur
- * valeur dans le même brouillon : ils partagent la barre au lieu d'en ajouter une.
+ * Bespoke fields (language, accent, task policy, studio name) put their
+ * value into the same draft: they share the bar instead of adding one.
  */
 export function useStudioSettings(home: SettingsHome) {
   const t = useT();
@@ -61,7 +61,7 @@ export function useStudioSettings(home: SettingsHome) {
 
   const setValue = (key: string, value: string) => setDraft((d) => ({ ...d, [key]: value }));
 
-  /** Changer d'unité change la valeur envoyée : c'est donc une modification à part entière. */
+  /** Changing the unit changes the value sent: it is therefore a change in its own right. */
   const setUnit = (field: SettingField, unit: SizeUnit) => {
     setUnits((u) => ({ ...u, [field.key]: unit }));
     setDraft((d) => ({ ...d, [field.key]: fieldDisplay(field, stored, d) }));
@@ -73,9 +73,9 @@ export function useStudioSettings(home: SettingsHome) {
   };
 
   /**
-   * Pousse les clés touchées. Lève plutôt que d'écrire à moitié : l'appelant enchaîne
-   * souvent d'autres enregistrements sous la même barre, et un demi-état serait pire qu'un
-   * refus lisible.
+   * Pushes the touched keys. Throws rather than writing half-way: the caller often chains
+   * other saves under the same bar, and a half state would be worse than a
+   * readable refusal.
    */
   const commit = async () => {
     const { entries, invalidKey } = settingsPayload(fields, draft, units);
@@ -89,9 +89,9 @@ export function useStudioSettings(home: SettingsHome) {
 }
 
 /**
- * L'action d'une barre d'enregistrement : un seul appel en vol, un message par résultat.
- * Le succès est annoncé une fois, quel que soit le nombre de routes que la page a dû
- * appeler pour honorer son bouton unique.
+ * The action of a save bar: a single call in flight, one message per result.
+ * Success is announced once, whatever the number of routes the page had to
+ * call to honour its single button.
  */
 export function useSaveAction(run: () => Promise<void>, successMessage?: string) {
   const t = useT();

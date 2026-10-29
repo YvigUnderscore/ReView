@@ -12,7 +12,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import type { ReviewStatus } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Formulaire de création/édition d'un statut de review (Phase 31.A). */
+/** Form for creating/editing a review status (Phase 31.A). */
 export default function ReviewStatusForm({
   status,
   onClose,

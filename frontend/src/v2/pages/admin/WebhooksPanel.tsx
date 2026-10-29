@@ -19,7 +19,7 @@ import { useT, type MessageKey } from '../../i18n';
 import type { AdminProjectRow } from '../../types/api';
 import { Hint } from '../../components/ui/hint';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
 
 interface WebhookRow {
@@ -27,7 +27,7 @@ interface WebhookRow {
   url: string;
   events: string[];
   active: boolean;
-  /** Portée : `null` = tout le studio ; sinon, ce projet et lui seul. */
+  /** Scope: `null` = the whole studio; otherwise, this project and only it. */
   projectId: number | null;
   lastStatus: number | null;
   lastError: string | null;
@@ -42,7 +42,7 @@ const eventRows = (t: Tr) => [
   { key: 'comment.created', label: t('comments.created') },
 ];
 
-/** Webhooks sortants (36.D) : POST JSON signés HMAC vers vos outils (Slack relais, CI…). */
+/** Outbound webhooks (36.D): JSON POSTs signed with HMAC to your tools (Slack relay, CI…). */
 export default function WebhooksPanel() {
   const t = useT();
   const qc = useQueryClient();
@@ -130,8 +130,8 @@ export default function WebhooksPanel() {
           maxLength={500}
         />
         <div className="flex flex-wrap items-center gap-3">
-          {/* Portée : par défaut tout le studio, comme avant. Rattacher à un projet est ce
-              qui rend un webhook donnable à un client sans lui ouvrir les autres films. */}
+           {/* Scope: the whole studio by default, as before. Attaching to a project is what
+               makes a webhook grantable to a client without opening the other films to them. */}
           <label className="flex items-center gap-1.5 text-xs">
             {t('webhooks.scope')}
             <Select
@@ -190,8 +190,8 @@ export default function WebhooksPanel() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{h.url}</p>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {/* La portée se corrige sans recréer le webhook : c'est ce réglage-là
-                      qu'on découvre trop tard, un client ayant déjà reçu un autre film. */}
+                  {/* The scope can be corrected without recreating the webhook: this is the setting
+                      one discovers too late, a client having already received another film. */}
                   <Select
                     className="px-1.5 py-0.5 text-xs"
                     value={h.projectId ?? ''}

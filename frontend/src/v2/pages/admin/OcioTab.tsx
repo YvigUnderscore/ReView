@@ -39,9 +39,9 @@ interface OcioRelease {
 }
 
 /**
- * Gestion de couleur OCIO (39.B) : récupère les configs ACES officielles depuis les releases
- * GitHub de l'ASWF, les installe dans le studio et fixe la config par défaut (ACES 1.3). Les
- * projets choisissent ensuite leur display/view dans leurs réglages.
+ * OCIO colour management (39.B): fetches the official ACES configs from the
+ * ASWF's GitHub releases, installs them on the studio and sets the default config (ACES 1.3). Projects
+ * then pick their display/view in their own settings.
  */
 export default function OcioTab() {
   const t = useT();
@@ -172,7 +172,7 @@ export default function OcioTab() {
                       className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2"
                     >
                       <span className="min-w-0 flex-1 truncate text-sm">{a.label}</span>
-                      {/* Badge, pas étiquette de section : il se lit par son aplat, pas par sa casse. */}
+                      {/* Badge, not a section label: it is read by its solid fill, not by its casing. */}
                       {a.recommendedDefault && (
                         <span className="rounded bg-primary/15 px-1.5 py-0.5 text-2xs text-primary">
                           {t('ocio.recommended')}

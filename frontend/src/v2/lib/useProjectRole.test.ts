@@ -5,9 +5,9 @@ import { describe, it, expect } from 'vitest';
 import { projectRoleInfo } from './useProjectRole';
 
 describe('projectRoleInfo', () => {
-  it('donne au superviseur de projet les droits que le serveur lui ouvre', () => {
-    // Le cas qui manquait : rôle global ARTIST, superviseur par membership. L'écran
-    // refusait ce que l'API acceptait.
+  it('gives the project supervisor the rights the server grants them', () => {
+    // The missing case: global role ARTIST, supervisor by membership. The screen
+    // refused what the API accepted.
     expect(projectRoleInfo('ARTIST', 'SUPERVISOR')).toEqual({
       role: 'SUPERVISOR',
       canManage: true,
@@ -15,17 +15,17 @@ describe('projectRoleInfo', () => {
     });
   });
 
-  it('ne retire rien à un administrateur du studio, membre ou non', () => {
+  it('takes nothing away from a studio admin, member or not', () => {
     expect(projectRoleInfo('ADMIN', null).canManage).toBe(true);
     expect(projectRoleInfo('ADMIN', 'CLIENT').canManage).toBe(true);
   });
 
-  it('retombe sur le rôle global tant que la requête n’a pas répondu', () => {
+  it('falls back to the global role until the request answers', () => {
     expect(projectRoleInfo('SUPERVISOR', null).canManage).toBe(true);
     expect(projectRoleInfo('ARTIST', null).canManage).toBe(false);
   });
 
-  it('ferme la contribution aux comptes clients', () => {
+  it('closes contribution to client accounts', () => {
     expect(projectRoleInfo('CLIENT', null)).toEqual({
       role: 'CLIENT',
       canManage: false,
@@ -34,7 +34,7 @@ describe('projectRoleInfo', () => {
     expect(projectRoleInfo('ARTIST', 'CLIENT').canContribute).toBe(false);
   });
 
-  it('ne conclut rien sans compte chargé', () => {
+  it('concludes nothing without a loaded account', () => {
     expect(projectRoleInfo(undefined, null)).toEqual({
       role: null,
       canManage: false,

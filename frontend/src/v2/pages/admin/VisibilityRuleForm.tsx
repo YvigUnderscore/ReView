@@ -18,11 +18,11 @@ import { MATCH_EXAMPLE, MATCH_LABEL, TYPE_LABEL } from './visibilityLabels';
 import { useT } from '../../i18n';
 
 /**
- * Écriture d'une règle de masquage.
+ * Writing a hiding rule.
  *
- * Le serveur refuse une expression invalide **ou trop lente** : ces deux refus arrivent ici,
- * au moment où l'admin peut corriger. Plus tard, la règle paraîtrait active sans rien
- * masquer, et personne ne saurait pourquoi.
+ * The server refuses an invalid **or too slow** expression: both refusals arrive here,
+ * at the moment the admin can correct them. Later, the rule would appear active without
+ * hiding anything, and nobody would know why.
  */
 const ENTITY_TYPES: VisibilityEntityType[] = ['all', 'episode', 'sequence', 'shot', 'asset'];
 const MATCH_TYPES: MatchType[] = ['exact', 'prefix', 'contains', 'regex'];

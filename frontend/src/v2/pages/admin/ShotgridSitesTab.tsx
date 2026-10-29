@@ -16,12 +16,12 @@ import {
 import type { SgSite } from '../../types/shotgrid';
 
 /**
- * Sites ShotGrid du studio (administration globale).
+ * The studio's ShotGrid sites (global administration).
  *
- * Les identifiants vivent ici, pas dans chaque projet : une paire créée une fois sert
- * à toutes les connexions du studio, et une rotation de clé se fait en un endroit.
- * Aucun secret n'est jamais renvoyé par l'API — les champs restent vides à l'édition,
- * et ne remplacer que ce qu'on saisit.
+ * Credentials live here, not in each project: a pair created once serves
+ * all of the studio's connections, and a key rotation happens in one place.
+ * No secret is ever returned by the API — the fields stay empty on edit,
+ * and only what is typed replaces the stored value.
  */
 export default function ShotgridSitesTab() {
   const t = useT();
@@ -141,7 +141,7 @@ export default function ShotgridSitesTab() {
   );
 }
 
-/** Rotation des identifiants d'un site : laisser vide conserve la valeur en place. */
+/** Rotation of a site's credentials: leaving it empty keeps the stored value. */
 function EditSite({ site, onDone }: { site: SgSite; onDone: () => void }) {
   const t = useT();
   const update = useUpdateSgSite();

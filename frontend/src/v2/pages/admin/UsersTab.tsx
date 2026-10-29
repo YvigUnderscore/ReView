@@ -24,7 +24,7 @@ import { filterUsers, sortUsers, type UserSort } from './adminUsers';
 import type { Role, User } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Liste des comptes (refonte admin) : recherche, filtre par rôle, tri, fiche détaillée. */
+/** Account list (admin overhaul): search, role filter, sort, detailed sheet. */
 export default function UsersTab() {
   const t = useT();
   const qc = useQueryClient();
@@ -43,7 +43,7 @@ export default function UsersTab() {
   const [resending, setResending] = useState<number | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: qk.users });
-  /** Relance : le lien précédent est périmé côté serveur, un seul lien vit à la fois. */
+  /** Resend: the previous link is stale server-side, only one link lives at a time. */
   const resendInvite = async (u: User) => {
     setResending(u.id);
     try {

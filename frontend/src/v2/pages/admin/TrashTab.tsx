@@ -78,9 +78,9 @@ export default function TrashTab() {
     }
   };
 
-  /* Le délai avant purge automatique se réglait ici même, dans la section fourre-tout, et
-     ailleurs pour les journaux. Il vit maintenant avec les autres durées de conservation ;
-     cet écran dit où, plutôt que d'en proposer une seconde copie. */
+  /* The delay before automatic purge used to be set here, in the catch-all section, and
+      elsewhere for the logs. It now lives with the other retention periods;
+      this screen says where, rather than offering a second copy. */
   const retentionPointer = (
     <SettingsPointer
       section="retention"

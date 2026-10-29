@@ -18,16 +18,16 @@ import { useCalloutLabels } from './docs/useCalloutLabels';
 import { t, useT } from '../i18n';
 
 /**
- * Documentation produit (/docs) : rendu du dossier DOCUMENTATION/ du repo, copié dans
- * public/docs + manifest.json par frontend/scripts/build-docs.mjs.
+ * Product documentation (/docs): renders the DOCUMENTATION/ folder of the repo, copied into
+ * public/docs + manifest.json by frontend/scripts/build-docs.mjs.
  *
- * Sommaire replié par section à gauche, chapitres de la page ouverte dessous, colonne de
- * lecture au centre avec ses deux pages voisines en pied. Le markdown est rendu localement.
+ * Summary folded per section on the left, chapters of the open page below it, reading column
+ * in the centre with its two neighbouring pages at the foot. The markdown is rendered locally.
  *
- * La recherche est la même que celle de la palette Ctrl+K (`docs/docsSearch`) : elle porte
- * sur les titres de chapitre autant que sur les titres de page, dit quel chapitre répond, et
- * **surligne le terme dans la page ouverte** (`docs/docsHighlight`), qu'on rejoint sur sa
- * première occurrence.
+ * Search is the same as the Ctrl+K palette's (`docs/docsSearch`): it covers
+ * chapter titles as well as page titles, says which chapter answers, and
+ * **highlights the term in the open page** (`docs/docsHighlight`), jumping to its
+ * first occurrence.
  */
 
 const fetchText = async (url: string): Promise<string> => {
@@ -42,8 +42,8 @@ export default function DocsPage() {
   const page = params.get('p') ?? 'README.md';
   const [query, setQuery] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
-  // Ancre demandée par un lien ou un chapitre d'une AUTRE page : elle ne peut être rejointe
-  // qu'une fois cette page rendue, ce qui suppose d'attendre son chargement.
+  // Anchor requested by a link or a chapter of ANOTHER page: it can only be reached
+  // once that page has rendered, which means waiting for its load.
   const pendingAnchor = useRef<string | null>(null);
 
   const manifestQ = useDocsManifest();
@@ -64,8 +64,8 @@ export default function DocsPage() {
     [pageQ.data, page, calloutLabels],
   );
   const { html, count: hits } = useMemo(() => highlightDocHtml(rendered, query), [rendered, query]);
-  // Les chapitres se lisent sur le rendu nu : le surlignage n'ajoute que des <mark> dans le
-  // texte des titres, mais recalculer la liste à chaque frappe ferait clignoter le sommaire.
+  // Chapters are read on the bare render: highlighting only adds <mark> tags in the
+  // text of the titles, but recomputing the list on each keystroke would make the summary flicker.
   const chapters = useMemo(() => extractChapters(rendered), [rendered]);
   const activeChapter = useActiveChapter(contentRef, chapters);
 
@@ -87,13 +87,13 @@ export default function DocsPage() {
     else pendingAnchor.current = hash;
   };
 
-  // Une page qui vient d'arriver commence en haut, quel que soit le défilement précédent.
+  // A page that has just arrived starts at the top, whatever the previous scroll.
   useEffect(() => {
     contentRef.current?.scrollTo?.(0, 0);
   }, [page]);
 
-  // Page rendue : on rejoint l'ancre demandée, à défaut la première occurrence surlignée —
-  // chercher un mot doit mener au mot, pas au haut d'une page de quarante paragraphes.
+  // Page rendered: we jump to the requested anchor, otherwise the first highlighted occurrence —
+  // searching for a word must lead to the word, not to the top of a forty-paragraph page.
   useEffect(() => {
     const anchor = pendingAnchor.current;
     pendingAnchor.current = null;
@@ -104,7 +104,7 @@ export default function DocsPage() {
     if (hits > 0) document.querySelector('[data-doc-hit="first"]')?.scrollIntoView?.({ block: 'center' });
   }, [html, hits]);
 
-  // Liens internes du markdown (data-doc posé par renderDocHtml) → navigation SPA.
+  // Internal markdown links (data-doc set by renderDocHtml) → SPA navigation.
   const onContentClick = (e: MouseEvent<HTMLDivElement>) => {
     const link = (e.target as HTMLElement).closest('a[data-doc]');
     const target = link?.getAttribute('data-doc');

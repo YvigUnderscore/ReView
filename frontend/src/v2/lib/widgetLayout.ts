@@ -4,70 +4,70 @@
 import type { MessageKey } from '../i18n';
 
 /**
- * Algèbre d'une page composable — masquer, réordonner, régler un bloc.
+ * Algebra for a composable page: hide, reorder, configure a block.
  *
- * Elle est née à l'Accueil (C2), écrite pour lui : les fonctions lisaient `HOME_WIDGETS`,
- * et leurs types nommaient ses cinq blocs. La vue d'ensemble d'un projet demande
- * exactement les mêmes gestes ; les recopier aurait donné deux jeux de règles à corriger
- * deux fois. Le registre devient donc un **paramètre**, et chaque page garde le sien.
+ * It was born on the Home page (C2), written for it: the functions read `HOME_WIDGETS`,
+ * and their types named its five blocks. A project overview needs exactly the same
+ * gestures; copying them would have produced two rule sets to fix twice. The registry
+ * therefore becomes a **parameter**, and each page keeps its own.
  *
- * Rien ici ne rend quoi que ce soit : ce sont des fonctions pures sur une préférence, ce
- * qui les rend vérifiables sans écran.
+ * Nothing here renders anything: these are pure functions over a preference, which
+ * makes them testable without a screen.
  */
 
-/** Largeur en colonnes sur une grille de douze. */
+/** Width in columns on a twelve-column grid. */
 export type WidgetSpan = 3 | 4 | 6 | 8 | 12;
 export type WidgetHeight = 'short' | 'normal' | 'tall';
 export type WidgetDensity = 'comfortable' | 'compact';
-/** Liste détaillée, grille de vignettes, ou chiffre seul. */
+/** Detailed list, thumbnail grid, or a single figure. */
 export type WidgetVariant = 'list' | 'grid' | 'kpi';
 
 export interface WidgetSettings {
   span?: WidgetSpan;
   height?: WidgetHeight;
   /**
-   * Hauteur en **rangées de grille** — la vue d'ensemble d'un projet et l'accueil. La rampe
-   * des hauteurs offertes et leur traduction en classes vivent dans le modèle de taille
-   * (`components/widgets/widgetSizing`), pas ici : seule la forme enregistrée est commune.
+   * Height in **grid rows**: the project overview and the home page. The ramp
+   * of offered heights and their translation into classes live in the size model
+   * (`components/widgets/widgetSizing`), not here: only the stored shape is shared.
    *
-   * Absente, la page retombe sur `height` puis sur son propre défaut — c'est ce qui rend
-   * relisible une disposition enregistrée avant que les hauteurs existent.
+   * If absent, the page falls back to `height`, then to its own default. This keeps a
+   * layout saved before heights existed readable.
    */
   rows?: number;
   density?: WidgetDensity;
   variant?: WidgetVariant;
-  /** Sans en-tête ni cadre : le bloc affleure la page. C'est ce qui la rend « épurée ». */
+  /** No header or frame: the block sits flush with the page. This is what makes it "clean". */
   bare?: boolean;
 }
 
-/** Disposition enregistrée — absente, la page rend sa disposition de déclaration. */
+/** Saved layout: if absent, the page renders its declaration order. */
 export interface WidgetsPref {
   hidden?: string[];
-  /** Ordre unique de la page, blocs masqués compris (cf. `reorderWidgets`). */
+  /** Single order for the page, hidden blocks included (see `reorderWidgets`). */
   order?: string[];
   settings?: Record<string, WidgetSettings>;
 }
 
 export interface WidgetDefinition {
   labelKey: MessageKey;
-  /** Largeur par défaut, et largeurs proposées au réglage. */
+  /** Default width, and widths offered in the settings. */
   span: WidgetSpan;
   spans: WidgetSpan[];
-  /** Variantes que ce bloc sait rendre ; une seule = pas de choix proposé. */
+  /** Variants this block can render; a single one means no choice is offered. */
   variants: [WidgetVariant, ...WidgetVariant[]];
 }
 
-/** Un registre de page : identifiant de bloc → sa définition. */
+/** A page registry: block id → its definition. */
 export type WidgetRegistry<Id extends string> = Record<Id, WidgetDefinition>;
 
-/** Ordre de déclaration du registre = disposition par défaut d'un compte neuf. */
+/** The registry's declaration order = default layout for a new account. */
 export const registryIds = <Id extends string>(registry: WidgetRegistry<Id>): Id[] =>
   Object.keys(registry) as Id[];
 
 export const isKnownWidget = <Id extends string>(registry: WidgetRegistry<Id>, value: string): value is Id =>
   value in registry;
 
-/** Blocs masqués (préférence filtrée sur les ids encore connus). */
+/** Hidden blocks (preference filtered to the ids still known). */
 export function hiddenWidgets<Id extends string>(
   registry: WidgetRegistry<Id>,
   pref: WidgetsPref | undefined,
@@ -76,8 +76,8 @@ export function hiddenWidgets<Id extends string>(
 }
 
 /**
- * Ordre effectif de la page : l'ordre sauvegardé d'abord, puis les blocs jamais ordonnés
- * (livrés après la dernière sauvegarde) à leur place de déclaration, moins les masqués.
+ * Effective page order: the saved order first, then blocks never ordered
+ * (shipped after the last save) at their declaration position, minus the hidden ones.
  */
 export function visibleWidgets<Id extends string>(
   registry: WidgetRegistry<Id>,
@@ -91,7 +91,7 @@ export function visibleWidgets<Id extends string>(
   return ordered.filter((id) => !hidden.has(id));
 }
 
-/** Réglages d'un bloc, tous renseignés — ce que le cadre reçoit pour se rendre. */
+/** Settings of a block, all filled in: what the frame receives to render. */
 export interface ResolvedWidgetSettings {
   span: WidgetSpan;
   variant: WidgetVariant;
@@ -100,7 +100,7 @@ export interface ResolvedWidgetSettings {
   bare: boolean;
 }
 
-/** Réglages effectifs d'un bloc : ceux du compte, complétés par les défauts du registre. */
+/** Effective settings of a block: the account's, completed by registry defaults. */
 export function widgetSettings<Id extends string>(
   registry: WidgetRegistry<Id>,
   id: Id,
@@ -120,7 +120,7 @@ export function widgetSettings<Id extends string>(
   };
 }
 
-/** Applique un réglage à un bloc ; renvoie le patch de préférence. */
+/** Applies a setting to a block; returns the preference patch. */
 export function setWidgetSetting(
   id: string,
   patch: WidgetSettings,
@@ -133,10 +133,10 @@ export function setWidgetSetting(
 }
 
 /**
- * Réordonne la page après un déplacement ; renvoie le patch de préférence.
+ * Reorders the page after a move; returns the preference patch.
  *
- * L'ordre complet est réécrit, blocs masqués compris : ne sauvegarder que les visibles
- * ferait réapparaître un bloc démasqué à une place arbitraire.
+ * The full order is rewritten, hidden blocks included: saving only the visible ones
+ * would bring a block that was unhidden back at an arbitrary position.
  */
 export function reorderWidgets<Id extends string>(
   registry: WidgetRegistry<Id>,
@@ -155,7 +155,7 @@ export function reorderWidgets<Id extends string>(
   return { ...pref, order: [...next, ...hidden.filter((id) => !next.includes(id))] };
 }
 
-/** Masque ou réaffiche un bloc ; renvoie le patch de préférence. */
+/** Hides or shows a block; returns the preference patch. */
 export function toggleWidget<Id extends string>(
   registry: WidgetRegistry<Id>,
   id: Id,
@@ -168,14 +168,14 @@ export function toggleWidget<Id extends string>(
   return { ...pref, hidden: [...hidden] };
 }
 
-/** Rend à la page sa disposition d'origine. */
+/** Restores the page to its original layout. */
 export function resetWidgets<Id extends string>(registry: WidgetRegistry<Id>): WidgetsPref {
   return { hidden: [], order: registryIds(registry), settings: {} };
 }
 
 /**
- * Classes de grille. Écrites en toutes lettres : une classe Tailwind construite par
- * interpolation (`col-span-${n}`) est purgée au build et ne produit aucun style.
+ * Grid classes. Written out in full: a Tailwind class built by
+ * interpolation (`col-span-${n}`) is purged at build time and produces no style.
  */
 const SPAN_CLASS: Record<WidgetSpan, string> = {
   3: 'md:col-span-6 xl:col-span-3',

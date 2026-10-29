@@ -22,7 +22,7 @@ const PAGE_SIZE = 50;
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 const STATUSES: VersionStatus[] = ['DRAFT', 'REVIEW', 'PUBLISHED'];
 
-/** Liste globale des versions (tous projets) : filtres, pagination, accès à la review. */
+/** Global list of versions (all projects): filters, pagination, access to the review. */
 export default function VersionsTab() {
   const t = useT();
   const [params] = useSearchParams();

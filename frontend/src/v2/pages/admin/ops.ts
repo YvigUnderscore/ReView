@@ -5,24 +5,24 @@ import type { MessageKey, Tr } from '../../i18n';
 import type { InstanceVersion } from './aboutInstance';
 
 /**
- * L'écran « Mises à jour & sauvegardes », côté données : la forme de `GET /api/admin/ops`
- * et les règles d'affichage qui vont avec.
+ * The "Updates & backups" screen, data side: the shape of `GET /api/admin/ops`
+ * and the display rules that go with it.
  *
- * Fonctions pures dans leur propre module (comme `aboutInstance`, `adminShared`…) : elles
- * se testent sans monter React, et le composant n'exporte que lui-même.
+ * Pure functions in their own module (like `aboutInstance`, `adminShared`...): they
+ * are tested without mounting React, and the component exports only itself.
  *
- * ⚠ Aucune table de libellés en constante de module : elle figerait la langue au
- * chargement du bundle. Toutes prennent `t` en paramètre, sans exception.
+ * ⚠ No label table as a module constant: it would freeze the language at
+ * bundle load. All take `t` as a parameter, without exception.
  */
 
-/** Comment cette instance change de version — décide si l'écran propose un bouton. */
+/** Whether this instance is changing version: decides whether the screen offers a button. */
 export type UpdateMode = 'registry' | 'build';
 
 export interface ReleaseInfo {
   tag: string;
   name: string;
   publishedAt: string | null;
-  /** Notes de version, en markdown. Contenu DISTANT : rendu échappé (`renderDocHtml`). */
+  /** Release notes, in markdown. REMOTE content: rendered escaped (`renderDocHtml`). */
   notesMd: string;
   htmlUrl: string;
   prerelease: boolean;
@@ -38,7 +38,7 @@ export interface BackupEntry {
   fromRelease: string | null;
   dbBytes: number | null;
   envIncluded: boolean;
-  /** Commande de restauration composée par le serveur — jamais fabriquée ici. */
+  /** Restore command composed by the server: never built here. */
   restoreCommand: string;
 }
 
@@ -93,7 +93,7 @@ export interface OpsOverview {
   current: InstanceVersion;
   mode: UpdateMode;
   latest: ReleaseInfo | null;
-  /** Tout ce qui est paru depuis la version en service : la réponse à « ça change quoi ». */
+  /** Everything released since the version in service: the answer to "what changes". */
   newer: ReleaseInfo[];
   release: { checkedAt: string | null; error: ReleaseError | null };
   updateAvailable: boolean;
@@ -104,42 +104,42 @@ export interface OpsOverview {
   commands: { update: string | null; backup: string; enableAgent: string };
 }
 
-/** Réponse de `GET /api/admin/ops/runs/:id` — l'état, et une tranche de journal. */
+/** Response of `GET /api/admin/ops/runs/:id`: the state, and a slice of the log. */
 export interface RunDetail {
   run: RunSummary;
   log: { from: number; next: number; text: string; truncated: boolean };
 }
 
-/** Un état terminal ne bougera plus : l'écran cesse de sonder, et le journal est complet. */
+/** A terminal state will not move again: the screen stops polling, and the log is complete. */
 export function isTerminalState(state: RunState): boolean {
   return state !== 'queued' && state !== 'running';
 }
 
 /**
- * Libellé d'un état. La clé de l'état est en kebab-case (`rolled-back`, tel que l'agent
- * l'écrit), celle du message en camelCase : la table de correspondance est ici, une fois.
+ * Label of a state. The state key is in kebab-case (`rolled-back`, as the agent
+ * writes it), the message key in camelCase: the mapping table lives here, once.
  */
 export function runStateLabel(t: Tr, state: RunState): string {
   const key = state === 'rolled-back' ? 'rolledBack' : state;
   return t(`ops.run.state.${key}` as MessageKey);
 }
 
-/** Couleur de la pastille d'état — le vocabulaire de `Badge`. */
+/** Colour of the state dot: the vocabulary of `Badge`. */
 export function runStateVariant(state: RunState): 'success' | 'warning' | 'destructive' | 'info' | 'muted' {
   if (state === 'succeeded') return 'success';
   if (state === 'running' || state === 'queued') return 'info';
-  // Un retour arrière n'est pas un échec : l'instance est debout, dans sa version d'avant.
+  // A rollback is not a failure: the instance is up, in its previous version.
   if (state === 'rolled-back' || state === 'unknown') return 'warning';
   if (state === 'failed') return 'destructive';
   return 'muted';
 }
 
-/** Jalons connus de `scripts/update.sh` ; tout autre mot vient d'une version plus récente. */
+/** Known milestones of `scripts/update.sh`; any other word comes from a newer version. */
 const KNOWN_PHASES = ['queued', 'precheck', 'backup', 'switch', 'health', 'rollback', 'done'];
 
 /**
- * Libellé d'un jalon. Un jalon inconnu — un agent plus récent que cet écran — est rendu
- * tel quel plutôt que masqué : mieux vaut un mot anglais qu'une ligne vide.
+ * Label of a milestone. An unknown milestone (an agent newer than this screen) is rendered
+ * as is rather than hidden: an English word is better than an empty line.
  */
 export function runPhaseLabel(t: Tr, phase: string | null): string {
   if (!phase) return t('ops.run.phase.queued');
@@ -147,23 +147,23 @@ export function runPhaseLabel(t: Tr, phase: string | null): string {
   return t(`ops.run.phase.${phase}` as MessageKey);
 }
 
-/** Libellé d'une opération. Le protocole peut en nommer une que cet écran ignore. */
+/** Label of an operation. The protocol may name one that this screen ignores. */
 export function runKindLabel(t: Tr, kind: string): string {
   if (kind !== 'update' && kind !== 'backup' && kind !== 'verify') return kind;
   return t(`ops.run.kind.${kind}` as MessageKey);
 }
 
-/** Ce que l'écran doit dire du mécanisme d'exécution, et sur quel ton. */
+/** What the screen must say about the execution mechanism, and in what tone. */
 export interface MechanismNotice {
   tone: 'info' | 'warning';
   text: string;
-  /** Commande de diagnostic à afficher, quand il y en a une d'utile. */
+  /** Diagnostic command to display, when there is a useful one. */
   command: string | null;
 }
 
 /**
- * Traduit l'état du mécanisme en message. `null` quand tout va bien : un bandeau permanent
- * qui dit « ça marche » finit par ne plus être lu, et masque celui qui compte.
+ * Translates the mechanism's state into a message. `null` when all is well: a permanent banner
+ * that says "it works" eventually goes unread, and hides the one that matters.
  */
 export function mechanismNotice(
   t: Tr,
@@ -189,7 +189,7 @@ export function mechanismNotice(
   }
 }
 
-/** Message d'indisponibilité du catalogue distant, ou `null` s'il a répondu. */
+/** Unavailability message for the remote catalogue, or `null` if it responded. */
 export function releaseErrorLabel(t: Tr, error: ReleaseError | null): string | null {
   if (error === 'UNREACHABLE') return t('ops.latest.unreachable');
   if (error === 'RATE_LIMITED') return t('ops.latest.rateLimited');
@@ -198,11 +198,11 @@ export function releaseErrorLabel(t: Tr, error: ReleaseError | null): string | n
 }
 
 /**
- * Le bouton de mise à jour a-t-il un sens ?
+ * Does the update button make sense?
  *
- * Le mode construction en est exclu **volontairement** : y basculer recompile des giga-octets
- * sur le serveur du studio, et `git checkout` réécrirait le dépôt sous les pieds d'une pile
- * en train de tourner. L'écran y affiche la commande, jamais un bouton.
+ * Build mode is excluded **on purpose**: switching to it recompiles gigabytes
+ * on the studio's server, and `git checkout` would rewrite the repository under a stack
+ * that is running. The screen shows the command there, never a button.
  */
 export function canUpdateFromHere(overview: OpsOverview): boolean {
   return (
@@ -214,7 +214,7 @@ export function canUpdateFromHere(overview: OpsOverview): boolean {
   );
 }
 
-/** Une sauvegarde est-elle commandable d'un clic ? */
+/** Can a backup be ordered with one click? */
 export function canBackupFromHere(overview: OpsOverview): boolean {
   return overview.mechanism.state === 'ready' && overview.mechanism.allow.backup;
 }

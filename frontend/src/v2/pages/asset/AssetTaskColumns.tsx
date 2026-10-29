@@ -8,19 +8,18 @@ import type { ViewMode } from '../../stores/useViewPref';
 import { useT } from '../../i18n';
 
 /**
- * Les départements d'un asset, côte à côte.
+ * An asset's departments, side by side.
  *
- * Ils étaient empilés : sur un asset qui traverse six étapes, la page défilait sur trois
- * écrans avant qu'on ait vu la dernière, et comparer deux étapes revenait à faire des
- * allers-retours. En colonnes, tout le pipe tient dans le champ de vision — et une colonne
- * se lit comme une file d'attente, ce qu'elle est.
+ * They used to be stacked: on an asset that goes through six steps, the page scrolled over three
+ * screens before one had seen the last, and comparing two steps meant going back and forth. In columns, the whole
+ * pipe fits in view — and a column reads like a queue, which is what it is.
  *
- * Deux dispositions, parce qu'aucune ne suffit : les **colonnes** pour comparer les étapes
- * (le cas courant), la **pile** pour un asset qui n'en traverse qu'une ou deux mais porte
- * beaucoup de tâches, où six colonnes vides gaspilleraient la largeur.
+ * Two layouts, because neither suffices: **columns** to compare steps
+ * (the common case), the **stack** for an asset that goes through only one or two but carries
+ * many tasks, where six empty columns would waste width.
  *
- * L'en-tête de colonne porte l'image du département quand il en a une. Au-delà de six
- * étapes, une pastille de couleur ne se distingue plus ; un logo, si.
+ * The column header carries the department's image when it has one. Beyond six
+ * steps, a colour dot no longer stands out; a logo does.
  */
 export default function AssetTaskColumns({
   projectId,
@@ -29,7 +28,7 @@ export default function AssetTaskColumns({
 }: {
   projectId: number;
   view: ViewMode;
-  /** Une entrée par département, dans l'ordre du pipe. */
+  /** One entry per department, in pipe order. */
   groups: { key: string | null; name: string; count: number; children: ReactNode }[];
 }) {
   const t = useT();
@@ -75,9 +74,9 @@ export default function AssetTaskColumns({
   }
 
   return (
-    // Défilement horizontal plutôt que retour à la ligne : douze étapes sur trois rangées
-    // ne se lisent pas mieux que sur une, et la position d'une colonne cesserait d'indiquer
-    // où l'on en est dans le pipe.
+    // Horizontal scrolling rather than wrapping: twelve steps over three rows
+    // read no better than over one, and a column's position would stop indicating
+    // where one is in the pipe.
     <div className="flex gap-3 overflow-x-auto pb-2">
       {groups.map((group) => (
         <section

@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Appels HTTP du board.
+ * HTTP calls for the board.
  *
- * `lib/apiClient` ne rend qu'un `Error` porteur du message : la page ne pourrait pas
- * distinguer un conflit d'édition (409 `BOARD_CONFLICT`, qui appelle un choix de
- * l'utilisateur) d'une panne. La sauvegarde passe donc par un `fetch` direct qui conserve
- * le statut et le corps d'erreur — et retombe sur `api.put` en cas de 401, pour garder le
- * renouvellement de jeton transparent qu'assure l'apiClient.
+ * `lib/apiClient` only yields an `Error` carrying the message: the page could not
+ * tell an editing conflict (409 `BOARD_CONFLICT`, which calls for a user choice) from an outage. The save
+ * therefore goes through a direct `fetch` that keeps the status and error body — and falls back to `api.put` on a 401, to keep the
+ * transparent token renewal that apiClient provides.
  */
 
 import { api, getToken } from '../../../lib/apiClient';
@@ -26,7 +25,7 @@ import {
 export type BoardScope = 'project' | 'asset';
 
 export class BoardConflictError extends Error {
-  /** `updatedAt` réellement enregistré côté serveur — base d'une sauvegarde forcée. */
+  /** `updatedAt` actually saved on the server — basis of a forced save. */
   serverUpdatedAt: string | null;
   constructor(message: string, serverUpdatedAt: string | null) {
     super(message);
@@ -45,18 +44,18 @@ type BoardResponse = {
 export type LoadedBoard = {
   elements: unknown[];
   files: BoardFiles;
-  /** Horodatage de référence de cette session d'édition. */
+  /** Reference timestamp of this editing session. */
   updatedAt: string | null;
-  /** Fichiers déjà dans MinIO : ils ne seront pas redéposés à la prochaine sauvegarde. */
+  /** Files already in MinIO: they will not be re-uploaded at the next save. */
   storedIds: Set<string>;
 };
 
-/** Charge le board et redonne à ses images la forme attendue par Excalidraw. */
+/** Loads the board and gives its images the shape Excalidraw expects. */
 export async function loadBoard(base: string): Promise<LoadedBoard> {
   const data = await api.get<BoardResponse>(base);
   const document = data.board.document ?? {};
   const files = document.files ?? {};
-  // À calculer AVANT la réhydratation : après, tous les fichiers ont une dataURL.
+  // To compute BEFORE rehydration: afterwards, every file has a dataURL.
   const storedIds = storedIdsOf(files);
   return {
     elements: document.elements ?? [],
@@ -66,7 +65,7 @@ export async function loadBoard(base: string): Promise<LoadedBoard> {
   };
 }
 
-/** URL de dépôt direct dans MinIO, par lots de 20 (plafond du serveur). */
+/** Direct upload URL into MinIO, in batches of 20 (server cap). */
 export async function presignBoardFiles(
   base: string,
   files: { id: string; mimeType: string }[],
@@ -82,7 +81,7 @@ export async function presignBoardFiles(
   return out;
 }
 
-/** Dépôt d'une image dans MinIO. Échec = sauvegarde annulée, rien n'est perdu localement. */
+/** Uploads an image to MinIO. Failure = save cancelled, nothing is lost locally. */
 export async function uploadBoardFile(url: string, blob: Blob): Promise<void> {
   const res = await fetch(url, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type } });
   if (!res.ok) throw new Error(t('board.uploadFailed'));
@@ -91,9 +90,9 @@ export async function uploadBoardFile(url: string, blob: Blob): Promise<void> {
 type SaveBody = { document: BoardDocument; baseUpdatedAt: string | null };
 
 /**
- * Sauvegarde conditionnée à `baseUpdatedAt` : le serveur refuse (409) si quelqu'un a
- * enregistré depuis. Rend le nouvel `updatedAt`, qui devient la base des sauvegardes
- * suivantes.
+ * Save conditional on `baseUpdatedAt`: the server refuses (409) if someone has
+ * saved since. Returns the new `updatedAt`, which becomes the basis of the
+ * following saves.
  */
 export async function saveBoard(base: string, body: SaveBody): Promise<string> {
   const res = await fetch(base, {
@@ -108,7 +107,7 @@ export async function saveBoard(base: string, body: SaveBody): Promise<string> {
     const data = (await res.json()) as { board: { updatedAt: string } };
     return data.board.updatedAt;
   }
-  // Jeton expiré : on repasse par l'apiClient, seul à savoir renouveler la session.
+  // Token expired: go back through the apiClient, the only one able to renew the session.
   if (res.status === 401) {
     const data = await api.put<{ board: { updatedAt: string } }>(base, body);
     return data.board.updatedAt;
@@ -125,9 +124,9 @@ export async function saveBoard(base: string, body: SaveBody): Promise<string> {
 }
 
 /**
- * Une sauvegarde complète : dépôt dans MinIO des images devenues trop lourdes pour le
- * document, puis écriture du document allégé. `stored` est enrichi au fur et à mesure —
- * une image déposée ne repart jamais deux fois.
+ * A full save: uploads to MinIO the images that became too heavy for the
+ * document, then writes the lightened document. `stored` is enriched as it goes —
+ * an uploaded image is never sent twice.
  */
 export async function persistBoard(
   base: string,

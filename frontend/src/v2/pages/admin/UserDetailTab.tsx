@@ -22,7 +22,7 @@ import { ActivityPanel, MembershipsPanel, SessionsPanel, TokensPanel } from './U
 import type { AdminUserDetail } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Fiche détaillée d'un compte (refonte admin) : profil, projets, sessions, activité. */
+/** Detailed sheet of an account (admin overhaul): profile, projects, sessions, activity. */
 export default function UserDetailTab() {
   const t = useT();
   const { id } = useParams();

@@ -15,26 +15,26 @@ describe('computeSelection', () => {
     expect([...b.next]).toEqual([]);
   });
 
-  it('Shift étend la plage depuis l’ancre (2 → 5)', () => {
+  it('Shift extends the range from the anchor (2 → 5)', () => {
     const first = computeSelection(new Set(), order, 2, null);
     const range = computeSelection(first.next, order, 5, first.anchor, { shiftKey: true });
     expect([...range.next].sort()).toEqual([2, 3, 4, 5]);
-    // L'ancre reste sur le point de départ pendant l'extension.
+    // The anchor stays on the starting point during the extension.
     expect(range.anchor).toBe(2);
   });
 
-  it('Shift fonctionne à rebours (4 → 1)', () => {
+  it('Shift works backwards (4 → 1)', () => {
     const first = computeSelection(new Set(), order, 4, null);
     const range = computeSelection(first.next, order, 1, first.anchor, { shiftKey: true });
     expect([...range.next].sort()).toEqual([1, 2, 3, 4]);
   });
 
-  it('Shift sans ancre se comporte comme un simple toggle', () => {
+  it('Shift without an anchor behaves like a simple toggle', () => {
     const r = computeSelection(new Set(), order, 3, null, { shiftKey: true });
     expect([...r.next]).toEqual([3]);
   });
 
-  it('Ctrl/Cmd-clic ajoute sans effacer la sélection existante', () => {
+  it('Ctrl/Cmd-click adds without clearing the existing selection', () => {
     const s = new Set([1]);
     const r = computeSelection(s, order, 4, 1, { ctrlKey: true });
     expect([...r.next].sort()).toEqual([1, 4]);

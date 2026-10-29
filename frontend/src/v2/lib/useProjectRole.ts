@@ -9,23 +9,23 @@ import { personLabel } from './peopleSearch';
 import type { Role } from '../types/api';
 
 /**
- * Rôle effectif sur un projet (C3).
+ * Effective role on a project (C3).
  *
- * L'API le renvoie depuis la phase 38 (`myRole` sur `GET /api/projects/:id`) et le front
- * ne l'a jamais lu : chaque écran déduisait les droits du rôle **global** du compte. Un
- * superviseur de projet — rôle donné par membership, pas par le compte — se voyait donc
- * refuser côté écran ce que le serveur lui ouvrait, et devait demander à un administrateur.
+ * The API has returned it since phase 38 (`myRole` on `GET /api/projects/:id`) and the front
+ * never read it: each screen derived rights from the account's **global** role. A
+ * project supervisor — a role given by membership, not by the account — was therefore
+ * refused on screen what the server allowed, and had to ask an administrator.
  *
- * Le rôle global reste prioritaire quand il est déjà suffisant : un ADMIN du studio gère
- * tous les projets, membre ou non.
+ * The global role still takes precedence when it is already sufficient: a studio ADMIN
+ * manages all projects, member or not.
  */
 
 export interface ProjectRoleInfo {
-  /** Rôle sur ce projet, `null` tant que la requête n'a pas répondu. */
+  /** Role on this project, `null` until the request has answered. */
   role: Role | null;
-  /** Peut modifier la structure du projet (réglages d'entité, création, suppression). */
+  /** Can modify the project's structure (entity settings, creation, deletion). */
   canManage: boolean;
-  /** Peut produire du contenu (versions, commentaires) — tout le monde sauf les clients. */
+  /** Can produce content (versions, comments) — everyone except clients. */
   canContribute: boolean;
 }
 
@@ -49,14 +49,14 @@ export function useProjectRole(projectId: number): ProjectRoleInfo {
   return projectRoleInfo(globalRole, data?.project.myRole ?? null);
 }
 
-/** Une personne à qui l'on peut confier du travail sur ce projet. */
+/** A person to whom work on this project can be entrusted. */
 export interface AssignableMember {
   id: number;
   name: string;
   role: Role;
-  /** Adresse : sur une équipe où deux comptes portent le même nom, c'est ce qui départage. */
+  /** Email: on a team where two accounts share a name, this is what breaks the tie. */
   email: string;
-  /** Photo déjà signée par le serveur — cf. `ProjectService.getProject`. */
+  /** Photo already signed by the server — see `ProjectService.getProject`. */
   avatarUrl: string | null;
 }
 
@@ -74,30 +74,30 @@ interface MembershipRow {
 }
 
 /**
- * Membres du projet qui peuvent recevoir du travail.
+ * Project members who can receive work.
  *
- * Les comptes de service et les clients sont écartés — le serveur les refuse de toute
- * façon, autant ne pas les proposer.
+ * Service accounts and clients are excluded — the server refuses them anyway,
+ * so there is no point offering them.
  */
 export function useProjectMembers(projectId: number): AssignableMember[] {
   return useMembers(projectId, (role) => role !== 'CLIENT');
 }
 
 /**
- * Membres du projet qu'on peut attendre en review.
+ * Project members one can expect in review.
  *
- * Le client EST un reviewer — c'est le rôle qui porte ce nom — donc il figure ici, là où
- * `useProjectMembers` l'écarte : on ne lui confie pas de travail, on lui demande son avis.
- * Les comptes de service restent hors liste dans les deux cas : une identité machine
- * n'ouvre pas la review.
+ * The client IS a reviewer — it is the role that carries this name — so it appears here, where
+ * `useProjectMembers` excludes it: one does not entrust work to them, one asks their opinion.
+ * Service accounts stay off the list in both cases: a machine identity
+ * does not open the review.
  */
 export function useProjectReviewers(projectId: number): AssignableMember[] {
   return useMembers(projectId, () => true);
 }
 
 /**
- * Le socle des deux : une seule requête, une seule clé de cache. La fiche du projet est
- * déjà chargée partout — en redemander une seconde pour la même donnée serait du gaspillage.
+ * The base of both: a single request, a single cache key. The project sheet is
+ * already loaded everywhere — requesting it a second time for the same data would be wasteful.
  */
 function useMembers(projectId: number, keepRole: (role: Role) => boolean): AssignableMember[] {
   const { data } = useQuery({

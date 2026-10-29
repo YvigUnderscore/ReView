@@ -9,19 +9,18 @@ import type { AssetLatest } from '../../types/api';
 import { intlLocale, useT } from '../../i18n';
 
 /**
- * Carte « dernière version » d'un asset (Phase 45).
+ * "Latest version" card of an asset (Phase 45).
  *
- * Elle répond à la seule question que pose quiconque ouvre un asset : où en est-il ? La
- * réponse n'est pas la version la plus récente mais celle de l'étape la plus avancée du
- * pipe — un correctif de modeling publié après le lookdev ne fait pas reculer l'asset.
+ * It answers the only question anyone asks when opening an asset: where does it stand? The
+ * answer is not the most recent version but the one at the most advanced step of the
+ * pipe — a modelling fix published after lookdev does not roll the asset back.
  *
- * Le lien « permanent » copié ici pointe sur `/{assets|shots}/:id/latest`, qui redirige
- * toujours vers l'état courant : collé dans une note de production, il reste juste des
- * mois plus tard sans que personne ait à le remettre à jour.
+ * The "permanent" link copied here points to `/{assets|shots}/:id/latest`, which always
+ * redirects to the current state: pasted into a production note, it simply stays valid
+ * months later without anyone having to update it.
  *
- * La carte sert aussi aux plans depuis la phase 45 (C3) : elle recevait alors un
- * identifiant de plan sous le nom `assetId` et copiait `/assets/<id>/latest`, l'adresse
- * d'une entité sans rapport que le destinataire ouvrait sans se douter de rien.
+ * The card has also served shots since phase 45 (C3): it then received a shot identifier under the name `assetId` and copied `/assets/<id>/latest`, the address
+ * of an unrelated entity that the recipient opened without suspecting anything.
  */
 export default function AssetLatestCard({
   assetId,

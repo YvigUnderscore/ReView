@@ -37,7 +37,7 @@ const fmt = (iso: string) =>
     minute: '2-digit',
   });
 
-/** Journal d'accès aux médias (36.E) : qui a visionné quoi / quand — comptes et partages. */
+/** Media access log (36.E): who viewed what / when — accounts and shares. */
 export default function MediaAccessTab() {
   const t = useT();
   const [page, setPage] = useState(1);

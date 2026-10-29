@@ -42,11 +42,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 /**
- * L'écran répond aux deux questions qu'on se pose devant un robot : que peut-il, et où ?
- * Rôle du compte porteur, cantonnement projet, expiration — servis avec la ligne.
+ * The screen answers the two questions one asks in front of a robot: what can it do, and where?
+ * Holding account's role, project confinement, expiry — served with the row.
  */
 describe('ServiceTokensTab', () => {
-  it('annonce rôle effectif, cantonnement et expiration dépassée', async () => {
+  it('shows effective role, confinement and an expired date', async () => {
     mount();
     expect(await screen.findByText('Render farm')).toBeTruthy();
     expect(screen.getByText(t('role.supervisor'))).toBeTruthy();
@@ -55,17 +55,17 @@ describe('ServiceTokensTab', () => {
     expect(screen.getByText('versions:read versions:write')).toBeTruthy();
   });
 
-  it('montre l’état vide quand le studio n’a aucune identité machine', async () => {
+  it('shows the empty state when the studio has no machine identity', async () => {
     api.get.mockResolvedValue({ tokens: [] });
     mount();
     expect(await screen.findByText(t('tokens.service.empty'))).toBeTruthy();
     expect(screen.queryByText(t('tokens.revokeHint'))).toBeNull();
   });
 
-  it('n’ouvre le formulaire d’émission que sur demande', async () => {
+  it('opens the issue form only on request', async () => {
     mount();
     await screen.findByText('Render farm');
-    // Le dialogue est fermé : ni champ de mot de passe, ni bouton d'émission à l'écran.
+    // The dialog is closed: no password field, no issue button on screen.
     expect(screen.queryByText(t('tokens.service.emit'))).toBeNull();
     expect(api.get).toHaveBeenCalledWith('/api/admin/service-tokens');
     expect(api.get).not.toHaveBeenCalledWith('/api/admin/projects');

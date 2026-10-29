@@ -25,13 +25,13 @@ import { scheduleLabel } from './taskSchedule';
 import type { AssetTreeTask, DepartmentGroup } from '../../types/api';
 
 /**
- * Tâches d'un asset, en cartes.
+ * Asset tasks, as cards.
  *
- * L'affichage précédent empilait départements, tâches, versions et médias dans une
- * seule colonne : sur un asset qui traverse quatre départements, la page devenait
- * illisible avant même d'avoir commencé à travailler. Ici, une carte par tâche donne
- * l'état d'un coup d'œil ; on entre dans une tâche pour en voir les versions, et on en
- * ressort. Un seul niveau à la fois.
+ * The previous display stacked departments, tasks, versions and media in a
+ * single column: on an asset that goes through four departments, the page became
+ * unreadable before any work had started. Here, one card per task gives the
+ * state at a glance; you enter a task to see its versions, and come back out. One
+ * level at a time.
  */
 export default function AssetTaskCards({
   groups,
@@ -41,30 +41,30 @@ export default function AssetTaskCards({
 }: {
   groups: DepartmentGroup<AssetTreeTask>[];
   projectId: number;
-  /** Le bord auquel ces tâches appartiennent — les étapes en dépendent, et leurs couleurs. */
+  /** The edge these tasks belong to: steps depend on it, and so do their colours. */
   entityType?: 'Asset' | 'Shot';
-  /** Créer la première tâche. Absent quand la personne n'en a pas le droit. */
+  /** Create the first task. Absent when the person is not allowed to. */
   onNewTask?: () => void;
 }) {
   const t = useT();
   const navigate = useNavigate();
   const { canManage } = useProjectRole(projectId);
-  // Mettre quelqu'un sur une étape se faisait en ouvrant la tâche, puis ses réglages.
-  // Devant les cartes, l'étape est déjà sous les yeux : le clic droit suffit.
+  // Assigning someone to a step used to mean opening the task, then its settings.
+  // In front of the cards the step is already in view: a right click is enough.
   const { assignEntry, departmentEntry } = useTaskAssignMenu(projectId);
-  // Les couleurs viennent du site : c'est ainsi que « groom » est vert ici comme
-  // là-bas, et qu'un pipe se relit d'un coup d'œil entre les deux outils. La liste est
-  // déjà en cache pour ce projet, elle ne coûte pas une requête de plus.
+  // Colours come from the site: this is how "groom" is green here as
+  // over there, and a pipe can be read at a glance across both tools. The list is
+  // already cached for this project, it costs no extra request.
   const { data: steps = [] } = useSgSteps(projectId, entityType);
   const colourOf = (task: AssetTreeTask): string | null =>
     steps.find((s) => s.code.toLowerCase() === (task.department ?? task.name).toLowerCase())?.color ?? null;
   const [openTaskId, setOpenTaskId] = useState<number | 'loose' | null>(null);
-  // Colonnes ou pile : le réglage suit la personne, comme toutes les listes.
+  // Columns or stack: the setting follows the person, like all lists.
   const view = useViewMode(`asset-tasks:${projectId}`);
 
   const allTasks = groups.flatMap((g) => g.items.map((task) => ({ task, group: g })));
-  // Rien à montrer, donc rien où faire un clic droit : c'est le seul endroit du pipe où un
-  // bouton visible se justifie — sans lui, une entité sans tâche est un cul-de-sac.
+  // Nothing to show, so nothing to right-click: this is the only place in the pipe where a
+  // visible button is justified — without it, an entity with no task is a dead end.
   if (allTasks.length === 0)
     return (
       <EmptyState
@@ -88,9 +88,9 @@ export default function AssetTaskCards({
       />
     );
 
-  /** Une tâche a sa page : c'est là qu'on dépose un média, qu'on publie et qu'on voit les
-   *  brouillons. La vue repliée dans cette page ne savait rien faire de tout cela — un
-   *  brouillon vide y devenait un cul-de-sac. */
+  /** A task has its page: that is where one uploads media, publishes and sees the
+   *  drafts. The collapsed view in this page could do none of that — an empty
+   *  draft became a dead end. */
   const cardsOf = (group: DepartmentGroup<AssetTreeTask>) =>
     group.items.map((task) => {
       const card = (
@@ -102,7 +102,7 @@ export default function AssetTaskCards({
           onOpen={() => (task.id ? navigate(`/tasks/${task.id}`) : setOpenTaskId('loose'))}
         />
       );
-      // Le fourre-tout des versions sans tâche n'a rien à assigner : pas de menu dessus.
+      // The catch-all for versions without a task has nothing to assign: no menu on it.
       const entries =
         task.id === null
           ? []
@@ -144,7 +144,7 @@ export default function AssetTaskCards({
 
 const formatDay = (value: string): string => (value ? new Date(value).toLocaleDateString(intlLocale()) : '—');
 
-/** Fenêtre de travail d'une tâche, telle que la production l'a fixée. */
+/** Work window of a task, as set by production. */
 function TaskSchedule({ task }: { task: AssetTreeTask }) {
   const t = useT();
   const label = scheduleLabel(task);
@@ -159,7 +159,7 @@ function TaskSchedule({ task }: { task: AssetTreeTask }) {
   return <span className={`text-xs ${late ? 'text-destructive' : 'text-muted-foreground'}`}>{text}</span>;
 }
 
-/** Carte d'une tâche : statut, échéance, nombre de versions, dernière image connue. */
+/** Task card: status, due date, number of versions, last known image. */
 function TaskCard({
   task,
   projectId,
@@ -168,7 +168,7 @@ function TaskCard({
 }: {
   task: AssetTreeTask;
   projectId: number;
-  /** Couleur de l'étape sur le site, quand elle en a une. */
+  /** Colour of the step on the site, when it has one. */
   colour: string | null;
   onOpen: () => void;
 }) {
@@ -226,8 +226,8 @@ function TaskCard({
           <span className="text-xs text-muted-foreground">
             {t('asset.tree.versionCount', { count: task.versions.length })}
           </span>
-          {/* La personne en fin de ligne : c'est la question qu'on pose à un pipe avant
-              toutes les autres, et il fallait ouvrir chaque tâche pour y répondre. */}
+           {/* The person at the end of the row: it is the question one asks a pipe before
+               all the others, and each task had to be opened to answer it. */}
           {task.assignee && (
             <span className="ml-auto flex items-center gap-1" title={assigneeName(task.assignee)}>
               <Avatar
@@ -253,7 +253,7 @@ function TaskCard({
   );
 }
 
-/** Versions d'une tâche, une fois la carte ouverte. */
+/** Versions of a task, once the card is opened. */
 function TaskVersions({
   task,
   department,

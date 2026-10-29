@@ -22,7 +22,7 @@ interface Page {
   pageSize: number;
 }
 
-/** Flux d'activité : journal d'audit paginé, avec auteur (avatar) et liens navigables. */
+/** Activity feed: paginated audit log, with author (avatar) and navigable links. */
 export default function ActivityTab() {
   const t = useT();
   const [page, setPage] = useState(1);

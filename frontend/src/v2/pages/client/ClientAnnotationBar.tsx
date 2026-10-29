@@ -11,19 +11,19 @@ import { useT } from '../../i18n';
 import '../review/chrome/chrome.css';
 
 /**
- * Les outils de dessin, pour l'invité.
+ * The drawing tools, for the guest.
  *
- * Rien n'est réécrit ici : ce sont les huit outils de la review interne (`DRAW_TOOLS`,
- * mêmes libellés, mêmes raccourcis D/R/E/A/G/T/M/X), le même bouton de rail et la même
- * feuille de style. Le format écrit est celui de la review — le retour d'un client se
- * rouvre dans la review de l'artiste, et deux formats qui divergent, c'est un dessin qui ne
- * s'affiche plus six mois plus tard.
+ * Nothing is rewritten here: these are the eight tools of the internal review (`DRAW_TOOLS`,
+ * same labels, same shortcuts D/R/E/A/G/T/M/X), the same rail button and the same
+ * stylesheet. The format written is that of the review — a client's feedback
+ * reopens in the artist's review, and two diverging formats mean a drawing that
+ * no longer displays six months later.
  *
- * L'interface reste simple : la barre n'apparaît que sur un lien qui autorise les retours,
- * et seulement une fois le mode dessin armé — tant qu'il ne l'est pas, il n'y a qu'un
- * bouton. Un invité n'a ni palette de commandes ni menu contextuel (le clic droit sert
- * déjà au vol libre des viewers spatiaux) : la barre flottante est ici le dernier recours
- * assumé, pas un réflexe.
+ * The interface stays simple: the bar only appears on a link that allows feedback,
+ * and only once drawing mode is armed — until then there is just a
+ * button. A guest has neither a command palette nor a context menu (the right click already
+ * serves free flight for the spatial viewers): the floating bar is here the last
+ * resort, deliberately, not a reflex.
  */
 export default function ClientAnnotationBar({ ann }: { ann: Annotations }) {
   const t = useT();
@@ -57,12 +57,12 @@ export default function ClientAnnotationBar({ ann }: { ann: Annotations }) {
 
       <div className="rv-rule" />
 
-      {/* Encre : la palette attitrée de l'application, plus un choix libre. Ce sont des
-          valeurs de données (hexadécimal), pas de l'habillage — l'habillage, lui, reste en
-          tokens de thème. */}
+       {/* Ink: the application's dedicated palette, plus a free choice. These are
+           data values (hexadecimal), not styling — the styling itself stays in
+           theme tokens. */}
       <div className="flex items-center gap-1" role="group" aria-label={t('draw.ink')}>
-        {/* Six encres, pas douze : la palette entière faisait passer la barre à la ligne, et
-            le choix libre reste à côté pour qui veut sa couleur. */}
+         {/* Six inks, not twelve: the full palette made the bar wrap, and
+             the free choice stays alongside for anyone who wants their own colour. */}
         {USER_COLORS.slice(0, 6).map((color) => (
           <button
             key={color}

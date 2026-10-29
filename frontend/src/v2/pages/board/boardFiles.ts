@@ -2,25 +2,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Images d'un board : passage de la dataURL base64 au stockage objet.
+ * Board images: moving from base64 dataURL to object storage.
  *
- * Excalidraw range chaque image collée dans `files` sous forme de dataURL base64. Le
- * document partait donc en entier à chaque autosave : deux captures suffisaient à dépasser
- * la limite de corps du serveur, et l'utilisateur perdait son travail sur un 413.
+ * Excalidraw keeps each pasted image in `files` as a base64 dataURL. The whole
+ * document was therefore sent on every autosave: two screenshots were enough to exceed
+ * the server's body limit, and the user lost their work on a 413.
  *
- * Les fichiers volumineux sont désormais déposés dans MinIO ; le document ne garde que
- * `{ id, mimeType }`. Au chargement, l'éditeur les rapatrie et reconstruit la dataURL —
- * Excalidraw reçoit donc exactement ce qu'il recevait avant, seul le transport a changé.
- * Les petits fichiers restent inline : c'est moins d'allers-retours, et cela couvre les
- * formats que MinIO ne renvoie qu'en `octet-stream`.
+ * Large files are now uploaded to MinIO; the document keeps only
+ * `{ id, mimeType }`. On load, the editor fetches them back and rebuilds the dataURL,
+ * so Excalidraw receives exactly what it received before; only the transport changed.
+ * Small files stay inline: fewer round trips, and this covers the
+ * formats that MinIO only returns as `octet-stream`.
  *
- * Ces bornes doivent rester alignées sur `backend/src/services/BoardService.ts`.
+ * These bounds must stay aligned with `backend/src/services/BoardService.ts`.
  */
 
-/** Longueur de dataURL en deçà de laquelle un fichier reste dans le document (≈ 46 Ko). */
+/** dataURL length below which a file stays in the document (about 46 KB). */
 export const MAX_INLINE_DATAURL = 64_000;
 
-/** Types que le serveur accepte de stocker (cf. `UPLOADABLE_TYPES` côté backend). */
+/** Types the server accepts to store (see `UPLOADABLE_TYPES` on the backend). */
 const UPLOADABLE = new Set([
   'image/png',
   'image/jpeg',
@@ -43,16 +43,16 @@ export type BoardFile = {
 export type BoardFiles = Record<string, BoardFile>;
 export type BoardDocument = { elements: unknown[]; files: BoardFiles };
 
-/** Type de repli pour un fichier dont Excalidraw n'a pas su nommer le format. */
+/** Fallback type for a file whose format Excalidraw could not name. */
 const fallbackType = (mimeType: string | undefined): string =>
   mimeType && UPLOADABLE.has(mimeType) ? mimeType : 'application/octet-stream';
 
-/** Image à déposer dans MinIO — sa dataURL est garantie présente. */
+/** Image to upload to MinIO: its dataURL is guaranteed present. */
 export type BoardUpload = { id: string; mimeType: string; dataURL: string };
 
 /**
- * Fichiers à déposer dans MinIO avant la prochaine sauvegarde : ceux qui portent encore
- * une dataURL trop longue pour rester dans le document et qui n'y sont pas déjà.
+ * Files to upload to MinIO before the next save: those that still carry a
+ * dataURL too long to stay in the document and are not already there.
  */
 export function filesToUpload(files: BoardFiles, stored: ReadonlySet<string>): BoardUpload[] {
   const out: BoardUpload[] = [];
@@ -66,9 +66,9 @@ export function filesToUpload(files: BoardFiles, stored: ReadonlySet<string>): B
 }
 
 /**
- * Document tel qu'il part au serveur : la dataURL des fichiers déjà stockés est retirée,
- * les petits fichiers restent inline. `lastRetrieved` est une métadonnée de session
- * d'Excalidraw, elle n'a rien à faire en base.
+ * Document as it is sent to the server: the dataURL of already stored files is removed,
+ * small files stay inline. `lastRetrieved` is Excalidraw session metadata,
+ * it has no business in the database.
  */
 export function toSavedDocument(
   elements: readonly unknown[],
@@ -86,7 +86,7 @@ export function toSavedDocument(
   return { elements: [...elements], files: out };
 }
 
-/** Identifiants déjà stockés dans MinIO d'après un document relu : ceux sans dataURL. */
+/** IDs already stored in MinIO according to a re-read document: those without a dataURL. */
 export function storedIdsOf(files: BoardFiles): Set<string> {
   return new Set(
     Object.entries(files)
@@ -95,7 +95,7 @@ export function storedIdsOf(files: BoardFiles): Set<string> {
   );
 }
 
-/** dataURL → binaire, pour le dépôt direct dans MinIO. */
+/** dataURL → binary, for direct upload to MinIO. */
 export function dataURLToBlob(dataURL: string): Blob {
   const comma = dataURL.indexOf(',');
   const head = dataURL.slice(0, comma < 0 ? dataURL.length : comma);
@@ -108,7 +108,7 @@ export function dataURLToBlob(dataURL: string): Blob {
   return new Blob([bytes], { type });
 }
 
-/** Binaire → dataURL, pour rendre à Excalidraw la forme qu'il attend. */
+/** Binary → dataURL, to give Excalidraw the shape it expects. */
 export function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -119,10 +119,10 @@ export function blobToDataURL(blob: Blob): Promise<string> {
 }
 
 /**
- * Rapatrie les fichiers stockés et reconstruit leur dataURL. Le type est repris du
- * document et non de la réponse : MinIO sert les formats non matriciels en `octet-stream`.
- * Un fichier introuvable est retiré du lot — Excalidraw affiche alors son propre repli,
- * plutôt que de recevoir une entrée sans image.
+ * Fetches the stored files back and rebuilds their dataURL. The type is taken from the
+ * document and not from the response: MinIO serves non-raster formats as `octet-stream`.
+ * A file not found is removed from the batch: Excalidraw then shows its own fallback,
+ * rather than receiving an entry without an image.
  */
 export async function rehydrateFiles(
   files: BoardFiles,

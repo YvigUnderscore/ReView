@@ -8,10 +8,10 @@ import type { AssetTreeVersion } from '../../types/api';
 import { useT, intlLocale } from '../../i18n';
 
 /**
- * Carte d'une version : sa vignette, sa décision de review, ses médias secondaires.
+ * Card for a version: its thumbnail, its review decision, its secondary media.
  *
- * Extraite de `AssetTaskCards` — elle décrit une version, pas une tâche, et le fichier des
- * tâches avait dépassé son budget de lignes en accueillant la disposition en colonnes.
+ * Extracted from `AssetTaskCards`: it describes a version, not a task, and the tasks file had
+ * outgrown its line budget by taking on the column layout.
  */
 export default function VersionCard({ version, sgUrl }: { version: AssetTreeVersion; sgUrl: string | null }) {
   const t = useT();

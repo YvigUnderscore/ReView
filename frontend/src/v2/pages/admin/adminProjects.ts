@@ -4,14 +4,14 @@
 import type { AdminProjectRow, PipelineSettings, ProjectStatus } from '../../types/api';
 import { t } from '../../i18n';
 
-/** Helpers purs des pages admin Projets — testés. */
+/** Pure helpers for the Projects admin pages — tested. */
 
-/** Ordre d'affichage des statuts — sûr à figer, ce ne sont pas des libellés. */
+/** Display order of statuses — safe to freeze, these are not labels. */
 export const PROJECT_STATUSES: ProjectStatus[] = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
 
 /**
- * Libellés de statut de projet, en fonction et non en constante : une table évaluée au
- * chargement du module fige la langue à l'import, avant l'arrivée du catalogue.
+ * Project status labels, as a function rather than a constant: a table evaluated at
+ * module load would freeze the language at import, before the catalogue arrives.
  */
 export function projectStatusLabels(tr: typeof t): Record<ProjectStatus, string> {
   return {
@@ -22,7 +22,7 @@ export function projectStatusLabels(tr: typeof t): Record<ProjectStatus, string>
   };
 }
 
-/** Filtre plein-texte (nom, slug) + statut. */
+/** Full-text filter (name, slug) + status. */
 export function filterProjects(
   projects: AdminProjectRow[],
   q: string,
@@ -36,13 +36,13 @@ export function filterProjects(
   });
 }
 
-/** Pourcentage de quota consommé (0–100, borné) ; null si pas de quota. */
+/** Percentage of quota consumed (0–100, clamped); null if there is no quota. */
 export function quotaPct(usage: number, quota: number | null): number | null {
   if (quota == null || quota <= 0) return null;
   return Math.min(100, Math.round((usage / quota) * 100));
 }
 
-/** Libellé compact d'un pipeline effectif : « 1920×1080 · 24 ips ». */
+/** Compact label of an effective pipeline: "1920×1080 · 24 fps". */
 export function pipelineLabel(p: PipelineSettings): string {
   return `${p.resolution.width}×${p.resolution.height} · ${p.framerate} fps`;
 }

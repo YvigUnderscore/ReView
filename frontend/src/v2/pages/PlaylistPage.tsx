@@ -24,13 +24,13 @@ import { parseIdParam } from '../lib/slug';
 import { useT } from '../i18n';
 
 /**
- * Page d'une playlist (C5) : le catalogue du projet à gauche, la playlist à droite.
+ * Playlist page (C5): the project catalogue on the left, the playlist on the right.
  *
- * La playlist était une ligne dépliable dans un onglet, et l'on n'y ajoutait rien depuis
- * là : il fallait ouvrir chaque plan un par un pour y cliquer « ajouter ». Les deux
- * panneaux côte à côte font de la construction d'une playlist de dailies un seul geste.
+ * The playlist used to be a collapsible row in a tab, and nothing could be added to it
+ * from there: one had to open each shot one by one to click "add". The two
+ * panels side by side make building a dailies playlist a single gesture.
  */
-/** Liste vide stable : le hook d'édition ne doit pas voir un tableau neuf à chaque rendu. */
+/** Stable empty list: the editing hook must not see a new array on each render. */
 const EMPTY_ITEMS: PlaylistItemEntry[] = [];
 
 export default function PlaylistPage() {
@@ -44,17 +44,17 @@ export default function PlaylistPage() {
 
   const userId = useAuth((s) => s.user?.id);
   const { canManage, canContribute } = useProjectRole(projectId);
-  // Même règle que le serveur : le créateur, ou qui gère le projet.
+  // Same rule as the server: the creator, or whoever manages the project.
   const canEdit = canManage || (canContribute && playlist?.createdBy?.id === userId);
 
   const add = useAddToPlaylist(playlistId, projectId);
-  // Réordonner et retirer passent par leur propre hook : les deux se défont, et le toast qui
-  // les confirme porte le geste inverse (cf. `playlist/usePlaylistUndo`).
+  // Reordering and removing each go through their own hook: both are undoable, and the toast that
+  // confirms them carries the inverse gesture (see `playlist/usePlaylistUndo`).
   const edits = usePlaylistUndo(playlistId, projectId, playlist?.items ?? EMPTY_ITEMS);
   const [editingName, setEditingName] = useState<string | null>(null);
-  // Sortie des notes de la playlist entière — CSV, planche, et surtout EDL/OTIO, les deux
-  // formats que la salle de montage sait relire. Au clic droit sur l'en-tête : la page
-  // n'a pas de dock où loger un panneau Export, et un bouton de plus n'apporterait rien.
+  // Export of the notes for the whole playlist — CSV, sheet, and above all EDL/OTIO, the two
+  // formats the editing room can read back. On right click on the header: the page
+  // has no dock to house an Export panel, and one more button would add nothing.
   const notesExport = useNotesExportEntry({ scope: 'playlist', id: playlistId });
 
   const busy = add.isPending || edits.busy;

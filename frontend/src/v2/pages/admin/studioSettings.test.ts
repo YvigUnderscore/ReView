@@ -21,17 +21,17 @@ const field = (over: Partial<SettingField> = {}): SettingField => ({
   ...over,
 });
 
-describe('répartition des réglages', () => {
-  it('donne une maison connue à chaque champ', () => {
+describe('settings distribution', () => {
+  it('gives each field a known home', () => {
     for (const f of SETTINGS_FIELDS) expect(SETTINGS_HOMES, f.key).toContain(f.home);
   });
 
-  it('ne laisse aucun champ dans deux sections', () => {
+  it('leaves no field in two sections', () => {
     const keys = SETTINGS_FIELDS.map((f) => f.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it('range chaque champ là où on le cherche', () => {
+  it('puts each field where one looks for it', () => {
     const home = (key: string) => SETTINGS_FIELDS.find((f) => f.key === key)?.home;
     expect(home('storage_limit_user')).toBe('storage');
     expect(home('max_file_size')).toBe('storage');
@@ -42,7 +42,7 @@ describe('répartition des réglages', () => {
     expect(home('studio_source_url')).toBe('settings');
   });
 
-  it('rend les champs d’une section, et rien d’autre', () => {
+  it('renders the fields of a section, and nothing else', () => {
     expect(fieldsFor('live').map((f) => f.key)).toEqual([
       'live_sync_hz_video',
       'live_sync_hz_image',
@@ -52,27 +52,27 @@ describe('répartition des réglages', () => {
     expect(fieldsFor('retention').map((f) => f.key)).toEqual(['trash_retention_days']);
   });
 
-  /** La section fourre-tout ne doit pas se reconstituer par accumulation. */
-  it('ne laisse à « Réglages » que l’identité de l’instance', () => {
+  /** The catch-all section must not be rebuilt by accumulation. */
+  it('leaves "Settings" with only the instance identity', () => {
     expect(fieldsFor('settings').map((f) => f.key)).toEqual(['studio_source_url']);
   });
 });
 
-describe('« quelque chose a changé »', () => {
-  it('reste inerte tant que rien n’est saisi', () => {
+describe('"something changed"', () => {
+  it('stays inert as long as nothing is typed', () => {
     expect(isDirty({})).toBe(false);
     expect(isDirty({ a: '' })).toBe(true);
   });
 });
 
-describe('valeur affichée', () => {
-  it('préfère la saisie en cours à la valeur enregistrée', () => {
+describe('displayed value', () => {
+  it('prefers the input in progress to the saved value', () => {
     const f = field({ key: 'max_concurrent_uploads' });
     expect(fieldDisplay(f, { max_concurrent_uploads: '5' }, {})).toBe('5');
     expect(fieldDisplay(f, { max_concurrent_uploads: '5' }, { max_concurrent_uploads: '9' })).toBe('9');
   });
 
-  it('remet une taille dans son unité lisible', () => {
+  it('puts a size back in its readable unit', () => {
     const f = field({ key: 'max_file_size', bytes: true });
     const fiveGiB = String(5 * 1024 ** 3);
     expect(fieldDisplay(f, { max_file_size: fiveGiB }, {})).toBe('5');
@@ -80,22 +80,22 @@ describe('valeur affichée', () => {
     expect(fieldUnit(f, { max_file_size: fiveGiB }, { max_file_size: 'MB' })).toBe('MB');
   });
 
-  it('n’affiche pas un zéro là où rien n’est réglé', () => {
+  it('does not show a zero where nothing is set', () => {
     const f = field({ key: 'max_file_size', bytes: true });
     expect(fieldDisplay(f, {}, {})).toBe('');
   });
 });
 
-describe('écritures envoyées', () => {
+describe('writes sent', () => {
   const fields = [field({ key: 'quota', bytes: true }), field({ key: 'hook' })];
 
-  it('n’envoie que ce qui a été touché', () => {
+  it('sends only what was touched', () => {
     const { entries, invalidKey } = settingsPayload(fields, { hook: 'https://x' }, {});
     expect(invalidKey).toBeNull();
     expect(entries).toEqual([{ key: 'hook', value: 'https://x' }]);
   });
 
-  it('convertit les tailles selon l’unité affichée', () => {
+  it('converts sizes according to the displayed unit', () => {
     expect(settingsPayload(fields, { quota: '2' }, { quota: 'GB' }).entries).toEqual([
       { key: 'quota', value: String(2 * 1024 ** 3) },
     ]);
@@ -104,14 +104,14 @@ describe('écritures envoyées', () => {
     ]);
   });
 
-  it('refuse tout l’enregistrement plutôt que d’en écrire la moitié', () => {
+  it('refuses the whole save rather than writing half of it', () => {
     const res = settingsPayload(fields, { hook: 'https://x', quota: 'douze' }, { quota: 'GB' });
     expect(res.invalidKey).toBe('quota');
     expect(res.entries).toEqual([]);
   });
 
-  /** Les champs sur mesure (langue, accent, politique) partagent le même brouillon. */
-  it('laisse passer une clé qui n’a pas de champ générique', () => {
+  /** Bespoke fields (language, accent, policy) share the same draft. */
+  it('lets through a key that has no generic field', () => {
     expect(settingsPayload(fields, { studio_accent: '#ff0000' }, {}).entries).toEqual([
       { key: 'studio_accent', value: '#ff0000' },
     ]);

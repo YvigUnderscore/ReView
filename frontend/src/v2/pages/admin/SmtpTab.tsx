@@ -16,15 +16,15 @@ import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Vue du formulaire : la configuration rendue par le serveur, plus `allowInsecure`.
+ * Form view: the configuration returned by the server, plus `allowInsecure`.
  *
- * Le champ est servi par `GET /api/studio/smtp` mais ne figure pas encore dans `SmtpConfig`
- * (`v2/types/api.ts`, hors du périmètre de ce lot) : on compose par intersection, jamais
- * en redéclarant l'entité — la règle de `v2/types/api.ts` interdit la seconde définition.
+ * The field is served by `GET /api/studio/smtp` but is not yet part of `SmtpConfig`
+ * (`v2/types/api.ts`, outside the scope of this batch): we compose by intersection, never
+ * by redeclaring the entity — the rule of `v2/types/api.ts` forbids a second definition.
  */
 type SmtpView = SmtpConfig & { allowInsecure?: boolean };
 
-/** Configuration SMTP (admin) : champs en base, mot de passe chiffré write-only + envoi test. */
+/** SMTP configuration (admin): fields stored in the database, write-only encrypted password + test send. */
 export default function SmtpTab() {
   const t = useT();
   const qc = useQueryClient();
@@ -50,9 +50,9 @@ export default function SmtpTab() {
         secure: !!v.secure,
         user: v.user,
         from: v.from,
-        // Toujours envoyé, jamais conditionné à `f.allowInsecure` : le service conserve la
-        // valeur en place quand le champ est absent, si bien qu'un décochage seul — sans
-        // autre modification — n'aurait rien remis en sécurité.
+        // Always sent, never conditioned on `f.allowInsecure`: the service keeps the
+        // value in place when the field is absent, so unticking alone — without
+        // any other change — would have put nothing back into safe mode.
         allowInsecure: !!v.allowInsecure,
         ...(f.password ? { password: f.password } : {}),
       };
@@ -135,11 +135,11 @@ export default function SmtpTab() {
           />
         </Row>
         {/*
-          Le réglage sort de la liste des champs, et porte la couleur du danger.
-          Aligné en `Row` entre « Port » et « Expéditeur », il se cocherait comme une
-          préférence d'affichage : or il retire le chiffrement du transport, donc remet le
-          mot de passe du relais et chaque lien d'invitation en clair sur le réseau. La
-          conséquence est écrite sous le libellé, pas renvoyée à une infobulle.
+           The setting drops out of the list of fields, and carries the danger colour. Aligned
+           in a `Row` between "Port" and "Sender" it would be ticked like a display
+           preference: yet it removes transport encryption, so it exposes the relay
+           password and every invitation link in plain text on the network. The
+           consequence is written under the label, not handed off to a tooltip.
         */}
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2.5">
           <label className="flex cursor-pointer items-start gap-2">

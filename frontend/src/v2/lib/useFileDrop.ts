@@ -5,36 +5,36 @@ import { useState, type DragEvent } from 'react';
 import { filesFromDataTransfer } from '../../lib/dropEntries';
 
 /**
- * Cible de dépôt de fichiers (Phase 46).
+ * Drop target for files (Phase 46).
  *
- * Déposer est le geste naturel pour livrer un travail ; l'application le réservait à une
- * zone unique, obligeant à créer la version, puis à viser le bouton d'upload, puis à
- * traverser un sélecteur de fichiers. Ce hook rend n'importe quel élément déposable, pour
- * que chaque version soit sa propre cible.
+ * Dropping is the natural gesture for delivering work; the application reserved it for a
+ * single zone, forcing one to create the version, then aim at the upload button, then
+ * go through a file picker. This hook makes any element droppable, so that
+ * each version is its own target.
  *
- * Un dossier déposé est déplié : c'est ainsi qu'arrive un plan livré en séquence d'images,
- * et `dataTransfer.files` seul l'aurait ignoré sans un mot.
+ * A dropped folder is unfolded: this is how a shot delivered as an image sequence arrives,
+ * and `dataTransfer.files` alone would have ignored it without a word.
  */
 export function useFileDrop(onFiles: (files: File[]) => void) {
   const [over, setOver] = useState(false);
 
   return {
-    /** Vrai pendant le survol : à l'appelant d'en faire un retour visuel. */
+    /** True while hovering: up to the caller to turn it into visual feedback. */
     over,
     dropProps: {
       onDragOver: (e: DragEvent) => {
-        // Sans preventDefault, le navigateur ouvre le fichier à la place de nous le donner.
+        // Without preventDefault, the browser opens the file instead of handing it to us.
         e.preventDefault();
         setOver(true);
       },
       onDragLeave: () => setOver(false),
       onDrop: (e: DragEvent) => {
         e.preventDefault();
-        // Un dépôt sur une version ne doit pas remonter à la zone « nouvelle version »
-        // qui l'englobe : sans cela, un même fichier partirait deux fois.
+        // A drop on a version must not bubble up to the "new version" zone
+        // enclosing it: otherwise the same file would be sent twice.
         e.stopPropagation();
         setOver(false);
-        // Les entrées se lisent pendant l'événement : l'appel part donc avant tout `await`.
+        // Entries are read during the event: the call is therefore sent before any `await`.
         void filesFromDataTransfer(e.dataTransfer).then((files) => {
           if (files.length > 0) onFiles(files);
         });

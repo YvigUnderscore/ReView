@@ -15,12 +15,12 @@ import { useSaveAction, useStudioRow, useStudioSettings } from './useStudioSetti
 import { useT } from '../../i18n';
 
 /**
- * Messagerie d'équipe : où ReView annonce les décisions et les publications.
+ * Team messaging: where ReView announces decisions and publications.
  *
- * Le webhook Slack vivait dans la section fourre-tout ; celui de Discord n'avait **aucun
- * écran** — l'API l'exposait, le service s'en servait, et il ne se réglait qu'en base. Deux
- * moitiés du même geste, séparées par un défaut d'interface. Elles tiennent ici sous une
- * barre unique.
+ * The Slack webhook lived in the catch-all section; the Discord one had **no
+ * screen** — the API exposed it, the service used it, and it could only be set in the database. Two
+ * halves of the same gesture, separated by an interface gap. They now sit here under a
+ * single bar.
  */
 export default function ChatTab() {
   const t = useT();
@@ -28,16 +28,16 @@ export default function ChatTab() {
   const settings = useStudioSettings('chat');
   const studioQ = useStudioRow();
 
-  // Le webhook Discord est porté par la ligne Studio, pas par la table clé/valeur : son
-  // brouillon est à part, sa barre d'enregistrement est la même.
+  // The Discord webhook is carried by the Studio row, not by the key/value table: its
+  // draft is separate, its save bar is the same.
   const [discord, setDiscord] = useState<string | null>(null);
   const storedDiscord = studioQ.data?.discordWebhookUrl ?? '';
   const discordDirty = discord !== null && discord !== storedDiscord;
 
   const { busy, save } = useSaveAction(async () => {
     if (discordDirty) {
-      // Champ vidé = intégration coupée : le serveur attend `null`, pas la chaîne vide,
-      // qu'il refuserait comme une URL invalide.
+      // Field emptied = integration switched off: the server expects `null`, not the empty string,
+      // which it would refuse as an invalid URL.
       await api.patch('/api/studio', { discordWebhookUrl: discord.trim() || null });
       await qc.invalidateQueries({ queryKey: qk.admin('studio') });
       setDiscord(null);

@@ -14,13 +14,13 @@ import { Label } from '../components/ui/label';
 import { AuthLayout } from './auth/AuthLayout';
 
 /**
- * Marqueur « ce navigateur a lancé le flux SSO ».
+ * Marker "this browser started the SSO flow".
  *
- * Le retour OIDC arrive dans le fragment de l'URL, que n'importe qui peut fabriquer : sans
- * ce garde-fou, `…/login#sso=<jeton de l'attaquant>` connecte silencieusement la victime
- * sur le compte de l'attaquant (fixation de session), qui lit ensuite tout ce qu'elle y
- * dépose. `sessionStorage` est volontaire : le marqueur est propre à l'onglet et disparaît
- * à sa fermeture.
+ * The OIDC return arrives in the URL fragment, which anyone can forge: without
+ * this guard, `…/login#sso=<attacker's token>` would silently log the victim into the
+ * attacker's account (session fixation), which then reads everything she
+ * stores there. `sessionStorage` is deliberate: the marker is specific to the tab and disappears
+ * when it closes.
  */
 const SSO_FLOW_KEY = 'sso_flow_started';
 
@@ -28,11 +28,11 @@ const markSsoFlowStarted = () => {
   try {
     sessionStorage.setItem(SSO_FLOW_KEY, '1');
   } catch {
-    /* stockage indisponible (navigation privée stricte) : le retour sera simplement refusé */
+    /* storage unavailable (strict private browsing): the return will simply be refused */
   }
 };
 
-/** Consomme le marqueur (usage unique) et dit s'il était présent. */
+/** Consumes the marker (single use) and says whether it was present. */
 const consumeSsoFlowMarker = (): boolean => {
   try {
     const ok = sessionStorage.getItem(SSO_FLOW_KEY) === '1';
@@ -43,7 +43,7 @@ const consumeSsoFlowMarker = (): boolean => {
   }
 };
 
-/** Traduit les erreurs techniques en messages humains. */
+/** Translates technical errors into human messages. */
 function humanError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('invalid') || m.includes('incorrect') || m.includes('identifiant'))
@@ -61,14 +61,14 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Étape 2FA (36.A) : tmpToken présent = on attend le code TOTP/secours.
+  // 2FA step (36.A): tmpToken present = we are waiting for the TOTP/backup code.
   const [tmpToken, setTmpToken] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Bouton SSO (36.A) — affiché seulement si l'OIDC est configuré côté studio. `passwordLogin`
-  // dit si le studio accepte encore le couple email + mot de passe (mode « SSO seul »).
+  // SSO button (36.A): shown only if OIDC is configured on the studio side. `passwordLogin`
+  // says whether the studio still accepts the email + password pair ("SSO only" mode).
   const ssoQ = useQuery({
     queryKey: ['oidc-status'],
     queryFn: () =>
@@ -77,11 +77,11 @@ export default function LoginPage() {
       ),
     staleTime: 5 * 60 * 1000,
   });
-  // Tant que la réponse n'est pas là, on garde le formulaire : mieux vaut un champ inutile
-  // une fraction de seconde qu'une page de connexion vide si la requête échoue.
+  // Until the response arrives, we keep the form: better a useless field
+  // for a fraction of a second than an empty sign-in page if the request fails.
   const passwordLogin = ssoQ.data?.passwordLogin !== false;
 
-  // Retours OIDC par fragment : #sso=<access>&refresh=<r> | #tfa=<tmpToken> | #ssoerr=<msg>.
+  // OIDC returns via fragment: #sso=<access>&refresh=<r> | #tfa=<tmpToken> | #ssoerr=<msg>.
   useEffect(() => {
     if (!window.location.hash) return;
     const params = new URLSearchParams(window.location.hash.slice(1));
@@ -89,11 +89,11 @@ export default function LoginPage() {
     const tfa = params.get('tfa');
     const ssoerr = params.get('ssoerr');
     window.history.replaceState(null, '', window.location.pathname);
-    // Le fragment ne prouve rien par lui-même : accepter un jeton parce qu'il est dans
-    // l'URL, c'est laisser un tiers envoyer `…/login#sso=<SON jeton>` et connecter
-    // silencieusement sa victime SUR SON COMPTE À LUI — tout ce qu'elle y dépose ensuite
-    // lui est lisible. On n'honore donc le retour que si CE navigateur a lui-même lancé le
-    // flux SSO, marqueur posé au clic et consommé ici.
+    // The fragment proves nothing by itself: accepting a token because it is in
+    // the URL would let a third party send `…/login#sso=<THEIR token>` and silently log
+    // its victim INTO THE THIRD PARTY'S ACCOUNT — everything she then stores
+    // is readable by them. So we only honour the return if THIS browser itself started the
+    // SSO flow, a marker set on click and consumed here.
     if ((sso || tfa) && !consumeSsoFlowMarker()) {
       setError(t('login.ssoUnsolicited'));
       return;
@@ -237,8 +237,8 @@ export default function LoginPage() {
           {ssoButton}
         </form>
       ) : (
-        // Mode « SSO seul » : le formulaire disparaît, le serveur refusant de toute façon
-        // le couple email + mot de passe (`PASSWORD_LOGIN_DISABLED`).
+        // "SSO only" mode: the form disappears, the server refusing the email + password
+        // pair anyway (`PASSWORD_LOGIN_DISABLED`).
         <div className="space-y-4">
           {error && <p className="text-sm text-destructive">{error}</p>}
           {ssoButton}

@@ -11,12 +11,12 @@ import type { MenuEntry } from './menuSpec';
 import { isOmitted, omitBody, sequenceIdOf, type OmitTarget } from './omitMenu';
 
 /**
- * Entrée « omis du montage » pour n'importe quel menu contextuel.
+ * "Omitted from the edit" entry for any context menu.
  *
- * Un plan coupé au montage garde ses tâches, ses versions, ses médias et ses commentaires
- * — c'est tout ce qui le distingue d'une suppression. La décision se prenait pourtant à
- * la main sur l'API : aucun écran ne l'offrait. Elle tient désormais dans une case à
- * cocher du clic droit, sur une carte de plan comme sur la page du plan.
+ * A shot cut at mount keeps its tasks, versions, media and comments
+ * — that is all that distinguishes it from a deletion. The decision used to be taken by
+ * hand on the API: no screen offered it. It now lives in a checkbox on the
+ * right click, on a shot card as on the shot page.
  */
 export function useOmitMenu(projectId: number) {
   const t = useT();
@@ -26,15 +26,15 @@ export function useOmitMenu(projectId: number) {
     const body = omitBody(shot);
     try {
       await api.patch(`/api/shots/${shot.id}`, body);
-      // Ce que l'omission ne détruit pas mérite d'être dit : c'est la question que se pose
-      // qui hésite à couper un plan plutôt qu'à le supprimer.
+      // What omission does not destroy deserves to be said: it is the question asked by
+      // someone hesitating to cut a shot rather than delete it.
       if (body.omitted) toast.success(t('shot.omitted'), { description: t('shot.omittedHint') });
       else toast.success(t('shots.updated'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     } finally {
-      // Le serveur n'émet que `timeline:update` (les montages se refont seuls) : les
-      // écrans qui montrent le plan, eux, ne l'apprendraient jamais.
+      // The server only emits `timeline:update` (edits rebuild themselves): the
+      // screens showing the shot would never find out.
       void qc.invalidateQueries({ queryKey: qk.shot(shot.id) });
       void qc.invalidateQueries({ queryKey: qk.shots(projectId) });
       const sequenceId = sequenceIdOf(shot);

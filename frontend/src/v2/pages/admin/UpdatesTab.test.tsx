@@ -9,9 +9,9 @@ const { api, toast } = vi.hoisted(() => ({
   api: { get: vi.fn(), post: vi.fn(), del: vi.fn(), patch: vi.fn() },
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
-// Le VRAI module, dont on ne remplace que `api` : le panneau importe aussi `ApiError`
-// pour distinguer un 404 définitif d'une coupure passagère, et un mock qui ne l'exporte pas
-// le rend `undefined` — `instanceof` jette alors, et l'écran ne rend plus rien du tout.
+// The REAL module, of which only `api` is replaced: the panel also imports `ApiError`
+// to tell a final 404 from a passing outage, and a mock that does not export it
+// makes it `undefined` — `instanceof` then throws, and the screen no longer renders anything at all.
 vi.mock('../../../lib/apiClient', async () => {
   const actual = await vi.importActual<typeof import('../../../lib/apiClient')>('../../../lib/apiClient');
   return { ...actual, api };
@@ -77,17 +77,17 @@ beforeEach(() => {
 afterEach(cleanup);
 
 /**
- * La règle que ces contrôles défendent : **jamais un bouton mort**. Une instance qui ne
- * peut pas agir sur elle-même n'affiche pas un bouton grisé — qui fait croire à une panne
- * et n'apprend rien — mais la commande exacte à taper.
+ * The rule these checks defend: **never a dead button**. An instance that
+ * cannot act on itself does not show a greyed-out button — which suggests a fault
+ * and teaches nothing — but the exact command to type.
  */
 describe('UpdatesTab', () => {
-  it('propose la mise à jour quand tout est réuni', async () => {
+  it('offers the update when everything is in place', async () => {
     mount();
     expect(await screen.findByText(t('ops.update.action', { tag: 'v2.4.0' }))).toBeTruthy();
   });
 
-  it('sans agent : aucun bouton d’action, la commande à la place', async () => {
+  it('without an agent: no action button, the command instead', async () => {
     withOverview({
       mechanism: {
         ...OVERVIEW.mechanism,
@@ -104,8 +104,8 @@ describe('UpdatesTab', () => {
     expect(screen.getByText('bash scripts/update.sh --version v2.4.0')).toBeTruthy();
   });
 
-  it('en mode construction : la commande, jamais le bouton', async () => {
-    // Y basculer recompilerait des giga-octets sur le serveur du studio.
+  it('in build mode: the command, never the button', async () => {
+    // Switching to it would recompile gigabytes on the studio's server.
     withOverview({ mode: 'build' });
     mount();
     expect(await screen.findByText('bash scripts/update.sh --version v2.4.0')).toBeTruthy();
@@ -113,21 +113,21 @@ describe('UpdatesTab', () => {
     expect(screen.getByText(t('ops.installed.buildHint'))).toBeTruthy();
   });
 
-  it('dit que le dépôt est mal monté plutôt que de laisser sauvegarder dans le vide', async () => {
+  it('says the repository is misconfigured rather than letting a save go into the void', async () => {
     withOverview({ mechanism: { ...OVERVIEW.mechanism, state: 'blocked', reason: 'ROOT_MISMATCH' } });
     mount();
     expect(await screen.findByText(t('ops.agent.rootMismatch'))).toBeTruthy();
     expect(screen.queryByText(t('ops.backups.create'))).toBeNull();
   });
 
-  it('annonce l’absence de catalogue de sauvegardes sans prétendre qu’il n’y en a aucune', async () => {
+  it('announces the absence of a backup catalogue without claiming there are none', async () => {
     withOverview({ backups: { available: false, dir: null, entries: [] } });
     mount();
     expect(await screen.findByText(t('ops.backups.unavailable'))).toBeTruthy();
     expect(screen.queryByText(t('ops.backups.empty'))).toBeNull();
   });
 
-  it('reste lisible quand le catalogue distant est injoignable', async () => {
+  it('stays readable when the remote catalogue is unreachable', async () => {
     withOverview({
       latest: null,
       newer: [],
@@ -137,11 +137,11 @@ describe('UpdatesTab', () => {
     mount();
     expect(await screen.findByText(t('ops.latest.unreachable'))).toBeTruthy();
     expect(screen.getByText(t('about.version'))).toBeTruthy();
-    // Ni « à jour » ni « disponible » : on ne sait pas, et on ne fait pas semblant.
+    // Neither "up to date" nor "available": we don't know, and we don't pretend to.
     expect(screen.queryByText(t('ops.latest.upToDate'))).toBeNull();
   });
 
-  it('suit l’opération que le serveur dit active', async () => {
+  it('follows the operation the server says is active', async () => {
     withOverview({
       activeRun: {
         id: '20260910-142233-a1b2c3',
@@ -187,15 +187,15 @@ describe('UpdatesTab', () => {
     mount();
     expect(await screen.findByText(t('ops.run.title'))).toBeTruthy();
     expect(await screen.findByText('▶ Dump…')).toBeTruthy();
-    // Une opération en cours verrouille les autres gestes.
+    // An operation in progress locks the other gestures.
     expect(screen.queryByText(t('ops.update.action', { tag: 'v2.4.0' }))).toBeNull();
   });
 
-  it('ne reste pas bloqué sur un run mémorisé qui n’existe plus', async () => {
-    // Le cul-de-sac constaté en usage : un identifiant resté dans localStorage, une API qui
-    // répond 404 — donc une réponse DÉFINITIVE — et un écran qui annonçait « l'instance
-    // redémarre » sans fin, sans bouton pour en sortir puisque « écarter » n'apparaissait
-    // qu'une fois l'opération terminée.
+  it('does not stay stuck on a remembered run that no longer exists', async () => {
+    // The dead end observed in use: an identifier left in localStorage, an API that
+    // answers 404 — hence a FINAL response — and a screen that announced "the instance
+    // is restarting" endlessly, with no button to get out since "dismiss" only appeared
+    // once the operation was finished.
     localStorage.setItem('review:ops-run', '20260910-142233-a1b2c3');
     api.get.mockImplementation((path: string) =>
       path.startsWith('/api/admin/ops/runs/')
@@ -205,14 +205,14 @@ describe('UpdatesTab', () => {
     mount();
     expect(await screen.findByText(t('ops.run.gone'))).toBeTruthy();
     expect(screen.queryByText(t('ops.run.reconnecting'))).toBeNull();
-    // Une sortie, et un oubli immédiat : un rechargement ne doit pas ramener le fantôme.
+    // An exit, and an immediate forget: a reload must not bring the ghost back.
     expect(screen.getByText(t('ops.run.dismiss'))).toBeTruthy();
     expect(localStorage.getItem('review:ops-run')).toBeNull();
   });
 
-  it('ne crie pas à l’erreur quand l’API disparaît pendant une bascule', async () => {
-    // C'est le comportement ATTENDU d'une mise à jour : le conteneur qui répondait est en
-    // train d'être recréé. Un toast rouge ferait croire à une panne à chaque bascule réussie.
+  it('does not cry error when the API disappears during a switchover', async () => {
+    // This is the EXPECTED behaviour of an update: the container that was answering is in
+    // the middle of being recreated. A red toast would suggest a fault at every successful switchover.
     localStorage.setItem('review:ops-run', '20260910-142233-a1b2c3');
     api.get.mockImplementation((path: string) =>
       path.startsWith('/api/admin/ops/runs/')

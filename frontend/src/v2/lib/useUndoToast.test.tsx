@@ -7,7 +7,7 @@ import { renderWithProviders } from '../../test/renderWithProviders';
 import { t } from '../i18n';
 import { useUndoToast } from './useUndoToast';
 
-/** Un écran minimal : il annonce un succès, avec ou sans inverse. */
+/** A minimal screen: it announces a success, with or without an inverse. */
 function Screen({ undo }: { undo?: () => Promise<unknown> }) {
   const { done } = useUndoToast();
   return (
@@ -18,7 +18,7 @@ function Screen({ undo }: { undo?: () => Promise<unknown> }) {
 }
 
 describe('useUndoToast', () => {
-  it('rejoue l’inverse au clic sur « Annuler », puis le confirme', async () => {
+  it('replays the inverse on clicking "Undo", then confirms it', async () => {
     const undo = vi.fn<() => Promise<unknown>>(() => Promise.resolve());
     const { user } = renderWithProviders(<Screen undo={undo} />);
     await user.click(screen.getByRole('button', { name: 'go' }));
@@ -27,7 +27,7 @@ describe('useUndoToast', () => {
     expect(await screen.findByText(t('common.undone'))).toBeTruthy();
   });
 
-  it('dit que l’annulation a échoué — elle est une écriture comme une autre', async () => {
+  it('reports that the undo failed — it is a write like any other', async () => {
     const undo = vi.fn<() => Promise<unknown>>(() => Promise.reject(new Error('403 refusé')));
     const { user } = renderWithProviders(<Screen undo={undo} />);
     await user.click(screen.getByRole('button', { name: 'go' }));
@@ -36,7 +36,7 @@ describe('useUndoToast', () => {
     expect(screen.queryByText(t('common.undone'))).toBeNull();
   });
 
-  it('sans inverse tenu, aucune promesse d’annulation n’est affichée', async () => {
+  it('with no tracked inverse, no undo promise is shown', async () => {
     const { user } = renderWithProviders(<Screen />);
     await user.click(screen.getByRole('button', { name: 'go' }));
     expect(await screen.findByText('Status set')).toBeTruthy();

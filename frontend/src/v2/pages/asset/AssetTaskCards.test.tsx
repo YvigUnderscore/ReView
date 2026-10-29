@@ -9,11 +9,11 @@ import AssetTaskCards from './AssetTaskCards';
 import type { AssetTreeTask, DepartmentGroup } from '../../types/api';
 
 /**
- * Les cartes de tâches d'un plan ou d'un asset.
+ * The task cards of a shot or an asset.
  *
- * Ce qui se joue ici, c'est la question qu'on pose à un pipe avant toutes les autres :
- * qui est dessus. Elle n'avait pas de réponse sur cette page — il fallait ouvrir chaque
- * tâche — et le geste pour y répondre (assigner) demandait d'ouvrir ses réglages.
+ * What is at stake here is the question one asks a pipe before all others:
+ * who is on it. It had no answer on this page — one had to open each
+ * task — and the gesture to answer it (assign) required opening its settings.
  */
 
 const task = (over: Partial<AssetTreeTask> = {}): AssetTreeTask => ({
@@ -42,7 +42,7 @@ const API = {
 };
 
 describe('AssetTaskCards', () => {
-  it('montre qui est sur la tâche, sans avoir à l’ouvrir', async () => {
+  it('shows who is on the task, without opening it', async () => {
     renderWithProviders(
       <AssetTaskCards
         groups={groups([
@@ -66,18 +66,18 @@ describe('AssetTaskCards', () => {
     expect(await screen.findByTitle('Alice Martin')).toBeInTheDocument();
   });
 
-  it('n’affiche rien de la personne quand la tâche n’en a pas', () => {
+  it('shows nothing about the person when the task has none', () => {
     renderWithProviders(<AssetTaskCards groups={groups([task()])} projectId={1} entityType="Shot" />, {
       api: API,
     });
 
-    // Le nom du département titre le groupe, celui de la tâche titre la carte.
+    // The department name titles the group, the task's title titles the card.
     expect(screen.getAllByText('Animation').length).toBeGreaterThan(0);
     expect(screen.queryByTitle('Alice Martin')).not.toBeInTheDocument();
   });
 
-  it('laisse la carte seule quand il n’y a pas de tâche à assigner', () => {
-    // Le fourre-tout des versions sans tâche : rien à assigner, donc pas de menu.
+  it('leaves the card alone when there is no task to assign', () => {
+    // The catch-all of versions without a task: nothing to assign, hence no menu.
     renderWithProviders(
       <AssetTaskCards groups={groups([task({ id: null })])} projectId={1} entityType="Shot" />,
       { api: API },

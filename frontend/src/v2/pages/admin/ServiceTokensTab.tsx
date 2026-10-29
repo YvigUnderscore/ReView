@@ -18,7 +18,7 @@ import { scopeLevel, type ScopeLevel } from '../../components/tokens/tokenScopes
 import { useT, intlLocale, type MessageKey } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
 
 const fmt = (iso: string) =>
@@ -36,7 +36,7 @@ const LEVEL_VARIANT: Record<ScopeLevel, 'destructive' | 'warning' | 'secondary'>
   read: 'secondary',
 };
 
-/** Rôle du compte porteur : ce que le robot peut faire, indépendamment de ses scopes. */
+/** Role of the holding account: what the robot can do, regardless of its scopes. */
 const roleLabel = (t: Tr, role: string): string => {
   if (role === 'SUPERVISOR') return t('role.supervisor');
   if (role === 'CLIENT') return t('role.client');
@@ -48,10 +48,10 @@ const isExpired = (tok: ServiceTokenRow): boolean =>
   tok.expiresAt !== null && new Date(tok.expiresAt).getTime() < Date.now();
 
 /**
- * Tokens de service (36.C) : les identités machine du studio — ferme de rendu, daemon
- * Prism, bot. Jusqu'ici le backend savait les émettre et seule une commande curl y
- * accédait ; cet écran rend visibles le rôle effectif, le cantonnement projet,
- * l'expiration et la dernière utilisation, seules réponses qui comptent devant un robot.
+ * Service tokens (36.C): the studio's machine identities — render farm, daemon
+ * Prism, bot. Until now the backend could issue them and only a curl command
+ * reached them; this screen makes visible the effective role, the project confinement,
+ * the expiry and the last use, the only answers that matter when facing a robot.
  */
 export default function ServiceTokensTab() {
   const t = useT();

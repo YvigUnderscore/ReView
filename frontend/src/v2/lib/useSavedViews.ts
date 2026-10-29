@@ -6,18 +6,18 @@ import { usePreferences, useUpdatePreferences } from './usePreferences';
 import type { SavedView } from '../types/preferences';
 
 /**
- * Vues de liste sauvegardées (42.A5 — №73) : jeux de filtres nommés, persistés par compte
- * dans `preferences.savedViews[scope]`. Réutilisable sur n'importe quelle liste filtrable.
+ * Saved list views (42.A5 — №73): named filter sets, persisted per account
+ * in `preferences.savedViews[scope]`. Reusable on any filterable list.
  */
 
-/** Enlève les filtres vides (« » = pas de filtre) pour une comparaison/stockage stables. */
+/** Removes empty filters ("" = no filter) for stable comparison/storage. */
 export function normalizeFilters(filters: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(filters)) if (v) out[k] = v;
   return out;
 }
 
-/** Deux jeux de filtres sont-ils équivalents (mêmes clés non vides / mêmes valeurs) ? */
+/** Are two filter sets equivalent (same non-empty keys / same values)? */
 export function filtersEqual(a: Record<string, string>, b: Record<string, string>): boolean {
   const na = normalizeFilters(a);
   const nb = normalizeFilters(b);
@@ -26,7 +26,7 @@ export function filtersEqual(a: Record<string, string>, b: Record<string, string
   return ka.every((k) => na[k] === nb[k]);
 }
 
-/** Ajoute ou remplace (par nom, insensible à la casse/espaces) une vue. */
+/** Adds or replaces (by name, case- and whitespace-insensitive) a view. */
 export function upsertView(views: SavedView[], name: string, filters: Record<string, string>): SavedView[] {
   const trimmed = name.trim();
   const norm = normalizeFilters(filters);

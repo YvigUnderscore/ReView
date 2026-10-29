@@ -5,11 +5,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 
 /**
- * Règles de masquage (admin).
+ * Hiding rules (admin).
  *
- * Une écriture invalide **tout** ce qui liste des entités : masquer, c'est retirer des
- * plans de l'onglet Plans, du cut, de la recherche et des statistiques d'un seul geste.
- * Cibler les invalidations reviendrait à énumérer les écrans, donc à en oublier.
+ * A write invalidates **everything** that lists entities: hiding removes shots from the
+ * Shots tab, the cut, search and statistics in a single gesture.
+ * Targeting the invalidations would mean enumerating the screens, and therefore forgetting some.
  */
 
 export type MatchType = 'exact' | 'prefix' | 'contains' | 'regex';
@@ -27,7 +27,7 @@ export interface VisibilityRule {
   createdAt: string;
 }
 
-/** Ce qu'un recalcul a fait : de quoi le dire à l'admin plutôt que de le laisser deviner. */
+/** What a recalculation did: enough to tell the admin rather than let them guess. */
 export interface ApplyResult {
   hidden: number;
   revealed: number;
@@ -57,7 +57,7 @@ export function useVisibilityRules(projectId?: number) {
   });
 }
 
-/** Invalide tout ce qui affiche des entités — cf. l'entête de ce module. */
+/** Invalidates everything that displays entities — see this module's header. */
 function useRefresh() {
   const qc = useQueryClient();
   return () => {
@@ -94,7 +94,7 @@ export function useDeleteRule() {
   });
 }
 
-/** Rejoue les règles à la demande — elles le sont déjà à chaque écriture et à chaque import. */
+/** Replays the rules on demand — they already run on each write and each import. */
 export function useApplyRules() {
   const refresh = useRefresh();
   return useMutation({

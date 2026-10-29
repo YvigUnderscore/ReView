@@ -6,20 +6,20 @@ import { useSearchParams } from 'react-router-dom';
 import { EMPTY_FILTERS, type EntityFilterState } from './entityFilters';
 
 /**
- * Les filtres d'une liste, portés par l'URL plutôt que par un `useState`.
+ * List filters, carried by the URL rather than by a `useState`.
  *
- * La page projet a fait ce choix pour son onglet courant (`?tab=shots`) et l'a documenté :
- * un lien se partage, un rechargement retrouve son écran, et les boutons Précédent/Suivant
- * du navigateur font ce qu'on attend d'eux. Les listes, elles, gardaient leurs filtres en
- * état React : appliquer « Waiting to Start » puis envoyer le lien à un collègue lui
- * ouvrait la liste entière, et un simple F5 effaçait le tri qu'on venait de poser.
+ * The project page made this choice for its current tab (`?tab=shots`) and documented it:
+ * a link can be shared, a reload finds its screen again, and the browser's Back/Forward
+ * buttons do what one expects of them. The lists, however, kept their filters in
+ * React state: applying "Waiting to Start" then sending the link to a colleague
+ * opened the whole list, and a simple F5 erased the sort just set.
  *
- * Les vues sauvegardées ne remplacent pas ce besoin : elles sont personnelles, nommées et
- * volontaires, là où l'on veut souvent partager un état passager.
+ * Saved views do not replace this need: they are personal, named and
+ * deliberate, whereas one often wants to share a transient state.
  *
- * Les filtres vides ne sont pas écrits : l'URL d'une liste sans filtre reste propre.
- * Le préfixe permet à deux listes d'une même page (Shots et Assets d'un projet) de ne pas
- * se marcher dessus.
+ * Empty filters are not written: the URL of a list without filters stays clean.
+ * The prefix lets two lists on the same page (a project's Shots and Assets) avoid
+ * stepping on each other.
  */
 export function useUrlFilters(prefix = ''): [EntityFilterState, (next: EntityFilterState) => void] {
   const [params, setParams] = useSearchParams();
@@ -41,8 +41,8 @@ export function useUrlFilters(prefix = ''): [EntityFilterState, (next: EntityFil
         if (value) updated.set(key(field), value);
         else updated.delete(key(field));
       }
-      // `replace` : filtrer n'est pas naviguer. Sans cela, revenir en arrière obligerait à
-      // défaire une à une chaque frappe de la recherche libre.
+      // `replace`: filtering is not navigating. Without this, going back would force
+      // undoing each keystroke of the free-text search one by one.
       setParams(updated, { replace: true });
     },
     [params, setParams, key],

@@ -15,18 +15,18 @@ import type { CommentFeedItem } from './mywork/myWorkTypes';
 import { useT } from '../i18n';
 
 /**
- * Le fil des derniers commentaires de mon périmètre.
+ * The feed of the latest comments within my scope.
  *
- * La quatrième carte de l'Accueil compte des commentaires ; elle empruntait son libellé au
- * filtre du fil de review (« All ») et menait à `/reviews`, qui n'en montre aucun. Un
- * compteur doit mener à ses lignes, sinon personne ne peut le contredire.
+ * The fourth card on the Home page counts comments; it borrowed its label from the
+ * review feed's filter ("All") and led to `/reviews`, which shows none of them. A
+ * counter must lead to its own rows, otherwise nobody can check it.
  *
- * Une ligne = une note (et non un média, comme « dernières reviews ») : c'est ce chiffre-là
- * qu'on déplie. Un CLIENT n'y voit que les notes qui lui sont destinées — le serveur borne,
- * la page ne trie rien.
+ * One row = one note (not a media item, as in "latest reviews"): that is the figure
+ * one expands. A CLIENT sees only the notes addressed to them — the server bounds,
+ * the page sorts nothing.
  */
 
-/** Une note du fil : le texte d'abord, puis où elle a été posée et par qui. */
+/** A note in the feed: the text first, then where it was left and by whom. */
 function CommentRow({ note }: { note: CommentFeedItem }) {
   const t = useT();
   const place = [note.mediaName, note.location, note.versionName].filter(Boolean).join(' · ');

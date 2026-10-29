@@ -7,28 +7,28 @@ import { isLate, scheduleLabel } from './taskSchedule';
 const NOW = new Date('2026-08-15T12:00:00Z').getTime();
 
 describe('isLate', () => {
-  it('reconnaît une échéance passée', () => {
+  it('recognises a past due date', () => {
     expect(isLate('2026-08-14', NOW)).toBe(true);
     expect(isLate('2026-08-20', NOW)).toBe(false);
   });
 
-  it('ne se prononce pas sans échéance', () => {
+  it('does not pronounce itself without a due date', () => {
     expect(isLate(null, NOW)).toBe(false);
     expect(isLate(undefined, NOW)).toBe(false);
   });
 
-  it('ignore une date illisible plutôt que de crier au retard', () => {
-    expect(isLate('bientôt', NOW)).toBe(false);
+  it('ignores an unreadable date rather than crying late', () => {
+    expect(isLate('soon', NOW)).toBe(false);
   });
 });
 
 describe('scheduleLabel', () => {
-  it('n’affiche rien quand la production n’a rien planifié', () => {
+  it('shows nothing when production has scheduled nothing', () => {
     expect(scheduleLabel({}, NOW)).toBeNull();
     expect(scheduleLabel({ startDate: null, dueDate: null }, NOW)).toBeNull();
   });
 
-  it('donne la fenêtre complète quand les deux dates sont là', () => {
+  it('gives the full window when both dates are set', () => {
     expect(scheduleLabel({ startDate: '2026-08-16', dueDate: '2026-08-20' }, NOW)).toEqual({
       key: 'task.schedule.window',
       start: '2026-08-16',
@@ -36,21 +36,21 @@ describe('scheduleLabel', () => {
     });
   });
 
-  it('le retard prime sur la fenêtre : c’est ce qu’on cherche sur une fiche', () => {
+  it('lateness takes precedence over the window: that is what one looks for on a sheet', () => {
     expect(scheduleLabel({ startDate: '2026-08-01', dueDate: '2026-08-10' }, NOW)).toEqual({
       key: 'task.schedule.late',
       date: '2026-08-10',
     });
   });
 
-  it('se contente de l’échéance quand le début n’est pas fixé', () => {
+  it('uses only the due date when the start is not set', () => {
     expect(scheduleLabel({ dueDate: '2026-08-20' }, NOW)).toEqual({
       key: 'task.schedule.due',
       date: '2026-08-20',
     });
   });
 
-  it('une date de début seule reste affichable', () => {
+  it('a lone start date remains displayable', () => {
     expect(scheduleLabel({ startDate: '2026-08-16' }, NOW)).toEqual({
       key: 'task.schedule.window',
       start: '2026-08-16',

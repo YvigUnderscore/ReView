@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Tonemap d'un buffer HDR linéaire (RGBA float) vers du RGBA 8 bits affichable :
- * échantillonnage nearest vers la taille cible + Reinhard (v/(1+v)) + gamma 2.2.
- * Pur (testable) — utilisé par l'aperçu miniature HDRI de l'admin (Phase 22).
+ * Tonemaps a linear HDR buffer (float RGBA) to displayable 8-bit RGBA:
+ * nearest-neighbour sampling to the target size + Reinhard (v/(1+v)) + gamma 2.2.
+ * Pure (testable) — used by the admin's HDRI thumbnail preview (Phase 22).
  */
 export function tonemapToRgba(
   data: ArrayLike<number>,

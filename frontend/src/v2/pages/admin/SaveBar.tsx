@@ -6,14 +6,14 @@ import { Button } from '../../components/ui/button';
 import { useT } from '../../i18n';
 
 /**
- * La barre d'enregistrement d'un écran de réglages : **une** par page, jamais une par champ.
+ * The save bar of a settings screen: **one** per page, never one per field.
  *
- * Elle ne s'arme que si quelque chose a changé, et le dit — c'est ce qui remplace les onze
- * boutons dispersés, dont aucun n'indiquait lequel restait à presser. « Annuler les
- * modifications » n'apparaît que lorsqu'il y a quelque chose à annuler.
+ * It only arms itself if something has changed, and says so — this is what replaces the eleven
+ * scattered buttons, none of which indicated which one was still to be pressed. "Discard
+ * changes" only appears when there is something to discard.
  *
- * Collante en bas de la colonne : sur les écrans longs (rétention, défauts de projet) le
- * bouton restait hors de vue au moment précis où l'on venait de modifier quelque chose.
+ * Sticky at the bottom of the column: on long screens (retention, project defaults) the
+ * button stayed out of view at the very moment one had just changed something.
  */
 export default function SaveBar({
   dirty,

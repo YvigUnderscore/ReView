@@ -19,8 +19,8 @@ import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Onglet Contextes de review → Statuts (Phase 31.A) : CRUD des statuts de
- * décision personnalisables (nom, couleur, flags approbation/retake/défaut, ordre).
+ * Review contexts → Statuses tab (Phase 31.A): CRUD for customisable decision
+ * statuses (name, colour, approval/retake/default flags, order).
  */
 export default function ReviewStatusTab() {
   const t = useT();
@@ -44,7 +44,7 @@ export default function ReviewStatusTab() {
     }
   };
 
-  /** Échange l'ordre avec le voisin (haut/bas). */
+  /** Swaps the order with the neighbour (up/down). */
   const move = async (index: number, dir: -1 | 1) => {
     const items = data ?? [];
     const a = items[index];

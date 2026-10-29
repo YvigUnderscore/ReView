@@ -7,12 +7,12 @@ import { MATCH_EFFECT, MATCH_EXAMPLE, MATCH_LABEL } from './visibilityLabels';
 import { useT } from '../../i18n';
 
 /**
- * Comment écrire un motif, en trois exemples.
+ * How to write a pattern, in three examples.
  *
- * L'expression régulière est la seule des quatre formes qui puisse se tromper, et c'est
- * aussi celle qui rend service au studio qui a une convention de nommage. La renvoyer à la
- * documentation aurait signifié que personne ne s'en sert : l'aide vit donc là où l'on
- * écrit la règle, repliée par défaut pour ne pas encombrer ceux qui savent déjà.
+ * The regular expression is the only one of the four forms that can go wrong, and it is
+ * also the one that serves the studio with a naming convention. Pointing it to the
+ * documentation would have meant nobody uses it: the help therefore lives where one
+ * writes the rule, collapsed by default so as not to clutter those who already know.
  */
 export default function VisibilityHelp() {
   const t = useT();
