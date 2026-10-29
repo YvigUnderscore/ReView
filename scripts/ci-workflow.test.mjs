@@ -67,10 +67,10 @@ describe('validation workflow', () => {
 
   it('runs the whole suite, never a subset', () => {
     const invocations = WORKFLOW.split('\n').filter((line) => line.includes('scripts/validate.sh'));
-    // Two calls: the suite alone, then the suite plus the integration tests.
-    expect(invocations).toHaveLength(2);
+    // Three calls: the suite alone, plus the integration tests, plus the Playwright E2E path.
+    expect(invocations).toHaveLength(3);
     for (const line of invocations) {
-      expect(line).toMatch(/^ +run: bash scripts\/validate\.sh( --with-integration)?$/);
+      expect(line).toMatch(/^ +run: bash scripts\/validate\.sh( --with-integration| --with-e2e)?$/);
     }
     expect(jobBlock(WORKFLOW, 'validate')).toMatch(/run: bash scripts\/validate\.sh$/m);
     expect(jobBlock(WORKFLOW, 'integration')).toMatch(/run: bash scripts\/validate\.sh --with-integration$/m);

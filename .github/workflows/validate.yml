@@ -28,6 +28,8 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
+  PYTHON_VERSION: '3.12'
+  RUFF_VERSION: '0.16.9'
 
 jobs:
   # Full suite without services: SPDX, third-party notices, i18n, color tokens, budgets,
@@ -65,6 +67,15 @@ jobs:
 
       # `npm ci` (not `npm install`) follows the lockfile exactly, which the freshness check
       # of THIRD-PARTY-NOTICES.md depends on.
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # `ruff` is mandatory in validate.sh (no silent skip when absent).
+      - name: Installer ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
+
       - name: Dépendances backend (npm ci)
         run: npm ci
         working-directory: backend
@@ -90,7 +101,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16.15-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
         env:
           POSTGRES_USER: review
           POSTGRES_PASSWORD: review_ci
@@ -104,7 +115,7 @@ jobs:
           --health-retries 10
 
       redis:
-        image: redis:7-alpine
+        image: redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
         ports:
           - 6379:6379
         options: >-
@@ -121,8 +132,8 @@ jobs:
       DATABASE_URL: postgresql://review:review_ci@localhost:5432/review_itest?schema=public
       JWT_SECRET: ci-placeholder-secret-not-used-outside-ci
       S3_ENDPOINT: http://localhost:9000
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
+      S3_ACCESS_KEY: ci-minio-user
+      S3_SECRET_KEY: ci-minio-password-0123456789
       S3_BUCKET: review
       S3_FORCE_PATH_STYLE: 'true'
       REDIS_URL: redis://localhost:6379
@@ -148,10 +159,14 @@ jobs:
       # `minio/minio` is no longer published, and `latest` broke this job the day the repository
       # disappeared from Docker Hub.
       - name: Démarrer MinIO
+        env:
+          MINIO_ROOT_USER: ${{ env.S3_ACCESS_KEY }}
+          MINIO_ROOT_PASSWORD: ${{ env.S3_SECRET_KEY }}
         run: |
+          # Variable NAMES only (values come from the step env): nothing secret on the command line.
           docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin \
+            -e MINIO_ROOT_USER \
+            -e MINIO_ROOT_PASSWORD \
             pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
           for _ in $(seq 1 30); do
             if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then
@@ -169,9 +184,20 @@ jobs:
       # `MC_HOST_<alias>` avoids persisting an `mc` configuration between runs; the `mc` is the
       # one from the server image, as for the compose probe and backup.sh.
       - name: Créer le bucket de stockage
+        env:
+          MC_HOST_ci: http://${{ env.S3_ACCESS_KEY }}:${{ env.S3_SECRET_KEY }}@localhost:9000
         run: |
-          docker exec -e MC_HOST_ci=http://minioadmin:minioadmin@localhost:9000 \
+          docker exec -e MC_HOST_ci \
             minio mc mb --ignore-existing ci/review
+
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # `ruff` is mandatory in validate.sh (no silent skip when absent).
+      - name: Installer ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
 
       - name: Dépendances backend (npm ci)
         run: npm ci
@@ -190,3 +216,165 @@ jobs:
 
       - name: Suite de validation + tests d'intégration
         run: bash scripts/validate.sh --with-integration
+
+  # Python client (clients/python): zero runtime dependency, so only the linter is installed.
+  # ruff is mandatory here too: no silent skip.
+  python-client:
+    name: Client Python (ruff + compileall + unittest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: clients/python
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Installer le client et ruff
+        run: pip install -e . "ruff==${{ env.RUFF_VERSION }}"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Syntaxe (compileall)
+        env:
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pycache
+        run: python -m compileall -q review tests
+
+      - name: Tests (unittest)
+        run: python -m unittest discover -s tests -t . -v
+
+  # E2E: the same suite through its `--with-e2e` path (integration + Playwright smoke, which
+  # starts backend and frontend). Same services as `integration`.
+  e2e:
+    name: validate.sh --with-e2e (Playwright + Postgres + Redis + MinIO)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    services:
+      postgres:
+        image: postgres:16.15-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+        env:
+          POSTGRES_USER: review
+          POSTGRES_PASSWORD: review_ci
+          POSTGRES_DB: review_itest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U review"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      # MinIO is not here: a GitHub Actions service container receives no command or
+      # arguments, and the MinIO image requires `server /data` to start anything other than its
+      # help output. It is therefore started with `docker run` below, on the same host network.
+
+    env:
+      DATABASE_URL: postgresql://review:review_ci@localhost:5432/review_itest?schema=public
+      JWT_SECRET: ci-placeholder-secret-not-used-outside-ci
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY: ci-minio-user
+      S3_SECRET_KEY: ci-minio-password-0123456789
+      S3_BUCKET: review
+      S3_FORCE_PATH_STYLE: 'true'
+      REDIS_URL: redis://localhost:6379
+      # The schema.prisma <-> migrations drift check is skipped when no database is reachable
+      # (machine without docker). Here one is, so it becomes mandatory; otherwise the only place
+      # it could run would also be the only place not requiring it.
+      REVIEW_REQUIRE_DRIFT_CHECK: '1'
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+
+      - name: Installer Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # Same image and version as docker-compose.yml (scripts/ci-workflow.test.mjs checks this):
+      # `minio/minio` is no longer published, and `latest` broke this job the day the repository
+      # disappeared from Docker Hub.
+      - name: Démarrer MinIO
+        env:
+          MINIO_ROOT_USER: ${{ env.S3_ACCESS_KEY }}
+          MINIO_ROOT_PASSWORD: ${{ env.S3_SECRET_KEY }}
+        run: |
+          # Variable NAMES only (values come from the step env): nothing secret on the command line.
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER \
+            -e MINIO_ROOT_PASSWORD \
+            pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then
+              echo "MinIO prêt."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MinIO n'a pas répondu en 60 s." >&2
+          docker logs minio >&2 || true
+          exit 1
+
+      # The bucket is only created at server startup (`server.ts` -> `ensureBucket`); integration
+      # tests mount the app without going through there, so it is created here.
+      # `MC_HOST_<alias>` avoids persisting an `mc` configuration between runs; the `mc` is the
+      # one from the server image, as for the compose probe and backup.sh.
+      - name: Créer le bucket de stockage
+        env:
+          MC_HOST_ci: http://${{ env.S3_ACCESS_KEY }}:${{ env.S3_SECRET_KEY }}@localhost:9000
+        run: |
+          docker exec -e MC_HOST_ci \
+            minio mc mb --ignore-existing ci/review
+
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # `ruff` is mandatory in validate.sh (no silent skip when absent).
+      - name: Installer ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
+
+      - name: Dépendances backend (npm ci)
+        run: npm ci
+        working-directory: backend
+
+      - name: Dépendances frontend (npm ci)
+        run: npm ci
+        working-directory: frontend
+
+      # Ephemeral job database: the schema comes from versioned migrations, never from a
+      # `db push`. Integration tests are written for both a blank database and an already
+      # populated one (cf. src/integration/api.itest.ts).
+      # Browser for the Playwright smoke (frontend/e2e); system libraries included.
+      - name: Installer Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      - name: Appliquer les migrations Prisma
+        run: npx prisma migrate deploy
+        working-directory: backend
+
+      - name: Suite de validation + E2E Playwright
+        run: bash scripts/validate.sh --with-e2e

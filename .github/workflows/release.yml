@@ -34,6 +34,7 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
+  RUFF_VERSION: '0.16.9'
   REGISTRY: ghcr.io
 
 jobs:
@@ -45,19 +46,33 @@ jobs:
       version: ${{ steps.resolve.outputs.version }}
       publish: ${{ steps.resolve.outputs.publish }}
       owner: ${{ steps.resolve.outputs.owner }}
+      prerelease: ${{ steps.resolve.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Résoudre la version
         id: resolve
+        env:
+          # Never interpolate `${{ inputs.* }}` into the script: it is attacker-controlled text
+          # (script injection). It travels as an environment variable and is validated below.
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_REF: ${{ inputs.ref }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$EVENT_NAME" = "push" ]; then
             version="${GITHUB_REF#refs/tags/}"
             publish=true
           else
-            version="${{ inputs.ref || 'v0.0.0-dry-run' }}"
+            version="${INPUT_REF:-v0.0.0-dry-run}"
             publish=false
           fi
+          # SemVer tag only (same shape as the `on.push.tags` filter): refuses anything else
+          # before it reaches an output, a grep pattern or an image tag.
+          if ! printf '%s' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'; then
+            echo "::error::Version invalide : doit ressembler à vX.Y.Z ou vX.Y.Z-rc.1." >&2
+            exit 1
+          fi
+          # A pre-release (vX.Y.Z-…) never moves `:latest`.
+          case "$version" in *-*) prerelease=true ;; *) prerelease=false ;; esac
           # Owner name in lowercase: OCI image references reject uppercase letters in the
           # path. `ghcr.io/YvigUnderscore/review-backend` is invalid, which is exactly what
           # `github.repository_owner` produced. The registry mode, the only one from which an
@@ -66,12 +81,15 @@ jobs:
           echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
           echo "Version : $version (publication : $publish, propriétaire : ${GITHUB_REPOSITORY_OWNER,,})"
 
       - name: Exiger une entrée de CHANGELOG
         if: steps.resolve.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
         run: |
-          version="${{ steps.resolve.outputs.version }}"
+          version="$VERSION"
           if ! grep -q "^## $version " CHANGELOG.md; then
             echo "::error::CHANGELOG.md n'a pas de section « ## $version — … »." >&2
             exit 1
@@ -92,15 +110,23 @@ jobs:
       S3_BUCKET: review
       REDIS_URL: redis://localhost:6379
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+
+      # ruff is mandatory in validate.sh (no silent skip).
+      - name: Installer ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
 
       - name: Dépendances backend (npm ci)
         run: npm ci
@@ -150,20 +176,20 @@ jobs:
             dockerfile: ./ops/Dockerfile
             usd: '0'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Authentification au registre
         if: needs.guard.outputs.publish == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Construire et publier
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
@@ -178,7 +204,7 @@ jobs:
             BUILD_DATE=${{ github.event.repository.updated_at }}
           tags: |
             ${{ env.REGISTRY }}/${{ needs.guard.outputs.owner }}/${{ matrix.image }}:${{ needs.guard.outputs.version }}
-            ${{ env.REGISTRY }}/${{ needs.guard.outputs.owner }}/${{ matrix.image }}:latest
+            ${{ needs.guard.outputs.prerelease == 'false' && format('{0}/{1}/{2}:latest', env.REGISTRY, needs.guard.outputs.owner, matrix.image) || '' }}
           labels: |
             org.opencontainers.image.title=${{ matrix.image }}
             org.opencontainers.image.version=${{ needs.guard.outputs.version }}
@@ -199,11 +225,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Extraire les notes de version
+        env:
+          VERSION: ${{ needs.guard.outputs.version }}
+          IMAGE_PREFIX: ${{ env.REGISTRY }}/${{ needs.guard.outputs.owner }}
         run: |
-          version="${{ needs.guard.outputs.version }}"
+          version="$VERSION"
           awk -v v="## $version " '
             index($0, v) == 1 { inside = 1; next }
             inside && /^## / { exit }
@@ -214,7 +243,7 @@ jobs:
             echo "### Images"
             echo ""
             echo '```'
-            echo "REVIEW_IMAGE_PREFIX=${{ env.REGISTRY }}/${{ needs.guard.outputs.owner }}"
+            echo "REVIEW_IMAGE_PREFIX=$IMAGE_PREFIX"
             echo "REVIEW_IMAGE_TAG=$version"
             echo '```'
             echo ""
@@ -226,7 +255,12 @@ jobs:
       - name: Créer la release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.guard.outputs.version }}
+          PRERELEASE: ${{ needs.guard.outputs.prerelease }}
         run: |
-          gh release create "${{ needs.guard.outputs.version }}" \
-            --title "ReView ${{ needs.guard.outputs.version }}" \
-            --notes-file release-notes.md
+          flags=()
+          # A pre-release is flagged as such and never becomes GitHub's "latest release".
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$VERSION" \
+            --title "ReView $VERSION" \
+            --notes-file release-notes.md "${flags[@]}"

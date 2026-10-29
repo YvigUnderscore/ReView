@@ -126,12 +126,18 @@ if [ -z "$PY" ]; then
 else
   PYTHONPYCACHEPREFIX="$(mktemp -d)" "$PY" -m compileall -q \
     "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
-  # `ruff` is not a dependency of the repository: present, we use it; absent, we carry on.
-  if command -v ruff >/dev/null 2>&1; then
-    step "Outillage — lint des scripts Python (ruff)"
-    ruff check "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
-  fi
 fi
+
+# `ruff` is MANDATORY (pip install ruff): a lint that is silently skipped when the tool is absent
+# stops protecting anything. Pinned rule set (pyflakes + syntax errors), independent of the
+# defaults of the installed ruff version: CI installs ruff via pip (see validate.yml).
+step "Outillage — lint des scripts Python (ruff)"
+if ! command -v ruff >/dev/null 2>&1; then
+  echo "✗ ruff est requis et introuvable (pip install ruff)." >&2
+  exit 1
+fi
+ruff check --isolated --select E4,E7,E9,F \
+  "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
 
 # ---------- Budget de taille (10.F4) ----------
 # The frontend is covered by the ESLint rule `max-lines` (300, skipComments). On the
