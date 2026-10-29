@@ -15,12 +15,12 @@ import { assertTokenProject } from '../../middleware/scope';
 import { readQuery } from './helpers';
 
 /**
- * Journal d'événements (API v1) — consommation par tirage.
+ * Event log (API v1): pull consumption.
  *
- * Un daemon de studio derrière un pare-feu ne peut pas recevoir de webhook : il vient
- * chercher. Le client conserve le dernier curseur reçu et le renvoie ; il ne perd rien
- * s'il redémarre, et ne relit rien deux fois. Sans curseur, la lecture démarre au présent
- * plutôt que de rejouer trente jours d'historique au premier appel.
+ * A studio daemon behind a firewall cannot receive webhooks: it fetches. The client keeps the
+ * last cursor it received and sends it back; it loses nothing on restart and re-reads nothing
+ * twice. Without a cursor, reading starts at the present rather than replaying thirty days of
+ * history on the first call.
  */
 const router = Router();
 
@@ -33,7 +33,7 @@ const eventsQuery = z.object({
 
 // GET /api/v1/events?since=1234&project=PROJ&events=version.published,task.status_changed
 router.get('/', requireScope('events:read'), validate({ query: eventsQuery }), async (req, res) => {
-  // Relecture typée : en Express 5 la coercition du middleware ne persiste pas.
+  // Typed re-read: under Express 5 the middleware's coercion does not persist.
   const q = readQuery(eventsQuery, req);
 
   const projectIds = await visibleProjectIds(req, q.project);
@@ -42,7 +42,7 @@ router.get('/', requireScope('events:read'), validate({ query: eventsQuery }), a
     .map((e) => e.trim())
     .filter((e): e is (typeof WEBHOOK_EVENTS)[number] => (WEBHOOK_EVENTS as readonly string[]).includes(e));
 
-  // Premier appel sans curseur : on se cale sur le présent. Le client repart de là.
+  // First call without a cursor: start from the present. The client continues from there.
   if (q.since === undefined) {
     const last = await prisma.apiEvent.findFirst({ orderBy: { id: 'desc' }, select: { id: true } });
     res.json({ events: [], cursor: last?.id ?? 0, hasMore: false });
@@ -60,9 +60,8 @@ router.get('/', requireScope('events:read'), validate({ query: eventsQuery }), a
 });
 
 /**
- * Projets dont l'appelant peut lire les événements.
- * `undefined` = aucune restriction (manager global sans token cantonné) ; une liste vide
- * signifierait « rien » et n'est jamais renvoyée telle quelle par erreur.
+ * Projects the caller may read events for. `undefined` means no restriction (global manager without a scoped
+ * token); an empty list would mean "nothing", and is never returned as such by mistake.
  */
 async function visibleProjectIds(
   req: Parameters<typeof assertProjectAccess>[0],

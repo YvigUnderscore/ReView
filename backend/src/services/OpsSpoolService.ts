@@ -18,21 +18,20 @@ import {
 import { redactSecrets } from '../lib/opsRedact';
 
 /**
- * Le seul module de l'application qui touche au spool de l'agent d'exploitation.
+ * The only module of the application that touches the operations agent's spool.
  *
- * Il **écrit** dans la file d'ordres et **lit** l'état — jamais l'inverse. Les deux chemins
- * sont montés séparément (`ops/queue` en écriture, `ops/state` en lecture seule) et cette
- * asymétrie est la vraie barrière : le backend est joignable depuis internet et tourne en
- * root ; s'il pouvait écrire dans l'état, il pourrait y poser un lien symbolique que
- * l'agent — qui détient le socket docker — suivrait ensuite en écriture.
+ * It **writes** to the order queue and **reads** the state — never the reverse. The two paths are mounted
+ * separately (`ops/queue` for writing, `ops/state` read-only) and this
+ * asymmetry is the real barrier: the backend is reachable from the internet and runs as root; if it could
+ * write into the state, it could place a symbolic link there that the
+ * agent — which holds the docker socket — would then follow for writing.
  *
- * Rien de tout cela ne vit en base : l'état d'une opération doit survivre au conteneur qui
- * l'a demandée (c'est lui qu'on détruit), et se relire ensuite depuis un backend d'une
- * AUTRE version. Une restauration de base ne doit pas non plus rembobiner la trace de
- * l'opération qui l'a provoquée.
+ * None of this lives in the database: the state of an operation must survive the container that requested it
+ * (that is the one we destroy), and be read back later from a backend
+ * of ANOTHER version. Nor may a database restore rewind the trace of the operation that caused it.
  */
 
-/** Ce dont l'écran a besoin pour parler d'une exécution. */
+/** What the screen needs in order to talk about a run. */
 export interface RunSummary {
   id: string;
   kind: string;
@@ -47,13 +46,12 @@ export interface RunSummary {
   backupId: string | null;
   agentVersion: string | null;
   /**
-   * La commande de restauration correspondant à la sauvegarde de ce run, quand il y en a
-   * une. Composée ici et non à l'écran : une ligne de shell appartient au module qui
-   * connaît les scripts, et un texte fabriqué dans un composant échapperait au contrôle
-   * des chaînes en dur du frontend.
+   * The restore command matching this run's backup, when there is one. Composed here and not on screen: a
+   * shell line belongs to the module that knows the scripts, and text assembled in a component would escape
+   * the frontend's hard-coded string check.
    */
   restoreCommand: string | null;
-  /** Annuler a-t-il encore un sens ? Faux dès que la bascule est engagée. */
+  /** Does cancelling still make sense? False as soon as the switch-over has begun. */
   cancellable: boolean;
 }
 
@@ -69,7 +67,7 @@ export interface Mechanism {
   allow: { update: boolean; backup: boolean; verify: boolean };
 }
 
-/** Un état terminal ne bougera plus : l'écran cesse de sonder. */
+/** A terminal state will no longer move: the screen stops polling. */
 const TERMINAL: ReadonlySet<RunState> = new Set<RunState>([
   'succeeded',
   'rolled-back',
@@ -82,14 +80,14 @@ const TERMINAL: ReadonlySet<RunState> = new Set<RunState>([
 
 export const isTerminal = (state: RunState): boolean => TERMINAL.has(state);
 
-/** Ce qu'on sert d'un journal en une fois : au-delà, on pagine par décalage d'octets. */
+/** What is served from a log at once: beyond that, one paginates by byte offset. */
 const LOG_CHUNK_BYTES = 256 * 1024;
-/** Exécutions listées : l'écran en montre dix, l'historique replié vingt. */
+/** Runs listed: the screen shows ten, the folded history twenty. */
 const MAX_RUNS = 20;
 
 const NO_ALLOW = { update: false, backup: false, verify: false };
 
-/** Les deux chemins, ou `null` si l'exécution n'est pas branchée sur cette instance. */
+/** The two paths, or `null` if the run is not wired up on this instance. */
 function dirs(): { queue: string; state: string } | null {
   if (!env.OPS_QUEUE_DIR || !env.OPS_STATE_DIR) return null;
   return { queue: env.OPS_QUEUE_DIR, state: env.OPS_STATE_DIR };
@@ -97,14 +95,14 @@ function dirs(): { queue: string; state: string } | null {
 
 export const isEnabled = (): boolean => dirs() !== null;
 
-/** Secondes écoulées depuis un horodatage ISO ; `Infinity` s'il est illisible ou absent. */
+/** Seconds elapsed since an ISO timestamp; `Infinity` if it is unreadable or absent. */
 function secondsSince(iso: string | null | undefined): number {
   if (!iso) return Number.POSITIVE_INFINITY;
   const at = Date.parse(iso);
   return Number.isNaN(at) ? Number.POSITIVE_INFINITY : (Date.now() - at) / 1000;
 }
 
-/** Lit un JSON écrit par l'agent. Illisible ou mal formé : `null`, jamais d'exception. */
+/** Reads a JSON written by the agent. Unreadable or malformed: `null`, never an exception. */
 async function readJson<T>(
   path: string,
   schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
@@ -118,11 +116,11 @@ async function readJson<T>(
   }
 }
 
-/** Transforme un `status.json` en résumé, en tranchant les cas que l'agent ne tranche pas. */
+/** Turns a `status.json` into a summary, settling the cases the agent does not settle itself. */
 function summarize(status: NonNullable<Awaited<ReturnType<typeof readStatus>>>): RunSummary {
   let state = status.state as RunState;
-  // Un run « en cours » dont l'agent ne bat plus n'est pas en cours : il est sans nouvelles.
-  // Sans cette règle, l'écran afficherait une progression éternelle pour un agent mort.
+  // A "running" run whose agent no longer heartbeats is not running: it is without news.
+  // Without this rule, the screen would show endless progress for a dead agent.
   if (
     (state === 'running' || state === 'queued') &&
     secondsSince(status.heartbeatAt) > env.OPS_AGENT_STALE_SEC
@@ -149,7 +147,7 @@ function summarize(status: NonNullable<Awaited<ReturnType<typeof readStatus>>>):
 
 const readStatus = (dir: string, id: string) => readJson(join(dir, 'runs', id, 'status.json'), statusSchema);
 
-/** L'état de l'agent, et ce qu'il accepte d'exécuter. */
+/** The agent's state, and what it agrees to execute. */
 export async function mechanism(): Promise<Mechanism> {
   const paths = dirs();
   if (!paths) {
@@ -180,15 +178,15 @@ export async function mechanism(): Promise<Mechanism> {
   if (secondsSince(agent.seenAt) > env.OPS_AGENT_STALE_SEC) {
     return { ...base, state: 'stalled', reason: 'AGENT_STALE' };
   }
-  // Le dépôt n'est pas monté sur son chemin hôte : `backup.sh` écrirait son miroir dans le
-  // vide, sans une erreur. Un refus net vaut mieux qu'une sauvegarde imaginaire.
+  // The repository is not mounted on its host path: `backup.sh` would write its mirror into the void, without
+  // an error. A clean refusal is better than an imaginary backup.
   if (agent.rootOk === false) return { ...base, state: 'blocked', reason: 'ROOT_MISMATCH' };
   if (agent.protocol > OPS_PROTOCOL) return { ...base, state: 'blocked', reason: 'PROTOCOL_UNSUPPORTED' };
   if ((await activeRun()) !== null) return { ...base, state: 'busy', reason: null };
   return { ...base, state: 'ready', reason: null };
 }
 
-/** Dépose un ordre. Écriture temporaire puis renommage : l'agent ne lit jamais un demi-JSON. */
+/** Drops an order. Temporary write then rename: the agent never reads half a JSON. */
 export async function enqueue(order: OpsOrder): Promise<void> {
   const paths = dirs();
   if (!paths) throw new Error('OPS spool disabled');
@@ -200,8 +198,8 @@ export async function enqueue(order: OpsOrder): Promise<void> {
 }
 
 /**
- * Demande l'annulation. C'est une SENTINELLE, pas un ordre : l'agent la lit s'il en est
- * encore au stade où l'abandon ne casse rien, et l'ignore une fois la bascule engagée.
+ * Requests cancellation. It is a SENTINEL, not an order: the agent reads it if it is still at a stage where
+ * abandoning breaks nothing, and ignores it once the switch-over has begun.
  */
 export async function cancel(runId: string): Promise<void> {
   const paths = dirs();
@@ -209,7 +207,7 @@ export async function cancel(runId: string): Promise<void> {
   await writeFile(join(paths.queue, `${runId}.cancel`), '', { mode: 0o600 });
 }
 
-/** Les ordres déposés que l'agent n'a pas encore ramassés. */
+/** The deposited orders that the agent has not yet picked up. */
 async function queuedRuns(paths: { queue: string; state: string }): Promise<RunSummary[]> {
   let names: string[];
   try {
@@ -217,10 +215,10 @@ async function queuedRuns(paths: { queue: string; state: string }): Promise<RunS
   } catch {
     return [];
   }
-  // L'ordre est relu pour dire de QUOI il s'agit. Sans cela, l'écran annoncerait une
-  // opération « inconnue » entre le clic et le ramassage par l'agent — quelques secondes
-  // pendant lesquelles la personne qui vient de lancer une sauvegarde lit qu'on ne sait pas
-  // ce qui tourne. La file est la seule surface d'écriture du backend : il s'y relit.
+  // The order is re-read to say WHAT it is. Without this, the screen would announce an "unknown" operation
+  // between the click and the agent's pickup — a few seconds during which the person who just
+  // launched a backup reads that nobody knows what is running. The queue is the backend's only write surface:
+  // it is re-read there.
   const orders = await Promise.all(names.map((name) => readJson(join(paths.queue, name), queuedOrderSchema)));
 
   return names.map((name, index) => {
@@ -244,7 +242,7 @@ async function queuedRuns(paths: { queue: string; state: string }): Promise<RunS
   });
 }
 
-/** Les exécutions connues, la plus récente en tête (l'identifiant est horodaté, donc trié). */
+/** Known runs, most recent first (the identifier is timestamped, hence sortable). */
 export async function listRuns(limit = MAX_RUNS): Promise<RunSummary[]> {
   const paths = dirs();
   if (!paths) return [];
@@ -262,15 +260,15 @@ export async function listRuns(limit = MAX_RUNS): Promise<RunSummary[]> {
     .filter((s): s is NonNullable<typeof s> => s !== null)
     .map(summarize);
 
-  // Un ordre encore en file n'a pas de statut : il vient de l'autre source. Les deux
-  // ensembles ne se recouvrent pas — l'agent supprime le fichier de file en le ramassant.
+  // An order still in the queue has no status: it comes from the other source. The two sets do not overlap —
+  // the agent deletes the queue file when it picks it up.
   const known = new Set(done.map((r) => r.id));
   const pending = (await queuedRuns(paths)).filter((r) => !known.has(r.id));
 
   return [...done, ...pending].sort((a, b) => b.id.localeCompare(a.id)).slice(0, limit);
 }
 
-/** L'exécution en cours, s'il y en a une. C'est elle qui verrouille les boutons. */
+/** The running operation, if there is one. It is that which locks the buttons. */
 export async function activeRun(): Promise<RunSummary | null> {
   const runs = await listRuns(MAX_RUNS);
   return runs.find((r) => r.state === 'queued' || r.state === 'running') ?? null;
@@ -285,11 +283,10 @@ export async function readRun(id: string): Promise<RunSummary | null> {
 }
 
 /**
- * Une tranche du journal, à partir d'un décalage en octets.
+ * A slice of the log, from a byte offset.
  *
- * Le fichier est écrit en APPEND seulement — c'est ce qui rend le décalage fiable à travers
- * un redémarrage du backend, et donc ce qui permet à l'écran de reprendre sa lecture là où
- * il en était après la coupure d'une mise à jour.
+ * The file is written in APPEND-only mode — this is what makes the offset reliable across a backend restart,
+ * and therefore what lets the screen resume its reading where it was after an update interrupted it.
  */
 export async function readLog(
   id: string,
@@ -318,9 +315,8 @@ export async function readLog(
     return {
       from: start,
       next: start + bytesRead,
-      // Caviardé ICI, au plus près de la sortie : le script, lui, n'a jamais à connaître
-      // la liste des secrets, et un `sed` construit sur un mot de passe se casserait sur
-      // le premier caractère spécial venu.
+      // Redacted HERE, as close to the output as possible: the script never has to know the list of secrets,
+      // and a `sed` built on a password would break on the first special character.
       text: redactSecrets(buffer.subarray(0, bytesRead).toString('utf8')),
       truncated: start + bytesRead < size,
     };

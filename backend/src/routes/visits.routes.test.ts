@@ -5,17 +5,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * Acquittement de visite (Phase 50, lot 9) — ce que la route ne doit jamais céder.
+ * Visit acknowledgement (Phase 50, batch 9): what the route must never give up.
  *
- * Une visite est une donnée personnelle, mais l'accès au projet se vérifie quand même :
- * acquitter ce qu'on n'a pas le droit de lire confirmerait au passage l'existence de
- * l'entité. Et « tout marquer comme lu » n'accepte **aucune liste d'ids** — les entités
- * concernées sont établies en base à partir du seul projet, faute de quoi il aurait fallu
- * vérifier l'appartenance de chaque id, une requête à la fois.
+ * A visit is personal data, but project access is still checked: acknowledging what one may not read
+ * would confirm the entity's existence along the way. And "mark everything as read" accepts **no list
+ * of ids**: the affected entities are determined in the database from the project alone, otherwise
+ * membership of each id would have to be checked one query at a time.
  */
 const { db, caller } = vi.hoisted(() => {
-  // Annoté plutôt que casté : `as Request['user']` est une assertion superflue aux yeux
-  // d'ESLint, qui la retire — et `role` retombe alors sur `string`.
+  // Annotated rather than cast: `as Request['user']` is a superfluous assertion in ESLint's eyes, which
+  // removes it, and `role` then falls back to `string`.
   const caller: { user: Request['user'] } = {
     user: { id: 7, email: 'artist@studio.com', role: 'ARTIST' },
   };
@@ -67,29 +66,29 @@ beforeEach(() => {
 });
 
 describe('POST /api/visits', () => {
-  it('acquitte la visite d’un membre et rend la date', async () => {
+  it('acknowledges a member\'s visit and returns the date', async () => {
     const res = await request(app).post('/api/visits').send({ targetType: 'SHOT', targetId: 4 });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ visitedAt: '2026-09-20T10:00:00.000Z' });
     expect(markVisited).toHaveBeenCalledWith(7, 'SHOT', 4);
   });
 
-  it('refuse le plan d’un projet dont l’appelant n’est pas membre', async () => {
+  it('refuses a shot from a project the caller is not a member of', async () => {
     db.projectMembership.findUnique.mockResolvedValue(null);
     const res = await request(app).post('/api/visits').send({ targetType: 'SHOT', targetId: 4 });
     expect(res.status).toBe(403);
     expect(markVisited).not.toHaveBeenCalled();
   });
 
-  it('rend 404 sur une cible introuvable, sans rien écrire', async () => {
+  it('returns 404 for an unknown target, writing nothing', async () => {
     db.shot.findUnique.mockResolvedValue(null);
     const res = await request(app).post('/api/visits').send({ targetType: 'SHOT', targetId: 999 });
     expect(res.status).toBe(404);
     expect(markVisited).not.toHaveBeenCalled();
   });
 
-  it('rejette un type qu’on ne sait pas autoriser plutôt que d’écrire sans contrôle', async () => {
-    // `BOARD` existe côté modèle mais n'a pas de résolveur de projet : 400 franc.
+  it('rejects a type it cannot authorize, instead of writing without a check', async () => {
+    // `BOARD` exists in the model but has no project resolver: a plain 400.
     const res = await request(app).post('/api/visits').send({ targetType: 'BOARD', targetId: 4 });
     expect(res.status).toBe(400);
     expect(markVisited).not.toHaveBeenCalled();
@@ -97,10 +96,10 @@ describe('POST /api/visits', () => {
 });
 
 describe('POST /api/visits/mark-all', () => {
-  it('établit les ids en base — jamais depuis le corps de la requête', async () => {
+  it('determines the ids in the database, never from the request body', async () => {
     const res = await request(app)
       .post('/api/visits/mark-all')
-      // Les ids postés sont ignorés : le schéma ne les connaît pas.
+      // Posted ids are ignored: the schema does not know them.
       .send({ targetType: 'SHOT', projectId: 3, ids: [999] });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ marked: 12 });
@@ -108,14 +107,14 @@ describe('POST /api/visits/mark-all', () => {
     expect(markManyVisited).toHaveBeenCalledWith(7, 'SHOT', [1, 2, 3]);
   });
 
-  it('exige l’accès au projet', async () => {
+  it('requires access to the project', async () => {
     db.projectMembership.findUnique.mockResolvedValue(null);
     const res = await request(app).post('/api/visits/mark-all').send({ targetType: 'SHOT', projectId: 3 });
     expect(res.status).toBe(403);
     expect(markManyVisited).not.toHaveBeenCalled();
   });
 
-  it('n’accepte que les trois listes qui portent le bouton', async () => {
+  it('only accepts the three lists that carry the button', async () => {
     const res = await request(app).post('/api/visits/mark-all').send({ targetType: 'MEDIA', projectId: 3 });
     expect(res.status).toBe(400);
     expect(markManyVisited).not.toHaveBeenCalled();

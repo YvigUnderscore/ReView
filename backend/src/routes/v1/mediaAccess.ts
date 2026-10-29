@@ -12,22 +12,21 @@ import { mediaSourceKey } from '../../services/MediaService';
 import { requireMediaProject } from './helpers';
 
 /**
- * Lecture des fichiers depuis l'API v1 — la moitié qui manquait au contrat.
+ * File reads from API v1: the half of the contract that was missing.
  *
- * L'API savait publier un rendu mais pas en rapatrier un : un script Nuke ne pouvait pas
- * récupérer la dernière plate approuvée sans passer par `/api/media/:id/url`, c'est-à-dire
- * par la surface interne que la documentation v1 déclare instable.
+ * The API could publish a render but not fetch one back: a Nuke script could not retrieve the
+ * latest approved plate without going through `/api/media/:id/url`, that is, the internal surface
+ * the v1 documentation declares unstable.
  *
- * Le fichier ne transite jamais par l'API : on rend une URL présignée, comme à l'envoi.
- * Trois variantes seulement, celles qui existent pour tous les types de média — la
- * diffusion HLS reste au lecteur web, elle n'a pas de sens pour un poste d'artiste qui
- * veut le fichier.
+ * The file never transits through the API: a presigned URL is returned, as on upload. Only three
+ * variants, those that exist for every media type; HLS delivery stays with the web player, it makes
+ * no sense for an artist workstation that wants the file.
  */
 
 export const MEDIA_VARIANTS = ['source', 'proxy', 'thumbnail'] as const;
 export type MediaVariant = (typeof MEDIA_VARIANTS)[number];
 
-/** Durée de validité par défaut d'une URL de lecture (une heure), bornée à 24 h. */
+/** Default validity of a read URL (one hour), capped at 24 h. */
 export const DEFAULT_URL_TTL = 3600;
 
 export const urlQuery = z.object({
@@ -35,7 +34,7 @@ export const urlQuery = z.object({
   expiresIn: z.coerce.number().int().min(60).max(86_400).default(DEFAULT_URL_TTL),
 });
 
-/** Colonnes nécessaires au contrôle de visibilité ET à la signature des variantes. */
+/** Columns needed for the visibility check AND for signing the variants. */
 const readableSelect = {
   ...mediaSelect,
   versionId: true,
@@ -49,9 +48,9 @@ const readableSelect = {
 export type ReadableMedia = Prisma.MediaObjectGetPayload<{ select: typeof readableSelect }>;
 
 /**
- * Média lisible par l'appelant : il existe, il n'est pas à la corbeille, et il est publié
- * — ou déposé par l'appelant lui-même. Même règle que l'API interne (`MediaService.getUrl`),
- * précédée des trois gardes v1 (projet, appartenance, cantonnement du token).
+ * Media readable by the caller: it exists, is not in the trash, and is published, or was uploaded
+ * by the caller themselves. Same rule as the internal API (`MediaService.getUrl`), preceded by the
+ * three v1 guards (project, membership, token scoping).
  */
 export async function loadReadableMedia(req: Request, id: number): Promise<ReadableMedia> {
   await requireMediaProject(req, id);
@@ -64,14 +63,13 @@ export async function loadReadableMedia(req: Request, id: number): Promise<Reada
 type MediaMeta = { proxyKey?: string; trim?: unknown; trimProxyKey?: string };
 
 /**
- * Clé de stockage d'une variante, ou `null` si ce média ne la porte pas.
+ * Storage key of a variant, or `null` if this media does not carry it.
  *
- * `proxy` suit la coupe non-destructive quand elle a été produite : c'est le fichier que
- * la review joue, donc celui qu'un outil doit récupérer pour montrer la même chose. La
- * découpe a été retirée en Phase 50 (lot 4) et plus rien ne produit de `trimProxyKey` ;
- * cette lecture reste pour les coupes **historiques**. Sans elle, un client externe qui
- * récupère `proxy` pour un conform recevrait un fichier plus long qu'à la review, sans
- * erreur ni avertissement.
+ * `proxy` follows the non-destructive cut when one was produced: it is the file the review plays,
+ * so the one a tool must fetch to show the same thing. Trimming was removed in Phase 50 (batch 4)
+ * and nothing produces `trimProxyKey` any more; this read stays for **historical** cuts. Without
+ * it, an external client fetching `proxy` for a conform would get a longer file than the review,
+ * with no error or warning.
  */
 export function variantKey(media: ReadableMedia, variant: MediaVariant): string | null {
   const meta = (media.metadata ?? {}) as MediaMeta;
@@ -82,7 +80,7 @@ export function variantKey(media: ReadableMedia, variant: MediaVariant): string 
   return mediaSourceKey(media);
 }
 
-/** URL présignée d'une variante — 404 explicite plutôt qu'une URL qui ne rendra rien. */
+/** Presigned URL of a variant: an explicit 404 rather than a URL that renders nothing. */
 export async function signVariant(
   media: ReadableMedia,
   variant: MediaVariant,
@@ -93,13 +91,13 @@ export async function signVariant(
   return storage.getPresignedGetUrl(key, expiresIn);
 }
 
-/** Le minimum pour signer la source d'un média : le contrat v1 plus la clé de stockage. */
+/** Minimum needed to sign a media's source: the v1 contract plus the storage key. */
 export type SignableMedia = Prisma.MediaObjectGetPayload<{ select: typeof mediaSelect }> & {
   storageKey: string;
   metadata: Prisma.JsonValue;
 };
 
-/** Ressource média du contrat v1, augmentée de l'URL de sa source. */
+/** Media resource of the v1 contract, plus the URL of its source. */
 export const toMediaWithUrl = async (
   row: SignableMedia,
   expiresIn: number,

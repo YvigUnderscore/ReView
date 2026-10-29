@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Role } from '@prisma/client';
 
 /**
- * Transmission de la sélection USD à la création du média. Tout ce qui touche la base, le
- * stockage et les files est neutralisé : ce qui est vérifié ici, c'est le trajet de `usd`
- * jusqu'à `MediaService.createUpload`, seule écriture qui pose `metadata.usdRequest`.
+ * Transmission of the USD selection at media creation. Everything touching the database, storage and queues
+ * is neutralised: what is verified here is the path of `usd` up to `MediaService.createUpload`, the only
+ * write that sets `metadata.usdRequest`.
  */
 const createUpload = vi.fn();
 
@@ -33,7 +33,7 @@ import { start } from './PublishFlowService';
 const actor = { id: 1, role: Role.SUPERVISOR, email: 'td@studio.test' };
 const base = { path: 'PROJ/SQ010/SH0100/anim', filename: 'SH0100_set_v001.usd', createMissing: true };
 
-/** Ce que `createUpload` a reçu au dernier appel. */
+/** What `createUpload` received on the last call. */
 const lastUpload = () => createUpload.mock.calls.at(-1)?.[1] as { usdRequest?: unknown };
 
 beforeEach(() => {
@@ -41,28 +41,28 @@ beforeEach(() => {
   createUpload.mockResolvedValue({ mediaObjectId: 99, uploadUrl: 'https://minio/put', namingWarning: false });
 });
 
-describe('PublishFlowService.start — sélection USD', () => {
-  it('transmet la sélection au média créé', async () => {
+describe('PublishFlowService.start: USD selection', () => {
+  it('transmits the selection to the created media', async () => {
     const usd = { variants: { '/World/Set': { modelingVariant: 'hero' } }, purpose: 'proxy' as const };
     await start(actor, { ...base, usd });
     expect(lastUpload().usdRequest).toEqual(usd);
   });
 
-  it('ne pose rien quand le client ne demande rien — la conversion garde ses valeurs par défaut', async () => {
+  it('sets nothing when the client asks for nothing — the conversion keeps its default values', async () => {
     await start(actor, base);
     expect(lastUpload().usdRequest).toBeUndefined();
   });
 
-  it('refuse la sélection sur un média qui ne sera jamais converti en USD', async () => {
+  it('refuses the selection on a media that will never be converted to USD', async () => {
     await expect(
       start(actor, { ...base, filename: 'SH0100_anim_v001.mov', usd: { variants: {}, purpose: 'render' } }),
     ).rejects.toMatchObject({ code: 'USD_NOT_3D' });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it("laisse passer une sélection dont les variantSets n'existent peut-être pas", async () => {
-    // À la publication, la scène n'a pas encore été analysée : filtrer ici est impossible.
-    // Le filtrage a lieu à la conversion (`sanitizeVariantSelection`), pas avant.
+  it("lets through a selection whose variantSets may not exist", async () => {
+    // At publication, the scene has not yet been analysed: filtering here is impossible. Filtering takes
+    // place at conversion (`sanitizeVariantSelection`), not before.
     const usd = { variants: { '/Nowhere': { inventé: 'jamais' } }, purpose: 'render' as const };
     await start(actor, { ...base, usd });
     expect(lastUpload().usdRequest).toEqual(usd);

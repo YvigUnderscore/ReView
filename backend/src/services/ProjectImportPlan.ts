@@ -7,13 +7,12 @@ import { resolveFrameRange } from '../lib/projectCsvParse';
 import { inferTaskType } from './PipelineEnsureService';
 
 /**
- * Ce qu'un fichier CSV va réellement faire à un projet, calculé AVANT d'écrire.
+ * What a CSV file is really going to do to a project, computed BEFORE writing.
  *
- * Le plan est une fonction pure de (fichier lu, état du projet). C'est ce qui rend
- * l'aperçu honnête — l'écran montre le plan, l'écriture applique le même plan — et ce qui
- * rend l'import idempotent : rejouer le fichier reconstruit un plan dont toutes les
- * lignes sont « inchangé ». Aucune requête ici : `ProjectImportService` lit l'état,
- * appelle `buildPlan`, puis applique.
+ * The plan is a pure function of (file read, project state). That is what makes the preview honest — the
+ * screen shows the plan, the write applies the same plan — and what makes the
+ * import idempotent: replaying the file rebuilds a plan whose rows are all "unchanged". No query here:
+ * `ProjectImportService` reads the state, calls `buildPlan`, then applies.
  */
 
 export interface StatusRef {
@@ -29,16 +28,16 @@ export interface DepartmentRef {
 export interface MemberRef {
   id: number;
   email: string;
-  /** Noms sous lesquels le fichier peut la désigner : pseudo, nom complet, « prénom nom ». */
+  /** Names by which the file may designate it: username, full name, "first last". */
   aliases: string[];
 }
 /**
- * Les entités de la corbeille comptent.
+ * Trashed entities count.
  *
- * Le soft-delete ne libère pas la clé : l'index d'unicité `(projet, code)` couvre aussi
- * les lignes supprimées. Les ignorer ferait échouer l'écriture groupée entière sur un
- * P2002 illisible, après qu'un studio a validé un aperçu qui promettait le contraire.
- * On les charge donc, et la ligne concernée est refusée à l'aperçu, motif à l'appui.
+ * Soft delete does not release the key: the uniqueness index `(project, code)` also covers deleted rows.
+ * Ignoring them would make the whole grouped write fail on an unreadable
+ * P2002, after a studio has validated a preview promising the opposite. They are therefore loaded, and the
+ * row concerned is refused at preview, with the reason.
  */
 export interface ExistingEpisode {
   id: number;
@@ -71,7 +70,7 @@ export interface ExistingTask {
   departmentId: number | null;
   pipelineStatusId: number | null;
   assigneeId: number | null;
-  /** Dates au format ISO `YYYY-MM-DD` — le plan ne manipule jamais d'objet `Date`. */
+  /** Dates in ISO format `YYYY-MM-DD` — the plan never handles a `Date` object. */
   startDate: string | null;
   dueDate: string | null;
 }
@@ -130,7 +129,7 @@ export interface RowOutcome {
   episode: string | null;
   sequence: string | null;
   shot: string;
-  /** `blocked` : la ligne vise une entité de la corbeille, rien ne sera écrit pour elle. */
+  /** `blocked`: the row targets a trashed entity, nothing will be written for it. */
   action: 'create' | 'update' | 'unchanged' | 'blocked';
   tasks: { create: number; update: number; unchanged: number };
   issues: CsvIssue[];
@@ -159,11 +158,11 @@ export interface ImportPlan {
   tasksToCreate: TaskCreate[];
   taskUpdates: { id: number; data: TaskPatch }[];
   rows: RowOutcome[];
-  /** Anomalies de fichier et lignes rejetées, hors anomalies déjà portées par une ligne. */
+  /** File anomalies and rejected rows, excluding anomalies already carried by a row. */
   issues: CsvIssue[];
 }
 
-/** Forme de comparaison des libellés : sans casse, sans accent, sans séparateur. */
+/** Comparison form of labels: no case, no accent, no separator. */
 const squash = (v: string) =>
   v
     .normalize('NFD')
@@ -192,10 +191,10 @@ function findMember(list: MemberRef[], value: string): MemberRef | null {
   );
 }
 
-/** Clé d'identité d'un plan : sa séquence (par code) et son code, insensibles à la casse. */
+/** Identity key of a shot: its sequence (by code) and its code, case-insensitive. */
 const shotKey = (sequenceCode: string | null, code: string) => `${lower(sequenceCode ?? '')}::${lower(code)}`;
 
-/** Comptes d'un plan vide, à alimenter au fil de la construction. */
+/** Counts of an empty shot, to be fed during construction. */
 function emptyCounts(): ImportCounts {
   return {
     episodesToCreate: 0,
@@ -230,8 +229,8 @@ export function buildPlan(parse: ProjectCsvParse, ctx: ImportContext): ImportPla
   const tagsColumn = parse.columns.some((c) => c.field === 'tags');
   const useEpisodes = ctx.episodesEnabled && episodeColumn;
   if (episodeColumn && !ctx.episodesEnabled) plan.issues.push({ code: 'EPISODES_DISABLED', line: null });
-  // Aucun modèle d'étiquette n'existe côté ReView : la colonne est reconnue pour ne pas
-  // passer pour une faute de frappe, et son contenu est explicitement laissé de côté.
+  // No tag model exists on the ReView side: the column is recognised so as not to be taken for a typo, and
+  // its content is explicitly set aside.
   if (tagsColumn && parse.entries.some((e) => e.tags.length > 0))
     plan.issues.push({ code: 'TAGS_UNSUPPORTED', line: null });
 
@@ -244,7 +243,7 @@ export function buildPlan(parse: ProjectCsvParse, ctx: ImportContext): ImportPla
   return plan;
 }
 
-/** Épisodes et séquences : ce qui manque est créé, ce qui a changé de parent est recollé. */
+/** Episodes and sequences: what is missing is created, what changed parent is re-glued. */
 function planStructure(
   entries: ParsedEntry[],
   ctx: ImportContext,
@@ -259,8 +258,8 @@ function planStructure(
       knownEpisodes.add(lower(entry.episode));
       plan.episodesToCreate.push(entry.episode);
     }
-    // Un épisode en corbeille garde sa clé : on ne peut pas le recréer. Le niveau étant
-    // facultatif, la séquence est simplement laissée hors épisode — pas de ligne perdue.
+    // An episode in the trash keeps its key: it cannot be recreated. The level being optional, the sequence
+    // is simply left outside any episode — no row lost.
     for (const code of trashedEpisodes)
       if (entries.some((e) => e.episode && lower(e.episode) === code))
         plan.issues.push({ code: 'IN_TRASH', line: null, value: code });
@@ -275,15 +274,15 @@ function planStructure(
     const episodeCode =
       useEpisodes && !trashedEpisodes.has(lower(entry.episode ?? '')) ? entry.episode : null;
     const existing = existingSequences.get(key);
-    if (existing?.trashed) continue; // séquence en corbeille : ses plans seront refusés
+    if (existing?.trashed) continue; // sequence in the trash: its shots will be refused
     if (!existing) {
       if (created.has(key)) continue;
       created.add(key);
       plan.sequencesToCreate.push({ code: entry.sequence, episodeCode });
       continue;
     }
-    // Une séquence déplacée d'un épisode à l'autre est un fait de production courant :
-    // on la recolle, mais jamais on ne la détache faute d'information dans le fichier.
+    // A sequence moved from one episode to another is a common production fact: we re-glue it, but never
+    // detach it for lack of information in the file.
     if (!episodeCode) continue;
     const target = episodeIdByCode.get(lower(episodeCode)) ?? null;
     const alreadyPlanned = plan.sequenceEpisodeUpdates.some((u) => u.id === existing.id);
@@ -294,7 +293,7 @@ function planStructure(
   plan.counts.sequencesToCreate = plan.sequencesToCreate.length;
 }
 
-/** Plans et tâches : création, mise à jour ciblée, ou rien du tout. */
+/** Shots and tasks: creation, targeted update, or nothing at all. */
 function planShotsAndTasks(entries: ParsedEntry[], ctx: ImportContext, plan: ImportPlan): void {
   const sequenceCodeById = new Map(ctx.sequences.map((s) => [s.id, lower(s.code)]));
   const shotByKey = new Map(
@@ -325,8 +324,8 @@ function planShotsAndTasks(entries: ParsedEntry[], ctx: ImportContext, plan: Imp
     const existing = shotByKey.get(shotKey(entry.sequence, entry.shot)) ?? null;
     const ref: ShotRef = { sequenceCode: entry.sequence, code: entry.shot };
 
-    // La clé d'un plan ou d'une séquence reste prise tant qu'ils sont en corbeille :
-    // écrire quand même échouerait sur l'index d'unicité, tout l'import avec.
+    // The key of a shot or a sequence remains taken as long as they are in the trash: writing anyway would
+    // fail on the uniqueness index, and the whole import with it.
     if (existing?.trashed || trashedSequences.has(lower(entry.sequence ?? ' '))) {
       issues.push({ code: 'IN_TRASH', line: entry.line, value: entry.shot, shot: entry.shot });
       plan.counts.rowsRejected++;
@@ -374,7 +373,7 @@ function planShotsAndTasks(entries: ParsedEntry[], ctx: ImportContext, plan: Imp
   }
 }
 
-/** Ligne de rapport d'un plan. */
+/** Report row of a shot. */
 function outcome(
   entry: ParsedEntry,
   action: RowOutcome['action'],
@@ -393,7 +392,7 @@ function outcome(
   };
 }
 
-/** Statut de plan demandé par la ligne, s'il figure au vocabulaire du projet. */
+/** Shot status requested by the row, if it appears in the project's vocabulary. */
 function resolveStatus(entry: ParsedEntry, ctx: ImportContext, issues: CsvIssue[]): number | null {
   if (!entry.status) return null;
   const found = findStatus(ctx.shotStatuses, entry.status);
@@ -402,7 +401,7 @@ function resolveStatus(entry: ParsedEntry, ctx: ImportContext, issues: CsvIssue[
   return null;
 }
 
-/** Champs du plan que le fichier change réellement — une valeur absente ne vide jamais rien. */
+/** Shot fields that the file actually changes — an absent value never empties anything. */
 function shotPatch(
   entry: ParsedEntry,
   range: { startFrame: number | null; endFrame: number | null },
@@ -420,7 +419,7 @@ function shotPatch(
   return data;
 }
 
-/** Tâches de la ligne : création de celles qui manquent, retouche de celles qui bougent. */
+/** The row's tasks: creation of those that are missing, retouch of those that move. */
 function planTasks(
   entry: ParsedEntry,
   ctx: ImportContext,
@@ -441,8 +440,8 @@ function planTasks(
         type: inferTaskType(task.name),
         order: order++,
         ...fields,
-        // Sans colonne « department », l'étape se devine du nom de la tâche — mais
-        // seulement si le projet la connaît déjà : une devinette n'enrichit pas le pipe.
+        // Without a "department" column, the step is guessed from the task's name — but only if the project
+        // already knows it: a guess does not enrich the pipe.
         ...(task.department === null ? inferDepartment(task.name, ctx) : {}),
       });
       counts.create++;
@@ -463,13 +462,13 @@ function planTasks(
 }
 
 /**
- * La tâche que la ligne désigne, s'il y en a une.
+ * The task the row designates, if there is one.
  *
- * L'identité d'une tâche est `(plan, étape, nom)` — c'est l'index d'unicité du schéma, et
- * c'est aussi la réalité du pipe : `Anim` en animation et `Anim` en compositing sont deux
- * travaux. Chercher sur le seul nom ferait basculer l'étape de la première trouvée, au
- * risque d'entrer en collision avec la seconde. Sans étape déclarée, le nom suffit ; avec
- * une étape déclarée, une tâche homonyme encore sans étape est rattrapée au passage.
+ * A task's identity is `(shot, step, name)` — this is the schema's uniqueness index, and also the reality of
+ * the pipe: `Anim` in animation and `Anim` in compositing are two jobs.
+ * Searching on the name alone would switch the step of the first found, at the risk of colliding with the
+ * second. Without a declared step, the name suffices; with a declared step, a
+ * homonym task still without a step is caught in passing.
  */
 function matchTask(tasks: ExistingTask[], name: string, departmentId: number | null): ExistingTask | null {
   const sameName = tasks.filter((t) => lower(t.name) === lower(name));
@@ -481,7 +480,7 @@ function matchTask(tasks: ExistingTask[], name: string, departmentId: number | n
   );
 }
 
-/** Valeurs de tâche résolues dans le vocabulaire du projet (étape, statut, personne). */
+/** Task values resolved within the project's vocabulary (step, status, person). */
 function taskFields(
   task: ParsedEntry['tasks'][number],
   shot: string,
@@ -516,7 +515,7 @@ function taskFields(
   return fields;
 }
 
-/** Étape devinée du nom d'une tâche, si le projet la déclare déjà. */
+/** Step guessed from a task's name, if the project already declares it. */
 function inferDepartment(name: string, ctx: ImportContext): Partial<TaskFields> {
   const guessed = inferTaskType(name);
   if (guessed === TaskType.OTHER) return {};
@@ -524,7 +523,7 @@ function inferDepartment(name: string, ctx: ImportContext): Partial<TaskFields> 
   return found ? { department: found.key, departmentId: found.id } : {};
 }
 
-/** Ce qui change sur une tâche déjà là — les colonnes absentes du fichier n'effacent rien. */
+/** What changes on a task already there — columns absent from the file erase nothing. */
 function taskPatch(
   task: ParsedEntry['tasks'][number],
   fields: TaskFields,

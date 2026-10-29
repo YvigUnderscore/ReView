@@ -3,23 +3,23 @@
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-// Aucune connexion Redis dans un test unitaire : seule la déclaration des files nous
-// intéresse (leur nom, leur étiquette de métrique et leur exhaustivité).
+// No Redis connection in a unit test: only the declaration of the queues interests us (their name, their
+// metric label and their completeness).
 vi.mock('bullmq', () => ({
   Queue: class {
     constructor(public readonly name: string) {}
   },
 }));
 
-// Import différé (et non `await` de premier niveau, interdit par la cible TS du projet) :
-// le mock de bullmq doit être en place avant que le module ne déclare ses files.
+// Deferred import (and not a top-level `await`, forbidden by the project's TS target): the bullmq mock must
+// be in place before the module declares its queues.
 let mod: typeof import('./JobService');
 beforeAll(async () => {
   mod = await import('./JobService');
 });
 
-describe('déclaration des files', () => {
-  it('les sept files sont étiquetées, aucune n’échappe aux métriques', () => {
+describe('queue declarations', () => {
+  it('the seven queues are labelled, none escapes the metrics', () => {
     expect(Object.keys(mod.QUEUE_LABELS).sort()).toEqual([
       'maintenance',
       'media',
@@ -32,25 +32,25 @@ describe('déclaration des files', () => {
     expect(mod.ALL_QUEUES).toHaveLength(7);
   });
 
-  it('toute file déclarée dans QUEUE_NAMES est étiquetée', () => {
+  it('every queue declared in QUEUE_NAMES is labelled', () => {
     const declared = Object.values(mod.QUEUE_NAMES);
     const labelled = mod.ALL_QUEUES.map(([, q]) => (q as unknown as { name: string }).name);
     for (const name of declared) expect(labelled).toContain(name);
   });
 
-  it('l’étiquette historique « media » est préservée (tableau Grafana et doc d’exploitation)', () => {
-    // Le nom de file est `media-processing`, mais Prometheus expose queue="media" depuis
-    // toujours : renommer casserait les requêtes et alertes existantes.
+  it('the historical label "media" is preserved (Grafana dashboard and operations documentation)', () => {
+    // The queue name is `media-processing`, but Prometheus has always exposed queue="media": renaming it
+    // would break the existing queries and alerts.
     expect(mod.QUEUE_NAMES.MEDIA).toBe('media-processing');
     const media = mod.ALL_QUEUES.find(([label]) => label === 'media');
     expect((media?.[1] as unknown as { name: string }).name).toBe('media-processing');
   });
 
-  it('l’identifiant d’export de montage reste déterministe (double clic sans effet)', () => {
+  it('the edit export identifier remains deterministic (double click has no effect)', () => {
     expect(mod.timelineExportJobId(42)).toBe('timeline-42');
   });
 
-  it('l’identifiant de vignette spatiale est déterministe (un seul rendu en vol par média)', () => {
+  it('the spatial thumbnail identifier is deterministic (a single render in flight per media)', () => {
     expect(mod.spatialThumbJobId(7)).toBe('spatial-thumb-7');
   });
 });

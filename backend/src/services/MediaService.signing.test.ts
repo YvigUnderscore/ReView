@@ -31,7 +31,7 @@ const access = vi.mocked(checkProjectAccess);
 const artist = { id: 3, role: Role.ARTIST };
 const page = { page: 1, pageSize: 500, order: 'desc' as const };
 
-/** Une page de `n` médias, chacun avec sa miniature et sa clé de lecture (2 signatures/média). */
+/** A page of `n` media, each with its thumbnail and its read key (2 signatures per media). */
 function fakeMedia(n: number) {
   return Array.from({ length: n }, (_, i) => ({
     id: i + 1,
@@ -49,12 +49,11 @@ function fakeMedia(n: number) {
 }
 
 /**
- * Compte les tours de boucle d'événements traversés pendant `run`.
+ * Counts the event-loop turns crossed during `run`.
  *
- * C'est LA mesure du défaut PERF-09 : la signature SigV4 se résout en microtâches, donc un
- * `Promise.all` sur toute la page ne rend jamais la main — aucune autre requête du process
- * n'est servie entre le premier et le dernier média. On compte donc des tours de boucle,
- * pas des millisecondes.
+ * This IS the measure of the PERF-09 defect: SigV4 signing resolves in microtasks, so a `Promise.all` over a
+ * whole page never yields — no other request of the process is served between the first and the last media.
+ * We therefore count loop turns, not milliseconds.
  */
 async function countEventLoopTurns<T>(run: () => Promise<T>): Promise<{ turns: number; value: T }> {
   let turns = 0;
@@ -77,30 +76,30 @@ beforeEach(() => {
   count.mockResolvedValue(0);
 });
 
-describe('MediaService — la signature des listes rend la main à la boucle (PERF-09)', () => {
-  it('listPublished : une page de 500 médias laisse passer les autres requêtes', async () => {
+describe('MediaService: signing of lists yields to the loop (PERF-09)', () => {
+  it('listPublished: a page of 500 media lets the other requests through', async () => {
     const media = fakeMedia(500);
     findMany.mockResolvedValue(media as never);
     count.mockResolvedValue(media.length);
 
     const { turns, value } = await countEventLoopTurns(() => listPublished(artist, 7, undefined, page));
 
-    // 500 médias / 25 par tranche = 20 tranches, donc au moins 19 reprises de boucle.
-    // Sans le découpage, `Promise.all` sur les 500 en rend exactement 0.
+    // 500 media / 25 per slice = 20 slices, hence at least 19 loop yields. Without the slicing, `Promise.all`
+    // over the 500 yields exactly 0.
     expect(turns).toBeGreaterThanOrEqual(19);
-    // 2 signatures par média, aucune de moins : le correctif ne retire rien de la réponse.
+    // Two signatures per media, none fewer: the fix removes nothing from the response.
     expect(presign).toHaveBeenCalledTimes(1000);
     expect(value.items).toHaveLength(500);
   });
 
-  it('listPublished : sortie identique à une signature d’un seul bloc (mêmes lignes, même ordre)', async () => {
+  it('listPublished: output identical to a single-block signing (same rows, same order)', async () => {
     const media = fakeMedia(120);
     findMany.mockResolvedValue(media as never);
     count.mockResolvedValue(media.length);
 
     const out = await listPublished(artist, 7, undefined, { ...page, pageSize: 120 });
 
-    // La référence est construite ici exactement comme le faisait l'ancien `Promise.all`.
+    // The reference is built here exactly as the former `Promise.all` did.
     const expected = await Promise.all(
       media.map(async (m) => ({
         id: m.id,
@@ -114,7 +113,7 @@ describe('MediaService — la signature des listes rend la main à la boucle (PE
     expect(out.total).toBe(120);
   });
 
-  it('petite page : aucun découpage inutile sous le seuil', async () => {
+  it('small page: no useless slicing below the threshold', async () => {
     const media = fakeMedia(10);
     findMany.mockResolvedValue(media as never);
     count.mockResolvedValue(media.length);
@@ -125,7 +124,7 @@ describe('MediaService — la signature des listes rend la main à la boucle (PE
     expect(turns).toBe(0);
   });
 
-  it('listReviews : même découpage sur la page Reviews globale', async () => {
+  it('listReviews: the same slicing on the global Reviews page', async () => {
     const media = fakeMedia(200).map((m) => ({
       ...m,
       kind: MediaKind.VIDEO,
@@ -141,7 +140,7 @@ describe('MediaService — la signature des listes rend la main à la boucle (PE
     );
 
     expect(turns).toBeGreaterThanOrEqual(7); // 200 / 25 = 8 tranches
-    expect(presign).toHaveBeenCalledTimes(400); // miniature + sprite par média
+    expect(presign).toHaveBeenCalledTimes(400); // thumbnail + sprite per media
     expect(value.items).toHaveLength(200);
   });
 });

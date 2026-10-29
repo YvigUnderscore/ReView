@@ -12,17 +12,15 @@ import { slugify } from '../lib/slug';
 import { logAudit } from './AuditService';
 
 /**
- * Tokens d'API (API v1) : émission, listing et révocation.
+ * API tokens (API v1): issuance, listing and revocation.
  *
- * Un token de service est adossé à un compte `User.isService` créé à la volée. Ce détour
- * par un vrai utilisateur est délibéré : toutes les écritures du produit référencent un
- * auteur (`authorId`, `uploaderId`, journal d'audit). Un token « sans utilisateur »
- * imposerait de rendre ces colonnes nullables et ferait disparaître la traçabilité —
- * on préfère un compte qui n'est une personne que sur le papier, incapable de se
- * connecter et jamais listé dans l'annuaire.
+ * A service token is backed by a `User.isService` account created on the fly. This detour through a real
+ * user is deliberate: every write in the product references an author (`authorId`, `uploaderId`, audit
+ * log). A "userless" token would force those columns to be nullable and would erase traceability; we
+ * prefer an account that is a person only on paper, unable to log in and never listed in the directory.
  */
 
-/** Domaine réservé aux comptes de service : jamais routable, donc jamais joignable. */
+/** Domain reserved for service accounts: never routable, hence never reachable. */
 const SERVICE_EMAIL_DOMAIN = 'service.review.invalid';
 
 export const tokenSelect = {
@@ -39,23 +37,21 @@ export const tokenSelect = {
 
 const expiryFrom = (days?: number): Date | null => (days ? new Date(Date.now() + days * 86_400_000) : null);
 
-/** Rejette les scopes inconnus tôt, avec un message qui nomme le fautif. */
+/** Rejects unknown scopes early, with a message naming the offender. */
 function assertScopes(scopes: readonly string[]): void {
   const unknown = scopes.filter((s) => !isGrantableScope(s));
   if (unknown.length > 0) throw badRequest(`Scopes inconnus : ${unknown.join(', ')}`, 'UNKNOWN_SCOPE');
 }
 
 /**
- * Ré-authentifie l'émetteur avant de forger une identité durable.
+ * Re-authenticates the issuer before forging a durable identity.
  *
- * Un `rvk_` vit jusqu'à 3650 jours et survit à la fermeture de l'onglet : fabriqué depuis
- * un jeton d'accès volé, il transforme un vol de session passager en accès permanent. Le
- * mot de passe est la seule chose que l'attaquant n'a pas.
+ * A `rvk_` lives up to 3650 days and survives closing the tab: forged from a stolen access token, it turns
+ * a passing session theft into permanent access. The password is the one thing the attacker does not have.
  *
- * Le refus est un **403** et non un 401 : un 401 déclencherait côté client le
- * renouvellement de session (`lib/apiClient`), qui purge la session quand il échoue —
- * une faute de frappe déconnecterait l'utilisateur. Ici l'appelant est bien authentifié ;
- * c'est l'action qui lui est refusée.
+ * The refusal is a **403** and not a 401: a 401 would trigger session renewal on the client side
+ * (`lib/apiClient`), which purges the session when it fails. A typo would log the user out. Here the caller
+ * is indeed authenticated; it is the action that is refused.
  */
 export async function assertActorPassword(userId: number, password?: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
@@ -63,7 +59,7 @@ export async function assertActorPassword(userId: number, password?: string): Pr
   if (!ok) throw forbidden('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
 }
 
-/** Vérifie que le projet de cantonnement existe (et n'est pas à la corbeille). */
+/** Checks that the scoping project exists (and is not in the trash). */
 async function assertProjectExists(projectId: number): Promise<void> {
   const project = await prisma.project.findFirst({
     where: { id: projectId, deletedAt: null },
@@ -80,7 +76,7 @@ export interface CreateTokenInput {
   projectId?: number;
 }
 
-/** Token personnel : agit au nom du porteur, avec le rôle de celui-ci. */
+/** Personal token: acts on behalf of the bearer, with the bearer's role. */
 export async function createPersonal(userId: number, input: CreateTokenInput) {
   assertScopes(input.scopes);
   if (input.projectId !== undefined) await assertProjectExists(input.projectId);
@@ -110,13 +106,13 @@ export async function createPersonal(userId: number, input: CreateTokenInput) {
 }
 
 export interface CreateServiceTokenInput extends CreateTokenInput {
-  /** Rôle porté par le compte de service. Jamais ADMIN : un robot ne gère pas le studio. */
+  /** Role carried by the service account. Never ADMIN: a bot does not manage the studio. */
   role?: Extract<Role, 'SUPERVISOR' | 'ARTIST' | 'CLIENT'>;
 }
 
 /**
- * Token de service : crée (ou retrouve) son compte porteur puis émet le token.
- * Réservé aux admins — l'appelant est responsable du contrôle de rôle.
+ * Service token: creates (or finds) its bearer account, then issues the token.
+ * Reserved to admins: the caller is responsible for the role check.
  */
 export async function createService(createdById: number, input: CreateServiceTokenInput) {
   assertScopes(input.scopes);
@@ -129,8 +125,8 @@ export async function createService(createdById: number, input: CreateServiceTok
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, isService: true } });
   if (existing && !existing.isService) throw conflict('A regular account already uses this address');
 
-  // Mot de passe aléatoire jamais communiqué : le compte reste inutilisable en connexion
-  // (le login refuse `isService`), et il n'existe aucun secret « par défaut » à deviner.
+  // Random password, never communicated: the account remains unusable for logging in (login refuses
+  // `isService`), and there is no "default" secret to guess.
   const serviceUser =
     existing ??
     (await prisma.user.create({
@@ -144,13 +140,13 @@ export async function createService(createdById: number, input: CreateServiceTok
       select: { id: true, isService: true },
     }));
 
-  // Un compte de service réutilisé peut voir son rôle ajusté à l'émission suivante.
+  // A reused service account may have its role adjusted on the next issuance.
   if (existing && input.role) {
     await prisma.user.update({ where: { id: serviceUser.id }, data: { role: input.role } });
   }
 
-  // Un token cantonné à un projet suppose que son compte y soit membre : sans cela, un
-  // compte de service ARTIST ne verrait rien du projet qu'il est censé alimenter.
+  // A token scoped to a project assumes its account is a member of it: without this, an ARTIST service
+  // account would see nothing of the project it is meant to feed.
   if (input.projectId !== undefined) {
     await prisma.projectMembership.upsert({
       where: { userId_projectId: { userId: serviceUser.id, projectId: input.projectId } },
@@ -185,11 +181,11 @@ export async function createService(createdById: number, input: CreateServiceTok
 }
 
 /**
- * Tokens de service actifs du studio (jamais le secret).
+ * Active service tokens of the studio (never the secret).
  *
- * Le rôle effectif vient du compte porteur et le cantonnement du projet lié : ce sont les
- * deux réponses que l'admin cherche devant la liste (« que peut ce robot, et où ? »), on
- * les sert avec la ligne plutôt que de faire deviner l'écran.
+ * The effective role comes from the bearer account and the scoping of the linked project: these are the
+ * two answers the admin is looking for in front of the list ("what can this bot do, and where?"); they are
+ * served with the row rather than making the screen guess.
  */
 export async function listService() {
   return prisma.apiToken.findMany({
@@ -203,7 +199,7 @@ export async function listService() {
   });
 }
 
-/** Révoque un token de service. Le compte porteur survit : ses écritures gardent un auteur. */
+/** Revokes a service token. The bearer account survives: its writes keep an author. */
 export async function revokeService(actorId: number, id: number): Promise<void> {
   const r = await prisma.apiToken.updateMany({
     where: { id, kind: ApiTokenKind.SERVICE, revokedAt: null },

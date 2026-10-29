@@ -4,15 +4,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
-/** Identité jouée par le middleware d'authentification factice de ce fichier. */
+/** Identity injected by this file's fake authentication middleware. */
 type Caller = { user: Request['user']; apiToken: Request['apiToken'] };
 
 const { db, caller } = vi.hoisted(() => {
   const caller: Caller = { user: { id: 7, email: 'artist@studio.com', role: 'ARTIST' }, apiToken: undefined };
   return {
     db: {
-      // `count` : la garde d'accès projet commence par vérifier que le projet n'est pas à
-      // la corbeille (`middleware/rbac`). Il ne l'est jamais dans ce fichier.
+      // `count`: the project access guard first checks that the project is not in the trash
+      // (`middleware/rbac`). It never is in this file.
       project: { findFirst: vi.fn(), count: vi.fn(() => Promise.resolve(1)) },
       sequence: { findFirst: vi.fn() },
       shot: { findFirst: vi.fn() },
@@ -25,12 +25,12 @@ const { db, caller } = vi.hoisted(() => {
 });
 
 vi.mock('../../lib/prisma', () => ({ prisma: db }));
-// Mock PARTIEL : le module porte aussi des schémas Zod qu'un routeur monté ici construit à
-// l'import (`reviewNoteSchema`). Un mock total les faisait disparaître, et le montage
-// échouait avant le premier test.
+// PARTIAL mock: the module also exports Zod schemas that a router mounted here builds at import
+// time (`reviewNoteSchema`). A full mock would make them disappear and mounting would fail
+// before the first test.
 vi.mock('../../lib/projectSettings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/projectSettings')>()),
-  // Le pipe du projet : c'est lui qui fait gagner le compositing sur l'animation.
+  // The project's pipe: it is what lets compositing win over animation.
   resolveProjectSettingsById: vi.fn(() =>
     Promise.resolve({
       departments: [
@@ -105,7 +105,7 @@ const versionRow = {
   media: [mediaRow],
 };
 
-/** Deux prétendants sur le même plan : l'anim publiée après le comp ne doit pas gagner. */
+/** Two candidates on the same shot: the animation published after comp must not win. */
 const candidates = [
   { id: 513, createdAt: at('2026-08-21T10:00:00.000Z'), task: { department: 'anim' } },
   { id: 514, createdAt: at('2026-08-20T10:00:00.000Z'), task: { department: 'comp' } },
@@ -119,7 +119,7 @@ beforeEach(() => {
   db.task.findUnique.mockResolvedValue({ shot: { projectId: 42 }, asset: null });
   db.version.findMany.mockResolvedValue(candidates);
   db.version.findUnique.mockResolvedValue(versionRow);
-  // La résolution de chemin ne rend ici que ce que `/latest` en lit : des identifiants.
+  // Path resolution only returns here what `/latest` reads: identifiers.
   db.project.findFirst.mockResolvedValue({ id: 42, slug: 'proj', name: 'PROJ' });
   db.sequence.findFirst.mockResolvedValue({ id: 11, code: 'SQ010', projectId: 42 });
   db.shot.findFirst.mockResolvedValue({ id: 42, code: 'SH0100', projectId: 42 });
@@ -127,7 +127,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/v1/tasks/:id/versions/latest', () => {
-  it('rend la version élue et ses médias, sans URL par défaut', async () => {
+  it('returns the elected version and its media, without URLs by default', async () => {
     const res = await request(app).get('/api/v1/tasks/87/versions/latest');
     expect(res.status).toBe(200);
     expect(res.body.version).toMatchObject({ id: 514, name: 'V03', published: true });
@@ -135,37 +135,37 @@ describe('GET /api/v1/tasks/:id/versions/latest', () => {
     expect(res.body.version.media[0]).not.toHaveProperty('url');
   });
 
-  it('joint l’URL de chaque média quand on la demande', async () => {
+  it('includes each media URL when requested', async () => {
     const res = await request(app).get('/api/v1/tasks/87/versions/latest?urls=true');
     expect(res.body.version.media[0].url).toContain(mediaRow.storageKey);
   });
 
-  // `published=false` sert l'artiste qui relit son propre travail : sans lui, un brouillon
-  // reste invisible d'un outil de DCC.
-  it('ne cherche que les versions publiées par défaut, les brouillons sur demande', async () => {
+  // `published=false` serves the artist re-reading their own work: without it a draft stays
+  // invisible to a DCC tool.
+  it('only looks at published versions by default, drafts on request', async () => {
     await request(app).get('/api/v1/tasks/87/versions/latest');
     expect(db.version.findMany.mock.calls[0]?.[0].where).toMatchObject({ published: true, taskId: 87 });
     await request(app).get('/api/v1/tasks/87/versions/latest?published=false');
     expect(db.version.findMany.mock.calls[1]?.[0].where.published).toBeUndefined();
   });
 
-  // Un média non publié n'appartient qu'à celui qui l'a déposé : `published=false` ouvre
-  // ses propres brouillons, jamais le travail en cours d'un collègue.
-  it('ne montre que ses propres brouillons', async () => {
+  // An unpublished media belongs only to whoever uploaded it: `published=false` opens their own
+  // drafts, never a colleague's work in progress.
+  it('only shows their own drafts', async () => {
     await request(app).get('/api/v1/tasks/87/versions/latest?published=false');
     const mediaWhere = db.version.findMany.mock.calls[0]?.[0].where.media.some;
     expect(mediaWhere).toEqual({ deletedAt: null, OR: [{ published: true }, { uploaderId: 7 }] });
     expect(db.version.findUnique.mock.calls[0]?.[0].select.media.where).toEqual(mediaWhere);
   });
 
-  it('répond 404 quand rien de lisible n’existe', async () => {
+  it('answers 404 when nothing readable exists', async () => {
     db.version.findMany.mockResolvedValue([]);
     const res = await request(app).get('/api/v1/tasks/87/versions/latest');
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('NO_LATEST_VERSION');
   });
 
-  it('refuse un token cantonné à un autre projet', async () => {
+  it('refuses a token scoped to another project', async () => {
     caller.apiToken = { id: 3, scopes: ['versions:read'], projectId: 7, kind: 'SERVICE' };
     expect((await request(app).get('/api/v1/tasks/87/versions/latest')).body.code).toBe(
       'TOKEN_PROJECT_SCOPE',
@@ -174,26 +174,26 @@ describe('GET /api/v1/tasks/:id/versions/latest', () => {
 });
 
 describe('GET /api/v1/latest?path=', () => {
-  it('élit l’étape la plus avancée du pipe, pas la plus récente', async () => {
+  it('elects the most advanced pipe step, not the most recent', async () => {
     const res = await request(app).get('/api/v1/latest?path=PROJ/SQ010/SH0100');
     expect(res.status).toBe(200);
     expect(db.version.findMany.mock.calls[0]?.[0].where).toMatchObject({ task: { shotId: 42 } });
     expect(db.version.findUnique.mock.calls[0]?.[0].where).toEqual({ id: 514 });
   });
 
-  it('restreint l’élection à une étape quand on la nomme', async () => {
+  it('restricts the election to a step when one is named', async () => {
     await request(app).get('/api/v1/latest?path=PROJ/SQ010/SH0100&department=anim');
     expect(db.version.findUnique.mock.calls[0]?.[0].where).toEqual({ id: 513 });
   });
 
-  it('refuse un chemin qui nomme déjà une version', async () => {
+  it('refuses a path that already names a version', async () => {
     db.version.findFirst.mockResolvedValue(versionRow);
     const res = await request(app).get('/api/v1/latest?path=PROJ/SQ010/SH0100/comp/V03');
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('PATH_INCLUDES_VERSION');
   });
 
-  it('refuse un chemin qui s’arrête au projet', async () => {
+  it('refuses a path that stops at the project', async () => {
     const res = await request(app).get('/api/v1/latest?path=PROJ');
     expect(res.body.code).toBe('PATH_TOO_SHALLOW');
   });

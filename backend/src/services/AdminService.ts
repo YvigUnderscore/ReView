@@ -10,12 +10,11 @@ import { getOnlineUserIds } from './PresenceService';
 import { logAudit } from './AuditService';
 
 /**
- * Logique métier de l'administration (métriques studio, santé système, séries
- * temporelles, corbeille globale, maintenance des jobs). Réservé aux admins ;
- * l'assertion de rôle est faite au niveau de la route (10.D8).
+ * Business logic of administration (studio metrics, system health, time series, global trash,
+ * job maintenance). Reserved to admins; the role assertion is done at the route level (10.D8).
  */
 
-/** Métriques compactes (compat. ascendante). */
+/** Compact metrics (backward compatibility). */
 export async function dashboard() {
   const [userCount, usersByRole, projectCount, mediaCount, storageAgg, recentUploads] = await Promise.all([
     prisma.user.count(),
@@ -45,7 +44,7 @@ export async function dashboard() {
   };
 }
 
-/** Métriques métier complètes. */
+/** Full business metrics. */
 export async function stats() {
   const [
     userCount,
@@ -112,18 +111,18 @@ export async function stats() {
   };
 }
 
-/** Métriques système + santé des services (DB, Redis, MinIO). */
+/** System metrics + service health (DB, Redis, MinIO). */
 export async function system() {
   const totalmem = os.totalmem();
   const freemem = os.freemem();
-  const load = os.loadavg(); // [1, 5, 15] min — toujours [0,0,0] sous Windows
+  const load = os.loadavg(); // [1, 5, 15] min; always [0,0,0] on Windows
 
   let disk: { total: number; free: number } | null = null;
   try {
     const s = await statfs(process.cwd());
     disk = { total: s.blocks * s.bsize, free: s.bfree * s.bsize };
   } catch {
-    /* statfs indisponible (selon OS) */
+    /* statfs unavailable (depends on OS) */
   }
 
   const [db, redisOk, minio] = await Promise.all([
@@ -157,10 +156,10 @@ export async function system() {
 }
 
 /**
- * Journal d'accès aux médias (36.E), paginé, récent d'abord.
+ * Media access log (36.E), paginated, most recent first.
  *
- * Le libellé du lien de partage est rapporté après coup : il n'y a pas de FK vers
- * `ShareLink`, un lien purgé laisserait sinon la ligne d'accès sans nom.
+ * The share link's label is reported after the fact: there is no FK to `ShareLink`, and a purged link
+ * would otherwise leave the access row without a name.
  */
 export async function mediaAccessLog({ page, pageSize }: { page: number; pageSize: number }) {
   const [rows, total] = await Promise.all([
@@ -195,7 +194,7 @@ export async function mediaAccessLog({ page, pageSize }: { page: number; pageSiz
   };
 }
 
-/** Projets en corbeille (globale). */
+/** Projects in the (global) trash. */
 export async function trashProjects() {
   return prisma.project.findMany({
     where: { deletedAt: { not: null } },
@@ -204,7 +203,7 @@ export async function trashProjects() {
   });
 }
 
-/** Relance tous les jobs média en échec. */
+/** Requeues all failed media jobs. */
 export async function retryFailedJobs(actorId: number) {
   const failed = await mediaQueue.getFailed();
   await Promise.all(failed.map((job) => job.retry().catch(() => undefined)));

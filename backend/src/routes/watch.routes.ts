@@ -18,12 +18,12 @@ import * as WatchService from '../services/WatchService';
 const router = Router();
 router.use(authenticate);
 
-// GET /api/watch — tous les suivis de l'utilisateur (état des menus clic droit)
+// GET /api/watch: all of the user's watches (state of the context menus)
 router.get('/', async (req, res) => {
   res.json({ watches: await WatchService.listForUser(req.user!.id) });
 });
 
-// PUT /api/watch — active/désactive le suivi d'un shot/asset/version (32.G)
+// PUT /api/watch: enable/disable watching a shot/asset/version (32.G)
 router.put(
   '/',
   validate({

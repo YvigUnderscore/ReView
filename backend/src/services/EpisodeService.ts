@@ -12,32 +12,29 @@ import {
 import { pageArgs, paginate, type PaginationParams } from '../lib/pagination';
 
 /**
- * Le niveau Épisode — logique métier.
+ * The Episode level — business logic.
  *
- * Un épisode groupe des séquences ; il ne porte ni plan ni version en propre. C'est un
- * niveau **facultatif par projet** : tant que `Project.episodesEnabled` est faux — ce
- * qu'il est par défaut — le serveur refuse toute écriture d'épisode et les écrans n'en
- * montrent aucune trace. Un long-métrage ne voit donc rien changer.
+ * An episode groups sequences; it carries no shot or version of its own. It is an **optional level per
+ * project**: as long as `Project.episodesEnabled` is false — which is the default — the server refuses any
+ * episode write and the screens show no trace of it. A feature film therefore sees nothing change.
  *
- * Désactiver le réglage sur un projet qui a déjà des épisodes ne détruit RIEN : les
- * lignes restent, les rattachements aussi, et tout réapparaît intact à la réactivation.
- * C'est le seul comportement défendable — l'alternative (détacher ou supprimer) ferait
- * d'un interrupteur d'affichage une opération destructive irréversible, sur une donnée
- * que personne n'a demandé à perdre. En contrepartie, les lectures d'épisode répondent
- * 409 tant que le réglage est éteint : rien ne doit pouvoir se lire ou s'écrire par une
- * URL devinée pendant que l'interface prétend que le niveau n'existe pas.
+ * Disabling the setting on a project that already has episodes destroys NOTHING: the rows remain, so do the
+ * attachments, and everything reappears intact on reactivation. This is the only defensible behaviour — the
+ * alternative (detaching or deleting) would turn a display switch into an irreversible destructive operation,
+ * on data nobody asked to lose. In return, episode reads answer 409 while the setting is off: nothing must be
+ * readable or writable through a guessed URL while the interface pretends the level does not exist.
  */
 
 /**
- * Séquences et plans ramenés par la fiche d'un épisode. Même raison que pour la fiche
- * d'une séquence : la page n'est pas paginée, mais elle ne peut pas être non bornée.
- * Un épisode de série porte 100 à 300 plans ; le plafond ne mord pas dessus.
+ * Sequences and shots returned by an episode's record. Same reason as for a sequence's record: the page is
+ * not paginated, but it cannot be unbounded. A series episode carries 100 to 300 shots; the cap does not bite
+ * on them.
  */
 const DETAIL_LIMIT = 500;
 
-// ───────────────────────────── Le réglage ─────────────────────────────
+// ───────────────────────────── The setting ─────────────────────────────
 
-/** Le niveau Épisode est-il activé sur ce projet ? Faux pour un projet inconnu. */
+/** Is the Episode level enabled on this project? False for an unknown project. */
 export async function isEnabled(projectId: number): Promise<boolean> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -47,10 +44,10 @@ export async function isEnabled(projectId: number): Promise<boolean> {
 }
 
 /**
- * Refuse l'opération quand le niveau est éteint.
+ * Refuses the operation when the level is switched off.
  *
- * 409 et non 403 : ce n'est pas une question de droits mais d'état du projet — la même
- * requête réussira dès que le studio aura activé le niveau.
+ * 409 rather than 403: this is not a matter of rights but of the project's state — the same request will
+ * succeed as soon as the studio enables the level.
  */
 export async function assertEnabled(projectId: number): Promise<void> {
   if (!(await isEnabled(projectId))) {
@@ -58,12 +55,12 @@ export async function assertEnabled(projectId: number): Promise<void> {
   }
 }
 
-/** Ce que l'écran de réglages a besoin de savoir pour proposer l'interrupteur. */
+/** What the settings screen needs to know in order to offer the switch. */
 export interface EpisodeSettings {
   enabled: boolean;
-  /** Épisodes vivants — ce que la désactivation va masquer, et rien de plus. */
+  /** Live episodes — what deactivation is going to hide, and nothing more. */
   episodeCount: number;
-  /** Séquences déjà rattachées : le décompte que l'avertissement affiche. */
+  /** Sequences already attached: the count the warning displays. */
   linkedSequenceCount: number;
 }
 
@@ -79,23 +76,23 @@ export async function readSettings(projectId: number): Promise<EpisodeSettings> 
   return { enabled: project.episodesEnabled, episodeCount, linkedSequenceCount };
 }
 
-/** Bascule le réglage. Aucun épisode n'est touché — voir l'en-tête du fichier. */
+/** Toggles the setting. No episode is touched — see the file header. */
 export async function setEnabled(projectId: number, enabled: boolean): Promise<EpisodeSettings> {
   await prisma.project.update({ where: { id: projectId }, data: { episodesEnabled: enabled } });
   return readSettings(projectId);
 }
 
-// ───────────────────────────── Lecture ─────────────────────────────
+// ───────────────────────────── Reading ─────────────────────────────
 
-/** Liste paginée des épisodes d'un projet, triée comme les séquences (`order`, puis `id`). */
+/** Paginated list of a project's episodes, sorted like sequences (`order`, then `id`). */
 export async function list(projectId: number, p: PaginationParams) {
-  // `hiddenAt` : un épisode masqué disparaît des listes — cf. ShotService.list.
+  // `hiddenAt`: a hidden episode disappears from lists — see ShotService.list.
   const where = { projectId, deletedAt: null, hiddenAt: null };
   const [episodes, total] = await Promise.all([
     prisma.episode.findMany({
       where,
-      // Départage sur `id` : un import laisse tous les épisodes à `order = 0`, et sans
-      // départage la page 2 réafficherait des lignes de la page 1.
+      // Tie-break on `id`: an import leaves all episodes at `order = 0`, and without a tie-break page 2 would
+      // redisplay rows from page 1.
       orderBy: [{ order: 'asc' }, { id: 'asc' }],
       ...pageArgs(p),
       include: {
@@ -105,12 +102,12 @@ export async function list(projectId: number, p: PaginationParams) {
     prisma.episode.count({ where }),
   ]);
   const { pageCount, hasMore } = paginate(episodes, total, p);
-  // Vignette effective de chaque épisode, en une passe : la sienne si elle a été choisie,
-  // sinon la première image venue de ses plans. Sans cela, la liste renvoyait la clé de
-  // stockage et aucune URL — les cartes d'épisodes ne pouvaient rien afficher.
+  // Effective thumbnail of each episode, in one pass: its own if one was chosen, otherwise the first image
+  // found among its shots. Without this, the list returned the storage
+  // key and no URL — the episode cards could not display anything.
   const withThumbs = await signEpisodeThumbnails(episodes);
-  // Séquences du projet qu'aucun épisode ne réclame : un découpage en cours en laisse
-  // toujours, et les taire ferait croire que le projet est vide.
+  // Project sequences that no episode claims: an ongoing split always leaves some, and hiding them would make
+  // the project look empty.
   const unassignedSequences = await prisma.sequence.count({
     where: { projectId, deletedAt: null, hiddenAt: null, episodeId: null },
   });
@@ -125,7 +122,7 @@ export async function list(projectId: number, p: PaginationParams) {
   };
 }
 
-/** Vignette effective d'une liste d'épisodes, en une passe (liste du projet). */
+/** Effective thumbnail of a list of episodes, in one pass (project list). */
 export async function signEpisodeThumbnails<T extends { id: number; thumbnailKey: string | null }>(
   rows: T[],
 ): Promise<(T & { thumbnailUrl: string | null })[]> {
@@ -138,7 +135,7 @@ export async function signEpisodeThumbnails<T extends { id: number; thumbnailKey
   );
 }
 
-/** Fiche complète : les séquences de l'épisode, et les plans de ces séquences. */
+/** Full record: the episode's sequences, and the shots of those sequences. */
 export async function getDetail(id: number) {
   const episode = await prisma.episode.findUnique({
     where: { id },
@@ -173,8 +170,8 @@ export async function getDetail(id: number) {
       pipelineStatusId: true,
     },
   });
-  // Une passe groupée pour toute la page, comme la fiche d'une séquence : la variante
-  // unitaire signerait une URL MinIO par plan, soit trois cents allers-retours.
+  // A grouped pass for the whole page, as for a sequence's record: the unit variant would sign one MinIO URL
+  // per shot, i.e. three hundred round trips.
   const fallbacks = await firstMediaThumbKeysForShots(shots.map((s) => s.id));
   const shotsWithThumbs = await Promise.all(
     shots.map(async (s) => ({
@@ -191,7 +188,7 @@ export async function getDetail(id: number) {
   };
 }
 
-// ───────────────────────────── Écriture ─────────────────────────────
+// ───────────────────────────── Writing ─────────────────────────────
 
 export interface EpisodeInput {
   name: string;
@@ -199,7 +196,7 @@ export interface EpisodeInput {
   order?: number;
 }
 
-/** Premier code déjà pris parmi ceux du lot — `null` si le lot est libre. */
+/** First code already taken among those of the batch — `null` if the batch is free. */
 export function firstDuplicate(codes: string[]): string | null {
   return codes.find((c, i) => codes.indexOf(c) !== i) ?? null;
 }
@@ -215,7 +212,7 @@ export async function create(projectId: number, input: EpisodeInput) {
   });
 }
 
-/** Création en lot : un doublon dans le lot ou en base annule tout, rien n'est créé. */
+/** Batch creation: a duplicate within the batch or in the database cancels everything; nothing is created. */
 export async function createBulk(projectId: number, items: EpisodeInput[]) {
   await assertEnabled(projectId);
   const codes = items.map((i) => i.code);
@@ -258,10 +255,10 @@ export async function update(id: number, projectId: number, body: UpdateEpisodeI
 }
 
 /**
- * Réordonnancement : la liste reçue donne le nouvel ordre, du premier au dernier.
+ * Reordering: the list received gives the new order, from first to last.
  *
- * Les identifiants étrangers au projet sont refusés en bloc plutôt qu'ignorés — une
- * requête partiellement appliquée laisserait un ordre que personne n'a demandé.
+ * Identifiers foreign to the project are refused in bulk rather than ignored — a partially applied request
+ * would leave an order that nobody asked for.
  */
 export async function reorder(projectId: number, ids: number[]): Promise<void> {
   await assertEnabled(projectId);
@@ -278,11 +275,11 @@ export async function reorder(projectId: number, ids: number[]): Promise<void> {
 }
 
 /**
- * Rattache (ou détache, avec `null`) des séquences à un épisode.
+ * Attaches (or detaches, with `null`) sequences to an episode.
  *
- * Les deux côtés sont vérifiés : la séquence doit appartenir au projet, et l'épisode
- * aussi. Sans cela, un identifiant de séquence emprunté à un autre projet passerait dans
- * l'épisode d'un film voisin — et le rattachement ne se voit pas depuis la page.
+ * Both sides are checked: the sequence must belong to the project, and so must the episode. Without this, a
+ * sequence identifier borrowed from another project would end up in a neighbouring film's
+ * episode — and the attachment would not be visible from the page.
  */
 export async function assignSequences(
   projectId: number,
@@ -304,6 +301,5 @@ export async function assignSequences(
   return count;
 }
 
-// La corbeille (mise à la corbeille, restauration, purge) vit dans `lib/trash`, avec
-// celle des séquences, des plans et des assets : c'est de là que la sélection multiple
-// et le balayage de rétention la pilotent.
+// The trash (soft delete, restore, purge) lives in `lib/trash`, together with that of sequences, shots and
+// assets: it is from there that multiple selection and the retention sweep drive it.

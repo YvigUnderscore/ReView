@@ -6,9 +6,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: { project: { findMany: vi.fn(), count: vi.fn() }, $queryRaw: vi.fn() },
 }));
-// La requête groupée elle-même (`DISTINCT ON`) vit dans `lib/thumbnails` et y est testée :
-// ce fichier vérifie ce que la liste en fait — une passe pour la page, et la bonne clé de
-// repli attribuée au bon projet.
+// The grouped query itself (`DISTINCT ON`) lives in `lib/thumbnails` and is tested there: this file checks
+// what the list does with it — one pass for the page, and the right fallback key attributed to the right
+// project.
 vi.mock('../lib/thumbnails', () => ({
   effectiveThumbnailUrl: vi.fn().mockResolvedValue(null),
   firstMediaThumbKeysForProjects: vi.fn().mockResolvedValue(new Map()),
@@ -36,20 +36,20 @@ beforeEach(() => {
   thumbKeys.mockResolvedValue(new Map());
 });
 
-describe('ProjectService.listProjects — filtre d’archivage (38.B)', () => {
-  it('exclut les projets ARCHIVED par défaut', async () => {
+describe('ProjectService.listProjects: archiving filter (38.B)', () => {
+  it('excludes ARCHIVED projects by default', async () => {
     await listProjects(admin, page);
     const where = findMany.mock.calls[0]![0]!.where as { status: unknown };
     expect(where.status).toEqual({ not: 'ARCHIVED' });
   });
 
-  it('ne renvoie que les ARCHIVED quand onlyArchived', async () => {
+  it('returns only the ARCHIVED ones when onlyArchived', async () => {
     await listProjects(admin, page, true);
     const where = findMany.mock.calls[0]![0]!.where as { status: unknown };
     expect(where.status).toEqual({ status: 'ARCHIVED' }.status);
   });
 
-  it('garde le filtre membership pour un non-global, avec l’exclusion d’archivage', async () => {
+  it('keeps the membership filter for a non-global user, with the archiving exclusion', async () => {
     await listProjects(client, page);
     const where = findMany.mock.calls[0]![0]!.where as { status: unknown; memberships: unknown };
     expect(where.status).toEqual({ not: 'ARCHIVED' });
@@ -57,7 +57,7 @@ describe('ProjectService.listProjects — filtre d’archivage (38.B)', () => {
   });
 });
 
-describe('ProjectService.listProjects — miniatures de repli groupées', () => {
+describe('ProjectService.listProjects: grouped fallback thumbnails', () => {
   const projects = [
     { id: 1, name: 'A', thumbnailKey: null },
     { id: 2, name: 'B', thumbnailKey: 'explicite/2.jpg' },
@@ -69,13 +69,13 @@ describe('ProjectService.listProjects — miniatures de repli groupées', () => 
     count.mockResolvedValue(projects.length);
   });
 
-  it('n’émet qu’UNE demande de miniatures pour toute la page (plus de N+1)', async () => {
+  it('issues only ONE thumbnail request for the whole page (no more N+1)', async () => {
     await listProjects(admin, page);
     expect(thumbKeys).toHaveBeenCalledTimes(1);
     expect(thumbKeys).toHaveBeenCalledWith([1, 2, 3]);
   });
 
-  it('rend à chaque projet SA miniature de repli, et null à celui qui n’en a pas', async () => {
+  it('gives each project ITS fallback thumbnail, and null to the one that has none', async () => {
     thumbKeys.mockResolvedValue(
       new Map([
         [3, 'thumbs/c.jpg'],

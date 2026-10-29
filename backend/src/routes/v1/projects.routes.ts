@@ -23,16 +23,15 @@ import * as Resolve from '../../services/PipelineResolveService';
 import { requireProject, refParam, actorOf, listQuery } from './helpers';
 
 /**
- * Projets et hiérarchie de tournage (API v1) : le projet, ses séquences, ses shots.
- * Filtrées et paginées, ces collections permettent à un client de peupler une interface
- * (un sélecteur de shot dans Maya) en un appel par niveau. Les assets et les vues
- * transversales vivent dans `project-content.routes`.
+ * Projects and the shooting hierarchy (API v1): the project, its sequences, its shots.
+ * Filtered and paginated, these collections let a client populate a UI (a shot picker in Maya) in
+ * one call per level. Assets and cross-cutting views live in `project-content.routes`.
  *
- * Les créations sont des « ensure » : rejouables, elles convergent vers le même état.
+ * Creations are "ensure" operations: replayable, they converge to the same state.
  */
 const router = Router();
 
-// GET /api/v1/projects — projets accessibles au porteur
+// GET /api/v1/projects: projects accessible to the bearer
 router.get(
   '/',
   requireScope('projects:read'),
@@ -40,12 +39,12 @@ router.get(
   async (req, res) => {
     const p = readPagination(req.query);
     const user = req.user!;
-    // Portée transverse (aucun projet visé) : c'est le seul cas où le rôle global décide.
+    // Cross-cutting scope (no target project): the only case where the global role decides.
     const manager = isGlobalManager(user.role);
     const where = {
       deletedAt: null,
       ...(req.query.status ? { status: req.query.status as ProjectStatus } : {}),
-      // Un token cantonné ne voit que son projet, même si son porteur est admin.
+      // A scoped token only sees its own project, even if its bearer is an admin.
       ...(req.apiToken?.projectId ? { id: req.apiToken.projectId } : {}),
       ...(manager ? {} : { memberships: { some: { userId: user.id } } }),
     };
@@ -57,22 +56,21 @@ router.get(
   },
 );
 
-// GET /api/v1/projects/:ref — détail (ref = identifiant, slug ou nom)
+// GET /api/v1/projects/:ref: detail (ref = identifier, slug or name)
 router.get('/:ref', requireScope('projects:read'), validate({ params: refParam }), async (req, res) => {
   res.json({ project: toProject(await requireProject(req, String(req.params.ref))) });
 });
 
 /**
- * GET /api/v1/projects/:ref/settings — les règles du projet, héritage studio résolu.
+ * GET /api/v1/projects/:ref/settings: the project's rules, with studio inheritance resolved.
  *
- * Ce sont celles qu'une publication doit connaître AVANT d'envoyer quoi que ce soit :
- * la convention de nommage (`naming`), qui peut refuser un fichier mal nommé, la
- * résolution et la cadence attendues, et la règle de consigne (`reviewRequest`), qui
- * décide si taguer un ReViewer exige d'écrire ce qu'il doit regarder — et sur combien de
- * caractères. Sans cette route, un DCC découvrait la règle en se faisant refuser.
+ * These are what a publication must know BEFORE sending anything: the naming convention (`naming`),
+ * which can refuse a badly named file; the expected resolution and frame rate; and the brief rule
+ * (`reviewRequest`), which decides whether tagging a reviewer requires writing what they must look
+ * at, and over how many characters. Without this route a DCC discovered the rule by being refused.
  *
- * Les valeurs rendues sont les valeurs EFFECTIVES : ce dont le projet hérite du studio est
- * déjà fondu dedans, un intégrateur n'a pas à recomposer deux niveaux.
+ * The returned values are the EFFECTIVE values: what the project inherits from the studio is already
+ * merged in, so an integrator does not have to compose two levels.
  */
 router.get(
   '/:ref/settings',
@@ -89,7 +87,7 @@ router.get(
   },
 );
 
-// ── Séquences ────────────────────────────────────────────────────────────────
+// ── Sequences ────────────────────────────────────────────────────────────────
 
 router.get(
   '/:ref/sequences',
@@ -140,7 +138,7 @@ router.get(
   async (req, res) => {
     const project = await requireProject(req, String(req.params.ref));
     const p = readPagination(req.query);
-    // Filtre facultatif par séquence, désignée par son code (pas par son identifiant).
+    // Optional sequence filter, designated by its code (not by its identifier).
     const sequenceId = req.query.sequence
       ? (await Resolve.resolveSequence(project.id, String(req.query.sequence))).id
       : undefined;

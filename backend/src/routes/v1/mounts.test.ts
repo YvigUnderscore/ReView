@@ -6,19 +6,19 @@ import { describeMounts } from '../../lib/openapiRoutes';
 import { V1_BASE_PATH, V1_MOUNTS } from './index';
 
 /**
- * Plan d'URL de l'API v1, lu comme le lit le générateur OpenAPI.
+ * URL plan of API v1, read the way the OpenAPI generator reads it.
  *
- * La table de montage sert à Express ET à la documentation : ce test la prend au mot, donc
- * un endpoint ajouté sans scope — ou oublié dans la table — se voit ici, pas en production.
+ * The mount table feeds Express AND the documentation: this test takes it at its word, so an
+ * endpoint added without a scope, or forgotten in the table, shows up here rather than in production.
  */
 const routes = describeMounts(V1_BASE_PATH, V1_MOUNTS);
 const find = (method: string, path: string) => routes.find((r) => r.method === method && r.path === path);
 
-/** Découverte : l'index et l'identité du porteur n'ont pas de domaine à cantonner. */
+/** Discovery: the index and the bearer's identity have no domain to scope. */
 const SCOPELESS = new Set(['/api/v1', '/api/v1/me']);
 
-describe('plan d’URL de l’API v1', () => {
-  it('publie les chemins de lecture attendus par un poste d’artiste', () => {
+describe('API v1 URL plan', () => {
+  it('publishes the read paths expected by an artist workstation', () => {
     expect(find('get', '/api/v1/media/{id}/url')?.scope).toBe('media:read');
     expect(find('get', '/api/v1/media/{id}')?.scope).toBe('media:read');
     expect(find('get', '/api/v1/tasks/{id}/versions/latest')?.scope).toBe('versions:read');
@@ -26,11 +26,11 @@ describe('plan d’URL de l’API v1', () => {
   });
 
   /**
-   * Les manques soldés par le tour d'API : ce qu'un intégrateur ne pouvait pas atteindre.
-   * Le `statusId` de `POST /versions/{id}/decision` n'était notamment découvrable nulle
-   * part — la route qui le rend est donc aussi importante que celle qui le consomme.
+   * Gaps closed by the API round: what an integrator could not reach. In particular the `statusId` of
+   * `POST /versions/{id}/decision` was discoverable nowhere, so the route that returns it matters as
+   * much as the one that consumes it.
    */
-  it('publie ce qui vivait jusque-là sur la seule API web', () => {
+  it('publishes what until then lived only on the web API', () => {
     expect(find('get', '/api/v1/versions/{id}/reviewers')?.scope).toBe('versions:read');
     expect(find('put', '/api/v1/versions/{id}/reviewers')?.scope).toBe('versions:write');
     expect(find('patch', '/api/v1/versions/{id}/reviewers/{userId}')?.scope).toBe('versions:write');
@@ -43,25 +43,25 @@ describe('plan d’URL de l’API v1', () => {
     expect(find('put', '/api/v1/shots/{id}/note')?.scope).toBe('shots:write');
     expect(find('get', '/api/v1/assets/{id}/assignees')?.scope).toBe('assets:read');
     expect(find('put', '/api/v1/sequences/{id}/assignees')?.scope).toBe('sequences:write');
-    // Un épisode se lit sous son domaine et s'écrit sous celui de la séquence : déclarer
-    // `episodes:write` sans route qui l'exige remettrait au catalogue un scope creux.
+    // An episode is read under its own domain and written under the sequence's: declaring
+    // `episodes:write` without a route requiring it would put a loose scope back in the catalogue.
     expect(find('put', '/api/v1/episodes/{id}/note')?.scope).toBe('sequences:write');
   });
 
-  it('n’a pas cassé les chemins d’écriture existants', () => {
+  it('did not break existing write paths', () => {
     expect(find('post', '/api/v1/publish')?.scope).toBe('versions:write');
     expect(find('post', '/api/v1/publish/{id}/complete')?.scope).toBe('versions:write');
     expect(find('get', '/api/v1/resolve')?.scope).toBe('projects:read');
   });
 
-  // « /tasks/:id/versions/latest » doit rester distinct de « /tasks/:id/versions » : deux
-  // routes, deux réponses. Un doublon signerait un montage qui en masque un autre.
-  it('ne déclare jamais deux fois le même couple méthode + chemin', () => {
+  // "/tasks/:id/versions/latest" must remain distinct from "/tasks/:id/versions": two routes, two
+  // responses. A duplicate would indicate a mount that masks another.
+  it('never declares the same method + path pair twice', () => {
     const seen = routes.map((r) => `${r.method} ${r.path}`);
     expect(new Set(seen).size).toBe(seen.length);
   });
 
-  it('exige un scope sur toute route qui touche à des données', () => {
+  it('requires a scope on every route that touches data', () => {
     const naked = routes.filter((r) => !r.scope && !SCOPELESS.has(r.path));
     expect(naked.map((r) => `${r.method} ${r.path}`)).toEqual([]);
   });

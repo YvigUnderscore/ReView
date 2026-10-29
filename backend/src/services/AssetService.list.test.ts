@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { db, thumbs } = vi.hoisted(() => ({
   db: {
     asset: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn() },
-    // Pastille « attend une review » : un agrégat SQL groupé pour la page entière.
+    // "Awaiting review" dot: a single grouped SQL aggregate for the whole page.
     $queryRaw: vi.fn(),
   },
   thumbs: {
@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.$queryRaw.mockResolvedValue([]);
   db.asset.findMany.mockResolvedValue([
-    // `include.assignees` : Prisma rend toujours la relation demandée.
+    // `include.assignees`: Prisma always returns the requested relation.
     { id: 4, name: 'Ship', thumbnailKey: null, assignees: [] },
   ]);
   db.asset.count.mockResolvedValue(1);
@@ -39,14 +39,14 @@ beforeEach(() => {
 });
 
 describe('AssetService.list', () => {
-  it('trie par nom puis id, la même règle que partout ailleurs', async () => {
+  it('sorts by name then id, the same rule used everywhere else', async () => {
     await list(3, page);
     expect(db.asset.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: [{ name: 'asc' }, { id: 'asc' }] }),
     );
   });
 
-  it('garde les étapes et les tâches que le menu contextuel des cartes consomme', async () => {
+  it('keeps the steps and tasks that the cards\' context menu consumes', async () => {
     await list(3, page);
     const args = db.asset.findMany.mock.calls[0]![0] as { include: Record<string, unknown> };
     expect(args.include.departments).toBeDefined();
@@ -54,13 +54,13 @@ describe('AssetService.list', () => {
     expect(args.include._count).toEqual({ select: { versions: true, tasks: true } });
   });
 
-  it('résout les vignettes en une passe groupée', async () => {
+  it('resolves thumbnails in one grouped pass', async () => {
     await list(3, page);
     expect(thumbs.firstMediaThumbKeysForAssets).toHaveBeenCalledTimes(1);
     expect(thumbs.firstMediaThumbKeysForAssets).toHaveBeenCalledWith([4]);
   });
 
-  it('reprend après le curseur sur le couple (name, id)', async () => {
+  it('resumes after the cursor on the (name, id) pair', async () => {
     await list(3, { ...page, cursor: encodeCursor('Ship', 4) });
     const args = db.asset.findMany.mock.calls[0]![0] as { skip: number; where: { AND: unknown[] } };
     expect(args.skip).toBe(0);
@@ -69,7 +69,7 @@ describe('AssetService.list', () => {
     ]);
   });
 
-  it('rend un curseur de suite quand la page est pleine', async () => {
+  it('returns a next-page cursor when the page is full', async () => {
     db.asset.findMany.mockResolvedValue([
       { id: 4, name: 'Ship', thumbnailKey: null, assignees: [] },
       { id: 9, name: 'Tank', thumbnailKey: null, assignees: [] },
@@ -82,7 +82,7 @@ describe('AssetService.list', () => {
 });
 
 describe('AssetService.getDetail', () => {
-  it('borne l’historique de versions et rend le compte réel', async () => {
+  it('caps the version history and returns the real count', async () => {
     db.asset.findUnique.mockResolvedValue({ id: 4, projectId: 3, thumbnailKey: null });
     await getDetail(4);
     const include = db.asset.findUnique.mock.calls[0]![0].include as {
@@ -98,12 +98,12 @@ describe('AssetService.getDetail', () => {
     expect(include._count).toEqual({ select: { versions: true, tasks: true } });
   });
 
-  it('signale un asset absent plutôt que de rendre un objet vide', async () => {
+  it('reports a missing asset rather than returning an empty object', async () => {
     db.asset.findUnique.mockResolvedValue(null);
     await expect(getDetail(404)).rejects.toThrow();
   });
 
-  it('calcule la vignette de la fiche comme avant le déplacement depuis la route', async () => {
+  it('computes the detail thumbnail as before the move out of the route', async () => {
     db.asset.findUnique.mockResolvedValue({ id: 4, projectId: 3, thumbnailKey: 'k.jpg' });
     thumbs.effectiveThumbnailUrl.mockResolvedValue('url:k.jpg');
     await expect(getDetail(4)).resolves.toMatchObject({ thumbnailUrl: 'url:k.jpg' });

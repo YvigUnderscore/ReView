@@ -16,8 +16,8 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('./StorageService', () => ({
   storage: { getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}`) },
 }));
-// L'accueil montre la même image qu'ailleurs : la vignette du projet, sinon celle de son
-// premier média publié. L'élection groupée est testée dans `lib/thumbnails`.
+// The home page shows the same image as elsewhere: the project's thumbnail, otherwise that of its first
+// published media. The grouped election is tested in `lib/thumbnails`.
 vi.mock('../lib/thumbnails', () => ({
   effectiveThumbnailUrl: vi.fn(async (key: string | null, fallback: string | null) => {
     const chosen = key ?? fallback;
@@ -40,16 +40,16 @@ const queryRaw = vi.mocked(prisma.$queryRaw);
 const artist = { id: 3, role: Role.ARTIST };
 
 /**
- * `comment.groupBy` sert deux fois dans l'accueil : l'élection SQL des six médias les plus
- * récemment commentés (appel porteur de `_max`) puis le comptage des notes par média. Le
- * stub répond à l'un ou à l'autre selon la forme de l'appel.
+ * `comment.groupBy` is used twice on the home page: the SQL election of the six most recently commented media
+ * (call carrying `_max`), then the count of notes per media. The stub answers one or the other depending on
+ * the shape of the call.
  */
 function stubGroupBy(latest: unknown[] = [], counts: unknown[] = []) {
   vi.mocked(prisma.comment.groupBy).mockImplementation(((args: { _max?: unknown }) =>
     Promise.resolve(args._max ? latest : counts)) as never);
 }
 
-/** L'appel d'élection (celui qui porte `_max`), tel que le service l'a posé. */
+/** The election call (the one carrying `_max`), as the service set it up. */
 function electionCall(): { by: unknown; take: unknown; orderBy: unknown; where: unknown } {
   const call = vi
     .mocked(prisma.comment.groupBy)
@@ -58,7 +58,7 @@ function electionCall(): { by: unknown; take: unknown; orderBy: unknown; where: 
   return call[0] as { by: unknown; take: unknown; orderBy: unknown; where: unknown };
 }
 
-/** Une note telle que la seconde lecture la rend (colonnes affichées seulement). */
+/** A note as the second read returns it (displayed columns only). */
 const noteSur9 = (content: string, id: number, createdAt: Date) => ({
   id,
   mediaObjectId: 9,
@@ -89,9 +89,9 @@ function stubEmpty() {
   vi.mocked(prisma.project.count).mockResolvedValue(2);
   vi.mocked(prisma.project.findMany).mockResolvedValue([] as never);
   vi.mocked(prisma.mediaObject.count).mockResolvedValue(5);
-  // Médias en review (5), fenêtre 7 jours (1), puis ce qu'on attend de moi (4) — l'ordre
-  // des appels de getDashboard. « Awaiting my review » est devenu un compte de médias :
-  // c'est `ReviewAssignment` qui le décide, plus les tâches en attente du studio entier.
+  // Media in review (5), 7-day window (1), then what is expected of me (4) — the order of the getDashboard
+  // calls. "Awaiting my review" became a count of media: it is `ReviewAssignment` that decides, not the tasks
+  // waiting for the whole studio.
   vi.mocked(prisma.mediaObject.count)
     .mockResolvedValueOnce(5)
     .mockResolvedValueOnce(1)
@@ -99,7 +99,7 @@ function stubEmpty() {
   vi.mocked(prisma.comment.count).mockResolvedValue(11);
   vi.mocked(prisma.comment.count).mockResolvedValueOnce(11).mockResolvedValueOnce(3);
   stubGroupBy();
-  // Un seul `task.count` désormais : mes retakes.
+  // A single `task.count` now: my retakes.
   vi.mocked(prisma.task.count).mockResolvedValueOnce(1);
 }
 
@@ -109,19 +109,19 @@ describe('DashboardService.getDashboard', () => {
     stubEmpty();
   });
 
-  it('borne les requêtes aux projets du membre (filtre membership pour un ARTIST)', async () => {
+  it('bounds the queries to the member\'s projects (membership filter for an ARTIST)', async () => {
     await getDashboard(artist);
     const projectWhere = vi.mocked(prisma.project.count).mock.calls[0]![0]!.where;
     expect(projectWhere).toEqual({ deletedAt: null, memberships: { some: { userId: 3 } } });
   });
 
-  it('ne filtre pas par membership pour un ADMIN', async () => {
+  it('does not filter by membership for an ADMIN', async () => {
     await getDashboard({ id: 1, role: Role.ADMIN });
     const projectWhere = vi.mocked(prisma.project.count).mock.calls[0]![0]!.where;
     expect(projectWhere).toEqual({ deletedAt: null });
   });
 
-  it('renvoie les stats agrégées, tendances 7 jours et compteurs personnels compris', async () => {
+  it('returns the aggregated stats, 7-day trends and personal counters included', async () => {
     const { stats } = await getDashboard(artist);
     expect(stats).toEqual({
       projects: 2,
@@ -134,11 +134,11 @@ describe('DashboardService.getDashboard', () => {
     });
   });
 
-  it('calcule la progression des projets récents (tâches approuvées / total)', async () => {
+  it('computes the progress of recent projects (approved tasks / total)', async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([
       { id: 7, name: 'Dock', thumbnailKey: 'thumbs/p7.jpg' },
     ] as never);
-    // Un seul agrégat remplace les deux `count` par projet : 6 approuvées sur 10.
+    // A single aggregate replaces the two `count` per project: 6 approved out of 10.
     queryRaw.mockResolvedValue([
       {
         projectId: 7,
@@ -156,9 +156,9 @@ describe('DashboardService.getDashboard', () => {
     ]);
   });
 
-  it('montre le premier média du projet quand aucune vignette n’a été choisie', async () => {
-    // L'accueil s'en tenait à `thumbnailKey` : un projet plein de travail livré y restait
-    // sans image, alors que sa carte en portait une dans la liste des projets.
+  it('shows the first media of the project when no thumbnail has been chosen', async () => {
+    // The home page stuck to `thumbnailKey`: a project full of delivered work stayed without an image,
+    // whereas its card carried one in the project list.
     vi.mocked(prisma.project.findMany).mockResolvedValue([
       { id: 7, name: 'Dock', thumbnailKey: null },
     ] as never);
@@ -167,30 +167,30 @@ describe('DashboardService.getDashboard', () => {
     expect(recentProjects[0]!.thumbnailUrl).toBe('https://minio/derived/9/thumb.webp');
   });
 
-  it('ne pose plus deux comptes par projet récent : un seul agrégat, cinq projets', async () => {
+  it('no longer issues two counts per recent project: a single aggregate, five projects', async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue(
       Array.from({ length: 5 }, (_, i) => ({ id: i + 1, name: `P${i}`, thumbnailKey: null })) as never,
     );
     await getDashboard(artist);
-    // Un seul `task.count` en tout (mes retakes) — plus aucun par projet. « Awaiting my
-    // review » compte désormais des médias confiés, pas des tâches.
+    // A single `task.count` in total (my retakes) — no more per project. "Awaiting my review" now counts
+    // entrusted media, not tasks.
     expect(vi.mocked(prisma.task.count)).toHaveBeenCalledTimes(1);
     expect(queryRaw).toHaveBeenCalledTimes(1);
-    // Les cinq identifiants voyagent en paramètres du même agrégat.
+    // The five identifiers travel as parameters of the same aggregate.
     expect(JSON.stringify(queryRaw.mock.calls[0]!.slice(1))).toContain('5');
   });
 
-  it('n’interroge pas la base quand aucun projet récent n’est à afficher', async () => {
+  it('does not query the database when no recent project is to be displayed', async () => {
     await getDashboard(artist);
     expect(queryRaw).not.toHaveBeenCalled();
   });
 
-  it('lit le référentiel du studio : terminal compte comme fait, inactif ne compte pas', async () => {
+  it('reads the studio\'s reference: terminal counts as done, inactive does not count', async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([
       { id: 7, name: 'Dock', thumbnailKey: null },
     ] as never);
     queryRaw.mockResolvedValue([
-      // « fin » : terminal côté site, l'enum local dit encore IN_PROGRESS.
+      // "fin": terminal on the site side, the local enum still says IN_PROGRESS.
       {
         projectId: 7,
         status: TaskStatus.IN_PROGRESS,
@@ -199,7 +199,7 @@ describe('DashboardService.getDashboard', () => {
         legacyStatus: TaskStatus.APPROVED,
         count: 3,
       },
-      // « omt » : omis — hors de toute jauge, ni au numérateur ni au dénominateur.
+      // "omt": omitted — outside any gauge, neither in the numerator nor in the denominator.
       {
         projectId: 7,
         status: TaskStatus.REJECTED,
@@ -221,7 +221,7 @@ describe('DashboardService.getDashboard', () => {
     expect(recentProjects[0]).toMatchObject({ totalTasks: 4, approvedTasks: 3 });
   });
 
-  it('exclut de « mes tâches » et des compteurs ce que le studio tient pour terminé ou inactif', async () => {
+  it('excludes from "my tasks" and from the counters what the studio regards as done or inactive', async () => {
     await getDashboard(artist);
     const myTasksWhere = JSON.stringify(tasks.mock.calls[0]![0]!.where);
     expect(myTasksWhere).toContain('"isDone":false');
@@ -232,21 +232,21 @@ describe('DashboardService.getDashboard', () => {
   });
 
   /**
-   * Les quatre compteurs mentaient chacun à leur façon (le détail de chaque périmètre est
-   * vérifié dans `lib/homeScope.test.ts`) : ce test-ci vérifie le câblage, c'est-à-dire que
-   * l'accueil pose bien CES périmètres-là et pas les anciens.
+   * The four counters each lied in their own way (the detail of each scope is verified in
+   * `lib/homeScope.test.ts`): this test verifies the wiring, that is, that the home page does set THESE
+   * scopes and not the old ones.
    */
-  it('compte ce qu’on attend de MOI : les reviews confiées, décision non rendue', async () => {
+  it('counts what is expected of ME: reviews entrusted to me, decision not yet given', async () => {
     await getDashboard(artist);
     const counts = vi.mocked(prisma.mediaObject.count).mock.calls.map((c) => JSON.stringify(c[0]!.where));
-    // La file personnelle passe par ReviewAssignment, et par lui seul.
+    // The personal queue goes through ReviewAssignment, and through it alone.
     const personnel = counts.filter((w) => w.includes('"reviewerId":3'));
     expect(personnel).toHaveLength(1);
-    // Aucun des compteurs de médias ne compte une version déjà tranchée.
+    // None of the media counters counts a version already decided.
     expect(counts.every((w) => w.includes('"reviewStatusId":null'))).toBe(true);
   });
 
-  it('borne « mes retakes » à mes projets vivants et à leurs éléments visibles', async () => {
+  it('bounds "my retakes" to my live projects and their visible items', async () => {
     await getDashboard(artist);
     const where = JSON.stringify(vi.mocked(prisma.task.count).mock.calls[0]![0]!.where);
     expect(where).toContain('"assigneeId":3');
@@ -254,7 +254,7 @@ describe('DashboardService.getDashboard', () => {
     expect(where).toContain('"hiddenAt":null');
   });
 
-  it('mappe les dernières reviews avec miniature présignée et dernier commentaire', async () => {
+  it('maps the latest reviews with presigned thumbnail and last comment', async () => {
     const posee = new Date('2026-07-12T10:00:00Z');
     stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
     comments.mockResolvedValue([noteSur9('À reprendre sur le raccord', 51, posee)] as never);
@@ -279,12 +279,12 @@ describe('DashboardService.getDashboard', () => {
   });
 
   /**
-   * PERF-01. La lecture d'origine combinait `distinct: ['mediaObjectId']` et `take: 6` :
-   * Prisma 5 résout le `distinct` en mémoire, ce qui neutralise le `take` — le SQL partait
-   * sans `LIMIT` et toute la table Comment du studio traversait le réseau pour six lignes.
-   * L'élection doit donc se faire en base, et la lecture qui suit ne viser que ces six-là.
+   * PERF-01. The original read combined `distinct: ['mediaObjectId']` and `take: 6`: Prisma 5 resolves the
+   * `distinct` in memory, which neutralizes the `take` — the SQL went out without a `LIMIT`, and the whole
+   * studio Comment table crossed the network for six rows. The election must therefore happen in the
+   * database, and the following read must only target those six.
    */
-  it('élit les six derniers médias commentés en SQL, sans rapatrier la table Comment', async () => {
+  it('elects the six latest commented media in SQL, without fetching the Comment table', async () => {
     const posee = new Date('2026-07-12T10:00:00Z');
     stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
     comments.mockResolvedValue([noteSur9('note', 51, posee)] as never);
@@ -293,34 +293,34 @@ describe('DashboardService.getDashboard', () => {
     expect(election.by).toEqual(['mediaObjectId']);
     expect(election.take).toBe(6);
     expect(election.orderBy).toEqual({ _max: { createdAt: 'desc' } });
-    // La seconde lecture ne va chercher que les notes élues, et n'a plus de `distinct`.
+    // The second read only fetches the elected notes, and no longer has a `distinct`.
     const lecture = comments.mock.calls[0]![0]!;
     expect(lecture.distinct).toBeUndefined();
     expect(JSON.stringify(lecture.where)).toContain('"mediaObjectId":9');
-    // Et jamais les colonnes lourdes (tracé d'annotation, viewpoint 3D, pièces jointes).
+    // And never the heavy columns (annotation trace, 3D viewpoint, attachments).
     const colonnes = JSON.stringify(lecture.select);
     expect(colonnes).not.toContain('annotation');
     expect(colonnes).not.toContain('cameraState');
     expect(colonnes).not.toContain('attachments');
   });
 
-  it('repasse le périmètre d’accès aux deux lectures : un CLIENT reste borné à ses notes', async () => {
+  it('passes the access scope to both reads: a CLIENT remains bounded to their notes', async () => {
     const posee = new Date('2026-07-12T10:00:00Z');
     stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
     comments.mockResolvedValue([noteSur9('note visible', 51, posee)] as never);
     await getDashboard({ id: 8, role: Role.CLIENT });
-    // Le filtre qui borne un client aux notes qui lui sont destinées doit se retrouver
-    // À L'IDENTIQUE dans l'élection ET dans la lecture : le perdre serait une fuite.
+    // The filter that bounds a client to the notes meant for them must be found IDENTICALLY in the election
+    // AND in the read: losing it would be a leak.
     expect(JSON.stringify(electionCall().where)).toContain('"isVisibleToClient":true');
     const where = comments.mock.calls[0]![0]!.where as { AND: unknown[] };
     expect(JSON.stringify(where.AND[0])).toContain('"isVisibleToClient":true');
   });
 
-  it('ne garde qu’une note par média, la plus récente — ce que faisait le distinct', async () => {
+  it('keeps only one note per media, the most recent — what the distinct used to do', async () => {
     const posee = new Date('2026-07-12T10:00:00Z');
     stubGroupBy([{ mediaObjectId: 9, _max: { createdAt: posee } }]);
-    // Deux notes du même média à la même milliseconde : la lecture les rend toutes les
-    // deux (tri décroissant, `id` en départage), l'accueil n'en montre qu'une.
+    // Two notes of the same media at the same millisecond: the read returns both (descending sort, `id` as
+    // tie-break), the home page shows only one.
     comments.mockResolvedValue([
       noteSur9('la retenue', 52, posee),
       noteSur9('la doublure', 51, posee),
@@ -330,12 +330,12 @@ describe('DashboardService.getDashboard', () => {
     expect(latestReviews[0]!.lastComment.content).toBe('la retenue');
   });
 
-  it('ne fait pas la seconde lecture quand aucun média n’a de note', async () => {
+  it('does not perform the second read when no media has a note', async () => {
     await getDashboard(artist);
     expect(comments).not.toHaveBeenCalled();
   });
 
-  it('fusionne versions + médias dans le flux, triés du plus récent au plus ancien', async () => {
+  it('merges versions + media into the feed, sorted from most recent to oldest', async () => {
     versions.mockResolvedValue([
       {
         name: 'V03',
@@ -360,7 +360,7 @@ describe('DashboardService.getDashboard', () => {
     expect(activity[1]).toMatchObject({ label: 'V03 — Comp', location: 'SH010', taskId: 4 });
   });
 
-  it('trie mes tâches par priorité de statut (RETAKE avant TODO) et borne à 8', async () => {
+  it('sorts my tasks by status priority (RETAKE before TODO) and caps at 8', async () => {
     tasks.mockResolvedValue([
       ...Array.from({ length: 6 }, (_, i) => ({
         id: 10 + i,
@@ -396,7 +396,7 @@ describe('DashboardService.getDashboard', () => {
     expect(myTasks.slice(1, 5).every((t) => t.status === 'PENDING_REVIEW')).toBe(true);
   });
 
-  it('ordonne mes tâches sur la famille du statut personnalisé, pas sur l’enum local', async () => {
+  it('orders my tasks on the family of the custom status, not on the local enum', async () => {
     tasks.mockResolvedValue([
       {
         id: 10,
@@ -408,7 +408,7 @@ describe('DashboardService.getDashboard', () => {
         asset: null,
       },
       {
-        // Statut « rtk » du site : l'enum local dit IN_PROGRESS, la famille dit « bloqué ».
+        // Site "rtk" status: the local enum says IN_PROGRESS, the family says "blocked".
         id: 11,
         name: 'retake du site',
         type: 'OTHER',

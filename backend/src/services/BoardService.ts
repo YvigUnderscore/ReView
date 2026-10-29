@@ -8,56 +8,53 @@ import { AppError, badRequest } from '../lib/errors';
 import { storage } from './StorageService';
 
 /**
- * Boards mood/reference (9.B) — persistance de la scène Excalidraw.
+ * Mood/reference boards (9.B): persistence of the Excalidraw scene.
  *
- * Deux défauts d'échelle réparés ici :
+ * Two scaling defects fixed here:
  *
- *  1. **Les images ne vivent plus dans le JSON.** Excalidraw range les images collées
- *     dans `files` sous forme de dataURL base64. Deux captures suffisaient à faire passer
- *     le document au-dessus de `express.json({ limit: '2mb' })` : chaque autosave repartait
- *     en 413 et le travail était perdu. Les fichiers volumineux sont désormais déposés dans
- *     MinIO comme n'importe quel média ; le document ne garde que `{ id, mimeType }` et la
- *     clé de stockage est **reconstruite ici** (jamais reçue du client), sans quoi un board
- *     pourrait pointer vers un objet quelconque du bucket. Les petits fichiers (SVG, icônes)
- *     restent inline sous un plafond strict — c'est le seul moyen de continuer à afficher
- *     les formats que MinIO ne peut pas servir en rendu direct.
- *  2. **Plus d'écrasement silencieux.** L'écriture porte l'`updatedAt` sur lequel l'éditeur
- *     a chargé le board et l'update est conditionnel : si quelqu'un a sauvegardé entre-temps,
- *     la réponse est un 409 `BOARD_CONFLICT` portant l'`updatedAt` courant.
+ *  1. **Images no longer live in the JSON.** Excalidraw stores pasted images in `files` as base64 dataURLs.
+ *     Two screenshots were enough to push the document above `express.json({ limit: '2mb' })`: every autosave
+ *     went back as a 413 and the work was lost. Large files are now uploaded to MinIO like any media; the
+ * document only keeps `{ id, mimeType }`, and the storage key is **rebuilt here** (never received from the
+ * client), otherwise a board could point to any object in the bucket. Small files (SVG, icons) stay inline
+ *     under a strict ceiling: that is the only way to keep displaying formats MinIO cannot serve for direct
+ *     rendering.
+ * 2. **No more silent overwrites.** The write carries the `updatedAt` the editor loaded the board with, and
+ * the update is conditional: if someone saved in the meantime, the response is a 409 `BOARD_CONFLICT`
+ * carrying
+ *     the current `updatedAt`.
  *
- * Compatibilité : un board déjà enregistré avec ses images en base64 se relit tel quel
- * (la lecture ne valide rien) et se migre à la première sauvegarde de l'éditeur.
+ * Compatibility: a board already saved with base64 images reads back as is (reading validates nothing) and is
+ * migrated on the editor's next save.
  */
 
 export type BoardScope = { projectId: number } | { assetId: number };
 
-/** Nombre d'éléments Excalidraw acceptés dans un document. */
+/** Number of Excalidraw elements accepted in a document. */
 export const MAX_ELEMENTS = 10_000;
-/** Nombre d'entrées `files` acceptées dans un document. */
+/** Number of `files` entries accepted in a document. */
 export const MAX_FILES = 500;
-/** Longueur maximale d'une dataURL laissée inline (≈ 46 Ko d'image). */
+/** Maximum length of a dataURL left inline (about 46 KB of image). */
 export const MAX_INLINE_DATAURL = 64_000;
-/** Taille sérialisée maximale du document, sous la limite de corps d'Express. */
+/** Maximum serialized size of the document, under Express's body limit. */
 export const MAX_DOCUMENT_BYTES = 1_500_000;
 
 /**
- * Identifiant de fichier Excalidraw. Il devient un segment de clé MinIO : la liste blanche
- * de caractères est ce qui interdit `../` et les clés fabriquées. Elle reste tolérante
- * (point accepté en position interne) parce qu'un board importé depuis un `.excalidraw`
- * apporte des identifiants que nous n'avons pas produits — mais jamais de séparateur, donc
- * jamais de traversée.
+ * Excalidraw file identifier. It becomes a MinIO key segment: the allow-list of characters is what forbids
+ * `../` and forged keys. It stays tolerant (a dot accepted in an inner position) because a board imported
+ * from an `.excalidraw` brings identifiers we did not produce, but never a separator, hence never a
+ * traversal.
  */
 const FILE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
 export const fileIdSchema = z.string().regex(FILE_ID_RE, 'Invalid board file id');
 
 /**
- * Types déposables dans MinIO.
+ * Types that can be uploaded to MinIO.
  *
- * Cette liste ne porte aucune garantie de sûreté : ce qui protège, c'est
- * `lib/uploadContentType`, qui ramène tout type actif (SVG, HTML) à `application/octet-stream`
- * aussi bien au dépôt qu'à la lecture. Elle sert à refuser les documents manifestement
- * fabriqués. Le SVG est accepté parce que l'éditeur reconstruit la dataURL à partir du type
- * déclaré et l'affiche dans un `<img>`, où un SVG n'exécute rien.
+ * This list gives no safety guarantee: what protects is `lib/uploadContentType`, which brings every active
+ * type (SVG, HTML) back to `application/octet-stream` both on upload and on read. This list serves to refuse
+ * documents that are obviously malformed. SVG is accepted because the editor rebuilds the dataURL from the
+ * declared type and displays it in an `<img>`, where an SVG executes nothing.
  */
 const UPLOADABLE_TYPES = new Set([
   'image/png',
@@ -76,19 +73,19 @@ const boardFileSchema = z
   .object({
     id: fileIdSchema,
     mimeType: z.string().min(1).max(80),
-    // Absente = le fichier est dans MinIO sous la clé dérivée de son id.
+    // Absent = the file is in MinIO under the key derived from its id.
     dataURL: z.string().max(MAX_INLINE_DATAURL).optional(),
     created: z.number().int().nonnegative().optional(),
     lastRetrieved: z.number().int().nonnegative().optional(),
   })
   .strict();
 
-/** Élément Excalidraw : forme minimale imposée, le reste des attributs passe tel quel. */
+/** Excalidraw element: minimal enforced shape; the remaining attributes pass through unchanged. */
 const boardElementSchema = z
   .object({ id: z.string().min(1).max(128), type: z.string().min(1).max(40) })
   .passthrough();
 
-/** Schéma borné du document — remplace le `z.any()` d'origine. */
+/** Bounded document schema: replaces the original `z.any()`. */
 export const boardDocumentSchema = z
   .object({
     elements: z.array(boardElementSchema).max(MAX_ELEMENTS).default([]),
@@ -106,8 +103,8 @@ export const boardDocumentSchema = z
     }
     for (const id of ids) {
       const file = doc.files[id]!;
-      // L'id porté par l'entrée sert à fabriquer la clé de stockage : il doit être celui
-      // sous lequel l'entrée est rangée, sinon le fichier lu n'est pas celui écrit.
+      // The id carried by the entry is used to build the storage key: it must be the one under which the
+      // entry is stored, otherwise the file read is not the one written.
       if (file.id !== id) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -135,32 +132,31 @@ export const boardDocumentSchema = z
 
 export type BoardDocument = z.infer<typeof boardDocumentSchema>;
 
-// ── Clés de stockage ─────────────────────────────────────────────────────────
+// ── Storage keys ─────────────────────────────────────────────────────────────
 /**
- * Préfixe MinIO d'un board.
+ * MinIO prefix of a board.
  *
- * Il est **rangé sous son projet** : `lib/trash.purgeProject` balaie déjà
- * `projects/{id}/`, les images d'un board partent donc avec le projet purgé sans qu'il y
- * ait un second endroit à tenir à jour. Un seul board par projet et un par asset — l'id
- * n'apparaît que pour les seconds.
+ * It is **filed under its project**: `lib/trash.purgeProject` already sweeps `projects/{id}/`, so a board's
+ * images leave with the purged project without a second place to maintain. One board per project and one per
+ * asset: the id appears only for the latter.
  */
 export const boardPrefix = (projectId: number, scope: BoardScope): string =>
   'projectId' in scope
     ? `projects/${projectId}/boards/project/`
     : `projects/${projectId}/boards/asset/${scope.assetId}/`;
 
-/** Clé d'un fichier de board — dérivée du scope et de l'id, jamais reçue du client. */
+/** Key of a board file: derived from the scope and the id, never received from the client. */
 export const boardFileKey = (projectId: number, scope: BoardScope, fileId: string): string => {
   if (!FILE_ID_RE.test(fileId)) throw badRequest('Invalid board file id', 'BAD_FILE_ID');
   return `${boardPrefix(projectId, scope)}${fileId}`;
 };
 
-// ── Lecture ──────────────────────────────────────────────────────────────────
+// ── Read ─────────────────────────────────────────────────────────────────────
 
 type StoredFile = { mimeType?: string; dataURL?: string };
 type StoredDocument = { files?: Record<string, StoredFile | null> };
 
-/** Board tel qu'il part vers le client — la forme d'origine, `fileUrls` en plus. */
+/** Board as sent to the client: the original shape, plus `fileUrls`. */
 export type BoardPayload = {
   id?: number;
   projectId?: number | null;
@@ -171,13 +167,13 @@ export type BoardPayload = {
 
 export type BoardRead = {
   board: BoardPayload;
-  /** URL présignée de lecture par fichier externalisé — vide pour un board legacy. */
+  /** Presigned read URL per externalised file: empty for a legacy board. */
   fileUrls: Record<string, string>;
 };
 
 /**
- * Lit le board et signe l'accès à ses fichiers externalisés. Le `Content-Type` de la
- * réponse est imposé dans la signature : le type déposé par le navigateur n'est pas fiable.
+ * Reads the board and signs access to its externalised files. The response's `Content-Type` is enforced in
+ * the signature: the type sent by the browser is not reliable.
  */
 export async function readBoard(projectId: number, scope: BoardScope): Promise<BoardRead> {
   const board = await prisma.board.findUnique({ where: scope });
@@ -197,7 +193,7 @@ export async function readBoard(projectId: number, scope: BoardScope): Promise<B
   };
 }
 
-// ── Écriture ─────────────────────────────────────────────────────────────────
+// ── Write ────────────────────────────────────────────────────────────────────
 
 const boardConflict = (updatedAt: Date | null | undefined): AppError =>
   new AppError('Board changed since it was loaded', 409, 'BOARD_CONFLICT', {
@@ -205,10 +201,9 @@ const boardConflict = (updatedAt: Date | null | undefined): AppError =>
   });
 
 /**
- * Écrit le document si personne n'a sauvegardé depuis `baseUpdatedAt` (ISO, ou `null` pour
- * « le board n'existait pas »). L'`updatedAt` attendu est porté par le `where` de l'update :
- * la condition est évaluée par Postgres, deux sauvegardes simultanées ne peuvent pas la
- * satisfaire toutes les deux.
+ * Writes the document if nobody has saved since `baseUpdatedAt` (ISO, or `null` for "the board did not
+ * exist"). The expected `updatedAt` is carried by the update's `where`: the condition is evaluated by
+ * Postgres, so two simultaneous saves cannot both satisfy it.
  */
 export async function writeBoard(
   scope: BoardScope,
@@ -221,8 +216,8 @@ export async function writeBoard(
     try {
       return await prisma.board.create({ data: { ...scope, ...data } });
     } catch (err) {
-      // P2002 = unicité sur projectId/assetId : le board existe déjà, quelqu'un l'a créé
-      // pendant l'édition. Toute autre erreur reste une erreur.
+      // P2002 = uniqueness on projectId/assetId: the board already exists, someone created it while editing.
+      // Any other error remains an error.
       if ((err as { code?: string }).code !== 'P2002') throw err;
       const current = await prisma.board.findUnique({ where: scope, select: { updatedAt: true } });
       throw boardConflict(current?.updatedAt);
@@ -238,11 +233,11 @@ export async function writeBoard(
   return (await prisma.board.findUnique({ where: scope }))!;
 }
 
-// ── Dépôt des images ─────────────────────────────────────────────────────────
+// ── Image uploads ────────────────────────────────────────────────────────────
 
 /**
- * URL présignées de dépôt pour les fichiers trop gros pour rester dans le document.
- * Le navigateur écrit directement dans MinIO, comme pour un média.
+ * Upload presigned URLs for files too large to stay in the document. The browser writes directly to MinIO, as
+ * for a media.
  */
 export async function presignBoardFiles(
   projectId: number,
@@ -255,8 +250,8 @@ export async function presignBoardFiles(
         throw badRequest(`Unsupported board image type: ${mimeType}`, 'BAD_CONTENT_TYPE');
       }
       const key = boardFileKey(projectId, scope, id);
-      // Le contenu va changer sous cette clé : l'URL de lecture mémorisée doit être oubliée,
-      // sinon le navigateur resservirait l'ancienne image depuis son cache.
+      // The content is about to change under this key: the remembered read URL must be forgotten, otherwise
+      // the browser would serve the old image from its cache.
       storage.forgetPresignedUrl(key);
       return { id, url: await storage.getPresignedPutUrl(key, mimeType, 900) };
     }),

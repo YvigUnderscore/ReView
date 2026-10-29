@@ -12,46 +12,45 @@ import { versionSelect, mediaSelect, toVersion, toMedia } from '../../lib/v1Reso
 import { DEFAULT_URL_TTL, toMediaWithUrl } from './mediaAccess';
 
 /**
- * « Quelle est la dernière version ? » — la question que pose tout script de DCC avant
- * d'ouvrir un plan, et à laquelle l'API v1 ne savait pas répondre.
+ * "What is the latest version?": the question every DCC script asks before opening a shot, which
+ * API v1 could not answer.
  *
- * La règle est celle du reste du produit (`lib/pipelineOrder`) : l'étape du pipe la plus
- * avancée qui a quelque chose à montrer, puis la plus récente à cette étape. Sur une
- * tâche, où l'étape est constante, cela se réduit à « la plus récente » — mais sur un plan
- * il ne faut surtout pas rendre l'anim publiée après le compositing.
+ * The rule matches the rest of the product (`lib/pipelineOrder`): the most advanced pipe step that
+ * has something to show, then the most recent one at that step. On a task, where the step is
+ * constant, this reduces to "the most recent"; but on a shot, the published animation must never
+ * win over the compositing.
  *
- * Une version élue porte forcément un média visible : « la dernière version » sans fichier
- * n'a aucun usage pour l'appelant, qui veut télécharger quelque chose.
+ * An elected version always carries a visible media: a "latest version" without a file is useless
+ * to a caller who wants to download something.
  */
 
-/** Parent de la recherche : une tâche, un plan, un asset — jamais deux. */
+/** Search parent: a task, a shot or an asset, never two. */
 export type LatestTarget = { taskId: number } | { shotId: number } | { assetId: number };
 
 export const latestQuery = z.object({
-  /** `false` inclut les brouillons — ce que veut l'artiste qui relit son propre travail. */
+  /** `false` includes drafts, which is what an artist re-reading their own work wants. */
   published: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .prefault('true'),
-  /** `true` joint une URL présignée à chaque média : un appel au lieu de deux par fichier. */
+  /** `true` attaches a presigned URL to each media: one call instead of two per file. */
   urls: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .prefault('false'),
   expiresIn: z.coerce.number().int().min(60).max(86_400).default(DEFAULT_URL_TTL),
-  /** Restreint l'élection à une étape du pipe (`comp`, `anim`…), par clé de département. */
+  /** Restricts the election to one pipe step (`comp`, `anim`...), by department key. */
   department: z.string().trim().max(80).optional(),
 });
 
 export type LatestOptions = z.infer<typeof latestQuery> & { projectId: number; viewerId: number };
 
 /**
- * Ce qui rend un média visible pour l'appelant.
+ * What makes a media visible to the caller.
  *
- * `published=false` ouvre les brouillons — mais ceux de l'appelant seulement : dans tout
- * le produit, un média non publié n'appartient qu'à celui qui l'a déposé (cf.
- * `MediaService.getUrl`). Sans ce filtre, un membre du projet lirait le travail en cours
- * de ses collègues, URL de téléchargement comprise.
+ * `published=false` opens drafts, but only the caller's own: across the product an unpublished
+ * media belongs only to whoever uploaded it (see `MediaService.getUrl`). Without this filter a
+ * project member would read their colleagues' work in progress, download URLs included.
  */
 const mediaFilter = (opts: { published: boolean; viewerId: number }): Prisma.MediaObjectWhereInput =>
   opts.published
@@ -61,14 +60,14 @@ const mediaFilter = (opts: { published: boolean; viewerId: number }): Prisma.Med
 const parentFilter = (target: LatestTarget): Prisma.VersionWhereInput => {
   if ('taskId' in target) return { taskId: target.taskId };
   if ('shotId' in target) return { task: { shotId: target.shotId } };
-  // Un asset porte des versions par ses tâches, et parfois en direct (héritage).
+  // An asset carries versions through its tasks, and sometimes directly (legacy).
   return { OR: [{ task: { assetId: target.assetId } }, { assetId: target.assetId }] };
 };
 
 /**
- * Élit la version. On ne charge que le strict nécessaire au classement — l'identifiant, la
- * date et l'étape — puis on relit la seule gagnante : une tâche de production peut porter
- * cinquante versions, il n'y a aucune raison de les rapatrier entières.
+ * Elects the version. Only what the ranking needs is loaded (identifier, date and step); then only
+ * the winner is re-read. A production task can hold fifty versions: there is no reason to fetch
+ * them all.
  */
 async function electVersionId(target: LatestTarget, opts: LatestOptions): Promise<number | null> {
   const rows = await prisma.version.findMany({
@@ -94,9 +93,9 @@ async function electVersionId(target: LatestTarget, opts: LatestOptions): Promis
 }
 
 /**
- * La version élue, telle que le contrat v1 la rend : ressource `version`, ses médias
- * visibles, et — sur demande — l'URL de chacun. Rien de plus qu'un `GET /versions/:id`
- * enrichi, pour qu'un client n'ait pas à apprendre une deuxième forme.
+ * The elected version, as the v1 contract returns it: a `version` resource, its visible media and,
+ * on request, each media's URL. Nothing more than an enriched `GET /versions/:id`, so a client does
+ * not have to learn a second shape.
  */
 export async function respondLatest(target: LatestTarget, opts: LatestOptions) {
   const versionId = await electVersionId(target, opts);
@@ -123,7 +122,7 @@ export async function respondLatest(target: LatestTarget, opts: LatestOptions) {
   return { version: { ...base, media } };
 }
 
-/** Relit la query typée (Express 5) et y joint le contexte manquant : projet et lecteur. */
+/** Re-reads the typed query (Express 5) and adds the missing context: project and reader. */
 export const latestOptions = (req: Request, projectId: number): LatestOptions => ({
   ...latestQuery.parse(req.query),
   projectId,

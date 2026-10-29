@@ -3,9 +3,9 @@
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
 
-// Fonctions pures testées : on neutralise les dépendances env/DB des imports. Le scan du
-// bucket et la table Project sont doublés — ce qui nous intéresse ici, ce sont les
-// opérations (combien de balayages, combien d'objets retenus), pas des octets réels.
+// Pure functions under test: env/DB dependencies of the imports are stubbed out. The bucket scan and
+// the Project table are doubled: what matters here is the operations (how many sweeps, how many objects
+// retained), not real bytes.
 const mocks = vi.hoisted(() => ({
   iterateObjects: vi.fn<() => AsyncIterable<{ key: string; size: number }>>(),
   findMany: vi.fn<() => Promise<{ id: number; slug: string; name: string; deletedAt: Date | null }[]>>(),
@@ -24,21 +24,21 @@ import {
 } from './AdminStorageService';
 
 describe('AdminStorageService — classifyKey', () => {
-  it('classe les originaux avec leur slug de projet', () => {
+  it('classifies originals under their project slug', () => {
     expect(classifyKey('projects/demo-film/SQ010-SH020/V01/42/plate.mov')).toEqual({
       category: 'originals',
       projectSlug: 'demo-film',
     });
   });
 
-  it('classe les dérivés avec leur sous-type', () => {
+  it('classifies derivatives under their subtype', () => {
     expect(classifyKey('derived/42/hls/master.m3u8')).toEqual({ category: 'derived', sub: 'hls' });
     expect(classifyKey('derived/42/thumbnail.webp')).toEqual({ category: 'derived', sub: 'thumbnails' });
     expect(classifyKey('derived/42/model.glb')).toEqual({ category: 'derived', sub: 'glb' });
     expect(classifyKey('derived/42/splat-mask.bin')).toEqual({ category: 'derived', sub: 'splat-edits' });
   });
 
-  it('classe les bibliothèques studio, avatars et quarantaine', () => {
+  it('classifies studio libraries, avatars and quarantine', () => {
     expect(classifyKey('studio/hdris/abc.exr')).toEqual({ category: 'studio', sub: 'hdris' });
     expect(classifyKey('studio/ocio/abc.ocio')).toEqual({ category: 'studio', sub: 'ocio' });
     expect(classifyKey('avatars/7.png')).toEqual({ category: 'avatars' });
@@ -46,25 +46,25 @@ describe('AdminStorageService — classifyKey', () => {
     expect(classifyKey('comments/attachments/3/note.webm')).toEqual({ category: 'comments' });
   });
 
-  it('range l’inconnu dans other', () => {
+  it('puts unknown keys under other', () => {
     expect(classifyKey('tmp/whatever.bin').category).toBe('other');
   });
 });
 
 describe('AdminStorageService — derivedSubtype', () => {
-  it('reconnaît chaque dérivé du worker FFmpeg', () => {
+  it('recognises each derivative produced by the FFmpeg worker', () => {
     expect(derivedSubtype('proxy.mp4')).toBe('proxies');
     expect(derivedSubtype('proxy-trim.mp4')).toBe('proxies');
     expect(derivedSubtype('client.mp4')).toBe('client');
     expect(derivedSubtype('timeline-sprite.jpg')).toBe('sprites');
     expect(derivedSubtype('reference-uuid.png')).toBe('references');
-    expect(derivedSubtype('reference.png')).toBe('references'); // référence unique legacy
+    expect(derivedSubtype('reference.png')).toBe('references'); // legacy single reference
     expect(derivedSubtype('inconnu.dat')).toBe('other');
   });
 });
 
 describe('AdminStorageService — aggregateObjects', () => {
-  it('agrège totaux, catégories, sous-types et projets triés par poids', () => {
+  it('aggregates totals, categories, subtypes and projects sorted by weight', () => {
     const report = aggregateObjects([
       { key: 'projects/alpha/sh/V01/1/a.mov', size: 100 },
       { key: 'projects/alpha/sh/V01/2/b.mov', size: 50 },
@@ -86,21 +86,21 @@ describe('AdminStorageService — aggregateObjects', () => {
     ]);
   });
 
-  it('rend un rapport vide sans objet', () => {
+  it('returns an empty report for no objects', () => {
     const report = aggregateObjects([]);
     expect(report.totalObjects).toBe(0);
     expect(report.projects).toEqual([]);
   });
 });
 
-// ── Scan du bucket : coût en objets retenus et en balayages ───────────────────
+// ── Bucket scan: cost in retained objects and in sweeps ──────────────────────
 
 /**
- * Générateur qui **réutilise un seul objet** pour tous les éléments rendus. C'est la sonde
- * du coût mémoire : un consommateur qui agrège au fil de l'eau lit chaque valeur avant la
- * suivante et rend le bon total ; un consommateur qui empile les objets dans un tableau se
- * retrouve avec N références vers la même case, donc N fois le dernier objet. Le test
- * échoue donc tant que `storageReport` matérialise le bucket (ce qu'il faisait).
+ * Generator that **reuses a single object** for all yielded items. This is the probe for memory cost:
+ * a consumer that aggregates as it goes reads each value before the next and returns the right total;
+ * a consumer that stacks the objects in an array ends up with N references to the same slot, so the
+ * last object N times. The test therefore fails as long as `storageReport` materializes the bucket
+ * (which it used to do).
  */
 async function* recycledScan(objects: { key: string; size: number }[]) {
   const buffer = { key: '', size: 0 };
@@ -126,9 +126,9 @@ afterEach(() => {
 });
 
 describe('AdminStorageService — aggregateObjectsStream', () => {
-  it('ne retient aucun objet : le flux est agrégé au fil de l’eau', async () => {
+  it('retains no object: the stream is aggregated as it goes', async () => {
     const streamed = await aggregateObjectsStream(recycledScan(BUCKET));
-    // Référence : l'agrégat de la liste matérialisée, inchangé depuis toujours.
+    // Reference: the aggregate of the materialized list, unchanged since always.
     expect(streamed).toEqual(aggregateObjects(BUCKET));
     expect(streamed.totalBytes).toBe(612);
   });
@@ -137,7 +137,7 @@ describe('AdminStorageService — aggregateObjectsStream', () => {
 describe('AdminStorageService — storageReport', () => {
   const project = { id: 7, slug: 'alpha', name: 'Alpha', deletedAt: null };
 
-  it('agrège sans matérialiser le bucket et croise les projets connus', async () => {
+  it('aggregates without materializing the bucket and cross-references known projects', async () => {
     mocks.iterateObjects.mockImplementation(() => recycledScan(BUCKET));
     mocks.findMany.mockResolvedValue([project]);
     const report = await storageReport();
@@ -149,7 +149,7 @@ describe('AdminStorageService — storageReport', () => {
     ]);
   });
 
-  it('trois ouvertures concurrentes de l’écran = un seul balayage', async () => {
+  it('three concurrent openings of the screen = a single sweep', async () => {
     mocks.iterateObjects.mockImplementation(() => recycledScan(BUCKET));
     mocks.findMany.mockResolvedValue([project]);
     const [a, b, c] = await Promise.all([storageReport(), storageReport(), storageReport()]);
@@ -158,7 +158,7 @@ describe('AdminStorageService — storageReport', () => {
     expect(b).toBe(c);
   });
 
-  it('un F5 dans la minute relit la mémoïsation, au-delà relance le balayage', async () => {
+  it('a refresh within the minute reads the memoized result, beyond that it re-sweeps', async () => {
     vi.useFakeTimers();
     mocks.iterateObjects.mockImplementation(() => recycledScan(BUCKET));
     mocks.findMany.mockResolvedValue([project]);
@@ -170,7 +170,7 @@ describe('AdminStorageService — storageReport', () => {
     expect(mocks.iterateObjects).toHaveBeenCalledTimes(2);
   });
 
-  it('un balayage en échec n’est pas mémoïsé : la tentative suivante rebalaye', async () => {
+  it('a failed sweep is not memoized: the next attempt sweeps again', async () => {
     mocks.iterateObjects.mockImplementation(() => {
       throw new Error('MinIO injoignable');
     });

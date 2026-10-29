@@ -6,13 +6,13 @@ import { badRequest, notFound } from '../lib/errors';
 import { storage, StorageService } from './StorageService';
 
 /**
- * Vignette choisie à la main pour une séquence, un plan ou un asset (C3).
+ * Thumbnail chosen by hand for a sequence, a shot or an asset (C3).
  *
- * La colonne `thumbnailKey` existait, le PATCH l'acceptait, et pourtant aucune entité n'a
- * jamais pu porter d'image : rien dans l'application ne savait produire la clé. Le dépôt
- * se fait donc comme celui d'un avatar — une URL présignée, puis l'enregistrement de la
- * clé — et la clé est reconstruite ici plutôt que reçue du client, pour qu'un appelant ne
- * puisse pas faire pointer une entité vers un objet quelconque du bucket.
+ * The `thumbnailKey` column existed, the PATCH accepted it, and yet no entity had ever been able to carry an
+ * image: nothing in the application knew how to produce the key. The upload
+ * therefore works like an avatar's — a presigned URL, then the recording of the key — and the key is rebuilt
+ * here rather than received from the client, so that a caller cannot point an
+ * entity at any object in the bucket.
  */
 
 export type ThumbnailHolder = 'sequence' | 'shot' | 'asset';
@@ -24,7 +24,7 @@ const EXTENSIONS: Record<string, string> = {
   'image/webp': '.webp',
 };
 
-/** Le projet qui porte l'entité — c'est lui qui décide de l'accès. */
+/** The project carrying the entity — it is that which decides access. */
 export async function resolveProject(holder: ThumbnailHolder, id: number): Promise<number> {
   if (holder === 'sequence') {
     const row = await prisma.sequence.findFirst({
@@ -44,7 +44,7 @@ export async function resolveProject(holder: ThumbnailHolder, id: number): Promi
   return row.projectId;
 }
 
-/** URL de dépôt à durée courte + clé à renvoyer ensuite. */
+/** Short-lived upload URL + key to return afterwards. */
 export async function presign(holder: ThumbnailHolder, id: number, contentType: string) {
   const ext = EXTENSIONS[contentType];
   if (!ext) throw badRequest('Unsupported image type', 'BAD_CONTENT_TYPE');
@@ -54,19 +54,19 @@ export async function presign(holder: ThumbnailHolder, id: number, contentType: 
 }
 
 /**
- * Enregistre la vignette. `null` la retire — l'entité retombe alors sur la miniature du
- * premier média publié, comme avant.
+ * Records the thumbnail. `null` removes it — the entity then falls back on the thumbnail of the first
+ * published media, as before.
  */
 export async function set(holder: ThumbnailHolder, id: number, key: string | null) {
-  // La clé doit désigner l'entité visée : sans ce contrôle, un PATCH suffirait à afficher
-  // n'importe quel objet du bucket, y compris le média d'un projet auquel on n'a pas accès.
+  // The key must designate the targeted entity: without this check, a PATCH would suffice to display any
+  // object in the bucket, including the media of a project one has no access to.
   if (key !== null) {
     const prefix = `entity-thumbs/${holder}/${id}.`;
     if (!key.startsWith(prefix)) throw badRequest('Thumbnail key does not match the entity', 'BAD_KEY');
-    // Le navigateur vient de déposer l'image directement dans MinIO, sous une clé qui ne
-    // dépend que de l'entité et de l'extension : remplacer une vignette réécrit donc le
-    // même objet. Il faut oublier l'URL mémorisée, sinon les cartes continueraient de
-    // servir l'ancienne image depuis le cache navigateur (URL inchangée).
+    // The browser has just uploaded the image directly into MinIO, under a key that depends only on the
+    // entity and the extension: replacing a thumbnail therefore rewrites the same
+    // object. The memoized URL must be forgotten, otherwise the cards would keep serving the old image from
+    // the browser cache (URL unchanged).
     storage.forgetPresignedUrl(key);
   }
   const data = { thumbnailKey: key };

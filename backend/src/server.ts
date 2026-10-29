@@ -16,68 +16,65 @@ import { logger } from './lib/logger';
 import { isLoopbackEndpoint } from './lib/publicEndpoint';
 
 /**
- * Process API.
+ * API process.
  *
- * Les trois rendez-vous périodiques (digest, rapport hebdomadaire, purge) ne sont plus
- * des `setInterval` : ils sont posés en file répétable (`lib/maintenanceSchedule`) et
- * exécutés par le worker. L'API reste l'endroit qui les **planifie**, parce que c'est
- * elle qui porte `DIGEST_HOUR`.
+ * The three periodic jobs (digest, weekly report, purge) are no longer `setInterval` calls: they are
+ * queued as repeatable jobs (`lib/maintenanceSchedule`) and executed by the worker. The API remains
+ * where they are **scheduled**, because it is the one holding `DIGEST_HOUR`.
  */
 
 async function main(): Promise<void> {
-  // S'assure que le bucket MinIO existe avant d'accepter du trafic.
+  // Ensure the MinIO bucket exists before accepting traffic.
   await storage.ensureBucket();
 
   const app = createApp();
   const server = http.createServer(app);
   const io = initSocket(server);
 
-  // Entretien périodique : mêmes heures qu'avant, mais en file (survit au redémarrage,
-  // ne part qu'une fois, visible dans le tableau de bord des files).
+  // Periodic maintenance: same hours as before, but queued (survives restarts, runs only once, visible
+  // in the queue dashboard).
   await scheduleMaintenanceJobs(env.DIGEST_HOUR).catch((err: unknown) => {
     logger.error({ err }, '[maintenance] pose des travaux périodiques impossible');
   });
 
-  // Réconciliation au démarrage : les médias figés en PROCESSING par un worker tué
-  // n'ont plus de job vivant. Différée pour laisser le worker se connecter à la file et
-  // éviter tout faux positif. Le rattrapage courant, lui, ne dépend plus de ce démarrage :
-  // `runPurge` (maintenance.worker) rejoue le balayage à chaque passe d'entretien — c'est
-  // le worker qui se fait tuer, pas l'API, et son redémarrage ne passait ici jamais.
+  // Startup reconciliation: media left in PROCESSING by a killed worker no longer have a live job.
+  // Deferred so the worker can connect to the queue first, avoiding false positives. The ongoing
+  // catch-up no longer depends on this startup: `runPurge` (maintenance.worker) replays the sweep on
+  // every maintenance pass. It is the worker that gets killed, not the API, and its restart never ran
+  // this code.
   setTimeout(() => {
     void reconcileStuckMedia().catch((err: unknown) => {
       logger.error({ err }, '[reconcile] balayage des médias figés impossible');
     });
   }, RECONCILE_BOOT_DELAY_MS).unref();
 
-  // La dérogation ShotGrid ouvre des adresses normalement refusées (HTTP, réseau
-  // privé) : si elle est posée, on veut la voir à chaque démarrage, pas la découvrir
-  // le jour d'un incident.
+  // The ShotGrid exception opens addresses normally refused (HTTP, private network): if it is set, we
+  // want to see it on every startup, not discover it on the day of an incident.
   if (env.SHOTGRID_INSECURE_HOSTS)
     logger.warn(
       { hosts: env.SHOTGRID_INSECURE_HOSTS },
       '⚠️  SHOTGRID_INSECURE_HOSTS actif : ces hôtes ShotGrid échappent au contrôle HTTPS/réseau privé. À réserver au simulateur de développement.',
     );
 
-  // Les URL présignées sont fabriquées pour le NAVIGATEUR, pas pour le serveur : laissée sur
-  // une adresse de bouclage, chacune désigne le poste du visiteur, et tout upload part dans
-  // le vide dès qu'on ouvre ReView depuis une autre machine. L'échec est silencieux et
-  // n'arrive qu'au premier fichier — d'où cet avertissement au démarrage. `install.sh` pose
-  // la bonne valeur ; une stack montée à la main ne le fait pas.
+  // Presigned URLs are built for the BROWSER, not for the server: left on a loopback address, each one
+  // points at the visitor's own machine, and any upload goes nowhere as soon as ReView is opened from
+  // another machine. The failure is silent and only shows on the first file, hence this startup
+  // warning. `install.sh` sets the right value; a stack assembled by hand does not.
   if (isLoopbackEndpoint(env.S3_PUBLIC_ENDPOINT ?? env.S3_ENDPOINT))
     logger.warn(
       { S3_PUBLIC_ENDPOINT: env.S3_PUBLIC_ENDPOINT ?? env.S3_ENDPOINT },
       "⚠️  S3_PUBLIC_ENDPOINT désigne une adresse de bouclage : les envois de médias ne marcheront que depuis cette machine. Pour un accès réseau, y mettre l'adresse de l'hôte (et exposer MinIO avec MINIO_BIND=0.0.0.0), comme le fait scripts/install.sh.",
     );
 
-  // Arrêt propre : socket.io ferme le serveur HTTP qu'il enveloppe (clients prévenus),
-  // puis les files et la base coupent leurs connexions. Sans cela, SIGTERM laissait les
-  // connexions ouvertes jusqu'au SIGKILL de docker dix secondes plus tard.
+  // Clean shutdown: socket.io closes the HTTP server it wraps (clients notified), then the queues and
+  // the database close their connections. Without this, SIGTERM left connections open until docker's
+  // SIGKILL ten seconds later.
   registerShutdownTask({
     name: 'http+socket.io',
     phase: SHUTDOWN_PHASE.STOP_INTAKE,
     run: async () => {
-      // Les connexions keep-alive inactives retiendraient la fermeture ; celles qui
-      // servent une requête sont laissées finir jusqu'au délai de grâce.
+      // Idle keep-alive connections would hold up the close; those serving a request are left to finish
+      // within the grace period.
       server.closeIdleConnections();
       await io.close();
     },

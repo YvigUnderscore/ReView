@@ -14,27 +14,27 @@ import {
 } from '../lib/statusFamily';
 
 /**
- * Pilotage de production (C6) — quatre questions, et rien d'autre.
+ * Production steering (C6): four questions, and nothing else.
  *
- *   1. où en est le projet — séquences × départements ;
- *   2. qu'est-ce qui est en retard ou bloqué ;
- *   3. qui fait quoi ;
- *   4. à quel rythme, et pour quelle fin projetée.
+ *   1. where the project stands — sequences x departments;
+ *   2. what is late or blocked;
+ *   3. who does what;
+ *   4. at what pace, and to what projected end.
  *
- * Deux règles gouvernent l'implémentation.
+ * Two rules govern the implementation.
  *
- * D'abord, **la base compte**. La vue chargeait toutes les tâches du projet (~10 000 à la
- * cible) et tous les médias publiés de la fenêtre pour les compter en JavaScript ; elle ne
- * lit plus que des agrégats — une ligne par croisement séquence × département × statut, et
- * au plus 150 tâches nominatives pour les trois listes d'attention.
+ * First, **the database counts**. The view used to load every task of the project (about 10,000 at target)
+ * and all published media of the window to count them in JavaScript; it now only reads
+ * aggregates — one row per sequence x department x status intersection, and at most 150 named tasks for the
+ * three attention lists.
  *
- * Ensuite, **le statut lu est celui du studio**. Les familles se déduisent de
- * `PipelineStatus` (`isDone`, `isInactive`, `legacyStatus`) et retombent sur l'enum figé
- * quand aucun statut personnalisable n'est posé — cf. `lib/statusFamily`. Un plan « omis »
- * ne pèse plus sur les jauges, un plan « fin » y compte enfin comme terminé.
+ * Then, **the status read is the studio's**. The families are derived from `PipelineStatus` (`isDone`,
+ * `isInactive`, `legacyStatus`) and fall back on the frozen enum when no customizable
+ * status is set — see `lib/statusFamily`. An "omitted" shot no longer weighs on the gauges; an "end" shot
+ * finally counts as done.
  *
- * Les fonctions de calcul restent pures et testées ; seules la lecture en base et
- * l'assemblage vivent dans `getOverview`.
+ * The computation functions remain pure and tested; only the database read and the assembly live in
+ * `getOverview`.
  */
 
 export type { Family };
@@ -48,9 +48,9 @@ export const EMPTY_CELL: Record<Family, number> = {
 };
 
 /**
- * Ce qu'une jauge lit d'une ligne : son statut, sa famille si la base l'a déjà résolue, et
- * le nombre de tâches qu'elle représente. Une tâche vaut une ligne de compte 1 — c'est ce
- * qui permet aux mêmes fonctions de servir aux agrégats SQL et aux listes nominatives.
+ * What a gauge reads from a row: its status, its family if the database has already resolved it, and the
+ * number of tasks it represents. A task is worth one row of count 1 — this is what
+ * lets the same functions serve both the SQL aggregates and the named lists.
  */
 interface CountedRow {
   status: TaskStatus;
@@ -61,7 +61,7 @@ interface CountedRow {
 const familyOfRow = (row: CountedRow): FamilyOrInactive => row.family ?? FAMILY_OF_ENUM[row.status];
 const countOf = (row: CountedRow): number => row.count ?? 1;
 
-/** Une tâche, réduite à ce dont le pilotage a besoin. */
+/** A task, reduced to what steering needs. */
 export interface ProductionTask extends CountedRow {
   id: number;
   name: string;
@@ -81,18 +81,18 @@ export interface MatrixCell extends Record<Family, number> {
   total: number;
 }
 
-/** Une case du tableau croisé, avant repliage : le croisement et son compte. */
+/** A cell of the cross-tab, before folding: the intersection and its count. */
 export interface MatrixRow extends CountedRow {
   sequenceId: number | null;
   department: string | null;
 }
 
-/** Tableau croisé séquences × départements, en comptes par famille de statut. */
+/** Sequences x departments cross-tab, in counts per status family. */
 export function buildMatrix(rows: MatrixRow[]): MatrixCell[] {
   const cells = new Map<string, MatrixCell>();
   for (const row of rows) {
     const family = familyOfRow(row);
-    // Ni à faire, ni fait : un statut inactif ne pèse sur aucune jauge d'avancement.
+    // Neither to do nor done: an inactive status weighs on no progress gauge.
     if (family === 'inactive') continue;
     const key = `${row.sequenceId ?? 'none'}::${row.department ?? 'none'}`;
     let cell = cells.get(key);
@@ -108,19 +108,18 @@ export function buildMatrix(rows: MatrixRow[]): MatrixCell[] {
 }
 
 /**
- * Combien de tâches demandent une décision — les TOTAUX, pas la longueur des listes.
+ * How many tasks require a decision — the TOTALS, not the length of the lists.
  *
- * Les tuiles affichaient `.length` de listes plafonnées à cinquante : un projet avec trois
- * cents tâches en retard annonçait « 50 ». Et le badge « ce qui bloque » sommait les trois
- * nombres, si bien qu'une tâche à la fois en retard ET non assignée comptait deux fois.
- * `blocking` est donc compté en base sur l'UNION des trois conditions — dédoublonnée par
- * construction, et jamais égale à la somme.
+ * The tiles displayed `.length` of lists capped at fifty: a project with three hundred late tasks announced
+ * "50". And the "what blocks" badge summed the three numbers, so a task both late AND
+ * unassigned was counted twice. `blocking` is therefore counted in the database over the UNION of the three
+ * conditions — de-duplicated by construction, and never equal to the sum.
  */
 export interface AttentionTotals {
   overdue: number;
   unassigned: number;
   waitingReview: number;
-  /** Tâches distinctes concernées par au moins une des trois conditions. */
+  /** Distinct tasks concerned by at least one of the three conditions. */
   blocking: number;
 }
 
@@ -129,17 +128,17 @@ export interface Attention {
   unassigned: ProductionTask[];
   waitingReview: ProductionTask[];
   totals: AttentionTotals;
-  /** Plafond appliqué aux trois listes : au-delà, lire les totaux. */
+  /** Cap applied to the three lists: beyond it, read the totals. */
   limit: number;
 }
 
-/** Les trois listes seules, sans les totaux que seule la base sait compter. */
+/** The three lists alone, without the totals that only the database can count. */
 export type AttentionLists = Pick<Attention, 'overdue' | 'unassigned' | 'waitingReview'>;
 
 /**
- * Ce qui demande une décision. Une tâche terminée n'est jamais « en retard » : sa date est
- * passée, mais le travail est fait — la signaler noierait ce qui compte vraiment. Une
- * tâche inactive (omise, sans objet) n'attend rien de personne et disparaît de même.
+ * What requires a decision. A finished task is never "late": its date has passed, but the work is done —
+ * flagging it would drown what really matters. An inactive task (omitted, not applicable) expects nothing
+ * from anyone and likewise disappears.
  */
 export function findAttention(tasks: ProductionTask[], now: Date, limit = 50): AttentionLists {
   const open = tasks.filter((t) => {
@@ -175,24 +174,24 @@ export interface WorkloadRow {
   total: number;
 }
 
-/** Une ligne de charge avant repliage : la personne, son statut, son compte. */
+/** A load row before folding: the person, their status, their count. */
 export interface WorkloadInput extends CountedRow {
   assigneeId: number | null;
   assigneeName: string | null;
   dueDate?: Date | null;
-  /** Retards déjà comptés en base ; à défaut, déduits de `dueDate`. */
+  /** Delays already counted in the database; otherwise deduced from `dueDate`. */
   overdue?: number;
 }
 
 /**
- * Charge par personne. L'assigné est transporté par l'API depuis toujours et n'était
- * affiché nulle part : impossible de voir qui portait quoi.
+ * Load per person. The assignee has always been carried by the API but was displayed nowhere: it was
+ * impossible to see who carried what.
  */
 export function buildWorkload(rows: WorkloadInput[], now: Date): WorkloadRow[] {
   const out = new Map<number | null, WorkloadRow>();
   for (const input of rows) {
     const family = familyOfRow(input);
-    // La charge, c'est ce qui reste à faire — ni le travail fait, ni ce qui est hors jeu.
+    // The load is what remains to be done — neither the work done nor what is out of play.
     if (family === 'done' || family === 'inactive') continue;
     let row = out.get(input.assigneeId);
     if (!row) {
@@ -214,8 +213,8 @@ export function buildWorkload(rows: WorkloadInput[], now: Date): WorkloadRow[] {
     row.overdue +=
       input.overdue ?? (input.dueDate != null && input.dueDate.getTime() < now.getTime() ? n : 0);
   }
-  // Les plus chargés d'abord ; les tâches sans assigné ferment la marche, quel qu'en soit
-  // le nombre — c'est un manque à combler, pas une personne à comparer aux autres.
+  // The most loaded first; tasks with no assignee close the march, whatever their number — it is a gap to
+  // fill, not a person to compare with the others.
   return [...out.values()].sort((a, b) => {
     if ((a.assigneeId === null) !== (b.assigneeId === null)) return a.assigneeId === null ? 1 : -1;
     return b.total - a.total;
@@ -223,23 +222,23 @@ export function buildWorkload(rows: WorkloadInput[], now: Date): WorkloadRow[] {
 }
 
 /**
- * Un point de rythme hebdomadaire.
+ * A weekly pace point.
  *
- * L'unité est portée par la SÉRIE, pas par le point : `pace` compte des tâches,
- * `delivery` des médias. C'est tout le correctif de la cadence — la projection divisait un
- * reste-à-faire en tâches par un rythme en médias publiés, et annonçait une fin de projet
- * en 2028. Deux séries nommées, deux unités déclarées, aucune division entre les deux.
+ * The unit is carried by the SERIES, not by the point: `pace` counts tasks, `delivery` counts media. That is
+ * the whole fix of the pace — the projection divided a remaining amount in tasks
+ * by a rate in published media, and announced a project end in 2028. Two named series, two declared units, no
+ * division between the two.
  */
 export interface WeekPoint {
-  /** Lundi de la semaine, en ISO court (AAAA-MM-JJ). */
+  /** Monday of the week, in short ISO (YYYY-MM-DD). */
   weekStart: string;
   count: number;
 }
 
-/** Lundi de la semaine contenant `date`, à minuit UTC. */
+/** Monday of the week containing `date`, at midnight UTC. */
 export function weekStartOf(date: Date): Date {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  // getUTCDay : 0 = dimanche. On ramène au lundi précédent.
+  // getUTCDay: 0 = Sunday. We bring it back to the previous Monday.
   const shift = (d.getUTCDay() + 6) % 7;
   d.setUTCDate(d.getUTCDate() - shift);
   return d;
@@ -247,7 +246,7 @@ export function weekStartOf(date: Date): Date {
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
-/** Série hebdomadaire sur la fenêtre demandée, semaines vides comprises. */
+/** Weekly series over the requested window, empty weeks included. */
 export function buildPace(counts: WeekPoint[], now: Date, weeks: number): WeekPoint[] {
   const start = weekStartOf(now);
   const points: WeekPoint[] = [];
@@ -265,39 +264,38 @@ export function buildPace(counts: WeekPoint[], now: Date, weeks: number): WeekPo
 }
 
 /**
- * Pourquoi il n'y a pas de date projetée.
+ * Why there is no projected date.
  *
- * Une projection absente doit dire sa raison, sinon l'écran ne peut pas choisir entre « la
- * production est finie » (bonne nouvelle) et « on ne sait pas » (à ne surtout pas afficher
- * comme une date).
+ * An absent projection must state its reason, otherwise the screen cannot choose between "the production is
+ * finished" (good news) and "we do not know" (which must absolutely not be shown
+ * as a date).
  */
 export type ProjectionUnavailable =
-  /** Tout est fait : il n'y a rien à projeter. */
+  /** Everything is done: there is nothing to project. */
   | 'nothing-left'
-  /** Aucune tâche franchie sur la fenêtre : la vélocité observée est nulle. */
+  /** No task crossed over the window: the observed velocity is zero. */
   | 'no-velocity';
 
 export interface Projection {
-  /** Unité comptée — des TÂCHES, la maille de tout le reste de la page. */
+  /** Counted unit — TASKS, the grain of everything else on the page. */
   unit: 'tasks';
   done: number;
   total: number;
-  /** Tâches franchies par semaine sur la fenêtre, dans la même unité que `done`/`total`. */
+  /** Tasks crossed per week over the window, in the same unit as `done`/`total`. */
   perWeek: number;
-  /** Date projetée d'achèvement, `null` dès que `unavailable` est renseigné. */
+  /** Projected completion date, `null` as soon as `unavailable` is set. */
   projectedEnd: string | null;
   unavailable: ProjectionUnavailable | null;
 }
 
 /**
- * Projection de fin, au rythme observé — et dans la MÊME unité que le reste-à-faire.
+ * Projected end, at the observed pace — and in the SAME unit as the remaining work.
  *
- * Le reste-à-faire se compte en tâches (`total - done`, lus sur la matrice) ; le rythme
- * doit donc l'être aussi. Il n'existe aucune date de clôture de tâche en base : la seule
- * date de franchissement qu'on puisse citer est celle de la première approbation de
- * review (`queryPace`). C'est une mesure réelle, pas une estimation — mais elle ne
- * connaît que les tâches passées en review, d'où le rythme rendu à côté de la date : sans
- * lui, une date seule se lit comme un engagement.
+ * The remaining work is counted in tasks (`total - done`, read from the matrix); the pace must therefore be
+ * too. No task closing date exists in the database: the only crossing date that can be
+ * cited is that of the first review approval (`queryPace`). It is a real measure, not an estimate — but it
+ * only knows tasks passed through review, which is why the pace is returned next to the date:
+ * without it, a date alone would be read as a commitment.
  */
 export function projectEnd(done: number, total: number, points: WeekPoint[], now: Date): Projection {
   const crossed = points.reduce((n, p) => n + p.count, 0);
@@ -317,19 +315,19 @@ export interface ProductionOverview {
   departments: string[];
   attention: Attention;
   workload: WorkloadRow[];
-  /** Vélocité, en TÂCHES franchies par semaine — la maille de `projection`. */
+  /** Velocity, in tasks CROSSED per week — the grain of `projection`. */
   pace: WeekPoint[];
-  /** Débit de sortie, en MÉDIAS publiés par semaine. Ne sert à aucune division. */
+  /** Output rate, in published MEDIA per week. Used for no division. */
   delivery: WeekPoint[];
   projection: Projection;
 }
 
-/** Plafond des trois listes d'attention ; les totaux, eux, sont comptés en base. */
+/** Cap of the three attention lists; the totals, for their part, are counted in the database. */
 export const ATTENTION_LIMIT = 50;
 
-// ── Lecture en base ───────────────────────────────────────────────────────────
+// ── Database reads ────────────────────────────────────────────────────────────
 
-/** Colonnes du statut personnalisable, telles qu'un agrégat les rend (nulles = absent). */
+/** Columns of the customizable status, as an aggregate returns them (null = absent). */
 interface StatusColumns {
   isDone: boolean | null;
   isInactive: boolean | null;
@@ -351,14 +349,14 @@ type WorkloadAggregate = StatusColumns & {
   overdue: number;
 };
 
-/** Résout la famille d'une ligne d'agrégat depuis ses colonnes de statut. */
+/** Resolves the family of an aggregate row from its status columns. */
 const familyOfAggregate = (row: StatusColumns & { status: TaskStatus }): FamilyOrInactive =>
   familyOf(row.status, statusRefOf(row));
 
-/** Une tâche appartient au projet par son plan OU par son asset — jamais les deux. */
+/** A task belongs to the project through its shot OR its asset — never both. */
 const taskInProject = (projectId: number): Prisma.TaskWhereInput => ({
-  // Le travail d'un élément masqué ne compte plus dans les statistiques de production :
-  // il fausserait l'avancement d'un projet avec des plans que personne ne voit.
+  // The work of a hidden item no longer counts in the production statistics: it would skew the progress of a
+  // project with shots that nobody sees.
   OR: [
     { shot: { projectId, deletedAt: null, hiddenAt: null } },
     { asset: { projectId, deletedAt: null, hiddenAt: null } },
@@ -394,11 +392,11 @@ const toProductionTask = (r: AttentionRow): ProductionTask => ({
 });
 
 /**
- * Les trois listes d'attention, bornées EN BASE.
+ * The three attention lists, bounded IN THE DATABASE.
  *
- * Chaque requête applique déjà le filtre, l'ordre et la limite de sa liste ; leur union
- * repasse ensuite par `findAttention`, qui la repartage à l'identique — une tâche absente
- * du haut de sa propre liste ne peut pas apparaître dans celle d'une autre.
+ * Each query already applies the filter, the order and the limit of its list; their union then goes back
+ * through `findAttention`, which re-splits it identically — a task absent from the top of its
+ * own list cannot appear in another's.
  */
 async function fetchAttentionCandidates(projectId: number, now: Date, limit: number) {
   const base = { AND: [taskInProject(projectId), TASK_OPEN_FILTER] };
@@ -425,14 +423,14 @@ async function fetchAttentionCandidates(projectId: number, now: Date, limit: num
   ]);
   const byId = new Map<number, ProductionTask>();
   for (const row of [...overdue, ...unassigned, ...waitingReview]) byId.set(row.id, toProductionTask(row));
-  // Ordre stable (échéance, puis identifiant) : le partage suivant trie par échéance et
-  // conserve l'ordre d'entrée à égalité.
+  // Stable order (deadline, then identifier): the following split sorts by deadline and keeps the input order
+  // on ties.
   return [...byId.values()].sort(
     (a, b) => (a.dueDate?.getTime() ?? Infinity) - (b.dueDate?.getTime() ?? Infinity) || a.id - b.id,
   );
 }
 
-/** Tableau croisé compté par Postgres : une ligne par séquence × département × statut. */
+/** Cross-tab counted by Postgres: one row per sequence x department x status. */
 function queryMatrix(projectId: number): Promise<MatrixAggregate[]> {
   return prisma.$queryRaw<MatrixAggregate[]>`
     SELECT sh."sequenceId"        AS "sequenceId",
@@ -452,11 +450,11 @@ function queryMatrix(projectId: number): Promise<MatrixAggregate[]> {
 }
 
 /**
- * Charge comptée par Postgres : une ligne par personne × statut, retards compris.
+ * Load counted by Postgres: one row per person x status, delays included.
  *
- * Les dates voyagent en ISO puis sont castées en `timestamp` : les colonnes du schéma sont
- * des `TIMESTAMP(3)` sans fuseau, et comparer directement un paramètre `timestamptz` ferait
- * dépendre le résultat du fuseau de la session (les conteneurs tournent en Europe/Paris).
+ * Dates travel as ISO and are then cast to `timestamp`: the schema's columns are `TIMESTAMP(3)` without a
+ * time zone, and directly comparing a `timestamptz` parameter would make the result depend on the
+ * session's time zone (the containers run in Europe/Paris).
  */
 function queryWorkload(projectId: number, now: Date): Promise<WorkloadAggregate[]> {
   return prisma.$queryRaw<WorkloadAggregate[]>`
@@ -481,12 +479,11 @@ function queryWorkload(projectId: number, now: Date): Promise<WorkloadAggregate[
 }
 
 /**
- * Médias publiés par semaine ISO (lundi, UTC) — le débit de SORTIE du pipe, en médias.
+ * Media published per ISO week (Monday, UTC) — the pipe's OUTPUT rate, in media.
  *
- * Deux corrections de périmètre : la corbeille des parents était ignorée (seul `hiddenAt`
- * était vérifié, jamais `deletedAt` — les livraisons d'un plan supprimé gonflaient donc le
- * rythme), et un média encore en cours d'encodage comptait comme livré. Le reste du
- * service filtre les deux ; la cadence le fait maintenant aussi.
+ * Two scope corrections: the trash of the parents was ignored (only `hiddenAt` was checked, never `deletedAt`
+ * — the deliveries of a deleted shot therefore inflated the pace), and a media still being
+ * encoded counted as delivered. The rest of the service filters both; the pace now does too.
  */
 function queryDelivery(projectId: number, since: Date): Promise<WeekPoint[]> {
   return prisma.$queryRaw<WeekPoint[]>`
@@ -509,16 +506,15 @@ function queryDelivery(projectId: number, since: Date): Promise<WeekPoint[]> {
 }
 
 /**
- * Tâches franchissant leur PREMIÈRE approbation par semaine — la vélocité, en tâches.
+ * Tasks crossing their FIRST approval per week — the velocity, in tasks.
  *
- * C'est la seule date de franchissement que la base sache citer : aucune colonne ne dit
- * quand une tâche a été terminée (`updatedAt` bouge à chaque retouche, et un statut n'a pas
- * d'historique). La première approbation de review en est le témoin daté : elle existe, elle
- * est horodatée, elle se compte en tâches. `MIN` par tâche parce qu'un retake suivi d'une
- * seconde approbation ne fait pas franchir deux fois la ligne d'arrivée.
+ * It is the only crossing date the database can cite: no column says when a task was completed (`updatedAt`
+ * moves at each touch-up, and a status has no history). The first review approval is the dated
+ * witness: it exists, it is timestamped, it is counted in tasks. `MIN` per task because a retake followed by
+ * a second approval does not cross the finish line twice.
  *
- * Le filtre de projet est DANS la première CTE : sorti d'elle, l'agrégat parcourrait toutes
- * les décisions de l'instance avant d'en retenir un projet.
+ * The project filter is INSIDE the first CTE: outside it, the aggregate would scan all the instance's
+ * decisions before retaining a project.
  */
 function queryPace(projectId: number, since: Date): Promise<WeekPoint[]> {
   return prisma.$queryRaw<WeekPoint[]>`
@@ -542,11 +538,11 @@ function queryPace(projectId: number, since: Date): Promise<WeekPoint[]> {
 }
 
 /**
- * Les totaux réels des trois listes d'attention, plus le badge dédoublonné.
+ * The real totals of the three attention lists, plus the de-duplicated badge.
  *
- * Quatre `count` indexés plutôt qu'un agrégat brut : les trois familles se disent déjà en
- * filtres Prisma (`lib/statusFamily`), et les redire en SQL dupliquerait la seule
- * traduction statut → famille du serveur.
+ * Four indexed `count`s rather than a raw aggregate: the three families are already expressed as Prisma
+ * filters (`lib/statusFamily`), and restating them in SQL would duplicate the only
+ * status → family translation on the server.
  */
 async function countAttention(projectId: number, now: Date): Promise<AttentionTotals> {
   const base = [taskInProject(projectId), TASK_OPEN_FILTER];
@@ -563,7 +559,7 @@ async function countAttention(projectId: number, now: Date): Promise<AttentionTo
   return { overdue, unassigned, waitingReview, blocking };
 }
 
-/** Vue de pilotage complète d'un projet. `weeks` borne la fenêtre de rythme. */
+/** Full steering view of a project. `weeks` bounds the pace window. */
 export async function getOverview(
   projectId: number,
   weeks = 8,
@@ -607,16 +603,16 @@ export async function getOverview(
     now,
   );
   const pace = buildPace(paceRows, now, weeks);
-  // Avancement : la matrice porte déjà les comptes, statuts inactifs exclus.
+  // Progress: the matrix already carries the counts, inactive statuses excluded.
   const done = matrix.reduce((n, cell) => n + cell.done, 0);
   const total = matrix.reduce((n, cell) => n + cell.total, 0);
 
   return {
     matrix,
     sequences,
-    // Les départements dans l'ordre alphabétique, sans doublon ni valeur vide. Ils sont
-    // lus sur TOUTES les lignes, statuts inactifs compris : une colonne du tableau ne doit
-    // pas disparaître au motif que son seul travail restant a été mis de côté.
+    // Departments in alphabetical order, without duplicates or empty values. They are read from ALL rows,
+    // inactive statuses included: a column of the table must not disappear on the grounds
+    // that its only remaining work has been set aside.
     departments: [
       ...new Set(matrixRows.map((r) => r.department).filter((d): d is string => d !== null)),
     ].sort(),
@@ -624,7 +620,7 @@ export async function getOverview(
     workload,
     pace,
     delivery: buildPace(deliveryRows, now, weeks),
-    // Même unité des deux côtés de la division : des tâches / des tâches par semaine.
+    // Same unit on both sides of the division: tasks / tasks per week.
     projection: projectEnd(done, total, pace, now),
   };
 }

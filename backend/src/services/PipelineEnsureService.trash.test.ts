@@ -4,9 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Prisma, Role } from '@prisma/client';
 
-// Les ensures doivent rester rejouables même quand la contrainte SQL voit une entité
-// que la recherche préalable ignore (corbeille) ou qu'une requête concurrente vient
-// de créer. On mocke la base : seul le rattrapage de P2002 est sous test.
+// Ensures must remain replayable even when the SQL constraint sees an entity that the prior lookup ignores
+// (trash) or that a concurrent request has just created. The database is mocked: only the recovery from P2002
+// is under test.
 vi.mock('../lib/prisma', () => ({
   prisma: {
     sequence: { findFirst: vi.fn(), create: vi.fn() },
@@ -39,8 +39,8 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('ensureAsset — idempotent face à la corbeille et à la concurrence', () => {
-  it("renvoie l'asset existant sans créer (created: false)", async () => {
+describe('ensureAsset: idempotent in the face of the trash and of concurrency', () => {
+  it("returns the existing asset without creating it (created: false)", async () => {
     const existing = { id: 59, name: 'crag' };
     vi.mocked(prisma.asset.findFirst).mockResolvedValue(existing as never);
     const out = await ensureAsset(admin, 7, { name: 'crag' });
@@ -48,7 +48,7 @@ describe('ensureAsset — idempotent face à la corbeille et à la concurrence',
     expect(prisma.asset.create).not.toHaveBeenCalled();
   });
 
-  it('répond 409 ASSET_IN_TRASH quand le nom est retenu par un asset supprimé', async () => {
+  it('answers 409 ASSET_IN_TRASH when the name is held by a deleted asset', async () => {
     vi.mocked(prisma.asset.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.asset.create).mockRejectedValue(uniqueViolation());
     await expect(ensureAsset(admin, 7, { name: 'crag' })).rejects.toMatchObject({
@@ -58,7 +58,7 @@ describe('ensureAsset — idempotent face à la corbeille et à la concurrence',
     expect(emitToProject).not.toHaveBeenCalled();
   });
 
-  it("renvoie l'asset créé par une requête concurrente (created: false)", async () => {
+  it("returns the asset created by a concurrent request (created: false)", async () => {
     const winner = { id: 96, name: 'crag' };
     vi.mocked(prisma.asset.findFirst)
       .mockResolvedValueOnce(null)
@@ -69,15 +69,15 @@ describe('ensureAsset — idempotent face à la corbeille et à la concurrence',
     expect(emitToProject).not.toHaveBeenCalled();
   });
 
-  it('laisse passer les erreurs qui ne sont pas une violation d’unicité', async () => {
+  it('lets through errors that are not a uniqueness violation', async () => {
     vi.mocked(prisma.asset.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.asset.create).mockRejectedValue(new Error('connexion perdue'));
     await expect(ensureAsset(admin, 7, { name: 'crag' })).rejects.toThrow('connexion perdue');
   });
 });
 
-describe('ensureSequence — idempotent face à la corbeille et à la concurrence', () => {
-  it('répond 409 SEQUENCE_IN_TRASH quand le code est retenu par une séquence supprimée', async () => {
+describe('ensureSequence: idempotent in the face of the trash and of concurrency', () => {
+  it('answers 409 SEQUENCE_IN_TRASH when the code is held by a deleted sequence', async () => {
     vi.mocked(prisma.sequence.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.sequence.create).mockRejectedValue(uniqueViolation());
     await expect(ensureSequence(admin, 7, { code: 'SQ010' })).rejects.toMatchObject({
@@ -86,7 +86,7 @@ describe('ensureSequence — idempotent face à la corbeille et à la concurrenc
     });
   });
 
-  it('renvoie la séquence créée par une requête concurrente (created: false)', async () => {
+  it('returns the sequence created by a concurrent request (created: false)', async () => {
     const winner = { id: 4, code: 'SQ010' };
     vi.mocked(prisma.sequence.findFirst)
       .mockResolvedValueOnce(null)
@@ -97,12 +97,12 @@ describe('ensureSequence — idempotent face à la corbeille et à la concurrenc
   });
 });
 
-describe('ensureTask — idempotent face à la concurrence', () => {
-  // Le nom « main » ne laisse deviner aucun département : la résolution n'entre pas en jeu.
+describe('ensureTask: idempotent in the face of concurrency', () => {
+  // The name "main" gives no hint of any department: department resolution does not come into play.
   const task = { name: 'main' };
 
-  it('renvoie la tâche créée par une requête concurrente (created: false)', async () => {
-    // Deux publications simultanées d'une ferme de rendu : une seule tâche doit exister.
+  it('returns the task created by a concurrent request (created: false)', async () => {
+    // Two simultaneous publications from a render farm: only one task must exist.
     const winner = { id: 77, name: 'main' };
     vi.mocked(prisma.task.findFirst)
       .mockResolvedValueOnce(null)
@@ -113,7 +113,7 @@ describe('ensureTask — idempotent face à la concurrence', () => {
     expect(emitToProject).not.toHaveBeenCalled();
   });
 
-  it('répond 409 TASK_EXISTS quand la relecture ne retrouve rien', async () => {
+  it('answers 409 TASK_EXISTS when the re-read finds nothing', async () => {
     vi.mocked(prisma.task.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.task.create).mockRejectedValue(uniqueViolation());
     await expect(ensureTask(admin, 7, { shotId: 3 }, task)).rejects.toMatchObject({
@@ -122,19 +122,19 @@ describe('ensureTask — idempotent face à la concurrence', () => {
     });
   });
 
-  it('laisse passer les erreurs qui ne sont pas une violation d’unicité', async () => {
+  it('lets through errors that are not a uniqueness violation', async () => {
     vi.mocked(prisma.task.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.task.create).mockRejectedValue(new Error('connexion perdue'));
     await expect(ensureTask(admin, 7, { shotId: 3 }, task)).rejects.toThrow('connexion perdue');
   });
 });
 
-describe('ensureVersion — idempotent face à la corbeille et à la concurrence', () => {
+describe('ensureVersion: idempotent in the face of the trash and of concurrency', () => {
   const parent = { taskId: 5 };
 
-  it('recalcule le numéro plutôt que de rendre la version d’un collègue', async () => {
-    // Sans nom demandé, l'appelant veut LA SUIVANTE : lui rendre la V02 que l'autre
-    // publication vient de créer rattacherait son média au travail d'un collègue.
+  it('recomputes the number rather than returning a colleague\'s version', async () => {
+    // With no name requested, the caller wants THE NEXT ONE: returning the V02 that the other publication has
+    // just created would attach their media to a colleague's work.
     vi.mocked(prisma.version.findMany)
       .mockResolvedValueOnce([{ name: 'V01' }] as never)
       .mockResolvedValueOnce([{ name: 'V01' }, { name: 'V02' }] as never);
@@ -147,7 +147,7 @@ describe('ensureVersion — idempotent face à la corbeille et à la concurrence
     expect(names).toEqual(['V02', 'V03']);
   });
 
-  it('abandonne proprement si le numéro reste pris', async () => {
+  it('gives up cleanly if the number remains taken', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.version.create).mockRejectedValue(uniqueViolation());
     await expect(ensureVersion(admin, 7, parent)).rejects.toMatchObject({
@@ -157,7 +157,7 @@ describe('ensureVersion — idempotent face à la corbeille et à la concurrence
     expect(prisma.version.create).toHaveBeenCalledTimes(3);
   });
 
-  it('répond 409 VERSION_IN_TRASH quand le nom est retenu par une version supprimée', async () => {
+  it('answers 409 VERSION_IN_TRASH when the name is held by a deleted version', async () => {
     vi.mocked(prisma.version.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.version.create).mockRejectedValue(uniqueViolation());
     await expect(ensureVersion(admin, 7, parent, { name: 'V03' })).rejects.toMatchObject({
@@ -166,7 +166,7 @@ describe('ensureVersion — idempotent face à la corbeille et à la concurrence
     });
   });
 
-  it('rend la version créée par une requête concurrente quand la reprise est demandée', async () => {
+  it('returns the version created by a concurrent request when resumption is requested', async () => {
     const winner = { id: 12, name: 'V03' };
     vi.mocked(prisma.version.findFirst)
       .mockResolvedValueOnce(null)
@@ -177,7 +177,7 @@ describe('ensureVersion — idempotent face à la corbeille et à la concurrence
     expect(emitToProject).not.toHaveBeenCalled();
   });
 
-  it('refuse d’écraser la version d’une requête concurrente sans reprise explicite', async () => {
+  it('refuses to overwrite the version of a concurrent request without explicit resumption', async () => {
     vi.mocked(prisma.version.findFirst)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 12, name: 'V03' } as never);
@@ -188,8 +188,8 @@ describe('ensureVersion — idempotent face à la corbeille et à la concurrence
   });
 });
 
-describe('ensureShot — idempotent face à la corbeille et à la concurrence', () => {
-  it('répond 409 SHOT_IN_TRASH quand le code est retenu par un shot supprimé', async () => {
+describe('ensureShot: idempotent in the face of the trash and of concurrency', () => {
+  it('answers 409 SHOT_IN_TRASH when the code is held by a deleted shot', async () => {
     vi.mocked(prisma.sequence.findFirst).mockResolvedValue({ id: 4 } as never);
     vi.mocked(prisma.shot.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.shot.create).mockRejectedValue(uniqueViolation());
@@ -199,7 +199,7 @@ describe('ensureShot — idempotent face à la corbeille et à la concurrence', 
     });
   });
 
-  it('renvoie le shot créé par une requête concurrente (created: false)', async () => {
+  it('returns the shot created by a concurrent request (created: false)', async () => {
     const winner = { id: 8, code: 'SH0100' };
     vi.mocked(prisma.sequence.findFirst).mockResolvedValue({ id: 4 } as never);
     vi.mocked(prisma.shot.findFirst)

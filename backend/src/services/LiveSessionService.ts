@@ -14,24 +14,23 @@ import {
 } from '../lib/redis';
 
 /**
- * Salle de review live (33.B) — état **partagé** (Redis) des sessions synchronisées.
+ * Live review room (33.B) — **shared** state (Redis) of the synchronised sessions.
  *
- * Une session est identifiée par une clé `media:<id>` ou `playlist:<id>` ; le premier
- * arrivant devient pilote, la main se passe explicitement, le dernier départ ferme la
- * session. Le pilote peut nommer des **co-pilotes** : parmi eux, le « driver » effectif
- * (celui dont la lecture fait foi) est le dernier à avoir interagi. Le RBAC (accès
- * projet) est vérifié par la couche socket avant tout join.
+ * A session is identified by a key `media:<id>` or `playlist:<id>`; the first arrival becomes the pilot,
+ * control is handed over explicitly, and the last departure closes the
+ * session. The pilot may name **co-pilots**: among them, the effective "driver" (whose playback is
+ * authoritative) is the last to have interacted. The RBAC (project access)
+ * is checked by the socket layer before any join.
  *
- * L'état tenait dans une `Map` de process : une salle de dailies disparaissait à chaque
- * redémarrage du serveur, et se serait coupée en deux sur une seconde réplique. Il est
- * désormais dans Redis, sous **verrou par session** (lire-modifier-écrire concurrent),
- * chaque participant portant une échéance : une réplique tuée en pleine session ne laisse
- * pas ses participants dans la salle pour toujours.
+ * The state used to live in a process `Map`: a dailies room disappeared at each server restart, and would
+ * have split in two on a second replica. It now lives in Redis, under a
+ * **per-session lock** (concurrent read-modify-write), each participant carrying an expiry: a replica killed
+ * in the middle of a session does not leave its participants in the room
+ * for ever.
  *
- * Les lectures restent **synchrones** : elles interrogent un miroir local, rafraîchi à
- * chaque mutation locale, à chaque notification d'une autre réplique, et au battement de
- * cœur. `listLiveSessions` est appelé depuis une route, `canDriveLive` sur le chemin
- * chaud de `live:sync` — ni l'un ni l'autre ne peut se permettre un aller-retour Redis.
+ * Reads remain **synchronous**: they query a local mirror, refreshed at each local mutation, at each
+ * notification from another replica, and at the heartbeat. `listLiveSessions` is
+ * called from a route, `canDriveLive` on the hot path of `live:sync` — neither can afford a Redis round trip.
  */
 
 export interface LiveParticipant {
@@ -45,12 +44,12 @@ export interface LiveState {
   key: string;
   pilotId: number;
   coHostIds: number[];
-  /** Pilote ou co-pilote dont la diffusion fait foi (dernier à avoir interagi). */
+  /** Pilot or co-pilot whose broadcast is authoritative (last to have interacted). */
   driverId: number;
   participants: LiveParticipant[];
 }
 
-/** Cible résolue au join (RBAC) — permet de lister les sessions d'un projet (badges LIVE). */
+/** Target resolved at join (RBAC) — allows listing a project's sessions (LIVE badges). */
 export interface LiveSessionMeta {
   projectId: number;
   mediaId?: number;
@@ -58,14 +57,14 @@ export interface LiveSessionMeta {
   versionId?: number;
 }
 
-/** Session d'un projet vue de l'extérieur (badges sur review et cartes de version). */
+/** A project's session seen from outside (badges on the review and the version cards). */
 export interface LiveSessionSummary extends LiveSessionMeta {
   key: string;
   participantCount: number;
   pilot: LiveParticipant | null;
 }
 
-/** Participant stocké : identité, arrivée (ordre), échéance du bail. */
+/** Stored participant: identity, arrival (order), lease expiry. */
 interface StoredParticipant {
   p: LiveParticipant;
   j: number;
@@ -80,11 +79,11 @@ interface StoredSession {
   meta?: LiveSessionMeta;
 }
 
-/** Grâce avant le retrait effectif d'un participant déconnecté : un F5 garde son rôle. */
+/** Grace period before a disconnected participant is effectively removed: a page reload (F5) keeps its role. */
 export const LIVE_LEAVE_GRACE_MS = 10_000;
-/** Bail d'un participant : au-delà, la réplique qui le portait est présumée morte. */
+/** A participant's lease: beyond it, the replica carrying it is presumed dead. */
 export const LIVE_PARTICIPANT_TTL_MS = 90_000;
-/** Bail de la session : filet de dernier recours si l'index venait à mentir. */
+/** The session's lease: last-resort safety net in case the index were to lie. */
 const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 const LOCK_TTL_MS = 2_000;
 const LOCK_WAIT_MS = 600;
@@ -109,7 +108,7 @@ function warnRedis(err: unknown): void {
   logger.warn({ err }, '[live] Redis indisponible : salles live dégradées');
 }
 
-/** Clé valide : `media:<id>` ou `playlist:<id>`. Renvoie sa cible ou null. */
+/** Valid key: `media:<id>` or `playlist:<id>`. Returns its target, or null. */
 export const parseLiveKey = (key: unknown): { type: 'media' | 'playlist'; id: number } | null => {
   if (typeof key !== 'string') return null;
   const m = /^(media|playlist):(\d+)$/.exec(key);
@@ -127,12 +126,11 @@ const toState = (key: string, s: StoredSession): LiveState => ({
   participants: s.participants.map((p) => p.p),
 });
 
-// ── Logique pure (inchangée : c'est le comportement observable de la salle) ───
+// ── Pure logic (unchanged: this is the observable behaviour of the room) ─────
 
 /**
- * Retire un participant. Si le pilote part, la main passe au premier co-pilote sinon au
- * plus ancien participant restant ; la session disparaît quand elle se vide.
- * `changed: false` = l'utilisateur n'y était pas.
+ * Removes a participant. If the pilot leaves, control passes to the first co-pilot, otherwise to the oldest
+ * remaining participant; the session disappears when it empties. `changed: false` = the user was not there.
  */
 export function removeParticipant(
   s: StoredSession,
@@ -150,7 +148,7 @@ export function removeParticipant(
   return { changed: true, session: s };
 }
 
-/** Retire les participants dont le bail a expiré (réplique morte, onglet fantôme). */
+/** Removes the participants whose lease has expired (dead replica, ghost tab). */
 export function pruneParticipants(s: StoredSession, now: number): StoredSession | null {
   let session: StoredSession | null = s;
   for (const expired of s.participants.filter((p) => p.e <= now)) {
@@ -160,7 +158,7 @@ export function pruneParticipants(s: StoredSession, now: number): StoredSession 
   return session;
 }
 
-/** Lecture défensive : un enregistrement corrompu vaut « pas de session ». */
+/** Defensive reading: a corrupted record counts as "no session". */
 function readSession(raw: string | null): StoredSession | null {
   const s = parseJson<StoredSession>(raw);
   if (!s || !Array.isArray(s.participants) || typeof s.pilotId !== 'number') return null;
@@ -168,14 +166,14 @@ function readSession(raw: string | null): StoredSession | null {
   return s;
 }
 
-// ── Accès Redis ──────────────────────────────────────────────────────────────
+// ── Redis access ─────────────────────────────────────────────────────────────
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Verrou de session. Un lire-modifier-écrire non protégé perdrait un participant dès que
- * deux répliques touchent la même salle. À l'expiration de l'attente on continue sans
- * verrou : mieux vaut une course improbable qu'un `live:join` qui ne répond jamais.
+ * Session lock. An unprotected read-modify-write would lose a participant as soon as two replicas touch the
+ * same room. When the wait expires we carry on without the lock: better an
+ * improbable race than a `live:join` that never answers.
  */
 async function acquireLock(key: string): Promise<string | null> {
   const token = `${INSTANCE_ID}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`;
@@ -193,7 +191,7 @@ async function releaseLock(key: string, token: string): Promise<void> {
     const redis = getRedis();
     if ((await redis.call('GET', lockKey(key))) === token) await redis.call('DEL', lockKey(key));
   } catch {
-    /* le bail du verrou expire de lui-même */
+    /* the lock's lease expires by itself */
   }
 }
 
@@ -215,7 +213,7 @@ async function saveSession(key: string, session: StoredSession | null): Promise<
 
 type Mutation<T> = (session: StoredSession | null) => { session: StoredSession | null; result: T };
 
-/** Lire-modifier-écrire sous verrou, puis miroir local et notification des répliques. */
+/** Read-modify-write under lock, then local mirror and notification of the replicas. */
 async function withSession<T>(key: string, mutate: Mutation<T>, fallback: T): Promise<T> {
   ensureWiring();
   let token: string | null = null;
@@ -237,7 +235,7 @@ async function withSession<T>(key: string, mutate: Mutation<T>, fallback: T): Pr
   }
 }
 
-// ── Miroir de lecture ────────────────────────────────────────────────────────
+// ── Read mirror ──────────────────────────────────────────────────────────────
 
 function ensureWiring(): void {
   if (wired) return;
@@ -247,9 +245,9 @@ function ensureWiring(): void {
 }
 
 /**
- * Amorce la synchronisation au démarrage du serveur : les salles ouvertes ailleurs (ou
- * avant le redémarrage) doivent apparaître dans les badges LIVE sans attendre qu'un
- * client de cette réplique-ci rejoigne une session.
+ * Seeds the synchronisation at server start-up: the rooms opened elsewhere (or before the restart) must
+ * appear in the LIVE badges without waiting for a client of this replica to join
+ * a session.
  */
 export function startLiveSync(): void {
   ensureWiring();
@@ -267,7 +265,7 @@ async function reloadOne(key: string): Promise<void> {
   }
 }
 
-/** Réconciliation complète : sessions des autres répliques, baux échus, index menteur. */
+/** Full reconciliation: sessions of the other replicas, expired leases, lying index. */
 async function reloadAll(): Promise<void> {
   const redis = getRedis();
   const keys = redisStrings(await redis.call('SMEMBERS', INDEX_KEY));
@@ -328,12 +326,12 @@ function dropMembership(key: string, userId: number): void {
   if (set.size === 0) localMembership.delete(key);
 }
 
-// ── API publique ─────────────────────────────────────────────────────────────
+// ── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Rejoint (ou crée) la session ; le premier participant devient pilote et driver.
- * `created` est **autoritatif** (décidé sous verrou) : c'est lui qui décide d'envoyer la
- * notification « live démarré », qui ne doit partir qu'une fois, quelle que soit la réplique.
+ * Joins (or creates) the session; the first participant becomes pilot and driver.
+ * `created` is **authoritative** (decided under lock): it is what decides to send the "live started"
+ * notification, which must go out only once, whichever replica it is.
  */
 export const joinLive = async (
   key: string,
@@ -373,7 +371,7 @@ export const joinLive = async (
   );
 };
 
-/** Quitte la session. Renvoie le nouvel état (null si fermée ou si l'utilisateur était absent). */
+/** Leaves the session. Returns the new state (null if closed or if the user was absent). */
 export const leaveLive = async (key: string, userId: number): Promise<LiveState | null> => {
   dropMembership(key, userId);
   return withSession<LiveState | null>(
@@ -388,7 +386,7 @@ export const leaveLive = async (key: string, userId: number): Promise<LiveState 
   );
 };
 
-/** Passage de main complet : seul le pilote peut donner le pilotage à un participant présent. */
+/** Full handover: only the pilot can give control to a participant present. */
 export const handoffLive = async (
   key: string,
   fromUserId: number,
@@ -412,7 +410,7 @@ export const handoffLive = async (
     null,
   );
 
-/** Nomme/retire un co-pilote : pilote seulement, cible présente et différente du pilote. */
+/** Names/removes a co-pilot: pilot only, target present and different from the pilot. */
 export const setCoHost = async (
   key: string,
   byUserId: number,
@@ -440,21 +438,21 @@ export const setCoHost = async (
     null,
   );
 
-/** Peut diffuser : pilote ou co-pilote (lecture du miroir — chemin chaud de `live:sync`). */
+/** May broadcast: pilot or co-pilot (read from the mirror — hot path of `live:sync`). */
 export const canDriveLive = (key: string, userId: number): boolean => {
   const s = mirror.get(key);
   return !!s && (s.pilotId === userId || s.coHostIds.includes(userId));
 };
 
-/** Est le driver effectif courant. */
+/** Is the current effective driver. */
 export const isLiveDriver = (key: string, userId: number): boolean => mirror.get(key)?.driverId === userId;
 
 /**
- * Prend la main effective (interaction d'un pilote/co-pilote). Renvoie le nouvel état
- * si le driver change, null sinon (déjà driver, ou non autorisé).
+ * Takes effective control (interaction of a pilot/co-pilot). Returns the new state if the driver changes,
+ * null otherwise (already driver, or not allowed).
  */
 export const claimDrive = async (key: string, userId: number): Promise<LiveState | null> => {
-  // Chemin chaud : la diffusion périodique repasse ici plusieurs fois par seconde.
+  // Hot path: the periodic broadcast comes back here several times per second.
   const known = mirror.get(key);
   if (known && (known.driverId === userId || !canDriveLive(key, userId))) return null;
   return withSession<LiveState | null>(
@@ -478,10 +476,10 @@ export const getLiveState = (key: string): LiveState | null => {
   return s ? toState(key, s) : null;
 };
 
-/** Projet porteur de la session (résolu au join) — null si session inconnue ou sans méta. */
+/** Project owning the session (resolved at join) — null if the session is unknown or has no metadata. */
 export const getLiveProjectId = (key: string): number | null => mirror.get(key)?.meta?.projectId ?? null;
 
-/** Sessions live en cours d'un projet (badges LIVE : review, cartes de version, playlists). */
+/** Live sessions in progress for a project (LIVE badges: review, version cards, playlists). */
 export const listLiveSessions = (projectId: number): LiveSessionSummary[] => {
   const out: LiveSessionSummary[] = [];
   for (const [key, s] of mirror) {
@@ -497,9 +495,10 @@ export const listLiveSessions = (projectId: number): LiveSessionSummary[] => {
 };
 
 /**
- * Départ différé après déconnexion socket : le retrait effectif (et la perte du rôle de
- * pilote) n'a lieu qu'après la grâce — un rechargement de page (F5) re-join avant et
- * annule via `cancelLiveLeave`. `onLeft` reçoit l'état résultant (null si session fermée).
+ * Deferred departure after a socket disconnection: the effective removal (and the loss of the pilot role)
+ * only takes place after the grace period — a page reload (F5) re-joins
+ * before and cancels via `cancelLiveLeave`. `onLeft` receives the resulting state (null if the session is
+ * closed).
  */
 export const scheduleLiveLeave = (
   key: string,
@@ -518,7 +517,7 @@ export const scheduleLiveLeave = (
   );
 };
 
-/** Annule un départ en grâce (re-join après F5). Vrai si un départ était bien programmé. */
+/** Cancels a departure in grace (re-join after F5). True if a departure was indeed scheduled. */
 export const cancelLiveLeave = (key: string, userId: number): boolean => {
   const k = graceKey(key, userId);
   const t = graceTimers.get(k);
@@ -528,7 +527,7 @@ export const cancelLiveLeave = (key: string, userId: number): boolean => {
   return true;
 };
 
-/** Réinitialisation de l'état local (tests) — Redis n'est pas touché. */
+/** Reset of the local state (tests) — Redis is not touched. */
 export const resetLiveSessions = (): void => {
   mirror.clear();
   localMembership.clear();
@@ -538,5 +537,5 @@ export const resetLiveSessions = (): void => {
   lastFailureLog = 0;
 };
 
-/** Crochets de test : réconciliation forcée sans attendre le battement de cœur. */
+/** Test hooks: forced reconciliation without waiting for the heartbeat. */
 export const __liveTesting = { reloadAll, liveHeartbeat, mirror };

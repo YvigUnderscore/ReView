@@ -9,32 +9,30 @@ import type { SheetImage, SheetLabels } from '../lib/notesSheetHtml';
 import type { ClipContext } from './CommentExportScope';
 
 /**
- * Images et libellés de la planche imprimable des notes.
+ * Images and labels of the printable notes sheet.
  *
- * La planche doit rester lisible une fois enregistrée : les images y sont donc encodées en
- * data URI plutôt que présignées (une URL signée expire en une heure, un PDF imprimé six
- * mois plus tard n'aurait plus que des cadres vides).
+ * The sheet must stay readable once saved: images are therefore encoded as data URIs rather than presigned (a
+ * signed URL expires in an hour; a PDF printed six months later would only show empty frames).
  *
- * La frame commentée sort de la **sprite de timeline** que le worker calcule déjà pour le
- * survol du lecteur : une vignette toutes les trois secondes, découpée en CSS. Extraire la
- * frame exacte demanderait un appel ffmpeg par note — quelques minutes pour un shot chargé,
- * ce qu'une requête HTTP ne peut pas tenir. À défaut de sprite (image, 3D, splat), c'est la
- * miniature du média.
+ * The commented frame comes from the **timeline sprite** the worker already computes for the player's hover:
+ * one thumbnail every three seconds, cut with CSS. Extracting the exact frame would require one ffmpeg call
+ * per note: minutes for a busy shot, which an HTTP request cannot afford. Without a sprite (image, 3D,
+ * splat), the media's thumbnail is used.
  */
 
-/** Au-delà, une seule image ferait à elle seule le poids du document. */
+/** Beyond this, a single image alone would make up the weight of the document. */
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
-/** Budget total d'images d'une planche : passé ce point, les notes suivantes sortent sans frame. */
+/** Total image budget of a sheet: past this point, the following notes are output without a frame. */
 const MAX_TOTAL_BYTES = 24 * 1024 * 1024;
 
-/** Largeur d'affichage d'une miniature de média, en pixels. */
+/** Display width of a media thumbnail, in pixels. */
 const THUMB_WIDTH = 160;
 
-/** Rapport d'image par défaut quand le média n'a pas relevé ses dimensions. */
+/** Default aspect ratio when the media did not record its dimensions. */
 const DEFAULT_ASPECT = 16 / 9;
 
-/** Récupère les libellés traduits de la planche. */
+/** Retrieves the translated labels of the sheet. */
 export function sheetLabels(locale: Locale): SheetLabels {
   return {
     frame: t(locale, 'notesSheet.frame'),
@@ -48,7 +46,7 @@ export function sheetLabels(locale: Locale): SheetLabels {
   };
 }
 
-/** Index de la vignette de sprite la plus proche d'un instant. */
+/** Index of the sprite thumbnail closest to an instant. */
 export function spriteTile(
   sprite: { intervalSec: number; count: number; cols: number },
   seconds: number,
@@ -60,7 +58,7 @@ export function spriteTile(
   return { col: index % sprite.cols, row: Math.floor(index / sprite.cols) };
 }
 
-/** Fabrique le chargeur d'images d'une planche : cache par média et budget d'octets partagés. */
+/** Builds the image loader of a sheet: cache per media and shared byte budget. */
 export function createSheetImages(): (clip: ClipContext, at: number | null) => Promise<SheetImage | null> {
   const cache = new Map<string, string | null>();
   let spent = 0;
@@ -76,7 +74,7 @@ export function createSheetImages(): (clip: ClipContext, at: number | null) => P
         uri = `data:${imageTypeFromKey(key)};base64,${buffer.toString('base64')}`;
       }
     } catch (err) {
-      // Une vignette absente ne doit pas emporter la planche : la note sort sans image.
+      // A missing thumbnail must not sink the sheet: the note is output without an image.
       logger.warn({ err, key }, 'Image de planche de notes illisible');
     }
     cache.set(cacheKey, uri);

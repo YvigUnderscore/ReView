@@ -7,15 +7,14 @@ import { notFound } from '../lib/errors';
 import { resolve as resolveTimeline } from './TimelineService';
 
 /**
- * Portées d'export des notes : quels médias, dans quel ordre, avec quelle durée.
+ * Note export scopes: which media, in what order, with what duration.
  *
- * Un export de notes s'adosse toujours à une suite de médias — un seul pour une review, la
- * playlist entière pour des dailies, le montage pour l'éditorial. Ce module ramène cette
- * suite sous une forme unique (`ClipContext`), ce qui laisse aux sérialiseurs CSV, EDL,
- * OTIO et planche exactement le même matériau.
+ * A notes export always rests on a sequence of media: a single one for a review, the whole playlist for
+ * dailies, the edit for editorial. This module brings that sequence into one form (`ClipContext`), which
+ * leaves the CSV, EDL, OTIO and sheet serializers exactly the same material.
  */
 
-/** Sprite de timeline du média (vignettes régulières déjà calculées par le worker). */
+/** Timeline sprite of the media (regular thumbnails already computed by the worker). */
 export interface SpriteMeta {
   key: string;
   intervalSec: number;
@@ -29,27 +28,27 @@ export interface SpriteMeta {
 export interface ClipContext {
   mediaId: number;
   mediaName: string;
-  /** Emplacement lisible : sequence · shot › task · version. */
+  /** Readable location: sequence · shot › task · version. */
   location: string;
   sequence: string;
   shot: string;
   task: string;
   version: string;
-  /** Décision de review courante de la version porteuse. */
+  /** Current review decision of the carrying version. */
   decision: string;
-  /** Durée du clip, en secondes. */
+  /** Clip duration, in seconds. */
   duration: number;
   fps: number;
   thumbnailKey: string | null;
   sprite: SpriteMeta | null;
-  /** Rapport largeur/hauteur relevé au traitement (null = inconnu). */
+  /** Width/height ratio recorded at processing (null = unknown). */
   aspect: number | null;
 }
 
 /**
- * Durée retenue pour un média sans durée propre (image, 3D, splat). Cinq secondes est la
- * convention des cartons en montage : assez pour voir la note, assez court pour ne pas
- * fausser la lecture d'un ours.
+ * Duration retained for a media with no duration of its own (image, 3D, splat). Five seconds is the
+ * convention for title cards in editing: long enough to read the note, short enough not to distort the
+ * reading of a shot.
  */
 export const STILL_SECONDS = 5;
 
@@ -95,13 +94,13 @@ type MediaRow = {
   };
 };
 
-/** Un média visible du demandeur : publié, ou déposé par lui (brouillon personnel). */
+/** A media visible to the requester: published, or uploaded by them (personal draft). */
 const visibleTo = (viewerId: number) => ({
   deletedAt: null,
   OR: [{ published: true }, { uploaderId: viewerId }],
 });
 
-/** Cadence relevée au traitement ; sinon celle du projet. */
+/** Frame rate recorded at processing; otherwise that of the project. */
 export function mediaFps(metadata: unknown, fallback: number): number {
   const meta = (metadata ?? {}) as Record<string, unknown>;
   const raw = meta.frameRate ?? meta.fps;
@@ -109,13 +108,13 @@ export function mediaFps(metadata: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-/** Durée relevée au traitement ; sinon la durée de carton. */
+/** Duration recorded at processing; otherwise the title-card duration. */
 function mediaDuration(metadata: unknown): number {
   const raw = (metadata as { duration?: unknown } | null)?.duration;
   return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : STILL_SECONDS;
 }
 
-/** Rapport d'image du média, quand ffprobe a relevé ses dimensions. */
+/** Aspect ratio of the media, when ffprobe recorded its dimensions. */
 export function mediaAspect(metadata: unknown): number | null {
   const meta = (metadata ?? {}) as { width?: unknown; height?: unknown };
   const w = typeof meta.width === 'number' ? meta.width : 0;
@@ -137,12 +136,12 @@ function mediaSprite(metadata: unknown): SpriteMeta | null {
   };
 }
 
-/** Où vit une version : par son shot quand elle en a un, sinon par son asset. */
+/** Where a version lives: under its shot when it has one, otherwise under its asset. */
 function locationOf(version: MediaRow['version']): { sequence: string; shot: string; task: string } {
   const task = version.task;
   if (task?.shot) return { sequence: task.shot.sequence?.code ?? '', shot: task.shot.code, task: task.name };
-  // Une version d'asset n'a pas de shot : le nom de l'asset tient la colonne, qu'il vienne
-  // de la version elle-même ou de la tâche qui la porte.
+  // An asset version has no shot: the asset name fills the column, whether it comes from the version itself
+  // or from the task carrying it.
   const asset = version.asset?.name ?? task?.asset?.name ?? '';
   return { sequence: '', shot: asset, task: task?.name ?? '' };
 }
@@ -166,7 +165,7 @@ function toClip(media: MediaRow, fallbackFps: number, duration?: number): ClipCo
   };
 }
 
-/** Médias d'une liste de versions, dans l'ordre donné (un clip par média). */
+/** Media of a list of versions, in the given order (one clip per media). */
 async function mediaOfVersions(versionIds: number[], viewerId: number, fps: number): Promise<ClipContext[]> {
   if (versionIds.length === 0) return [];
   const rows = await prisma.mediaObject.findMany({
@@ -181,9 +180,8 @@ async function mediaOfVersions(versionIds: number[], viewerId: number, fps: numb
 }
 
 /**
- * Une playlist montre UN média par version — le premier visible, comme la salle de
- * dailies (`PlaylistService.getDetail`). Reprendre toute la version doublerait les clips
- * de l'EDL exporté.
+ * A playlist shows ONE media per version: the first visible one, as the dailies room does
+ * (`PlaylistService.getDetail`). Taking the whole version would double the clips of the exported EDL.
  */
 async function playlistClips(id: number, viewerId: number, fps: number): Promise<ClipContext[]> {
   const items = await prisma.playlistItem.findMany({
@@ -217,13 +215,13 @@ async function timelineClips(id: number, viewerId: number): Promise<{ label: str
   const clips: ClipContext[] = [];
   for (const item of view.items) {
     const row = item.mediaId === null ? undefined : byId.get(item.mediaId);
-    // La durée vient du montage, pas du fichier : c'est elle qui fait foi côté éditorial.
+    // The duration comes from the edit, not from the file: it is the one that prevails on the editorial side.
     if (row) clips.push(toClip(row, view.framerate, item.duration));
   }
   return { label: view.name ?? view.sequenceCode ?? `timeline-${id}`, clips };
 }
 
-/** Suite de clips d'une portée, avec son libellé (titre d'EDL, sous-titre de planche). */
+/** Sequence of clips for a scope, with its label (EDL title, sheet subtitle). */
 export async function collectClips(
   scope: 'media' | 'version' | 'shot' | 'playlist' | 'timeline',
   id: number,

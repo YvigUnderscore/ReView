@@ -19,29 +19,28 @@ import entityExtrasRoutes from './entity-extras.routes';
 import reviewRoutes from './review.routes';
 
 /**
- * API d'intégration v1 — surface stable destinée aux outils : DCC (Maya, Blender,
- * Houdini, Nuke), gestionnaires de pipeline (Prism), bots et synchronisations tierces.
+ * Stable v1 integration API, intended for tools: DCCs (Maya, Blender, Houdini, Nuke), pipeline
+ * managers (Prism), bots and third-party syncs.
  *
- * Elle est séparée de `/api`, qui sert l'interface web : celle-ci suit le produit et
- * change au rythme des écrans, quand une intégration installée sur les postes d'un studio
- * ne peut pas être mise à jour à chaque livraison. Ce qui est publié ici ne bougera pas
- * sans changement de version.
+ * It is separate from `/api`, which serves the web UI: the UI follows the product and changes
+ * with the screens, whereas an integration installed on a studio's workstations cannot be
+ * updated at every release. What is published here will not change without a version bump.
  *
- * Particularités par rapport à `/api` :
- *  - les entités s'adressent par **chemin** (`PROJ/SQ010/SH0100/anim`) autant que par id ;
- *  - les créations sont **idempotentes** (« ensure ») et acceptent `Idempotency-Key` ;
- *  - chaque route exige un **scope** explicite quand l'appel porte un token d'API.
+ * Differences from `/api`:
+ *  - entities are addressed by **path** (`PROJ/SQ010/SH0100/anim`) as well as by id;
+ *  - creations are **idempotent** ("ensure") and accept `Idempotency-Key`;
+ *  - every route requires an explicit **scope** when the call carries an API token.
  */
 
 export const V1_BASE_PATH = '/api/v1';
 
 /**
- * Table de montage — source unique du plan d'URL v1. Elle sert au montage Express ET à
- * la génération OpenAPI (`lib/openapiRoutes`) : impossible qu'un endpoint existe sans
- * être documenté, ou qu'un chemin documenté ne corresponde à rien.
+ * Mount table: the single source of the v1 URL plan. It drives both the Express mounting AND
+ * OpenAPI generation (`lib/openapiRoutes`), so an endpoint cannot exist undocumented, nor a
+ * documented path point to nothing.
  *
- * Les entités par identifiant et les fils de commentaires sont montés à la racine : leurs
- * chemins portent déjà leur préfixe (`/shots/:id`, `/media/:id/comments`).
+ * Entities by identifier and comment threads are mounted at the root: their paths already carry
+ * their prefix (`/shots/:id`, `/media/:id/comments`).
  */
 export const V1_MOUNTS: { prefix: string; router: ExpressRouter }[] = [
   { prefix: '', router: metaRoutes },
@@ -49,21 +48,21 @@ export const V1_MOUNTS: { prefix: string; router: ExpressRouter }[] = [
   { prefix: '/projects', router: projectContentRoutes },
   { prefix: '/publish', router: publishRoutes },
   { prefix: '/events', router: eventsRoutes },
-  // Le niveau épisode, monté avant les entités : ses deux chemins portent déjà leur
-  // préfixe (`/projects/:ref/episodes`, `/episodes/:id`).
+  // The episode level, mounted before entities: its two paths already carry their prefix
+  // (`/projects/:ref/episodes`, `/episodes/:id`).
   { prefix: '', router: episodesRoutes },
   { prefix: '', router: entitiesRoutes },
   { prefix: '', router: tasksRoutes },
   { prefix: '', router: versionsRoutes },
-  // Ce qu'une entité porte en plus de sa fiche : ses responsables, son brief.
+  // What an entity carries beyond its record: its owners and its brief.
   { prefix: '', router: entityExtrasRoutes },
-  // Lecture des fichiers et « dernière version » : montés après les collections, dont ils
-  // prolongent les chemins (`/tasks/:id/versions/latest` après `/tasks/:id/versions`).
+  // File reads and "latest version": mounted after the collections whose paths they extend
+  // (`/tasks/:id/versions/latest` after `/tasks/:id/versions`).
   { prefix: '', router: mediaRoutes },
   { prefix: '', router: latestRoutes },
   { prefix: '', router: commentsRoutes },
-  // Le tour de la review : qui est attendu sur un média, le vocabulaire de décision, et
-  // l'historique. Monté après les médias et les versions, dont il prolonge les chemins.
+  // The review round: who is expected on a media, the decision vocabulary, and the history.
+  // Mounted after media and versions, whose paths it extends.
   { prefix: '', router: reviewRoutes },
 ];
 

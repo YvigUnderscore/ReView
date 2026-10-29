@@ -30,66 +30,66 @@ import {
 } from '../lib/imageSequence';
 
 /**
- * Transport d'une séquence d'images : N fichiers, UN média.
+ * Transport of an image sequence: N files, ONE media.
  *
- * Le multipart résumable (`MediaUploadService`) découpe **un** fichier en parts ; ici c'est
- * l'inverse — mille fichiers entiers doivent former un seul média. Le parallélisme, la
- * reprise et l'annulation sont donc rejoués à l'échelle de la frame :
+ * Resumable multipart (`MediaUploadService`) splits **one** file into parts; here it is the reverse — a
+ * thousand whole files must form a single media. Parallelism, resume and
+ * cancellation are therefore replayed at the scale of the frame:
  *
- *   1. `initSequence` — crée le média porteur (VIDEO, UPLOADING) et la ligne `ImageSequence`,
- *      ou **retrouve** celui d'un envoi interrompu. Les frames déjà déposées sont listées
- *      depuis MinIO : le stockage fait foi, le client n'a aucun état à conserver.
- *   2. `frameUploadUrls` — URLs présignées par lots ; le client en envoie plusieurs de front.
- *   3. `completeSequence` — vérifie ce qui est réellement arrivé, écrit le manifeste, et
- *      enfile l'assemblage. C'est ici que se joue le rôle de `MediaService.finalize`, qui ne
- *      sait valider qu'un objet unique.
- *   4. `listSequenceFrames` — le livrable d'origine, frame par frame, en URLs présignées.
+ * 1. `initSequence` — creates the carrier media (VIDEO, UPLOADING) and the `ImageSequence` row, or **finds**
+ * that of an interrupted upload. The frames already deposited are
+ *      listed from MinIO: storage is authoritative, the client has no state to keep.
+ *   2. `frameUploadUrls` — presigned URLs in batches; the client sends several in parallel.
+ * 3. `completeSequence` — verifies what actually arrived, writes the manifest, and enqueues the assembly.
+ * This is where the role of `MediaService.finalize` is played, which
+ *      can only validate a single object.
+ *   4. `listSequenceFrames` — the original deliverable, frame by frame, as presigned URLs.
  */
 
 type SessionUser = { id: number; role: Role };
 
-/** URLs présignées demandées d'un coup : borne le coût de signature d'un aller-retour. */
+/** Presigned URLs requested at once: bounds the signing cost of one round trip. */
 export const FRAME_URL_BATCH_MAX = 64;
 
 /**
- * Durée de vie des URLs de téléchargement du livrable d'origine.
+ * Lifetime of the download URLs of the original deliverable.
  *
- * Récupérer mille EXR de 50 Mo prend du temps, même à quatre connexions : une heure ne
- * suffit pas toujours, et la liste entière serait à redemander en cours de route.
+ * Fetching a thousand 50 MB EXRs takes time, even over four connections: one hour is not always enough, and
+ * the whole list would have to be requested again midway.
  */
 const FRAME_URL_TTL_SEC = 6 * 3600;
 
 /**
- * Frames dont l'en-tête est réellement relu à la finalisation.
+ * Frames whose header is actually re-read at finalization.
  *
- * Relire les 32 premiers octets de trois mille objets coûterait trois mille requêtes pour
- * une garantie que le listing donne déjà en une : chaque frame existe et n'est pas vide.
- * On relit donc la première, celle du milieu et la dernière — assez pour attraper le cas
- * réel (un dossier de PNG déposé sous une extension `.exr`, une livraison tronquée en tête
- * ou en queue), sans transformer la finalisation en balayage complet du bucket.
+ * Re-reading the first 32 bytes of three thousand objects would cost three thousand requests for a guarantee
+ * that the listing already gives in one: every frame exists and is not
+ * empty. We therefore re-read the first, the middle and the last — enough to catch the real case (a folder of
+ * PNGs deposited under an `.exr` extension, a delivery truncated at its
+ * head or tail), without turning finalization into a full sweep of the bucket.
  */
 const HEADER_CHECK_POSITIONS = 3;
 
 export interface InitSequenceInput {
   versionId: number;
-  /** Motif FFmpeg (`SH0100_comp_v003.%04d.exr`) — c'est le nom du média. */
+  /** FFmpeg pattern (`SH0100_comp_v003.%04d.exr`) — this is the name of the media. */
   pattern: string;
-  /** Fichiers du lot : nom livré et taille annoncée. */
+  /** Files of the batch: delivered name and announced size. */
   frames: { name: string; size: number }[];
-  /** Cadence imposée par l'utilisateur ; sinon héritée du pipeline du plan. */
+  /** Frame rate imposed by the user; otherwise inherited from the shot's pipeline. */
   framerate?: number;
 }
 
-/** Métadonnée de reprise : distingue une séquence en cours d'un upload multipart. */
+/** Resume metadata: distinguishes a sequence in progress from a multipart upload. */
 interface SequenceMeta {
   sequencePending?: boolean;
   [key: string]: unknown;
 }
 
 /**
- * Cadence d'assemblage : héritage studio→projet→séquence→shot, exactement celui que
- * l'administration affiche. Une séquence d'images n'a pas de cadence intrinsèque — la lui
- * inventer (24 en dur) produirait un plan qui ne dure pas ce qu'il doit durer.
+ * Assembly frame rate: inherited studio → project → sequence → shot, exactly what administration displays. An
+ * image sequence has no intrinsic frame rate — inventing one for it (24 hard-coded) would produce a shot that
+ * does not last what it should.
  */
 export async function resolveSequenceFramerate(versionId: number, projectId: number): Promise<number> {
   const project = await resolveProjectSettingsById(projectId);
@@ -103,7 +103,7 @@ export async function resolveSequenceFramerate(versionId: number, projectId: num
   return resolveEntitySettings(project, shot?.sequence?.settings, shot?.settings).framerate;
 }
 
-/** Contrôles de forme du lot, avant toute écriture : refuser tôt, jamais après le transfert. */
+/** Shape checks of the batch, before any write: refuse early, never after the transfer. */
 function assertSequenceShape(input: InitSequenceInput): { extension: string; digits: number } {
   const parsed = parseFramePattern(input.pattern);
   if (!parsed) throw badRequest('Not an image sequence pattern (expected « name.%04d.ext »)', 'BAD_PATTERN');
@@ -128,7 +128,7 @@ function assertSequenceShape(input: InitSequenceInput): { extension: string; dig
   return parsed;
 }
 
-/** Numéros de frame du lot, dans l'ordre, appariés à leur nom de fichier. */
+/** Frame numbers of the batch, in order, paired with their file name. */
 function orderedFrames(input: InitSequenceInput): { frame: number; name: string; size: number }[] {
   return input.frames
     .map((f) => ({ frame: parseFrameName(f.name)!.number, name: f.name, size: f.size }))
@@ -136,11 +136,11 @@ function orderedFrames(input: InitSequenceInput): { frame: number; name: string;
 }
 
 /**
- * Ouvre (ou reprend) l'envoi d'une séquence.
+ * Opens (or resumes) the upload of a sequence.
  *
- * La reprise ne s'appuie sur rien que le client détiendrait : même version, même compte,
- * même motif, statut UPLOADING — et la liste des frames déjà en place est relue dans MinIO.
- * Fermer l'onglet au milieu d'une livraison de 80 Go ne coûte donc que les frames en vol.
+ * Resumption relies on nothing the client might hold: same version, same account, same pattern, UPLOADING
+ * status — and the list of frames already in place is re-read from MinIO.
+ * Closing the tab in the middle of an 80 GB delivery therefore only costs the frames in flight.
  */
 export async function initSequence(user: SessionUser, input: InitSequenceInput) {
   const { extension, digits } = assertSequenceShape(input);
@@ -169,15 +169,15 @@ export async function initSequence(user: SessionUser, input: InitSequenceInput) 
     };
   }
 
-  // Une frame de 2 Go n'existe pas : le plafond de taille de fichier s'applique au lot
-  // entier, faute de quoi la limite du studio serait contournable en la découpant.
+  // A 2 GB frame does not exist: the file size ceiling applies to the whole batch, otherwise the studio's
+  // limit could be bypassed by splitting it.
   const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);
   if (declaredSize > maxFileSize) throw badRequest('Image sequence is too large', 'FILE_TOO_LARGE');
 
-  // Tous les garde-fous d'un upload ordinaire (accès, contribution, projet archivé, quotas,
-  // nomenclature, héritage de publication) sont ceux de `createUpload` : on l'appelle plutôt
-  // que d'en écrire une seconde version, qui aurait dérivé. L'URL présignée qu'il renvoie ne
-  // sert pas ici — une séquence n'a pas d'objet unique à déposer.
+  // All the safeguards of an ordinary upload (access, contribution, archived project, quotas, naming
+  // convention, publication inheritance) are those of `createUpload`: we call it rather
+  // than write a second version, which would have drifted. The presigned URL it returns is not used here — a
+  // sequence has no single object to deposit.
   const created = await createUpload(user, {
     versionId: input.versionId,
     filename: input.pattern,
@@ -221,7 +221,7 @@ export async function initSequence(user: SessionUser, input: InitSequenceInput) 
   };
 }
 
-/** Frames déjà présentes sous le préfixe (le stockage fait foi, comme ListParts en multipart). */
+/** Frames already present under the prefix (storage is authoritative, as ListParts is in multipart). */
 async function listUploadedFrameNames(prefix: string): Promise<string[]> {
   const names: string[] = [];
   for await (const object of storage.iterateObjects(prefix)) {
@@ -230,7 +230,7 @@ async function listUploadedFrameNames(prefix: string): Promise<string[]> {
   return names.sort((a, b) => a.localeCompare(b));
 }
 
-/** Charge une séquence en cours d'envoi appartenant à l'appelant. */
+/** Loads a sequence being uploaded that belongs to the caller. */
 async function loadOwnSequence(user: SessionUser, id: number, status: MediaStatus) {
   const media = await prisma.mediaObject.findFirst({
     where: { id, uploaderId: user.id, status },
@@ -240,7 +240,7 @@ async function loadOwnSequence(user: SessionUser, id: number, status: MediaStatu
   return { media, sequence: media.imageSequence };
 }
 
-/** URLs présignées d'un lot de frames. Les noms sont revalidés : ils composent une clé. */
+/** Presigned URLs of a batch of frames. The names are re-validated: they compose a key. */
 export async function frameUploadUrls(user: SessionUser, id: number, names: string[]) {
   const { sequence } = await loadOwnSequence(user, id, MediaStatus.UPLOADING);
   const urls = await Promise.all(
@@ -251,9 +251,8 @@ export async function frameUploadUrls(user: SessionUser, id: number, names: stri
         throw badRequest(`« ${name} » does not belong to ${sequence.pattern}`, 'FRAME_OUTSIDE_PATTERN');
       return {
         name,
-        // Type neutre : l'objet est servi depuis l'origine de l'application, et le
-        // presigner ne signe pas l'en-tête — c'est le serveur qui arrête le type, jamais
-        // le navigateur (cf. `lib/uploadContentType`).
+        // Neutral type: the object is served from the application's origin, and the presigner does not sign
+        // the header — it is the server that fixes the type, never the browser (see `lib/uploadContentType`).
         url: await storage.getPresignedPutUrl(
           sequenceFrameKey(sequence.storagePrefix, name),
           'application/octet-stream',
@@ -265,21 +264,21 @@ export async function frameUploadUrls(user: SessionUser, id: number, names: stri
 }
 
 /**
- * Clôt l'envoi : ce qui est réellement arrivé fait foi.
+ * Closes the upload: what actually arrived is authoritative.
  *
- * Le listing MinIO donne d'un coup l'existence, la taille et le compte ; trois en-têtes
- * relus attrapent le format menti. Une séquence dont il manque des frames n'est pas
- * refusée — c'est une livraison partielle légitime — mais le compte et les bornes écrits en
- * base sont ceux du réel, jamais ceux annoncés à l'ouverture.
+ * The MinIO listing gives existence, size and count in one go; three re-read headers catch a misrepresented
+ * format. A sequence missing some frames is not refused — it is a legitimate
+ * partial delivery — but the count and the bounds written in the database are those of reality, never those
+ * announced at opening.
  *
- * `note` est la consigne d'upload : cette fonction joue le rôle de `MediaService.finalize`
- * pour une séquence, elle porte donc la même règle. Sans cela, « consigne obligatoire »
- * n'aurait valu que pour les fichiers uniques, et l'artiste l'aurait appris par l'exception.
+ * `note` is the upload brief: this function plays the role of `MediaService.finalize` for a sequence, so it
+ * carries the same rule. Without it, "mandatory brief" would only have applied
+ * to single files, and the artist would have learned it from the exception.
  */
 export async function completeSequence(user: SessionUser, id: number, note?: string | null) {
   const { media, sequence } = await loadOwnSequence(user, id, MediaStatus.UPLOADING);
-  // Contrôlée AVANT le balayage du bucket et toute écriture : refuser plus loin coûterait un
-  // listing complet pour une phrase manquante, alors que le client n'a qu'à rappeler.
+  // Checked BEFORE the bucket sweep and any write: refusing later would cost a complete listing for a missing
+  // sentence, whereas the client only has to call back.
   const owner = await resolveProjectIdForVersion(media.versionId);
   const [draftMode, uploadNote] = await Promise.all([
     isDraftModeEnabled(),
@@ -352,9 +351,9 @@ export async function completeSequence(user: SessionUser, id: number, note?: str
     });
   }
   await enqueueMediaJob({ mediaObjectId: id, kind: 'transcode' });
-  // Publication d'office (Phase 50) : la séquence est un média comme un autre, née publiée
-  // hors mode brouillon. Sans cette annonce, sa version resterait « brouillon » aux yeux du
-  // calcul et les suiveurs n'entendraient jamais parler de la livraison.
+  // Automatic publication (Phase 50): the sequence is a media like any other, born published outside draft
+  // mode. Without this announcement, its version would remain "draft" in
+  // the eyes of the computation and followers would never hear about the delivery.
   if (updated.published && !draftMode)
     await announcePublication(
       { id, versionId: media.versionId, kind: updated.kind, originalName: updated.originalName },
@@ -377,7 +376,7 @@ export async function completeSequence(user: SessionUser, id: number, note?: str
   };
 }
 
-/** Relit l'en-tête de trois frames et refuse le lot si l'une n'est pas l'image annoncée. */
+/** Re-reads the header of three frames and refuses the batch if one is not the announced image. */
 async function assertFrameHeaders(
   prefix: string,
   extension: string,
@@ -393,13 +392,12 @@ async function assertFrameHeaders(
 }
 
 /**
- * Le livrable d'origine, frame par frame.
+ * The original deliverable, frame by frame.
  *
- * Une séquence de mille EXR ne se rezippe pas à la volée dans le processus web : l'archive
- * ferait cent gigaoctets et occuperait une connexion pendant une heure. On rend donc le
- * manifeste et les URLs présignées, que n'importe quel client (navigateur, `curl`, outil de
- * studio) télécharge en parallèle — et sous leur nom d'origine, puisque c'est lui qui a
- * servi de clé.
+ * A sequence of a thousand EXRs is not re-zipped on the fly inside the web process: the archive would weigh a
+ * hundred gigabytes and occupy a connection for an hour. We therefore
+ * return the manifest and the presigned URLs, which any client (browser, `curl`, studio tool) downloads in
+ * parallel — under their original name, since that is what served as the key.
  */
 export async function listSequenceFrames(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findUnique({
@@ -424,11 +422,11 @@ export async function listSequenceFrames(user: SessionUser, id: number) {
       frame: parseFrameName(o.name)?.number ?? 0,
       name: o.name,
       size: o.size,
-      // Type de réponse imposé, et opaque : la signature du PUT ne couvre pas l'en-tête,
-      // une frame a donc pu être déposée en `text/html`. Ces objets sont servis depuis
-      // l'origine de l'application (nginx expose MinIO sous `/<bucket>/…`) — rendus, ils
-      // exécuteraient du script avec le jeton de session. Aucune frame n'a de raison
-      // d'être affichée par le navigateur : elles se téléchargent.
+      // Response type imposed, and opaque: the PUT's signature does not cover the header, so a frame may have
+      // been deposited as `text/html`. These objects are served from the
+      // application's origin (nginx exposes MinIO under `/<bucket>/…`) — rendered, they would run script with
+      // the session token. No frame has any reason to be displayed by the
+      // browser: they are downloaded.
       url: await storage.getPresignedGetUrl(
         sequenceFrameKey(sequence.storagePrefix, o.name),
         FRAME_URL_TTL_SEC,

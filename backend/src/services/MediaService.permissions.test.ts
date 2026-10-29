@@ -5,13 +5,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MediaKind, MediaStatus, Role } from '@prisma/client';
 
 /**
- * Le bloc `permissions` du détail média (Phase 50, lot 6).
+ * The `permissions` block of the media detail (Phase 50, batch 6).
  *
- * L'écran décidait seul d'afficher les gizmos et le bouton « Enregistrer » du mode
- * « Nettoyer », sur la règle « version non publiée + rôle interne ». Le serveur exige en plus
- * l'auteur de la version ou un gestionnaire du projet : un ARTIST membre non auteur voyait donc
- * un bouton refusé ensuite en 403. Le détail porte désormais la réponse du serveur, et c'est
- * elle que le viewer lit — ce test l'éprouve sur le chemin réel de `getDetail`.
+ * The screen decided on its own whether to show the gizmos and the "Save" button of the "Clean" mode, on the
+ * rule "unpublished version + internal role". The server additionally requires
+ * the version's author or a project manager: an ARTIST member who is not the author therefore saw a button
+ * refused afterwards with a 403. The detail now carries the server's answer, and it is
+ * that which the viewer reads — this test exercises it on the real path of `getDetail`.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -56,7 +56,7 @@ vi.mock('../lib/settings', () => ({
   isDraftModeEnabled: vi.fn(() => Promise.resolve(false)),
   SETTING_KEYS: {},
 }));
-// Ratio du cadre de livraison : sa chaîne d'héritage a son propre banc (`lib/deliveryAspect`).
+// The delivery frame ratio: its inheritance chain has its own bench (`lib/deliveryAspect`).
 vi.mock('../lib/deliveryAspect', () => ({ resolveDeliveryAspect: vi.fn(() => Promise.resolve(16 / 9)) }));
 vi.mock('../lib/projectSettings', () => ({
   checkNaming: vi.fn(),
@@ -92,7 +92,7 @@ const media = {
   metadata: {},
 };
 
-/** Interroge le détail au nom d'un utilisateur, avec une version donnée. */
+/** Queries the detail on behalf of a user, with a given version. */
 async function detailFor(opts: {
   userId: number;
   authorId: number | null;
@@ -111,31 +111,31 @@ async function detailFor(opts: {
 describe('getDetail — bloc permissions', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('accorde la transformation à l’auteur d’une version non publiée', async () => {
+  it('grants the transform to the author of an unpublished version', async () => {
     expect(await detailFor({ userId: AUTHOR, authorId: AUTHOR, published: false, manager: false })).toEqual({
       editTransform: true,
     });
   });
 
-  it('l’accorde au gestionnaire du projet qui n’est pas l’auteur', async () => {
+  it('grants it to the project manager who is not the author', async () => {
     expect(await detailFor({ userId: OTHER, authorId: AUTHOR, published: false, manager: true })).toEqual({
       editTransform: true,
     });
   });
 
-  it('la refuse au membre interne ni auteur ni gestionnaire — c’était le bouton mort', async () => {
+  it('refuses it to the internal member who is neither author nor manager — it was the dead button', async () => {
     expect(await detailFor({ userId: OTHER, authorId: AUTHOR, published: false, manager: false })).toEqual({
       editTransform: false,
     });
   });
 
-  it('la refuse dès que la version est publiée, même à un gestionnaire', async () => {
+  it('refuses it as soon as the version is published, even to a manager', async () => {
     expect(await detailFor({ userId: OTHER, authorId: AUTHOR, published: true, manager: true })).toEqual({
       editTransform: false,
     });
   });
 
-  it('interroge la version du média, et le rôle effectif sur SON projet', async () => {
+  it('queries the version of the media, and the effective role on ITS project', async () => {
     await detailFor({ userId: AUTHOR, authorId: AUTHOR, published: false, manager: false });
     expect(db.version.findUnique).toHaveBeenCalledWith({
       where: { id: VERSION_ID },

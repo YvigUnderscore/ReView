@@ -16,31 +16,31 @@ import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 import { emitToProject } from './SocketService';
 
-/** Logique métier des assets. L'accès projet (RBAC) est asserté dans la route (10.D8). */
+/** Business logic of assets. Project access (RBAC) is asserted in the route (10.D8). */
 
 /**
- * Versions et tâches ramenées par la fiche d'un asset.
+ * Versions and tasks returned by an asset's detail.
  *
- * La fiche les affiche d'un bloc, sans pagination : le plafond évite qu'un asset repris
- * cent fois (un décor de long-métrage) ne rende la page proportionnelle à son historique.
- * Les compteurs `_count` disent le nombre réel.
+ * The detail displays them as one block, without pagination: the cap prevents an asset reused a hundred
+ * times (a feature-film set) from making the page proportional to its history. The `_count` counters give
+ * the real numbers.
  */
 const DETAIL_LIMIT = 200;
 
 /**
- * Assets paginés d'un projet + miniatures.
+ * Paginated assets of a project + thumbnails.
  *
- * Le nom est unique par projet, donc déjà discriminant, mais le départage sur `id` est
- * posé quand même : c'est la même règle partout, et elle ne dépend plus de la contrainte
- * d'unicité du modèle. Le curseur suit le couple `(name, id)`.
+ * The name is unique per project, so it is already discriminating, but the tie-break on `id` is applied
+ * anyway: it is the same rule everywhere, and no longer depends on the model's uniqueness constraint. The
+ * cursor follows the `(name, id)` pair.
  */
 export async function list(
   projectId: number,
   p: PaginationParams,
-  /** Qui regarde — état « non consulté » (lot 9). Absent : aucune carte ne s'allume. */
+  /** Who is looking: "not yet viewed" state (batch 9). Absent: no card lights up. */
   userId?: number,
 ) {
-  // `hiddenAt` : un asset masqué n'apparaît dans aucune liste — cf. ShotService.list.
+  // `hiddenAt`: a hidden asset appears in no list; see ShotService.list.
   const where = { projectId, deletedAt: null, hiddenAt: null };
   const [assets, total] = await Promise.all([
     prisma.asset.findMany({
@@ -49,8 +49,8 @@ export async function list(
       ...pageArgs(p),
       include: {
         _count: { select: { versions: true, tasks: true } },
-        // Étapes et assignés : le menu contextuel des cartes en a besoin pour cocher
-        // l'état courant. Sans eux, il faudrait une requête par carte affichée.
+        // Steps and assignees: the cards' context menu needs them to tick the current state. Without them,
+        // one query per displayed card would be required.
         departments: {
           select: { id: true, key: true, name: true, color: true },
           orderBy: { order: 'asc' },
@@ -59,8 +59,8 @@ export async function list(
           select: {
             id: true,
             departmentId: true,
-            // Le nom de l'étape vient d'ici : une tâche peut vivre dans un département
-            // que l'asset ne déclare pas, et le menu doit tout de même savoir le nommer.
+            // The step name comes from here: a task may live in a department the asset does not declare, and
+            // the menu must still be able to name it.
             departmentRef: { select: { id: true, name: true } },
             assignee: { select: { id: true, name: true } },
           },
@@ -70,13 +70,13 @@ export async function list(
     }),
     prisma.asset.count({ where }),
   ]);
-  // Requête groupée (B3) — cf. ShotService.list.
+  // Grouped query (B3); see ShotService.list.
   const ids = assets.map((a) => a.id);
   const [fallbacks, awaiting, unseen] = await Promise.all([
     firstMediaThumbKeysForAssets(ids),
     awaitingReviewByAsset(ids),
-    // « Non consulté » : l'activité de l'asset (ses tâches, ses livraisons par leurs DEUX
-    // chemins de rattachement, leurs médias) confrontée à ma dernière visite.
+    // "Not viewed": the asset's activity (its tasks, its deliveries through BOTH attachment paths, its media)
+    // compared with my last visit.
     userId ? unseenByAsset(userId, assets) : Promise.resolve(new Map<number, boolean>()),
   ]);
   const signed = await signAssignees(assets);
@@ -91,7 +91,7 @@ export async function list(
   return paginateCursor(items, total, p, (a) => a.name);
 }
 
-/** Fiche complète d'un asset (versions, tâches, rattachements, vignette). */
+/** Full detail of an asset (versions, tasks, attachments, thumbnail). */
 export async function getDetail(id: number) {
   const asset = await prisma.asset.findUnique({
     where: { id },
@@ -108,13 +108,13 @@ export async function getDetail(id: number) {
         select: { id: true, code: true, name: true, sequenceId: true },
       },
       sequences: { where: { deletedAt: null, hiddenAt: null }, select: { id: true, code: true, name: true } },
-      // Départements traversés (B1) : le panneau de réglages les coche (C3).
+      // Departments traversed (B1): the settings panel ticks them (C3).
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
     },
   });
   if (!asset) throw notFound('Asset not found');
-  // La vignette n'était calculée que dans la liste : la page d'un asset ne montrait
-  // jamais l'image, alors que celle d'un plan l'affichait.
+  // The thumbnail was only computed in the list: an asset's page never showed the image, whereas a shot's
+  // page did.
   const thumbnailUrl = await effectiveThumbnailUrl(asset.thumbnailKey, await firstMediaThumbKeyForAsset(id));
   return { ...asset, thumbnailUrl };
 }
@@ -127,8 +127,8 @@ export interface CreateAssetInput {
 }
 
 /**
- * Crée un asset. Le verrou ShotGrid (48) est vérifié par la route AVANT d'arriver ici :
- * il porte un lien de création distant que seule la couche HTTP sait présenter.
+ * Creates an asset. The ShotGrid lock (48) is checked by the route BEFORE arriving here: it carries a remote
+ * creation link that only the HTTP layer knows how to present.
  */
 export async function create(body: CreateAssetInput) {
   const { projectId, name, type, description } = body;
@@ -143,9 +143,8 @@ export interface UpdateAssetInput {
   name?: string;
   type?: AssetType;
   /**
-   * Libellé exact du type tel que le studio le nomme (C3). La colonne existait depuis la
-   * phase 48 mais n'était écrite que par la synchronisation ShotGrid : un studio autonome
-   * ne pouvait pas nommer ses propres types.
+   * Exact label of the type as the studio names it (C3). The column existed since phase 48 but was only
+   * written by the ShotGrid sync: a standalone studio could not name its own types.
    */
   typeLabel?: string | null;
   description?: string | null;
@@ -156,14 +155,15 @@ export interface UpdateAssetInput {
 }
 
 /**
- * Met à jour un asset et, le cas échéant, ses rattachements. Shots et séquences sont
- * vérifiés comme appartenant au projet de l'asset : un identifiant venu d'un autre projet
- * créerait un lien invisible depuis les deux écrans concernés.
+ * Updates an asset and, where applicable, its attachments. Shots and sequences are verified to belong to
+ * the asset's project: an identifier coming from another project would create an invisible link from both
+ * affected screens.
  */
 export async function update(projectId: number, id: number, body: UpdateAssetInput) {
   const { shotIds, sequenceIds, ...scalar } = body;
-  // Le statut doit venir du vocabulaire de CE projet, comme pour une tâche ou un plan :
-  // l'identifiant d'un statut importé du site d'un autre projet passerait sans bruit.
+  // The status must come from THIS project's vocabulary, as for a task or a shot: the identifier of a status
+  // imported from another project's site would pass silently. the identifier of a status imported from
+  // another project's site would pass silently.
   if (body.pipelineStatusId !== undefined) {
     await PipelineStatusService.assertBelongsToProject(projectId, 'asset', body.pipelineStatusId);
   }
@@ -191,15 +191,14 @@ export async function update(projectId: number, id: number, body: UpdateAssetInp
       sequences: { where: { deletedAt: null, hiddenAt: null }, select: { id: true, code: true, name: true } },
     },
   });
-  // Même raison que pour un plan ou une séquence : le front écoute `asset:update`, mais
-  // seuls `PipelineEnsureService` et la synchronisation ShotGrid l'émettaient — jamais le
-  // chemin d'édition ordinaire. Un statut ou un rattachement changé restait invisible sur
-  // un écran déjà ouvert jusqu'au rechargement.
+  // Same reason as for a shot or a sequence: the front end listens for `asset:update`, but only
+  // `PipelineEnsureService` and the ShotGrid sync emitted it, never the ordinary edit path. A changed status
+  // or attachment stayed invisible on an already open screen until reload.
   emitToProject(projectId, 'asset:update', { projectId, id });
-  // 48 : les rattachements remontent à ShotGrid, qui porte ces liens sur l'asset.
+  // 48: attachments are propagated to ShotGrid, which carries these links on the asset.
   if (shotIds || sequenceIds) await enqueuePush(projectId, { type: 'asset-links', assetId: id });
-  // Le statut repart vers le site : sans cela, la synchronisation suivante ramènerait
-  // l'ancien et le changement s'annulerait tout seul.
+  // The status goes back to the site: otherwise the next sync would bring back the old one and the change
+  // would cancel itself.
   if (body.pipelineStatusId !== undefined) {
     await enqueuePush(projectId, { type: 'asset-status', assetId: id });
   }

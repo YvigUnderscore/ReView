@@ -24,7 +24,7 @@ import {
 import { prisma } from '../lib/prisma';
 import { TaskStatus } from '@prisma/client';
 
-const NOW = new Date('2026-08-18T12:00:00Z'); // un mardi
+const NOW = new Date('2026-08-18T12:00:00Z'); // a Tuesday
 
 const task = (over: Partial<ProductionTask> = {}): ProductionTask => ({
   id: 1,
@@ -41,7 +41,7 @@ const task = (over: Partial<ProductionTask> = {}): ProductionTask => ({
 });
 
 describe('buildMatrix', () => {
-  it('croise séquence et département, et compte par famille', () => {
+  it('crosses sequence and department, and counts by family', () => {
     const cells = buildMatrix([
       task({ id: 1, status: TaskStatus.TODO }),
       task({ id: 2, status: TaskStatus.APPROVED }),
@@ -52,7 +52,7 @@ describe('buildMatrix', () => {
     expect(cells[1]).toMatchObject({ department: 'anim', blocked: 1, total: 1 });
   });
 
-  it('range ensemble ce qui n’a ni séquence ni département', () => {
+  it('groups together what has neither a sequence nor a department', () => {
     const cells = buildMatrix([
       task({ id: 1, sequenceId: null, department: null }),
       task({ id: 2, sequenceId: null, department: null, status: TaskStatus.IN_PROGRESS }),
@@ -61,7 +61,7 @@ describe('buildMatrix', () => {
     expect(cells[0]).toMatchObject({ sequenceId: null, department: null, todo: 1, progress: 1 });
   });
 
-  it('additionne les lignes déjà comptées en base, une case identique à N tâches', () => {
+  it('adds up the rows already counted in the database, one identical cell for N tasks', () => {
     const grouped = buildMatrix([
       { sequenceId: 1, department: 'comp', status: TaskStatus.TODO, count: 3 },
       { sequenceId: 1, department: 'comp', status: TaskStatus.APPROVED, count: 2 },
@@ -74,7 +74,7 @@ describe('buildMatrix', () => {
     expect(grouped[0]).toMatchObject({ todo: 3, done: 2, total: 5 });
   });
 
-  it('sort des jauges les statuts inactifs — ni à faire, ni fait', () => {
+  it('removes inactive statuses from the gauges — neither to do nor done', () => {
     const cells = buildMatrix([
       { sequenceId: 1, department: 'comp', status: TaskStatus.TODO, count: 4 },
       { sequenceId: 1, department: 'comp', status: TaskStatus.TODO, family: 'inactive', count: 6 },
@@ -82,8 +82,8 @@ describe('buildMatrix', () => {
     expect(cells[0]).toMatchObject({ todo: 4, total: 4 });
   });
 
-  it('compte comme fait le statut que le studio déclare terminal', () => {
-    // « fin » côté ShotGrid : l'enum local dit encore IN_PROGRESS.
+  it('counts as done the status the studio declares terminal', () => {
+    // "fin" on the ShotGrid side: the local enum still says IN_PROGRESS.
     const cells = buildMatrix([
       { sequenceId: 1, department: 'comp', status: TaskStatus.IN_PROGRESS, family: 'done', count: 2 },
     ]);
@@ -95,7 +95,7 @@ describe('findAttention', () => {
   const yesterday = new Date('2026-08-17T12:00:00Z');
   const tomorrow = new Date('2026-08-19T12:00:00Z');
 
-  it('signale les échéances dépassées, la plus ancienne d’abord', () => {
+  it('flags overdue deadlines, the oldest first', () => {
     const older = new Date('2026-08-10T12:00:00Z');
     const found = findAttention(
       [
@@ -108,14 +108,14 @@ describe('findAttention', () => {
     expect(found.overdue.map((t) => t.id)).toEqual([2, 1]);
   });
 
-  it('ne compte jamais une tâche terminée comme en retard', () => {
-    // Sa date est passée, mais le travail est fait : la signaler noierait ce qui compte.
+  it('never counts a finished task as late', () => {
+    // Its date has passed, but the work is done: flagging it would drown what matters.
     const found = findAttention([task({ id: 1, status: TaskStatus.APPROVED, dueDate: yesterday })], NOW);
     expect(found.overdue).toEqual([]);
     expect(found.unassigned).toEqual([]);
   });
 
-  it('écarte de même une tâche inactive, omise ou sans objet', () => {
+  it('likewise excludes an inactive task, omitted or not applicable', () => {
     const found = findAttention(
       [task({ id: 1, status: TaskStatus.TODO, family: 'inactive', dueDate: yesterday })],
       NOW,
@@ -124,7 +124,7 @@ describe('findAttention', () => {
     expect(found.unassigned).toEqual([]);
   });
 
-  it('sépare les non-assignés et l’attente de review', () => {
+  it('separates unassigned tasks and those awaiting review', () => {
     const found = findAttention(
       [
         task({ id: 1, assigneeId: null }),
@@ -137,8 +137,8 @@ describe('findAttention', () => {
     expect(found.waitingReview.map((t) => t.id)).toEqual([3]);
   });
 
-  it('reconnaît l’attente de verdict d’un statut personnalisé', () => {
-    // Statut « suprev » du site : l'enum local n'en sait rien, la famille si.
+  it('recognises the wait for a verdict of a custom status', () => {
+    // "suprev" status on the site: the local enum knows nothing of it, the family does.
     const found = findAttention(
       [task({ id: 4, assigneeId: 7, status: TaskStatus.IN_PROGRESS, family: 'review' })],
       NOW,
@@ -146,14 +146,14 @@ describe('findAttention', () => {
     expect(found.waitingReview.map((t) => t.id)).toEqual([4]);
   });
 
-  it('borne chaque liste, une page ne se lit pas à cinq cents lignes', () => {
+  it('bounds each list, a page is not read at five hundred lines', () => {
     const many = Array.from({ length: 80 }, (_, i) => task({ id: i, assigneeId: null }));
     expect(findAttention(many, NOW, 10).unassigned).toHaveLength(10);
   });
 });
 
 describe('buildWorkload', () => {
-  it('compte ce qui reste à faire, par personne', () => {
+  it('counts what remains to be done, per person', () => {
     const rows = buildWorkload(
       [
         task({ id: 1, assigneeId: 7, assigneeName: 'Ada', status: TaskStatus.IN_PROGRESS }),
@@ -169,20 +169,20 @@ describe('buildWorkload', () => {
     expect(rows[0]).toMatchObject({ todo: 1, progress: 1 });
   });
 
-  it('exclut le travail terminé — la charge, c’est ce qui reste', () => {
+  it('excludes finished work — the load is what remains', () => {
     expect(buildWorkload([task({ assigneeId: 7, status: TaskStatus.APPROVED })], NOW)).toEqual([]);
     expect(
       buildWorkload([task({ assigneeId: 7, status: TaskStatus.TODO, family: 'inactive' })], NOW),
     ).toEqual([]);
   });
 
-  it('compte les retards de chacun', () => {
+  it('counts each person\'s delays', () => {
     const late = new Date('2026-08-01T12:00:00Z');
     const rows = buildWorkload([task({ assigneeId: 7, assigneeName: 'Ada', dueDate: late })], NOW);
     expect(rows[0]?.overdue).toBe(1);
   });
 
-  it('reprend les retards déjà comptés en base plutôt que de relire des dates', () => {
+  it('takes up the delays already counted in the database rather than re-reading dates', () => {
     const rows = buildWorkload(
       [
         { assigneeId: 7, assigneeName: 'Ada', status: TaskStatus.TODO, count: 9, overdue: 4 },
@@ -193,7 +193,7 @@ describe('buildWorkload', () => {
     expect(rows[0]).toMatchObject({ todo: 9, review: 1, total: 10, overdue: 4 });
   });
 
-  it('range les non-assignées en dernier, si nombreuses soient-elles', () => {
+  it('places unassigned tasks last, however many there are', () => {
     const rows = buildWorkload(
       [
         ...Array.from({ length: 5 }, (_, i) => task({ id: i, assigneeId: null })),
@@ -206,7 +206,7 @@ describe('buildWorkload', () => {
 });
 
 describe('weekStartOf', () => {
-  it('ramène au lundi, y compris depuis un dimanche', () => {
+  it('brings back to Monday, including from a Sunday', () => {
     expect(weekStartOf(new Date('2026-08-18T12:00:00Z')).toISOString()).toBe('2026-08-17T00:00:00.000Z');
     expect(weekStartOf(new Date('2026-08-23T23:00:00Z')).toISOString()).toBe('2026-08-17T00:00:00.000Z');
     expect(weekStartOf(new Date('2026-08-17T00:00:00Z')).toISOString()).toBe('2026-08-17T00:00:00.000Z');
@@ -214,15 +214,15 @@ describe('weekStartOf', () => {
 });
 
 describe('buildPace', () => {
-  it('rend une semaine par créneau, les vides comprises', () => {
+  it('returns one week per slot, empty ones included', () => {
     const points = buildPace([], NOW, 4);
     expect(points.map((p) => p.weekStart)).toEqual(['2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17']);
     expect(points.every((p) => p.count === 0)).toBe(true);
   });
 
-  it('range chaque livraison dans sa semaine', () => {
-    // Les mêmes trois livraisons qu'avant, déjà regroupées par la base : deux dans la
-    // semaine du 17 (mardi 18 et lundi 17), une dans celle du 10.
+  it('places each delivery in its week', () => {
+    // The same three deliveries as before, already grouped by the database: two in the week of the 17th
+    // (Tuesday 18 and Monday 17), one in that of the 10th.
     const points = buildPace(
       [
         { weekStart: '2026-08-17', count: 2 },
@@ -234,7 +234,7 @@ describe('buildPace', () => {
     expect(points.map((p) => p.count)).toEqual([0, 0, 1, 2]);
   });
 
-  it('ignore ce qui tombe hors fenêtre plutôt que de le rattacher au bord', () => {
+  it('ignores what falls outside the window rather than attaching it to the edge', () => {
     expect(buildPace([{ weekStart: '2025-12-29', count: 1 }], NOW, 4).every((p) => p.count === 0)).toBe(true);
   });
 });
@@ -245,42 +245,42 @@ describe('projectEnd', () => {
     { weekStart: '2026-08-10', count: 6 },
   ];
 
-  it('projette la fin au rythme observé', () => {
+  it('projects the end at the observed pace', () => {
     const p = projectEnd(10, 30, points, NOW);
     expect(p.perWeek).toBe(5);
-    // 20 restantes à 5/semaine = 4 semaines.
+    // 20 remaining at 5/week = 4 weeks.
     expect(p.projectedEnd).toBe('2026-09-15');
   });
 
-  it('ne projette rien sans rythme — une date inventée se lirait comme un engagement', () => {
+  it('projects nothing without a pace — an invented date would be read as a commitment', () => {
     const flat = projectEnd(10, 30, [{ weekStart: '2026-08-10', count: 0 }], NOW);
     expect(flat.projectedEnd).toBeNull();
-    // La raison compte autant que l'absence : l'écran doit pouvoir dire « on ne sait pas »
-    // plutôt que de laisser un vide qui se lit comme « bientôt ».
+    // The reason matters as much as the absence: the screen must be able to say "we do not know" rather than
+    // leave a blank that reads as "soon".
     expect(flat.unavailable).toBe('no-velocity');
     expect(projectEnd(10, 30, [], NOW).unavailable).toBe('no-velocity');
   });
 
-  it('ne projette rien quand tout est fait, et le dit autrement', () => {
+  it('projects nothing when everything is done, and says so differently', () => {
     const done = projectEnd(30, 30, points, NOW);
     expect(done.projectedEnd).toBeNull();
     expect(done.unavailable).toBe('nothing-left');
   });
 
-  it('déclare son unité : la projection divise des tâches par des tâches', () => {
+  it('declares its unit: the projection divides tasks by tasks', () => {
     expect(projectEnd(10, 30, points, NOW).unit).toBe('tasks');
   });
 });
 
-// ── Assemblage : ce que getOverview demande à la base, et ce qu'il en fait ────
+// ── Assembly: what getOverview asks of the database, and what it does with it ──
 
 const NO_STATUS = { isDone: null, isInactive: null, legacyStatus: null };
 
 /**
- * Renvoie la réponse correspondant au SQL reconnu dans le template balisé.
+ * Returns the response matching the SQL recognised in the tagged template.
  *
- * `pace` et `delivery` regroupent tous deux par `date_trunc` : ce qui les distingue est la
- * table lue — les décisions de review pour la vélocité, les médias pour le débit.
+ * `pace` and `delivery` both group by `date_trunc`: what distinguishes them is the table read — review
+ * decisions for the velocity, media for the output rate.
  */
 function stubQueryRaw(answers: {
   matrix?: unknown[];
@@ -306,7 +306,7 @@ describe('getOverview', () => {
     vi.mocked(prisma.task.count).mockResolvedValue(0);
   });
 
-  it('ne lit que des agrégats : quatre requêtes brutes, les séquences, trois listes bornées', async () => {
+  it('reads only aggregates: four raw queries, the sequences, three bounded lists', async () => {
     await getOverview(7, 8, NOW);
     expect(vi.mocked(prisma.$queryRaw)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(prisma.sequence.findMany)).toHaveBeenCalledTimes(1);
@@ -316,8 +316,8 @@ describe('getOverview', () => {
     }
   });
 
-  it('compte les totaux en base au lieu de mesurer des listes plafonnées', async () => {
-    // Un projet où chaque liste dépasse le plafond : les tuiles doivent annoncer 300, pas 50.
+  it('counts the totals in the database instead of measuring capped lists', async () => {
+    // A project where each list exceeds the cap: the tiles must announce 300, not 50.
     vi.mocked(prisma.task.count).mockResolvedValue(300);
     const view = await getOverview(7, 8, NOW);
     expect(vi.mocked(prisma.task.count)).toHaveBeenCalledTimes(4);
@@ -330,9 +330,9 @@ describe('getOverview', () => {
     expect(view.attention.limit).toBe(50);
   });
 
-  it('dédoublonne le badge : il est compté en base sur l’union, pas sommé', async () => {
-    // Le quatrième `count` est celui du badge. Une tâche à la fois en retard et non
-    // assignée ne doit y figurer qu'une fois : 5 + 9 + 6 = 20, mais l'union en vaut 14.
+  it('de-duplicates the badge: it is counted in the database over the union, not summed', async () => {
+    // The fourth `count` is that of the badge. A task both late and unassigned must appear there only once: 5
+    // + 9 + 6 = 20, but the union is worth 14.
     const counts = [5, 9, 6, 14];
     let call = 0;
     vi.mocked(prisma.task.count).mockImplementation((() => Promise.resolve(counts[call++] ?? 0)) as never);
@@ -340,19 +340,19 @@ describe('getOverview', () => {
     expect(view.attention.totals.blocking).toBe(14);
     const { overdue, unassigned, waitingReview } = view.attention.totals;
     expect(overdue + unassigned + waitingReview).toBe(20);
-    // Le where du badge est bien une union des trois conditions, pas une conjonction.
+    // The badge's where is indeed a union of the three conditions, not a conjunction.
     const badge = JSON.stringify(vi.mocked(prisma.task.count).mock.calls[3]![0]!.where);
     expect(badge).toContain('"assigneeId":null');
     expect(badge).toContain('"dueDate"');
   });
 
-  it('sépare les deux unités : la vélocité en tâches, le débit en médias', async () => {
+  it('separates the two units: velocity in tasks, output rate in media', async () => {
     stubQueryRaw({
       matrix: [
         { sequenceId: 1, department: 'comp', status: TaskStatus.TODO, count: 10, ...NO_STATUS },
         { sequenceId: 1, department: 'comp', status: TaskStatus.APPROVED, count: 10, ...NO_STATUS },
       ],
-      // 8 tâches franchies sur 4 semaines = 2 tâches/semaine ; 10 restantes ⇒ 5 semaines.
+      // 8 tasks crossed over 4 weeks = 2 tasks/week; 10 remaining ⇒ 5 weeks.
       pace: [{ weekStart: '2026-08-10', count: 8 }],
       delivery: [{ weekStart: '2026-08-10', count: 400 }],
     });
@@ -365,11 +365,11 @@ describe('getOverview', () => {
       projectedEnd: '2026-09-22',
       unavailable: null,
     });
-    // Le débit, énorme, ne touche pas la projection : c'était tout le défaut.
+    // The output rate, enormous, does not touch the projection: that was the whole defect.
     expect(view.delivery.map((p) => p.count)).toEqual([0, 0, 400, 0]);
   });
 
-  it('borne le débit aux médias prêts et aux parents vivants', async () => {
+  it('bounds the output rate to ready media and living parents', async () => {
     await getOverview(7, 8, NOW);
     const sql = vi
       .mocked(prisma.$queryRaw)
@@ -379,7 +379,7 @@ describe('getOverview', () => {
     expect(sql.match(/sh\."deletedAt" IS NULL/)).not.toBeNull();
   });
 
-  it('replie la matrice, la charge et le rythme depuis les comptes de la base', async () => {
+  it('folds the matrix, the load and the pace from the counts of the database', async () => {
     stubQueryRaw({
       matrix: [
         { sequenceId: 1, department: 'comp', status: TaskStatus.TODO, count: 4, ...NO_STATUS },
@@ -420,14 +420,14 @@ describe('getOverview', () => {
       { assigneeId: 7, name: 'Ada', todo: 0, progress: 3, review: 0, blocked: 0, overdue: 1, total: 3 },
     ]);
     expect(view.pace.map((p) => p.count)).toEqual([0, 0, 5, 0]);
-    // 6 faits sur 12 comptés (les inactifs sont hors jeu), rythme 5/4 semaines = 1,25.
+    // 6 facts out of 12 counted (inactives are out of play), pace 5/4 weeks = 1.25.
     expect(view.projection).toMatchObject({ done: 6, total: 12, perWeek: 1.25 });
   });
 
-  it('lit le référentiel du studio : terminal compte comme fait, inactif ne compte pas', async () => {
+  it('reads the studio reference: terminal counts as done, inactive does not count', async () => {
     stubQueryRaw({
       matrix: [
-        // « fin » : terminal côté site, mais l'enum local dit IN_PROGRESS.
+        // "fin": terminal on the site side, but the local enum says IN_PROGRESS.
         {
           sequenceId: 1,
           department: 'comp',
@@ -437,7 +437,7 @@ describe('getOverview', () => {
           isInactive: false,
           legacyStatus: TaskStatus.APPROVED,
         },
-        // « omt » : omis — ni à faire, ni fait.
+        // "omt": omitted — neither to do nor done.
         {
           sequenceId: 1,
           department: 'comp',
@@ -461,11 +461,11 @@ describe('getOverview', () => {
     const view = await getOverview(7, 8, NOW);
     expect(view.matrix[0]).toMatchObject({ done: 3, todo: 1, blocked: 0, total: 4 });
     expect(view.projection).toMatchObject({ done: 3, total: 4 });
-    // La colonne reste visible même si son seul reste-à-faire a été mis de côté.
+    // The column remains visible even if its only remaining work has been set aside.
     expect(view.departments).toEqual(['comp']);
   });
 
-  it('n’écarte des listes d’attention ni les statuts terminaux ni les inactifs', async () => {
+  it('does not exclude terminal or inactive statuses from the attention lists', async () => {
     await getOverview(7, 8, NOW);
     const wheres = vi.mocked(prisma.task.findMany).mock.calls.map((c) => JSON.stringify(c[0]!.where));
     for (const where of wheres) {
@@ -474,7 +474,7 @@ describe('getOverview', () => {
     }
   });
 
-  it('repartage les candidats sans jamais mélanger les trois listes', async () => {
+  it('re-splits the candidates without ever mixing the three lists', async () => {
     const row = (over: Record<string, unknown>) => ({
       id: 1,
       name: 't',
@@ -495,8 +495,7 @@ describe('getOverview', () => {
       ] as never);
 
     const { attention } = await getOverview(7, 8, NOW);
-    // La tâche 1 est à la fois en retard et non assignée : une seule ligne en base,
-    // présente dans les deux listes.
+    // Task 1 is both late and unassigned: a single row in the database, present in both lists.
     expect(attention.overdue.map((t) => t.id)).toEqual([1]);
     expect(attention.unassigned.map((t) => t.id)).toEqual([1]);
     expect(attention.waitingReview.map((t) => t.id)).toEqual([2]);

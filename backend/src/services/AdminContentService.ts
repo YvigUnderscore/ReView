@@ -7,9 +7,9 @@ import { toPublicUser } from '../lib/userView';
 import { pageArgs, paginate, orderByFrom, type PaginationParams } from '../lib/pagination';
 
 /**
- * Listes globales de contenus pour l'administration : versions (tous projets, filtres
- * projet/statut/type/publication) et commentaires (recherche + modération). Les
- * constructeurs de clauses `where` et le libellé de localisation sont purs (testés).
+ * Global content lists for administration: versions (all projects, filtered by
+ * project/status/type/publication) and comments (search + moderation). The `where`
+ * clause builders and the location label are pure (and tested).
  */
 
 // ── Versions ─────────────────────────────────────────────────────────────────
@@ -22,12 +22,12 @@ export interface VersionFilters {
   q?: string;
 }
 
-/** Chemins « version → projet » (une version vit sous une tâche de shot/asset, ou un asset). */
+/** "Version -> project" paths (a version lives under a shot/asset task, or directly under an asset). */
 export function projectPathsOf(projectId: number): Prisma.VersionWhereInput[] {
   return [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }];
 }
 
-/** Clause Prisma d'une liste de versions filtrée (admin, tous projets). */
+/** Prisma clause for a filtered list of versions (admin, all projects). */
 export function versionWhere(f: VersionFilters): Prisma.VersionWhereInput {
   const where: Prisma.VersionWhereInput = { deletedAt: null };
   if (f.status) where.status = f.status;
@@ -38,7 +38,7 @@ export function versionWhere(f: VersionFilters): Prisma.VersionWhereInput {
   return where;
 }
 
-/** Forme minimale nécessaire au libellé de localisation d'une version. */
+/** Minimal shape needed for a version's location label. */
 export interface VersionLocationInput {
   task?: {
     name: string;
@@ -48,7 +48,7 @@ export interface VersionLocationInput {
   asset?: { name: string } | null;
 }
 
-/** Localisation lisible : « SQ010 · SH020 › anim », « perso › lookdev » ou « perso ». */
+/** Readable location: "SQ010 · SH020 › anim", "perso › lookdev" or "perso". */
 export function versionLocation(v: VersionLocationInput): string {
   const t = v.task;
   if (t?.shot) {
@@ -59,7 +59,7 @@ export function versionLocation(v: VersionLocationInput): string {
   return v.asset?.name ?? '';
 }
 
-/** Liste paginée des versions du studio (admin) avec localisation et médias. */
+/** Paginated list of studio versions (admin), with location and media. */
 export async function listVersions(f: VersionFilters, p: PaginationParams) {
   const where = versionWhere(f);
   const [rows, total] = await Promise.all([
@@ -120,7 +120,7 @@ export interface CommentFilters {
   q?: string;
 }
 
-/** Clause Prisma d'une liste de commentaires filtrée (admin, modération). */
+/** Prisma clause for a filtered list of comments (admin, moderation). */
 export function commentWhere(f: CommentFilters): Prisma.CommentWhereInput {
   const where: Prisma.CommentWhereInput = {};
   if (f.authorId) where.userId = f.authorId;
@@ -130,7 +130,7 @@ export function commentWhere(f: CommentFilters): Prisma.CommentWhereInput {
   return where;
 }
 
-/** Liste paginée des commentaires du studio (admin) — recherche + modération. */
+/** Paginated list of studio comments (admin): search and moderation. */
 export async function listComments(f: CommentFilters, p: PaginationParams) {
   const where = commentWhere(f);
   const [rows, total] = await Promise.all([

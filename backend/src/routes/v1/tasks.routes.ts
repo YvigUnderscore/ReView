@@ -17,9 +17,9 @@ import * as TaskService from '../../services/TaskService';
 import { idParam, actorOf, requireShotProject, requireAssetProject, requireTaskProject } from './helpers';
 
 /**
- * Tâches de l'API v1 : celles d'un shot ou d'un asset porteur, puis la tâche elle-même
- * et ses versions. Un shot et un asset portent leurs tâches de la même façon — d'où les
- * fabriques ci-dessous, qui ne diffèrent que par la clé de rattachement.
+ * Tasks in API v1: those of a shot or asset owner, then the task itself and its versions. A shot and
+ * an asset carry their tasks the same way, hence the factories below, which differ only by the
+ * attachment key.
  */
 const router = Router();
 
@@ -28,10 +28,10 @@ const taskBody = z.object({
   type: z.nativeEnum(TaskType).optional(),
 });
 
-/** Garde d'accès d'un porteur de tâches : elle rend l'identifiant de son projet. */
+/** Access guard for a task owner: it returns the identifier of its project. */
 type OwnerGuard = (req: Request, id: number) => Promise<number>;
 
-/** GET des tâches d'un porteur (shot ou asset), dans l'ordre du pipeline. */
+/** GET of an owner's tasks (shot or asset), in pipeline order. */
 const listTasksOf =
   (requireProject: OwnerGuard, key: 'shotId' | 'assetId'): RequestHandler =>
   async (req, res) => {
@@ -45,7 +45,7 @@ const listTasksOf =
     res.json({ tasks: rows.map(toTask) });
   };
 
-/** POST idempotent d'une tâche sur un porteur (shot ou asset). */
+/** Idempotent POST of a task on an owner (shot or asset). */
 const ensureTaskOn =
   (requireProject: OwnerGuard, key: 'shotId' | 'assetId'): RequestHandler =>
   async (req, res) => {
@@ -105,7 +105,7 @@ router.get('/tasks/:id', requireScope('tasks:read'), validate({ params: idParam 
   res.json({ task: toTask(task) });
 });
 
-// PATCH /api/v1/tasks/:id — statut et assignation, le minimum qu'un pipeline pilote
+// PATCH /api/v1/tasks/:id: status and assignment, the minimum a pipeline drives
 router.patch(
   '/tasks/:id',
   requireScope('tasks:write'),

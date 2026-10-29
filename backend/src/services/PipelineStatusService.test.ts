@@ -26,7 +26,7 @@ const site = [
 ];
 const own = [{ id: 20, scope: 'task', code: 'brief', origin: 'local', legacyStatus: TaskStatus.TODO }];
 
-/** Enchaîne les retours de `findMany` dans l'ordre où le service les demande. */
+/** Chains the results of `findMany` in the order in which the service requests them. */
 const answers = (...lists: unknown[][]) => {
   for (const list of lists) db.pipelineStatus.findMany.mockResolvedValueOnce(list);
 };
@@ -36,22 +36,22 @@ const whereOf = (call: number) =>
 beforeEach(() => vi.clearAllMocks());
 
 /**
- * Le référentiel appartient au studio, la liste proposée appartient au projet. Mélanger
- * les deux vocabulaires invite à poser sur un projet ShotGrid un statut que le site
- * refusera — et à proposer ailleurs des statuts qui ne veulent rien dire.
+ * The reference belongs to the studio, the proposed list belongs to the project. Mixing the two vocabularies
+ * invites setting on a ShotGrid project a status that the site will refuse — and offering elsewhere statuses
+ * that mean nothing.
  */
 describe('listForProject', () => {
-  it('sert d’abord le vocabulaire propre au projet', async () => {
+  it('serves the project\'s own vocabulary first', async () => {
     answers(own);
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['brief']);
-    // Le studio n'est pas consulté : le projet a le dernier mot sur la SOURCE. La
-    // connexion, elle, l'est désormais — c'est elle qui porte les statuts retenus, et
-    // ce tri vaut aussi pour un vocabulaire propre au projet.
+    // The studio is not consulted: the project has the last word on the SOURCE. The connection, for its part,
+    // now is — it is what carries the statuses retained, and this sort also applies to a vocabulary specific
+    // to the project.
     expect(db.pipelineStatus.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('ne propose que le vocabulaire du site sur un projet relié', async () => {
+  it('offers only the site\'s vocabulary on a linked project', async () => {
     answers([], site);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true });
     const r = await listForProject(461, 'task');
@@ -59,7 +59,7 @@ describe('listForProject', () => {
     expect(whereOf(1)).toMatchObject({ projectId: null, origin: 'shotgrid' });
   });
 
-  it('ne propose que les statuts locaux sur un projet non relié', async () => {
+  it('offers only the local statuses on an unlinked project', async () => {
     answers([], local);
     db.shotgridConnection.findUnique.mockResolvedValue(null);
     const r = await listForProject(448, 'task');
@@ -67,39 +67,39 @@ describe('listForProject', () => {
     expect(whereOf(1)).toMatchObject({ projectId: null, origin: 'local' });
   });
 
-  it('traite une connexion désactivée comme une absence de connexion', async () => {
-    // Délier un projet ne doit pas laisser son équipe avec le vocabulaire d'un site
-    // auquel elle n'a plus accès.
+  it('treats a disabled connection as an absence of connection', async () => {
+    // Unlinking a project must not leave its team with the vocabulary of a site to which it no longer has
+    // access.
     answers([], local);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: false });
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['todo', 'approved']);
   });
 
-  it('retombe sur le vocabulaire local quand le site n’a pas encore été lu', async () => {
-    // Un projet relié dont les statuts n'ont pas encore été importés : mieux vaut le
-    // vocabulaire local qu'un sélecteur sans aucune option.
+  it('falls back on the local vocabulary when the site has not yet been read', async () => {
+    // A linked project whose statuses have not yet been imported: better the local vocabulary than a selector
+    // with no option at all.
     answers([], [], local);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true });
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['todo', 'approved']);
   });
 
-  it('ne sert JAMAIS le vocabulaire d’un site à un projet non relié', async () => {
-    // Le défaut corrigé en B2 : le repli rendait « tout le référentiel », site compris,
-    // à un projet qui n'y est pas relié.
+  it('NEVER serves a site\'s vocabulary to an unlinked project', async () => {
+    // The default corrected in B2: the fallback returned "the whole reference", site included, to a project
+    // that is not linked to it.
     answers([], []);
     db.shotgridConnection.findUnique.mockResolvedValue(null);
     expect(await listForProject(448, 'shot')).toEqual([]);
-    // Trois appels auraient signifié qu'on est allé chercher un repli de plus.
+    // Three calls would have meant that one went looking for one more fallback.
     expect(db.pipelineStatus.findMany).toHaveBeenCalledTimes(2);
   });
 
-  it('trie de façon déterministe', async () => {
+  it('sorts deterministically', async () => {
     answers(own);
     await listForProject(448, 'task');
-    // Deux statuts de même rang sortiraient dans un ordre variable sans départage :
-    // le « premier » servant de repli changerait d'un appel à l'autre.
+    // Two statuses of the same rank would come out in a varying order without a tie-break: the "first",
+    // serving as a fallback, would change from one call to the next.
     expect((db.pipelineStatus.findMany.mock.calls[0]![0] as { orderBy: unknown }).orderBy).toEqual([
       { scope: 'asc' },
       { order: 'asc' },
@@ -109,23 +109,23 @@ describe('listForProject', () => {
 });
 
 describe('resolveByLegacy', () => {
-  it('cherche la correspondance dans le vocabulaire du projet, pas dans le référentiel entier', async () => {
+  it('looks for the match in the project\'s vocabulary, not in the whole reference', async () => {
     answers([], site);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true });
     const match = await resolveByLegacy(461, 'task', TaskStatus.PENDING_REVIEW);
     expect(match?.code).toBe('suprev');
   });
 
-  it('rend le premier statut du projet qui porte cette valeur', async () => {
-    // « wtg » et « hld » retombent tous deux sur TODO : c'est l'ordre du projet qui tranche,
-    // et non l'ordre global du référentiel.
+  it('returns the first status of the project carrying this value', async () => {
+    // "wtg" and "hld" both fall back on TODO: it is the project's order that decides, and not the global
+    // order of the reference.
     answers([], site);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true });
     const match = await resolveByLegacy(461, 'task', TaskStatus.TODO);
     expect(match?.code).toBe('wtg');
   });
 
-  it('rend null quand aucun statut du projet ne porte cette valeur', async () => {
+  it('returns null when no status of the project carries this value', async () => {
     answers([], local);
     db.shotgridConnection.findUnique.mockResolvedValue(null);
     expect(await resolveByLegacy(448, 'task', TaskStatus.RETAKE)).toBeNull();
@@ -133,60 +133,60 @@ describe('resolveByLegacy', () => {
 });
 
 describe('assertBelongsToProject', () => {
-  it('accepte un statut offert au projet', async () => {
+  it('accepts a status offered to the project', async () => {
     answers(own);
     await expect(assertBelongsToProject(461, 'task', 20)).resolves.toBe(20);
   });
 
-  it('refuse un statut venu du site d’un autre projet', async () => {
-    // Le cas qui compte : un identifiant valide en base, mais étranger à ce projet.
+  it('refuses a status coming from another project\'s site', async () => {
+    // The case that matters: an identifier valid in the database, but foreign to this project.
     answers([], local);
     db.shotgridConnection.findUnique.mockResolvedValue(null);
     await expect(assertBelongsToProject(448, 'task', 12)).rejects.toThrow();
   });
 
-  it('laisse toujours effacer le statut', async () => {
+  it('always lets the status be cleared', async () => {
     await expect(assertBelongsToProject(448, 'shot', null)).resolves.toBeNull();
     expect(db.pipelineStatus.findMany).not.toHaveBeenCalled();
   });
 });
 
 /**
- * Tri du studio (réglage ShotGrid du projet) : un site propose vingt et un statuts de
- * plan, une production n'en emploie que six. Ce qui est masqué ne doit plus être
- * proposé — mais rien ne doit jamais rendre une liste vide, où plus aucun choix ne se
- * ferait et d'où l'on ne pourrait plus revenir.
+ * The studio's sort (ShotGrid setting of the project): a site offers twenty-one shot statuses, a production
+ * uses only six. What is hidden must no longer be offered — but nothing
+ * must ever return an empty list, where no choice would be possible any more and from which one could no
+ * longer go back.
  */
-describe('listForProject — statuts retenus par le projet', () => {
+describe('listForProject: statuses retained by the project', () => {
   const connectionWith = (visibleStatuses: unknown) =>
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true, settings: { visibleStatuses } });
 
-  it('ne garde que les codes cochés pour le périmètre', async () => {
+  it('keeps only the codes ticked for the scope', async () => {
     answers([], site);
     connectionWith({ task: ['wtg', 'suprev'] });
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['wtg', 'suprev']);
   });
 
-  it('laisse le périmètre entier quand rien n’est coché', async () => {
+  it('leaves the whole scope when nothing is ticked', async () => {
     answers([], site);
     connectionWith({ task: [], shot: ['fin'] });
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['wtg', 'hld', 'suprev']);
   });
 
-  it('ignore un filtre qui ne reconnaît plus aucun code', async () => {
-    // Codes renommés côté site, liste recopiée d'un autre projet : un menu vide ne se
-    // répare pas depuis l'écran où il manque.
+  it('ignores a filter that no longer recognises any code', async () => {
+    // Codes renamed on the site side, a list copied from another project: an empty menu cannot be repaired
+    // from the screen where it is missing.
     answers([], site);
     connectionWith({ task: ['inconnu'] });
     const r = await listForProject(461, 'task');
     expect(r.map((s) => s.code)).toEqual(['wtg', 'hld', 'suprev']);
   });
 
-  it('juge le repli périmètre par périmètre', async () => {
-    // Sans scope : les statuts de tâche restés dans le résultat ne doivent pas faire
-    // croire que le filtre de plan a fonctionné.
+  it('judges the fallback scope by scope', async () => {
+    // Without a scope: the task statuses remaining in the result must not make it seem that the shot filter
+    // worked.
     const mixed = [...site, { id: 30, scope: 'shot', code: 'fin', origin: 'shotgrid' }];
     answers([], mixed);
     connectionWith({ task: ['wtg'], shot: ['inconnu'] });
@@ -194,14 +194,14 @@ describe('listForProject — statuts retenus par le projet', () => {
     expect(r.map((s) => s.code)).toEqual(['wtg', 'fin']);
   });
 
-  it('rend le catalogue entier quand l’écran de réglage le demande', async () => {
+  it('returns the entire catalogue when the settings screen asks for it', async () => {
     answers([], site);
     connectionWith({ task: ['wtg'] });
     const r = await listForProject(461, 'task', { all: true });
     expect(r.map((s) => s.code)).toEqual(['wtg', 'hld', 'suprev']);
   });
 
-  it('ne filtre rien sur un projet non relié', async () => {
+  it('filters nothing on an unlinked project', async () => {
     answers([], local);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: false, settings: { task: ['todo'] } });
     const r = await listForProject(448, 'task');

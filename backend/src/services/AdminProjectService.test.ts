@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-// Fonctions pures testées : on neutralise les dépendances env/DB des imports.
+// Pure functions under test: env/DB dependencies of the imports are stubbed out.
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
 vi.mock('./StorageService', () => ({ storage: {} }));
 
@@ -20,7 +20,7 @@ const projectSettings: ProjectSettings = {
 };
 
 describe('AdminProjectService — hasPipelineOverride', () => {
-  it('détecte résolution ou framerate, ignore le reste', () => {
+  it('detects resolution or framerate, ignores the rest', () => {
     expect(hasPipelineOverride(null)).toBe(false);
     expect(hasPipelineOverride({})).toBe(false);
     expect(hasPipelineOverride({ autre: 1 })).toBe(false);
@@ -30,7 +30,7 @@ describe('AdminProjectService — hasPipelineOverride', () => {
 });
 
 describe('AdminProjectService — buildHierarchy', () => {
-  it('résout l’héritage projet→séquence→shot et pose les drapeaux override', () => {
+  it('resolves project->sequence->shot inheritance and sets the override flags', () => {
     const h = buildHierarchy(
       projectSettings,
       [
@@ -66,17 +66,17 @@ describe('AdminProjectService — buildHierarchy', () => {
     expect(seq.override).toBe(true);
     expect(seq.effective).toEqual({ resolution: { width: 1920, height: 1080 }, framerate: 25 });
 
-    // SH010 hérite de la séquence (25 ips), sans override propre.
+    // SH010 inherits from the sequence (25 fps), with no override of its own.
     expect(seq.shots[0]!.override).toBe(false);
     expect(seq.shots[0]!.effective.framerate).toBe(25);
-    // SH020 override la résolution mais hérite du framerate séquence.
+    // SH020 overrides the resolution but inherits the sequence framerate.
     expect(seq.shots[1]!.override).toBe(true);
     expect(seq.shots[1]!.effective).toEqual({
       resolution: { width: 3840, height: 2160 },
       framerate: 25,
     });
 
-    // Shot sans séquence : hérite directement du projet.
+    // Shot without a sequence: inherits directly from the project.
     expect(h.noSequence[0]!.override).toBe(false);
     expect(h.noSequence[0]!.effective).toEqual({
       resolution: { width: 1920, height: 1080 },
@@ -84,7 +84,7 @@ describe('AdminProjectService — buildHierarchy', () => {
     });
   });
 
-  it('rend des listes vides pour un projet sans structure', () => {
+  it('returns empty lists for a project without structure', () => {
     expect(buildHierarchy(projectSettings, [], [])).toEqual({ sequences: [], noSequence: [] });
   });
 });

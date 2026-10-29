@@ -5,8 +5,8 @@ import { Queue } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
 
 /**
- * Files de jobs BullMQ. Les workers FFmpeg (transcodage, miniatures) et la conversion 3D
- * (assimp) sont implémentés dans src/workers/.
+ * BullMQ job queues. The FFmpeg workers (transcoding, thumbnails) and the 3D conversion (assimp) are
+ * implemented in src/workers/.
  */
 export const QUEUE_NAMES = {
   MEDIA: 'media-processing',
@@ -19,9 +19,9 @@ export const QUEUE_NAMES = {
 } as const;
 
 /**
- * Travaux ShotGrid (Phase 48) : application d'un événement reçu, relevé périodique du
- * journal d'événements, réconciliation, et écritures vers ShotGrid. Une seule file :
- * l'ordre relatif des opérations d'une même connexion compte plus que le parallélisme.
+ * ShotGrid jobs (Phase 48): applying a received event, periodic reading of the event log, reconciliation, and
+ * writes to ShotGrid. A single queue: the relative order of the operations on one connection matters more
+ * than parallelism.
  */
 export type ShotgridJobData =
   | { kind: 'event'; connectionId: number; event: unknown; deliveryId?: string | null }
@@ -31,7 +31,7 @@ export type ShotgridJobData =
 
 export interface MediaJobData {
   mediaObjectId: number;
-  // 'scan' (37.E) : antivirus seul, pour les médias servis tels quels (GLB natif, splats).
+  // 'scan' (37.E): antivirus alone, for media served as they are (native GLB, splats).
   kind: 'transcode' | 'thumbnail' | 'convert3d' | 'scan';
 }
 
@@ -48,13 +48,13 @@ export const mediaQueue = new Queue<MediaJobData, void, string>(QUEUE_NAMES.MEDI
 export const enqueueMediaJob = (data: MediaJobData) => mediaQueue.add(data.kind, data);
 
 /**
- * Vignette d'un média spatial (3D / gaussian splat) — file **dédiée**, à part de
+ * Thumbnail of a spatial media (3D / Gaussian splat) — a **dedicated** queue, separate from
  * `media-processing`.
  *
- * Pourquoi pas un `kind` de plus sur la file média : ce travail est décoratif. Il ne doit
- * jamais faire passer un média en `PROCESSING` ni en `FAILED`, il occupe le CPU longtemps
- * (rendu Cycles) et il doit pouvoir échouer sans conséquence. Une file séparée à
- * concurrence 1 l'isole du transcodage, qui lui est bloquant pour l'utilisateur.
+ * Why not one more `kind` on the media queue: this work is decorative. It must never move a media to
+ * `PROCESSING` or `FAILED`, it occupies the CPU for a long time (Cycles rendering) and it must be able to
+ * fail without consequence. A separate queue with concurrency 1 isolates it from transcoding, which blocks
+ * the user.
  */
 export interface SpatialThumbJobData {
   mediaObjectId: number;
@@ -63,29 +63,29 @@ export interface SpatialThumbJobData {
 export const spatialThumbQueue = new Queue<SpatialThumbJobData, void, string>(QUEUE_NAMES.SPATIAL_THUMB, {
   connection: redisConnectionOptions,
   defaultJobOptions: {
-    // Le GLB n'existe qu'une fois la conversion terminée : les premières tentatives
-    // peuvent arriver trop tôt. Le recul exponentiel laisse plus d'une heure au total,
-    // ce qui couvre une scène USD lourde sans occuper la file entre-temps.
+    // The GLB only exists once the conversion has finished: the first attempts may arrive too early. The
+    // exponential back-off leaves more than an hour in total, which covers a heavy USD scene without
+    // occupying the queue in the meantime.
     attempts: 8,
     backoff: { type: 'exponential', delay: 30_000 },
-    // Identifiant déterministe (anti-doublon) : l'expiration libère la clé, sans quoi un
-    // `reprocess` ultérieur du même média serait silencieusement ignoré.
+    // Deterministic identifier (anti-duplicate): expiry frees the key, otherwise a later `reprocess` of the
+    // same media would be silently ignored.
     removeOnComplete: { age: 600, count: 100 },
     removeOnFail: { age: 86_400, count: 200 },
   },
 });
 
-/** Un seul rendu en vol par média : deux uploads/reprocess rapprochés n'en lancent pas deux. */
+/** A single render in flight per media: two closely spaced uploads/reprocesses do not launch two. */
 export const spatialThumbJobId = (mediaObjectId: number) => `spatial-thumb-${mediaObjectId}`;
 
 export const enqueueSpatialThumb = (data: SpatialThumbJobData) =>
   spatialThumbQueue.add('render', data, { jobId: spatialThumbJobId(data.mediaObjectId) });
 
 /**
- * Journal des orphelins storage : quand une suppression MinIO échoue APRÈS que la DB
- * a déjà été purgée (cf. lib/trash), on enfile les clés/préfixes ici pour retry
- * (la DB reste cohérente ; seul l'objet storage subsiste temporairement). Retries
- * automatiques BullMQ (attempts + backoff) traités par workers/storageCleanup.worker.
+ * Log of storage orphans: when a MinIO deletion FAILS AFTER the database has already been purged (see
+ * lib/trash), the keys/prefixes are enqueued here for retry (the database stays consistent; only the storage
+ * object remains temporarily). Automatic BullMQ retries (attempts + backoff) handled by
+ * workers/storageCleanup.worker.
  */
 export interface StorageCleanupJobData {
   keys?: string[];
@@ -108,7 +108,7 @@ export const storageCleanupQueue = new Queue<StorageCleanupJobData, void, string
 export const enqueueStorageCleanup = (data: StorageCleanupJobData) =>
   storageCleanupQueue.add('cleanup', data);
 
-/** Livraison de webhook (36.D) : un job par webhook abonné, retries automatiques. */
+/** Webhook delivery (36.D): one job per subscribed webhook, automatic retries. */
 export interface WebhookJobData {
   webhookId: number;
   event: string;
@@ -130,8 +130,8 @@ export const enqueueWebhookDelivery = (data: WebhookJobData) => webhookQueue.add
 export const shotgridQueue = new Queue<ShotgridJobData, void, string>(QUEUE_NAMES.SHOTGRID, {
   connection: redisConnectionOptions,
   defaultJobOptions: {
-    // Une seule tentative pour les événements : la réconciliation périodique rattrape
-    // ce qui a échoué, mieux qu'un empilement de reprises sur un site indisponible.
+    // A single attempt for events: the periodic reconciliation catches what failed, better than a pile-up of
+    // retries on an unavailable site.
     attempts: 2,
     backoff: { type: 'exponential', delay: 15_000 },
     removeOnComplete: 200,
@@ -140,9 +140,9 @@ export const shotgridQueue = new Queue<ShotgridJobData, void, string>(QUEUE_NAME
 });
 
 /**
- * Export d'un montage en fichier unique (Phase 45). Un seul job à la fois par montage :
- * l'identifiant de job est déterministe, BullMQ ignore silencieusement un doublon — deux
- * clics sur « exporter » ne lancent pas deux encodages du même film.
+ * Export of an edit as a single file (Phase 45). One job at a time per edit: the job identifier is
+ * deterministic, and BullMQ silently ignores a duplicate — two clicks on
+ * "export" do not launch two encodings of the same film.
  */
 export interface TimelineExportJobData {
   timelineId: number;
@@ -168,20 +168,20 @@ export const enqueueTimelineExport = (data: TimelineExportJobData) =>
   timelineExportQueue.add('export', data, { jobId: timelineExportJobId(data.timelineId) });
 
 /**
- * Entretien périodique (digest quotidien, rapport hebdomadaire, purges).
+ * Periodic maintenance (daily digest, weekly report, purges).
  *
- * Ces trois rendez-vous vivaient dans des `setInterval` du process API : ils mouraient
- * avec lui, se dupliquaient sur deux répliques, et rien ne disait s'ils avaient eu lieu.
- * Passés en file, ils sont posés par l'API (qui seule connaît `DIGEST_HOUR`) et exécutés
- * par le worker, avec l'historique, les reprises et le tableau de bord des autres files.
+ * These three appointments used to live in `setInterval` timers of the API process: they died with it, were
+ * duplicated across two replicas, and nothing said whether they had taken place.
+ * Moved to a queue, they are scheduled by the API (which alone knows `DIGEST_HOUR`) and executed by the
+ * worker, with history, retries and the dashboard of the other queues.
  */
 export type MaintenanceJobData = { kind: 'daily-digest' } | { kind: 'weekly-report' } | { kind: 'purge' };
 
 export const maintenanceQueue = new Queue<MaintenanceJobData, void, string>(QUEUE_NAMES.MAINTENANCE, {
   connection: redisConnectionOptions,
   defaultJobOptions: {
-    // Un rendez-vous manqué est rattrapé par le suivant : mieux vaut deux tentatives
-    // qu'un empilement de reprises sur un SMTP durablement injoignable.
+    // A missed appointment is caught up by the next one: better two attempts than a pile-up of retries on a
+    // SMTP server that is durably unreachable.
     attempts: 2,
     backoff: { type: 'exponential', delay: 60_000 },
     removeOnComplete: 50,
@@ -190,11 +190,11 @@ export const maintenanceQueue = new Queue<MaintenanceJobData, void, string>(QUEU
 });
 
 /**
- * Toutes les files déclarées — source unique pour les métriques et le tableau de bord.
+ * All declared queues — the single source for metrics and the dashboard.
  *
- * L'étiquette n'est pas le nom de file : `media-processing` s'expose depuis toujours
- * sous `queue="media"` dans Prometheus, dans le tableau Grafana provisionné et dans la
- * documentation d'exploitation. La renommer casserait les requêtes existantes.
+ * The label is not the queue name: `media-processing` has always been exposed as `queue="media"` in
+ * Prometheus, in the provisioned Grafana dashboard and in the operations documentation.
+ * Renaming it would break the existing queries.
  */
 export const QUEUE_LABELS = {
   media: mediaQueue,
@@ -211,8 +211,8 @@ export type QueueLabel = keyof typeof QUEUE_LABELS;
 export const ALL_QUEUES = Object.entries(QUEUE_LABELS) as ReadonlyArray<readonly [QueueLabel, Queue]>;
 
 /**
- * Ferme toutes les files (arrêt propre du process API) : sans cela, les connexions Redis
- * des `Queue` maintiennent le process en vie après `server.close()`.
+ * Closes all queues (clean shutdown of the API process): without this, the Redis connections of the `Queue`
+ * instances keep the process alive after `server.close()`.
  */
 export async function closeQueues(): Promise<void> {
   await Promise.all(Object.values(QUEUE_LABELS).map((q) => q.close()));

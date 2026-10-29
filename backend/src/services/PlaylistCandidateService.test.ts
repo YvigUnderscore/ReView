@@ -33,7 +33,7 @@ const whereOf = () => vi.mocked(prisma.version.findMany).mock.calls[0]![0]!.wher
 beforeEach(() => vi.clearAllMocks());
 
 describe('list', () => {
-  it('compose une localisation lisible depuis la séquence, le plan et la tâche', async () => {
+  it('composes a readable location from the sequence, the shot and the task', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([version()] as never);
     const [c] = await list(1, 9);
     expect(c).toMatchObject({
@@ -43,7 +43,7 @@ describe('list', () => {
     });
   });
 
-  it('nomme aussi ce qui pend d’un asset, par la tâche ou en direct', async () => {
+  it('also names what hangs from an asset, by the task or directly', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([
       version({ task: { name: 'lookdev', department: null, shot: null, asset: { name: 'Ship' } } }),
       version({ id: 2, taskId: null, task: null, asset: { name: 'Ship' } }),
@@ -52,7 +52,7 @@ describe('list', () => {
     expect(found.map((c) => c.location)).toEqual(['Ship › lookdev', 'Ship']);
   });
 
-  it('signe la vignette du premier média visible, et rend null quand il n’y en a pas', async () => {
+  it('signs the thumbnail of the first visible media, and returns null when there is none', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([
       version({ media: [{ id: 8, kind: 'VIDEO', originalName: 'a.mov', thumbnailKey: 'derived/8.webp' }] }),
       version({ id: 2, media: [] }),
@@ -62,7 +62,7 @@ describe('list', () => {
     expect(found[1]?.media).toBeNull();
   });
 
-  it('ne montre que les médias que le demandeur a le droit de voir', async () => {
+  it('only shows the media the requester is entitled to see', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([] as never);
     await list(1, 42);
     const select = vi.mocked(prisma.version.findMany).mock.calls[0]![0]!.select as {
@@ -75,14 +75,14 @@ describe('list', () => {
     });
   });
 
-  it('cherche le texte sur la version, la tâche, le plan et l’asset', async () => {
+  it('searches the text on the version, the task, the shot and the asset', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([] as never);
     await list(1, 9, { q: 'roof' });
     const and = whereOf().AND as { OR?: unknown[] }[];
     expect(and[1]?.OR).toHaveLength(5);
   });
 
-  it('distingue « hors séquence » d’une séquence précise', async () => {
+  it('distinguishes "outside any sequence" from a specific sequence', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([] as never);
     await list(1, 9, { sequenceId: 'none' });
     expect((whereOf().AND as unknown[])[1]).toEqual({ task: { shot: { sequenceId: null } } });
@@ -92,8 +92,8 @@ describe('list', () => {
     expect((whereOf().AND as unknown[])[1]).toEqual({ task: { shot: { sequenceId: 7 } } });
   });
 
-  it('ne garde que la dernière version par tâche quand on le demande', async () => {
-    // La requête est déjà triée du plus récent au plus ancien.
+  it('keeps only the latest version per task when asked to', async () => {
+    // The query is already sorted from most recent to oldest.
     vi.mocked(prisma.version.findMany).mockResolvedValue([
       version({ id: 3, taskId: 50 }),
       version({ id: 2, taskId: 50 }),
@@ -103,9 +103,9 @@ describe('list', () => {
     expect(found.map((c) => c.versionId)).toEqual([3, 1]);
   });
 
-  it('garde toujours les versions rattachées directement à un asset', async () => {
-    // Elles n'ont pas de tâche : les dédupliquer par tâche les ferait toutes disparaître
-    // sauf une, alors qu'elles n'ont rien à voir entre elles.
+  it('always keeps the versions attached directly to an asset', async () => {
+    // They have no task: de-duplicating them by task would make them all disappear except one, although they
+    // have nothing to do with one another.
     vi.mocked(prisma.version.findMany).mockResolvedValue([
       version({ id: 3, taskId: null, task: null, asset: { name: 'Ship' } }),
       version({ id: 2, taskId: null, task: null, asset: { name: 'Dock' } }),
@@ -114,7 +114,7 @@ describe('list', () => {
     expect(found.map((c) => c.versionId)).toEqual([3, 2]);
   });
 
-  it('borne le nombre de résultats rendus', async () => {
+  it('bounds the number of results returned', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue(
       Array.from({ length: 10 }, (_, i) => version({ id: i + 1, taskId: i + 1 })) as never,
     );

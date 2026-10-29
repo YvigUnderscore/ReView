@@ -4,15 +4,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * A5-03 — accorder ou retirer l'accès à un projet laisse une trace nominative.
+ * A5-03 — granting or removing access to a project leaves a named trace.
  *
- * C'est exactement le geste d'escalade du constat A1-03 : un superviseur *local* ajoute
- * — ou rétrograde en CLIENT — un compte qu'il contrôle, qui lit dès lors tous les médias
- * publiés du projet. L'écran d'audit ne montrait rien : `addMember`/`removeMember`
- * écrivaient dans `projectMembership` sans jamais appeler `logAudit`.
+ * This is exactly the escalation gesture of finding A1-03: a *local* supervisor adds — or demotes to CLIENT —
+ * an account they control, which then reads all the published media of the project. The audit screen showed
+ * nothing: `addMember`/`removeMember` wrote into `projectMembership` without ever calling `logAudit`.
  *
- * Le cas qui compte n'est pas l'arrivée mais le CHANGEMENT DE RÔLE d'un membre déjà là :
- * l'`upsert` couvrait les deux sans les distinguer, donc sans jamais dire depuis quel rôle.
+ * The case that matters is not the arrival but the ROLE CHANGE of a member already there: the `upsert`
+ * covered both without distinguishing them, hence never saying from which role.
  */
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -47,7 +46,7 @@ beforeEach(() => {
 });
 
 describe('addMember', () => {
-  it("consigne l'arrivée d'un membre avec son acteur et sa cible", async () => {
+  it("logs the arrival of a member with its actor and its target", async () => {
     await addMember(7, 42, undefined, SUPERVISOR);
     expect(audited).toHaveBeenCalledWith({
       userId: 5,
@@ -58,7 +57,7 @@ describe('addMember', () => {
     });
   });
 
-  it('distingue le changement de rôle et dit depuis quel rôle', async () => {
+  it('distinguishes a role change and says from which role', async () => {
     findUnique.mockResolvedValue({ role: 'SUPERVISOR' } as never);
     await addMember(7, 42, 'CLIENT', SUPERVISOR);
     expect(audited).toHaveBeenCalledWith({
@@ -70,19 +69,19 @@ describe('addMember', () => {
     });
   });
 
-  it('consigne quand même sans acteur — la synchronisation ShotGrid n’en a pas', async () => {
+  it('logs even without an actor — the ShotGrid sync has none', async () => {
     await addMember(7, 42);
     expect(audited).toHaveBeenCalledWith(expect.objectContaining({ userId: null }));
   });
 
-  it("rend bien le membership, la lecture préalable n'en change pas le retour", async () => {
+  it("returns the membership as usual, the prior read does not change the return value", async () => {
     vi.mocked(prisma.projectMembership.upsert).mockResolvedValue({ id: 99 } as never);
     await expect(addMember(7, 42, undefined, SUPERVISOR)).resolves.toEqual({ id: 99 });
   });
 });
 
 describe('removeMember', () => {
-  it("consigne le retrait d'accès avec le rôle perdu", async () => {
+  it("logs the removal of access with the role that was lost", async () => {
     vi.mocked(prisma.projectMembership.delete).mockResolvedValue({ role: 'SUPERVISOR' } as never);
     await removeMember(7, 42, SUPERVISOR);
     expect(audited).toHaveBeenCalledWith({
@@ -94,7 +93,7 @@ describe('removeMember', () => {
     });
   });
 
-  it('ne consigne rien si la suppression échoue', async () => {
+  it('logs nothing if the deletion fails', async () => {
     vi.mocked(prisma.projectMembership.delete).mockRejectedValue(new Error('absent'));
     await expect(removeMember(7, 42, SUPERVISOR)).rejects.toThrow();
     expect(audited).not.toHaveBeenCalled();

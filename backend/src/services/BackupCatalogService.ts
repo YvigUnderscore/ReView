@@ -7,57 +7,56 @@ import { env } from '../config/env';
 import { logger } from '../lib/logger';
 
 /**
- * Le catalogue des sauvegardes prises par `scripts/backup.sh`.
+ * Catalogue of backups taken by `scripts/backup.sh`.
  *
- * ⚠ Ce service **n'ouvre que `manifest.txt`**, et c'est une décision de sécurité, pas une
- * économie. Le dossier de sauvegarde contient `env.backup` — une copie des secrets de
- * l'instance, écrite en 600 — et `db.dump`, c'est-à-dire toute la base. Le montage est
- * donc en lecture seule et ce module ne lit jamais autre chose que le manifeste, dont le
- * contenu est celui que `backup.sh` écrit lui-même (six lignes `clé=valeur`). La taille
- * du dump est obtenue par `stat`, jamais en le lisant.
+ * ⚠ This service **only opens `manifest.txt`**, and that is a security decision, not a saving. The backup
+ * folder contains `env.backup`, a copy of the instance secrets written with mode 600, and `db.dump`, that is,
+ * the whole database. The mount is therefore read-only and this module never reads anything but the manifest,
+ * whose content is what `backup.sh` writes itself (six `key=value` lines). The size of the dump is obtained
+ * with `stat`, never by reading it.
  *
- * Absence de `BACKUPS_DIR` : le catalogue répond « indisponible » et l'écran l'explique.
- * Une liste vide et un dossier invisible ne sont pas la même chose, et les confondre
- * ferait croire à un exploitant qu'il n'a aucune sauvegarde.
+ * Missing `BACKUPS_DIR`: the catalogue answers "unavailable" and the screen explains it. An empty list and an
+ * invisible folder are not the same thing, and confusing them would make an operator believe they have no
+ * backups.
  */
 
-/** Un dossier de sauvegarde, nommé par l'instant où il a commencé. */
+/** A backup folder, named after the moment it started. */
 export interface BackupEntry {
-  /** Horodatage `AAAAMMJJ-HHMMSS` — c'est le nom du dossier, et l'identifiant partout. */
+  /** `YYYYMMDD-HHMMSS` timestamp: this is the folder name, and the identifier everywhere. */
   id: string;
-  /** Date ISO déclarée par le manifeste ; à défaut, celle du dossier. */
+  /** ISO date declared by the manifest; otherwise that of the folder. */
   date: string | null;
   mode: string | null;
   bucket: string | null;
-  /** Version de l'application au moment de la sauvegarde (`app_version` du manifeste). */
+  /** Application version at backup time (`app_version` of the manifest). */
   fromRelease: string | null;
   dbBytes: number | null;
-  /** Les secrets suivent-ils ? Sans eux, une restauration ailleurs rend des lignes illisibles. */
+  /** Do the secrets come along? Without them, a restore elsewhere yields unreadable rows. */
   envIncluded: boolean;
   /**
-   * La commande exacte pour restaurer CETTE sauvegarde. Composée ici, jamais à l'écran :
-   * une ligne de shell appartient au module qui connaît les scripts, et un texte fabriqué
-   * dans un composant échapperait au contrôle des chaînes en dur.
+   * The exact command to restore THIS backup. Composed here, never on screen: a shell line belongs to the
+   * module that knows the scripts, and text assembled in a component would escape the hard-coded string
+   * check.
    */
   restoreCommand: string;
 }
 
 export interface BackupCatalog {
-  /** `false` quand aucun dossier n'est monté : l'écran le dit au lieu d'afficher « aucune ». */
+  /** `false` when no folder is mounted: the screen says so instead of displaying "none". */
   available: boolean;
   dir: string | null;
   entries: BackupEntry[];
 }
 
-/** Nom d'un dossier de sauvegarde — `backup.sh` le compose avec `date +%Y%m%d-%H%M%S`. */
+/** Name of a backup folder: `backup.sh` composes it with `date +%Y%m%d-%H%M%S`. */
 export const BACKUP_STAMP = /^\d{8}-\d{6}$/;
 
-/** Un manifeste fait six lignes ; au-delà, ce n'est pas un manifeste. */
+/** A manifest has six lines; beyond that, it is not a manifest. */
 const MAX_MANIFEST_BYTES = 8 * 1024;
-/** Ce que l'écran montre : au-delà, on ne défile plus, on cherche dans un terminal. */
+/** What the screen shows: beyond this, one no longer scrolls, one searches in a terminal. */
 const MAX_ENTRIES = 50;
 
-/** `clé=valeur` par ligne — le format qu'écrit `backup.sh`, rien de plus. */
+/** `key=value` per line: the format `backup.sh` writes, nothing more. */
 export function parseManifest(raw: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const line of raw.split(/\r?\n/)) {
@@ -68,7 +67,7 @@ export function parseManifest(raw: string): Record<string, string> {
   return out;
 }
 
-/** Lit une entrée ; un dossier sans manifeste lisible est ignoré, pas signalé en erreur. */
+/** Reads an entry; a folder without a readable manifest is skipped, not reported as an error. */
 async function readEntry(dir: string, id: string): Promise<BackupEntry | null> {
   const path = join(dir, id);
   let manifest: Record<string, string>;
@@ -77,13 +76,13 @@ async function readEntry(dir: string, id: string): Promise<BackupEntry | null> {
     if (!info.isFile() || info.size > MAX_MANIFEST_BYTES) return null;
     manifest = parseManifest(await readFile(join(path, 'manifest.txt'), 'utf8'));
   } catch {
-    // Sauvegarde interrompue, dossier étranger, permissions : rien à en dire de fiable.
+    // Interrupted backup, foreign folder, permissions: nothing reliable to report about it.
     return null;
   }
 
   let dbBytes: number | null = Number.parseInt(manifest.db_bytes ?? '', 10);
   if (Number.isNaN(dbBytes)) {
-    // Manifeste plus ancien que le champ : la taille se prend sur le fichier, sans l'ouvrir.
+    // Manifest older than the field: the size is taken from the file, without opening it.
     dbBytes = await stat(join(path, 'db.dump'))
       .then((s) => s.size)
       .catch(() => null);
@@ -101,7 +100,7 @@ async function readEntry(dir: string, id: string): Promise<BackupEntry | null> {
   };
 }
 
-/** Les sauvegardes présentes, la plus récente en tête. */
+/** Available backups, most recent first. */
 export async function list(): Promise<BackupCatalog> {
   const dir = env.BACKUPS_DIR;
   if (!dir) return { available: false, dir: null, entries: [] };
@@ -109,8 +108,8 @@ export async function list(): Promise<BackupCatalog> {
   let names: string[];
   try {
     names = (await readdir(dir, { withFileTypes: true }))
-      // `minio-current/` est le miroir vivant, pas une sauvegarde : l'exclure ici est la
-      // même règle que la rotation de `backup.sh`, qui ne le purge jamais non plus.
+      // `minio-current/` is the live mirror, not a backup: excluding it here is the same rule as
+      // `backup.sh`'s rotation, which never purges it either.
       .filter((e) => e.isDirectory() && BACKUP_STAMP.test(e.name))
       .map((e) => e.name)
       .sort()

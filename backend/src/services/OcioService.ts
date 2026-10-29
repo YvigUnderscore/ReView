@@ -25,21 +25,21 @@ import { enqueueOcioBake } from '../workers/ocio/queue';
 import { fetchAllowlisted, readCappedBody } from '../lib/httpFetch';
 
 /**
- * Catalogue des configs couleur OCIO (39.B). Les configs ACES officielles sont récupérées depuis
- * les **releases GitHub de l'ASWF** (`OpenColorIO-Config-ACES`) puis installées dans MinIO
- * (`studio/ocio/`). L'inventaire des configs installées vit dans un `Setting` JSON (`ocioLibrary`)
- * — pas de migration, même pattern que la bibliothèque HDRI. Défaut produit : **ACES 1.3**.
+ * Catalogue of OCIO colour configs (39.B). The official ACES configs are fetched from the **ASWF GitHub
+ * releases** (`OpenColorIO-Config-ACES`) then installed in MinIO (`studio/ocio/`). The inventory of installed
+ * configs lives in a JSON `Setting` (`ocioLibrary`) — no migration, same pattern as the HDRI library. Product
+ * default: **ACES 1.3**.
  *
- * Sécurité (CP-SEC) : le dépôt est **fixe** (aucune URL fournie par l'utilisateur) ; on installe
- * uniquement des assets renvoyés par l'API GitHub, dont l'hôte de téléchargement est **allowlisté**,
- * avec un plafond de taille. Les fichiers `.ocio` sont du YAML stocké tel quel (jamais exécuté).
+ * Security (CP-SEC): the repository is **fixed** (no URL supplied by the user); we only install assets
+ * returned by the GitHub API, whose download host is **allow-listed**,
+ * with a size ceiling. The `.ocio` files are YAML stored as is (never executed).
  *
- * Ces deux requêtes partent du processus API, DANS le réseau applicatif : elles passent donc
- * par `fetchAllowlisted` (lib/httpFetch) et non par `fetch`. L'allow-list seule ne suffisait
- * pas — GitHub sert ses assets par une redirection 302, que `fetch` suivait en aveugle : un
- * amont (ou un résolveur) hostile renvoyait la requête vers `169.254.169.254` ou `minio:9000`
- * et le contenu obtenu était rangé comme une « config OCIO ». Chaque saut est désormais
- * re-soumis à la garde SSRF et à l'allow-list, avec délai d'attente et taille bornée.
+ * These two requests leave the API process, INSIDE the application network: they therefore go through
+ * `fetchAllowlisted` (lib/httpFetch) and not through `fetch`. The allow-list alone was not
+ * enough — GitHub serves its assets through a 302 redirect, which `fetch` followed blindly: a hostile
+ * upstream (or resolver) redirected the request to `169.254.169.254` or `minio:9000`, and the content
+ * obtained was filed as an "OCIO config". Each hop is now re-submitted to the SSRF guard and the allow-list,
+ * with a timeout and a bounded size.
  */
 
 const SETTING_KEY = 'ocioLibrary';
@@ -51,14 +51,14 @@ const ALLOWED_ASSET_HOSTS = new Set([
   'objects.githubusercontent.com',
   'release-assets.githubusercontent.com',
 ]);
-const MAX_ASSET_BYTES = 25 * 1024 * 1024; // 25 Mo (les configs ACES font < 1 Mo)
-/** Quinze releases avec leurs assets : quelques centaines de ko, jamais deux. */
+const MAX_ASSET_BYTES = 25 * 1024 * 1024; // 25 MB (ACES configs are under 1 MB)
+/** Fifteen releases with their assets: a few hundred KB, never two. */
 const MAX_RELEASES_BYTES = 2 * 1024 * 1024;
 const RELEASES_TTL_MS = 10 * 60 * 1000;
-/** Ni le catalogue ni le téléchargement ne doivent pouvoir retenir un worker de requête. */
+/** Neither the catalogue nor the download may be able to hold a request worker. */
 const OUTBOUND_TIMEOUT_MS = 15_000;
 
-/** Porte de sortie injectable (tests) — par défaut la sortie durcie de `lib/httpFetch`. */
+/** Injectable exit gate (tests) — by default the hardened exit of `lib/httpFetch`. */
 export type OutboundFetch = typeof fetchAllowlisted;
 
 export interface OcioEntry {
@@ -76,7 +76,7 @@ export interface OcioEntry {
   isDefault: boolean;
 }
 
-/** Forme (partielle) d'une release GitHub. */
+/** (Partial) shape of a GitHub release. */
 interface GithubRelease {
   tag_name: string;
   name: string | null;
@@ -84,7 +84,7 @@ interface GithubRelease {
   assets: { name: string; browser_download_url: string; size: number }[];
 }
 
-/** Asset ACES exposé au catalogue admin. */
+/** ACES asset exposed to the admin catalogue. */
 export interface OcioCatalogAsset {
   assetName: string;
   downloadUrl: string;
@@ -95,7 +95,7 @@ export interface OcioCatalogAsset {
   recommendedDefault: boolean;
 }
 
-/** Une release ACES avec ses assets de config reconnus. */
+/** An ACES release with its recognised config assets. */
 export interface OcioReleaseEntry {
   tag: string;
   name: string;
@@ -103,7 +103,7 @@ export interface OcioReleaseEntry {
   assets: OcioCatalogAsset[];
 }
 
-/** Construit le catalogue (pur) : ne garde que les releases portant ≥1 asset `.ocio` reconnu. */
+/** Builds the catalogue (pure): keeps only releases carrying ≥1 recognised `.ocio` asset. */
 export function buildReleaseCatalog(
   releases: GithubRelease[],
   installedAssetNames: Set<string>,
@@ -131,7 +131,7 @@ export function buildReleaseCatalog(
   return out;
 }
 
-/** Vrai si l'hôte de l'URL de téléchargement est autorisé (anti-SSRF). */
+/** True if the download URL's host is allowed (anti-SSRF). */
 export function isAllowedAssetHost(url: string): boolean {
   try {
     return ALLOWED_ASSET_HOSTS.has(new URL(url).hostname);
@@ -161,14 +161,13 @@ async function writeLibrary(entries: OcioEntry[]): Promise<void> {
 
 let releasesCache: { at: number; data: GithubRelease[] } | null = null;
 
-/** Récupère (avec cache 10 min) les releases ACES depuis GitHub. `fetchFn` injectable (tests). */
+/** Fetches (with a 10 min cache) the ACES releases from GitHub. `fetchFn` injectable (tests). */
 async function fetchReleases(fetchFn: OutboundFetch): Promise<GithubRelease[]> {
   if (releasesCache && Date.now() - releasesCache.at < RELEASES_TTL_MS) return releasesCache.data;
   const res = await fetchFn(
     `${GITHUB_API}/repos/${OCIO_REPO}/releases?per_page=15`,
     { headers: { accept: 'application/vnd.github+json', 'user-agent': 'ReView-app' } },
-    // L'API GitHub ne redirige pas : une redirection ici n'est pas un cas d'usage, c'est un
-    // détournement.
+    // The GitHub API does not redirect: a redirect here is not a use case, it is a hijacking.
     {
       isAllowedHost: (url) => ALLOWED_API_HOSTS.has(url.hostname),
       timeoutMs: OUTBOUND_TIMEOUT_MS,
@@ -187,18 +186,18 @@ async function fetchReleases(fetchFn: OutboundFetch): Promise<GithubRelease[]> {
   return data;
 }
 
-/** Réinitialise le cache des releases (tests). */
+/** Resets the release cache (tests). */
 export function __resetReleasesCache(): void {
   releasesCache = null;
 }
 
-/** Catalogue des releases ACES disponibles, marquées « installées » / « défaut recommandé ». */
+/** Catalogue of available ACES releases, marked "installed" / "recommended default". */
 export async function listReleases(fetchFn: OutboundFetch = fetchAllowlisted): Promise<OcioReleaseEntry[]> {
   const [releases, installed] = await Promise.all([fetchReleases(fetchFn), readLibrary()]);
   return buildReleaseCatalog(releases, new Set(installed.map((e) => e.assetName)));
 }
 
-/** Configs OCIO installées (avec URL présignée de lecture). */
+/** Installed OCIO configs (with a presigned read URL). */
 export async function listInstalled(): Promise<(OcioEntry & { url: string })[]> {
   const entries = await readLibrary();
   return Promise.all(
@@ -206,21 +205,21 @@ export async function listInstalled(): Promise<(OcioEntry & { url: string })[]> 
   );
 }
 
-/** Config par défaut (repli couleur du studio), ou null si aucune installée. */
+/** Default config (the studio's colour fallback), or null if none is installed. */
 export async function getDefault(): Promise<OcioEntry | null> {
   const entries = await readLibrary();
   return entries.find((e) => e.isDefault) ?? entries[0] ?? null;
 }
 
-/** Une config installée par son identifiant, ou `null` (utilisé par le worker de cuisson). */
+/** An installed config by its identifier, or `null` (used by the baking worker). */
 export async function getEntry(id: string): Promise<OcioEntry | null> {
   return (await readLibrary()).find((e) => e.id === id) ?? null;
 }
 
-// Displays/views d'une config sont immuables une fois installée → cache par clé de stockage.
+// A config's displays/views are immutable once installed → cache keyed by storage key.
 const displaysCache = new Map<string, OcioDisplay[]>();
 
-/** Displays/views d'une config installée (parse du `.ocio` depuis MinIO, mis en cache). */
+/** Displays/views of an installed config (parses the `.ocio` from MinIO, cached). */
 export async function getConfigDisplays(id: string): Promise<OcioDisplay[]> {
   const entries = await readLibrary();
   const entry = entries.find((e) => e.id === id);
@@ -235,24 +234,24 @@ export async function getConfigDisplays(id: string): Promise<OcioDisplay[]> {
   return displays;
 }
 
-/** État d'une LUT d'affichage pour un couple display/view d'une config. */
+/** State of a display LUT for a display/view pair of a config. */
 export interface LutInfo {
   display: string;
   view: string;
   size: number;
-  /** URL présignée du `.cube`, ou `null` si aucune LUT n'existe (ni cuite, ni cuisinable ici). */
+  /** Presigned URL of the `.cube`, or `null` if no LUT exists (neither baked, nor bakable here). */
   url: string | null;
-  /** Pourquoi il n'y en a pas : la vue demande une courbe de rendu que seul OCIO sait cuire. */
+  /** Why there is none: the view asks for a rendering curve that only OCIO can bake. */
   reason: 'OCIO_TOOLING_REQUIRED' | null;
 }
 
 /**
- * LUT d'affichage d'un couple display/view. Sert le `.cube` déjà cuit ; sinon, cuit **à la
- * demande** le repli colorimétrique (immédiat, exact) et demande au worker la version OCIO
- * pour les vues tone-mappées, qu'on ne fabrique jamais par approximation.
+ * Display LUT of a display/view pair. Serves the already baked `.cube`; otherwise, bakes **on demand** the
+ * colorimetric fallback (immediate, exact) and asks the worker for the OCIO version
+ * of tone-mapped views, which are never produced by approximation.
  *
- * Le couple est vérifié contre la config : sans cela, n'importe quel authentifié pourrait
- * faire écrire dans MinIO une clé de son choix.
+ * The pair is checked against the config: without this, any authenticated user could have MinIO write a key
+ * of their choice.
  */
 export async function getLut(configId: string, display: string, view: string): Promise<LutInfo> {
   const displays = await getConfigDisplays(configId);
@@ -265,7 +264,7 @@ export async function getLut(configId: string, display: string, view: string): P
     await storage.statObject(key);
     return { ...base, url: await storage.getPresignedGetUrl(key), reason: null };
   } catch {
-    // Pas encore cuite : on tente le repli intégré, sinon c'est l'affaire du worker.
+    // Not yet baked: we try the built-in fallback, otherwise it is the worker's business.
   }
 
   const lut = bakeBuiltinLut(display, view);
@@ -280,8 +279,8 @@ export async function getLut(configId: string, display: string, view: string): P
 }
 
 /**
- * Installe un asset d'une release ACES : télécharge le `.ocio` (hôte allowlisté, taille plafonnée)
- * et le range dans MinIO. La 1re studio config ACES 1.3 installée devient le défaut.
+ * Installs an asset of an ACES release: downloads the `.ocio` (allow-listed host, capped size) and files it
+ * in MinIO. The first installed ACES 1.3 studio config becomes the default.
  */
 export async function install(
   tag: string,
@@ -300,9 +299,9 @@ export async function install(
     throw badRequest('This download host is not allowed', 'OCIO_BAD_HOST');
   if (asset.sizeBytes > MAX_ASSET_BYTES) throw badRequest('Config is too large', 'OCIO_TOO_LARGE');
 
-  // GitHub sert l'asset par une redirection vers son hôte de contenu : on la suit, mais
-  // chaque saut repasse par la garde SSRF ET par l'allow-list — c'est tout l'objet de
-  // `fetchAllowlisted`. Un 302 vers 169.254.169.254 ou minio:9000 est refusé avant d'émettre.
+  // GitHub serves the asset through a redirect to its content host: we follow it, but each hop goes back
+  // through the SSRF guard AND through the allow-list — that is the whole point of
+  // `fetchAllowlisted`. A 302 to 169.254.169.254 or minio:9000 is refused before anything is sent.
   const dl = await fetchFn(
     asset.downloadUrl,
     { headers: { 'user-agent': 'ReView-app' } },
@@ -334,13 +333,13 @@ export async function install(
     isDefault: makeDefault,
   };
   await writeLibrary([...entries, entry]);
-  // Les LUT d'affichage sont cuites en tâche de fond : la review n'attend pas la première
-  // lecture. L'échec de la file ne remet pas l'installation en cause (cf. enqueueOcioBake).
+  // Display LUTs are baked in the background: the review does not wait for the first read. The queue's
+  // failure does not call the installation into question (see enqueueOcioBake).
   await enqueueOcioBake({ configId: entry.id });
   return entry;
 }
 
-/** Définit la config par défaut (exclusive). */
+/** Sets the default config (exclusive). */
 export async function setDefault(id: string): Promise<OcioEntry> {
   const entries = await readLibrary();
   if (!entries.some((e) => e.id === id)) throw notFound('OCIO config not found');
@@ -349,7 +348,7 @@ export async function setDefault(id: string): Promise<OcioEntry> {
   return next.find((e) => e.id === id)!;
 }
 
-/** Supprime une config installée (entrée + objet MinIO) ; promeut un défaut si besoin. */
+/** Removes an installed config (entry + MinIO object); promotes a default if needed. */
 export async function remove(id: string): Promise<void> {
   const entries = await readLibrary();
   const target = entries.find((e) => e.id === id);
@@ -360,7 +359,7 @@ export async function remove(id: string): Promise<void> {
   }
   await writeLibrary(rest);
   await storage.deleteObject(target.storageKey).catch(() => undefined);
-  // Les LUT cuites n'ont plus d'objet : sans cette purge elles resteraient orphelines et
-  // une réinstallation de la même config (nouvel id) n'y toucherait jamais.
+  // Baked LUTs no longer have an object: without this purge they would remain orphaned, and a reinstallation
+  // of the same config (new id) would never touch them.
   await storage.deletePrefix(lutPrefix(id)).catch(() => undefined);
 }

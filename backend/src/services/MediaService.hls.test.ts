@@ -47,7 +47,7 @@ const artist = { id: 3, role: Role.ARTIST };
 const MASTER = ['#EXTM3U', '#EXT-X-STREAM-INF:BANDWIDTH=1,RESOLUTION=1280x720', '720p.m3u8', ''].join('\n');
 const RENDITION = ['#EXTM3U', '#EXTINF:2.0,', '720p_000.ts', '#EXT-X-ENDLIST', ''].join('\n');
 
-/** Le média existe, il est publié, et le lecteur est membre du projet. */
+/** The media exists, is published, and the player is a member of the project. */
 function grantAccess(): void {
   findUnique.mockResolvedValue({ published: true, uploaderId: 99, versionId: 5 } as never);
   resolveProject.mockResolvedValue(11);
@@ -65,8 +65,8 @@ beforeEach(() => {
   getObjectStream.mockResolvedValue(Readable.from(['octets']));
 });
 
-describe('MediaService.getHlsFile — le maître est le point de contrôle', () => {
-  it('vérifie l’accès en base, journalise, et accroche le jeton à chaque rendition', async () => {
+describe('MediaService.getHlsFile: the master is the control point', () => {
+  it('checks access in the database, logs, and attaches the token to each rendition', async () => {
     const out = await getHlsFile(artist, MEDIA_ID, 'master.m3u8', { ip: '10.0.0.1' });
 
     expect(findUnique).toHaveBeenCalledTimes(1);
@@ -75,30 +75,30 @@ describe('MediaService.getHlsFile — le maître est le point de contrôle', () 
     expect(out.contentType).toBe('application/vnd.apple.mpegurl');
     expect(out.cacheControl).toBe('private, no-store');
     expect(out.body).toMatch(/^720p\.m3u8\?pt=[\w.-]+$/m);
-    // Le maître reste relatif : aucune URL de stockage n'y figure.
+    // The master stays relative: no storage URL appears in it.
     expect(out.body).not.toContain('minio.test');
   });
 
-  it('refuse un non-membre du projet', async () => {
+  it('refuses a non-member of the project', async () => {
     access.mockResolvedValue(false);
     await expect(getHlsFile(artist, MEDIA_ID, 'master.m3u8')).rejects.toThrow(/No access/);
   });
 
-  it("refuse le brouillon d'un autre compte (introuvable, pas interdit)", async () => {
+  it("refuses another account's draft (not found, not forbidden)", async () => {
     findUnique.mockResolvedValue({ published: false, uploaderId: 99, versionId: 5 } as never);
     await expect(getHlsFile(artist, MEDIA_ID, 'master.m3u8')).rejects.toThrow(/not found/i);
   });
 
-  it('refuse un nom de fichier qui composerait une autre clé de stockage', async () => {
+  it('refuses a file name that would compose another storage key', async () => {
     await expect(getHlsFile(artist, MEDIA_ID, '..')).rejects.toThrow(/not found/i);
     expect(getObjectBuffer).not.toHaveBeenCalled();
   });
 });
 
-describe('MediaService.getHlsFile — sous-playlist présignée', () => {
+describe('MediaService.getHlsFile: presigned sub-playlist', () => {
   const token = () => signMediaPlaybackToken(MEDIA_ID, artist.id);
 
-  it('avec un jeton valide : aucune requête base, segments en URL MinIO absolues', async () => {
+  it('with a valid token: no database query, segments as absolute MinIO URLs', async () => {
     const out = await getHlsFile(artist, MEDIA_ID, '720p.m3u8', { playbackToken: token() });
 
     expect(findUnique).not.toHaveBeenCalled();
@@ -108,13 +108,13 @@ describe('MediaService.getHlsFile — sous-playlist présignée', () => {
     expect(out.cacheControl).toBe('private, no-store');
   });
 
-  it('sans jeton : le contrôle complet reprend la main (rien ne casse)', async () => {
+  it('without a token: the full check takes over (nothing breaks)', async () => {
     const out = await getHlsFile(artist, MEDIA_ID, '720p.m3u8');
     expect(findUnique).toHaveBeenCalledTimes(1);
     expect(out.body).toContain('https://minio.test/review/derived/9/hls/720p_000.ts');
   });
 
-  it('avec le jeton d’un AUTRE média : contrôle complet, et refus si l’accès manque', async () => {
+  it('with the token of ANOTHER media: full check, and refusal if access is missing', async () => {
     const foreign = signMediaPlaybackToken(MEDIA_ID + 1, artist.id);
     access.mockResolvedValue(false);
     await expect(getHlsFile(artist, MEDIA_ID, '720p.m3u8', { playbackToken: foreign })).rejects.toThrow(
@@ -122,13 +122,13 @@ describe('MediaService.getHlsFile — sous-playlist présignée', () => {
     );
   });
 
-  it('avec le jeton d’un AUTRE compte : contrôle complet', async () => {
+  it('with the token of ANOTHER account: full check', async () => {
     const foreign = signMediaPlaybackToken(MEDIA_ID, artist.id + 1);
     await getHlsFile(artist, MEDIA_ID, '720p.m3u8', { playbackToken: foreign });
     expect(findUnique).toHaveBeenCalledTimes(1);
   });
 
-  it('gèle la playlist par fenêtre : deux lecteurs reçoivent les mêmes URL, signées une fois', async () => {
+  it('freezes the playlist per window: two players receive the same URLs, signed once', async () => {
     const first = await getHlsFile(artist, MEDIA_ID, '720p.m3u8', { playbackToken: token() });
     const other = { id: 4, role: Role.ARTIST };
     const second = await getHlsFile(other, MEDIA_ID, '720p.m3u8', {
@@ -141,8 +141,8 @@ describe('MediaService.getHlsFile — sous-playlist présignée', () => {
   });
 });
 
-describe('MediaService.getHlsFile — repli segment par le proxy', () => {
-  it('reste servi, et devient cachable indéfiniment (contenu immuable)', async () => {
+describe('MediaService.getHlsFile: segment fallback through the proxy', () => {
+  it('remains served, and becomes cacheable indefinitely (immutable content)', async () => {
     const out = await getHlsFile(artist, MEDIA_ID, '720p_000.ts', {
       playbackToken: signMediaPlaybackToken(MEDIA_ID, artist.id),
     });
@@ -151,7 +151,7 @@ describe('MediaService.getHlsFile — repli segment par le proxy', () => {
     expect(out.cacheControl).toBe('private, max-age=31536000, immutable');
   });
 
-  it('rend 404 quand le segment est absent du stockage', async () => {
+  it('returns 404 when the segment is absent from storage', async () => {
     getObjectStream.mockRejectedValue(new Error('NoSuchKey'));
     await expect(getHlsFile(artist, MEDIA_ID, '720p_999.ts')).rejects.toThrow(/not found/i);
   });

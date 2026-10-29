@@ -26,8 +26,8 @@ const admin = { id: 1, role: 'ADMIN' as const };
 type ManyArgs = { data: Record<string, unknown>[] };
 
 /**
- * tx factice : les écritures groupées sont capturées, `createManyAndReturn` rend les lignes
- * à l'envers pour qu'aucun rattachement ne puisse s'appuyer sur l'ordre de retour.
+ * Fake tx: grouped writes are captured, and `createManyAndReturn` returns the rows in reverse so that no
+ * attachment can rely on the return order.
  */
 function makeTx() {
   const created = {
@@ -76,7 +76,7 @@ beforeEach(() => {
 });
 
 describe('ProjectService.importCsv (38.F)', () => {
-  it('en dry-run, n’écrit rien et rend l’aperçu', async () => {
+  it('in dry-run, writes nothing and returns the preview', async () => {
     const preview = await importCsv(admin, 3, CSV, false);
     expect(preview).toMatchObject({
       committed: false,
@@ -87,7 +87,7 @@ describe('ProjectService.importCsv (38.F)', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('écrit séquences, plans et tâches en écritures groupées (un appel par entité)', async () => {
+  it('writes sequences, shots and tasks in grouped writes (one call per entity)', async () => {
     const { tx, created } = makeTx();
     vi.mocked(prisma.$transaction).mockImplementation(((fn: (client: unknown) => unknown) =>
       fn(tx)) as never);
@@ -102,7 +102,7 @@ describe('ProjectService.importCsv (38.F)', () => {
     expect(created.tasks).toHaveLength(3);
   });
 
-  it('rattache chaque tâche à son plan, sans se fier à l’ordre de retour', async () => {
+  it('attaches each task to its shot, without relying on the return order', async () => {
     const { tx, created } = makeTx();
     vi.mocked(prisma.$transaction).mockImplementation(((fn: (client: unknown) => unknown) =>
       fn(tx)) as never);
@@ -115,7 +115,7 @@ describe('ProjectService.importCsv (38.F)', () => {
     expect(created.tasks.filter((t) => t.shotId === sh020).map((t) => t.name)).toEqual(['anim']);
   });
 
-  it('donne un délai explicite à la transaction (les 5 s par défaut ne tiennent pas un long-métrage)', async () => {
+  it('gives an explicit deadline to the transaction (the 5 s default does not hold a feature film)', async () => {
     const { tx } = makeTx();
     vi.mocked(prisma.$transaction).mockImplementation(((fn: (client: unknown) => unknown) =>
       fn(tx)) as never);
@@ -126,7 +126,7 @@ describe('ProjectService.importCsv (38.F)', () => {
     expect(options?.timeout).toBeGreaterThan(5_000);
   });
 
-  it('réutilise une séquence déjà présente au lieu de la recréer', async () => {
+  it('reuses a sequence already present instead of recreating it', async () => {
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([{ code: 'SQ01' }] as never);
     const { tx, created } = makeTx();
     tx.sequence.findMany.mockResolvedValue([{ id: 55, code: 'SQ01' }] as never);
@@ -136,12 +136,12 @@ describe('ProjectService.importCsv (38.F)', () => {
     await importCsv(admin, 3, CSV, true);
 
     expect(created.sequences).toHaveLength(0);
-    // Une seule requête pour toutes les séquences réutilisées, pas une par code.
+    // A single query for all the reused sequences, not one per code.
     expect(tx.sequence.findMany).toHaveBeenCalledTimes(1);
     expect(created.shots.every((s) => s.sequenceId === 55)).toBe(true);
   });
 
-  it('saute les plans déjà présents sans les écraser', async () => {
+  it('skips the shots already present without overwriting them', async () => {
     vi.mocked(prisma.shot.findMany).mockResolvedValue([{ code: 'SH010', sequenceId: 1 }] as never);
     const { tx, created } = makeTx();
     tx.sequence.findMany.mockResolvedValue([] as never);

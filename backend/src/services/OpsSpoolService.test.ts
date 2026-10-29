@@ -38,7 +38,7 @@ import {
 
 const ID = '20260910-142233-a1b2c3';
 
-/** Un spool tel que l'agent le laisse : file d'un côté, état de l'autre. */
+/** A spool as the agent leaves it: queue on one side, state on the other. */
 function spool(): { queue: string; state: string } {
   const root = mkdtempSync(join(tmpdir(), 'review-ops-'));
   const queue = join(root, 'queue');
@@ -97,49 +97,49 @@ beforeEach(() => {
 });
 
 describe('mechanism', () => {
-  it('dit « absent » quand l’exécution n’est pas branchée', async () => {
+  it('says "absent" when execution is not wired up', async () => {
     await expect(mechanism()).resolves.toMatchObject({ state: 'absent', reason: 'SPOOL_UNSET' });
   });
 
-  it('dit « absent » quand l’agent n’a jamais écrit son état', async () => {
+  it('says "absent" when the agent has never written its state', async () => {
     spool();
     await expect(mechanism()).resolves.toMatchObject({ state: 'absent', reason: 'AGENT_NEVER_SEEN' });
   });
 
-  it('dit « prêt » quand l’agent bat et que rien ne tourne', async () => {
+  it('says "ready" when the agent heartbeats and nothing is running', async () => {
     const { state } = spool();
     agentFile(state);
     await expect(mechanism()).resolves.toMatchObject({ state: 'ready', agentVersion: '2.4.0' });
   });
 
-  it('dit « muet » quand le battement date', async () => {
+  it('says "silent" when the heartbeat is stale', async () => {
     const { state } = spool();
     agentFile(state, { seenAt: new Date(Date.now() - 600_000).toISOString() });
     await expect(mechanism()).resolves.toMatchObject({ state: 'stalled', reason: 'AGENT_STALE' });
   });
 
-  it('bloque tout quand le dépôt n’est pas monté sur son chemin hôte', async () => {
-    // `backup.sh` écrirait alors son miroir dans le vide, sans une erreur : on ne s'en
-    // apercevrait que le jour de la restauration.
+  it('blocks everything when the repository is not mounted on its host path', async () => {
+    // `backup.sh` would then write its mirror into the void, without an error: we would only notice on the
+    // day of the restore.
     const { state } = spool();
     agentFile(state, { rootOk: false });
     await expect(mechanism()).resolves.toMatchObject({ state: 'blocked', reason: 'ROOT_MISMATCH' });
   });
 
-  it('bloque tout quand l’agent parle un protocole plus récent que le nôtre', async () => {
+  it('blocks everything when the agent speaks a more recent protocol than ours', async () => {
     const { state } = spool();
     agentFile(state, { protocol: 99 });
     await expect(mechanism()).resolves.toMatchObject({ state: 'blocked', reason: 'PROTOCOL_UNSUPPORTED' });
   });
 
-  it('dit « occupé » tant qu’une opération tourne', async () => {
+  it('says "busy" as long as an operation is running', async () => {
     const { state } = spool();
     agentFile(state);
     statusFile(state, ID);
     await expect(mechanism()).resolves.toMatchObject({ state: 'busy' });
   });
 
-  it('reste debout devant un état illisible', async () => {
+  it('stays up in front of an unreadable state', async () => {
     const { state } = spool();
     writeFileSync(join(state, 'agent.json'), '{ ceci n’est pas du JSON');
     await expect(mechanism()).resolves.toMatchObject({ state: 'absent' });
@@ -147,12 +147,12 @@ describe('mechanism', () => {
 });
 
 describe('enqueue', () => {
-  it('écrit l’ordre dans la file, et seulement là', async () => {
+  it('writes the order into the queue, and only there', async () => {
     const { queue, state } = spool();
     await enqueue(order);
     expect(readdirSync(queue)).toEqual([`${ID}.json`]);
-    // L'état appartient à l'agent : c'est cette asymétrie qui empêche un backend compromis
-    // d'y poser un lien symbolique que l'agent suivrait ensuite en écriture.
+    // The state belongs to the agent: this asymmetry is what prevents a compromised backend from placing a
+    // symbolic link there that the agent would then follow for writing.
     expect(readdirSync(join(state, 'runs'))).toEqual([]);
     expect(JSON.parse(readFileSync(join(queue, `${ID}.json`), 'utf8'))).toMatchObject({
       id: ID,
@@ -160,26 +160,26 @@ describe('enqueue', () => {
     });
   });
 
-  it('ne laisse aucun fichier temporaire derrière lui', async () => {
+  it('leaves no temporary file behind', async () => {
     const { queue } = spool();
     await enqueue(order);
     expect(readdirSync(queue).filter((n) => n.endsWith('.tmp'))).toEqual([]);
   });
 
-  it('refuse d’écrire quand l’exécution n’est pas branchée', async () => {
+  it('refuses to write when execution is not wired up', async () => {
     await expect(enqueue(order)).rejects.toThrow();
   });
 });
 
-describe('listRuns et activeRun', () => {
-  it('réunit les ordres en attente et les exécutions connues, la plus récente en tête', async () => {
+describe('listRuns and activeRun', () => {
+  it('gathers the pending orders and the known runs, most recent first', async () => {
     const { state } = spool();
     await enqueue(order);
     statusFile(state, '20260909-100000-000001', { state: 'succeeded', phase: 'done', endedAt: 'x' });
     const runs = await listRuns();
     expect(runs.map((r) => r.id)).toEqual([ID, '20260909-100000-000001']);
-    // L'ordre est relu : entre le clic et le ramassage par l'agent, l'écran doit dire de
-    // QUOI il s'agit — pas « opération inconnue » à la personne qui vient de la lancer.
+    // The order is re-read: between the click and the agent's pickup, the screen must say WHAT it is — not
+    // "unknown operation" to the person who just launched it.
     expect(runs[0]).toMatchObject({
       state: 'queued',
       kind: 'update',
@@ -188,15 +188,15 @@ describe('listRuns et activeRun', () => {
     });
   });
 
-  it('tient pour « sans nouvelles » une exécution dont l’agent ne bat plus', async () => {
-    // Sans cette règle, l'écran afficherait une progression éternelle pour un agent mort.
+  it('considers a run whose agent no longer heartbeats as "no news"', async () => {
+    // Without this rule, the screen would show endless progress for a dead agent.
     const { state } = spool();
     statusFile(state, ID, { heartbeatAt: new Date(Date.now() - 600_000).toISOString() });
     await expect(readRun(ID)).resolves.toMatchObject({ state: 'unknown' });
     await expect(activeRun()).resolves.toBeNull();
   });
 
-  it('ne laisse annuler que tant que rien n’est basculé', async () => {
+  it('only lets one cancel as long as nothing has been switched', async () => {
     const { state } = spool();
     statusFile(state, ID, { phase: 'backup' });
     expect((await readRun(ID))?.cancellable).toBe(true);
@@ -204,13 +204,13 @@ describe('listRuns et activeRun', () => {
     expect((await readRun(ID))?.cancellable).toBe(false);
   });
 
-  it('refuse un identifiant qui n’en est pas un', async () => {
+  it('refuses an identifier that is not one', async () => {
     spool();
     await expect(readRun('../../etc')).resolves.toBeNull();
     await expect(cancel('../../etc')).rejects.toThrow();
   });
 
-  it('dépose la sentinelle d’annulation dans la file, jamais dans l’état', async () => {
+  it('drops the cancellation sentinel into the queue, never into the state', async () => {
     const { queue, state } = spool();
     await cancel(ID);
     expect(readdirSync(queue)).toEqual([`${ID}.cancel`]);
@@ -219,7 +219,7 @@ describe('listRuns et activeRun', () => {
 });
 
 describe('readLog', () => {
-  it('sert le journal par décalage d’octets — c’est ce qui survit à un redémarrage', async () => {
+  it('serves the log by byte offset — this is what survives a restart', async () => {
     const { state } = spool();
     mkdirSync(join(state, 'runs', ID), { recursive: true });
     writeFileSync(join(state, 'runs', ID, 'output.log'), 'première ligne\n');
@@ -228,28 +228,28 @@ describe('readLog', () => {
     expect(first.text).toBe('première ligne\n');
     expect(first.truncated).toBe(false);
 
-    // Le fichier n'est écrit qu'en ajout : reprendre au curseur donne exactement la suite.
+    // The file is only ever appended to: resuming at the cursor gives exactly the continuation.
     writeFileSync(join(state, 'runs', ID, 'output.log'), 'première ligne\nseconde ligne\n');
     const second = await readLog(ID, first.next);
     expect(second.text).toBe('seconde ligne\n');
     expect(second.from).toBe(first.next);
   });
 
-  it('caviarde les secrets avant de servir', async () => {
+  it('redacts secrets before serving', async () => {
     const { state } = spool();
     mkdirSync(join(state, 'runs', ID), { recursive: true });
     writeFileSync(join(state, 'runs', ID, 'output.log'), 'url=postgresql://review:hunter2222@db:5432/x\n');
     expect((await readLog(ID, 0)).text).not.toContain('hunter2222');
   });
 
-  it('rend un journal vide plutôt qu’une erreur quand il n’y en a pas', async () => {
+  it('returns an empty log rather than an error when there is none', async () => {
     spool();
     await expect(readLog(ID, 0)).resolves.toMatchObject({ text: '', next: 0 });
   });
 });
 
 describe('isTerminal', () => {
-  it('distingue ce qui bougera encore de ce qui est joué', () => {
+  it('distinguishes what will still move from what has been played', () => {
     for (const state of ['queued', 'running'] as const) expect(isTerminal(state), state).toBe(false);
     for (const state of [
       'succeeded',

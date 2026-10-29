@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * A2-04 — `transform` était `z.any().optional()` : une colonne Json qu'un membre du projet
- * remplissait de la forme et du volume qu'il voulait, jusqu'au plafond du parseur de corps.
- * Le viewer, lui, n'écrit jamais que quatre nombres (orientation + échelle).
+ * A2-04: `transform` was `z.any().optional()`: a Json column that any project member could fill with
+ * whatever shape and size they wanted, up to the body-parser limit. The viewer only ever writes four
+ * numbers (orientation + scale).
  */
 
 vi.mock('../middleware/auth', () => ({
@@ -49,25 +49,25 @@ const patch = (body: Record<string, unknown>) => request(app).patch('/api/versio
 
 beforeEach(() => vi.mocked(VersionService.update).mockClear());
 
-describe('PATCH /api/versions/:id — schéma de la transformation (A2-04)', () => {
-  it('accepte l’orientation et l’échelle que le viewer enregistre', async () => {
+describe('PATCH /api/versions/:id: transform schema (A2-04)', () => {
+  it('accepts the orientation and scale the viewer saves', async () => {
     const transform = { yaw: 45, pitch: -12.5, roll: 0, scale: 1.75 };
     await patch({ transform }).expect(200);
     expect(vi.mocked(VersionService.update).mock.calls[0]?.[3]).toMatchObject({ transform });
   });
 
-  it('refuse un blob quelconque et n’écrit rien', async () => {
+  it('refuses an arbitrary blob and writes nothing', async () => {
     await patch({ transform: { pad: 'A'.repeat(200_000) } }).expect(400);
     expect(VersionService.update).not.toHaveBeenCalled();
   });
 
-  it('refuse une valeur hors bornes plutôt que de la persister', async () => {
+  it('refuses an out-of-bounds value instead of persisting it', async () => {
     await patch({ transform: { yaw: 1e12 } }).expect(400);
     await patch({ transform: { scale: Number.POSITIVE_INFINITY } }).expect(400);
     expect(VersionService.update).not.toHaveBeenCalled();
   });
 
-  it('laisse passer le renommage seul, sans transformation', async () => {
+  it('lets a rename pass on its own, without a transform', async () => {
     await patch({ name: 'v003' }).expect(200);
     expect(vi.mocked(VersionService.update).mock.calls[0]?.[3]).toEqual({ name: 'v003' });
   });

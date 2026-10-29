@@ -36,7 +36,7 @@ import { sendToUser } from './PushService';
 
 const db = vi.mocked(prisma, true);
 
-/** Vue minimale d'un fil, telle que la relit `conversationViewFor` après écriture. */
+/** Minimal view of a thread, as `conversationViewFor` reads it back after a write. */
 const membershipRow = (conversationId: number, memberIds: number[]) => ({
   conversationId,
   userId: memberIds[0],
@@ -62,14 +62,14 @@ beforeEach(() => {
 });
 
 describe('ChatService.createConversation', () => {
-  it('rouvre le tête-à-tête existant au lieu d’en créer un second', async () => {
+  it('reopens the existing one-to-one conversation instead of creating a second', async () => {
     db.conversation.findFirst.mockResolvedValue({ id: 7 } as never);
     const view = await createConversation(1, { userIds: [2] });
     expect(db.conversation.create).not.toHaveBeenCalled();
     expect(view.id).toBe(7);
   });
 
-  it('crée un tête-à-tête avec les deux membres', async () => {
+  it('creates a one-to-one conversation with both members', async () => {
     await createConversation(1, { userIds: [2] });
     expect(db.conversation.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -81,33 +81,33 @@ describe('ChatService.createConversation', () => {
     );
   });
 
-  it('marque le fil comme groupe dès qu’un titre est donné', async () => {
+  it('marks the thread as a group as soon as a title is given', async () => {
     await createConversation(1, { userIds: [2], title: 'Séquence 12' });
     expect(db.conversation.create.mock.calls[0]![0].data).toMatchObject({
       isGroup: true,
       title: 'Séquence 12',
     });
-    // Un groupe nommé ne doit jamais recycler un tête-à-tête existant.
+    // A named group must never recycle an existing one-to-one conversation.
     expect(db.conversation.findFirst).not.toHaveBeenCalled();
   });
 
-  it('refuse un destinataire inconnu plutôt que de l’ignorer en silence', async () => {
+  it('refuses an unknown recipient rather than silently ignoring them', async () => {
     db.user.findMany.mockResolvedValue([{ id: 2 }] as never);
     await expect(createConversation(1, { userIds: [2, 999] })).rejects.toThrow(/not found/i);
   });
 
-  it('refuse un fil avec soi-même pour seul destinataire', async () => {
+  it('refuses a thread with oneself as the only recipient', async () => {
     await expect(createConversation(1, { userIds: [1] })).rejects.toThrow(/recipient/i);
   });
 });
 
-/** Les deux `where` que `resolveTargets` envoie : le second porte le filtre par projet. */
+/** The two `where` clauses that `resolveTargets` sends: the second carries the per-project filter. */
 type TargetQuery = { where: { id: { in: number[] }; memberships?: unknown } };
 
-describe('ChatService.createConversation — cloisonnement d’un CLIENT', () => {
+describe('ChatService.createConversation: CLIENT isolation', () => {
   /**
-   * Acteur CLIENT dont les projets ne recoupent que `sharedIds` : la requête portant le
-   * filtre `memberships` ne renvoie que ceux-là, l'autre voit tout le monde.
+   * CLIENT actor whose projects overlap only `sharedIds`: the query carrying the `memberships` filter returns
+   * only those, the other sees everyone.
    */
   const asClient = (sharedIds: number[]) => {
     db.user.findUnique.mockResolvedValue({ role: Role.CLIENT } as never);
@@ -118,15 +118,15 @@ describe('ChatService.createConversation — cloisonnement d’un CLIENT', () =>
     }) as never);
   };
 
-  it('laisse un CLIENT écrire à quelqu’un d’un projet partagé', async () => {
+  it('lets a CLIENT write to someone in a shared project', async () => {
     asClient([2]);
     const view = await createConversation(1, { userIds: [2] });
     expect(view.id).toBe(7);
     expect(db.conversation.create).toHaveBeenCalled();
   });
 
-  it('refuse à un CLIENT un compte interne hors de ses projets', async () => {
-    // Refus nommé (403) et non filtrage silencieux : l'identifiant écarté est dit.
+  it('refuses a CLIENT an internal account outside their projects', async () => {
+    // A named refusal (403) rather than a silent filter: the discarded identifier is reported.
     asClient([]);
     await expect(createConversation(1, { userIds: [2] })).rejects.toMatchObject({
       statusCode: 403,
@@ -136,7 +136,7 @@ describe('ChatService.createConversation — cloisonnement d’un CLIENT', () =>
     expect(db.conversation.create).not.toHaveBeenCalled();
   });
 
-  it('ne restreint pas un compte interne', async () => {
+  it('does not restrict an internal account', async () => {
     db.user.findUnique.mockResolvedValue({ role: Role.SUPERVISOR } as never);
     await createConversation(1, { userIds: [2] });
     const queries = db.user.findMany.mock.calls.map((c) => c[0] as TargetQuery);
@@ -156,16 +156,16 @@ describe('ChatService.sendMessage', () => {
     } as never);
   });
 
-  it('refuse un message vide (espaces seuls)', async () => {
+  it('refuses an empty message (whitespace only)', async () => {
     await expect(sendMessage(7, 1, '   ')).rejects.toThrow(/empty message/i);
   });
 
-  it('refuse d’écrire dans un fil dont on n’est pas membre', async () => {
+  it('refuses to write to a thread one is not a member of', async () => {
     db.conversationMember.findUnique.mockResolvedValue(null);
     await expect(sendMessage(7, 3, 'Coucou')).rejects.toThrow(/not part of this conversation/i);
   });
 
-  it('pousse le message à tous les membres et remonte le fil', async () => {
+  it('pushes the message to all members and brings the thread back to the top', async () => {
     await sendMessage(7, 1, 'Bonjour');
     expect(db.conversation.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 7 }, data: { lastMessageAt: expect.any(Date) } }),
@@ -176,14 +176,14 @@ describe('ChatService.sendMessage', () => {
     ]);
   });
 
-  it('n’envoie pas de notification push à l’auteur du message', async () => {
+  it('does not send a push notification to the author of the message', async () => {
     await sendMessage(7, 1, 'Bonjour');
     const pushed = vi.mocked(sendToUser).mock.calls.map((c) => c[0]);
     expect(pushed).not.toContain(1);
     expect(pushed).toContain(2);
   });
 
-  it('se compte comme lu pour l’auteur', async () => {
+  it('counts as read for the author', async () => {
     await sendMessage(7, 1, 'Bonjour');
     expect(db.conversationMember.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -194,12 +194,12 @@ describe('ChatService.sendMessage', () => {
 });
 
 /**
- * Messages de service (arrivée, départ, renommage). La phrase était écrite en français EN
- * BASE : une fois enregistrée, plus rien ne pouvait la retraduire. Ce qui compte ici est
- * donc ce qui atteint la colonne — une clé et ses variables, jamais une phrase française.
+ * Service messages (arrival, departure, rename). The sentence used to be written in French IN THE DATABASE:
+ * once stored, nothing could translate it again. What matters here is therefore what reaches the column: a
+ * key and its variables, never a French sentence.
  */
-describe('ChatService — messages de service', () => {
-  /** Données du `chatMessage.create` du message de service (le seul créé par ces flux). */
+describe('ChatService: service messages', () => {
+  /** Data of the `chatMessage.create` for the service message (the only one created by these flows). */
   const systemData = () => db.chatMessage.create.mock.calls[0]![0].data as Record<string, unknown>;
 
   beforeEach(() => {
@@ -214,7 +214,7 @@ describe('ChatService — messages de service', () => {
     db.user.findMany.mockResolvedValue([] as never);
   });
 
-  it('enregistre la clé du renommage et son titre, et un corps anglais', async () => {
+  it('records the rename key and its title, and an English body', async () => {
     await renameConversation(7, 1, 'Séquence 12');
     expect(systemData()).toMatchObject({
       isSystem: true,
@@ -224,7 +224,7 @@ describe('ChatService — messages de service', () => {
     });
   });
 
-  it('accorde l’arrivée sur le nombre d’arrivants (`count`)', async () => {
+  it('pluralises the arrival according to the number of arrivals (`count`)', async () => {
     db.user.findMany.mockResolvedValue([
       { id: 3, email: 'u3@x.io', username: 'nina' },
       { id: 4, email: 'u4@x.io', username: 'sacha' },
@@ -237,7 +237,7 @@ describe('ChatService — messages de service', () => {
     });
   });
 
-  it('distingue un départ volontaire d’un retrait', async () => {
+  it('distinguishes a voluntary departure from a removal', async () => {
     db.user.findUnique.mockResolvedValue({ id: 1, email: 'u1@x.io', username: 'nina' } as never);
     await removeMember(7, 1, 1);
     expect(systemData()).toMatchObject({
@@ -259,14 +259,14 @@ describe('ChatService — messages de service', () => {
     });
   });
 
-  it('pousse la notification navigateur dans la langue de chaque destinataire', async () => {
-    // Le Web Push sort de l'application : il échappe au catalogue du navigateur. Sans
-    // cette résolution, tout le monde recevait la phrase du serveur.
+  it('pushes the browser notification in each recipient\'s language', async () => {
+    // Web Push leaves the application: it escapes the browser catalogue. Without this resolution, everyone
+    // received the server's sentence.
     db.user.findMany.mockResolvedValue([
       { id: 1, preferences: { locale: 'ja' } },
       { id: 2, preferences: {} },
     ] as never);
-    db.setting.findUnique.mockResolvedValue({ value: 'fr' } as never); // défaut du studio
+    db.setting.findUnique.mockResolvedValue({ value: 'fr' } as never); // studio default
     await renameConversation(7, 1, 'Séquence 12');
     const bodies = new Map(vi.mocked(sendToUser).mock.calls.map((c) => [c[0], c[1].body]));
     expect(bodies.get(1)).toBe(t('ja', 'chat.system.renamed', { title: 'Séquence 12' }));

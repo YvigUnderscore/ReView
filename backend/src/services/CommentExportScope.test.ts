@@ -4,9 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * La portée décide de ce qui entre dans l'export : quels médias, dans quel ordre, avec
- * quelle durée. Deux règles ne se voient qu'ici — une playlist ne prend qu'un média par
- * version, et un montage impose SA durée de clip, pas celle du fichier.
+ * The scope decides what goes into the export: which media, in what order, with which duration. Two rules are
+ * visible only here: a playlist takes only one media per version, and an edit imposes ITS clip duration, not
+ * the file's.
  */
 
 const { db, timeline } = vi.hoisted(() => ({
@@ -44,26 +44,26 @@ const media = (id: number, over: Record<string, unknown> = {}) => ({
 beforeEach(() => vi.clearAllMocks());
 
 describe('mediaFps / mediaAspect', () => {
-  it('lit la cadence relevée au traitement, sous ses deux noms', () => {
+  it('reads the frame rate recorded at processing, under either of its two names', () => {
     expect(mediaFps({ frameRate: 23.98 }, 24)).toBe(23.98);
     expect(mediaFps({ fps: '25' }, 24)).toBe(25);
   });
 
-  it('retombe sur la cadence du projet quand le média n’en porte pas', () => {
+  it('falls back to the project frame rate when the media does not carry one', () => {
     expect(mediaFps({}, 24)).toBe(24);
     expect(mediaFps({ frameRate: 0 }, 24)).toBe(24);
     expect(mediaFps(null, 24)).toBe(24);
   });
 
-  it('ne calcule un rapport d’image que si les deux dimensions sont connues', () => {
+  it('computes an aspect ratio only when both dimensions are known', () => {
     expect(mediaAspect({ width: 1920, height: 1080 })).toBeCloseTo(16 / 9);
     expect(mediaAspect({ width: 1920 })).toBeNull();
     expect(mediaAspect(null)).toBeNull();
   });
 });
 
-describe('collectClips — média', () => {
-  it('rend un clip unique, situé dans le pipe', async () => {
+describe('collectClips: media', () => {
+  it('returns a single clip, placed in the pipe', async () => {
     db.mediaObject.findFirst.mockResolvedValue(media(7));
     const { label, clips } = await collectClips('media', 7, 1, 24);
     expect(label).toBe('SH07_comp.mov');
@@ -73,20 +73,20 @@ describe('collectClips — média', () => {
     expect(clips[0]?.duration).toBe(4);
   });
 
-  it('refuse un média que le demandeur ne voit pas', async () => {
+  it('refuses a media the requester cannot see', async () => {
     db.mediaObject.findFirst.mockResolvedValue(null);
     await expect(collectClips('media', 7, 1, 24)).rejects.toThrow(/Media not found/);
   });
 
-  it('donne une durée de carton à un média sans durée propre', async () => {
+  it('gives a title-card duration to a media with no duration of its own', async () => {
     db.mediaObject.findFirst.mockResolvedValue(media(7, { metadata: {} }));
     const { clips } = await collectClips('media', 7, 1, 24);
     expect(clips[0]?.duration).toBe(STILL_SECONDS);
   });
 });
 
-describe('collectClips — playlist', () => {
-  it('garde un seul média par version, dans l’ordre de la playlist', async () => {
+describe('collectClips: playlist', () => {
+  it('keeps a single media per version, in playlist order', async () => {
     db.playlist.findUnique.mockResolvedValue({ name: 'Dailies 21/08' });
     db.playlistItem.findMany.mockResolvedValue([{ versionId: 108 }, { versionId: 107 }]);
     const second = media(8, { id: 9, version: { ...media(8).version, id: 108 } });
@@ -96,7 +96,7 @@ describe('collectClips — playlist', () => {
     expect(clips.map((c) => c.mediaId)).toEqual([8, 7]);
   });
 
-  it('rend une playlist vide sans interroger les médias', async () => {
+  it('returns an empty playlist without querying the media', async () => {
     db.playlist.findUnique.mockResolvedValue({ name: 'vide' });
     db.playlistItem.findMany.mockResolvedValue([]);
     const { clips } = await collectClips('playlist', 3, 1, 24);
@@ -105,8 +105,8 @@ describe('collectClips — playlist', () => {
   });
 });
 
-describe('collectClips — montage', () => {
-  it('prend la durée du montage et saute les trous', async () => {
+describe('collectClips: edit', () => {
+  it('takes the edit duration and skips the gaps', async () => {
     timeline.resolve.mockResolvedValue({
       name: null,
       sequenceCode: 'SQ010',
@@ -124,8 +124,8 @@ describe('collectClips — montage', () => {
   });
 });
 
-describe('collectClips — shot', () => {
-  it('rassemble les versions de toutes les tâches du plan', async () => {
+describe('collectClips: shot', () => {
+  it('gathers the versions of all the tasks of the shot', async () => {
     db.shot.findUnique.mockResolvedValue({
       code: 'SH010',
       sequence: { code: 'SQ010' },

@@ -6,23 +6,23 @@ import { prisma } from '../lib/prisma';
 import { storage } from './StorageService';
 
 /**
- * Catalogue des versions qu'on peut mettre dans une playlist (C5).
+ * Catalogue of the versions that can be put into a playlist (C5).
  *
- * Il n'existait aucune recherche d'entités réutilisable : celle de la palette plafonne à
- * cinq résultats par type et ignore les versions. Monter une playlist de dailies obligeait
- * donc à ouvrir chaque plan un par un et à y cliquer « ajouter ».
+ * There was no reusable entity search: the palette's caps at five results per type and ignores versions.
+ * Building a dailies playlist therefore required opening each shot one by one
+ * and clicking "add".
  *
- * Une version pend d'une tâche (elle-même sous un plan ou un asset) ou directement d'un
- * asset : les trois chemins sont couverts, sans quoi tout un pan du projet reste
- * introuvable selon la façon dont le studio range son travail.
+ * A version hangs from a task (itself under a shot or an asset) or directly from an asset: all three paths
+ * are covered, otherwise a whole section of the project remains unfindable depending on how the studio files
+ * its work.
  */
 
 export interface CandidateQuery {
   q?: string;
   sequenceId?: number | 'none';
-  /** Clé de département, telle que la tâche la dénormalise. */
+  /** Department key, as the task denormalises it. */
   department?: string;
-  /** Ne garder que la dernière version de chaque tâche — le cas ordinaire des dailies. */
+  /** Keep only the latest version of each task — the ordinary case for dailies. */
   latestOnly?: boolean;
   limit?: number;
 }
@@ -30,7 +30,7 @@ export interface CandidateQuery {
 export interface Candidate {
   versionId: number;
   name: string;
-  /** Localisation lisible : « SQ010 · SH020 › comp ». */
+  /** Readable location: "SQ010 · SH020 › comp". */
   location: string;
   sequenceId: number | null;
   department: string | null;
@@ -41,9 +41,9 @@ export interface Candidate {
 
 function ownedByProject(projectId: number): Prisma.VersionWhereInput {
   return {
-    // `hiddenAt` : le travail d'un élément masqué ne se propose pas aux dailies. Sans ce
-    // filtre, un plan retiré de tous les écrans réapparaissait dans le choix des versions
-    // d'une playlist — c'est-à-dire à la projection, devant le client.
+    // `hiddenAt`: the work of a hidden item is not offered to dailies. Without this filter, a shot removed
+    // from all screens reappeared in the choice of versions of a playlist —
+    // that is to say, in the projection, in front of the client.
     OR: [
       { task: { shot: { projectId, hiddenAt: null } } },
       { task: { asset: { projectId, hiddenAt: null } } },
@@ -52,7 +52,7 @@ function ownedByProject(projectId: number): Prisma.VersionWhereInput {
   };
 }
 
-/** Versions du projet, filtrées, avec de quoi les reconnaître à l'œil. */
+/** Versions of the project, filtered, with what is needed to recognise them at a glance. */
 export async function list(
   projectId: number,
   viewerId: number,
@@ -81,8 +81,8 @@ export async function list(
   const versions = await prisma.version.findMany({
     where: { deletedAt: null, AND: filters },
     orderBy: { createdAt: 'desc' },
-    // Le tri « dernière d'abord » ne survit pas au filtrage par tâche : on prend large,
-    // puis on élit. La coupe finale se fait après.
+    // The "latest first" sort does not survive the filtering by task: we take wide, then elect. The final cut
+    // is made afterwards.
     take: query.latestOnly ? limit * 4 : limit,
     select: {
       id: true,
@@ -100,7 +100,7 @@ export async function list(
       },
       asset: { select: { name: true } },
       media: {
-        // Même règle de visibilité que partout : publié, ou déposé par le demandeur.
+        // Same visibility rule as everywhere: published, or uploaded by the requester.
         where: { deletedAt: null, status: 'READY', OR: [{ published: true }, { uploaderId: viewerId }] },
         orderBy: { createdAt: 'asc' },
         take: 1,
@@ -141,12 +141,12 @@ export async function list(
   );
 }
 
-/** La liste est déjà triée du plus récent au plus ancien : la première vue par tâche gagne. */
+/** The list is already sorted from most recent to oldest: the first version seen per task wins. */
 function keepLatestPerTask<T extends { id: number; taskId: number | null }>(versions: T[]): T[] {
   const seen = new Set<number>();
   return versions.filter((v) => {
-    // Une version rattachée directement à un asset n'a pas de tâche : elle se garde
-    // toujours, sans quoi tout un pan du catalogue disparaîtrait de la recherche.
+    // A version attached directly to an asset has no task: it is always kept, otherwise a whole section of
+    // the catalogue would disappear from the search.
     if (v.taskId === null) return true;
     if (seen.has(v.taskId)) return false;
     seen.add(v.taskId);

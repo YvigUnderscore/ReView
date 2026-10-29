@@ -47,22 +47,22 @@ import type { UsdRequest } from './ModelConvertService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
- * Logique métier des médias (upload présigné, finalize/validation magic bytes,
- * publication, reprocess, bibliothèque, corbeille). Les routes ne font que
- * valider → appeler ces fonctions → répondre (cf. 10.D8).
+ * Media business logic: presigned upload, finalize with magic-byte validation,
+ * publication, reprocess, library and trash. Routes only validate, call these
+ * functions, then respond.
  */
 
 type SessionUser = { id: number; role: Role };
 
-/** Sérialise le `size` BigInt d'un média en Number pour la réponse JSON. */
+/** Serializes a media's BigInt `size` to a Number for the JSON response. */
 const serializeMedia = <T extends { size: bigint }>(m: T): Omit<T, 'size'> & { size: number } => ({
   ...m,
   size: Number(m.size),
 });
 
 /**
- * Demande la vignette d'un média spatial (3D/splat) — file dédiée, **jamais bloquante** :
- * Redis indisponible ne doit pas faire échouer une finalisation d'upload pour un aperçu.
+ * Requests the thumbnail of a spatial media (3D/splat). Runs on a dedicated
+ * queue and never blocks: Redis being down must not fail an upload finalize.
  */
 async function requestSpatialThumb(mediaId: number, kind: MediaKind, ext: string): Promise<void> {
   if (!spatialThumbSource(kind, ext)) return;
@@ -77,17 +77,17 @@ export interface CreateUploadInput {
   contentType: string;
   kind: MediaKind;
   size?: number;
-  /** sha256 hex du fichier, calculé côté client (37.B : checksum bout-en-bout + dédup). */
+  /** SHA-256 hex of the file, computed client-side (37.B: end-to-end checksum and dedup). */
   contentHash?: string;
   /**
-   * Scène USD (`MODEL_3D`) : variantes et purpose demandés par le client (45.E). Posé dans
-   * `metadata.usdRequest` — la clé que lit le worker `convert3d` et qu'écrit la
-   * recomposition — pour que la **première** conversion soit déjà la bonne.
+   * USD scene (`MODEL_3D`): variants and purpose requested by the client (45.E). Stored in
+   * `metadata.usdRequest`, the key read by the `convert3d` worker and written by the
+   * recomposition, so the first conversion is already the right one.
    */
   usdRequest?: UsdRequest;
 }
 
-/** Crée un MediaObject (UPLOADING) et renvoie une URL présignée PUT. */
+/** Creates a MediaObject (UPLOADING) and returns a presigned PUT URL. */
 export async function createUpload(user: SessionUser, input: CreateUploadInput) {
   const { versionId, filename, contentType, kind, size } = input;
   const storageCtx = await resolveStorageContextForVersion(versionId);
@@ -95,10 +95,10 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   const projectId = storageCtx.projectId;
   if (!(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas d'upload
-  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+  await assertCanContribute(user.id, user.role, projectId); // 38.E: CLIENT cannot upload
+  await assertProjectWritable(projectId); // 38.B: archived project is read-only
 
-  // Quotas configurables (admin exempté du quota de stockage).
+  // Configurable quotas (admins are exempt from the storage quota).
   const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);
   if (size && size > maxFileSize) throw badRequest('File is too large', 'FILE_TOO_LARGE');
 
@@ -119,20 +119,20 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
     if (used + (size ?? 0) > limit) throw forbidden('Storage quota exceeded', 'STORAGE_LIMIT');
   }
 
-  // Quota de stockage du projet (38.D) — s'applique à tous, admin compris.
+  // Project storage quota (38.D), applied to everyone, admins included.
   await assertProjectQuota(projectId, size ?? 0);
 
-  // Convention de nommage (38.C) : refus en mode reject, avertissement renvoyé en mode warn.
+  // Naming convention (38.C): rejected in reject mode, warning returned in warn mode.
   const { naming } = await resolveProjectSettingsById(projectId);
   const namingCheck = checkNaming(filename, naming);
   if (!namingCheck.pass && namingCheck.mode === 'reject')
     throw badRequest('Filename does not match the naming rule of this project', 'NAMING_REJECTED');
   const namingWarning = !namingCheck.pass && namingCheck.mode === 'warn';
 
-  // Publication d'office (Phase 50) : hors mode brouillon, un média naît publié — déposer
-  // EST livrer. Mode brouillon actif, la règle historique s'applique telle quelle : seule
-  // une version déjà publiée donne un média publié à la naissance, pour qu'elle ne retombe
-  // pas en brouillon parce qu'on lui ajoute un rendu (symétrique de `syncVersionPublication`).
+  // Automatic publication (Phase 50): outside draft mode a media is born published, so
+  // uploading IS delivering. In active draft mode the historical rule still applies: only an
+  // already-published version yields a published media at birth, so it does not fall back to
+  // draft when a render is added (symmetric with `syncVersionPublication`).
   const parentVersion = await prisma.version.findUnique({
     where: { id: versionId },
     select: { published: true },
@@ -147,7 +147,7 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
       versionId,
       kind,
       originalName: filename,
-      storageKey: '', // rempli juste après avec l'id
+      storageKey: '', // filled right after with the id
       mimeType: contentType,
       status: MediaStatus.UPLOADING,
       published: bornPublished,
@@ -168,17 +168,17 @@ export async function createUpload(user: SessionUser, input: CreateUploadInput) 
   await prisma.mediaObject.update({ where: { id: media.id }, data: { storageKey } });
 
   const uploadUrl = await storage.getPresignedPutUrl(storageKey, contentType);
-  // `published` est rendu ici pour que l'appelant sache, sans lire un réglage d'administration
-  // qui lui est fermé, si « publier » sera encore un geste à proposer après l'envoi.
+  // `published` is returned so the caller knows, without reading an admin setting that is
+  // closed to it, whether "publish" is still a gesture to offer after upload.
   return { mediaObjectId: media.id, storageKey, uploadUrl, namingWarning, published: bornPublished };
 }
 
 /**
- * Finalise un upload : valide les magic bytes, met la taille à jour, déclenche le traitement.
+ * Finalizes an upload: validates magic bytes, updates the size, triggers processing.
  *
- * `note` est la consigne d'upload — ce que l'auteur dit de ce qu'il livre. Elle n'est
- * obligatoire que si le projet l'exige (`settings.reviewRequest.requireNote`) ; fournie, elle
- * est conservée dans `metadata.uploadNote` et rendue par le détail du média.
+ * `note` is the upload brief: what the author says about what they deliver. It is only
+ * mandatory if the project requires it (`settings.reviewRequest.requireNote`); when given,
+ * it is kept in `metadata.uploadNote` and shown in the media detail.
  */
 export async function finalize(user: SessionUser, id: number, note?: string | null) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
@@ -187,19 +187,19 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  // `finalize` relance le pipeline de traitement et réécrit statut et taille : le simple
-  // accès au projet ne suffit pas. Il faut pouvoir contribuer (un CLIENT est en lecture
-  // seule) et le média ne doit pas être déjà publié (verrou Phase 11).
+  // `finalize` re-runs the processing pipeline and rewrites status and size: simply having
+  // project access is not enough. The caller must be able to contribute (a CLIENT is
+  // read-only) and the media must not already be published (Phase 11 lock).
   await assertCanContribute(user.id, user.role, projectId);
-  // Verrou de publication (Phase 11), nuancé depuis que les médias héritent de la
-  // publication de leur version : un média encore en UPLOADING n'a jamais été servi à
-  // personne, le finaliser est le déroulement normal de son dépôt. Le verrou garde tout
-  // son sens pour un média déjà finalisé, dont le contenu, lui, a été diffusé.
+  // Publication lock (Phase 11), refined now that media inherit their version's publication:
+  // a media still UPLOADING was never served to anyone, so finalizing it is the normal course
+  // of its upload. The lock keeps its full meaning for an already-finalized media, whose
+  // content has been distributed.
   if (media.status !== MediaStatus.UPLOADING) assertWritable(media, 'uploadFinalize');
 
-  // Consigne d'upload : contrôlée AVANT toute écriture et avant tout appel au stockage. La
-  // refuser plus loin marquerait le média FAILED et supprimerait l'objet déposé pour une
-  // phrase manquante, alors qu'il suffit de rappeler `finalize` avec elle.
+  // Upload brief: checked BEFORE any write and before any storage call. Refusing it later
+  // would mark the media FAILED and delete the deposited object over a missing sentence,
+  // whereas re-calling `finalize` with the note is enough.
   const [draftMode, projectSettings] = await Promise.all([
     isDraftModeEnabled(),
     resolveProjectSettingsById(projectId),
@@ -217,9 +217,8 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
     throw badRequest('Invalid file type (magic-bytes check failed)', 'INVALID_FILE');
   }
 
-  // Taille RÉELLE de l'objet déposé. Les quotas n'ont été vérifiés qu'à la demande d'URL,
-  // contre une taille *déclarée* par le client : annoncer 1 octet puis en téléverser
-  // cinquante gigaoctets passait sans jamais être repris.
+  // REAL size of the deposited object. Quotas were only checked when the URL was requested,
+  // against a *declared* size: announcing 1 byte then uploading 50 GB passed unnoticed.
   const realSize = stat.size;
   const maxFileSize = await getNumericSetting(SETTING_KEYS.MAX_FILE_SIZE);
   if (realSize > maxFileSize) {
@@ -235,10 +234,10 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
     throw err;
   }
 
-  // Le type stocké est arrêté ici, côté serveur : celui passé à la signature du PUT n'est
-  // pas contraignant (le presigner ne signe que `host`), le navigateur a donc pu déposer
-  // l'objet en `text/html`. Les objets étant servis depuis l'origine de l'app, on le ramène
-  // à une valeur inerte avant que le média ne devienne lisible.
+  // The stored type is fixed here, server-side: the one passed to the PUT signature is not
+  // binding (the presigner only signs `host`), so the browser could have stored `text/html`.
+  // Objects are served from the app origin, so reset it to an inert value before the media
+  // becomes readable.
   await storage
     .setObjectContentType(media.storageKey, stat.contentType ?? '')
     .catch((err) => logger.warn({ err, key: media.storageKey }, '[Media] type de contenu non normalisé'));
@@ -249,21 +248,21 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
     data: {
       status: jobKind ? MediaStatus.PROCESSING : MediaStatus.READY,
       size: BigInt(stat.size),
-      // La consigne rejoint les métadonnées du média : c'est ce que l'auteur a dit de sa
-      // livraison, et cela doit survivre au fait que personne ne soit encore assigné.
+      // The brief joins the media metadata: it is what the author said about their delivery
+      // and must survive even if nobody is assigned yet.
       ...(uploadNote
         ? { metadata: { ...((media.metadata ?? {}) as Record<string, unknown>), uploadNote } }
         : {}),
     },
   });
   if (jobKind) await enqueueMediaJob({ mediaObjectId: id, kind: jobKind });
-  // 37.E : les médias servis tels quels (GLB natif, splats) passent quand même à
-  // l'antivirus — READY tout de suite, quarantaine a posteriori si détection.
+  // 37.E: media served as-is (native GLB, splats) still go through the antivirus: READY right
+  // away, quarantined afterwards if a detection occurs.
   else if (isClamavEnabled()) await enqueueMediaJob({ mediaObjectId: id, kind: 'scan' });
-  // Aperçu des médias spatiaux : le rendu attend le GLB quand une conversion est en cours.
+  // Spatial media preview: rendering waits for the GLB when a conversion is in progress.
   await requestSpatialThumb(id, media.kind, detected);
 
-  // Compteur de stockage utilisateur (affichage ; le quota utilise la somme live).
+  // User storage counter (display only; the quota uses the live sum).
   if (media.uploaderId) {
     await prisma.user.update({
       where: { id: media.uploaderId },
@@ -271,39 +270,36 @@ export async function finalize(user: SessionUser, id: number, note?: string | nu
     });
   }
 
-  // Publication d'office : le média est né publié, donc c'est ICI qu'il devient une
-  // livraison — la version suit ses médias, l'équipe est prévenue, les intégrations partent.
-  // En mode brouillon, rien de tout cela : « publier » reste un geste et c'est lui qui
-  // annonce, exactement comme avant ce lot.
+  // Automatic publication: the media was born published, so THIS is where it becomes a
+  // delivery: the version follows its media, the team is notified, integrations fire.
+  // In draft mode none of this happens: "publish" stays a gesture and it is that which
+  // announces, exactly as before this batch.
   if (updated.published && !draftMode) await announcePublication(updated, projectId, user.id);
 
   return { media: serializeMedia(updated), detectedExtension: detected };
 }
 
 /**
- * Nombre de lignes signées d'affilée avant de rendre la main à la boucle d'événements.
+ * Number of signed lines in a row before yielding back to the event loop.
  *
- * POURQUOI. `getSignedUrl` rend bien une promesse, mais la signature SigV4 est une chaîne
- * de HMAC-SHA256 qui se résout **en microtâches** : la boucle ne reprend pas la main entre
- * deux signatures. Mesuré sur le `@aws-sdk/s3-request-presigner` du projet, avec un
- * battement `setImmediate` en parallèle : 1 000 signatures = 164 ms et **zéro** tour de
- * boucle. Pendant ces 164 ms, aucune autre requête n'est servie — ni une frappe de palette,
- * ni un commentaire, ni un battement Socket.io. Une page de la bibliothèque en signe deux
- * par média ; à `pageSize=500`, plafond qu'un simple paramètre d'URL atteint, cela fait
- * 1 000 signatures d'un bloc. On intercale donc un vrai tour de boucle toutes les 25 lignes.
+ * WHY: `getSignedUrl` returns a promise, but SigV4 signing is a chain of HMAC-SHA256 steps
+ * that resolve in microtasks, so the loop never gets a turn between two signatures. Measured
+ * with the project's presigner: 1000 signatures take 164 ms with zero loop turns, during which
+ * no other request is served. A library page signs two per media; at `pageSize=500` (reachable
+ * with a plain URL parameter) that is 1000 signatures in one block. Hence a real loop turn
+ * every 25 lines.
  */
 const SIGN_YIELD_EVERY = 25;
 
-/** Rend la main à la boucle : `setImmediate` est le seul point qui laisse passer les I/O en attente. */
+/** Yields to the event loop: `setImmediate` is the only point that lets pending I/O through. */
 const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 /**
- * `Promise.all(rows.map(build))`, mais par tranches, avec un tour de boucle entre chacune.
+ * `Promise.all(rows.map(build))`, but in slices, with an event-loop turn between each.
  *
- * Le résultat est strictement le même : mêmes lignes, même ordre, mêmes valeurs — seule la
- * simultanéité change (25 constructions de front au lieu de toutes). Le coût CPU total est
- * inchangé ; ce qui disparaît, c'est le blocage en tête de file pour tous les autres
- * appelants du process.
+ * The result is strictly identical: same rows, same order, same values. Only concurrency
+ * changes (25 builds at a time instead of all of them). Total CPU cost is unchanged; what
+ * disappears is the head-of-line blocking for the other callers of the process.
  */
 async function mapYieldingToEventLoop<T, R>(rows: readonly T[], build: (row: T) => Promise<R>): Promise<R[]> {
   if (rows.length <= SIGN_YIELD_EVERY) return Promise.all(rows.map(build));
@@ -315,7 +311,7 @@ async function mapYieldingToEventLoop<T, R>(rows: readonly T[], build: (row: T) 
   return out;
 }
 
-/** Bibliothèque paginée : médias publiés (READY) d'un projet, avec URLs présignées. */
+/** Paginated library: published media (READY) of a project, with presigned URLs. */
 export async function listPublished(
   user: SessionUser,
   projectId: number,
@@ -342,7 +338,7 @@ export async function listPublished(
     kind: m.kind,
     originalName: m.originalName,
     thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
-    // Clé affichable : une bibliothèque d'EXR renverrait sinon des URL que rien ne rend.
+    // Displayable key: an EXR library would otherwise return URLs that nothing can render.
     url: await storage.getPresignedGetUrl(mediaViewKey(m)),
   }));
   return paginate(items, total, p);
@@ -352,16 +348,16 @@ export interface ReviewsFilter {
   projectId?: number;
   kind?: MediaKind;
   status?: 'published' | 'draft';
-  /** Filtre par décision de review courante : id de ReviewStatus, ou 'none' = sans décision. */
+  /** Filter by current review decision: a ReviewStatus id, or 'none' for no decision. */
   decision?: number | 'none';
-  /** 'me' = les versions dont la review m'a été confiée (Phase 49) — l'encart s'en sert. */
+  /** 'me' = versions whose review was assigned to me (Phase 49); the assignment panel uses it. */
   assigned?: 'me';
 }
 
 /**
- * Page « Reviews » globale (12.C) : médias publiés (READY) de tous mes projets
- * + mes propres brouillons, cross-projets par membership (ADMIN/SUPERVISOR = tous),
- * filtrables par projet/type/statut, tri du plus récent au plus ancien.
+ * Global "Reviews" page (12.C): published media (READY) of all my projects plus my own
+ * drafts, across projects by membership (ADMIN/SUPERVISOR see everything), filterable by
+ * project, type and status, sorted newest first.
  */
 export async function listReviews(
   user: SessionUser,
@@ -374,7 +370,7 @@ export async function listReviews(
     ...(filter.projectId ? { id: filter.projectId } : {}),
     ...(isGlobal ? {} : { memberships: { some: { userId: user.id } } }),
   };
-  // Visibilité : les brouillons ne sont montrés qu'à leur uploader (même sémantique que getDetail).
+  // Visibility: drafts are only shown to their uploader (same semantics as getDetail).
   const visibility: Prisma.MediaObjectWhereInput =
     filter.status === 'draft'
       ? { published: false, uploaderId: user.id }
@@ -392,8 +388,8 @@ export async function listReviews(
         : filter.decision !== undefined
           ? { reviewStatusId: filter.decision }
           : {}),
-      // Reviews confiées (Phase 49). Le filtre porte sur la version, pas sur le média :
-      // c'est la livraison qu'on confie, et elle en compte souvent plusieurs.
+      // Reviews assigned to me (Phase 49). The filter applies to the version, not the media:
+      // it is the delivery that is assigned, and it often contains several.
       ...(filter.assigned === 'me' ? { reviewers: { some: { reviewerId: user.id } } } : {}),
       OR: [
         { task: { shot: { deletedAt: null, project } } },
@@ -439,7 +435,7 @@ export async function listReviews(
         ? `${t.asset.name} › ${t.name}`
         : (m.version?.asset?.name ?? '');
     const project = t?.shot?.project ?? t?.asset?.project ?? m.version?.asset?.project ?? null;
-    // Sprite de miniatures pour l'aperçu animé au survol des cartes (42.A — №78, vidéo).
+    // Thumbnail sprite for the hover preview of the cards (42.A, #78, video).
     const meta = (m.metadata ?? {}) as {
       timelineSprite?: { key: string; count: number; cols: number; rows: number };
     };
@@ -460,8 +456,8 @@ export async function listReviews(
           }
         : null,
       location,
-      // La décision se pose sur la VERSION, pas sur le média : sans cet identifiant,
-      // la page Reviews ne pouvait rien changer en lot sans un appel par carte.
+      // The decision is set on the VERSION, not the media: without this identifier the Reviews
+      // page could not change anything in bulk without one call per card.
       versionId: m.versionId,
       versionName: m.version?.name ?? '',
       reviewStatus: m.version?.reviewStatus ?? null,
@@ -473,12 +469,12 @@ export async function listReviews(
 }
 
 /**
- * Brouillons (non publiés) de l'utilisateur, avec localisation lisible.
+ * The user's drafts (unpublished), with a readable location.
  *
- * Chaque ligne porte aussi son projet et la règle de consigne qui y règne : la pastille
- * « Brouillons en attente » est le second endroit d'où l'on publie, et publier, c'est dire
- * à qui l'on confie. Sans ces deux champs, le panneau aurait dû faire un appel par
- * brouillon pour savoir s'il peut proposer le geste — et sous quelle contrainte.
+ * Each row also carries its project and the brief rule that applies to it: the "pending
+ * drafts" badge is the second place from which one publishes, and publishing means saying
+ * to whom it is delegated. Without these two fields the panel would need one call per draft
+ * to know whether it can offer the action and under which constraint.
  */
 export async function listDrafts(userId: number) {
   const drafts = await prisma.mediaObject.findMany({
@@ -503,9 +499,9 @@ export async function listDrafts(userId: number) {
       },
     },
   });
-  // Les règles de consigne sont lues une fois par PROJET, pas une fois par brouillon : cent
-  // brouillons d'une même production ne doivent pas faire cent résolutions de réglages,
-  // chacune traversant les défauts studio.
+  // Brief rules are read once per PROJECT, not once per draft: a hundred drafts from the same
+  // production must not trigger a hundred settings resolutions, each going through the studio
+  // defaults.
   const projectOf = (m: (typeof drafts)[number]) =>
     m.version?.task?.shot?.projectId ?? m.version?.task?.asset?.projectId ?? m.version?.asset?.projectId;
   const rules = new Map(
@@ -531,8 +527,8 @@ export async function listDrafts(userId: number) {
       versionName: v?.name ?? '',
       location,
       createdAt: m.createdAt,
-      // De quoi confier la review sans quitter la pastille : la version, son projet, et ce
-      // que ce projet exige d'une consigne.
+      // What is needed to assign the review without leaving the badge: the version, its project,
+      // and what that project requires of a brief.
       versionId: m.versionId,
       projectId: projectOf(m) ?? null,
       reviewRequest: rules.get(projectOf(m) ?? -1) ?? null,
@@ -541,10 +537,10 @@ export async function listDrafts(userId: number) {
 }
 
 /**
- * Aligne l'état publié d'une version sur celui de ses médias (règles dans `lib/publishState`).
+ * Aligns a version's published state with that of its media (rules in `lib/publishState`).
  *
- * Appelée après chaque publication de média. Ne dépublie jamais : retirer une version de
- * la diffusion reste une décision de superviseur, pas l'effet de bord d'une suppression.
+ * Called after each media publication. Never unpublishes: withdrawing a version from
+ * distribution remains a supervisor decision, not a side effect of a deletion.
  */
 export async function syncVersionPublication(versionId: number, actorId: number): Promise<boolean> {
   const version = await prisma.version.findUnique({
@@ -571,42 +567,41 @@ export async function syncVersionPublication(versionId: number, actorId: number)
 }
 
 /**
- * Publie un média brouillon (réservé à l'uploader) — geste du mode brouillon.
+ * Publishes a draft media (reserved to the uploader): the gesture of draft mode.
  *
- * Hors mode brouillon (défaut depuis la Phase 50), le média est déjà publié à l'arrivée ici :
- * la route reste servie pour les studios qui ont gardé le brouillon, et pour l'API v1 dont
- * la finalisation passe par elle. Elle ne republie alors rien — voir la garde plus bas.
+ * Outside draft mode (the default since Phase 50) the media already arrives published. The
+ * route still serves studios that kept drafts, and API v1, whose finalize goes through it. It
+ * then republishes nothing; see the guard below.
  *
- * `reviewers` est le geste de l'upload : « publie, et voilà qui doit regarder quoi ». La
- * liste est écrite sur la VERSION — c'est elle qu'on confie — et AVANT le basculement :
- * c'est ce qui donne son sens au réglage projet « consigne obligatoire », qui refuse alors
- * la publication au lieu de la laisser partir et de râler ensuite. Absente, la liste déjà
- * posée est laissée telle quelle : publier n'est pas défaire ce qu'on a confié.
+ * `reviewers` is the gesture of the upload: "publish, and here is who must look at what". The
+ * list is written on the VERSION (it is what gets assigned), BEFORE the switch: that gives
+ * meaning to the project setting "mandatory brief", which then refuses publication instead of
+ * letting it go out and complaining afterwards. When absent, the list already set is left as is:
+ * publishing does not undo what was assigned.
  *
- * Rend le média ET la liste : c'est ce qui permet à l'écran de se mettre à jour sans
- * relire le média — un détail relu resignerait toutes ses URL et rechargerait le viewer.
+ * Returns the media AND the list, so the screen can update without re-reading the media; that
+ * re-read would re-sign all its URLs and reload the viewer.
  */
 export async function publish(user: SessionUser, id: number, reviewers?: ReviewerInput[]) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Media not found');
-  // Brouillon strictement privé : seul l'uploader voit et publie son média (404 sinon).
+  // Strictly private draft: only the uploader sees and publishes their media (404 otherwise).
   if (media.uploaderId !== user.id) throw notFound('Media not found');
-  // Un média encore en UPLOADING n'est jamais passé par `finalize` : ni validation des
-  // magic bytes, ni normalisation du type de contenu, ni antivirus, ni contrôle de la
-  // taille réelle contre les quotas. Le publier ferait servir un contenu jamais vérifié.
+  // A media still UPLOADING has never gone through `finalize`: no magic-byte validation, no
+  // content-type normalization, no antivirus, no check of the real size against quotas.
+  // Publishing it would serve unverified content.
   if (media.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
   if (reviewers !== undefined) {
-    // Une liste explicitement demandée ne se perd pas en silence : une version détachée de
-    // tout projet n'a personne à qui la confier, et le dire vaut mieux que publier comme si
-    // de rien n'était.
+    // An explicitly requested list is not lost silently: a version detached from any project
+    // has nobody to assign it to, and saying so is better than publishing as if nothing happened.
     const owner = await resolveProjectIdForVersion(media.versionId);
     if (!owner) throw notFound('Version not attached to a project');
     await setReviewers(user, owner, media.versionId, reviewers);
   }
-  // Un média déjà publié — c'est le cas de tout upload hors mode brouillon — ne se
-  // republie pas : la liste demandée est écrite, et on s'arrête là. Sans cette garde, le
-  // chemin de l'API v1 (`PublishFlowService.complete`) annoncerait deux fois la même
-  // livraison : deux webhooks, deux notifications de suiveurs, deux envois ShotGrid.
+  // A media already published (which is every upload outside draft mode) is not republished:
+  // the requested list is written and we stop there. Without this guard the API v1 path
+  // (`PublishFlowService.complete`) would announce the same delivery twice: two webhooks, two
+  // follower notifications, two ShotGrid sends.
   const alreadyPublished = media.published;
   const updated = alreadyPublished
     ? media
@@ -617,15 +612,15 @@ export async function publish(user: SessionUser, id: number, reviewers?: Reviewe
 }
 
 /**
- * Ce qui suit une publication de média, d'où qu'elle vienne.
+ * What follows a media publication, wherever it comes from.
  *
- * Extrait de `publish` parce qu'il y a désormais DEUX portes : le geste explicite, en mode
- * brouillon, et la finalisation de l'upload, qui publie d'office. Laisser la seconde sans
- * ces effets aurait donné des médias visibles de tous dont la version reste « brouillon »,
- * dont les suiveurs n'entendent pas parler et que ShotGrid ne reçoit jamais.
+ * Extracted from `publish` because there are now TWO doors: the explicit gesture in draft
+ * mode, and the upload finalization, which publishes automatically. Leaving the second one
+ * without these effects would give media visible to everyone while the version stays "draft",
+ * with followers never hearing about it and ShotGrid never receiving it.
  *
- * `projectId` peut manquer (version détachée) : la version suit tout de même ses médias,
- * mais il n'y a personne à prévenir.
+ * `projectId` may be missing (detached version): the version still follows its media, but
+ * there is nobody to notify.
  */
 export async function announcePublication(
   media: { id: number; versionId: number; kind: MediaKind; originalName: string },
@@ -633,15 +628,15 @@ export async function announcePublication(
   actorId: number,
 ): Promise<void> {
   const { id, versionId, originalName } = media;
-  // La version suit ses médias : dès qu'il ne reste plus un brouillon, elle est publiée.
+  // The version follows its media: as soon as no draft remains, it is published.
   await syncVersionPublication(versionId, actorId);
   if (!projectId) return;
   emitToProject(projectId, 'media:update', { projectId, id, versionId });
-  // 48 : la version part vers ShotGrid — création si elle y est inconnue, ajout du
-  // média à la version existante sinon. Un média ajouté en cours de route ne doit
-  // pas fabriquer un doublon portant le même nom.
+  // 48: the version is sent to ShotGrid: created if unknown there, otherwise the media is added
+  // to the existing version. A media added along the way must not create a duplicate with the
+  // same name.
   await enqueuePush(projectId, { type: 'version-publish', versionId, actorId });
-  // Suiveurs (32.G) : publication sur la chaîne version/shot/asset.
+  // Followers (32.G): publication on the version/shot/asset chain.
   await notifyWatchers({
     mediaObjectId: id,
     projectId,
@@ -649,7 +644,7 @@ export async function announcePublication(
     params: { name: originalName },
     exclude: [actorId],
   });
-  // Webhooks sortants (36.D).
+  // Outgoing webhooks (36.D).
   publishApiEvent('media.published', {
     projectId,
     entityType: 'media',
@@ -664,33 +659,32 @@ export async function announcePublication(
       publishedBy: actorId,
     },
   });
-  // Messagerie d'équipe (42.B — №67).
+  // Team messaging (42.B, #67).
   void notifyChat('chat.mediaPublished', { name: originalName });
 }
 
 /**
- * Relance le job de traitement d'un média.
+ * Re-queues a media's processing job.
  *
- * Un brouillon se relance librement. Un média **publié** ne se relance que si son
- * traitement a échoué, et une seule fois (`lib/publishLock`) : sans cette exception, un
- * média publié d'office dont le transcodage échoue serait mort à jamais — le verrou
- * interdisait la relance, et il n'y avait plus de brouillon où recommencer. La relance
- * consommée est comptée dans `metadata`, pour que la deuxième tentative soit refusée avec
- * ses propres mots plutôt qu'avec un « verrouillé » qui ne dirait rien de vrai.
+ * A draft can be re-queued freely. A **published** media can only be re-queued if its
+ * processing failed, and only once (`lib/publishLock`): without this exception, a media
+ * published automatically whose transcoding fails would be dead forever, since the lock
+ * forbade re-queuing and no draft was left to start over. The consumed retry is counted in
+ * `metadata`, so a second attempt is refused with its own wording rather than a generic
+ * "locked" message.
  */
 export async function reprocess(user: SessionUser, id: number) {
   await assertMediaManage(id, user);
   /*
-   * Lecture, contrôle et dépense du compteur SOUS VERROU DE LIGNE (CP-SEC de la phase 50).
+   * Read, check and spend the counter UNDER ROW LOCK (CP-SEC of phase 50).
    *
-   * En lecture-puis-écriture séparées, deux POST simultanés sur le même média publié en échec
-   * lisaient tous les deux 0, écrivaient tous les deux 1, et enfilaient tous les deux un job :
-   * « une seule relance » devenait « autant qu'on peut en tirer en parallèle ». La même
-   * fenêtre perdait aussi l'écriture concurrente d'un worker sur `metadata`, puisque le
-   * compteur réécrit la colonne JSON entière depuis une lecture périmée.
+   * With separate read-then-write, two simultaneous POSTs on the same failed published media
+   * both read 0, both wrote 1 and both enqueued a job: "one retry" became "as many as can run
+   * in parallel". The same window also lost a concurrent worker write to `metadata`, since the
+   * counter rewrote the whole JSON column from a stale read.
    *
-   * `FOR UPDATE` suffit ici (pas besoin de sérialisable) : les deux requêtes visent la même
-   * ligne, la seconde attend la première et relit son compteur déjà dépensé.
+   * `FOR UPDATE` is enough here (no need for serializable): both queries target the same row,
+   * the second waits for the first and re-reads its already-spent counter.
    */
   const media = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "MediaObject" WHERE id = ${id} FOR UPDATE`;
@@ -698,8 +692,8 @@ export async function reprocess(user: SessionUser, id: number) {
     if (!row) throw notFound('Media not found');
     if (row.status === MediaStatus.UPLOADING) throw badRequest('Upload not finalised', 'NOT_FINALIZED');
     assertReprocessable(row);
-    // Le compteur n'est tenu que pour un média publié : un brouillon se relance sans limite,
-    // et lui poser un compteur ferait échouer sa première relance après publication.
+    // The counter is only kept for a published media: a draft can be re-queued without limit,
+    // and giving it a counter would fail its first re-queue after publication.
     if (row.published) {
       await tx.mediaObject.update({
         where: { id },
@@ -708,14 +702,14 @@ export async function reprocess(user: SessionUser, id: number) {
     }
     return row;
   });
-  // Le compteur est déjà dépensé dans la transaction ci-dessus : les écritures qui suivent ne
-  // portent plus que le statut.
+  // The counter is already spent in the transaction above: the writes that follow only carry
+  // the status.
   const spend = {};
 
   const ext = getExtension(media.originalName);
   const jobKind = jobKindFor(media.kind, ext);
   if (!jobKind) {
-    // Rien à reconvertir (ex : GLB/glTF natif) → simplement remettre READY.
+    // Nothing to reconvert (e.g. native GLB/glTF): simply set it back to READY.
     const updated = await prisma.mediaObject.update({
       where: { id },
       data: { status: MediaStatus.READY, ...spend },
@@ -735,8 +729,8 @@ export async function reprocess(user: SessionUser, id: number) {
 }
 
 /**
- * Clé « source » réellement servie d'un média : après transcodage vidéo, l'original est
- * supprimé (gain de place) et le proxy MP4 devient la source.
+ * "Source" key actually served for a media: after video transcoding the original is deleted
+ * (space saving) and the MP4 proxy becomes the source.
  */
 export function mediaSourceKey(media: { storageKey: string; metadata: unknown }): string {
   const meta = (media.metadata ?? {}) as { proxyKey?: string; sourceDeleted?: boolean };
@@ -744,13 +738,12 @@ export function mediaSourceKey(media: { storageKey: string; metadata: unknown })
 }
 
 /**
- * Clé réellement **affichable** d'un média : le proxy web quand le format d'origine n'est
- * pas rendu par un navigateur (EXR, DPX, TIFF, TGA — cf. `lib/imageProxy`), la source sinon.
+ * Key actually **displayable** for a media: the web proxy when the original format is not
+ * rendered by browsers (EXR, DPX, TIFF, TGA; see `lib/imageProxy`), the source otherwise.
  *
- * La distinction avec `mediaSourceKey` est le point d'appui de toute la review d'image de
- * production : le viewer, l'A/B, le wipe et le diff consomment cette clé, tandis que le
- * téléchargement, l'API v1 et les envois ShotGrid continuent de livrer l'original — c'est
- * lui, et lui seul, que l'artiste a déposé.
+ * The distinction from `mediaSourceKey` is the cornerstone of production image review: the
+ * viewer, A/B, wipe and diff consume this key, while download, API v1 and ShotGrid sends keep
+ * delivering the original, which is the file the artist deposited.
  */
 export function mediaViewKey(media: { storageKey: string; metadata: unknown }): string {
   const meta = (media.metadata ?? {}) as { webProxyKey?: string };
@@ -759,7 +752,7 @@ export function mediaViewKey(media: { storageKey: string; metadata: unknown }): 
     : mediaSourceKey(media);
 }
 
-/** Détail complet d'un média + URLs présignées (original, miniature, proxy, glb). */
+/** Full media detail + presigned URLs (original, thumbnail, proxy, glb). */
 export async function getDetail(user: SessionUser, id: number, ip?: string | null) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
   if (!media) throw notFound('Media not found');
@@ -767,21 +760,21 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  // Journal d'accès (36.E) : la review charge ce détail à l'ouverture — dédup 30 min.
+  // Access log (36.E): the review loads this detail on open; deduplicated over 30 min.
   logMediaAccess({ mediaObjectId: id, userId: user.id, ip: ip ?? null });
   const meta = (media.metadata ?? {}) as {
     proxyKey?: string;
     sourceDeleted?: boolean;
     glbKey?: string;
-    // `usd` (45.C) : description de la scène — couche racine, variantes, assets manquants.
+    // `usd` (45.C): scene description: root layer, variants, missing assets.
     model?: { sourceFormat: string; converter: string; native: boolean; usd?: unknown };
-    // Raison d'un échec de traitement (45.C) — affichée en review plutôt qu'un `FAILED` muet.
+    // Reason for a processing failure (45.C), shown in review rather than a silent `FAILED`.
     processingError?: string;
-    /** Nom du fichier réellement livré par ShotGrid, quand le média porte le code du site. */
+    /** Name of the file actually delivered by ShotGrid, when the media carries the site code. */
     sourceFilename?: string;
-    /** Consigne écrite à l'upload (Phase 50) — ce que l'auteur dit de ce qu'il livre. */
+    /** Brief written at upload (Phase 50): what the author says about what they deliver. */
     uploadNote?: string;
-    // Override de scène (46.D) : mise en scène rejouée à l'ouverture pour tous.
+    // Scene override (46.D): staging replayed on open, for everyone.
     usdOverride?: unknown;
     fps?: number;
     width?: number;
@@ -805,15 +798,15 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
       tileH: number;
     };
   };
-  // Compatibilité des coupes historiques (Phase 50, lot 4) : la découpe vidéo a été retirée,
-  // plus rien ne produit de `trimProxyKey`. La LECTURE reste : un média coupé avant le
-  // retrait continue de jouer sa coupe. Retirer cet arbitrage rejouerait soudain la version
-  // non coupée d'un média déjà validé et commenté par d'autres.
+  // Compatibility of historical cuts (Phase 50, batch 4): video trimming was removed and nothing
+  // produces `trimProxyKey` any more. Reading is kept: a media cut before the removal keeps
+  // playing its cut. Removing this would suddenly replay the uncut version of a media already
+  // validated and commented by others.
   const proxyKey = meta.trim && meta.trimProxyKey ? meta.trimProxyKey : meta.proxyKey;
   const sourceKey = mediaSourceKey(media);
-  // Image de production (EXR, DPX, TIFF, TGA) : le viewer reçoit le proxy web, jamais
-  // l'original — que le navigateur ne décoderait pas. Les deux sont renvoyés : l'un pour
-  // regarder, l'autre pour télécharger.
+  // Production image (EXR, DPX, TIFF, TGA): the viewer receives the web proxy, never the
+  // original, which the browser would not decode. Both are returned: one to watch, the other
+  // to download.
   const viewKey = mediaViewKey(media);
   const [
     url,
@@ -839,13 +832,13 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
     meta.splatSubsetKey ? storage.getPresignedGetUrl(meta.splatSubsetKey) : Promise.resolve(null),
     meta.timelineSprite?.key ? storage.getPresignedGetUrl(meta.timelineSprite.key) : Promise.resolve(null),
     prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
-    // Éclairage HDRI par défaut du projet (39.F) : rejoué si le média n'a pas le sien.
+    // Project default HDRI lighting (39.F): replayed if the media has none of its own.
     resolveProjectSettingsById(projectId),
-    // Ratio du cadre de livraison (Phase 50, lot 8) : réglage pipeline hérité
-    // studio → projet → séquence → plan, comme la cadence d'une séquence d'images.
+    // Delivery frame ratio (Phase 50, batch 8): pipeline setting inherited
+    // studio -> project -> sequence -> shot, like an image sequence's frame rate.
     resolveDeliveryAspect(media.versionId, projectId),
-    // Images de référence (Phase 24, multi-items) — lecture inline (le service référence
-    // assertMediaManage d'ici : un import croisé créerait un cycle).
+    // Reference images (Phase 24, multi-items): inline read (the service imports
+    // assertMediaManage from here, and a cross import would create a cycle).
     prisma.reviewReference.findMany({ where: { mediaObjectId: id }, orderBy: { id: 'asc' } }).then((rows) =>
       Promise.all(
         rows.map(async (r) => ({
@@ -854,18 +847,18 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
           x: r.x,
           y: r.y,
           width: r.width,
-          // Commentaire porteur : affichée seulement quand il est sélectionné (null = historique).
+          // Carrying comment: only shown when selected (null = historical).
           commentId: r.commentId,
         })),
       ),
     ),
-    // Qui est attendu sur cette version, et sa consigne. La garde de lecture est celle de
-    // la fonction : on n'arrive ici qu'après l'avoir passée.
+    // Who is expected on this version, and their brief. The read guard is the function's own:
+    // we only get here after passing it.
     listReviewers(media.versionId),
-    // Droits d'écriture rendus avec le média (`permissions`) : l'auteur de la version et
-    // son état de publication sont les deux entrées du prédicat, le rôle effectif sur le
-    // projet la troisième. Sans eux, l'écran devinait — et offrait un bouton qui finissait
-    // en 403 (cf. `lib/versionPermissions`).
+    // Write rights returned with the media (`permissions`): the version author and its
+    // publication state are the two inputs of the predicate, the effective role on the project
+    // the third. Without them the screen guessed, and offered a button that ended in a 403
+    // (see `lib/versionPermissions`).
     prisma.version.findUnique({
       where: { id: media.versionId },
       select: { authorId: true, published: true },
@@ -874,59 +867,59 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
   ]);
   return {
     media: serializeMedia(media),
-    // Projet porteur : évite au front une résolution séparée (mentions, liens profonds).
+    // Carrying project: avoids a separate resolution on the front end (mentions, deep links).
     projectId,
     url,
-    // Fichier tel qu'il a été déposé — identique à `url` sauf pour une image de production,
-    // où `url` est le proxy JPEG. C'est cette adresse que doit suivre « télécharger ».
+    // File as it was deposited: identical to `url` except for a production image, where `url`
+    // is the JPEG proxy. This is the address "download" must follow.
     downloadUrl: viewKey === sourceKey ? url : await storage.getPresignedGetUrl(sourceKey),
-    // Le média est-il servi par un dérivé plutôt que par son fichier d'origine ? (affichage
-    // d'un EXR/DPX/TIFF/TGA : ce qui est à l'écran n'est pas le fichier de référence).
+    // Is the media served by a derivative rather than its original file? (For display of an
+    // EXR/DPX/TIFF/TGA, what is on screen is not the reference file.)
     webProxy: viewKey !== sourceKey,
     thumbnailUrl,
     proxyUrl,
     glbUrl,
     startFrame: project?.startFrame ?? 1001,
-    // Provenance de conversion 3D (39.A, étendue 45.C avec le bloc `usd`) : fiche technique.
+    // 3D conversion provenance (39.A, extended in 45.C with the `usd` block): technical sheet.
     modelSource: meta.model ?? null,
-    // Le média importé porte le code de la Version ShotGrid ; le nom du fichier livré
-    // reste consultable ici — la convention d'un studio y porte souvent une information
-    // (espace colorimétrique, encodage) que le code ne reprend pas.
+    // The imported media carries the ShotGrid Version code; the delivered file name stays
+    // readable here, since a studio's naming convention often encodes information (colour
+    // space, encoding) that the code does not repeat.
     sourceFilename: meta.sourceFilename ?? null,
-    // Raison de l'échec quand le média est FAILED (45.C) : asset USD manquant, outillage absent…
+    // Failure reason when the media is FAILED (45.C): missing USD asset, missing tooling...
     processingError: meta.processingError ?? null,
-    // Consigne d'upload (Phase 50) : ce que l'auteur a dit en livrant. Rendue à tout le monde —
-    // c'est elle qui répond à « qu'est-ce qu'on attend de moi ? » quand personne n'est assigné.
+    // Upload brief (Phase 50): what the author said when delivering. Shown to everyone: it
+    // answers "what is expected of me?" when nobody is assigned.
     uploadNote: meta.uploadNote ?? null,
-    // Override de scène (46.D) — rejoué au chargement du viewer 3D pour tous les spectateurs.
+    // Scene override (46.D): replayed when the 3D viewer loads, for all viewers.
     usdOverride: meta.usdOverride ?? null,
     fps: meta.fps ?? null,
-    // Fréquence de diffusion de la salle live (33.B), réglable admin par type de média.
+    // Live room broadcast frequency (33.B), admin-settable per media type.
     liveSyncHz: await getLiveSyncHz(media.kind),
-    // Éditions splat non-destructives (10.G) : JSON + masque binaire (SplatEditService).
+    // Non-destructive splat edits (10.G): JSON + binary mask (SplatEditService).
     splatEdits: meta.splatEdits ?? null,
     splatMaskUrl,
     splatMaskCount: meta.splatMaskCount ?? 0,
-    // Transformations de sous-ensembles (Phase 28) : ops binaires rejouées au chargement.
+    // Subset transformations (Phase 28): binary ops replayed on load.
     splatSubsetUrl,
     splatSubsetCount: meta.splatSubsetCount ?? 0,
-    // Présentation persistée (10.G-V5) : caméra/DoF/reveal/LOD/animation, rejouée pour tous.
+    // Persisted presentation (10.G-V5): camera/DoF/reveal/LOD/animation, replayed for everyone.
     splatPresentation: meta.splatPresentation ?? null,
-    // Éclairage HDRI par défaut du projet (39.F) : repli quand le média n'a pas le sien.
+    // Project default HDRI lighting (39.F): fallback when the media has none of its own.
     projectDefaultLighting: projectSettings.defaultLighting ?? null,
-    // Gestion de couleur OCIO du projet (39.B) : intention display/view (badge review).
+    // Project OCIO colour management (39.B): display/view intent (review badge).
     projectColor: projectSettings.color ?? null,
-    // Ratio du cadre de review des médias spatiaux : celui de la résolution de livraison
-    // héritée. Il ne se substitue PAS à l'aspect déjà gelé dans une présentation — changer le
-    // cadre d'un média déjà annoté déplacerait des annotations normalisées déjà validées.
+    // Review frame ratio of spatial media: that of the inherited delivery resolution. It does
+    // NOT replace the aspect already frozen in a presentation: changing the frame of an
+    // already-annotated media would shift annotations already validated.
     deliveryAspect,
-    // Coupe historique (10.G-V10, retirée en Phase 50) : bornes d'un média coupé avant le
-    // retrait. Plus rien n'en pose ; la review s'en sert pour dire ce qu'elle joue.
+    // Historical cut (10.G-V10, removed in Phase 50): bounds of a media cut before the removal.
+    // Nothing sets them any more; review uses them to say what it plays.
     trim: meta.trim ?? null,
     trimProxyReady: Boolean(meta.trim && meta.trimProxyKey),
-    // HLS adaptatif (Phase 23) : présent → master servi via /api/media/:id/hls/master.m3u8.
+    // Adaptive HLS (Phase 23): when present, the master is served via /api/media/:id/hls/master.m3u8.
     hls: meta.hls ?? null,
-    // Sprite de miniatures de la timeline (vignette ~toutes les 3 s, un seul JPEG).
+    // Timeline thumbnail sprite (one thumbnail about every 3 s, a single JPEG).
     timelineSprite: meta.timelineSprite
       ? {
           intervalSec: meta.timelineSprite.intervalSec,
@@ -938,31 +931,31 @@ export async function getDetail(user: SessionUser, id: number, ip?: string | nul
         }
       : null,
     timelineSpriteUrl,
-    // Images de référence review 2D (Phase 24, multi-items) : persistées & partagées.
+    // Reference images of 2D review (Phase 24, multi-items): persisted and shared.
     references,
-    // À qui la review de cette version est confiée, et ce que chacun doit y regarder.
-    // Rendu à tout le monde : savoir qu'un lead est attendu évite deux reviews en parallèle.
+    // Who the review of this version is assigned to, and what each must look at.
+    // Returned to everyone: knowing a lead is expected avoids two parallel reviews.
     reviewers,
-    // La règle du projet, rendue avec le média : l'écran peut refuser une consigne trop
-    // courte sans aller-retour, et dire au passage ce qu'il attend.
+    // The project rule, returned with the media: the screen can refuse a brief that is too
+    // short without a round trip, and say what it expects.
     reviewRequest: projectSettings.reviewRequest,
-    // Ce que CET appelant a le droit d'écrire. Le viewer 3D s'en sert pour ne pas offrir un
-    // mode « Nettoyer » dont le bouton « Enregistrer » serait refusé — la règle est celle du
-    // service d'écriture, pas une approximation de rôle recopiée côté écran.
+    // What THIS caller is allowed to write. The 3D viewer uses it so as not to offer a "Clean"
+    // mode whose "Save" button would be refused: the rule is that of the write service, not a
+    // role approximation copied to the screen.
     permissions: {
       editTransform: version
         ? canEditVersionTransform(version, user.id, manager)
-        : /* version disparue entre les deux lectures : rien n'est éditable */ false,
+        : /* version disappeared between the two reads: nothing is editable */ false,
     },
   };
 }
 
 /**
- * URL présignée GET pour le serving direct depuis MinIO.
+ * Presigned GET URL for direct serving from MinIO.
  *
- * Sert la clé **affichable** : un EXR renvoyait jusqu'ici une présignée sur le fichier
- * source, que le navigateur ne décode pas — la review affichait un cadre vide.
- * `original: true` réclame le fichier déposé (téléchargement, outillage).
+ * Serves the **displayable** key: an EXR previously got a presigned URL on the source file,
+ * which the browser cannot decode, so the review showed an empty frame. `original: true`
+ * requests the deposited file (download, tooling).
  */
 export async function getUrl(user: SessionUser, id: number, opts: { original?: boolean } = {}) {
   const media = await prisma.mediaObject.findUnique({ where: { id } });
@@ -975,26 +968,26 @@ export async function getUrl(user: SessionUser, id: number, opts: { original?: b
 }
 
 /**
- * ── Diffusion HLS (Phase 23, révisée vague 2 : la vidéo ne traverse plus Node) ────────────
+ * ── HLS delivery (Phase 23, revised in wave 2: video no longer goes through Node) ────────────
  *
- * Avant : chaque segment de 2 s repassait par le process web après trois requêtes Prisma de
- * contrôle d'accès, et repartait en `private, max-age=60` — sur un contenu pourtant
- * immuable. Un plan de dix minutes coûtait ~300 requêtes par rendition et par spectateur,
- * toutes imputées au plafond de débit partagé par IP : c'est ce qui plafonnait les dailies.
+ * Before: each 2 s segment went back through the web process after three Prisma access-control
+ * queries and was sent with `private, max-age=60`, even though the content is immutable. A
+ * ten-minute shot cost ~300 requests per rendition and per viewer, all charged to the shared
+ * per-IP rate limit, which is what capped the dailies.
  *
- * Maintenant, trois niveaux :
- *  1. `master.m3u8` — l'autorisation en base est payée **ici, une seule fois** (avec le
- *     journal d'accès). Le maître renvoyé accroche un jeton de lecture à chaque rendition.
- *  2. `<rendition>.m3u8?pt=…` — le jeton tient lieu d'autorisation : vérification HMAC,
- *     zéro requête SQL. La sous-playlist renvoyée pointe des URL MinIO présignées.
- *  3. les segments — servis directement par le stockage. Aucun octet de vidéo dans Node.
+ * Now there are three levels:
+ *  1. `master.m3u8`: the database authorization is paid **here, once** (with the access log).
+ *     The returned master attaches a read token to each rendition.
+ *  2. `<rendition>.m3u8?pt=...`: the token stands in for authorization: HMAC check, zero SQL
+ *     queries. The returned sub-playlist points to presigned MinIO URLs.
+ *  3. segments: served directly by storage. No video bytes go through Node.
  *
- * Le proxy historique `/api/media/:id/hls/<segment>.ts` reste servi (client qui n'aurait pas
- * de manifeste réécrit, nom de segment inattendu) : rien ne casse, mais il n'est plus le
- * chemin nominal — et il pose enfin un cache immuable.
+ * The historical proxy `/api/media/:id/hls/<segment>.ts` is still served (clients without a
+ * rewritten manifest, unexpected segment names): nothing breaks, but it is no longer the nominal
+ * path, and it now sets an immutable cache.
  */
 
-/** Réponse d'un fichier HLS : un corps texte (playlist réécrite) ou un flux (repli segment). */
+/** Response for an HLS file: a text body (rewritten playlist) or a stream (segment fallback). */
 export interface HlsFileResponse {
   contentType: string;
   cacheControl: string;
@@ -1002,14 +995,14 @@ export interface HlsFileResponse {
   stream?: Readable;
 }
 
-/** Un segment ne change jamais : une fois pris, il n'a plus jamais à être redemandé. */
+/** A segment never changes: once fetched, it never needs to be requested again. */
 const HLS_SEGMENT_CACHE_CONTROL = 'private, max-age=31536000, immutable';
-/** Les playlists portent un jeton et des URL signées : jamais de cache partagé. */
+/** Playlists carry a token and signed URLs: never a shared cache. */
 const HLS_PLAYLIST_CACHE_CONTROL = 'private, no-store';
 
 const hlsKey = (id: number, file: string) => `derived/${id}/hls/${file}`;
 
-/** Le contrôle d'accès complet — les trois requêtes que le jeton de lecture évite ensuite. */
+/** The full access check: the three queries that the read token avoids afterwards. */
 async function assertHlsRead(user: SessionUser, id: number): Promise<void> {
   const media = await prisma.mediaObject.findUnique({
     where: { id },
@@ -1030,51 +1023,49 @@ async function readHlsText(id: number, file: string): Promise<string> {
 }
 
 /**
- * Sous-playlists réécrites, **gelées par fenêtre de signature**.
+ * Rewritten sub-playlists, **frozen per signature window**.
  *
- * Sans cela, deux spectateurs recevraient deux jeux d'URL présignées différents pour les
- * mêmes segments (la signature dépend de l'instant), et aucun cache partagé ne pourrait les
- * rapprocher. En figeant la playlist par fenêtre de quinze minutes, les vingt spectateurs
- * d'un daily demandent exactement les mêmes URL : le frontal ne lit qu'une fois chaque
- * segment au stockage. Corollaire assumé : une échelle HLS régénérée (reprocess) peut être
- * annoncée avec au plus une fenêtre de retard.
+ * Otherwise two viewers would receive two different sets of presigned URLs for the same
+ * segments (the signature depends on the instant), and no shared cache could match them.
+ * By freezing the playlist per fifteen-minute window, the twenty viewers of a daily request
+ * exactly the same URLs, so the front end reads each segment from storage only once. Accepted
+ * corollary: a regenerated HLS ladder (reprocess) may be announced with at most one window of delay.
  */
 interface RenditionEntry {
-  /** Taille du texte mémorisé, comptée une fois résolu (0 tant que la lecture est en vol). */
+  /** Size of the cached text, counted once resolved (0 while the read is in flight). */
   bytes: number;
   text: Promise<string>;
 }
 
 const renditionCache = new Map<string, RenditionEntry>();
 let renditionCacheBytes = 0;
-/** Fenêtre de signature couverte par le contenu du cache (-1 = cache vide). */
+/** Signature window covered by the cache contents (-1 = empty cache). */
 let renditionCacheWindow = -1;
 
 /**
- * Plafond d'entrées, dimensionné sur une salle de dailies et non au hasard.
+ * Entry cap, sized for a dailies room rather than picked at random.
  *
- * Une entrée = une rendition d'un média. Mesuré sur la pile de développement : un média
- * transcodé porte 1 à 3 renditions (360p/720p/1080p selon la source). Une playlist de
- * dailies de quinze à trente plans consomme donc 45 à 120 entrées **dans la même fenêtre de
- * signature** — l'ancien plafond de 32 les évinçait au fur et à mesure, et comme l'éviction
- * était FIFO stricte sans rajeunissement à la lecture, un parcours cyclique de la playlist
- * évinçait systématiquement l'entrée dont on allait avoir besoin : taux de succès nul,
- * précisément dans le cas que le cache était censé servir. 512 couvre une playlist de 128
- * plans à 4 renditions.
+ * One entry = one rendition of a media. Measured on the dev stack: a transcoded media has 1 to 3
+ * renditions (360p/720p/1080p depending on the source). A dailies playlist of fifteen to thirty
+ * shots thus consumes 45 to 120 entries within the same signature window. The old cap of 32
+ * evicted them continuously, and since eviction was strict FIFO with no refresh on read, a
+ * cyclic traversal of the playlist systematically evicted the entry about to be needed: zero hit
+ * rate, precisely in the case the cache was meant to serve. 512 covers a 128-shot playlist with
+ * 4 renditions.
  */
 const RENDITION_CACHE_MAX = 512;
 
 /**
- * Plafond mémoire — la vraie borne, parce que la taille d'une entrée varie de deux ordres
- * de grandeur. Mesuré sur la pile : une sous-playlist réécrite d'un plan de 52 s à segments
- * de 2 s pèse 11,3 ko (27 segments × ~420 o d'URL présignée) ; un montage de dix minutes en
- * pèserait ~126 ko. Compter les entrées seules laisserait donc le cache peser entre 6 et
- * 64 Mo selon le contenu. 8 Mo se compare aux ~2 Mo du cache de signatures
- * (`PRESIGN_CACHE_MAX`), et c'est le plafond qui mord en premier sur les longs montages.
+ * Memory cap: the real bound, because an entry's size varies by two orders of magnitude.
+ * Measured: a rewritten sub-playlist of a 52 s shot with 2 s segments weighs 11.3 kB (27
+ * segments x ~420 B of presigned URL); a ten-minute cut would weigh ~126 kB. Counting entries
+ * alone would let the cache weigh anywhere from 6 to 64 MB depending on content. 8 MB compares
+ * with the ~2 MB of the signature cache (`PRESIGN_CACHE_MAX`), and it is the cap that bites
+ * first on long cuts.
  */
 const RENDITION_CACHE_MAX_BYTES = 8 * 1024 * 1024;
 
-/** Lit la sous-playlist et réécrit chaque segment en URL présignée. Aucun cache ici. */
+/** Reads the sub-playlist and rewrites each segment as a presigned URL. No cache here. */
 async function buildPresignedRendition(id: number, file: string): Promise<string> {
   const text = await readHlsText(id, file);
   const names = playlistUris(text).filter(isSafeHlsName);
@@ -1086,7 +1077,7 @@ async function buildPresignedRendition(id: number, file: string): Promise<string
   return withPresignedSegments(text, new Map(signed));
 }
 
-/** Évince les plus anciennement LUES jusqu'à repasser sous les deux plafonds. */
+/** Evicts the least recently READ entries until back under both caps. */
 function evictRenditions(): void {
   while (renditionCache.size > RENDITION_CACHE_MAX || renditionCacheBytes > RENDITION_CACHE_MAX_BYTES) {
     const oldest = renditionCache.entries().next();
@@ -1098,8 +1089,8 @@ function evictRenditions(): void {
 
 async function presignedRendition(id: number, file: string): Promise<string> {
   const windowStart = signingWindowStart();
-  // La clé porte la fenêtre : au changement de fenêtre, TOUT le contenu est périmé d'un
-  // bloc. Un `clear()` est donc exactement l'ancien balayage clé par clé, en O(1).
+  // The key carries the window: when the window changes, ALL content goes stale at once. A
+  // `clear()` is therefore exactly the former key-by-key sweep, in O(1).
   if (windowStart !== renditionCacheWindow) {
     renditionCache.clear();
     renditionCacheBytes = 0;
@@ -1109,16 +1100,16 @@ async function presignedRendition(id: number, file: string): Promise<string> {
 
   const hit = renditionCache.get(cacheKey);
   if (hit) {
-    // LRU : relire rajeunit l'entrée (une Map itère dans l'ordre d'insertion). En FIFO
-    // stricte, la rendition qu'on vient de servir restait la prochaine à être évincée.
+    // LRU: reading refreshes the entry (a Map iterates in insertion order). With strict FIFO,
+    // the rendition just served would remain the next to be evicted.
     renditionCache.delete(cacheKey);
     renditionCache.set(cacheKey, hit);
     return hit.text;
   }
 
-  // On mémorise la PROMESSE, pas le texte. Sans cela le cache ne rapprochait que des
-  // spectateurs SÉQUENTIELS : les vingt spectateurs d'un daily arrivent ensemble, tous
-  // manquaient le cache et chacun refaisait sa lecture MinIO et son jeu de signatures.
+  // Memoize the PROMISE, not the text. Without this the cache only matched SEQUENTIAL viewers:
+  // the twenty viewers of a daily arrive together, all miss the cache, and each redoes its
+  // MinIO read and its signature set.
   const entry: RenditionEntry = { bytes: 0, text: buildPresignedRendition(id, file) };
   renditionCache.set(cacheKey, entry);
   void entry.text.then(
@@ -1129,21 +1120,21 @@ async function presignedRendition(id: number, file: string): Promise<string> {
       evictRenditions();
     },
     () => {
-      // Un échec ne se mémorise pas : la lecture suivante doit pouvoir réessayer.
+      // A failure is not memoized: the next read must be able to retry.
       if (renditionCache.get(cacheKey) === entry) renditionCache.delete(cacheKey);
     },
   );
   return entry.text;
 }
 
-/** Vide le cache des sous-playlists (tests, et point d'entrée si un purgeur en a besoin). */
+/** Empties the sub-playlist cache (tests, and an entry point if a purger needs it). */
 export function resetHlsPlaylistCache(): void {
   renditionCache.clear();
   renditionCacheBytes = 0;
   renditionCacheWindow = -1;
 }
 
-/** Compteurs du cache de sous-playlists — lus par les tests, jamais par une route. */
+/** Sub-playlist cache counters: read by tests, never by a route. */
 export const __hlsCacheTesting = {
   stats: () => ({ entries: renditionCache.size, bytes: renditionCacheBytes }),
   RENDITION_CACHE_MAX,
@@ -1151,8 +1142,8 @@ export const __hlsCacheTesting = {
 };
 
 /**
- * Manifeste ou segment HLS (`derived/{id}/hls/{file}`). `file` est validé par la route ;
- * on le revalide ici parce qu'il compose une clé de stockage.
+ * HLS manifest or segment (`derived/{id}/hls/{file}`). `file` is validated by the route;
+ * it is re-validated here because it composes a storage key.
  */
 export async function getHlsFile(
   user: SessionUser,
@@ -1163,13 +1154,13 @@ export async function getHlsFile(
   if (!isSafeHlsName(file)) throw notFound('HLS file not found');
   const contentType = hlsContentType(file);
   const isMaster = file === 'master.m3u8';
-  // Un jeton de lecture valide dispense du contrôle en base ; absent ou invalide (expiré,
-  // autre média, autre compte), on refait le contrôle complet — jamais de refus surprise.
+  // A valid read token skips the database check; if absent or invalid (expired, other media,
+  // other account), the full check is redone: never a surprise refusal.
   if (isMaster || !verifyMediaPlaybackToken(opts.playbackToken, id, user.id)) await assertHlsRead(user, id);
 
   if (isMaster) {
-    // Journal d'accès (36.E), dédupliqué par fenêtre de 30 min : le visionnage reste tracé
-    // alors même que les segments ne passent plus par l'API.
+    // Access log (36.E), deduplicated over a 30 min window: viewing stays traced even though
+    // segments no longer go through the API.
     logMediaAccess({ mediaObjectId: id, userId: user.id, ip: opts.ip ?? null });
     const master = await readHlsText(id, file);
     return {
@@ -1195,14 +1186,13 @@ export async function getHlsFile(
 const MAX_THUMBNAIL_BYTES = 1_500_000;
 
 /**
- * Enregistre une miniature fournie par le client (capture d'un rendu ou fichier choisi).
- * Data URL image/jpeg|png|webp base64, validée par magic bytes, stockée dans MinIO,
- * référencée par `thumbnailKey`. Réservé aux gestionnaires du média (uploader/superviseur+).
- * La miniature est de la **présentation** (comme `splatPresentation`) : elle reste
- * modifiable après publication — exception assumée au verrou Phase 11 (le contenu du
- * média, lui, reste figé).
+ * Stores a thumbnail provided by the client (capture of a render or a chosen file).
+ * base64 image/jpeg|png|webp data URL, validated by magic bytes, stored in MinIO, referenced
+ * by `thumbnailKey`. Reserved to the media's managers (uploader/supervisor+).
+ * The thumbnail is **presentation** (like `splatPresentation`): it remains editable after
+ * publication, a deliberate exception to the Phase 11 lock (the media content itself stays frozen).
  */
-/** Décode + valide une data URL image base64 → buffer + type + extension (lève si invalide). */
+/** Decodes and validates a base64 image data URL into buffer + type + extension (throws if invalid). */
 function decodeThumbnailDataUrl(dataUrl: string): { buf: Buffer; contentType: string; ext: string } {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i.exec(dataUrl);
   if (!m) throw badRequest('Invalid thumbnail (an image data URL is expected)', 'INVALID_THUMBNAIL');
@@ -1228,11 +1218,11 @@ export async function setThumbnail(user: SessionUser, id: number, dataUrl: strin
 }
 
 /**
- * Miniature **auto** capturée côté client à la 1re visualisation d'un média 3D/splat (pas de
- * rendu headless serveur). Bootstrap idempotent : n'écrit que si `thumbnailKey` est **absent**
- * (jamais d'écrasement — n'entre donc pas en conflit avec le verrou de publication : on remplit
- * un aperçu manquant, on ne modifie pas le média). Accès lecture suffisant (tout membre du
- * projet qui voit le média). Concurrence gérée par un update conditionnel (une seule écriture).
+ * **Automatic** thumbnail captured client-side at the first viewing of a 3D/splat media (no
+ * headless server rendering). Idempotent bootstrap: writes only if `thumbnailKey` is **absent**
+ * (it never overwrites, so it does not conflict with the publication lock: a missing preview is
+ * filled, the media itself is not modified). Read access is enough (any project member who sees
+ * the media). Concurrency is handled by a conditional update (a single write).
  */
 export async function setAutoThumbnail(user: SessionUser, id: number, dataUrl: string) {
   const media = await prisma.mediaObject.findUnique({
@@ -1244,20 +1234,20 @@ export async function setAutoThumbnail(user: SessionUser, id: number, dataUrl: s
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  // Déjà une miniature (worker ou capture concurrente) : on ne touche à rien.
+  // Already has a thumbnail (worker or concurrent capture): leave everything untouched.
   if (media.thumbnailKey) {
     return { thumbnailUrl: await storage.getPresignedGetUrl(media.thumbnailKey), created: false };
   }
   const { buf, contentType, ext } = decodeThumbnailDataUrl(dataUrl);
   const key = StorageService.thumbnailKey(id, ext);
   await storage.putObject(key, buf, contentType);
-  // Écriture conditionnelle : ne pose la clé que si toujours nulle (anti-course).
+  // Conditional write: only sets the key if it is still null (race protection).
   const { count } = await prisma.mediaObject.updateMany({
     where: { id, thumbnailKey: null },
     data: { thumbnailKey: key },
   });
   if (count === 0) {
-    // Une capture concurrente a gagné : on supprime notre objet et on renvoie la sienne.
+    // A concurrent capture won: delete our object and return theirs.
     await storage.deleteObject(key).catch(() => undefined);
     const fresh = await prisma.mediaObject.findUnique({ where: { id }, select: { thumbnailKey: true } });
     const url = fresh?.thumbnailKey ? await storage.getPresignedGetUrl(fresh.thumbnailKey) : null;
@@ -1266,7 +1256,7 @@ export async function setAutoThumbnail(user: SessionUser, id: number, dataUrl: s
   return { thumbnailUrl: await storage.getPresignedGetUrl(key), created: true };
 }
 
-/** Vérifie que l'utilisateur peut gérer ce média (uploader ou superviseur+) et renvoie le projet. */
+/** Checks that the user can manage this media (uploader or supervisor+) and returns the project. */
 export async function assertMediaManage(
   mediaId: number,
   user: SessionUser,
@@ -1279,9 +1269,9 @@ export async function assertMediaManage(
   const projectId = await resolveProjectIdForVersion(media.versionId);
   if (!projectId || !(await checkProjectAccess(user.id, user.role, projectId)))
     throw forbidden('No access to this project');
-  // 38.E : le rôle global ne décide de rien ici. Un ARTIST rétrogradé CLIENT conserve son
-  // membership — `checkProjectAccess` dit donc toujours oui — mais ne gère plus les médias
-  // qu'il avait déposés avant ; un ARTIST promu SUPERVISOR localement, lui, gère les autres.
+  // 38.E: the global role decides nothing here. An ARTIST demoted to CLIENT keeps their
+  // membership (so `checkProjectAccess` still says yes) but no longer manages the media they
+  // deposited earlier; an ARTIST promoted to SUPERVISOR locally manages the others.
   await assertCanContribute(user.id, user.role, projectId);
   const manager = await isProjectManager(user.id, user.role, projectId);
   if (!manager && media.uploaderId !== user.id)
@@ -1289,7 +1279,7 @@ export async function assertMediaManage(
   return { projectId, versionId: media.versionId };
 }
 
-/** Corbeille (soft-delete) un média. */
+/** Soft-deletes (trashes) a media. */
 export async function trash(user: SessionUser, id: number) {
   const { projectId, versionId } = await assertMediaManage(id, user);
   await softDeleteMedia(id);
@@ -1297,14 +1287,14 @@ export async function trash(user: SessionUser, id: number) {
   emitToProject(projectId, 'media:update', { projectId, id, versionId });
 }
 
-/** Restaure un média depuis la corbeille. */
+/** Restores a media from the trash. */
 export async function restore(user: SessionUser, id: number) {
   const { projectId, versionId } = await assertMediaManage(id, user);
   await restoreMedia(id);
   emitToProject(projectId, 'media:update', { projectId, id, versionId });
 }
 
-/** Purge définitive d'un média (superviseur+). */
+/** Permanently purges a media (supervisor+). */
 export async function purge(user: SessionUser, id: number) {
   if (user.role !== Role.ADMIN && user.role !== Role.SUPERVISOR)
     throw forbidden('Supervisors and administrators only');

@@ -13,9 +13,8 @@ import { resolveUserLocale } from '../lib/settings';
 import { formatTag, t, type Locale } from '../i18n';
 
 /**
- * Digest email quotidien (backlog P2 10.G) : résumé des activités de la veille,
- * par projet, envoyé aux utilisateurs ayant activé `preferences.emailDigest`.
- * Déclenché par le scheduler du serveur (cf. server.ts, DIGEST_HOUR).
+ * Daily email digest (backlog P2 10.G): summary of the previous day's activity, per project, sent to users
+ * who enabled `preferences.emailDigest`. Triggered by the server's scheduler (see server.ts, DIGEST_HOUR).
  */
 
 export interface ProjectDigest {
@@ -26,7 +25,7 @@ export interface ProjectDigest {
   comments: { author: string; excerpt: string; mediaName: string }[];
 }
 
-/** Texte brut borné à partir d'un contenu HTML de commentaire. */
+/** Plain text bounded from the HTML content of a comment. */
 export function excerptOf(html: string, max = 120): string {
   const text = html
     .replace(/<[^>]*>/g, ' ')
@@ -36,7 +35,7 @@ export function excerptOf(html: string, max = 120): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
-/** Activité d'un projet depuis `since` (versions créées, médias publiés, commentaires). */
+/** Activity of a project since `since` (versions created, media published, comments). */
 async function buildProjectDigest(
   projectId: number,
   projectName: string,
@@ -109,7 +108,7 @@ async function buildProjectDigest(
   };
 }
 
-/** Digest complet d'un utilisateur : un bloc par projet dont il est membre, actifs seulement. */
+/** Full digest of a user: one block per project they are a member of, active only. */
 export async function buildUserDigest(
   userId: number,
   since: Date,
@@ -127,7 +126,7 @@ export async function buildUserDigest(
   return digests;
 }
 
-/** HTML de l'email (pur — testé unitairement). */
+/** HTML of the email (pure — unit tested). */
 export function renderDigestHtml(
   locale: Locale,
   userName: string,
@@ -186,7 +185,7 @@ ${blocks}
   );
 }
 
-/** Envoie le digest quotidien à tous les abonnés (préférence `emailDigest`). */
+/** Sends the daily digest to all subscribers (`emailDigest` preference). */
 export async function sendDailyDigests(now = new Date()): Promise<number> {
   if (!(await isMailerConfigured())) {
     logger.info('[Digest] SMTP non configuré : envoi quotidien sauté');
@@ -194,7 +193,7 @@ export async function sendDailyDigests(now = new Date()): Promise<number> {
   }
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const users = await prisma.user.findMany({
-    // Les comptes de service portent une adresse non routable : rien à leur envoyer.
+    // Service accounts carry a non-routable address: there is nothing to send them.
     where: { isService: false },
     select: {
       id: true,
@@ -214,9 +213,9 @@ export async function sendDailyDigests(now = new Date()): Promise<number> {
     const digests = await buildUserDigest(u.id, since, locale);
     if (digests.length === 0) continue;
     const html = renderDigestHtml(locale, displayName(u), digests, now);
-    // Envoi récurrent : il porte son désabonnement en en-tête, que la messagerie
-    // transforme en bouton natif. Sans lui, le seul geste à portée du lecteur qui n'en
-    // veut plus est « indésirable » — et c'est la réputation de tous nos envois qui trinque.
+    // Recurring send: it carries its unsubscribe link in a header, which the mail client turns into a native
+    // button. Without it, the only gesture within the reader's reach to opt out is "spam" — and the
+    // reputation of all our sends pays for it.
     const sentOk = await sendMail(u.email, t(locale, 'digest.subject'), html, {
       unsubscribeUrl: unsubscribeUrl(u.id, 'emailDigest') ?? undefined,
     });

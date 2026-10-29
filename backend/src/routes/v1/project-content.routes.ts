@@ -14,9 +14,9 @@ import * as Resolve from '../../services/PipelineResolveService';
 import { requireProject, refParam, actorOf, readQuery, listQuery } from './helpers';
 
 /**
- * Contenu d'un projet qui ne suit pas la hiérarchie séquence → shot : les assets, puis
- * les vues transversales (toutes les tâches, toutes les versions). Un client de dailies
- * ou de synchronisation interroge celles-ci sans parcourir l'arbre.
+ * Project content that does not follow the sequence -> shot hierarchy: the assets, then the
+ * cross-cutting views (all tasks, all versions). A dailies or sync client queries these without
+ * walking the tree.
  */
 const router = Router();
 
@@ -67,9 +67,9 @@ router.post(
   },
 );
 
-// ── Tâches et versions du projet (vues transversales) ────────────────────────
+// ── Project tasks and versions (cross-cutting views) ─────────────────────────
 
-// GET /api/v1/projects/:ref/tasks — toutes les tâches du projet, filtrables
+// GET /api/v1/projects/:ref/tasks: all project tasks, filterable
 router.get(
   '/:ref/tasks',
   requireScope('tasks:read'),
@@ -111,7 +111,7 @@ const versionsQuery = listQuery.extend({
     .optional(),
 });
 
-// GET /api/v1/projects/:ref/versions — versions du projet (dailies, synchro externe)
+// GET /api/v1/projects/:ref/versions: project versions (dailies, external sync)
 router.get(
   '/:ref/versions',
   requireScope('versions:read'),
@@ -119,7 +119,7 @@ router.get(
   async (req, res) => {
     const project = await requireProject(req, String(req.params.ref));
     const p = readPagination(req.query);
-    // Relecture typée : sans elle, `published=false` resterait la chaîne « false ».
+    // Typed re-read: without it, `published=false` would remain the string "false".
     const q = readQuery(versionsQuery, req);
     const where = {
       deletedAt: null,

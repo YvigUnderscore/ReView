@@ -7,10 +7,10 @@ import { Role } from '@prisma/client';
 const { db } = vi.hoisted(() => ({
   db: {
     mediaObject: { findUnique: vi.fn() },
-    // Résolution Version → Projet (`lib/pipeline`, laissé réel).
+    // Version → Project resolution (`lib/pipeline`, left real).
     version: { findUnique: vi.fn() },
-    // Rôle par projet (38.E), lu par `lib/projectRoles` — laissé réel lui aussi : mocker
-    // la garde qu'on éprouve rendrait le test aveugle au contournement A1-03.
+    // Role per project (38.E), read by `lib/projectRoles` — left real too: mocking the guard under test would
+    // make the test blind to the A1-03 bypass.
     projectMembership: { findUnique: vi.fn() },
   },
 }));
@@ -31,38 +31,37 @@ import { assertMediaManage } from './MediaService';
 import { checkProjectAccess } from '../middleware/rbac';
 
 const PROJECT = 42;
-/** Média déposé par l'utilisateur 7 avant sa rétrogradation. */
+/** Media uploaded by user 7 before their demotion. */
 const OWN_MEDIA = { uploaderId: 7, versionId: 3 };
-/** Média déposé par quelqu'un d'autre. */
+/** Media uploaded by someone else. */
 const OTHER_MEDIA = { uploaderId: 99, versionId: 3 };
 
-/** Ce que `projectMembership.findUnique` doit rendre pour un rôle local donné. */
+/** What `projectMembership.findUnique` must return for a given local role. */
 const membership = (role: Role | null) => ({ userId: 7, projectId: PROJECT, role });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(checkProjectAccess).mockResolvedValue(true); // membre : l'appartenance ne suffit pas
+  vi.mocked(checkProjectAccess).mockResolvedValue(true); // member: membership alone is not enough
   db.version.findUnique.mockResolvedValue({ asset: { projectId: PROJECT }, task: null });
   db.mediaObject.findUnique.mockResolvedValue(OWN_MEDIA);
   db.projectMembership.findUnique.mockResolvedValue(membership(null));
 });
 
 /**
- * A1-03 — `assertMediaManage` décidait sur le rôle GLOBAL (`user.role === ADMIN ||
- * SUPERVISOR`) après n'avoir vérifié que l'appartenance au projet. Un ARTIST rétrogradé
- * CLIENT (38.E) gardait son `ProjectMembership`, donc `checkProjectAccess` disait oui, et
- * il continuait de corbeiller, reprocesser et retoucher les médias qu'il avait
- * déposés. C'est la porte d'entrée de toute la gestion média : corbeille, reprocess,
- * miniature, éditions splat, overrides USD, actions en lot.
+ * A1-03 — `assertMediaManage` decided on the GLOBAL role (`user.role === ADMIN || SUPERVISOR`) after checking
+ * only membership in the project. An ARTIST demoted to CLIENT (38.E) kept their `ProjectMembership`, so
+ * `checkProjectAccess` said yes, and they kept trashing, reprocessing and retouching the media they had
+ * uploaded. It is the front door of all media management: trash, reprocess, thumbnail, splat edits, USD
+ * overrides, batch actions.
  */
-describe('assertMediaManage — rôle effectif par projet (38.E)', () => {
+describe('assertMediaManage: effective role per project (38.E)', () => {
   const artist = { id: 7, role: Role.ARTIST };
 
-  it('laisse l’uploader gérer son média tant qu’il contribue au projet', async () => {
+  it('lets the uploader manage their media as long as they contribute to the project', async () => {
     await expect(assertMediaManage(1, artist)).resolves.toEqual({ projectId: PROJECT, versionId: 3 });
   });
 
-  it('refuse un ARTIST rétrogradé CLIENT, même sur le média qu’il a déposé', async () => {
+  it('refuses an ARTIST demoted to CLIENT, even on the media they uploaded', async () => {
     db.projectMembership.findUnique.mockResolvedValue(membership(Role.CLIENT));
     await expect(assertMediaManage(1, artist)).rejects.toMatchObject({
       statusCode: 403,
@@ -70,18 +69,18 @@ describe('assertMediaManage — rôle effectif par projet (38.E)', () => {
     });
   });
 
-  it('refuse le média d’autrui à un simple contributeur', async () => {
+  it('refuses someone else\'s media to a simple contributor', async () => {
     db.mediaObject.findUnique.mockResolvedValue(OTHER_MEDIA);
     await expect(assertMediaManage(1, artist)).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('inversement : un ARTIST promu SUPERVISOR localement gère le média d’un autre', async () => {
+  it('conversely: an ARTIST promoted to SUPERVISOR locally manages someone else\'s media', async () => {
     db.mediaObject.findUnique.mockResolvedValue(OTHER_MEDIA);
     db.projectMembership.findUnique.mockResolvedValue(membership(Role.SUPERVISOR));
     await expect(assertMediaManage(1, artist)).resolves.toEqual({ projectId: PROJECT, versionId: 3 });
   });
 
-  it('un ADMIN global reste ADMIN partout, sans membership', async () => {
+  it('a global ADMIN remains ADMIN everywhere, without membership', async () => {
     db.mediaObject.findUnique.mockResolvedValue(OTHER_MEDIA);
     db.projectMembership.findUnique.mockResolvedValue(null);
     await expect(assertMediaManage(1, { id: 1, role: Role.ADMIN })).resolves.toMatchObject({

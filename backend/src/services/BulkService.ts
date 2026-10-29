@@ -37,18 +37,17 @@ import * as TaskService from './TaskService';
 import * as VersionService from './VersionService';
 
 /**
- * Actions groupées (13.C). Chaque id est **revalidé** (accès projet + RBAC métier) avant
- * toute mutation : si un seul id échoue, rien n'est modifié.
- * Les domaines à corbeille (episodes/sequences/shots/assets/versions/media) partagent une passe
- * de validation puis une écriture en lot transactionnelle (`lib/trash`). Les patchs
- * (tasks/versions) réutilisent les services unitaires (émission temps réel + notifs).
+ * Batch actions (13.C). Each id is **re-validated** (project access + business RBAC) before any mutation: if
+ * a single id fails, nothing is changed. The trash-enabled domains
+ * (episodes/sequences/shots/assets/versions/media) share a validation pass followed by a transactional batch
+ * write (`lib/trash`). The patches (tasks/versions) reuse the unit services (real-time emission +
+ * notifications).
  *
- * **La revalidation est mutualisée, pas relâchée.** Ce qui ne dépend que du projet — le
- * projet est-il désignable, la personne y appartient-elle, avec quel rôle effectif — est
- * résolu UNE fois par projet pour tout le lot ; ce qui dépend de l'entité (auteur d'une
- * version, déposant d'un média) continue d'être vérifié id par id, dans l'ordre reçu.
- * Poser la même question deux cents fois coûtait plus de mille requêtes séquentielles avant
- * la première écriture, et ne protégeait rien de plus.
+ * **Re-validation is pooled, not relaxed.** What depends only on the project (is it designatable, does the
+ * person belong to it, with which effective role) is resolved ONCE per project for the whole batch; what
+ * depends on the entity (author of a version, uploader of a media) is still checked id by id, in the order
+ * received. Asking the same question two hundred times used to cost more than a thousand sequential queries
+ * before the first write, and protected nothing more.
  */
 
 type SessionUser = { id: number; role: Role };
@@ -66,12 +65,12 @@ export const DELETE_DOMAINS = [
 ] as const;
 export type DeleteDomain = (typeof DELETE_DOMAINS)[number];
 
-/** Domaines résolus par une lecture directe ; `media` a sa propre garde (cf. plus bas). */
+/** Domains resolved by a direct read; `media` has its own guard (see below). */
 type PipelineDomain = Exclude<DeleteDomain, 'media'>;
 
 /**
- * Chaîne Version → projet, telle que la parcourt `resolveProjectIdForVersion`
- * (lib/pipeline) — reprise ici pour la lire en une seule requête sur tout un lot.
+ * Version -> project chain, as walked by `resolveProjectIdForVersion` (lib/pipeline), reproduced here to read
+ * it in a single query over a whole batch.
  */
 const VERSION_PROJECT_SELECT = {
   asset: { select: { projectId: true } },
@@ -85,26 +84,24 @@ type VersionProjectChain = {
   task: { shot: { projectId: number } | null; asset: { projectId: number } | null } | null;
 };
 
-/** Même précédence que `resolveProjectIdForVersion` : asset direct, puis task→shot, puis task→asset. */
+/** Same precedence as `resolveProjectIdForVersion`: direct asset, then task->shot, then task->asset. */
 const projectIdOfVersion = (version: VersionProjectChain): number | null =>
   version.asset?.projectId ?? version.task?.shot?.projectId ?? version.task?.asset?.projectId ?? null;
 
-/** Ce que le contrôle d'accès a besoin de savoir d'une entité : son projet, et son propriétaire. */
+/** What the access check needs to know about an entity: its project, and its owner. */
 interface BulkEntity {
   projectId: number | null;
-  /** Auteur d'une version ; `null` pour les domaines dont l'accès ne dépend que du rôle. */
+  /** Author of a version; `null` for domains whose access depends only on the role. */
   ownerId: number | null;
 }
 
 /**
- * Résout en UNE requête le projet porteur de tout un lot.
+ * Resolves the owning project of a whole batch in ONE query.
  *
- * Les résolveurs unitaires de `lib/pipeline` font une requête par identifiant — et trois
- * pour une version, à cause de ses relations imbriquées. Sur les deux cents ids que la
- * route autorise, cela faisait des centaines de lectures qui rendaient toutes le même
- * projet. La forme des `select` est recopiée telle quelle : même précédence, mêmes cas nuls.
- * Un id absent de la carte est un id introuvable, exactement comme un résolveur qui rendait
- * `null`.
+ * The unit resolvers of `lib/pipeline` make one query per identifier, and three for a version because of its
+ * nested relations. Across the two hundred ids the route allows, that meant hundreds of reads all returning
+ * the same project. The shape of the `select` is copied as is: same precedence, same null cases. An id absent
+ * from the map is an unknown id, exactly as a resolver returning `null` would be.
  */
 async function loadBulkEntities(domain: PipelineDomain, ids: number[]): Promise<Map<number, BulkEntity>> {
   const where = { id: { in: ids } };
@@ -140,14 +137,13 @@ async function loadBulkEntities(domain: PipelineDomain, ids: number[]): Promise<
 }
 
 /**
- * Verdict d'accès projet mémorisé pour la durée d'un lot.
+ * Project access verdict, memoized for the duration of a batch.
  *
- * L'utilisateur, son rôle global et `includeTrashed` ne varient pas d'un identifiant à
- * l'autre : le verdict ne dépend donc QUE du projet. Le redemander par entité, c'est
- * refaire deux cents fois le même `project.count` et la même lecture d'appartenance avant
- * la première écriture. On mémorise la promesse, pas sa valeur : deux demandes concurrentes
- * partagent la requête. La garde elle-même reste `checkProjectAccess` — on n'en réécrit
- * aucune règle, on cesse seulement de la reposer.
+ * The user, their global role and `includeTrashed` do not vary from one identifier to the next: the verdict
+ * therefore depends ONLY on the project. Asking for it per entity would redo the same `project.count` and
+ * membership read two hundred times before the first write. The promise is memoized, not its value: two
+ * concurrent requests share the query. The guard itself remains `checkProjectAccess`: none of its rules is
+ * rewritten, we only stop repeating it.
  */
 function memoProjectAccess(
   user: SessionUser,
@@ -184,9 +180,9 @@ const RESTORE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
   media: restoreMedias,
 };
 
-// Purge définitive (DB + MinIO) en lot : une passe de lecture, une passe de suppression,
-// un seul `DeleteObjects` pour tout le lot (cf. lib/trash) — au lieu d'une purge unitaire
-// bouclée, qui enchaînait des milliers d'allers-retours MinIO dans la requête HTTP.
+// Permanent purge (DB + MinIO) in batch: one read pass, one delete pass, a single `DeleteObjects` for the
+// whole batch (see lib/trash), instead of a looped single purge that chained thousands of MinIO round trips
+// inside the HTTP request.
 const PURGE: Record<DeleteDomain, (ids: number[]) => Promise<void>> = {
   projects: purgeProjects,
   episodes: purgeEpisodes,
@@ -238,18 +234,16 @@ const AUDIT_ACTION: Record<DeleteDomain, { del: string; restore: string; purge: 
 };
 
 /**
- * Revalide l'accès à chaque id d'un domaine à corbeille. Les domaines pipeline
- * (projects/episodes/sequences/shots/assets) exigent ADMIN/SUPERVISOR ; media délègue à
- * `assertMediaManage` (uploader ou manager) ; versions exige auteur ou manager.
+ * Re-validates access to each id of a trash-enabled domain. The pipeline domains
+ * (projects/episodes/sequences/shots/ assets) require ADMIN/SUPERVISOR; media delegates to
+ * `assertMediaManage` (uploader or manager); versions requires the author or a manager.
  *
- * Coût mesuré sur la base de démonstration, sélection accordée dans un seul projet : le
- * contrôle passe de 3 requêtes par plan (2 pour un ADMIN) à 3 pour tout le lot, quel qu'en
- * soit le nombre d'éléments.
+ * Measured on the demo database, with a selection inside a single project: the check goes from 3 queries per
+ * shot (2 for an ADMIN) to 3 for the whole batch, whatever its number of items.
  *
- * `fromTrash` marque les deux opérations qui, par nature, désignent des éléments déjà à la
- * corbeille — restauration et purge. Elles seules lèvent l'invariant du RBAC (« un projet
- * à la corbeille n'existe plus »), sans quoi la corbeille globale ne pourrait plus rendre
- * ni détruire ce qu'elle affiche. La mise à la corbeille, elle, garde la garde entière.
+ * `fromTrash` marks the two operations that, by nature, designate items already in the trash: restore and
+ * purge. Only they lift the RBAC invariant ("a project in the trash no longer exists"), otherwise the global
+ * trash could neither return nor destroy what it displays. Moving to the trash keeps the full guard.
  */
 async function assertDeleteAccess(
   user: SessionUser,
@@ -261,8 +255,8 @@ async function assertDeleteAccess(
   const manager = isManager(user.role);
   const entities = await loadBulkEntities(domain, ids);
   const hasAccess = memoProjectAccess(user, { includeTrashed: fromTrash });
-  // Les identifiants restent parcourus DANS L'ORDRE REÇU : le premier qui échoue rend la
-  // même erreur qu'avant, avec le même identifiant dans le message.
+  // The ids are still walked IN THE ORDER RECEIVED: the first one that fails returns the same error as
+  // before, with the same id in the message.
   for (const id of ids) {
     const entity = entities.get(id);
     const projectId = entity?.projectId ?? null;
@@ -278,27 +272,23 @@ async function assertDeleteAccess(
 }
 
 /**
- * Garde des médias en lot.
+ * Batch media guard.
  *
- * `MediaService.assertMediaManage` reste la SEULE autorité sur la politique de projet
- * (projet désignable, appartenance, droit de contribuer, rôle de gestion) : elle est
- * appelée telle quelle sur le premier média de chaque projet rencontré. Ce qu'on cesse de
- * refaire, c'est de la reposer pour les cent quatre-vingt-dix-neuf suivants, dont le
- * verdict de projet est identique par construction — six requêtes par média, toutes les
- * mêmes, avant la moindre écriture.
+ * `MediaService.assertMediaManage` remains the ONLY authority on project policy (project designatable,
+ * membership, right to contribute, management role): it is called as is on the first media of each project
+ * encountered. What we stop doing is repeating it for the next hundred and ninety-nine, whose project verdict
+ * is identical by construction: six queries per media, all the same, before any write.
  *
- * Seule la règle qui dépend RÉELLEMENT du média est rejouée pour les suivants : gérant du
- * projet, ou déposant de ce média-là. Si une règle par média venait s'ajouter à
- * `assertMediaManage`, c'est ici qu'il faudrait la reporter — d'où le nommage explicite.
+ * Only the rule that truly depends on the media is replayed for the others: project manager, or uploader of
+ * that media. If a per-media rule were added to `assertMediaManage`, this is where it would have to be
+ * carried over, hence the explicit naming.
  *
- * `fromTrash` n'entre pas en jeu : `assertMediaManage` contrôle l'accès projet sans
- * dérogation de corbeille, et cette voie-ci ne fait que la reprendre. Comportement
- * inchangé, y compris pour la restauration et la purge.
+ * `fromTrash` does not come into play: `assertMediaManage` checks project access without any trash exemption,
+ * and this path merely reuses it. Behaviour unchanged, including for restore and purge.
  */
 async function assertMediaBulkManage(user: SessionUser, ids: number[]): Promise<void> {
-  // Un seul identifiant : rien à mutualiser. La lecture préalable coûterait alors plus que
-  // ce qu'elle épargne (mesuré : 13 requêtes contre 8), et la sélection d'un seul média est
-  // un geste courant. On garde la garde d'origine, telle quelle.
+  // A single identifier: nothing to pool. The prior read would then cost more than it saves (measured: 13
+  // queries against 8), and selecting a single media is a common gesture. The original guard is kept as is.
   if (ids.length <= 1) {
     for (const id of ids) await assertMediaManage(id, user);
     return;
@@ -310,7 +300,7 @@ async function assertMediaBulkManage(user: SessionUser, ids: number[]): Promise<
   const byId = new Map(
     rows.map((row) => [row.id, { uploaderId: row.uploaderId, projectId: projectIdOfVersion(row.version) }]),
   );
-  // Projets dont la garde complète est déjà passée, avec le rôle effectif qui y a servi.
+  // Projects whose full guard has already passed, with the effective role that was used.
   const cleared = new Map<number, Role | null>();
   for (const id of ids) {
     const media = byId.get(id);
@@ -318,7 +308,7 @@ async function assertMediaBulkManage(user: SessionUser, ids: number[]): Promise<
     const projectId = media.projectId;
     if (projectId === null || !cleared.has(projectId)) {
       await assertMediaManage(id, user);
-      // Projet non résolu : `assertMediaManage` a déjà levé, on n'arrive jamais ici.
+      // Unresolved project: `assertMediaManage` has already thrown, we never get here.
       if (projectId !== null)
         cleared.set(projectId, await effectiveProjectRole(user.id, user.role, projectId));
       continue;
@@ -345,17 +335,16 @@ export async function bulkRestore(user: SessionUser, domain: DeleteDomain, ids: 
 }
 
 /**
- * Purge définitive en lot (corbeille → suppression DB + MinIO). Même passe de validation
- * d'accès que delete/restore, puis purge unitaire (chaque fonction gère la cascade DB et
- * le nettoyage storage après commit). Irréversible.
+ * Batch permanent purge (trash -> DB + MinIO deletion). Same access validation pass as delete/restore, then
+ * unit purge (each function handles the DB cascade and the storage cleanup after commit). Irreversible.
  */
 export async function bulkPurge(user: SessionUser, domain: DeleteDomain, ids: number[]): Promise<number> {
   await assertDeleteAccess(user, domain, ids, true);
-  // La purge d'un projet est réservée aux ADMIN — c'est la règle de la route unitaire
-  // (`DELETE /api/projects/:projectId/purge`, requireRole(ADMIN)). `assertDeleteAccess` ne
-  // demande qu'un « gestionnaire », qui inclut SUPERVISOR : sans ce contrôle, la voie
-  // groupée rendait à un superviseur — dont l'accès projet est global — la destruction
-  // définitive et irréversible de n'importe quel projet, base et stockage compris.
+  // Purging a project is reserved to ADMIN: this is the rule of the single route (`DELETE
+  // /api/projects/:projectId/purge`, requireRole(ADMIN)). `assertDeleteAccess` only asks for a "manager",
+  // which includes SUPERVISOR: without this check, the batch path would give a supervisor, whose project
+  // access is global, the permanent and irreversible destruction of any project, database and storage
+  // included.
   if (domain === 'projects' && user.role !== Role.ADMIN)
     throw forbidden('Permanently purging a project is reserved to administrators');
   await PURGE[domain](ids);
@@ -364,7 +353,7 @@ export async function bulkPurge(user: SessionUser, domain: DeleteDomain, ids: nu
   return ids.length;
 }
 
-// ── Patchs groupés (statut / réassignation / déplacement) ────────────────────────
+// ── Batch patches (status / reassignment / move) ─────────────────────────────────
 
 export interface BulkTaskPatch {
   status?: TaskStatus;
@@ -372,9 +361,9 @@ export interface BulkTaskPatch {
 }
 
 /**
- * Patch de tâches en lot — réutilise `TaskService.update` (RBAC + notifs + temps réel) par id.
- * Le projet porteur, lui, est résolu pour tout le lot en une requête : le redemander par
- * tâche revenait à relire cinquante fois la même relation avant chaque écriture.
+ * Batch task patch: reuses `TaskService.update` (RBAC + notifications + real time) per id. The owning
+ * project, however, is resolved for the whole batch in one query: asking again per task would reread the same
+ * relation before each write.
  */
 export async function bulkPatchTasks(
   user: SessionUser,
@@ -385,7 +374,7 @@ export async function bulkPatchTasks(
     where: { id: { in: ids } },
     select: { id: true, shot: { select: { projectId: true } }, asset: { select: { projectId: true } } },
   });
-  // Même précédence que `resolveProjectIdForTask` : le plan d'abord, l'asset ensuite.
+  // Same precedence as `resolveProjectIdForTask`: the shot first, then the asset.
   const projectIds = new Map(
     rows.map((row) => [row.id, row.shot?.projectId ?? row.asset?.projectId ?? null]),
   );
@@ -397,7 +386,7 @@ export async function bulkPatchTasks(
   return ids.length;
 }
 
-/** Patch de versions en lot (statut) — réutilise `VersionService.update` par id. */
+/** Batch version patch (status): reuses `VersionService.update` per id. */
 export async function bulkPatchVersions(
   user: SessionUser,
   ids: number[],
@@ -413,18 +402,16 @@ export async function bulkPatchVersions(
 }
 
 /**
- * Statut d'une sélection de plans.
+ * Status of a shot selection.
  *
- * C'était le manque le plus criant de la sélection multiple : elle n'offrait que
- * « Assigner » et « Supprimer », là où le clic droit sur un seul plan propose neuf actions —
- * et où le geste quotidien d'une production consiste précisément à passer trente plans en
- * retake d'un coup.
+ * This was the most glaring gap in multiple selection: it only offered "Assign" and "Delete", whereas
+ * right-clicking a single shot offers nine actions, and the daily gesture of a production is precisely to
+ * move thirty shots into retake at once.
  *
- * Chaque plan passe par `ShotService.update`, comme au singulier : mêmes garde-fous
- * (projet inscriptible, statut appartenant bien au vocabulaire de ce projet), même
- * arbitrage ShotGrid, même trace d'audit. Un plan qui échoue est compté à part plutôt que
- * de faire tomber le lot — sur cinquante plans, tout perdre pour un seul serait absurde,
- * c'est déjà la règle retenue pour l'assignation.
+ * Each shot goes through `ShotService.update`, as for the singular action: same guards (writable project,
+ * status belonging to this project's vocabulary), same ShotGrid arbitration, same audit trail. A failing shot
+ * is counted separately rather than sinking the batch: out of fifty shots, losing everything over one would
+ * be absurd, which is already the rule adopted for assignment.
  */
 export async function bulkPatchShotStatus(
   user: SessionUser,
@@ -447,21 +434,20 @@ export async function bulkPatchShotStatus(
   const touched: number[] = [];
   for (const shot of shots) {
     try {
-      // `deferEvents` : les trente `shot:update` unitaires que cette boucle émettait
-      // rechargeaient trente fois le kanban ENTIER chez chaque personne qui l'avait
-      // ouvert — huit artistes, un seul geste, des centaines de requêtes dont presque
-      // toutes étaient annulées en vol. Un lot doit se décrire en un événement.
+      // `deferEvents`: the thirty unit `shot:update` events this loop used to emit each reloaded the WHOLE
+      // kanban, for everyone who had it open: eight artists, one gesture, hundreds of requests almost all
+      // cancelled in flight. A batch must be described by a single event.
       await ShotService.update(shot.id, projectId, { pipelineStatusId }, user.id, {
         deferEvents: true,
       });
       touched.push(shot.id);
     } catch {
-      // Statut refusé par l'arbitrage ShotGrid, plan verrouillé : compté, pas jeté.
+      // Status refused by the ShotGrid arbitration, or locked shot: counted, not discarded.
       failed++;
     }
   }
-  // Un seul couple d'événements, portant les plans réellement modifiés. Émis après la
-  // boucle : ce qui a échoué ne doit pas figurer dans le lot annoncé.
+  // A single pair of events, carrying the shots actually modified. Emitted after the loop: what failed must
+  // not appear in the announced batch.
   ShotService.emitShotsUpdated(projectId, touched);
   const updated = touched.length;
   logAudit({
@@ -474,12 +460,12 @@ export async function bulkPatchShotStatus(
   return { updated, failed };
 }
 
-/** Déplacement de shots vers une séquence (ou hors séquence si `null`) — ADMIN/SUPERVISOR. */
+/** Moves shots to a sequence (or out of any sequence if `null`) — ADMIN/SUPERVISOR. */
 /**
- * Cocher ou décocher des étapes sur une sélection d'assets.
+ * Ticks or unticks steps on a selection of assets.
  *
- * Les droits sont revérifiés pour chaque asset : une sélection peut traverser plusieurs
- * projets, et un seul contrôle en tête laisserait passer tous les autres.
+ * Rights are re-checked for each asset: a selection may span several projects, and a single check at the head
+ * would let all the others through.
  */
 export async function bulkAssetDepartments(
   user: SessionUser,
@@ -500,7 +486,7 @@ export async function bulkMoveShots(
   sequenceId: number | null,
 ): Promise<number> {
   if (!isManager(user.role)) throw forbidden('Supervisors and administrators only');
-  // Tous les shots doivent appartenir au même projet, cohérent avec la séquence cible.
+  // All shots must belong to the same project, consistent with the target sequence.
   const shots = await prisma.shot.findMany({
     where: { id: { in: ids } },
     select: { id: true, projectId: true },

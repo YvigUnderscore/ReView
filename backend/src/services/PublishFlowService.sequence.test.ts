@@ -5,13 +5,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Role } from '@prisma/client';
 
 /**
- * Une séquence d'images ne se publie pas par la voie DCC en deux temps — et il faut le dire.
+ * An image sequence is not published through the two-step DCC path — and it must be said.
  *
- * `SH0100_comp_v003.%04d.exr` passe tous les contrôles de format : l'extension est `.exr`,
- * donc IMAGE, donc acceptée. Sans refus explicite, le DCC obtient une URL présignée, y
- * dépose une frame ou rien du tout, et crée un média nommé d'après un motif — muet,
- * inutilisable, et découvert des jours plus tard. C'est exactement la faute que la vague
- * précédente a corrigée sur les extensions annoncées mais non reconnues.
+ * `SH0100_comp_v003.%04d.exr` passes all the format checks: the extension is `.exr`, hence IMAGE, hence
+ * accepted. Without an explicit refusal, the DCC obtains a presigned URL, uploads
+ * a frame or nothing at all there, and creates a media named after a pattern — silent, unusable, and
+ * discovered days later. This is exactly the fault that the previous wave corrected
+ * on extensions announced but not recognised.
  */
 const createUpload = vi.fn();
 
@@ -42,27 +42,27 @@ beforeEach(() => {
   createUpload.mockResolvedValue({ mediaObjectId: 99, uploadUrl: 'https://minio/put', namingWarning: false });
 });
 
-describe('PublishFlowService.start — motif de séquence', () => {
-  it('refuse un motif FFmpeg au lieu d’ouvrir un média vide', async () => {
+describe('PublishFlowService.start: sequence pattern', () => {
+  it('refuses an FFmpeg pattern instead of opening an empty media', async () => {
     await expect(start(actor, { ...base, filename: 'SH0100_comp_v003.%04d.exr' })).rejects.toMatchObject({
       code: 'SEQUENCE_NOT_SUPPORTED_HERE',
     });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it('refuse aussi la notation en dièses, celle des DCC', async () => {
+  it('also refuses the hash notation, the one used by DCCs', async () => {
     await expect(start(actor, { ...base, filename: 'SH0100_comp_v003.####.dpx' })).rejects.toMatchObject({
       code: 'SEQUENCE_NOT_SUPPORTED_HERE',
     });
   });
 
-  it('nomme la route à utiliser à la place', async () => {
+  it('names the route to use instead', async () => {
     await expect(start(actor, { ...base, filename: 'plan.%04d.exr' })).rejects.toThrow(
       /\/api\/media\/sequence\/init/,
     );
   });
 
-  it('laisse passer une frame isolée, qui est un fichier comme un autre', async () => {
+  it('lets a single frame through, which is a file like any other', async () => {
     await start(actor, { ...base, filename: 'SH0100_comp_v003.1001.exr' });
     expect(createUpload).toHaveBeenCalledTimes(1);
   });

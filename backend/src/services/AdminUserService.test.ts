@@ -4,14 +4,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * A5-03 — la fiche d'un compte rend `metadata`, et le rend RÉDIGÉ.
+ * A5-03: the detail of an account returns `metadata`, and returns it REDACTED.
  *
- * L'activité était servie sans `metadata` : « MEDIA_PURGE · MediaObject · 812 » sans dire
- * lesquels des trois cents identifiants du lot étaient partis. La vue studio le rend
- * désormais ; si celle-ci le rendait brut, elle exposerait ce que l'autre protège — une URL
- * de webhook dont le chemin EST le secret, un mot de passe glissé dans le contexte.
+ * The activity was served without `metadata`: "MEDIA_PURGE · MediaObject · 812" without saying which
+ * of the three hundred identifiers in the batch had gone. The studio view now returns it; if this view
+ * returned it raw, it would expose what the other one protects: a webhook URL whose path IS the secret,
+ * a password slipped into the context.
  *
- * `redactAuditMetadata` n'est PAS feint ici : c'est justement la composition qu'on vérifie.
+ * `redactAuditMetadata` is NOT faked here: the composition is exactly what is being verified.
  */
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -47,8 +47,8 @@ beforeEach(() => {
   vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as never);
 });
 
-describe('userDetail — activité', () => {
-  it('demande bien `metadata` à la base', async () => {
+describe('userDetail: activity', () => {
+  it('does request `metadata` from the database', async () => {
     await userDetail(1);
     const args = vi.mocked(prisma.auditLog.findMany).mock.calls[0]![0] as {
       select: Record<string, boolean>;
@@ -56,14 +56,14 @@ describe('userDetail — activité', () => {
     expect(args.select.metadata).toBe(true);
   });
 
-  it('restitue le contexte utile — les identifiants du lot purgé', async () => {
+  it('returns the useful context: the identifiers of the purged batch', async () => {
     vi.mocked(prisma.auditLog.findMany).mockResolvedValue([
       { id: 9, action: 'MEDIA_PURGE', entityType: 'MediaObject', entityId: 812, metadata: { ids: [1, 2] } },
     ] as never);
     expect((await activityOf())[0]!.metadata).toEqual({ ids: [1, 2] });
   });
 
-  it('rédige les secrets et réduit les URL à leur origine', async () => {
+  it('redacts secrets and reduces URLs to their origin', async () => {
     vi.mocked(prisma.auditLog.findMany).mockResolvedValue([
       { id: 9, action: 'WEBHOOK_UPDATE', metadata: { url: 'https://hooks.slack.com/services/T/B/XYZ' } },
       { id: 8, action: 'SMTP_UPDATE', metadata: { password: 'hunter2' } },

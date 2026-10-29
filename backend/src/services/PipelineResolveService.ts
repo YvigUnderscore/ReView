@@ -14,17 +14,17 @@ import {
 } from '../lib/v1Resources';
 
 /**
- * Résolution des entités du pipeline à partir de noms (API v1).
+ * Resolution of pipeline entities from names (API v1).
  *
- * Toute lecture est insensible à la casse : un DCC écrit `sh0100` là où la production a
- * saisi `SH0100`, et refuser sur ce détail rendrait l'API inutilisable en pratique. Les
- * codes restent uniques par parent côté base, la casse ne crée donc pas d'ambiguïté.
+ * Every read is case-insensitive: a DCC writes `sh0100` where production typed `SH0100`, and refusing over
+ * that detail would make the API unusable in practice. The codes remain unique
+ * per parent on the database side, so case creates no ambiguity.
  *
- * Rien ici ne vérifie les droits : le projet résolu est renvoyé à l'appelant, à charge
- * pour la route d'appeler `assertProjectAccess` avant d'exposer quoi que ce soit.
+ * Nothing here checks rights: the resolved project is returned to the caller, it being up to the route to
+ * call `assertProjectAccess` before exposing anything.
  */
 
-/** Une référence est soit un identifiant numérique, soit un code/nom. */
+/** A reference is either a numeric identifier, or a code/name. */
 const asId = (ref: string): number | null => (/^\d+$/.test(ref) ? Number(ref) : null);
 
 const insensitive = (value: string) => ({ equals: value, mode: 'insensitive' as const });
@@ -57,8 +57,8 @@ export async function resolveSequence(projectId: number, ref: string) {
 }
 
 /**
- * Shot d'un projet. `sequenceId` à `null` cible explicitement les shots sans séquence ;
- * `undefined` cherche dans tout le projet (cas d'un client qui ne connaît que le code).
+ * A project's shot. `sequenceId` set to `null` explicitly targets shots without a sequence; `undefined`
+ * searches the whole project (the case of a client who only knows the code).
  */
 export async function resolveShot(projectId: number, ref: string, sequenceId?: number | null) {
   const id = asId(ref);
@@ -90,12 +90,11 @@ export async function resolveAsset(projectId: number, ref: string) {
 }
 
 /**
- * Tâche d'un shot XOR d'un asset, par nom (ex. `anim`, `lighting`).
+ * A task of a shot XOR an asset, by name (e.g. `anim`, `lighting`).
  *
- * `department` restreint la recherche : un pipeline nomme volontiers `main` la tâche de
- * chaque département, et sans cette précision `modeling:main` et `lookdev:main` seraient
- * la même tâche. Sans département, la recherche reste sur le seul nom — les chemins
- * historiques continuent de résoudre.
+ * `department` restricts the search: a pipeline readily names the task of each department `main`, and without
+ * this precision `modeling:main` and `lookdev:main` would be the same task.
+ * Without a department, the search stays on the name alone — the historical paths continue to resolve.
  */
 export async function resolveTask(
   parent: { shotId?: number; assetId?: number },
@@ -115,7 +114,7 @@ export async function resolveTask(
   return task;
 }
 
-/** Version d'une tâche XOR d'un asset, par nom (ex. `v003`). */
+/** Version of a task XOR an asset, by name (e.g. `v003`). */
 export async function resolveVersion(parent: { taskId?: number; assetId?: number }, ref: string) {
   const id = asId(ref);
   const version = await prisma.version.findFirst({
@@ -141,7 +140,7 @@ export interface ResolvedPath {
   version?: Awaited<ReturnType<typeof resolveVersion>>;
 }
 
-/** Résout la branche asset d'un chemin analysé. */
+/** Resolves the asset branch of a parsed path. */
 async function resolveAssetBranch(parsed: PipelinePath, out: ResolvedPath): Promise<void> {
   out.asset = await resolveAsset(out.projectId, parsed.asset!);
   if (parsed.task) out.task = await resolveTask({ assetId: out.asset.id }, parsed.task, parsed.department);
@@ -152,11 +151,11 @@ async function resolveAssetBranch(parsed: PipelinePath, out: ResolvedPath): Prom
   }
 }
 
-/** Résout la branche séquence/shot d'un chemin analysé. */
+/** Resolves the sequence/shot branch of a parsed path. */
 async function resolveShotBranch(parsed: PipelinePath, out: ResolvedPath): Promise<void> {
   if (parsed.sequence) out.sequence = await resolveSequence(out.projectId, parsed.sequence);
   if (parsed.shot) {
-    // Sans séquence dans le chemin (branche `shots/`), on cible les shots orphelins.
+    // Without a sequence in the path (`shots/` branch), we target the orphan shots.
     out.shot = await resolveShot(out.projectId, parsed.shot, out.sequence ? out.sequence.id : null);
   }
   if (parsed.task && out.shot)
@@ -165,8 +164,8 @@ async function resolveShotBranch(parsed: PipelinePath, out: ResolvedPath): Promi
 }
 
 /**
- * Résout un chemin complet en entités. Chaque maillon manquant lève un 404 nommant le
- * segment fautif — un script de pipeline doit pouvoir dire *quoi* est introuvable.
+ * Resolves a complete path into entities. Each missing link raises a 404 naming the offending segment — a
+ * pipeline script must be able to say *what* cannot be found.
  */
 export async function resolvePath(raw: string): Promise<ResolvedPath> {
   const parsed = parsePipelinePath(raw);
@@ -179,7 +178,7 @@ export async function resolvePath(raw: string): Promise<ResolvedPath> {
   return out;
 }
 
-/** Entité désignée par la feuille du chemin — ce que l'appelant a réellement demandé. */
+/** Entity designated by the leaf of the path — what the caller actually asked for. */
 export function leafOf(resolved: ResolvedPath) {
   switch (resolved.kind) {
     case 'version':

@@ -9,16 +9,16 @@ import { assertProjectManage } from '../lib/projectRoles';
 import type { SessionUser } from '../lib/shotgridAccess';
 
 /**
- * La fiche d'une entité : du markdown enrichi, écrit dans ReView et par personne d'autre.
+ * An entity's sheet: enriched markdown, written in ReView and by no one else.
  *
- * `description` vient de ShotGrid et y retourne : une ligne, souvent en lecture seule ici.
- * La fiche est l'inverse — c'est là que vit le brief, avec ses titres dépliables, ses
- * jauges d'avancement et son carrousel de références. Les confondre aurait signifié qu'une
- * synchronisation écrase le brief, ce qui arrive une fois et suffit à ne plus rien y écrire.
+ * `description` comes from ShotGrid and stays there: a single line, often read-only here.
+ * The sheet is the opposite — that is where the brief lives, with its collapsible headings,
+ * progress gauges and reference carousel. Confusing them would have meant a sync overwriting the brief, which
+ * happens once and is enough to stop anyone writing in it.
  *
- * Le rendu (titres dépliables, `::progress`, `::divider`, carrousel) est entièrement côté
- * client : le serveur garde du texte, jamais du HTML. C'est ce qui rend la fiche exportable
- * et empêche l'injection par construction plutôt que par assainissement.
+ * Rendering (collapsible headings, `::progress`, `::divider`, carousel) is entirely client-side: the server
+ * keeps text, never HTML. This keeps the sheet exportable and prevents injection by construction rather than
+ * by sanitization.
  */
 
 export const NOTE_KINDS = ['episode', 'sequence', 'shot', 'asset'] as const;
@@ -28,15 +28,14 @@ export const TEMPLATE_SCOPES = ['all', ...NOTE_KINDS] as const;
 export type TemplateScope = (typeof TEMPLATE_SCOPES)[number];
 
 /**
- * Plafond de taille d'une fiche.
+ * Size ceiling of a sheet.
  *
- * Cent mille caractères, soit une quarantaine de pages : au-delà, ce n'est plus un brief
- * mais un document, et il a sa place ailleurs. La borne protège surtout la charge utile
- * envoyée à chaque ouverture de page.
+ * One hundred thousand characters, about forty pages: beyond that, it is no longer a brief but a document,
+ * and it belongs elsewhere. The bound mainly protects the payload sent on every page opening.
  */
 const MAX_BODY = 100_000;
 
-/** La colonne de rattachement d'un type — une seule est renseignée (CHECK `EntityNote_target_xor`). */
+/** The attachment column of a type — only one is filled (CHECK `EntityNote_target_xor`). */
 function targetOf(kind: NoteKind, id: number) {
   switch (kind) {
     case 'episode':
@@ -50,7 +49,7 @@ function targetOf(kind: NoteKind, id: number) {
   }
 }
 
-/** Le projet de l'entité, et son existence. Une fiche sans projet ne serait lisible nulle part. */
+/** The entity's project, and its existence. A sheet without a project would be readable nowhere. */
 export async function resolveProject(kind: NoteKind, id: number): Promise<number> {
   const select = { projectId: true };
   const row =
@@ -73,7 +72,7 @@ export interface NoteView {
 
 const AUTHOR_SELECT = { id: true, name: true, username: true, avatarKey: true } as const;
 
-/** La fiche d'une entité — vide plutôt qu'absente : l'écran affiche toujours l'encart. */
+/** The sheet of an entity — empty rather than absent: the screen always displays the panel. */
 export async function getNote(kind: NoteKind, id: number): Promise<NoteView> {
   const note = await prisma.entityNote.findFirst({
     where: targetOf(kind, id),
@@ -84,11 +83,10 @@ export async function getNote(kind: NoteKind, id: number): Promise<NoteView> {
 }
 
 /**
- * Écrit la fiche.
+ * Writes the sheet.
  *
- * Une fiche vidée est **supprimée** plutôt que gardée vide : sinon l'écran afficherait
- * « modifiée par Alice il y a deux minutes » sur un encart sans contenu, et la liste des
- * entités documentées serait fausse.
+ * An emptied sheet is **deleted** rather than kept empty: otherwise the screen would show "modified by Alice
+ * two minutes ago" on a panel with no content, and the list of documented entities would be wrong.
  */
 export async function setNote(
   actor: SessionUser,
@@ -125,14 +123,14 @@ export async function setNote(
   return { body: note.body, updatedAt: note.updatedAt, updatedBy: note.updatedBy };
 }
 
-// ───────────────────────────── Modèles de fiche ─────────────────────────────
+// ───────────────────────────── Sheet templates ─────────────────────────────
 
 /**
- * Les modèles proposés à une entité : ceux du projet d'abord, ceux du studio ensuite.
+ * The templates offered to an entity: those of the project first, then those of the studio.
  *
- * Un modèle de portée `all` est proposé partout — c'est le cas du « Brief » générique.
- * Les deux niveaux se cumulent au lieu de se remplacer : un projet qui définit ses propres
- * modèles n'a aucune raison de perdre ceux du studio.
+ * A template of scope `all` is offered everywhere — that is the case of the generic "Brief". The two levels
+ * accumulate rather than replace each other: a project defining its own
+ * templates has no reason to lose those of the studio.
  */
 export async function listTemplates(
   studioId: number,

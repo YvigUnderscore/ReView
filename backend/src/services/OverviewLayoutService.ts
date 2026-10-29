@@ -11,29 +11,28 @@ import {
 } from '../lib/overviewWidgets';
 
 /**
- * Dispositions par défaut de la vue d'ensemble, **une par rôle**, décidées en
- * administration.
+ * Default layouts of the overview, **one per role**, decided in administration.
  *
- * Un artiste, un superviseur et un producteur n'ouvrent pas la même page : le premier veut
- * ce qui lui est assigné, le deuxième ce qui bloque, le troisième l'avancement. Servir la
- * même disposition à tout le monde revient à demander à chacun de la refaire — et celui qui
- * ne la refait pas garde une page qui ne lui parle pas.
+ * An artist, a supervisor and a producer do not open the same page: the first wants what is assigned to them,
+ * the second what blocks, the third progress. Serving the same layout to
+ * everyone amounts to asking each to redo it — and whoever does not redo it keeps a page that does not speak
+ * to them.
  *
- * Le stockage est une ligne de `Setting` : quatre dispositions de quelques centaines
- * d'octets ne méritent pas une table, et l'administration écrit déjà ses réglages là.
+ * Storage is one `Setting` row: four layouts of a few hundred bytes do not merit a table, and administration
+ * already writes its settings there.
  */
 
 /**
- * Les défauts enregistrés. Une valeur illisible — JSON cassé, forme d'une version
- * antérieure, bloc disparu du produit — rend un objet vide plutôt qu'une erreur : la page
- * doit s'ouvrir quoi qu'il arrive, sur la disposition livrée avec le produit.
+ * The registered defaults. An unreadable value — broken JSON, the shape of an earlier version, a block that
+ * has disappeared from the product — returns an empty object rather than an error:
+ * the page must open whatever happens, on the layout shipped with the product.
  */
 export async function getRoleDefaults(): Promise<OverviewRoleDefaults> {
   const row = await prisma.setting.findUnique({ where: { key: KEY } });
   return parseDefaults(row?.value);
 }
 
-/** Lecture tolérante du réglage, isolée pour être testable sans base. */
+/** Tolerant reading of the setting, isolated so it can be tested without a database. */
 export function parseDefaults(value: string | null | undefined): OverviewRoleDefaults {
   if (!value) return {};
   try {
@@ -45,11 +44,11 @@ export function parseDefaults(value: string | null | undefined): OverviewRoleDef
 }
 
 /**
- * Enregistre (ou retire, avec `null`) la disposition par défaut d'un rôle.
+ * Saves (or removes, with `null`) the default layout of a role.
  *
- * Lecture puis écriture dans une transaction : les quatre rôles vivent dans la même ligne,
- * et deux administrateurs qui règlent deux rôles à la même seconde s'effaceraient l'un
- * l'autre. C'est aussi pourquoi seul le rôle visé est remplacé, jamais la carte entière.
+ * Read then write within a transaction: the four roles live in the same row, and two administrators setting
+ * two roles in the same second would erase each other. This is also why only the
+ * targeted role is replaced, never the whole map.
  */
 export async function setRoleDefault(
   role: Role,

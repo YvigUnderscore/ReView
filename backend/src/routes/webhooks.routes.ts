@@ -16,7 +16,7 @@ import { listDeliveries, queueDelivery, replayDelivery } from '../services/Webho
 import { logAudit } from '../services/AuditService';
 import { badRequest, notFound } from '../lib/errors';
 
-/** Webhooks sortants (36.D) — administration. Monté sous /api/admin/webhooks. */
+/** Outgoing webhooks (36.D): administration. Mounted under /api/admin/webhooks. */
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
 
@@ -35,12 +35,12 @@ const hookSelect = {
 
 const idParam = z.object({ id: z.coerce.number().int() });
 const deliveryParams = idParam.extend({ deliveryId: z.coerce.number().int() });
-// Seuls les événements réellement publiés sont proposés : un abonnement qu'on ne peut pas
-// honorer fait croire à une alerte branchée (cf. lib/webhookCatalog).
+// Only events actually published are offered: a subscription that cannot be honoured makes a wired
+// alert look real (see lib/webhookCatalog).
 const eventsSchema = z.array(z.enum(EMITTED_WEBHOOK_EVENTS)).min(1);
 const projectIdSchema = z.number().int().positive().nullable().optional();
 
-/** L'URL est refusée si elle vise le réseau interne ; le projet, s'il n'existe pas. */
+/** The URL is refused if it targets the internal network; the project, if it does not exist. */
 async function assertScope(url: string | undefined, projectId: number | null | undefined) {
   if (url && !isWebhookUrlAllowed(url))
     throw badRequest('Webhook URL refused (private or local host, or a non-HTTP scheme)', 'BAD_WEBHOOK_URL');
@@ -49,20 +49,20 @@ async function assertScope(url: string | undefined, projectId: number | null | u
 }
 
 const findHook = async (id: number) => {
-  // Jamais le secret : il n'est montré qu'une fois, à la création.
+  // Never the secret: it is shown only once, at creation.
   const hook = await prisma.webhook.findUnique({ where: { id }, select: hookSelect });
   if (!hook) throw notFound('Webhook not found');
   return hook;
 };
 
-// GET /api/admin/webhooks — liste (jamais le secret)
+// GET /api/admin/webhooks: list (never the secret)
 router.get('/', async (_req, res) => {
   res.json({
     webhooks: await prisma.webhook.findMany({ orderBy: { createdAt: 'desc' }, select: hookSelect }),
   });
 });
 
-// POST /api/admin/webhooks — crée un webhook ; le secret HMAC n'est montré qu'ICI
+// POST /api/admin/webhooks: creates a webhook; the HMAC secret is shown ONLY here
 router.post(
   '/',
   validate({
@@ -91,7 +91,7 @@ router.post(
   },
 );
 
-// PATCH /api/admin/webhooks/:id — URL / événements / portée / actif
+// PATCH /api/admin/webhooks/:id: URL / events / scope / active
 router.patch(
   '/:id',
   validate({
@@ -114,8 +114,8 @@ router.patch(
     const existing = await findHook(Number(req.params.id));
     const webhook = await prisma.webhook.update({
       where: { id: existing.id },
-      // Réactiver, c'est repartir de zéro : sans cela un webhook désactivé après cinq
-      // pertes se re-désactiverait au premier échec suivant.
+      // Re-enabling means starting from scratch: otherwise a webhook disabled after five failures
+      // would be disabled again at the next failure.
       data: { ...body, ...(body.active === true ? { failureStreak: 0 } : {}) },
       select: hookSelect,
     });
@@ -144,7 +144,7 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   res.status(204).end();
 });
 
-// POST /api/admin/webhooks/:id/test — livraison d'essai (via la file, signée normalement)
+// POST /api/admin/webhooks/:id/test: test delivery (via the queue, signed normally)
 router.post('/:id/test', validate({ params: idParam }), async (req, res) => {
   const existing = await findHook(Number(req.params.id));
   const deliveryId = await queueDelivery(existing.id, 'test', {
@@ -154,7 +154,7 @@ router.post('/:id/test', validate({ params: idParam }), async (req, res) => {
   res.status(202).json({ queued: true, deliveryId });
 });
 
-// GET /api/admin/webhooks/:id/deliveries — journal des livraisons, récentes d'abord
+// GET /api/admin/webhooks/:id/deliveries: delivery log, most recent first
 router.get(
   '/:id/deliveries',
   validate({
@@ -171,11 +171,11 @@ router.get(
   },
 );
 
-// POST /api/admin/webhooks/:id/deliveries/:deliveryId/replay — rejoue une livraison perdue
+// POST /api/admin/webhooks/:id/deliveries/:deliveryId/replay: replays a lost delivery
 router.post('/:id/deliveries/:deliveryId/replay', validate({ params: deliveryParams }), async (req, res) => {
   const existing = await findHook(Number(req.params.id));
-  // Rejouer vers un webhook désactivé ne produirait rien : `deliver` s'arrête net et la
-  // nouvelle ligne resterait en attente pour toujours. Mieux vaut le dire.
+  // Replaying towards a disabled webhook would produce nothing: `deliver` stops dead and the new row
+  // would stay pending forever. Better to say so.
   if (!existing.active)
     throw badRequest('Enable the webhook before replaying a delivery', 'WEBHOOK_INACTIVE');
   const deliveryId = await replayDelivery(existing.id, Number(req.params.deliveryId));

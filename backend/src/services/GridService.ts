@@ -7,33 +7,32 @@ import { decodeCursor, cursorWhere, encodeCursor } from '../lib/pagination';
 import { familyOf, type FamilyOrInactive } from '../lib/statusFamily';
 
 /**
- * Grille de suivi de production (Phase 50, lot 2) — plans en lignes, départements en
- * colonnes, une tâche par case.
+ * Production tracking grid (Phase 50, batch 2): shots in rows, departments in columns, one task per cell.
  *
- * C'est la vue que réclamait « je veux y retrouver tout le nécessaire pour faire un
- * parfait suivi de prod » : lire d'un coup d'œil où en est chaque plan, étape par étape,
- * avec qui le tient, depuis quand rien n'a bougé et si l'étape est même au programme.
+ * This is the view that was requested by "I want to find everything needed for perfect production tracking
+ * there": reading at a glance where each shot stands, step by step, who holds it, since when nothing has
+ * moved, and whether the step is even on the schedule.
  *
- * Deux règles gouvernent l'implémentation.
+ * Two rules govern the implementation.
  *
- * **La pagination se fait PAR PLAN, jamais par tâche.** Une ligne de grille est un plan
- * avec toutes ses cases : paginer par tâche couperait une ligne en deux, et la page 2
- * rendrait la fin d'un plan dont on aurait perdu l'en-tête. Le curseur porte donc
- * `(Shot.order, Shot.id)` — l'index `[projectId, deletedAt, order, id]` existe pour ça.
+ * **Pagination is done PER SHOT, never per task.** A grid row is a shot with all its cells: paginating by
+ * task would cut a row in two, and page 2 would return the end of a shot whose header had been lost. The
+ * cursor therefore carries `(Shot.order, Shot.id)` — the index `[projectId, deletedAt, order, id]` exists for
+ * that.
  *
- * **Tout le comptage reste en base.** Quatre lectures indexées par page (plus le total et
- * le référentiel de départements) : les plans, leurs tâches, l'agrégat de versions par
- * tâche — comptes et dernière activité en une seule `groupBy` —, et les départements au
- * programme de chaque plan. Aucun repliage de dix mille tâches en JavaScript.
+ * **All the counting stays in the database.** Four indexed reads per page (plus the total and the department
+ * reference): the shots, their tasks, the aggregate of versions per task — counts and last activity in a
+ * single `groupBy` — and the departments on each shot's schedule. No folding of ten thousand tasks in
+ * JavaScript.
  */
 
-/** Plafond dur d'une page. Au-delà, ce n'est plus une grille mais un export. */
+/** Hard ceiling of a page. Beyond it, this is no longer a grid but an export. */
 export const GRID_MAX_LIMIT = 200;
 
-/** Taille servie quand l'appelant n'en demande pas. */
+/** Size served when the caller does not ask for one. */
 export const GRID_DEFAULT_LIMIT = 50;
 
-/** Un département du référentiel du projet, dans l'ordre du pipe. */
+/** A department of the project's reference, in pipe order. */
 export interface GridDepartment {
   id: number;
   key: string;
@@ -42,7 +41,7 @@ export interface GridDepartment {
   order: number;
 }
 
-/** Le statut propre d'un plan : toujours un `PipelineStatus`, ou rien. */
+/** A shot's own status: always a `PipelineStatus`, or nothing. */
 export interface GridShotStatus {
   id: number;
   code: string;
@@ -51,21 +50,20 @@ export interface GridShotStatus {
 }
 
 /**
- * Le statut d'une tâche, tel qu'une case l'affiche.
+ * A task's status, as a cell displays it.
  *
- * Le serveur n'écrit AUCUN texte d'écran : quand la tâche n'a pas de statut
- * personnalisable, `name` est vide et `color` nulle — c'est au lecteur de traduire `code`
- * (la valeur de l'enum figé) ou `family`. Inventer ici « In progress » figerait la langue
- * du serveur dans quatorze catalogues.
+ * The server writes NO on-screen text: when the task has no customisable status, `name` is empty and `color`
+ * null — it is up to the reader to translate `code` (the value of the frozen enum) or `family`. Inventing "In
+ * progress" here would freeze the server's language into fourteen catalogues.
  */
 export interface GridCellStatus {
-  /** Identifiant du `PipelineStatus`, `null` quand la tâche n'a que l'enum figé. */
+  /** Identifier of the `PipelineStatus`, `null` when the task only has the frozen enum. */
   id: number | null;
-  /** Code du statut du studio, ou la valeur de l'enum (`IN_PROGRESS`) à défaut. */
+  /** Code of the studio's status, or the enum value (`IN_PROGRESS`) otherwise. */
   code: string;
-  /** Libellé du studio, vide quand aucun statut personnalisable n'est posé. */
+  /** Studio label, empty when no customisable status is set. */
   name: string;
-  /** Teinte du studio (#RRGGBB), `null` quand aucun statut personnalisable n'est posé. */
+  /** Studio tint (#RRGGBB), `null` when no customisable status is set. */
   color: string | null;
   family: FamilyOrInactive;
 }
@@ -76,10 +74,10 @@ export interface GridCell {
   status: GridCellStatus | null;
   assignee: { id: number; name: string | null } | null;
   versionCount: number;
-  /** Date de la dernière version livrée sur cette tâche, `null` si aucune. */
+  /** Date of the last version delivered on this task, `null` if none. */
   lastActivityAt: string | null;
   dueDate: string | null;
-  /** Ce département est-il au programme de ce plan (`ShotDepartments`) ? */
+  /** Is this department on this shot's schedule (`ShotDepartments`)? */
   scheduled: boolean;
 }
 
@@ -102,30 +100,29 @@ export interface ProjectGrid {
   total: number;
 }
 
-/** Filtres acceptés par la grille. Tous facultatifs, tous cumulatifs. */
+/** Filters accepted by the grid. All optional, all cumulative. */
 export interface GridFilters {
   cursor?: string;
   limit?: number;
   episodeId?: number;
   sequenceId?: number;
-  /** Clé de département (`comp`), pas son libellé. */
+  /** Department key (`comp`), not its label. */
   department?: string;
   assigneeId?: number;
-  /** Code de statut du studio, ou valeur de l'enum figé pour un studio sans référentiel. */
+  /** Studio status code, or the frozen enum value for a studio without a reference. */
   status?: string;
 }
 
-// ── Filtres ──────────────────────────────────────────────────────────────────
+// ── Filters ──────────────────────────────────────────────────────────────────
 
 const TASK_STATUS_VALUES = new Set<string>(Object.values(TaskStatus));
 
 /**
- * « Cette tâche porte-t-elle ce statut ? »
+ * "Does this task carry this status?"
  *
- * Le code du studio d'abord ; à défaut de référentiel, la valeur de l'enum figé. Les deux
- * branches sont disjointes (`pipelineStatusId: null`) : un studio relié à ShotGrid filtre
- * sur son vocabulaire, un studio sans connexion sur le nôtre, sans qu'aucun n'ait à savoir
- * lequel des deux l'API attend.
+ * The studio's code first; failing a reference, the value of the frozen enum. The two branches are disjoint
+ * (`pipelineStatusId: null`): a studio linked to ShotGrid filters on its vocabulary, a studio without a
+ * connection on ours, without either needing to know which of the two the API expects.
  */
 function statusFilter(status: string): Prisma.TaskWhereInput {
   const branches: Prisma.TaskWhereInput[] = [{ pipelineStatus: { code: status } }];
@@ -135,9 +132,8 @@ function statusFilter(status: string): Prisma.TaskWhereInput {
 }
 
 /**
- * Filtres qui portent sur les TÂCHES d'un plan. Un plan reste une ligne entière : le
- * filtre décide s'il est affiché, jamais quelles cases il montre — une grille dont les
- * colonnes se vident au filtrage ne se lit plus.
+ * Filters that bear on a shot's TASKS. A shot remains an entire row: the filter decides whether it is
+ * displayed, never which cells it shows — a grid whose columns empty out on filtering can no longer be read.
  */
 export function gridTaskFilter(filters: GridFilters): Prisma.TaskWhereInput | null {
   const clauses: Prisma.TaskWhereInput[] = [];
@@ -150,7 +146,7 @@ export function gridTaskFilter(filters: GridFilters): Prisma.TaskWhereInput | nu
   return clauses.length > 0 ? { AND: clauses } : null;
 }
 
-/** `where` des plans de la page — corbeille et masquage exclus, filtres compris. */
+/** `where` of the page's shots — trash and hiding excluded, filters included. */
 export function gridShotWhere(projectId: number, filters: GridFilters): Prisma.ShotWhereInput {
   const taskFilter = gridTaskFilter(filters);
   return {
@@ -158,14 +154,14 @@ export function gridShotWhere(projectId: number, filters: GridFilters): Prisma.S
     deletedAt: null,
     hiddenAt: null,
     ...(filters.sequenceId !== undefined ? { sequenceId: filters.sequenceId } : {}),
-    // Relation à-un facultative : la clause implique que la séquence existe, ce qui écarte
-    // d'office les plans hors épisode — c'est bien ce que « filtre par épisode » demande.
+    // Optional to-one relation: the clause implies that the sequence exists, which automatically excludes
+    // shots outside an episode — exactly what "filter by episode" asks.
     ...(filters.episodeId !== undefined ? { sequence: { episodeId: filters.episodeId } } : {}),
     ...(taskFilter ? { tasks: { some: taskFilter } } : {}),
   };
 }
 
-// ── Lectures ─────────────────────────────────────────────────────────────────
+// ── Reads ────────────────────────────────────────────────────────────────────
 
 const shotSelect = {
   id: true,
@@ -175,9 +171,8 @@ const shotSelect = {
   sequenceId: true,
   sequence: { select: { code: true, episodeId: true, episode: { select: { code: true } } } },
   pipelineStatus: { select: { id: true, code: true, name: true, color: true } },
-  // Départements au programme de ce plan : c'est ce qui distingue « rien à faire ici » de
-  // « à faire, pas commencé ». Une jointure de plus sur la table de liaison, bornée à la
-  // page — pas un balayage du projet.
+  // Departments on this shot's schedule: this is what distinguishes "nothing to do here" from "to do, not
+  // started". One more join on the link table, bounded to the page — not a sweep of the project.
   departments: { select: { id: true } },
 } satisfies Prisma.ShotSelect;
 
@@ -206,7 +201,7 @@ const taskSelect = {
 export type GridShotRow = Prisma.ShotGetPayload<{ select: typeof shotSelect }>;
 export type GridTaskRow = Prisma.TaskGetPayload<{ select: typeof taskSelect }>;
 
-/** Agrégat de versions d'une tâche : combien, et la plus récente. */
+/** Aggregate of a task's versions: how many, and the most recent one. */
 export interface GridVersionAggregate {
   taskId: number;
   count: number;
@@ -214,11 +209,11 @@ export interface GridVersionAggregate {
 }
 
 /**
- * Référentiel de départements du projet, réduit à ce qu'une colonne affiche.
+ * The project's department reference, reduced to what a column displays.
  *
- * Même règle que `DepartmentService.listForProject` — les départements propres du projet
- * remplacent entièrement ceux du studio — mais sans signer les images : une grille de deux
- * cents lignes n'a que faire de vingt URL présignées.
+ * Same rule as `DepartmentService.listForProject` — the project's own departments entirely replace those of
+ * the studio — but without signing the images: a grid of two hundred rows has no use for twenty presigned
+ * URLs.
  */
 export async function listGridDepartments(projectId: number): Promise<GridDepartment[]> {
   const select = { id: true, key: true, name: true, color: true, order: true };
@@ -241,13 +236,13 @@ export async function listGridDepartments(projectId: number): Promise<GridDepart
   });
 }
 
-// ── Assemblage (pur, testé sans base) ────────────────────────────────────────
+// ── Assembly (pure, tested without a database) ───────────────────────────────
 
-/** Clé de département d'une tâche : la relation fait foi, la colonne dénormalisée supplée. */
+/** A task's department key: the relation is authoritative, the denormalised column stands in. */
 const taskDepartmentKey = (task: GridTaskRow): string | null =>
   task.departmentRef?.key ?? task.department ?? null;
 
-/** Statut d'une case, synthétisé du statut du studio ou, à défaut, de l'enum figé. */
+/** A cell's status, synthesised from the studio's status or, failing that, from the frozen enum. */
 export function cellStatusOf(task: GridTaskRow): GridCellStatus {
   const ps = task.pipelineStatus;
   return {
@@ -260,13 +255,13 @@ export function cellStatusOf(task: GridTaskRow): GridCellStatus {
 }
 
 /**
- * Plans + tâches + agrégats → lignes de grille.
+ * Shots + tasks + aggregates → grid rows.
  *
- * Une case par département du référentiel, dans l'ordre du pipe : la grille garde ses
- * colonnes même quand un plan n'a rien à y faire. Quand plusieurs tâches partagent un
- * département sur le même plan — la contrainte d'unicité le permet, les noms diffèrent —
- * la case montre la PREMIÈRE dans l'ordre du pipe (`order`, puis `id`) ; les tâches dont
- * le département n'appartient pas au référentiel n'ont pas de colonne où s'afficher.
+ * One cell per department of the reference, in pipe order: the grid keeps its columns even when a shot has
+ * nothing to do there. When several tasks share a department on the same
+ * shot — the unique constraint allows it, the names differ — the cell shows the FIRST in pipe order (`order`,
+ * then `id`); tasks whose department does not belong to the reference have
+ * no column in which to display themselves.
  */
 export function buildGridRows(
   shots: GridShotRow[],
@@ -274,12 +269,12 @@ export function buildGridRows(
   versions: GridVersionAggregate[],
   departments: GridDepartment[],
 ): GridRow[] {
-  // La casse des clés dénormalisées n'est pas garantie sur les lignes anciennes (la
-  // colonne était une chaîne libre avant la relation) : l'index est donc insensible.
+  // The case of the denormalised keys is not guaranteed on old rows (the column was a free string before the
+  // relation): the index is therefore case-insensitive.
   const byKey = new Map(departments.map((d) => [d.key.toLowerCase(), d]));
   const versionOf = new Map(versions.map((v) => [v.taskId, v]));
 
-  /** shotId → clé de département → tâche retenue (la première de l'ordre reçu). */
+  /** shotId → department key → retained task (the first in the order received). */
   const cellTasks = new Map<number, Map<string, GridTaskRow>>();
   for (const task of tasks) {
     if (task.shotId === null) continue;
@@ -317,7 +312,7 @@ export function buildGridRows(
           versionCount: aggregate?.count ?? 0,
           lastActivityAt: aggregate?.lastAt ? aggregate.lastAt.toISOString() : null,
           dueDate: task?.dueDate ? task.dueDate.toISOString() : null,
-          // Une tâche existante vaut programme : elle n'aurait pas été créée autrement.
+          // An existing task counts as scheduled: it would not have been created otherwise.
           scheduled: scheduledIds.has(department.id) || task !== undefined,
         };
       }),
@@ -325,13 +320,13 @@ export function buildGridRows(
   });
 }
 
-/** Une page de grille. Le curseur reprend après le dernier plan servi. */
+/** A page of the grid. The cursor resumes after the last shot served. */
 export async function getProjectGrid(projectId: number, filters: GridFilters = {}): Promise<ProjectGrid> {
   const limit = Math.min(Math.max(1, Math.trunc(filters.limit ?? GRID_DEFAULT_LIMIT)), GRID_MAX_LIMIT);
   const where = gridShotWhere(projectId, filters);
   const cursor = decodeCursor(filters.cursor);
-  // Le curseur s'empile dans `AND` : le `where` porte déjà des clauses de relation qu'un
-  // étalement à la racine écraserait.
+  // The cursor stacks into `AND`: the `where` already carries relation clauses that a spread at the root
+  // would overwrite.
   const paged: Prisma.ShotWhereInput = cursor
     ? { ...where, AND: [cursorWhere('order', 'asc', cursor)] }
     : where;
@@ -339,8 +334,8 @@ export async function getProjectGrid(projectId: number, filters: GridFilters = {
   const [shots, total, departments] = await Promise.all([
     prisma.shot.findMany({
       where: paged,
-      // Exactement le tri de l'index `[projectId, deletedAt, order, id]` : `id` ferme le
-      // départage, sans quoi deux plans d'`order` égal changeraient de page.
+      // Exactly the sort of the index `[projectId, deletedAt, order, id]`: `id` closes the tie-break,
+      // otherwise two shots of equal `order` would change page.
       orderBy: [{ order: 'asc' }, { id: 'asc' }],
       take: limit,
       select: shotSelect,
@@ -355,8 +350,8 @@ export async function getProjectGrid(projectId: number, filters: GridFilters = {
       ? []
       : await prisma.task.findMany({
           where: { shotId: { in: shotIds } },
-          // L'index `[shotId, order]` sert le filtre ET le tri : c'est cet ordre qui élit
-          // la tâche d'une case quand un département en porte plusieurs.
+          // The index `[shotId, order]` serves the filter AND the sort: it is this order that elects the task
+          // of a cell when a department carries several.
           orderBy: [{ order: 'asc' }, { id: 'asc' }],
           select: taskSelect,
         });
@@ -379,7 +374,7 @@ export async function getProjectGrid(projectId: number, filters: GridFilters = {
   return {
     departments,
     rows: buildGridRows(shots, tasks, versions, departments),
-    // Une page incomplète ferme la liste : inutile de faire redemander une page vide.
+    // An incomplete page closes the list: no need to make the client request an empty page.
     nextCursor: last && shots.length >= limit ? encodeCursor(last.order, last.id) : null,
     total,
   };

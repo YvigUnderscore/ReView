@@ -11,19 +11,19 @@ vi.mock('../config/env', () => ({
 
 import { excerptOf, renderDigestHtml, sendDailyDigests, type ProjectDigest } from './DigestService';
 
-describe('DigestService — extrait de commentaire', () => {
-  it('supprime le HTML et normalise les espaces', () => {
+describe('DigestService: comment excerpt', () => {
+  it('strips the HTML and normalises whitespace', () => {
     expect(excerptOf('<p>Trop  <strong>sombre</strong>&nbsp;ici</p>')).toBe('Trop sombre ici');
   });
 
-  it('tronque au-delà de la limite', () => {
+  it('truncates beyond the limit', () => {
     const out = excerptOf('x'.repeat(300));
     expect(out.length).toBe(120);
     expect(out.endsWith('…')).toBe(true);
   });
 });
 
-describe('DigestService — rendu HTML', () => {
+describe('DigestService: HTML rendering', () => {
   const digest: ProjectDigest = {
     projectId: 5,
     projectName: 'Projet <Démo>',
@@ -32,7 +32,7 @@ describe('DigestService — rendu HTML', () => {
     comments: [{ author: 'Grace', excerpt: 'À revoir', mediaName: 'plan.mp4' }],
   };
 
-  it('contient les sections, échappe le HTML et lie le projet via APP_URL', () => {
+  it('contains the sections, escapes the HTML and links the project via APP_URL', () => {
     const html = renderDigestHtml('en', 'Yvig', [digest], new Date('2026-07-11T07:00:00'));
     expect(html).toContain('Hello Yvig');
     expect(html).toContain('Projet &lt;Démo&gt;');
@@ -43,14 +43,14 @@ describe('DigestService — rendu HTML', () => {
     expect(html).toContain('Grace');
   });
 
-  it('omet les sections vides', () => {
+  it('omits empty sections', () => {
     const html = renderDigestHtml('en', 'Yvig', [{ ...digest, versions: [], media: [] }], new Date());
     expect(html).not.toContain('New versions');
     expect(html).not.toContain('Published media');
     expect(html).toContain('Comments (1)');
   });
 
-  it('rend le digest dans la langue du destinataire, pied compris', () => {
+  it('renders the digest in the recipient\'s language, footer included', () => {
     const html = renderDigestHtml('fr', 'Yvig', [digest], new Date('2026-07-11T07:00:00'));
     expect(html).toContain('lang="fr"');
     expect(html).toContain('Bonjour Yvig');
@@ -58,22 +58,22 @@ describe('DigestService — rendu HTML', () => {
     expect(html).toContain('plateforme de review collaborative');
   });
 
-  it('date le digest dans la langue du destinataire', () => {
+  it('dates the digest in the recipient\'s language', () => {
     const day = new Date('2026-07-11T07:00:00');
     expect(renderDigestHtml('en', 'Yvig', [digest], day)).toContain('July');
     expect(renderDigestHtml('fr', 'Yvig', [digest], day)).toContain('juillet');
     expect(renderDigestHtml('ja', 'Yvig', [digest], day)).toContain('7月');
   });
 
-  // Le vocabulaire métier ne se traduit pas : un artiste lit « version » dans toutes
-  // les langues, y compris là où le reste de la phrase change d'alphabet.
-  it('garde le vocabulaire métier en anglais', () => {
+  // Business vocabulary is not translated: an artist reads "version" in every language, even where the rest
+  // of the sentence changes alphabet.
+  it('keeps the business vocabulary in English', () => {
     expect(renderDigestHtml('ja', 'Yvig', [digest], new Date())).toContain('新しい version');
   });
 });
 
-describe('DigestService — envoi', () => {
-  it('saute proprement quand SMTP n’est pas configuré', async () => {
+describe('DigestService: sending', () => {
+  it('skips cleanly when SMTP is not configured', async () => {
     await expect(sendDailyDigests()).resolves.toBe(0);
   });
 });

@@ -7,15 +7,15 @@ import type { WebhookEvent } from '../lib/webhooks';
 import { emitWebhookEvent } from './WebhookService';
 
 /**
- * Journal d'événements de l'API v1.
+ * v1 event journal.
  *
- * Deux modes de consommation, pour deux réalités d'atelier :
- *  - les **webhooks** poussent l'événement vers une URL publique (bot Discord hébergé) ;
- *  - le **journal** se lit en tirant (`GET /api/v1/events?since=…`), ce qui reste la seule
- *    option pour un daemon Prism derrière le pare-feu d'un studio, injoignable de dehors.
+ * Two modes of consumption, for two workshop realities:
+ *  - **webhooks** push the event to a public URL (a hosted Discord bot);
+ *  - the **journal** is read by pulling (`GET /api/v1/events?since=...`), which remains the only option
+ *    for a Prism daemon behind a studio's firewall, unreachable from outside.
  *
- * `publish` alimente les deux. L'écriture du journal est volontairement non bloquante :
- * un incident de base n'a pas à faire échouer la publication d'une version.
+ * `publish` feeds both. Writing to the journal is deliberately non-blocking: a database incident must
+ * not make a version publication fail.
  */
 
 export interface EventInput {
@@ -27,18 +27,16 @@ export interface EventInput {
 }
 
 /**
- * Faits qu'une couche et une route publient tous les deux.
+ * Facts that both a layer and a route publish.
  *
- * `version.published` part désormais de `VersionService` — c'est ce qui rend le flux exact
- * quel que soit le point d'entrée (interface, patch en lot, flux de publication d'un
- * média). La route v1 `PATCH /api/v1/versions/:id` publie encore le même fait juste après
- * avoir appelé ce service : sans garde, un appel v1 laisserait deux lignes de journal et
- * deux livraisons pour une seule publication.
+ * `version.published` now comes from `VersionService`, which keeps the stream exact whatever the entry
+ * point (UI, batch patch, media publication flow). The v1 route `PATCH /api/v1/versions/:id` still
+ * publishes the same fact right after calling that service: without a guard, a v1 call would leave two
+ * journal rows and two deliveries for a single publication.
  *
- * La coalescence est volontairement étroite — un seul nom d'événement, une fenêtre de
- * quelques secondes, et une clé qui descend jusqu'à l'entité : publier deux fois la même
- * version en cinq secondes, c'est la publier une fois. Elle n'est pas généralisée aux
- * autres événements, où deux changements rapprochés sont deux faits distincts.
+ * Coalescing is deliberately narrow: a single event name, a window of a few seconds, and a key that goes
+ * down to the entity. Publishing the same version twice within five seconds is publishing it once. It is
+ * not generalized to other events, where two close changes are two distinct facts.
  */
 const COALESCED_EVENTS = new Set<WebhookEvent>(['version.published']);
 const COALESCE_WINDOW_MS = 5_000;
@@ -47,7 +45,7 @@ const recentlyPublished = new Map<string, number>();
 function isRepeatOfSameFact(event: WebhookEvent, input: EventInput): boolean {
   if (!COALESCED_EVENTS.has(event)) return false;
   const now = Date.now();
-  // Purge d'abord : la table ne doit pas grossir avec le nombre d'entités touchées.
+  // Purge first: the table must not grow with the number of entities touched.
   for (const [key, at] of recentlyPublished) if (now - at > COALESCE_WINDOW_MS) recentlyPublished.delete(key);
   const key = `${event}|${input.entityType ?? ''}|${input.entityId ?? ''}`;
   const seenAt = recentlyPublished.get(key);
@@ -56,16 +54,15 @@ function isRepeatOfSameFact(event: WebhookEvent, input: EventInput): boolean {
 }
 
 /**
- * Journalise l'événement et le diffuse aux webhooks abonnés.
+ * Journals the event and broadcasts it to subscribed webhooks.
  *
- * Ne lève jamais, y compris de façon synchrone : cette fonction est appelée depuis le
- * chemin critique (publication d'une version, dépôt d'un commentaire), et un incident du
- * journal ne doit jamais faire échouer le geste métier qui l'a déclenché.
+ * Never throws, not even synchronously: this function is called from the critical path (version
+ * publication, comment posting), and a journal incident must never make the business action that
+ * triggered it fail.
  *
- * L'ordre a changé : la ligne de journal est écrite AVANT l'émission, pour que son
- * identifiant accompagne la livraison. Ce n'est pas un blocage — l'ensemble reste dans une
- * promesse non attendue — et l'échec de l'écriture n'empêche pas la livraison de partir,
- * simplement sans référence au journal.
+ * The order has changed: the journal row is written BEFORE emission, so that its identifier travels with
+ * the delivery. This is not blocking: everything stays within an unawaited promise, and a failed write
+ * does not stop the delivery from going out, merely without a journal reference.
  */
 export function publish(event: WebhookEvent, input: EventInput): void {
   try {
@@ -97,7 +94,7 @@ export function publish(event: WebhookEvent, input: EventInput): void {
 }
 
 export interface ListEventsParams {
-  /** Curseur : ne renvoyer que les événements d'id strictement supérieur. */
+  /** Cursor: return only events with an id strictly greater than this. */
   since?: number;
   limit: number;
   projectIds?: number[];
@@ -105,8 +102,8 @@ export interface ListEventsParams {
 }
 
 /**
- * Page d'événements par curseur croissant. Le curseur est un identifiant, pas une date :
- * deux événements de la même milliseconde ne peuvent pas se masquer l'un l'autre.
+ * Page of events by increasing cursor. The cursor is an identifier, not a date: two events within the
+ * same millisecond cannot hide one another.
  */
 export async function list(params: ListEventsParams) {
   const rows = await prisma.apiEvent.findMany({
@@ -130,16 +127,15 @@ export async function list(params: ListEventsParams) {
   });
   return {
     events: rows,
-    // Curseur à repasser tel quel au prochain appel — absent si la page est vide.
+    // Cursor to pass back unchanged on the next call; absent when the page is empty.
     cursor: rows.length > 0 ? rows[rows.length - 1]!.id : (params.since ?? null),
     hasMore: rows.length === params.limit,
   };
 }
 
 /**
- * Rétention : le journal est purgé par `lib/retention` (famille `apiEvent`, 30 jours par
- * défaut, réglable par l'administration). Il s'y ajoute la garantie qui manquait ici — la
- * suppression part par tranches plafonnées au lieu d'un `DELETE` sur toute la table.
- * Conséquence inchangée côté client : passé la durée, un consommateur trop en retard
- * (`GET /api/v1/events?since=…`) repart du présent au lieu de rejouer l'historique.
+ * Retention: the journal is purged by `lib/retention` (family `apiEvent`, 30 days by default, adjustable by
+ * administrators). The guarantee that was missing here is added: deletion runs in capped batches instead of
+ * a `DELETE` over the whole table. Client-side consequence unchanged: past that duration, a consumer that is
+ * too far behind (`GET /api/v1/events?since=...`) restarts from the present instead of replaying history.
  */

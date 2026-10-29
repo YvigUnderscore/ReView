@@ -12,10 +12,10 @@ import { discardUploadObjects } from '../lib/staleUploads';
 type SessionUser = { id: number; role: Role };
 
 /**
- * Restreint une requête `MediaObject` aux projets visibles par l'appelant.
- * ADMIN et SUPERVISOR ont un accès global (cf. `middleware/rbac`) ; les autres passent par
- * leur `ProjectMembership`. Le média se rattache à un projet par trois chemins possibles
- * (tâche de shot, tâche d'asset, ou asset direct), d'où les trois branches.
+ * Restricts a `MediaObject` query to the projects visible to the caller.
+ * ADMIN and SUPERVISOR have global access (see `middleware/rbac`); the others go through their
+ * `ProjectMembership`. A media attaches to a project through three possible paths
+ * (shot task, asset task, or direct asset), hence the three branches.
  */
 function accessibleMediaWhere(user: SessionUser): Prisma.MediaObjectWhereInput {
   if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return {};
@@ -28,26 +28,26 @@ function accessibleMediaWhere(user: SessionUser): Prisma.MediaObjectWhereInput {
 }
 
 /**
- * Upload résumable multipart + dédup par hash de contenu (37.A/37.B).
+ * Resumable multipart upload + deduplication by content hash (37.A/37.B).
  *
- * Reprise sans état client : `init` retrouve un upload multipart interrompu (même
- * uploader/version/nom/hash) et renvoie les parts déjà reçues (ListParts S3 = source
- * de vérité). Dédup : si un média READY du même sha256+taille existe et que son objet
- * source est encore présent, l'objet est copié côté serveur (« upload instantané »).
+ * Stateless resumption on the client side: `init` finds an interrupted multipart upload (same
+ * uploader/version/name/hash) and returns the parts already received (S3 ListParts being
+ * the source of truth). Deduplication: if a READY media with the same sha256+size exists and its source
+ * object is still present, the object is copied server-side ("instant upload").
  */
 
-/** Taille de part par défaut (min S3 : 5 Mo). Communiquée au client par `init`. */
+/** Default part size (S3 minimum: 5 MB). Communicated to the client by `init`. */
 export const MULTIPART_PART_SIZE = 16 * 1024 * 1024;
 /**
- * Parts au-delà desquelles le seul trafic de contrôle (signatures, ListParts, Complete)
- * devient coûteux : un master de 20 Go découpé en 16 Mo ferait 1 250 parts.
+ * Number of parts beyond which the control traffic alone (signatures, ListParts, Complete) becomes costly: a
+ * 20 GB master cut into 16 MB chunks would make 1,250 parts.
  */
 const MAX_PARTS = 1000;
 
 /**
- * Découpe d'un fichier : 16 Mo, agrandie au Mo supérieur au-delà de 16 Go pour rester
- * sous `MAX_PARTS`. Fonction **déterministe** de la taille : une reprise retrouve
- * exactement la découpe de l'envoi initial, même sans métadonnée.
+ * Splitting a file: 16 MB, enlarged to the next MB beyond 16 GB to stay under `MAX_PARTS`. A
+ * **deterministic** function of the size: a resumption finds exactly the split of the
+ * initial upload, even without metadata.
  */
 export function partSizeFor(size: number): number {
   const mb = 1024 * 1024;
@@ -58,7 +58,7 @@ export function partSizeFor(size: number): number {
 type Meta = Record<string, unknown>;
 
 export async function initMultipart(user: SessionUser, input: CreateUploadInput & { size: number }) {
-  // Reprise : un upload multipart interrompu du même fichier par le même compte ?
+  // Resumption: an interrupted multipart upload of the same file by the same account?
   if (input.contentHash) {
     const pending = await prisma.mediaObject.findFirst({
       where: {
@@ -75,29 +75,28 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
         const uploadedParts = await storage.listUploadedParts(pending.storageKey, meta.multipartUploadId);
         return {
           mediaObjectId: pending.id,
-          // La découpe de l'envoi initial fait foi : la recalculer changerait les
-          // frontières de parts et rendrait inutilisables celles déjà reçues.
+          // The split of the initial upload is authoritative: recomputing it would change the part boundaries
+          // and make those already received unusable.
           partSize:
             typeof meta.multipartPartSize === 'number' ? meta.multipartPartSize : partSizeFor(input.size),
           resumed: true,
           uploadedParts,
         };
       } catch {
-        // UploadId expiré/aborté côté MinIO : on repart de zéro (ligne nettoyée plus bas).
-        // L'abandon est tenté AVANT la suppression de la ligne : `listUploadedParts` échoue
-        // aussi sur un incident passager de MinIO, et le multipart est alors bien vivant —
-        // la ligne partie, son `uploadId` ne serait plus nulle part et ses parts resteraient
-        // sur le disque pour toujours. Si l'upload a réellement disparu, l'abandon échoue
-        // et n'a rien coûté.
+        // UploadId expired/aborted on the MinIO side: we start from scratch (row cleaned up below). The abort
+        // is attempted BEFORE the row is deleted: `listUploadedParts` also fails on a passing MinIO incident,
+        // and the multipart is then still alive — the row gone, its `uploadId` would be nowhere and its parts
+        // would stay on disk forever. If the upload has really disappeared, the abort fails and costs
+        // nothing.
         await storage.abortMultipartUpload(pending.storageKey, meta.multipartUploadId).catch(() => undefined);
         await prisma.mediaObject.delete({ where: { id: pending.id } }).catch(() => undefined);
       }
     }
 
-    // Dédup (37.B) : même contenu déjà présent (source encore là) → copie serveur.
-    // Bornée aux projets auxquels l'appelant a accès : sans ce filtre, la recherche du
-    // jumeau balayait toute l'instance, et une empreinte connue suffisait à faire recopier
-    // les octets d'un autre projet — et à savoir qu'un contenu donné y existe.
+    // Deduplication (37.B): the same content already present (source still there) → server-side copy.
+    // Bounded to the projects the caller has access to: without this filter, the search for the twin swept
+    // the whole instance, and a known fingerprint was enough to have the
+    // bytes of another project copied — and to learn that a given content exists there.
     const twin = await prisma.mediaObject.findFirst({
       where: {
         status: MediaStatus.READY,
@@ -164,7 +163,7 @@ export async function initMultipart(user: SessionUser, input: CreateUploadInput 
   };
 }
 
-/** Charge un média multipart appartenant à l'appelant, encore en cours d'upload. */
+/** Loads a multipart media belonging to the caller, still being uploaded. */
 async function loadOwnMultipart(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findFirst({
     where: { id, uploaderId: user.id, status: MediaStatus.UPLOADING },
@@ -198,12 +197,12 @@ export async function completeMultipart(
 }
 
 /**
- * Abandon d'un téléversement en cours, quel qu'en soit le chemin.
+ * Abandons an upload in progress, whatever its path.
  *
- * Le bouton « annuler » du client aboutit ici. Le tri des trois chemins de dépôt (multipart
- * à abandonner, préfixe de frames à vider, objet tronqué à supprimer) vit dans
- * `lib/staleUploads.discardUploadObjects`, partagé avec la purge des envois abandonnés :
- * les deux suppriment la même ligne `MediaObject`, ils doivent effacer les mêmes octets.
+ * The client's "cancel" button ends up here. The sorting of the three deposit paths (multipart to abort,
+ * frame prefix to empty, truncated object to delete) lives in `lib/staleUploads.discardUploadObjects`, shared
+ * with the purge of abandoned uploads: both delete the same `MediaObject` row, they must erase the same
+ * bytes.
  */
 export async function abortUpload(user: SessionUser, id: number) {
   const media = await prisma.mediaObject.findFirst({

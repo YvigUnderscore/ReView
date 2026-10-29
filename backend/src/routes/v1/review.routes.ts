@@ -11,16 +11,14 @@ import * as ReviewDecisionService from '../../services/ReviewDecisionService';
 import { actorOf, idParam, requireProjectId, requireVersionProject } from './helpers';
 
 /**
- * Le tour de la review, côté intégrations : qui doit regarder quoi, et ce que le studio a
- * conclu.
+ * The review round, integration side: who must look at what, and what the studio concluded.
  *
- * Trois manques que cette famille solde. `POST /versions/{id}/decision` existait depuis la
- * Phase 31 et réclame un `statusId`, sans qu'aucune route v1 ne permette de DÉCOUVRIR ces
- * identifiants — un intégrateur les lisait en base ou les codait en dur, et un studio qui
- * renommait son vocabulaire cassait le script. L'historique des décisions, que tout rapport
- * de production vient chercher, n'était rendu nulle part. Et l'assignation de review
- * (Phase 49) vivait sur la seule API web, alors que c'est exactement ce qu'un bot de
- * production veut écrire après un rendu de nuit.
+ * Three gaps this family closes. `POST /versions/{id}/decision` had existed since Phase 31 and
+ * requires a `statusId`, yet no v1 route allowed DISCOVERING these identifiers: an integrator read
+ * them from the database or hard-coded them, and a studio renaming its vocabulary broke the script.
+ * The decision history, which every production report queries, was returned nowhere. And review
+ * assignment (Phase 49) lived only on the web API, although it is exactly what a production bot wants
+ * to write after a night render.
  */
 const router = Router();
 
@@ -31,7 +29,7 @@ const note = reviewNoteSchema.describe(
     'une consigne manquante ou trop courte refuse alors l’écriture.',
 );
 
-// ── À qui la review d'une version est confiée ────────────────────────────────
+// ── Who the review of a version is assigned to ───────────────────────────────
 
 router.get(
   '/versions/:id/reviewers',
@@ -45,11 +43,10 @@ router.get(
 );
 
 /**
- * PUT /api/v1/versions/{id}/reviewers — remplace la liste, consignes comprises.
+ * PUT /api/v1/versions/{id}/reviewers: replaces the list, briefs included.
  *
- * Remplacement et non ajout : un script décrit l'état voulu (« ces trois-là »), il ne
- * compose pas une liste par accumulation. Réservé au gestionnaire du projet et à l'auteur
- * de la version, comme depuis l'interface.
+ * Replacement, not addition: a script describes the desired state ("these three"), it does not build
+ * a list by accumulation. Reserved to the project manager and the version's author, as in the UI.
  */
 router.put(
   '/versions/:id/reviewers',
@@ -68,7 +65,7 @@ router.put(
   },
 );
 
-// PATCH /api/v1/versions/{id}/reviewers/{userId} — réécrit la consigne d'une seule personne.
+// PATCH /api/v1/versions/{id}/reviewers/{userId}: rewrites the brief of a single person.
 router.patch(
   '/versions/:id/reviewers/:userId',
   requireScope('versions:write'),
@@ -87,34 +84,34 @@ router.patch(
   },
 );
 
-// ── Vocabulaire et historique des décisions ──────────────────────────────────
+// ── Vocabulary and decision history ──────────────────────────────────────────
 
 /**
- * GET /api/v1/review-statuses — les statuts que le studio emploie, et leurs identifiants.
+ * GET /api/v1/review-statuses: the statuses the studio uses, and their identifiers.
  *
- * `projectId` restreint au vocabulaire réellement postable sur ce projet : sur un projet
- * relié à ShotGrid, seuls les statuts qui ont une correspondance sur le site sont offerts,
- * et poster un autre n'irait nulle part.
+ * `projectId` restricts the list to the vocabulary actually postable on that project: on a project
+ * linked to ShotGrid, only statuses with a counterpart on the site are offered, and posting another
+ * would go nowhere.
  */
 router.get(
   '/review-statuses',
   requireScope('versions:read'),
   validate({ query: z.object({ projectId: z.coerce.number().int().positive().optional() }) }),
   async (req, res) => {
-    // Express 5 : la validation fusionne, elle ne remplace pas — la valeur reste une chaîne.
+    // Express 5: validation merges, it does not replace; the value remains a string.
     const raw = req.query.projectId;
     const projectId = raw === undefined ? undefined : Number(raw);
     if (!projectId || !Number.isInteger(projectId))
       return res.json({ statuses: await ReviewDecisionService.listStatuses() });
-    // Seule route v1 qui lisait un `projectId` sans passer par les gardes communes : un
-    // jeton cantonné au projet X y apprenait le vocabulaire — donc l'existence et le
-    // rattachement ShotGrid — du projet Y.
+    // The only v1 route that read a `projectId` without going through the common guards: a token
+    // scoped to project X could learn project Y's vocabulary, and therefore its existence and its
+    // ShotGrid link.
     await requireProjectId(req, projectId);
     res.json({ statuses: await ReviewDecisionService.listStatusesForProject(projectId) });
   },
 );
 
-// GET /api/v1/versions/{id}/decisions — l'historique, de la plus récente à la plus ancienne.
+// GET /api/v1/versions/{id}/decisions: the history, from newest to oldest.
 router.get(
   '/versions/:id/decisions',
   requireScope('versions:read'),

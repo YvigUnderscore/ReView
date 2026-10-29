@@ -29,22 +29,22 @@ import { notFound, badRequest } from '../lib/errors';
 import { type PaginationParams, type Paginated, pageArgs, paginate, orderByFrom } from '../lib/pagination';
 
 /**
- * Logique métier des projets (liste avec miniatures, CRUD, membres, réglages,
- * corbeille, activité). Les routes ne font que valider → appeler → répondre (10.D8).
+ * Project business logic (list with thumbnails, CRUD, members, settings, trash, activity). The routes only
+ * validate, call and respond (10.D8).
  */
 
 type SessionUser = { id: number; role: Role };
 
 const isGlobal = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
-/** Sélecteur `OR` des entités (versions/médias) rattachées à un projet donné. */
+/** `OR` selector for the entities (versions/media) attached to a given project. */
 const versionInProject = (projectId: number) => ({
   OR: [{ task: { shot: { projectId } } }, { task: { asset: { projectId } } }, { asset: { projectId } }],
 });
 
 /**
- * Découpe une liste d'écritures groupées. Un `createMany` passe un paramètre par colonne
- * et par ligne : dix mille tâches dépassent la limite de 65 535 paramètres de PostgreSQL.
+ * Splits a list of grouped writes. A `createMany` passes one parameter per column and per row: ten thousand
+ * tasks exceed PostgreSQL's limit of 65,535 parameters.
  */
 function chunked<T>(items: T[], size = 1000): T[][] {
   const out: T[][] = [];
@@ -53,13 +53,13 @@ function chunked<T>(items: T[], size = 1000): T[][] {
 }
 
 /**
- * Une transaction de structure (duplication, import CSV) écrit des milliers de lignes :
- * les 5 s par défaut de Prisma la font échouer en P2028 après avoir tout écrit puis tout
- * annulé. Deux minutes couvrent un long-métrage (2000 plans, 10 000 tâches).
+ * A structural transaction (duplication, CSV import) writes thousands of rows: Prisma's default 5 s makes it
+ * fail with P2028 after having written everything and then rolled everything back.
+ * Two minutes cover a feature film (2,000 shots, 10,000 tasks).
  */
 const STRUCTURE_TX = { timeout: 120_000, maxWait: 15_000 };
 
-/** Écriture groupée par lots, en récupérant les lignes créées (id + clé de rattachement). */
+/** Batched grouped write, retrieving the created rows (id + attachment key). */
 async function createManyReturning<TIn, TOut>(
   data: TIn[],
   write: (batch: TIn[]) => Promise<TOut[]>,
@@ -69,13 +69,12 @@ async function createManyReturning<TIn, TOut>(
   return out;
 }
 
-/** Identité d'un plan dans son projet : `(sequenceId, code)` — `code` seul ne suffit pas. */
+/** Identity of a shot within its project: `(sequenceId, code)` — `code` alone is not enough. */
 const shotKey = (sequenceId: number | null, code: string) => `${sequenceId ?? 'none'}::${code}`;
 
 /**
- * Liste paginée des projets visibles (globale pour admin/superviseur, membership sinon) +
- * miniatures. Par défaut les projets ARCHIVED (38.B) sont exclus ; `onlyArchived` inverse
- * le filtre pour l'onglet « Archivés ».
+ * Paginated list of visible projects (global for admin/supervisor, membership otherwise) + thumbnails. By
+ * default ARCHIVED projects (38.B) are excluded; `onlyArchived` inverts the filter for the "Archived" tab.
  */
 export async function listProjects(
   user: SessionUser,
@@ -140,10 +139,9 @@ export async function createProject(user: SessionUser, input: CreateProjectInput
 }
 
 /**
- * Duplique la structure d'un projet (38.A) : séquences, shots et — si `includeTasks` —
- * les tâches rattachées aux shots (statut réinitialisé à TODO, sans assigné). Copie les
- * réglages projet. NE copie NI médias NI versions NI assets. Sert aussi de « création
- * depuis un template » (un projet marqué `settings.isTemplate`).
+ * Duplicates a project's structure (38.A): sequences, shots and — if `includeTasks` — the tasks attached to
+ * the shots (status reset to TODO, no assignee). Copies the project settings. Copies NEITHER media NOR
+ * versions NOR assets. Also serves as "creation from a template" (a project marked `settings.isTemplate`).
  */
 export async function duplicateProject(
   user: SessionUser,
@@ -168,8 +166,8 @@ export async function duplicateProject(
   if (await prisma.project.findUnique({ where: { studioId_slug: { studioId: source.studioId, slug } } }))
     throw badRequest('A project with this name already exists', 'SLUG_TAKEN');
 
-  // Les réglages sont copiés à l'identique, sauf le marqueur de template (le nouveau
-  // projet est un projet concret, pas un modèle).
+  // The settings are copied as is, except the template marker (the new project is a concrete project, not a
+  // model).
   const settings = { ...(source.settings as Record<string, unknown>) };
   delete settings.isTemplate;
 
@@ -185,7 +183,7 @@ export async function duplicateProject(
         memberships: { create: { userId: user.id } },
       },
     });
-    // Séquences : une seule écriture, `code` (unique par projet) remappe les shots.
+    // Sequences: a single write; `code` (unique per project) remaps the shots.
     const newSeqs = await createManyReturning(
       source.sequences.map((seq) => ({
         projectId: project.id,
@@ -214,8 +212,8 @@ export async function duplicateProject(
       })),
       (data) => tx.shot.createManyAndReturn({ data, select: { id: true, code: true, sequenceId: true } }),
     );
-    // `(sequenceId, code)` identifie un plan dans un projet : on n'a pas à parier sur
-    // l'ordre de retour de l'écriture groupée pour rattacher les tâches.
+    // `(sequenceId, code)` identifies a shot within a project: we cannot bet on the return order of the
+    // grouped write to attach the tasks.
     const shotIdByKey = new Map(newShots.map((s) => [shotKey(s.sequenceId, s.code), s.id]));
 
     if (includeTasks) {
@@ -252,9 +250,9 @@ export async function duplicateProject(
 }
 
 /**
- * Import CSV de shots/tâches (38.F). `commit=false` = dry-run (aperçu + erreurs sans écrire).
- * Crée les séquences manquantes, les shots absents (unicité code par séquence) et leurs
- * tâches (type OTHER). Les shots déjà présents sont ignorés (non écrasés).
+ * CSV import of shots/tasks (38.F). `commit=false` = dry-run (preview + errors without writing).
+ * Creates the missing sequences, the absent shots (code unique per sequence) and their tasks (type OTHER).
+ * Shots already present are ignored (not overwritten).
  */
 export async function importCsv(user: SessionUser, projectId: number, csv: string, commit: boolean) {
   const { rows, errors } = parseShotsCsv(csv);
@@ -284,7 +282,7 @@ export async function importCsv(user: SessionUser, projectId: number, csv: strin
       (data) => tx.sequence.createManyAndReturn({ data, select: { id: true, code: true } }),
     );
     const seqIdByCode = new Map(newSeqs.map((s) => [s.code, s.id]));
-    // Séquences préexistantes utilisées par l'import : une seule requête pour toutes.
+    // Pre-existing sequences used by the import: a single query for all of them.
     const reusedCodes = [
       ...new Set(rows.map((r) => r.sequence).filter((c): c is string => !!c && !seqIdByCode.has(c))),
     ];
@@ -326,7 +324,7 @@ export async function importCsv(user: SessionUser, projectId: number, csv: strin
   return { committed: true, ...preview };
 }
 
-/** Export CSV des shots/tâches d'un projet (38.G), ré-importable par `importCsv`. */
+/** CSV export of a project's shots/tasks (38.G), re-importable by `importCsv`. */
 export async function exportCsv(projectId: number): Promise<string> {
   const shots = await prisma.shot.findMany({
     where: { projectId, deletedAt: null },
@@ -354,8 +352,8 @@ export async function getProject(projectId: number) {
     include: {
       memberships: {
         include: {
-          // username exposé pour l'autocomplete des mentions @user (32.B) ; `isService`
-          // pour que l'interface n'offre pas d'assigner du travail à une identité machine.
+          // username exposed for the autocomplete of @user mentions (32.B); `isService` so that the interface
+          // does not offer to assign work to a machine identity.
           user: {
             select: {
               id: true,
@@ -364,16 +362,15 @@ export async function getProject(projectId: number) {
               role: true,
               username: true,
               isService: true,
-              // Photo de profil : les écrans d'assignation montrent des visages, pas des
-              // lignes de texte — sur vingt noms qui se ressemblent, c'est la seule façon
-              // de reconnaître quelqu'un du premier coup d'œil.
+              // Profile photo: assignment screens show faces, not lines of text — among twenty similar names,
+              // it is the only way to recognise someone at a glance.
               firstName: true,
               lastName: true,
               avatarKey: true,
-              // Départements de la personne, bornés au vocabulaire de CE projet (lot 10) :
-              // la liste complète mêlerait les étapes d'autres projets, que cet écran ne
-              // sait ni montrer ni retirer. Une instance = un studio, `projectId: null`
-              // désigne donc sans ambiguïté le référentiel hérité.
+              // The person's departments, bounded to THIS project's vocabulary (batch 10): the full list
+              // would mix steps from other projects, which this screen can neither
+              // display nor remove. One instance = one studio, so `projectId: null` unambiguously designates
+              // the inherited reference.
               departments: {
                 where: { deletedAt: null, OR: [{ projectId }, { projectId: null }] },
                 select: { id: true, key: true, name: true, color: true },
@@ -386,8 +383,8 @@ export async function getProject(projectId: number) {
     },
   });
   if (!project) throw notFound('Project not found');
-  // Les photos sont signées ici, une fois par personne : la fiche du projet est la source
-  // des listes d'assignation, et chacune aurait sinon signé les mêmes avatars de son côté.
+  // Photos are signed here, once per person: the project sheet is the source of the assignment lists, and
+  // each would otherwise have signed the same avatars on its own.
   const memberships = await Promise.all(
     project.memberships.map(async ({ user, ...m }) => {
       const { avatarKey, ...rest } = user;
@@ -403,7 +400,7 @@ export interface UpdateProjectInput {
   status?: ProjectStatus;
   thumbnailKey?: string | null;
   startFrame?: number;
-  // Quota de stockage en octets (38.D) — null = illimité.
+  // Storage quota in bytes (38.D) — null = unlimited.
   storageQuota?: number | null;
 }
 
@@ -422,7 +419,7 @@ export async function updateProject(projectId: number, data: UpdateProjectInput)
   });
 }
 
-/** Usage/quota de stockage d'un projet (38.D) — octets consommés + quota (null = illimité). */
+/** Storage usage/quota of a project (38.D) — bytes consumed + quota (null = unlimited). */
 export async function getProjectUsage(projectId: number) {
   const project = await prisma.project.findFirst({
     where: { id: projectId, deletedAt: null },
@@ -434,9 +431,9 @@ export async function getProjectUsage(projectId: number) {
 }
 
 /**
- * Octets consommés par projet, en une agrégation. Le panel appelait
- * `getProjectStorageUsage` par projet, chacune balayant les médias du studio entier
- * derrière son triple OR : cent projets, cent balayages.
+ * Bytes consumed per project, in a single aggregation. The panel used to call
+ * `getProjectStorageUsage` per project, each sweeping the media of the whole studio behind its triple OR: a
+ * hundred projects, a hundred sweeps.
  */
 async function storageUsageByProject(): Promise<Map<number, bigint>> {
   const rows = await prisma.$queryRaw<{ projectId: number | null; bytes: bigint | null }[]>`
@@ -456,7 +453,7 @@ async function storageUsageByProject(): Promise<Map<number, bigint>> {
   return out;
 }
 
-/** Conso de stockage de tous les projets (38.D, admin) — pour le panel Système. */
+/** Storage consumption of all projects (38.D, admin) — for the System panel. */
 export async function listUsage() {
   const [projects, usage] = await Promise.all([
     prisma.project.findMany({
@@ -491,16 +488,16 @@ export async function purge(user: SessionUser, projectId: number) {
 }
 
 /**
- * Ajout d'un membre — ou changement de son rôle local, que le même `upsert` couvre.
+ * Adds a member — or changes their local role, which the same `upsert` covers.
  *
- * A5-03 : c'est le geste d'escalade du constat A1-03 (un superviseur local rétrograde un
- * ARTIST en CLIENT sur un compte qu'il contrôle), et il ne laissait aucune trace. On lit
- * donc l'état AVANT l'écriture : c'est la seule façon de distinguer une arrivée d'un
- * changement de rôle, et de dire depuis quel rôle — le détail qui rend la trace utile.
+ * A5-03: this is the escalation gesture of finding A1-03 (a local supervisor demotes an ARTIST to CLIENT on
+ * an account they control), and it left no trace. We therefore read the state BEFORE the write: it is the
+ * only way to distinguish an arrival from a role change, and to say from which role — the detail that makes
+ * the trace useful.
  *
- * L'acteur est optionnel parce que la synchronisation ShotGrid appelle sans session
- * humaine (`ShotgridCrewService`) ; l'entrée est posée dans tous les cas, sans auteur si
- * besoin — une trace anonyme vaut mieux qu'aucune trace.
+ * The actor is optional because the ShotGrid sync calls without a human session (`ShotgridCrewService`); the
+ * entry is written in every case, without an author if needed — an anonymous
+ * trace is worth more than none.
  */
 export async function addMember(projectId: number, userId: number, role?: Role, actor?: SessionUser | null) {
   const before = await prisma.projectMembership.findUnique({
@@ -522,7 +519,7 @@ export async function addMember(projectId: number, userId: number, role?: Role, 
   return membership;
 }
 
-/** Retrait d'accès : consigné pour les mêmes raisons que l'octroi (A5-03). */
+/** Access removal: logged for the same reasons as the grant (A5-03). */
 export async function removeMember(projectId: number, userId: number, actor?: SessionUser | null) {
   const membership = await prisma.projectMembership.delete({
     where: { userId_projectId: { userId, projectId } },
@@ -536,9 +533,9 @@ export async function removeMember(projectId: number, userId: number, actor?: Se
   });
 }
 
-/* --- Réglages : lecture effective vs lecture d'override (voir lib/projectSettings) --- */
+/* --- Settings: effective reading vs override reading (see lib/projectSettings) --- */
 
-/** JSON d'override brut d'un projet vivant, ou 404. */
+/** Raw override JSON of a live project, or 404. */
 async function storedSettings(projectId: number): Promise<Prisma.JsonValue> {
   const project = await prisma.project.findFirst({
     where: { id: projectId, deletedAt: null },
@@ -548,14 +545,14 @@ async function storedSettings(projectId: number): Promise<Prisma.JsonValue> {
   return project.settings;
 }
 
-/** Le projet a-t-il son propre pipe (lignes `Department` à sa portée) ? */
+/** Does the project have its own pipe (`Department` rows at its scope)? */
 async function hasOwnDepartments(projectId: number): Promise<boolean> {
   return (await prisma.department.count({ where: { projectId, deletedAt: null } })) > 0;
 }
 
 /**
- * Sections réellement surchargées. Les départements sont des entités depuis B1 : ce sont
- * les lignes propres au projet qui font foi, pas le JSON qui n'en est que le reflet.
+ * Sections actually overridden. Departments have been entities since B1: it is the rows specific to the
+ * project that count, not the JSON which is only their reflection.
  */
 function sectionsOf(override: ProjectSettingsOverride, ownDepartments: boolean): SettingsSection[] {
   const sections = new Set<SettingsSection>(overriddenSections(override));
@@ -565,9 +562,9 @@ function sectionsOf(override: ProjectSettingsOverride, ownDepartments: boolean):
 }
 
 /**
- * Réglages EFFECTIFS d'un projet (héritage studio appliqué) + la liste des sections qu'il
- * surcharge. C'est cette liste qui permet à l'écran de dire « hérité du studio » plutôt que
- * de laisser croire que tout appartient au projet.
+ * EFFECTIVE settings of a project (studio inheritance applied) + the list of sections it overrides. It is
+ * this list that lets the screen say "inherited from the studio" rather than
+ * letting it appear that everything belongs to the project.
  */
 export async function getSettings(projectId: number) {
   const stored = await storedSettings(projectId);
@@ -580,9 +577,8 @@ export async function getSettings(projectId: number) {
 }
 
 /**
- * Lecture d'OVERRIDE : ce que le projet stocke réellement, plus les défauts studio dont il
- * hérite. Réservée à qui peut gérer le projet — c'est la vue d'édition, pas la vue de
- * consultation.
+ * OVERRIDE reading: what the project actually stores, plus the studio defaults it inherits. Reserved to
+ * whoever can manage the project — this is the edit view, not the browse view.
  */
 export async function getSettingsOverride(projectId: number) {
   const stored = await storedSettings(projectId);
@@ -595,9 +591,9 @@ export async function getSettingsOverride(projectId: number) {
 }
 
 /**
- * Rend au projet le pipe du studio : ses départements propres sont retirés logiquement,
- * `DepartmentService.listForProject` retombe alors sur ceux du studio. Écriture directe
- * assumée ici : c'est le pendant de `syncFromSettings`, qui n'a pas d'inverse.
+ * Gives the project back the studio's pipe: its own departments are removed logically, and
+ * `DepartmentService.listForProject` then falls back on the studio's. The direct write is
+ * deliberate here: it is the counterpart of `syncFromSettings`, which has no inverse.
  */
 async function inheritDepartments(projectId: number) {
   await prisma.department.updateMany({
@@ -606,17 +602,16 @@ async function inheritDepartments(projectId: number) {
   });
 }
 
-/** Les départements sont des entités depuis B1 : la liste éditée est traduite en base. */
+/** Departments have been entities since B1: the edited list is translated into the database. */
 async function writeDepartments(projectId: number, departments: { key: string; name: string }[] | null) {
   if (departments === null) await inheritDepartments(projectId);
   else await DepartmentService.syncFromSettings(projectId, departments);
 }
 
 /**
- * PUT : remplace l'override ENTIER. Seules les sections présentes dans le corps restent
- * surchargées ; les autres retournent à l'héritage studio. L'ancien code écrivait le corps
- * tel quel — or l'écran envoyait les réglages effectifs, ce qui figeait dans le projet tout
- * ce qu'il ne faisait qu'hériter.
+ * PUT: replaces the WHOLE override. Only the sections present in the body remain overridden; the others
+ * return to the studio inheritance. The old code wrote the body as is — yet the
+ * screen sent the effective settings, which froze into the project everything it merely inherited.
  */
 export async function updateSettings(user: SessionUser, projectId: number, body: object) {
   const stored = await storedSettings(projectId);
@@ -639,9 +634,9 @@ export async function updateSettings(user: SessionUser, projectId: number, body:
 }
 
 /**
- * PATCH : écriture SECTION PAR SECTION. Une section absente du corps reste ce qu'elle
- * était, une section à `null` retourne à l'héritage studio. C'est ce qui permet
- * d'enregistrer la nomenclature d'un projet sans y figer au passage sa résolution.
+ * PATCH: SECTION-BY-SECTION write. A section absent from the body remains what it was; a section set to
+ * `null` returns to the studio inheritance. This is what makes it possible to save
+ * a project's nomenclature without freezing its resolution along the way.
  */
 export async function patchSettings(user: SessionUser, projectId: number, patch: ProjectSettingsPatch) {
   const stored = await storedSettings(projectId);
@@ -663,15 +658,15 @@ export async function patchSettings(user: SessionUser, projectId: number, patch:
 }
 
 /**
- * Éléments en corbeille d'un projet (épisodes, séquences, shots, assets, versions, médias).
+ * A project's trashed items (episodes, sequences, shots, assets, versions, media).
  *
- * Les épisodes n'y apparaissent que si le projet en a mis à la corbeille : un long-métrage,
- * qui n'a jamais activé le niveau, ne voit pas la section.
+ * Episodes only appear there if the project has trashed some: a feature film, which never enabled the level,
+ * does not see the section.
  */
 export async function getTrash(projectId: number) {
   const mediaWhere = { deletedAt: { not: null }, version: versionInProject(projectId) };
-  // Niveau Épisode éteint : la section n'existe pas, même si des épisodes dorment en
-  // corbeille — l'extinction ne détruit rien, elle ne doit rien montrer non plus.
+  // Episode level switched off: the section does not exist, even if episodes lie dormant in the trash —
+  // switching it off destroys nothing, and must not display anything either.
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { episodesEnabled: true },
@@ -705,7 +700,7 @@ export async function getTrash(projectId: number) {
   };
 }
 
-/** Localisation lisible d'une tâche/version (shot·séquence ou asset). */
+/** Readable location of a task/version (shot·sequence or asset). */
 function loc(
   t: {
     shot?: { code: string; sequence?: { code: string } | null } | null;
@@ -718,7 +713,7 @@ function loc(
   return '';
 }
 
-/** Flux d'activité (dernières versions + médias publiés) + tâches du projet. */
+/** Activity feed (latest versions + published media) + the project's tasks. */
 export async function getActivity(projectId: number) {
   const inProject = versionInProject(projectId);
   const [versions, media, tasks] = await Promise.all([
@@ -806,9 +801,9 @@ export async function getActivity(projectId: number) {
       name: t.name,
       type: t.type,
       status: t.status,
-      // Sans le statut du référentiel, l'écran retombe sur l'énumération et propose six
-      // valeurs figées là où le projet en a quinze : le vocabulaire du site est perdu
-      // entre la base et l'affichage.
+      // Without the repository's status, the screen falls back on the enumeration and offers six frozen
+      // values where the project has fifteen: the site's vocabulary is lost
+      // between the database and the display.
       pipelineStatusId: t.pipelineStatusId,
       assignee: t.assignee ? { id: t.assignee.id, name: t.assignee.name } : null,
       location: loc(t),

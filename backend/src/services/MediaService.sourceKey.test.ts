@@ -17,15 +17,15 @@ vi.mock('../middleware/rbac', () => ({ checkProjectAccess: vi.fn() }));
 
 import { mediaSourceKey, mediaViewKey } from './MediaService';
 
-describe('mediaSourceKey — source servie après suppression de l’original', () => {
-  it('sert la clé originale tant que la source existe', () => {
+describe('mediaSourceKey: source served after the original is deleted', () => {
+  it('serves the original key as long as the source exists', () => {
     expect(mediaSourceKey({ storageKey: 'k/orig.mp4', metadata: { proxyKey: 'derived/1/proxy.mp4' } })).toBe(
       'k/orig.mp4',
     );
     expect(mediaSourceKey({ storageKey: 'k/img.png', metadata: null })).toBe('k/img.png');
   });
 
-  it('sert le proxy quand la source a été supprimée après transcodage', () => {
+  it('serves the proxy when the source was deleted after transcoding', () => {
     expect(
       mediaSourceKey({
         storageKey: 'k/orig.mp4',
@@ -34,7 +34,7 @@ describe('mediaSourceKey — source servie après suppression de l’original', 
     ).toBe('derived/1/proxy.mp4');
   });
 
-  it('retombe sur la clé originale si le flag est posé sans proxy (incohérence défensive)', () => {
+  it('falls back on the original key if the flag is set without a proxy (defensive inconsistency)', () => {
     expect(mediaSourceKey({ storageKey: 'k/orig.mp4', metadata: { sourceDeleted: true } })).toBe(
       'k/orig.mp4',
     );
@@ -42,23 +42,23 @@ describe('mediaSourceKey — source servie après suppression de l’original', 
 });
 
 /**
- * Le viewer ne peut pas afficher un EXR : c'est le proxy JPEG produit par le worker qu'il
- * doit recevoir. La source, elle, reste ce que l'artiste a déposé — c'est elle qu'on
- * télécharge, qu'on envoie à ShotGrid et que sert l'API v1.
+ * The viewer cannot display an EXR: it must receive the JPEG proxy produced by the worker. The source, for
+ * its part, remains what the artist deposited — it is that which is downloaded, sent to ShotGrid and served
+ * by the API v1.
  */
-describe('mediaViewKey — clé réellement affichable', () => {
-  it('sert le proxy web dʼune image de production', () => {
+describe('mediaViewKey: key actually displayable', () => {
+  it('serves the web proxy of a production image', () => {
     expect(
       mediaViewKey({ storageKey: 'k/plate.exr', metadata: { webProxyKey: 'derived/9/proxy.jpg' } }),
     ).toBe('derived/9/proxy.jpg');
   });
 
-  it('sert lʼoriginal pour une image que le navigateur sait lire', () => {
+  it('serves the original for an image that the browser can read', () => {
     expect(mediaViewKey({ storageKey: 'k/ref.png', metadata: {} })).toBe('k/ref.png');
     expect(mediaViewKey({ storageKey: 'k/ref.png', metadata: null })).toBe('k/ref.png');
   });
 
-  it('ne diverge pas de mediaSourceKey sur la vidéo : le proxy MP4 reste la source', () => {
+  it('does not diverge from mediaSourceKey on video: the MP4 proxy remains the source', () => {
     const media = {
       storageKey: 'k/master.mxf',
       metadata: { sourceDeleted: true, proxyKey: 'derived/4/proxy.mp4' },
@@ -66,7 +66,7 @@ describe('mediaViewKey — clé réellement affichable', () => {
     expect(mediaViewKey(media)).toBe(mediaSourceKey(media));
   });
 
-  it('ignore une clé vide plutôt que de servir une URL creuse', () => {
+  it('ignores an empty key rather than serving a hollow URL', () => {
     expect(mediaViewKey({ storageKey: 'k/plate.exr', metadata: { webProxyKey: '' } })).toBe('k/plate.exr');
   });
 });

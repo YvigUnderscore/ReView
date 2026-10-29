@@ -15,23 +15,23 @@ import {
   type ShareScopeRef,
 } from './ClientShareService';
 
-describe('publishedMediaWhere — ce que voit un visiteur du lien public', () => {
+describe('publishedMediaWhere: what a visitor to the public link sees', () => {
   const where = publishedMediaWhere(7);
 
-  // Chaque branche du OR remonte à une entité différente (plan porté par une task, asset
-  // porté par une task, asset direct) : seule cette entité porte projectId/deletedAt.
+  // Each branch of the OR leads to a different entity (shot carried by a task, asset carried by a task,
+  // direct asset): only that entity carries projectId/deletedAt.
   const ownerOf = (branch: (typeof where.version.OR)[number]) =>
     branch.task ? (branch.task.shot ?? branch.task.asset) : branch.asset;
 
-  it('n’expose que les médias prêts et publiés d’une version publiée', () => {
+  it('exposes only the ready, published media of a published version', () => {
     expect(where.status).toBe('READY');
     expect(where.published).toBe(true);
     expect(where.version.published).toBe(true);
   });
 
-  // La corbeille est un soft-delete : sans ces filtres, un plan supprimé reste listé et
-  // téléchargeable sur le lien public alors qu'il a disparu de l'interface interne.
-  it('exclut la corbeille à tous les niveaux de la hiérarchie', () => {
+  // The trash is a soft delete: without these filters, a deleted shot stays listed and downloadable on the
+  // public link although it has disappeared from the internal interface.
+  it('excludes the trash at every level of the hierarchy', () => {
     expect(where.deletedAt).toBeNull();
     expect(where.version.deletedAt).toBeNull();
     for (const branch of where.version.OR) {
@@ -39,7 +39,7 @@ describe('publishedMediaWhere — ce que voit un visiteur du lien public', () =>
     }
   });
 
-  it('reste borné au projet partagé', () => {
+  it('remains bounded to the shared project', () => {
     for (const branch of where.version.OR) {
       expect(ownerOf(branch)?.projectId).toBe(7);
     }
@@ -47,12 +47,11 @@ describe('publishedMediaWhere — ce que voit un visiteur du lien public', () =>
 });
 
 /**
- * La portée est la seule chose qui sépare « montrer un plan » de « ouvrir le film entier ».
- * Elle doit donc RESTREINDRE le filtre public, jamais le remplacer : un lien de playlist qui
- * oublierait `published` montrerait des brouillons, et un lien dont la cible a disparu ne
- * doit surtout pas retomber sur le projet.
+ * The scope is the only thing separating "show a shot" from "open the whole film". It must therefore RESTRICT
+ * the public filter, never replace it: a playlist link that forgot `published` would show drafts, and a link
+ * whose target has disappeared must above all not fall back to the project.
  */
-describe('shareMediaWhere — ce que la portée retire au filtre public', () => {
+describe('shareMediaWhere: what the scope removes from the public filter', () => {
   const base: ShareScopeRef = {
     projectId: 7,
     scope: ShareScope.PROJECT,
@@ -62,11 +61,11 @@ describe('shareMediaWhere — ce que la portée retire au filtre public', () => 
   };
   const publicFilter = publishedMediaWhere(7);
 
-  it('laisse le filtre public intact pour un lien de projet', () => {
+  it('leaves the public filter intact for a project link', () => {
     expect(shareMediaWhere(base)).toEqual(publicFilter);
   });
 
-  it('ajoute la playlist sans perdre les garanties de publication', () => {
+  it('adds the playlist without losing the publication guarantees', () => {
     const where = shareMediaWhere({ ...base, scope: ShareScope.PLAYLIST, playlistId: 3 });
     expect(where.published).toBe(true);
     expect(where.deletedAt).toBeNull();
@@ -75,26 +74,26 @@ describe('shareMediaWhere — ce que la portée retire au filtre public', () => 
       deletedAt: null,
       playlistItems: { some: { playlistId: 3 } },
     });
-    // Le OR d'appartenance au projet reste : une playlist ne peut pas servir de passe-droit.
+    // The project membership OR remains: a playlist cannot serve as a pass.
     expect((where.version as { OR?: unknown[] }).OR).toHaveLength(3);
   });
 
-  it('borne un lien de version à cette version', () => {
+  it('bounds a version link to that version', () => {
     expect(shareMediaWhere({ ...base, scope: ShareScope.VERSION, versionId: 42 })).toMatchObject({
       versionId: 42,
       published: true,
     });
   });
 
-  it('borne un lien de sélection aux médias choisis', () => {
+  it('bounds a selection link to the chosen media', () => {
     const where = shareMediaWhere({ ...base, scope: ShareScope.MEDIA, mediaIds: [11, 12] });
     expect(where.id).toEqual({ in: [11, 12] });
     expect(where.published).toBe(true);
   });
 
-  // Cascade et contrainte CHECK rendent ces états impossibles en base ; s'ils survenaient,
-  // l'élargissement silencieux serait la pire réponse possible.
-  it('ne montre rien plutôt que tout quand la cible manque', () => {
+  // Cascade and CHECK constraint make these states impossible in the database; should they occur, a silent
+  // widening would be the worst possible answer.
+  it('shows nothing rather than everything when the target is missing', () => {
     for (const broken of [
       { ...base, scope: ShareScope.PLAYLIST },
       { ...base, scope: ShareScope.VERSION },
@@ -106,11 +105,10 @@ describe('shareMediaWhere — ce que la portée retire au filtre public', () => 
 });
 
 /**
- * Une playlist porte un NOM de production (« Retour client — final »), et l'accueil de la
- * page publique en affiche la liste. C'est donc une divulgation à part entière : la portée
- * doit la borner comme elle borne les médias.
+ * A playlist carries a production NAME ("Client return — final"), and the public page's home displays the
+ * list. It is therefore a disclosure in its own right: the scope must bound it just as it bounds the media.
  */
-describe('sharePlaylistWhere — quelles playlists un lien a le droit de nommer', () => {
+describe('sharePlaylistWhere: which playlists a link is allowed to name', () => {
   const base: ShareScopeRef = {
     projectId: 7,
     scope: ShareScope.PROJECT,
@@ -119,55 +117,54 @@ describe('sharePlaylistWhere — quelles playlists un lien a le droit de nommer'
     mediaIds: [],
   };
 
-  it('ne retient, pour un lien de projet, que les playlists qui ouvrent vraiment un média', () => {
+  it('retains, for a project link, only the playlists that really open a media', () => {
     const where = sharePlaylistWhere(base);
     expect(where).toMatchObject({ projectId: 7 });
-    // Le `some` est écrit avec le filtre de portée lui-même : une playlist ne peut pas
-    // servir de passe-droit vers un brouillon ou la corbeille.
+    // The `some` is written with the scope filter itself: a playlist cannot serve as a pass to a draft or to
+    // the trash.
     expect(where?.items).toEqual({ some: { version: { media: { some: shareMediaWhere(base) } } } });
   });
 
-  it('épingle un lien de playlist à la sienne, et au projet', () => {
+  it('pins a playlist link to its own playlist, and to the project', () => {
     const where = sharePlaylistWhere({ ...base, scope: ShareScope.PLAYLIST, playlistId: 3 });
     expect(where).toMatchObject({ id: 3, projectId: 7 });
   });
 
   /**
-   * Le point qui compte : lister « les playlists qui contiennent cette version » serait
-   * techniquement dans la portée des MÉDIAS, et révélerait pourtant l'existence de dailies
-   * que le destinataire n'a jamais reçus. Une portée qui ne montre qu'un plan ne nomme rien.
+   * The crucial point: listing "the playlists containing this version" would technically be within the scope
+   * of MEDIA, yet would reveal the existence of dailies the recipient never received. A scope that shows only
+   * one shot names nothing.
    */
-  it('n’en nomme AUCUNE pour un lien de version ou de sélection', () => {
+  it('names NO playlist for a version or selection link', () => {
     expect(sharePlaylistWhere({ ...base, scope: ShareScope.VERSION, versionId: 42 })).toBeNull();
     expect(sharePlaylistWhere({ ...base, scope: ShareScope.MEDIA, mediaIds: [11] })).toBeNull();
   });
 
-  it('ne retombe pas sur toutes les playlists quand la cible a disparu', () => {
+  it('does not fall back to all playlists when the target has disappeared', () => {
     expect(sharePlaylistWhere({ ...base, scope: ShareScope.PLAYLIST })).toBeNull();
   });
 });
 
 /**
- * Masquage (`hiddenAt`, cf. `VisibilityRule`) : l'élément existe, aucun écran interne ne le
- * propose. Tant que la page publique n'affichait qu'une grille de noms de fichiers, le
- * laisser passer se voyait à peine ; depuis qu'elle range les médias par entité, elle
- * afficherait le nom et le code de ce qu'on a justement décidé de masquer.
+ * Hiding (`hiddenAt`, see `VisibilityRule`): the item exists, no internal screen offers it. As long as the
+ * public page only showed a grid of file names, letting it through was barely visible; since it groups media
+ * by entity, it would display the name and code of what we have just decided to hide.
  */
-describe('publishedMediaWhere — le masquage suit jusque sur le lien public', () => {
+describe('publishedMediaWhere: hiding carries over to the public link', () => {
   const where = publishedMediaWhere(7);
   const shotBranch = where.version.OR[0] as {
     task: { shot: { hiddenAt: null; OR: { sequenceId?: null; sequence?: { hiddenAt: null } }[] } };
   };
 
-  it('écarte un plan, un asset ou une séquence masqués', () => {
+  it('excludes a hidden shot, asset or sequence', () => {
     expect(shotBranch.task.shot.hiddenAt).toBeNull();
     expect(where.version.OR[1]).toMatchObject({ task: { asset: { hiddenAt: null } } });
     expect(where.version.OR[2]).toMatchObject({ asset: { hiddenAt: null } });
   });
 
-  // Un plan sans séquence est un cas NORMAL (long-métrage) : exiger une séquence visible
-  // sans cette alternative l'écarterait du partage.
-  it('n’exige la visibilité de la séquence que lorsqu’il y en a une', () => {
+  // A shot without a sequence is a NORMAL case (feature film): requiring a visible sequence without this
+  // alternative would exclude it from sharing.
+  it('requires the sequence to be visible only when there is one', () => {
     expect(shotBranch.task.shot.OR).toEqual([
       { sequenceId: null },
       { sequence: { deletedAt: null, hiddenAt: null } },
@@ -176,28 +173,27 @@ describe('publishedMediaWhere — le masquage suit jusque sur le lien public', (
 });
 
 /**
- * Lot 14 — le masque et les ops d'une proposition d'édition de nuage sont stockés comme des
- * pièces jointes du commentaire : c'est ce qui leur donne la purge. Sur une page PUBLIQUE, les
- * présigner reviendrait à offrir au client un bitset qu'il n'ouvrira jamais, et à faire
- * descendre une URL vers un objet interne. Ils sont donc écartés avant présignature, par leur
- * clé — un vrai fichier joint par le studio, lui, continue de descendre.
+ * Batch 14: the mask and ops of a cloud-edit proposal are stored as attachments of the comment: that is what
+ * gives them their purge. On a PUBLIC page, presigning them would offer the client a bitset they will never
+ * open, and bring an internal object URL down. They are therefore excluded before presigning, by their key: a
+ * genuine file attached by the studio, on the other hand, still goes through.
  */
-describe('dropSplatEditBlobs — ce qu’un lien public ne présigne pas', () => {
+describe('dropSplatEditBlobs: what a public link does not presign', () => {
   const mask = { key: 'comments/attachments/1/mask.bin', name: 'splat-mask.bin' };
   const pdf = { key: 'comments/attachments/1/notes.pdf', name: 'notes.pdf' };
   const annotation = [
     { type: 'splat-edit', transform: null, volumes: [], mask: { key: mask.key, count: 3 }, subset: null },
   ];
 
-  it('écarte le binaire que la proposition référence', () => {
+  it('excludes the binary the proposal references', () => {
     expect(dropSplatEditBlobs([mask, pdf], annotation)).toEqual([pdf]);
   });
 
-  it('ne touche à rien sans proposition', () => {
+  it('touches nothing without a proposal', () => {
     expect(dropSplatEditBlobs([mask, pdf], [{ type: 'poi', points: [] }])).toEqual([mask, pdf]);
   });
 
-  it('garde un fichier homonyme qui n’est pas celui de la proposition', () => {
+  it('keeps a same-named file that is not the proposal\'s', () => {
     const other = { key: 'comments/attachments/2/mask.bin', name: 'splat-mask.bin' };
     expect(dropSplatEditBlobs([other], annotation)).toEqual([other]);
   });

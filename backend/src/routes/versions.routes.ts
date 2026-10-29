@@ -23,14 +23,13 @@ router.use(authenticate);
 const idParam = z.object({ id: z.coerce.number().int() });
 
 /**
- * Transformation d'affichage d'une version 3D (A2-04) : orientation en degrés + échelle
- * uniforme, exactement ce que `useSaveTransform` envoie et ce qu'`applyEulerTransform` lit.
- * C'était un `z.any()` — donc une colonne Json qu'un membre du projet remplissait de la
- * forme et du volume qu'il voulait, jusqu'au plafond du parseur de corps.
+ * Display transform of a 3D version (A2-04): orientation in degrees + uniform scale, exactly what
+ * `useSaveTransform` sends and `applyEulerTransform` reads. It used to be a `z.any()`, i.e. a Json column
+ * that any project member could fill with whatever shape and size they wanted, up to the body-parser limit.
  *
- * L'écriture est stricte, la lecture reste tolérante : les transformations héritées de
- * l'ancien viewer continuent d'être relues telles quelles côté front, qui les fusionne avec
- * ses valeurs par défaut. Champs facultatifs, mais aucun champ libre.
+ * Writing is strict, reading stays tolerant: transforms inherited from the old viewer are still read
+ * back as they are on the front end, which merges them with its defaults. Fields are optional, but
+ * there are no free-form fields.
  */
 const transformSchema = z
   .object({
@@ -41,7 +40,7 @@ const transformSchema = z
   })
   .strict();
 
-/** Résout le projet d'une version + assertion d'accès (RBAC) → renvoie le projectId. */
+/** Resolves a version's project and asserts access (RBAC); returns the projectId. */
 async function resolveVersionAccess(req: Request, id: number): Promise<number> {
   const projectId = await resolveProjectIdForVersion(id);
   if (!projectId) throw notFound('Version not found');
@@ -49,7 +48,7 @@ async function resolveVersionAccess(req: Request, id: number): Promise<number> {
   return projectId;
 }
 
-/** Résout le projet d'un parent Task XOR Asset + assertion d'accès. */
+/** Resolves the project of a parent that is either a Task XOR an Asset, and asserts access. */
 async function resolveParentAccess(req: Request, taskId?: number, assetId?: number): Promise<number> {
   const projectId = taskId ? await resolveProjectIdForTask(taskId) : await resolveProjectIdForAsset(assetId!);
   if (!projectId) throw notFound('Parent not found');
@@ -73,7 +72,7 @@ router.get(
   },
 );
 
-// POST /api/versions — artiste+ ; rattachée à une Task XOR un Asset
+// POST /api/versions: artist+; attached to a Task XOR an Asset
 router.post(
   '/',
   validate({
@@ -96,21 +95,21 @@ router.post(
         : await resolveProjectIdForAsset(body.assetId!);
     if (!projectId) throw badRequest('Parent task or asset not found');
     await assertProjectAccess(req, projectId);
-    // Le droit de contribuer se lit sur le rôle EFFECTIF (38.E), asserté par le service :
-    // tester `req.user.role === CLIENT` ici laissait passer un membre rétrogradé CLIENT sur
-    // ce projet et refusait un ARTIST promu SUPERVISOR dessus.
+    // Contribution rights are read from the EFFECTIVE role (38.E), asserted by the service:
+    // testing `req.user.role === CLIENT` here would let a member demoted to CLIENT on this project
+    // through, and refuse an ARTIST promoted to SUPERVISOR on it.
     res.status(201).json({ version: await VersionService.create(req.user!, projectId, body) });
   },
 );
 
-// GET /api/versions/:id (avec médias)
+// GET /api/versions/:id (with media)
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await resolveVersionAccess(req, id);
   res.json({ version: await VersionService.getDetail(req.user!.id, id) });
 });
 
-// PATCH /api/versions/:id — auteur ou superviseur+. Publication (PUBLISHED) réservée superviseur+.
+// PATCH /api/versions/:id: author or supervisor+. Publication (PUBLISHED) reserved to supervisor+.
 router.patch(
   '/:id',
   validate({
@@ -129,17 +128,17 @@ router.patch(
 );
 
 /**
- * POST /api/versions/:id/publish — publie d'un geste tous les brouillons de la version
- * (Phase 46). La version bascule publiée dès qu'il ne lui reste plus un seul brouillon.
+ * POST /api/versions/:id/publish: publishes all of the version's drafts in one gesture (Phase 46).
+ * The version flips to published as soon as no draft remains.
  */
 router.post('/:id/publish', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
-  // Contribution jugée sur le rôle effectif du projet (38.E) — assertée par le service.
+  // Contribution judged on the project's effective role (38.E), asserted by the service.
   res.json(await VersionService.publishAll(req.user!, projectId, id));
 });
 
-// DELETE /api/versions/:id — corbeille (soft-delete, auteur ou superviseur+)
+// DELETE /api/versions/:id: trash (soft-delete, author or supervisor+)
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
@@ -147,7 +146,7 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   res.status(204).end();
 });
 
-// POST /api/versions/:id/restore — auteur ou superviseur+
+// POST /api/versions/:id/restore: author or supervisor+
 router.post('/:id/restore', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
@@ -155,7 +154,7 @@ router.post('/:id/restore', validate({ params: idParam }), async (req, res) => {
   res.status(204).end();
 });
 
-// POST /api/versions/:id/decision — décision de review (SUPERVISOR+), historisée (Phase 31)
+// POST /api/versions/:id/decision: review decision (SUPERVISOR+), recorded in history (Phase 31)
 router.post(
   '/:id/decision',
   validate({
@@ -165,8 +164,8 @@ router.post(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveVersionAccess(req, id);
-    // Décider d'une review est un acte de supervision DE CE PROJET : le rôle effectif fait
-    // foi (38.E), pas le rôle global — sinon le superviseur nommé sur le projet en est exclu.
+    // Deciding a review is a supervision act ON THIS PROJECT: the effective role counts (38.E), not the
+    // global role, otherwise a supervisor named on the project would be excluded.
     await assertProjectManage(req.user!.id, req.user!.role, projectId);
     const { statusId, comment } = req.body as { statusId: number; comment?: string };
     res.status(201).json({
@@ -175,14 +174,14 @@ router.post(
   },
 );
 
-// GET /api/versions/:id/decisions — historique des décisions (membres du projet)
+// GET /api/versions/:id/decisions: decision history (project members)
 router.get('/:id/decisions', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await resolveVersionAccess(req, id);
   res.json({ decisions: await ReviewDecisionService.history(id) });
 });
 
-// DELETE /api/versions/:id/purge — suppression définitive (superviseur+)
+// DELETE /api/versions/:id/purge: permanent deletion (supervisor+)
 router.delete('/:id/purge', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);

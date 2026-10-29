@@ -25,16 +25,16 @@ import { toProject } from '../../lib/v1Resources';
 import * as Resolve from '../../services/PipelineResolveService';
 
 /**
- * Points d'entrée de découverte de l'API v1.
+ * Discovery entry points of API v1.
  *
- * Un client de pipeline démarre par ici : il apprend ce que son token peut faire (`/me`),
- * quelles valeurs le studio accepte (`/schema` — types de tâches, statuts de review
- * personnalisés…) et comment traduire un nom en entité (`/resolve`). Sans cela, chaque
- * intégration coderait en dur des énumérations qui divergent au premier changement.
+ * A pipeline client starts here: it learns what its token can do (`/me`), which values the studio
+ * accepts (`/schema`: task types, custom review statuses...) and how to translate a name into an
+ * entity (`/resolve`). Without this, each integration would hard-code enumerations that diverge at
+ * the first change.
  */
 const router = Router();
 
-// GET /api/v1 — index : version, capacités, chemins utiles
+// GET /api/v1: index: version, capabilities, useful paths
 router.get('/', (_req, res) => {
   res.json({
     name: 'ReView API',
@@ -46,21 +46,21 @@ router.get('/', (_req, res) => {
       idempotency: 'Idempotency-Key',
       events: '/api/v1/events',
       publish: '/api/v1/publish',
-      // Chemins de lecture : un outil découvre ici qu'il peut rapatrier un fichier.
+      // Read paths: a tool discovers here that it can fetch a file.
       latest: '/api/v1/latest',
       mediaUrl: '/api/v1/media/{id}/url',
     },
   });
 });
 
-// GET /api/v1/me — identité effective et pouvoirs réels du jeton présenté
+// GET /api/v1/me: effective identity and real powers of the presented token
 router.get('/me', async (req, res) => {
   const user = req.user!;
   const memberships = await prisma.projectMembership.findMany({
     where: { userId: user.id },
     select: { projectId: true, role: true },
   });
-  // Portée transverse (aucun projet visé) : c'est le seul cas où le rôle global décide.
+  // Cross-cutting scope (no target project): the only case where the global role decides.
   const manager = isGlobalManager(user.role);
   res.json({
     user: { id: user.id, email: user.email, role: user.role },
@@ -72,12 +72,12 @@ router.get('/me', async (req, res) => {
           projectId: req.apiToken.projectId ?? null,
         }
       : { kind: 'session', scopes: null, projectId: null },
-    // Un manager global voit tous les projets : la liste des adhésions serait trompeuse.
+    // A global manager sees all projects: a membership list would be misleading.
     projects: manager ? 'all' : memberships,
   });
 });
 
-// GET /api/v1/schema — valeurs acceptées par cette instance (enums + statuts du studio)
+// GET /api/v1/schema: values accepted by this instance (enums and studio statuses)
 router.get('/schema', requireScope('projects:read'), async (_req, res) => {
   const reviewStatuses = await prisma.reviewStatus.findMany({
     orderBy: { order: 'asc' },
@@ -94,14 +94,14 @@ router.get('/schema', requireScope('projects:read'), async (_req, res) => {
       mediaStatus: Object.values(MediaStatus),
       role: Object.values(Role),
     },
-    // Statuts de review propres au studio (Phase 31) : ce sont eux qu'une décision référence.
+    // Studio-specific review statuses (Phase 31): these are what a decision references.
     reviewStatuses,
     scopes: ALL_SCOPES,
     events: API_EVENTS,
   });
 });
 
-// GET /api/v1/resolve?path=PROJ/SQ010/SH0100/anim — chemin → entités
+// GET /api/v1/resolve?path=PROJ/SQ010/SH0100/anim: path to entities
 router.get(
   '/resolve',
   requireScope('projects:read'),

@@ -28,7 +28,7 @@ import { storage } from './StorageService';
 beforeEach(() => vi.clearAllMocks());
 
 describe('resolveProject', () => {
-  it('rend le projet porteur, entité par entité', async () => {
+  it('returns the carrying project, entity by entity', async () => {
     vi.mocked(prisma.sequence.findFirst).mockResolvedValue({ projectId: 7 } as never);
     vi.mocked(prisma.shot.findFirst).mockResolvedValue({ projectId: 8 } as never);
     vi.mocked(prisma.asset.findFirst).mockResolvedValue({ projectId: 9 } as never);
@@ -37,10 +37,10 @@ describe('resolveProject', () => {
     await expect(resolveProject('asset', 1)).resolves.toBe(9);
   });
 
-  it('refuse une entité en corbeille comme une entité absente', async () => {
+  it('refuses an entity in the trash as an absent entity', async () => {
     vi.mocked(prisma.shot.findFirst).mockResolvedValue(null);
     await expect(resolveProject('shot', 1)).rejects.toThrow();
-    // La corbeille est bien dans le filtre, pas seulement l'identifiant.
+    // The trash is indeed in the filter, not only the identifier.
     expect(vi.mocked(prisma.shot.findFirst).mock.calls[0]![0]).toMatchObject({
       where: { id: 1, deletedAt: null },
     });
@@ -48,7 +48,7 @@ describe('resolveProject', () => {
 });
 
 describe('presign', () => {
-  it('construit la clé depuis le type d’image, sans rien recevoir du client', async () => {
+  it('builds the key from the image type, without receiving anything from the client', async () => {
     await expect(presign('asset', 42, 'image/png')).resolves.toEqual({
       url: 'https://minio/put',
       key: 'entity-thumbs/asset/42.png',
@@ -61,14 +61,14 @@ describe('presign', () => {
     });
   });
 
-  it('rejette un type qui n’est pas une image reconnue', async () => {
+  it('rejects a type that is not a recognised image', async () => {
     await expect(presign('asset', 1, 'application/pdf')).rejects.toThrow();
     await expect(presign('asset', 1, 'image/gif')).rejects.toThrow();
   });
 });
 
 describe('set', () => {
-  it('enregistre une clé qui désigne bien l’entité', async () => {
+  it('records a key that does designate the entity', async () => {
     await set('shot', 12, 'entity-thumbs/shot/12.jpg');
     expect(prisma.shot.update).toHaveBeenCalledWith({
       where: { id: 12 },
@@ -76,7 +76,7 @@ describe('set', () => {
     });
   });
 
-  it('efface la vignette : l’entité retombe sur le média publié', async () => {
+  it('clears the thumbnail: the entity falls back on the published media', async () => {
     await set('sequence', 4, null);
     expect(prisma.sequence.update).toHaveBeenCalledWith({
       where: { id: 4 },
@@ -84,26 +84,26 @@ describe('set', () => {
     });
   });
 
-  it('refuse une clé qui pointe ailleurs — un autre type, une autre entité, un média', async () => {
+  it('refuses a key pointing elsewhere — another type, another entity, a media', async () => {
     await expect(set('shot', 12, 'entity-thumbs/asset/12.jpg')).rejects.toThrow();
     await expect(set('shot', 12, 'entity-thumbs/shot/13.jpg')).rejects.toThrow();
     await expect(set('shot', 12, 'derived/99/thumbnail.webp')).rejects.toThrow();
     expect(prisma.shot.update).not.toHaveBeenCalled();
   });
 
-  it('refuse un préfixe qui n’est qu’un début d’identifiant', async () => {
-    // Sans le point final, « shot/1 » couvrirait « shot/12 », « shot/123 »…
+  it('refuses a prefix that is only the start of an identifier', async () => {
+    // Without the final dot, "shot/1" would cover "shot/12", "shot/123"…
     await expect(set('shot', 1, 'entity-thumbs/shot/12.jpg')).rejects.toThrow();
   });
 
-  it('oublie l’URL mémorisée : remplacer une vignette réécrit le même objet', async () => {
-    // Même entité, même extension ⇒ même clé. Sans cet oubli, l'URL présignée resterait
-    // identique pendant toute la tranche et la carte afficherait l'ancienne image.
+  it('forgets the memoized URL: replacing a thumbnail rewrites the same object', async () => {
+    // Same entity, same extension ⇒ same key. Without this forgetting, the presigned URL would remain
+    // identical for the whole slice and the card would show the old image.
     await set('shot', 12, 'entity-thumbs/shot/12.jpg');
     expect(storage.forgetPresignedUrl).toHaveBeenCalledWith('entity-thumbs/shot/12.jpg');
   });
 
-  it('n’oublie rien quand la clé est refusée ou effacée', async () => {
+  it('forgets nothing when the key is refused or cleared', async () => {
     await expect(set('shot', 12, 'derived/99/thumbnail.webp')).rejects.toThrow();
     await set('shot', 12, null);
     expect(storage.forgetPresignedUrl).not.toHaveBeenCalled();

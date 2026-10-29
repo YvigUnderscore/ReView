@@ -5,13 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MediaKind, Role } from '@prisma/client';
 
 /**
- * Refus des formats illisibles **avant** le transfert.
+ * Refusal of unreadable formats **before** the transfer.
  *
- * Le défaut corrigé ici est le plus coûteux de l'ingestion : la table d'extensions
- * annonçait EXR, DPX, TIFF, TGA, MXF et AVI, la validation d'en-tête ne les connaissait
- * pas, et le contrôle n'avait lieu qu'à la finalisation — soit après le transfert complet
- * du master. Deux garanties sont vérifiées : ce qui est annoncé passe, et ce qui n'est pas
- * lisible est refusé au premier appel, sans qu'un octet ait quitté le poste de l'artiste.
+ * The defect corrected here is the costliest of ingestion: the extension table announced EXR, DPX, TIFF, TGA,
+ * MXF and AVI, header validation did not know them, and the check only took place at finalization — that is,
+ * after the full transfer of the master. Two guarantees are verified: what is announced passes, and what is
+ * not readable is refused at the first call, without a single byte having left the artist's workstation.
  */
 const createUpload = vi.fn();
 
@@ -37,7 +36,7 @@ import { start } from './PublishFlowService';
 const actor = { id: 1, role: Role.SUPERVISOR, email: 'td@studio.test' };
 const base = { path: 'PROJ/SQ010/SH0100/comp', createMissing: true };
 
-/** Type de média retenu par `start` au dernier appel. */
+/** Media type retained by `start` on the last call. */
 const lastKind = () => (createUpload.mock.calls.at(-1)?.[1] as { kind: MediaKind }).kind;
 
 beforeEach(() => {
@@ -45,48 +44,48 @@ beforeEach(() => {
   createUpload.mockResolvedValue({ mediaObjectId: 99, uploadUrl: 'https://minio/put', namingWarning: false });
 });
 
-describe('PublishFlowService.start — formats réellement livrés en VFX', () => {
-  it('ouvre la publication dʼun rendu EXR', async () => {
+describe('PublishFlowService.start: formats really delivered in VFX', () => {
+  it('opens the publication of an EXR render', async () => {
     await start(actor, { ...base, filename: 'SH0100_comp_v012.exr' });
     expect(lastKind()).toBe(MediaKind.IMAGE);
   });
 
-  it('ouvre la publication dʼune plaque DPX et dʼun matte TGA', async () => {
+  it('opens the publication of a DPX plate and a TGA matte', async () => {
     await start(actor, { ...base, filename: 'SH0100_plate_v001.dpx' });
     expect(lastKind()).toBe(MediaKind.IMAGE);
     await start(actor, { ...base, filename: 'SH0100_matte_v001.tga' });
     expect(lastKind()).toBe(MediaKind.IMAGE);
   });
 
-  it('ouvre la publication dʼun master MXF et dʼun AVI', async () => {
+  it('opens the publication of an MXF master and an AVI', async () => {
     await start(actor, { ...base, filename: 'SH0100_master_v003.mxf' });
     expect(lastKind()).toBe(MediaKind.VIDEO);
     await start(actor, { ...base, filename: 'SH0100_ref_v001.avi' });
     expect(lastKind()).toBe(MediaKind.VIDEO);
   });
 
-  it('refuse un format illisible avant tout transfert, en nommant ce qui est accepté', async () => {
+  it('refuses an unreadable format before any transfer, naming what is accepted', async () => {
     await expect(start(actor, { ...base, filename: 'SH0100_comp_v012.psd' })).rejects.toMatchObject({
       code: 'KIND_UNKNOWN',
     });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it('refuse aussi quand le client impose un « kind » que lʼextension ne peut pas honorer', async () => {
+  it('also refuses when the client imposes a "kind" that the extension cannot honour', async () => {
     await expect(
       start(actor, { ...base, filename: 'notes.txt', kind: MediaKind.IMAGE }),
     ).rejects.toMatchObject({ code: 'UNSUPPORTED_FORMAT' });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it('refuse un EXR déclaré VIDEO : la validation dʼen-tête le rejetterait après coup', async () => {
+  it('refuses an EXR declared as VIDEO: header validation would reject it afterwards', async () => {
     await expect(
       start(actor, { ...base, filename: 'SH0100_comp_v012.exr', kind: MediaKind.VIDEO }),
     ).rejects.toMatchObject({ code: 'UNSUPPORTED_FORMAT' });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it('le message dʼerreur énumère les extensions admises pour ce type', async () => {
+  it('the error message enumerates the extensions admitted for this type', async () => {
     await expect(start(actor, { ...base, filename: 'cache.abc', kind: MediaKind.MODEL_3D })).rejects.toThrow(
       /\.glb/,
     );

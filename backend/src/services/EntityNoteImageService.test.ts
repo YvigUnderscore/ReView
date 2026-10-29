@@ -28,46 +28,46 @@ beforeEach(() => {
 });
 
 /**
- * La clé d'une image de fiche est la seule chose qui décide de l'accès : elle est donc lue
- * strictement, et tout ce qui s'en écarte est refusé plutôt qu'interprété.
+ * The key of a sheet image is the only thing that decides access: it is therefore read strictly, and anything
+ * that deviates is refused rather than interpreted.
  */
 describe('parseNoteImageKey', () => {
-  it('lit le type et l’identifiant de l’entité porteuse', () => {
+  it('reads the type and the identifier of the carrying entity', () => {
     expect(parseNoteImageKey('note-images/shot/12/1700-planche.png')).toEqual({ kind: 'shot', id: 12 });
   });
 
-  it('refuse une remontée de chemin', () => {
+  it('refuses a path traversal', () => {
     expect(parseNoteImageKey('note-images/shot/12/../../avatars/1.png')).toBeNull();
   });
 
-  it('refuse un type inconnu et un identifiant qui n’en est pas un', () => {
+  it('refuses an unknown type and an identifier that is not one', () => {
     expect(parseNoteImageKey('note-images/media/12/a.png')).toBeNull();
     expect(parseNoteImageKey('note-images/shot/douze/a.png')).toBeNull();
   });
 
-  it('refuse un sous-dossier de plus — la convention n’en a pas', () => {
+  it('refuses one sub-folder too many — the convention has none', () => {
     expect(parseNoteImageKey('note-images/shot/12/sous/a.png')).toBeNull();
   });
 
-  it('ignore ce qui n’est pas une image de fiche', () => {
+  it('ignores what is not a sheet image', () => {
     expect(parseNoteImageKey('comments/attachments/9/note.webm')).toBeNull();
     expect(parseNoteImageKey('https://ailleurs.test/a.jpg')).toBeNull();
   });
 });
 
 describe('buildNoteImageKey', () => {
-  it('range l’image sous son entité et impose l’extension du type déclaré', () => {
+  it('files the image under its entity and enforces the extension of the declared type', () => {
     const key = buildNoteImageKey('asset', 3, 'Planche Finale.PNG', 'image/png');
     expect(key).toMatch(/^note-images\/asset\/3\/\d+-Planche_Finale\.png$/);
   });
 
-  it('refuse un type que le navigateur n’affichera pas', () => {
+  it('refuses a type the browser will not display', () => {
     expect(() => buildNoteImageKey('shot', 1, 'x.psd', 'image/vnd.adobe.photoshop')).toThrow();
   });
 });
 
 describe('presign', () => {
-  it('rend l’URL de dépôt et celle de lecture — l’image doit s’afficher aussitôt', async () => {
+  it('returns the upload URL and the read URL — the image must display right away', async () => {
     const out = await presign('shot', 12, 'ref.png', 'image/png');
     expect(out.key).toContain('note-images/shot/12/');
     expect(out.url).toContain('?put');
@@ -76,7 +76,7 @@ describe('presign', () => {
 });
 
 describe('resolveMany', () => {
-  it('ne rend l’URL que si le projet de l’entité est accessible', async () => {
+  it('returns the URL only if the entity\'s project is accessible', async () => {
     vi.mocked(resolveProject).mockResolvedValue(42);
     vi.mocked(checkProjectAccess).mockResolvedValue(false);
 
@@ -85,7 +85,7 @@ describe('resolveMany', () => {
     expect(urls).toEqual({});
   });
 
-  it('ne vérifie l’appartenance qu’une fois par entité, quel que soit le nombre d’images', async () => {
+  it('checks membership only once per entity, whatever the number of images', async () => {
     vi.mocked(resolveProject).mockResolvedValue(42);
     vi.mocked(checkProjectAccess).mockResolvedValue(true);
 
@@ -99,7 +99,7 @@ describe('resolveMany', () => {
     expect(vi.mocked(checkProjectAccess)).toHaveBeenCalledTimes(1);
   });
 
-  it('ignore l’image d’une entité disparue sans emporter le reste de la planche', async () => {
+  it('ignores the image of a vanished entity without taking the rest of the sheet with it', async () => {
     vi.mocked(checkProjectAccess).mockResolvedValue(true);
     vi.mocked(resolveProject).mockImplementation(async (_kind, id) => {
       if (id === 999) throw new Error('Entity not found');
@@ -111,7 +111,7 @@ describe('resolveMany', () => {
     expect(urls).toEqual({ 'note-images/shot/12/a.png': expect.any(String) });
   });
 
-  it('laisse passer une fiche ancienne qui pointe encore vers l’extérieur', async () => {
+  it('lets through an old sheet still pointing outside', async () => {
     vi.mocked(resolveProject).mockResolvedValue(42);
     vi.mocked(checkProjectAccess).mockResolvedValue(true);
 

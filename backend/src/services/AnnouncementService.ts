@@ -7,9 +7,9 @@ import { notFound } from '../lib/errors';
 import { logAudit } from './AuditService';
 
 /**
- * Annonces studio (Phase 22) : CRUD admin + résolution des annonces « actives » pour un
- * utilisateur selon la période, le ciblage par rôle et la fréquence (permanent / 1re connexion /
- * 1re du jour), pilotée par les accusés de lecture (`AnnouncementRead`).
+ * Studio announcements (Phase 22): admin CRUD + resolution of the "active" announcements for a user
+ * according to the period, role targeting and frequency (permanent / first login / first of the day),
+ * driven by read acknowledgements (`AnnouncementRead`).
  */
 
 type SessionUser = { id: number; role: Role };
@@ -36,7 +36,7 @@ const data = (i: AnnouncementInput) => ({
   active: i.active,
 });
 
-/** Liste complète (admin) + nombre d'accusés de lecture. */
+/** Full list (admin) + number of read acknowledgements. */
 export async function list() {
   return prisma.announcement.findMany({
     orderBy: { createdAt: 'desc' },
@@ -63,7 +63,7 @@ export async function remove(user: SessionUser, id: number) {
   logAudit({ userId: user.id, action: 'ANNOUNCEMENT_DELETE', entityType: 'Announcement', entityId: id });
 }
 
-/** Une lecture le même jour civil UTC (fréquence 1re du jour — déterministe, sans fuseau). */
+/** A read on the same UTC calendar day (first-of-day frequency: deterministic, timezone-free). */
 function readToday(readAt: Date, now: Date): boolean {
   return (
     readAt.getUTCFullYear() === now.getUTCFullYear() &&
@@ -72,16 +72,16 @@ function readToday(readAt: Date, now: Date): boolean {
   );
 }
 
-/** Décide si une annonce doit s'afficher pour cet utilisateur selon fréquence + dernier accusé. */
+/** Decides whether an announcement should be shown to this user, based on frequency and the last acknowledgement. */
 export function shouldShow(frequency: AnnouncementFrequency, lastReadAt: Date | null, now: Date): boolean {
   if (frequency === AnnouncementFrequency.PERMANENT) return true;
   if (!lastReadAt) return true;
   if (frequency === AnnouncementFrequency.FIRST_LOGIN) return false;
-  // FIRST_OF_DAY : réafficher si le dernier accusé n'est pas d'aujourd'hui.
+  // FIRST_OF_DAY: show again if the last acknowledgement is not from today.
   return !readToday(lastReadAt, now);
 }
 
-/** Annonces à présenter maintenant à l'utilisateur (période + rôle + fréquence). */
+/** Announcements to present to the user now (period + role + frequency). */
 export async function active(user: SessionUser) {
   const now = new Date();
   const rows = await prisma.announcement.findMany({
@@ -104,7 +104,7 @@ export async function active(user: SessionUser) {
     .map(({ reads: _reads, ...a }) => a);
 }
 
-/** Accusé de lecture (upsert) : masque l'annonce selon sa fréquence. */
+/** Read acknowledgement (upsert): hides the announcement according to its frequency. */
 export async function acknowledge(user: SessionUser, id: number) {
   if (!(await prisma.announcement.findUnique({ where: { id }, select: { id: true } })))
     throw notFound('Announcement not found');

@@ -6,25 +6,25 @@ import { prisma } from '../lib/prisma';
 import { badRequest, conflict, notFound } from '../lib/errors';
 
 /**
- * Statuts de pipeline personnalisables (tâches et plans).
+ * Customisable pipeline statuses (tasks and shots).
  *
- * L'énumération `TaskStatus` reste en base : les colonnes du kanban, les statistiques
- * et l'API v1 s'y appuient. Chaque statut personnalisé porte donc son équivalent
- * (`legacyStatus`), écrit en parallèle. Un studio sans ShotGrid garde exactement ses
- * six statuts d'origine ; un studio connecté voit ceux de son site.
+ * The `TaskStatus` enumeration remains in the database: the kanban columns, the statistics and the API v1
+ * rely on it. Each customised status therefore carries its equivalent
+ * (`legacyStatus`), written in parallel. A studio without ShotGrid keeps exactly its six original statuses; a
+ * connected studio sees those of its site.
  */
 
 /**
- * Les quatre périmètres qui portent un statut.
+ * The four scopes that carry a status.
  *
- * ShotGrid tient une liste **par entité** (`sg_status_list` sur Task, Shot, Sequence et
- * Asset), et elles ne coïncident pas : quatre valeurs sur une séquence, quinze sur un
- * plan. Les confondre proposait à l'écran des états que le site refusait à l'écriture —
- * et l'asset, lui, empruntait le vocabulaire des tâches faute d'en avoir un.
+ * ShotGrid keeps a list **per entity** (`sg_status_list` on Task, Shot, Sequence and Asset), and they do not
+ * coincide: four values on a sequence, fifteen on a shot. Confusing them
+ * offered the screen states that the site refused on write — and the asset, for its part, borrowed the task
+ * vocabulary for lack of one of its own.
  */
 export type Scope = 'task' | 'shot' | 'sequence' | 'asset';
 
-/** Les périmètres proposés dans les écrans de réglage, dans l'ordre du pipe. */
+/** The scopes offered in the settings screens, in pipe order. */
 export const SCOPES: readonly Scope[] = ['task', 'shot', 'sequence', 'asset'];
 
 export interface StatusInput {
@@ -38,9 +38,9 @@ export interface StatusInput {
   legacyStatus?: TaskStatus | null;
 }
 
-// `order` seul laisse des égalités que Postgres ne départage pas : deux statuts de même
-// rang sortiraient dans un ordre variable d'un appel à l'autre, et le « premier » servant
-// de repli changerait sans raison. Le code tranche.
+// `order` alone leaves ties that Postgres does not break: two statuses of the same rank would come out in a
+// varying order from one call to the next, and the "first" serving as a fallback
+// would change for no reason. The code decides.
 const ORDER_BY = [{ scope: 'asc' as const }, { order: 'asc' as const }, { code: 'asc' as const }];
 
 export async function list(scope?: Scope): Promise<PipelineStatus[]> {
@@ -51,18 +51,18 @@ export async function list(scope?: Scope): Promise<PipelineStatus[]> {
 }
 
 /**
- * Statuts à proposer sur un projet donné.
+ * Statuses to offer on a given project.
  *
- * Trois niveaux, du plus précis au plus général :
- *   1. le vocabulaire propre au projet, s'il en a un (B2) ;
- *   2. sinon celui du studio, filtré par origine — un projet relié parle le vocabulaire de
- *      son site et lui seul, un projet autonome ne doit jamais se voir proposer les statuts
- *      importés d'un site auquel il n'est pas relié ;
- *   3. en dernier recours, et **seulement pour un projet relié** dont on n'a pas encore lu
- *      les statuts, le vocabulaire local : mieux vaut ça qu'une liste vide.
+ * Three levels, from the most precise to the most general:
+ *   1. the vocabulary specific to the project, if it has one (B2);
+ * 2. otherwise that of the studio, filtered by origin — a linked project speaks the vocabulary of its site
+ * and that alone, a standalone project must never be offered the statuses
+ *      imported from a site it is not linked to;
+ * 3. as a last resort, and **only for a linked project** whose statuses have not yet been read, the local
+ * vocabulary: better that than an empty list.
  *
- * Le troisième niveau ne joue jamais dans l'autre sens. C'est ce qui manquait : le repli
- * précédent servait les statuts ShotGrid à des projets autonomes.
+ * The third level never plays the other way round. That was the missing piece: the previous fallback served
+ * ShotGrid statuses to standalone projects.
  */
 export async function listForProject(
   projectId: number,
@@ -71,8 +71,8 @@ export async function listForProject(
 ): Promise<PipelineStatus[]> {
   const where = scope ? { scope } : {};
   const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });
-  // Le tri du studio (`visibleStatuses`) s'applique au résultat, quelle que soit la
-  // source : un vocabulaire propre au projet se réduit comme celui du site.
+  // The studio's sort (`visibleStatuses`) applies to the result, whatever the source: a vocabulary specific
+  // to the project is reduced like that of the site.
   const keep = (list: PipelineStatus[]) =>
     options.all ? list : filterVisible(list, connection?.active ? connection.settings : null);
 
@@ -95,19 +95,19 @@ export async function listForProject(
 }
 
 /**
- * Ne garder que les statuts que le studio a retenus pour ce projet (réglage ShotGrid).
+ * Keeps only the statuses the studio has retained for this project (ShotGrid setting).
  *
- * Un périmètre sans liste reste entier : on ne déduit jamais un masquage d'un oubli.
- * Et un filtre qui ne reconnaîtrait plus aucun code — codes renommés côté site, liste
- * héritée d'un autre projet — est ignoré : mieux vaut proposer trop que rien du tout,
- * un menu vide ne se répare pas depuis l'écran où il manque.
+ * A scope without a list remains whole: one never deduces a hiding from an omission. And a filter that no
+ * longer recognises any code — codes renamed on the site side, a list inherited
+ * from another project — is ignored: better to offer too much than nothing at all; an empty menu cannot be
+ * repaired from the screen where it is missing.
  */
 function filterVisible(list: PipelineStatus[], settings: unknown): PipelineStatus[] {
   const visible = (settings as { visibleStatuses?: Partial<Record<Scope, string[]>> } | null)
     ?.visibleStatuses;
   if (!visible) return list;
-  // Le repli se juge périmètre par périmètre : une liste de plans devenue vide ne doit
-  // pas être sauvée par les statuts de tâche restés, eux, dans le résultat.
+  // The fallback is judged scope by scope: a shot list that has become empty must not be saved by the task
+  // statuses which, for their part, remain in the result.
   const kept = new Set<number>();
   for (const scope of SCOPES) {
     const inScope = list.filter((s) => s.scope === scope);
@@ -115,18 +115,17 @@ function filterVisible(list: PipelineStatus[], settings: unknown): PipelineStatu
     const shown = !codes || codes.length === 0 ? inScope : inScope.filter((s) => codes.includes(s.code));
     for (const s of shown.length > 0 ? shown : inScope) kept.add(s.id);
   }
-  // Un périmètre inconnu de `SCOPES` traverse sans filtre : il n'a pas de réglage.
+  // A scope unknown to `SCOPES` passes through without a filter: it has no setting.
   return list.filter((s) => kept.has(s.id) || !SCOPES.includes(s.scope as Scope));
 }
 
 /**
- * Le statut à poser pour une valeur de l'énumération, dans le vocabulaire du projet.
+ * The status to set for an enumeration value, within the project's vocabulary.
  *
- * Le kanban envoie encore l'énumération à six valeurs. La résolution cherchait « le premier
- * statut du référentiel entier qui porte cet enum », tous projets et toutes origines
- * confondus : un plan « On Hold » redescendait en « Waiting to Start », et le résultat
- * repartait vers le site ShotGrid du studio. La recherche est désormais bornée au
- * vocabulaire réellement offert au projet.
+ * The kanban still sends the six-value enumeration. Resolution looked for "the first status of the whole
+ * reference that carries this enum", across all projects and all origins alike: a
+ * shot "On Hold" went back down to "Waiting to Start", and the result went back to the studio's ShotGrid
+ * site. The search is now bounded to the vocabulary actually offered to the project.
  */
 export async function resolveByLegacy(
   projectId: number,
@@ -138,12 +137,11 @@ export async function resolveByLegacy(
 }
 
 /**
- * Vérifie qu'un statut est bien de ceux qu'on peut poser sur une entité de ce projet (C3).
+ * Checks that a status is indeed one of those that may be set on an entity of this project (C3).
  *
- * Même garde que pour les tâches, étendue aux plans et aux séquences dont le PATCH
- * n'acceptait tout simplement pas le statut : la valeur ne pouvait venir que de la
- * synchronisation ShotGrid, et un studio autonome n'avait aucun moyen de la changer.
- * `null` efface le statut, ce qui est toujours permis.
+ * Same guard as for tasks, extended to shots and sequences whose PATCH simply did not accept the status: the
+ * value could only come from the ShotGrid sync, and a standalone studio had
+ * no way to change it. `null` clears the status, which is always allowed.
  */
 export async function assertBelongsToProject(
   projectId: number,
@@ -197,9 +195,9 @@ export async function update(id: number, input: Partial<StatusInput>): Promise<P
 }
 
 /**
- * Supprime un statut inutilisé. Un statut porté par des tâches ou des plans ne
- * disparaît pas : les entités concernées perdraient leur état sans que personne
- * n'ait décidé lequel leur donner à la place.
+ * Deletes an unused status. A status carried by tasks or shots does not disappear: the entities concerned
+ * would lose their state without anyone having decided which one to give them
+ * instead.
  */
 export async function remove(id: number): Promise<void> {
   const status = await prisma.pipelineStatus.findUnique({ where: { id } });
@@ -237,7 +235,7 @@ async function nextOrder(scope: Scope, projectId: number | null): Promise<number
   return (last?.order ?? -1) + 1;
 }
 
-/** Le statut par défaut est unique par périmètre ET par portée : un projet a le sien. */
+/** The default status is unique per scope AND per reach: a project has its own. */
 async function clearDefault(scope: Scope, projectId: number | null): Promise<void> {
   await prisma.pipelineStatus.updateMany({
     where: { scope, projectId, isDefault: true },

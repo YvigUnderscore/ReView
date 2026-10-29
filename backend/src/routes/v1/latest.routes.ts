@@ -12,11 +12,11 @@ import { idParam, requireTaskProject } from './helpers';
 import { latestQuery, latestOptions, respondLatest, type LatestTarget } from './latestPick';
 
 /**
- * « Donne-moi la dernière version » — le geste de lecture d'un poste d'artiste.
+ * "Give me the latest version": the read gesture of an artist workstation.
  *
- * Deux entrées, selon ce que l'outil connaît : l'identifiant d'une tâche (il vient de la
- * lire dans l'API) ou un chemin de pipeline (il ne connaît que des noms, cas d'un Nuke
- * lancé par la ferme). Le fond est le même — voir `latestPick`.
+ * Two entries, depending on what the tool knows: a task identifier (read from the API) or a
+ * pipeline path (it only knows names, e.g. a Nuke launched by the render farm). The logic is the
+ * same; see `latestPick`.
  */
 const router = Router();
 
@@ -33,12 +33,11 @@ router.get(
 );
 
 /**
- * GET /api/v1/latest?path=PROJ/SQ010/SH0100 — même réponse, adressée par chemin.
+ * GET /api/v1/latest?path=PROJ/SQ010/SH0100: same response, addressed by path.
  *
- * Le chemin peut s'arrêter au plan ou à l'asset : l'élection choisit alors l'étape la plus
- * avancée du pipe, c'est-à-dire ce qu'un lecteur doit voir en ouvrant le plan. Il peut
- * aussi nommer une tâche pour rester sur une étape, ou une version pour la relire telle
- * quelle.
+ * The path may stop at the shot or the asset: the election then picks the most advanced step of
+ * the pipe, which is what a reviewer should see when opening the shot. It may also name a task to
+ * stay on one step, or a version to read it as-is.
  */
 const pathQuery = latestQuery.extend({ path: z.string().min(1).max(1200) });
 
@@ -52,9 +51,9 @@ router.get('/latest', requireScope('versions:read'), validate({ query: pathQuery
 });
 
 /**
- * Entité sur laquelle porte l'élection. Un chemin qui nomme déjà une version ne demande
- * rien à élire : on le dit plutôt que de rendre au hasard la version voisine — même refus
- * que `POST /api/v1/publish`, pour que les deux surfaces se comportent pareil.
+ * Entity the election applies to. A path that already names a version has nothing to elect: we
+ * say so rather than returning a neighbouring version at random. Same refusal as
+ * `POST /api/v1/publish`, so both surfaces behave alike.
  */
 function targetOf(resolved: Resolve.ResolvedPath): LatestTarget {
   if (resolved.version) {

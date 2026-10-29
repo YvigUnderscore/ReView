@@ -12,23 +12,21 @@ import {
 } from '../lib/entityFreshness';
 
 /**
- * L'état « non consulté » (Phase 50, lot 9).
+ * The "not yet viewed" state (Phase 50, batch 9).
  *
- * Une carte s'allume quand l'entité a bougé depuis que **cette personne** l'a ouverte pour
- * la dernière fois. Deux dates suffisent à le dire : l'activité de l'entité — la sienne et
- * celle de sa descendance, calculée par `lib/entityFreshness` — et la date de visite,
- * écrite ici. Ouvrir éteint ; toute modification postérieure rallume.
+ * A card lights up when the entity has changed since **this person** last opened it. Two dates are enough to
+ * say so: the entity's activity — its own and that of its descendants, computed by `lib/entityFreshness` —
+ * and the visit date, written here. Opening switches it off; any later change switches it back on.
  *
- * Tout se lit **en lot**, pour la page entière. La variante par carte aurait demandé une
- * requête de visite et trois agrégats par ligne, soit huit cents allers-retours pour une
- * page de deux cents plans — le genre de multiplication qui a déjà coûté cher sur ces
- * mêmes listes.
+ * Everything is read **in batch**, for the whole page. A per-card variant would have required one visit query
+ * and three aggregates per row, i.e. eight hundred round trips for a page of two hundred shots — the kind of
+ * multiplication that has already been costly on these same lists.
  */
 
-/** Ce que chaque fonction d'activité sait faire : une famille d'entités, en lot. */
+/** What each activity function can do: one family of entities, in batch. */
 type ActivityReader = (rows: FreshnessRow[]) => Promise<Map<number, Date>>;
 
-/** Les visites de cette personne, pour ce type, parmi ces ids. Une requête pour la page. */
+/** This person's visits, for this type, among these ids. One query for the page. */
 export async function visitedAtFor(
   userId: number,
   targetType: VisitTargetType,
@@ -42,7 +40,7 @@ export async function visitedAtFor(
   return new Map(rows.map((r) => [r.targetId, r.visitedAt]));
 }
 
-/** Marque une entité consultée : la lueur s'éteint. Idempotent — la date est écrasée. */
+/** Marks an entity as viewed: the glow goes out. Idempotent — the date is overwritten. */
 export async function markVisited(
   userId: number,
   targetType: VisitTargetType,
@@ -58,14 +56,14 @@ export async function markVisited(
 }
 
 /**
- * « Tout marquer comme lu » : une seule instruction pour toute la liste.
+ * "Mark everything as read": a single statement for the whole list.
  *
- * Un `upsert` par carte aurait demandé deux mille allers-retours sur un long-métrage.
- * L'`ON CONFLICT` insère et met à jour d'un coup, et rend le geste atomique : deux clics
- * simultanés ne peuvent pas se croiser sur une violation d'unicité — ce qu'un `deleteMany`
- * suivi d'un `createMany`, même en transaction, n'aurait pas garanti.
+ * A per-card `upsert` would have required two thousand round trips on a feature film. `ON CONFLICT` inserts
+ * and updates at once, and makes the gesture atomic: two simultaneous
+ * clicks cannot collide on a uniqueness violation — which a `deleteMany` followed by a `createMany`, even in
+ * a transaction, would not have guaranteed.
  *
- * Renvoie le nombre de lignes écrites.
+ * Returns the number of rows written.
  */
 export async function markManyVisited(
   userId: number,
@@ -84,15 +82,15 @@ export async function markManyVisited(
 }
 
 /**
- * Ce que « tout marquer comme lu » embrasse : les entités vivantes d'un projet, par type.
+ * What "mark everything as read" covers: the live entities of a project, by type.
  *
- * Les ids sont établis **par le serveur** à partir du seul projet, jamais reçus du client.
- * Une liste d'ids postée aurait demandé d'en vérifier l'appartenance une par une — donc
- * autant de requêtes que d'entités, et une occasion de se tromper. Ici l'autorisation
- * tient en une seule assertion d'accès au projet, faite dans la route.
+ * The ids are established **by the server** from the project alone, never received from the client. A posted
+ * list of ids would have required checking membership one by one — hence as many queries
+ * as entities, and an opportunity to get it wrong. Here the authorization rests on a single project access
+ * assertion, made in the route.
  *
- * Les éléments en corbeille ou masqués sont exclus : ils ne sont dans aucune liste, et les
- * marquer lus écrirait des lignes que personne ne relira jamais.
+ * Trashed or hidden items are excluded: they are in no list, and marking them read would write rows that
+ * nobody will ever read back.
  */
 export async function visitableIdsOfProject(
   projectId: number,
@@ -105,11 +103,11 @@ export async function visitableIdsOfProject(
     return (await prisma.sequence.findMany({ where: alive, select: { id: true } })).map((r) => r.id);
   if (targetType === VisitTargetType.ASSET)
     return (await prisma.asset.findMany({ where: alive, select: { id: true } })).map((r) => r.id);
-  // Les autres types n'ont pas encore de liste qui les allume : rien à marquer.
+  // The other types do not yet have a list that lights them up: nothing to mark.
   return [];
 }
 
-/** Fabrique commune : active la lecture d'activité, la confronte aux visites. */
+/** Common factory: enables activity reading, and compares it with the visits. */
 async function unseenBy(
   userId: number,
   targetType: VisitTargetType,
@@ -128,17 +126,17 @@ async function unseenBy(
   return unseenFrom(dates, visits);
 }
 
-/** « Ce plan a bougé depuis que je l'ai ouvert » — pour la page entière. */
+/** "This shot has moved since I opened it" — for the whole page. */
 export function unseenByShot(userId: number, rows: FreshnessRow[]): Promise<Map<number, boolean>> {
   return unseenBy(userId, VisitTargetType.SHOT, rows, activityByShot);
 }
 
-/** Idem pour une séquence : ses plans et leurs livraisons comptent comme son activité. */
+/** Same for a sequence: its shots and their deliveries count as its activity. */
 export function unseenBySequence(userId: number, rows: FreshnessRow[]): Promise<Map<number, boolean>> {
   return unseenBy(userId, VisitTargetType.SEQUENCE, rows, activityBySequence);
 }
 
-/** Idem pour un asset, ses deux chemins de rattachement de version compris. */
+/** Same for an asset, including its two version attachment paths. */
 export function unseenByAsset(userId: number, rows: FreshnessRow[]): Promise<Map<number, boolean>> {
   return unseenBy(userId, VisitTargetType.ASSET, rows, activityByAsset);
 }

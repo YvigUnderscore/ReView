@@ -23,14 +23,14 @@ import type { Department } from '../lib/projectSettings';
 
 const findMany = vi.mocked(prisma.version.findMany);
 
-/** Pipe du projet, de l'amont vers l'aval. */
+/** The project's pipe, from upstream to downstream. */
 const PIPE: Department[] = [
   { key: 'layout', name: 'Layout' },
   { key: 'anim', name: 'Animation' },
   { key: 'comp', name: 'Compositing' },
 ];
 
-/** Une ligne de la passe d'élection : rattachement, étape, date, identifiant. */
+/** A row of the election pass: attachment, step, date, identifier. */
 const candidate = (
   id: number,
   createdAt: string,
@@ -45,7 +45,7 @@ const candidate = (
     : null,
 });
 
-/** Une ligne de la passe de contenu : ce que le lecteur reçoit vraiment. */
+/** A row of the content pass: what the reader actually receives. */
 const payload = (id: number, name: string) => ({
   id,
   name,
@@ -58,30 +58,30 @@ const payload = (id: number, name: string) => ({
   media: [],
 });
 
-/** Passe 1 (élection) puis passe 2 (contenu des élus). */
+/** Pass 1 (election) then pass 2 (content of the elected ones). */
 function stubTwoPhases(candidates: unknown[], payloads: unknown[]) {
   findMany.mockResolvedValueOnce(candidates as never).mockResolvedValueOnce(payloads as never);
 }
 
-describe('PipelineLatestService — élection en deux passes', () => {
-  // `resetAllMocks` et non `clearAllMocks` : les réponses posées par `mockResolvedValueOnce`
-  // survivraient sinon d'un test à l'autre et décaleraient les passes.
+describe('PipelineLatestService: two-pass election', () => {
+  // `resetAllMocks` and not `clearAllMocks`: otherwise the responses set by `mockResolvedValueOnce` would
+  // survive from one test to the next and shift the passes.
   beforeEach(() => vi.resetAllMocks());
 
-  it('ne touche pas la base sans entité à résoudre', async () => {
+  it('does not touch the database without an entity to resolve', async () => {
     expect(await latestForShots([], PIPE)).toEqual(new Map());
     expect(await latestForAssets([], PIPE)).toEqual(new Map());
     expect(findMany).not.toHaveBeenCalled();
   });
 
-  it('n’élit qu’une version par plan, et ne charge le contenu que des élues', async () => {
+  it('elects only one version per shot, and loads the content of the elected ones only', async () => {
     stubTwoPhases(
       [
-        // Plan 1 : le compositing est plus avancé que l'animation, même publiée après.
+        // Shot 1: compositing is more advanced than animation, even if published later.
         candidate(10, '2026-08-01T00:00:00Z', { department: 'anim', shotId: 1 }),
         candidate(11, '2026-08-02T00:00:00Z', { department: 'comp', shotId: 1 }),
         candidate(12, '2026-08-05T00:00:00Z', { department: 'anim', shotId: 1 }),
-        // Plan 2 : une seule étape, la plus récente gagne.
+        // Shot 2: a single step, the most recent wins.
         candidate(20, '2026-08-01T00:00:00Z', { department: 'anim', shotId: 2 }),
         candidate(21, '2026-08-03T00:00:00Z', { department: 'anim', shotId: 2 }),
       ],
@@ -93,22 +93,22 @@ describe('PipelineLatestService — élection en deux passes', () => {
     expect([...picks.keys()]).toEqual([1, 2]);
     expect(picks.get(1)!.versionId).toBe(11);
     expect(picks.get(2)!.versionId).toBe(21);
-    // Passe 2 : uniquement les deux élues, jamais les cinq prétendantes.
+    // Pass 2: only the two elected ones, never the five contenders.
     expect(findMany).toHaveBeenCalledTimes(2);
     expect(findMany.mock.calls[1]![0]!.where).toEqual({ id: { in: [11, 21] } });
   });
 
-  it('n’embarque ni médias ni auteur dans la passe d’élection', async () => {
+  it('carries neither media nor author in the election pass', async () => {
     stubTwoPhases([], []);
     await latestForShots([1], PIPE);
     const select = findMany.mock.calls[0]![0]!.select as Record<string, unknown>;
     expect(Object.keys(select).sort()).toEqual(['assetId', 'createdAt', 'id', 'task']);
     expect(select.media).toBeUndefined();
-    // La passe 2, elle, ramène bien les médias visibles.
-    expect(findMany).toHaveBeenCalledTimes(1); // aucune élue : pas de seconde passe
+    // Pass 2, for its part, does bring back the visible media.
+    expect(findMany).toHaveBeenCalledTimes(1); // no elected version: no second pass
   });
 
-  it('ne demande que les versions publiées porteuses d’un média visible', async () => {
+  it('only requests published versions carrying a visible media', async () => {
     stubTwoPhases([], []);
     await latestForShots([1, 2], PIPE);
     expect(findMany.mock.calls[0]![0]!.where).toMatchObject({
@@ -118,12 +118,12 @@ describe('PipelineLatestService — élection en deux passes', () => {
     });
   });
 
-  it('plafonne à l’étape demandée, et retombe sur l’amont quand elle manque', async () => {
+  it('caps at the requested step, and falls back on the upstream when it is missing', async () => {
     stubTwoPhases(
       [
         candidate(10, '2026-08-01T00:00:00Z', { department: 'anim', shotId: 1 }),
         candidate(11, '2026-08-02T00:00:00Z', { department: 'comp', shotId: 1 }),
-        // Plan 2 : rien en anim, seulement du layout — le repli amont doit jouer.
+        // Shot 2: nothing in anim, only layout — the upstream fallback must play.
         candidate(20, '2026-08-01T00:00:00Z', { department: 'layout', shotId: 2 }),
       ],
       [payload(10, 'V01'), payload(20, 'V01')],
@@ -133,12 +133,12 @@ describe('PipelineLatestService — élection en deux passes', () => {
     expect(picks.get(2)!.versionId).toBe(20);
   });
 
-  it('résout un asset par sa tâche comme par sa version directe', async () => {
+  it('resolves an asset by its task as well as by its direct version', async () => {
     stubTwoPhases(
       [
         candidate(30, '2026-08-01T00:00:00Z', { department: 'comp', assetId: 5 }),
-        // Version accrochée directement à l'asset 6, sans tâche : hors pipe, elle gagne
-        // faute d'autre prétendante.
+        // Version attached directly to asset 6, without a task: off the pipe, it wins for lack of another
+        // contender.
         candidate(31, '2026-08-02T00:00:00Z', null, 6),
       ],
       [payload(30, 'V01'), payload(31, 'V01')],
@@ -148,8 +148,8 @@ describe('PipelineLatestService — élection en deux passes', () => {
     expect(picks.get(6)!.versionId).toBe(31);
   });
 
-  it('ignore une entité dont aucune version n’a survécu au chargement', async () => {
-    // Une version supprimée entre les deux passes ne doit pas produire d'entrée vide.
+  it('ignores an entity none of whose versions survived the loading', async () => {
+    // A version deleted between the two passes must not produce an empty entry.
     stubTwoPhases([candidate(40, '2026-08-01T00:00:00Z', { department: 'comp', shotId: 9 })], []);
     expect(await latestForShots([9], PIPE)).toEqual(new Map());
   });
