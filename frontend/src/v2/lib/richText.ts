@@ -2,24 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Le corps d'un commentaire est du **HTML** — c'est le format du produit, pas un accident :
- * l'éditeur en produit, `CommentItem` le rend, et l'import ShotGrid convertit ses notes vers
- * lui. Partout où un commentaire s'affiche en pleine largeur, ce HTML doit être rendu.
+ * The body of a comment is **HTML** — that is the product's format, not an accident: the editor
+ * produces it, `CommentItem` renders it, and the ShotGrid import converts its notes to it. Wherever a
+ * comment is shown full width, this HTML must be rendered.
  *
- * Mais un aperçu d'une ligne ne peut pas le rendre : des balises de bloc dans une phrase
- * casseraient la mise en page. Il faut donc en extraire le texte — et l'oublier se voit tout
- * de suite, puisque le lecteur reçoit alors le balisage en toutes lettres. C'est ce que
- * l'accueil affichait : « <p><em>ShotGrid</em></p><p>The hero lands two frames late.</p> ».
+ * But a one-line preview cannot render it: block tags inside a sentence would break the layout. The
+ * text therefore has to be extracted — and forgetting to do so shows at once, since the reader then
+ * receives the markup in full. This is what the home page used to display: "<p><em>ShotGrid</em></p><p>The hero lands two frames late.</p>".
  *
- * Ces aperçus vivaient dans le montage ; il y en a désormais deux, d'où ce module commun.
+ * These previews used to live in the editing module; there are now two of them, hence this shared module.
  */
 
 /**
- * Texte nu d'un contenu déjà assaini.
+ * Bare text of an already sanitised content.
  *
- * Les balises deviennent une espace plutôt que rien : `<p>a</p><p>b</p>` doit se lire
- * « a b » et non « ab ». Les espaces sont ensuite repliés, ce qui absorbe l'espace en trop
- * quand la balise en séparait déjà.
+ * Tags become a space rather than nothing: `<p>a</p><p>b</p>` must read "a b", not "ab". Spaces are
+ * then collapsed, which absorbs the extra space when the tag already separated them.
  */
 export function stripHtml(html: string): string {
   return html
@@ -29,10 +27,10 @@ export function stripHtml(html: string): string {
 }
 
 /**
- * Aperçu d'une ligne : texte nu, coupé sur une limite de mot.
+ * One-line preview: bare text, cut on a word boundary.
  *
- * Couper au caractère près donne « The hero lands two fra… », qui se lit mal ; reculer
- * jusqu'à la dernière espace coûte quelques signes et rend la phrase.
+ * Cutting at the exact character gives "The hero lands two fra…", which reads badly; stepping back
+ * to the last space costs a few characters and makes the sentence readable.
  */
 export function excerpt(html: string, max = 120): string {
   const texte = stripHtml(html);

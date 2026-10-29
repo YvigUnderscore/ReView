@@ -6,11 +6,11 @@ import { api } from '../../../lib/apiClient';
 import { useSgConnection } from '../../lib/shotgridApi';
 
 /**
- * Correspondances ShotGrid d'un projet, pour construire les liens directs.
+ * ShotGrid matches for a project, used to build direct links.
  *
- * Une seule requête par projet plutôt qu'une par carte : une liste de plans en affiche
- * des centaines, et l'adresse d'une fiche distante se déduit d'un identifiant. Sans
- * connexion, rien n'est demandé au serveur et rien ne s'affiche.
+ * One request per project rather than one per card: a plan list shows hundreds, and the
+ * address of a remote record can be derived from an identifier. Without a connection,
+ * nothing is requested from the server and nothing is shown.
  */
 export type SgLinkType = 'sequence' | 'shot' | 'asset' | 'task' | 'version';
 
@@ -24,17 +24,17 @@ const SG_ENTITY: Record<SgLinkType, string> = {
 
 interface LinkMap {
   baseUrl: string;
-  /** `localType` → `localId` → identifiant ShotGrid. */
+  /** `localType` → `localId` → ShotGrid identifier. */
   byType: Record<string, Record<number, number>>;
-  /** Dernière relecture, par type puis par identifiant local. */
+  /** Last re-read, by type then by local identifier. */
   syncedAt: Record<string, Record<number, string | null>>;
 }
 
 /**
- * État d'une entité vis-à-vis de ShotGrid.
- * - `off` : le projet n'est pas relié, il n'y a rien à dire ;
- * - `linked` : l'entité a sa correspondance sur le site ;
- * - `unlinked` : elle n'existe que dans ReView.
+ * State of an entity with respect to ShotGrid.
+ * - `off`: the project is not linked, there is nothing to say;
+ * - `linked`: the entity has its match on the site;
+ * - `unlinked`: it only exists in ReView.
  */
 export type SgEntityState = 'off' | 'linked' | 'unlinked';
 
@@ -67,7 +67,7 @@ export function useSgLinks(projectId: number) {
     staleTime: 60_000,
   });
 
-  /** Adresse de la fiche ShotGrid, ou `null` si l'entité n'y est pas liée. */
+  /** Address of the ShotGrid record, or `null` if the entity is not linked to it. */
   const linkFor = (type: SgLinkType, localId: number | null | undefined): string | null => {
     if (!data || !localId) return null;
     const sgId = data.byType[type]?.[localId];
@@ -76,17 +76,17 @@ export function useSgLinks(projectId: number) {
   };
 
   /**
-   * L'entité a-t-elle sa contrepartie sur le site ?
+   * Does the entity have its counterpart on the site?
    *
-   * Répondu depuis la table déjà chargée : afficher l'état sur deux cents plans ne coûte
-   * aucune requête de plus que d'afficher leurs liens.
+   * Answered from the table already loaded: showing the state on two hundred plans costs
+   * no more requests than showing their links.
    */
   const stateFor = (type: SgLinkType, localId: number | null | undefined): SgEntityState => {
     if (!enabled || !data || !localId) return 'off';
     return data.byType[type]?.[localId] ? 'linked' : 'unlinked';
   };
 
-  /** Date de dernière relecture, pour l'infobulle. */
+  /** Date of the last re-read, for the tooltip. */
   const syncedAtFor = (type: SgLinkType, localId: number | null | undefined): string | null =>
     (localId && data?.syncedAt[type]?.[localId]) || null;
 

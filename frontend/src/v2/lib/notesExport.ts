@@ -5,21 +5,20 @@ import { getToken } from '../../lib/apiClient';
 import { t } from '../i18n';
 
 /**
- * Téléchargement des notes de review (CSV, EDL, OTIO, planche imprimable).
+ * Downloading review notes (CSV, EDL, OTIO, printable sheet).
  *
- * Un export est un fichier, pas une ressource à mettre en cache : il passe par `fetch` +
- * blob plutôt que par TanStack Query, exactement comme l'export CSV du projet
- * (`ProjectCsvActions`). Un simple `<a href>` ne conviendrait pas — la route est
- * authentifiée par en-tête `Authorization`, qu'une navigation ne porte pas.
+ * An export is a file, not a resource to cache: it goes through `fetch` + blob rather than TanStack
+ * Query, exactly like the project's CSV export (`ProjectCsvActions`). A plain `<a href>` would not
+ * do — the route is authenticated by an `Authorization` header, which a navigation does not carry.
  *
- * Le module est partagé : la review y branche le CSV et la planche, une playlist ou un
- * montage y branchent en plus l'EDL et l'OTIO.
+ * The module is shared: review plugs in the CSV and the sheet, a playlist or an edit additionally
+ * plug in the EDL and the OTIO.
  */
 
-/** Ce sur quoi porte l'export. */
+/** What the export applies to. */
 export type NotesScope = 'media' | 'version' | 'shot' | 'playlist' | 'timeline';
 
-/** Format demandé. `sheet` est la planche HTML imprimable (→ PDF depuis le navigateur). */
+/** Requested format. `sheet` is the printable HTML sheet (→ PDF from the browser). */
 export type NotesFormat = 'csv' | 'edl' | 'otio' | 'sheet';
 
 const EXTENSIONS: Record<NotesFormat, string> = { csv: 'csv', edl: 'edl', otio: 'otio', sheet: 'html' };
@@ -32,33 +31,33 @@ export interface NotesExportRequest {
 
 export interface NotesExportResult {
   filename: string;
-  /** Le plafond de notes a mordu côté serveur : le fichier est incomplet. */
+  /** The server's note cap was hit: the file is incomplete. */
   truncated: boolean;
 }
 
-/** Chemin d'API d'un export — exposé pour les tests et les liens de débogage. */
+/** API path of an export — exposed for tests and debugging links. */
 export const notesExportPath = ({ scope, id, format }: NotesExportRequest): string =>
   `/api/comments/export?scope=${scope}&id=${id}&format=${format}`;
 
-/** Nom de fichier annoncé par le serveur, sinon un nom construit localement. */
+/** File name announced by the server, otherwise a locally built name. */
 function filenameFrom(header: string | null, req: NotesExportRequest): string {
   const match = header ? /filename="([^"]+)"/.exec(header) : null;
   return match?.[1] ?? `notes-${req.scope}-${req.id}.${EXTENSIONS[req.format]}`;
 }
 
-/** Déclenche le téléchargement du fichier dans le navigateur. */
+/** Triggers the download of the file in the browser. */
 function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   link.click();
-  // Révoquer dans le même tour de boucle annule le téléchargement sur certains
-  // navigateurs : on laisse le clic partir d'abord.
+  // Revoking in the same event-loop turn cancels the download on some browsers: let the click
+  // go through first.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-/** Télécharge les notes de la portée demandée. Lève une `Error` traduite en cas d'échec. */
+/** Downloads the notes for the requested scope. Throws a translated `Error` on failure. */
 export async function downloadNotes(req: NotesExportRequest): Promise<NotesExportResult> {
   const token = getToken();
   const res = await fetch(notesExportPath(req), {

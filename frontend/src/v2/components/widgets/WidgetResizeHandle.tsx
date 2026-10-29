@@ -15,31 +15,30 @@ import {
 import { useT } from '../../i18n';
 
 /**
- * La poignée de redimensionnement d'un bloc — le geste demandé pour la vue d'ensemble
- * (lot 12), puis mot pour mot pour l'accueil (« les mêmes réglages de redimensionnement,
- * de fenêtres »). Elle vit donc avec le cadre commun, et les deux pages la montent.
+ * The resize handle of a block — the gesture requested for the project overview (batch 12),
+ * then word for word for the home page ("the same resize settings, of windows"). It therefore
+ * lives with the common frame, and both pages mount it.
  *
- * Elle est l'exception assumée à la règle « clic droit d'abord » : régler une taille au
- * menu, cran par cran, c'est régler une taille sans la voir. On tire donc le coin, et la
- * grille suit sous le curseur. Elle n'apparaît qu'en composition, comme la poignée de
- * déplacement : hors composition, la page reste une page.
+ * It is the deliberate exception to the "right click first" rule: setting a size through a menu,
+ * step by step, means setting a size without seeing it. So the corner is dragged, and the grid
+ * follows under the cursor. It only appears in composition mode, like the move handle: outside
+ * composition, the page stays a page.
  *
- * Ce n'est pas un décor : c'est un bouton, il prend le focus, et les quatre flèches
- * parcourent les mêmes crans que la souris — à droite et à gauche la largeur, en haut et
- * en bas la hauteur. Son nom accessible porte la taille courante, pour que le résultat du
- * geste s'entende autant qu'il se voit.
+ * It is not decoration: it is a button, it takes focus, and the four arrow keys walk the same
+ * steps as the mouse — left and right for the width, up and down for the height. Its accessible
+ * name carries the current size, so that the result of the gesture is heard as well as seen.
  *
- * Le glissement ne passe **pas** par `onPreview` → enregistrement à chaque pixel : chaque
- * cran franchi écrirait une préférence, soit une requête par cran. L'aperçu vit dans la
- * grille, et seul le relâchement enregistre.
+ * Dragging does **not** go through `onPreview` → save on every pixel: each step crossed would
+ * write a preference, that is one request per step. The preview lives in the grid, and only
+ * release saves.
  *
- * Les libellés restent sous le préfixe `overview.widget.*`, où ils sont nés : ce sont mot
- * pour mot les mêmes messages d'un bout à l'autre, et une clé ne se renomme pas pour faire
- * joli — elle se renommerait dans quatorze catalogues sans qu'un seul mot change à l'écran.
- * `WidgetShell`, partagé lui aussi, garde de même ses libellés en `home.widget.*`.
+ * The labels stay under the `overview.widget.*` prefix, where they were born: they are word for
+ * word the same messages end to end, and a key is not renamed for the sake of tidiness — it
+ * would be renamed in fourteen catalogues without a single word changing on screen.
+ * `WidgetShell`, also shared, likewise keeps its labels under `home.widget.*`.
  */
 
-/** Les quatre flèches, et ce qu'elles règlent. */
+/** The four arrows, and what they adjust. */
 const ARROWS: Record<string, { axis: 'span' | 'rows'; direction: -1 | 1 }> = {
   ArrowRight: { axis: 'span', direction: 1 },
   ArrowLeft: { axis: 'span', direction: -1 },
@@ -48,14 +47,14 @@ const ARROWS: Record<string, { axis: 'span' | 'rows'; direction: -1 | 1 }> = {
 };
 
 export interface WidgetResizeHandleProps {
-  /** Titre du bloc : la poignée s'annonce par ce qu'elle redimensionne. */
+  /** Block title: the handle announces itself by what it resizes. */
   name: string;
   size: WidgetSize;
-  /** Largeurs que ce bloc propose — le bornage est le même à la souris et au clavier. */
+  /** Widths this block offers — the bounding is the same with the mouse and the keyboard. */
   spans: WidgetSpan[];
-  /** Taille sous le curseur pendant le glissement ; `null` quand il s'achève. */
+  /** Size under the cursor during the drag; `null` when it ends. */
   onPreview: (size: WidgetSize | null) => void;
-  /** Taille retenue — enregistrée une seule fois, au relâchement ou à la touche. */
+  /** Chosen size — saved once only, on release or on key press. */
   onCommit: (size: WidgetSize) => void;
 }
 
@@ -76,8 +75,8 @@ export default function WidgetResizeHandle({
     event.preventDefault();
     event.stopPropagation();
     const origin = { x: event.clientX, y: event.clientY };
-    // Le pas de la grille est lu sur le conteneur du bloc, c'est-à-dire la grille
-    // elle-même : elle porte les colonnes calculées et la hauteur de rangée.
+    // The grid step is read from the block's container, that is the grid itself:
+    // it carries the computed columns and the row height.
     const geometry = gridGeometry(handle.current?.closest('section[data-widget]')?.parentElement ?? null);
     let target = size;
 
@@ -127,9 +126,9 @@ export default function WidgetResizeHandle({
 }
 
 /**
- * Le même réglage de hauteur, au panneau : la poignée montre le résultat, la liste montre
- * la rampe. L'une sans l'autre laisserait soit un geste impossible à retrouver, soit un
- * réglage impossible à viser.
+ * The same height setting, in the panel: the handle shows the result, the list shows the
+ * scale. One without the other would leave either a gesture impossible to find, or a setting
+ * impossible to aim at.
  */
 export function WidgetRowsChoice({ rows, onRows }: { rows: WidgetRows; onRows: (rows: WidgetRows) => void }) {
   const t = useT();

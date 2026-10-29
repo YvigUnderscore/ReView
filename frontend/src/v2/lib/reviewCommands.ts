@@ -5,10 +5,9 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 
 /**
- * Registre des commandes contextuelles de review pour la palette Ctrl+K (B3) : le viewer monté
- * publie ses actions (cadrer, poser une clé, preset orbite…), la palette les affiche dans un
- * groupe dédié — conforme à la règle « UI simple » : une action de plus n'est pas un bouton de
- * plus.
+ * Registry of contextual review commands for the Ctrl+K palette (B3): the mounted viewer publishes its
+ * actions (frame, set a key, orbit preset…), the palette displays them in a dedicated group — in line
+ * with the "simple UI" rule: one more action is not one more button.
  */
 export interface ReviewCommand {
   id: string;
@@ -26,7 +25,7 @@ export const useReviewCommands = create<ReviewCommandsState>()((set) => ({
   setCommands: (commands) => set({ commands }),
 }));
 
-/** Publie les commandes du viewer monté ; vidées au démontage. */
+/** Publishes the commands of the mounted viewer; cleared on unmount. */
 export function useRegisterReviewCommands(commands: ReviewCommand[]): void {
   const setCommands = useReviewCommands((s) => s.setCommands);
   useEffect(() => {

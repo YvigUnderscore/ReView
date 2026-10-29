@@ -31,22 +31,22 @@ beforeEach(() => {
 });
 
 /**
- * L'écran qui règle le tri doit voir le catalogue entier : cocher dans une liste déjà
- * amputée d'elle-même ne permettrait plus d'y revenir.
+ * The screen that sets the sort order must see the whole catalogue: ticking items in a
+ * list already trimmed by itself would make it impossible to get back.
  */
 describe('SgStatusesPanel', () => {
-  it('demande le catalogue entier, pas la liste déjà réduite', () => {
+  it('requests the whole catalogue, not the list already reduced', () => {
     render(<SgStatusesPanel connection={connection} canManage />);
     expect(usePipelineStatuses).toHaveBeenCalledWith('shot', 461, { all: true });
   });
 
-  it('coche les statuts retenus et laisse les autres décochés', () => {
+  it('ticks the retained statuses and leaves the others unticked', () => {
     render(<SgStatusesPanel connection={connection} canManage />);
     expect(screen.getByRole('checkbox', { name: /In Progress/ })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: /Final/ })).not.toBeChecked();
   });
 
-  it('ajoute un code au périmètre courant sans toucher aux autres', () => {
+  it('adds a code to the current scope without touching the others', () => {
     render(<SgStatusesPanel connection={connection} canManage />);
     fireEvent.click(screen.getByRole('checkbox', { name: /Final/ }));
     expect(mutateAsync).toHaveBeenCalledWith({
@@ -54,7 +54,7 @@ describe('SgStatusesPanel', () => {
     });
   });
 
-  it('retire un code déjà coché', () => {
+  it('removes an already ticked code', () => {
     render(<SgStatusesPanel connection={connection} canManage />);
     fireEvent.click(screen.getByRole('checkbox', { name: /In Progress/ }));
     expect(mutateAsync).toHaveBeenCalledWith({
@@ -62,13 +62,13 @@ describe('SgStatusesPanel', () => {
     });
   });
 
-  it('n’écrit rien quand on ne gère pas le projet', () => {
+  it('writes nothing when the user does not manage the project', () => {
     render(<SgStatusesPanel connection={connection} canManage={false} />);
     fireEvent.click(screen.getByRole('checkbox', { name: /Final/ }));
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('suit le périmètre choisi dans la liste déroulante', () => {
+  it('follows the scope chosen in the dropdown', () => {
     render(<SgStatusesPanel connection={connection} canManage />);
     fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'asset' } });
     expect(usePipelineStatuses).toHaveBeenLastCalledWith('asset', 461, { all: true });

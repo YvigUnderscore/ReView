@@ -6,16 +6,16 @@ import { act, render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 
 /**
- * Le pont socket mesuré en REQUÊTES, pas en intentions.
+ * The socket bridge measured in REQUESTS, not in intentions.
  *
- * Un lot de statuts sur trente plans émettait trente `shot:update` ; chacun déclenchait
- * cinq invalidations, dont le kanban entier — la lecture la plus lourde de l'application.
- * Huit artistes ayant le kanban ouvert, un seul geste de production faisait partir des
- * centaines de requêtes, presque toutes annulées en vol. On compte ici les appels de
- * `queryFn` : c'est exactement le nombre de requêtes HTTP qu'un navigateur aurait émises.
+ * A batch of statuses on thirty shots emitted thirty `shot:update`; each one triggered five
+ * invalidations, including the whole kanban — the heaviest read in the application. With eight
+ * artists having the kanban open, a single production gesture sent hundreds of requests, almost all
+ * cancelled in flight. Here we count the calls to `queryFn`: that is exactly the number of HTTP
+ * requests a browser would have issued.
  */
 
-/** Faux socket : les gestionnaires sont déclenchés à la main, sans réseau. */
+/** Fake socket: the handlers are triggered by hand, without network. */
 const handlers = new Map<string, Set<(payload: unknown) => void>>();
 const socket = {
   on(event: string, fn: (payload: unknown) => void) {
@@ -32,8 +32,8 @@ const fire = (event: string, payload: unknown): void => {
   for (const fn of [...(handlers.get(event) ?? [])]) fn(payload);
 };
 
-// `emitActivity` : le pont porte aussi le battement de présence — inerte ici, mais il
-// doit exister, sinon le montage du pont lève avant la moindre mesure d'invalidation.
+// `emitActivity`: the bridge also carries the presence heartbeat — inert here, but it must
+// exist, otherwise mounting the bridge throws before any invalidation measurement.
 vi.mock('../../lib/socket', () => ({ getSocket: () => socket, emitActivity: () => undefined }));
 
 import { useSocketInvalidation, COALESCE_WINDOW_MS, dropRedundantKeys } from './socketBridge';
@@ -48,7 +48,7 @@ const counted = (name: string) => () => {
   return Promise.resolve({ name });
 };
 
-/** Un écran qui tient le kanban, la liste des plans et la fiche d'un plan ouverts. */
+/** A screen holding the kanban, the shot list and a shot record open. */
 function Screen() {
   useSocketInvalidation(PROJECT);
   useQuery({ queryKey: qk.projectBoard(PROJECT), queryFn: counted('board') });
@@ -59,7 +59,7 @@ function Screen() {
   return null;
 }
 
-/** Laisse courir les minuteries (fenêtre de regroupement) et les promesses en attente. */
+/** Lets the timers (grouping window) and pending promises run. */
 const settle = async (ms = 0): Promise<void> => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
@@ -75,7 +75,7 @@ const mount = async (): Promise<void> => {
       <Screen />
     </QueryClientProvider>,
   );
-  // Premier chargement : cinq requêtes, que l'on remet à zéro avant de mesurer.
+  // First load: five requests, which we reset before measuring.
   await settle();
   calls = {};
 };
@@ -90,43 +90,43 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('useSocketInvalidation — regroupement des invalidations', () => {
-  it('un lot de trente plans ne recharge le kanban qu’une fois', async () => {
+describe('useSocketInvalidation — grouping invalidations', () => {
+  it('a batch of thirty shots reloads the kanban only once', async () => {
     await mount();
 
-    // Ce que faisait le serveur avant le correctif : un événement par plan.
+    // What the server used to do before the fix: one event per shot.
     for (let id = 1; id <= 30; id++) fire('shot:update', { projectId: PROJECT, id });
     await settle(COALESCE_WINDOW_MS * 2);
 
-    // Mesuré avant le correctif sur ce même écran : 93 requêtes
-    // (30 kanban + 30 listes de plans + 30 activités + 1 fiche + 2 arbres).
+    // Measured before the fix on this same screen: 93 requests
+    // (30 kanban + 30 shot lists + 30 activities + 1 record + 2 trees).
     expect(calls).toEqual({ board: 1, shots: 1, activity: 1, shot: 1, shotTree: 1 });
   });
 
-  it('un événement de lot (`ids`) rafraîchit chaque plan du lot sans multiplier les listes', async () => {
+  it('a batch event (`ids`) refreshes each shot of the batch without multiplying the lists', async () => {
     await mount();
 
     const ids = Array.from({ length: 30 }, (_, i) => i + 1);
-    // Ce que fait le serveur après le correctif : UN événement décrivant le lot.
+    // What the server does after the fix: ONE event describing the batch.
     fire('shot:update', { projectId: PROJECT, id: ids[0], ids: [...ids, SHOT] });
     await settle(COALESCE_WINDOW_MS * 2);
 
-    // Le plan ouvert fait partie du lot : sa fiche se met à jour, une seule fois.
+    // The open shot is part of the batch: its record updates, only once.
     expect(calls).toEqual({ board: 1, shots: 1, activity: 1, shot: 1, shotTree: 1 });
   });
 
-  it('un changement isolé reste visible tout de suite', async () => {
+  it('an isolated change is visible straight away', async () => {
     await mount();
 
     fire('shot:update', { projectId: PROJECT, id: SHOT });
-    // Sans avancer d'une seule fenêtre : le premier événement d'une rafale part au plus tôt.
+    // Without advancing by a single window: the first event of a burst goes out as early as possible.
     await settle();
 
     expect(calls.board ?? 0).toBe(1);
     expect(calls.shot ?? 0).toBe(1);
   });
 
-  it('un second changement, plus tard, recharge de nouveau — la fenêtre n’endort pas l’écran', async () => {
+  it('a second change, later, reloads again — the window does not put the screen to sleep', async () => {
     await mount();
 
     fire('shot:update', { projectId: PROJECT, id: SHOT });
@@ -137,18 +137,18 @@ describe('useSocketInvalidation — regroupement des invalidations', () => {
     expect(calls.board ?? 0).toBe(2);
   });
 
-  it('une clé et son préfixe ne déclenchent pas deux requêtes sur la même fiche', async () => {
+  it('a key and its prefix do not trigger two requests on the same record', async () => {
     await mount();
 
-    // `shot:update` invalidait `['shot', id]` PUIS `['shot', id, 'tree']` : la seconde
-    // invalidation annulait la requête d'arbre déjà partie et en relançait une.
+    // `shot:update` invalidated `['shot', id]` THEN `['shot', id, 'tree']`: the second
+    // invalidation cancelled the tree request already in flight and started another one.
     fire('shot:update', { projectId: PROJECT, id: SHOT });
     await settle(COALESCE_WINDOW_MS * 2);
 
     expect(calls.shotTree ?? 0).toBe(1);
   });
 
-  it('les plans hors du lot ne sont pas rechargés', async () => {
+  it('shots outside the batch are not reloaded', async () => {
     await mount();
 
     fire('shot:update', { projectId: PROJECT, id: SHOT + 100 });
@@ -160,7 +160,7 @@ describe('useSocketInvalidation — regroupement des invalidations', () => {
 });
 
 describe('dropRedundantKeys', () => {
-  it('garde le préfixe et jette la clé qu’il couvre déjà', () => {
+  it('keeps the prefix and drops the key it already covers', () => {
     const kept = dropRedundantKeys([
       ['shot', 7],
       ['shot', 7, 'tree'],
@@ -172,7 +172,7 @@ describe('dropRedundantKeys', () => {
     ]);
   });
 
-  it('ne touche pas à des clés sœurs', () => {
+  it('does not touch sibling keys', () => {
     const keys = [
       ['shot', 7],
       ['shot', 8],
@@ -180,7 +180,7 @@ describe('dropRedundantKeys', () => {
     expect(dropRedundantKeys(keys)).toEqual(keys);
   });
 
-  it('laisse passer une clé vide seule et absorbe tout le reste avec elle', () => {
+  it('lets an empty key through alone and absorbs everything else with it', () => {
     expect(dropRedundantKeys([[], ['shot', 7]])).toEqual([[]]);
   });
 });

@@ -4,9 +4,9 @@
 import { QueryClient } from '@tanstack/react-query';
 
 /**
- * Client TanStack Query global (10.E1).
- * - staleTime 30 s : navigation retour instantanée depuis le cache, re-fetch en arrière-plan.
- * - retry 1 : une seule relance sur échec réseau (les erreurs métier 4xx restent immédiates).
+ * Global TanStack Query client (10.E1).
+ * - staleTime 30 s: instant back-navigation from the cache, background re-fetch.
+ * - retry 1: a single retry on network failure (business 4xx errors stay immediate).
  */
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,21 +19,21 @@ export const queryClient = new QueryClient({
 });
 
 /**
- * Convention de clés — hiérarchiques pour des invalidations ciblées :
- * `invalidateQueries({ queryKey: qk.project(id) })` invalide aussi activity/settings/trash.
+ * Key convention — hierarchical for targeted invalidations:
+ * `invalidateQueries({ queryKey: qk.project(id) })` also invalidates activity/settings/trash.
  */
 export const qk = {
   setupStatus: ['setup-status'] as const,
   branding: ['branding'] as const,
   dashboard: ['dashboard'] as const,
-  /** Mes tâches, tous projets confondus (page « mes tâches ») — clé = chaîne de filtres. */
+  /** My tasks, across all projects ("my tasks" page) — key = filter string. */
   myTasks: (filter: string) => ['my-tasks', filter] as const,
-  /** Toutes vues confondues : ce qu'invalide un statut changé, d'où qu'il le soit. */
+  /** All views combined: what a changed status invalidates, wherever it comes from. */
   myTasksAll: ['my-tasks'] as const,
-  /** Fil des derniers commentaires de mon périmètre (carte « commentaires » de l'Accueil). */
+  /** Feed of the latest comments within my scope ("comments" card of the Home page). */
   commentFeed: (filter: string) => ['comment-feed', filter] as const,
   announcementsActive: ['announcements', 'active'] as const,
-  /** Dispositions par défaut de la vue d'ensemble, une par rôle (réglage studio). */
+  /** Default layouts of the overview, one per role (studio setting). */
   overviewLayoutDefaults: ['overview-layout'] as const,
   reviews: (filter: string) => ['reviews', filter] as const,
   projects: ['projects'] as const,
@@ -45,14 +45,14 @@ export const qk = {
   projectTrash: (id: number) => ['project', id, 'trash'] as const,
   projectStats: (id: number) => ['project', id, 'stats'] as const,
   projectSchedule: (id: number) => ['project', id, 'schedule'] as const,
-  /** Grille de suivi (plans × départements). `search` est la query-string des filtres :
-   *  deux filtres différents sont deux listes différentes, jamais la même page réécrite. */
+  /** Tracking grid (shots × departments). `search` is the filter query string:
+   *  two different filters are two different lists, never the same page rewritten. */
   projectGrid: (id: number, search: string) => ['project', id, 'grid', search] as const,
-  /** Toutes les grilles du projet — ce qu'une mutation de case invalide, filtres compris. */
+  /** All the grids of the project — what a cell mutation invalidates, filters included. */
   projectGridAll: (id: number) => ['project', id, 'grid'] as const,
   projectMedia: (id: number, kind?: string) => ['project', id, 'media', kind ?? 'all'] as const,
-  /** Niveau Épisode (facultatif par projet) — le réglage pend sous le projet, comme les
-   *  autres réglages : l'invalider avec lui suffit. */
+  /** Episode level (optional per project) — the setting hangs under the project, like the other
+   *  settings: invalidating it with them is enough. */
   episodeSettings: (projectId: number) => ['project', projectId, 'episodes', 'settings'] as const,
   episodes: (projectId: number) => ['episodes', projectId] as const,
   episode: (id: number) => ['episode', id] as const,
@@ -65,19 +65,19 @@ export const qk = {
   assets: (projectId: number) => ['assets', projectId] as const,
   asset: (id: number) => ['asset', id] as const,
   assetTree: (id: number) => ['asset', id, 'tree'] as const,
-  /** Permalien d'un asset ou d'un plan (C3) : `/{assets|shots}/:id/latest`. */
+  /** Permalink of an asset or a shot (C3): `/{assets|shots}/:id/latest`. */
   entityLatest: (entity: 'asset' | 'shot', id: number) => [entity, id, 'latest'] as const,
   tasks: (shotId: number) => ['tasks', shotId] as const,
-  /** Le plan vu comme un dossier : départements → tâches → versions. */
+  /** The shot seen as a folder: departments → tasks → versions. */
   shotTree: (shotId: number) => ['shot', shotId, 'tree'] as const,
-  /** Toutes les tâches d'un projet, quel que soit leur parent (destination d'upload). */
+  /** All the tasks of a project, whatever their parent (upload destination). */
   projectTasks: (projectId: number) => ['tasks', 'project', projectId] as const,
-  /** Le kanban entier en une requête (C4) — remplace une requête par plan et par asset. */
+  /** The whole kanban in one request (C4) — replaces one request per shot and per asset. */
   projectBoard: (projectId: number) => ['tasks', 'board', projectId] as const,
-  /** Départements applicables à un projet (B1) : les siens, sinon ceux du studio. */
+  /** Departments applicable to a project (B1): its own, otherwise the studio's. */
   departments: (projectId: number) => ['departments', projectId] as const,
   task: (id: number) => ['task', id] as const,
-  /** parent = `taskId=1` ou `assetId=2` (query-string du GET /api/versions) */
+  /** parent = `taskId=1` or `assetId=2` (query string of GET /api/versions) */
   versions: (parent: string) => ['versions', parent] as const,
   version: (id: number) => ['version', id] as const,
   media: (id: number) => ['media', id] as const,
@@ -109,16 +109,16 @@ export const qk = {
   docsPage: (path: string) => ['docs', 'page', path] as const,
   reviewStatuses: ['review-statuses'] as const,
   watches: ['watches'] as const,
-  /** Pilotage de production (C6), fenêtre de rythme comprise. */
+  /** Production management (C6), rhythm window included. */
   projectProduction: (projectId: number, weeks: number) => ['production', projectId, weeks] as const,
-  /** Toutes fenêtres confondues — à invalider quand une échéance bouge. */
+  /** All windows combined — to invalidate when a deadline moves. */
   projectProductionAll: (projectId: number) => ['production', projectId] as const,
   playlists: (projectId: number) => ['playlists', projectId] as const,
   playlist: (id: number) => ['playlist', id] as const,
-  /** Catalogue des versions à mettre en playlist (C5), clé = chaîne de filtres. */
+  /** Catalogue of versions to put in a playlist (C5), key = filter string. */
   playlistCandidates: (projectId: number, filters: string) =>
     ['playlist-candidates', projectId, filters] as const,
-  /** Montages automatiques (Phase 45) — `sequenceId` null = montage du projet entier. */
+  /** Automatic cuts (Phase 45) — `sequenceId` null = cut of the whole project. */
   timelineOf: (projectId: number, sequenceId: number | null) =>
     ['timeline', 'of', projectId, sequenceId ?? 'project'] as const,
   timeline: (id: number) => ['timeline', id] as const,
@@ -129,7 +129,7 @@ export const qk = {
   liveSessions: (projectId: number) => ['live-sessions', projectId] as const,
   timelineMarkers: (mediaId: number) => ['timeline-markers', mediaId] as const,
   versionDecisions: (versionId: number) => ['version-decisions', versionId] as const,
-  /** Personnes à qui la review d'une version est confiée (Phase 49). */
+  /** People to whom a version's review is assigned (Phase 49). */
   versionReviewers: (versionId: number) => ['version-reviewers', versionId] as const,
   shareLinks: (projectId: number) => ['share-links', projectId] as const,
   watermarkConfig: ['watermark-config'] as const,

@@ -7,27 +7,26 @@ import { t } from '../../i18n';
 import { Button } from './button';
 
 /**
- * Frontière d'erreur de rendu.
+ * Render error boundary.
  *
- * React démonte l'arbre entier quand un composant jette pendant le rendu : sans frontière,
- * la moindre exception laissait un écran blanc — sans en-tête, sans navigation, sans
- * message, sans autre issue que F5. Le risque n'a rien de théorique ici : les pages de
- * review montent Three.js, Spark et Excalidraw, et beaucoup d'écrans indexent des données
- * serveur sans garde.
+ * React unmounts the whole tree when a component throws during render: without a boundary,
+ * any exception left a blank screen — no header, no navigation, no message, and no way out
+ * but F5. The risk is not theoretical here: review pages mount Three.js, Spark and
+ * Excalidraw, and many screens index server data without a guard.
  *
- * Posée à trois niveaux, du plus fin au plus grossier — le viewer, la zone de contenu de la
- * coquille, la racine — pour qu'un plantage emporte le moins de surface possible : quand le
- * viewer tombe, le panneau de commentaires et la navigation restent utilisables.
+ * It is placed at three levels, from finest to coarsest — the viewer, the content area of
+ * the shell, the root — so that a crash takes down as little as possible: when the viewer
+ * falls over, the comments panel and navigation remain usable.
  *
- * `Suspense` ne remplace pas ce composant : il n'attrape que les promesses en attente, pas
- * les exceptions.
+ * `Suspense` does not replace this component: it only catches pending promises, not
+ * exceptions.
  */
 
 interface Props {
   children: ReactNode;
-  /** Bloc de repli sur mesure. Par défaut : le panneau ci-dessous. */
+  /** Custom fallback block. By default: the panel below. */
   fallback?: (reset: () => void) => ReactNode;
-  /** Portée affichée dans le détail technique (« review », « board »…). */
+  /** Scope shown in the technical detail ("review", "board", ...). */
   scope?: string;
 }
 
@@ -43,8 +42,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    // Pas de `console.log` ailleurs dans l'application, mais ici il n'y a pas d'autre
-    // canal : sans cette trace, une exception de rendu ne laisse rien derrière elle.
+    // No `console.log` anywhere else in the application, but here there is no other
+    // channel: without this trace, a render exception leaves nothing behind.
     console.error(
       `[ErrorBoundary${this.props.scope ? ` ${this.props.scope}` : ''}]`,
       error,

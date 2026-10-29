@@ -19,24 +19,23 @@ import type {
 } from '../types/api';
 
 /**
- * Hooks Query partagés entre plusieurs composants (une clé = une shape).
- * Les queries propres à une seule page restent définies dans la page.
+ * Query hooks shared between several components (one key = one shape).
+ * Queries specific to a single page stay defined in the page.
  *
- * Les listes d'entités (projets, plans, assets) rendent une `InfiniteList` : `data` reste
- * le tableau attendu par les appelants, mais le total réel et « charger la suite »
- * cessent d'être jetés à la réception. Elles ne chargent que la première page ; un
- * appelant qui a besoin de la liste entière — un sélecteur, une modale — demande `all`.
+ * Entity lists (projects, shots, assets) render an `InfiniteList`: `data` remains the array the callers
+ * expect, but the real total and "load more" are no longer thrown away on receipt. They only load the
+ * first page; a caller that needs the whole list — a selector, a modal — asks for `all`.
  */
 
-/** Options de liste laissées aux appelants (l'URL et la clé sont fixées ici). */
+/** List options left to the callers (the URL and the key are fixed here). */
 export type ListOptions = Pick<InfiniteListOptions, 'all' | 'pageSize'>;
 
-/** Liste des projets actifs (archivés exclus) — partagée Shell / ProjectsPage. */
+/** List of active projects (archived excluded) — shared by Shell / ProjectsPage. */
 export function useProjectsQuery(options: ListOptions = {}): InfiniteList<Project> {
   return useInfiniteList<Project>(qk.projects, '/api/projects', options);
 }
 
-/** Projets archivés (38.B) — onglet « Archivés » de ProjectsPage. */
+/** Archived projects (38.B) — the "Archived" tab of ProjectsPage. */
 export function useArchivedProjectsQuery(enabled = true, options: ListOptions = {}): InfiniteList<Project> {
   return useInfiniteList<Project>(qk.projectsArchived, '/api/projects?archived=1', {
     ...options,
@@ -44,7 +43,7 @@ export function useArchivedProjectsQuery(enabled = true, options: ListOptions = 
   });
 }
 
-/** Séquences d'un projet (+ compteur de shots hors séquence) — sidebar / ProjectPage / AssetAssignDialog. */
+/** Sequences of a project (+ count of shots outside any sequence) — sidebar / ProjectPage / AssetAssignDialog. */
 export function useSequencesQuery(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.sequences(projectId),
@@ -56,7 +55,7 @@ export function useSequencesQuery(projectId: number, enabled = true) {
   });
 }
 
-/** Shots d'un projet — ProjectPage / KanbanPage / AssetAssignDialog. */
+/** Shots of a project — ProjectPage / KanbanPage / AssetAssignDialog. */
 export function useShotsQuery(
   projectId: number,
   enabled = true,
@@ -68,7 +67,7 @@ export function useShotsQuery(
   });
 }
 
-/** Assets d'un projet — sidebar / ProjectPage / ShotDetailDrawer. */
+/** Assets of a project — sidebar / ProjectPage / ShotDetailDrawer. */
 export function useAssetsQuery(
   projectId: number,
   enabled = true,
@@ -80,11 +79,10 @@ export function useAssetsQuery(
   });
 }
 
-/** Statuts de review du studio (Phase 31) — badges, filtres, menus de décision. */
+/** Studio review statuses (Phase 31) — badges, filters, decision menus. */
 /**
- * Statuts de review. Avec un `projectId`, la liste est celle du projet : sur un projet
- * relié à ShotGrid, elle se restreint au vocabulaire du site plutôt que d'empiler les
- * statuts d'origine de ReView et ceux du studio.
+ * Review statuses. With a `projectId`, the list is the project's: on a project linked to ShotGrid, it
+ * narrows to the site's vocabulary rather than stacking ReView's original statuses and the studio's.
  */
 export function useReviewStatusesQuery(enabled = true, projectId?: number) {
   return useQuery({
@@ -100,7 +98,7 @@ export function useReviewStatusesQuery(enabled = true, projectId?: number) {
   });
 }
 
-/** Notifications de l'utilisateur courant (+ compteur non-lus) — cloche topbar (10.C5). */
+/** Notifications of the current user (+ unread counter) — topbar bell (10.C5). */
 export interface NotificationsData {
   notifications: Notification[];
   unread: number;
@@ -114,9 +112,9 @@ export function useNotificationsQuery(enabled = true) {
 }
 
 /**
- * Sessions live en cours du projet (badges LIVE — retours 33) : bouton de la review,
- * cartes de version. Rafraîchies par l'event socket `live:changed` (room du projet,
- * rejointe via `join_project` par les pages concernées ou ici même).
+ * Live sessions in progress on the project (LIVE badges — feedback 33): the review button, version
+ * cards. Refreshed by the `live:changed` socket event (project room, joined via `join_project` by the
+ * relevant pages or right here).
  */
 export function useLiveSessionsQuery(projectId: number | null) {
   const qc = useQueryClient();
@@ -130,9 +128,8 @@ export function useLiveSessionsQuery(projectId: number | null) {
     socket.on('live:changed', onChanged);
     return () => {
       socket.off('live:changed', onChanged);
-      // La salle n'était jamais quittée (D3) : un onglet ouvert la journée finissait par
-      // recevoir les événements de tous les projets visités, et invalidait des caches qui
-      // ne le concernaient plus.
+      // The room was never left (D3): a tab open all day ended up receiving the events of every
+      // project visited, and invalidating caches that no longer concerned it.
       socket.emit('leave_project', projectId);
     };
   }, [projectId, qc]);
@@ -147,7 +144,7 @@ export function useLiveSessionsQuery(projectId: number | null) {
   });
 }
 
-/** Personne de l'annuaire de présence du studio (`GET /api/users/presence`). */
+/** Someone from the studio's presence directory (`GET /api/users/presence`). */
 export interface PresenceUser {
   id: number;
   email: string;
@@ -160,28 +157,26 @@ export interface PresenceUser {
 }
 
 /**
- * Clé de l'annuaire de présence.
+ * Key of the presence directory.
  *
- * Définie ici et non dans `qk` (query.ts) faute de pouvoir toucher ce fichier dans ce
- * lot : elle a vocation à y rejoindre ses voisines sous le nom `qk.presence`. Tableau
- * autonome plutôt que `['users', 'presence']`, pour ne pas se faire invalider par
- * ricochet à chaque écriture sur `qk.users` (administration des comptes).
+ * Defined here and not in `qk` (query.ts) because this file could not be touched within this batch:
+ * it is meant to join its neighbours there under the name `qk.presence`. A standalone tuple rather than
+ * `['users', 'presence']`, so that it does not get invalidated by ricochet on every write to `qk.users`
+ * (account administration).
  */
 export const presenceKey = ['presence'] as const;
 
 /**
- * Annuaire de présence du studio — une seule requête pour tous les consommateurs.
+ * The studio's presence directory — a single request for all consumers.
  *
- * L'annuaire était chargé dans un `useEffect` propre à chaque consommateur, hors
- * TanStack Query : deux composants montés ensemble faisaient deux requêtes, et chaque
- * ouverture du sélecteur de personnes en refaisait une. La réponse porte une URL
- * d'avatar présignée par compte (calculée à chaque appel côté serveur) : mesurée à
- * 4 724 octets pour 8 comptes, soit ~70 ko pour un studio de 120 personnes.
+ * The directory used to be loaded in a `useEffect` of each consumer, outside TanStack Query: two
+ * components mounted together made two requests, and each opening of the people selector made another.
+ * The response carries a presigned avatar URL per account (computed on every call server-side): measured
+ * at 4,724 bytes for 8 accounts, i.e. ~70 kB for a studio of 120 people.
  *
- * `staleTime` d'une minute : ce qui bouge vite dans cette liste, c'est « qui est en
- * ligne », et cela arrive par la poussée socket `presence:update` qui écrit directement
- * dans ce cache (`applyPresencePush`, socketBridge). Le reste — nom, avatar, statut —
- * ne justifie pas un rechargement à chaque montage.
+ * `staleTime` of one minute: what moves fast in this list is "who is online", and that arrives through
+ * the `presence:update` socket push, which writes directly into this cache (`applyPresencePush`,
+ * socketBridge). The rest — name, avatar, status — does not justify a reload on every mount.
  */
 export function usePresenceQuery(enabled = true) {
   return useQuery({
@@ -192,7 +187,7 @@ export function usePresenceQuery(enabled = true) {
   });
 }
 
-/** Config watermark spectateur (35.B) — lue par les viewers internes. */
+/** Viewer watermark configuration (35.B) — read by the internal viewers. */
 export function useWatermarkConfigQuery() {
   return useQuery({
     queryKey: qk.watermarkConfig,
@@ -204,7 +199,7 @@ export function useWatermarkConfigQuery() {
   });
 }
 
-/** Tâche proposable comme destination d'une version. */
+/** Task that can be proposed as a destination for a version. */
 export interface ProjectTask {
   id: number;
   name: string;
@@ -216,10 +211,10 @@ export interface ProjectTask {
 }
 
 /**
- * Toutes les tâches du projet.
+ * All the project's tasks.
  *
- * Chargées seulement quand on en a besoin — au moment de choisir où ranger une version —
- * et gardées un moment : la liste ne bouge qu'au rythme des synchronisations.
+ * Loaded only when needed — when choosing where to file a version — and kept for a while: the list only
+ * moves at the pace of synchronisations.
  */
 export function useProjectTasks(projectId: number, enabled = true) {
   return useQuery({

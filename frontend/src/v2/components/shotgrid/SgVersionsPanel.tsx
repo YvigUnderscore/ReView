@@ -8,9 +8,9 @@ import { useT } from '../../i18n';
 import { useImportVersions, useSgImportableVersions } from '../../lib/shotgridApi';
 
 /**
- * Publishes ShotGrid du projet : ce qui est déjà dans ReView et ce qui peut y entrer.
- * L'import automatique couvre les nouveaux ; cette table sert à rattraper l'historique
- * ou à récupérer un publish exclu par le filtre de statuts.
+ * The project's ShotGrid versions: what is already in ReView and what can still come in.
+ * Automatic import covers new ones; this table is for catching up on history or recovering
+ * a version excluded by the status filter.
  */
 export default function SgVersionsPanel({ projectId, canManage }: { projectId: number; canManage: boolean }) {
   const t = useT();

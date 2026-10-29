@@ -5,12 +5,12 @@ import { describe, it, expect } from 'vitest';
 import { chatSystemText } from './chatSystemText';
 import type { MessageKey, TParams } from '../i18n';
 
-/** Traducteur de test : rend la clé et ses paramètres, sans dépendre d'un catalogue. */
+/** Test translator: returns the key and its parameters, without depending on a catalogue. */
 const t = (key: MessageKey, params?: TParams) =>
   params ? `${key}(${Object.values(params).join(',')})` : String(key);
 
 describe('chatSystemText', () => {
-  it('traduit la clé du message de service avec ses variables', () => {
+  it('translates the system message key with its variables', () => {
     expect(
       chatSystemText(t, {
         systemKey: 'chat.system.renamed',
@@ -20,22 +20,22 @@ describe('chatSystemText', () => {
     ).toBe('chat.system.renamed(Séquence 12)');
   });
 
-  it('rend le corps tel quel pour un message écrit', () => {
-    // Un message tapé par quelqu'un n'a pas de langue à choisir : le traduire serait le
-    // réécrire.
+  it('returns the body as is for a written message', () => {
+    // A message typed by someone has no language to choose: translating it would be
+    // rewriting it.
     expect(chatSystemText(t, { systemKey: null, systemVars: null, body: 'Bonjour' })).toBe('Bonjour');
   });
 
-  it('retombe sur le corps enregistré pour un message antérieur à la clé', () => {
-    // Les messages postés avant ce changement portent la phrase française en base : sans
-    // ce repli, le fil afficherait du vide là où il y avait une trace.
+  it('falls back to the stored body for a message predating the key', () => {
+    // Messages posted before this change carry the French sentence in the database: without
+    // this fallback, the thread would show nothing where there was a trace.
     expect(
       chatSystemText(t, { systemKey: null, systemVars: null, body: 'Alice a quitté la conversation' }),
     ).toBe('Alice a quitté la conversation');
   });
 
-  it('retombe aussi sur le corps quand la clé est inconnue du catalogue', () => {
-    // Un serveur plus récent que l'onglet ouvert : mieux vaut l'anglais qu'un identifiant.
+  it('also falls back to the body when the key is unknown to the catalogue', () => {
+    // A server newer than the open tab: English is better than an identifier.
     expect(
       chatSystemText(
         t,
@@ -45,7 +45,7 @@ describe('chatSystemText', () => {
     ).toBe('Alice did something');
   });
 
-  it('rend la clé seule quand elle n’a pas de variable', () => {
+  it('returns the bare key when it has no variable', () => {
     expect(chatSystemText(t, { systemKey: 'chat.system.left', systemVars: null, body: 'Alice left' })).toBe(
       'chat.system.left',
     );

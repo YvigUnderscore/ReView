@@ -3,7 +3,7 @@
 
 import { t } from '../i18n';
 
-/** Étiquette lisible d'un user-agent (36.B, liste des sessions) — heuristique volontairement simple. */
+/** Readable label of a user-agent (36.B, sessions list) — deliberately simple heuristic. */
 export function deviceLabel(userAgent: string | null): string {
   if (!userAgent) return t('common.unknownDevice');
   const ua = userAgent.toLowerCase();

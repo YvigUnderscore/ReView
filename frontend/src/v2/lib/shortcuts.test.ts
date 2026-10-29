@@ -16,7 +16,7 @@ const input = (type: string) => {
 };
 
 describe('isEditable', () => {
-  it('bloque les raccourcis dans les champs de saisie de texte', () => {
+  it('blocks shortcuts inside text input fields', () => {
     expect(isEditable(input('text'))).toBe(true);
     expect(isEditable(input('password'))).toBe(true);
     expect(isEditable(input('number'))).toBe(true);
@@ -24,7 +24,7 @@ describe('isEditable', () => {
     expect(isEditable(document.createElement('select'))).toBe(true);
   });
 
-  it('laisse passer les raccourcis depuis les contrôles non textuels (checkbox du HUD…)', () => {
+  it('lets shortcuts through from non-text controls (HUD checkbox…)', () => {
     expect(isEditable(input('checkbox'))).toBe(false);
     expect(isEditable(input('radio'))).toBe(false);
     expect(isEditable(input('range'))).toBe(false);
@@ -34,12 +34,12 @@ describe('isEditable', () => {
 });
 
 /**
- * La collision du leader `g`, constatée dans le code puis fermée (Phase 50).
+ * The `g` leader collision, found in the code and then closed (Phase 50).
  *
- * Ce gestionnaire vit sur `document`, le rail d'outils de la review sur `window` : la remontée
- * traverse le premier avant le second. Une frappe faisait donc deux choses — `g` armait l'outil
- * polygone *et* amorçait la séquence, et la frappe suivante (`p`, `k`, `b`) quittait la page en
- * armant au passage un outil du rail. La séquence consomme désormais ses deux frappes.
+ * This handler lives on `document`, the review tool rail on `window`: the event bubbles through the
+ * first before the second. A keystroke therefore did two things — `g` armed the polygon tool *and*
+ * started the sequence, and the next keystroke (`p`, `k`, `b`) left the page while arming a rail tool
+ * on the way. The sequence now consumes its two keystrokes.
  */
 const mountGlobal = (projectId: number | null = 7) => {
   const onHelp = vi.fn();
@@ -67,15 +67,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('useGlobalShortcuts — la séquence « g » consomme ses deux frappes', () => {
-  it('le leader n’atteint pas le rail d’outils de la review', () => {
+describe('useGlobalShortcuts — the "g" sequence consumes its two keystrokes', () => {
+  it('the leader does not reach the review tool rail', () => {
     const { heard, dispose } = mountGlobal();
     press('g');
     expect(heard).toEqual([]);
     dispose();
   });
 
-  it('la seconde frappe navigue, et n’atteint pas le rail non plus', () => {
+  it('the second keystroke navigates, and does not reach the rail either', () => {
     const { heard, dispose } = mountGlobal();
     press('g');
     press('b');
@@ -84,7 +84,7 @@ describe('useGlobalShortcuts — la séquence « g » consomme ses deux frappes'
     dispose();
   });
 
-  it('une séquence avortée reste consommée, sans naviguer', () => {
+  it('an aborted sequence stays consumed, without navigating', () => {
     const { heard, dispose } = mountGlobal();
     press('g');
     press('x');
@@ -93,7 +93,7 @@ describe('useGlobalShortcuts — la séquence « g » consomme ses deux frappes'
     dispose();
   });
 
-  it('hors séquence, les touches du rail passent — seul « g » lui est retiré', () => {
+  it('outside a sequence, the rail keys pass through — only "g" is taken away from it', () => {
     const { heard, dispose } = mountGlobal();
     press('d');
     press('t');
@@ -101,7 +101,7 @@ describe('useGlobalShortcuts — la séquence « g » consomme ses deux frappes'
     dispose();
   });
 
-  it('« ? » ouvre l’aide', () => {
+  it('"?" opens the help', () => {
     const { onHelp, dispose } = mountGlobal();
     press('?');
     expect(onHelp).toHaveBeenCalledTimes(1);

@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Ce qu'une vignette écrit quand elle n'a pas d'image — le nom de l'élément, mis à la
- * taille de la place disponible. Séparé de `EntityThumb` parce qu'un fichier de composant
- * n'exporte que des composants (rafraîchissement à chaud).
+ * What a thumbnail writes when it has no image — the element's name, sized to the space available.
+ * Split from `EntityThumb` because a component file may only export components (hot refresh).
  */
 
-/** Taille de police décroissante avec la longueur : un nom long doit rester lisible. */
+/** Font size decreasing with length: a long name must stay readable. */
 export function thumbScale(label: string): string {
   if (label.length <= 8) return 'text-xl';
   if (label.length <= 16) return 'text-base';
@@ -16,23 +15,22 @@ export function thumbScale(label: string): string {
 }
 
 /**
- * Abrégé des vignettes trop petites pour un nom (ligne compacte : 32 px de côté).
+ * Abbreviation for thumbnails too small for a name (compact row: 32 px square).
  *
- * En production les noms partagent leur préfixe et se distinguent par leur numéro
- * (`SH0120`, `SH0130`) : c'est donc le dernier nombre qui identifie, pas les initiales —
- * « SH » les rendrait toutes identiques. À défaut de chiffre, les initiales des deux
- * premiers mots, comme une pastille d'avatar.
+ * In production the names share their prefix and are told apart by their number (`SH0120`,
+ * `SH0130`): it is therefore the last number that identifies, not the initials — "SH" would make
+ * them all identical. Failing a digit, the initials of the first two words, like an avatar badge.
  */
 export function thumbAbbrev(name: string): string {
   const clean = name.trim();
   if (!clean) return '';
   const numbers = clean.match(/\d+/g);
-  // Quatre chiffres au plus : au-delà, rien ne serait lisible dans 32 px.
+  // Four digits at most: beyond that, nothing would be legible in 32 px.
   if (numbers) return numbers[numbers.length - 1].slice(-4);
-  // Découpage sur les séparateurs de nomenclature (`_`, `-`, `.`) autant que sur l'espace.
+  // Split on nomenclature separators (`_`, `-`, `.`) as well as on spaces.
   const words = clean.split(/[\s._-]+/).filter(Boolean);
-  // Itération par caractères (et non par unités de code) : un nom peut commencer par un
-  // caractère hors plan de base, qu'un `slice` couperait en deux moitiés illisibles.
+  // Iterate by character (not by code unit): a name may start with a character outside the
+  // base plane, which a `slice` would cut into two unreadable halves.
   const letters = words.length >= 2 ? [...words[0]][0] + [...words[1]][0] : [...clean].slice(0, 2).join('');
   return letters.toUpperCase();
 }

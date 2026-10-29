@@ -4,22 +4,22 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Projet « courant » de la barre latérale, même hors d'une page de projet (C1).
+ * The "current" project of the sidebar, even outside a project page (C1).
  *
- * La route seule ne suffit pas : passer par l'accueil, la liste des projets ou les reviews
- * remettait `currentProjectId` à null, et les sections du projet disparaissaient de la
- * barre — il fallait rouvrir le projet pour les retrouver. Le dernier projet ouvert reste
- * donc affiché tant qu'on n'en ouvre pas un autre, et survit au rechargement.
+ * The route alone is not enough: going through the home page, the project list or the reviews set
+ * `currentProjectId` back to null, and the project's sections disappeared from the sidebar — the project
+ * had to be reopened to find them again. The last project opened therefore stays displayed until another
+ * one is opened, and survives a reload.
  */
 
 const STORAGE_KEY = 'review:last-project';
 
-/** Quel projet montrer : celui de la route, sinon le dernier connu. Fonction pure, testée. */
+/** Which project to show: the route's, otherwise the last known one. Pure function, tested. */
 export function pickStickyProject(current: number | null, stored: number | null): number | null {
   return current ?? stored;
 }
 
-/** Lit l'identifiant mémorisé, en ignorant toute valeur qui n'est pas un id plausible. */
+/** Reads the remembered identifier, ignoring any value that is not a plausible id. */
 export function readStoredProject(raw: string | null): number | null {
   if (!raw) return null;
   const id = Number(raw);
@@ -31,12 +31,12 @@ export function useStickyProjectId(currentProjectId: number | null): number | nu
     try {
       return readStoredProject(localStorage.getItem(STORAGE_KEY));
     } catch {
-      return null; // stockage indisponible (navigation privée, quota)
+      return null; // storage unavailable (private browsing, quota)
     }
   });
 
-  // Ajusté pendant le rendu plutôt que dans un effet : React relance immédiatement, sans
-  // rendu intermédiaire où la barre latérale montrerait l'ancien projet.
+  // Adjusted during render rather than in an effect: React re-runs immediately, without an
+  // intermediate render where the sidebar would show the old project.
   if (currentProjectId !== null && currentProjectId !== stored) setStored(currentProjectId);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function useStickyProjectId(currentProjectId: number | null): number | nu
     try {
       localStorage.setItem(STORAGE_KEY, String(currentProjectId));
     } catch {
-      /* stockage indisponible */
+      /* storage unavailable */
     }
   }, [currentProjectId]);
 

@@ -3,49 +3,48 @@
 
 import type { Role } from '../types/api';
 import { intlLocale } from '../i18n';
-// Même repli que la palette : le module est déjà pur et testé, le dupliquer ici
-// ferait diverger deux définitions de « insensible aux accents ».
+// Same fallback as the palette: the module is already pure and tested, duplicating it here
+// would let two definitions of "accent-insensitive" drift apart.
 import { foldForSearch } from '../components/palette/paletteMatch';
 
 /**
- * Choisir une personne dans l'annuaire — filtrage, tri et ligne d'identité.
+ * Pick a person from the directory — filtering, sorting and identity line.
  *
- * Un studio aligne des dizaines de comptes dont beaucoup portent le même nom d'affichage
- * (vingt-sept « IT Artist » d'affilée, observés en production) : la seule liste de noms ne
- * dit pas lequel est le bon. Deux réponses, toutes deux ici parce qu'elles sont pures et
- * doivent être testées : la recherche porte sur tout ce qui identifie quelqu'un (nom,
- * adresse, poste, rôle), et la ligne secondaire affiche ce qui départage — le poste et
- * l'adresse, qui, elle, est unique par construction.
+ * A studio lines up dozens of accounts, many of which share the same display name (twenty-seven
+ * "IT Artist" in a row, observed in production): the list of names alone does not say which one is
+ * the right one. Two answers, both here because they are pure and must be tested: the search covers
+ * everything that identifies someone (name, email, job title, role), and the secondary line shows
+ * what tells them apart — the job title and the email address, which is unique by construction.
  */
 
-/** Une personne proposée au choix. Ce qu'il faut pour la reconnaître, rien de plus. */
+/** A person offered for selection. What is needed to recognise them, nothing more. */
 export interface PersonOption {
   id: number;
-  /** Nom affiché, déjà résolu par l'appelant (cf. `personLabel`). */
+  /** Displayed name, already resolved by the caller (see `personLabel`). */
   name: string;
-  /** Adresse : le seul champ qui départage deux homonymes à coup sûr. */
+  /** Email address: the only field that reliably tells two namesakes apart. */
   email?: string | null;
-  /** Poste déclaré sur la fiche (« Compositing lead »), quand il existe. */
+  /** Job title declared on the record ("Compositing lead"), when it exists. */
   jobTitle?: string | null;
-  /** Rôle dans le studio ou sur le projet — affiché en pastille. */
+  /** Role in the studio or on the project — displayed as a badge. */
   role?: Role | null;
   avatarUrl?: string | null;
-  /** Initiales calculées par le serveur ; à défaut, l'appelant les dérive du nom. */
+  /** Initials computed by the server; failing that, the caller derives them from the name. */
   initials?: string;
-  /** Compte machine (token d'API) : jamais proposé à moins qu'on l'exige. */
+  /** Machine account (API token): never offered unless explicitly required. */
   isService?: boolean;
 }
 
 export interface PeopleFilterOptions {
-  /** Saisie de l'utilisateur — casse, accents et espaces de bord ignorés. */
+  /** The user's input — case, accents and surrounding spaces ignored. */
   query?: string;
-  /** Personnes déjà retenues ailleurs (membres du projet, destinataires du fil). */
+  /** People already selected elsewhere (project members, thread recipients). */
   excludeIds?: readonly number[];
-  /** Laisse passer les comptes de service (aucun écran ne le demande aujourd'hui). */
+  /** Lets service accounts through (no screen asks for it today). */
   includeService?: boolean;
 }
 
-/** Identité brute telle qu'elle arrive de l'API, avant résolution du nom d'affichage. */
+/** Raw identity as it arrives from the API, before the display name is resolved. */
 export interface PersonIdentity {
   displayName?: string | null;
   username?: string | null;
@@ -54,28 +53,28 @@ export interface PersonIdentity {
 }
 
 /**
- * Nom d'affichage d'un compte.
+ * Display name of an account.
  *
- * Le serveur calcule déjà `displayName` (pseudo > nom > prénom+nom > adresse) et l'envoie
- * sur la plupart des routes ; le repli couvre les vues qui ne le portent pas encore. Un
- * compte invité mais jamais renseigné n'a que son adresse : c'est elle qui s'affiche,
- * plutôt qu'une ligne vide qu'on ne saurait pas cliquer.
+ * The server already computes `displayName` (nickname > name > first name + last name > email) and sends
+ * it on most routes; the fallback covers the views that do not carry it yet. An invited account that
+ * was never filled in only has its email address: that is what is displayed, rather than an empty line
+ * nobody could click.
  */
 export function personLabel(user: PersonIdentity): string {
   return user.displayName ?? user.username ?? user.name ?? user.email;
 }
 
-/** Ce qui départage deux homonymes, en une ligne : le poste puis l'adresse. */
+/** What tells two namesakes apart, on one line: the job title, then the email address. */
 export function personSubtitle(person: PersonOption): string {
   return [person.jobTitle, person.email].filter((part): part is string => Boolean(part)).join(' · ');
 }
 
 /**
- * La personne correspond-elle à la saisie ?
+ * Does the person match the input?
  *
- * Le rôle est comparé sur sa valeur technique (`ARTIST`) et non sur son libellé traduit :
- * comme les clés de la palette, elle ne bouge pas d'une langue à l'autre, et « admin »
- * reste ce que tape quelqu'un qui cherche un administrateur.
+ * The role is compared on its technical value (`ARTIST`) and not on its translated label: like the
+ * palette keys, it does not change from one language to another, and "admin" remains what someone
+ * types when looking for an administrator.
  */
 export function personMatches(person: PersonOption, query: string): boolean {
   const needle = foldForSearch(query.trim());
@@ -86,11 +85,10 @@ export function personMatches(person: PersonOption, query: string): boolean {
 }
 
 /**
- * Candidats retenus, triés pour la lecture.
+ * Retained candidates, sorted for reading.
  *
- * Le tri secondaire par adresse n'est pas cosmétique : sur une liste d'homonymes, c'est
- * le seul ordre stable — sans lui, deux « IT Artist » changent de place d'un rendu à
- * l'autre et on clique sur le mauvais.
+ * The secondary sort by email is not cosmetic: on a list of namesakes, it is the only stable order —
+ * without it, two "IT Artist" swap places from one render to the next and the wrong one gets clicked.
  */
 export function filterPeople(
   people: readonly PersonOption[],
@@ -111,13 +109,12 @@ export function filterPeople(
 }
 
 /**
- * Lequel des deux vides annoncer ?
+ * Which of the two empty messages to announce?
  *
- * Une liste vide ne dit pas la même chose selon qu'on a cherché ou non. « Personne ne
- * correspond à cette recherche » sur un champ vide accuse une recherche qui n'a pas eu
- * lieu : ce qu'il faut dire, c'est qu'il n'y a personne à proposer — et cela, seul
- * l'appelant le sait (tout le studio est déjà membre, l'entité n'a aucun département…).
- * Dès qu'un mot est tapé, en revanche, c'est bien de correspondance qu'il s'agit.
+ * An empty list does not say the same thing depending on whether a search was made. "No one matches
+ * this search" over an empty field blames a search that never took place: what should be said is that
+ * there is nobody to offer — and only the caller knows that (the whole studio is already a member, the
+ * entity has no department…). As soon as a word is typed, on the other hand, it is indeed a matter of match.
  */
 export function emptyPeopleReason(query: string): 'no-candidates' | 'no-match' {
   return query.trim() === '' ? 'no-candidates' : 'no-match';

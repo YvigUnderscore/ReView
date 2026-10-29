@@ -5,9 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { groupSequencesByEpisode, moveInOrder, shotsOfSequence } from './episodesApi';
 
 /**
- * Les trois règles pures du niveau Épisode. Ce sont celles qu'une erreur d'index rendrait
- * silencieusement fausses : la liste se réafficherait, dans le mauvais ordre ou amputée
- * d'une séquence, sans qu'aucune erreur ne remonte.
+ * The three pure rules of the Episode level. These are the ones an index error would silently make
+ * wrong: the list would redisplay, in the wrong order or missing a sequence, without any error being raised.
  */
 
 const seq = (id: number, episodeId?: number | null) => ({ id, episodeId });
@@ -15,30 +14,30 @@ const seq = (id: number, episodeId?: number | null) => ({ id, episodeId });
 describe('moveInOrder', () => {
   const items = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
-  it('monte et descend d’un cran', () => {
+  it('moves up and down by one step', () => {
     expect(moveInOrder(items, 3, -1)).toEqual([1, 3, 2]);
     expect(moveInOrder(items, 1, 1)).toEqual([2, 1, 3]);
   });
 
-  it('laisse la liste intacte hors des bornes plutôt que de la tronquer', () => {
+  it('leaves the list intact outside the bounds rather than truncating it', () => {
     expect(moveInOrder(items, 1, -1)).toEqual([1, 2, 3]);
     expect(moveInOrder(items, 3, 1)).toEqual([1, 2, 3]);
   });
 
-  it('laisse la liste intacte pour un identifiant inconnu', () => {
+  it('leaves the list intact for an unknown identifier', () => {
     expect(moveInOrder(items, 99, 1)).toEqual([1, 2, 3]);
   });
 });
 
 describe('groupSequencesByEpisode', () => {
-  it('rend un groupe « sans épisode », même vide de sens pour un long-métrage', () => {
-    // « Sans » est une réponse, pas une absence : taire ce groupe ferait disparaître de
-    // l'écran des séquences bien vivantes.
+  it('returns a "no episode" group, even if it makes little sense for a feature film', () => {
+    // "None" is an answer, not an absence: hiding this group would make live sequences disappear
+    // from the screen.
     const groups = groupSequencesByEpisode([], [seq(1), seq(2, null)]);
     expect(groups).toEqual([{ episodeId: null, sequences: [seq(1), seq(2, null)] }]);
   });
 
-  it('range chaque séquence sous son épisode, dans l’ordre reçu', () => {
+  it('files each sequence under its episode, in the order received', () => {
     const groups = groupSequencesByEpisode(
       [{ id: 10 }, { id: 11 }],
       [seq(1, 11), seq(2, 10), seq(3, 11), seq(4, null)],
@@ -50,14 +49,14 @@ describe('groupSequencesByEpisode', () => {
     ]);
   });
 
-  it('n’invente pas de groupe pour un épisode que rien ne réclame', () => {
+  it('does not invent a group for an episode nothing claims', () => {
     const groups = groupSequencesByEpisode([{ id: 10 }], []);
     expect(groups.every((g) => g.sequences.length === 0)).toBe(true);
   });
 });
 
 describe('shotsOfSequence', () => {
-  it('ne garde que les plans de la séquence demandée, ordre serveur conservé', () => {
+  it('keeps only the shots of the requested sequence, server order preserved', () => {
     const shots = [
       { id: 1, sequenceId: 5 },
       { id: 2, sequenceId: 6 },

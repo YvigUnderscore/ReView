@@ -18,49 +18,47 @@ import {
 } from './tooltip.variants';
 
 /**
- * Infobulle accessible (Radix) : portal, positionnement automatique, fermeture Échap,
- * ouverture au survol **et au focus clavier**. Elle remplace l'attribut `title` natif, qui
- * attend ~1,5 s, ne se style pas, ignore le thème et n'apparaît jamais au clavier.
+ * Accessible tooltip (Radix): portal, automatic positioning, close on Escape,
+ * opens on hover **and on keyboard focus**. It replaces the native `title` attribute, which
+ * waits ~1.5 s, cannot be styled, ignores the theme and never appears on the keyboard.
  *
- * ## Elle ne nomme pas le contrôle — elle le décrit
+ * ## It does not name the control — it describes it
  *
- * Point à ne pas confondre : Radix pose `aria-describedby` sur le déclencheur, pas
- * `aria-labelledby`. Une infobulle n'est donc **jamais** un substitut au nom accessible.
- * Un bouton à icône seule garde son `aria-label` : c'est lui que le lecteur d'écran
- * annonce, et c'est la seule information qui survive au tactile, où aucune infobulle ne
- * s'ouvre (ni la native, ni celle-ci).
+ * Do not confuse the two: Radix sets `aria-describedby` on the trigger, not
+ * `aria-labelledby`. A tooltip is therefore **never** a substitute for the accessible name.
+ * An icon-only button keeps its `aria-label`: that is what the screen reader announces, and
+ * it is the only information that survives on touch, where no tooltip opens (neither the
+ * native one nor this one).
  *
- * Contrepartie assumée quand l'infobulle reprend mot pour mot l'`aria-label` (le cas de
- * `IconButton`) : à l'ouverture, le lecteur d'écran annonce le nom puis la description,
- * donc deux fois le même mot. C'est le comportement de tout le monde (shadcn, Radix), et
- * c'est le moindre mal — supprimer l'`aria-label` rendrait le bouton anonyme au tactile et
- * pour tout lecteur qui n'ouvre pas l'infobulle.
+ * Accepted trade-off when the tooltip repeats the `aria-label` word for word (the case of
+ * `IconButton`): on opening, the screen reader announces the name then the description, so
+ * the same word twice. This is what everyone does (shadcn, Radix), and it is the lesser evil —
+ * removing the `aria-label` would leave the button anonymous on touch and for any reader
+ * that does not open the tooltip.
  */
 const TooltipRoot = TooltipPrimitive.Root;
 const TooltipTrigger = TooltipPrimitive.Trigger;
 
 /**
- * Marqueur de présence du provider.
+ * Provider presence marker.
  *
- * Radix **lève** quand un `Tooltip` n'a pas de provider au-dessus de lui, et une exception
- * de rendu n'est pas rattrapable localement : elle remonte à l'`ErrorBoundary` la plus
- * proche et vide tout le sous-arbre. Un bouton à icône, posé dans une racine React montée à
- * part, ferait donc disparaître la page qui l'entoure. Trop de dégâts pour une décoration.
+ * Radix **throws** when a `Tooltip` has no provider above it, and a render exception cannot
+ * be caught locally: it bubbles to the nearest `ErrorBoundary` and empties the whole subtree.
+ * An icon button mounted in a React root on its own would therefore make the page around it
+ * disappear. Too much damage for a decoration.
  *
- * D'où ce contexte, qui n'existe que pour répondre « y a-t-il un provider ? » — question à
- * laquelle le contexte de Radix, non exporté, ne permet pas de répondre. Quand la réponse
- * est non, `Tooltip` se fournit le sien : on perd la fenêtre de grâce partagée, jamais
- * l'affichage.
+ * Hence this context, which exists only to answer "is there a provider?" — a question that
+ * Radix's own context, not exported, cannot answer. When the answer is no, `Tooltip` supplies
+ * its own: we lose the shared grace window, never the display.
  */
 const HasTooltipProvider = createContext(false);
 
 /**
- * Un seul provider, monté haut dans l'arbre (cf. `App.tsx`).
+ * A single provider, mounted high in the tree (see `App.tsx`).
  *
- * En poser un par bouton coûterait un contexte par bouton **et** ferait perdre la fenêtre
- * de grâce : c'est le provider qui la mémorise, donc c'est lui qui permet de balayer une
- * barre dense sans repayer le délai à chaque icône. Les deux réglages sont donc portés ici,
- * une fois.
+ * Mounting one per button would cost one context per button **and** lose the grace window:
+ * it is the provider that remembers it, so it is what lets a dense bar be swept without
+ * paying the delay on every icon. Both settings are therefore held here, once.
  */
 function TooltipProvider({
   delayDuration = TOOLTIP_DELAY_MS,
@@ -95,12 +93,11 @@ const TooltipContent = forwardRef<
 TooltipContent.displayName = 'TooltipContent';
 
 /**
- * Raccourci pour le cas courant : envelopper un contrôle déjà nommé.
+ * Shortcut for the common case: wrapping an already named control.
  *
- * `asChild` sur le déclencheur — l'infobulle ne doit pas introduire de balise
- * supplémentaire autour du bouton : elle casserait les barres en `flex` et les sélecteurs
- * de voisinage. Un `label` vide ne monte rien du tout, pour que les appelants puissent
- * passer une valeur optionnelle sans se garder eux-mêmes.
+ * `asChild` on the trigger — the tooltip must not introduce an extra tag around the button:
+ * it would break `flex` bars and neighbour selectors. An empty `label` renders nothing at all,
+ * so callers can pass an optional value without guarding it themselves.
  */
 export function RadixTooltip({
   label,
@@ -119,7 +116,7 @@ export function RadixTooltip({
       <TooltipContent side={side}>{label}</TooltipContent>
     </TooltipRoot>
   );
-  // Repli isolé : mieux vaut une fenêtre de grâce perdue qu'un sous-arbre effacé.
+  // Isolated fallback: a lost grace window is better than an erased subtree.
   return hasProvider ? tooltip : <TooltipProvider>{tooltip}</TooltipProvider>;
 }
 

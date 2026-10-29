@@ -5,39 +5,39 @@ import { describe, it, expect } from 'vitest';
 import { thumbAbbrev, thumbScale } from './entityThumbLabel';
 
 /**
- * L'abrégé sert des noms de production, pas des noms de personnes : deux plans d'une même
- * séquence partagent tout sauf leur numéro. Prendre les initiales les rendrait identiques.
+ * The abbreviation is for production names, not people's names: two shots of the same sequence
+ * share everything except their number. Taking the initials would make them identical.
  */
 describe('thumbAbbrev', () => {
-  it('retient le dernier nombre du nom — c’est lui qui distingue deux plans', () => {
+  it('keeps the last number of the name — it is what tells two shots apart', () => {
     expect(thumbAbbrev('SH0120')).toBe('0120');
     expect(thumbAbbrev('SQ010_SH0130')).toBe('0130');
     expect(thumbAbbrev('EP02')).toBe('02');
   });
 
-  it('borne l’abrégé à quatre chiffres', () => {
+  it('caps the abbreviation at four digits', () => {
     expect(thumbAbbrev('SH1234567')).toBe('4567');
   });
 
-  it('retombe sur les initiales quand le nom ne porte aucun chiffre', () => {
+  it('falls back to the initials when the name carries no digit', () => {
     expect(thumbAbbrev('Le Grand Voyage')).toBe('LG');
     expect(thumbAbbrev('bunker')).toBe('BU');
     expect(thumbAbbrev('deep_forest')).toBe('DF');
   });
 
-  it('ne coupe pas un caractère en deux moitiés', () => {
-    // Emoji et idéogrammes tiennent sur deux unités de code : un `slice(0, 2)` naïf
-    // rendrait une moitié de caractère, affichée en losange noir.
+  it('does not split a character in two halves', () => {
+    // Emoji and ideographs take two code units: a naive `slice(0, 2)` would produce half a
+    // character, displayed as a black lozenge.
     expect(thumbAbbrev('🎬 clap')).toBe('🎬C');
   });
 
-  it('accepte un nom vide sans rien inventer', () => {
+  it('accepts an empty name without inventing anything', () => {
     expect(thumbAbbrev('   ')).toBe('');
   });
 });
 
 describe('thumbScale', () => {
-  it('réduit la police à mesure que le nom s’allonge', () => {
+  it('shrinks the font as the name gets longer', () => {
     expect(thumbScale('SQ010')).toBe('text-xl');
     expect(thumbScale('Le Grand Voyage')).toBe('text-base');
     expect(thumbScale('Le Grand Voyage de Mémé')).toBe('text-sm');

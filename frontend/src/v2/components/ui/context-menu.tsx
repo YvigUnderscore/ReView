@@ -7,13 +7,13 @@ import { Check, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 /**
- * Menu contextuel (clic droit) accessible — Radix, style shadcn (13.B). Utilisé sur les
- * items de liste (EntityCard) pour regrouper Ouvrir/Éditer/Favori/Déplacer/Supprimer.
+ * Accessible context menu (right click): Radix, shadcn style (13.B). Used on list items
+ * (EntityCard) to group Open/Edit/Favourite/Move/Delete.
  */
-// Non-modal : un menu modal pose `pointer-events: none` sur le body et, quand un item
-// ouvre un Dialog pendant son animation de fermeture, les deux verrous s'emmêlent et le
-// blocage persiste après fermeture (page figée — retour CP-HUMAIN 33). Sans modalité,
-// le menu ne verrouille rien ; les Dialogs gardent leur propre verrou, posé proprement.
+// Non-modal: a modal menu sets `pointer-events: none` on the body, and when an item
+// opens a Dialog during the menu's closing animation, the two locks tangle and the block
+// persists after closing (page frozen: CP-HUMAIN 33 feedback). Without modality, the menu
+// locks nothing; Dialogs keep their own lock, set properly.
 const ContextMenu = (props: React.ComponentProps<typeof ContextMenuPrimitive.Root>) => (
   <ContextMenuPrimitive.Root modal={false} {...props} />
 );
@@ -50,8 +50,8 @@ const ContextMenuItem = forwardRef<
 >(({ className, danger, onClick, onSelect, ...props }, ref) => (
   <ContextMenuPrimitive.Item
     ref={ref}
-    // Action différée après la fermeture du menu : ouvrir un Dialog pendant que le menu
-    // se démonte laisse un `pointer-events: none` résiduel sur le body (page figée).
+    // Action deferred until the menu has closed: opening a Dialog while the menu is
+    // unmounting leaves a residual `pointer-events: none` on the body (page frozen).
     onSelect={(e) => {
       onSelect?.(e);
       if (onClick) setTimeout(() => onClick(e as unknown as React.MouseEvent<HTMLDivElement>), 0);
@@ -68,9 +68,9 @@ const ContextMenuItem = forwardRef<
 ContextMenuItem.displayName = 'ContextMenuItem';
 
 /**
- * Choix unique dans un menu (statut d'une entité). Radix pose `role="menuitemradio"`,
- * `aria-checked` et la navigation clavier ; refaire la sémantique à la main sur un
- * `ContextMenuItem` serait de toute façon écrasé par la primitive.
+ * Single choice within a menu (status of an entity). Radix sets `role="menuitemradio"`,
+ * `aria-checked` and keyboard navigation; redoing the semantics by hand on a
+ * `ContextMenuItem` would be overridden by the primitive anyway.
  */
 const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup;
 
@@ -87,7 +87,7 @@ const ContextMenuRadioItem = forwardRef<
     )}
     {...props}
   >
-    {/* Emplacement fixe : sans lui, les libellés se décalent selon l'élément coché. */}
+    {/* Fixed slot: without it, labels shift depending on which item is checked. */}
     <span className="flex w-4 shrink-0 items-center justify-center">
       <ContextMenuPrimitive.ItemIndicator>
         <Check size={13} />
@@ -99,9 +99,9 @@ const ContextMenuRadioItem = forwardRef<
 ContextMenuRadioItem.displayName = 'ContextMenuRadioItem';
 
 /**
- * Bascule d'un état (plan omis du montage). Comme le choix unique, la primitive porte la
- * sémantique — `role="menuitemcheckbox"` et `aria-checked` — qu'un item ordinaire coiffé
- * d'une coche dessinée à la main n'aurait pas.
+ * Toggle for a state (plan left out of the mount). Like the single choice, the primitive
+ * carries the semantics — `role="menuitemcheckbox"` and `aria-checked` — which an ordinary
+ * item with a hand-drawn tick would not have.
  */
 const ContextMenuCheckboxItem = forwardRef<
   ComponentRef<typeof ContextMenuPrimitive.CheckboxItem>,
@@ -116,7 +116,7 @@ const ContextMenuCheckboxItem = forwardRef<
     )}
     {...props}
   >
-    {/* Même emplacement fixe que le choix unique : les libellés ne bougent pas. */}
+    {/* Same fixed slot as the single choice: labels do not move. */}
     <span className="flex w-4 shrink-0 items-center justify-center">
       <ContextMenuPrimitive.ItemIndicator>
         <Check size={13} />
@@ -127,7 +127,7 @@ const ContextMenuCheckboxItem = forwardRef<
 ));
 ContextMenuCheckboxItem.displayName = 'ContextMenuCheckboxItem';
 
-// Sous-menus (gestion des rôles live par clic droit — retours 33).
+// Submenus (live role management via right click — feedback 33).
 const ContextMenuSub = ContextMenuPrimitive.Sub;
 
 const ContextMenuSubTrigger = forwardRef<

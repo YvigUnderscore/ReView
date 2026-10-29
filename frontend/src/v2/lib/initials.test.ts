@@ -5,15 +5,15 @@ import { describe, it, expect } from 'vitest';
 import { initialsFrom } from './initials';
 
 describe('initialsFrom', () => {
-  it('prend la première lettre de chaque mot', () => {
+  it('takes the first letter of each word', () => {
     expect(initialsFrom('Ada Lovelace')).toBe('AL');
   });
 
-  it('se contente d’une lettre pour un prénom seul', () => {
+  it('settles for one letter for a first name alone', () => {
     expect(initialsFrom('ada')).toBe('A');
   });
 
-  it('rend un repère lisible plutôt que rien quand le nom manque', () => {
+  it('returns a readable marker rather than nothing when the name is missing', () => {
     expect(initialsFrom(null)).toBe('?');
     expect(initialsFrom('')).toBe('?');
   });

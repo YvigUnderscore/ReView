@@ -23,14 +23,14 @@ vi.mock('../../lib/shotgridTasksApi', () => ({ useSgProjectMembers: sgMembers })
 vi.mock('../shotgrid/PipelineStatusBadge', () => ({ default: () => null }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-/** Les tâches de l'asset ouvert — celles que la page a déjà chargées. */
+/** The open asset's tasks — the ones the page has already loaded. */
 const MINE: PickableTask[] = [
   { id: 41, name: 'Lookdev', department: 'lookdev', pipelineStatusId: null, versionCount: 2 },
 ];
 
 /**
- * Le reste du projet, du même bord : c'est exactement ce que le dialogue proposait à tort
- * sous « Elsewhere in the project ».
+ * The rest of the project, from the same side: this is exactly what the dialog wrongly
+ * offered under "Elsewhere in the project".
  */
 const PROJECT = [
   {
@@ -87,40 +87,40 @@ const mount = (props: Partial<Parameters<typeof TaskPickerDialog>[0]> = {}) => {
 };
 
 /**
- * Le dialogue s'ouvre depuis une entité : proposer les tâches d'une autre invite à ranger
- * la version au mauvais endroit, et ShotGrid la reçoit là-bas — ce qui ne se rattrape pas.
+ * The dialog opens from an entity: offering the tasks of another one invites filing the
+ * version in the wrong place, and ShotGrid receives it there — which cannot be undone.
  */
 describe('TaskPickerDialog — destinations', () => {
-  it('ne propose que les tâches de l’entité ouverte', () => {
+  it('only offers the tasks of the open entity', () => {
     mount();
     expect(screen.getByRole('button', { name: /Lookdev/ })).toBeTruthy();
-    // Un autre asset du même bord : c'était la section « ailleurs dans le projet ».
+    // Another asset from the same side: that was the "elsewhere in the project" section.
     expect(screen.queryByRole('button', { name: /Layout/ })).toBeNull();
     expect(screen.queryByText(/Train Yard Scan/)).toBeNull();
-    // Et, a fortiori, aucune tâche de plan.
+    // And, a fortiori, no plan task.
     expect(screen.queryByRole('button', { name: /Groom/ })).toBeNull();
     expect(screen.queryByText(/SH010/)).toBeNull();
   });
 
-  it('rend la tâche choisie, celle de l’entité', async () => {
+  it('returns the chosen task, the entity\'s own', async () => {
     const user = userEvent.setup();
     const onPick = mount();
     await user.click(screen.getByRole('button', { name: /Lookdev/ }));
     expect(onPick).toHaveBeenCalledWith(41);
   });
 
-  it('laisse rattacher au parent quand la page l’autorise, jamais sinon', () => {
+  it('allows attaching to the parent when the page permits it, never otherwise', () => {
     mount({ allowNone: true });
     expect(screen.getByRole('button', { name: t('upload.pickTask.none') })).toBeTruthy();
   });
 
-  it('n’offre pas le rattachement au parent sans `allowNone`', () => {
+  it('does not offer attaching to the parent without `allowNone`', () => {
     mount();
     expect(screen.queryByRole('button', { name: t('upload.pickTask.none') })).toBeNull();
   });
 });
 
-describe('TaskPickerDialog — étape manquante', () => {
+describe('TaskPickerDialog — missing step', () => {
   beforeEach(() => {
     steps.mockReturnValue({
       linked: false,
@@ -129,7 +129,7 @@ describe('TaskPickerDialog — étape manquante', () => {
     });
   });
 
-  it('crée l’étape manquante sur l’entité ouverte', async () => {
+  it('creates the missing step on the open entity', async () => {
     const user = userEvent.setup();
     mount();
     await user.click(
@@ -138,7 +138,7 @@ describe('TaskPickerDialog — étape manquante', () => {
     expect(createTask).toHaveBeenCalledWith(expect.objectContaining({ parent: { kind: 'asset', id: 12 } }));
   });
 
-  it('propose encore les noms du projet en autocomplétion — un nom n’est pas une destination', () => {
+  it('still suggests the project names as autocompletion — a name is not a destination', () => {
     mount();
     const names = [...document.querySelectorAll('#review-task-names option')].map((o) =>
       o.getAttribute('value'),
@@ -149,24 +149,24 @@ describe('TaskPickerDialog — étape manquante', () => {
 });
 
 /**
- * Aucune tâche sur l'entité ET aucune étape inscriptible : le dialogue rendait alors une
- * boîte vide dont la seule issue était la croix de la modale — donc un dépôt impossible.
- * Le cas n'est pas exotique : rien ne sème de département à l'installation, la politique
- * de département ne laisse d'étape écrivable qu'à qui appartient à l'une d'elles, et un
- * site relié peut n'exposer aucune étape pour ce type d'entité.
+ * No task on the entity AND no writable step: the dialog then rendered an empty box whose
+ * only exit was the modal's close button — so an impossible drop.
+ * The case is not exotic: nothing seeds a department at installation, the department policy
+ * only leaves a step writable to whoever belongs to one of them, and a linked site may expose
+ * no step at all for this kind of entity.
  */
-describe('TaskPickerDialog — aucune destination', () => {
+describe('TaskPickerDialog — no destination', () => {
   beforeEach(() => {
     projectTasks.mockReturnValue({ data: [] });
     steps.mockReturnValue({ linked: false, steps: [], isLoading: false });
   });
 
-  it('ne reste jamais sans issue : la tâche sans étape rouvre le dépôt', async () => {
+  it('never gets stuck: the task without a step reopens the drop', async () => {
     const user = userEvent.setup();
     const onPick = mount({ tasks: [], parent: { kind: 'shot', id: 12 } });
     expect(screen.getByText(t('upload.pickTask.barren'))).toBeTruthy();
     const create = screen.getByRole('button', { name: t('upload.pickTask.createStepless') });
-    // Sans nom, le serveur refuserait la tâche : le bouton attend qu'on en donne un.
+    // Without a name, the server would refuse the task: the button waits for one to be given.
     expect(create).toBeDisabled();
     await user.type(screen.getByLabelText(t('upload.pickTask.nameRequired')), 'compo fix');
     expect(create).toBeEnabled();
@@ -178,25 +178,25 @@ describe('TaskPickerDialog — aucune destination', () => {
   });
 
   /**
-   * Sur un asset, `allowNone` offrait déjà une issue (la version pend à l'asset lui-même).
-   * Les deux cohabitent : l'explication reste vraie, et ranger le rendu sous une tâche
-   * plutôt que « sur l'asset » garde l'étape qui l'a produit.
+   * On an asset, `allowNone` already offered an exit (the version hangs off the asset itself).
+   * Both coexist: the explanation stays true, and filing the render under a task rather than
+   * "on the asset" keeps the step that produced it.
    */
-  it('laisse les deux issues sur un asset, sans en faire disparaître une', () => {
+  it('leaves both exits on an asset, without making either disappear', () => {
     mount({ tasks: [], allowNone: true });
     expect(screen.getByText(t('upload.pickTask.barren'))).toBeTruthy();
     expect(screen.getByRole('button', { name: t('upload.pickTask.createStepless') })).toBeTruthy();
     expect(screen.getByRole('button', { name: t('upload.pickTask.none') })).toBeTruthy();
   });
 
-  it('sur un projet relié, renvoie au site plutôt que de créer un doublon', () => {
+  it('on a linked project, sends the user to the site rather than creating a duplicate', () => {
     steps.mockReturnValue({ linked: true, steps: [], isLoading: false });
     mount({ tasks: [] });
     expect(screen.getByText(t('upload.pickTask.barrenLinked'))).toBeTruthy();
     expect(screen.queryByRole('button', { name: t('upload.pickTask.createStepless') })).toBeNull();
   });
 
-  it('attend la réponse du pipe avant d’annoncer qu’il n’y a rien', () => {
+  it('waits for the pipeline response before announcing there is nothing', () => {
     steps.mockReturnValue({ linked: false, steps: [], isLoading: true });
     mount({ tasks: [] });
     expect(screen.getByText(t('common.loading'))).toBeTruthy();
@@ -204,7 +204,7 @@ describe('TaskPickerDialog — aucune destination', () => {
     expect(screen.queryByRole('button', { name: t('upload.pickTask.createStepless') })).toBeNull();
   });
 
-  it('s’efface dès qu’une étape existe : la sortie de secours n’est pas un raccourci', () => {
+  it('disappears as soon as a step exists: the fallback exit is not a shortcut', () => {
     steps.mockReturnValue({
       linked: false,
       steps: [{ key: 'dept-7', code: 'ANIM', color: null }],

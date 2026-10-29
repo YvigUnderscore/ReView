@@ -4,14 +4,13 @@
 import type { SgCrewInviteResult, SgCrewPerson } from '../../types/shotgrid';
 
 /**
- * Sélection et résumé de l'invitation d'équipe — logique pure.
+ * Invitation selection and summary for the team: pure logic.
  *
- * Ce qui se joue ici : dire à l'utilisateur **avant** de cliquer combien de comptes
- * seront créés. Une invitation envoie un courriel à quelqu'un ; l'annoncer après coup
- * serait trop tard.
+ * The point here is to tell the user **before** they click how many accounts will be
+ * created. An invitation sends an email to someone; announcing it afterwards would be too late.
  */
 
-/** Seules ces personnes gagnent quelque chose à être invitées. */
+/** Only these people gain anything from being invited. */
 export function isInvitable(person: SgCrewPerson): boolean {
   return person.state === 'account' || person.state === 'none';
 }
@@ -20,7 +19,7 @@ export function invitableOf(crew: SgCrewPerson[]): SgCrewPerson[] {
   return crew.filter(isInvitable);
 }
 
-/** Ce que fera la sélection : des créations de comptes, des ajouts au projet. */
+/** What the selection will do: account creations and additions to the project. */
 export function splitOutcome(
   crew: SgCrewPerson[],
   selected: number[],
@@ -33,7 +32,7 @@ export function splitOutcome(
   };
 }
 
-/** Compteurs par issue, pour le retour après coup. */
+/** Counters per outcome, for reporting afterwards. */
 export function summarize(results: SgCrewInviteResult[]): Record<SgCrewInviteResult['outcome'], number> {
   const counts = { created: 0, added: 0, linked: 0, skipped: 0 };
   for (const r of results) counts[r.outcome] += 1;

@@ -8,16 +8,15 @@ import type { TaskStatus } from '../../types/api';
 import type { StatusScope } from '../../types/shotgrid';
 
 /**
- * Sélecteur de statut, dans le vocabulaire du projet.
+ * Status selector using the project's own vocabulary.
  *
- * Le référentiel `PipelineStatus` existait déjà — la synchronisation ShotGrid le
- * remplissait fidèlement — mais aucun sélecteur ne le lisait : tous proposaient les six
- * valeurs figées de l'énumération. Un superviseur travaillant sur un projet ShotGrid ne
- * pouvait donc pas poser « Ready to Start » ni « On Hold », et voyait « Approved » là où
- * son site dit « Supervisor Approved ».
+ * The `PipelineStatus` catalogue already existed and ShotGrid sync filled it, but no
+ * selector read it: all of them offered the six fixed enum values. A supervisor on a
+ * ShotGrid project could therefore not set "Ready to Start" or "On Hold", and saw
+ * "Approved" where the site says "Supervisor Approved".
  *
- * Le repli sur les six statuts figés reste, et sert deux fois : le temps que la requête
- * réponde, et pour un studio dont le référentiel n'a jamais été rempli.
+ * The fallback to the six fixed statuses is kept for two cases: while the request is
+ * in flight, and for a studio whose catalogue was never populated.
  */
 export default function PipelineStatusSelect({
   projectId,
@@ -29,11 +28,11 @@ export default function PipelineStatusSelect({
   disabled,
 }: {
   projectId: number;
-  /** Une séquence porte son propre vocabulaire de statuts, distinct de celui d'un plan (C3). */
+  /** A sequence has its own status vocabulary, distinct from a plan's (C3). */
   scope: StatusScope;
-  /** Statut du référentiel, quand l'entité en porte un. */
+  /** Catalogue status, when the entity has one. */
   statusId: number | null | undefined;
-  /** Valeur de l'énumération, seule information disponible sur les entités anciennes. */
+  /** Enum value; the only information available on legacy entities. */
   legacyStatus?: TaskStatus | null;
   onChange: (next: { statusId: number | null; legacyStatus: TaskStatus }) => void;
   className?: string;
@@ -43,7 +42,7 @@ export default function PipelineStatusSelect({
   const { data: statuses = [] } = usePipelineStatuses(scope, projectId);
 
   if (statuses.length === 0) {
-    // Repli : le vocabulaire figé, tant qu'aucun référentiel n'est disponible.
+    // Fallback: the fixed vocabulary, as long as no catalogue is available.
     return (
       <select
         aria-label={t('common.status')}
@@ -61,16 +60,16 @@ export default function PipelineStatusSelect({
     );
   }
 
-  // L'entité peut ne porter que son ancienne valeur : on retrouve alors le statut du
-  // référentiel qui la représente, plutôt que d'afficher une liste sans sélection.
+  // The entity may only carry its legacy value: look up the catalogue status that
+  // represents it, rather than showing a list with no selection.
   const current =
     statuses.find((s) => s.id === statusId) ??
     (legacyStatus ? statuses.find((s) => s.legacyStatus === legacyStatus) : undefined);
 
   return (
-    // `title` porte le code du référentiel : c'est une précision, pas un nom. Sans
-    // `aria-label`, une page de kanban annonçait autant de « listes déroulantes » que de
-    // cartes — le sélecteur de statut est présent sur chacune.
+    // `title` carries the catalogue code: it is a detail, not a name. Without an
+    // `aria-label`, a kanban page announced as many "dropdowns" as there were cards,
+    // since every card has this selector.
     <select
       aria-label={t('common.status')}
       value={current?.id ?? ''}

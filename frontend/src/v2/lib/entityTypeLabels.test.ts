@@ -6,43 +6,43 @@ import { t } from '../i18n';
 import { assetTypeLabel, taskTypeLabel, titleCase } from './entityTypeLabels';
 
 /**
- * Les filtres de l'onglet Assets et du kanban affichaient `CHARACTER`, `PROP`, `LOOKDEV` —
- * des identifiants de base, en capitales, au milieu d'une interface rédigée.
+ * The Assets tab and kanban filters displayed `CHARACTER`, `PROP`, `LOOKDEV` — base identifiers,
+ * in capitals, in the middle of an otherwise written interface.
  */
 describe('assetTypeLabel', () => {
-  it('traduit les types connus', () => {
+  it('translates the known types', () => {
     expect(assetTypeLabel(t, 'CHARACTER')).toBe('Character');
     expect(assetTypeLabel(t, 'ENVIRONMENT')).toBe('Environment');
   });
 
-  it('laisse FX tel quel — c’est du vocabulaire de production', () => {
+  it('leaves FX as is — it is production vocabulary', () => {
     expect(assetTypeLabel(t, 'FX')).toBe('FX');
   });
 
-  it('se rabat sur une casse lisible pour un type inconnu, jamais sur la clé', () => {
+  it('falls back to a readable casing for an unknown type, never to the key', () => {
     expect(assetTypeLabel(t, 'MATTE_PAINTING')).toBe('Matte Painting');
     expect(assetTypeLabel(t, 'MACHIN')).not.toContain('assetType.');
   });
 });
 
 describe('taskTypeLabel', () => {
-  it('garde le vocabulaire de département, en casse normale', () => {
+  it('keeps the department vocabulary, in normal casing', () => {
     expect(taskTypeLabel(t, 'LOOKDEV')).toBe('Look Dev');
     expect(taskTypeLabel(t, 'COMPOSITING')).toBe('Compositing');
     expect(taskTypeLabel(t, 'FX')).toBe('FX');
   });
 
-  it('reste lisible sur un type qu’il ne connaît pas', () => {
+  it('stays readable for a type it does not know', () => {
     expect(taskTypeLabel(t, 'MATCHMOVE')).toBe('Matchmove');
   });
 
-  it('traduit « Autre », qui n’est pas un nom de département', () => {
+  it('translates "Other", which is not a department name', () => {
     expect(taskTypeLabel(t, 'OTHER')).toBe('Other');
   });
 });
 
 describe('titleCase', () => {
-  it('sait lire les séparateurs des identifiants de base', () => {
+  it('can read the separators of base identifiers', () => {
     expect(titleCase('LOOK_DEV')).toBe('Look Dev');
     expect(titleCase('matte-painting')).toBe('Matte Painting');
     expect(titleCase('')).toBe('');

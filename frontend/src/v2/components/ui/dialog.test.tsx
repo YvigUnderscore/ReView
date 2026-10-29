@@ -7,12 +7,12 @@ import userEvent from '@testing-library/user-event';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog';
 
 /**
- * La règle de fermeture d'une modale.
+ * The rule for closing a modal.
  *
- * Elle a coûté deux fiches et un panneau de réglages : ouvrir le sélecteur de fichiers fait
- * perdre le focus au document, et la modale se refermait en croyant qu'on avait cliqué
- * ailleurs. Le geste le plus banal — « choisir une image » — emportait donc le travail en
- * cours. Un focus qui sort n'est pas un clic dehors, et ce test le maintient.
+ * It cost two tickets and a settings panel: opening the file picker moves focus out of the
+ * document, and the modal closed itself believing the user had clicked elsewhere. The most
+ * mundane gesture — "choose an image" — therefore lost the work in progress. A focus that
+ * leaves is not an outside click, and this test keeps it that way.
  */
 function Harness({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   return (
@@ -26,19 +26,19 @@ function Harness({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
 }
 
 describe('DialogContent', () => {
-  it('reste ouverte quand le focus part vers une fenêtre du système', () => {
+  it('stays open when the focus moves to a system window', () => {
     const onOpenChange = vi.fn();
     render(<Harness onOpenChange={onOpenChange} />);
 
-    // Ce que fait le navigateur en ouvrant le sélecteur de fichiers : le document perd le
-    // focus au profit de quelque chose qui n'est pas dans la modale.
+    // What the browser does when the file picker opens: the document loses focus to
+    // something outside the modal.
     document.body.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('se ferme toujours sur Échap : ce geste-là veut bien dire « je sors »', async () => {
+  it('always closes on Escape: that gesture does mean "I am leaving"', async () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
     render(<Harness onOpenChange={onOpenChange} />);
@@ -50,16 +50,16 @@ describe('DialogContent', () => {
 });
 
 /**
- * La description d'une modale.
+ * A modal's description.
  *
- * Le contenu portait `aria-describedby={undefined}` en dur : la phrase d'explication était
- * écrite, affichée, et pourtant jamais annoncée — dans toutes les modales du produit à la
- * fois, puisque le défaut vivait dans la primitive. Ces trois cas tiennent la règle : on
- * relie quand il y a une description, on ne désigne rien quand il n'y en a pas, et un
- * appelant qui pose son propre `aria-describedby` reste maître de son dialogue.
+ * The content had `aria-describedby={undefined}` hard-coded: the explanatory sentence was
+ * written, displayed, and yet never announced — in every modal in the product at once,
+ * since the default lived in the primitive. These three cases hold the rule: we link when
+ * there is a description, we point at nothing when there is none, and a caller that sets
+ * its own `aria-describedby` stays in control of its dialog.
  */
 describe('description accessible de DialogContent', () => {
-  it('annonce la description écrite, même posée au fond d’un DialogHeader', () => {
+  it('announces the written description, even when placed deep inside a DialogHeader', () => {
     render(
       <Dialog open>
         <DialogContent>
@@ -74,7 +74,7 @@ describe('description accessible de DialogContent', () => {
     expect(screen.getByRole('dialog')).toHaveAccessibleDescription('Les annotations liées seront perdues.');
   });
 
-  it('ne désigne rien quand la modale n’a pas de description', () => {
+  it('points at nothing when the modal has no description', () => {
     render(
       <Dialog open>
         <DialogContent>
@@ -83,11 +83,11 @@ describe('description accessible de DialogContent', () => {
       </Dialog>,
     );
 
-    // Un identifiant pointant dans le vide n'est pas une description : l'attribut disparaît.
+    // An identifier pointing into the void is not a description: the attribute disappears.
     expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby');
   });
 
-  it('laisse l’appelant désigner lui-même son texte', () => {
+  it('lets the caller point at its own text', () => {
     render(
       <Dialog open>
         <DialogContent aria-describedby="quota-hint">

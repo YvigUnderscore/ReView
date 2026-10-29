@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Slugs d'URL « parlants » (slug + id). Les routes restent résolues par l'**id**
- * (suffixe numérique) : le slug n'est que cosmétique et les anciens liens en pur-id
- * (`/review/219`) continuent de fonctionner. Aucune migration : le slug est dérivé du
- * nom déjà présent (projet, fichier média…) — jamais stocké.
+ * Readable URL slugs (slug + id). Routes stay resolved by the **id**
+ * (numeric suffix): the slug is only cosmetic and old pure-id links
+ * (`/review/219`) keep working. No migration: the slug is derived from the
+ * name already present (project, media file…) — never stored.
  *
- * Exemples : `/projects/le-projet-demo-390`, `/review/perso-principal-v01-219`.
+ * Examples: `/projects/le-projet-demo-390`, `/review/perso-principal-v01-219`.
  */
 
-// Plage des diacritiques combinants (U+0300–U+036F), retirés après normalisation NFD.
+// Range of combining diacritics (U+0300–U+036F), removed after NFD normalisation.
 const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g');
 
-/** Normalise un texte en segment d'URL : sans accents, minuscule, mots séparés par des tirets. */
+/** Normalises a text into a URL segment: no accents, lowercase, words separated by dashes. */
 export function slugify(input: string | null | undefined): string {
   return (input ?? '')
     .normalize('NFD')
@@ -22,25 +22,25 @@ export function slugify(input: string | null | undefined): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
-    .replace(/-+$/g, ''); // pas de tiret final après troncature
+    .replace(/-+$/g, ''); // no trailing dash after truncation
 }
 
-/** `nom-slugifie-{id}` (ou juste `{id}` si le nom ne produit aucun slug). */
+/** `slugified-name-{id}` (or just `{id}` if the name produces no slug). */
 export function entitySlug(name: string | null | undefined, id: number): string {
   const s = slugify(name);
   return s ? `${s}-${id}` : String(id);
 }
 
-/** Slug d'un média à partir de son nom de fichier (extension retirée). */
+/** Slug of a media file from its file name (extension removed). */
 export function mediaSlug(originalName: string | null | undefined, id: number): string {
   const base = (originalName ?? '').replace(/\.[a-z0-9]{1,8}$/i, '');
   return entitySlug(base, id);
 }
 
 /**
- * Extrait l'id numérique d'un paramètre de route sluggé. L'id est toujours le dernier
- * groupe de chiffres (on l'ajoute en suffixe après un tiret). Tolère le pur-id.
- * Renvoie `NaN` si aucun chiffre — les appelants gèrent déjà l'id invalide.
+ * Extracts the numeric id from a slugged route parameter. The id is always the last group of digits
+ * (it is appended as a suffix after a dash). Tolerates the pure id.
+ * Returns `NaN` if there are no digits — the callers already handle an invalid id.
  */
 export function parseIdParam(param: string | null | undefined): number {
   if (!param) return NaN;
@@ -48,22 +48,22 @@ export function parseIdParam(param: string | null | undefined): number {
   return m ? Number(m[1]) : NaN;
 }
 
-/** Chemin client d'un projet (`/projects/{slug}`), avec suffixe optionnel (`/kanban`…). */
+/** Client path of a project (`/projects/{slug}`), with an optional suffix (`/kanban`…). */
 export function projectPath(project: { id: number; name?: string | null }, suffix = ''): string {
   return `/projects/${entitySlug(project.name, project.id)}${suffix}`;
 }
 
 /**
- * Chemin client d'un épisode (`/episodes/{slug}`).
+ * Client path of an episode (`/episodes/{slug}`).
  *
- * Le niveau Épisode est facultatif par projet : ce chemin ne mène quelque part que sur
- * un projet où il est activé — ailleurs, aucun écran ne le construit.
+ * The Episode level is optional per project: this path only leads somewhere on a project where it is
+ * enabled — elsewhere, no screen builds it.
  */
 export function episodePath(episode: { id: number; code?: string | null }): string {
   return `/episodes/${entitySlug(episode.code, episode.id)}`;
 }
 
-/** Chemin client d'une review de média (`/review/{slug}`). */
+/** Client path of a media review (`/review/{slug}`). */
 export function reviewPath(media: { id: number; originalName?: string | null }): string {
   return `/review/${mediaSlug(media.originalName, media.id)}`;
 }

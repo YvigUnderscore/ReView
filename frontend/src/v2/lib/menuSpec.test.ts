@@ -5,43 +5,43 @@ import { describe, expect, it, vi } from 'vitest';
 import { isCheckbox, isSeparator, isSubmenu, separator, tidyMenu, type MenuEntry } from './menuSpec';
 
 const action = (id: string): MenuEntry => ({ id, label: id, onSelect: vi.fn() });
-/** Résumé lisible : le libellé d'une action, `|` pour un séparateur. */
+/** Readable summary: the label of an action, `|` for a separator. */
 const shape = (entries: MenuEntry[]) => entries.map((e) => (isSeparator(e) ? '|' : e.id));
 const ids = (entries: MenuEntry[]) => entries.map((e) => e.id);
 
 describe('tidyMenu', () => {
-  it('laisse une liste propre intacte', () => {
+  it('leaves a clean list intact', () => {
     const entries = [action('a'), separator('s1'), action('b')];
     expect(shape(tidyMenu(entries))).toEqual(['a', '|', 'b']);
   });
 
-  it('retire le séparateur de tête', () => {
+  it('removes the leading separator', () => {
     expect(shape(tidyMenu([separator('s'), action('a')]))).toEqual(['a']);
   });
 
-  it('retire le séparateur de queue', () => {
+  it('removes the trailing separator', () => {
     expect(shape(tidyMenu([action('a'), separator('s')]))).toEqual(['a']);
   });
 
-  it('fond les séparateurs consécutifs — cas d’une action masquée par les droits', () => {
+  it('merges consecutive separators — case of an action hidden by permissions', () => {
     const entries = [action('a'), separator('s1'), separator('s2'), action('b')];
     expect(shape(tidyMenu(entries))).toEqual(['a', '|', 'b']);
   });
 
-  it('dérive l’identifiant du séparateur de l’entrée qu’il précède', () => {
+  it('derives the separator identifier from the entry it precedes', () => {
     expect(separator('statut').id).toBe('statut-separator');
   });
 
-  it('rend une liste vide sur des séparateurs seuls', () => {
+  it('returns an empty list when there are only separators', () => {
     expect(tidyMenu([separator('s1'), separator('s2')])).toEqual([]);
   });
 
-  it('laisse tomber un sous-menu vide', () => {
+  it('drops an empty submenu', () => {
     const entries: MenuEntry[] = [action('a'), { kind: 'submenu', id: 'sub', label: 'Statut', items: [] }];
     expect(ids(tidyMenu(entries))).toEqual(['a']);
   });
 
-  it('nettoie l’intérieur d’un sous-menu', () => {
+  it('cleans the inside of a submenu', () => {
     const entries: MenuEntry[] = [
       { kind: 'submenu', id: 'sub', label: 'Statut', items: [separator('x'), action('todo')] },
     ];
@@ -49,7 +49,7 @@ describe('tidyMenu', () => {
     expect(isSubmenu(sub) && ids(sub.items)).toEqual(['todo']);
   });
 
-  it('n’altère pas la liste d’origine', () => {
+  it('does not alter the original list', () => {
     const entries = [separator('s'), action('a')];
     tidyMenu(entries);
     expect(ids(entries)).toEqual(['s-separator', 'a']);
@@ -65,7 +65,7 @@ const checkbox = (checked: boolean): MenuEntry => ({
 });
 
 describe('discriminants', () => {
-  it('distingue les familles d’entrées', () => {
+  it('tells apart the families of entries', () => {
     expect(isSeparator(separator('s'))).toBe(true);
     expect(isSeparator(action('a'))).toBe(false);
     expect(isSubmenu({ kind: 'submenu', id: 'x', label: 'x', items: [] })).toBe(true);
@@ -75,21 +75,21 @@ describe('discriminants', () => {
   });
 });
 
-describe('tidyMenu et les cases à cocher', () => {
-  it('garde une case décochée, qui vaut un état et non une entrée vide', () => {
-    // Le piège du groupe radio vide : une case décochée n'a rien à voir avec un sous-menu
-    // sans contenu, la jeter ferait disparaître le seul moyen de remettre le plan au montage.
+describe('tidyMenu and checkboxes', () => {
+  it('keeps an unticked checkbox, which is a state and not an empty entry', () => {
+    // The trap of the empty radio group: an unticked checkbox has nothing to do with a submenu
+    // without content; dropping it would remove the only way to set the plan on mount.
     expect(ids(tidyMenu([checkbox(false)]))).toEqual(['omitted']);
     expect(ids(tidyMenu([checkbox(true)]))).toEqual(['omitted']);
   });
 
-  it('garde un sous-menu qui ne contient qu’une case', () => {
+  it('keeps a submenu that contains only a checkbox', () => {
     const tidy = tidyMenu([{ kind: 'submenu', id: 'cut', label: 'Montage', items: [checkbox(false)] }]);
     expect(isSubmenu(tidy[0]) && ids(tidy[0].items)).toEqual(['omitted']);
   });
 });
 
-describe('tidyMenu et les groupes radio', () => {
+describe('tidyMenu and radio groups', () => {
   const group = (items: number) => ({
     kind: 'radiogroup' as const,
     id: 'status-group',
@@ -102,21 +102,21 @@ describe('tidyMenu et les groupes radio', () => {
     })),
   });
 
-  it('garde un sous-menu qui ne contient qu’un groupe rempli', () => {
-    // C'est exactement le menu « Statut » : sans traitement dédié, le groupe ne comptait
-    // pour rien et son sous-menu était jeté alors qu'il était plein.
+  it('keeps a submenu that contains only a filled group', () => {
+    // This is exactly the "Status" menu: without dedicated handling, the group counted for nothing
+    // and its submenu was dropped although it was full.
     const tidy = tidyMenu([{ kind: 'submenu', id: 'status', label: 'Status', items: [group(3)] }]);
     expect(tidy).toHaveLength(1);
     expect(isSubmenu(tidy[0]) && tidy[0].items).toHaveLength(1);
   });
 
-  it('jette un groupe vide, et le sous-menu qui ne contenait que lui', () => {
+  it('drops an empty group, and the submenu that contained only it', () => {
     const tidy = tidyMenu([
       { id: 'open', label: 'Open', onSelect: () => {} },
       separator('status'),
       { kind: 'submenu', id: 'status', label: 'Status', items: [group(0)] },
     ]);
-    // Le séparateur laissé seul en queue part avec.
+    // The separator left alone at the end goes with it.
     expect(tidy.map((e) => e.id)).toEqual(['open']);
   });
 });

@@ -7,17 +7,16 @@ import type { Department } from '../types/api';
 import { qk } from './query';
 
 /**
- * Départements du pipeline (B1) — côté client.
+ * Pipeline departments (B1) — client side.
  *
- * Ils étaient une entrée d'un tableau JSON dans les réglages du projet, sans identité :
- * impossible d'en rattacher un à un asset, ni de le renommer sans détacher les tâches.
- * Ce sont maintenant des entités, avec un référentiel de studio hérité par défaut et une
- * liste propre par projet.
+ * They were an entry of a JSON array in the project settings, with no identity: it was impossible to
+ * attach one to an asset one by one, or to rename it without detaching the tasks. They are now
+ * entities, with a studio reference inherited by default and a clean list per project.
  *
- * La shape `Department` est celle de `types/api` : ce module ne porte que les hooks.
+ * The `Department` shape is that of `types/api`: this module only carries the hooks.
  */
 
-/** Départements applicables à un projet : les siens, sinon ceux du studio. */
+/** Departments applicable to a project: its own, otherwise the studio's. */
 export function useDepartments(projectId: number, enabled = true) {
   return useQuery({
     queryKey: qk.departments(projectId),
@@ -26,7 +25,7 @@ export function useDepartments(projectId: number, enabled = true) {
         .get<{ departments: Department[] }>(`/api/projects/${projectId}/departments`)
         .then((d) => d.departments),
     enabled: enabled && projectId > 0,
-    // Le pipe d'un projet ne change pas plusieurs fois par heure.
+    // A project's pipeline does not change several times an hour.
     staleTime: 5 * 60_000,
   });
 }
@@ -64,8 +63,8 @@ export function useRemoveDepartment(projectId: number) {
   });
 }
 
-/** Départements que déclare traverser une entité. La liste envoyée remplace la précédente. */
-/** Les caches à rafraîchir quand les étapes d'une entité changent. */
+/** Departments an entity is declared to go through. The list sent replaces the previous one. */
+/** Caches to refresh when an entity's steps change. */
 function entityKeys(projectId: number, holder: 'assets' | 'shots' | 'sequences', id: number) {
   const singular = holder === 'assets' ? 'asset' : holder === 'shots' ? 'shot' : 'sequence';
   return [
@@ -83,8 +82,8 @@ export function useSetEntityDepartments(
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ids: number[]) => api.put(`/api/${holder}/${id}/departments`, { ids }),
-    // La fiche de l'entité aussi : n'invalider que la liste des départements du projet
-    // laissait l'écran afficher les anciennes étapes jusqu'au prochain rechargement.
+    // The entity's record too: invalidating only the project's department list would leave
+    // the screen showing the old steps until the next reload.
     onSuccess: () => {
       for (const key of entityKeys(projectId, holder, id)) void qc.invalidateQueries({ queryKey: key });
     },
@@ -92,10 +91,10 @@ export function useSetEntityDepartments(
 }
 
 /**
- * Coche ou décoche une étape sans réécrire la liste entière.
+ * Ticks or unticks a step without rewriting the whole list.
  *
- * Le `PUT` remplace tout : deux bascules rapides dans un menu et la seconde repart de
- * l'état d'avant la première, annulant son effet.
+ * The `PUT` replaces everything: two quick toggles in a menu and the second one starts from the
+ * state from before the first, cancelling its effect.
  */
 export function useToggleEntityDepartment(
   projectId: number,
@@ -113,18 +112,18 @@ export function useToggleEntityDepartment(
 }
 
 /**
- * Départements d'un membre **sur ce projet** — coché, décoché, jamais remplacé (lot 10).
+ * A member's departments **on this project** — ticked, unticked, never replaced (batch 10).
  *
- * Un artiste appartient à plusieurs départements : un lead compositing qui tient aussi le
- * roto n'a pas à choisir. Et l'écran n'affiche que le vocabulaire d'un projet — envoyer
- * l'état affiché effacerait les étapes venues d'ailleurs, d'où l'ajout/retrait nommé.
+ * An artist belongs to several departments: a compositing lead who also does roto does not have to
+ * choose. And the screen only displays the vocabulary of one project — sending the displayed state
+ * would erase the steps coming from elsewhere, hence the named add/remove.
  */
 export function useToggleMemberDepartment(projectId: number, userId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (change: { add?: number[]; remove?: number[] }) =>
       api.patch(`/api/projects/${projectId}/members/${userId}/departments`, change),
-    // La fiche du projet porte les memberships : c'est elle que l'onglet relit.
+    // The project record carries the memberships: that is what the tab re-reads.
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.project(projectId) }),
   });
 }

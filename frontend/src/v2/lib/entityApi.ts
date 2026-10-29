@@ -8,15 +8,14 @@ import { ENTITY_SEGMENT, type EntityKind } from '../components/entity/entitySett
 import { useT } from '../i18n';
 
 /**
- * Fiche d'une entité de pipe (C3) — réglages et vignette.
+ * Record of a pipeline entity (C3) — settings and thumbnail.
  *
- * La vignette se dépose en deux temps, comme un avatar : le serveur signe une URL et
- * calcule la clé, on téléverse vers MinIO, puis on enregistre. La clé n'est jamais
- * choisie par le client — le PATCH l'acceptait, et rien n'empêchait d'y écrire celle
- * d'un média appartenant à un autre projet.
+ * The thumbnail is uploaded in two steps, like an avatar: the server signs a URL and computes the
+ * key, we upload to MinIO, then we save. The key is never chosen by the client — the PATCH used to
+ * accept it, and nothing prevented writing into it the key of a media belonging to another project.
  */
 
-/** Invalide tout ce qui montre l'entité : sa fiche, la liste dont elle vient, ses vignettes. */
+/** Invalidates everything that shows the entity: its record, the list it comes from, its thumbnails. */
 function entityQueryKeys(kind: EntityKind, id: number, projectId: number) {
   const own = kind === 'sequence' ? qk.sequence(id) : kind === 'shot' ? qk.shot(id) : qk.asset(id);
   const list =
@@ -56,8 +55,8 @@ export function useSetEntityThumbnail(kind: EntityKind, id: number, projectId: n
         { contentType: file.type },
       );
       const res = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      // Le dépôt va directement vers MinIO : l'échec ne passe pas par notre client HTTP,
-      // et se retrouverait sans message si on ne le formulait pas ici.
+      // The upload goes straight to MinIO: a failure does not go through our HTTP client,
+      // and would come back without a message if we did not phrase it here.
       if (!res.ok) throw new Error(t('common.error.upload'));
       await api.put(`/api/${segment}/${id}/thumbnail`, { key });
       return key;

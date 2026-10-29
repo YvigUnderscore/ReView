@@ -6,8 +6,8 @@ import { cn } from '../../lib/utils';
 import { Button } from './button';
 
 /**
- * État vide accueillant : icône, message, action de création éventuelle.
- * `compact` pour les sous-sections (listes imbriquées), pleine hauteur sinon.
+ * Welcoming empty state: icon, message, optional create action.
+ * `compact` for nested sub-sections (nested lists), full height otherwise.
  */
 export default function EmptyState({
   icon: Icon,

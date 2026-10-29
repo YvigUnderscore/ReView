@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** Borne une taille dans [min, max]. Pur, testable. */
+/** Clamps a size to [min, max]. Pure, testable. */
 export function clampSize(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
 const KEY_PREFIX = 'review.resizable.';
 
-/** Lit une taille persistée (localStorage), repli si absente/invalide. */
+/** Reads a persisted size (localStorage), falls back if absent or invalid. */
 export function readStoredSize(key: string, fallback: number): number {
   try {
     const raw = localStorage.getItem(KEY_PREFIX + key);
@@ -19,11 +19,11 @@ export function readStoredSize(key: string, fallback: number): number {
   }
 }
 
-/** Persiste une taille (localStorage). */
+/** Persists a size (localStorage). */
 export function writeStoredSize(key: string, value: number): void {
   try {
     localStorage.setItem(KEY_PREFIX + key, String(Math.round(value)));
   } catch {
-    /* stockage indisponible : on ignore */
+    /* storage unavailable: ignore */
   }
 }

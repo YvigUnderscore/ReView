@@ -19,19 +19,19 @@ const WHITE: Rgb = [1, 1, 1];
 const BLACK: Rgb = [0, 0, 0];
 
 describe('conversions', () => {
-  it('lit les deux formes hexadécimales, avec ou sans dièse', () => {
+  it('reads both hex forms, with or without the hash', () => {
     expect(hexToRgb('#ffffff')).toEqual([1, 1, 1]);
     expect(hexToRgb('000')).toEqual([0, 0, 0]);
     expect(hexToRgb('#F00')).toEqual([1, 0, 0]);
   });
 
-  it('rejette ce qui n’est pas une couleur', () => {
+  it('rejects anything that is not a colour', () => {
     expect(hexToRgb('')).toBeNull();
     expect(hexToRgb('rouge')).toBeNull();
     expect(hexToRgb('#12345')).toBeNull();
   });
 
-  it('fait l’aller-retour RVB ↔ TSL', () => {
+  it('round-trips RGB ↔ HSL', () => {
     const [h, s, l] = rgbToHsl([1, 0, 0]);
     expect(Math.round(h)).toBe(0);
     expect(Math.round(s)).toBe(100);
@@ -40,29 +40,29 @@ describe('conversions', () => {
     expect(back.map((v) => Math.round(v * 255))).toEqual([255, 0, 0]);
   });
 
-  it('rend le gris sans teinte ni saturation', () => {
+  it('returns grey with no hue or saturation', () => {
     expect(rgbToHsl([0.5, 0.5, 0.5])).toEqual([0, 0, 50]);
   });
 });
 
 describe('contrastRatio', () => {
-  it('donne 21 pour noir sur blanc et 1 pour une couleur sur elle-même', () => {
+  it('gives 21 for black on white and 1 for a colour against itself', () => {
     expect(contrastRatio(BLACK, WHITE)).toBeCloseTo(21, 5);
     expect(contrastRatio(WHITE, WHITE)).toBeCloseTo(1, 5);
   });
 
-  it('est symétrique', () => {
+  it('is symmetric', () => {
     const a = hslToRgb(200, 80, 40);
     expect(contrastRatio(a, WHITE)).toBeCloseTo(contrastRatio(WHITE, a), 10);
   });
 
-  it('classe le blanc comme le plus lumineux', () => {
+  it('ranks white as the lightest', () => {
     expect(relativeLuminance(WHITE)).toBeGreaterThan(relativeLuminance(BLACK));
   });
 });
 
 describe('mix', () => {
-  it('interpole entre premier plan et fond', () => {
+  it('interpolates between foreground and background', () => {
     expect(mix(WHITE, BLACK, 0.5)).toEqual([0.5, 0.5, 0.5]);
     expect(mix(WHITE, BLACK, 0)).toEqual(BLACK);
     expect(mix(WHITE, BLACK, 1)).toEqual(WHITE);
@@ -70,14 +70,14 @@ describe('mix', () => {
 });
 
 describe('readableLightness', () => {
-  it('éclaircit sur fond sombre et assombrit sur fond clair', () => {
+  it('lightens on a dark background and darkens on a light one', () => {
     const onDark = readableLightness(220, 80, 30, hslToRgb(223, 28, 10), true);
     expect(onDark).toBeGreaterThan(30);
     const onLight = readableLightness(50, 90, 80, hslToRgb(220, 25, 97), false);
     expect(onLight).toBeLessThan(80);
   });
 
-  it('ne bouge pas une couleur déjà lisible', () => {
+  it('does not move a colour that is already readable', () => {
     const bg = hslToRgb(223, 28, 10);
     const already = readableLightness(184, 100, 50, bg, true);
     expect(already).toBe(50);
@@ -85,13 +85,13 @@ describe('readableLightness', () => {
 });
 
 describe('statusSwatch', () => {
-  it('renvoie null sans couleur exploitable', () => {
+  it('returns null without a usable colour', () => {
     expect(statusSwatch(null, true)).toBeNull();
     expect(statusSwatch(undefined, false)).toBeNull();
     expect(statusSwatch('pas-une-couleur', true)).toBeNull();
   });
 
-  // Les deux cas cités par l'audit : illisibles tels quels avant normalisation.
+  // The two cases cited by the audit: unreadable as they were before normalisation.
   const CASES: Array<[string, string]> = [
     ['bleu marine', '#1b2a5e'],
     ['jaune pâle', '#f7f0a8'],
@@ -105,11 +105,11 @@ describe('statusSwatch', () => {
   for (const isDark of [true, false]) {
     const theme = isDark ? 'sombre' : 'clair';
     for (const [label, hex] of CASES) {
-      it(`tient AA en thème ${theme} — ${label}`, () => {
+      it(`meets AA in ${theme} theme — ${label}`, () => {
         const swatch = statusSwatch(hex, isDark);
         expect(swatch).not.toBeNull();
-        // On vérifie ce qui est réellement rendu : le fond émis par le helper, composé
-        // sur la surface du thème, et la couleur de texte émise.
+        // We check what is really rendered: the background emitted by the helper, composed
+        // over the theme surface, and the text colour emitted.
         const surface = isDark ? hslToRgb(223, 28, 10) : hslToRgb(220, 25, 97);
         const composed = mix(parseHsl(swatch!.backgroundColor), surface, 0.15);
         expect(contrastRatio(parseHsl(swatch!.color), composed)).toBeGreaterThanOrEqual(AA_CONTRAST);
@@ -117,7 +117,7 @@ describe('statusSwatch', () => {
     }
   }
 
-  it('conserve la teinte d’origine — le statut reste reconnaissable', () => {
+  it('keeps the original hue — the status stays recognisable', () => {
     const swatch = statusSwatch('#1b2a5e', true)!;
     const [sourceHue] = rgbToHsl(hexToRgb('#1b2a5e')!);
     const [textHue] = rgbToHsl(parseHsl(swatch.color));
@@ -125,7 +125,7 @@ describe('statusSwatch', () => {
   });
 });
 
-/** `hsl(H S% L%)` ou `hsl(H S% L% / A)` → RVB, pour vérifier ce que le helper a produit. */
+/** `hsl(H S% L%)` or `hsl(H S% L% / A)` → RGB, to check what the helper produced. */
 function parseHsl(value: string): Rgb {
   const [h, s, l] = value.match(/-?[\d.]+/g)!.map(Number);
   return hslToRgb(h, s, l);

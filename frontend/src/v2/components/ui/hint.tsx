@@ -6,32 +6,31 @@ import { cn } from '../../lib/utils';
 import { hintClasses, type HintSize, type HintTone } from './hint.variants';
 
 /**
- * La phrase sous un réglage — l'aide, l'erreur, la confirmation.
+ * The sentence under a setting: help, error or confirmation.
  *
- * La paire `text-xs text-muted-foreground` était recopiée 364 fois, et le cran plus petit
- * 76 fois de plus : aucune primitive ne la portait, si bien que chaque écran redécidait
- * seul de la taille de ses explications. Le résultat se voyait — trois tailles d'aide sur
- * une même colonne de réglages.
+ * The pair `text-xs text-muted-foreground` was copied 364 times, and the smaller step 76
+ * more: no primitive carried it, so each screen decided the size of its explanations on
+ * its own. The result was visible — three help sizes in one settings column.
  *
- * La distinction que porte ce composant n'est pas décorative, et vit dans
- * `hint.variants.ts` : une note se réduit, un message d'erreur ou de confirmation jamais.
+ * The distinction this component carries is not decorative, and lives in
+ * `hint.variants.ts`: a note shrinks, an error or confirmation never does.
  *
  * ```tsx
  * <Hint>{t('display.view.hint')}</Hint>
- * <Hint size="fine">{t('settings.accentHint')}</Hint>   // note de bas de panneau
- * <Hint tone="error">{error}</Hint>                      // jamais réduit
+ * <Hint size="fine">{t('settings.accentHint')}</Hint>   // panel footnote
+ * <Hint tone="error">{error}</Hint>                      // never shrunk
  * ```
  */
 export interface HintProps {
   children: ReactNode;
   /**
-   * `note` (défaut) : la ligne d'aide d'un réglage. `fine` : un cran plus petit, pour la
-   * note de bas de panneau qui commente le panneau entier plutôt qu'un champ.
-   * Sans effet sur les tons `error` et `success`.
+   * `note` (default): the help line of a setting. `fine`: one step smaller, for the panel
+   * footnote that comments on the whole panel rather than a field.
+   * No effect on the `error` and `success` tones.
    */
   size?: HintSize;
   tone?: HintTone;
-  /** Pour relier l'aide à son champ (`aria-describedby`). */
+  /** Links the help to its field (`aria-describedby`). */
   id?: string;
   className?: string;
 }

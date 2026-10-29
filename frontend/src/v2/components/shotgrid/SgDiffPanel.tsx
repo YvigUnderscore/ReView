@@ -10,12 +10,12 @@ import { useRunSync, useSgDiff } from '../../lib/shotgridApi';
 import type { SgConnection, SgDiffEntry } from '../../types/shotgrid';
 
 /**
- * Comparaison ReView ↔ ShotGrid.
+ * ReView <-> ShotGrid comparison.
  *
- * Après une coupure, une mise à jour ou un webhook perdu, le miroir peut avoir dérivé
- * sans que rien ne le signale. Cet écran relit les deux côtés et énumère les écarts —
- * sans rien corriger. Le réalignement est un geste séparé, parce qu'écraser du travail
- * mérite d'être décidé plutôt que subi.
+ * After an outage, an update or a lost webhook, the mirror can drift without anything
+ * signalling it. This panel re-reads both sides and lists the gaps, without fixing
+ * anything. Realignment is a separate action, because overwriting work should be a
+ * deliberate choice rather than something imposed.
  */
 export default function SgDiffPanel({
   connection,

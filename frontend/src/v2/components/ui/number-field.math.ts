@@ -4,38 +4,38 @@
 import { intlLocale } from '../../i18n';
 
 /**
- * Logique pure du champ numérique « drag-label » (`NumberField`) : valeur ajustée en glissant
- * horizontalement sur le libellé (pattern DCC/Blender), bornée et arrondie au pas. Testable
- * sans DOM. Écrite en Phase 17 pour le HUD, promue avec la primitive lors de la refonte du
- * chrome de review — les maths n'ont pas bougé.
+ * Pure logic for the "drag-label" numeric field (`NumberField`): a value adjusted by
+ * dragging horizontally on the label (DCC/Blender pattern), clamped and rounded to the step.
+ * Testable without DOM. Written in Phase 17 for the HUD, promoted with the primitive during
+ * the review chrome redesign — the maths did not change.
  */
 
 export interface NumberFieldSpec {
   min: number;
   max: number;
-  /** Pas d'arrondi de la valeur (ex. 1 pour des degrés entiers, 0.001 pour une ouverture). */
+  /** Rounding step of the value (e.g. 1 for whole degrees, 0.001 for an aperture). */
   step: number;
-  /** Pixels de glissement pour parcourir un pas (défaut 4 — ~250 px pour 60 pas). */
+  /** Drag pixels to traverse one step (default 4: ~250 px for 60 steps). */
   pixelsPerStep?: number;
 }
 
-/** Arrondit `value` au multiple de `step` le plus proche (précision flottante nettoyée). */
+/** Rounds `value` to the nearest multiple of `step` (floating-point noise cleaned up). */
 export function snapToStep(value: number, step: number): number {
   if (!(step > 0)) return value;
   const snapped = Math.round(value / step) * step;
-  // Nettoie le bruit binaire (0.30000000000000004 → 0.3) selon les décimales du pas.
+  // Cleans binary noise (0.30000000000000004 → 0.3) according to the step's decimals.
   const decimals = Math.max(0, Math.ceil(-Math.log10(step)));
   return Number(snapped.toFixed(Math.min(decimals + 1, 10)));
 }
 
-/** Borne puis arrondit une valeur selon la spec. */
+/** Clamps then rounds a value according to the spec. */
 export function clampValue(value: number, spec: NumberFieldSpec): number {
   return Math.min(spec.max, Math.max(spec.min, snapToStep(value, spec.step)));
 }
 
 /**
- * Valeur après un glissement de `dxPx` pixels depuis `start` : chaque `pixelsPerStep` pixels
- * vaut un `step` (Maj = ×10 via `fine=false`, Ctrl = pas fin ×0.1 via `fine=true` côté appelant).
+ * Value after dragging `dxPx` pixels from `start`: every `pixelsPerStep` pixels is one
+ * `step` (Shift = ×10 via `fine=false`, Ctrl = fine step ×0.1 via `fine=true` on the caller's side).
  */
 export function dragValue(start: number, dxPx: number, spec: NumberFieldSpec, multiplier = 1): number {
   const perStep = spec.pixelsPerStep ?? 4;
@@ -44,26 +44,26 @@ export function dragValue(start: number, dxPx: number, spec: NumberFieldSpec, mu
 }
 
 /**
- * Distance (px) au-delà de laquelle un appui **sur le champ de saisie** devient un scrub
- * plutôt qu'un clic. Assez court pour que le geste démarre franchement, assez long pour
- * qu'un clic tremblé continue de focaliser le champ.
+ * Distance (px) beyond which a press **on the input field** becomes a scrub rather than a
+ * click. Short enough for the gesture to start clearly, long enough that a shaky click
+ * still focuses the field.
  */
 export const SCRUB_THRESHOLD_PX = 4;
 
-/** Vrai dès que le pointeur a franchi le seuil : en deçà, l'appui reste un clic. */
+/** True once the pointer has crossed the threshold: below it, the press remains a click. */
 export function isScrub(dxPx: number): boolean {
   return Math.abs(dxPx) >= SCRUB_THRESHOLD_PX;
 }
 
 /**
- * Déplacement utile d'un scrub armé sur le champ : le seuil est retiré, sinon la valeur
- * sauterait de plusieurs pas à l'instant exact où le geste est reconnu.
+ * Useful movement of a scrub armed on the field: the threshold is removed, otherwise the
+ * value would jump several steps at the exact moment the gesture is recognised.
  */
 export function scrubOffset(dxPx: number): number {
   return dxPx - Math.sign(dxPx) * SCRUB_THRESHOLD_PX;
 }
 
-/** Parse une saisie clavier (virgule française acceptée) — null si vide ou invalide. */
+/** Parses keyboard input (French decimal comma accepted) — null if empty or invalid. */
 export function parseInput(text: string): number | null {
   const trimmed = text.trim().replace(',', '.');
   if (trimmed === '') return null;
@@ -71,12 +71,12 @@ export function parseInput(text: string): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-/** Formate la valeur pour l'affichage selon le pas (pas de décimales inutiles). */
+/** Formats the value for display according to the step (no unnecessary decimals). */
 export function formatValue(value: number, step: number): string {
   const decimals = step >= 1 ? 0 : Math.max(0, Math.ceil(-Math.log10(step)));
   return value.toLocaleString(intlLocale(), {
-    // Pas de séparateur de milliers : `parseInput` relit ce qu'on affiche, et il ne sait
-    // pas défaire un groupement (« 1 001 » revenait NaN pour un numéro de frame).
+    // No thousands separator: `parseInput` reads back what is displayed, and cannot
+    // undo grouping ("1 001" came back as NaN for a frame number).
     useGrouping: false,
     minimumFractionDigits: 0,
     maximumFractionDigits: Math.min(decimals, 6),

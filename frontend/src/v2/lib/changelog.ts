@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Changelog in-app (42.B — №68) : parse le markdown `DOCUMENTATION/CHANGELOG.md`
- * (servi sur /docs/CHANGELOG.md) en entrées, une par titre de niveau 2 (`## …`),
- * la plus récente en premier. Le corps reste du markdown (rendu via docsRender).
+ * In-app changelog (42.B — №68): parses the markdown `DOCUMENTATION/CHANGELOG.md`
+ * (served at /docs/CHANGELOG.md) into entries, one per level-2 heading (`## …`),
+ * most recent first. The body stays markdown (rendered via docsRender).
  */
 export interface ChangelogEntry {
-  /** Titre de l'entrée (= identifiant, ex. « 2026-07 — … »). */
+  /** Entry title (= identifier, e.g. "2026-07 — …"). */
   id: string;
   body: string;
 }

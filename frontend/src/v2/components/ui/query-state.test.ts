@@ -4,33 +4,33 @@
 import { describe, expect, it } from 'vitest';
 import { resolveQueryPhase, type QueryPhase, type QuerySnapshot } from './query-state.helpers';
 
-/** Raccourci : un état au repos, sans donnée ni erreur — le chargement initial. */
+/** Shortcut: an idle state, with no data or error — the initial load. */
 const snap = (over: Partial<QuerySnapshot> = {}): QuerySnapshot => ({
   isError: false,
   hasData: false,
   ...over,
 });
 
-describe('resolveQueryPhase — arbitrage des états de requête (admin)', () => {
-  it('montre le squelette tant que rien ne répond', () => {
+describe('resolveQueryPhase — deciding query states (admin)', () => {
+  it('shows the skeleton as long as nothing answers', () => {
     expect(resolveQueryPhase(snap())).toBe('pending');
   });
 
-  it('montre le contenu dès que des données sont en main', () => {
+  it('shows the content as soon as data is at hand', () => {
     expect(resolveQueryPhase(snap({ hasData: true }))).toBe('ready');
   });
 
-  it("montre l'échec quand le serveur a refusé et qu'il n'y a rien à afficher", () => {
-    // Le défaut corrigé : ce cas rendait un squelette qui pulsait indéfiniment.
+  it("shows the failure when the server refused and there is nothing to display", () => {
+    // The corrected default: this case rendered a skeleton that pulsed forever.
     expect(resolveQueryPhase(snap({ isError: true }))).toBe('error');
   });
 
-  it('garde le contenu déjà affiché quand un rafraîchissement échoue', () => {
-    // Cas des listes paginées (keepPreviousData) : effacer l'écran serait une régression.
+  it('keeps the content already displayed when a refresh fails', () => {
+    // Paginated lists case (keepPreviousData): clearing the screen would be a regression.
     expect(resolveQueryPhase(snap({ isError: true, hasData: true }))).toBe('ready');
   });
 
-  it('ne renvoie jamais autre chose que les trois phases connues', () => {
+  it('never returns anything other than the three known phases', () => {
     const phases: QueryPhase[] = ['pending', 'error', 'ready'];
     for (const isError of [false, true])
       for (const hasData of [false, true]) expect(phases).toContain(resolveQueryPhase({ isError, hasData }));

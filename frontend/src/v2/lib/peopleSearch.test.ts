@@ -17,7 +17,7 @@ const person = (over: Partial<PersonOption> & { id: number }): PersonOption => (
   ...over,
 });
 
-// Le cas qui a motivé l'écran : des homonymes que seule l'adresse départage.
+// The case that motivated the screen: namesakes that only the email address tells apart.
 const heloise = person({ id: 1, name: 'Héloïse Marchand', email: 'heloise@studio.io' });
 const artistA = person({ id: 2, name: 'IT Artist', email: 'anna@studio.io', jobTitle: 'Lighting' });
 const artistB = person({ id: 3, name: 'IT Artist', email: 'bruno@studio.io', role: 'ADMIN' });
@@ -25,18 +25,18 @@ const bot = person({ id: 4, name: 'Farm bot', email: 'farm@studio.io', isService
 const roster = [artistB, bot, artistA, heloise];
 
 describe('personMatches', () => {
-  it('ignore la casse et les accents', () => {
+  it('ignores case and accents', () => {
     expect(personMatches(heloise, 'HELOISE')).toBe(true);
     expect(personMatches(heloise, 'ïse mar')).toBe(true);
     expect(personMatches(heloise, 'bruno')).toBe(false);
   });
 
-  it('ignore les espaces de bord et accepte une saisie vide', () => {
+  it('ignores surrounding spaces and accepts an empty input', () => {
     expect(personMatches(heloise, '  marchand  ')).toBe(true);
     expect(personMatches(heloise, '   ')).toBe(true);
   });
 
-  it('cherche aussi dans l’adresse, le poste et le rôle technique', () => {
+  it('also searches the email address, job title and technical role', () => {
     expect(personMatches(artistA, 'anna@')).toBe(true);
     expect(personMatches(artistA, 'lighting')).toBe(true);
     expect(personMatches(artistB, 'admin')).toBe(true);
@@ -45,29 +45,29 @@ describe('personMatches', () => {
 });
 
 describe('filterPeople', () => {
-  it('écarte les comptes de service, sauf demande explicite', () => {
+  it('excludes service accounts unless explicitly requested', () => {
     expect(filterPeople(roster).map((p) => p.id)).not.toContain(bot.id);
     expect(filterPeople(roster, { includeService: true }).map((p) => p.id)).toContain(bot.id);
   });
 
-  it('écarte les personnes déjà retenues', () => {
+  it('excludes people already selected', () => {
     expect(filterPeople(roster, { excludeIds: [artistA.id, heloise.id] }).map((p) => p.id)).toEqual([
       artistB.id,
     ]);
   });
 
-  it('départage deux homonymes par l’adresse saisie', () => {
+  it('tells apart two namesakes by the email address typed', () => {
     expect(filterPeople(roster, { query: 'artist bruno' })).toEqual([]);
     expect(filterPeople(roster, { query: 'bruno' }).map((p) => p.id)).toEqual([artistB.id]);
   });
 
-  it('ordonne par nom puis par adresse — deux homonymes ne changent pas de place', () => {
+  it('orders by name then by email — two namesakes do not swap places', () => {
     expect(filterPeople(roster).map((p) => p.email)).toEqual([
       'heloise@studio.io',
       'anna@studio.io',
       'bruno@studio.io',
     ]);
-    // Même liste dans un autre ordre d'entrée : le résultat ne bouge pas.
+    // Same list in another input order: the result does not move.
     expect(filterPeople([...roster].reverse()).map((p) => p.email)).toEqual([
       'heloise@studio.io',
       'anna@studio.io',
@@ -75,36 +75,36 @@ describe('filterPeople', () => {
     ]);
   });
 
-  it('ne modifie pas la liste reçue', () => {
+  it('does not modify the list received', () => {
     const source = [...roster];
     filterPeople(source);
     expect(source).toEqual(roster);
   });
 
-  it('rend tout le monde quand la saisie est vide', () => {
+  it('returns everyone when the input is empty', () => {
     expect(filterPeople(roster, { query: '' })).toHaveLength(3);
   });
 });
 
 describe('personLabel', () => {
-  it('préfère le nom calculé par le serveur, puis le pseudo, puis le nom', () => {
+  it('prefers the name computed by the server, then the nickname, then the name', () => {
     expect(personLabel({ displayName: 'Anna L.', username: 'anna', email: 'a@x.io' })).toBe('Anna L.');
     expect(personLabel({ username: 'anna', name: 'Anna Lopez', email: 'a@x.io' })).toBe('anna');
     expect(personLabel({ name: 'Anna Lopez', email: 'a@x.io' })).toBe('Anna Lopez');
   });
 
-  it('retombe sur l’adresse plutôt que sur une ligne vide', () => {
+  it('falls back to the email address rather than an empty line', () => {
     expect(personLabel({ email: 'invite@studio.io' })).toBe('invite@studio.io');
     expect(personLabel({ displayName: null, username: null, name: null, email: 'a@x.io' })).toBe('a@x.io');
   });
 });
 
 describe('personSubtitle', () => {
-  it('joint le poste et l’adresse', () => {
+  it('joins the job title and the email address', () => {
     expect(personSubtitle(artistA)).toBe('Lighting · anna@studio.io');
   });
 
-  it('n’affiche pas de séparateur orphelin', () => {
+  it('does not display an orphan separator', () => {
     expect(personSubtitle(heloise)).toBe('heloise@studio.io');
     expect(personSubtitle(person({ id: 9, email: null, jobTitle: 'Compositing' }))).toBe('Compositing');
     expect(personSubtitle(person({ id: 9, email: null }))).toBe('');
@@ -112,21 +112,20 @@ describe('personSubtitle', () => {
 });
 
 /**
- * Le défaut constaté à l'écran : sur un studio dont tout le monde est déjà membre, le
- * dialogue d'ajout affichait « Personne ne correspond à cette recherche » alors que le
- * champ était vide — il accusait une recherche que personne n'avait faite.
+ * The defect seen on screen: on a studio where everyone is already a member, the add dialog displayed
+ * "No one matches this search" while the field was empty — it blamed a search nobody had made.
  */
 describe('emptyPeopleReason', () => {
-  it('sans recherche, la liste vide veut dire qu’il n’y a personne à proposer', () => {
+  it('without a search, an empty list means there is nobody to offer', () => {
     expect(emptyPeopleReason('')).toBe('no-candidates');
   });
 
-  it('des espaces ne sont pas une recherche', () => {
+  it('spaces are not a search', () => {
     expect(emptyPeopleReason('   ')).toBe('no-candidates');
     expect(emptyPeopleReason('\t\n')).toBe('no-candidates');
   });
 
-  it('dès qu’un mot est tapé, la liste vide parle bien de correspondance', () => {
+  it('as soon as a word is typed, the empty list does speak of a match', () => {
     expect(emptyPeopleReason('a')).toBe('no-match');
     expect(emptyPeopleReason('  héloïse  ')).toBe('no-match');
   });

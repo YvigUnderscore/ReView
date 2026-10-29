@@ -2,44 +2,43 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Arbitrage « que montrer à la place du contenu » pour une requête TanStack.
+ * Decides "what to show in place of the content" for a TanStack query.
  *
- * Les écrans d'administration gardaient tous la même forme — `if (!data) return
- * <SkeletonRows />` — qui confond deux situations que l'exploitant doit distinguer :
- * la donnée arrive, ou le serveur a répondu 500. Dans le second cas le squelette
- * pulsait indéfiniment, sans message ni autre moyen de relancer que F5.
+ * Admin screens all shared the same shape — `if (!data) return <SkeletonRows />` — which
+ * conflates two situations the operator must tell apart: the data is arriving, or the server
+ * answered 500. In the second case the skeleton pulsed forever, with no message and no way
+ * to retry other than F5.
  *
- * La décision est isolée ici, hors de React, pour être testée : le composant
- * `QueryState` ne fait plus que peindre la phase choisie.
+ * The decision is isolated here, outside React, so it can be tested: the `QueryState`
+ * component now only paints the chosen phase.
  */
 
-/** Ce qu'un écran affiche à la place de son contenu. */
+/** What a screen displays in place of its content. */
 export type QueryPhase = 'pending' | 'error' | 'ready';
 
-/** Les seuls signaux lus sur une requête — deux booléens, tous deux portés par TanStack. */
+/** The only signals read from a query — two booleans, both provided by TanStack. */
 export interface QuerySnapshot {
-  /** La dernière tentative a échoué (`status === 'error'`). */
+  /** The last attempt failed (`status === 'error'`). */
   isError: boolean;
-  /** Des données exploitables sont en main (réponse fraîche, cache, page précédente). */
+  /** Usable data is at hand (fresh response, cache, previous page). */
   hasData: boolean;
 }
 
 /**
- * Ordre de priorité :
+ * Priority order:
  *
- * 1. **Données en main → `ready`.** Un rafraîchissement en échec n'efface pas un écran
- *    déjà rempli : l'exploitant garde le contenu, quitte à ce qu'il vieillisse. C'est ce
- *    qui rend la primitive sûre sur les listes paginées (`keepPreviousData`).
- * 2. **Échec sans données → `error`.** Rien à montrer : l'écran le dit et propose la
- *    reprise.
- * 3. **Le reste → `pending`.** Chargement initial, mais aussi requête désactivée
- *    (`enabled: false`) ou succès sans corps — on retombe sur le squelette, qui était
- *    déjà le comportement en place.
+ * 1. **Data at hand → `ready`.** A failed refresh does not wipe a screen already filled:
+ *    the operator keeps the content, even if it ages. This is what makes the primitive safe
+ *    on paginated lists (`keepPreviousData`).
+ * 2. **Failure without data → `error`.** Nothing to show: the screen says so and offers a retry.
+ * 3. **Everything else → `pending`.** Initial load, but also a disabled query
+ *    (`enabled: false`) or a success without a body — we fall back to the skeleton, which was
+ *    already the existing behaviour.
  *
- * `isFetching` est délibérément absent : le faire primer sur l'échec ferait clignoter
- * squelette et panneau d'erreur toutes les cinq secondes sur les écrans qui sondent
- * (`refetchInterval`, cf. la page des jobs). Le panneau reste donc affiché pendant la
- * reprise, et disparaît quand elle aboutit.
+ * `isFetching` is deliberately absent: letting it take precedence over failure would make
+ * the skeleton and error panel flicker every five seconds on screens that poll
+ * (`refetchInterval`, see the jobs page). The panel therefore stays displayed during the
+ * retry, and disappears when it succeeds.
  */
 export function resolveQueryPhase({ isError, hasData }: QuerySnapshot): QueryPhase {
   if (hasData) return 'ready';

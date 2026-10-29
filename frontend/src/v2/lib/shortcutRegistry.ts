@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Registre des raccourcis clavier **globaux** (42.A2) — source de vérité unique pour le
- * handler (`useGlobalShortcuts`) et le cheatsheet (`ShortcutsHelp`), qui dupliquaient la liste.
+ * Registry of **global** keyboard shortcuts (42.A2) — single source of truth for the
+ * handler (`useGlobalShortcuts`) and the cheatsheet (`ShortcutsHelp`), which used to duplicate the list.
  *
- * Modèle : soit une séquence « leader » (touche `g` puis une touche), soit une touche seule.
- * Seule la **seconde** touche (leader) ou la touche seule est reconfigurable ; le leader `g`
- * reste fixe. Les surcharges sont persistées côté compte dans `preferences.shortcuts`.
+ * Model: either a "leader" sequence (the `g` key then one key), or a single key. Only the **second**
+ * key (leader) or the single key is reconfigurable; the `g` leader stays fixed. Overrides are persisted
+ * on the account in `preferences.shortcuts`.
  */
 import type { MessageKey } from '../i18n';
 
@@ -15,13 +15,13 @@ export type ShortcutId = 'nav.projects' | 'nav.kanban' | 'nav.board' | 'help';
 
 export interface ShortcutDef {
   id: ShortcutId;
-  /** Clé de traduction du libellé, résolue au rendu (le registre est sans état). */
+  /** Translation key of the label, resolved at render time (the registry is stateless). */
   labelKey: MessageKey;
-  /** `leader-g` : `g` puis la touche ; `single` : touche seule. */
+  /** `leader-g`: `g` then the key; `single`: a single key. */
   kind: 'leader-g' | 'single';
-  /** Touche par défaut (un seul caractère). */
+  /** Default key (a single character). */
   defaultKey: string;
-  /** L'action n'a de sens que dans un projet (kanban/board). */
+  /** The action only makes sense within a project (kanban/board). */
   requiresProject?: boolean;
 }
 
@@ -44,14 +44,14 @@ export const GLOBAL_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'help', labelKey: 'shortcuts.showHelp', kind: 'single', defaultKey: '?' },
 ];
 
-/** Une touche de surcharge valide = exactement un caractère, et jamais le leader `g`. */
+/** A valid override key = exactly one character, and never the `g` leader. */
 export function isValidKey(key: string): boolean {
   return key.length === 1 && key.toLowerCase() !== 'g';
 }
 
 /**
- * Résout les touches actives en fusionnant les défauts avec les surcharges du compte.
- * Une surcharge invalide (vide, multi-caractères, `g`) est ignorée → repli sur le défaut.
+ * Resolves the active keys by merging the defaults with the account's overrides.
+ * An invalid override (empty, multi-character, `g`) is ignored → falls back to the default.
  */
 export function resolveBindings(overrides?: Record<string, string>): Record<ShortcutId, string> {
   const out = {} as Record<ShortcutId, string>;

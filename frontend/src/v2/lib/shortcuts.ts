@@ -6,21 +6,20 @@ import { useNavigate } from 'react-router-dom';
 import type { ShortcutId } from './shortcutRegistry';
 
 /**
- * Raccourcis clavier globaux (10.A3, reconfigurables 42.A2) : séquence « g » puis touche
- * (défauts g p → projets, g k → kanban, g b → board du projet courant) et « ? » → aide.
- * Les touches actives viennent du registre résolu (`bindings`, surcharges compte incluses).
- * Inactifs dans les champs de saisie et quand un dialog est ouvert
- * (Ctrl+K vit dans CommandPalette, qui doit primer partout).
+ * Global keyboard shortcuts (10.A3, reconfigurable 42.A2): a "g" sequence then a key
+ * (defaults g p → projects, g k → kanban, g b → board of the current project) and "?" → help.
+ * The active keys come from the resolved registry (`bindings`, account overrides included).
+ * Inactive in text input fields and while a dialog is open
+ * (Ctrl+K lives in CommandPalette, which must take precedence everywhere).
  *
- * La séquence **consomme ses deux frappes** (`stopPropagation`). Ce gestionnaire est posé sur
- * `document`, le rail d'outils de la review sur `window` : la remontée traverse le premier
- * avant le second, et sans cela une même frappe faisait deux choses. `g` armait l'outil
- * polygone *et* amorçait la séquence ; la frappe suivante quittait la page — annotation en
- * cours perdue. Le leader `g` n'étant pas reconfigurable, c'est lui qui garde la main, et la
- * lettre de l'outil a été déplacée (`chrome/tools.ts`).
+ * The sequence **consumes its two keystrokes** (`stopPropagation`). This handler is set on
+ * `document`, the review tool rail on `window`: the event bubbles through the first before the second,
+ * and without this a single keystroke did two things. `g` armed the polygon tool *and* started the
+ * sequence; the next keystroke left the page — an annotation in progress was lost. The `g` leader not
+ * being reconfigurable, it is the one that keeps control, and the tool's letter was moved (`chrome/tools.ts`).
  */
 
-/** Types d'input qui ne saisissent pas de texte : le focus dessus ne bloque pas les raccourcis. */
+/** Input types that do not take text: focus on them does not block shortcuts. */
 const NON_TEXT_INPUT = /^(checkbox|radio|button|submit|reset|range|color|file)$/;
 
 export const isEditable = (el: EventTarget | null): boolean => {
@@ -52,9 +51,9 @@ export function useGlobalShortcuts({
       if (pendingG.current) {
         pendingG.current = false;
         window.clearTimeout(timer.current);
-        // Seconde frappe de la séquence : elle appartient à la séquence, aboutie ou non. La
-        // laisser filer armait un outil du rail au passage (`g b` armait la sélection
-        // rectangle d'un splat en même temps qu'il ouvrait le board).
+        // Second keystroke of the sequence: it belongs to the sequence, successful or not. Letting it
+        // through would arm a rail tool in passing (`g b` armed the rectangle selection of a splat
+        // at the same time as it opened the board).
         e.stopPropagation();
         if (key === bindings['nav.projects']) {
           e.preventDefault();

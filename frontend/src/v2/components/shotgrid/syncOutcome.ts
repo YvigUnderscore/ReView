@@ -2,17 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Ce que le panneau annonce au retour d'une demande de synchronisation — logique pure.
+ * What the panel announces when a sync request returns: pure logic.
  *
- * Le serveur distingue trois issues là où l'écran n'en lisait que deux. Une demande
- * arrivée pendant qu'une passe tournait rend `deferred` : elle est fusionnée avec la
- * demande en attente et rejouée à la fin de la passe en cours, mais rien n'a encore eu
- * lieu. L'annoncer en vert « Synchronisation terminée » envoie chercher dans la liste des
- * exécutions un résultat qui n'y est pas — c'est très exactement la confusion que le
- * statut `deferred` existe pour lever.
+ * The server distinguishes three outcomes where the screen only read two. A request that
+ * arrives while a pass is running returns `deferred`: it is merged with the pending
+ * request and replayed at the end of the current pass, but nothing has happened yet.
+ * Announcing it in green as "Sync complete" sends the user looking in the run list for a
+ * result that is not there, which is exactly the confusion the `deferred` status exists to remove.
  */
 
-/** Le vert est réservé à un travail réellement fait ; la mise en file s'annonce en neutre. */
+/** Green is reserved for work actually done; queueing is announced in neutral. */
 export type SyncTone = 'success' | 'info' | 'error';
 
 export interface SyncOutcome {
@@ -21,8 +20,8 @@ export interface SyncOutcome {
 }
 
 /**
- * Statut rendu par l'API → bandeau à afficher. Un statut inconnu retombe sur « terminé » :
- * la passe a bien eu lieu, seul son détail nous échappe.
+ * Status returned by the API → banner to display. An unknown status falls back to "done":
+ * the pass did take place, only its detail escapes us.
  */
 export function syncOutcome(status: string | undefined): SyncOutcome {
   if (status === 'error') return { tone: 'error', key: 'shotgrid.sync.failed' };

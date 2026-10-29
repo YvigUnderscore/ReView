@@ -5,16 +5,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/apiClient';
 
 /**
- * Fiche markdown d'une entité, et modèles de fiche.
+ * Markdown record of an entity, and record templates.
  *
- * `description` vient de ShotGrid et y retourne : une ligne, souvent en lecture seule dans
- * ReView. La fiche est l'inverse — elle appartient à ReView, personne ne l'écrase, et c'est
- * là que vit le brief. Deux champs, deux modules.
+ * `description` comes from ShotGrid and goes back there: one line, often read-only in ReView. The
+ * record is the opposite — it belongs to ReView, nobody overwrites it, and that is where the brief
+ * lives. Two fields, two modules.
  */
 
-/** Segment d'URL de l'entité porteuse. */
+/** URL segment of the owning entity. */
 export type NoteKind = 'episodes' | 'sequences' | 'shots' | 'assets';
-/** Périmètre d'un modèle, au singulier — celui que le serveur attend. */
+/** Scope of a template, in the singular — the one the server expects. */
 export type NoteScope = 'all' | 'episode' | 'sequence' | 'shot' | 'asset';
 
 export interface EntityNote {
@@ -48,7 +48,7 @@ export function useSaveNote(kind: NoteKind, id: number) {
   return useMutation({
     mutationFn: (body: string) =>
       api.put<{ note: EntityNote }>(`/api/${kind}/${id}/note`, { body }).then((r) => r.note),
-    // La réponse fait foi : elle porte l'auteur et la date que le serveur vient d'écrire.
+    // The response is authoritative: it carries the author and the date the server has just written.
     onSuccess: (note) => qc.setQueryData(noteKey(kind, id), note),
   });
 }

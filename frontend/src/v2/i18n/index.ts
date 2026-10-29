@@ -16,70 +16,68 @@ import {
 export * from './locales';
 
 /**
- * Socle i18n de ReView — sans dépendance.
+ * ReView i18n core — no dependencies.
  *
- * L'anglais est la langue de base : `messages/en.json` définit l'ensemble des clés et
- * toute clé absente d'un autre catalogue y retombe, si bien qu'une traduction partielle
- * reste utilisable.
+ * English is the base language: `messages/en.json` defines the full set of keys, and any key
+ * missing from another catalogue falls back to it, so a partial translation stays usable.
  *
- * **Aucun catalogue n'est embarqué dans le chunk d'entrée**, pas même l'anglais : il y
- * pesait 51,5 ko gzip — 16,6 % du premier chargement mesuré au build — que tout lecteur
- * non anglophone payait avant de télécharger sa propre langue, pour n'en lire jamais une
- * phrase. Les quatorze catalogues sont désormais des chunks à part, et l'anglais n'est
- * chargé que s'il sert effectivement de repli, c'est-à-dire quand la langue retenue ne
- * couvre pas toutes les clés de base (voir `coversAllBaseKeys`).
+ * **No catalogue is embedded in the entry chunk**, not even English: it weighed 51.5 kB gzip —
+ * 16.6% of the first load measured at build time — which every non-English reader paid before
+ * downloading their own language, only to never read a sentence of it. The fourteen catalogues
+ * are now separate chunks, and English is only loaded if it really serves as a fallback, that is
+ * when the chosen language does not cover all the base keys (see `coversAllBaseKeys`).
  *
- * Le vocabulaire métier (shot, sequence, dailies, playblast, version, annotation…) n'est
- * jamais traduit : les artistes le lisent en anglais dans tous les pipelines. Voir le
- * glossaire dans `scripts/check-translations.mjs` et DOCUMENTATION/development/i18n.md.
+ * Business vocabulary (shot, sequence, dailies, playblast, version, annotation…) is never
+ * translated: artists read it in English in every pipeline. See the glossary in
+ * `scripts/check-translations.mjs` and DOCUMENTATION/development/i18n.md.
  */
 
-/** Formes plurielles d'un message, nommées d'après les catégories CLDR. */
+/** Plural forms of a message, named after the CLDR categories. */
 type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
 type Message = string | PluralForms;
 type Catalog = Partial<Record<MessageKey, Message>>;
 
 /**
- * L'ensemble des clés de traduction — dérivé du catalogue anglais de référence.
+ * The set of translation keys — derived from the reference English catalogue.
  *
- * `typeof import(…)` est un type, pas une valeur : TypeScript le résout à la compilation
- * et il ne subsiste rien au bundle. Un `import` ordinaire, lui, inlinait les 3 197 clés
- * dans le chunk d'entrée.
+ * `typeof import(…)` is a type, not a value: TypeScript resolves it at compile time and nothing
+ * remains in the bundle. An ordinary `import`, by contrast, inlined the 3,197 keys into the
+ * entry chunk.
  */
 export type MessageKey = keyof typeof import('./messages/en.json');
 
-/** Signature du traducteur — à passer aux helpers définis hors composant. */
+/** Signature of the translator — to pass to helpers defined outside the component. */
 export type Tr = typeof t;
 
-/** Valeurs interpolées dans un message : `{name}` dans le catalogue. */
+/** Values interpolated into a message: `{name}` in the catalogue. */
 export type TParams = Record<string, string | number> & { count?: number };
 
 /**
- * Case de `localStorage` où vit la langue choisie sur cet appareil.
+ * `localStorage` key where the language chosen on this device lives.
  *
- * Ce module n'est plus seul à la lire : le script de préchargement produit au build
- * (`i18nCatalogPreload` dans `vite.config.js`, correctif F13) doit ouvrir la même case pour
- * savoir quel catalogue précharger avant même que le bundle ne s'exécute. D'où l'export —
- * `preload.test.ts` confronte les deux valeurs, une divergence ferait précharger une langue
- * et en télécharger une autre, en silence.
+ * This module is no longer the only one reading it: the preload script generated at build time
+ * (`i18nCatalogPreload` in `vite.config.js`, fix F13) must open the same key to know which
+ * catalogue to preload before the bundle even runs. Hence the export — `preload.test.ts` checks
+ * both values against each other: a divergence would silently preload one language and download
+ * another.
  */
 export const LOCALE_STORAGE_KEY = 'locale';
 
-/** Catalogues chargés. Vide au démarrage : même l'anglais arrive par son propre chunk. */
+/** Loaded catalogues. Empty at startup: even English arrives through its own chunk. */
 const catalogs = new Map<Locale, Catalog>();
 
 /**
- * Chargeurs paresseux, un par fichier de `messages/`. Le glob est résolu à la
- * compilation : déposer un nouveau `<code>.json` suffit à le rendre chargeable.
+ * Lazy loaders, one per file in `messages/`. The glob is resolved at
+ * compile time: dropping in a new `<code>.json` is enough to make it loadable.
  */
 const loaders = import.meta.glob<{ default: Catalog }>('./messages/*.json');
 
 /**
- * Hors production, le catalogue de base est embarqué d'emblée : les tests unitaires
- * appellent `t()` et `hasMessage()` sans passer par l'amorçage `initLocale()`, et le
- * serveur de développement n'a de toute façon pas de chunk à économiser. `import.meta.env.PROD`
- * est résolu à la compilation : la branche — et avec elle le catalogue — disparaît du
- * bundle livré (vérifié sur le build : plus aucune clé anglaise dans le chunk d'entrée).
+ * Outside production, the base catalogue is embedded straight away: unit tests call `t()` and
+ * `hasMessage()` without going through the `initLocale()` bootstrap, and the development server
+ * has no chunk to save anyway. `import.meta.env.PROD` is resolved at compile time: the branch — and
+ * with it the catalogue — disappears from the shipped bundle (checked on the build: no English key
+ * remains in the entry chunk).
  */
 if (!import.meta.env.PROD) {
   const embedded = import.meta.glob<{ default: Catalog }>('./messages/en.json', { eager: true });
@@ -92,13 +90,12 @@ function loaderFor(code: Locale): (() => Promise<{ default: Catalog }>) | undefi
 }
 
 /**
- * Cette langue couvre-t-elle toutes les clés du catalogue de base ? Si oui, l'anglais ne
- * lui servirait de repli à rien et on ne le télécharge pas — c'est là toute l'économie.
+ * Does this language cover all the keys of the base catalogue? If so, English would serve no
+ * purpose as a fallback and is not downloaded — that is the whole saving.
  *
- * La liste est calculée au build par `vite.config.js`, sur les fichiers-mêmes qui partent
- * dans le bundle : elle ne peut pas mentir sur ce qui est livré. Absente (dev, tests,
- * configuration sans le plugin), on ne sait pas : on charge l'anglais. Le repli prime
- * toujours sur l'économie.
+ * The list is computed at build time by `vite.config.js`, from the very files that go into the
+ * bundle: it cannot lie about what is shipped. When absent (dev, tests, configuration without the
+ * plugin), we do not know: English is loaded. The fallback always takes precedence over the saving.
  */
 function coversAllBaseKeys(code: Locale): boolean {
   if (code === BASE_LOCALE) return true;
@@ -110,9 +107,9 @@ let current: Locale = BASE_LOCALE;
 const listeners = new Set<() => void>();
 
 /**
- * Compteur de révision du store, et non la langue courante, parce que `useSyncExternalStore`
- * court-circuite le rendu quand le snapshot ne change pas : à l'arrivée du catalogue la
- * langue vaut déjà sa nouvelle valeur, et l'écran resterait figé sur le repli anglais.
+ * Store revision counter, and not the current language, because `useSyncExternalStore` short-circuits
+ * rendering when the snapshot does not change: when the catalogue arrives, the language already holds
+ * its new value, and the screen would stay frozen on the English fallback.
  */
 let version = 0;
 
@@ -128,27 +125,27 @@ function readStored(): Locale | null {
     const v = localStorage.getItem(LOCALE_STORAGE_KEY);
     return isLocale(v) ? v : null;
   } catch {
-    return null; // stockage indisponible (SSR, tests, mode privé)
+    return null; // storage unavailable (SSR, tests, private mode)
   }
 }
 
-/** Charge un catalogue s'il manque, sans jamais faire échouer l'appelant. */
+/** Loads a catalogue if it is missing, without ever failing the caller. */
 async function fetchCatalog(code: Locale): Promise<void> {
   if (catalogs.has(code)) return;
   const load = loaderFor(code);
-  if (!load) return; // langue déclarée sans catalogue : elle restera en anglais
+  if (!load) return; // language declared without a catalogue: it will stay in English
   try {
     const mod = await load();
     catalogs.set(code, mod.default);
   } catch {
-    /* catalogue illisible : le repli anglais prend le relais */
+    /* unreadable catalogue: the English fallback takes over */
   }
 }
 
 /**
- * Charge le catalogue d'une langue, accompagné de celui de la langue de base lorsqu'il
- * lui servira de repli. Les deux requêtes partent **en parallèle** : la chaîne de repli
- * est complète au premier rendu, en un seul aller-retour et non deux.
+ * Loads the catalogue of a language, together with the base language's one when it will serve
+ * as the fallback. Both requests go out **in parallel**: the fallback chain is complete at first
+ * render, in a single round trip rather than two.
  */
 export async function loadCatalog(code: Locale): Promise<void> {
   await Promise.all(
@@ -167,14 +164,14 @@ export function getLocale(): Locale {
   return current;
 }
 
-/** Vrai quand la langue vient d'un choix explicite enregistré sur cet appareil. */
+/** True when the language comes from an explicit choice saved on this device. */
 export function hasExplicitLocale(): boolean {
   return readStored() !== null;
 }
 
 /**
- * Change la langue courante. Le rendu bascule immédiatement (repli anglais pour les
- * clés du catalogue pas encore arrivé), puis une seconde fois à la fin du chargement.
+ * Changes the current language. The render switches immediately (English fallback for the keys
+ * of the catalogue not yet arrived), then a second time when loading completes.
  */
 export function setLocale(code: Locale, options: { persist?: boolean } = {}): Promise<void> {
   if (!isLocale(code)) return Promise.resolve();
@@ -183,7 +180,7 @@ export function setLocale(code: Locale, options: { persist?: boolean } = {}): Pr
     try {
       localStorage.setItem(LOCALE_STORAGE_KEY, code);
     } catch {
-      /* stockage indisponible */
+      /* storage unavailable */
     }
   }
   if (code === current && catalogs.has(code)) return Promise.resolve();
@@ -193,18 +190,17 @@ export function setLocale(code: Locale, options: { persist?: boolean } = {}): Pr
   return loadCatalog(code).then(emit);
 }
 
-/** Ce que dit le navigateur, quand on a le droit de l'écouter. */
+/** What the browser reports, when we are allowed to listen to it. */
 const negotiateBrowserLocale = (): Locale =>
   negotiateLocale(typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language]));
 
 /**
- * Détermine et charge la langue de démarrage : choix enregistré sur l'appareil, sinon —
- * **sauf sur un lien de partage, qui démarre en anglais** (cf. `isSharePath`) — négociation
- * avec les préférences du navigateur. Appelé avant le premier rendu pour éviter un passage
- * visible par l'anglais.
+ * Determines and loads the starting language: the choice saved on the device, otherwise —
+ * **except on a share link, which starts in English** (see `isSharePath`) — negotiation with
+ * the browser preferences. Called before the first render to avoid a visible flash of English.
  *
- * `pathname` est un paramètre plutôt qu'une lecture directe de `location` : c'est ce qui
- * rend la règle testable sans simuler la navigation.
+ * `pathname` is a parameter rather than a direct read of `location`: that is what makes the
+ * rule testable without simulating navigation.
  */
 export function initLocale(pathname?: string): Promise<void> {
   const path = pathname ?? (typeof location === 'undefined' ? '' : location.pathname);
@@ -215,9 +211,8 @@ export function initLocale(pathname?: string): Promise<void> {
 }
 
 /**
- * Aligne la langue sur la préférence du compte, sauf si un choix explicite a déjà été
- * fait sur cet appareil — ce choix-là l'emporte, c'est celui qui a été posé en dernier
- * en connaissance de cause.
+ * Aligns the language with the account preference, unless an explicit choice has already been
+ * made on this device — that choice wins, it is the one made last with full knowledge.
  */
 export function syncAccountLocale(code: string | null | undefined): void {
   if (!isLocale(code) || hasExplicitLocale()) return;
@@ -228,7 +223,7 @@ function lookup(code: Locale, key: MessageKey): Message | undefined {
   return catalogs.get(code)?.[key];
 }
 
-/** Choisit la forme plurielle correspondant à `count` dans la langue courante. */
+/** Picks the plural form matching `count` in the current language. */
 function selectPlural(forms: PluralForms, count: number, code: Locale): string {
   try {
     const rule = new Intl.PluralRules(pluralTag(code)).select(count);
@@ -249,10 +244,10 @@ function interpolate(text: string, params: TParams | undefined): string {
 }
 
 /**
- * Traduit une clé dans la langue courante.
+ * Translates a key in the current language.
  *
- * Repli en cascade : catalogue courant → anglais. Une clé absente partout renvoie la
- * clé elle-même, ce qui la rend visible en revue plutôt que de vider l'écran.
+ * Cascading fallback: current catalogue → English. A key missing everywhere returns the key
+ * itself, which makes it visible in review rather than emptying the screen.
  */
 export function t(key: MessageKey, params?: TParams): string {
   const message = lookup(current, key) ?? lookup(BASE_LOCALE, key);
@@ -261,21 +256,21 @@ export function t(key: MessageKey, params?: TParams): string {
   if (typeof message === 'string') return interpolate(message, params);
 
   const count = params?.count ?? 0;
-  // Le pluriel se résout dans la langue du message réellement retenu : un message
-  // anglais servi en repli suit les règles anglaises, pas celles de la langue courante.
+  // Plural resolution uses the language of the message actually chosen: an English message
+  // served as a fallback follows English rules, not those of the current language.
   const resolved = lookup(current, key) === undefined ? BASE_LOCALE : current;
   return interpolate(selectPlural(message, count, resolved), params);
 }
 
 /**
- * La clé existe-t-elle au catalogue ? Utile aux clés **construites** — `error.${code}`
- * pour un code d'erreur d'API — où l'appelant doit pouvoir se rabattre sur autre chose
- * que la clé elle-même affichée à l'écran.
+ * Does the key exist in the catalogue? Useful for **constructed** keys — `error.${code}` for an
+ * API error code — where the caller must be able to fall back on something other than the key
+ * itself displayed on screen.
  */
 export function hasMessage(key: string): key is MessageKey {
-  // L'union « langue courante ∪ anglais » redonne exactement l'ensemble des clés de base :
-  // aucun catalogue n'a de clé orpheline (`check-translations.mjs` les refuse), et l'anglais
-  // est chargé dès que la langue courante ne couvre pas tout.
+  // The union "current language ∪ English" gives back exactly the set of base keys: no catalogue
+  // has an orphan key (`check-translations.mjs` refuses them), and English is loaded as soon as
+  // the current language does not cover everything.
   return declaresKey(current, key) || declaresKey(BASE_LOCALE, key);
 }
 
@@ -291,42 +286,42 @@ const subscribe = (fn: () => void) => {
   };
 };
 
-/** `t` réactif : le composant se re-rend au changement de langue et à l'arrivée du catalogue. */
+/** Reactive `t`: the component re-renders on language change and when the catalogue arrives. */
 export function useT(): typeof t {
   useSyncExternalStore(subscribe, getVersion, () => 0);
   return t;
 }
 
 /**
- * Étiquette à passer aux API `Intl` pour la langue courante — les dates et les
- * nombres suivent le choix du lecteur au lieu d'être figés sur une locale.
+ * Label to pass to the `Intl` APIs for the current language — dates and numbers follow the
+ * reader's choice instead of being frozen to one locale.
  */
 export function intlLocale(): string {
   return formatTag(current);
 }
 
-/** Langue courante, réactive. */
+/** Current language, reactive. */
 export function useLocale(): Locale {
   useSyncExternalStore(subscribe, getVersion, () => 0);
   return current;
 }
 
 /**
- * Contrat du store, exporté pour être testable : `t()` seul ne révèle pas si React a
- * bien de quoi re-rendre — c'est le couple abonnement + snapshot qui le décide.
+ * Contract of the store, exported so it can be tested: `t()` alone does not reveal whether React
+ * has what it needs to re-render — the pair of subscription and snapshot is what decides.
  */
 export { subscribe as subscribeToLocale, getVersion as localeSnapshot };
 
 /**
- * Part des clés effectivement traduites dans une langue — alimente la mention de
- * couverture du sélecteur. Renvoie `null` tant que le catalogue n'est pas chargé.
+ * Share of the keys actually translated in a language — feeds the coverage note of the selector.
+ * Returns `null` until the catalogue is loaded.
  */
 export function coverage(code: Locale): { translated: number; total: number } | null {
   const catalog = catalogs.get(code);
   if (!catalog) return null;
   const baseCatalog = catalogs.get(BASE_LOCALE);
-  // Pas de catalogue de base en mémoire ⇒ celui-ci couvre toutes ses clés : c'est
-  // précisément la condition à laquelle on a renoncé à télécharger l'anglais.
+  // No base catalogue in memory ⇒ this one covers all its keys: that is precisely the condition
+  // under which we gave up downloading English.
   if (!baseCatalog) {
     const complete = Object.keys(catalog).length;
     return { translated: complete, total: complete };

@@ -5,16 +5,16 @@ import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 /**
- * Choix exclusif de 2 à 5 options, sur une piste unique — mode de rendu, espace du gizmo,
- * canaux, mode de comparaison. Préféré à une rangée de boutons parce que l'exclusivité se
- * voit d'un coup d'œil. `size="lg"` sert la bascule de mode de l'en-tête ; `iconOnly`
- * réduit à des carrés de 28 px pour les barres denses.
+ * Exclusive choice of 2 to 5 options, on a single track — render mode, gizmo space,
+ * channels, comparison mode. Preferred over a row of buttons because exclusivity is seen
+ * at a glance. `size="lg"` serves the header's mode switch; `iconOnly`
+ * shrinks to 28 px squares for dense bars.
  */
 export interface SegmentedItem<T extends string> {
   value: T;
   label: string;
   icon?: LucideIcon;
-  /** Infobulle — remplace le libellé quand `iconOnly`. */
+  /** Tooltip — replaces the label when `iconOnly`. */
   hint?: string;
   disabled?: boolean;
 }
@@ -25,7 +25,7 @@ export interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
   size?: 'sm' | 'lg';
   iconOnly?: boolean;
-  /** Décrit le groupe pour les lecteurs d'écran. */
+  /** Describes the group for screen readers. */
   label: string;
   className?: string;
 }

@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EMPTY_SEARCH, MIN_SEARCH_LENGTH, fetchSearch, hasSearchResults } from './searchApi';
 
 /**
- * Client de la recherche globale. Ce qui compte ici : la requête part authentifiée, elle
- * est **annulable** (c'est sa raison d'être), et un jeton expiré ne la fait pas échouer
- * silencieusement — elle repasse par le client partagé, qui sait renouveler la session.
+ * Client of the global search. What matters here: the request goes out authenticated, it is
+ * **cancellable** (that is its whole purpose), and an expired token does not make it fail silently —
+ * it goes back through the shared client, which knows how to renew the session.
  */
 
 const json = (body: unknown, status = 200) =>
@@ -27,41 +27,41 @@ afterEach(() => {
 });
 
 describe('fetchSearch', () => {
-  it('encode la saisie dans la query-string', async () => {
+  it('encodes the input in the query string', async () => {
     await fetchSearch('SH0120 & co');
     expect(fetchMock.mock.calls[0][0]).toBe('/api/search?q=SH0120%20%26%20co');
   });
 
-  it('porte le jeton de session quand il y en a un', async () => {
+  it('carries the session token when there is one', async () => {
     localStorage.setItem('token', 'jwt-abc');
     await fetchSearch('v012');
     const init = fetchMock.mock.calls[0][1] as { headers: Record<string, string> };
     expect(init.headers.Authorization).toBe('Bearer jwt-abc');
   });
 
-  it('n’invente pas d’en-tête d’autorisation sans session', async () => {
+  it('does not invent an authorization header without a session', async () => {
     await fetchSearch('v012');
     const init = fetchMock.mock.calls[0][1] as { headers: Record<string, string> };
     expect(init.headers.Authorization).toBeUndefined();
   });
 
-  it('transmet le signal d’annulation à fetch', async () => {
+  it('passes the cancellation signal on to fetch', async () => {
     const controller = new AbortController();
     await fetchSearch('v012', controller.signal);
     const init = fetchMock.mock.calls[0][1] as { signal?: AbortSignal };
     expect(init.signal).toBe(controller.signal);
   });
 
-  it('laisse remonter l’abandon plutôt que de rendre un résultat vide', async () => {
+  it('lets the abort propagate rather than returning an empty result', async () => {
     fetchMock.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
     await expect(fetchSearch('v012')).rejects.toThrow('Aborted');
   });
 
-  it('rend les résultats du serveur', async () => {
+  it('returns the server results', async () => {
     expect(await fetchSearch('alpha')).toEqual(results);
   });
 
-  it('repasse par le client partagé sur 401 — le jeton se renouvelle là-bas', async () => {
+  it('goes back through the shared client on 401 — the token is renewed there', async () => {
     localStorage.setItem('token', 'expiré');
     localStorage.setItem('refreshToken', 'refresh-abc');
     fetchMock.mockResolvedValueOnce(json({ error: 'Unauthorized' }, 401));
@@ -72,24 +72,24 @@ describe('fetchSearch', () => {
     expect(localStorage.getItem('token')).toBe('neuf');
   });
 
-  it('lève sur une erreur serveur', async () => {
+  it('throws on a server error', async () => {
     fetchMock.mockResolvedValue(json({ error: 'boom' }, 500));
     await expect(fetchSearch('alpha')).rejects.toThrow();
   });
 });
 
 describe('hasSearchResults', () => {
-  it('reconnaît un résultat vide', () => {
+  it('recognises an empty result', () => {
     expect(hasSearchResults(EMPTY_SEARCH)).toBe(false);
   });
 
-  it('suffit d’une seule famille remplie', () => {
+  it('one filled family is enough', () => {
     expect(
       hasSearchResults({ ...EMPTY_SEARCH, comments: [], people: [{ id: 1, name: 'ana', jobTitle: null }] }),
     ).toBe(true);
   });
 
-  it('n’interroge pas le serveur sur un seul caractère', () => {
+  it('does not query the server for a single character', () => {
     expect(MIN_SEARCH_LENGTH).toBeGreaterThan(1);
   });
 });

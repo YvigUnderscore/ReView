@@ -4,20 +4,20 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 
 /**
- * Les variantes du bouton, isolées du composant pour être vérifiables sans rendu (même
- * découpage que `card.variants.ts`).
+ * Button variants, isolated from the component so they can be checked without rendering
+ * (same split as `card.variants.ts`).
  *
- * Deux règles tiennent ce fichier, et les tests les verrouillent :
+ * Two rules hold this file together, and the tests lock them in:
  *
- *  1. **Une variante sans aplat se lit par sa bordure.** `outline` n'a pas de fond : son
- *     trait est la seule chose qui dit qu'il y a un bouton, c'est donc une limite de
- *     contrôle au sens de WCAG 1.4.11 (3:1 avec la surface) et il prend `border-strong`.
- *     `--border`, le trait décoratif des séparateurs, le laissait à 1,37:1 en thème clair
- *     et 1,17:1 en sombre : sur une carte, le bouton n'avait pas de contour visible.
- *  2. **Tout état de survol a son état enfoncé.** `active:` pousse l'aplat un cran plus
- *     loin que `hover:`, sinon appuyer ne se distingue pas de survoler. L'enfoncement
- *     géométrique commun à tous les contrôles vient de `ui-pressable` (cf. index.css) : il
- *     ne dépend pas de la variante et n'est donc écrit qu'une fois, dans la base.
+ *  1. **A variant without a fill is read by its border.** `outline` has no background: its
+ *     line is the only thing that says there is a button, so it is a control boundary in
+ *     the sense of WCAG 1.4.11 (3:1 against the surface) and it takes `border-strong`.
+ *     `--border`, the decorative line used for separators, left it at 1.37:1 in light theme
+ *     and 1.17:1 in dark: on a card the button had no visible outline.
+ *  2. **Every hover state has its pressed state.** `active:` pushes the fill one step
+ *     further than `hover:`, otherwise pressing is indistinguishable from hovering. The
+ *     geometric press effect common to all controls comes from `ui-pressable` (see
+ *     index.css): it does not depend on the variant, so it is written only once, in the base.
  */
 export const buttonVariants = cva(
   'ui-pressable inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',

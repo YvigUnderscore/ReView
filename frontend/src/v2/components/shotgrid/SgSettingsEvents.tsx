@@ -10,12 +10,12 @@ import { useRotateWebhookSecret, useWebhookSecret } from '../../lib/shotgridApi'
 import { useT } from '../../i18n';
 
 /**
- * Comment ReView apprend qu'une chose a changé sur le site, et comment il rattrape ce qu'il
- * a manqué.
+ * How ReView learns that something changed on the site, and how it catches up on what it
+ * missed.
  *
- * Les deux vont ensemble : un webhook perdu ou une coupure se rattrapent à la
- * réconciliation, et régler l'un sans voir l'autre laisse une intégration qui paraît
- * fonctionner jusqu'au jour où elle a manqué une journée entière.
+ * The two go together: a lost webhook or an outage is recovered by reconciliation, and
+ * tuning one without the other leaves an integration that looks healthy until the day it
+ * has missed a whole day.
  */
 export default function SgSettingsEvents({
   connection,
@@ -35,9 +35,9 @@ export default function SgSettingsEvents({
   const t = useT();
   const s = settings;
   /**
-   * Le secret ne descend pas avec la connexion : il se demande, et seulement quand
-   * quelqu'un le regarde. Tant que ce bouton n'a pas été pressé, la valeur n'a jamais
-   * traversé le réseau ni atteint le cache du client.
+   * The secret is not sent down with the connection: it is requested, and only when
+   * someone looks at it. Until this button is pressed, the value has never crossed the
+   * network or reached the client cache.
    */
   const [shown, setShown] = useState(false);
   const secret = useWebhookSecret(connection.projectId, shown);
@@ -115,9 +115,9 @@ export default function SgSettingsEvents({
             </div>
 
             {/*
-              Le secret de signature. Il était généré à la création de la connexion et
-              n'était montré nulle part : ShotGrid signait donc avec une autre valeur, et
-              **toutes** les livraisons repartaient en 404 sans que rien ne l'explique.
+              The signing secret. It was generated when the connection was created and
+              shown nowhere: ShotGrid therefore signed with a different value, and
+              **every** delivery failed with 404 without anything explaining why.
             */}
             <div className="space-y-1">
               <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">

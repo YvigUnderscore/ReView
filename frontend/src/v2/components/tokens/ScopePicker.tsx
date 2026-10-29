@@ -9,11 +9,11 @@ import { useScopeCatalog } from './tokenApi';
 import { ADMIN_SCOPE, groupScopes, isScopeOn, toggleScope } from './tokenScopes';
 
 /**
- * Sélecteur de scopes, alimenté par le catalogue du serveur (`GET /api/auth/scopes`).
+ * Scope picker, fed by the server catalogue (`GET /api/auth/scopes`).
  *
- * Les noms de scopes (`versions:write`) sont des identifiants d'API, pas de la prose :
- * ils s'affichent en `<code>`, tels qu'on les écrira dans un script. Seules les colonnes
- * (lire / écrire) et les avertissements se traduisent.
+ * Scope names (`versions:write`) are API identifiers, not prose: they are shown in `<code>`,
+ * exactly as they would be written in a script. Only the columns (read / write) and the
+ * warnings are translated.
  */
 export default function ScopePicker({
   value,
@@ -22,7 +22,7 @@ export default function ScopePicker({
 }: {
   value: string[];
   onChange: (next: string[]) => void;
-  /** Distingue deux sélecteurs montés en même temps (profil ↔ dialogue d'admin). */
+  /** Tells apart two pickers mounted at the same time (profile vs. admin dialog). */
   idPrefix?: string;
 }) {
   const t = useT();

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Registre des types d'événement notifiables — **copie à l'identique** de
- * `backend/src/lib/notificationKinds.ts`, dont `notificationKinds.test.ts` (côté backend)
- * refuse la divergence. Même contrat que `i18n/locales.json` : deux paquets, une liste.
+ * Registry of notifiable event types — **identical copy** of
+ * `backend/src/lib/notificationKinds.ts`, which `notificationKinds.test.ts` (backend side)
+ * refuses to let diverge. Same contract as `i18n/locales.json`: two packages, one list.
  *
- * Le front n'en a pas besoin pour afficher une notification (il lit son `type`), mais pour
- * offrir le réglage : l'écran de profil ne doit pas proposer un genre que `notify()` ne
- * consulte pas, ni taire un genre qu'il consulte.
+ * The front end does not need it to display a notification (it reads its `type`), but to offer
+ * the setting: the profile screen must not propose a kind that `notify()` does not consult, nor
+ * silence a kind it does consult.
  */
 export const NOTIFICATION_KINDS = [
   'mention',
@@ -23,18 +23,18 @@ export const NOTIFICATION_KINDS = [
 
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
-/** Les deux voies d'arrivée réglables : le panneau in-app et la notification navigateur. */
+/** The two adjustable arrival channels: the in-app panel and the browser notification. */
 export const NOTIFICATION_CHANNELS = ['inApp', 'push'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
-/** Clé de premier niveau du sac de préférences où vivent ces réglages. */
+/** Top-level key of the preferences bag where these settings live. */
 export const NOTIFICATION_SETTINGS_KEY = 'notifications';
 
 export type NotificationSettings = Partial<Record<NotificationKind, { inApp?: boolean; push?: boolean }>>;
 
 /**
- * Ce canal est-il ouvert pour ce genre ? Même règle qu'au serveur : seul un `false`
- * explicite ferme, tout le reste laisse passer. La case cochée est donc l'état par défaut.
+ * Is this channel open for this kind? Same rule as on the server: only an explicit `false` closes,
+ * everything else lets through. The ticked box is therefore the default state.
  */
 export function channelEnabled(
   settings: NotificationSettings | undefined,
@@ -45,11 +45,10 @@ export function channelEnabled(
 }
 
 /**
- * Sac de réglages après bascule d'un canal — renvoyé tel quel au `PATCH` de préférences.
+ * Settings bag after toggling a channel — returned as-is to the preferences `PATCH`.
  *
- * La fusion du serveur est **superficielle** : elle remplace `notifications` en entier.
- * D'où la recopie de tout le sac ici, sans quoi cocher une case en effacerait toutes les
- * autres.
+ * The server merge is **shallow**: it replaces `notifications` as a whole. Hence copying the whole bag
+ * here, otherwise ticking one box would erase all the others.
  */
 export function withChannel(
   settings: NotificationSettings | undefined,

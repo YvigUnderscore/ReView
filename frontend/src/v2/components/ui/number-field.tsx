@@ -21,29 +21,29 @@ import {
   type NumberFieldSpec,
 } from './number-field.math';
 
-/** Geste en cours — armé au pointerdown, promu en scrub au franchissement du seuil. */
+/** Gesture in progress: armed on pointerdown, promoted to a scrub once the threshold is crossed. */
 interface Gesture {
   pointerId: number;
   startX: number;
   startValue: number;
-  /** Vrai dès que la valeur suit le pointeur ; faux tant que l'appui peut rester un clic. */
+  /** True once the value follows the pointer; false while the press can still be a click. */
   scrubbing: boolean;
-  /** Geste parti du champ de saisie (seuil + focus différé) plutôt que du libellé. */
+  /** Gesture started from the input field (threshold + deferred focus) rather than from the label. */
   fromField: boolean;
 }
 
 /**
- * Champ numérique scrubable — la primitive du chrome de review, promue du HUD 3D (Phase 17).
- * Glisser horizontalement **la valeur ou le libellé** scrube (Maj ×10, Échap annule) ; un
- * clic net focalise le champ et sélectionne le texte, la saisie clavier reste entière.
- * Remplace les sliders : compact, précis, alignable en ligne dans une barre d'options comme
- * dans une ligne de panneau.
+ * Scrubbable numeric field — the review chrome primitive, promoted from the 3D HUD (Phase 17).
+ * Dragging horizontally **on the value or on the label** scrubs (Shift ×10, Escape cancels); a
+ * clean click focuses the field and selects the text, keyboard input stays fully available.
+ * Replaces sliders: compact, precise, can be aligned inline in an options bar as well as
+ * in a panel row.
  *
- * `pixelsPerStep` vaut 3 par défaut ; passer 6 pour les plages inférieures à 1 (ouverture,
- * gamma, vitesse) afin que le geste reste contrôlable.
+ * `pixelsPerStep` defaults to 3; pass 6 for ranges below 1 (aperture, gamma, speed) so
+ * that the gesture remains controllable.
  */
 export interface NumberFieldProps {
-  /** Libellé court ou icône, affiché avant la valeur — lui aussi se glisse. */
+  /** Short label or icon, shown before the value — it can be dragged too. */
   label: ReactNode;
   value: number;
   onChange: (value: number) => void;
@@ -51,9 +51,9 @@ export interface NumberFieldProps {
   max: number;
   step: number;
   pixelsPerStep?: number;
-  /** Unité affichée après la valeur (`%`, `°`, `×`…). */
+  /** Unit shown after the value (`%`, `°`, `×`…). */
   unit?: string;
-  /** Infobulle du champ — complétée par le rappel du geste. */
+  /** Field tooltip — completed with a reminder of the gesture. */
   hint?: string;
   className?: string;
   disabled?: boolean;
@@ -75,17 +75,17 @@ export function NumberField({
   const t = useT();
   const spec: NumberFieldSpec = { min, max, step, pixelsPerStep };
   /*
-   * Le libellé visible est un *frère* de l'input — c'est lui qui porte le geste de
-   * glissement, il ne peut donc pas l'englober. Sans association, un lecteur d'écran
-   * annonce une zone de saisie anonyme. On le rattache par `aria-labelledby` ; quand le
-   * libellé est une icône (donc sans texte), `hint` prend le relais.
+   * The visible label is a *sibling* of the input — it is the one carrying the drag gesture,
+   * so it cannot wrap it. Without an association, a screen reader announces an anonymous
+   * input. It is linked via `aria-labelledby`; when the label is an icon (hence without text),
+   * `hint` takes over.
    */
   const labelId = useId();
   const textLabel = typeof label === 'string';
   const gesture = useRef<Gesture | null>(null);
-  // Le scrub est aussi un *état* : c'est lui qui décide d'écouter Échap (voir l'effet).
+  // The scrub is also a *state*: it decides whether to listen for Escape (see the effect).
   const [scrubbing, setScrubbing] = useState(false);
-  // Pendant la frappe l'input vit sa vie (« -», « 0, », champ vide) ; on ne commet qu'à la sortie.
+  // While typing, the input lives its own life ("-", "0,", empty field); we only commit on blur.
   const [draft, setDraft] = useState<string | null>(null);
 
   const commit = (text: string) => {
@@ -94,14 +94,14 @@ export function NumberField({
     setDraft(null);
   };
 
-  /** Clôt le geste — relâchement ou pointeur annulé ; ignore un pointeur étranger. */
+  /** Ends the gesture — release or cancelled pointer; ignores a foreign pointer. */
   const endGesture = (e?: ReactPointerEvent) => {
     if (e && gesture.current?.pointerId !== e.pointerId) return;
     gesture.current = null;
     setScrubbing(false);
   };
 
-  /** Déplacement : arme puis suit le scrub, commun au libellé et au champ. */
+  /** Movement: arms then follows the scrub, shared by the label and the field. */
   const handleMove = (e: ReactPointerEvent) => {
     const g = gesture.current;
     if (!g || g.pointerId !== e.pointerId) return;
@@ -111,16 +111,16 @@ export function NumberField({
       g.scrubbing = true;
       setScrubbing(true);
     }
-    // Le seuil n'est retiré que pour le champ : le libellé, lui, scrube dès le premier pixel.
+    // The threshold is only removed for the field: the label scrubs from the first pixel.
     onChange(dragValue(g.startValue, g.fromField ? scrubOffset(dx) : dx, spec, e.shiftKey ? 10 : 1));
   };
 
   /*
-   * Piège : pendant un scrub sur le champ, le focus est volontairement refusé (le caret et
-   * la sélection parasiteraient le geste) — la touche n'atteint donc jamais l'input. C'est
-   * la fenêtre qui écoute Échap, et seulement le temps du geste, pour ne pas confisquer la
-   * touche au reste de l'application. L'Échap de l'input (abandon du brouillon de saisie)
-   * n'entre pas en conflit : un scrub ne s'arme jamais sur un champ déjà en saisie.
+   * Trap: during a scrub on the field, focus is deliberately refused (the caret and the
+   * selection would interfere with the gesture), so the key never reaches the input. It is
+   * the window that listens for Escape, and only for the duration of the gesture, so as not
+   * to take the key away from the rest of the application. The input's own Escape (discarding
+   * the draft text) does not conflict: a scrub is never armed on a field already being edited.
    */
   useEffect(() => {
     if (!scrubbing) return;
@@ -147,10 +147,10 @@ export function NumberField({
       title={hint ? t('numberField.scrubHint', { hint }) : undefined}
     >
       {/*
-        Le libellé garde son propre rappel (`dragHint`, « glisser le libellé ») : son texte
-        reste juste dans les quatorze langues, alors que l'enveloppe annonce désormais le
-        geste sur la valeur (`scrubHint`). Réécrire l'ancienne clé aurait rendu faux le
-        message de tous les autres appelants.
+        The label keeps its own hint (`dragHint`, "drag the label"): its text stays correct
+        in all fourteen languages, whereas the wrapper now announces the gesture on the value
+        (`scrubHint`). Rewriting the old key would have made the message wrong for all the
+        other callers.
       */}
       <span
         id={textLabel ? labelId : undefined}
@@ -158,7 +158,7 @@ export function NumberField({
         className="flex touch-none select-none items-center text-muted-foreground [cursor:ew-resize]"
         onPointerDown={(e) => {
           if (e.button !== 0) return;
-          // Pas de seuil ici : le libellé n'a rien d'autre à faire qu'être glissé.
+          // No threshold here: the label has nothing to do but be dragged.
           gesture.current = {
             pointerId: e.pointerId,
             startX: e.clientX,
@@ -190,12 +190,12 @@ export function NumberField({
           else if (e.key === 'Escape') setDraft(null);
         }}
         onPointerDown={(e) => {
-          // Champ déjà en saisie : on rend la main au caret et à la sélection de texte
-          // natifs — sinon on ne pourrait plus corriger un chiffre au milieu d'un nombre.
+          // Field already being edited: hand control back to the native caret and text
+          // selection — otherwise a digit in the middle of a number could no longer be corrected.
           if (e.button !== 0 || document.activeElement === e.currentTarget) return;
-          // Le focus est refusé tant qu'on ne sait pas si l'appui est un clic ou un scrub :
-          // annuler le pointerdown supprime les événements souris de compatibilité, donc
-          // la focalisation. Le clic net le rendra lui-même au relâchement.
+          // Focus is refused until we know whether the press is a click or a scrub: cancelling
+          // the pointerdown suppresses the compatibility mouse events, and therefore the
+          // focusing. A clean click will focus it itself on release.
           e.preventDefault();
           gesture.current = {
             pointerId: e.pointerId,
@@ -212,14 +212,14 @@ export function NumberField({
           if (!g || g.pointerId !== e.pointerId) return;
           const field = e.currentTarget;
           endGesture();
-          // Sous le seuil : c'était un clic. On focalise, `onFocus` sélectionne la valeur.
+          // Below the threshold: it was a click. Focus it; `onFocus` selects the value.
           if (!g.scrubbing) field.focus();
         }}
         onPointerCancel={endGesture}
         className={cn(
           'h-[1.625rem] w-10 touch-none border-0 bg-transparent p-0 text-right font-mono text-xs',
           'text-foreground outline-none',
-          // Le curseur dit ce que le champ fait : scrubable au survol, textuel en saisie.
+          // The cursor says what the field does: scrubbable on hover, text when editing.
           '[cursor:ew-resize] focus:[cursor:text]',
         )}
       />

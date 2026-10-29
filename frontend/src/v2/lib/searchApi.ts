@@ -6,13 +6,13 @@ import { t } from '../i18n';
 import type { AssetRef, MediaKind, ProjectRef, SequenceRef, ShotRef, Task } from '../types/api';
 
 /**
- * Recherche globale (palette Ctrl+K) — dix familles de résultats servies par `GET /api/search`.
+ * Global search (Ctrl+K palette) — ten result families served by `GET /api/search`.
  *
- * L'appel a son propre client, pour une seule raison : **il doit pouvoir être annulé**. La
- * palette interroge à chaque frappe débouncée ; sans `AbortSignal`, une requête lente sur
- * « SH » continue d'occuper la connexion pendant que l'on tape « SH0120 ». `api.get` n'expose
- * pas de signal (il porte, lui, le renouvellement de session), d'où le chemin rapide ici et
- * le repli sur le client partagé au premier 401 — la mécanique de refresh n'est pas dupliquée.
+ * The call has its own client, for one reason: **it must be cancellable**. The palette queries on every
+ * debounced keystroke; without an `AbortSignal`, a slow request for "SH" keeps occupying the connection
+ * while "SH0120" is being typed. `api.get` does not expose a signal (it carries the session renewal),
+ * hence the fast path here and the fallback to the shared client on the first 401 — the refresh
+ * mechanism is not duplicated.
  */
 
 export interface SearchResults {
@@ -55,11 +55,11 @@ export const EMPTY_SEARCH: SearchResults = {
   people: [],
 };
 
-/** Y a-t-il quoi que ce soit à afficher ? */
+/** Is there anything at all to display? */
 export const hasSearchResults = (r: SearchResults): boolean =>
   Object.values(r).some((list) => list.length > 0);
 
-/** Longueur minimale interrogée — un caractère ne discrimine rien (le serveur la refuse). */
+/** Minimum queried length — a single character discriminates nothing (the server refuses it). */
 export const MIN_SEARCH_LENGTH = 2;
 
 export async function fetchSearch(q: string, signal?: AbortSignal): Promise<SearchResults> {

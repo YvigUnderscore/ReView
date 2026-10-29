@@ -7,12 +7,12 @@ import type { SgSettings } from '../../types/shotgrid';
 import { useT } from '../../i18n';
 
 /**
- * Ce qui circule entre les deux outils : médias importés, publications renvoyées,
- * descriptions, et qui gagne en cas de désaccord.
+ * What flows between the two tools: imported media, published versions sent back,
+ * descriptions, and who wins in case of disagreement.
  *
- * La description a sa carte à elle, et ce n'est pas de la décoration : c'est le seul
- * réglage qui **rend un champ modifiable ou non** dans ReView. Le noyer dans « écritures »
- * aurait laissé les studios chercher pourquoi la description est grisée.
+ * The description gets its own card, and this is not decoration: it is the only setting
+ * that **makes a field editable or read-only** in ReView. Burying it under "writes" would
+ * leave studios wondering why the description is greyed out.
  */
 export default function SgSettingsContent({
   settings,

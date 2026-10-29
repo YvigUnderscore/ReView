@@ -28,28 +28,28 @@ const status = (over: Partial<PipelineStatus> & { id: number }): PipelineStatus 
 });
 
 describe('statusChoices', () => {
-  it('rend un choix par statut du référentiel, dans l’ordre reçu', () => {
+  it('returns one choice per catalogue status, in the order received', () => {
     const choices = statusChoices(
       [status({ id: 1, name: 'Waiting', code: 'wtg' }), status({ id: 2 })],
       'shot',
       t,
     );
     expect(choices.map((c) => c.value)).toEqual(['1', '2']);
-    // Le nom d'un statut est une donnée du studio : jamais traduit, jamais réécrit.
+    // The name of a status is studio data: never translated, never rewritten.
     expect(choices[0].label).toBe('Waiting');
     expect(choices[0].color).toBe('#3B82F6');
   });
 
-  it('retombe sur les six valeurs historiques pour une tâche sans référentiel', () => {
+  it('falls back to the six historical values for a task without a catalogue', () => {
     const choices = statusChoices([], 'task', t);
     expect(choices).toHaveLength(6);
     expect(choices[0].value).toBe('legacy:TODO');
     expect(choices[0].statusId).toBeNull();
   });
 
-  it('ne propose rien pour un plan ou une séquence sans référentiel', () => {
-    // Leur PATCH n'accepte que `pipelineStatusId` : proposer les valeurs historiques
-    // donnerait un menu qui échoue à tous les coups. Mieux vaut ne pas l'afficher.
+  it('offers nothing for a shot or a sequence without a catalogue', () => {
+    // Their PATCH only accepts `pipelineStatusId`: offering the historical values would give a
+    // menu that fails every time. Better not to display it.
     expect(statusChoices([], 'shot', t)).toEqual([]);
     expect(statusChoices([], 'sequence', t)).toEqual([]);
   });
@@ -58,17 +58,17 @@ describe('statusChoices', () => {
 describe('currentStatusValue', () => {
   const choices = statusChoices([status({ id: 7 }), status({ id: 8, legacyStatus: 'APPROVED' })], 'task', t);
 
-  it('retrouve le choix par son identifiant', () => {
+  it('finds the choice by its identifier', () => {
     expect(currentStatusValue(choices, { pipelineStatusId: 8 })).toBe('8');
   });
 
-  it('retombe sur la même famille quand l’identifiant n’est plus offert', () => {
-    // Statut hérité d'un autre site ou d'un vocabulaire changé : montrer la famille vaut
-    // mieux que prétendre qu'aucun statut n'est posé.
+  it('falls back to the same family when the identifier is no longer offered', () => {
+    // A status inherited from another site or from a changed vocabulary: showing the family is
+    // better than claiming that no status is set.
     expect(currentStatusValue(choices, { pipelineStatusId: 999, status: 'APPROVED' })).toBe('8');
   });
 
-  it('rend la sentinelle quand rien n’est posé', () => {
+  it('returns the sentinel when nothing is set', () => {
     expect(currentStatusValue(choices, {})).toBe(NO_STATUS);
   });
 });
@@ -76,24 +76,24 @@ describe('currentStatusValue', () => {
 describe('bodyForChoice', () => {
   const choices = statusChoices([status({ id: 12 })], 'task', t);
 
-  it('envoie l’identifiant seul pour un statut du référentiel', () => {
+  it('sends the identifier alone for a catalogue status', () => {
     const body = bodyForChoice(choices, '12');
     expect(body).toEqual({ pipelineStatusId: 12 });
-    // Surtout pas `status` en plus : le serveur le déduit et sa déduction prime.
+    // Certainly not `status` as well: the server derives it and its derivation takes precedence.
     expect(body && 'status' in body).toBe(false);
   });
 
-  it('envoie l’énumération pour un choix de repli', () => {
+  it('sends the enum for a fallback choice', () => {
     expect(bodyForChoice(statusChoices([], 'task', t), 'legacy:IN_PROGRESS')).toEqual({
       status: 'IN_PROGRESS',
     });
   });
 
-  it('efface le statut sur la sentinelle', () => {
+  it('clears the status on the sentinel', () => {
     expect(bodyForChoice(choices, NO_STATUS)).toEqual({ pipelineStatusId: null });
   });
 
-  it('ne fabrique rien pour une valeur inconnue', () => {
+  it('builds nothing for an unknown value', () => {
     expect(bodyForChoice(choices, '404')).toBeNull();
   });
 });
@@ -101,18 +101,18 @@ describe('bodyForChoice', () => {
 describe('withStatus', () => {
   const choice = statusChoices([status({ id: 5, legacyStatus: 'APPROVED' })], 'task', t)[0];
 
-  it('écrit les deux champs pour que colonne et pastille suivent ensemble', () => {
+  it('writes both fields so that the column and the badge follow together', () => {
     const next = withStatusOne({ id: 1, name: 'x', pipelineStatusId: null, status: 'TODO' as const }, choice);
     expect(next.pipelineStatusId).toBe(5);
     expect(next.status).toBe('APPROVED');
     expect(next.name).toBe('x');
   });
 
-  it('efface les deux champs sur un retrait', () => {
+  it('clears both fields on a removal', () => {
     expect(withStatusOne({ id: 1, pipelineStatusId: 5 }, null).pipelineStatusId).toBeNull();
   });
 
-  it('ne touche que l’élément visé dans une liste', () => {
+  it('only touches the targeted element in a list', () => {
     const list = [
       { id: 1, pipelineStatusId: null },
       { id: 2, pipelineStatusId: null },

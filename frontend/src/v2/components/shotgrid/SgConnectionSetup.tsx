@@ -15,13 +15,13 @@ import {
 import type { SgRemoteProject } from '../../types/shotgrid';
 
 /**
- * Création d'une connexion : choix (ou création) du site, puis désignation du projet
- * ShotGrid par son NOM.
+ * Creates a connection: picks (or creates) the site, then designates the ShotGrid
+ * project by its NAME.
  *
- * Le nom n'est pas un confort d'affichage. Un site de studio héberge des dizaines de
- * projets, souvent aux noms voisins (« Demo », « Demo 2 »…) : c'est le seul moment où
- * un humain confirme la cible, et le serveur revérifie que l'identifiant choisi porte
- * bien ce nom avant d'enregistrer quoi que ce soit.
+ * The name is not a display convenience. A studio site hosts dozens of projects, often
+ * with similar names ("Demo", "Demo 2", ...): this is the only point where a human
+ * confirms the target, and the server re-checks that the chosen ID really carries this
+ * name before saving anything.
  */
 export default function SgConnectionSetup({ projectId }: { projectId: number }) {
   const t = useT();
@@ -190,7 +190,7 @@ export default function SgConnectionSetup({ projectId }: { projectId: number }) 
   );
 }
 
-/** Enregistrement d'un site ShotGrid : identifiants de script ou compte utilisateur. */
+/** Registers a ShotGrid site, using script credentials or a user account. */
 function SiteForm({ onDone, onCancel }: { onDone: (id: number) => void; onCancel?: () => void }) {
   const t = useT();
   const createSite = useCreateSgSite();
@@ -234,8 +234,8 @@ function SiteForm({ onDone, onCancel }: { onDone: (id: number) => void; onCancel
     </label>
   );
 
-  // Une option d'authentification. Le libellé est enfant direct du <span> porteur : le texte
-  // accessible du <label> doit rester à faible profondeur pour être reconnu comme tel.
+  // One auth option. The label is a direct child of the wrapping <span>: the accessible
+  // text of the <label> must stay shallow to be recognised as such.
   const modeOption = (value: 'script' | 'user', label: string, hint: string) => (
     <label className="flex items-start gap-2 text-sm">
       <input type="radio" checked={authMode === value} onChange={() => setAuthMode(value)} className="mt-1" />

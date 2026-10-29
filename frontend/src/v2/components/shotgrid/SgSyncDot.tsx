@@ -10,15 +10,15 @@ import { useT, intlLocale } from '../../i18n';
 import { useSgLinks, type SgLinkType } from './useSgLinks';
 
 /**
- * État d'alignement d'une entité sur ShotGrid, et le geste pour le rétablir.
+ * Alignment state of an entity with ShotGrid, and the action to restore it.
  *
- * Une pastille plutôt qu'un badge : sur une liste de deux cents plans, un mot par ligne
- * noie ce qu'on est venu lire. La couleur dit l'essentiel — présent sur le site, ou non
- * — et l'infobulle donne la date de dernière relecture. Un clic relit cette entité-là,
- * sans toucher au reste du projet.
+ * A dot rather than a badge: on a list of two hundred plans, one word per row drowns out
+ * what the user came to read. Colour conveys the essentials (present on the site or not)
+ * and the tooltip gives the date of the last re-read. A click re-reads only that entity,
+ * without touching the rest of the project.
  *
- * Rien ne s'affiche sur un projet non relié : un studio sans ShotGrid ne doit pas voir
- * apparaître des pastilles qui ne veulent rien dire pour lui.
+ * Nothing is shown on an unlinked project: a studio without ShotGrid should not see dots
+ * that mean nothing to it.
  */
 export default function SgSyncDot({
   projectId,
@@ -29,7 +29,7 @@ export default function SgSyncDot({
   projectId: number;
   type: SgLinkType;
   localId: number | null | undefined;
-  /** Le réalignement écrit en base : réservé à qui gère le projet. */
+  /** Realignment writes to the database: reserved for whoever manages the project. */
   canRealign?: boolean;
 }) {
   const t = useT();
@@ -58,14 +58,14 @@ export default function SgSyncDot({
         localType: type,
         localId,
       });
-      // « deferred » : une synchronisation tournait déjà, la relecture attend son tour.
-      // Annoncer « réaligné » serait faux — c'est exactement ce que faisait l'écran quand
-      // le serveur jetait la demande en la déclarant réussie. Le ton suit le message :
-      // le vert dit « c'est fait », et rien n'est fait tant que la passe en cours tourne.
+      // "deferred": a sync was already running, so the re-read waits its turn.
+      // Announcing "realigned" would be wrong: that is exactly what the screen did when
+      // the server dropped the request while reporting success. The tone follows the
+      // message: green says "done", yet nothing is done while the current pass is running.
       if (status === 'deferred') toast.info(t('shotgrid.sync.dot.queued'));
       else toast.success(t('shotgrid.sync.dot.realigned'));
-      // Ce qui vient d'être relu peut avoir changé de nom, de statut ou de dates :
-      // on invalide largement plutôt que de deviner quel écran l'affichait.
+      // What was just re-read may have changed name, status or dates:
+      // invalidate broadly rather than guessing which screen was displaying it.
       await qc.invalidateQueries();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('shotgrid.sync.failed'));
@@ -80,12 +80,12 @@ export default function SgSyncDot({
     return <span title={title} className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${colour}`} />;
 
   /*
-   * La pastille reste un point de 6 px — c'est un signal, pas un bouton — mais sa zone
-   * cliquable fait 24 px, le minimum de WCAG 2.5.8. Mesuré avant correction : douze cibles
-   * de 6 × 6 px sur une seule liste de plans, impossibles à viser sans s'y reprendre.
+   * The dot stays a 6 px point (it is a signal, not a button), but its clickable area is
+   * 24 px, the WCAG 2.5.8 minimum. Measured before the fix: twelve 6 x 6 px targets on a
+   * single plan list, impossible to hit without several attempts.
    *
-   * La marge négative empêche cette zone d'écarter les éléments voisins : le dessin garde
-   * exactement la place qu'il avait.
+   * The negative margin stops this area from pushing neighbouring elements away: the dot
+   * keeps exactly the space it had.
    */
   return (
     <button

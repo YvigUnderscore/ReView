@@ -15,7 +15,7 @@ import {
 const CATALOG = ['projects:read', 'versions:read', 'versions:write', 'admin'];
 
 describe('groupScopes', () => {
-  it('range les scopes par domaine dans l’ordre servi', () => {
+  it('groups the scopes by domain in the order served', () => {
     const { domains, standalone } = groupScopes(CATALOG);
     expect(domains).toEqual([
       { domain: 'projects', read: 'projects:read', write: null },
@@ -24,54 +24,54 @@ describe('groupScopes', () => {
     expect(standalone).toEqual([ADMIN_SCOPE]);
   });
 
-  // Une case en trop vaut mieux qu'un droit invisible.
-  it('isole un scope inconnu plutôt que de le perdre', () => {
+  // An extra checkbox is better than an invisible right.
+  it('isolates an unknown scope rather than losing it', () => {
     expect(groupScopes(['weird', 'versions:purge']).standalone).toEqual(['weird', 'versions:purge']);
   });
 
-  it('ne duplique pas un scope global servi deux fois', () => {
+  it('does not duplicate a global scope served twice', () => {
     expect(groupScopes(['admin', 'admin']).standalone).toEqual([ADMIN_SCOPE]);
   });
 });
 
 describe('toggleScope', () => {
-  it('accorde la lecture avec l’écriture (ce que le serveur ferait de toute façon)', () => {
+  it('grants read along with write (what the server would do anyway)', () => {
     expect(toggleScope([], 'versions:write', true).sort()).toEqual(['versions:read', 'versions:write']);
   });
 
-  it('retire l’écriture quand on retire la lecture', () => {
+  it('removes write when read is removed', () => {
     expect(toggleScope(['versions:read', 'versions:write'], 'versions:read', false)).toEqual([]);
   });
 
-  it('laisse l’écriture d’un autre domaine intacte', () => {
+  it('leaves the write of another domain intact', () => {
     const next = toggleScope(['shots:read', 'versions:read', 'versions:write'], 'versions:read', false);
     expect(next).toEqual(['shots:read']);
   });
 
-  it('rend `admin` exclusif', () => {
+  it('makes `admin` exclusive', () => {
     expect(toggleScope(['versions:read'], ADMIN_SCOPE, true)).toEqual([ADMIN_SCOPE]);
     expect(toggleScope([ADMIN_SCOPE], ADMIN_SCOPE, false)).toEqual([]);
   });
 
-  it('abandonne `admin` dès qu’on coche un scope fin', () => {
+  it('drops `admin` as soon as a fine-grained scope is ticked', () => {
     expect(toggleScope([ADMIN_SCOPE], 'shots:read', true)).toEqual(['shots:read']);
   });
 });
 
 describe('isScopeOn', () => {
-  it('coche tout sous `admin`', () => {
+  it('ticks everything under `admin`', () => {
     expect(isScopeOn([ADMIN_SCOPE], 'versions:write')).toBe(true);
     expect(isScopeOn([ADMIN_SCOPE], ADMIN_SCOPE)).toBe(true);
   });
 
-  it('ne coche que ce qui est accordé sinon', () => {
+  it('otherwise only ticks what is granted', () => {
     expect(isScopeOn(['versions:read'], 'versions:write')).toBe(false);
     expect(isScopeOn(['versions:read'], 'versions:read')).toBe(true);
   });
 });
 
 describe('scopeLevel', () => {
-  it('reconnaît les trois niveaux, scopes hérités compris', () => {
+  it('recognises the three levels, legacy scopes included', () => {
     expect(scopeLevel(['admin'])).toBe('admin');
     expect(scopeLevel(['write'])).toBe('write');
     expect(scopeLevel(['versions:write', 'shots:read'])).toBe('write');
@@ -80,7 +80,7 @@ describe('scopeLevel', () => {
 });
 
 describe('expiryDays', () => {
-  it('traduit le choix en jours, sans expiration par défaut', () => {
+  it('translates the choice into days, with no expiry by default', () => {
     expect(expiryDays('90')).toBe(90);
     expect(expiryDays('')).toBeUndefined();
     expect(expiryDays('0')).toBeUndefined();
@@ -89,19 +89,19 @@ describe('expiryDays', () => {
 });
 
 describe('buildTokenDraft', () => {
-  it('refuse un brouillon sans nom ou sans scope', () => {
+  it('rejects a draft without a name or without a scope', () => {
     expect(buildTokenDraft({ name: '   ', scopes: ['read'] })).toBeNull();
     expect(buildTokenDraft({ name: 'Farm', scopes: [] })).toBeNull();
   });
 
-  it('n’envoie que les champs renseignés', () => {
+  it('only sends the fields filled in', () => {
     expect(buildTokenDraft({ name: '  Farm  ', scopes: ['read'] })).toEqual({
       name: 'Farm',
       scopes: ['read'],
     });
   });
 
-  it('porte cantonnement, expiration, description et mot de passe', () => {
+  it('carries restriction, expiry, description and password', () => {
     expect(
       buildTokenDraft({
         name: 'Render farm',
@@ -121,7 +121,7 @@ describe('buildTokenDraft', () => {
     });
   });
 
-  it('traite « tous les projets » comme une absence de cantonnement', () => {
+  it('treats "all projects" as no restriction', () => {
     const draft = buildTokenDraft({ name: 'Farm', scopes: ['read'], projectId: '', expiry: '' });
     expect(draft).not.toHaveProperty('projectId');
     expect(draft).not.toHaveProperty('expiresInDays');

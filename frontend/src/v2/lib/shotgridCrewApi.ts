@@ -8,10 +8,10 @@ import { sgKeys } from './shotgridApi';
 import type { SgCrewInviteResult, SgCrewResponse } from '../types/shotgrid';
 
 /**
- * L'équipe du projet ShotGrid.
+ * The ShotGrid project crew.
  *
- * La requête touche le site distant : elle n'est lancée que sur demande explicite
- * (`enabled`), pas à l'ouverture de l'onglet Membres.
+ * The query hits the remote site: it only runs on explicit request (`enabled`), not when the Members
+ * tab is opened.
  */
 export function useSgCrew(projectId: number, enabled: boolean) {
   return useQuery({
@@ -24,10 +24,10 @@ export function useSgCrew(projectId: number, enabled: boolean) {
 }
 
 /**
- * Relie à la main un compte du site à un compte ReView (ou défait le lien).
+ * Manually links a site account to a ReView account (or unlinks it).
  *
- * Le rapprochement automatique passe par l'adresse ; celui-ci sert aux personnes dont
- * l'adresse diffère d'un outil à l'autre, et que rien ne pouvait donc relier.
+ * Automatic matching goes through the email address; this one serves people whose address differs
+ * between tools, and that nothing could therefore link.
  */
 export function useLinkSgAccount(projectId: number) {
   const qc = useQueryClient();
@@ -52,7 +52,7 @@ export function useInviteSgCrew(projectId: number) {
         .then((r) => r.results),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: sgKeys.crew(projectId) });
-      // La liste des membres du projet et l'annuaire changent tous les deux.
+      // The project's member list and the directory both change.
       void qc.invalidateQueries({ queryKey: qk.project(projectId) });
       void qc.invalidateQueries({ queryKey: qk.users });
     },

@@ -5,9 +5,9 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
 /**
- * Interrupteur 30×17 du chrome de review : une ligne de panneau = un libellé à gauche, un
- * `Switch` à droite. Pas de texte d'état à côté — l'état se lit à la position du pouce.
- * `role="switch"` + `aria-checked` ; `label` sert d'`aria-label` et d'infobulle.
+ * 30×17 toggle of the review chrome: a panel row = a label on the left, a `Switch` on the
+ * right. No state text beside it — the state is read from the thumb's position.
+ * `role="switch"` + `aria-checked`; `label` serves as `aria-label` and tooltip.
  */
 export interface SwitchProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -15,7 +15,7 @@ export interface SwitchProps extends Omit<
 > {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-  /** Décrit ce que l'interrupteur active — obligatoire, aucun bouton nu. */
+  /** Describes what the switch turns on — mandatory, no bare button. */
   label: string;
 }
 

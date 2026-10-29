@@ -4,38 +4,37 @@
 import registry from './locales.json';
 
 /**
- * Registre des langues — vue typée de `locales.json` (copie identique côté backend).
+ * Language registry — typed view of `locales.json` (identical copy on the backend side).
  *
- * Ajouter une langue : une entrée dans `locales.json`, le code dans l'union `Locale`,
- * un `messages/<code>.json`. `scripts/check-translations.mjs` refuse tout écart entre
- * ces trois sources et entre les registres front/back.
+ * To add a language: an entry in `locales.json`, the code in the `Locale` union, and a
+ * `messages/<code>.json`. `scripts/check-translations.mjs` refuses any mismatch between these
+ * three sources and between the front-end and back-end registries.
  */
 export type Locale =
   'en' | 'fr' | 'es' | 'de' | 'pt' | 'zh-Hans' | 'ko' | 'ja' | 'hi' | 'br' | 'eu' | 'co' | 'gsw-FR' | 'oc';
 
-/** Métadonnées d'affichage et de formatage d'une langue. */
+/** Display and formatting metadata of a language. */
 export type LocaleInfo = {
-  /** Étiquette BCP-47 : identifiant, clé de fichier et attribut `lang` du document. */
+  /** BCP-47 tag: identifier, file key and the document's `lang` attribute. */
   code: Locale;
-  /** Endonyme — la langue s'annonce dans sa propre langue dans le sélecteur. */
+  /** Endonym — the language announces itself in its own language in the selector. */
   native: string;
-  /** Exonyme anglais, pour la doc et l'admin. */
+  /** English exonym, for the docs and the admin. */
   english: string;
   dir: 'ltr' | 'rtl';
-  /** Langue régionale : signalée comme telle dans le sélecteur (ReView les défend). */
+  /** Regional language: flagged as such in the selector (ReView defends them). */
   regional: boolean;
-  /** Catalogue produit par traduction automatique, non relu par un humain. */
+  /** Catalogue produced by machine translation, not reviewed by a human. */
   machineTranslated: boolean;
   /**
-   * Étiquettes candidates pour les API `Intl`, de la plus précise à la plus sûre : toutes
-   * les langues du registre ne sont pas dans ICU (corse, alsacien), et les règles de
-   * pluriel ne suivent pas toujours les conventions de chiffres (le corse pluralise
-   * comme l'italien mais s'écrit avec les formats français).
+   * Candidate tags for the `Intl` APIs, from most precise to safest: not every language in the
+   * registry is in ICU (Corsican, Alsatian), and plural rules do not always follow the digit
+   * conventions (Corsican pluralises like Italian but is written with French formats).
    */
   intl: { plural: string[]; format: string[] };
 };
 
-/** Langue de référence : elle définit l'ensemble des clés et sert de repli universel. */
+/** Reference language: it defines the full set of keys and serves as the universal fallback. */
 export const BASE_LOCALE: Locale = registry.base as Locale;
 
 export const LOCALES = registry.locales as readonly LocaleInfo[];
@@ -48,15 +47,15 @@ export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && BY_CODE.has(value);
 }
 
-/** Métadonnées d'une langue (repli sur la langue de base si le code est inconnu). */
+/** Metadata of a language (falls back to the base language if the code is unknown). */
 export function localeInfo(code: Locale): LocaleInfo {
   return BY_CODE.get(code) ?? BY_CODE.get(BASE_LOCALE)!;
 }
 
 /**
- * Choisit la première étiquette réellement connue d'`Intl` parmi les candidates.
- * Sans ce filtre, `Intl.PluralRules('co')` retombe silencieusement sur la racine et
- * range tous les nombres dans `other` — les singuliers disparaîtraient.
+ * Picks the first tag that `Intl` actually knows among the candidates.
+ * Without this filter, `Intl.PluralRules('co')` silently falls back to the root and puts every
+ * number in `other` — the singular forms would disappear.
  */
 function firstSupported(
   api: { supportedLocalesOf(tags: string[]): string[] },
@@ -66,45 +65,44 @@ function firstSupported(
     try {
       if (api.supportedLocalesOf([tag]).length > 0) return tag;
     } catch {
-      /* étiquette mal formée : on passe à la candidate suivante */
+      /* malformed tag: move on to the next candidate */
     }
   }
   return BASE_LOCALE;
 }
 
-/** Étiquette à passer à `Intl.PluralRules` pour cette langue. */
+/** Tag to pass to `Intl.PluralRules` for this language. */
 export function pluralTag(code: Locale): string {
   return firstSupported(Intl.PluralRules, localeInfo(code).intl.plural);
 }
 
-/** Étiquette à passer aux formateurs de nombres, dates et listes. */
+/** Tag to pass to the number, date and list formatters. */
 export function formatTag(code: Locale): string {
   return firstSupported(Intl.NumberFormat, localeInfo(code).intl.format);
 }
 
 /**
- * Ce chemin est-il celui d'un lien de partage — la page qu'ouvre quelqu'un d'extérieur au
- * studio ?
+ * Is this path that of a share link — the page opened by someone outside the studio?
  *
- * Le portail client démarre en **anglais**, quelle que soit la langue du navigateur, au lieu
- * de négocier comme le reste de l'application. L'anglais est la langue de travail des
- * pipelines : c'est dans cette langue que le studio a nommé ses plans et, le plus souvent,
- * rédigé les notes que le client va lire. Une interface traduite au-dessus de notes
- * anglaises fait lire deux langues à la fois. Le sélecteur reste offert, et le choix du
- * lecteur l'emporte ensuite — il est retenu sur son appareil.
+ * The client portal starts in **English**, whatever the browser language, instead of negotiating
+ * like the rest of the application. English is the working language of the pipelines: it is in
+ * this language that the studio named its shots and, most often, wrote the notes the client is
+ * going to read. A translated interface on top of English notes makes people read two languages
+ * at once. The selector remains on offer, and the reader's choice wins afterwards — it is kept
+ * on their device.
  *
- * Le test cherche un **segment**, pas un préfixe : l'application peut être servie sous un
- * chemin de base (`/review/client/…`). Il est volontairement trivial — le script de
- * préchargement produit au build doit le rejouer à l'identique en JavaScript nu, et une
- * règle qu'on ne peut pas recopier sans se tromper est une règle qui divergera.
+ * The test looks for a **segment**, not a prefix: the application can be served under a base
+ * path (`/review/client/…`). It is deliberately trivial — the preload script generated at build
+ * time must replay it identically in plain JavaScript, and a rule that cannot be copied without
+ * error is a rule that will diverge.
  */
 export function isSharePath(pathname: string): boolean {
   return pathname.includes('/client/');
 }
 
 /**
- * Négocie la meilleure langue disponible à partir des préférences du navigateur.
- * `fr-CA` retient `fr`, `zh-CN` retient `zh-Hans` ; sinon repli sur la langue de base.
+ * Negotiates the best available language from the browser preferences.
+ * `fr-CA` matches `fr`, `zh-CN` matches `zh-Hans`; otherwise falls back to the base language.
  */
 export function negotiateLocale(preferred: readonly string[]): Locale {
   for (const raw of preferred) {
@@ -116,8 +114,8 @@ export function negotiateLocale(preferred: readonly string[]): Locale {
     const exact = LOCALE_CODES.find((c) => c.toLowerCase() === lower);
     if (exact) return exact;
 
-    // `zh`, `zh-CN`, `zh-SG` → chinois simplifié ; `zh-TW`/`zh-Hant` ne sont pas encore
-    // proposés et retombent volontairement sur la langue de base.
+    // `zh`, `zh-CN`, `zh-SG` → simplified Chinese; `zh-TW`/`zh-Hant` are not offered yet and
+    // deliberately fall back to the base language.
     if (lower === 'zh' || lower.startsWith('zh-hans') || /^zh-(cn|sg|my)$/.test(lower)) {
       return 'zh-Hans';
     }

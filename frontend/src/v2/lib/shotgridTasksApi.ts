@@ -6,10 +6,10 @@ import { api } from '../../lib/apiClient';
 import { useSgConnection } from './shotgridApi';
 
 /**
- * Étapes de pipeline et création de tâche.
+ * Pipeline steps and task creation.
  *
- * Séparé du reste de l'API ShotGrid parce que ces trois appels servent un seul geste :
- * créer la tâche qui manque pour pouvoir déposer un rendu.
+ * Separated from the rest of the ShotGrid API because these three calls serve a single gesture:
+ * creating the missing task so that a render can be dropped.
  */
 
 export interface SgPipelineStep {
@@ -18,16 +18,15 @@ export interface SgPipelineStep {
   shortName: string;
   color: string | null;
   order: number;
-  /** Une tâche du projet porte-t-elle déjà cette étape ? */
+  /** Does a task of the project already carry this step? */
   used: boolean;
 }
 
 /**
- * Étapes que le site connaît pour ce type d'entité.
+ * Steps the site knows for this kind of entity.
  *
- * Ce sont les colonnes qu'on voit dans ShotGrid — art, model, rig, groom, lookdev — et
- * elles existent avant toute tâche. Demandées seulement quand on en a besoin : la liste
- * vient du site, elle n'a rien à faire dans le chargement d'une page.
+ * These are the columns seen in ShotGrid — art, model, rig, groom, lookdev — and they exist before any
+ * task. Requested only when needed: the list comes from the site, it has no business in a page's loading.
  */
 export function useSgSteps(
   projectId: number,
@@ -56,7 +55,7 @@ export interface SgProjectMember {
   userId: number | null;
 }
 
-/** Personnes affectées au projet sur le site — pas l'annuaire du studio. */
+/** People assigned to the project on the site — not the studio's directory. */
 export function useSgProjectMembers(projectId: number, enabled = true) {
   const { data: connection } = useSgConnection(projectId);
   return useQuery({
@@ -70,7 +69,7 @@ export function useSgProjectMembers(projectId: number, enabled = true) {
   });
 }
 
-/** Crée dans ShotGrid la tâche qui manque, puis la rapatrie. */
+/** Creates the missing task in ShotGrid, then pulls it back. */
 export function useCreateTaskFromStep(projectId: number) {
   const qc = useQueryClient();
   return useMutation({

@@ -19,28 +19,28 @@ import { cn } from '../../lib/utils';
 import { useT } from '../../i18n';
 
 /**
- * Dialog accessible (Radix) : portal, overlay, focus trap, fermeture Échap/clic
- * extérieur, aria-labelledby automatique via DialogTitle.
- * Toute modale de l'app DOIT passer par cette primitive (pas d'overlay artisanal).
+ * Accessible Dialog (Radix): portal, overlay, focus trap, close on Escape/outside click,
+ * automatic aria-labelledby via DialogTitle.
+ * Every modal in the app MUST go through this primitive (no hand-made overlay).
  */
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogClose = DialogPrimitive.Close;
 
 /**
- * Une description écrite doit être annoncée.
+ * A written description must be announced.
  *
- * Le contenu portait `aria-describedby={undefined}` en dur — le contournement connu de
- * l'avertissement Radix « modale sans description ». Posé dans la primitive, il coupait la
- * description de **toutes** les modales du produit : la phrase s'affichait à l'écran, mais
- * le lecteur d'écran annonçait le titre puis passait au premier contrôle. Radix nomme
- * pourtant l'attribut tout seul (`Description` porte l'identifiant que `Content` désigne) ;
- * il suffit de le laisser faire quand une description est montée, et de ne neutraliser
- * l'attribut que lorsqu'il n'y en a pas — sinon il pointerait dans le vide.
+ * The content had `aria-describedby={undefined}` hard-coded — the known workaround for the
+ * Radix warning "modal without description". Set in the primitive, it cut the description
+ * of **all** modals in the product: the sentence showed on screen, but the screen reader
+ * announced the title and then moved on to the first control. Radix already names the
+ * attribute by itself (`Description` carries the identifier that `Content` points to);
+ * it is enough to let it do so when a description is mounted, and to neutralise the
+ * attribute only when there is none — otherwise it would point into the void.
  *
- * Chaque `DialogDescription` se signale donc au contenu qui l'englobe : le décompte, et non
- * une inspection des enfants, car la description arrive le plus souvent au fond d'un
- * `DialogHeader` ou d'un rendu conditionnel.
+ * Each `DialogDescription` therefore signals itself to the enclosing content: a count, not
+ * an inspection of children, because the description most often sits deep inside a
+ * `DialogHeader` or a conditional render.
  */
 type DescriptionRegistry = { register: () => () => void };
 const DescriptionRegistryContext = createContext<DescriptionRegistry | null>(null);
@@ -62,10 +62,10 @@ const DialogContent = forwardRef<
   );
 
   /*
-   * Clé absente : Radix relie lui-même le contenu à la description qu'il a montée.
-   * Clé présente et `undefined` : l'attribut est retiré du DOM, faute d'élément à désigner
-   * (React ne pose rien, et le `undefined` explicite écrase la valeur de Radix, qui
-   * étale les props de l'appelant après les siennes).
+   * Key absent: Radix links the content to the description it has mounted itself.
+   * Key present and `undefined`: the attribute is removed from the DOM, with no element to
+   * point to (React sets nothing, and the explicit `undefined` overrides Radix's value,
+   * since it spreads the caller's props after its own).
    */
   const describedBy: Pick<AriaAttributes, 'aria-describedby'> =
     ariaDescribedBy !== undefined
@@ -81,13 +81,12 @@ const DialogContent = forwardRef<
         ref={ref}
         {...describedBy}
         /*
-         * Un focus qui sort n'est pas un clic dehors.
+         * A focus that leaves is not an outside click.
          *
-         * Le sélecteur de fichiers est une fenêtre du système : elle prend le focus, le
-         * document le perd, et la modale se refermait en croyant qu'on avait cliqué
-         * ailleurs — « choisir une image » suffisait à perdre la fiche en cours, dans le
-         * brief comme dans les réglages d'une entité. Seul le clic dehors ferme désormais ;
-         * un appelant qui aurait besoin de l'autre comportement le repose lui-même.
+         * The file picker is a system window: it takes the focus, the document loses it, and
+         * the modal used to close believing the user had clicked elsewhere — "choose an image"
+         * was enough to lose the current record, in the brief as in an entity's settings. Only
+         * an outside click closes it now; a caller that needs the other behaviour sets it up itself.
          */
         onFocusOutside={(e) => e.preventDefault()}
         className={cn(
@@ -130,9 +129,9 @@ const DialogDescription = forwardRef<
 >(({ className, ...props }, ref) => {
   const registry = useContext(DescriptionRegistryContext);
   /*
-   * Effet de **layout** : le contenu doit porter son `aria-describedby` avant la peinture,
-   * donc avant que Radix ne déplace le focus dans la modale — c'est à cet instant que la
-   * technologie d'assistance en lit le nom et la description.
+   * **Layout** effect: the content must carry its `aria-describedby` before paint, so
+   * before Radix moves focus into the modal — that is the moment assistive technology reads
+   * its name and description.
    */
   useLayoutEffect(() => registry?.register(), [registry]);
   return (

@@ -2,46 +2,46 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Helpers PURS du modèle de droits machine — la logique que l'écran des tokens partage
- * entre le profil (token personnel) et l'administration (token de service).
+ * PURE helpers for the machine rights model: the logic the token screen shares between the
+ * profile (personal token) and administration (service token).
  *
- * Le catalogue de scopes n'est jamais recopié ici : il arrive de `GET /api/auth/scopes`.
- * Ce fichier ne fait que le mettre en forme (`domaine:action` → une ligne par domaine) et
- * tenir la cohérence des cases cochées. Conséquence voulue : le jour où le serveur retire
- * un scope de son catalogue, l'écran cesse de le proposer sans qu'on y touche.
+ * The scope catalogue is never copied here: it comes from `GET /api/auth/scopes`. This file
+ * only formats it (`domain:action` → one row per domain) and keeps the checkboxes consistent.
+ * Intended consequence: the day the server removes a scope from its catalogue, the screen
+ * stops offering it without anyone touching it.
  */
 
-/** Une ligne du sélecteur : un domaine et les actions que le serveur y déclare. */
+/** One row of the picker: a domain and the actions the server declares for it. */
 export interface ScopeDomainRow {
   domain: string;
-  /** Scope complet (`versions:read`) ou `null` si le serveur ne le déclare pas. */
+  /** Full scope (`versions:read`), or `null` if the server does not declare it. */
   read: string | null;
   write: string | null;
 }
 
 export interface GroupedScopes {
   domains: ScopeDomainRow[];
-  /** Scopes sans domaine — `admin` aujourd'hui : ils gouvernent tout, on les isole. */
+  /** Scopes without a domain: `admin` today. They govern everything, so they are isolated. */
   standalone: string[];
 }
 
-/** Scope qui couvre tout : cocher autre chose à côté n'aurait aucun sens. */
+/** Scope that covers everything: ticking anything else alongside it would be meaningless. */
 export const ADMIN_SCOPE = 'admin';
 
-/** Sépare le domaine de l'action dans un scope (`versions:write`). */
+/** Splits the domain from the action in a scope (`versions:write`). */
 const SEPARATOR = ':';
 
 /**
- * Recompose un scope. Assemblé par `join` et non par un gabarit : le contrôle des textes
- * en dur voit dans `` `${domain}:read` `` une phrase autour d'une interpolation, et il a
- * raison de s'en méfier — ici c'est un identifiant d'API, pas de la prose.
+ * Rebuilds a scope. Assembled with `join` rather than a template: the hard-coded text
+ * checker sees `` `${domain}:read` `` as a sentence around an interpolation, and it is
+ * right to be wary of it: here it is an API identifier, not prose.
  */
 const scopeOf = (domain: string, action: 'read' | 'write'): string => [domain, action].join(SEPARATOR);
 
 /**
- * Regroupe le catalogue par domaine, dans l'ordre où le serveur l'a servi.
- * Un scope mal formé (sans `:`) est traité comme un scope global plutôt qu'ignoré : mieux
- * vaut une case en trop qu'un droit invisible.
+ * Groups the catalogue by domain, in the order the server served it.
+ * A malformed scope (without `:`) is treated as a global scope rather than ignored: better
+ * an extra checkbox than an invisible right.
  */
 export function groupScopes(scopes: readonly string[]): GroupedScopes {
   const rows = new Map<string, ScopeDomainRow>();
@@ -60,11 +60,11 @@ export function groupScopes(scopes: readonly string[]): GroupedScopes {
 }
 
 /**
- * Coche ou décoche un scope en gardant la sélection cohérente avec ce que le serveur
- * fera de toute façon (`expandScopes` côté back) :
- * - une écriture accordée implique la lecture du même domaine ;
- * - retirer la lecture retire l'écriture, sinon la case affichée mentirait ;
- * - `admin` est exclusif : il couvre tout, le reste devient du bruit.
+ * Ticks or unticks a scope, keeping the selection consistent with what the server will do
+ * anyway (`expandScopes` on the back end):
+ * - granting write implies read on the same domain;
+ * - removing read removes write, otherwise the displayed checkbox would be misleading;
+ * - `admin` is exclusive: it covers everything, the rest becomes noise.
  */
 export function toggleScope(selected: readonly string[], scope: string, on: boolean): string[] {
   if (scope === ADMIN_SCOPE) return on ? [ADMIN_SCOPE] : [];
@@ -80,11 +80,11 @@ export function toggleScope(selected: readonly string[], scope: string, on: bool
   return [...set];
 }
 
-/** Le scope est-il coché, directement ou par la couverture d'`admin` ? */
+/** Is the scope ticked, directly or through `admin` coverage? */
 export const isScopeOn = (selected: readonly string[], scope: string): boolean =>
   selected.includes(scope) || (scope !== ADMIN_SCOPE && selected.includes(ADMIN_SCOPE));
 
-/** Niveau résumé d'un token, pour la pastille de la liste. */
+/** Summary level of a token, for the badge in the list. */
 export type ScopeLevel = 'admin' | 'write' | 'read';
 
 export function scopeLevel(scopes: readonly string[]): ScopeLevel {
@@ -92,7 +92,7 @@ export function scopeLevel(scopes: readonly string[]): ScopeLevel {
   return scopes.some((s) => s === 'write' || s.endsWith(SEPARATOR + 'write')) ? 'write' : 'read';
 }
 
-/** Durées de vie proposées ; `''` = pas d'expiration (le serveur reçoit alors rien). */
+/** Offered lifetimes; `''` = no expiry (the server then receives nothing). */
 export const EXPIRY_CHOICES = ['', '30', '90', '365'] as const;
 
 export const expiryDays = (choice: string): number | undefined => {
@@ -100,7 +100,7 @@ export const expiryDays = (choice: string): number | undefined => {
   return Number.isFinite(days) && days > 0 ? days : undefined;
 };
 
-/** Corps d'émission d'un token — les champs vides ne sont pas envoyés du tout. */
+/** Issuance request body: empty fields are not sent at all. */
 export interface TokenDraft {
   name: string;
   description?: string;
@@ -111,9 +111,9 @@ export interface TokenDraft {
 }
 
 /**
- * Construit le corps de la requête à partir de l'état du formulaire.
- * `null` quand le brouillon est inexploitable (nom vide, aucun scope) : la validation
- * vit ici, testée, plutôt que dispersée dans deux composants.
+ * Builds the request body from the form state.
+ * `null` when the draft is unusable (empty name, no scope): validation lives here, tested,
+ * rather than being spread across two components.
  */
 export function buildTokenDraft(form: {
   name: string;

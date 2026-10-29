@@ -5,32 +5,32 @@ import { describe, expect, it } from 'vitest';
 import { pickStickyProject, readStoredProject } from './stickyProject';
 
 describe('pickStickyProject', () => {
-  it('préfère toujours le projet de la route', () => {
+  it('always prefers the route\'s project', () => {
     expect(pickStickyProject(12, 7)).toBe(12);
   });
 
-  it('retombe sur le dernier connu hors page de projet', () => {
-    // C'est le cas visé : accueil, liste des projets ou reviews ne doivent pas vider
-    // les sections du projet dans la barre latérale.
+  it('falls back to the last known project outside a project page', () => {
+    // This is the targeted case: the home page, the project list or reviews must not empty
+    // the project's sections in the sidebar.
     expect(pickStickyProject(null, 7)).toBe(7);
   });
 
-  it('rend null quand rien n’est connu', () => {
+  it('returns null when nothing is known', () => {
     expect(pickStickyProject(null, null)).toBeNull();
   });
 });
 
 describe('readStoredProject', () => {
-  it('lit un identifiant valide', () => {
+  it('reads a valid identifier', () => {
     expect(readStoredProject('461')).toBe(461);
   });
 
-  it('ignore une valeur absente ou vide', () => {
+  it('ignores an absent or empty value', () => {
     expect(readStoredProject(null)).toBeNull();
     expect(readStoredProject('')).toBeNull();
   });
 
-  it('ignore ce qui n’est pas un identifiant plausible', () => {
+  it('ignores anything that is not a plausible identifier', () => {
     expect(readStoredProject('abc')).toBeNull();
     expect(readStoredProject('-3')).toBeNull();
     expect(readStoredProject('0')).toBeNull();

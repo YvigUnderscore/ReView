@@ -4,12 +4,11 @@
 import type { ReactNode } from 'react';
 
 /**
- * Description déclarative d'un menu contextuel (A3).
+ * Declarative description of a context menu (A3).
  *
- * Chaque écran décrivait son menu en JSX, si bien qu'aucun ne proposait tout à fait les
- * mêmes actions et que les sous-menus étaient réécrits à chaque fois. Une entité décrit
- * désormais ses actions comme des données ; le rendu, les styles, l'accessibilité et la
- * règle de multi-sélection sont traités une seule fois.
+ * Each screen described its menu in JSX, so none of them offered quite the same actions, and submenus
+ * were rewritten every time. An entity now describes its actions as data; rendering, styles,
+ * accessibility and the multi-selection rule are handled once.
  */
 
 export interface MenuAction {
@@ -17,11 +16,11 @@ export interface MenuAction {
   id: string;
   label: string;
   icon?: ReactNode;
-  /** Raccourci affiché en fin de ligne (le menu ne l'écoute pas, il le rappelle). */
+  /** Shortcut shown at the end of the line (the menu does not listen to it, it reminds of it). */
   kbd?: string;
   danger?: boolean;
   disabled?: boolean;
-  /** Vrai si l'action porte sur une sélection multiple. */
+  /** True if the action applies to a multiple selection. */
   onSelect: () => void;
 }
 
@@ -39,11 +38,11 @@ export interface MenuSeparator {
 }
 
 /**
- * Bascule d'un état de l'entité — un plan omis du montage, typiquement.
+ * Toggle of an entity state — typically a plan left out of the mount.
  *
- * Une action ordinaire annonce ce qu'elle va faire, jamais où en est l'entité : il
- * faudrait deux libellés et deux icônes pour laisser deviner un état que la coche
- * énonce d'elle-même, et le menu mentirait le temps que la liste se rafraîchisse.
+ * An ordinary action announces what it is going to do, never where the entity stands: it would take
+ * two labels and two icons to suggest a state that the tick states by itself, and the menu would lie
+ * while the list refreshes.
  */
 export interface MenuCheckbox {
   kind: 'checkbox';
@@ -55,7 +54,7 @@ export interface MenuCheckbox {
   onCheckedChange: (checked: boolean) => void;
 }
 
-/** Un choix parmi plusieurs, dans un groupe. */
+/** One choice among several, in a group. */
 export interface MenuRadioItem {
   id: string;
   value: string;
@@ -65,10 +64,10 @@ export interface MenuRadioItem {
 }
 
 /**
- * Sélection unique — le statut d'une entité, typiquement.
+ * Single selection — typically the status of an entity.
  *
- * Une liste d'actions ne dit pas laquelle est en cours : il faut un groupe radio pour
- * que le statut courant soit *coché* plutôt que deviné à la couleur d'une pastille.
+ * A list of actions does not say which one is current: a radio group is needed so that the current
+ * status is *ticked* rather than guessed from the colour of a badge.
  */
 export interface MenuRadioGroup {
   kind: 'radiogroup';
@@ -81,9 +80,9 @@ export interface MenuRadioGroup {
 export type MenuEntry = MenuAction | MenuSubmenu | MenuSeparator | MenuRadioGroup | MenuCheckbox;
 
 /**
- * Séparateur dérivé de l'identifiant de l'entrée qui le suit. Le suffixe est posé ici et
- * non chez l'appelant : un littéral technique dans un fichier JSX est signalé par le
- * contrôle des textes en dur, qui ne peut pas distinguer une clé d'un libellé.
+ * Separator derived from the identifier of the entry that follows it. The suffix is set here and not
+ * by the caller: a technical literal in a JSX file is flagged by the hard-coded text check, which
+ * cannot tell a key from a label.
  */
 export const separator = (id: string): MenuSeparator => ({ kind: 'separator', id: id + SEPARATOR_SUFFIX });
 
@@ -105,15 +104,15 @@ export function isCheckbox(entry: MenuEntry): entry is MenuCheckbox {
   return entry.kind === 'checkbox';
 }
 
-/** Une entrée éventuelle devient une liste — évite un `?? []` mal typé chez l'appelant. */
+/** An optional entry becomes a list — avoids a badly typed `?? []` on the caller's side. */
 export function entriesOf(...entries: (MenuEntry | null | undefined)[]): MenuEntry[] {
   return entries.filter((e): e is MenuEntry => e != null);
 }
 
 /**
- * Nettoie une liste d'entrées avant rendu : retire les séparateurs en tête, en queue et
- * en double, et laisse tomber les sous-menus vides. Sans ça, un menu dont la moitié des
- * actions est masquée par les droits affiche des traits dans le vide.
+ * Cleans a list of entries before rendering: removes leading, trailing and duplicate separators, and
+ * drops empty submenus. Without that, a menu where half the actions are hidden by permissions would
+ * display lines in the void.
  */
 export function tidyMenu(entries: MenuEntry[]): MenuEntry[] {
   const kept: MenuEntry[] = [];
@@ -124,9 +123,9 @@ export function tidyMenu(entries: MenuEntry[]): MenuEntry[] {
       kept.push({ ...entry, items });
       continue;
     }
-    // Un groupe vide n'a rien à afficher — et son sous-menu doit disparaître avec lui.
-    // Traité avant la branche séparateur : le sous-menu « Statut » ne contient que lui,
-    // et le compter pour rien le ferait jeter alors qu'il est bien rempli.
+    // An empty group has nothing to display — and its submenu must disappear with it.
+    // Handled before the separator branch: the "Status" submenu contains only it, and counting it
+    // for nothing would drop it although it is full.
     if (isRadioGroup(entry)) {
       if (entry.items.length === 0) continue;
       kept.push(entry);
@@ -148,16 +147,16 @@ export interface EntityItemAction {
   onClick?: () => void;
   danger?: boolean;
   disabled?: boolean;
-  /** Sous-menu (choix d'un statut, d'une playlist…). `onClick` est alors ignoré. */
+  /** Submenu (choice of a status, a playlist…). `onClick` is then ignored. */
   items?: EntityItemAction[];
-  /** Trait de séparation posé avant cette entrée. */
+  /** Separator line placed before this entry. */
   separatorBefore?: boolean;
 }
 
 /**
- * Traduit les actions d'une carte en entrées de menu déclaratives (A3). L'ancien rendu
- * ne savait exprimer qu'une liste plate : ni sous-menu, ni entrée désactivée, ni
- * séparateur — d'où des menus qui ne pouvaient pas proposer « changer le statut ».
+ * Translates the actions of a card into declarative menu entries (A3). The former rendering could
+ * only express a flat list: no submenu, no disabled entry, no separator — hence menus that could not
+ * offer "change the status".
  */
 export function toMenuEntries(actions: EntityItemAction[], prefix = 'a'): MenuEntry[] {
   return actions.flatMap((action, index): MenuEntry[] => {
