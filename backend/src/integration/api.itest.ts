@@ -151,7 +151,7 @@ describe('API — auth & RBAC', () => {
       .post('/api/auth/tokens')
       .set('Authorization', `Bearer ${token}`)
       .send({ name: 'IT no password', scopes: ['read'] });
-    expect(noPassword.status).toBe(401);
+    expect(noPassword.status).toBe(403);
     expect(noPassword.body.code).toBe('CURRENT_PASSWORD_REQUIRED');
 
     const created = await request(app)
