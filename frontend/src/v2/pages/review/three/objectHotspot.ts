@@ -8,9 +8,9 @@ import { isDrawn } from './sceneOverrideApply';
 import { isClickGesture } from './usdPicking';
 
 /**
- * Point de surface visé par un rayon caméra (NDC). Comme pour la sélection de prim, les objets
- * invisibles sont écartés : les options d'une variante USD sont toutes cuites au même endroit
- * dans le GLB, et sans ce filtre le rayon accroche celle que personne ne voit.
+ * Surface point hit by a camera ray (NDC). As for prim selection, invisible objects are discarded:
+ * the options of a USD variant are all baked in the same place in the GLB, and without this filter
+ * the ray would hit the one nobody sees.
  */
 export function raycastSurface(
   three: typeof import('three'),
@@ -24,14 +24,14 @@ export function raycastSurface(
 }
 
 /**
- * Hotspot de surface pour un modèle Three, posé **là où l'on clique** (NDC du pointeur). Point
- * stocké en **espace-objet** du groupe (suit la transformation, comme le splat, 10.G-V10).
- * `null` si le rayon ne touche rien.
+ * Surface hotspot for a Three model, placed **where one clicks** (pointer NDC). The point is stored
+ * in the group's **object space** (it follows the transform, like the splat, 10.G-V10).
+ * `null` if the ray hits nothing.
  *
- * Historique : le hotspot ne pouvait se poser qu'au centre de l'écran, ce qui obligeait à
- * recadrer la caméra pour désigner un défaut — alors que le picking au clic existait déjà juste
- * à côté (`usdPicking`). Le repli « au centre » a été RETIRÉ en Phase 50 (lot 12) : son seul
- * appelant posait un point d'office à l'entrée en annotation, sans que personne l'ait désigné.
+ * History: the hotspot could only be placed at the center of the screen, which forced re-framing
+ * the camera to point at a defect — even though click picking already existed right next door
+ * (`usdPicking`). The "center" fallback was REMOVED in Phase 50 (batch 12): its only caller placed
+ * a point by default when entering annotation, without anyone having designated it.
  */
 export function raycastModelPoint(
   three: typeof import('three'),
@@ -48,13 +48,13 @@ export function raycastModelPoint(
   return { position: `${local.x} ${local.y} ${local.z}`, normal: `${n.x} ${n.y} ${n.z}`, space: 'object' };
 }
 
-/** Point d'ancrage d'un marqueur : position (espace objet ou monde) et son numéro d'affichage. */
+/** Anchor point of a marker: position (object or world space) and its display number. */
 export interface MarkerPoint {
   point: THREE.Vector3;
   objectSpace: boolean;
 }
 
-/** Point sérialisé (`"x y z"`) → point de marqueur ; `null` si la chaîne est inexploitable. */
+/** Serialized point (`"x y z"`) → marker point; `null` if the string is unusable. */
 export function toMarkerPoint(three: typeof import('three'), hs: Hotspot3D): MarkerPoint | null {
   const [x, y, z] = hs.position.split(/\s+/).map((v) => parseFloat(v));
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return null;
@@ -62,25 +62,24 @@ export function toMarkerPoint(three: typeof import('three'), hs: Hotspot3D): Mar
 }
 
 /**
- * Marqueurs DOM des points d'intérêt (pastilles numérotées) projetés à l'écran chaque frame —
- * générique sur un `Object3D`, donc le MÊME code sert au modèle 3D et au splat (les points en
- * espace-objet suivent la matrice monde de l'objet passé).
+ * DOM markers for points of interest (numbered dots) projected on screen every frame — generic
+ * over an `Object3D`, so the SAME code serves the 3D model and the splat (points in object space
+ * follow the world matrix of the object passed in).
  *
- * Les pastilles deviennent manipulables quand l'appelant fournit des gestionnaires
- * (`setInteractive`) : c'est le cas pendant la rédaction, où un point se déplace en tirant sa
- * pastille et se désigne en la cliquant. En relecture, elles restent inertes — un commentaire
- * envoyé ne se réécrit pas au passage de la souris.
+ * The dots become manipulable when the caller provides handlers (`setInteractive`): this is the
+ * case while drafting, where a point is moved by dragging its dot and designated by clicking it.
+ * In read-back they stay inert — a sent comment is not rewritten when the mouse passes over it.
  *
- * Chaque pastille porte son rang (`poi/poiAnchor`) et son apparition est annoncée sur le
- * conteneur : le calque React des cartes de commentaire s'y ancre par portail, et suit donc le
- * point sans reprojeter quoi que ce soit. C'est le seul lien entre ce fichier et React.
+ * Each dot carries its rank (`poi/poiAnchor`) and its appearance is announced on the container:
+ * the React layer of comment cards anchors itself there via a portal, and thus follows the point
+ * without reprojecting anything. It is the only link between this file and React.
  */
 export interface MarkerHandlers {
-  /** Pastille tirée puis lâchée ailleurs : le point de ce rang se repose sous le pointeur. */
+  /** Dot dragged then dropped elsewhere: the point of this rank is reset under the pointer. */
   onMove: (index: number, clientX: number, clientY: number) => void;
-  /** Pastille cliquée sans déplacement : le point de ce rang devient celui qu'on édite. */
+  /** Dot clicked without moving: the point of this rank becomes the one being edited. */
   onSelect: (index: number) => void;
-  /** Libellé accessible d'une pastille, numéro compris — traduit par l'appelant. */
+  /** Accessible label of a dot, number included — translated by the caller. */
   label: (index: number) => string;
 }
 
@@ -92,20 +91,20 @@ export interface ObjectMarker {
     width: number,
     height: number,
   ): void;
-  /** Arme (ou désarme, avec `null`) le déplacement et la désignation des pastilles. */
+  /** Arms (or disarms, with `null`) moving and designating the dots. */
   setInteractive(handlers: MarkerHandlers | null): void;
-  /** Rang mis en avant (la rangée du composeur qu'on édite), ou `null`. */
+  /** Highlighted rank (the composer row being edited), or `null`. */
   setActive(index: number | null): void;
   remove(): void;
 }
 
 const MARKER_CLASS =
   'absolute left-0 top-0 z-[5] flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs font-semibold shadow';
-/** Pastille au repos : elle ne doit pas voler le pointeur à l'orbite. */
+/** Resting dot: it must not steal the pointer from the orbit. */
 const IDLE_CLASS = 'pointer-events-none border-background bg-primary text-primary-foreground';
-/** Pastille manipulable — le curseur annonce qu'elle se tire. */
+/** Manipulable dot — the cursor announces that it can be dragged. */
 const LIVE_CLASS = 'cursor-grab border-background bg-primary text-primary-foreground';
-/** Pastille du point en cours d'édition : le même jeu de tokens, en inverse. */
+/** Dot of the point being edited: the same set of tokens, inverted. */
 const ACTIVE_CLASS = 'cursor-grab border-primary bg-background text-primary';
 
 export function createObjectMarker(three: typeof import('three'), container: HTMLElement): ObjectMarker {
@@ -128,29 +127,29 @@ export function createObjectMarker(three: typeof import('three'), container: HTM
     }
   };
 
-  /** Pastille de rang `i`, créée à la demande (un seul point = un seul nœud dans le DOM). */
+  /** Dot of rank `i`, created on demand (a single point = a single node in the DOM). */
   const elementAt = (i: number): HTMLDivElement => {
     let el = els[i];
     if (!el) {
       el = document.createElement('div');
       el.textContent = String(i + 1);
       el.style.display = 'none';
-      // Rang publié sur la pastille : c'est par lui qu'un calque React s'y ancre (`poi/poiAnchor`)
-      // pour suivre le point sans se reprojeter lui-même.
+      // Rank published on the dot: a React layer anchors itself to it (`poi/poiAnchor`)
+      // to follow the point without reprojecting itself.
       el.setAttribute(POI_ANCHOR_ATTR, String(i));
-      // Un seul jeu d'écouteurs par pastille, posé à la création : ils lisent `handlers` au
-      // moment du geste, donc (dés)armer n'ajoute ni ne retire rien.
+      // A single set of listeners per dot, bound at creation: they read `handlers` at the
+      // time of the gesture, so (dis)arming adds and removes nothing.
       let down: { x: number; y: number } | null = null;
       el.addEventListener('pointerdown', (e) => {
         if (!handlers || e.button !== 0) return;
         down = { x: e.clientX, y: e.clientY };
-        // Le canvas ne doit ni orbiter ni poser un point de plus sous la pastille.
+        // The canvas must neither orbit nor place an extra point under the dot.
         e.stopPropagation();
         e.preventDefault();
         try {
           el.setPointerCapture(e.pointerId);
         } catch {
-          // Pointeurs synthétiques sans capture (tests) : le geste reste fonctionnel.
+          // Synthetic pointers without capture (tests): the gesture still works.
         }
       });
       el.addEventListener('pointerup', (e) => {

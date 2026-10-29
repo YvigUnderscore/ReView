@@ -17,7 +17,7 @@ import { applyLighting, loadHdriEnvironment, type HdriEnvironment } from './hdri
 import { setGroundShadow } from './groundShadow';
 import type { Model3DThreeState } from './useModel3DThree';
 
-/** Entrée de la bibliothèque HDRI (miroir de `HdriService.listWithUrls`). */
+/** Entry of the HDRI library (mirror of `HdriService.listWithUrls`). */
 export interface HdriItem {
   id: string;
   name: string;
@@ -26,12 +26,12 @@ export interface HdriItem {
 }
 
 /**
- * Éclairage HDRI du viewer 3D (Phase 29) : charge un environnement de la **bibliothèque instance**
- * (`/api/studio/hdris`), l'applique à la scène (exposition + rotation + fond optionnel), rejoue la
- * config **persistée par défaut** (gestionnaire) à l'ouverture pour tous, et laisse les spectateurs
- * **tweaker en session** (non persisté — reprise du défaut au rechargement). Le gestionnaire
- * enregistre/efface le défaut dans `splatPresentation.lighting` (fusion côté client pour préserver
- * la caméra/animation déjà persistées).
+ * HDRI lighting of the 3D viewer (Phase 29): loads an environment from the **instance library**
+ * (`/api/studio/hdris`), applies it to the scene (exposure + rotation + optional background),
+ * replays the **persisted default** config (set by the manager) on opening, for everyone, and lets
+ * viewers **tweak it in session** (not persisted — the default is restored on reload). The manager
+ * saves/clears the default in `splatPresentation.lighting` (client-side merge to preserve the camera
+ * and animation already persisted).
  */
 export function useModel3DLighting(
   model3d: Model3DThreeState,
@@ -41,8 +41,8 @@ export function useModel3DLighting(
 ) {
   const { ready, getSceneHandle } = model3d;
   const { busy, persist } = useCameraPresentation(data.media.id, onSaved);
-  // Éclairage initial : réglage propre du média, sinon défaut projet (39.F), sinon neutre.
-  // Fusion sur DEFAULT_LIGHTING pour tolérer les champs absents des enregistrements anciens.
+  // Initial lighting: the media's own setting, otherwise the project default (39.F), otherwise neutral.
+  // Merged over DEFAULT_LIGHTING to tolerate fields absent from older records.
   const [cfg, setCfg] = useState<LightingConfig>(
     data.splatPresentation?.lighting
       ? { ...DEFAULT_LIGHTING, ...data.splatPresentation.lighting }
@@ -58,7 +58,7 @@ export function useModel3DLighting(
     queryFn: () => api.get<{ hdris: HdriItem[] }>('/api/studio/hdris').then((d) => d.hdris),
   });
 
-  // Applique la config d'éclairage à la scène ; (dé)charge l'HDRI quand `hdriId` change.
+  // Applies the lighting config to the scene; (un)loads the HDRI when `hdriId` changes.
   useEffect(() => {
     if (!ready) return;
     const handle = getSceneHandle();
@@ -91,15 +91,15 @@ export function useModel3DLighting(
         apply();
       })
       .catch(() => {
-        /* échec de chargement : conserve l'éclairage courant */
+        /* loading failure: keeps the current lighting */
       });
     return () => {
       cancelled = true;
     };
   }, [ready, getSceneHandle, hdris, cfg]);
 
-  // Sol récepteur d'ombres (39.F) : plan invisible ShadowMaterial sous le modèle, piloté par
-  // `cfg.groundShadow`. Effet dédié — indépendant de l'HDRI (l'ombre ne dépend pas de son intensité).
+  // Shadow-receiving ground (39.F): invisible ShadowMaterial plane under the model, driven by
+  // `cfg.groundShadow`. Dedicated effect — independent of the HDRI (the shadow does not depend on its intensity).
   useEffect(() => {
     if (!ready) return;
     const handle = getSceneHandle();
@@ -107,7 +107,7 @@ export function useModel3DLighting(
     setGroundShadow(handle, cfg.groundShadow);
   }, [ready, getSceneHandle, cfg.groundShadow]);
 
-  // Libération de l'environnement et du sol d'ombres au démontage.
+  // Release of the environment and of the shadow ground on unmount.
   useEffect(
     () => () => {
       envRef.current?.dispose();

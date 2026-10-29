@@ -6,13 +6,13 @@ import * as THREE from 'three';
 import { textureFullUrl, textureImageSource } from './textureImage';
 
 /**
- * Ouvrir une texture en grand suppose de savoir l'extraire de la scène. Trois formes arrivent
- * du chargeur glTF et une seule est directement affichable ; le reste passe par un canvas, qui
- * peut refuser (contexte 2D absent sous happy-dom, ou canvas marqué par une image servie sans
- * en-tête CORS). Dans ce cas la texture n'est simplement pas ouvrable — jamais un cadre noir.
+ * Opening a texture enlarged requires extracting it from the scene. Three shapes come from the glTF
+ * loader and only one is directly displayable; the rest goes through a canvas, which may refuse
+ * (2D context absent under happy-dom, or a canvas tainted by an image served without a CORS header).
+ * In that case the texture is simply not openable — never a black frame.
  */
 
-/** `<img>` détachée, avec une adresse : le cas d'une texture embarquée dans le GLB. */
+/** Detached `<img>` with an address: the case of a texture embedded in the GLB. */
 function imageTexture(src: string, width = 2048, height = 1024): THREE.Texture {
   const img = document.createElement('img');
   img.src = src;
@@ -24,8 +24,8 @@ function imageTexture(src: string, width = 2048, height = 1024): THREE.Texture {
 }
 
 describe('textureImageSource', () => {
-  it('reconnaît une image et rapporte sa résolution native', () => {
-    // `naturalWidth` et non `width` : une `<img>` non mise en page rapporte 0 en `width`.
+  it('recognizes an image and reports its native resolution', () => {
+    // `naturalWidth` and not `width`: an unlaid-out `<img>` reports 0 in `width`.
     expect(textureImageSource(imageTexture('blob:review/albedo'))).toMatchObject({
       kind: 'element',
       src: 'blob:review/albedo',
@@ -34,14 +34,14 @@ describe('textureImageSource', () => {
     });
   });
 
-  it('reconnaît une texture procédurale comme un tableau d’octets', () => {
+  it('recognizes a procedural texture as an array of bytes', () => {
     const tex = new THREE.DataTexture(new Uint8Array(4), 1, 1);
     expect(textureImageSource(tex)).toMatchObject({ kind: 'data', width: 1, height: 1 });
   });
 
-  it('ne rend rien d’une texture sans image, ni d’une image sans adresse', () => {
+  it('renders nothing for a texture without an image, nor for an image without an address', () => {
     expect(textureImageSource(new THREE.Texture())).toBeNull();
-    // Une `<img>` dont la source n'a jamais été posée n'est pas affichable en lightbox.
+    // An `<img>` whose source was never set cannot be displayed in the lightbox.
     const tex = new THREE.Texture();
     tex.image = document.createElement('img');
     expect(textureImageSource(tex)).toBeNull();
@@ -49,13 +49,13 @@ describe('textureImageSource', () => {
 });
 
 describe('textureFullUrl', () => {
-  it('sert l’adresse de l’image telle quelle, sans passer par un canvas', () => {
+  it('serves the image address as is, without going through a canvas', () => {
     expect(textureFullUrl(imageTexture('blob:review/normal'))).toBe('blob:review/normal');
   });
 
-  it('rend `null` plutôt que de lever quand le canvas ne sait pas exporter', () => {
-    // happy-dom n'implémente pas `getContext('2d')` : c'est exactement le repli attendu
-    // d'un navigateur qui refuse l'export (canvas marqué).
+  it('returns `null` rather than throwing when the canvas cannot export', () => {
+    // happy-dom does not implement `getContext('2d')`: that is exactly the expected fallback
+    // of a browser refusing the export (tainted canvas).
     expect(textureFullUrl(new THREE.DataTexture(new Uint8Array(4), 1, 1))).toBeNull();
     expect(textureFullUrl(new THREE.Texture())).toBeNull();
   });

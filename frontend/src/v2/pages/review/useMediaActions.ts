@@ -11,16 +11,16 @@ import type { MediaResp } from './reviewTypes';
 import { useT } from '../../i18n';
 
 /**
- * Actions de gestion du média de la review (extrait de ReviewPage, budget 300) :
- * publication (verrou Phase 11) et relance de conversion 3D.
+ * Management actions for the review's media (extracted from ReviewPage, budget 300):
+ * publication (Phase 11 lock) and 3D conversion relaunch.
  */
 export function useMediaActions(
   id: number,
   model3d: { clearLoadError: () => void },
   /**
-   * Exécuté avant la publication (46.S) : la mise en scène non enregistrée du gestionnaire
-   * devient l'override de base — ce qu'il voit est ce que les reviewers verront par défaut.
-   * Renvoyer `false` annule la publication (le média serait figé sans la mise en scène voulue).
+   * Run before publication (46.S): the manager's unsaved scene becomes the base override — what they
+   * see is what reviewers will see by default. Returning `false` cancels the publication (the media
+   * would be frozen without the intended scene).
    */
   beforePublish?: () => Promise<boolean>,
 ) {
@@ -29,11 +29,11 @@ export function useMediaActions(
   const [reprocessing, setReprocessing] = useState(false);
 
   /**
-   * Publie, et confie la review au passage.
+   * Publishes, and hands the review over on the way.
    *
-   * Les ReViewers voyagent avec la publication plutôt qu'en un second appel : le serveur
-   * les écrit AVANT de basculer le média, ce qui permet au réglage « consigne obligatoire »
-   * de refuser la publication au lieu de la laisser partir puis de râler.
+   * The ReViewers travel with the publication rather than in a second call: the server writes them
+   * BEFORE switching the media, which lets the "mandatory instruction" setting refuse the publication
+   * instead of letting it through and complaining afterwards.
    */
   const publishMedia = async (reviewers?: { userId: number; note: string | null }[]) => {
     if (beforePublish && !(await beforePublish())) return;
@@ -42,9 +42,9 @@ export function useMediaActions(
         `/api/media/${id}/publish`,
         reviewers ? { reviewers } : {},
       );
-      // Mise à jour ciblée du cache : pas de refetch (les URLs présignées changeraient et
-      // rechargeraient le viewer) — la réponse porte déjà la liste à jour, il n'y a rien à
-      // relire. Seuls le badge, les ReViewers et les brouillons sont concernés.
+      // Targeted cache update: no refetch (the presigned URLs would change and reload the viewer) — the
+      // response already carries the up-to-date list, there is nothing to re-read. Only the badge, the
+      // ReViewers and the drafts are affected.
       qc.setQueryData<MediaResp>(qk.media(id), (old) =>
         old
           ? {
@@ -54,7 +54,7 @@ export function useMediaActions(
             }
           : old,
       );
-      // La version porteuse vient de la réponse : pas besoin de la passer en paramètre.
+      // The carrying version comes from the response: no need to pass it as a parameter.
       void qc.invalidateQueries({ queryKey: qk.versionReviewers(answer.media.versionId) });
       void qc.invalidateQueries({ queryKey: qk.drafts });
       void qc.invalidateQueries({ queryKey: ['versions'] });

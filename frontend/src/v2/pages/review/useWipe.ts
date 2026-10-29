@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { wipeClipPath } from './wipe';
 
 /**
- * Position/angle du wipe hissés par l'orchestrateur (session live, retours 33) : le
- * driver diffuse pos/angle, les spectateurs les appliquent. `onGrab` (optionnel) est
- * appelé à la prise d'une poignée — prise de main d'un co-pilote.
+ * Wipe position/angle lifted into the orchestrator (live session, feedback 33): the driver broadcasts
+ * position/angle, the viewers apply them. `onGrab` (optional) is called when a handle is grabbed — a
+ * co-pilot taking the hand.
  */
 export interface WipeShared {
   pos: number;
@@ -17,7 +17,7 @@ export interface WipeShared {
   onGrab?: () => void;
 }
 
-/** État partagé du wipe (position 0..1, angle, taille du conteneur) + clip-path du média B. */
+/** Shared state of the wipe (position 0..1, angle, container size) + clip-path of media B. */
 export function useWipe(shared?: WipeShared) {
   const [localPos, setLocalPos] = useState(0.5);
   const [localAngle, setLocalAngle] = useState(0);

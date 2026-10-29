@@ -18,16 +18,15 @@ import { poiStoredPoints, poiUploadPlan } from './poi/poiUpload';
 import { useT, t as translate } from '../../i18n';
 
 /**
- * Envoi d'un commentaire de review (extrait de ReviewPage, budget 10.F4) : assemble
- * timestamp/caméra/annotation (points d'intérêt + painter + anim caméra + dessins 2D),
- * téléverse les pièces jointes, crée le commentaire puis lie les **images de référence en
- * préparation** (position figée côté serveur). Renvoie true si l'envoi a réussi.
+ * Sends a review comment (extracted from ReviewPage, budget 10.F4): assembles timestamp/camera/annotation
+ * (points of interest + painter + camera animation + 2D drawings), uploads the attachments, creates the
+ * comment, then links the **reference images in preparation** (position frozen server-side). Returns
+ * true if the send succeeded.
  *
- * **Un seul commentaire part**, quel que soit le nombre de points d'intérêt posés : il porte
- * tous les points (part `poi`), la remarque de chacun recopiée numérotée dans son texte, et
- * leurs images dans la liste de pièces jointes du commentaire. C'est la forme arrêtée avec
- * l'utilisateur, et c'est elle qui laisse le portail client, l'export de notes et le pont
- * ShotGrid inchangés — ils ne lisent que `content`.
+ * **A single comment is sent**, whatever the number of points of interest placed: it carries all the
+ * points (`poi` part), each one's remark copied numbered into its text, and their images in the
+ * comment's attachments list. This is the form settled with the user, and it is what leaves the client
+ * portal, the notes export and the ShotGrid bridge unchanged — they only read `content`.
  */
 export function useSubmitComment(opts: {
   id: number;
@@ -37,7 +36,7 @@ export function useSubmitComment(opts: {
   videoRef: RefObject<HTMLVideoElement | null>;
   captureCamera: () => unknown;
   loadComments: () => Promise<unknown>;
-  /** Boucle I/O active (secondes) : jointe comme plage in→out du commentaire (34.A). */
+  /** Active I/O loop (seconds): attached as the comment's in→out range (34.A). */
   loop?: { in: number | null; out: number | null };
   fps?: number;
 }) {
@@ -47,8 +46,8 @@ export function useSubmitComment(opts: {
 
   return async (text: string, files: File[]): Promise<boolean> => {
     const kind = data?.media.kind;
-    // Plage in→out (34.A) : la boucle I/O active à l'envoi devient la plage du commentaire
-    // (annotation visible pendant toute la plage) ; le marqueur s'ancre au point d'entrée.
+    // In→out range (34.A): the active I/O loop at send time becomes the comment's range
+    // (annotation visible across the whole range); the marker anchors at the entry point.
     const range =
       kind === 'VIDEO' && loop && loop.in != null && loop.out != null && loop.out > loop.in
         ? { inFrame: Math.round(loop.in * (fps || 24)), outFrame: Math.round(loop.out * (fps || 24)) }
@@ -56,37 +55,36 @@ export function useSubmitComment(opts: {
     let timestamp = kind === 'VIDEO' && videoRef.current ? videoRef.current.currentTime : undefined;
     if (range && loop) timestamp = loop.in!;
     const cameraState = kind === 'MODEL_3D' || kind === 'SPLAT' ? captureCamera() : undefined;
-    // Les images des points et celles du composeur partent ensemble : le plan décide de
-    // l'ordre (les points d'abord) et de ce qui tombe au plafond.
+    // The images of the points and those of the composer leave together: the plan decides the order
+    // (points first) and what falls at the ceiling.
     const spatial = kind === 'MODEL_3D' || kind === 'SPLAT';
     const poiPoints = spatial ? ann.poi.points : [];
     const plan = poiUploadPlan(poiPoints, files);
-    // Annotation : 3D/splat = points d'intérêt + dessins 2D ; autres = dessins 2D.
+    // Annotation: 3D/splat = points of interest + 2D drawings; others = 2D drawings.
     let annotation: unknown;
     if (spatial) {
       const parts: unknown[] = [];
-      // Traits de la brosse de surface (V9) : les DEUX types spatiaux depuis le lot 13 — la
-      // brosse était restée au splat, et un trait peint sur un modèle n'aurait pas été envoyé.
+      // Strokes of the surface brush (V9): both spatial types since batch 13 — the brush had stayed on
+      // the splat, and a stroke painted on a model would not have been sent.
       parts.push(...paint.serializePending());
-      // Mode layout : anim caméra (F-curves v2) jointe au commentaire (au lieu de dessiner).
+      // Layout mode: camera animation (F-curves v2) attached to the comment (instead of drawing).
       //
-      // La part EST l'animation, étalée telle quelle. Elle était recopiée champ par champ
-      // (`version`, `loop`, `channels`), et `durationMs` — la durée de lecture réglable, Phase 27
-      // — restait sur le quai : l'animation arrivait bien, mais bouclait sur son dernier temps de
-      // clé au lieu de la durée voulue. Un rejeu qui n'est pas à l'identique est une présentation
-      // perdue. `CameraAnimV2` et `cameraAnimShape` (Zod) décrivent la même forme, à quatre
-      // champs : rien d'étranger ne peut partir vers un schéma `strict()`, et un champ ajouté
-      // demain voyage sans qu'on ait à y repenser ici.
+      // The part IS the animation, spread as is. It used to be copied field by field (`version`, `loop`,
+      // `channels`), and `durationMs` — the adjustable playback duration, Phase 27 — stayed on the dock:
+      // the animation arrived, but looped on its last key time instead of the wanted duration. A replay
+      // that is not identical is a lost presentation. `CameraAnimV2` and `cameraAnimShape` (Zod) describe
+      // the same shape, with the same four fields: nothing foreign can leave for a `strict()` schema, and
+      // a field added tomorrow travels without anyone having to think about it here.
       if (ann.cameraAnim) parts.push({ type: 'camera-anim', ...ann.cameraAnim });
-      // Proposition de scène 3D (46.D) : les modifications locales du reviewer voyagent avec
-      // le commentaire et ne sont rejouées qu'à sa sélection — la scène commune ne bouge pas.
+      // 3D scene proposal (46.D): the reviewer's local edits travel with the comment and are only
+      // replayed on its selection — the shared scene does not move.
       if (ann.sceneOverride) parts.push({ type: 'scene-override', override: ann.sceneOverride });
       parts.push(...ann.annot);
       annotation = parts.length ? parts : undefined;
     } else {
       annotation = ann.annot.length ? ann.annot : undefined;
     }
-    // Plage vidéo : part `range` ajoutée à l'annotation (créée au besoin).
+    // Video range: `range` part added to the annotation (created if needed).
     if (range) {
       const parts = Array.isArray(annotation) ? [...annotation] : [];
       parts.push({ type: 'range', ...range });
@@ -95,14 +93,12 @@ export function useSubmitComment(opts: {
     try {
       if (plan.dropped > 0) toast.warning(t('poi.imagesDropped', { count: plan.dropped }));
       const uploaded = plan.files.length > 0 ? await uploadCommentAttachments(plan.files) : [];
-      // Proposition d'édition de nuage (lot 14) : même mécanique que la scène 3D, pour l'autre
-      // viewer spatial. Depuis que le verrou referme l'écriture globale à la publication, c'est
-      // par là qu'une édition de splat atteint les autres — rejouée à la lecture du commentaire,
-      // jamais écrite dans le média.
+      // Point-cloud edit proposal (batch 14): same mechanism as the 3D scene, for the other spatial
+      // viewer. Since the lock closes global writes at publication, this is how a splat edit reaches
+      // the others — replayed when the comment is read, never written into the media.
       //
-      // Elle s'assemble ICI, et pour la même raison que la part `poi` : ses deux binaires (masque
-      // de suppression, ops de sous-ensemble) sont des pièces jointes du commentaire, et leurs
-      // clés n'existent qu'une fois déposées.
+      // It is assembled HERE, for the same reason as the `poi` part: its two binaries (deletion mask,
+      // subset ops) are attachments of the comment, and their keys only exist once uploaded.
       const draft = kind === 'SPLAT' ? ann.takeSplatEdit() : null;
       const blobs = await uploadSplatEditBlobs(draft, uploaded.length);
       if (blobs.dropped === 'size') toast.warning(t('splat.proposalTooLarge'));
@@ -110,13 +106,13 @@ export function useSubmitComment(opts: {
       const splatPart = buildSplatEditPart(draft?.edits ?? null, blobs.refs);
       if (splatPart) annotation = [...(Array.isArray(annotation) ? annotation : []), splatPart];
       const attachments = [...uploaded, ...blobs.attachments];
-      // La part `poi` ne peut être assemblée qu'ICI : les clés des images n'existent qu'après
-      // le téléversement, et c'est par elles qu'un point reconnaît les siennes.
+      // The `poi` part can only be assembled HERE: the keys of the images only exist after the upload,
+      // and it is through them that a point recognizes its own.
       const poi = buildPoiPart(poiStoredPoints(poiPoints, plan, uploaded));
       if (poi) annotation = [poi, ...(Array.isArray(annotation) ? annotation : [])];
       const { comment } = await api.post<{ comment: ReviewComment }>('/api/comments', {
         mediaObjectId: id,
-        // Texte optionnel (annotation seule) : placeholder minimal pour la contrainte backend.
+        // Optional text (annotation only): minimal placeholder for the backend constraint.
         content: poiContent(text, poiPoints, annotation ? '(annotation)' : '(image)'),
         timestamp,
         cameraState,
@@ -135,7 +131,7 @@ export function useSubmitComment(opts: {
   };
 }
 
-/** Images de référence en préparation → liées au commentaire créé, position figée. */
+/** Reference images in preparation → linked to the created comment, position frozen. */
 async function linkStagedReferences(qc: QueryClient, id: number, ann: Annotations, commentId: number) {
   for (const r of ann.stagedRefs) {
     try {

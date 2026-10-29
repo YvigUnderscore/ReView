@@ -21,34 +21,33 @@ import { usePointerBroadcast } from './live/usePointerBroadcast';
 export type { LiveParticipant, LiveStatePayload } from './liveSync';
 
 export interface LiveSession {
-  /** Clé de la session courante (`media:<id>` ou `playlist:<id>`) — badges LIVE. */
+  /** Key of the current session (`media:<id>` or `playlist:<id>`) — LIVE badges. */
   key: string;
-  /** En session (rejointe et non quittée). */
+  /** In session (joined and not left). */
   active: boolean;
   isPilot: boolean;
-  /** Diffusion en cours (pilote ou co-pilote driver). */
+  /** Broadcast in progress (driver: pilot or co-pilot). */
   isDriver: boolean;
   pilotId: number | null;
   coHostIds: number[];
   driverId: number | null;
   participants: LiveParticipant[];
-  /** Lecture démarrée en sourdine (autoplay bloqué) : proposer d'activer le son. */
+  /** Playback started muted (autoplay blocked): suggest turning the sound on. */
   needsUnmute: boolean;
   unmute: () => void;
   join: () => void;
   leave: () => void;
   handoff: (toUserId: number) => void;
   setCoHost: (toUserId: number, isCoHost: boolean) => void;
-  /** Interaction locale d'un co-pilote (clic viewer, zoom…) → prise de main immédiate. */
+  /** Local interaction of a co-pilot (viewer click, zoom…) → immediate takeover. */
   claimInteraction: () => void;
 }
 
 /**
- * Salle de review live (33.B + retours CP-HUMAIN). Session identifiée par
- * `playlist:<id>` (si `?playlist=`) sinon `media:<id>`. Le **driver** (pilote ou
- * co-pilote ayant interagi en dernier) diffuse à `syncHz` : média courant,
- * playhead/pause, caméra 3D/splat (DoF inclus), comparaison A/B, zoom/pan image.
- * Les spectateurs appliquent tout ; `?live=1` fait rejoindre automatiquement.
+ * Live review room (33.B + CP-HUMAN feedback). Session identified by `playlist:<id>` (if `?playlist=`)
+ * otherwise `media:<id>`. The **driver** (the pilot or co-pilot who last interacted) broadcasts at
+ * `syncHz`: current media, playhead/pause, 3D/splat camera (DoF included), A/B comparison, image
+ * zoom/pan. Viewers apply everything; `?live=1` joins automatically.
  */
 export function useLiveSession({
   mediaId,
@@ -77,7 +76,7 @@ export function useLiveSession({
   restoreCamera: (camera: unknown) => void;
   compareId: number | null;
   onCompareChange: (id: number | null) => void;
-  /** Mode de comparaison + barre de wipe — diffusés par le driver (retours 33, diff 34.E). */
+  /** Comparison mode + wipe bar — broadcast by the driver (feedback 33, diff 34.E). */
   compareMode: 'side' | 'wipe' | 'diff';
   onCompareModeChange: (mode: 'side' | 'wipe' | 'diff') => void;
   wipe: { pos: number; angle: number };
@@ -92,17 +91,17 @@ export function useLiveSession({
   const wantLive = searchParams.get('live') === '1';
 
   const [state, setState] = useState<LiveStatePayload | null>(null);
-  // `?live=1` à l'arrivée = session déjà rejointe (navigation pilotée) → actif d'emblée.
+  // `?live=1` on arrival = session already joined (piloted navigation) → active right away.
   const [active, setActive] = useState(() => wantLive);
   const [needsUnmute, setNeedsUnmute] = useState(false);
   const isPilot = active && state?.pilotId === selfId;
   const canDrive = active && (isPilot || (state?.coHostIds ?? []).includes(selfId));
   const isDriver = active && state?.driverId === selfId;
-  // Application d'une sync en cours : les événements vidéo qui en découlent ne sont
-  // pas des interactions locales (un co-pilote ne doit pas voler la main en suivant).
+  // Applying a sync in progress: the video events that follow are not local interactions
+  // (a co-pilot must not steal the hand while following).
   const applyingRef = useRef(false);
-  // Refs miroir pour les callbacks socket/intervalles (pas de re-abonnement par tick) :
-  // recopiées après chaque render (l'effet sans dépendances court à chaque commit).
+  // Mirror refs for the socket/interval callbacks (no re-subscription per tick): copied after each
+  // render (the effect without dependencies runs on each commit).
   const is3d = kind === 'MODEL_3D' || kind === 'SPLAT';
   const mirror = {
     mediaId,
@@ -116,7 +115,7 @@ export function useLiveSession({
     onCompareModeChange,
     wipe,
     onWipeApply,
-    // Nom des curseurs partagés : le bus ne transporte que des identifiants.
+    // Name of the shared cursors: the bus only carries identifiers.
     participants: state?.participants ?? [],
   };
   const applyRef = useRef(mirror);
@@ -138,7 +137,7 @@ export function useLiveSession({
     [setSearchParams],
   );
 
-  /** Compose l'état courant à diffuser (driver). */
+  /** Composes the current state to broadcast (driver). */
   const buildPayload = useCallback(
     (action?: boolean): LiveSyncPayload => {
       const cur = applyRef.current;
@@ -152,7 +151,7 @@ export function useLiveSession({
       if (cur.is3d) payload.camera = cur.captureCamera();
       if (cur.kind === 'VIDEO' || cur.kind === 'IMAGE') {
         payload.compareId = cur.compareId;
-        // Comparaison active : le mode (côte-à-côte/wipe) et la barre suivent le driver.
+        // Active comparison: the mode (side by side/wipe) and the bar follow the driver.
         if (cur.compareId != null) {
           payload.compareMode = cur.compareMode;
           if (cur.compareMode === 'wipe') payload.wipe = cur.wipe;
@@ -189,10 +188,10 @@ export function useLiveSession({
     [key],
   );
 
-  /** Interaction locale d'un pilote/co-pilote : sync immédiate marquée `action`. */
+  /** Local interaction of a pilot/co-pilot: immediate sync marked `action`. */
   const claimInteraction = useCallback(() => {
-    // Déjà driver : la diffusion périodique suffit (évite un spam d'émissions pendant
-    // un drag continu — wipe, zoom). Le claim ne sert qu'à prendre la main.
+    // Already driver: the periodic broadcast is enough (avoids spamming emissions during a continuous
+    // drag — wipe, zoom). The claim only serves to take the hand.
     if (!canDrive || isDriver || applyingRef.current) return;
     getSocket().emit('live:sync', key, buildPayload(true));
   }, [canDrive, isDriver, key, buildPayload]);
@@ -203,7 +202,7 @@ export function useLiveSession({
     setNeedsUnmute(false);
   }, [videoRef]);
 
-  // Abonnement à l'état de la session + auto-join si l'URL porte ?live=1.
+  // Subscription to the session state + auto-join if the URL carries ?live=1.
   useEffect(() => {
     const socket = getSocket();
     const onState = (data: { key: string; state: LiveStatePayload | null }) => {
@@ -220,20 +219,20 @@ export function useLiveSession({
     return () => {
       socket.off('live:state', onState);
       socket.off('connect', rejoin);
-      // Départ différé : annulé si la review suivante (même session) remonte aussitôt.
+      // Deferred departure: cancelled if the next review (same session) comes back right away.
       if (wantLive) schedulePendingLeave(key);
     };
   }, [key, wantLive]);
 
-  // Navigation locale d'un co-pilote (≠ suivi du driver) → prise de main immédiate.
+  // Local navigation of a co-pilot (not following the driver) → immediate takeover.
   useEffect(() => {
     if (!canDrive || isDriver || driverMedia.lastId === 0 || driverMedia.lastId === mediaId) return;
     claimInteraction();
-    // Volontairement dépendant du seul montage/état : une navigation = un claim.
+    // Deliberately depends only on mount/state: one navigation = one claim.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canDrive, isDriver, mediaId]);
 
-  // Spectateur (et co-pilote non-driver) : applique l'état du driver.
+  // Viewer (and non-driver co-pilot): applies the driver's state.
   useEffect(() => {
     if (!active || isDriver) return;
     const socket = getSocket();
@@ -254,8 +253,8 @@ export function useLiveSession({
         driverMedia.lastId = payload.mediaId;
         const video = videoRef.current;
         if (video && payload.t !== undefined) {
-          // Recalage : à la frame près en pause (les frames doivent être alignées),
-          // avec tolérance en lecture (éviter les à-coups).
+          // Resync: frame-accurate when paused (frames must line up), with tolerance during playback
+          // (avoids jerks).
           const drift = Math.abs(video.currentTime - payload.t);
           const threshold = payload.playing ? 0.35 : 1 / (fps || 24) / 2 + 0.001;
           if (drift > threshold) {
@@ -263,8 +262,8 @@ export function useLiveSession({
             video.currentTime = payload.t;
           }
           if (payload.playing === true && video.paused) {
-            // Autoplay sans interaction préalable : replier sur une lecture en sourdine
-            // (autorisée par les navigateurs) et proposer d'activer le son.
+            // Autoplay without prior interaction: fall back to muted playback (allowed by browsers) and
+            // offer to turn the sound on.
             void video.play().catch(() => {
               video.muted = true;
               setNeedsUnmute(true);
@@ -280,11 +279,11 @@ export function useLiveSession({
         if (payload.wipe && (payload.wipe.pos !== cur.wipe.pos || payload.wipe.angle !== cur.wipe.angle))
           cur.onWipeApply(payload.wipe.pos, payload.wipe.angle);
         if (payload.imageView && cur.kind === 'IMAGE') imageViewApiRef.current?.apply(payload.imageView);
-        // Curseur du driver : trame légère, hors cadence de synchronisation.
+        // Driver's cursor: lightweight frame, outside the sync cadence.
         applyPointer(payload, cur.participants);
       } finally {
-        // Reset différé : les événements play/pause/seeked découlant de l'application
-        // arrivent après ce handler (même tick ou tâche suivante).
+        // Deferred reset: the play/pause/seeked events resulting from the application arrive after
+        // this handler (same tick or next task).
         setTimeout(() => {
           applyingRef.current = false;
         }, 0);
@@ -296,7 +295,7 @@ export function useLiveSession({
     };
   }, [active, isDriver, key, playlistId, fps, navigate, videoRef, programmaticSeekRef, imageViewApiRef]);
 
-  // Co-pilote non-driver : une commande vidéo locale (play/pause/seek) prend la main.
+  // Non-driver co-pilot: a local video command (play/pause/seek) takes the hand.
   useEffect(() => {
     if (!canDrive || isDriver) return;
     const video = videoRef.current;
@@ -315,7 +314,7 @@ export function useLiveSession({
     };
   }, [canDrive, isDriver, videoRef, programmaticSeekRef, claimInteraction]);
 
-  // Co-pilote non-driver : un clic dans un viewer 3D/splat (canvas) prend la main.
+  // Non-driver co-pilot: a click in a 3D/splat viewer (canvas) takes the hand.
   useEffect(() => {
     if (!canDrive || isDriver || !applyRef.current.is3d) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -325,10 +324,10 @@ export function useLiveSession({
     return () => window.removeEventListener('pointerdown', onPointerDown);
   }, [canDrive, isDriver, claimInteraction]);
 
-  // Curseur partagé (reliquat du studio) : « là, ce truc » n'avait aucun support visuel.
+  // Shared cursor (studio leftover): "there, this thing" had no visual support.
   usePointerBroadcast({ active, isDriver, sessionKey: key, selfId, mediaId });
 
-  // Driver : diffuse l'état courant à `syncHz` (réglable admin par type de média).
+  // Driver: broadcasts the current state at `syncHz` (admin-adjustable per media type).
   useEffect(() => {
     if (!isDriver) return;
     const socket = getSocket();

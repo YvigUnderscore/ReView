@@ -32,50 +32,50 @@ const prim = (path: string, over: Partial<UsdPrim> = {}): UsdPrim => ({
   ...over,
 });
 
-/** Chemins de tous les nœuds, en profondeur — vue compacte de l'arbre pour les assertions. */
+/** Paths of all nodes, depth-first — compact view of the tree for assertions. */
 const flatten = (nodes: PrimNode[]): string[] => nodes.flatMap((n) => [n.path, ...flatten(n.children)]);
 
-describe('chemins USD', () => {
-  it('découpe, remonte au parent et nomme la feuille', () => {
+describe('USD paths', () => {
+  it('splits, climbs to the parent and names the leaf', () => {
     expect(primSegments('/World/Asset/Geo')).toEqual(['World', 'Asset', 'Geo']);
     expect(parentPath('/World/Asset/Geo')).toBe('/World/Asset');
     expect(parentPath('/World')).toBeNull();
     expect(leafName('/World/Asset/Geo')).toBe('Geo');
   });
 
-  it('énumère les ancêtres, de la racine au parent', () => {
+  it('enumerates the ancestors, from the root to the parent', () => {
     expect(ancestorPaths('/World/Asset/Geo')).toEqual(['/World', '/World/Asset']);
     expect(ancestorPaths('/World')).toEqual([]);
   });
 
-  it('reconnaît un descendant sans confondre les préfixes voisins', () => {
+  it('recognizes a descendant without confusing neighboring prefixes', () => {
     expect(isSelfOrDescendant('/World/Asset', '/World/Asset')).toBe(true);
     expect(isSelfOrDescendant('/World/Asset/Geo', '/World/Asset')).toBe(true);
-    // `/World/AssetB` commence par `/World/Asset` sans en être un descendant.
+    // `/World/AssetB` starts with `/World/Asset` without being one of its descendants.
     expect(isSelfOrDescendant('/World/AssetB', '/World/Asset')).toBe(false);
   });
 });
 
 describe('buildPrimTree', () => {
-  it('reconstruit la hiérarchie depuis la liste plate', () => {
+  it('rebuilds the hierarchy from the flat list', () => {
     const tree = buildPrimTree([prim('/World'), prim('/World/Asset'), prim('/World/Asset/Geo')]);
     expect(flatten(tree)).toEqual(['/World', '/World/Asset', '/World/Asset/Geo']);
     expect(tree[0].children[0].children[0].path).toBe('/World/Asset/Geo');
   });
 
-  it('crée les niveaux intermédiaires absents plutôt que d’orpheliner la branche', () => {
-    // Arbre tronqué : `/World/Asset` manque entre la racine et la feuille.
+  it('creates missing intermediate levels rather than orphaning the branch', () => {
+    // Truncated tree: `/World/Asset` is missing between the root and the leaf.
     const tree = buildPrimTree([prim('/World'), prim('/World/Asset/Geo')]);
     expect(flatten(tree)).toEqual(['/World', '/World/Asset', '/World/Asset/Geo']);
-    expect(tree[0].children[0].type).toBe(''); // nœud implicite, non typé
+    expect(tree[0].children[0].type).toBe(''); // implicit node, untyped
   });
 
-  it('trie les frères par nom pour un affichage stable', () => {
+  it('sorts siblings by name for a stable display', () => {
     const tree = buildPrimTree([prim('/W/b'), prim('/W/a'), prim('/W')]);
     expect(tree[0].children.map((c) => c.name)).toEqual(['a', 'b']);
   });
 
-  it('conserve les métadonnées du prim réel malgré un nœud implicite préalable', () => {
+  it('keeps the metadata of the real prim despite a preceding implicit node', () => {
     const tree = buildPrimTree([
       prim('/World/Asset/Geo'),
       prim('/World/Asset', { type: 'Xform', variantSets: ['modelingVariant'] }),
@@ -86,7 +86,7 @@ describe('buildPrimTree', () => {
     expect(asset.children.map((c) => c.path)).toEqual(['/World/Asset/Geo']);
   });
 
-  it('renvoie un arbre vide sans prim', () => {
+  it('returns an empty tree with no prim', () => {
     expect(buildPrimTree([])).toEqual([]);
   });
 });
@@ -100,34 +100,34 @@ describe('matchPrimPath', () => {
     '/World/Asset/Geo/Geo/Suzanne',
   ];
 
-  it('privilégie l’égalité stricte', () => {
+  it('prefers strict equality', () => {
     expect(matchPrimPath('/World/Asset', paths)).toBe('/World/Asset');
   });
 
-  it('absorbe un niveau collapsé par l’importeur Blender', () => {
-    // Cas réel : Blender produit `/World/Asset/Geo/Suzanne`, l'USD porte un `Geo` de plus.
+  it('absorbs a level collapsed by the Blender importer', () => {
+    // Real case: Blender produces `/World/Asset/Geo/Suzanne`, the USD carries one extra `Geo`.
     expect(matchPrimPath('/World/Asset/Geo/Suzanne', paths)).toBe('/World/Asset/Geo/Geo/Suzanne');
   });
 
-  it('renvoie null quand aucun prim ne porte ce nom', () => {
+  it('returns null when no prim carries this name', () => {
     expect(matchPrimPath('/World/Autre', paths)).toBeNull();
   });
 
-  it('renvoie null plutôt que de trancher une ambiguïté', () => {
-    // Deux prims homonymes à la même profondeur, sans préfixe commun discriminant.
+  it('returns null rather than deciding an ambiguity', () => {
+    // Two homonymous prims at the same depth, without a discriminating common prefix.
     expect(matchPrimPath('/X/Mesh', ['/A/Mesh', '/B/Mesh'])).toBeNull();
   });
 
-  it('départage par le préfixe commun le plus long', () => {
+  it('breaks the tie by the longest common prefix', () => {
     expect(matchPrimPath('/A/B/Mesh', ['/A/B/C/Mesh', '/Z/Mesh'])).toBe('/A/B/C/Mesh');
   });
 });
 
 describe('buildRenderedPrimTree', () => {
-  it('ajoute des prims implicites pour la géométrie que l’analyseur ne compose pas', () => {
-    // L'analyseur compose UNE option par jeu de variantes : la géométrie de l'option `lo`,
-    // cuite dans le GLB (46.G), n'existe pas dans sa liste. Sans prim implicite, elle était
-    // insélectionnable et l'isolement retombait sur le parent connu le plus proche.
+  it('adds implicit prims for the geometry the parser does not compose', () => {
+    // The parser composes ONE option per variant set: the geometry of the `lo` option,
+    // baked into the GLB (46.G), does not exist in its list. Without an implicit prim, it was
+    // unselectable and isolation fell back to the nearest known parent.
     const tree = buildRenderedPrimTree(
       [prim('/World'), prim('/World/Asset'), prim('/World/Asset/Geo')],
       ['/World/Asset/Geo', '/World/Asset/Geo/Geo/Cube'],
@@ -141,7 +141,7 @@ describe('buildRenderedPrimTree', () => {
     ]);
   });
 
-  it('ne duplique pas les prims déjà connus et écarte les artefacts _materials', () => {
+  it('does not duplicate known prims and discards _materials artifacts', () => {
     const tree = buildRenderedPrimTree(
       [prim('/World'), prim('/World/Asset')],
       ['/World/Asset', '/World/Asset/_materials'],
@@ -149,7 +149,7 @@ describe('buildRenderedPrimTree', () => {
     expect(flatten(tree)).toEqual(['/World', '/World/Asset']);
   });
 
-  it('sans chemin rendu, rend l’arbre de l’analyseur tel quel', () => {
+  it('with no rendered path, renders the parser tree as is', () => {
     const tree = buildRenderedPrimTree([prim('/World'), prim('/World/Asset')], []);
     expect(flatten(tree)).toEqual(['/World', '/World/Asset']);
   });
@@ -165,7 +165,7 @@ describe('flattenTree / searchPrimTree', () => {
     prim('/root/table/leg/screw'),
   ]);
 
-  it('aplatit en pré-ordre (ordre d’affichage) — plage Maj+clic', () => {
+  it('flattens in pre-order (display order) — Shift+click range', () => {
     expect(flattenTree(tree)).toEqual([
       '/root',
       '/root/chairA',
@@ -176,7 +176,7 @@ describe('flattenTree / searchPrimTree', () => {
     ]);
   });
 
-  it('filtre en gardant les ancêtres des résultats, insensible à la casse', () => {
+  it('filters while keeping the ancestors of the results, case-insensitive', () => {
     expect(flattenTree(searchPrimTree(tree, 'seat').tree)).toEqual([
       '/root',
       '/root/chairA',
@@ -184,23 +184,23 @@ describe('flattenTree / searchPrimTree', () => {
     ]);
     expect(flattenTree(searchPrimTree(tree, 'CHAIR').tree)).toEqual(['/root', '/root/chairA']);
     expect(searchPrimTree(tree, 'introuvable').tree).toEqual([]);
-    // Requête vide : arbre inchangé (même référence), et rien à déplier de force.
+    // Empty query: tree unchanged (same reference), and nothing to force open.
     const blank = searchPrimTree(tree, '  ');
     expect(blank.tree).toBe(tree);
     expect(blank.expand.size).toBe(0);
   });
 
-  it('ne retient QUE le nom : chercher « table » ne ramène pas toute sa descendance', () => {
-    // Le défaut corrigé : la comparaison portait sur le chemin complet, et `/root/table/leg`
-    // comme `/root/table/leg/screw` contenaient « table ». Tout le sous-arbre remontait.
+  it('matches ONLY on the name: searching "table" does not bring back all its descendants', () => {
+    // The fixed bug: the comparison covered the full path, so `/root/table/leg` and
+    // `/root/table/leg/screw` both contained "table". The whole subtree came back.
     expect(flattenTree(searchPrimTree(tree, 'table').tree)).toEqual(['/root', '/root/table']);
   });
 
-  it('ne déplie que le chemin menant au résultat', () => {
-    // `/root` mène à la correspondance et s'ouvre ; `/root/table`, qui EST la correspondance,
-    // reste fermé — on n'a pas demandé sa descendance.
+  it('only expands the path leading to the result', () => {
+    // `/root` leads to the match and opens; `/root/table`, which IS the match,
+    // stays closed — its descendants were not requested.
     expect([...searchPrimTree(tree, 'table').expand]).toEqual(['/root']);
-    // Une correspondance profonde ouvre toute sa lignée, et elle seule.
+    // A deep match opens its entire lineage, and only that.
     expect([...searchPrimTree(tree, 'screw').expand].sort()).toEqual([
       '/root',
       '/root/table',
@@ -208,7 +208,7 @@ describe('flattenTree / searchPrimTree', () => {
     ]);
   });
 
-  it('accepte une intention de chemin explicite quand la requête porte une barre', () => {
+  it('accepts an explicit path intent when the query contains a slash', () => {
     expect(flattenTree(searchPrimTree(tree, 'table/leg').tree)).toEqual([
       '/root',
       '/root/table',
@@ -219,18 +219,18 @@ describe('flattenTree / searchPrimTree', () => {
 });
 
 describe('initialExpansion', () => {
-  it('ouvre les deux premiers niveaux, pas le troisième', () => {
+  it('opens the first two levels, not the third', () => {
     const tree = buildPrimTree([prim('/root'), prim('/root/table'), prim('/root/table/leg')]);
     expect([...initialExpansion(tree)].sort()).toEqual(['/root', '/root/table']);
   });
 
-  it('tient un arbre vide', () => {
+  it('holds an empty tree', () => {
     expect(initialExpansion([]).size).toBe(0);
   });
 });
 
-describe('promoteToKind — le clic désigne le component, pas la feuille', () => {
-  /** Une chaise de scène de production : le component porte sa géométrie sous lui. */
+describe('promoteToKind — the click designates the component, not the leaf', () => {
+  /** A production scene chair: the component carries its geometry beneath it. */
   const KITCHEN = [
     prim('/Kitchen_set', { kind: 'assembly' }),
     prim('/Kitchen_set/Props_grp', { kind: 'group' }),
@@ -243,48 +243,48 @@ describe('promoteToKind — le clic désigne le component, pas la feuille', () =
   const kinds = primKinds(KITCHEN);
   const selectable = new Set(KITCHEN.map((p) => p.path));
 
-  it('remonte de la feuille touchée au component englobant', () => {
+  it('climbs from the hit leaf to the enclosing component', () => {
     expect(promoteToKind(SEAT, { kinds, selectable })).toBe(CHAIR);
   });
 
-  it('rend le component lui-même quand c’est lui qu’on touche', () => {
+  it('returns the component itself when it is what is touched', () => {
     expect(promoteToKind(CHAIR, { kinds, selectable })).toBe(CHAIR);
   });
 
-  it('ne promeut pas ce qui est au-dessus du component', () => {
-    // Un groupe reste un groupe : la promotion ne monte jamais jusqu'à l'assembly.
+  it('does not promote what sits above the component', () => {
+    // A group stays a group: promotion never climbs up to the assembly.
     expect(promoteToKind('/Kitchen_set/Props_grp', { kinds, selectable })).toBe('/Kitchen_set/Props_grp');
   });
 
-  it('garde le chemin quand l’ancêtre component manque à l’arbre (arbre tronqué)', () => {
-    // `MAX_PRIMS_REPORTED` : l'analyseur n'a pas rapporté la chaise, seulement sa feuille.
+  it('keeps the path when the component ancestor is missing from the tree (truncated tree)', () => {
+    // `MAX_PRIMS_REPORTED`: the parser did not report the chair, only its leaf.
     const truncated = primKinds([prim(SEAT)]);
     expect(promoteToKind(SEAT, { kinds: truncated })).toBe(SEAT);
   });
 
-  it('traverse les prims implicites, au `kind` vide, sans s’y arrêter', () => {
-    // `/Geom` est un niveau sans kind : il ne doit ni arrêter la remontée, ni être rendu à la
-    // place du component.
+  it('traverses implicit prims with an empty kind without stopping on them', () => {
+    // `/Geom` is a level without a kind: it must neither stop the climb nor be returned in
+    // place of the component.
     expect(promoteToKind('/Kitchen_set/Props_grp/ChairB_1/Geom', { kinds, selectable })).toBe(CHAIR);
   });
 
-  it('ignore un component qui ne porte aucun objet manipulable', () => {
-    // Sans objet indexé, le promouvoir donnerait une sélection sans halo, sans cadrage et sans
-    // gizmo : mieux vaut garder la feuille, qui en a un.
+  it('ignores a component carrying no manipulable object', () => {
+    // Without an indexed object, promoting it would yield a selection without halo, framing or
+    // gizmo: better keep the leaf, which has one.
     const withoutChair = new Set(selectable);
     withoutChair.delete(CHAIR);
     expect(promoteToKind(SEAT, { kinds, selectable: withoutChair })).toBe(SEAT);
   });
 
-  it('sans liste de chemins manipulables, ne filtre rien', () => {
+  it('without a list of manipulable paths, filters nothing', () => {
     expect(promoteToKind(SEAT, { kinds })).toBe(CHAIR);
   });
 
-  it('rend null pour un chemin nul — un clic qui ne résout rien reste un clic dans le vide', () => {
+  it('returns null for a null path — a click resolving nothing stays a click on empty space', () => {
     expect(promoteToKind(null, { kinds, selectable })).toBeNull();
   });
 
-  it('vise le `kind` demandé, pas seulement `component`', () => {
+  it('targets the requested `kind`, not just `component`', () => {
     expect(promoteToKind(SEAT, { kinds, kind: 'assembly' })).toBe('/Kitchen_set');
   });
 });

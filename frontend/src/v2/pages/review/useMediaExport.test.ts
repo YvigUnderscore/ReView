@@ -43,20 +43,20 @@ afterEach(() => {
 });
 
 describe('exportFileName', () => {
-  it('remplace l’extension d’origine par celle de l’export', () => {
+  it('replaces the original extension with that of the export', () => {
     expect(exportFileName('sh010_comp_v003.mov', 'frame', 'png')).toBe('sh010_comp_v003-frame.png');
     expect(exportFileName('sans_extension', 'contact-sheet', 'png')).toBe('sans_extension-contact-sheet.png');
   });
 });
 
 describe('captureVideoFramePng', () => {
-  it('refuse une image non décodée plutôt que d’écrire un PNG vide', () => {
+  it('refuses an undecoded image rather than writing an empty PNG', () => {
     expect(() => captureVideoFramePng({ videoWidth: 0, videoHeight: 0 } as HTMLVideoElement)).toThrowError();
   });
 });
 
-describe('useMediaExport — les deux boutons du panneau Export', () => {
-  it('n’expose rien pour un média non vidéo', () => {
+describe('useMediaExport — the two buttons of the Export panel', () => {
+  it('exposes nothing for a non-video media', () => {
     const { result } = renderHook(() =>
       useMediaExport(
         media({ media: { id: 7, kind: 'IMAGE', originalName: 'a.png' } } as Partial<MediaResp>),
@@ -67,7 +67,7 @@ describe('useMediaExport — les deux boutons du panneau Export', () => {
     expect(result.current.onContactSheet).toBeUndefined();
   });
 
-  it('n’expose la planche contact que si le sprite de timeline existe', () => {
+  it('exposes the contact sheet only if the timeline sprite exists', () => {
     const sans = renderHook(() => useMediaExport(media(), videoRef(null)));
     expect(sans.result.current.onExportFrame).toBeDefined();
     expect(sans.result.current.onContactSheet).toBeUndefined();
@@ -81,7 +81,7 @@ describe('useMediaExport — les deux boutons du panneau Export', () => {
     expect(avec.result.current.onContactSheet).toBeDefined();
   });
 
-  it('télécharge la planche contact composée depuis le sprite', async () => {
+  it('downloads the composed contact sheet from the sprite', async () => {
     const { result } = renderHook(() =>
       useMediaExport(
         media({ timelineSprite: sprite, timelineSpriteUrl: 'https://s3/sprite.jpg' }),
@@ -96,7 +96,7 @@ describe('useMediaExport — les deux boutons du panneau Export', () => {
     });
   });
 
-  it('sans lecteur monté, signale l’échec au lieu de planter', async () => {
+  it('without a mounted player, reports the failure instead of crashing', async () => {
     const { toast } = await import('sonner');
     const { result } = renderHook(() => useMediaExport(media(), videoRef(null)));
     result.current.onExportFrame!();

@@ -6,53 +6,52 @@ import { matchPrimPath } from './usdScenegraph';
 import { IDENTITY_TRANSFORM, type PrimTransform, type SceneOverride } from './sceneOverride';
 
 /**
- * Application du « ReView override » sur la scène Three (Phase 46, 46.B).
+ * Applies the "ReView override" to the Three scene (Phase 46, 46.B).
  *
- * Séparé en deux : `planOverride` **calcule** ce que chaque objet doit devenir (pur, testable
- * sans Three), `applyPlan` se contente d'écrire. L'application est **idempotente** : chaque
- * objet est d'abord ramené à son état d'origine, mémorisé au chargement, puis le delta est
- * posé. Sans cette remise à zéro, désélectionner un commentaire laisserait sa proposition
- * appliquée, et enchaîner deux propositions cumulerait leurs déplacements.
+ * Split in two: `planOverride` **computes** what each object must become (pure, testable without
+ * Three), `applyPlan` merely writes. Application is **idempotent**: each object is first brought
+ * back to its original state, recorded at load time, then the delta is laid on top. Without this
+ * reset, deselecting a comment would leave its proposal applied, and chaining two proposals would
+ * compound their moves.
  */
 
-/** État d'origine d'un objet, relevé au chargement du GLB. */
+/** Original state of an object, recorded when the GLB is loaded. */
 export interface BaseState {
   position: [number, number, number];
-  /** Rotation d'origine en euler XYZ (radians) — le delta s'y ajoute. */
+  /** Original rotation in Euler XYZ (radians) — the delta is added to it. */
   rotation: [number, number, number];
   scale: [number, number, number];
   visible: boolean;
 }
 
-/** Appartenance d'un objet aux options de variantes cuites dans le GLB (46.G, multi-jeux 46.R). */
+/** Membership of an object in the variant options baked into the GLB (46.G, multi-set 46.R). */
 export interface VariantMembership {
-  /** Prim porteur des jeux de variantes. */
+  /** Prim carrying the variant sets. */
   prim: string;
   /**
-   * Option requise par jeu — l'objet n'est visible que si **toutes** correspondent. Un prim
-   * peut porter plusieurs jeux (assiettes : modelingVariant ET shadingVariant) : chaque
-   * sous-arbre cuit est composé avec les autres jeux à leur valeur par défaut, et doit
-   * disparaître dès que l'un d'eux change.
+   * Option required per set — the object is only visible if **all** of them match. A prim can carry
+   * several sets (plates: modelingVariant AND shadingVariant): each baked subtree is composed with
+   * the other sets at their default value, and must disappear as soon as one of them changes.
    */
   selections: Record<string, string>;
 }
 
-/** Objet indexé : son chemin de prim résolu et son état d'origine. */
+/** Indexed object: its resolved prim path and its original state. */
 export interface IndexedObject<T> {
   object: T;
-  /** Chemin du prim USD, ou le chemin brut du glTF si aucun prim ne correspond. */
+  /** USD prim path, or the raw glTF path if no prim matches. */
   primPath: string;
   base: BaseState;
-  /** Renseigné si l'objet appartient à une option de variante — sinon il est toujours visible. */
+  /** Set if the object belongs to a variant option — otherwise it is always visible. */
   variant?: VariantMembership;
 }
 
-/** Option active par jeu de variantes : `{ '/World/Asset': { modelingVariant: 'hero' } }`. */
+/** Active option per variant set: `{ '/World/Asset': { modelingVariant: 'hero' } }`. */
 export type VariantSelection = Record<string, Record<string, string>>;
 
 /**
- * Option retenue pour un jeu de variantes : celle de l'override si l'utilisateur en a choisi
- * une, sinon celle qu'avait la scène à la conversion.
+ * Option kept for a variant set: the one from the override if the user chose one, otherwise the
+ * one the scene had at conversion time.
  */
 export function effectiveVariant(
   override: SceneOverride | null,
@@ -64,9 +63,9 @@ export function effectiveVariant(
 }
 
 /**
- * Vrai si l'objet appartient aux options **retenues** de tous ses jeux de variantes (ou n'en
- * porte aucun). C'est le prédicat unique de visibilité de variante : plan d'application,
- * grisement de l'arbre et cibles de cadrage s'y réfèrent.
+ * True if the object belongs to the **kept** options of all its variant sets (or carries none).
+ * This is the single variant-visibility predicate: the application plan, the greying of the tree
+ * and the framing targets all refer to it.
  */
 export function variantActive<T>(
   entry: IndexedObject<T>,
@@ -81,15 +80,14 @@ export function variantActive<T>(
 }
 
 /**
- * Vrai si retenir `option` pour le jeu `set` du prim afficherait réellement de la géométrie,
- * compte tenu des options retenues sur les **autres** jeux du même prim.
+ * True if keeping `option` for the prim's set `set` would actually display geometry, given the
+ * options kept on the **other** sets of the same prim.
  *
- * La cuisson importe chaque option composée avec les autres jeux à leur défaut (46.G/46.R) :
- * une combinaison de deux options non-défaut n'existe dans le GLB que si elle a été composée
- * telle quelle — la choisir quand elle ne l'est pas fait tout disparaître (« PlateA puis
- * dirty → l'assiette s'évanouit »). Le menu s'en sert pour griser ces combinaisons (46.U).
- * Si aucun objet indexé ne porte ce jeu (GLB d'avant l'étiquetage), on ne sait pas : ne pas
- * bloquer.
+ * Baking imports each option composed with the other sets at their default (46.G/46.R): a
+ * combination of two non-default options only exists in the GLB if it was composed as such —
+ * choosing it when it is not makes everything vanish ("PlateA then dirty → the plate disappears").
+ * The menu uses this to grey out such combinations (46.U). If no indexed object carries this set
+ * (GLB predating the tagging), we cannot know: do not block.
  */
 export function variantOptionRenderable<T>(
   indexed: readonly IndexedObject<T>[],
@@ -115,7 +113,7 @@ export function variantOptionRenderable<T>(
   return !known;
 }
 
-/** Ce qu'il faut écrire sur un objet pour refléter l'override. */
+/** What must be written on an object to reflect the override. */
 export interface ObjectPlan<T> {
   object: T;
   position: [number, number, number];
@@ -125,35 +123,35 @@ export interface ObjectPlan<T> {
 }
 
 /**
- * Calcule l'état cible de chaque objet indexé. Le delta de l'override s'**ajoute** à l'état
- * d'origine : translation et rotation par addition, échelle par multiplication.
+ * Computes the target state of each indexed object. The override's delta is **added** to the
+ * original state: translation and rotation by addition, scale by multiplication.
  */
 export function planOverride<T>(
   indexed: readonly IndexedObject<T>[],
   override: SceneOverride | null,
-  /** Options de variantes actives à la conversion — base sur laquelle l'override s'applique. */
+  /** Active variant options at conversion time — the base the override applies to. */
   variantDefaults: VariantSelection = {},
 ): ObjectPlan<T>[] {
   return indexed.map((entry) => {
     const { object, primPath, base } = entry;
     const edit = override?.prims[primPath];
     const delta: PrimTransform = edit?.transform ?? IDENTITY_TRANSFORM;
-    // Variante cuite (46.G) : l'objet n'existe dans le GLB que pour des options données, il
-    // n'est visible que si elles sont toutes retenues. C'est ce qui rend la bascule instantanée.
+    // Baked variant (46.G): the object only exists in the GLB for given options, so it is only
+    // visible if they are all kept. This is what makes switching instantaneous.
     const variantVisible = variantActive(entry, override, variantDefaults);
     return {
       object,
       position: [base.position[0] + delta.t[0], base.position[1] + delta.t[1], base.position[2] + delta.t[2]],
       rotation: [base.rotation[0] + delta.r[0], base.rotation[1] + delta.r[1], base.rotation[2] + delta.r[2]],
       scale: [base.scale[0] * delta.s[0], base.scale[1] * delta.s[1], base.scale[2] * delta.s[2]],
-      // `visible: false` sur un objet masque toute sa descendance : l'héritage est gratuit.
-      // Une option de variante non retenue l'emporte sur toute demande de visibilité.
+      // `visible: false` on an object hides its whole subtree: inheritance is free.
+      // A kept-out variant option overrides any visibility request.
       visible: variantVisible && (edit?.visible ?? base.visible),
     };
   });
 }
 
-/** Relève l'état d'origine d'un objet Three. */
+/** Records the original state of a Three object. */
 export function captureBase(object: THREE.Object3D): BaseState {
   return {
     position: [object.position.x, object.position.y, object.position.z],
@@ -164,15 +162,15 @@ export function captureBase(object: THREE.Object3D): BaseState {
 }
 
 /**
- * Indexe les objets du GLB par chemin de prim USD. La correspondance vient de `usdPath`, écrit
- * dans les `extras` glTF par le worker et remonté par three.js dans `userData` ; elle est
- * appariée à l'arbre USD réel (`matchPrimPath`), les deux hiérarchies pouvant différer d'un
- * niveau. Un objet sans `usdPath` (GLB non issu d'USD) est ignoré.
+ * Indexes the GLB's objects by USD prim path. The match comes from `usdPath`, written into the
+ * glTF `extras` by the worker and surfaced by three.js in `userData`; it is paired with the real
+ * USD tree (`matchPrimPath`), the two hierarchies possibly differing by one level. An object
+ * without `usdPath` (GLB not derived from USD) is ignored.
  */
 /**
- * Appartenances de variantes d'un nœud glTF. Deux encodages coexistent : `usdVariants`
- * (`set=option;set=option`, multi-jeux — 46.R) et l'ancien couple `usdVariantSet`/
- * `usdVariantOption` (un seul jeu) des médias convertis avant.
+ * Variant memberships of a glTF node. Two encodings coexist: `usdVariants`
+ * (`set=option;set=option`, multi-set — 46.R) and the legacy `usdVariantSet`/`usdVariantOption`
+ * pair (a single set) of media converted earlier.
  */
 function parseMembership(data: {
   usdVariantPrim?: unknown;
@@ -216,7 +214,7 @@ export function indexPrimObjects(
   return indexed;
 }
 
-/** Écrit le plan sur la scène. Seule fonction qui mute — le reste est pur. */
+/** Writes the plan onto the scene. The only function that mutates — the rest is pure. */
 export function applyPlan(plans: readonly ObjectPlan<THREE.Object3D>[]): void {
   for (const plan of plans) {
     plan.object.position.set(...plan.position);
@@ -227,10 +225,10 @@ export function applyPlan(plans: readonly ObjectPlan<THREE.Object3D>[]): void {
 }
 
 /**
- * Vrai si l'objet est réellement dessiné. Three masque toute la descendance d'un objet invisible
- * **sans toucher** le `visible` des enfants : masquer un prim parent laisse donc ses meshes à
- * `visible: true`. Tout ce qui suit l'affichage (le halo de sélection) doit remonter la
- * hiérarchie, sinon il continue de s'afficher autour d'un objet devenu invisible.
+ * True if the object is actually drawn. Three hides a whole subtree when an object is invisible
+ * **without touching** the `visible` of the children: hiding a parent prim thus leaves its meshes
+ * at `visible: true`. Everything that follows the display (the selection halo) must walk up the
+ * hierarchy, otherwise it keeps showing around an object that became invisible.
  */
 export function isDrawn(object: THREE.Object3D): boolean {
   for (let node: THREE.Object3D | null = object; node; node = node.parent) if (!node.visible) return false;
@@ -238,10 +236,9 @@ export function isDrawn(object: THREE.Object3D): boolean {
 }
 
 /**
- * Delta d'override correspondant à la pose **courante** d'un objet par rapport à son état
- * d'origine (46.N — gizmo TRS par prim). Inverse exact de `planOverride` : translation et
- * rotation par différence, échelle par rapport — réappliquer le delta depuis la base redonne
- * la pose manipulée au gizmo près.
+ * Override delta matching the **current** pose of an object relative to its original state (46.N —
+ * per-prim TRS gizmo). Exact inverse of `planOverride`: translation and rotation by difference,
+ * scale by ratio — re-applying the delta from the base gives back the pose manipulated by the gizmo.
  */
 export function transformDeltaFrom(
   base: BaseState,
@@ -251,7 +248,7 @@ export function transformDeltaFrom(
     scale: { x: number; y: number; z: number };
   },
 ): PrimTransform {
-  // Une base d'échelle nulle est dégénérée (objet aplati) : rapport 1 pour ne pas produire NaN.
+  // A zero scale base is degenerate (flattened object): ratio 1, so as not to produce NaN.
   const ratio = (value: number, b: number) => (Math.abs(b) < 1e-12 ? 1 : value / b);
   return {
     t: [
@@ -273,12 +270,12 @@ export function transformDeltaFrom(
 }
 
 /**
- * Résout un objet touché vers son prim **via l'index**, en remontant la hiérarchie.
+ * Resolves a hit object to its prim **via the index**, climbing the hierarchy.
  *
- * L'index est la seule table qui fasse autorité : il a déjà apparié le chemin brut du glTF à
- * l'arbre USD (`matchPrimPath`), qui peut collapser un niveau. Lire `usdPath` directement à la
- * sélection produirait un chemin absent de l'index — la sélection ne désignerait alors aucun
- * objet, ni pour le halo ni pour l'arbre.
+ * The index is the only authoritative table: it has already matched the raw glTF path to the USD
+ * tree (`matchPrimPath`), which may collapse a level. Reading `usdPath` directly at selection time
+ * would produce a path absent from the index — the selection would then designate no object, neither
+ * for the halo nor for the tree.
  */
 export function makePrimResolver(
   indexed: readonly IndexedObject<THREE.Object3D>[],
@@ -293,7 +290,7 @@ export function makePrimResolver(
   };
 }
 
-/** Tous les chemins de prims réellement rendus — utile pour isoler ou lister la sélection. */
+/** All the paths of prims actually rendered — useful to isolate or list the selection. */
 export function renderedPrimPaths(indexed: readonly IndexedObject<unknown>[]): string[] {
   return [...new Set(indexed.map((i) => i.primPath))];
 }

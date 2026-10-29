@@ -18,20 +18,20 @@ import { useT } from '../../../i18n';
 const FADE_MS = 300;
 const SLIDE_MS = 400;
 
-/** Modèles 3D frères (READY) d'une liste de médias de version (pur). */
+/** Sibling 3D models (READY) of a list of version media (pure). */
 export function model3dSiblings(media: MediaSummary[]): MediaSummary[] {
   return media.filter((m) => m.kind === 'MODEL_3D' && m.status === 'READY');
 }
 
 /**
- * Comparaison A/B des modèles 3D (39.E, parité avec l'A/B splat) : les frères `MODEL_3D` de la
- * version courante **et les modèles cochés dans d'autres versions** sont chargés dans la
- * **même scène** (donc **caméra liée**) — bascule A/B en fondu, ou **« voir tous »** côte à
- * côte avec glissement. Les modèles sont normalisés (bbox → taille cible, bas de bbox sur
- * `y = 0`) par `loadModel`, donc déjà à des tailles comparables et **posés sur le même sol** —
- * l'écartement ne joue que sur X ; la bascule « taille réelle » du viewer répond, elle, à la
- * question des tailles. Non destructif : les modèles comparés sont chargés **bruts** (sans les
- * éditions persistées de leur média) et libérés au démontage ou au décochage.
+ * A/B comparison of 3D models (39.E, parity with the splat A/B): the `MODEL_3D` siblings of the
+ * current version **and the models ticked in other versions** are loaded into the **same scene**
+ * (hence a **linked camera**) — A/B switch with a crossfade, or **"show all"** side by side with a
+ * slide. Models are normalized (bbox → target size, bottom of bbox on `y = 0`) by `loadModel`, so
+ * they are already at comparable sizes and **standing on the same ground** — the spacing only plays
+ * on X; the viewer's real-size toggle answers the size question instead. Non-destructive: compared
+ * models are loaded **raw** (without the persisted edits of their media) and released on unmount or
+ * untick.
  */
 export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
   const t = useT();
@@ -51,7 +51,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
   const opacityRef = useRef(new Map<number, number>());
   const baseXRef = useRef(new Map<number, number>());
 
-  /** Fondu de l'opacité d'un objet (A/B), interpolé sur la boucle de rendu. */
+  /** Opacity crossfade of an object (A/B), interpolated on the render loop. */
   const fade = useCallback(
     (id: number, object: THREE.Object3D, to: number) => {
       const from = opacityRef.current.get(id) ?? (id === current.id ? 1 : 0);
@@ -69,7 +69,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     [subscribeFrame, current.id],
   );
 
-  /** Glissement de la position X d'un objet vers sa base + offset (côte à côte). */
+  /** Slide of an object's X position toward its base + offset (side by side). */
   const slideX = useCallback(
     (id: number, object: THREE.Object3D, offset: number) => {
       const base = baseXRef.current.get(id) ?? object.position.x;
@@ -89,7 +89,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     [subscribeFrame],
   );
 
-  /** Charge (une fois) un frère dans la scène — normalisé, sous `root`, invisible au départ. */
+  /** Loads (once) a sibling into the scene — normalized, under `root`, invisible at first. */
   const ensureSibling = useCallback(
     async (id: number): Promise<THREE.Object3D | null> => {
       const handle = getSceneHandle();
@@ -102,7 +102,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
       const loaded = await loadModel(handle.THREE, new GLTFLoader(), src);
       const object = loaded.object;
       setObjectOpacity(object, 0);
-      handle.mesh.add(object); // enfant de `root` : aligné avec le modèle principal
+      handle.mesh.add(object); // child of `root`: aligned with the main model
       opacityRef.current.set(id, 0);
       baseXRef.current.set(id, object.position.x);
       siblingsRef.current.set(id, object);
@@ -111,7 +111,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     [getSceneHandle],
   );
 
-  /** Tous les objets en scène : le modèle principal + les frères chargés. */
+  /** All objects in the scene: the main model + the loaded siblings. */
   const allObjects = useCallback((): [number, THREE.Object3D][] => {
     const handle = getSceneHandle();
     const out: [number, THREE.Object3D][] = [];
@@ -120,7 +120,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     return out;
   }, [getSceneHandle, current.id]);
 
-  /** Bascule A/B : fondu vers le modèle choisi, les autres s'éteignent, positions restaurées. */
+  /** A/B switch: crossfade to the chosen model, the others switch off, positions restored. */
   const switchTo = useCallback(
     async (id: number) => {
       setBusy(true);
@@ -141,12 +141,12 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     [current.id, ensureSibling, allObjects, fade, slideX, t],
   );
 
-  /** « Voir tous » : charge tous les frères et les écarte côte à côte. */
+  /** "Show all": loads all siblings and spreads them side by side. */
   const viewAll = useCallback(async () => {
     setBusy(true);
     try {
       for (const m of models) if (m.id !== current.id) await ensureSibling(m.id);
-      const spacing = TARGET_SIZE * 1.15; // modèles normalisés à la même taille cible
+      const spacing = TARGET_SIZE * 1.15; // normalized models at the same target size
       const offsets = sideBySideOffsets(models.length, spacing);
       const byId = new Map(allObjects());
       models.forEach((m, i) => {
@@ -163,7 +163,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     }
   }, [models, current.id, ensureSibling, allObjects, fade, slideX, t]);
 
-  /** Coche une version : le modèle est chargé et affiché tout de suite (pas d'étape en plus). */
+  /** Ticks a version: the model is loaded and shown right away (no extra step). */
   const addVersion = useCallback(
     (id: number, media?: MediaSummary) => {
       versions.add(id, media);
@@ -172,7 +172,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     [versions, switchTo],
   );
 
-  /** Décoche une version : retour au modèle courant si c'était lui qui était affiché. */
+  /** Unticks a version: back to the current model if it was the one displayed. */
   const removeVersion = useCallback(
     (id: number) => {
       versions.remove(id);
@@ -181,8 +181,8 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     [versions, activeId, switchTo, current.id],
   );
 
-  // Décochage : le modèle retiré de la liste doit quitter la scène — sinon il resterait chargé,
-  // invisible en A/B mais bien présent en « voir tous ».
+  // Untick: the model removed from the list must leave the scene — otherwise it would stay loaded,
+  // invisible in A/B but still present in "show all".
   const listedIds = models.map((m) => m.id).join(',');
   useEffect(() => {
     const kept = new Set(listedIds.split(',').map(Number));
@@ -195,7 +195,7 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     }
   }, [listedIds]);
 
-  // Démontage : retire et libère les frères chargés (le modèle principal appartient au viewer).
+  // Unmount: removes and frees the loaded siblings (the main model belongs to the viewer).
   useEffect(() => {
     const map = siblingsRef.current;
     return () => {
@@ -212,12 +212,12 @@ export function useModel3DCompare(model3d: Model3DThreeState, current: Media) {
     busy,
     switchTo,
     viewAll,
-    /** Sélection d'autres versions (alimente `CompareSelect`). */
+    /** Selection of other versions (feeds `CompareSelect`). */
     versions: { ids: versions.ids, add: addVersion, remove: removeVersion, set: versions.set },
   };
 }
 
-/** Libère géométries et matériaux d'un modèle comparé, puis le retire de la scène. */
+/** Frees geometries and materials of a compared model, then removes it from the scene. */
 function disposeObject(object: THREE.Object3D): void {
   object.traverse((o) => {
     const mesh = o as THREE.Mesh;

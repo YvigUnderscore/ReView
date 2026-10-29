@@ -4,39 +4,39 @@
 import type { TextureInfo } from './modelStats';
 
 /**
- * Compteurs de performance du viewer 3D : ce que le renderer déclare à chaque frame (draw
- * calls, triangles réellement dessinés, objets en mémoire) plus une estimation de la mémoire
- * texture, que Three ne chiffre pas (`renderer.info.memory.textures` n'est qu'un **nombre**
- * de textures). Le superviseur qui demande « pourquoi ça rame ? » lit ces quatre chiffres.
+ * Performance counters of the 3D viewer: what the renderer reports each frame (draw calls,
+ * triangles actually drawn, objects in memory) plus an estimate of texture memory, which Three does
+ * not quantify (`renderer.info.memory.textures` is only a **count** of textures). The supervisor
+ * asking "why is it lagging?" reads these four figures.
  *
- * Purement arithmétique et testable : la lecture du renderer vit dans `useModel3DThree`.
+ * Pure arithmetic, testable: reading the renderer lives in `useModel3DThree`.
  */
 
-/** Métriques lues sur le renderer à la fin d'une frame. */
+/** Metrics read from the renderer at the end of a frame. */
 export interface ModelPerfSample {
-  /** Appels de rendu WebGL (`renderer.info.render.calls`). */
+  /** WebGL render calls (`renderer.info.render.calls`). */
   calls: number;
-  /** Triangles réellement dessinés (`renderer.info.render.triangles`). */
+  /** Triangles actually drawn (`renderer.info.render.triangles`). */
   triangles: number;
-  /** Géométries résidentes en mémoire GPU (`renderer.info.memory.geometries`). */
+  /** Geometries resident in GPU memory (`renderer.info.memory.geometries`). */
   geometries: number;
-  /** Textures résidentes en mémoire GPU (`renderer.info.memory.textures`). */
+  /** Textures resident in GPU memory (`renderer.info.memory.textures`). */
   textures: number;
 }
 
 export type ModelPerf = { fps: number } & ModelPerfSample;
 
-/** Budget de triangles au-delà duquel le viewer prévient (ordre de grandeur d'un plan lourd). */
+/** Triangle budget beyond which the viewer warns (order of magnitude of a heavy scene). */
 export const TRIANGLE_BUDGET = 1_500_000;
 
-/** Surcoût de la chaîne de mipmaps : 1 + 1/4 + 1/16 + … ≈ 4/3 du niveau 0. */
+/** Overhead of the mipmap chain: 1 + 1/4 + 1/16 + … ≈ 4/3 of level 0. */
 const MIPMAP_FACTOR = 4 / 3;
 
 /**
- * Mémoire texture estimée, en octets : chaque texture distincte compte `largeur × hauteur × 4`
- * (RGBA8 décompressé, ce que produit le décodage d'un PNG/JPEG glTF), majoré des mipmaps.
- * Une texture apparaissant sur plusieurs canaux ou plusieurs matériaux n'est comptée qu'une
- * fois — c'est la même ressource GPU.
+ * Estimated texture memory, in bytes: each distinct texture counts `width × height × 4`
+ * (decompressed RGBA8, what decoding a glTF PNG/JPEG produces), plus mipmaps.
+ * A texture appearing on several channels or several materials is counted only once — it is the
+ * same GPU resource.
  */
 export function estimateTextureBytes(
   textures: readonly Pick<TextureInfo, 'width' | 'height' | 'name'>[],
@@ -56,17 +56,17 @@ export function estimateTextureBytes(
   return Math.round(withMipmaps ? bytes * MIPMAP_FACTOR : bytes);
 }
 
-/** Mégaoctets arrondis au dixième — unité d'affichage des mémoires du panneau. */
+/** Megabytes rounded to one decimal — display unit of the panel's memory figures. */
 export function megabytes(bytes: number): number {
   return Math.round((bytes / (1024 * 1024)) * 10) / 10;
 }
 
-/** Millions de triangles arrondis au dixième — unité de l'avertissement de budget. */
+/** Millions of triangles rounded to one decimal — unit of the budget warning. */
 export function megaTriangles(triangles: number): number {
   return Math.round((triangles / 1_000_000) * 10) / 10;
 }
 
-/** Vrai au-delà du budget de triangles : le panneau affiche alors un avertissement. */
+/** True beyond the triangle budget: the panel then shows a warning. */
 export function overTriangleBudget(triangles: number, budget = TRIANGLE_BUDGET): boolean {
   return triangles > budget;
 }

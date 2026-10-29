@@ -4,24 +4,24 @@
 import type * as THREE from 'three';
 
 /**
- * Ce qu'on peut faire d'une texture Three **hors de la scène** : une vignette dans le dock,
- * et une image plein écran dans la lightbox.
+ * What can be done with a Three texture **outside the scene**: a thumbnail in the dock, and a
+ * full-screen image in the lightbox.
  *
- * Trois formes arrivent du chargeur glTF, et une seule est directement affichable en HTML :
- *   - `HTMLImageElement` — le cas courant, et le seul qui porte déjà une adresse (`blob:` pour
- *     une texture embarquée dans le GLB). On la sert telle quelle : aucun canvas, donc aucun
- *     risque de canvas « tainted », et la pleine résolution sans recopie ;
- *   - `ImageBitmap` / `HTMLCanvasElement` — dessinables, mais sans adresse : il faut passer par
- *     un canvas pour en tirer une image ;
- *   - `DataTexture` — un tableau d'octets (damier UV procédural, matcap) : même chose, via
+ * Three shapes come from the glTF loader, and only one is directly displayable in HTML:
+ *   - `HTMLImageElement` — the common case, and the only one already carrying an address (`blob:`
+ *     for a texture embedded in the GLB). It is served as is: no canvas, hence no risk of a
+ *     "tainted" canvas, and full resolution without copying;
+ *   - `ImageBitmap` / `HTMLCanvasElement` — drawable, but without an address: a canvas is needed to
+ *     extract an image from them;
+ *   - `DataTexture` — an array of bytes (procedural UV checkerboard, matcap): same thing, via
  *     `ImageData`.
  *
- * La classification est séparée du dessin pour être testable sans contexte 2D : happy-dom
- * n'implémente pas `getContext('2d')`, et un test qui ne peut rien dessiner doit quand même
- * pouvoir vérifier qu'une texture d'image donne bien son adresse.
+ * Classification is separated from drawing so it can be tested without a 2D context: happy-dom does
+ * not implement `getContext('2d')`, and a test that cannot draw anything must still be able to check
+ * that an image texture gives its address.
  */
 
-/** Image sous-jacente d'une texture, ramenée à ce qui sait la rendre. */
+/** Underlying image of a texture, reduced to what can render it. */
 export type TextureImageSource =
   | { kind: 'element'; image: CanvasImageSource; width: number; height: number; src: string }
   | { kind: 'drawable'; image: CanvasImageSource; width: number; height: number }
@@ -34,15 +34,15 @@ type RawImage = CanvasImageSource & {
   src?: string;
 };
 
-/** Classe l'image d'une texture, ou `null` si rien n'est exploitable hors WebGL. */
+/** Classifies the image of a texture, or `null` if nothing is usable outside WebGL. */
 export function textureImageSource(texture: THREE.Texture): TextureImageSource | null {
   const img = texture.image as RawImage | null | undefined;
   if (!img) return null;
   const width = img.width ?? 0;
   const height = img.height ?? 0;
   if (typeof HTMLImageElement !== 'undefined' && img instanceof HTMLImageElement)
-    // `naturalWidth` plutôt que `width` : une `<img>` non attachée au document rapporte 0 en
-    // `width` tant qu'elle n'est pas mise en page, alors que le pixel est bien là.
+    // `naturalWidth` rather than `width`: an `<img>` not attached to the document reports 0 in
+    // `width` until it is laid out, although the pixel data is there.
     return img.src
       ? {
           kind: 'element',
@@ -60,7 +60,7 @@ export function textureImageSource(texture: THREE.Texture): TextureImageSource |
   return null;
 }
 
-/** Canvas à la résolution native, rempli avec la source — `null` si le dessin est impossible. */
+/** Canvas at native resolution, filled with the source — `null` if drawing is impossible. */
 function paint(source: TextureImageSource): HTMLCanvasElement | null {
   const canvas = document.createElement('canvas');
   canvas.width = source.width;
@@ -78,10 +78,10 @@ function paint(source: TextureImageSource): HTMLCanvasElement | null {
 }
 
 /**
- * Adresse affichable de la texture en pleine résolution (lightbox). Une image garde la sienne ;
- * tout le reste passe par un canvas, dont l'export peut échouer — contexte 2D absent (tests),
- * ou canvas marqué par une image servie sans en-tête CORS. Dans ce cas la texture n'est pas
- * ouvrable en grand, et l'appelant se contente de sa vignette.
+ * Displayable address of the texture at full resolution (lightbox). An image keeps its own;
+ * everything else goes through a canvas, whose export can fail — 2D context absent (tests), or a
+ * canvas tainted by an image served without a CORS header. In that case the texture cannot be
+ * opened enlarged, and the caller simply keeps its thumbnail.
  */
 export function textureFullUrl(texture: THREE.Texture): string | null {
   const source = textureImageSource(texture);
@@ -94,7 +94,7 @@ export function textureFullUrl(texture: THREE.Texture): string | null {
   }
 }
 
-/** Dessine la vignette d'une texture dans un canvas déjà dimensionné. */
+/** Draws the thumbnail of a texture into an already-sized canvas. */
 export function drawTexturePreview(canvas: HTMLCanvasElement, texture: THREE.Texture): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -103,14 +103,14 @@ export function drawTexturePreview(canvas: HTMLCanvasElement, texture: THREE.Tex
   if (!source) return;
   try {
     if (source.kind === 'data') {
-      // Blit à la résolution native puis mise à l'échelle : `putImageData` ignore toute
-      // transformation, il ne sait pas réduire.
+      // Blit at native resolution, then scale: `putImageData` ignores any transformation,
+      // it cannot downscale.
       const native = paint(source);
       if (native) ctx.drawImage(native, 0, 0, canvas.width, canvas.height);
       return;
     }
     ctx.drawImage(source.image, 0, 0, canvas.width, canvas.height);
   } catch {
-    /* aperçu indisponible (texture non lisible en 2D) — le cadre vide reste affiché */
+    /* preview unavailable (texture not readable in 2D) — the empty frame stays displayed */
   }
 }

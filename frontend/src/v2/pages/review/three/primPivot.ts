@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Pivot du gizmo TRS par prim (46.Q) — mathématiques **pures**.
+ * TRS gizmo pivot per prim (46.Q) — **pure** math.
  *
- * Le gizmo ne peut pas être attaché à l'objet lui-même : avec des transformations cuites dans
- * les sommets (export Blender), l'origine locale de l'objet est souvent au centre du monde, et
- * le gizmo apparaissait au milieu de la scène au lieu d'être sur la géométrie manipulée. Il est
- * donc posé sur un **proxy** placé au centre englobant du prim, et chaque delta du proxy est
- * retraduit en pose de l'objet, pivotée autour de ce centre.
+ * The gizmo cannot be attached to the object itself: with transforms baked into the vertices
+ * (Blender export), the object's local origin is often at the world center, and the gizmo appeared
+ * in the middle of the scene instead of on the manipulated geometry. It is therefore placed on a
+ * **proxy** at the prim's bounding center, and each delta of the proxy is translated back into a
+ * pose for the object, rotated around that center.
  */
 
 export type Vec3 = [number, number, number];
-/** Quaternion en composantes [x, y, z, w] — l'ordre de `THREE.Quaternion.toArray()`. */
+/** Quaternion as [x, y, z, w] components — the order of `THREE.Quaternion.toArray()`. */
 export type Quat = [number, number, number, number];
 
 export const IDENTITY_QUAT: Quat = [0, 0, 0, 1];
 
-/** Produit de quaternions (a ∘ b : applique b puis a). */
+/** Quaternion product (a ∘ b: applies b, then a). */
 export function mulQuat(a: Quat, b: Quat): Quat {
   const [ax, ay, az, aw] = a;
   const [bx, by, bz, bw] = b;
@@ -29,7 +29,7 @@ export function mulQuat(a: Quat, b: Quat): Quat {
   ];
 }
 
-/** Rotation d'un vecteur par un quaternion (forme optimisée classique, sans matrice). */
+/** Rotation of a vector by a quaternion (classic optimized form, no matrix). */
 export function rotateVec(q: Quat, v: Vec3): Vec3 {
   const [qx, qy, qz, qw] = q;
   const [vx, vy, vz] = v;
@@ -43,14 +43,14 @@ export function rotateVec(q: Quat, v: Vec3): Vec3 {
   ];
 }
 
-/** Pose locale d'un objet dans l'espace de son parent. */
+/** Local pose of an object in its parent's space. */
 export interface Pose {
   position: Vec3;
   quaternion: Quat;
   scale: Vec3;
 }
 
-/** Delta relevé sur le proxy du gizmo depuis le début du drag, exprimé dans l'espace parent. */
+/** Delta read on the gizmo proxy since the start of the drag, expressed in parent space. */
 export interface PivotDelta {
   t: Vec3;
   q: Quat;
@@ -58,9 +58,9 @@ export interface PivotDelta {
 }
 
 /**
- * Pose de l'objet après application du delta **autour du pivot** : l'offset objet→pivot est
- * mis à l'échelle puis tourné, l'orientation composée, l'échelle multipliée. Tout est exprimé
- * dans l'espace parent de l'objet — l'appelant y convertit le delta monde du proxy.
+ * Pose of the object after applying the delta **around the pivot**: the object→pivot offset is
+ * scaled then rotated, the orientation composed, the scale multiplied. Everything is expressed in
+ * the object's parent space — the caller converts the proxy's world delta into it.
  */
 export function pivotedPose(base: Pose, pivot: Vec3, delta: PivotDelta): Pose {
   const offset: Vec3 = [

@@ -4,11 +4,11 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 /**
- * Modes d'affichage du viewer de review (42.A) :
- * - **plein écran navigateur** (Fullscreen API sur la racine review) ;
- * - **mode théâtre** (№76) : superposition in-window plein cadre (sidebar/en-tête masqués),
- *   distincte du plein écran ; Échap quitte ;
- * - **lecteur détachable** (№75) : Picture-in-Picture natif de l'élément vidéo.
+ * Display modes of the review viewer (42.A):
+ * - **browser fullscreen** (Fullscreen API on the review root);
+ * - **theater mode** (№76): full-frame in-window overlay (sidebar/header hidden), distinct from
+ *   fullscreen; Escape exits;
+ * - **detachable player** (№75): the video element's native Picture-in-Picture.
  */
 export function useReviewViewport(videoRef: RefObject<HTMLVideoElement | null>) {
   const reviewRootRef = useRef<HTMLDivElement>(null);

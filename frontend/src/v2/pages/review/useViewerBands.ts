@@ -4,10 +4,10 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { MEDIA_CANVAS, NO_BANDS, fitBands, type RefCanvas, type ViewerBands } from './referenceBox';
 
-/** Valeur d'`overflow` qui rogne. Vide = propriété non calculée : on la tient pour `visible`. */
+/** `overflow` value that clips. Empty = property not computed: treated as `visible`. */
 const clips = (value: string) => value !== '' && value !== 'visible';
 
-/** Premier ancêtre qui rogne ce qui dépasse : c'est lui qui décide de ce qu'on voit. */
+/** First ancestor that clips what overflows: it decides what we see. */
 function clipAncestor(el: HTMLElement): HTMLElement | null {
   for (let p = el.parentElement; p; p = p.parentElement) {
     const style = getComputedStyle(p);
@@ -17,10 +17,10 @@ function clipAncestor(el: HTMLElement): HTMLElement | null {
 }
 
 /**
- * Zone que le viewer montre, **en fractions du média** et au zoom courant : de quoi borner un
- * déplacement de référence au canevas visible sans le borner au cadre de l'image. Mesurée à
- * chaque geste (le zoom et le pan ne déclenchent aucun observateur : ils ne changent qu'une
- * transformation). Rien de mesurable ⇒ le cadre du média, prudemment.
+ * Area the viewer shows, **in fractions of the media** and at the current zoom: enough to bound a
+ * reference's move to the visible canvas without bounding it to the image frame. Measured on each
+ * gesture (zoom and pan trigger no observer: they only change a transform). Nothing measurable ⇒ the
+ * media's frame, cautiously.
  */
 export function viewerCanvas(layer: HTMLElement): RefCanvas {
   const media = layer.getBoundingClientRect();
@@ -39,15 +39,15 @@ const same = (a: ViewerBands, b: ViewerBands) =>
   a.left === b.left && a.right === b.right && a.top === b.top && a.bottom === b.bottom;
 
 /**
- * Bandes libres autour du média dans le viewer, mesurées sur les **aspects** du média et de
- * la zone qui le rogne. Passer par les aspects plutôt que par les deux boîtes rend la mesure
- * indépendante du zoom : le rattrapage des positions héritées ne se ferait pas au premier cran
- * de molette (le média zoomé déborde alors le viewer, et toute bande mesurée en pixels serait
- * nulle). Ces bandes ne bornent aucun geste : une référence se pose où on la lâche.
+ * Free bands around the media in the viewer, measured from the **aspects** of the media and of the
+ * area that clips it. Going through aspects rather than the two boxes makes the measurement independent
+ * of zoom: the catch-up of inherited positions would not happen on the first wheel notch (the zoomed
+ * media then overflows the viewer, and any band measured in pixels would be zero). These bands bound no
+ * gesture: a reference is placed where it is dropped.
  *
- * `mediaRef` désigne un calque qui épouse le média (`absolute inset-0` de son plan). Rien de
- * mesurable (conteneur sans hauteur, aucun ancêtre rogneur) ⇒ aucune bande, donc le cadre du
- * média pour seule zone : c'est le comportement prudent.
+ * `mediaRef` designates a layer that matches the media (`absolute inset-0` of its plane). Nothing
+ * measurable (container without height, no clipping ancestor) ⇒ no band, hence the media's frame as the
+ * sole area: that is the cautious behavior.
  */
 export function useViewerBands(mediaRef: RefObject<HTMLElement | null>): ViewerBands {
   const [bands, setBands] = useState<ViewerBands>(NO_BANDS);
@@ -60,8 +60,8 @@ export function useViewerBands(mediaRef: RefObject<HTMLElement | null>): ViewerB
       const media = el.getBoundingClientRect();
       const clip = viewport.getBoundingClientRect();
       const next = fitBands(media.width / media.height, clip.width / clip.height);
-      // Même objet si rien n'a bougé : sinon chaque impulsion de l'observateur rendrait le
-      // calque des références pour rien.
+      // Same object if nothing moved: otherwise every impulse of the observer would render the
+      // references layer for nothing.
       setBands((prev) => (same(prev, next) ? prev : next));
     };
     measure();

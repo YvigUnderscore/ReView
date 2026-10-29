@@ -38,93 +38,93 @@ import { usePrimAlign } from './usePrimAlign';
 import { usePrimTransforms, type PrimTransformCommit } from './usePrimTransforms';
 
 /**
- * Scenegraph USD et « ReView override » du viewer 3D (Phase 46, 46.C).
+ * USD scenegraph and "ReView override" of the 3D viewer (Phase 46, 46.C).
  *
- * Trois étages se composent, du plus stable au plus volatil :
- *  1. l'override **de base** du média, figé à la publication et rejoué pour tous ;
- *  2. la **proposition** portée par le commentaire sélectionné, le cas échéant ;
- *  3. l'**exploration locale** du spectateur, jamais enregistrée tant qu'elle n'est pas
- *     attachée à un commentaire ou (avant publication) sauvegardée comme override de base.
+ * Three layers compose, from the most stable to the most volatile:
+ *  1. the media's **base** override, frozen at publication and replayed for everyone;
+ *  2. the **proposal** carried by the selected comment, if any;
+ *  3. the viewer's **local exploration**, never recorded until it is attached to a comment or
+ *     (before publication) saved as the base override.
  *
- * Tout s'applique au chargement sans reconversion : changer de variante, masquer un prim ou
- * le déplacer se voit immédiatement, y compris sur un asset publié.
+ * Everything applies at load time without reconversion: changing a variant, hiding a prim or moving
+ * it shows up immediately, including on a published asset.
  */
 
-/** Frames d'attente avant d'abandonner l'indexation (GLB sans `usdPath`). */
+/** Frames to wait before giving up on indexing (GLB without `usdPath`). */
 const MAX_INDEX_FRAMES = 60;
 
 export interface UsdSceneState {
-  /** Arbre de prims, vide si le média n'est pas une scène USD analysée. */
+  /** Prim tree, empty if the media is not a parsed USD scene. */
   tree: PrimNode[];
-  /** Chemins réellement présents dans le GLB (les autres sont grisés dans l'arbre). */
+  /** Paths actually present in the GLB (the others are greyed out in the tree). */
   renderedPaths: Set<string>;
-  /** Override effectif appliqué à la scène (base + proposition + exploration locale). */
+  /** Effective override applied to the scene (base + proposal + local exploration). */
   override: SceneOverride;
-  /** Options de variantes actives à la conversion. */
+  /** Active variant options at conversion time. */
   variantDefaults: VariantSelection;
-  /** Multi-sélection de prims (B1) — le dernier est le **primaire** (pivot des menus). */
+  /** Multi-selection of prims (B1) — the last one is the **primary** (menu pivot). */
   selected: string[];
-  /** Dernier prim sélectionné, ou null — l'équivalent de l'ancienne mono-sélection. */
+  /** Last selected prim, or null — the equivalent of the former single selection. */
   primary: string | null;
-  /** Sélectionne : remplace la sélection, ou bascule l'appartenance (`additive` = Ctrl+clic). */
+  /** Selects: replaces the selection, or toggles membership (`additive` = Ctrl+click). */
   select: (path: string | null, opts?: { additive?: boolean }) => void;
-  /** Remplace la sélection entière (Maj+clic plage dans l'arbre). */
+  /** Replaces the whole selection (Shift+click range in the tree). */
   selectMany: (paths: string[]) => void;
-  /** Prim auquel appartient un objet de la scène — la feuille exacte, table de référence.
-   *  Renvoie null pour un prim **verrouillé** (exclu du picking). */
+  /** Prim to which a scene object belongs — the exact leaf, reference table.
+   *  Returns null for a **locked** prim (excluded from picking). */
   resolvePrim: (object: THREE.Object3D) => string | null;
   /**
-   * Prim désigné par un **clic dans le viewer** : la feuille touchée, promue au `component`
-   * USD englobant (`exact` — Alt+clic — court-circuite la promotion). Seule la résolution du
-   * clic promeut ; `resolvePrim` reste la feuille pour tout le reste.
+   * Prim designated by a **click in the viewer**: the hit leaf, promoted to the enclosing USD
+   * `component` (`exact` — Alt+click — bypasses the promotion). Only click resolution promotes;
+   * `resolvePrim` stays the leaf for everything else.
    */
   resolvePick: (object: THREE.Object3D, opts?: { exact?: boolean }) => string | null;
-  /** Prims verrouillés : insélectionnables au clic dans le viewer (B2). */
+  /** Locked prims: not selectable by clicking in the viewer (B2). */
   locked: ReadonlySet<string>;
   toggleLock: (path: string) => void;
-  /** Objets affichés de **tous** les prims sélectionnés — cadrage `F`, pivot du gizmo. */
+  /** Displayed objects of **all** selected prims — `F` framing, gizmo pivot. */
   selectedObjects: () => THREE.Object3D[];
-  /** Un objet représentatif par prim sélectionné — chacun reçoit la pose du gizmo de groupe. */
+  /** One representative object per selected prim — each receives the group gizmo's pose. */
   representatives: () => THREE.Object3D[];
-  /** Objet représentatif du prim primaire — compat mono-sélection (arbitrage du gizmo). */
+  /** Representative object of the primary prim — single-selection compat (gizmo arbitration). */
   selectedObject: THREE.Object3D | null;
   /**
-   * Fin de drag du gizmo de groupe : la pose courante de chaque représentant devient le delta
-   * d'override de son prim (ou de son clone) — un seul lot. Renvoie les deltas avant/après.
+   * End of a group-gizmo drag: the current pose of each representative becomes the override delta
+   * of its prim (or its clone) — a single batch. Returns the before/after deltas.
    */
   commitPrimTransforms: (objects: readonly THREE.Object3D[]) => PrimTransformCommit[];
-  /** Écrit un delta sur un prim ou un clone (`/prim#id`) — chemin unique de l'undo du gizmo. */
+  /** Writes a delta on a prim or a clone (`/prim#id`) — the single undo path of the gizmo. */
   applyPrimTransform: (path: string, transform: PrimTransform | null) => void;
-  /** Duplique un prim (ou un clone) en clone d'override, le sélectionne, renvoie son pseudo-chemin. */
+  /** Duplicates a prim (or a clone) into an override clone, selects it, returns its pseudo-path. */
   duplicatePrim: (path: string) => string | null;
-  /** Supprime un clone désigné par son pseudo-chemin. */
+  /** Deletes a clone designated by its pseudo-path. */
   deleteClone: (pseudo: string) => void;
-  /** Aligne la sélection sur un axe monde (min/centre/max des boîtes englobantes) — C2. */
+  /** Aligns the selection on a world axis (min/center/max of the bounding boxes) — C2. */
   alignSelected: (axis: AlignAxis, mode: AlignMode) => void;
-  /** Répartit les centres de la sélection à intervalles réguliers sur un axe — C2. */
+  /** Distributes the centers of the selection at regular intervals along an axis — C2. */
   distributeSelected: (axis: AlignAxis) => void;
   setPrim: (path: string, patch: PrimEdit | null) => void;
   isolate: (path: string) => void;
   setVariant: (prim: string, set: string, option: string) => void;
   /**
-   * Vrai si retenir cette option affichera de la géométrie, compte tenu des options déjà
-   * retenues sur les autres jeux du même prim — le menu grise les combinaisons non cuites
-   * au lieu de faire disparaître l'objet (46.U).
+   * True if keeping this option will display geometry, given the options already kept on the other
+   * sets of the same prim — the menu greys out combinations that were not baked instead of making
+   * the object disappear (46.U).
    */
   variantChoiceRenderable: (prim: string, set: string, option: string) => boolean;
-  /** Annule l'exploration locale et revient à l'override enregistré. */
+  /** Cancels the local exploration and returns to the saved override. */
   revert: () => void;
-  /** Vrai si l'exploration locale diffère de ce qui est enregistré. */
+  /** True if the local exploration differs from what is saved. */
   dirty: boolean;
-  /** Recherche et dépliage de l'arbre — hors du panneau, pour survivre au changement d'onglet. */
+  /** Tree search and expansion — kept outside the panel, to survive a dock tab change. */
   view: ScenegraphView;
-  /** Delta local seul — c'est lui qu'on joint à un commentaire. */
+  /** Local delta alone — it is what gets attached to a comment. */
   localDelta: SceneOverride;
-  /** Override complet à enregistrer comme base (prépublish). */
+  /** Full override to save as the base (pre-publish). */
   merged: SceneOverride;
 }
 
-/** Options de variantes actives à la conversion, indexées par prim. */
+/** Active variant options at conversion time, indexed by prim. */
 function defaultsFrom(data: MediaResp | null): VariantSelection {
   const sets = data?.modelSource?.usd?.variantSets ?? [];
   const defaults: VariantSelection = {};
@@ -136,9 +136,9 @@ export function useUsdScene(
   data: MediaResp | null,
   getSceneHandle: () => ViewerSceneHandle | null,
   ready: boolean,
-  /** Proposition du commentaire sélectionné, rejouée par-dessus l'override de base. */
+  /** Proposal of the selected comment, replayed on top of the base override. */
   commentOverride: SceneOverride | null,
-  /** Publie le delta local pour qu'il soit joint au prochain commentaire (46.D). */
+  /** Publishes the local delta so it is attached to the next comment (46.D). */
   onLocalDelta?: (delta: SceneOverride | null) => void,
 ): UsdSceneState {
   const usd = data?.modelSource?.usd ?? null;
@@ -148,9 +148,9 @@ export function useUsdScene(
   const [indexed, setIndexed] = useState<IndexedObject<THREE.Object3D>[]>([]);
 
   /**
-   * Changement de média (autre asset de la version) : l'exploration locale — isolement,
-   * visibilités, sélection — appartient à la scène qu'on quittait et ne doit pas suivre (46.K).
-   * Ajusté pendant le rendu (pattern `useChromeState`), pas dans un effet.
+   * Media change (another asset of the version): the local exploration — isolation, visibilities,
+   * selection — belongs to the scene being left and must not carry over (46.K).
+   * Adjusted during render (`useChromeState` pattern), not in an effect.
    */
   const mediaId = data?.media.id ?? null;
   const [lastMediaId, setLastMediaId] = useState(mediaId);
@@ -161,40 +161,40 @@ export function useUsdScene(
     setLocked(new Set());
     setIndexed([]);
   }
-  // Le delta en attente de commentaire est lui aussi abandonné avec la scène qui le portait.
+  // The pending delta awaiting a comment is also dropped along with the scene that carried it.
   useEffect(() => {
     onLocalDelta?.(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- déclenché par le média, pas par l'identité du callback
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- triggered by the media, not by the callback identity
   }, [mediaId]);
 
   const variantDefaults = useMemo(() => defaultsFrom(data), [data]);
   const base = useMemo(() => normalizeOverride(data?.usdOverride), [data?.usdOverride]);
 
-  /** Ce qui est enregistré (base + proposition), sans l'exploration locale. */
+  /** What is saved (base + proposal), without the local exploration. */
   const stored = useMemo(() => mergeOverrides(base, commentOverride), [base, commentOverride]);
   const override = useMemo(() => mergeOverrides(stored, local), [stored, local]);
 
   /**
-   * Indexation du modèle chargé : c'est là qu'on relève l'état d'origine de chaque objet, qui
-   * sert de référence à l'application idempotente du delta. Dérivée du modèle plutôt que
-   * stockée en état — elle ne fait que **lire** la scène Three, jamais la modifier.
+   * Indexing of the loaded model: this is where the original state of each object is recorded,
+   * which serves as the reference for the idempotent application of the delta. Derived from the
+   * model rather than stored as state — it only **reads** the Three scene, never modifies it.
    */
-  // Clé **stable** : la requête TanStack renvoie un objet neuf à chaque invalidation. Indexer
-  // sur son identité re-capturerait comme « état d'origine » des transformations déjà
-  // modifiées par l'override, qui se cumuleraient alors à chaque rafraîchissement.
+  // **Stable** key: the TanStack query returns a new object on every invalidation. Indexing on its
+  // identity would re-capture as "original state" transforms already modified by the override,
+  // which would then compound on every refresh.
   const primPathsKey = useMemo(() => (usd?.prims ?? []).map((p) => p.path).join('|'), [usd]);
 
   /**
-   * Indexation du modèle chargé — relevé de l'état d'origine servant de référence à
-   * l'application idempotente du delta.
+   * Indexing of the loaded model — records the original state that serves as the reference for the
+   * idempotent application of the delta.
    *
-   * `ready` doit signaler la **scène Three réellement construite** (`useModel3DThree.ready`), pas
-   * « le média est affichable » : le viewer expose sa scène de façon impérative, et lire un
-   * `modelObject` pas encore posé laissait l'index vide pour toujours — le scenegraph ne pilotait
-   * alors plus rien, ni la vue, ni la sélection, ni le halo.
+   * `ready` must signal the **Three scene actually built** (`useModel3DThree.ready`), not "the media
+   * is displayable": the viewer exposes its scene imperatively, and reading a `modelObject` not yet
+   * set left the index empty forever — the scenegraph then drove nothing anymore: neither the view,
+   * nor the selection, nor the halo.
    */
   useEffect(() => {
-    // Média sans scenegraph USD : rien à indexer, et surtout aucune attente à lancer.
+    // Media without a USD scenegraph: nothing to index, and above all no wait to launch.
     if (!ready || !primPathsKey) return;
     let frame = 0;
     let attempts = 0;
@@ -206,9 +206,9 @@ export function useUsdScene(
         setIndexed(next);
         return;
       }
-      // Filet de sécurité borné : `ready` garantit désormais que le modèle est posé, mais un
-      // GLB sans `usdPath` (converti avant la phase 46) n'aurait jamais d'index — on ne laisse
-      // pas tourner une boucle d'animation pour rien.
+      // Bounded safety net: `ready` now guarantees the model is set, but a GLB without `usdPath`
+      // (converted before phase 46) would never get an index — we do not leave an animation loop
+      // running for nothing.
       if ((attempts += 1) > MAX_INDEX_FRAMES) return;
       frame = requestAnimationFrame(tryIndex);
     };
@@ -216,29 +216,28 @@ export function useUsdScene(
     return () => cancelAnimationFrame(frame);
   }, [ready, getSceneHandle, primPathsKey]);
 
-  // Application : recalculée depuis l'état d'origine, donc revenir en arrière rétablit
-  // exactement la scène de départ.
+  // Application: recomputed from the original state, so going back restores exactly the starting
+  // scene.
   useEffect(() => {
     if (indexed.length === 0) return;
     applyPlan(planOverride(indexed, override, variantDefaults));
   }, [override, variantDefaults, indexed]);
 
-  // Clones de mise en scène (C1) : réconciliation des copies dans `useSceneClones`.
+  // Staging clones (C1): reconciliation of the copies in `useSceneClones`.
   const cloneIndex = useSceneClones(override, indexed, variantDefaults);
 
-  // Miroir de `local` lisible dans les gestionnaires d'événements sans passer par un updater.
+  // Mirror of `local`, readable in event handlers without going through an updater.
   const localRef = useRef(local);
   localRef.current = local;
 
   /**
-   * Toute édition locale passe ici : elle met à jour la scène **et** publie le delta pour le
-   * prochain commentaire. Fait dans le gestionnaire d'événement, pas dans un effet.
+   * Any local edit goes through here: it updates the scene **and** publishes the delta for the next
+   * comment. Done in the event handler, not in an effect.
    *
-   * Le delta est calculé **hors** de l'updater : appeler `onLocalDelta` (un setState du
-   * parent) depuis l'updater est un effet de bord que React peut rejouer pendant le rendu —
-   * les deux états partaient alors dans des rendus séparés, et l'effet de reset de
-   * `Model3DReview` voyait « pas de proposition + exploration sale » : le premier delta du
-   * gizmo était annulé à l'instant où il venait d'être commité.
+   * The delta is computed **outside** the updater: calling `onLocalDelta` (a parent's setState) from
+   * the updater is a side effect that React may replay during render — the two states then went into
+   * separate renders, and `Model3DReview`'s reset effect saw "no proposal + dirty exploration": the
+   * first gizmo delta was cancelled the moment it had just been committed.
    */
   const editLocal = useCallback(
     (next: (current: SceneOverride) => SceneOverride) => {
@@ -250,23 +249,23 @@ export function useUsdScene(
     [onLocalDelta],
   );
 
-  /** Tous les chemins présents dans le GLB, options de variantes comprises. */
+  /** All paths present in the GLB, variant options included. */
   const loadedPaths = useMemo(() => renderedPrimPaths(indexed), [indexed]);
 
   /**
-   * L'arbre couvre la scène **réellement chargée** : prims de l'analyseur + prims implicites
-   * pour la géométrie des variantes cuites (46.G), que l'analyseur ne compose pas. Sans eux,
-   * cette géométrie était insélectionnable dans l'arbre et l'isolement retombait sur le parent.
+   * The tree covers the **actually loaded** scene: the parser's prims plus implicit prims for the
+   * geometry of baked variants (46.G), which the parser does not compose. Without them, that geometry
+   * could not be selected in the tree, and isolation fell back to the parent.
    */
   const tree = useMemo(() => buildRenderedPrimTree(usd?.prims ?? [], loadedPaths), [usd, loadedPaths]);
 
-  // Recherche et dépliage de l'arbre : portés par la scène, pas par le panneau, qui est démonté
-  // dès qu'on change d'onglet du dock.
+  // Tree search and expansion: carried by the scene, not by the panel, which is unmounted as soon
+  // as the dock tab changes.
   const view = useScenegraphView(tree, mediaId);
 
   /**
-   * Chemins réellement affichés compte tenu des variantes retenues : les rangées d'une option
-   * inactive sont grisées, comme les prims que l'analyseur connaît mais que le GLB n'a pas.
+   * Paths actually displayed given the kept variants: the rows of an inactive option are greyed out,
+   * like the prims the parser knows but the GLB does not have.
    */
   const renderedPaths = useMemo(() => {
     const shown = new Set<string>();
@@ -275,11 +274,11 @@ export function useUsdScene(
     return shown;
   }, [indexed, override, variantDefaults]);
 
-  /** Index complet : objets du GLB + copies des clones (sélection, gizmo, halo, cadrage). */
+  /** Full index: GLB objects + clone copies (selection, gizmo, halo, framing). */
   const allIndexed = useMemo(() => [...indexed, ...cloneIndex], [indexed, cloneIndex]);
 
-  // Verrouillage (B2) : un prim verrouillé ne répond plus au picking du viewer — l'arbre, lui,
-  // reste le chemin pour le sélectionner ou le déverrouiller.
+  // Locking (B2): a locked prim no longer responds to viewer picking — the tree, however, remains
+  // the way to select or unlock it.
   const baseResolver = useMemo(() => makePrimResolver(allIndexed), [allIndexed]);
   const lockedRef = useRef(locked);
   lockedRef.current = locked;
@@ -291,28 +290,27 @@ export function useUsdScene(
     [baseResolver],
   );
   /**
-   * Clic dans le viewer : on désigne le **component** englobant, pas la feuille touchée.
+   * Click in the viewer: we designate the enclosing **component**, not the leaf that was hit.
    *
-   * Dans une scène de production, cliquer une chaise touche `.../Chair_1/Geom/seat/Mesh` ;
-   * l'objet que l'utilisateur croit désigner est la chaise, c'est-à-dire le prim `component`
-   * de la hiérarchie de modèle USD. La promotion n'a lieu **qu'ici** : `resolvePrim` reste la
-   * feuille, et rien n'est jamais promu à l'écriture d'un override — les chemins déjà
-   * enregistrés visent des feuilles, et un override posé sur le component ne se superposerait
-   * plus au même prim.
+   * In a production scene, clicking a chair hits `.../Chair_1/Geom/seat/Mesh`; the object the user
+   * thinks they are designating is the chair, i.e. the `component` prim of the USD model hierarchy.
+   * Promotion happens **only here**: `resolvePrim` stays the leaf, and nothing is ever promoted when
+   * writing an override — already recorded paths target leaves, and an override set on the component
+   * would no longer overlay the same prim.
    *
-   * Deux garde-fous : l'ancêtre doit être **indexé** (sinon la sélection n'aurait ni halo, ni
-   * cadrage, ni gizmo), et le verrou est revérifié **après** promotion — sinon verrouiller une
-   * chaise n'aurait plus empêché de l'attraper par l'un de ses meshes.
+   * Two safeguards: the ancestor must be **indexed** (otherwise the selection would have no halo, no
+   * framing, no gizmo), and the lock is re-checked **after** promotion — otherwise locking a chair
+   * would no longer prevent grabbing it through one of its meshes.
    *
-   * `exact` (Alt+clic) descend à la feuille, pour viser une pièce précise de l'objet.
+   * `exact` (Alt+click) descends to the leaf, to target a precise part of the object.
    */
   const kinds = useMemo(() => primKinds(usd?.prims ?? []), [usd]);
   const pickable = useMemo(() => new Set(loadedPaths), [loadedPaths]);
   const resolvePick = useCallback(
     (object: THREE.Object3D, opts?: { exact?: boolean }) => {
       const leaf = resolvePrim(object);
-      // Un clone de mise en scène (`/prim#id`) n'a pas d'ancêtre USD : « remonter » le ferait
-      // retomber sur son prim source, et cliquer une copie sélectionnerait l'original.
+      // A staging clone (`/prim#id`) has no USD ancestor: "climbing" would fall back to its source
+      // prim, and clicking a copy would select the original.
       if (opts?.exact || leaf === null || parseClonePath(leaf)) return leaf;
       const promoted = promoteToKind(leaf, { kinds, selectable: pickable });
       return promoted !== null && lockedRef.current.has(promoted) ? null : promoted;
@@ -332,7 +330,7 @@ export function useUsdScene(
 
   const select = useCallback((path: string | null, opts?: { additive?: boolean }) => {
     setSelected((prev) => {
-      // Ctrl+clic dans le vide : la sélection en cours ne bouge pas (comme dans un DCC).
+      // Ctrl+click on empty space: the current selection does not move (as in a DCC).
       if (path === null) return opts?.additive || prev.length === 0 ? prev : [];
       if (!opts?.additive) return [path];
       return prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path];
@@ -340,7 +338,7 @@ export function useUsdScene(
   }, []);
   const selectMany = useCallback((paths: string[]) => setSelected(paths), []);
 
-  /** Objets affichés d'un prim ou d'un clone (visibles, variante active). */
+  /** Displayed objects of a prim or a clone (visible, active variant). */
   const objectsOf = useCallback(
     (path: string): THREE.Object3D[] => {
       const src = parseClonePath(path)?.path ?? path;
@@ -352,13 +350,13 @@ export function useUsdScene(
     [allIndexed, override, variantDefaults],
   );
 
-  /** Objets affichés de tous les prims sélectionnés — cadrage `F` (46.I), pivot du gizmo. */
+  /** Displayed objects of all selected prims — `F` framing (46.I), gizmo pivot. */
   const selectedObjects = useCallback(
     (): THREE.Object3D[] => selected.flatMap((path) => objectsOf(path)),
     [selected, objectsOf],
   );
 
-  /** Un représentant par prim sélectionné — chacun reçoit la pose du gizmo de groupe. */
+  /** One representative per selected prim — each receives the group gizmo's pose. */
   const representatives = useCallback(
     (): THREE.Object3D[] =>
       selected.map((path) => objectsOf(path)[0]).filter((o): o is THREE.Object3D => !!o),
@@ -370,7 +368,7 @@ export function useUsdScene(
     [primary, objectsOf],
   );
 
-  // Poses des prims et des clones (commit du gizmo, duplication, suppression) — voir
+  // Poses of prims and clones (gizmo commit, duplication, deletion) — see
   // `usePrimTransforms`.
   const { writeTransform, applyPrimTransform, commitPrimTransforms, duplicatePrim, deleteClone } =
     usePrimTransforms({
@@ -383,7 +381,7 @@ export function useUsdScene(
       setSelected,
     });
 
-  // Alignement / répartition (C2) — voir `usePrimAlign`.
+  // Align / distribute (C2) — see `usePrimAlign`.
   const { alignSelected, distributeSelected } = usePrimAlign({
     getSceneHandle,
     selected,
@@ -394,14 +392,14 @@ export function useUsdScene(
   });
 
   /**
-   * Halo de sélection : recalculé quand la sélection ou l'override change (l'objet a pu être
-   * déplacé ou masqué). Les objets d'un prim masqué ne reçoivent pas de halo.
+   * Selection halo: recomputed when the selection or the override changes (the object may have been
+   * moved or hidden). The objects of a hidden prim do not receive a halo.
    */
   useEffect(() => {
     const handle = getSceneHandle();
     if (!handle) return;
     const glow = createSelectionGlow(handle.THREE, handle.scene);
-    // Le halo se charge de descendre jusqu'aux meshes réellement dessinés.
+    // The halo takes care of descending to the meshes actually drawn.
     const paths = new Set(selected);
     glow.show(allIndexed.filter((i) => paths.has(i.primPath)).map((i) => i.object));
     return () => glow.dispose();
@@ -414,9 +412,9 @@ export function useUsdScene(
 
   const isolate = useCallback(
     (path: string) => {
-      // L'isolement couvre **tout** ce qui est chargé, pas seulement les prims composés par
-      // l'analyseur : sans les chemins propres au GLB (variantes cuites, niveaux insérés par
-      // Blender), ces objets échappaient au masquage et l'isolement semblait viser le parent.
+      // Isolation covers **everything** loaded, not just the prims composed by the parser: without
+      // the GLB's own paths (baked variants, levels inserted by Blender), these objects escaped
+      // masking and isolation seemed to target the parent.
       const paths = [...new Set([...(usd?.prims ?? []).map((p) => p.path), ...loadedPaths])];
       editLocal((o) => isolatePrim(o, path, paths));
     },

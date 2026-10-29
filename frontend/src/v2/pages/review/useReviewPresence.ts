@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { getSocket } from '../../../lib/socket';
 import { useAuth } from '../../stores/useAuth';
 
-/** Spectateur d'une review (payload socket `review:presence`). */
+/** Spectator of a review (`review:presence` socket payload). */
 export interface ReviewViewer {
   id: number;
   displayName: string;
@@ -14,9 +14,9 @@ export interface ReviewViewer {
 }
 
 /**
- * Présence sur une review : rejoint la room socket du média (RBAC revérifié
- * serveur), écoute la liste des spectateurs et la renvoie sans soi-même.
- * Quitte la room au démontage ; re-join après une reconnexion socket.
+ * Presence on a review: joins the media's socket room (RBAC re-checked server-side), listens to the
+ * list of spectators and returns it without oneself. Leaves the room on unmount; re-joins after a
+ * socket reconnection.
  */
 export function useReviewPresence(mediaId: number): ReviewViewer[] {
   const selfId = useAuth((s) => s.user?.id) ?? 0;

@@ -6,34 +6,33 @@ import { poseForScale } from './loadModel';
 import type { SceneRuntime } from './useModel3DThree';
 
 /**
- * Bascule « taille réelle » du viewer 3D.
+ * Real-size toggle of the 3D viewer.
  *
- * Le chargement ramène tout modèle à deux unités monde pour que le cadrage soit cohérent quel
- * que soit l'export — pratique pour présenter, faux pour inspecter : un prop de 20 cm et un
- * décor de 30 m y apparaissent identiques. Le facteur de normalisation est maintenant
- * **conservé** (`SceneRuntime.normScale`), donc la bascule ne recharge rien : elle re-pose le
- * wrapper à l'échelle 1 (unités du fichier) ou à l'échelle normalisée, met à jour le rayon et
- * le centre dont dépendent le cadrage et le turntable, puis recadre.
+ * Loading brings every model back to two world units so that framing stays consistent whatever the
+ * export — convenient for presenting, wrong for inspecting: a 20 cm prop and a 30 m set look identical
+ * there. The normalization factor is now **kept** (`SceneRuntime.normScale`), so the toggle reloads
+ * nothing: it re-poses the wrapper at scale 1 (file units) or at the normalized scale, updates the
+ * radius and center on which framing and the turntable depend, then reframes.
  *
- * `near`/`far` sont recalculés dans la foulée : à l'échelle réelle, un décor de 30 m sortirait
- * du frustum réglé pour un objet de 2 unités, et un objet de 2 cm disparaîtrait dans le near.
+ * `near`/`far` are recomputed right after: at real scale, a 30 m set would fall outside the frustum
+ * set for a 2-unit object, and a 2 cm object would vanish into the near plane.
  *
- * Le réglage est une **préférence d'inspection** : elle survit au changement de média, et
- * `reapplyRef` la rejoue sur le modèle qui vient d'être chargé (sinon l'interrupteur
- * annoncerait une échelle réelle devant un modèle normalisé).
+ * The setting is an **inspection preference**: it survives the media change, and `reapplyRef` replays
+ * it on the model that has just loaded (otherwise the switch would claim a real scale in front of a
+ * normalized model).
  */
 export function useModelScale(params: {
   runtimeRef: RefObject<SceneRuntime | null>;
   threeRef: RefObject<typeof import('three') | null>;
   homeView: () => void;
-  /** Rempli par le hook : appelé par la boucle de chargement, une fois le runtime en place. */
+  /** Filled by the hook: called by the loading loop, once the runtime is in place. */
   reapplyRef: RefObject<(() => void) | null>;
 }) {
   const { runtimeRef, threeRef, homeView, reapplyRef } = params;
   const [realScale, setRealScaleState] = useState(false);
   const realScaleRef = useRef(false);
 
-  /** Re-pose le wrapper à l'échelle demandée (aucun état React touché). */
+  /** Re-poses the wrapper at the requested scale (no React state touched). */
   const pose = useCallback(
     (on: boolean, refit: boolean) => {
       const rt = runtimeRef.current;
@@ -55,8 +54,8 @@ export function useModelScale(params: {
   );
 
   useEffect(() => {
-    // Le modèle fraîchement chargé est normalisé : on lui applique la préférence en cours,
-    // recadrage compris — le cadrage initial a été calculé sur le rayon normalisé.
+    // The freshly loaded model is normalized: the current preference is applied to it, framing
+    // included — the initial framing was computed on the normalized radius.
     reapplyRef.current = () => realScaleRef.current && pose(true, true);
     return () => {
       reapplyRef.current = null;

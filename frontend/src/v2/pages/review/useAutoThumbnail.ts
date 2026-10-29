@@ -9,10 +9,10 @@ import type { MediaResp } from './reviewTypes';
 import type { MediaKind } from '../../types/api';
 
 /**
- * Miniature **auto** (Phase 20) : pas de rendu headless serveur pour les médias 3D/splat →
- * on capture le rendu client à la 1re visualisation **si aucune miniature n'existe**, et on
- * l'envoie via `POST /api/media/:id/auto-thumbnail` (bootstrap idempotent côté backend, ouvert à
- * tout membre du projet). Best-effort et silencieux ; une seule tentative par montage.
+ * **Auto** thumbnail (Phase 20): no server-side headless render for 3D/splat media → we capture the
+ * client-side render at the first view **if no thumbnail exists**, and send it via
+ * `POST /api/media/:id/auto-thumbnail` (idempotent bootstrap on the backend, open to any project
+ * member). Best-effort and silent; a single attempt per mount.
  */
 export function useAutoThumbnail(
   id: number,
@@ -40,7 +40,7 @@ export function useAutoThumbnail(
             qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
           }
         } catch {
-          // best-effort : miniature silencieuse
+          // best-effort: silent thumbnail
         }
       })();
     }, 600);

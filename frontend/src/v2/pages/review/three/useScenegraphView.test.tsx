@@ -8,11 +8,11 @@ import { buildPrimTree, type PrimNode } from './usdScenegraph';
 import type { UsdPrim } from '../../../types/api';
 
 /**
- * La mémoire du scenegraph : recherche et dépliage.
+ * The scenegraph's memory: search and expansion.
  *
- * Ils vivaient dans le panneau, que le dock démonte dès qu'on change d'onglet — l'arbre
- * repartait replié, requête effacée, et il fallait retrouver son prim à la main. Ils vivent
- * donc avec la scène, et ne s'effacent qu'avec elle (changement de média).
+ * They lived in the panel, which the dock unmounts as soon as one changes tab — the tree restarted
+ * collapsed, query cleared, and the prim had to be found again by hand. They now live with the scene,
+ * and are only cleared with it (media change).
  */
 
 const prim = (path: string): UsdPrim => ({
@@ -31,15 +31,15 @@ const makeTree = () => buildPrimTree(PATHS.map(prim));
 const TREE = makeTree();
 
 describe('useScenegraphView', () => {
-  it('déplie les deux premiers niveaux tant que personne n’y touche', () => {
+  it('expands the first two levels as long as nobody touches them', () => {
     const { result } = renderHook(() => useScenegraphView(TREE, 1));
     expect([...result.current.expanded].sort()).toEqual(['/World', '/World/Chair']);
     expect(result.current.query).toBe('');
   });
 
-  it('suit l’arbre qui arrive après le premier rendu', () => {
-    // L'indexation de la scène Three prend quelques frames : un état initialisé une fois pour
-    // toutes serait resté vide, et l'arbre serait apparu entièrement replié.
+  it('follows the tree that arrives after the first render', () => {
+    // Indexing the Three scene takes a few frames: a state initialized once and for all would have
+    // stayed empty, and the tree would have appeared entirely collapsed.
     const { result, rerender } = renderHook(({ tree }) => useScenegraphView(tree, 1), {
       initialProps: { tree: [] as PrimNode[] },
     });
@@ -48,21 +48,21 @@ describe('useScenegraphView', () => {
     expect([...result.current.expanded].sort()).toEqual(['/World', '/World/Chair']);
   });
 
-  it('plie et déplie un nœud, et fige alors le dépliage', () => {
+  it('collapses and expands a node, and then freezes the expansion', () => {
     const { result, rerender } = renderHook(({ tree }) => useScenegraphView(tree, 1), {
       initialProps: { tree: TREE },
     });
     act(() => result.current.toggle('/World/Chair'));
     expect(result.current.expanded.has('/World/Chair')).toBe(false);
-    // Un arbre reconstruit à l'identique (réindexation) ne réinstalle pas le défaut : ce que
-    // l'utilisateur a plié reste plié.
+    // A tree rebuilt identically (re-indexing) does not reinstall the default: what the user
+    // collapsed stays collapsed.
     rerender({ tree: makeTree() });
     expect(result.current.expanded.has('/World/Chair')).toBe(false);
     act(() => result.current.toggle('/World/Chair'));
     expect(result.current.expanded.has('/World/Chair')).toBe(true);
   });
 
-  it('déplie un lot de chemins d’un coup — révélation du prim sélectionné', () => {
+  it('expands a batch of paths at once — reveals the selected prim', () => {
     const { result } = renderHook(() => useScenegraphView(TREE, 1));
     act(() => result.current.expand(['/World/Chair/Geom', '/World/Chair/Geom/seat']));
     expect([...result.current.expanded].sort()).toEqual([
@@ -73,7 +73,7 @@ describe('useScenegraphView', () => {
     ]);
   });
 
-  it('oublie tout en changeant de média, et rien avant', () => {
+  it('forgets everything when changing media, and nothing before', () => {
     const { result, rerender } = renderHook(({ id }) => useScenegraphView(TREE, id), {
       initialProps: { id: 1 },
     });
@@ -84,12 +84,12 @@ describe('useScenegraphView', () => {
     expect(result.current.query).toBe('seat');
     expect(result.current.expanded.has('/World')).toBe(false);
 
-    // Un simple rendu de plus (la caméra bouge, le dock se rend) ne perd rien.
+    // One more render (the camera moves, the dock renders) loses nothing.
     rerender({ id: 1 });
     expect(result.current.query).toBe('seat');
 
-    // Un autre asset de la version : la recherche et le dépliage appartenaient à la scène qu'on
-    // quitte, comme l'isolement et la sélection (46.K).
+    // Another asset of the version: the search and the expansion belonged to the scene being left,
+    // like isolation and selection (46.K).
     rerender({ id: 2 });
     expect(result.current.query).toBe('');
     expect([...result.current.expanded].sort()).toEqual(['/World', '/World/Chair']);

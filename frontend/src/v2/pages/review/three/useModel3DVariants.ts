@@ -10,22 +10,22 @@ import type { Model3DThreeState } from './useModel3DThree';
 import { useT } from '../../../i18n';
 
 /**
- * Variantes de matériaux + caméras embarquées du modèle 3D (Phase 40, 40.C). Lit le glTF exposé
- * par `useModel3DThree` via `getSceneHandle` (comme `useModel3DInspect`) : liste les variantes et
- * les caméras une fois le modèle chargé, bascule les matériaux, et adopte une caméra embarquée
- * comme point de vue (via `restoreModelCamera`, l'infra caméra commune). Local à la session.
+ * Material variants + embedded cameras of the 3D model (Phase 40, 40.C). Reads the glTF exposed by
+ * `useModel3DThree` via `getSceneHandle` (like `useModel3DInspect`): lists the variants and the
+ * cameras once the model is loaded, switches the materials, and adopts an embedded camera as the
+ * point of view (via `restoreModelCamera`, the common camera infrastructure). Local to the session.
  */
 export function useModel3DVariants(model3d: Model3DThreeState) {
   const t = useT();
   const { ready, getSceneHandle } = model3d;
   const [current, setCurrent] = useState(-1);
 
-  // Variantes + caméras dérivées du glTF une fois le modèle prêt (mémoïsé, comme la fiche 39.C).
+  // Variants + cameras derived from the glTF once the model is ready (memoized, like the 39.C sheet).
   const { variants, cameras } = useMemo<{ variants: string[]; cameras: EmbeddedCameraView[] }>(() => {
     if (!ready) return { variants: [], cameras: [] };
     const h = getSceneHandle();
     if (!h?.gltf || !h.mesh) return { variants: [], cameras: [] };
-    // Distance de cadrage de la cible = rayon englobant (repère cohérent avec l'auto-cadrage).
+    // Framing distance of the target = bounding radius (consistent with the auto-framing).
     const sphere = new h.THREE.Box3().setFromObject(h.mesh).getBoundingSphere(new h.THREE.Sphere());
     return {
       variants: readVariants(h.gltf),

@@ -5,16 +5,16 @@ import { useCallback, useState } from 'react';
 import type { MediaSummary } from '../../../types/api';
 
 /**
- * Médias d'**autres versions** retenus pour la comparaison spatiale (3D et splat).
+ * Media of **other versions** selected for spatial comparison (3D and splat).
  *
- * La comparaison A/B ne franchissait pas la frontière de version : les deux viewers ne
- * listaient que les frères de la version courante, alors que le cas de review le plus
- * courant est v003 contre v004 du même asset. Le sélecteur de versions (`CompareSelect`),
- * jusque-là réservé à la vidéo et à l'image, alimente maintenant cette liste ; le reste de la
- * mécanique (chargement dans la scène commune, fondu, côte à côte, caméra liée) ne change pas.
+ * The A/B comparison did not cross the version boundary: both viewers only listed the siblings of
+ * the current version, whereas the most common review case is v003 against v004 of the same asset.
+ * The version selector (`CompareSelect`), until then reserved for video and image, now feeds this
+ * list; the rest of the mechanics (loading into the common scene, crossfade, side by side, linked
+ * camera) is unchanged.
  *
- * Le résumé du média est mémorisé avec son identifiant : le sélecteur l'a déjà résolu depuis
- * le détail de la version, inutile de le redemander pour afficher son nom dans la barre.
+ * The media summary is memoized with its identifier: the selector has already resolved it from the
+ * version detail, so there is no need to request it again to display its name in the bar.
  */
 export function useCompareVersions() {
   const [extras, setExtras] = useState<MediaSummary[]>([]);
@@ -28,7 +28,7 @@ export function useCompareVersions() {
     setExtras((list) => list.filter((m) => m.id !== id));
   }, []);
 
-  /** Remplacement exclusif (sémantique A/B simple du sélecteur mono-version). */
+  /** Exclusive replacement (simple A/B semantics of the single-version selector). */
   const set = useCallback((id: number | null, media?: MediaSummary) => {
     setExtras(id == null || !media ? [] : [media]);
   }, []);
@@ -39,9 +39,9 @@ export function useCompareVersions() {
 export type CompareVersionsState = ReturnType<typeof useCompareVersions>;
 
 /**
- * Liste comparée = frères de la version courante puis médias des autres versions, sans
- * doublon (un même média peut être atteint par les deux chemins) et dans un ordre stable —
- * la barre de comparaison est une liste d'onglets, elle ne doit pas se réordonner.
+ * Compared list = siblings of the current version, then media of other versions, without duplicates
+ * (the same media can be reached by both paths) and in a stable order — the comparison bar is a tab
+ * list, it must not reorder itself.
  */
 export function mergeCompareMedia(
   siblings: readonly MediaSummary[],

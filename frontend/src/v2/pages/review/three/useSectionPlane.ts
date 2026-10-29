@@ -9,10 +9,10 @@ import type { SectionState } from './viewState';
 type Bounds = Record<SectionAxis, { min: number; max: number }>;
 
 /**
- * Plan de coupe (section) du viewer 3D (39.D) : masque une moitié du modèle le long d'un axe, à une
- * position **scrubbable** (glisser/saisir dans le HUD → « draggable » à l'idiome de l'app), avec
- * inversion du côté conservé. **Session-local**, non destructif (`renderer.clippingPlanes`, restauré
- * à la désactivation). Les bornes de position viennent de la boîte englobante du modèle.
+ * Section plane of the 3D viewer (39.D): masks one half of the model along an axis, at a
+ * **scrubbable** position (drag/type in the HUD → "draggable" per the app idiom), with inversion of
+ * the kept side. **Session-local**, non-destructive (`renderer.clippingPlanes`, restored on
+ * deactivation). The position bounds come from the model's bounding box.
  */
 export function useSectionPlane(viewer: SceneViewer) {
   const { ready, getSceneHandle } = viewer;
@@ -21,7 +21,7 @@ export function useSectionPlane(viewer: SceneViewer) {
   const [flip, setFlip] = useState(false);
   const [position, setPosition] = useState(0);
 
-  // Boîte englobante du modèle → bornes de position par axe. Lecture seule (memo, pas d'effet).
+  // Model bounding box → position bounds per axis. Read-only (memo, not an effect).
   const bounds = useMemo<Bounds | null>(() => {
     if (!ready) return null;
     const h = getSceneHandle();
@@ -35,7 +35,7 @@ export function useSectionPlane(viewer: SceneViewer) {
     };
   }, [ready, getSceneHandle]);
 
-  // Applique/retire le plan de coupe (global renderer) selon l'état.
+  // Applies/removes the section plane (global renderer) according to the state.
   useEffect(() => {
     const h = getSceneHandle();
     if (!h?.renderer) return;
@@ -53,7 +53,7 @@ export function useSectionPlane(viewer: SceneViewer) {
 
   const toggle = useCallback(() => {
     setActive((v) => {
-      if (!v) center(axis, bounds); // recentre à l'activation
+      if (!v) center(axis, bounds); // re-centers on activation
       return !v;
     });
   }, [axis, bounds, center]);
@@ -67,9 +67,9 @@ export function useSectionPlane(viewer: SceneViewer) {
   );
 
   /**
-   * Rejoue un plan de coupe capturé (état de vue d'un commentaire) : les quatre réglages sont
-   * posés d'un bloc, sans le recentrage que déclenche un changement d'axe à la main — la
-   * position enregistrée est celle qu'il faut retrouver, pas le milieu de la bbox.
+   * Replays a captured section plane (view state of a comment): the four settings are set in one
+   * block, without the re-centering triggered by a manual axis change — the recorded position is the
+   * one to restore, not the bbox midpoint.
    */
   const apply = useCallback((s: SectionState) => {
     setActive(s.active);

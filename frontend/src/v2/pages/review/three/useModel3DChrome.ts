@@ -13,10 +13,10 @@ import { usePrimGizmo } from './usePrimGizmo';
 import type { UsdSceneState } from './useUsdScene';
 import { useT } from '../../../i18n';
 
-/** Cible vide stable pour le gizmo par prim quand aucune scène USD n'est montée. */
+/** Stable empty target for the per-prim gizmo when no USD scene is mounted. */
 const EMPTY_TARGETS = () => [];
 
-/** Traduction rail → mode du gizmo TRS. */
+/** Translation rail → TRS gizmo mode. */
 const GIZMO_MODE: Partial<Record<ToolId, TransformMode>> = {
   translate: 'translate',
   rotate: 'rotate',
@@ -24,10 +24,10 @@ const GIZMO_MODE: Partial<Record<ToolId, TransformMode>> = {
 };
 
 /**
- * Branche le rail sur les hooks qui portent réellement le geste : le gizmo du modèle (l'outil
- * armé décide du mode de transformation, et chaque drag reste annulable) et la brosse de
- * surface. Reprend le montage qui vivait dans `Model3DTransformBar` — seule la barre disparaît,
- * l'historique et le gizmo sont inchangés. Jumeau de `splat/useSplatChrome`.
+ * Wires the rail to the hooks that actually carry the gesture: the model's gizmo (the armed tool
+ * decides the transform mode, and each drag stays undoable) and the surface brush. Takes over the
+ * wiring that lived in `Model3DTransformBar` — only the bar disappears; history and gizmo are
+ * unchanged. Twin of `splat/useSplatChrome`.
  */
 export function useModel3DChrome({
   state,
@@ -39,12 +39,12 @@ export function useModel3DChrome({
   state: ChromeState;
   m: Model3DThreeState;
   /**
-   * Brosse de surface — le MÊME hook que le splat depuis le lot 13. Le rail dit lequel des deux
-   * outils est armé, le hook de peinture en déduit ce que fait le clic.
+   * Surface brush — the SAME hook as the splat since batch 13. The rail says which of the two tools
+   * is armed; the painting hook deduces what the click does.
    */
   paint: SplatPaintState;
   cameraRig?: { mode: 'translate' | 'rotate'; setMode: (mode: 'translate' | 'rotate') => void };
-  /** Scène USD : un prim sélectionné détourne le gizmo TRS vers ce prim (46.N). */
+  /** USD scene: a selected prim diverts the TRS gizmo to that prim (46.N). */
   usdScene?: UsdSceneState;
 }) {
   const t = useT();
@@ -52,9 +52,9 @@ export function useModel3DChrome({
   const { updateTransform } = m;
   const mode: TransformMode = GIZMO_MODE[state.tool] ?? 'navigate';
 
-  // Des prims USD sélectionnés prennent le gizmo : le delta est écrit dans l'override ReView
-  // (pas dans la transformation de version), donc enregistrable pour tous avant publication et
-  // joignable à un commentaire après. Sans sélection, le gizmo transforme le modèle entier.
+  // Selected USD prims take over the gizmo: the delta is written into the ReView override (not into
+  // the version transform), hence savable for everyone before publication and attachable to a
+  // comment afterwards. Without a selection, the gizmo transforms the whole model.
   const primSelection = usdScene?.selected ?? [];
   const hasPrims = primSelection.length > 0 && !!usdScene?.selectedObject;
 
@@ -80,8 +80,8 @@ export function useModel3DChrome({
     targets: usdScene?.selectedObjects ?? EMPTY_TARGETS,
     selectionKey: primSelection.join('|'),
     syncKey: usdScene?.override,
-    // Pendant le drag, le proxy pilote la pose des représentants ; les deltas ne sont relevés
-    // qu'au lâcher (un seul lot), puis `applyPlan` les répercute sur tous les objets des prims.
+    // During the drag, the proxy drives the representatives' pose; the deltas are only read on
+    // release (a single batch), then `applyPlan` propagates them to all objects of the prims.
     onCommit: (objects) => {
       if (!usdScene) return;
       const commits = usdScene.commitPrimTransforms(objects);
@@ -110,7 +110,7 @@ export function useModel3DChrome({
     else if (state.tool === 'cam-aim') cameraRig.setMode('rotate');
   }, [state.tool, cameraRig]);
 
-  // Ce qui dit si quelque chose est en attente, c'est l'édition locale de la transformation
-  // pas encore poussée sur la version — l'enregistrement la relâche.
+  // What tells whether something is pending is the local edit of the transform, not yet pushed to
+  // the version — saving releases it.
   return { history, dirty: m.tfDirty };
 }

@@ -5,22 +5,22 @@ import { useCallback, useState } from 'react';
 import { initialExpansion, type PrimNode } from './usdScenegraph';
 
 /**
- * Recherche et dépliage du scenegraph USD — **hors du panneau**.
+ * Search and expansion of the USD scenegraph — **outside the panel**.
  *
- * Le panneau vit dans un onglet du dock : passer sur *Info* puis revenir le démontait, et
- * l'arbre repartait replié, requête effacée. Sur une scène de production, retrouver le prim
- * qu'on regardait coûtait alors une dizaine de clics. L'état vit donc aussi longtemps que la
- * scène (`useUsdScene`), et ne s'efface qu'avec elle.
+ * The panel lives in a dock tab: switching to *Info* and back unmounted it, and the tree restarted
+ * collapsed, query cleared. On a production scene, finding again the prim one was looking at then cost
+ * a dozen clicks. The state therefore lives as long as the scene (`useUsdScene`), and is only cleared
+ * with it.
  */
 export interface ScenegraphView {
-  /** Texte de recherche courant. */
+  /** Current search text. */
   query: string;
   setQuery: (query: string) => void;
-  /** Chemins dépliés — deux premiers niveaux tant que rien n'a été plié ni déplié. */
+  /** Expanded paths — the first two levels as long as nothing has been collapsed or expanded. */
   expanded: ReadonlySet<string>;
-  /** Plie ou déplie un nœud (chevron de la rangée). */
+  /** Collapses or expands a node (chevron of the row). */
   toggle: (path: string) => void;
-  /** Déplie un lot de chemins — révélation du prim sélectionné (`F` au survol). */
+  /** Expands a batch of paths — reveals the selected prim (`F` on hover). */
   expand: (paths: Iterable<string>) => void;
 }
 
@@ -29,10 +29,10 @@ export function useScenegraphView(tree: readonly PrimNode[], mediaId: number | n
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => initialExpansion(tree));
 
   /**
-   * Ensemencement du dépliage par défaut. L'arbre n'existe pas au premier rendu — l'indexation
-   * de la scène Three prend quelques frames — et un état initialisé une fois pour toutes aurait
-   * laissé l'arbre entièrement replié à son arrivée. On l'ensemence donc au premier arbre non
-   * vide, puis plus jamais : ce que l'utilisateur a plié reste plié.
+   * Seeding of the default expansion. The tree does not exist at the first render — indexing the
+   * Three scene takes a few frames — and a state initialized once and for all would have left the
+   * tree entirely collapsed on arrival. So we seed it on the first non-empty tree, then never again:
+   * what the user has collapsed stays collapsed.
    */
   const [seeded, setSeeded] = useState(tree.length > 0);
   if (!seeded && tree.length > 0) {
@@ -40,7 +40,7 @@ export function useScenegraphView(tree: readonly PrimNode[], mediaId: number | n
     setExpanded(initialExpansion(tree));
   }
 
-  /** Changement de média : la recherche et le dépliage appartiennent à la scène qu'on quitte. */
+  /** Media change: the search and the expansion belong to the scene being left. */
   const [lastMediaId, setLastMediaId] = useState(mediaId);
   if (lastMediaId !== mediaId) {
     setLastMediaId(mediaId);

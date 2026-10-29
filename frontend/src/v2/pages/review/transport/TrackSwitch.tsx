@@ -8,8 +8,8 @@ import { useT } from '../../../i18n';
 export type TrackId = 'camera' | 'clip';
 
 /**
- * Sélecteur de piste du transport spatial : l'animation caméra de la mise en scène, ou les
- * clips portés par le fichier. Absent quand le média n'a qu'une des deux.
+ * Track selector of the spatial transport: the camera animation of the staging, or the clips carried
+ * by the file. Absent when the media has only one of the two.
  */
 export default function TrackSwitch({
   track,

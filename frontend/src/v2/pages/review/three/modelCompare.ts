@@ -3,15 +3,15 @@
 
 import type * as THREE from 'three';
 
-/** Décalages côte à côte centrés (pur) : n positions espacées de `spacing`. */
+/** Centered side-by-side offsets (pure): n positions spaced by `spacing`. */
 export function sideBySideOffsets(n: number, spacing: number): number[] {
   return Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * spacing);
 }
 
 /**
- * Règle l'opacité d'un objet 3D chargé (39.E) en parcourant ses matériaux : `transparent` et
- * `depthWrite` suivent l'opacité, et l'objet est masqué à 0 (évite le coût de rendu). Non
- * destructif — l'appel à 1 rétablit un rendu opaque standard. Testable (three réel).
+ * Sets the opacity of a loaded 3D object (39.E) by walking its materials: `transparent` and
+ * `depthWrite` follow the opacity, and the object is hidden at 0 (avoids the rendering cost). Not
+ * destructive — calling with 1 restores a standard opaque render. Testable with real three.
  */
 export function setObjectOpacity(object: THREE.Object3D, opacity: number): void {
   const transparent = opacity < 1;

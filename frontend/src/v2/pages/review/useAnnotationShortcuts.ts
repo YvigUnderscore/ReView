@@ -4,15 +4,15 @@
 import { UNDO_PRIORITY, useUndoScope } from '../../lib/undoScope';
 
 /**
- * Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y sur l'annotation en cours — formes **et** références collées.
+ * Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y on the annotation in progress — shapes **and** pasted references.
  *
- * Le gestionnaire clavier lui-même vit maintenant dans `lib/undoScope`, partagé avec l'éditeur
- * de splat et la brosse 3D. Ce module ne dit plus que ceci : le composer est le périmètre le
- * **plus prioritaire** (`UNDO_PRIORITY.composer`), et il ne réclame la frappe que s'il a
- * vraiment un cran à rendre — sinon elle retombe sur l'éditeur du média.
+ * The keyboard handler itself now lives in `lib/undoScope`, shared with the splat editor and the 3D
+ * brush. This module now says only this: the composer is the **highest-priority** scope
+ * (`UNDO_PRIORITY.composer`), and it claims the keystroke only if it really has a step to restore —
+ * otherwise it falls back to the media's editor.
  *
- * Avant ce partage, chaque historique posait son propre `keydown` sur `document` : deux
- * historiques ayant un cran, une seule frappe en défaisait deux.
+ * Before this sharing, each history posted its own `keydown` on `document`: two histories with a step
+ * meant that a single keystroke undid both.
  */
 export function useAnnotationShortcuts({
   enabled,

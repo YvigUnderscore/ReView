@@ -15,13 +15,12 @@ import type { SplatViewer } from './splat/useSplat';
 import { useT } from '../../i18n';
 
 /**
- * Overlay d'annotation 2D (extrait de ReviewViewer, budget 300) ; `captureAspect` (3D)
- * cale le dessin malgré un viewer de taille différente. Le wrapper est en
- * pointer-events-none : en lecture on peut orbiter (le modèle reçoit les events) ; en
- * édition la SVG les capte. Le dessin peut déborder du cadre de livraison (marge,
- * Phase 25) — signalé une fois à l'auteur.
+ * 2D annotation overlay (extracted from ReviewViewer, budget 300); `captureAspect` (3D) fits the
+ * drawing despite a viewer of a different size. The wrapper is pointer-events-none: when reading,
+ * one can orbit (the model receives the events); when editing, the SVG captures them. The drawing may
+ * overflow the delivery frame (margin, Phase 25) — flagged once to the author.
  */
-/** Commentaire sélectionné — une réponse se sélectionne comme les autres, elle compte donc. */
+/** Selected comment — a reply is selected like the others, so it counts. */
 function findComment(comments: readonly ReviewComment[] | null | undefined, id: number | null) {
   if (id == null) return null;
   for (const c of comments ?? []) {
@@ -33,16 +32,16 @@ function findComment(comments: readonly ReviewComment[] | null | undefined, id: 
 }
 
 /**
- * Points d'intérêt 3D/splat (extrait de ReviewViewer) : affiche les pastilles numérotées du
- * commentaire sélectionné, sinon celles en cours de rédaction — projetées par le viewer.
+ * 3D/splat points of interest (extracted from ReviewViewer): shows the numbered dots of the selected
+ * comment, otherwise those being drafted — projected by the viewer.
  *
- * Les deux viewers reçoivent la même liste par la même poignée (`showPoiPoints`) : c'est la
- * numérotation de la scène, et elle vaut pour le modèle 3D comme pour le splat.
+ * Both viewers receive the same list through the same handle (`showPoiPoints`): it is the scene's
+ * numbering, and it applies to the 3D model as well as to the splat.
  *
- * Rend le calque des **cartes de commentaire ancrées dans la scène** (`poi/PoiSceneCards`) : le
- * commentaire relu se lit à son point, images comprises, sans quitter la scène des yeux. Le calque
- * se pose par portail dans les pastilles du viewer — sa place dans l'arbre React n'a donc aucune
- * importance, et il ne coûte rien à la boucle de rendu.
+ * Renders the layer of **comment cards anchored in the scene** (`poi/PoiSceneCards`): the comment
+ * being read is read at its point, images included, without taking one's eyes off the scene. The
+ * layer is placed by portal into the viewer's dots — its place in the React tree therefore does not
+ * matter, and it costs nothing to the render loop.
  */
 export function usePoiDisplay(
   kind: string | undefined,
@@ -58,12 +57,12 @@ export function usePoiDisplay(
   const spatial = kind === 'SPLAT' || kind === 'MODEL_3D';
   const viewed = ann.viewedPoi;
   const draft = ann.poi.points;
-  // PRIORITÉ AU COMMENTAIRE RELU : cliquer un commentaire doit montrer SES points, même au milieu
-  // d'une rédaction. C'est `usePoiPlacement` qui rend l'écran au brouillon, en relâchant les points
-  // relus quand on arme l'outil — la seule chose qui puisse vouloir la place.
+  // PRIORITY TO THE COMMENT BEING READ: clicking a comment must show ITS points, even in the middle
+  // of a draft. `usePoiPlacement` gives the screen back to the draft, releasing the points being read
+  // when the tool is armed — the only thing that could want the place.
   //
-  // Une liste stable d'un rendu à l'autre : sans ce mémo, l'effet réécrirait les pastilles à
-  // chaque rendu du composeur (frappe au clavier comprise).
+  // A list stable from one render to the next: without this memo, the effect would rewrite the dots
+  // on every render of the composer (keystrokes included).
   const points = useMemo(
     () =>
       !spatial
@@ -78,8 +77,8 @@ export function usePoiDisplay(
     else if (kind === 'MODEL_3D') showModelPoi(points);
   }, [kind, points, showPoiPoints, showModelPoi]);
 
-  // Cartes du commentaire relu : mémoïsées, car le calque s'abonne aux pastilles sur leur
-  // identité — une liste neuve à chaque rendu le réabonnerait sans fin.
+  // Cards of the comment being read: memoized, because the layer subscribes to the dots by their
+  // identity — a new list on every render would resubscribe endlessly.
   const comment = findComment(comments, selectedCommentId);
   const cards = useMemo(
     () =>

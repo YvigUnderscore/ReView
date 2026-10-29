@@ -7,12 +7,11 @@ import { qk } from '../../lib/query';
 import type { MediaSummary, VersionDetail } from '../../types/api';
 
 /**
- * Médias de la version courante.
+ * Media of the current version.
  *
- * Deux lecteurs : le tiroir des assets, qui les montre, et le chrome, qui n'en veut que le
- * nombre — le tiroir et sa bascule disparaissent quand la version ne porte qu'un asset, faute
- * de quoi l'on ouvrait une bande vide. Même clé de query que `VersionNavigator` : rien de plus
- * n'est demandé au serveur.
+ * Two readers: the assets drawer, which shows them, and the chrome, which only wants their count — the
+ * drawer and its toggle disappear when the version carries only one asset, otherwise an empty band
+ * would open. Same query key as `VersionNavigator`: nothing more is requested from the server.
  */
 export function useVersionMedia(versionId: number): MediaSummary[] {
   const versionQ = useQuery({

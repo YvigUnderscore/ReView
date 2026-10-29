@@ -9,10 +9,10 @@ import type { MediaResp, SplatEditsPatch } from './reviewTypes';
 import type { SplatViewer } from './splat/useSplat';
 
 /**
- * Callback post-enregistrement des éditions splat (10.G) : patch du cache média sans refetch,
- * puis **re-capture** de la miniature (le rendu a changé) via `/thumbnail` — réservé aux
- * gestionnaires d'un média non publié (le backend re-vérifie `assertMediaManage` + verrou).
- * Le bootstrap de miniature à la 1re vue est géré par `useAutoThumbnail` (tous les viewers).
+ * Post-save callback for splat edits (10.G): patches the media cache without refetch, then
+ * **re-captures** the thumbnail (the render has changed) via `/thumbnail` — reserved for managers of an
+ * unpublished media (the backend re-checks `assertMediaManage` + lock). First-view thumbnail bootstrap
+ * is handled by `useAutoThumbnail` (all viewers).
  */
 export function useSplatThumbnail(
   id: number,
@@ -31,14 +31,14 @@ export function useSplatThumbnail(
       });
       qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, thumbnailUrl } : old));
     } catch {
-      // best-effort : miniature silencieuse (ex. droits insuffisants)
+      // best-effort: silent thumbnail (e.g. insufficient rights)
     }
   }, [captureThumbnail, id, qc]);
 
   return useCallback(
     (patch: SplatEditsPatch) => {
       qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, ...patch } : old));
-      // Après stabilisation du rendu — best-effort, uniquement si l'utilisateur peut éditer.
+      // After the render has stabilized — best-effort, only if the user can edit.
       if (canEdit) setTimeout(() => void uploadThumbnail(), 400);
     },
     [qc, id, uploadThumbnail, canEdit],

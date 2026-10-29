@@ -4,20 +4,19 @@
 import type * as THREE from 'three';
 
 /**
- * Repère visuel de l'outil de mesure : deux pastilles et le segment qui les relie, ajoutés à
- * la **scène** (jamais au modèle) pour n'être ni capturés par l'indexation des prims, ni
- * touchés par un raycast, ni embarqués dans la miniature — même précaution que le halo de
- * sélection.
+ * Visual marker for the measure tool: two dots and the segment joining them, added to the
+ * **scene** (never to the model) so they are neither captured by prim indexing, hit by a
+ * raycast, nor embedded in the thumbnail — same precaution as the selection glow.
  *
- * Le segment est dessiné par-dessus la géométrie (`depthTest: false`) : une mesure qui
- * traverse la pièce doit rester lisible, sinon on ne voit que ce qui dépasse.
+ * The segment is drawn on top of the geometry (`depthTest: false`): a measurement crossing the
+ * room must stay readable, otherwise you only see what sticks out.
  */
 
-/** Couleur du repère de mesure — accent du thème (cyan), lisible sur fond clair comme sombre. */
+/** Color of the measure marker: the theme accent (cyan), readable on light and dark backgrounds. */
 export const MEASURE_COLOR = 0x22d3ee;
 
 export interface MeasureGizmo {
-  /** Positionne le repère sur 0, 1 ou 2 points (monde). */
+  /** Places the marker on 0, 1 or 2 points (world). */
   setPoints(points: readonly THREE.Vector3[]): void;
   dispose(): void;
 }
@@ -25,7 +24,7 @@ export interface MeasureGizmo {
 export function createMeasureGizmo(
   three: typeof import('three'),
   scene: THREE.Scene,
-  /** Rayon du modèle : les pastilles doivent rester visibles à toutes les échelles. */
+  /** Model radius: the dots must stay visible at every scale. */
   radius: number,
 ): MeasureGizmo {
   const group = new three.Group();

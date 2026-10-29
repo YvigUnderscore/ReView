@@ -3,7 +3,7 @@
 
 import type * as THREE from 'three';
 
-/** Vrai si le sous-arbre contient au moins un `SkinnedMesh` (rig présent → debug squelette 40.B). */
+/** True if the subtree contains at least one `SkinnedMesh` (rig present → skeleton debug 40.B). */
 export function hasSkinnedMesh(root: THREE.Object3D): boolean {
   let found = false;
   root.traverse((o) => {
@@ -13,10 +13,10 @@ export function hasSkinnedMesh(root: THREE.Object3D): boolean {
 }
 
 /**
- * Overlay de debug du squelette (Phase 40, 40.B) : `SkeletonHelper` (lignes des os) dessiné
- * **par-dessus** le modèle (depthTest désactivé) pour rester visible à travers la géométrie. À
- * ajouter à la scène, retirer + `dispose()` au masquage. L'helper se met à jour tout seul dans la
- * boucle de rendu (il est dans le graphe de scène), donc suit l'animation du rig.
+ * Skeleton debug overlay (Phase 40, 40.B): a `SkeletonHelper` (bone lines) drawn **on top of** the
+ * model (depthTest disabled) so it stays visible through the geometry. Added to the scene; removed
+ * and `dispose()`d when hidden. The helper updates itself in the render loop (it is part of the
+ * scene graph), so it follows the rig's animation.
  */
 export function createSkeletonOverlay(
   three: typeof import('three'),

@@ -13,9 +13,9 @@ import {
 } from './sceneOverrideApply';
 
 /**
- * Mini-store externe : l'index des clones est produit par l'effet de réconciliation (qui crée
- * les `Object3D` — un système externe à React) et lu via `useSyncExternalStore`, le motif
- * recommandé par la règle `set-state-in-effect` pour refléter un état né hors de React.
+ * External mini-store: the clone index is produced by the reconciliation effect (which creates the
+ * `Object3D`s — a system external to React) and read via `useSyncExternalStore`, the pattern
+ * recommended by the `set-state-in-effect` rule to reflect a state born outside React.
  */
 interface CloneIndexStore {
   index: IndexedObject<THREE.Object3D>[];
@@ -23,12 +23,12 @@ interface CloneIndexStore {
 }
 
 /**
- * Clones de mise en scène (C1) : réconciliation des copies d'objets dans la scène Three.
- * Un clone = les objets affichés du prim source dupliqués (`Object3D.clone` — géométrie et
- * matériaux partagés) dans le même parent, indexés sous le pseudo-chemin `/prim#id` avec la
- * **base du source** : son delta s'applique alors exactement comme un override de prim
- * (`planOverride`). Les objets ne sont recréés que si l'ensemble des clones change ; un
- * changement de delta seul ne fait que replanifier. Extrait de `useUsdScene` (budget lignes).
+ * Staging clones (C1): reconciliation of object copies in the Three scene.
+ * A clone = the displayed objects of the source prim duplicated (`Object3D.clone` — geometry and
+ * materials shared) under the same parent, indexed under the pseudo-path `/prim#id` with the
+ * **source's base**: its delta then applies exactly like a prim override (`planOverride`). Objects
+ * are only recreated when the set of clones changes; a change of delta alone merely replans.
+ * Extracted from `useUsdScene` (line budget).
  */
 export function useSceneClones(
   override: SceneOverride,
@@ -36,8 +36,8 @@ export function useSceneClones(
   variantDefaults: VariantSelection,
 ): IndexedObject<THREE.Object3D>[] {
   const cloneObjectsRef = useRef(new Map<string, THREE.Object3D[]>());
-  // Le store vit dans une ref, pas dans un état : son contenu est écrit hors de React (effet de
-  // réconciliation) et un état React n'a pas le droit d'être muté en place.
+  // The store lives in a ref, not in state: its content is written outside React (reconciliation
+  // effect), and React state must not be mutated in place.
   const storeRef = useRef<CloneIndexStore>({ index: [], listeners: new Set() });
   const subscribe = useCallback((onChange: () => void) => {
     const store = storeRef.current;
@@ -49,21 +49,21 @@ export function useSceneClones(
 
   useEffect(() => {
     const known = cloneObjectsRef.current;
-    // Ensemble voulu : un pseudo-chemin par clone d'un prim dont des objets sont indexés.
+    // Desired set: one pseudo-path per clone of a prim whose objects are indexed.
     const desired = new Map<string, { srcPath: string; transform: PrimTransform }>();
     for (const [path, edit] of Object.entries(override.prims))
       for (const clone of edit.clones ?? [])
         desired.set(clonePath(path, clone.id), { srcPath: path, transform: clone.transform });
 
     let membershipChanged = false;
-    // Retire les clones disparus.
+    // Removes the vanished clones.
     for (const [pseudo, objects] of known) {
       if (desired.has(pseudo)) continue;
       for (const object of objects) object.parent?.remove(object);
       known.delete(pseudo);
       membershipChanged = true;
     }
-    // Crée les clones manquants.
+    // Creates the missing clones.
     const nextIndex: IndexedObject<THREE.Object3D>[] = [];
     for (const [pseudo, { srcPath }] of desired) {
       let objects = known.get(pseudo);
@@ -88,7 +88,7 @@ export function useSceneClones(
         if (base) nextIndex.push({ object, primPath: pseudo, base });
       });
     }
-    // Applique les deltas des clones (et la visibilité héritée du prim source).
+    // Applies the clones' deltas (and the source prim's inherited visibility).
     const cloneOverride = emptyOverride();
     for (const [pseudo, { srcPath, transform }] of desired)
       cloneOverride.prims[pseudo] = {
@@ -103,7 +103,7 @@ export function useSceneClones(
     }
   }, [override, variantDefaults, indexed]);
 
-  // Démontage : les copies ne survivent pas au viewer.
+  // Teardown: the copies do not survive the viewer.
   useEffect(
     () => () => {
       for (const objects of cloneObjectsRef.current.values())

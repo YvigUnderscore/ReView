@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { createSkeletonOverlay, hasSkinnedMesh } from './skeletonOverlay';
 
-describe('skeletonOverlay — debug squelette (40.B)', () => {
-  it('détecte la présence d’un SkinnedMesh dans le sous-arbre', () => {
+describe('skeletonOverlay — skeleton debug (40.B)', () => {
+  it('detects the presence of a SkinnedMesh in the subtree', () => {
     const rigged = new THREE.Group();
     rigged.add(new THREE.SkinnedMesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial()));
     expect(hasSkinnedMesh(rigged)).toBe(true);
@@ -16,7 +16,7 @@ describe('skeletonOverlay — debug squelette (40.B)', () => {
     expect(hasSkinnedMesh(plain)).toBe(false);
   });
 
-  it('crée un overlay dessiné par-dessus le modèle (depthTest off)', () => {
+  it('creates an overlay drawn on top of the model (depthTest off)', () => {
     const root = new THREE.Group();
     root.add(new THREE.Bone());
     const helper = createSkeletonOverlay(THREE, root);

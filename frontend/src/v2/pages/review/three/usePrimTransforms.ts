@@ -19,7 +19,7 @@ import {
 } from './sceneOverride';
 import { transformDeltaFrom, type IndexedObject } from './sceneOverrideApply';
 
-/** Delta d'un prim avant/après un drag du gizmo — matière de l'undo (46.N). */
+/** Delta of a prim before/after a gizmo drag — the material of undo (46.N). */
 export interface PrimTransformCommit {
   path: string;
   before: PrimTransform | null;
@@ -27,17 +27,17 @@ export interface PrimTransformCommit {
 }
 
 /**
- * Écriture des poses de prims et de clones (46.N, C1) : commit du gizmo de groupe, duplication,
- * suppression de clone. Tout passe par `editLocal` — un seul lot par geste, donc une seule
- * publication du delta. Extrait de `useUsdScene` (budget lignes).
+ * Writes prim and clone poses (46.N, C1): group gizmo commit, duplication, clone deletion. Everything
+ * goes through `editLocal` — one batch per gesture, hence a single publication of the delta.
+ * Extracted from `useUsdScene` (line budget).
  */
 export function usePrimTransforms(opts: {
   getSceneHandle: () => ViewerSceneHandle | null;
-  /** Objets du GLB **et** copies des clones — c'est là qu'on retrouve l'état d'origine. */
+  /** GLB objects **and** clone copies — that is where the original state is found. */
   allIndexed: IndexedObject<THREE.Object3D>[];
-  /** Override effectif (base + proposition + exploration locale). */
+  /** Effective override (base + proposal + local exploration). */
   override: SceneOverride;
-  /** Exploration locale seule — l'état « avant » d'un prim non cloné. */
+  /** Local exploration alone — the "before" state of a non-cloned prim. */
   local: SceneOverride;
   objectsOf: (path: string) => THREE.Object3D[];
   editLocal: (next: (o: SceneOverride) => SceneOverride) => void;
@@ -51,7 +51,7 @@ export function usePrimTransforms(opts: {
 } {
   const { getSceneHandle, allIndexed, override, local, objectsOf, editLocal, setSelected } = opts;
 
-  /** Écrit un delta sur un prim ou un clone (un seul chemin d'écriture pour l'undo du gizmo). */
+  /** Writes a delta on a prim or a clone (a single write path for the gizmo's undo). */
   const writeTransform = useCallback(
     (o: SceneOverride, path: string, transform: PrimTransform | null): SceneOverride => {
       const clone = parseClonePath(path);
@@ -67,10 +67,10 @@ export function usePrimTransforms(opts: {
   );
 
   /**
-   * Fin de drag du gizmo de groupe (46.N, généralisé B1) : la pose de chaque représentant,
-   * comparée à son état d'origine, devient le delta d'override de son prim — le tout en **un
-   * seul lot** (`editLocal` unique → une seule publication du delta), que `applyPlan`
-   * répercute ensuite sur tous les objets de chaque prim.
+   * End of a group-gizmo drag (46.N, generalized B1): the pose of each representative, compared with
+   * its original state, becomes the override delta of its prim — all in **one batch** (a single
+   * `editLocal` → a single publication of the delta), which `applyPlan` then propagates to all
+   * objects of each prim.
    */
   const commitPrimTransforms = useCallback(
     (objects: readonly THREE.Object3D[]) => {
@@ -91,18 +91,18 @@ export function usePrimTransforms(opts: {
     [allIndexed, override, local, editLocal, writeTransform],
   );
 
-  /** Duplique un prim (ou un clone) : nouveau clone décalé d'un dixième de son rayon, sélectionné. */
+  /** Duplicates a prim (or a clone): new clone offset by a tenth of its radius, selected. */
   const duplicatePrim = useCallback(
     (path: string): string | null => {
       const clone = parseClonePath(path);
       const srcPath = clone?.path ?? path;
       if (clonesOf(override, srcPath).length >= 50) return null;
-      // Delta de départ : celui de l'original (clone dupliqué → son delta ; prim → son override).
+      // Starting delta: that of the original (duplicated clone → its delta; prim → its override).
       const from = clone
         ? clonesOf(override, srcPath).find((c) => c.id === clone.id)?.transform
         : override.prims[srcPath]?.transform;
       const start = from ?? IDENTITY_TRANSFORM;
-      // Décalage visible d'emblée : un dixième de l'encombrement de la géométrie source.
+      // Visible offset right away: a tenth of the source geometry's footprint.
       const handle = getSceneHandle();
       let offset = 0.5;
       if (handle) {

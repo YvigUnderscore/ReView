@@ -13,32 +13,32 @@ import {
 const tex = (name: string, width: number, height: number) => ({ name, width, height });
 
 describe('perfStats.estimateTextureBytes', () => {
-  it('compte 4 octets par texel, mipmaps compris', () => {
-    // 1024×1024 RGBA = 4 Mio, ×4/3 avec les mipmaps.
+  it('counts 4 bytes per texel, mipmaps included', () => {
+    // 1024×1024 RGBA = 4 MiB, ×4/3 with mipmaps.
     expect(estimateTextureBytes([tex('albedo', 1024, 1024)])).toBe(Math.round(4 * 1024 * 1024 * (4 / 3)));
     expect(estimateTextureBytes([tex('albedo', 1024, 1024)], false)).toBe(4 * 1024 * 1024);
   });
 
-  it('ne compte qu’une fois une texture partagée entre canaux ou matériaux', () => {
+  it('counts a texture shared between channels or materials only once', () => {
     const one = estimateTextureBytes([tex('albedo', 512, 512)]);
     expect(estimateTextureBytes([tex('albedo', 512, 512), tex('albedo', 512, 512)])).toBe(one);
-    // Deux textures distinctes de même taille comptent bien double (à l'arrondi près).
+    // Two distinct textures of the same size do count double (up to rounding).
     expect(estimateTextureBytes([tex('albedo', 512, 512), tex('normal', 512, 512)])).toBeCloseTo(one * 2, -1);
   });
 
-  it('ignore les textures sans dimensions connues', () => {
-    expect(estimateTextureBytes([tex('vide', 0, 0), tex('nan', Number.NaN, 512)])).toBe(0);
+  it('ignores textures with unknown dimensions', () => {
+    expect(estimateTextureBytes([tex('empty', 0, 0), tex('nan', Number.NaN, 512)])).toBe(0);
   });
 });
 
-describe('perfStats — unités et budget', () => {
-  it('convertit en Mo et en millions de triangles au dixième', () => {
+describe('perfStats — units and budget', () => {
+  it('converts to MB and to millions of triangles to one decimal', () => {
     expect(megabytes(1024 * 1024)).toBe(1);
     expect(megabytes(1024 * 1024 * 1.55)).toBe(1.6);
     expect(megaTriangles(1_500_000)).toBe(1.5);
   });
 
-  it('n’avertit qu’au-delà du budget de triangles', () => {
+  it('only warns beyond the triangle budget', () => {
     expect(overTriangleBudget(TRIANGLE_BUDGET)).toBe(false);
     expect(overTriangleBudget(TRIANGLE_BUDGET + 1)).toBe(true);
     expect(overTriangleBudget(50_000, 10_000)).toBe(true);

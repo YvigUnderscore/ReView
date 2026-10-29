@@ -10,8 +10,8 @@ import { useT } from '../../../i18n';
 import type { Transform } from '../reviewTypes';
 
 /**
- * Écrit la transformation de la version puis relâche l'édition locale : extrait de
- * `useModel3DThree` qui dépassait son budget de lignes.
+ * Writes the version's transform, then releases the local edit: extracted from `useModel3DThree`,
+ * which had exceeded its line budget.
  */
 export function useSaveTransform(
   versionId: number | null | undefined,

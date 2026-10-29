@@ -12,13 +12,12 @@ import { useT } from '../../../i18n';
 type CameraState = ReturnType<typeof useModel3DCamera>;
 
 /**
- * Palette Ctrl+K (B3) du bloc modèle 3D : cadrer/reset, lecture caméra, pose de clé, preset
- * orbite, effacement de présentation, **taille réelle et mesure**. `cam`/`model3d` sont des
- * objets neufs à chaque rendu : les commandes les rappellent via des refs synchronisées en
- * effet, la liste reste stable.
+ * Ctrl+K palette (B3) of the 3D model block: frame/reset, camera readout, key pose, orbit preset,
+ * presentation clearing, **real size and measurement**. `cam`/`model3d` are new objects on every
+ * render: the commands recall them via refs synchronized in an effect, so the list stays stable.
  *
- * Règle « UI simple » : l'échelle réelle et la mesure entrent par la palette (et par le
- * panneau Infos où se lisent leurs résultats), pas par deux boutons de plus sur la scène.
+ * "Simple UI" rule: real scale and measurement enter through the palette (and through the Info
+ * panel where their results are read), not through two more buttons on the scene.
  */
 export function useModel3DCommands(
   cam: CameraState,

@@ -5,22 +5,22 @@ import type * as THREE from 'three';
 import { isDrawn } from './sceneOverrideApply';
 
 /**
- * Sélection d'un prim au clic dans le viewer 3D (Phase 46, 46.C).
+ * Prim selection on click in the 3D viewer (Phase 46, 46.C).
  *
- * Le clic gauche du viewer sert aussi à l'orbite : on ne sélectionne donc que si le pointeur
- * n'a **pas bougé** entre l'appui et le relâchement (au-delà de quelques pixels, c'est une
- * navigation). Sans ce garde-fou, toute rotation de caméra changerait la sélection.
+ * The viewer's left click also drives the orbit, so we only select if the pointer has **not moved**
+ * between press and release (beyond a few pixels, it is navigation). Without this guard, any
+ * camera rotation would change the selection.
  */
 
-/** Distance en pixels au-delà de laquelle le geste est une navigation, pas un clic. */
+/** Pixel distance beyond which the gesture is navigation, not a click. */
 export const CLICK_SLOP_PX = 4;
 
-/** Vrai si le déplacement du pointeur reste dans la tolérance d'un clic. */
+/** True if the pointer movement stays within the tolerance of a click. */
 export function isClickGesture(dx: number, dy: number, slop = CLICK_SLOP_PX): boolean {
   return Math.hypot(dx, dy) <= slop;
 }
 
-/** Coordonnées NDC (−1..1) d'un point écran dans un élément donné. */
+/** NDC coordinates (−1..1) of a screen point within a given element. */
 export function toNdc(
   clientX: number,
   clientY: number,
@@ -28,13 +28,13 @@ export function toNdc(
 ): { x: number; y: number } {
   const x = rect.width > 0 ? ((clientX - rect.left) / rect.width) * 2 - 1 : 0;
   const y = rect.height > 0 ? -(((clientY - rect.top) / rect.height) * 2 - 1) : 0;
-  // `|| 0` normalise le `-0` que produit l'inversion verticale au centre exact.
+  // `|| 0` normalizes the `-0` produced by the vertical flip at the exact center.
   return { x: x || 0, y: y || 0 };
 }
 
 /**
- * Remonte la hiérarchie jusqu'au premier objet portant un `usdPath` : un clic touche un mesh,
- * mais c'est le prim qui porte l'identité manipulable.
+ * Walks up the hierarchy to the first object carrying a `usdPath`: a click hits a mesh, but it is
+ * the prim that carries the manipulable identity.
  */
 export function primPathOf(object: THREE.Object3D | null): string | null {
   for (let node: THREE.Object3D | null = object; node; node = node.parent) {
@@ -45,10 +45,11 @@ export function primPathOf(object: THREE.Object3D | null): string | null {
 }
 
 /**
- * Prim touché par un rayon lancé depuis la caméra, ou `null`.
+ * Prim hit by a ray cast from the camera, or `null`.
  *
- * `resolve` traduit l'objet touché en prim ; le viewer y branche l'index de la scène, qui a déjà
- * apparié les chemins glTF à l'arbre USD. Le repli `primPathOf` sert hors de ce contexte.
+ * `resolve` translates the hit object into a prim; the viewer plugs in the scene index there, which
+ * has already matched glTF paths to the USD tree. The `primPathOf` fallback serves outside that
+ * context.
  */
 export function pickPrim(
   three: typeof import('three'),
@@ -59,10 +60,9 @@ export function pickPrim(
 ): string | null {
   const raycaster = new three.Raycaster();
   raycaster.setFromCamera(new three.Vector2(ndc.x, ndc.y), camera);
-  // Le raycaster de Three **ne filtre pas** les objets invisibles. Or les options d'une variante
-  // sont toutes cuites dans le même GLB, au même endroit : sans ce filtre, l'option masquée
-  // intercepte le clic à la place de celle qu'on voit, et la sélection tombe sur un prim que
-  // personne n'affiche.
+  // Three's raycaster does **not** filter invisible objects. Yet the options of a variant are all
+  // baked into the same GLB, in the same place: without this filter, the hidden option intercepts
+  // the click instead of the one we see, and the selection lands on a prim nobody displays.
   const hit = raycaster.intersectObject(root, true).find((h) => isDrawn(h.object));
   return hit ? resolve(hit.object) : null;
 }

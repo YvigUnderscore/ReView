@@ -9,40 +9,39 @@ import type { UsdSceneState } from './useUsdScene';
 import { useT } from '../../../i18n';
 
 /**
- * Réagencement de la scène USD au clavier (lot 13) : **Suppr** masque la sélection, et
- * **Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y** défont ce réagencement.
+ * Keyboard rearrangement of the USD scene (batch 13): **Delete** hides the selection, and
+ * **Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y** undo that rearrangement.
  *
- * Trois règles du dépôt commandent cette implémentation :
+ * Three repository rules drive this implementation:
  *
- *  1. **Masquer, pas supprimer.** Le fichier USD d'origine n'est jamais réécrit : `Suppr` pose
- *     `visible: false` dans l'override ReView, une couche non destructive rejouée au chargement
- *     (46.B). D'où le nom du cran d'historique — « Masquer », et non « Supprimer ».
- *  2. **Un seul historique par frappe.** L'écran 3D en compte déjà plusieurs (annotation en
- *     cours, animation caméra) : on s'inscrit au registre de préséance du lot 9
- *     (`lib/undoScope`) au rang de REPLI (`UNDO_PRIORITY.editor`), sur l'historique que le
- *     viewer tient déjà pour ses gizmos (`useModel3DChrome`). Pas de quatrième pile : un
- *     masquage et un déplacement de prim se défont dans l'ordre où ils ont été faits.
- *  3. **Aucune promotion à l'écriture.** Le clic dans le viewer désigne le `component`
- *     englobant (lot 6), l'arbre et Alt+clic désignent la feuille : `Suppr` masque
- *     exactement les chemins que la sélection porte, sans les remonter ni les descendre. Ce
- *     qui est surligné est ce qui disparaît, et c'est ce chemin-là que l'override enregistre.
+ *  1. **Hide, don't delete.** The original USD file is never rewritten: `Delete` sets
+ *     `visible: false` in the ReView override, a non-destructive layer replayed at load time
+ *     (46.B). Hence the name of the history step — "Hide", not "Delete".
+ *  2. **One history per keystroke.** The 3D screen already has several (annotation in progress,
+ *     camera animation): we register in the batch 9 precedence registry (`lib/undoScope`) at the
+ *     FALLBACK rank (`UNDO_PRIORITY.editor`), on the history the viewer already keeps for its gizmos
+ *     (`useModel3DChrome`). No fourth stack: a hide and a prim move are undone in the order they
+ *     were made.
+ *  3. **No promotion on write.** A click in the viewer designates the enclosing `component`
+ *     (batch 6), the tree and Alt+click designate the leaf: `Delete` hides exactly the paths the
+ *     selection carries, without climbing or descending. What is highlighted is what disappears,
+ *     and that is the path the override records.
  */
 
-/** Ce que `Suppr` va écrire : un prim à masquer, et la valeur à rendre en cas d'annulation. */
+/** What `Delete` is going to write: a prim to hide, and the value to restore on undo. */
 export interface HideStep {
   path: string;
-  /** `visible` que l'exploration locale portait avant — `undefined` = aucune consigne. */
+  /** `visible` the local exploration held before — `undefined` = no instruction. */
   before: boolean | undefined;
 }
 
 /**
- * Prims que `Suppr` doit masquer, pris dans la sélection telle quelle. Fonction pure.
+ * Prims that `Delete` must hide, taken from the selection as is. Pure function.
  *
- * Deux exclusions. Un prim **déjà invisible** (à titre propre ou par un ancêtre masqué) ne
- * donne pas de cran : le masquer une seconde fois ne changerait rien à l'écran tout en
- * salissant le delta. Un **clone de mise en scène** (`/prim#id`) n'est pas masquable — c'est
- * une copie d'override, qui se retire par son menu contextuel ; le confondre avec son prim
- * source ferait disparaître l'original.
+ * Two exclusions. A prim **already invisible** (on its own or by a hidden ancestor) gives no step:
+ * hiding it a second time would change nothing on screen while dirtying the delta. A **staging
+ * clone** (`/prim#id`) cannot be hidden — it is an override copy, removed through its context menu;
+ * confusing it with its source prim would make the original disappear.
  */
 export function planHide(
   selected: readonly string[],
@@ -57,7 +56,7 @@ export function planHide(
   return steps;
 }
 
-/** L'historique du viewer, vu d'ici : on y pousse un cran, et on le rejoue. */
+/** The viewer's history, seen from here: we push a step onto it, and replay it. */
 interface SceneHistory {
   push: (op: { label: string; undo: () => void; redo: () => void }) => void;
   undo: () => void;
@@ -67,23 +66,23 @@ interface SceneHistory {
 }
 
 export function useSceneEditShortcuts(opts: {
-  /** Scène USD du média — absente quand le modèle n'en est pas une. */
+  /** USD scene of the media — absent when the model is not one. */
   scene?: UsdSceneState;
-  /** Historique du viewer 3D : gizmos (46.N) et, désormais, masquages de prims. */
+  /** 3D viewer history: gizmos (46.N) and, now, prim hides. */
   history: SceneHistory;
   /**
-   * `Suppr` nous appartient. Faux quand l'éditeur de courbes est ouvert : il supprime les clés
-   * sélectionnées avec la même touche, et c'est lui qu'on a sous les yeux.
+   * `Delete` is ours. False when the curve editor is open: it deletes the selected keys with the
+   * same key, and that is the one the user is looking at.
    */
   deleteEnabled: boolean;
-  /** Vol en cours (clic droit maintenu) : les touches pilotent la caméra, pas la scène. */
+  /** Ongoing flight (right button held): the keys drive the camera, not the scene. */
   isFlying: () => boolean;
 }): void {
   const { scene, history, deleteEnabled, isFlying } = opts;
   const t = useT();
 
-  // L'historique du viewer prend la frappe au rang de repli : l'atelier caméra (phase de
-  // capture) et le composer d'annotation passent devant, exactement comme sur un splat.
+  // The viewer's history takes the keystroke at fallback rank: the camera workshop (capture
+  // phase) and the annotation composer go first, exactly as on a splat.
   useUndoScope({
     enabled: true,
     priority: UNDO_PRIORITY.editor,
@@ -93,8 +92,8 @@ export function useSceneEditShortcuts(opts: {
     redo: history.redo,
   });
 
-  // Miroir relu dans le gestionnaire clavier : la sélection et l'override changent à chaque
-  // rendu, le gestionnaire ne doit pas être réinscrit pour autant.
+  // Read-back mirror in the keyboard handler: selection and override change on every render;
+  // the handler must not be re-registered because of it.
   const ref = useRef({ scene, history, t });
   useEffect(() => {
     ref.current = { scene, history, t };

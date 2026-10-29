@@ -7,20 +7,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { useHlsPlayer } from './useHlsPlayer';
 
 /**
- * Deux propriétés sont vérifiées ici, et la première est une **grandeur** : le nombre de
- * fois où le module `hls.js` est évalué. Avec l'import statique d'avant, il valait 1 dès
- * l'import du hook — donc pour une review d'image, de 3D ou de splat. Il doit valoir 0
- * tant qu'aucune playlist n'est jouée, puis 1 quelle que soit la suite.
+ * Two properties are checked here, and the first is a **count**: the number of times the `hls.js`
+ * module is evaluated. With the former static import, it was 1 as soon as the hook was imported —
+ * hence for an image, 3D or splat review. It must be 0 as long as no playlist is played, then 1
+ * whatever follows.
  *
- * La seconde est le contrat d'écran : `active` (donc « l'élément vidéo reçoit-il `src` ? »)
- * doit être connu **dès le premier rendu**, sans attendre le téléchargement — sinon le
- * lecteur afficherait un MP4 le temps d'un aller-retour avant de basculer.
+ * The second is the screen contract: `active` (hence "does the video element receive `src`?") must be
+ * known **from the first render**, without waiting for the download — otherwise the player would show
+ * an MP4 for a round trip before switching.
  */
 
 const lib = vi.hoisted(() => ({
-  /** Nombre d'évaluations du module `hls.js` = nombre de téléchargements du lecteur. */
+  /** Number of evaluations of the `hls.js` module = number of player downloads. */
   loads: 0,
-  /** Nombre de lecteurs instanciés. */
+  /** Number of player instances created. */
   created: 0,
   last: null as FakePlayer | null,
 }));
@@ -76,7 +76,7 @@ vi.mock('hls.js', () => {
   return { default: FakeHls };
 });
 
-// MSE présent : sans ce bouchon, happy-dom ferait retomber tout le monde sur le repli MP4.
+// MSE present: without this stub, happy-dom would make everyone fall back to the MP4 path.
 (globalThis as Record<string, unknown>).MediaSource = { isTypeSupported: () => true };
 
 const MASTER = '/api/media/7/hls/master.m3u8';
@@ -87,12 +87,12 @@ function mountPlayer(url: string | null) {
   return { ref, ...renderHook(() => useHlsPlayer(ref, url)) };
 }
 
-describe('useHlsPlayer — le lecteur adaptatif ne se télécharge que pour une vidéo', () => {
-  it('une review sans playlist n’évalue jamais hls.js', async () => {
+describe('useHlsPlayer — the adaptive player is only downloaded for a video', () => {
+  it('a review without a playlist never evaluates hls.js', async () => {
     expect(lib.loads).toBe(0);
     const image = mountPlayer(null);
     expect(image.result.current.active).toBe(false);
-    // Une source MP4 (média transcodé avant l’échelle adaptative, ou trim gravé) non plus.
+    // Nor does an MP4 source (media transcoded before the adaptive scale, or a burned-in trim).
     const mp4 = mountPlayer('/api/media/7/proxy.mp4');
     expect(mp4.result.current.active).toBe(false);
     await act(async () => {
@@ -102,29 +102,29 @@ describe('useHlsPlayer — le lecteur adaptatif ne se télécharge que pour une 
     expect(lib.created).toBe(0);
   });
 
-  it('une playlist le charge — une seule fois pour deux lecteurs (comparaison A/B)', async () => {
+  it('a playlist loads it — only once for two players (A/B comparison)', async () => {
     const a = mountPlayer(MASTER);
-    // Aucun aller-retour n’est attendu pour savoir quoi afficher : l’élément vidéo sait
-    // dès ce rendu-ci qu’il ne doit pas poser `src`.
+    // No round trip is needed to know what to display: the video element knows from this very render
+    // that it must not set `src`.
     expect(a.result.current.active).toBe(true);
     mountPlayer(MASTER);
     await waitFor(() => expect(lib.created).toBe(2));
     expect(lib.loads).toBe(1);
   });
 
-  it('joue toujours : manifeste attaché, meilleure rendition verrouillée', async () => {
+  it('still plays: manifest attached, best rendition locked', async () => {
     const { ref, result } = mountPlayer(MASTER);
     await waitFor(() => expect(lib.last?.src).toBe(MASTER));
     const player = lib.last!;
     expect(player.media).toBe(ref.current);
     act(() => player.emit('manifestParsed'));
-    // 1080 est la plus haute des trois renditions — c’est elle qui doit être verrouillée.
+    // 1080 is the highest of the three renditions — it is the one that must be locked.
     expect(player.currentLevel).toBe(1);
     expect(result.current.level).toBe(1);
     expect(result.current.levels.map((l) => l.height)).toEqual([540, 1080, 720]);
   });
 
-  it('un démontage pendant le téléchargement n’attache aucun lecteur au DOM retiré', async () => {
+  it('an unmount during the download attaches no player to the removed DOM', async () => {
     const before = lib.created;
     const { unmount } = mountPlayer(MASTER);
     unmount();
@@ -135,7 +135,7 @@ describe('useHlsPlayer — le lecteur adaptatif ne se télécharge que pour une 
     expect(lib.created).toBe(before);
   });
 
-  it('détruit le lecteur au démontage (aucune instance laissée derrière)', async () => {
+  it('destroys the player on unmount (no instance left behind)', async () => {
     const { unmount } = mountPlayer(MASTER);
     await waitFor(() => expect(lib.created).toBeGreaterThan(0));
     const player = lib.last!;

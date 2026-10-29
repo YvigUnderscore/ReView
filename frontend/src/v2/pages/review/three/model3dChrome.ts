@@ -6,59 +6,55 @@ import { DEFAULT_TOOL, toolsFor, type ReviewTool } from '../chrome/tools';
 import type { MessageKey } from '../../../i18n';
 
 /**
- * Bascule de mode et rail du viewer **modèle 3D** — les seuls écarts au chrome spatial commun,
- * rassemblés ici plutôt que dispersés dans `modes.ts`, qui sert aussi au splat.
+ * Mode switcher and rail of the **3D model** viewer: the only deviations from the common spatial
+ * chrome, gathered here rather than scattered in `modes.ts`, which the splat also uses.
  *
- * Deux décisions de Phase 50, lot 6, prises sur ce que l'écran offrait réellement :
+ * Two decisions of Phase 50, batch 6, taken from what the screen actually offered:
  *
- *  1. **« Mise en scène » n'est plus un segment.** Le mode n'existait que pour allumer le
- *     layout (vue PiP + caméra-objet + outils caméra + bouton « Publier »), et le panneau
- *     Caméra portait déjà l'interrupteur qui fait la même chose. Deux commandes pour un seul
- *     état, qui se contredisaient dès qu'on changeait de mode. Le mode reste **valide** —
- *     c'est l'interrupteur du panneau Caméra qui l'arme, exactement comme « Annoter » s'arme
- *     depuis l'espace commentaire sans figurer dans la bascule. Rien n'est supprimé.
+ *  1. **"Staging" is no longer a segment.** The mode only existed to turn on the layout (PiP view +
+ *     object camera + camera tools + "Publish" button), and the Camera panel already carried the
+ *     toggle doing the same thing. Two controls for one state, which contradicted each other as soon
+ *     as the mode changed. The mode stays **valid**: the Camera panel toggle arms it, exactly as
+ *     "Annotate" is armed from the comment space without appearing in the switcher. Nothing is removed.
  *
- *  2. **« Nettoyer » ne s'affiche que s'il sert.** Sur un modèle 3D, ses seuls outils sont les
- *     gizmos TRS — les outils de sélection de nuage sont propres au splat. Ces gizmos écrivent
- *     dans l'un ou l'autre de DEUX endroits, et il suffit que l'un des deux soit atteignable :
+ *  2. **"Clean" only shows when it is useful.** On a 3D model, its only tools are the TRS gizmos —
+ *     the point-cloud selection tools are specific to the splat. These gizmos write to one of TWO
+ *     places, and it is enough for one of the two to be reachable:
  *
- *       - sans sélection, la **transformation de la version** : elle exige
- *         `permissions.editTransform` (auteur de la version ou gestionnaire, avant publication),
- *         calculé par le serveur. Sans ce droit, le mode ne proposait qu'un « Enregistrer »
- *         refusé en 403 ;
- *       - avec des prims sélectionnés dans une scène USD, l'**override de scène** (46.N) : un
- *         delta rejoué pour tous quand un gestionnaire l'enregistre, et joignable à un
- *         commentaire par n'importe quel relecteur. Il ne passe pas par la transformation de
- *         version et n'a donc pas ses droits.
+ *       - without a selection, the **version transform**: it requires
+ *         `permissions.editTransform` (version author or manager, before publication), computed by
+ *         the server. Without this right, the mode only offered a "Save" refused with a 403;
+ *       - with prims selected in a USD scene, the **scene override** (46.N): a delta replayed for
+ *         everyone when a manager saves it, and reachable by a comment from any reviewer. It does not
+ *         go through the version transform and therefore does not have its rights.
  *
- *     La condition est donc « l'un OU l'autre ». La juger sur le seul droit d'écrire la
- *     transformation aurait retiré le gizmo par prim à tous les non-auteurs — supprimer une
- *     fonctionnalité en supprimant son onglet, exactement ce qu'on cherche à éviter.
+ *     The condition is thus "one OR the other". Judging it on the right to write the version
+ *     transform alone would have removed the per-prim gizmo for all non-authors — removing a feature
+ *     by removing its tab, exactly what we are trying to avoid.
  */
 
-/** Ce qui rend le mode « Nettoyer » atteignable sur un modèle 3D. */
+/** What makes the "Clean" mode reachable on a 3D model. */
 export interface Model3DCleanReach {
-  /** `permissions.editTransform` du détail média : la transformation de la version. */
+  /** `permissions.editTransform` of the media detail: the version transform. */
   canEditTransform: boolean;
-  /** La scène USD a un scenegraph : les gizmos peuvent viser un prim (override de scène). */
+  /** The USD scene has a scenegraph: the gizmos can target a prim (scene override). */
   hasScenegraph: boolean;
 }
 
 /**
- * Ce que « Nettoyer » fait vraiment sur un modèle : transformer. Clé existante, même message —
- * c'est le libellé que l'historique d'édition donne déjà à ce geste.
+ * What "Clean" really does on a model: transform. Existing key, same message —
+ * it is the label the edit history already gives this gesture.
  */
 const CLEAN_HINT: MessageKey = 'model3d.transformModel';
 
-/** Outils du mode « Nettoyer » qui font réellement quelque chose (hors état de repos). */
+/** Tools of the "Clean" mode that really do something (excluding the idle state). */
 export function model3dCleanTools(): ReviewTool[] {
   return toolsFor('clean', 'MODEL_3D').filter((tool) => tool.id !== DEFAULT_TOOL);
 }
 
 /**
- * Le mode « Nettoyer » est-il utilisable ? Il faut les deux : au moins un outil au rail, **et**
- * un endroit où garder ce qu'il produit. Un seul des deux donne une impasse — un rail vide, ou
- * un travail qu'on ne peut pas garder.
+ * Is the "Clean" mode usable? Both are needed: at least one tool on the rail, **and** a place to
+ * keep what it produces. Either one alone is a dead end — an empty rail, or work that cannot be kept.
  */
 export function canCleanModel3d({ canEditTransform, hasScenegraph }: Model3DCleanReach): boolean {
   const somewhereToSave = canEditTransform || hasScenegraph;
@@ -66,12 +62,12 @@ export function canCleanModel3d({ canEditTransform, hasScenegraph }: Model3DClea
 }
 
 /**
- * Segments de la bascule pour un modèle 3D, dans l'ordre d'affichage (et des touches 1, 2…).
+ * Switcher segments for a 3D model, in display order (and keys 1, 2…).
  *
- * L'infobulle de « Nettoyer » est réécrite au passage : celle du chrome spatial promet
- * « sélection, suppression, volumes de coupe, transformation », quatre gestes dont un seul
- * existe sur un modèle — les trois autres sont les outils de nuage, propres au splat. Un
- * modèle n'y trouve que les gizmos, et c'est ce que l'infobulle dit maintenant.
+ * The "Clean" tooltip is rewritten along the way: the spatial chrome one promises
+ * "selection, deletion, cut volumes, transform", four gestures of which only one exists on a model —
+ * the other three are point-cloud tools, specific to the splat. A model only has the gizmos, and
+ * the tooltip now says so.
  */
 export function model3dSwitcherModes(canClean: boolean): ReviewMode[] {
   return switcherModesFor('MODEL_3D')
@@ -80,9 +76,9 @@ export function model3dSwitcherModes(canClean: boolean): ReviewMode[] {
 }
 
 /**
- * Outils réellement au rail pour un mode donné. « Nettoyer » indisponible rend une liste vide :
- * sans cela, `T`/`R`/`S` continueraient d'y basculer au clavier — le bouton mort reviendrait
- * par la porte de service, le rail en moins.
+ * Tools actually on the rail for a given mode. An unavailable "Clean" yields an empty list:
+ * otherwise `T`/`R`/`S` would keep switching to it from the keyboard — the dead button would come
+ * back through the service door, rail or not.
  */
 export function model3dToolsFor(mode: ModeId, canClean: boolean): ReviewTool[] {
   if (mode === 'clean' && !canClean) return [];

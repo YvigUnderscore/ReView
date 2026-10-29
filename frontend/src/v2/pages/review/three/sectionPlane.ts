@@ -5,18 +5,18 @@ import type * as THREE from 'three';
 
 export type SectionAxis = 'x' | 'y' | 'z';
 
-/** Vecteur d'axe monde unitaire. */
+/** Unit world-axis vector. */
 function axisVector(three: typeof import('three'), axis: SectionAxis): THREE.Vector3 {
   return new three.Vector3(axis === 'x' ? 1 : 0, axis === 'y' ? 1 : 0, axis === 'z' ? 1 : 0);
 }
 
 /**
- * Construit le plan de coupe (39.D) d'un axe/position donnés. `renderer.clippingPlanes` retire les
- * fragments de distance signée négative ; on garde donc, par défaut, la moitié « avant » la position
- * le long de l'axe (`flip` inverse le côté conservé). Pur/testable.
+ * Builds the section plane (39.D) for a given axis/position. `renderer.clippingPlanes` removes the
+ * fragments with a negative signed distance; by default we therefore keep the half "before" the
+ * position along the axis (`flip` reverses the kept side). Pure, testable.
  *
- * - non flip : normale = -axe, constante = position  → conserve `coord ≤ position`
- * - flip     : normale = +axe, constante = -position → conserve `coord ≥ position`
+ * - no flip: normal = -axis, constant = position  → keeps `coord ≤ position`
+ * - flip:    normal = +axis, constant = -position → keeps `coord ≥ position`
  */
 export function makeClipPlane(
   three: typeof import('three'),

@@ -9,19 +9,18 @@ import { downloadImage } from './mediaCapture';
 import type { MediaResp } from './reviewTypes';
 
 /**
- * Exports du panneau « Export » du dock.
+ * Exports of the dock's "Export" panel.
  *
- * Le panneau savait déjà dessiner les deux boutons — « frame courante en PNG » et « planche
- * contact » — mais sous condition de recevoir les fonctions qui les exécutent, et personne
- * ne les lui passait : deux branches mortes, et un panneau qui répondait invariablement
- * « seulement l'original ». La capture et la composition existaient pourtant, écrites pour
- * le menu clic droit. C'est le câblage qui manquait.
+ * The panel already knew how to draw the two buttons — "current frame as PNG" and "contact sheet" — but
+ * only on condition of receiving the functions that run them, and nobody passed them: two dead
+ * branches, and a panel that invariably answered "original only". The capture and the composition did
+ * exist, however, written for the right-click menu. It was the wiring that was missing.
  */
 
 /**
- * Frame courante en PNG. Le clic droit propose du JPEG — bon pour le presse-papiers et les
- * miniatures ; un export destiné à repartir dans une compo ou une planche mérite un format
- * sans perte, c'est d'ailleurs ce que le libellé du bouton annonce.
+ * Current frame as PNG. The right click offers JPEG — good for the clipboard and thumbnails; an export
+ * meant to go back into a composition or a sheet deserves a lossless format, which is also what the
+ * button's label promises.
  */
 export function captureVideoFramePng(video: HTMLVideoElement): string {
   const canvas = document.createElement('canvas');
@@ -32,20 +31,20 @@ export function captureVideoFramePng(video: HTMLVideoElement): string {
   try {
     return canvas.toDataURL('image/png');
   } catch {
-    // Canvas « tainted » : le média a été servi sans en-tête CORS exploitable.
+    // "Tainted" canvas: the media was served without a usable CORS header.
     throw new Error(t('capture.failed'));
   }
 }
 
-/** Nom de fichier d'un export, dérivé du nom d'origine du média. */
+/** File name of an export, derived from the media's original name. */
 export function exportFileName(originalName: string, suffix: string, extension: string): string {
   return `${originalName.replace(/\.[^.]+$/, '')}-${suffix}.${extension}`;
 }
 
 /**
- * Actions d'export d'un média vidéo. Chaque entrée vaut `undefined` quand l'export n'a rien
- * à produire — le panneau n'affiche alors pas le bouton correspondant plutôt que d'offrir un
- * geste qui échouerait.
+ * Export actions of a video media. Each entry is `undefined` when the export has nothing to produce —
+ * the panel then does not display the corresponding button rather than offering a gesture that would
+ * fail.
  */
 export function useMediaExport(
   data: MediaResp | null,
@@ -87,7 +86,7 @@ export function useMediaExport(
 
   return {
     onExportFrame: isVideo ? onExportFrame : undefined,
-    // La planche se compose à partir du sprite de timeline : sans lui, il n'y a pas de grille.
+    // The sheet is composed from the timeline sprite: without it, there is no grid.
     onContactSheet: isVideo && spriteUrl && sprite ? onContactSheet : undefined,
   };
 }

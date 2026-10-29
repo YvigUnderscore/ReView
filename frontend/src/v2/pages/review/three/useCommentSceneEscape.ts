@@ -4,12 +4,12 @@
 import { useEffect } from 'react';
 
 /**
- * La scène proposée par un commentaire reste appliquée après un mouvement de vue (46.T) : on
- * peut naviguer dans la scène modifiée, et Échap la relâche — même touche que le retour à
- * l'outil de repos, même sémantique de « repos ».
+ * The scene proposed by a comment stays applied after a view movement (46.T): one can navigate the
+ * modified scene, and Escape releases it — same key as returning to the idle tool, same "idle"
+ * semantics.
  *
- * La frappe est ignorée pendant une saisie de texte : Échap y annule le champ, pas la scène.
- * Extrait de `Model3DReview` (budget de lignes).
+ * The keystroke is ignored during text entry: there Escape cancels the field, not the scene.
+ * Extracted from `Model3DReview` (line budget).
  */
 export function useCommentSceneEscape(active: boolean, release: () => void): void {
   useEffect(() => {

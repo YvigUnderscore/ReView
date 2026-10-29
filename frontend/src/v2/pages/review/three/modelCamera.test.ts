@@ -6,8 +6,8 @@ import * as THREE from 'three';
 import { captureModelCamera, orbitToPosition, restoreModelCamera } from './modelCamera';
 
 describe('modelCamera — capture/restauration de vue (V5)', () => {
-  it('orbitToPosition : orbite model-viewer → cartésien autour de la cible', () => {
-    // phi=90° (équateur), theta=0 → +Z ; rayon 5, cible origine.
+  it('orbitToPosition: model-viewer orbit → Cartesian around the target', () => {
+    // phi=90° (equator), theta=0 → +Z; radius 5, target at origin.
     const p = orbitToPosition(THREE, { theta: 0, phi: Math.PI / 2, radius: 5 }, { x: 0, y: 0, z: 0 });
     expect(p.z).toBeCloseTo(5);
     expect(p.x).toBeCloseTo(0);
@@ -21,7 +21,7 @@ describe('modelCamera — capture/restauration de vue (V5)', () => {
     expect(q.x).toBeCloseTo(5);
   });
 
-  it('capture position + cible + fov (caméra orientée vers la cible, comme OrbitControls)', () => {
+  it('captures position + target + fov (camera oriented toward the target, like OrbitControls)', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     camera.position.set(1, 2, 3);
     const target = new THREE.Vector3(4, 5, 6);
@@ -35,17 +35,17 @@ describe('modelCamera — capture/restauration de vue (V5)', () => {
     expect(s.fov).toBe(50);
   });
 
-  it('vol (controls gelés) : la capture suit la rotation réelle de la caméra (live, retours 33)', () => {
+  it('flight (controls frozen): the capture follows the real camera rotation (live, feedback 33)', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     camera.position.set(0, 0, 5);
     const controls = { target: new THREE.Vector3(0, 0, 0) } as never;
     camera.quaternion.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0, 'YXZ'));
     const s = captureModelCamera(THREE, camera, controls);
-    expect(s.target.x).toBeCloseTo(-5); // reprojetée devant la caméra (distance d'orbite 5)
+    expect(s.target.x).toBeCloseTo(-5); // reprojected in front of the camera (orbit distance 5)
     expect(s.target.z).toBeCloseTo(5);
   });
 
-  it('restaure un état position (nouveau format)', () => {
+  it('restores a position state (new format)', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const update = vi.fn();
     const controls = { target: new THREE.Vector3(), update } as never;
@@ -59,7 +59,7 @@ describe('modelCamera — capture/restauration de vue (V5)', () => {
     expect(update).toHaveBeenCalled();
   });
 
-  it('restaure un état orbite hérité (model-viewer)', () => {
+  it('restores a legacy orbit state (model-viewer)', () => {
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     const controls = { target: new THREE.Vector3(), update: vi.fn() } as never;
     restoreModelCamera(THREE, camera, controls, {
@@ -69,7 +69,7 @@ describe('modelCamera — capture/restauration de vue (V5)', () => {
     expect(camera.position.z).toBeCloseTo(4);
   });
 
-  it('état inexploitable : no-op', () => {
+  it('unusable state: no-op', () => {
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(1, 1, 1);
     const controls = { target: new THREE.Vector3(), update: vi.fn() } as never;

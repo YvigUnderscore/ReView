@@ -5,11 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { createObjectMarker, raycastModelPoint, toMarkerPoint } from './objectHotspot';
 
-/** Rayon au centre de l'image : le repli « poser au centre » a disparu, le NDC (0,0) reste. */
+/** Radius at the center of the image: the "place at center" fallback is gone, NDC (0,0) remains. */
 const atCenter = (camera: THREE.PerspectiveCamera, root: THREE.Object3D) =>
   raycastModelPoint(THREE, camera, root, { x: 0, y: 0 });
 
-/** Caméra en (0,0,5) regardant l'origine — un plan unitaire y remplit le centre de l'image. */
+/** Camera at (0,0,5) looking at the origin — a unit plane fills the center of the image. */
 function scene() {
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
   camera.position.set(0, 0, 5);
@@ -23,52 +23,52 @@ function scene() {
 }
 
 describe('objectHotspot.raycastModelPoint', () => {
-  it('pose le point là où l’on clique, pas au centre de l’écran', () => {
+  it('places the point where one clicks, not at the center of the screen', () => {
     const { camera, root } = scene();
     const center = atCenter(camera, root);
     const offset = raycastModelPoint(THREE, camera, root, { x: 0.5, y: 0 });
     expect(center?.position.split(' ').map(Number)[0]).toBeCloseTo(0);
-    // Un clic à droite du centre touche la surface plus à droite : les deux hotspots diffèrent.
+    // A click right of center hits the surface further right: the two hotspots differ.
     expect(offset).not.toBeNull();
     expect(Number(offset!.position.split(' ')[0])).toBeGreaterThan(0.5);
     expect(offset!.space).toBe('object');
   });
 
-  it('renvoie null quand le rayon ne touche rien', () => {
+  it('returns null when the ray hits nothing', () => {
     const { camera, root } = scene();
     expect(raycastModelPoint(THREE, camera, root, { x: 0.99, y: 0.99 })).toBeNull();
   });
 
-  it('ignore la géométrie masquée (option de variante cuite au même endroit)', () => {
+  it('ignores hidden geometry (variant option baked in the same place)', () => {
     const { camera, root, mesh } = scene();
     mesh.visible = false;
     expect(atCenter(camera, root)).toBeNull();
   });
 
-  it('exprime le point dans l’espace objet, donc il suit la transformation', () => {
+  it('expresses the point in object space, so it follows the transform', () => {
     const { camera, root } = scene();
     root.position.set(1, 0, 0);
     root.updateMatrixWorld(true);
     const hs = atCenter(camera, root);
-    // Le rayon touche le monde en x = 0 ; l'objet étant décalé de +1, le local vaut −1.
+    // The ray hits the world at x = 0; the object being offset by +1, the local value is −1.
     expect(Number(hs!.position.split(' ')[0])).toBeCloseTo(-1);
   });
 });
 
 describe('objectHotspot.toMarkerPoint', () => {
-  it('relit un point sérialisé et son espace', () => {
+  it('reads back a serialized point and its space', () => {
     const p = toMarkerPoint(THREE, { position: '1 2 3', normal: '0 0 1', space: 'object' });
     expect(p?.point.toArray()).toEqual([1, 2, 3]);
     expect(p?.objectSpace).toBe(true);
   });
 
-  it('rejette une position inexploitable', () => {
+  it('rejects an unusable position', () => {
     expect(toMarkerPoint(THREE, { position: 'x y z', normal: '0 0 1' })).toBeNull();
   });
 });
 
 describe('objectHotspot.createObjectMarker', () => {
-  it('numérote une pastille par point et masque celles qui ne servent plus', () => {
+  it('numbers one marker per point and hides those no longer used', () => {
     const { camera, root } = scene();
     const container = document.createElement('div');
     const marker = createObjectMarker(THREE, container);
@@ -79,7 +79,7 @@ describe('objectHotspot.createObjectMarker', () => {
     expect(dots.map((d) => d.textContent)).toEqual(['1', '2', '3']);
     expect(dots.every((d) => d.style.display === 'flex')).toBe(true);
 
-    // Un seul point : les pastilles surnuméraires disparaissent sans être détruites.
+    // A single point: the surplus markers disappear without being destroyed.
     marker.update([at(0)], camera, root, 800, 600);
     expect(dots.map((d) => d.style.display)).toEqual(['flex', 'none', 'none']);
 
@@ -89,7 +89,7 @@ describe('objectHotspot.createObjectMarker', () => {
     expect(container.children).toHaveLength(0);
   });
 
-  it('masque un point situé derrière la caméra', () => {
+  it('hides a point behind the camera', () => {
     const { camera, root } = scene();
     const container = document.createElement('div');
     const marker = createObjectMarker(THREE, container);
@@ -98,8 +98,8 @@ describe('objectHotspot.createObjectMarker', () => {
   });
 });
 
-describe('objectHotspot.createObjectMarker — pastilles manipulables pendant la rédaction', () => {
-  /** Pastille de rang 0, projetée à l'écran (elle n'existe dans le DOM qu'une fois rendue). */
+describe('objectHotspot.createObjectMarker — markers manipulable while drafting', () => {
+  /** Rank-0 marker, projected on screen (it only exists in the DOM once rendered). */
   function dot() {
     const { camera, root } = scene();
     const container = document.createElement('div');
@@ -108,13 +108,13 @@ describe('objectHotspot.createObjectMarker — pastilles manipulables pendant la
     return { marker, el: container.children[0] as HTMLElement };
   }
 
-  it('reste inerte tant qu’aucun gestionnaire n’est posé (relecture)', () => {
+  it('stays inert as long as no manager is set (read-back)', () => {
     const { el } = dot();
     expect(el.className).toContain('pointer-events-none');
     expect(el.getAttribute('role')).toBeNull();
   });
 
-  it('tirée, la pastille repose son point ; cliquée, elle le désigne', () => {
+  it('when dragged, the marker resets its point; when clicked, it designates it', () => {
     const { marker, el } = dot();
     const onMove = vi.fn();
     const onSelect = vi.fn();
@@ -132,7 +132,7 @@ describe('objectHotspot.createObjectMarker — pastilles manipulables pendant la
     expect(onMove).toHaveBeenCalledWith(0, 90, 70);
   });
 
-  it('le geste sur une pastille n’atteint pas le canvas (ni orbite, ni point de plus)', () => {
+  it('a gesture on a marker does not reach the canvas (no orbit, no extra point)', () => {
     const { marker, el } = dot();
     marker.setInteractive({ onMove: vi.fn(), onSelect: vi.fn(), label: () => 'Point 1' });
     const seen = vi.fn();
@@ -141,7 +141,7 @@ describe('objectHotspot.createObjectMarker — pastilles manipulables pendant la
     expect(seen).not.toHaveBeenCalled();
   });
 
-  it('le rang mis en avant change de peau, et le désarmement rend l’inertie', () => {
+  it('the highlighted rank changes skin, and disarming restores inertness', () => {
     const { marker, el } = dot();
     marker.setInteractive({ onMove: vi.fn(), onSelect: vi.fn(), label: () => 'Point 1' });
     marker.setActive(0);

@@ -13,47 +13,47 @@ import { canSwitchMode, switcherModesFor } from '../chrome/modes';
 import { chromeCommandFor } from '../chrome/shortcuts';
 
 /**
- * Bascule du viewer modèle 3D après le lot 6 : « Mise en scène » a quitté les segments (son
- * interrupteur vit dans le panneau Caméra) et « Nettoyer » ne s'affiche que s'il sert.
+ * Switcher of the 3D model viewer after batch 6: "Staging" left the segments (its toggle now lives
+ * in the Camera panel) and "Clean" only shows when it is useful.
  *
- * Ce fichier vérifie aussi les deux façons de faire revenir un bouton mort par la porte de
- * service : la touche d'outil qui arme un mode absent de la bascule, et le splat, dont la
- * bascule partage le même `modes.ts` et ne doit pas bouger d'un segment.
+ * This file also checks the two ways a dead button can sneak back in through the service door:
+ * the tool key that arms a mode missing from the switcher, and the splat, whose switcher shares
+ * the same `modes.ts` and must not move by a single segment.
  */
 
 const values = (reach: Model3DCleanReach) => model3dSwitcherModes(canCleanModel3d(reach)).map((m) => m.value);
 
-/** Le cas nu : un GLB sans scène USD, dont la seule écriture est la transformation. */
+/** The bare case: a GLB without a USD scene, whose only write is the transform. */
 const plainGlb = (canEditTransform: boolean): Model3DCleanReach => ({
   canEditTransform,
   hasScenegraph: false,
 });
 
 describe('model3dSwitcherModes', () => {
-  it('ne propose plus « Mise en scène » comme segment', () => {
+  it('no longer offers "Staging" as a segment', () => {
     for (const can of [true, false]) expect(values(plainGlb(can))).not.toContain('stage');
   });
 
-  it('ne propose « Nettoyer » que lorsqu’il est utilisable', () => {
+  it('only offers "Clean" when it is usable', () => {
     expect(values(plainGlb(true))).toEqual(['explore', 'clean']);
     expect(values(plainGlb(false))).toEqual(['explore']);
   });
 
-  it('fait disparaître la bascule quand il ne reste qu’Explorer', () => {
-    // Un segment unique ne bascule vers rien : la règle du chrome, appliquée telle quelle.
+  it('hides the switcher when only Explore is left', () => {
+    // A single segment switches to nothing: the chrome rule, applied as is.
     expect(canSwitchMode('ARTIST', values(plainGlb(false)).length)).toBe(false);
     expect(canSwitchMode('ARTIST', values(plainGlb(true)).length)).toBe(true);
   });
 
-  it('ne promet plus à « Nettoyer » des outils que le modèle n’a pas', () => {
-    // L'infobulle du chrome spatial annonce « sélection, suppression, volumes de coupe,
-    // transformation » : trois de ces quatre gestes sont les outils de nuage, propres au splat.
+  it('no longer promises "Clean" tools the model does not have', () => {
+    // The spatial chrome tooltip announces "selection, deletion, cut volumes,
+    // transform": three of these four gestures are point-cloud tools, specific to the splat.
     const clean = model3dSwitcherModes(true).find((mode) => mode.value === 'clean');
     expect(clean?.hintKey).not.toBe('mode.clean.hint');
     expect(switcherModesFor('SPLAT').find((m) => m.value === 'clean')?.hintKey).toBe('mode.clean.hint');
   });
 
-  it('laisse la bascule du splat intacte — même fichier de modes, autre viewer', () => {
+  it('leaves the splat switcher intact — same modes file, other viewer', () => {
     const splat = switcherModesFor('SPLAT').map((m) => m.value);
     expect(splat).toContain('stage');
     expect(splat).toContain('clean');
@@ -61,24 +61,23 @@ describe('model3dSwitcherModes', () => {
 });
 
 describe('canCleanModel3d', () => {
-  it('exige les deux : des outils ET un endroit où garder le résultat', () => {
-    // Les gizmos TRS sont bien là (les outils de sélection, eux, sont propres au splat) :
-    // c'est donc la destination de leur travail qui décide.
+  it('requires both: tools AND a place to keep the result', () => {
+    // The TRS gizmos are there (the selection tools, however, are specific to the splat):
+    // so it is the destination of their work that decides.
     expect(model3dCleanTools().length).toBeGreaterThan(0);
     expect(canCleanModel3d({ canEditTransform: true, hasScenegraph: false })).toBe(true);
     expect(canCleanModel3d({ canEditTransform: false, hasScenegraph: false })).toBe(false);
   });
 
-  it('reste offert sur une scène USD sans le droit d’écrire la transformation', () => {
-    // Les mêmes gizmos visent un prim et écrivent dans l'override de scène (46.N) : un delta
-    // rejoué pour tous quand un gestionnaire l'enregistre, joignable à un commentaire par
-    // n'importe quel relecteur. Le juger sur le seul `editTransform` supprimerait cette
-    // fonctionnalité en supprimant l'onglet.
+  it('stays offered on a USD scene without the right to write the transform', () => {
+    // The same gizmos target a prim and write into the scene override (46.N): a delta replayed
+    // for everyone when a manager saves it, reachable by a comment from any reviewer. Judging it on
+    // `editTransform` alone would remove this feature by removing the tab.
     expect(canCleanModel3d({ canEditTransform: false, hasScenegraph: true })).toBe(true);
     expect(values({ canEditTransform: false, hasScenegraph: true })).toContain('clean');
   });
 
-  it('n’offre aucun outil de nuage de points sur un modèle', () => {
+  it('offers no point-cloud tool on a model', () => {
     const ids = model3dCleanTools().map((tool) => tool.id);
     for (const splatOnly of ['sel-rect', 'sel-lasso', 'sel-brush', 'volume'])
       expect(ids).not.toContain(splatOnly);
@@ -86,18 +85,18 @@ describe('canCleanModel3d', () => {
 });
 
 describe('model3dToolsFor', () => {
-  it('vide le rail du mode « Nettoyer » quand il est indisponible', () => {
+  it('empties the "Clean" mode rail when it is unavailable', () => {
     expect(model3dToolsFor('clean', false)).toEqual([]);
     expect(model3dToolsFor('clean', true).map((tool) => tool.id)).toContain('translate');
   });
 
-  it('ne touche pas aux autres modes', () => {
+  it('does not touch the other modes', () => {
     for (const mode of ['explore', 'annotate', 'stage'] as const)
       expect(model3dToolsFor(mode, false)).toEqual(model3dToolsFor(mode, true));
   });
 });
 
-describe('raccourcis — un mode retiré ne s’arme pas au clavier', () => {
+describe('shortcuts — a removed mode is not armed from the keyboard', () => {
   const press = (key: string, canClean: boolean) =>
     chromeCommandFor(key, {
       kind: 'MODEL_3D',
@@ -107,18 +106,18 @@ describe('raccourcis — un mode retiré ne s’arme pas au clavier', () => {
       toolsOf: (mode) => model3dToolsFor(mode, canClean),
     });
 
-  it('n’envoie pas « T » dans un mode « Nettoyer » indisponible', () => {
-    // Sans le droit d'enregistrer, `T` ne doit pas armer le gizmo de translation : il
-    // trouve l'outil caméra de la mise en scène, qui, lui, n'enregistre rien de verrouillé.
+  it('does not send "T" into an unavailable "Clean" mode', () => {
+    // Without the right to save, `T` must not arm the translation gizmo: it would
+    // find the staging camera tool, which saves nothing locked.
     const command = press('t', false);
     expect(command).toEqual({ action: 'tool', mode: 'stage', tool: 'cam-move' });
   });
 
-  it('y envoie « T » dès que le mode est offert', () => {
+  it('sends "T" there as soon as the mode is offered', () => {
     expect(press('t', true)).toEqual({ action: 'tool', mode: 'clean', tool: 'translate' });
   });
 
-  it('ne garde que la touche « 1 » en bascule de mode quand un seul segment reste', () => {
+  it('keeps only the "1" key as mode toggle when a single segment remains', () => {
     expect(press('1', false)).toEqual({ action: 'mode', mode: 'explore' });
     expect(press('2', false)).toBeNull();
     expect(press('2', true)).toEqual({ action: 'mode', mode: 'clean' });

@@ -7,28 +7,28 @@ import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { useSpatialContextMenu } from '../viewer/useSpatialContextMenu';
 import { useUsdPicking } from './useUsdPicking';
 
-/** Ce que le hook attend du viewer 3D : sa scène et son canvas. */
+/** What the hook expects from the 3D viewer: its scene and its canvas. */
 interface PrimPointerViewer {
   getSceneHandle: () => ViewerSceneHandle | null;
   getDom: () => HTMLElement | null;
 }
 
 /**
- * Les deux gestes du pointeur dans le viewer 3D, montés ensemble parce qu'ils partagent la même
- * résolution de prim : **clic gauche immobile** = sélection (`useUsdPicking`), **clic droit bref**
- * = menu du prim visé. Le clic droit maintenu, lui, appartient au vol — c'est
- * `viewer/useSpatialContextMenu`, partagé avec le splat, qui départage les deux au relâchement.
+ * The two pointer gestures of the 3D viewer, mounted together because they share the same prim
+ * resolution: **left click without moving** = selection (`useUsdPicking`), **brief right click** =
+ * menu of the targeted prim. The held right click belongs to flight — `viewer/useSpatialContextMenu`,
+ * shared with the splat, tells the two apart on release.
  *
- * Ce qui est propre au modèle 3D tient en deux règles : dans le vide, **aucun menu** (toutes ses
- * entrées portent sur un prim), et le prim visé passe aussi en sélection — on agit sur ce qu'on
- * voit surligné. Le chemin est rendu comme état, et non comme rappel : le `ContextMenu` qui
- * enveloppe le pane doit peupler son contenu au rendu, avant que Radix ne l'ouvre.
+ * What is specific to the 3D model comes down to two rules: in empty space, **no menu** (all its
+ * entries concern a prim), and the targeted prim also goes into the selection — we act on what is
+ * seen highlighted. The path is rendered as state, not as a callback: the `ContextMenu` wrapping the
+ * pane must populate its content at render time, before Radix opens it.
  */
 export function usePrimPointer(
   viewer: PrimPointerViewer,
   ready: boolean,
   select: (path: string | null, opts?: { additive?: boolean }) => void,
-  /** Résolveur du viewer : promotion au component englobant, `exact` pour la feuille (Alt+clic). */
+  /** Viewer resolver: promotion to the enclosing component, `exact` for the leaf (Alt+click). */
   resolvePick: (object: THREE.Object3D, opts?: { exact?: boolean }) => string | null,
 ): string | null {
   const [path, setPath] = useState<string | null>(null);

@@ -9,19 +9,19 @@ import { cancelPendingPlay, safePlay, stepVideoFrame } from './reviewTypes';
 import { useCompareOffset } from './compareOffset';
 
 /**
- * Raccourcis clavier de la review vidéo (10.C2) :
- * - Espace : lecture/pause · K : pause
- * - ←/→ : ±1 frame · Maj+←/→ : ±10 frames
- * - J / L : lecture arrière / avant (appuis répétés : ×2, ×4, ×8)
- * - I / O : points d'entrée/sortie de boucle · Maj+I/O : efface la boucle
- * - M : pause + composer de commentaire (marqueur à la frame courante)
- * - [ / ] : décalage de la comparaison A/B, ∓1 frame (Maj : ∓10) · Maj+\ : recale à zéro
- * Inactifs dans les champs de saisie et quand un dialog est ouvert.
- * La lecture arrière n'existe pas en HTML5 : elle est simulée par un pas de
- * requestAnimationFrame qui décrémente currentTime à vitesse réelle.
+ * Keyboard shortcuts of the video review (10.C2):
+ * - Space: play/pause · K: pause
+ * - ←/→: ±1 frame · Shift+←/→: ±10 frames
+ * - J / L: reverse / forward playback (repeated presses: ×2, ×4, ×8)
+ * - I / O: loop in/out points · Shift+I/O: clears the loop
+ * - M: pause + comment composer (marker at the current frame)
+ * - [ / ]: offset of the A/B comparison, ∓1 frame (Shift: ∓10) · Shift+\: resets to zero
+ * Inactive in input fields and when a dialog is open.
+ * Reverse playback does not exist in HTML5: it is simulated by a requestAnimationFrame step that
+ * decrements currentTime at real speed.
  *
- * Les crochets sont repérés par leur **position** (`e.code`) et non par le caractère
- * produit : sur un clavier AZERTY, ce caractère demande AltGr, que ce gestionnaire écarte.
+ * The brackets are identified by their **position** (`e.code`) and not by the character produced: on
+ * an AZERTY keyboard, that character requires AltGr, which this handler ignores.
  */
 export function useReviewShortcuts({
   videoRef,
@@ -35,13 +35,13 @@ export function useReviewShortcuts({
   videoRef: RefObject<HTMLVideoElement | null>;
   fps: number;
   onMarker: () => void;
-  /** I : marque le point d'entrée de boucle à la frame courante (14.B). */
+  /** I: marks the loop entry point at the current frame (14.B). */
   onLoopIn?: () => void;
-  /** O : marque le point de sortie de boucle à la frame courante (14.B). */
+  /** O: marks the loop exit point at the current frame (14.B). */
   onLoopOut?: () => void;
-  /** Maj+I ou Maj+O : efface la boucle. */
+  /** Shift+I or Shift+O: clears the loop. */
   onClearLoop?: () => void;
-  /** Vitesse de la lecture arrière J (négative), null à l'arrêt — affichage 34.C. */
+  /** Speed of reverse playback J (negative), null when stopped — display 34.C. */
   onShuttle?: (speed: number | null) => void;
 }) {
   const shuttle = useRef<{ speed: number; raf: number; last: number } | null>(null);
@@ -86,13 +86,13 @@ export function useReviewShortcuts({
       if (!v) return;
       if (shuttle.current || v.paused) {
         stopShuttle();
-        safePlay(v); // attend que l'image soit décodable (pas de son sur image figée)
+        safePlay(v); // waits until the image is decodable (no sound over a frozen image)
         return;
       }
       v.playbackRate = Math.min(v.playbackRate * 2, 8);
     };
 
-    /** Annonce le décalage courant : un toast qui se remplace, pas une pile de toasts. */
+    /** Announces the current offset: a toast that replaces itself, not a stack of toasts. */
     const announceOffset = (frames: number) => {
       const message =
         frames === 0
@@ -114,7 +114,7 @@ export function useReviewShortcuts({
       if (document.querySelector('[role="dialog"]')) return;
       const v = videoRef.current;
       if (!v) return;
-      // Décalage de la comparaison A/B : repéré à la position de la touche (cf. en-tête).
+      // Comparison offset: identified by the key's position (see header).
       if (e.code === 'BracketLeft' || e.key === '[' || e.key === '{') {
         e.preventDefault();
         nudgeOffset(e.shiftKey ? -10 : -1);
@@ -177,19 +177,19 @@ export function useReviewShortcuts({
           playForward();
           break;
         case 'm':
-          // ARBITRAGE — sur une vidéo, M appartient au transport, pas au rail d'outils.
+          // ARBITRATION — on a video, M belongs to the transport, not to the tool rail.
           //
-          // Deux gestes se disputaient la lettre : « pause + commentaire à la frame
-          // courante » ici, et l'outil `shape-move` du mode Annoter (chrome/tools.ts). Une
-          // frappe faisait les deux : le composer s'ouvrait *et* tout l'écran basculait en
-          // mode Annoter, canvas de tracé par-dessus l'image, clic-pour-lire perdu.
+          // Two gestures fought over the letter: "pause + comment at the current frame" here, and the
+          // `shape-move` tool of Annotate mode (chrome/tools.ts). One keystroke did both: the composer
+          // opened *and* the whole screen switched to Annotate mode, drawing canvas over the image,
+          // click-to-play lost.
           //
-          // M reste au transport, parce que noter un retour à la frame exacte est le geste
-          // central d'une review. Le partage n'était qu'à moitié réglé : `stopPropagation`
-          // (ce gestionnaire vit sur `document`, le rail sur `window`, et la remontée traverse
-          // le premier en premier) empêchait bien le double effet, mais le bouton du rail
-          // continuait d'annoncer `M` sur une vidéo, où la lettre ne l'armait jamais. L'outil
-          // a donc changé de touche en Phase 50 (`S`) ; la coupure reste, en garde-fou.
+          // M stays with the transport, because noting a return to the exact frame is the central
+          // gesture of a review. The sharing was only half-settled: `stopPropagation` (this handler
+          // lives on `document`, the rail on `window`, and bubbling reaches the first before the second)
+          // did prevent the double effect, but the rail's button kept announcing `M` on a video, where
+          // the letter never armed it. The tool therefore changed key in Phase 50 (`S`); the cut remains,
+          // as a safeguard.
           e.preventDefault();
           e.stopPropagation();
           stopShuttle();
@@ -200,7 +200,7 @@ export function useReviewShortcuts({
       }
     };
 
-    // Lecture lancée via les contrôles natifs → stoppe la lecture arrière en cours.
+    // Playback started via the native controls → stops the ongoing reverse playback.
     const v = videoRef.current;
     const onPlay = () => stopShuttle();
     v?.addEventListener('play', onPlay);
@@ -209,8 +209,8 @@ export function useReviewShortcuts({
       document.removeEventListener('keydown', down);
       v?.removeEventListener('play', onPlay);
       stopShuttle();
-      // Le décalage de comparaison appartient à la séance en cours : il ne suit pas
-      // l'utilisateur sur le média suivant, où le conform n'a aucune raison d'être le même.
+      // The comparison offset belongs to the current session: it does not follow the user to the next
+      // media, where the conform has no reason to be the same.
       useCompareOffset.getState().reset();
     };
   }, [videoRef, fps, onMarker, onLoopIn, onLoopOut, onClearLoop, onShuttle]);

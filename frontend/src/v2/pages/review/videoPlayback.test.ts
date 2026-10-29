@@ -5,8 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { ASSEMBLING_POLL_MS, assemblingPollMs, isSequenceName, videoPlayback } from './videoPlayback';
 
 /**
- * Le viewer vidéo ne doit jamais rester muet : soit il lit, soit il dit pourquoi il ne peut
- * pas — assemblage en cours, ou échec avec sa relance.
+ * The video viewer must never stay silent: either it plays, or it says why it cannot — assembly in
+ * progress, or failure with its retry.
  */
 
 const media = (status: 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED', originalName = 'c_%04d.jpg') => ({
@@ -15,33 +15,33 @@ const media = (status: 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED', original
 });
 
 describe('isSequenceName', () => {
-  it('reconnaît le motif FFmpeg d’une séquence', () => {
+  it('recognizes the FFmpeg pattern of a sequence', () => {
     expect(isSequenceName('c_%04d.jpg')).toBe(true);
     expect(isSequenceName('SH0100_comp_v003.%04d.exr')).toBe(true);
   });
 
-  it('ne confond pas un fichier vidéo avec une séquence', () => {
+  it('does not confuse a video file with a sequence', () => {
     expect(isSequenceName('plan_v003.mov')).toBe(false);
     expect(isSequenceName('plan.1001.exr')).toBe(false);
   });
 });
 
 describe('videoPlayback', () => {
-  it('annonce l’assemblage d’une séquence au lieu de lire son manifeste JSON', () => {
+  it('announces the assembly of a sequence instead of reading its JSON manifest', () => {
     expect(videoPlayback(media('PROCESSING'), null)).toBe('assembling');
     expect(videoPlayback(media('UPLOADING'), null)).toBe('assembling');
   });
 
-  it('montre l’échec, pour qu’il soit lisible et relançable', () => {
+  it('shows the failure, so that it is readable and retryable', () => {
     expect(videoPlayback(media('FAILED'), null)).toBe('failed');
     expect(videoPlayback(media('FAILED', 'plan.mov'), null)).toBe('failed');
   });
 
-  it('lit une vidéo en cours de traitement depuis son original, comme avant', () => {
+  it('plays a video being processed from its original, as before', () => {
     expect(videoPlayback(media('PROCESSING', 'plan.mov'), null)).toBe('play');
   });
 
-  it('lit dès qu’un proxy existe, même après une relance en échec', () => {
+  it('plays as soon as a proxy exists, even after a failed retry', () => {
     expect(videoPlayback(media('READY'), 'https://s3/proxy.mp4')).toBe('play');
     expect(videoPlayback(media('FAILED'), 'https://s3/proxy.mp4')).toBe('play');
   });
@@ -53,11 +53,11 @@ describe('assemblingPollMs', () => {
     proxyUrl: null,
   });
 
-  it('relit le média tant que la séquence s’assemble', () => {
+  it('rereads the media as long as the sequence is assembling', () => {
     expect(assemblingPollMs(data('PROCESSING'))).toBe(ASSEMBLING_POLL_MS);
   });
 
-  it('ne relit jamais un média lisible : les URLs présignées rechargeraient le lecteur', () => {
+  it('never rereads a readable media: presigned URLs would reload the player', () => {
     expect(assemblingPollMs(data('READY'))).toBe(false);
     expect(assemblingPollMs({ ...data('PROCESSING'), proxyUrl: 'https://s3/proxy.mp4' })).toBe(false);
     expect(assemblingPollMs(undefined)).toBe(false);

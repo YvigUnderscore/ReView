@@ -25,16 +25,16 @@ import { snapToFrame, timecode, trackPct } from '../camera/timeline/viewTransfor
 import { useT } from '../../../i18n';
 
 /**
- * Plafond des champs de temps et de durée, en secondes — **le même que celui du serveur**
- * (`3 600 000 ms`). Les deux champs étaient bornés à 600 s : une animation plus longue, pourtant
- * enregistrable, ne pouvait plus ni se régler ni se rejoindre au clavier.
+ * Ceiling of the time and duration fields, in seconds — **the same as the server's** (`3 600 000 ms`).
+ * Both fields were capped at 600 s: a longer animation, yet recordable, could neither be adjusted nor
+ * rejoined from the keyboard.
  */
 const MAX_SECONDS = 3600;
 
 /**
- * Ligne du bas des viewers spatiaux : le temps. Reprend `AnimToolbar` (qui flottait avec le
- * panneau d'animation) et lui donne une piste cliquable — clés en losanges, tête de lecture.
- * Le tiroir « Courbes » s'ancre juste en dessous au lieu d'ouvrir une fenêtre déplaçable.
+ * Bottom line of the spatial viewers: the time. Takes over `AnimToolbar` (which floated with the
+ * animation panel) and gives it a clickable track — keys as diamonds, playhead.
+ * The "Curves" drawer anchors right underneath instead of opening a movable window.
  */
 export default function SpatialTransport({
   anim,
@@ -46,31 +46,31 @@ export default function SpatialTransport({
   onDrawer,
 }: {
   anim: CameraAnimState;
-  /** Gestionnaire pré-publication : seul à pouvoir écrire des clés. */
+  /** Pre-publication manager: the only one allowed to write keys. */
   editable: boolean;
-  /** Framerate du pipeline — snap du scrub à la frame, timecode `s:ff`. */
+  /** Pipeline framerate — scrub snaps to the frame, `s:ff` timecode. */
   fps: number;
-  /** Sélecteur de piste, quand le média porte aussi des clips d'animation. */
+  /** Track selector, when the media also carries animation clips. */
   trackSwitch?: ReactNode;
   /**
-   * Joindre — ou détacher — l'animation du prochain commentaire (mode layout).
+   * Attach — or detach — the animation to the next comment (layout mode).
    *
-   * L'état voyage AVEC l'action, et non à côté : joindre ne laissait qu'un toast, si bien que le
-   * temps d'écrire la remarque, plus rien à l'écran ne disait si l'animation partirait — et on
-   * envoyait en croyant l'avoir jointe. Le bouton reste donc allumé tant qu'elle est jointe, et
-   * un second appui la détache.
+   * The state travels WITH the action, not beside it: attaching used to leave only a toast, so that
+   * while writing the remark, nothing on screen said whether the animation would be sent — and one
+   * sent believing it had been attached. The button therefore stays lit as long as it is attached,
+   * and a second press detaches it.
    */
   attach?: { toggle: () => void; attached: boolean };
   drawerOpen: boolean;
   onDrawer: () => void;
 }) {
   const t = useT();
-  // `keyTimes` fusionne déjà les clés de tous les canaux, triées.
+  // `keyTimes` already merges the keys of all channels, sorted.
   const times = anim.keyTimes;
-  // Plancher de 1 ms : une animation d'une seule colonne de clés ne divise pas par zéro.
+  // 1 ms floor: an animation with a single column of keys does not divide by zero.
   const span = Math.max(anim.playDuration, times[times.length - 1] ?? 0, 1);
-  // `trackPct` borne la position à la piste — au-delà, la tête de lecture débordait et le
-  // transport se dotait d'une scrollbar horizontale.
+  // `trackPct` clamps the position to the track — beyond it, the playhead overflowed and the
+  // transport gained a horizontal scrollbar.
   const pct = (t: number) => trackPct(t, span);
   const goToKey = (dir: -1 | 1) => {
     const next =
@@ -80,7 +80,7 @@ export default function SpatialTransport({
     if (next !== undefined) anim.scrub(next);
   };
 
-  // Scrub au drag sur la piste (capture du pointeur) — snap à la frame, Alt pour libérer.
+  // Drag-scrub on the track (pointer capture) — snaps to the frame, Alt to release.
   const trackDrag = useRef(false);
   const scrubTrack = (e: React.PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -124,7 +124,7 @@ export default function SpatialTransport({
         className="rv-track"
         style={{ flex: '1 1 200px', minWidth: 160, cursor: 'ew-resize' }}
         onPointerDown={(e) => {
-          // Les losanges de clé gardent leur clic exact (scrub à la clé).
+          // Key diamonds keep their exact click (scrub to the key).
           if (e.button !== 0 || (e.target as HTMLElement).closest('.rv-key')) return;
           trackDrag.current = true;
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -189,7 +189,7 @@ export default function SpatialTransport({
             bordered
             active={anim.autoKey}
             className={
-              // Enregistrement armé : état fort façon DCC — impossible de l'oublier allumé.
+              // Recording armed: a strong DCC-style state — impossible to forget it being on.
               anim.autoKey
                 ? 'animate-pulse bg-destructive/20 text-destructive hover:bg-destructive/30'
                 : undefined

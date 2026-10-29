@@ -6,11 +6,11 @@ import type { Transform } from '../reviewTypes';
 import { quatToEulerDeg } from '../options/transformMath';
 
 /**
- * Convertit la TRS d'un mesh (lue par le gizmo, `readMeshTransform`) vers la transformation
- * stockée du modèle 3D (`Transform` : yaw/pitch/roll en degrés + échelle uniforme). Le format
- * `version.transform` ne porte ni translation ni échelle non-uniforme : la rotation vient du
- * quaternion (euler XYZ = [pitch, yaw, roll], cohérent avec `applyEulerTransform`), l'échelle est
- * ramenée à la moyenne des composantes. Pur/testable.
+ * Converts a mesh's TRS (read by the gizmo, `readMeshTransform`) into the stored transform of the
+ * 3D model (`Transform`: yaw/pitch/roll in degrees + uniform scale). The `version.transform` format
+ * carries neither translation nor non-uniform scale: the rotation comes from the quaternion (Euler
+ * XYZ = [pitch, yaw, roll], consistent with `applyEulerTransform`), and the scale is reduced to the
+ * average of its components. Pure, testable.
  */
 export function eulerTransformFromMesh(t: SplatTransform): Transform {
   const [pitch, yaw, roll] = quatToEulerDeg(t.quaternion);

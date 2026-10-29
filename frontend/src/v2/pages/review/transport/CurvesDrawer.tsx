@@ -15,14 +15,14 @@ import { DRAWER_DEFAULT_H, DRAWER_MAX_H, DRAWER_MIN_H } from '../chrome/chromeSt
 import { useT } from '../../../i18n';
 
 /**
- * Tiroir « Courbes » ancré sous le transport : le séquenceur de l'animation caméra — règle
- * temporelle graduée (scrub au drag, timecode `s:ff`) au-dessus du graph editor, **même échelle
- * horizontale** pour les deux (les clés restent alignées verticalement), et la grille du graphe
- * tombe désormais sur les graduations de cette règle plutôt que sur des secondes décimales.
+ * "Curves" drawer anchored under the transport: the sequencer of the camera animation — a graduated
+ * time ruler (scrub on drag, `s:ff` timecode) above the graph editor, **same horizontal scale** for
+ * both (the keys stay vertically aligned), and the graph grid now falls on this ruler's graduations
+ * rather than on decimal seconds.
  *
- * Navigation : molette = zoom temporel, Ctrl+molette = zoom vertical, Maj+molette = pan temporel,
- * bouton du milieu = pan des deux axes, boutons « ajuster » (tout) et « cadrer la sélection ».
- * Hauteur redimensionnable par le bord supérieur (persistée avec les préférences du chrome).
+ * Navigation: wheel = time zoom, Ctrl+wheel = vertical zoom, Shift+wheel = time pan, middle button =
+ * pan on both axes, "fit" (all) and "frame selection" buttons. Height resizable from the top edge
+ * (persisted with the chrome preferences).
  */
 export default function CurvesDrawer({
   anim,
@@ -34,12 +34,12 @@ export default function CurvesDrawer({
 }: {
   anim: CameraAnimState;
   editable: boolean;
-  /** Framerate du pipeline (snap du scrub et des clés, timecode, graduations). */
+  /** Pipeline framerate (snap of scrub and keys, timecode, graduations). */
   fps: number;
-  /** Hauteur persistée du tiroir (préférences du chrome). */
+  /** Persisted drawer height (chrome preferences). */
   height?: number;
   onHeight?: (h: number) => void;
-  /** Preset orbite proposé dans l'état vide (gestionnaire). */
+  /** Orbit preset offered in the empty state (manager). */
   onOrbitPreset?: () => void;
 }) {
   const t = useT();
@@ -57,7 +57,7 @@ export default function CurvesDrawer({
     return () => ro.disconnect();
   }, []);
 
-  // Clés : Suppr supprime la sélection, Ctrl/⌘+C copie, Ctrl/⌘+V colle à la tête de lecture.
+  // Keys: Delete removes the selection, Ctrl/⌘+C copies, Ctrl/⌘+V pastes at the playhead.
   useEffect(() => {
     if (!editable) return;
     const onKey = (e: KeyboardEvent) => {

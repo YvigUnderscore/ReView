@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import SpatialTransport from './SpatialTransport';
 import type { CameraAnimState } from '../camera/useCameraAnim';
 
-/** État d'animation minimal : le transport ne lit que ces champs. */
+/** Minimal animation state: the transport only reads these fields. */
 const animState = (over: Partial<CameraAnimState> = {}) =>
   ({
     keyTimes: [0, 1000, 2000],
@@ -31,7 +31,7 @@ const animState = (over: Partial<CameraAnimState> = {}) =>
     ...over,
   }) as unknown as CameraAnimState;
 
-/** Ancre la piste à 200 px : happy-dom ne mesure rien et ne capture pas le pointeur. */
+/** Anchors the track at 200 px: happy-dom measures nothing and does not capture the pointer. */
 const anchor = (el: Element) => {
   el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 24 }) as DOMRect;
   el.setPointerCapture = () => {};
@@ -41,23 +41,23 @@ const anchor = (el: Element) => {
 const mount = (anim: CameraAnimState, fps = 10) =>
   render(<SpatialTransport anim={anim} editable fps={fps} drawerOpen={false} onDrawer={vi.fn()} />).container;
 
-describe('SpatialTransport — tête de lecture bornée à sa piste', () => {
-  it('au milieu de la durée, la tête est à la moitié de la piste', () => {
+describe('SpatialTransport — playhead clamped to its track', () => {
+  it('at mid-duration, the playhead is at half the track', () => {
     const container = mount(animState({ timeMs: 1000 }));
     expect((container.querySelector('.rv-track__head') as HTMLElement).style.left).toBe('50%');
     expect((container.querySelector('.rv-track__fill') as HTMLElement).style.width).toBe('50%');
   });
 
-  it('loin dans la timeline, la tête s’arrête au bord au lieu de déborder', () => {
-    // Un scrub à 60 s sur une animation de 2 s posait `left: 3000%` : la piste débordait du
-    // transport, qui défile en overflow-x, et une scrollbar horizontale apparaissait.
+  it('far along the timeline, the playhead stops at the edge instead of overflowing', () => {
+    // A scrub at 60 s on a 2 s animation set `left: 3000%`: the track overflowed the transport,
+    // which scrolls in overflow-x, and a horizontal scrollbar appeared.
     const container = mount(animState({ timeMs: 60_000 }));
     expect((container.querySelector('.rv-track__head') as HTMLElement).style.left).toBe('100%');
     expect((container.querySelector('.rv-track__fill') as HTMLElement).style.width).toBe('100%');
   });
 
-  it('les clés au-delà de la durée étirent la piste au lieu d’en sortir', () => {
-    // La piste s'étend au plus tard des deux : durée de lecture réglée, ou dernière clé.
+  it('keys beyond the duration stretch the track instead of spilling out of it', () => {
+    // The track extends to the greater of the two: the playback duration set, or the last key.
     const container = mount(animState({ keyTimes: [0, 1000, 9000], playDuration: 2000 }));
     const lefts = [...container.querySelectorAll('.rv-key')].map((k) =>
       Number.parseFloat((k as HTMLElement).style.left),
@@ -68,8 +68,8 @@ describe('SpatialTransport — tête de lecture bornée à sa piste', () => {
   });
 });
 
-describe('SpatialTransport — scrub sur la piste', () => {
-  it('un appui sur la piste déplace la lecture, snappée à la frame', () => {
+describe('SpatialTransport — scrub on the track', () => {
+  it('a press on the track moves playback, snapped to the frame', () => {
     const anim = animState();
     const container = mount(anim);
     const track = container.querySelector('.rv-track') as HTMLElement;
@@ -78,7 +78,7 @@ describe('SpatialTransport — scrub sur la piste', () => {
     expect(anim.scrub).toHaveBeenCalledWith(500);
   });
 
-  it('le glissement suit le pointeur, et s’arrête au relâchement', () => {
+  it('dragging follows the pointer, and stops on release', () => {
     const anim = animState();
     const container = mount(anim);
     const track = container.querySelector('.rv-track') as HTMLElement;
@@ -91,7 +91,7 @@ describe('SpatialTransport — scrub sur la piste', () => {
     expect(anim.scrub).toHaveBeenCalledTimes(2);
   });
 
-  it('cliquer un losange va exactement à la clé, sans passer par la piste', () => {
+  it('clicking a diamond goes exactly to the key, without going through the track', () => {
     const anim = animState();
     const container = mount(anim);
     const track = container.querySelector('.rv-track') as HTMLElement;

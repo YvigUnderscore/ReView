@@ -4,19 +4,19 @@
 import type { TimelineClip } from '../../types/api';
 
 /**
- * Navigation dans un montage automatique (Phase 45) — analyse PURE, testée.
+ * Navigation through an automatic montage (Phase 45) — PURE analysis, tested.
  *
- * Les cartons (plans sans média publié) comptent dans le montage : ils en donnent la
- * durée réelle et signalent ce qui manque. Mais ils ne sont pas lisibles, donc la lecture
- * les saute — l'enchaînement va d'un média au média suivant, sans s'arrêter sur un trou.
+ * Title cards (shots without a published media) count in the montage: they give its real duration
+ * and flag what is missing. But they are not playable, so playback skips them — the sequence goes
+ * from one media to the next, without stopping on a gap.
  */
 
-/** Position du clip qui porte ce média, -1 s'il n'est pas dans ce montage. */
+/** Position of the clip carrying this media, -1 if it is not in this montage. */
 export function clipIndexOfMedia(items: readonly TimelineClip[], mediaId: number): number {
   return items.findIndex((it) => it.mediaId === mediaId);
 }
 
-/** Clip lisible le plus proche dans la direction donnée, null en bord de montage. */
+/** Nearest playable clip in the given direction, null at the montage edge. */
 export function playableNeighbor(
   items: readonly TimelineClip[],
   index: number,
@@ -30,7 +30,7 @@ export function playableNeighbor(
   return null;
 }
 
-/** Rang de lecture (1-based) d'un clip parmi les seuls clips lisibles, et leur total. */
+/** Play rank (1-based) of a clip among the playable clips only, and their total. */
 export function playablePosition(
   items: readonly TimelineClip[],
   index: number,
@@ -41,7 +41,7 @@ export function playablePosition(
   return { position, total };
 }
 
-/** Durée totale mise en forme `m:ss` (les montages de production restent sous l'heure). */
+/** Total duration formatted `m:ss` (production montages stay under an hour). */
 export function formatDuration(seconds: number): string {
   const safe = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
   const total = Math.round(safe);

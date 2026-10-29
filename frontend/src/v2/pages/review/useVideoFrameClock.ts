@@ -5,27 +5,25 @@ import { useEffect, useState, type RefObject } from 'react';
 import { frameAtTime } from './frameRate';
 
 /**
- * Horloge de frame du lecteur.
+ * Player frame clock.
  *
- * Le compteur ne suivait que `timeupdate`, événement spécifié à environ quatre émissions par
- * seconde : en lecture à 24 fps, le numéro affiché sautait de six en six, le curseur de la
- * timeline avançait par à-coups et les annotations de plage s'allumaient jusqu'à 250 ms trop
- * tard. Le pas-à-pas, lui, était juste — c'est bien la lecture continue qui retardait.
+ * The counter only followed `timeupdate`, an event specified to fire about four times per second:
+ * during playback at 24 fps, the displayed frame number skipped by six, the timeline cursor advanced in
+ * jerks, and range annotations lit up up to 250 ms too late. Frame stepping, however, was correct — it
+ * is indeed continuous playback that lagged.
  *
- * `requestVideoFrameCallback` répond exactement à cela : le navigateur rappelle à **chaque
- * image présentée** et fournit `mediaTime`, l'horodatage de cette image précise — pas la
- * position approximative du lecteur. Là où il manque (Firefox), un pas de
- * `requestAnimationFrame` tient lieu de repli : il ne connaît que `currentTime`, mais il
- * rafraîchit à la cadence de l'écran plutôt que quatre fois par seconde.
+ * `requestVideoFrameCallback` answers exactly this: the browser calls back on **each presented frame**
+ * and provides `mediaTime`, the timestamp of that precise frame — not the player's approximate position.
+ * Where it is missing (Firefox), a `requestAnimationFrame` step serves as a fallback: it only knows
+ * `currentTime`, but it refreshes at the screen's rate rather than four times per second.
  *
- * `timeupdate`, `seeked` et `loadedmetadata` restent branchés comme filet : ils couvrent la
- * pause, le scrub et le chargement, où aucune image nouvelle n'est présentée.
+ * `timeupdate`, `seeked` and `loadedmetadata` stay wired as a safety net: they cover pause, scrub and
+ * loading, where no new frame is presented.
  */
 
 /**
- * Les types du DOM annoncent `requestVideoFrameCallback` comme acquis ; Firefox ne
- * l'implémente pas. On le rend donc facultatif dans le type, faute de quoi le repli passe
- * pour du code inatteignable.
+ * The DOM types announce `requestVideoFrameCallback` as available; Firefox does not implement it. It is
+ * therefore made optional in the type, otherwise the fallback looks like unreachable code.
  */
 type FrameCallbackApi = Partial<
   Pick<HTMLVideoElement, 'requestVideoFrameCallback' | 'cancelVideoFrameCallback'>
@@ -36,19 +34,19 @@ type VideoWithFrameCallback = Omit<
 > &
   FrameCallbackApi;
 
-/** Seul champ des métadonnées d'image qui nous intéresse : l'horodatage de l'image montrée. */
+/** The only image-metadata field we care about: the timestamp of the shown image. */
 interface VideoFrameMetadataLike {
   mediaTime: number;
 }
 
-/** Le lecteur sait-il annoncer ses images ? (faux sous Firefox et en test happy-dom) */
+/** Can the player announce its frames? (false under Firefox and in happy-dom tests) */
 export function hasFrameCallback(video: HTMLVideoElement | null): boolean {
   return typeof (video as VideoWithFrameCallback | null)?.requestVideoFrameCallback === 'function';
 }
 
 /**
- * Numéro de frame courant, rafraîchi image par image. `fps` est la cadence **corrigée**
- * (cf. `frameRate.ts`) : le compteur ne peut pas être plus juste que la cadence dont il dérive.
+ * Current frame number, refreshed frame by frame. `fps` is the **corrected** rate (see `frameRate.ts`):
+ * the counter cannot be more accurate than the rate it derives from.
  */
 export function useVideoFrameClock(videoRef: RefObject<HTMLVideoElement | null>, fps: number): number {
   const [frame, setFrame] = useState(0);
@@ -58,8 +56,8 @@ export function useVideoFrameClock(videoRef: RefObject<HTMLVideoElement | null>,
     if (!video) return;
 
     let stopped = false;
-    // Un `setState` par image présentée ne coûte rien tant que la valeur ne change pas :
-    // React abandonne le rendu quand l'état est identique. On ne filtre donc que le bruit.
+    // A `setState` per presented frame costs nothing as long as the value does not change:
+    // React bails out of the render when the state is identical. So we only filter the noise.
     const publish = (time: number) => setFrame(frameAtTime(time, fps));
     const fromElement = () => publish(video.currentTime);
 
@@ -78,11 +76,11 @@ export function useVideoFrameClock(videoRef: RefObject<HTMLVideoElement | null>,
     };
 
     if (typeof video.requestVideoFrameCallback === 'function') {
-      // La boucle tourne en continu : à l'arrêt, le navigateur ne rappelle simplement pas.
+      // The loop runs continuously: when stopped, the browser simply does not call back.
       vfcHandle = video.requestVideoFrameCallback(onPresented);
     } else {
-      // Repli : la boucle ne tourne que pendant la lecture, sinon elle réveillerait l'onglet
-      // soixante fois par seconde pour recopier une valeur qui ne bouge pas.
+      // Fallback: the loop only runs during playback, otherwise it would wake the tab sixty times per
+      // second to copy a value that does not move.
       const start = () => {
         if (!rafHandle) rafHandle = requestAnimationFrame(tick);
       };

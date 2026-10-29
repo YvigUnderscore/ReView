@@ -13,33 +13,32 @@ export interface HlsLevel {
 }
 
 /**
- * Lecture HLS (Phase 23) via hls.js (MSE). Les **manifestes** sont servis par l'API
- * authentifiée `/api/media/:id/hls/*` (le JWT est injecté par `xhrSetup`) ; depuis la
- * vague 2, les **segments** y sont référencés par URL MinIO présignées et ne passent plus
- * par le backend — d'où deux règles portées par `hlsSource` : le jeton de session ne suit
- * que les URL d'API, et une signature périmée se répare en rechargeant le manifeste.
- * Sans support MSE (`active=false`), l'appelant retombe sur le proxy MP4.
+ * HLS playback (Phase 23) via hls.js (MSE). The **manifests** are served by the authenticated API
+ * `/api/media/:id/hls/*` (the JWT is injected by `xhrSetup`); since wave 2, the **segments** are
+ * referenced there by presigned MinIO URLs and no longer go through the backend — hence two rules
+ * carried by `hlsSource`: the session token only follows API URLs, and a stale signature is repaired
+ * by reloading the manifest. Without MSE support (`active=false`), the caller falls back to the MP4
+ * proxy.
  *
- * Système de qualité volontairement minimal (refonte 2026-07-18) :
- * - **pas d'ABR** : la lecture démarre verrouillée sur la rendition la plus haute, la
- *   qualité affichée est toujours la qualité servie ;
- * - changement **en lecture** → `nextLevel` : bascule au prochain fragment, sans flush à
- *   la position courante — aucun trou de buffer possible, donc jamais de son sur image
- *   figée ;
- * - changement **en pause** → `currentLevel` : flush pour rafraîchir la frame affichée,
- *   suivi d'un micro-seek de resynchro si le décodeur n'a plus d'image sous la tête ;
- * - **aucune bascule automatique** de qualité (le va-et-vient bas↔haut du scrub était la
- *   source des trous de buffer) ;
- * - `switching` = feedback UI du changement en cours, retombé par LEVEL_SWITCHED ou par
- *   un garde-fou (le spinner ne peut pas rester coincé).
+ * Deliberately minimal quality system (rework 2026-07-18):
+ * - **no ABR**: playback starts locked on the highest rendition; the displayed quality is always the
+ *   quality served;
+ * - change **during playback** → `nextLevel`: switches at the next fragment, without a flush at the
+ *   current position — no buffer hole is possible, hence never sound over a frozen image;
+ * - change **while paused** → `currentLevel`: flush to refresh the displayed frame, followed by a
+ *   micro-seek to resync if the decoder no longer has an image under its head;
+ * - **no automatic** quality switching (the low↔high back-and-forth of scrubbing was the source of
+ *   buffer holes);
+ * - `switching` = UI feedback of the ongoing change, cleared by LEVEL_SWITCHED or by a safeguard (the
+ *   spinner cannot get stuck).
  *
- * La bibliothèque elle-même est chargée **à la demande** (`hlsRuntime`) : elle ne pèse
- * plus sur les reviews d'image, de 3D ou de splat. La décision « HLS ou MP4 ? » reste
- * prise dès le premier rendu, sans elle, pour que l'écran ne change pas d'un iota.
+ * The library itself is loaded **on demand** (`hlsRuntime`): it no longer weighs on image, 3D or splat
+ * reviews. The "HLS or MP4?" decision is still made at the first render; without the library, the screen
+ * would not shift at all.
  *
- * Échelle progressive (34.F) : `mediaId` fourni → à l'événement `hls:changed` (room de
- * review, nouvelles renditions transcodées), le master est rechargé en préservant
- * position/lecture ; qualité re-verrouillée sur la plus haute, sauf choix manuel.
+ * Progressive scale (34.F): `mediaId` provided → on the `hls:changed` event (review room, new transcoded
+ * renditions), the master is reloaded preserving position/playback; quality is re-locked on the highest,
+ * unless manually chosen.
  */
 export function useHlsPlayer(
   videoRef: RefObject<HTMLVideoElement | null>,
@@ -51,21 +50,20 @@ export function useHlsPlayer(
   const [switching, setSwitching] = useState(false);
   const hlsRef = useRef<HlsInstance | null>(null);
   const switchTimer = useRef<number | undefined>(undefined);
-  // Source dont le chunk du lecteur n'a pas pu être téléchargé (réseau coupé au mauvais
-  // moment) : on y repasse au repli MP4 plutôt que de laisser un élément vidéo sans
-  // source. Mémoriser l'URL plutôt qu'un booléen évite de devoir la remettre à zéro — un
-  // média suivant n'est pas celui qui a échoué.
+  // Source whose player chunk could not be downloaded (network cut at the wrong moment): we fall back
+  // to the MP4 path instead of leaving a video element without a source. Storing the URL rather than a
+  // boolean avoids having to reset it — a next media is not the one that failed.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const active = canUseHlsJs(hlsUrl) && failedUrl !== hlsUrl;
-  // Rechargement du master (34.F) : génération bumpée par l'événement socket ; l'état de
-  // lecture (position/pause) et le choix manuel de qualité survivent au re-attach.
+  // Master reload (34.F): generation bumped by the socket event; playback state (position/pause) and
+  // the manual quality choice survive the re-attach.
   const [gen, setGen] = useState(0);
   const restoreRef = useRef<{ t: number; paused: boolean } | null>(null);
   const manualHeightRef = useRef<number | null>(null);
-  // Rechargements déclenchés par une URL de segment périmée — bornés (cf. MAX_HLS_REFRESHES).
+  // Reloads triggered by a stale segment URL — bounded (see MAX_HLS_REFRESHES).
   const refreshesRef = useRef(0);
 
-  /** Recharge le manifeste en préservant position et état de lecture. */
+  /** Reloads the manifest while preserving position and playback state. */
   const reloadSource = useCallback(() => {
     const video = videoRef.current;
     restoreRef.current = { t: video?.currentTime ?? 0, paused: video?.paused ?? true };
@@ -80,9 +78,9 @@ export function useHlsPlayer(
 
   useEffect(() => {
     if (!videoRef.current || !hlsUrl || !canUseHlsJs(hlsUrl)) return;
-    // Chargement paresseux (F2) : la bibliothèque n'est demandée qu'ici, donc uniquement
-    // pour une vraie vidéo. `disposed` couvre le démontage survenu pendant le
-    // téléchargement — sans lui, un lecteur s'attacherait à un élément déjà retiré.
+    // Lazy loading (F2): the library is only requested here, hence only for a real video. `disposed`
+    // covers an unmount that happened during the download — without it, a player would attach to an
+    // already removed element.
     let disposed = false;
     let player: HlsInstance | null = null;
     void loadHls().then(
@@ -98,8 +96,8 @@ export function useHlsPlayer(
         hls.loadSource(hlsUrl);
         hls.on(HlsCtor.Events.MANIFEST_PARSED, () => {
           setLevels(hls.levels.map((l) => ({ height: l.height, bitrate: l.bitrate })));
-          // Verrouille la meilleure rendition avant le premier fragment (pas d'ABR) — sauf
-          // qualité choisie manuellement, conservée à travers un rechargement 34.F.
+          // Locks the best rendition before the first fragment (no ABR) — unless a quality was chosen
+          // manually, kept across a 34.F reload.
           let target = 0;
           hls.levels.forEach((l, i) => {
             if (l.height > hls.levels[target].height) target = i;
@@ -111,7 +109,7 @@ export function useHlsPlayer(
           }
           setLevelState(target);
           hls.currentLevel = target;
-          // Reprise après rechargement du master (34.F) : position et lecture restaurées.
+          // Resume after the master reload (34.F): position and playback restored.
           const restore = restoreRef.current;
           restoreRef.current = null;
           if (restore && video) {
@@ -122,14 +120,14 @@ export function useHlsPlayer(
         hls.on(HlsCtor.Events.LEVEL_SWITCHED, () => {
           window.clearTimeout(switchTimer.current);
           setSwitching(false);
-          // Après un flush en pause, le décodeur peut ne plus avoir d'image sous la tête de
-          // lecture : micro-seek sur place pour recharger le segment et rafraîchir la frame.
+          // After a flush while paused, the decoder may no longer have an image under the playhead:
+          // micro-seek in place to reload the segment and refresh the frame.
           if (video.paused && video.readyState < 3)
             video.currentTime = Math.max(0, video.currentTime - 0.001);
         });
-        // Segment refusé par le stockage : sa signature a expiré (séance plus longue que la
-        // durée de validité). Le manifeste, lui, reste accessible — on le redemande, ce qui
-        // rend un jeu d'URL fraîches, position et lecture préservées.
+        // Segment refused by storage: its signature expired (session longer than its validity period).
+        // The manifest itself remains accessible — we request it again, which yields a set of fresh URLs,
+        // position and playback preserved.
         hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
           if (!isExpiredMediaUrlError(data) || refreshesRef.current >= MAX_HLS_REFRESHES) return;
           refreshesRef.current += 1;
@@ -137,7 +135,7 @@ export function useHlsPlayer(
         });
       },
       () => {
-        // Repli MP4 : `active` retombe à faux, l'élément vidéo reçoit `src` au rendu suivant.
+        // MP4 fallback: `active` drops to false, the video element receives `src` at the next render.
         if (!disposed) setFailedUrl(hlsUrl);
       },
     );
@@ -151,12 +149,12 @@ export function useHlsPlayer(
     };
   }, [videoRef, hlsUrl, gen, reloadSource]);
 
-  // Nouveau média : le compteur de rechargements repart à zéro.
+  // New media: the reload counter starts again from zero.
   useEffect(() => {
     refreshesRef.current = 0;
   }, [hlsUrl]);
 
-  // Échelle progressive (34.F) : de nouvelles renditions sont prêtes → recharge le master.
+  // Progressive scale (34.F): new renditions are ready → reloads the master.
   useEffect(() => {
     if (!active || !mediaId) return;
     const socket = getSocket();
@@ -170,10 +168,10 @@ export function useHlsPlayer(
     };
   }, [active, mediaId, levels.length, reloadSource]);
 
-  /** Change la qualité de lecture (index de rendition). */
+  /** Changes the playback quality (rendition index). */
   const setLevel = (idx: number) => {
     setLevelState(idx);
-    // Choix manuel : conservé si le master est rechargé (nouvelles renditions 34.F).
+    // Manual choice: kept if the master is reloaded (new 34.F renditions).
     manualHeightRef.current = levels[idx]?.height ?? null;
     const hls = hlsRef.current;
     if (!hls || hls.currentLevel === idx) return;

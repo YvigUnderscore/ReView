@@ -12,14 +12,14 @@ function makeObject() {
   return { group, mat: mesh.material };
 }
 
-describe('modelCompare — comparaison A/B 3D (39.E)', () => {
-  it('sideBySideOffsets centre les positions', () => {
+describe('modelCompare — 3D A/B comparison (39.E)', () => {
+  it('sideBySideOffsets centers the positions', () => {
     expect(sideBySideOffsets(1, 3)).toEqual([0]);
     expect(sideBySideOffsets(2, 2)).toEqual([-1, 1]);
     expect(sideBySideOffsets(3, 2)).toEqual([-2, 0, 2]);
   });
 
-  it('setObjectOpacity à 0.5 : transparent, opacité, objet visible', () => {
+  it('setObjectOpacity at 0.5: transparent, opacity, object visible', () => {
     const { group, mat } = makeObject();
     setObjectOpacity(group, 0.5);
     expect(mat.opacity).toBe(0.5);
@@ -28,13 +28,13 @@ describe('modelCompare — comparaison A/B 3D (39.E)', () => {
     expect(group.visible).toBe(true);
   });
 
-  it('setObjectOpacity à 0 masque l’objet', () => {
+  it('setObjectOpacity at 0 hides the object', () => {
     const { group } = makeObject();
     setObjectOpacity(group, 0);
     expect(group.visible).toBe(false);
   });
 
-  it('setObjectOpacity à 1 rétablit un rendu opaque', () => {
+  it('setObjectOpacity at 1 restores an opaque render', () => {
     const { group, mat } = makeObject();
     setObjectOpacity(group, 0.2);
     setObjectOpacity(group, 1);
@@ -44,7 +44,7 @@ describe('modelCompare — comparaison A/B 3D (39.E)', () => {
     expect(group.visible).toBe(true);
   });
 
-  it('gère les matériaux multiples (tableau)', () => {
+  it('handles multiple materials (array)', () => {
     const group = new THREE.Group();
     const mats = [new THREE.MeshStandardMaterial(), new THREE.MeshBasicMaterial()];
     group.add(new THREE.Mesh(new THREE.BoxGeometry(), mats));

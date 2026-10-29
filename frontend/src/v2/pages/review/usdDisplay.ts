@@ -5,13 +5,13 @@ import type { UsdModelInfo, UsdVariantSelection } from '../../types/api';
 import { t } from '../../i18n';
 
 /**
- * Logique d'affichage partagée entre `UsdSceneGroup` (section USD de la fiche technique) et
- * `UsdRecomposeGroup` (Phase 45, 45.F). Extraite ici pour être testable et n'exister qu'une
- * fois : les deux composants doivent afficher **la même** valeur courante de variante, et le
- * même mot pour le purpose que l'on relit avant de recomposer.
+ * Display logic shared by `UsdSceneGroup` (USD section of the tech sheet) and `UsdRecomposeGroup`
+ * (Phase 45, 45.F). Extracted here so that it is testable and exists only once: both components must
+ * show **the same** current variant value, and the same word for the purpose read back before
+ * recomposing.
  */
 
-/** Libellé lisible de l'échelle de scène (`metersPerUnit` USD). */
+/** Readable label of the scene scale (USD `metersPerUnit`). */
 export function unitLabel(metersPerUnit: number): string {
   if (metersPerUnit === 1) return t('usd.metre');
   if (metersPerUnit === 0.01) return t('usd.centimetre');
@@ -19,7 +19,7 @@ export function unitLabel(metersPerUnit: number): string {
   return `${metersPerUnit} m`;
 }
 
-/** Libellé du purpose USD — « Proxy » est le mot du format, il ne se traduit pas. */
+/** Label of the USD purpose — "Proxy" is the format's own word, it is not translated. */
 export function purposeLabel(purpose: string): string {
   if (purpose === 'render') return t('viewer.render.title');
   if (purpose === 'proxy') return 'Proxy';
@@ -28,8 +28,8 @@ export function purposeLabel(purpose: string): string {
 }
 
 /**
- * Valeur courante d'un jeu de variantes : la sélection appliquée à la conversion prime sur
- * celle portée par la scène elle-même.
+ * Current value of a variant set: the selection applied at conversion takes precedence over the one
+ * carried by the scene itself.
  */
 export function variantValue(
   selection: UsdVariantSelection,
@@ -40,7 +40,7 @@ export function variantValue(
   return selection[prim]?.[name] ?? fallback;
 }
 
-/** État initial du dialogue : un choix par jeu de variantes, aligné sur l'affichage. */
+/** Initial state of the dialog: one choice per variant set, aligned with the display. */
 export function initialSelection(usd: UsdModelInfo): UsdVariantSelection {
   const initial: UsdVariantSelection = {};
   for (const set of usd.variantSets) {
